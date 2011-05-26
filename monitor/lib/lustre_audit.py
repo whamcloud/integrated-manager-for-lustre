@@ -25,6 +25,8 @@ class HostAuditError(Exception):
         self.host = host
         super(HostAuditError, self).__init__(*args, **kwargs)
 
+AGENT_PATH = "/root/hydra-agent.py"
+
 class LustreAudit:
     def __init__(self):
         self.issues = []
@@ -42,7 +44,7 @@ class LustreAudit:
         addresses = [str(h.address) for h in hosts]
         log().info("Auditing hosts: %s" % ", ".join(addresses))
         task = task_self()
-        task.shell("/root/wche_audit.py", nodes = NodeSet.fromlist(addresses))
+        task.shell(AGENT_PATH, nodes = NodeSet.fromlist(addresses))
         task.resume()
 
         targets = {}
@@ -57,8 +59,8 @@ class LustreAudit:
         # Map of AuditHost to dict
         audit_data = {}
 
-        # First pass: create AuditHosts and store state dicts
-        # ===================================================
+        # First pass: create AuditHosts and store AuditHost->json dict
+        # ============================================================
         for output, nodes in task.iter_buffers():
             for node in nodes:
                 log().info(str(node))
@@ -117,17 +119,17 @@ class LustreAudit:
         # Third pass: learn client and target states
         # ===================================================
         for audit_host, data in audit_data.items():
-            for fs_name, mount_info in data['client_mounts'].items():
+            for mount_point, client_info in data['client_mounts'].items():
                 try:
-                    fs = Filesystem.objects.get(name = fs_name)
+                    fs = Filesystem.objects.get(name = client_info['filesystem'])
                 except Filesystem.DoesNotExist:
                     log().warning("Ignoring client mount for unknown filesystem '%s' on %s" % (fs_name, audit_host.host))
                     continue
-                (client, created) = Client.objects.get_or_create(host = audit_host.host, mount_point = mount_info['mount_point'], filesystem = fs)
+                (client, created) = Client.objects.get_or_create(host = audit_host.host, mount_point = mount_point, filesystem = fs)
                 if created:
                     log().info("Learned client %s" % client)
 
-                audit_mountable = AuditMountable(audit = audit, audit_host = audit_host, mountable = client, mounted = mount_info['mounted'])
+                audit_mountable = AuditMountable(audit = audit, audit_host = audit_host, mountable = client, mounted = client_info['mounted'])
                 audit_mountable.save()
 
             for mount_info in data['local_targets']:
@@ -145,11 +147,6 @@ class LustreAudit:
                     audit_mountable = AuditMountable(audit = audit, audit_host = audit_host, mountable = local_mountable, mounted = mount_info['running'])
                 audit_mountable.save()
 
-        # Generate issues for any target which doesn't have an AuditMountable
-        # Generate issues for any Target not found (unless the host where
-        # we expected to find the target was not contacted)
-        # Generate issues for any targets we found which do not correspond 
-        # to any Target.
         audit.complete = True
         audit.save()
 
