@@ -41,6 +41,9 @@ class LustreAudit:
             raise HostAuditError(host)
 
     def audit_hosts(self, hosts):
+        if len(hosts) == 0:
+            return
+
         addresses = [str(h.address) for h in hosts]
         log().info("Auditing hosts: %s" % ", ".join(addresses))
         task = task_self()
@@ -58,6 +61,9 @@ class LustreAudit:
 
         # Map of AuditHost to dict
         audit_data = {}
+
+        # Map of target name to host
+        target_locations = {}
 
         # First pass: create AuditHosts and store AuditHost->json dict
         # ============================================================
@@ -80,6 +86,9 @@ class LustreAudit:
                     audit_host.auditnid_set.create(nid_string = nid_str)
 
                 audit_data[audit_host] = data
+
+                for mount_info in data['local_targets']:
+                    target_locations[mount_info['name']] = host
         
         # Second pass: try to learn any unknown filesystems, targets
         # =========================================================
@@ -106,12 +115,16 @@ class LustreAudit:
                 for fs, targets in filesystem_targets.items():
                     for target in targets:
                         name = target['name']
+                        if not name in target_locations and LocalMountable.objects.filter(name = name).count() == 0:
+                            log().warning("Target %s found on MGS but not locally on any audited hosts")
+                            continue
+
                         if name.find("-MDT") != -1:
-                            (mdt, created) = MetadataTarget.objects.get_or_create(name = target['name'], host = audit_host.host, filesystem = fs)
+                            (mdt, created) = MetadataTarget.objects.get_or_create(name = target['name'], host = target_locations[name], filesystem = fs)
                             if created:
                                 log().info("Learned MDT %s" % name)
                         elif name.find("-OST") != -1:
-                            (ost, created) = ObjectStoreTarget.objects.get_or_create(name = target['name'], host = audit_host.host, filesystem = fs)
+                            (ost, created) = ObjectStoreTarget.objects.get_or_create(name = target['name'], host = target_locations[name], filesystem = fs)
                             if created:
                                 log().info("Learned OST %s" % name)
                     
