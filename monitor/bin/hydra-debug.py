@@ -36,58 +36,13 @@ class HydraDebug(cmd.Cmd, object):
     def do_EOF(self, line):
         raise KeyboardInterrupt()
 
-    def __mountable_audit_status(self, vol):
-        # Latest audit that tried to contact our host
-        try:
-            audit = Audit.objects.filter(attempted_hosts = vol.host, complete = True).latest('id')
-        except Audit.DoesNotExist:
-            log().warning("Never audited %s" % vol.host)
-            return "???"
-
-        try:
-            audit_host = audit.audithost_set.get(host = vol.host)
-            try:
-                audit_mountable = audit_host.auditmountable_set.get(mountable = vol)
-                try:
-                    if audit_mountable.auditrecoverable.is_recovering():
-                        return "RECOVERY"
-                except AuditRecoverable.DoesNotExist:
-                    pass
-
-                return {True: "MOUNTED", False: "UNMOUNTED"}[audit_mountable.mounted]
-            except AuditMountable.DoesNotExist:
-                # Does not appear in our scan: could just be unmounted on 
-                # an fstabless host
-                return "UNMOUNTED"
-
-        except AuditHost.DoesNotExist:
-            # Last audit attempt on this host failed
-            log().warning("No up to date audit info for %s" % vol.host)
-            return "???"
-
-    def __lnet_audit_status(self, host):
-        # Latest audit that tried to contact our host
-        try:
-            audit = Audit.objects.filter(attempted_hosts = host, complete = True).latest('id')
-        except Audit.DoesNotExist:
-            log().warning("Never audited %s" % vol.host)
-            return "???"
-
-        try:
-            audit_host = audit.audithost_set.get(host = host)
-            return {True: "UP", False: "DOWN"}[audit_host.lnet_up]
-        except AuditHost.DoesNotExist:
-            # Last audit attempt on this host failed
-            log().warning("No up to date audit info for %s" % host)
-            return "???"
-
     def __volume_row(self, vol, table):
         table.add_row([
             vol.id,
             vol.role(),
             vol.host.address,
             vol.name,
-            self.__mountable_audit_status(vol)
+            AuditMountable.mountable_status_string(vol)
             ])
 
     def __filesystem_title(self, filesystem):
@@ -157,7 +112,7 @@ class HydraDebug(cmd.Cmd, object):
         table.header(['id', 'address', 'kind', 'lnet status'])
         for host in Host.objects.all():
             if host.mountable_set.count() > 0:
-                table.add_row([host.id, host.address, host.role(), self.__lnet_audit_status(host)])
+                table.add_row([host.id, host.address, host.role(), AuditHost.lnet_status_string(host)])
 
         screen(table.draw())
 

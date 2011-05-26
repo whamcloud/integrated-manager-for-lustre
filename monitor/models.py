@@ -36,8 +36,8 @@ class Router(models.Model):
 class Filesystem(models.Model):
     name = models.CharField(max_length=8)
 
-    def get_volumes(self):
-        return list(MetadataTarget.objects.filter(filesystem = self).all()) + list(ObjectStoreTarget.objects.filter(filesystem = self).all())
+    def get_targets(self):
+        return [self.get_mgs()] + list(MetadataTarget.objects.filter(filesystem = self).all()) + list(ObjectStoreTarget.objects.filter(filesystem = self).all())
 
     def get_mgs(self):
         return ManagementTarget.objects.get(filesystems = self)
@@ -53,6 +53,9 @@ class Mountable(models.Model):
 
     def role(self):
         return get_real_mountable(self).role()
+
+    def status_string(self):
+        return AuditMountable.mountable_status_string(self)
 
     def pretty_block_device(self):
         # Truncate to iSCSI iqn if possible
@@ -138,7 +141,7 @@ class ObjectStoreTarget(LocalMountable, FilesystemMountable):
     def role(self):
         return "OST"
 
-class Client(Mountable, FilesystemMountable):
+class Client(FilesystemMountable, Mountable):
     def role(self):
         return "Client"
 
@@ -174,6 +177,21 @@ class AuditHost(models.Model):
     audit = models.ForeignKey(Audit)
     lnet_up = models.BooleanField()
 
+    @staticmethod
+    def lnet_status_string(host):
+        # Latest audit that tried to contact our host
+        try:
+            audit = Audit.objects.filter(attempted_hosts = host, complete = True).latest('id')
+        except Audit.DoesNotExist:
+            return "???"
+
+        try:
+            audit_host = audit.audithost_set.get(host = host)
+            return {True: "UP", False: "DOWN"}[audit_host.lnet_up]
+        except AuditHost.DoesNotExist:
+            # Last audit attempt on this host failed
+            return "???"
+
 class AuditNid(models.Model):
     audit_host = models.ForeignKey(AuditHost)
     nid_string = models.CharField(max_length=128)
@@ -190,6 +208,34 @@ class AuditMountable(models.Model):
 
     def __str__(self):
         return "Audit %s %s %s" % (self.audit.created_at, self.mountable.host, self.mountable)
+
+    @staticmethod
+    def mountable_status_string(mountable):
+        # Latest audit that tried to contact our host
+        try:
+            audit = Audit.objects.filter(attempted_hosts = mountable.host, complete = True).latest('id')
+        except Audit.DoesNotExist:
+            return "???"
+
+        try:
+            audit_host = audit.audithost_set.get(host = mountable.host)
+            try:
+                audit_mountable = audit_host.auditmountable_set.get(mountable = mountable)
+                try:
+                    if audit_mountable.auditrecoverable.is_recovering():
+                        return "RECOVERY"
+                except AuditRecoverable.DoesNotExist:
+                    pass
+
+                return {True: "MOUNTED", False: "UNMOUNTED"}[audit_mountable.mounted]
+            except AuditMountable.DoesNotExist:
+                # Does not appear in our scan: could just be unmounted on 
+                # an fstabless host
+                return "UNMOUNTED"
+
+        except AuditHost.DoesNotExist:
+            # Last audit attempt on this host failed
+            return "???"
 
 class AuditRecoverable(AuditMountable):
     # When a volume is present, we will have been able to interrogate 

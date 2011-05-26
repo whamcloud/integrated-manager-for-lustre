@@ -1,0 +1,39 @@
+
+<h1>Filesystems</h1>
+<ul>
+{% for filesystem in filesystems %}
+<li>{{filesystem.name}}
+<ul>
+{% for mountable in filesystem.get_targets %}
+<li>
+{{mountable}} {{ mountable.status_string }}
+</li>
+{% endfor %}
+</ul>
+</li>
+{% endfor %}
+</ul>
+
+<h1>Hosts</h1>
+<ul>
+    {% for host in hosts %}
+    <li>{{host}} {{host.role}}
+    <ul>
+        {% for mountable in host.mountable_set.all %}
+        <li>
+        {{mountable}} {{mountable.status_string}}
+        </li>
+        {% endfor %}
+    </ul>
+    </li>
+    {% endfor %}
+</ul>
+
+<h1>Clients</h1>
+<ul>
+    {% for client in clients %}
+    <li>
+    {{client.host}} {{client.mount_point}} {{client.status_string}}
+    </li>
+    {% endfor %}
+</ul>
