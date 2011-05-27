@@ -1,5 +1,7 @@
 from django.db import models
 
+from collections_24 import defaultdict
+
 import simplejson as json
 
 # Create your models here.
@@ -8,6 +10,11 @@ class Host(models.Model):
 
     def __str__(self):
         return "Host '%s'" % self.address
+
+    def get_mountables(self):
+        """Like mountable_set.all() but downcasting to their most 
+           specific class rather than returning a bunch of Mountable"""
+        return [get_real_mountable(m) for m in self.mountable_set.all()]
 
     def role(self):
         roles = set()
@@ -30,6 +37,25 @@ class Host(models.Model):
 
         return "/".join(roles)
 
+    def status_string(self):
+        # Green if all targets are online
+        target_status_set = set([t.status_string() for t in self.mountable_set.all() if not hasattr(t, 'client')])
+        print target_status_set
+        if len(target_status_set) > 0:
+            if target_status_set == set(["MOUNTED"]):
+                return "OK"
+            elif not "MOUNTED" in target_status_set:
+                return "OFFLINE"
+            else:
+                return "WARNING"
+        else:
+            # No local targets, just report lnet status
+            lnet_status = AuditHost.lnet_status_string(self)
+            if lnet_status == "UP":
+                return "OK"
+            else:
+                return "OFFLINE"
+
 class Router(models.Model):
     host = models.ForeignKey(Host)
 
@@ -37,10 +63,35 @@ class Filesystem(models.Model):
     name = models.CharField(max_length=8)
 
     def get_targets(self):
-        return [self.get_mgs()] + list(MetadataTarget.objects.filter(filesystem = self).all()) + list(ObjectStoreTarget.objects.filter(filesystem = self).all())
+        return [self.get_mgs()] + self.get_filesystem_targets()
+
+    def get_filesystem_targets(self):
+        return list(MetadataTarget.objects.filter(filesystem = self).all()) + list(ObjectStoreTarget.objects.filter(filesystem = self).all())
 
     def get_mgs(self):
         return ManagementTarget.objects.get(filesystems = self)
+
+    def get_servers(self):
+        targets = self.get_targets()
+        servers = defaultdict(list)
+        for t in targets:
+            servers[t.host].append(t)
+
+        # NB converting to dict because django templates don't place nice with defaultdict
+        # (http://stackoverflow.com/questions/4764110/django-template-cant-loop-defaultdict)
+        return dict(servers)
+
+    def status_string(self):
+        # If all my targets are down, I'm red, even if my MGS is up
+        if not "MOUNTED" in set([t.status_string() for t in self.get_filesystem_targets()]):
+            return "OFFLINE"
+
+        # If all my targets are up including the MGS, then I'm green
+        if set([t.status_string() for t in self.get_targets()]) == set(["MOUNTED"]):
+            return "OK"
+
+        # Else I'm orange
+        return "WARNING"
 
     def __str__(self):
         return "Filesystem '%s'" % self.name
@@ -118,8 +169,8 @@ class LocalMountable(Mountable):
     # Like testfs-OST0001
     name = models.CharField(max_length = 64)
 
-    def pretty_name(self):
-        """Something like OST0001"""
+    def name_no_fs(self):
+        """Something like OST0001 rather than testfs1-OST0001"""
         if self.name:
             if self.name.find("-") != -1:
                 return self.name.split("-")[1]

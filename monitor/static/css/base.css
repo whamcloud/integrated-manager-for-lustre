@@ -1,0 +1,206 @@
+
+div.dashtree {
+    font-family: verdana, arial, helvetica, sans-serif;
+    background: #eee;
+    border: 1px solid #ccc;
+    padding: 6px;
+    font-size: 0.8em;
+    width: 416px;
+    position: relative;
+
+    margin-bottom: 4px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+div.dashtree h1 {
+    font-size: 1.1em;
+    margin: 0px;
+}
+
+div.dashtree li{
+    margin-bottom: 4px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+
+    padding-bottom: 3px;
+    padding-top: 3px;
+    padding-right: 3px;
+    /* Leave padding-left to be set by icon styles */
+}
+
+div.dashtree li.collapsible {
+    cursor: pointer;
+}
+
+div.dashtree ul.tree {
+    padding-left: 0px;
+    margin-top: 6px;
+    width: 400px;
+}
+
+/* each child -24 for icon+padding, then -4 for rhs padding */
+
+div.dashtree ul.tree ul.tree {
+    width: 372px;
+}
+
+
+div.dashtree ul.tree ul.tree ul.tree {
+    width: 344px;
+}
+
+div.dashtree ul.tree li {
+    background-color: #c9c9cf;
+    list-style: none;
+
+}
+
+div.dashtree ul.tree ul.tree li {
+    background-color: #d9d9df;
+}
+
+div.dashtree ul.tree ul.tree ul.tree li {
+    background-color: #e9e9ef;
+}
+
+div.dashtree span.name {
+    font-weight: bold;
+    font-variant: small-caps;
+}
+
+div.dashtree span.status {
+    position: absolute;
+    left: 300px;
+    font-size: 0.85em;
+    font-weight: bold;
+
+    background: #777;
+    padding: 2px;
+
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+
+    /* Long enough for 'UNMOUNTED' */
+    width: 7.5em;
+    text-align: center;
+}
+
+div.dashtree span.OK {
+    color: #0e0;
+    border: 1px solid #0e0;
+}
+
+div.dashtree span.WARNING {
+    color: #FFBF00;
+    border: 1px solid #FFBF00;
+}
+
+div.dashtree span.OFFLINE {
+    color: #F00;
+    border: 1px solid #f00;
+}
+
+div.dashtree span.MOUNTED {
+    color: #0e0;
+    border: 1px solid #0e0;
+}
+
+div.dashtree span.UNMOUNTED {
+    color: #e00;
+    border: 1px solid #e00;
+}
+
+div.dashtree li.host {
+    background-image: url(../images/network-server.png);
+    background-repeat: no-repeat;
+    padding-left: 24px;
+    background-position: 4px 4px;
+}
+
+div.dashtree li.target {
+    background-image: url(../images/drive-harddisk.png);
+    background-repeat: no-repeat;
+    padding-left: 24px;
+    background-position: 4px 4px;
+}
+
+div.dashtree li.filesystem {
+    background-image: url(../images/folder-remote.png);
+    background-repeat: no-repeat;
+    padding-left: 24px;
+    background-position: 4px 4px;
+}
+
+div.dashtree li.client {
+    background-image: url(../images/folder-open.png);
+    background-repeat: no-repeat;
+    padding-left: 24px;
+    background-position: 4px 4px;
+}
+
+table.twocolumns td {
+   vertical-align: text-top; 
+}
+
+/* Body/header/logo/navigation */
+
+body {
+    margin: 0px;
+    padding: 0px;
+    font-family: arial, serif;
+    background-color: #eee;
+}
+
+div#logo {
+    float: right;
+    margin: 0px;
+    padding: 0px;
+    background-image: url(../images/whamcloud_mono_24.png);
+    width: 58px;
+    height: 24px;
+}
+
+#navigation ul {
+    height: 24px;
+    margin: 0;
+    padding-left: 10px;
+    padding-right: 10px;
+    background: #0099ff;
+}
+
+#navigation li {
+    list-style: none;
+	float: left;
+}
+
+#navigation li a {
+        display: block;
+        margin-top: 3px;
+        padding: 2px 10px;
+        text-decoration: none;
+        font-size: 0.75em;
+        text-transform: lowercase;
+        color: #fff;
+        border-right: 1px dotted #fff;
+}
+
+#navigation li a.current {
+color: #e6e6e6;
+}
+
+#navigation li a.last {
+border-right: 1px solid #0099ff;
+}
+
+#navigation li a:hover {
+        margin-top: 3px;
+        padding: 0px 10px;
+	color: #0099ff;
+	background-color: #fff;
+}
+
+
