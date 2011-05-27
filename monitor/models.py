@@ -40,7 +40,6 @@ class Host(models.Model):
     def status_string(self):
         # Green if all targets are online
         target_status_set = set([t.status_string() for t in self.mountable_set.all() if not hasattr(t, 'client')])
-        print target_status_set
         if len(target_status_set) > 0:
             if target_status_set == set(["MOUNTED"]):
                 return "OK"
