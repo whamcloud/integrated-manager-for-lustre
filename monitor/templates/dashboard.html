@@ -33,15 +33,21 @@
         if (state == null) {
             state = !item.hasClass('closed')
         }
-        if (item.hasClass('closed') != state) {
+        if (state != item.hasClass('closed')) {
             if (state) {
                 var style = 'hide';
-            }else {
+            } else {
                 var style = 'show'; 
             }
             item.children('ul').animate({height: style, opacity: style}, duration); 
             item.toggleClass('closed', state)
-            closed_states[item.getPath()] = item.hasClass('closed');
+            closed_states[item.getPath()] = state;
+            if (state) {
+                console.log(item.children('div.open_icon'));
+                item.children('div.open_icon').replaceWith("<div class='closed_icon'></div>");
+            } else {
+                item.children('div.closed_icon').replaceWith("<div class='open_icon'></div>");
+            }
         }
     }
 
@@ -58,6 +64,7 @@
                 
                 $("<a href='#' class='tree_all expand_all'>Show all</a>").insertBefore($(this).children('ul'))
                 $("<span>&nbsp;/&nbsp;</span><a href='#' class='tree_all collapse_all'>Hide all</a>").insertBefore($(this).children('ul'));
+
             });
 
             $('a.expand_all').click(function(event) {
@@ -69,10 +76,10 @@
             });
 
             $('a.collapse_all').click(function(event) {
-                toggle_closed($(this).parent(), true, 0);
                 $(this).parent().find('li.collapsible').each(function() {
                     toggle_closed($(this), true, 0);
                 });
+                toggle_closed($(this).parent(), true, 0);
                 event.stopPropagation();
             });
 
@@ -91,6 +98,9 @@
             $('li.collapsible').each(function(item) {
                 if ($(this).hasClass('closed')) {
                     $(this).children('ul').hide();
+                    $("<div class='closed_icon'></div>").insertBefore($(this).children('ul'));
+                } else {
+                    $("<div class='open_icon'></div>").insertBefore($(this).children('ul'));
                 }
             });
             $('li.collapsible').click(function(event) {

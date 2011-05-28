@@ -168,6 +168,26 @@ td.audit_time {
     text-align: right;
 }
 
+div.open_icon {
+    float:left;
+    margin-left: -12px;
+    margin-top: 8px;
+    padding: 0px;
+    background-image: url(../images/list-remove.png);
+    width: 16px;
+    height: 16px;
+}
+
+div.closed_icon {
+    float:left;
+    margin-left: -12px;
+    margin-top: 8px;
+    padding: 0px;
+    background-image: url(../images/list-add.png);
+    width: 16px;
+    height: 16px;
+}
+
 /* Body/header/logo/navigation */
 
 body {
