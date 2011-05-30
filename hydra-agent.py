@@ -94,7 +94,7 @@ class LocalLustreAudit:
 
         # Get volume info for each device in scan_devices
         for dev,mntpnt in scan_devices:
-            tunefs_text = subprocess.Popen(["tunefs.lustre", dev], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.read()
+            tunefs_text = subprocess.Popen(["tunefs.lustre", "--dryrun", dev], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.read()
             try:
                 name = re.search("Target:\\s+(.*)\n", tunefs_text).group(1)
                 fs_name = re.search("Lustre FS:\\s+(.*)\n", tunefs_text).group(1)
