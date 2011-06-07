@@ -33,8 +33,10 @@ class LocalLustreAudit:
             return re.search("^\\w+-(\\w\\w\\w)", name).group(1)
 
     def get_local_targets(self):
-        targets = []
         devices_file = "/proc/fs/lustre/devices"
+        targets = {}
+        # Find running devices in /proc and extract any info that we won't 
+        # get from tunefs.lustre later.
         if os.path.exists(devices_file):
             for line in open(devices_file).readlines():
                 target_types = {"obdfilter": "OST", "mdt": "MDT", "mgs": "MGS"}
@@ -60,59 +62,70 @@ class LocalLustreAudit:
 
                 device = self.normalize_device(open(glob.glob("/proc/fs/lustre/*/%s/mntdev" % name)[0]).read())
 
-                targets.append({
-                    "running": True,
-                    "device": device,
-                    "name": name,
-                    "uuid": uuid,
-                    "state": state,
-                    "kind": self.name2kind(name),
-                    "recovery_status": recovery_status,
-                    "mount_point": None
-                    })
-
-        running_devices = {}
-        for dev in targets:
-            running_devices[dev["device"]] = dev
+                targets[device] = {"recovery_status": recovery_status, "uuid": uuid, "running": True}
 
         mntpnts = {}
-        scan_devices = set()
 
-        # Get all 'lustre' targets from fstab, and populate mount_point for
-        # already-found targets, or add to scan_devices for interrogation later.
+        # Get all 'lustre' targets from fstab, and merge info with
+        # what we learned from /proc or create fresh entries for 
+        # targets not previously known
         for line in open("/etc/fstab").readlines():
             (device, mntpnt, fstype) = line.split()[0:3]
             if not fstype == "lustre":
                 continue
 
             device = self.normalize_device(device)
-            if device in running_devices:
-                running_devices[device]["mount_point"] = mntpnt
-            elif os.path.exists(device):
-                # Record local devices
-                scan_devices.add((device,mntpnt))
+            if os.path.exists(device):
+                info = {"mount_point": mntpnt, "recovery_status": {}}
+                if targets.has_key(device):
+                    targets[device] = dict(targets[device].items() + info.items())
+                else:
+                    targets[device] = info
+            else:
+                # TODO: log warning that we found a device that doesn't exist unless
+                # it's a client-looking 'device'
+                pass
 
-        # Get volume info for each device in scan_devices
-        for dev,mntpnt in scan_devices:
-            tunefs_text = subprocess.Popen(["tunefs.lustre", "--dryrun", dev], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.read()
+        # Interrogate each target that we found in proc or fstab
+        for device,device_info in targets.items():
+            tunefs_text = subprocess.Popen(["tunefs.lustre", "--dryrun", device], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.read()
             try:
                 name = re.search("Target:\\s+(.*)\n", tunefs_text).group(1)
-                fs_name = re.search("Lustre FS:\\s+(.*)\n", tunefs_text).group(1)
-                targets.append({
-                    "running": False,
+                fs_name = re.search("Lustre FS:\\s+([^\n]*)\n", tunefs_text).group(1)
+                params_re = re.search("Parameters:\\ ([^\n]+)\n", tunefs_text)
+                if params_re:
+                    # Dictionary of parameter name to list of instance values
+                    params = {}
+                    # FIXME: naive parse: can these lines be quoted/escaped/have spaces?
+                    for param,value in [t.split('=') for t in params_re.group(1).split()]:
+                        if not params.has_key(param):
+                            params[param] = []
+                        params[param].append(value)
+                else:
+                    params = {}
+
+                # If no 'running' set for the device before, then it wasn't
+                # interrogated from /proc and is therefore not running
+                if device_info.has_key('running'):
+                    running = device_info['running']
+                else:
+                    running = False
+
+                targets[device] = dict(targets[device].items() + {
+                    "running": running,
                     "kind": self.name2kind(name),
-                    "device": dev,
                     "name": name,
                     "filesystem": fs_name,
-                    "mount_point": mntpnt,
-                    "recovery_status": {}
-                    })
-            except:
+                    "params": params,
+                    "device": device
+                    }.items())
+            except Exception,e:
+                del targets[device]
                 # Failed to get tunefs output, probably not a lustre-formatted
                 # volume
                 pass
 
-        return targets
+        return targets.values()
 
     def get_client_mounts(self):
         """Parse 'fstab' and 'mount' to get a list of configured clients
@@ -137,9 +150,12 @@ class LocalLustreAudit:
             if info:
                 client_mounts[mntpnt] = info
 
-        mount_text = subprocess.Popen(["mount"], stdout=subprocess.PIPE).stdout.read()
+        # NB we must use /proc/mounts instead of `mount` because `mount` sometimes
+        # reports out of date information from /etc/mtab when a lustre service doesn't
+        # tear down properly.
+        mount_text = open("/proc/mounts").read()
         for line in mount_text.split("\n"):
-            result = re.search("([^ ]+) on ([^ ]+) type ([^ ]+) ",line)
+            result = re.search("([^ ]+) ([^ ]+) ([^ ]+) ",line)
             if not result:
                 continue
 
@@ -161,44 +177,44 @@ class LocalLustreAudit:
         for t in local_targets:
             if t["kind"] == "MGS":
                 mgs_target = t
+        if not mgs_target:
+            return {}
 
         mgs_targets = {}
-        if mgs_target:
-            dev = mgs_target["device"]
-            ls = subprocess.Popen(["debugfs", "-c", "-R", "ls -l CONFIGS/", dev], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.read()
-            filesystems = []
-            for line in ls.split("\n"):
-                try:
-                    name = line.split()[8]
-                except IndexError:
-                    pass
-                match = re.search("(\w+)-client", name)
-                if match != None:
-                    filesystems.append(match.group(1).__str__())
+        dev = mgs_target["device"]
+        ls = subprocess.Popen(["debugfs", "-c", "-R", "ls -l CONFIGS/", dev], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.read()
+        filesystems = []
+        for line in ls.split("\n"):
+            try:
+                name = line.split()[8]
+            except IndexError:
+                pass
+            match = re.search("(\w+)-client", name)
+            if match != None:
+                filesystems.append(match.group(1).__str__())
 
-            for fs in filesystems:
-                tmpfile = "/tmp/debugfs.tmp"
-                debugfs_rc = subprocess.Popen(["debugfs", "-c", "-R", "dump CONFIGS/%s-client %s" % (fs, tmpfile), dev], stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
-                client_log = subprocess.Popen(["llog_reader", tmpfile], stdout=subprocess.PIPE).stdout.read()
+        for fs in filesystems:
+            tmpfile = "/tmp/debugfs.tmp"
+            debugfs_rc = subprocess.Popen(["debugfs", "-c", "-R", "dump CONFIGS/%s-client %s" % (fs, tmpfile), dev], stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+            client_log = subprocess.Popen(["llog_reader", tmpfile], stdout=subprocess.PIPE).stdout.read()
 
-                entries = client_log.split("\n#")[1:]
-                fs_targets = []
-                for entry in entries:
-                    tokens = entry.split()
-                    step_num = tokens[0]
-                    (code,action) = re.search("^\\((\d+)\\)(\w+)$", tokens[1]).groups()
-                    if action == 'setup':
-                        volume = re.search("0:(\w+-\w+)-\w+", tokens[2]).group(1)
-                        uuid = re.search("1:(.*)", tokens[3]).group(1)
-                        nid = re.search("2:(.*)", tokens[4]).group(1)
+            entries = client_log.split("\n#")[1:]
+            fs_targets = []
+            for entry in entries:
+                tokens = entry.split()
+                step_num = tokens[0]
+                (code,action) = re.search("^\\((\d+)\\)(\w+)$", tokens[1]).groups()
+                if action == 'setup':
+                    volume = re.search("0:(\w+-\w+)-\w+", tokens[2]).group(1)
+                    uuid = re.search("1:(.*)", tokens[3]).group(1)
+                    nid = re.search("2:(.*)", tokens[4]).group(1)
 
-                        fs_targets.append({
-                            "uuid": uuid,
-                            "name": volume,
-                            "nid": nid})
+                    fs_targets.append({
+                        "uuid": uuid,
+                        "name": volume,
+                        "nid": nid})
 
-
-                mgs_targets[fs] = fs_targets
+            mgs_targets[fs] = fs_targets
 
         return mgs_targets
 
@@ -233,10 +249,8 @@ class LocalLustreAudit:
             # Skip header line
             for line in lines[1:]:
                 tokens = line.split()
-                if tokens[0] == "0@lo":
-                    continue
-
-                lnet_nids.append(tokens[0])
+                if tokens[0] != "0@lo":
+                    lnet_nids.append(tokens[0])
 
         return lnet_up, lnet_nids
 
