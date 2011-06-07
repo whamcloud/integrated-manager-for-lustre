@@ -309,7 +309,11 @@ class LustreAudit:
 
     def learn_fs_targets(self):
         for audit_host, data in self.raw_data.items():
-            if len(data['mgs_targets']) == 0:
+            found_mgs = False
+            for volume in data['local_targets']:
+                if volume['kind'] == "MGS":
+                    found_mgs = True
+            if not found_mgs:
                 continue
 
             # Learn an MGS target and a TargetMount for this host
@@ -343,14 +347,12 @@ class LustreAudit:
         raw_data = {}
         for output, nodes in task.iter_buffers():
             for node in nodes:
-                log().info(str(node))
-                log().info("=" * len(str(node)))
+                log().info("Parsing JSON from %s" % str(node))
                 output = "%s" % output
                 try:
                     data = json.loads(output)
-                    log().info("Parse OK from %s" % node)
                 except Exception,e:
-                    log().error("bad output from %s: %s '%s'" % (node, e, output))
+                    log().error("bad output from %s: %s '%s'" % (str(node), e, output))
                     continue
             
                 host = Host.objects.get(address = node)
