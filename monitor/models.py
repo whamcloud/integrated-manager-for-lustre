@@ -128,7 +128,19 @@ class Mountable(models.Model):
         return get_real_mountable(self).role()
 
     def status_string(self):
-        return AuditMountable.mountable_status_string(self)
+        raise NotImplementedError
+
+    def status_rag(self):
+        return {
+                "MOUNTED": "OK",
+                "FAILOVER": "WARNING",
+                "HA WARN": "WARNING",
+                "RECOVERY": "WARNING",
+                "REDUNDANT": "OK",
+                "SPARE": "OK",
+                "UNMOUNTED": "OFFLINE",
+                "???": ""
+                }[self.status_string()]
 
 class FilesystemMember(models.Model):
     """A Mountable for a particular filesystem, such as 
@@ -169,16 +181,6 @@ class TargetMount(Mountable):
         else:
             return "%s %s" % (self.target.role(), self.target.id)
 
-    def status_rag(self):
-        return {
-                "MOUNTED": "OK",
-                "FAILOVER": "WARNING",
-                "HA WARN": "WARNING",
-                "REDUNDANT": "OK",
-                "SPARE": "OK",
-                "UNMOUNTED": "OFFLINE",
-                "???": ""
-                }[self.status_string()]
 
     def status_string(self):
         this_status = AuditMountable.mountable_status_string(self)
@@ -284,6 +286,9 @@ class Client(Mountable, FilesystemMember):
 
     def role(self):
         return "Client"
+
+    def status_string(self):
+        return AuditMountable.mountable_status_string(self)
 
 def get_real_target(target):
     try:
