@@ -14,20 +14,21 @@ class Host(models.Model):
     def get_mountables(self):
         """Like mountable_set.all() but downcasting to their most 
            specific class rather than returning a bunch of Mountable"""
-        return [get_real_mountable(m) for m in self.mountable_set.all()]
+        return [get_real_mountable(m) for m in list(self.targetmount_set.all()) + list(self.client_set.all())]
 
     def role(self):
         roles = set()
-        for t in self.mountable_set.all():
-            t = get_real_mountable(t)
-            if t.__class__ == ManagementTarget:
+        for target_mount in self.targetmount_set.all():
+            target = get_real_target(target_mount.target)
+            if target.__class__ == ManagementTarget:
                 roles.add("MGS")
-            elif t.__class__ == MetadataTarget:
+            elif target.__class__ == MetadataTarget:
                 roles.add("MDS")
-            elif t.__class__ == ObjectStoreTarget:
+            elif target.__class__ == ObjectStoreTarget:
                 roles.add("OSS")
-            elif t.__class__ == Client:
-                roles.add("Client")
+
+        if self.client_set.count() > 0:
+            roles.add("Client")
 
         if self.router_set.count() > 0:
             roles.add("Router")
@@ -39,11 +40,12 @@ class Host(models.Model):
 
     def status_string(self):
         # Green if all targets are online
-        target_status_set = set([t.status_string() for t in self.mountable_set.all() if not hasattr(t, 'client')])
+        target_status_set = set([t.status_string() for t in self.get_mountables() if not hasattr(t, 'client')])
         if len(target_status_set) > 0:
-            if target_status_set == set(["MOUNTED"]):
+            good_states = ["MOUNTED", "REDUNDANT", "SPARE"]
+            if set(good_states) >= target_status_set:
                 return "OK"
-            elif not "MOUNTED" in target_status_set:
+            elif len(set(good_states) & target_status_set) == 0:
                 return "OFFLINE"
             else:
                 return "WARNING"
@@ -55,11 +57,18 @@ class Host(models.Model):
             else:
                 return "OFFLINE"
 
+class Nid(models.Model):
+    """Simplified NID representation for monitoring only"""
+    host = models.ForeignKey(Host)
+    nid_string = models.CharField(max_length=128)
+
 class Router(models.Model):
     host = models.ForeignKey(Host)
 
 class Filesystem(models.Model):
     name = models.CharField(max_length=8)
+    mgs = models.ForeignKey('ManagementTarget')
+    # TODO: uniqueness constraint on name + MGS
 
     def get_targets(self):
         return [self.get_mgs()] + self.get_filesystem_targets()
@@ -74,19 +83,26 @@ class Filesystem(models.Model):
         targets = self.get_targets()
         servers = defaultdict(list)
         for t in targets:
-            servers[t.host].append(t)
+            for tm in t.targetmount_set.all():
+                servers[tm.host].append(tm)
 
         # NB converting to dict because django templates don't place nice with defaultdict
         # (http://stackoverflow.com/questions/4764110/django-template-cant-loop-defaultdict)
         return dict(servers)
 
     def status_string(self):
+        fs_statuses = set([t.status_string() for t in self.get_filesystem_targets()])
+
+        good_status = set(["MOUNTED", "REDUNDANT", "SPARE"])
         # If all my targets are down, I'm red, even if my MGS is up
-        if not "MOUNTED" in set([t.status_string() for t in self.get_filesystem_targets()]):
+        if not good_status & fs_statuses:
             return "OFFLINE"
 
+        all_statuses = fs_statuses | set([self.get_mgs().status_string()])
+
         # If all my targets are up including the MGS, then I'm green
-        if set([t.status_string() for t in self.get_targets()]) == set(["MOUNTED"]):
+
+        if all_statuses <= good_status:
             return "OK"
 
         # Else I'm orange
@@ -96,16 +112,105 @@ class Filesystem(models.Model):
         return "Filesystem '%s'" % self.name
 
 class Mountable(models.Model):
-    host = models.ForeignKey(Host)
-    # Nullable because we might learn about a mountable on the MGS and
-    # not know its mount point until we look at the server it's on.
+    """Something that can be mounted on a particular host (roughly
+       speaking a line in fstab."""
     mount_point = models.CharField(max_length = 512, null = True, blank = True)
+
+    def host(self):
+        """To be implemented by child classes"""
+        raise NotImplementedError()
+
+    def device(self):
+        """To be implemented by child classes"""
+        raise NotImplementedError()
 
     def role(self):
         return get_real_mountable(self).role()
 
     def status_string(self):
         return AuditMountable.mountable_status_string(self)
+
+class FilesystemMember(models.Model):
+    """A Mountable for a particular filesystem, such as 
+       MDT, OST or Client"""
+    filesystem = models.ForeignKey(Filesystem)
+
+    # Use of abstract base classes to avoid django bug #12002
+    class Meta:
+        abstract = True
+
+    def management_targets(self):
+        mgts = ManagementTarget.objects.filter(filesystems__in = [self.filesystem])
+        if len(mgts) == 0:
+            raise ManagementTarget.DoesNotExist
+        else:
+            return mgts
+
+class TargetMount(Mountable):
+    """A mountable (host+mount point+device()) which associates a Target
+       with a particular location to mount as primary or as failover"""
+    # Like /dev/disk/by-path/ip-asdasdasd
+    block_device = models.CharField(max_length = 512, null = True, blank = True)
+    # TODO: constraint that there can only be one primary for a target
+    primary = models.BooleanField()
+
+    # TODO: in the case of an MGS, constrain that there may not be two TargetMounts for the same host which 
+    # both reference an MGS in 'target'
+
+    target = models.ForeignKey('Target')
+
+    # NB we have to define host here rather than in parent Mountable
+    # in order for ManyToManyField to work with this as a 'through'
+    host = models.ForeignKey(Host)
+
+    def __str__(self):
+        if self.target.name:
+            return self.target.name
+        else:
+            return "%s %s" % (self.target.role(), self.target.id)
+
+    def status_rag(self):
+        return {
+                "MOUNTED": "OK",
+                "FAILOVER": "WARNING",
+                "HA WARN": "WARNING",
+                "REDUNDANT": "OK",
+                "SPARE": "OK",
+                "UNMOUNTED": "OFFLINE",
+                "???": ""
+                }[self.status_string()]
+
+    def status_string(self):
+        this_status = AuditMountable.mountable_status_string(self)
+        other_status = []
+        for target_mount in self.target.targetmount_set.all():
+            if target_mount != self:
+                other_status.append(AuditMountable.mountable_status_string(target_mount))
+
+        if len(other_status) == 0:
+            return this_status
+        else:
+            if self.primary and this_status != "MOUNTED":
+                if "MOUNTED" in other_status:
+                    return "FAILOVER"
+                else:
+                    return "UNMOUNTED"
+
+            if self.primary and this_status == "MOUNTED":
+                if "???" in other_status:
+                    return "HA WARN"
+                else:
+                    return "REDUNDANT"
+
+            if not self.primary:
+                if this_status == "MOUNTED":
+                    return "FAILOVER"
+                elif this_status == "???":
+                    return "???"
+                else:
+                    return "SPARE"
+
+        raise NotImplementedError
 
     def pretty_block_device(self):
         # Truncate to iSCSI iqn if possible
@@ -126,47 +231,17 @@ class Mountable(models.Model):
         # Fall through, do nothing
         return self.block_device
 
-    def __str__(self):
-        if isinstance(self, LocalMountable):
-            if self.name:
-                name = self.name
-            else:
-                if isinstance(self, FilesystemMountable):
-                    name = "%s-%sffff %s" % (self.filesystem.name, self.role(), self.id)
-                else:
-                    name = "%s %s" % (self.role(), self.id)
-        else:
-            if isinstance(self, FilesystemMountable):
-                name = "%s-%s %s" % (self.filesystem.name, self.role(), self.id)
-            else:
-                name = "%s %s" % (self.role(), self.id)
-
-        return name
-        
-
-class FilesystemMountable(models.Model):
-    """A Mountable for a particular filesystem, such as 
-       MDT, OST or Client"""
-    filesystem = models.ForeignKey(Filesystem)
-
-    def management_targets(self):
-        mgts = ManagementTarget.objects.filter(filesystems__in = [self.filesystem])
-        if len(mgts) == 0:
-            raise ManagementTarget.DoesNotExist
-        else:
-            return mgts
-
-class LocalMountable(Mountable):
+class Target(models.Model):
     """NB the nullable-ness of the dev vs. name is a monitor vs. manage thing.  When
        you're managing, and you create volumes, you always have a dev but you may 
        not have a name til you format.  But when you're monitoring, you may learn
        a name from the MGS before you get to the host to learn the device.  This
        version of the class is monitoring-oriented"""
-    # Like /dev/disk/by-path/ip-asdasdasd
-    block_device = models.CharField(max_length = 512, null = True, blank = True)
-
     # Like testfs-OST0001
     name = models.CharField(max_length = 64)
+
+    # Hosts which may mount this target
+    hosts = models.ManyToManyField(Host, through = TargetMount)
 
     def name_no_fs(self):
         """Something like OST0001 rather than testfs1-OST0001"""
@@ -178,41 +253,66 @@ class LocalMountable(Mountable):
         else:
             return self.role()
 
-class MetadataTarget(LocalMountable, FilesystemMountable):
+    def status_string(self):
+        mount_statuses = set([target_mount.status_string() for target_mount in self.targetmount_set.all()])
+        if "REDUNDANT" in mount_statuses:
+            return "REDUNDANT"
+        elif "FAILOVER" in mount_statuses:
+            return "FAILOVER"
+        elif "MOUNTED" in mount_statuses:
+            return "MOUNTED"
+        else:
+            return "UNMOUNTED"
+
+class MetadataTarget(Target, FilesystemMember):
     def role(self):
         return "MDT"
 
-class ManagementTarget(LocalMountable):
+class ManagementTarget(Target):
     filesystems = models.ManyToManyField(Filesystem)
     def role(self):
         return "MGS"
 
-class ObjectStoreTarget(LocalMountable, FilesystemMountable):
+class ObjectStoreTarget(Target, FilesystemMember):
     def role(self):
         return "OST"
 
-class Client(FilesystemMountable, Mountable):
+class Client(Mountable, FilesystemMember):
+    # Nullable because we might learn about a mountable on the MGS and
+    # not know its mount point until we look at the server it's on.
+    host = models.ForeignKey(Host)
+
     def role(self):
         return "Client"
 
-def get_real_mountable(target):
+def get_real_target(target):
     try:
-        lm = target.localmountable
-    except LocalMountable.DoesNotExist:
-        return target.client
-
-    try:
-        return lm.metadatatarget
+        return target.metadatatarget
     except MetadataTarget.DoesNotExist:
         pass
     try:
-        return lm.managementtarget
-    except ManagementTarget.DoesNotExist:
-        pass
-    try:
-        return lm.objectstoretarget
+        return target.objectstoretarget
     except ObjectStoreTarget.DoesNotExist:
         pass
+    try:
+        return target.managementtarget
+    except ManagementTarget.DoesNotExist:
+        pass
+
+    raise NotImplementedError
+
+def get_real_mountable(mountable):
+    try:
+        return mountable.targetmount
+    except TargetMount.DoesNotExist:
+        pass
+
+    try:
+        return mountable.client
+    except Client.DoesNotExist:
+        pass
+
+    raise NotImplementedError
 
 class Audit(models.Model):
     """Represent an attempt to audit some hosts"""
@@ -310,8 +410,7 @@ from django.contrib import admin
 admin.site.register(Host)
 admin.site.register(Filesystem)
 admin.site.register(Mountable)
-admin.site.register(FilesystemMountable)
-admin.site.register(LocalMountable)
+admin.site.register(FilesystemMember)
 admin.site.register(ManagementTarget)
 admin.site.register(MetadataTarget)
 admin.site.register(ObjectStoreTarget)

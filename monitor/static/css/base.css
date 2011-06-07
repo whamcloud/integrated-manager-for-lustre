@@ -105,17 +105,6 @@ div.dashtree span.WARNING {
 div.dashtree span.OFFLINE {
     color: #F00;
     border: 1px solid #f00;
-}
-
-div.dashtree span.MOUNTED {
-    color: #0f0;
-    border: 1px solid #0e0;
-    background: #0a0;
-}
-
-div.dashtree span.UNMOUNTED {
-    color: #f00;
-    border: 1px solid #e00;
     background: #500;
 }
 

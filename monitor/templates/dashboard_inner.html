@@ -11,9 +11,9 @@
     {% for host,targets in filesystem.get_servers.items %}
     <li class="host collapsible"><span class='name'>{{host.address}}</span> ({{host.role}}) <span class="status {{host.status_string}}">{{host.status_string}}</span>
         <ul class="tree">
-            {% for mountable in targets %}
+            {% for targetmountable in targets %}
                 <li class="target">
-                {{mountable.name_no_fs}} <span class="status {{mountable.status_string}}">{{ mountable.status_string }}</span>
+                {{targetmountable.target.name_no_fs}} <span class="status {{targetmountable.status_rag}}">{{ targetmountable.status_string }}</span>
                 </li>
             {% endfor %}
         </ul>
@@ -35,7 +35,7 @@
     <ul class="tree">
         {% for mountable in host.get_mountables %}
         <li class="target">
-        {{mountable}} <span class='status {{mountable.status_string}}'>{{mountable.status_string}}</span>
+        {{mountable}} <span class='status {{mountable.status_rag}}'>{{mountable.status_string}}</span>
         </li>
         {% endfor %}
     </ul>

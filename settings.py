@@ -129,12 +129,22 @@ LOGGING = {
         'mail_admins': {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler'
+        },
+        'sql_log_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'sql.log'
         }
     },
     'loggers': {
         'django.request':{
             'handlers': ['mail_admins'],
             'level': 'ERROR',
+            'propagate': True,
+        },
+        'django.db.backends':{
+            'handlers': ['sql_log_file'],
+            'level': 'DEBUG',
             'propagate': True,
         },
     }

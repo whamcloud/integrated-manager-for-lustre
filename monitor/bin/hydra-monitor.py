@@ -11,10 +11,10 @@ import os
 
 if __name__=='__main__':
     try:
-        lustre_audit = LustreAudit()
         while(True):
-            lustre_audit.audit_all()
+            LustreAudit().audit_all()
             sleep(5)
+        #LustreAudit().audit_all()
 
     except KeyboardInterrupt:
         print "Exiting..."
