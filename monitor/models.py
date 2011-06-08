@@ -410,7 +410,6 @@ from django.contrib import admin
 admin.site.register(Host)
 admin.site.register(Filesystem)
 admin.site.register(Mountable)
-admin.site.register(FilesystemMember)
 admin.site.register(ManagementTarget)
 admin.site.register(MetadataTarget)
 admin.site.register(ObjectStoreTarget)
