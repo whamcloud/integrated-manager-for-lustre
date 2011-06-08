@@ -9,22 +9,7 @@ import subprocess
 
 class LocalLustreAudit:
     def normalize_device(self, device):
-        bypath = "/dev/disk/by-path"
-        if not hasattr(self, 'device_lookup'):
-            self.device_lookup = {}
-            for f in os.listdir(bypath):
-                self.device_lookup[os.path.realpath(os.path.join(bypath, f))] = os.path.join(bypath, f)
-
-
-        device = device.strip()
-        if os.path.commonprefix([bypath, device]) != bypath:
-            try:
-                return self.device_lookup[os.path.realpath(device)]
-            except KeyError:
-                return device
-        else:
-            return device
-
+        return os.path.realpath(device)
 
     def name2kind(self, name):
         if name == "MGS":
