@@ -244,12 +244,11 @@ class LustreAudit:
         for audit_host, data in self.raw_data.items():
             for mount_info in data['local_targets']:
                 if mount_info['kind'] == 'MGS':
-                    mgs = ManagementTarget.objects.get(hosts = audit_host.host, name = mount_info['name'])
-                    mountable = mgs.targetmount_set.get(host = audit_host.host, mount_point = mount_info['mount_point'])
+                    target = ManagementTarget.objects.get(hosts = audit_host.host, name = mount_info['name'])
+                    mountable = target.targetmount_set.get(host = audit_host.host, mount_point = mount_info['mount_point'])
 
                     audit_mountable = AuditMountable(audit = self.audit,
-                            audit_host = audit_host, mountable = mountable,
-                            mounted = mount_info['running'])
+                            mountable = mountable, mounted = mount_info['running'])
                 else:
                     # Find the MGS based on mount_info['params']['mgsnode']
                     mgsnode_nids = normalize_nids(mount_info['params']['mgsnode'][0].split(","))
@@ -266,17 +265,23 @@ class LustreAudit:
                             continue
 
                         if target_val.filesystem.mgs == mgs:
-                            for tm in target_val.targetmount_set.filter(host = audit_host.host):
-                                if tm.mount_point == mount_info['mount_point']:
-                                    mountable = tm
+                            mountable = target_val.targetmount_set.get(host = audit_host.host,
+                                            mount_point = mount_info['mount_point'])
+                            break
 
                     if mountable == None:
                         log().warning("Cannot find target %s for mgs nids %s" % (mount_info['name'], mgsnode_nids))
                         continue
 
-                    audit_mountable = AuditRecoverable(audit = self.audit, audit_host = audit_host,
+                    audit_mountable = AuditRecoverable(audit = self.audit, 
                             mountable = mountable, mounted = mount_info['running'],
                             recovery_status = json.dumps(mount_info["recovery_status"]))
+
+                audit_target,created = self.audit.audittarget_set.get_or_create(target = mountable.target, audit = self.audit)
+                if created:
+                    for key, val_list in mount_info['params'].items():
+                        for val in val_list:
+                            audit_target.auditparam_set.create(key = key, value = val)
 
                 audit_mountable.save()
 
@@ -304,7 +309,7 @@ class LustreAudit:
                 if created:
                     log().info("Learned client %s" % client)
 
-                audit_mountable = AuditMountable(audit = self.audit, audit_host = audit_host, mountable = client, mounted = client_info['mounted'])
+                audit_mountable = AuditMountable(audit = self.audit, mountable = client, mounted = client_info['mounted'])
                 audit_mountable.save()
 
     def learn_fs_targets(self):

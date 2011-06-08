@@ -266,6 +266,9 @@ class Target(models.Model):
         else:
             return "UNMOUNTED"
 
+    def params(self):
+        return AuditTarget.target_params(self)
+
 class MetadataTarget(Target, FilesystemMember):
     def role(self):
         return "MDT"
@@ -351,12 +354,34 @@ class AuditNid(models.Model):
     audit_host = models.ForeignKey(AuditHost)
     nid_string = models.CharField(max_length=128)
 
+class AuditTarget(models.Model):
+    audit = models.ForeignKey(Audit)
+    target = models.ForeignKey(Target)
+
+    @staticmethod
+    def target_params(target):
+        """Unlike what we do for TargetMount status, when there isn't an up to date
+           AuditTarget, we will return the last known parameters rather than '???'"""
+        result = []
+        try:
+            audit_target = AuditTarget.objects.filter(target = target).latest('audit__created_at') 
+            for param in audit_target.auditparam_set.all():
+                result.append((param.key, param.value))
+        except AuditTarget.DoesNotExist:
+            pass
+
+        return result
+
+class AuditParam(models.Model):
+    audit_target = models.ForeignKey(AuditTarget)
+    key = models.CharField(max_length=128)
+    value = models.CharField(max_length=512)
+
 class AuditMountable(models.Model):
     """Everything we learned about a Mountable when auditing a Host"""
     # Reference audit and audithost in order to allow for the case
     # where we audit the volume on the 'wrong' host
     audit = models.ForeignKey(Audit)
-    audit_host = models.ForeignKey(AuditHost)
 
     mountable = models.ForeignKey(Mountable)
     mounted = models.BooleanField()
@@ -375,7 +400,7 @@ class AuditMountable(models.Model):
         try:
             audit_host = audit.audithost_set.get(host = mountable.host)
             try:
-                audit_mountable = audit_host.auditmountable_set.get(mountable = mountable)
+                audit_mountable = audit.auditmountable_set.get(mountable = mountable)
                 try:
                     if audit_mountable.auditrecoverable.is_recovering():
                         return "RECOVERY"
