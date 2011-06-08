@@ -177,6 +177,20 @@ div.closed_icon {
     height: 16px;
 }
 
+ul.compact_list li {
+    margin-bottom: 0px;
+    padding-bottom: 0px;
+    font-size: 0.9em;
+}
+
+li.lustre_param {
+    color: #333;
+}
+
+span.param_key {
+    font-weight: bold;
+}
+
 /* Body/header/logo/navigation */
 
 body {
