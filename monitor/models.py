@@ -14,7 +14,7 @@ class Host(models.Model):
     def get_mountables(self):
         """Like mountable_set.all() but downcasting to their most 
            specific class rather than returning a bunch of Mountable"""
-        return [m for m in list(self.targetmount_set.all()) + list(self.client_set.all())]
+        return [m.downcast() for m in self.mountable_set.all()]
 
     def role(self):
         roles = set()
@@ -115,6 +115,7 @@ class Mountable(models.Model):
     """Something that can be mounted on a particular host (roughly
        speaking a line in fstab."""
     mount_point = models.CharField(max_length = 512, null = True, blank = True)
+    host = models.ForeignKey(Host)
 
     def host(self):
         """To be implemented by child classes"""
@@ -189,15 +190,8 @@ class TargetMount(Mountable):
 
     target = models.ForeignKey('Target')
 
-    # NB we have to define host here rather than in parent Mountable
-    # in order for ManyToManyField to work with this as a 'through'
-    host = models.ForeignKey(Host)
-
     def __str__(self):
-        if self.target.name:
-            return self.target.name
-        else:
-            return "%s %s" % (self.target.role(), self.target.id)
+        return "%s" % self.target
 
 
     def status_string(self):
@@ -260,9 +254,6 @@ class Target(models.Model):
     # Like testfs-OST0001
     name = models.CharField(max_length = 64)
 
-    # Hosts which may mount this target
-    hosts = models.ManyToManyField(Host, through = TargetMount)
-
     def downcast(self):
         try:
             return self.metadatatarget
@@ -278,6 +269,7 @@ class Target(models.Model):
             pass
 
         raise NotImplementedError
+
     def name_no_fs(self):
         """Something like OST0001 rather than testfs1-OST0001"""
         if self.name:
@@ -302,6 +294,12 @@ class Target(models.Model):
     def params(self):
         return AuditTarget.target_params(self)
 
+    def __str__(self):
+        if self.name:
+            return self.name
+        else:
+            return "%s %s" % (self.__class__.__name__, self.id)
+
 class MetadataTarget(Target, FilesystemMember):
     def role(self):
         return "MDT"
@@ -316,10 +314,6 @@ class ObjectStoreTarget(Target, FilesystemMember):
         return "OST"
 
 class Client(Mountable, FilesystemMember):
-    # Nullable because we might learn about a mountable on the MGS and
-    # not know its mount point until we look at the server it's on.
-    host = models.ForeignKey(Host)
-
     def role(self):
         return "Client"
 
