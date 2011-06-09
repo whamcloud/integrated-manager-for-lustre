@@ -92,7 +92,7 @@ class LustreAudit:
         # same ManagementTarget.
         for h in hosts:
             for target_mount in h.targetmount_set.all():
-                target = get_real_target(target_mount.target)
+                target = target_mount.target.downcast()
                 if isinstance(target, ManagementTarget):
                     return target
         
@@ -260,7 +260,7 @@ class LustreAudit:
 
                     mountable = None
                     for target_val in Target.objects.filter(name = mount_info['name']):
-                        target_val = get_real_target(target_val)
+                        target_val = target_val.downcast()
                         if not isinstance(target_val, FilesystemMember):
                             continue
 

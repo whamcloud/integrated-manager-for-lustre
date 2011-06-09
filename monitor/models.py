@@ -14,12 +14,12 @@ class Host(models.Model):
     def get_mountables(self):
         """Like mountable_set.all() but downcasting to their most 
            specific class rather than returning a bunch of Mountable"""
-        return [get_real_mountable(m) for m in list(self.targetmount_set.all()) + list(self.client_set.all())]
+        return [m for m in list(self.targetmount_set.all()) + list(self.client_set.all())]
 
     def role(self):
         roles = set()
         for target_mount in self.targetmount_set.all():
-            target = get_real_target(target_mount.target)
+            target = target_mount.target.downcast()
             if target.__class__ == ManagementTarget:
                 roles.add("MGS")
             elif target.__class__ == MetadataTarget:
@@ -125,7 +125,25 @@ class Mountable(models.Model):
         raise NotImplementedError()
 
     def role(self):
-        return get_real_mountable(self).role()
+        return self.downcast().role()
+
+    def downcast(self):
+        if self.__class__ != Mountable and isinstance(self, Mountable):
+            return self
+            
+        try:
+            return self.targetmount
+        except TargetMount.DoesNotExist:
+            pass
+
+        try:
+            return self.client
+        except Client.DoesNotExist:
+            pass
+
+        print self, self.id
+
+        raise NotImplementedError
 
     def status_string(self):
         raise NotImplementedError
@@ -245,6 +263,21 @@ class Target(models.Model):
     # Hosts which may mount this target
     hosts = models.ManyToManyField(Host, through = TargetMount)
 
+    def downcast(self):
+        try:
+            return self.metadatatarget
+        except MetadataTarget.DoesNotExist:
+            pass
+        try:
+            return self.objectstoretarget
+        except ObjectStoreTarget.DoesNotExist:
+            pass
+        try:
+            return self.managementtarget
+        except ManagementTarget.DoesNotExist:
+            pass
+
+        raise NotImplementedError
     def name_no_fs(self):
         """Something like OST0001 rather than testfs1-OST0001"""
         if self.name:
@@ -293,34 +326,9 @@ class Client(Mountable, FilesystemMember):
     def status_string(self):
         return AuditMountable.mountable_status_string(self)
 
-def get_real_target(target):
-    try:
-        return target.metadatatarget
-    except MetadataTarget.DoesNotExist:
-        pass
-    try:
-        return target.objectstoretarget
-    except ObjectStoreTarget.DoesNotExist:
-        pass
-    try:
-        return target.managementtarget
-    except ManagementTarget.DoesNotExist:
-        pass
 
-    raise NotImplementedError
 
-def get_real_mountable(mountable):
-    try:
-        return mountable.targetmount
-    except TargetMount.DoesNotExist:
-        pass
 
-    try:
-        return mountable.client
-    except Client.DoesNotExist:
-        pass
-
-    raise NotImplementedError
 
 class Audit(models.Model):
     """Represent an attempt to audit some hosts"""
@@ -444,7 +452,6 @@ admin.site.register(ManagementTarget)
 admin.site.register(MetadataTarget)
 admin.site.register(ObjectStoreTarget)
 admin.site.register(Client)
-
 admin.site.register(Audit)
 admin.site.register(AuditHost)
 admin.site.register(AuditNid)
