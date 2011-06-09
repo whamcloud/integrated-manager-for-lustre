@@ -68,15 +68,20 @@ class LocalLustreAudit:
 
                 device = self.normalize_device(open(glob.glob("/proc/fs/lustre/*/%s/mntdev" % name)[0]).read())
 
-                targets[device] = {"recovery_status": recovery_status, "uuid": uuid, "running": True}
+                # For mounted devices, we can learn the mount point from /proc/mounts
+                mount_point = None
+                for mount_device, mntpnt, fstype in self.mounts:
+                    if mount_device == device:
+                        mount_point = mntpnt
+
+                targets[device] = {"recovery_status": recovery_status, "uuid": uuid, "running": True, "mount_point": mount_point}
 
         mntpnts = {}
 
         # Get all 'lustre' targets from fstab, and merge info with
         # what we learned from /proc or create fresh entries for 
         # targets not previously known
-        for line in open("/etc/fstab").readlines():
-            (device, mntpnt, fstype) = line.split()[0:3]
+        for device, mntpnt, fstype in self.fstab:
             if not fstype == "lustre":
                 continue
 
@@ -150,22 +155,12 @@ class LocalLustreAudit:
             else:
                 return None
 
-        for line in open("/etc/fstab").readlines():
-            (device, mntpnt, fstype) = line.split()[0:3]
+        for device, mntpnt, fstype in self.fstab:
             info = client_info(device, mntpnt, fstype)
             if info:
                 client_mounts[mntpnt] = info
 
-        # NB we must use /proc/mounts instead of `mount` because `mount` sometimes
-        # reports out of date information from /etc/mtab when a lustre service doesn't
-        # tear down properly.
-        mount_text = open("/proc/mounts").read()
-        for line in mount_text.split("\n"):
-            result = re.search("([^ ]+) ([^ ]+) ([^ ]+) ",line)
-            if not result:
-                continue
-
-            device,mntpnt,fstype = result.groups()
+        for device, mntpnt, fstype in self.mounts:
             if mntpnt in client_mounts:
                 client_mounts[mntpnt]['mounted'] = True
             else:
@@ -260,7 +255,33 @@ class LocalLustreAudit:
 
         return lnet_up, lnet_nids
 
+    def read_mounts(self):
+        # NB we must use /proc/mounts instead of `mount` because `mount` sometimes
+        # reports out of date information from /etc/mtab when a lustre service doesn't
+        # tear down properly.
+        self.mounts = []
+        mount_text = open("/proc/mounts").read()
+        for line in mount_text.split("\n"):
+            result = re.search("([^ ]+) ([^ ]+) ([^ ]+) ",line)
+            if not result:
+                continue
+            device,mntpnt,fstype = result.groups()
+
+            self.mounts.append((
+                device,
+                mntpnt,
+                fstype))
+
+    def read_fstab(self):
+        self.fstab = []
+        for line in open("/etc/fstab").readlines():
+            (device, mntpnt, fstype) = line.split()[0:3]
+            self.fstab.append((device, mntpnt, fstype))
+
     def audit_info(self):
+        self.read_mounts()
+        self.read_fstab()
+
         local_targets = self.get_local_targets()
         mgs_targets = self.get_mgs_targets(local_targets)
         client_mounts = self.get_client_mounts()
