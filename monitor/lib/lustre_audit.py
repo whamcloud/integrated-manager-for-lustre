@@ -85,18 +85,16 @@ class LustreAudit:
 
     def nids_to_mgs(self, nid_strings):
         nids = Nid.objects.filter(nid_string__in = nid_strings)
-        hosts = set([n.host for n in nids])
-        # TODO: detect and report the pathological case where someone has given
-        # us two NIDs that refer to different hosts which both have a 
-        # targetmount for a ManagementTarget, but they're not the
-        # same ManagementTarget.
-        for h in hosts:
-            for target_mount in h.targetmount_set.all():
-                target = target_mount.target.downcast()
-                if isinstance(target, ManagementTarget):
-                    return target
-        
-        raise ManagementTarget.DoesNotExist
+        hosts = Host.objects.filter(nid__in = nids)
+        try:
+            mgs = ManagementTarget.objects.get(targetmount__host__in = hosts)
+        except ManagementTarget.MultipleObjectsReturned:
+            # TODO: detect and report the pathological case where someone has given
+            # us two NIDs that refer to different hosts which both have a 
+            # targetmount for a ManagementTarget, but they're not the
+            # same ManagementTarget.
+
+            raise ManagementTarget.DoesNotExist
 
     def audit_hosts(self, hosts):
         if len(hosts) == 0:
