@@ -171,7 +171,7 @@ class LustreAudit:
 
     def learn_mgs(self, host, data):
         try:
-            mgs = ManagementTarget.objects.get(hosts = host)
+            mgs = ManagementTarget.get_by_host(host)
         except ManagementTarget.DoesNotExist:
             # This can either be a newly discovered MGS, or it could be an existing
             # MGS 
@@ -224,10 +224,24 @@ class LustreAudit:
                         elif name.find("-OST") != -1:
                             klass = ObjectStoreTarget
 
-                        (target, created) = klass.objects.get_or_create(
-                            name = local_target['name'], filesystem = fs)
-                        if created:
-                            log().info("Learned %s %s" % (klass.__name__, name))
+                    
+                        try:
+                            # See if there's a new unnamed target that we can fill out 
+                            # the name for
+                            target = klass.objects.get(targetmount__host = host,
+                                    targetmount__mount_point = local_target['mount_point'],
+                                    targetmount__block_device = local_target['device'],
+                                    filesystem = fs,
+                                    name = None)
+                            target.name = local_target['name']
+                            target.save()
+                            log().info("Learned name '%s' for %s on %s" % (
+                                local_target['name'], local_target['device'], host.address))
+                        except klass.DoesNotExist:
+                            (target, created) = klass.objects.get_or_create(
+                                name = local_target['name'], filesystem = fs)
+                            if created:
+                                log().info("Learned %s %s" % (klass.__name__, name))
 
                         try:
                             primary = is_primary(host, local_target)
@@ -244,7 +258,7 @@ class LustreAudit:
         for audit_host, data in self.raw_data.items():
             for mount_info in data['local_targets']:
                 if mount_info['kind'] == 'MGS':
-                    target = ManagementTarget.objects.get(hosts = audit_host.host, name = mount_info['name'])
+                    target = ManagementTarget.get_by_host(audit_host.host)
                     mountable = target.targetmount_set.get(host = audit_host.host, mount_point = mount_info['mount_point'])
 
                     audit_mountable = AuditMountable(audit = self.audit,
@@ -331,8 +345,6 @@ class LustreAudit:
                 if created:
                     log().info("Learned filesystem '%s'" % fs_name)
                 filesystem_targets[fs] = targets
-                # .add does not duplicate if fs is already there
-                mgs.filesystems.add(fs)
 
             self.learn_mgs_targets(filesystem_targets, normalize_nids(data['lnet_nids']))
 

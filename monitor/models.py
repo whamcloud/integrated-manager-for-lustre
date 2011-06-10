@@ -18,17 +18,19 @@ class Host(models.Model):
 
     def role(self):
         roles = set()
-        for target_mount in self.targetmount_set.all():
-            target = target_mount.target.downcast()
-            if target.__class__ == ManagementTarget:
-                roles.add("MGS")
-            elif target.__class__ == MetadataTarget:
-                roles.add("MDS")
-            elif target.__class__ == ObjectStoreTarget:
-                roles.add("OSS")
+        for mountable in self.mountable_set.all():
+            mountable = mountable.downcast()
+            if isinstance(mountable, TargetMount):
+                target = mountable.target.downcast()
+                if target.__class__ == ManagementTarget:
+                    roles.add("MGS")
+                elif target.__class__ == MetadataTarget:
+                    roles.add("MDS")
+                elif target.__class__ == ObjectStoreTarget:
+                    roles.add("OSS")
 
-        if self.client_set.count() > 0:
-            roles.add("Client")
+            if isinstance(mountable, Client):
+                roles.add("Client")
 
         if self.router_set.count() > 0:
             roles.add("Router")
@@ -71,13 +73,10 @@ class Filesystem(models.Model):
     # TODO: uniqueness constraint on name + MGS
 
     def get_targets(self):
-        return [self.get_mgs()] + self.get_filesystem_targets()
+        return [self.mgs] + self.get_filesystem_targets()
 
     def get_filesystem_targets(self):
         return list(MetadataTarget.objects.filter(filesystem = self).all()) + list(ObjectStoreTarget.objects.filter(filesystem = self).all())
-
-    def get_mgs(self):
-        return ManagementTarget.objects.get(filesystems = self)
 
     def get_servers(self):
         targets = self.get_targets()
@@ -98,10 +97,9 @@ class Filesystem(models.Model):
         if not good_status & fs_statuses:
             return "OFFLINE"
 
-        all_statuses = fs_statuses | set([self.get_mgs().status_string()])
+        all_statuses = fs_statuses | set([self.mgs.status_string()])
 
         # If all my targets are up including the MGS, then I'm green
-
         if all_statuses <= good_status:
             return "OK"
 
@@ -114,12 +112,8 @@ class Filesystem(models.Model):
 class Mountable(models.Model):
     """Something that can be mounted on a particular host (roughly
        speaking a line in fstab."""
+    host = models.ForeignKey('Host')
     mount_point = models.CharField(max_length = 512, null = True, blank = True)
-    host = models.ForeignKey(Host)
-
-    def host(self):
-        """To be implemented by child classes"""
-        raise NotImplementedError()
 
     def device(self):
         """To be implemented by child classes"""
@@ -191,8 +185,7 @@ class TargetMount(Mountable):
     target = models.ForeignKey('Target')
 
     def __str__(self):
-        return "%s" % self.target
-
+        return "%s on %s" % (self.target, self.host.address)
 
     def status_string(self):
         this_status = AuditMountable.mountable_status_string(self)
@@ -246,13 +239,10 @@ class TargetMount(Mountable):
         return self.block_device
 
 class Target(models.Model):
-    """NB the nullable-ness of the dev vs. name is a monitor vs. manage thing.  When
-       you're managing, and you create volumes, you always have a dev but you may 
-       not have a name til you format.  But when you're monitoring, you may learn
-       a name from the MGS before you get to the host to learn the device.  This
-       version of the class is monitoring-oriented"""
     # Like testfs-OST0001
-    name = models.CharField(max_length = 64)
+    # Nullable because when manager creates a Target it doesn't know the name
+    # until it's formatted+started+audited
+    name = models.CharField(max_length = 64, null = True, blank = True)
 
     def downcast(self):
         try:
@@ -278,7 +268,7 @@ class Target(models.Model):
             else:
                 return self.name
         else:
-            return self.role()
+            return self.downcast().role()
 
     def status_string(self):
         mount_statuses = set([target_mount.status_string() for target_mount in self.targetmount_set.all()])
@@ -305,9 +295,12 @@ class MetadataTarget(Target, FilesystemMember):
         return "MDT"
 
 class ManagementTarget(Target):
-    filesystems = models.ManyToManyField(Filesystem)
     def role(self):
         return "MGS"
+
+    @staticmethod
+    def get_by_host(host):
+        return ManagementTarget.objects.get(targetmount__host = host)
 
 class ObjectStoreTarget(Target, FilesystemMember):
     def role(self):
@@ -319,10 +312,6 @@ class Client(Mountable, FilesystemMember):
 
     def status_string(self):
         return AuditMountable.mountable_status_string(self)
-
-
-
-
 
 class Audit(models.Model):
     """Represent an attempt to audit some hosts"""
