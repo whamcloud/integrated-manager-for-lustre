@@ -245,3 +245,15 @@ pre
         display: inline;
         padding: 10px 100px;
     }
+.normal
+    {
+	color: #000000;
+    }
+.lustre
+    {
+	color: #0000FF;
+    }
+.lustre_error
+    {
+	color: #FF0000;
+    }
