@@ -5,6 +5,8 @@ from django.template import RequestContext
 
 from monitor.models import *
 
+import re
+
 def dashboard(request):
     return render_to_response("dashboard.html",
             RequestContext(request, {}))
@@ -24,3 +26,117 @@ def dashboard_inner(request):
                 "clients": Client.objects.all(),
                 "last_audit_time": last_audit_time
                 }))
+
+from django import forms
+from django.http import HttpResponse
+from django.http import HttpResponseRedirect
+
+class LogViewerForm(forms.Form):
+    start_month = forms.ChoiceField(label = "Starting Month")
+    start_day = forms.ChoiceField(label = "Starting Day")
+    only_lustre = forms.BooleanField(required=False, label = "Only Lustre messages?")
+
+MONTHS=('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
+
+# XXX tsk tsk tsk.  this is a copy of the same function from 
+#     monitor/lib/lustre_audit.py
+#     we need to build a library of this kind of stuff that everyone
+#     can use
+def normalize_nid(string):
+    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow 
+       direct comparisons between NIDs"""
+    if string[-4:] == "@tcp":
+        string += "0"
+
+    # remove _ from nids (i.e. @tcp_0 -> @tcp0
+    i = string.find("_")
+    if i > -1:
+        string = string[:i] + string [i + 1:]
+
+    return string
+
+def get_log_data(for_date, only_lustre):
+    log_file = open("/tmp/syslog")
+
+    log_file.seek(0, 0)
+    matched = 0
+    log_data = ""
+    while 1:
+        line = log_file.readline()
+        if line == "":
+            break
+        if only_lustre and line.find(" Lustre") < 0:
+            continue
+        if line.startswith(for_date):
+            matched = 1
+            p = re.compile("(\d{1,3}\.){3}\d{1,3}@tcp(_\d+)?")
+            i = p.finditer(line)
+            for match in i:
+                replace = match.group()
+                replace = normalize_nid(replace)
+                try:
+                    line = line.replace(match.group(),
+                               Nid.objects.get(nid_string = replace).host.address,
+                               1)
+                except:
+                    print "failed to replace " + replace
+
+            if line.find(" LustreError") > -1:
+                line = '</pre><font color="#FF0000"><pre>' + line + '</pre><font color="#000000"><pre>'
+            elif line.find(" Lustre") > -1:
+                line = '</pre><font color="#0000FF"><pre>' + line + '</pre><font color="#000000"><pre>'
+            log_data += line
+        else:
+    	# bail out early
+            if matched:
+                break
+
+    return log_data
+
+def log_viewer(request):
+    log_file = open("/tmp/syslog")
+    # get the date of the first line
+    line = log_file.readline()
+    (start_m, start_d, junk) = line.split(None, 2)
+    
+    # and now the last line
+    log_file.seek(-1000, 2)
+    for line in log_file.readlines():
+        last_line = line
+    
+    (end_m, end_d, junk) = last_line.split(None, 2)
+    
+    display_month = start_m
+    display_day = int(start_d)
+    display_date = "%s %2d " % (display_month, display_day)
+
+    if request.method == 'POST': # If the form has been submitted...
+        form = LogViewerForm(request.POST) # A form bound to the POST data
+        if form.is_valid(): # All validation rules pass
+            only_lustre = True
+            display_month = form.cleaned_data['start_month']
+            display_day = form.cleaned_data['start_day']
+            only_lustre = form.cleaned_data['only_lustre']
+            display_date = "%s %2d" % (MONTHS[int(display_month) - 1],
+                                       int(display_day))
+
+            log_data = "<pre>"
+            log_data += get_log_data(display_date, only_lustre)
+            log_data += "</pre>"
+            return render_to_response('log_viewer.html', { 'form': form, },
+                                      RequestContext(request,
+                                                     { "log_data": log_data, }))
+    else:
+        only_lustre = True
+        form = LogViewerForm() # An unbound form
+        form.fields['start_month'].choices.append(("6", "Jun"))
+        for day in range(int(start_d), int(end_d) + 1):
+            form.fields['start_day'].choices.append((day, day))
+        form.fields['only_lustre'].initial = only_lustre
+
+        log_data = "<pre>"
+        log_data += get_log_data(display_date, only_lustre)
+        log_data += "</pre>"
+        return render_to_response('log_viewer.html', { 'form': form, },
+                                  RequestContext(request,
+                                                 { "log_data": log_data, }))
