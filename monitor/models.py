@@ -164,13 +164,6 @@ class FilesystemMember(models.Model):
     class Meta:
         abstract = True
 
-    def management_targets(self):
-        mgts = ManagementTarget.objects.filter(filesystems__in = [self.filesystem])
-        if len(mgts) == 0:
-            raise ManagementTarget.DoesNotExist
-        else:
-            return mgts
-
 class TargetMount(Mountable):
     """A mountable (host+mount point+device()) which associates a Target
        with a particular location to mount as primary or as failover"""
@@ -185,7 +178,10 @@ class TargetMount(Mountable):
     target = models.ForeignKey('Target')
 
     def __str__(self):
-        return "%s on %s" % (self.target, self.host.address)
+        return "%s" % (self.target)
+
+    def device(self):
+        return self.block_device
 
     def status_string(self):
         this_status = AuditMountable.mountable_status_string(self)
@@ -313,6 +309,9 @@ class Client(Mountable, FilesystemMember):
     def status_string(self):
         return AuditMountable.mountable_status_string(self)
 
+    def __str__(self):
+        return "%s-client %d" % (self.filesystem.name, self.id)
+
 class Audit(models.Model):
     """Represent an attempt to audit some hosts"""
     created_at = models.DateTimeField(auto_now = True)
@@ -427,16 +426,7 @@ class AuditRecoverable(AuditMountable):
         else:
             return "N/A"
 
-from django.contrib import admin
-admin.site.register(Host)
-admin.site.register(Filesystem)
-admin.site.register(Mountable)
-admin.site.register(ManagementTarget)
-admin.site.register(MetadataTarget)
-admin.site.register(ObjectStoreTarget)
-admin.site.register(Client)
-admin.site.register(Audit)
-admin.site.register(AuditHost)
-admin.site.register(AuditNid)
-admin.site.register(AuditMountable)
-admin.site.register(AuditRecoverable)
+# Note: normally we would register models with the django admin, but
+# if you are including one app's models from another app, the included
+# app's models must not call into the admin, because the admin scans
+# all apps' models, causing a circular import.
