@@ -56,8 +56,8 @@ def dashboard_inner(request):
     return render_to_response("dashboard_inner.html",
             RequestContext(request, {
                 "management_targets": ManagementTarget.objects.all(),
-                "filesystems": Filesystem.objects.all(),
-                "hosts": Host.objects.all(),
+                "filesystems": Filesystem.objects.all().order_by('name'),
+                "hosts": Host.objects.all().order_by('address'),
                 "clients": Client.objects.all(),
                 "last_audit_time": last_audit_time
                 }))
