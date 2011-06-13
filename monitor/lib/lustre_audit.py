@@ -79,7 +79,7 @@ class LustreAudit:
         self.audit_hosts(hosts)
 
     def audit_host(self, host):
-        audit = self.audit_hosts([host], learn_state = False)
+        audit = self.audit_hosts([host])
         if audit.audithost_set.count() == 0:
             raise HostAuditError(host)
 
@@ -93,8 +93,9 @@ class LustreAudit:
             # us two NIDs that refer to different hosts which both have a 
             # targetmount for a ManagementTarget, but they're not the
             # same ManagementTarget.
-
             raise ManagementTarget.DoesNotExist
+
+        return mgs
 
     def audit_hosts(self, hosts):
         if len(hosts) == 0:
@@ -205,8 +206,8 @@ class LustreAudit:
                 name = target['name']
 
                 # Resolve name + nids of this mgs to locations for this target
+                local_info = None
                 for nid in mgs_host_nids:
-                    local_info = None
                     for ((name_val, mgs_nids_val), info_val) in self.target_locations.items():
                         if name_val == name and nid in mgs_nids_val:
                             local_info = info_val
@@ -221,7 +222,6 @@ class LustreAudit:
                             klass = MetadataTarget
                         elif name.find("-OST") != -1:
                             klass = ObjectStoreTarget
-
                     
                         try:
                             # See if there's a new unnamed target that we can fill out 
@@ -350,7 +350,7 @@ class LustreAudit:
         # Invoke hydra-agent remotely
         # ===========================
         addresses = [str(h.address) for h in hosts]
-        log().info("Auditing hosts: %s" % ", ".join(addresses))
+        log().debug("Auditing hosts: %s" % ", ".join(addresses))
         task = task_self()
         task.shell(AGENT_PATH, nodes = NodeSet.fromlist(addresses))
         task.resume()
@@ -362,7 +362,7 @@ class LustreAudit:
         raw_data = {}
         for output, nodes in task.iter_buffers():
             for node in nodes:
-                log().info("Parsing JSON from %s" % str(node))
+                log().debug("Parsing JSON from %s" % str(node))
                 output = "%s" % output
                 try:
                     data = json.loads(output)
