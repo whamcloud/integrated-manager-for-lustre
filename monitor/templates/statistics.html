@@ -51,92 +51,116 @@
         }
     }
 
-    function load_inner() {
-        $('#inner').load("statistics_inner/", function(response, status) {
-            if (status == 'error') {
-                $('#inner').html("Error loading status, check connection between browser and Hydra server");
+    function refresh_images() {
+        $('img.graph').each(function(item) {
+            if (!$(this).parents("li.collapsible").hasClass("closed")) {
+                $(this).attr("src", "/monitor/dyngraphs/" + $(this).attr('id') + "?time=" + new Date().getTime());
             }
-
-            setTimeout('load_inner()', 2000);
-
-            $('li.collapsible').each(function() {
-                /* Insert expand all and collapse all links */
-                if ($(this).find('li.collapsible').size() == 0) {
-                    return;
-                }
-                
-                $("<a href='#' class='tree_all expand_all'>Show all</a>").insertBefore($(this).children('ul'))
-                $("<span>&nbsp;/&nbsp;</span><a href='#' class='tree_all collapse_all'>Hide all</a>").insertBefore($(this).children('ul'));
-
-            });
-
-            $('a.expand_all').click(function(event) {
-                toggle_closed($(this).parent(), false, 0);
-                $(this).parent().find('li.collapsible').each(function() {
-                    toggle_closed($(this), false, 0);
-                });
-                event.stopPropagation();
-            });
-
-            $('a.collapse_all').click(function(event) {
-                $(this).parent().find('li.collapsible').each(function() {
-                    toggle_closed($(this), true, 0);
-                });
-                toggle_closed($(this).parent(), true, 0);
-                event.stopPropagation();
-            });
-
-            $('li.collapsible').each(function(item) {
-                /* Set 'closed' on anything with an 'OK' status */
-                if ($(this).children('span.status').first().hasClass('OK')) {
-                    $(this).addClass('closed')
-                }
-
-                /* Apply any closedness states stored in closed_states */
-                if ($(this).getPath() in closed_states) {
-                    $(this).toggleClass('closed', closed_states[$(this).getPath()])
-                }
-            });
-
-            $('li.collapsible').each(function(item) {
-                if ($(this).hasClass('closed')) {
-                    $(this).children('ul').hide();
-                    $("<div class='closed_icon'></div>").insertBefore($(this).children('ul'));
-                } else {
-                    $("<div class='open_icon'></div>").insertBefore($(this).children('ul'));
-                }
-            });
-            $('li.collapsible').click(function(event) {
-                toggle_closed($(this));
-                event.stopPropagation();
-            });
         });
+
+        setTimeout('refresh_images()', 5000);
     }
 
     $(document).ready(function() {
-            load_inner();
+        $('li.collapsible').each(function() {
+            /* Insert expand all and collapse all links */
+            if ($(this).find('li.collapsible').size() == 0) {
+                return;
+            }
+            
+            $("<a href='#' class='tree_all expand_all'>Show all</a>").insertBefore($(this).children('ul'))
+            $("<span>&nbsp;/&nbsp;</span><a href='#' class='tree_all collapse_all'>Hide all</a>").insertBefore($(this).children('ul'));
+
+        });
+
+        $('a.expand_all').click(function(event) {
+            toggle_closed($(this).parent(), false, 0);
+            $(this).parent().find('li.collapsible').each(function() {
+                toggle_closed($(this), false, 0);
+            });
+            event.stopPropagation();
+        });
+
+        $('a.collapse_all').click(function(event) {
+            $(this).parent().find('li.collapsible').each(function() {
+                toggle_closed($(this), true, 0);
+            });
+            toggle_closed($(this).parent(), true, 0);
+            event.stopPropagation();
+        });
+
+        $('li.collapsible').each(function(item) {
+            $(this).addClass('closed')
+
+            /* Apply any closedness states stored in closed_states */
+            if ($(this).getPath() in closed_states) {
+                $(this).toggleClass('closed', closed_states[$(this).getPath()])
+            }
+        });
+
+        $('li.collapsible').each(function(item) {
+            if ($(this).hasClass('closed')) {
+                $(this).children('ul').hide();
+                $("<div class='closed_icon'></div>").insertBefore($(this).children('ul'));
+            } else {
+                $("<div class='open_icon'></div>").insertBefore($(this).children('ul'));
+            }
+        });
+        $('li.collapsible').click(function(event) {
+            toggle_closed($(this));
+            event.stopPropagation();
+        });    
     });
 
+    refresh_images();
 
 </script>
 {% endblock %}
 
 {% block content %}
 
-<div id='inner'>
-    <span class='loading_placeholder'>Loading...</span>
-</div>
-<!--
+<table class="twocolumns">
+  <tr>
+    <td>
 <div class="dashtree">
-<h1>Clients</h1>
+<h1>Filesystems</h1>
 <ul class="tree">
-    {% for client in clients %}
-    <li class="client">
-    {{client.host.address}} ({{client.mount_point}}) <span class='status {{client.status_string}}'>{{client.status_string}}</span>
-    </li>
+{% for filesystem in filesystems %}
+<li class="filesystem collapsible"><span class='name'>{{filesystem.name}}</span>
+    <ul class="tree">
+    {% for target in filesystem.get_filesystem_targets %}
+        <li class="target collapsible">
+          <span class="name">{{target.name_no_fs}}</span>
+          <ul class="tree">
+            <li><span class="graph"><img class="graph" id="target/{{target.name}}:small" src="/monitor/dyngraphs/target/{{target.name}}:small"></span>
+            <span class="graph"><img class="graph" id="target/{{target.name}},ops:small" src="/monitor/dyngraphs/target/{{target.name}}:small"></span></li>
+            <li><span class="graph"><img class="graph" id="target/{{target.name}},lock:small" src="/monitor/dyngraphs/target/{{target.name}}:small"></span>
+            <span class="graph"><img class="graph" id="target/{{target.name}},clients:small" src="/monitor/dyngraphs/target/{{target.name}}:small"></span></li>
+          </ul>
+        </li>
     {% endfor %}
+    </ul>
+    </li>
+{% endfor %}
 </ul>
 </div>
--->
+    </td>
+    <td>
+<div class="dashtree">
+<h1>Servers</h1>
+<ul class="tree">
+  {% for host in hosts %}
+  <li class="host">
+    <span class='name'>{{host.address}}</span> ({{host.role}})
+    <div id="graphs">
+      <span class="graph"><img class="graph" id="server/{{host.address}}" src="/monitor/dyngraphs/server/{{host.address}}"></span>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+</div>
+    </td>
+  </tr>
+</table>
 
 {% endblock %}

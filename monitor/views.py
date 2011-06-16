@@ -7,8 +7,8 @@ from django.http import HttpResponse
 from monitor.models import *
 from monitor.lib.graph_helper import load_graph,dyn_load_graph
 
-def dyn_graph_loader(request, name, subdir):
-    image_data, mime_type = dyn_load_graph(subdir, name)
+def dyn_graph_loader(request, name, subdir, graph_type, size):
+    image_data, mime_type = dyn_load_graph(subdir, name, graph_type, size)
     return HttpResponse(image_data, mime_type)
 
 def graph_loader(request, name, subdir):
@@ -17,7 +17,12 @@ def graph_loader(request, name, subdir):
 
 def statistics(request):
     return render_to_response("statistics.html",
-            RequestContext(request, {}))
+            RequestContext(request, {
+                "management_targets": ManagementTarget.objects.all(),
+                "filesystems": Filesystem.objects.all().order_by('name'),
+                "hosts": Host.objects.all().order_by('address'),
+                "clients": Client.objects.all(),
+                }))
 
 def statistics_inner(request):
     try:
