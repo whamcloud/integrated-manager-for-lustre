@@ -97,7 +97,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-ROOT_URLCONF = 'hydra-server.urls'
+ROOT_URLCONF = 'urls'
 
 TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
@@ -133,7 +133,7 @@ LOGGING = {
         'sql_log_file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': 'sql.log'
+            'filename': '/tmp/sql.log'
         }
     },
     'loggers': {
