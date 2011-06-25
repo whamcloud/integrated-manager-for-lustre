@@ -49,11 +49,14 @@ pushd /usr/share/hydra-server >/dev/null
 if [ ! -f database.db ]; then
     # but don't clobber one that's already there!
     PYTHONPATH=$(pwd) python manage.py syncdb --noinput >/dev/null
-    # if a sql.log debug file was created, make sure apache owns it so
+    # make sure a sql.log debug file exists and apache owns it so
     # it can write to it
+    touch /tmp/sql.log
     chown apache.apache /tmp/sql.log
     # and the database, of course
     chown apache.apache /usr/share/hydra-server/database.db
+    # start apache at boot time
+    chkconfig httpd on
 fi
 popd >/dev/null
 
