@@ -234,4 +234,26 @@ border-right: 1px solid #0099ff;
 	background-color: #fff;
 }
 
+pre
+    {
+        overflow: auto;
+        display: inline;
+    }
 
+.log_viewer_input_widget
+    {
+        display: inline;
+        padding: 10px 100px;
+    }
+.normal
+    {
+	color: #000000;
+    }
+.lustre
+    {
+	color: #0000FF;
+    }
+.lustre_error
+    {
+	color: #FF0000;
+    }

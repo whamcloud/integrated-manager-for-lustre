@@ -1,0 +1,32 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+
+<form action="/monitor/log_viewer/" method="post">{% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="log_viewer_input_widget">
+        {{ form.start_month.errors }}
+        <label for="id_start_month">Start Month</label>
+        {{ form.start_month }}
+    </div>
+    <div class="log_viewer_input_widget">
+        {{ form.start_day.errors }}
+        <label for="id_start_day">Start Day</label>
+        {{ form.start_day }}
+    </div>
+    <div class="log_viewer_input_widget">
+        {{ form.only_lustre.errors }}
+        <label for="id_only_lustre">Only Lustre Messages</label>
+        {{ form.only_lustre }}
+    </div>
+<input type="submit" value="Submit" />
+
+</form>
+<div>
+{% for text,class in log_data %}
+<tt class="{{class}}">{{text}}</tt><br>
+{% endfor %}
+</div>
+
+{% endblock %}
