@@ -22,44 +22,53 @@ def dyn_load_graph(subdir, name, graph_type, size):
 
     if subdir == "target":
         if re.search("MDT", name):
-            args.extend([
-                "DEF:kbytes_free=%s:kbytes_free:AVERAGE" % rrd,
-                "DEF:inodes_free=%s:inodes_free:AVERAGE" % rrd,
-                "LINE2:kbytes_free#ff0000:free kbytes",
-                "LINE2:inodes_free#0000ff:free inodes"
-            ])
+            if graph_type == "space":
+                args.extend([
+                    "DEF:kbytes_free=%s:kbytes_free:AVERAGE" % rrd,
+                    "LINE2:kbytes_free#ff0000:free kbytes",
+                ])
+            elif graph_type == "inodes":
+                args.extend([
+                    "DEF:inodes_free=%s:inodes_free:AVERAGE" % rrd,
+                    "LINE2:inodes_free#0000ff:free inodes"
+                ])
         else:
-            if graph_type == ",ops":
+            if graph_type == "ops":
                 args.extend([
                     "DEF:iops=%s:iops:AVERAGE" % rrd,
                     "LINE2:iops#00ff00:iops"
                 ])
-            elif graph_type == ",lock":
+            elif graph_type == "lock":
                 args.extend([
                     "DEF:grant_rate=%s:grant_rate:AVERAGE" % rrd,
                     "DEF:cancel_rate=%s:cancel_rate:AVERAGE" % rrd,
                     "LINE2:grant_rate#fc0000:lock grants/s",
                     "LINE2:cancel_rate#00fc00:lock cancels/s"
                 ])
-            elif graph_type == ",clients":
+            elif graph_type == "clients":
                 args.extend([
                     "DEF:num_exports=%s:num_exports:AVERAGE" % rrd,
                     "LINE2:num_exports#0000fb:client count"
                 ])
-            else:
+            elif graph_type == "bw":
                 args.extend([
                     "DEF:read_bytes=%s:read_bytes:AVERAGE" % rrd,
                     "DEF:write_bytes=%s:write_bytes:AVERAGE" % rrd,
                     "LINE2:read_bytes#ff0000:read bytes/sec",
                     "LINE2:write_bytes#0000ff:write bytes/sec"
                 ])
+            else:
+                raise NotImplementedError
     elif subdir == "server":
-        args.extend([
-                    "DEF:pct_cpu=%s:pct_cpu:AVERAGE" % rrd,
-                    "DEF:pct_mem=%s:pct_mem:AVERAGE" % rrd,
-                    "LINE2:pct_cpu#ff0000:% cpu used",
-                    "LINE2:pct_mem#0000ff:% ram used"
-        ])
+        if graph_type == "cpumem":
+            args.extend([
+                        "DEF:pct_cpu=%s:pct_cpu:AVERAGE" % rrd,
+                        "DEF:pct_mem=%s:pct_mem:AVERAGE" % rrd,
+                        "LINE2:pct_cpu#ff0000:% cpu used",
+                        "LINE2:pct_mem#0000ff:% ram used"
+            ])
+        else:
+            raise NotImplementedError
 
     if size == ":small":
         args.extend([

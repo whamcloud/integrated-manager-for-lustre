@@ -132,10 +132,17 @@
         <li class="target collapsible">
           <span class="name">{{target.name_no_fs}}</span>
           <ul class="tree">
-            <li><span class="graph"><img class="graph" id="target/{{target.name}}:small" src="/monitor/dyngraphs/target/{{target.name}}:small"></span>
-            <span class="graph"><img class="graph" id="target/{{target.name}},ops:small" src="/monitor/dyngraphs/target/{{target.name}}:small"></span></li>
-            <li><span class="graph"><img class="graph" id="target/{{target.name}},lock:small" src="/monitor/dyngraphs/target/{{target.name}}:small"></span>
-            <span class="graph"><img class="graph" id="target/{{target.name}},clients:small" src="/monitor/dyngraphs/target/{{target.name}}:small"></span></li>
+          <li>
+          {% if target.metadatatarget %}
+              <span class="graph"><img class="graph" id="target/{{target.name}},space:small" src="/monitor/dyngraphs/target/{{target.name}},space:small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},inodes:small" src="/monitor/dyngraphs/target/{{target.name}},inodes:small"></span>
+          {% else %}
+              <span class="graph"><img class="graph" id="target/{{target.name}},bw:small" src="/monitor/dyngraphs/target/{{target.name}},bw:small"></span>
+            <span class="graph"><img class="graph" id="target/{{target.name}},ops:small" src="/monitor/dyngraphs/target/{{target.name}},ops:small"></span></li>
+            <li><span class="graph"><img class="graph" id="target/{{target.name}},lock:small" src="/monitor/dyngraphs/target/{{target.name}},lock:small"></span>
+            <span class="graph"><img class="graph" id="target/{{target.name}},clients:small" src="/monitor/dyngraphs/target/{{target.name}},clients:small"></span>
+            {% endif %}
+            </li>
           </ul>
         </li>
     {% endfor %}
@@ -150,11 +157,9 @@
 <h1>Servers</h1>
 <ul class="tree">
   {% for host in hosts %}
-  <li class="host">
+  <li class="host collapsible">
     <span class='name'>{{host.address}}</span> ({{host.role}})
-    <div id="graphs">
-      <span class="graph"><img class="graph" id="server/{{host.address}}" src="/monitor/dyngraphs/server/{{host.address}}"></span>
-    </div>
+    <span class="graph"><img class="graph" id="server/{{host.pretty_name}},cpumem" src="/monitor/dyngraphs/server/{{host.pretty_name}},cpumem"></span>
   </li>
   {% endfor %}
 </ul>

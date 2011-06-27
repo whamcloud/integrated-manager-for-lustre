@@ -16,28 +16,15 @@ def graph_loader(request, name, subdir):
     return HttpResponse(image_data, mime_type)
 
 def statistics(request):
+    # Limit to hosts which we expect there to be some LMT metrics for
+    stat_hosts = list(set([tm.host for tm in TargetMount.objects.filter(target__managementtarget = None)]))
+    stat_hosts.sort(lambda i,j: cmp(i.address, j.address))
     return render_to_response("statistics.html",
             RequestContext(request, {
                 "management_targets": ManagementTarget.objects.all(),
                 "filesystems": Filesystem.objects.all().order_by('name'),
-                "hosts": Host.objects.all().order_by('address'),
+                "hosts": stat_hosts,
                 "clients": Client.objects.all(),
-                }))
-
-def statistics_inner(request):
-    try:
-        last_audit = Audit.objects.filter(complete = True).latest('id')
-        last_audit_time = last_audit.created_at.strftime("%H:%M:%S %Z %z");
-    except Audit.DoesNotExist:
-        last_audit_time = "never"
-        
-    return render_to_response("statistics_inner.html",
-            RequestContext(request, {
-                "management_targets": ManagementTarget.objects.all(),
-                "filesystems": Filesystem.objects.all().order_by('name'),
-                "hosts": Host.objects.all().order_by('address'),
-                "clients": Client.objects.all(),
-                "last_audit_time": last_audit_time
                 }))
 
 import re
@@ -66,45 +53,18 @@ from django import forms
 
 MONTHS=('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
 
-# XXX tsk tsk tsk.  this is a copy of the same function from 
-#     monitor/lib/lustre_audit.py
-#     we need to build a library of this kind of stuff that everyone
-#     can use
-def normalize_nid(string):
-    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow 
-       direct comparisons between NIDs"""
-    if string[-4:] == "@tcp":
-        string += "0"
 
-    # remove _ from nids (i.e. @tcp_0 -> @tcp0
-    i = string.find("_")
-    if i > -1:
-        string = string[:i] + string [i + 1:]
-
-    return string
 
 def get_log_data(for_date, only_lustre):
-
     matched = False
     log_data = []
-    for line in open("/tmp/syslog"):
+    for line in open("/var/log/hydra"):
         if line == "":
             break
         if only_lustre and line.find(" Lustre") < 0:
             continue
         if line.startswith(for_date):
             matched = True
-            p = re.compile("(\d{1,3}\.){3}\d{1,3}@tcp(_\d+)?")
-            i = p.finditer(line)
-            for match in i:
-                replace = match.group()
-                replace = normalize_nid(replace)
-                try:
-                    line = line.replace(match.group(),
-                               Nid.objects.get(nid_string = replace).host.address,
-                               1)
-                except Nid.DoesNotExist:
-                    print "failed to replace " + replace
 
             if line.find(" LustreError") > -1:
                 typ = "lustre_error"
@@ -118,17 +78,17 @@ def get_log_data(for_date, only_lustre):
             if matched:
                 break
 
+    log_data.reverse()
     return log_data
 
 def log_viewer(request):
-
     class LogViewerForm(forms.Form):
         start_month = forms.ChoiceField(label = "Starting Month")
         start_day = forms.ChoiceField(label = "Starting Day")
         only_lustre = forms.BooleanField(required = False,
                                          label = "Only Lustre messages?")
 
-    log_file = open("/tmp/syslog")
+    log_file = open("/var/log/hydra")
     # get the date of the first line
     line = log_file.readline()
     (start_m, start_d, junk) = line.split(None, 2)

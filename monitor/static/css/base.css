@@ -253,26 +253,60 @@ border-right: 1px solid #0099ff;
 	background-color: #fff;
 }
 
-pre
-    {
-        overflow: auto;
-        display: inline;
-    }
+/* Log viewer styles */
 
-.log_viewer_input_widget
-    {
-        display: inline;
-        padding: 10px 100px;
-    }
-.normal
-    {
-	color: #000000;
-    }
-.lustre
-    {
-	color: #0000FF;
-    }
-.lustre_error
-    {
-	color: #FF0000;
-    }
+div.log_line {
+    margin: 0px;
+    font-family: courier;
+    padding-left: 3px;
+    font-size: 0.8em;
+}
+div.log_view {
+    padding: 12px;
+    background: #ccc;
+    margin-top: 12px;
+    font-size: 0.9em;
+    border-left: 2px solid #09f;
+}
+
+div.log_viewer_input_widget
+{
+    display: inline;
+    padding: 2px 10px 2px 0px;
+    font-size: 0.9em;
+    margin-bottom: 12px;
+}
+div.log_view .normal
+{
+color: #333;
+}
+div.log_view .lustre
+{
+background: #ddddee;
+}
+div.log_view .lustre_error
+{
+    background: #FFcccc;
+}
+
+div.log_view .lustre_error .log_message
+{
+    font-weight: bold;
+}
+
+span.log_service {
+    color: #444;
+}
+
+span.log_date {
+    color: #444;
+}
+
+span.log_host {
+    color: #444;
+    font-weight: bold;
+}
+
+span.log_message {
+    color: #000;
+}

@@ -7,25 +7,26 @@
     {{ form.non_field_errors }}
     <div class="log_viewer_input_widget">
         {{ form.start_month.errors }}
-        <label for="id_start_month">Start Month</label>
+        <label for="id_start_month">Start month</label>
         {{ form.start_month }}
     </div>
     <div class="log_viewer_input_widget">
         {{ form.start_day.errors }}
-        <label for="id_start_day">Start Day</label>
+        <label for="id_start_day">Start day</label>
         {{ form.start_day }}
     </div>
     <div class="log_viewer_input_widget">
         {{ form.only_lustre.errors }}
-        <label for="id_only_lustre">Only Lustre Messages</label>
+        <label for="id_only_lustre">Only Lustre messages</label>
         {{ form.only_lustre }}
     </div>
-<input type="submit" value="Submit" />
+<input type="submit" value="Update" />
 
 </form>
-<div>
+<div class='log_view'>
+{% load log_prettify %}
 {% for text,class in log_data %}
-<tt class="{{class}}">{{text}}</tt><br>
+<div class="log_line {{class}}">{{text|pretty_log_line}}</div>
 {% endfor %}
 </div>
 
