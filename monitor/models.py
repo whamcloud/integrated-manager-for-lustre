@@ -4,6 +4,21 @@ from collections_24 import defaultdict
 
 import simplejson as json
 
+def status_style(status):
+        return {
+                "STARTED": "OK",
+                "FAILOVER": "WARNING",
+                "HA WARN": "WARNING",
+                "RECOVERY": "WARNING",
+                "REDUNDANT": "OK",
+                "SPARE": "OK",
+                "STOPPED": "OFFLINE",
+                "???": "",
+                "OFFLINE": "OFFLINE",
+                "OK": "OK",
+                "WARNING": "WARNING"
+                }[status]
+
 # Create your models here.
 class Host(models.Model):
     address = models.CharField(max_length = 256)
@@ -112,6 +127,9 @@ class Filesystem(models.Model):
         # Else I'm orange
         return "WARNING"
 
+    def status_rag(self):
+        return status_style(self.status_string())
+
     def __str__(self):
         return "Filesystem '%s'" % self.name
 
@@ -150,16 +168,7 @@ class Mountable(models.Model):
         raise NotImplementedError
 
     def status_rag(self):
-        return {
-                "STARTED": "OK",
-                "FAILOVER": "WARNING",
-                "HA WARN": "WARNING",
-                "RECOVERY": "WARNING",
-                "REDUNDANT": "OK",
-                "SPARE": "OK",
-                "STOPPED": "OFFLINE",
-                "???": ""
-                }[self.status_string()]
+        return status_style(self.status_string())
 
 class FilesystemMember(models.Model):
     """A Mountable for a particular filesystem, such as 
@@ -220,6 +229,9 @@ class TargetMount(Mountable):
                     return "SPARE"
 
         raise NotImplementedError
+
+    def status_rag(self):
+        return status_style(self.status_string())
 
     def pretty_block_device(self):
         # Truncate to iSCSI iqn if possible
@@ -282,6 +294,9 @@ class Target(models.Model):
             return "STARTED"
         else:
             return "STOPPED"
+
+    def status_rag(self):
+        return status_style(self.status_string())
 
     def params(self):
         return AuditTarget.target_params(self)

@@ -72,7 +72,8 @@ div.dashtree ul.tree ul.tree ul.tree li {
 
 div.dashtree span.name {
     font-weight: bold;
-    font-variant: small-caps;
+    font-size: 0.95em;
+    /*font-variant: small-caps;*/
 }
 
 div.dashtree span.status {

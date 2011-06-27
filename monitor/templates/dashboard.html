@@ -52,9 +52,14 @@
     }
 
     function load_inner() {
-        $('#inner').load("dashboard_inner/", function(response, status) {
+        console.log("load_inner");
+        reload_request = $.get("dashboard_inner/", function(response, status) {
+            reload_timeout = setTimeout('load_inner()', 2000);
+
             if (status == 'error') {
                 $('#inner').html("Error loading status, check connection between browser and Hydra server");
+            } else {
+                $('#inner').html(response);
             }
 
             setTimeout('load_inner()', 2000);
