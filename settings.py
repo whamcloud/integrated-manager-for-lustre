@@ -131,7 +131,7 @@ LOGGING = {
             'class': 'django.utils.log.AdminEmailHandler'
         },
         'sql_log_file': {
-            'level': 'DEBUG',
+            'level': 'ERROR',
             'class': 'logging.FileHandler',
             'filename': '/tmp/sql.log'
         }
