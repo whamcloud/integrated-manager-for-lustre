@@ -9,7 +9,7 @@
 <li class="filesystem collapsible"><span class='name'>{{filesystem.name}}</span> <span class="status {{filesystem.status_string}}">{{filesystem.status_string}}</span>
     <ul class="tree">
     {% for host,targets in filesystem.get_servers.items %}
-    <li class="host collapsible"><span class='name'>{{host.address}}</span> ({{host.role}}) <span class="status {{host.status_string}}">{{host.status_string}}</span>
+    <li class="host collapsible"><span class='name'>{{host.pretty_name}}</span> ({{host.role}}) <span class="status {{host.status_string}}">{{host.status_string}}</span>
         <ul class="tree">
             {% for targetmountable in targets %}
                 <li class="target collapsible">
@@ -40,7 +40,7 @@
 <h1>Hosts</h1>
 <ul class="tree">
     {% for host in hosts %}
-    <li class="host collapsible"><span class='name'>{{host.address}}</span> ({{host.role}}) <span class='status {{host.status_string}}'>{{host.status_string}}</span>
+    <li class="host collapsible"><span class='name'>{{host.pretty_name}}</span> ({{host.role}}) <span class='status {{host.status_string}}'>{{host.status_string}}</span>
     <ul class="tree">
         {% for mountable in host.get_mountables %}
         <li class="target">

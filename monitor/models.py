@@ -16,6 +16,12 @@ class Host(models.Model):
            specific class rather than returning a bunch of Mountable"""
         return [m.downcast() for m in self.mountable_set.all()]
 
+    def pretty_name(self):
+        if self.address[-12:] == ".localdomain":
+            return self.address[:-12]
+        else:
+            return self.address
+    
     def role(self):
         roles = set()
         for mountable in self.mountable_set.all():
@@ -44,7 +50,7 @@ class Host(models.Model):
         # Green if all targets are online
         target_status_set = set([t.status_string() for t in self.get_mountables() if not hasattr(t, 'client')])
         if len(target_status_set) > 0:
-            good_states = ["MOUNTED", "REDUNDANT", "SPARE"]
+            good_states = ["STARTED", "REDUNDANT", "SPARE"]
             if set(good_states) >= target_status_set:
                 return "OK"
             elif len(set(good_states) & target_status_set) == 0:
@@ -92,7 +98,7 @@ class Filesystem(models.Model):
     def status_string(self):
         fs_statuses = set([t.status_string() for t in self.get_filesystem_targets()])
 
-        good_status = set(["MOUNTED", "REDUNDANT", "SPARE"])
+        good_status = set(["STARTED", "REDUNDANT", "SPARE"])
         # If all my targets are down, I'm red, even if my MGS is up
         if not good_status & fs_statuses:
             return "OFFLINE"
@@ -145,13 +151,13 @@ class Mountable(models.Model):
 
     def status_rag(self):
         return {
-                "MOUNTED": "OK",
+                "STARTED": "OK",
                 "FAILOVER": "WARNING",
                 "HA WARN": "WARNING",
                 "RECOVERY": "WARNING",
                 "REDUNDANT": "OK",
                 "SPARE": "OK",
-                "UNMOUNTED": "OFFLINE",
+                "STOPPED": "OFFLINE",
                 "???": ""
                 }[self.status_string()]
 
@@ -193,20 +199,20 @@ class TargetMount(Mountable):
         if len(other_status) == 0:
             return this_status
         else:
-            if self.primary and this_status != "MOUNTED":
-                if "MOUNTED" in other_status:
+            if self.primary and this_status != "STARTED":
+                if "STARTED" in other_status:
                     return "FAILOVER"
                 else:
-                    return "UNMOUNTED"
+                    return "STOPPED"
 
-            if self.primary and this_status == "MOUNTED":
+            if self.primary and this_status == "STARTED":
                 if "???" in other_status:
                     return "HA WARN"
                 else:
                     return "REDUNDANT"
 
             if not self.primary:
-                if this_status == "MOUNTED":
+                if this_status == "STARTED":
                     return "FAILOVER"
                 elif this_status == "???":
                     return "???"
@@ -272,10 +278,10 @@ class Target(models.Model):
             return "REDUNDANT"
         elif "FAILOVER" in mount_statuses:
             return "FAILOVER"
-        elif "MOUNTED" in mount_statuses:
-            return "MOUNTED"
+        elif "STARTED" in mount_statuses:
+            return "STARTED"
         else:
-            return "UNMOUNTED"
+            return "STOPPED"
 
     def params(self):
         return AuditTarget.target_params(self)
@@ -397,11 +403,11 @@ class AuditMountable(models.Model):
                 except AuditRecoverable.DoesNotExist:
                     pass
 
-                return {True: "MOUNTED", False: "UNMOUNTED"}[audit_mountable.mounted]
+                return {True: "STARTED", False: "STOPPED"}[audit_mountable.mounted]
             except AuditMountable.DoesNotExist:
                 # Does not appear in our scan: could just be unmounted on 
                 # an fstabless host
-                return "UNMOUNTED"
+                return "STOPPED"
 
         except AuditHost.DoesNotExist:
             # Last audit attempt on this host failed

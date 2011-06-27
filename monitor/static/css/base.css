@@ -12,6 +12,10 @@ div.dashtree {
     -webkit-border-radius: 4px;
     -moz-border-radius: 4px;
     border-radius: 4px;
+
+    border-left: 3px solid #09f;
+    border-right: 3px solid #09f;
+    margin-right: 12px;
 }
 
 div.dashtree h1 {
