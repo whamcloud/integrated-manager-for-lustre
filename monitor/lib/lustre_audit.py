@@ -252,13 +252,24 @@ class LustreAudit:
                         except NoLNetInfo:
                             log().warning("Cannot set up target %s on %s until LNet is running" % (name, host.address))
 
+    def target_online_event(self, target_mount, mounted):
+        """Generate an event if the target_mount's status has changed"""
+        try:
+            old_mounted = AuditMountable.objects.filter(mountable = target_mount).latest('audit__created_at').mounted
+        except AuditMountable.DoesNotExist:
+            old_mounted = None
+
+        if old_mounted != mounted:
+            ev = TargetOnlineEvent(target_mount = target_mount, started = mounted)
+            ev.save()
+
     def learn_target_states(self):
         for audit_host, data in self.raw_data.items():
             for mount_info in data['local_targets']:
                 if mount_info['kind'] == 'MGS':
                     target = ManagementTarget.get_by_host(audit_host.host)
                     mountable = target.targetmount_set.get(host = audit_host.host, mount_point = mount_info['mount_point'])
-
+                    self.target_online_event(mountable, mount_info['running'])
                     audit_mountable = AuditMountable(audit = self.audit,
                             mountable = mountable, mounted = mount_info['running'])
                 else:
@@ -285,6 +296,8 @@ class LustreAudit:
                         log().warning("Cannot find target %s for mgs nids %s" % (mount_info['name'], mgsnode_nids))
                         continue
 
+                    # TODO: an event for recovery
+                    self.target_online_event(mountable, mount_info['running'])
                     audit_mountable = AuditRecoverable(audit = self.audit, 
                             mountable = mountable, mounted = mount_info['running'],
                             recovery_status = json.dumps(mount_info["recovery_status"]))
@@ -321,6 +334,7 @@ class LustreAudit:
                 if created:
                     log().info("Learned client %s" % client)
 
+                # TODO: make a ClientOnlineEvent if needed
                 audit_mountable = AuditMountable(audit = self.audit, mountable = client, mounted = client_info['mounted'])
                 audit_mountable.save()
 
@@ -362,19 +376,34 @@ class LustreAudit:
         raw_data = {}
         for output, nodes in task.iter_buffers():
             for node in nodes:
-                log().debug("Parsing JSON from %s" % str(node))
-                output = "%s" % output
+                host = Host.objects.get(address = node)
                 try:
+                    log().debug("Parsing JSON from %s" % str(node))
+                    output = "%s" % output
                     data = json.loads(output)
+                    audit_host = AuditHost(audit = self.audit, host = host, lnet_up = data['lnet_up'])
+                    audit_host.save()
+                    raw_data[audit_host] = data
+                    contact = True
                 except Exception,e:
                     log().error("bad output from %s: %s '%s'" % (str(node), e, output))
-                    continue
-            
-                host = Host.objects.get(address = node)
-                audit_host = AuditHost(audit = self.audit, host = host, lnet_up = data['lnet_up'])
-                audit_host.save()
+                    contact = False
+           
+                # See if we could contact the host last time, in order to detect a
+                # transition between contactable and uncontactable states and generate
+                # a HostContactEvent if necessary.
+                try:
+                    last_audit = Audit.objects.filter(attempted_hosts = host, complete = True).latest('created_at')
+                    last_contact = last_audit.audithost_set.filter(host = host).count() > 0
+                except Audit.DoesNotExist:
+                    print "no last contact for host %s" % host
+                    last_contact = None
 
-                raw_data[audit_host] = data
+                print last_contact, contact
+    
+                if contact != last_contact:
+                    hce = HostContactEvent(host = host, contact = contact)
+                    hce.save()
 
         return raw_data
 

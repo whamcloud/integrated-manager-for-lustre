@@ -24,7 +24,7 @@ class Host(models.Model):
     address = models.CharField(max_length = 256, unique = True)
 
     def __str__(self):
-        return "Host '%s'" % self.address
+        return self.pretty_name()
 
     def get_mountables(self):
         """Like mountable_set.all() but downcasting to their most 
@@ -162,8 +162,6 @@ class Mountable(models.Model):
         except Client.DoesNotExist:
             pass
 
-        print self, self.id
-
         raise NotImplementedError
 
     def status_string(self):
@@ -275,6 +273,8 @@ class TargetMount(Mountable):
         return self.block_device
 
 class Target(models.Model):
+    """A Lustre filesystem target (MGS, MDT, OST) in the abstract, which
+       may be accessible through 1 or more hosts via TargetMount"""
     # Like testfs-OST0001
     # Nullable because when manager creates a Target it doesn't know the name
     # until it's formatted+started+audited
@@ -354,6 +354,102 @@ class Client(Mountable, FilesystemMember):
 
     def __str__(self):
         return "%s-client %d" % (self.filesystem.name, self.id)
+
+
+class Event(models.Model):
+    created_at = models.DateTimeField(auto_now = True)
+    severity = models.IntegerField()
+    host = models.ForeignKey(Host, blank = True, null = True)
+
+    @staticmethod
+    def type_name():
+        raise NotImplementedError
+
+    def severity_class(self):
+        # CSS class from an Event severity -- FIXME: this should be a templatetag
+        from logging import INFO, WARNING, ERROR
+        return {INFO: 'info', WARNING: 'warning', ERROR: 'error'}[self.severity]
+
+    def message(self):
+        raise NotImplementedError
+
+    def downcast(self):
+        try:
+            return self.targetonlineevent
+        except:
+            pass
+
+        try:
+            return self.genericevent
+        except:
+            pass
+
+        try:
+            return self.hostcontactevent
+        except:
+            pass
+
+        raise NotImplementedError
+
+class GenericEvent(Event):
+    message_str = models.CharField(max_length = 512)
+
+    @staticmethod
+    def type_name():
+        return "Message"
+
+    def message(self):
+        return self.message_str
+
+class TargetOnlineEvent(Event):
+    # Which target and where it happened
+    target_mount = models.ForeignKey(TargetMount)
+    # Whether this was a target starting (True) or stopping (False)
+    started = models.BooleanField()
+
+    @staticmethod
+    def type_name():
+        return "Target"
+
+    def save(self, *args, **kwargs):
+        from logging import WARNING, INFO
+        if self.started:
+            self.severity = INFO
+        else:
+            self.severity = WARNING
+
+        self.host = self.target_mount.host
+
+        super(TargetOnlineEvent, self).save(*args, **kwargs)
+
+    def message(self):
+        if self.started:
+            return "Target '%s' started" % self.target_mount.target.name
+        else:
+            return "Target '%s' stopped" % self.target_mount.target.name
+
+class HostContactEvent(Event):
+    # Did we successfully audit
+    contact = models.BooleanField()
+
+    @staticmethod
+    def type_name():
+        return "Host contact"
+
+    def save(self, *args, **kwargs):
+        from logging import WARNING, INFO
+        if self.contact:
+            self.severity = INFO
+        else:
+            self.severity = WARNING
+
+        super(HostContactEvent, self).save(*args, **kwargs)
+
+    def message(self):
+        if self.contact:
+            return "Established contact with host %s" % self.host.pretty_name()
+        else:
+            return "Lost contact with host %s" % self.host.pretty_name()
 
 class Audit(models.Model):
     """Represent an attempt to audit some hosts"""
@@ -488,4 +584,9 @@ admin.site.register(ObjectStoreTarget)
 admin.site.register(Router)
 admin.site.register(Target)
 admin.site.register(TargetMount)
+
+admin.site.register(Event)
+admin.site.register(TargetOnlineEvent)
+admin.site.register(HostContactEvent)
+admin.site.register(GenericEvent)
 

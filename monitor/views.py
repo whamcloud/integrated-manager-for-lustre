@@ -27,8 +27,6 @@ def statistics(request):
                 "clients": Client.objects.all(),
                 }))
 
-import re
-
 def dashboard(request):
     return render_to_response("dashboard.html",
             RequestContext(request, {}))
@@ -52,8 +50,6 @@ def dashboard_inner(request):
 from django import forms
 
 MONTHS=('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-
-
 
 def get_log_data(for_date, only_lustre):
     matched = False
@@ -137,3 +133,56 @@ def log_viewer(request):
         return render_to_response('log_viewer.html', { 'form': form, },
                                   RequestContext(request,
                                                  { "log_data": log_data, }))
+
+def events(request):
+    def type_choices():
+        klasses = [HostContactEvent, TargetOnlineEvent, GenericEvent]
+        choices = [("", "Any")]
+        for klass in klasses:
+            choices.append((klass.__name__, klass.type_name()))
+        return tuple(choices)
+
+    from django import forms
+    class EventFilterForm(forms.Form):
+        from logging import INFO, WARNING, ERROR
+        host = forms.ModelChoiceField(queryset = Host.objects.all(), empty_label = "Any", required = False)
+        severity = forms.ChoiceField((("", "Any"), (INFO, 'info'), (WARNING, 'warning'), (ERROR, 'error')), required = False)
+        event_type = forms.ChoiceField(type_choices(), required = False)
+
+    filter_args = []
+    filter_kwargs = {}
+
+    if request.method == 'GET':
+        form = EventFilterForm()
+    elif request.method == 'POST':
+        form = EventFilterForm(data = request.POST)
+        print form.is_valid()
+        print form.errors
+        if form.is_valid():
+            try:
+                host_id = request.POST['host']
+                if len(host_id) > 0:
+                    filter_kwargs['host'] = host_id
+            except:
+                pass
+            try:
+                severity = request.POST['severity']
+                if len(severity) > 0:
+                    filter_kwargs['severity'] = severity
+            except:
+                pass
+            try:
+                klass = request.POST['event_type']
+                if len(klass) > 0:
+                    from django.db.models import Q
+                    klass_lower = klass.lower()
+                    filter_args.append(~Q(**{klass_lower: None}))
+            except KeyError:
+                pass
+
+    event_set = [e.downcast() for e in Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')]
+    return render_to_response('events.html', RequestContext(request, {
+        'form': form,
+        'events': event_set}))
+
+

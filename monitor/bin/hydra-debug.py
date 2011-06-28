@@ -123,6 +123,17 @@ class HydraDebug(cmd.Cmd, object):
         if not created:
             screen("Host '%s' already exists" % line)
 
+    def do_test_fake_events(self, line):
+        from random import randint
+        count = int(line)
+        tms = list(TargetMount.objects.all())
+        for i in range(0, count):
+            tm = tms[randint(0, len(tms))]
+            ev = TargetOnlineEvent(target_mount = tm, started = False)
+            ev.save()
+            ev = TargetOnlineEvent(target_mount = tm, started = True)
+            ev.save()
+
 if __name__ == '__main__':
     cmdline = HydraDebug
 

@@ -310,3 +310,136 @@ span.log_host {
 span.log_message {
     color: #000;
 }
+
+/* Event list */
+div#event_filter {
+    margin-left: 16px;
+    width: 150px;
+    border: 1px solid #09f;
+    border-radius: 6px;
+    float:left;
+    margin-top: 16px;
+    background: #bee5ff;
+    padding: 8px;
+}
+
+h2.filter_title {
+    margin-bottom: 8px;
+    font-size: 1.0em;
+}
+
+div#event_filter p {
+    margin-top: 1px;
+    margin-bottom: 3px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+div#event_filter select {
+    width: 100%;
+}
+
+table#event_filter th {
+    font-size: 0.8em;
+    font-weight: normal;
+    text-align: left;
+}
+
+div#event_list {
+    float:left;
+    margin-left: 16px;
+    margin-top: 16px;
+}
+
+table.event_list {
+    border-collapse: collapse;
+    font-size: 0.9em;
+    color: black;
+    width: 800px;
+
+    padding-bottom: 3px;
+    padding-top: 3px;
+    border-top: 2px solid #09f;
+    border-bottom: 2px solid #09f;
+    border-left: 1px solid #09f; 
+    border-right: 1px solid #09f; 
+}
+
+table.event_list td {
+    padding: 3px;
+}
+
+table.event_list tr {
+    border-bottom: 1px solid #09f;
+}
+
+table.event_list tr.info {
+    background: #bee5ff;
+}
+table.event_list tr.warning {
+    background: #FFBF00;
+}
+table.event_list tr.error {
+    background: #500;
+}
+
+table.event_list td.event_created_at {
+    font-size: 0.9em;
+    font-style: italic;
+    min-width: 12em;
+}
+
+table.event_list td.event_severity {
+    min-width: 16px;
+}
+
+table.event_list td.event_message {
+    width: 100%;
+}
+
+
+table.event_list tr.info td.event_severity {
+    width: 22px;
+    height: 22px;
+    background-image: url(../images/dialog-information.png);
+    background-repeat: no-repeat;
+    background-position: 3px 3px;
+}
+
+table.event_list tr.warning td.event_severity {
+    width: 22px;
+    height: 22px;
+    background-image: url(../images/dialog-warning.png);
+    background-repeat: no-repeat;
+    background-position: 3px 3px;
+}
+
+/* django-pagination */
+div.pagination {
+    margin-top: 6px;
+    text-align: right;
+}
+.disabled {
+    color: gray;
+}
+
+.page {
+    border: 1px solid #09f;
+    padding: 2px;
+}
+
+.current {
+    font-weight: bold;
+    border-width: 2px;
+}
+.page {
+    text-decoration: none;
+    color: #09f;
+    background-color: #bee5ff;
+}
+.prev,
+.next {
+    text-decoration: none;
+    color: #09f;
+}
+
