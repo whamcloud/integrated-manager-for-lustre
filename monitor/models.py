@@ -447,7 +447,23 @@ class AuditRecoverable(AuditMountable):
         else:
             return "N/A"
 
-# Note: normally we would register models with the django admin, but
-# if you are including one app's models from another app, the included
-# app's models must not call into the admin, because the admin scans
-# all apps' models, causing a circular import.
+from django.contrib import admin
+admin.site.register(AuditHost)
+admin.site.register(Audit)
+admin.site.register(AuditMountable)
+admin.site.register(AuditNid)
+admin.site.register(AuditParam)
+admin.site.register(AuditRecoverable)
+admin.site.register(AuditTarget)
+admin.site.register(Client)
+admin.site.register(Filesystem)
+admin.site.register(Host)
+admin.site.register(ManagementTarget)
+admin.site.register(MetadataTarget)
+admin.site.register(Mountable)
+admin.site.register(Nid)
+admin.site.register(ObjectStoreTarget)
+admin.site.register(Router)
+admin.site.register(Target)
+admin.site.register(TargetMount)
+
