@@ -12,7 +12,7 @@ print sys.argv[1]
 
 setup(name = 'hydra-server',
       license = 'Proprietary',
-      version = '0.1',
+      version = '0.2',
       author = "Whamcloud, Inc.",
       author_email = "info@whamcloud.com",
       description = 'The Whamcloud Lustre Monitoring and Adminisration Interface',
