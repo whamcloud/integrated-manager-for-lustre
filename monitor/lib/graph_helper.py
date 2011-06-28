@@ -83,28 +83,5 @@ def dyn_load_graph(subdir, name, graph_type, size):
                     "--only-graph", "--width", "50", "--height", "15",
         ])
 
-    r, w = os.pipe()
-    fcntl.fcntl(r, fcntl.F_SETFL, os.O_NONBLOCK)
-    so = os.dup(sys.__stdout__.fileno())
-    os.dup2(w, 1)
-    rrdtool.graph([(a.encode('ascii')) for a in args])
-    image_data = StringIO()
-    i = 0
-    while i < 2:
-        try:
-            chunk = os.read(r, 1024)
-            if chunk:
-                image_data.write(chunk)
-            else:
-                break
-        except OSError, e:
-            sys.stdout.flush()
-            i += 1
-            time.sleep(0.1)
-            continue
-
-    os.dup2(so, 1)
-    os.close(r)
-    os.close(w)
-    os.close(so)
-    return image_data.getvalue(), "image/%s" % image_type
+    image_data = rrdtool.graph2str([(a.encode('ascii')) for a in args])
+    return image_data[3], "image/%s" % image_type
