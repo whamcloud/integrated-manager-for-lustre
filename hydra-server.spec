@@ -53,6 +53,8 @@ if [ ! -f database.db ]; then
     # it can write to it
     touch /tmp/sql.log
     chown apache.apache /tmp/sql.log
+    # need to set the selinux context on it too
+    chcon "system_u:object_r:httpd_log_t" /tmp/sql.log 
     # and the database, of course
     chown apache.apache /usr/share/hydra-server/database.db
     # start apache at boot time
