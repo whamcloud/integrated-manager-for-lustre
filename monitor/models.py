@@ -21,7 +21,7 @@ def status_style(status):
 
 # Create your models here.
 class Host(models.Model):
-    address = models.CharField(max_length = 256)
+    address = models.CharField(max_length = 256, unique = True)
 
     def __str__(self):
         return "Host '%s'" % self.address
@@ -91,7 +91,9 @@ class Router(models.Model):
 class Filesystem(models.Model):
     name = models.CharField(max_length=8)
     mgs = models.ForeignKey('ManagementTarget')
-    # TODO: uniqueness constraint on name + MGS
+
+    class Meta:
+        unique_together = ('name', 'mgs')
 
     def get_targets(self):
         return [self.mgs] + self.get_filesystem_targets()
@@ -184,11 +186,31 @@ class TargetMount(Mountable):
        with a particular location to mount as primary or as failover"""
     # Like /dev/disk/by-path/ip-asdasdasd
     block_device = models.CharField(max_length = 512, null = True, blank = True)
-    # TODO: constraint that there can only be one primary for a target
     primary = models.BooleanField()
 
-    # TODO: in the case of an MGS, constrain that there may not be two TargetMounts for the same host which 
-    # both reference an MGS in 'target'
+    def save(self, force_insert = False, force_update = False, using = None):
+        # If primary is true, then target must be unique
+        if self.primary:
+            from django.db.models import Q
+            other_primaries = TargetMount.objects.filter(~Q(id = self.id), target = self.target).count()
+            if other_primaries > 0:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("Cannot have multiple primary mounts for target %s" % self.target)
+
+        # If this is an MGS, there may not be another MGS on 
+        # this host
+        try:
+            from django.db.models import Q
+            mgs = self.target.managementtarget
+            other_mgs_mountables_local = TargetMount.objects.filter(~Q(target__managementtarget = None), ~Q(id = self.id), host = self.host).count()
+            if other_mgs_mountables_local > 0:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("Cannot have multiple MGS mounts on host %s" % self.host.address)
+
+        except ManagementTarget.DoesNotExist:
+            pass
+
+        return super(TargetMount, self).save(force_insert, force_update, using)
 
     target = models.ForeignKey('Target')
 
@@ -447,7 +469,23 @@ class AuditRecoverable(AuditMountable):
         else:
             return "N/A"
 
-# Note: normally we would register models with the django admin, but
-# if you are including one app's models from another app, the included
-# app's models must not call into the admin, because the admin scans
-# all apps' models, causing a circular import.
+from django.contrib import admin
+admin.site.register(AuditHost)
+admin.site.register(Audit)
+admin.site.register(AuditMountable)
+admin.site.register(AuditNid)
+admin.site.register(AuditParam)
+admin.site.register(AuditRecoverable)
+admin.site.register(AuditTarget)
+admin.site.register(Client)
+admin.site.register(Filesystem)
+admin.site.register(Host)
+admin.site.register(ManagementTarget)
+admin.site.register(MetadataTarget)
+admin.site.register(Mountable)
+admin.site.register(Nid)
+admin.site.register(ObjectStoreTarget)
+admin.site.register(Router)
+admin.site.register(Target)
+admin.site.register(TargetMount)
+
