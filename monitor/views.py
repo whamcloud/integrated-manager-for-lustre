@@ -96,8 +96,8 @@ def log_viewer(request):
     
     (end_m, end_d, junk) = last_line.split(None, 2)
     
-    display_month = start_m
-    display_day = int(start_d)
+    display_month = end_m
+    display_day = int(end_d)
     display_date = "%s %2d " % (display_month, display_day)
 
     if request.method == 'POST': # If the form has been submitted...
@@ -127,6 +127,8 @@ def log_viewer(request):
         form.fields['start_month'].choices.append(("6", "Jun"))
         for day in range(int(start_d), int(end_d) + 1):
             form.fields['start_day'].choices.append((day, day))
+        form.fields['start_month'].initial = display_month
+        form.fields['start_day'].initial = display_day
         form.fields['only_lustre'].initial = only_lustre
 
         log_data = get_log_data(display_date, only_lustre)
