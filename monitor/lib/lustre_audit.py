@@ -200,6 +200,10 @@ class LustreAudit:
         return mgs
 
     def learn_mgs_targets(self, filesystem_targets, mgs_host_nids):
+        if len(mgs_host_nids) == 0:
+            log().warning("Cannot map targets on MGS to local locations because MGS nids are not yet known -- LNet is probably down on the MGS?")
+            return
+
         # Learn any targets
         for fs, targets in filesystem_targets.items():
             for target in targets:
