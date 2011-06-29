@@ -255,6 +255,19 @@ border-right: 1px solid #0099ff;
 
 /* Log viewer styles */
 
+div#log_filter {
+    margin: 12px;
+    background: #bee5ff;
+    border: 1px solid #09f;
+    border-radius: 6px;
+    padding: 6px;
+    font-size: 0.9em;
+}
+
+div#log_filter form {
+    margin: 0px;
+}
+
 div.log_line {
     margin: 0px;
     font-family: courier;
@@ -262,19 +275,20 @@ div.log_line {
     font-size: 0.8em;
 }
 div.log_view {
-    padding: 12px;
-    background: #ccc;
+    padding: 6px;
+    background: #bee5ff;
     margin-top: 12px;
+    margin-left: 12px;
     font-size: 0.9em;
     border-left: 2px solid #09f;
 }
 
 div.log_viewer_input_widget
 {
+    margin: 0px;
     display: inline;
     padding: 2px 10px 2px 0px;
     font-size: 0.9em;
-    margin-bottom: 12px;
 }
 div.log_view .normal
 {
@@ -282,11 +296,12 @@ color: #333;
 }
 div.log_view .lustre
 {
-background: #ddddee;
+    background-color: #bee5ff;
 }
 div.log_view .lustre_error
 {
-    background: #FFcccc;
+    background: #daa;
+    border-left: 2px solid #f00;
 }
 
 div.log_view .lustre_error .log_message
@@ -308,7 +323,6 @@ span.log_host {
 }
 
 span.log_message {
-    color: #000;
 }
 
 /* Event list */

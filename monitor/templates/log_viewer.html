@@ -3,6 +3,7 @@
 
 {% block content %}
 
+<div id="log_filter">
 <form action="/monitor/log_viewer/" method="post">{% csrf_token %}
     {{ form.non_field_errors }}
     <div class="log_viewer_input_widget">
@@ -20,9 +21,11 @@
         <label for="id_only_lustre">Only Lustre messages</label>
         {{ form.only_lustre }}
     </div>
-<input type="submit" value="Update" />
+    <input type="submit" value="Update" />
 
 </form>
+</div>
+
 <div class='log_view'>
 {% load log_prettify %}
 {% for text,class in log_data %}
