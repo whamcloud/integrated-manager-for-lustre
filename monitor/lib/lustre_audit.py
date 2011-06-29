@@ -396,11 +396,8 @@ class LustreAudit:
                     last_audit = Audit.objects.filter(attempted_hosts = host, complete = True).latest('created_at')
                     last_contact = last_audit.audithost_set.filter(host = host).count() > 0
                 except Audit.DoesNotExist:
-                    print "no last contact for host %s" % host
                     last_contact = None
 
-                print last_contact, contact
-    
                 if contact != last_contact:
                     hce = HostContactEvent(host = host, contact = contact)
                     hce.save()
