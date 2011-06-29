@@ -5,6 +5,7 @@ from django.utils.html import conditional_escape
 
 import re
 nid_regex = re.compile("(\d{1,3}\.){3}\d{1,3}@tcp(_\d+)?")
+target_regex = re.compile("\\b(\\w+-(MDT|OST)\\d\\d\\d\\d)\\b")
 
 from monitor.models import Nid, Host
 
@@ -46,8 +47,7 @@ def pretty_log_line(line):
     service = conditional_escape(service)
     message = conditional_escape(message)
 
-    i = nid_regex.finditer(message)
-    for match in i:
+    for match in nid_regex.finditer(message):
         replace = match.group()
         replace = normalize_nid(replace)
         try:
@@ -58,6 +58,14 @@ def pretty_log_line(line):
                        1)
         except Nid.DoesNotExist:
             print "failed to replace " + replace
+
+    for match in target_regex.finditer(message):
+        # TODO: look up to a target and link to something useful
+        replace = match.group()
+        markup = "<a href='#' title='%s'>%s</a>" % ("foo", match.group())
+        message = message.replace(match.group(),
+                   markup,
+                   1)
 
     return mark_safe("<span class='log_date'>%s</span> <span class='log_host'>%s</span> <span class='log_service'>%s</span>: <span class='log_message'>%s</span>" % (date, host, service, message))
 
