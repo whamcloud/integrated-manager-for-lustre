@@ -133,7 +133,7 @@ class Filesystem(models.Model):
         return status_style(self.status_string())
 
     def __str__(self):
-        return "Filesystem '%s'" % self.name
+        return self.name
 
 class Mountable(models.Model):
     """Something that can be mounted on a particular host (roughly
@@ -356,7 +356,10 @@ class Client(Mountable, FilesystemMember):
         return "%s-client %d" % (self.filesystem.name, self.id)
 
 
+from polymorphic.models import DowncastMetaclass
 class Event(models.Model):
+    __metaclass__ = DowncastMetaclass
+
     created_at = models.DateTimeField(auto_now = True)
     severity = models.IntegerField()
     host = models.ForeignKey(Host, blank = True, null = True)
@@ -373,23 +376,27 @@ class Event(models.Model):
     def message(self):
         raise NotImplementedError
 
-    def downcast(self):
-        try:
-            return self.targetonlineevent
-        except:
-            pass
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.generic import GenericForeignKey
+class LearnEvent(Event):
+    # Every environment at some point reinvents void* :-)
+    learned_item_type = models.ForeignKey(ContentType)
+    learned_item_id = models.PositiveIntegerField()
+    learned_item = GenericForeignKey('learned_item_type', 'learned_item_id')
 
-        try:
-            return self.genericevent
-        except:
-            pass
+    @staticmethod
+    def type_name():
+        return "Autodetection"
 
-        try:
-            return self.hostcontactevent
-        except:
-            pass
-
-        raise NotImplementedError
+    def message(self):
+        if isinstance(self.learned_item, TargetMount):
+            return "Discovered mount point of %s on %s" % (self.learned_item, self.learned_item.host)
+        elif isinstance(self.learned_item, Target):
+            return "Discovered formatted target %s" % (self.learned_item)
+        elif isinstance(self.learned_item, Filesystem):
+            return "Dicovered filesystem %s on MGS %s" % (self.learned_item, self.learned_item.mgs.targetmount_set.get(primary = True).host)
+        else:
+            return "Discovered %s" % self.learned_item
 
 class GenericEvent(Event):
     message_str = models.CharField(max_length = 512)
@@ -401,55 +408,84 @@ class GenericEvent(Event):
     def message(self):
         return self.message_str
 
-class TargetOnlineEvent(Event):
+class BooleanStateEvent(Event):
+    # Did we successfully audit
+    state = models.BooleanField()
+
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+@receiver(pre_save)
+def populate_severity(sender, instance, **kwargs):
+    if isinstance(instance, BooleanStateEvent):
+        from logging import WARNING, INFO
+        if instance.state:
+            instance.severity = INFO
+        else:
+            instance.severity = WARNING
+
+class TargetOnlineEvent(BooleanStateEvent):
     # Which target and where it happened
     target_mount = models.ForeignKey(TargetMount)
-    # Whether this was a target starting (True) or stopping (False)
-    started = models.BooleanField()
 
     @staticmethod
     def type_name():
         return "Target"
 
-    def save(self, *args, **kwargs):
-        from logging import WARNING, INFO
-        if self.started:
-            self.severity = INFO
-        else:
-            self.severity = WARNING
-
-        self.host = self.target_mount.host
-
-        super(TargetOnlineEvent, self).save(*args, **kwargs)
-
     def message(self):
-        if self.started:
+        if self.state:
             return "Target '%s' started" % self.target_mount.target.name
         else:
             return "Target '%s' stopped" % self.target_mount.target.name
 
-class HostContactEvent(Event):
-    # Did we successfully audit
-    contact = models.BooleanField()
-
+class HostContactEvent(BooleanStateEvent):
     @staticmethod
     def type_name():
         return "Host contact"
 
-    def save(self, *args, **kwargs):
-        from logging import WARNING, INFO
-        if self.contact:
-            self.severity = INFO
+    def message(self):
+        if self.state:
+            return "Established contact with host %s" % self.host
         else:
-            self.severity = WARNING
+            return "Lost contact with host %s" % self.host
 
-        super(HostContactEvent, self).save(*args, **kwargs)
+class LNetOnlineEvent(BooleanStateEvent):
+    host = models.ForeignKey(Host)
+
+    @staticmethod
+    def type_name():
+        return "LNet online"
 
     def message(self):
-        if self.contact:
-            return "Established contact with host %s" % self.host.pretty_name()
+        if self.state:
+            return "LNet started on host %s" % self.host
         else:
-            return "Lost contact with host %s" % self.host.pretty_name()
+            return "LNet stopped on host %s" % self.host
+
+class TargetRecoveryEvent(BooleanStateEvent):
+    target_mount = models.ForeignKey(TargetMount)
+
+    @staticmethod
+    def type_name():
+        return "Target recovery"
+
+    def message(self):
+        if self.state:
+            return "Recovery started on target %s" % self.target_mount.target
+        else:
+            return "Recovery finished on target %s" % self.target_mount.target
+
+class ClientOnlineEvent(BooleanStateEvent):
+    client = models.ForeignKey(Client)
+
+    @staticmethod
+    def type_name():
+        return "Client online"
+
+    def message(self):
+        if self.state:
+            return "Client started on host %s" % self.client.host
+        else:
+            return "Client stopped on host %s" % self.client.host
 
 class Audit(models.Model):
     """Represent an attempt to audit some hosts"""
@@ -587,6 +623,10 @@ admin.site.register(TargetMount)
 
 admin.site.register(Event)
 admin.site.register(TargetOnlineEvent)
+admin.site.register(TargetRecoveryEvent)
 admin.site.register(HostContactEvent)
+admin.site.register(ClientOnlineEvent)
+admin.site.register(LNetOnlineEvent)
+admin.site.register(LearnEvent)
 admin.site.register(GenericEvent)
 

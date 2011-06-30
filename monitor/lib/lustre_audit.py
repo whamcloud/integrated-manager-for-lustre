@@ -125,6 +125,22 @@ class LustreAudit:
         # Create and get state of Client objects
         self.learn_clients()
 
+        # Any TargetMounts which we didn't get data for may need to emit offline events
+        # (unless we failed to audit their host, in which case don't)
+        for mountable in Mountable.objects.all():
+            mountable = mountable.downcast()
+            try:
+                audit_host = AuditHost.objects.get(audit = self.audit, host = mountable.host)
+            except AuditHost.DoesNotExist:
+                continue
+            try:
+                audited = AuditMountable.objects.get(audit = self.audit, mountable = mountable)
+            except AuditMountable.DoesNotExist:
+                self.mountable_online_event(mountable, False)
+                audit_mountable = AuditMountable(audit = self.audit,
+                        mountable = mountable, mounted = False)
+                audit_mountable.save()
+
         self.audit.complete = True
         self.audit.save()
 
@@ -146,7 +162,7 @@ class LustreAudit:
                 audit_host.auditnid_set.create(nid_string = nid_str)
 
     def get_target_locations(self):
-        """Return map of (target name, [mgs_nid,]) to (host, mount_info)"""
+        """Return map of (target name, [mgs_nid,]) to [(host, mount_info),...]"""
         target_locations = defaultdict(list)
 
         for audit_host, data in self.raw_data.items():
@@ -177,6 +193,7 @@ class LustreAudit:
             mgs = ManagementTarget(name = "MGS")
             mgs.save()
             log().info("Learned MGS on %s" % host)
+            self.learn_event(host, mgs)
             # Find the local_targets info for the MGS
             #  * if it has no failnode, then this is definitely primary (+ if
             #    it's configured on more than one host then that's an error)
@@ -199,7 +216,7 @@ class LustreAudit:
 
         return mgs
 
-    def learn_mgs_targets(self, filesystem_targets, mgs_host_nids):
+    def learn_mgs_targets(self, filesystem_targets, mgs_host, mgs_host_nids):
         if len(mgs_host_nids) == 0:
             log().warning("Cannot map targets on MGS to local locations because MGS nids are not yet known -- LNet is probably down on the MGS?")
             return
@@ -211,9 +228,16 @@ class LustreAudit:
 
                 # Resolve name + nids of this mgs to locations for this target
                 local_info = None
-                for nid in mgs_host_nids:
-                    for ((name_val, mgs_nids_val), info_val) in self.target_locations.items():
-                        if name_val == name and nid in mgs_nids_val:
+                for ((name_val, mgs_nids_val), info_val) in self.target_locations.items():
+                    host = info_val[0][0]
+                    if mgs_nids_val == ("0@lo",) or mgs_nids_val == tuple([]):
+                        # Match any target with the right name that's on the right host
+                        if name_val == name and host == mgs_host:
+                            local_info = info_val
+                            break
+                    else:
+                        # Match any target with the right name that contains one of our MGS nids in its mgs_nids
+                        if name_val == name and (set(mgs_host_nids) & set(mgs_nids_val)):
                             local_info = info_val
                             break
 
@@ -244,28 +268,58 @@ class LustreAudit:
                                 name = local_target['name'], filesystem = fs)
                             if created:
                                 log().info("Learned %s %s" % (klass.__name__, name))
+                                self.learn_event(host, target)
 
                         try:
                             primary = is_primary(host, local_target)
+                            print target, host, primary, local_target['mount_point'], local_target['device']
                             (tm, created) = TargetMount.objects.get_or_create(target = target,
                                     host = host, primary = primary,
                                     mount_point = local_target['mount_point'],
                                     block_device = local_target['device'])
                             if created:
                                 log().info("Learned association %d between %s and host %s" % (tm.id, name, host.address))
+                                self.learn_event(host, tm)
                         except NoLNetInfo:
                             log().warning("Cannot set up target %s on %s until LNet is running" % (name, host.address))
 
-    def target_online_event(self, target_mount, mounted):
-        """Generate an event if the target_mount's status has changed"""
+    def mountable_online_event(self, mountable, mounted):
+        """Generate an event if the mountable's status has changed"""
         try:
-            old_mounted = AuditMountable.objects.filter(mountable = target_mount).latest('audit__created_at').mounted
+            old_mounted = AuditMountable.objects.filter(mountable = mountable).latest('audit__created_at').mounted
         except AuditMountable.DoesNotExist:
             old_mounted = None
 
         if old_mounted != mounted:
-            ev = TargetOnlineEvent(target_mount = target_mount, started = mounted)
-            ev.save()
+            if isinstance(mountable, TargetMount):
+                TargetOnlineEvent(host = mountable.host, target_mount = mountable, state = mounted).save()
+            elif isinstance(mountable, Client):
+                ClientOnlineEvent(host = mountable.host, client = mountable, state = mounted).save()
+            else:
+                raise NotImplementedError
+            
+    def target_recovery_event(self, target_mount, in_recovery):
+        try:
+            old_in_recovery = AuditRecoverable.objects.filter(mountable = target_mount).latest('audit__created_at').is_recovering()
+        except:
+            old_in_recovery = None
+
+        if old_in_recovery != in_recovery and (old_in_recovery != None or in_recovery == True):
+            TargetRecoveryEvent(host = target_mount.host, target_mount = target_mount, state = in_recovery).save()
+
+    def host_lnet_event(self, host, lnet_up):
+        """Generate an event if the host's LNet has changed state"""
+        try:
+            old_lnet_up = AuditHost.objects.filter(host = host).latest('audit__created_at').lnet_up
+        except:
+            old_lnet_up = None
+
+        if old_lnet_up != lnet_up:
+            LNetOnlineEvent(host = host, state = lnet_up).save()
+
+    def learn_event(self, host, learned_item):
+        from logging import INFO
+        LearnEvent(severity = INFO, host = host, learned_item = learned_item).save()
 
     def learn_target_states(self):
         for audit_host, data in self.raw_data.items():
@@ -273,17 +327,25 @@ class LustreAudit:
                 if mount_info['kind'] == 'MGS':
                     target = ManagementTarget.get_by_host(audit_host.host)
                     mountable = target.targetmount_set.get(host = audit_host.host, mount_point = mount_info['mount_point'])
-                    self.target_online_event(mountable, mount_info['running'])
+                    self.mountable_online_event(mountable, mount_info['running'])
                     audit_mountable = AuditMountable(audit = self.audit,
                             mountable = mountable, mounted = mount_info['running'])
                 else:
-                    # Find the MGS based on mount_info['params']['mgsnode']
-                    mgsnode_nids = normalize_nids(mount_info['params']['mgsnode'][0].split(","))
-                    try:
-                        mgs = self.nids_to_mgs(mgsnode_nids)
-                    except ManagementTarget.DoesNotExist:
-                        log().warning("Cannot find MGS for target %s (nids %s) on host %s" % (mount_info['name'], mgsnode_nids, audit_host.host.address))
-                        continue
+                    if mount_info['params'].has_key('mgsnode') and mount_info['params']['mgsnode'] != ("0@lo",):
+                        # Find the MGS based on mount_info['params']['mgsnode']
+                        mgsnode_nids = normalize_nids(mount_info['params']['mgsnode'][0].split(","))
+                        try:
+                            mgs = self.nids_to_mgs(mgsnode_nids)
+                        except ManagementTarget.DoesNotExist:
+                            log().warning("Cannot find MGS for target %s (nids %s) on host %s" % (mount_info['name'], mgsnode_nids, audit_host.host.address))
+                            continue
+                    else:
+                        # The MGS is local
+                        try:
+                            mgs = ManagementTarget.objects.get(targetmount__host = audit_host.host)
+                        except ManagementTarget.DoesNotExist:
+                            log().error("Cannot find local MGS for target %s on %s which has no mgsnode param" % (mount_info['name'], audit_host.host))
+                            continue
 
                     mountable = None
                     for target_val in Target.objects.filter(name = mount_info['name']):
@@ -297,22 +359,27 @@ class LustreAudit:
                             break
 
                     if mountable == None:
-                        log().warning("Cannot find target %s for mgs nids %s" % (mount_info['name'], mgsnode_nids))
+                        log().warning("Cannot find target %s for mgs %d" % (mount_info['name'], mgs.id))
                         continue
 
-                    # TODO: an event for recovery
-                    self.target_online_event(mountable, mount_info['running'])
                     audit_mountable = AuditRecoverable(audit = self.audit, 
                             mountable = mountable, mounted = mount_info['running'],
                             recovery_status = json.dumps(mount_info["recovery_status"]))
 
-                audit_target,created = self.audit.audittarget_set.get_or_create(target = mountable.target, audit = self.audit)
+                    self.mountable_online_event(mountable, mount_info['running'])
+                    self.target_recovery_event(mountable, audit_mountable.is_recovering())
+
+                audit_mountable.save()
+                # Fill out an AuditTarget object as well, potentially multiple times if
+                # we encounter the target on multiple hosts
+                audit_target,created = self.audit.audittarget_set.get_or_create(
+                        target = mountable.target, audit = self.audit)
                 if created:
                     for key, val_list in mount_info['params'].items():
                         for val in val_list:
-                            audit_target.auditparam_set.create(key = key, value = val)
+                            audit_target.auditparam_set.get_or_create(key = key, value = val)
 
-                audit_mountable.save()
+                
 
     def learn_clients(self):
         for audit_host, data in self.raw_data.items():
@@ -337,8 +404,9 @@ class LustreAudit:
                         host = audit_host.host, mount_point = mount_point, filesystem = fs)
                 if created:
                     log().info("Learned client %s" % client)
+                    self.learn_event(audit_host.host, client)
 
-                # TODO: make a ClientOnlineEvent if needed
+                self.mountable_online_event(client, client_info['mounted'])
                 audit_mountable = AuditMountable(audit = self.audit, mountable = client, mounted = client_info['mounted'])
                 audit_mountable.save()
 
@@ -360,9 +428,10 @@ class LustreAudit:
                 (fs, created) = Filesystem.objects.get_or_create(name = fs_name, mgs = mgs)
                 if created:
                     log().info("Learned filesystem '%s'" % fs_name)
+                    self.learn_event(audit_host.host, fs)
                 filesystem_targets[fs] = targets
 
-            self.learn_mgs_targets(filesystem_targets, normalize_nids(data['lnet_nids']))
+            self.learn_mgs_targets(filesystem_targets, audit_host.host, normalize_nids(data['lnet_nids']))
 
     def get_raw_data(self, hosts):
         # Invoke hydra-agent remotely
@@ -387,12 +456,13 @@ class LustreAudit:
                     data = json.loads(output)
                     audit_host = AuditHost(audit = self.audit, host = host, lnet_up = data['lnet_up'])
                     audit_host.save()
+                    self.host_lnet_event(host, data['lnet_up'])
                     raw_data[audit_host] = data
                     contact = True
                 except Exception,e:
                     log().error("bad output from %s: %s '%s'" % (str(node), e, output))
                     contact = False
-           
+
                 # See if we could contact the host last time, in order to detect a
                 # transition between contactable and uncontactable states and generate
                 # a HostContactEvent if necessary.
@@ -402,9 +472,11 @@ class LustreAudit:
                 except Audit.DoesNotExist:
                     last_contact = None
 
-                if contact != last_contact:
-                    hce = HostContactEvent(host = host, contact = contact)
-                    hce.save()
+                # Only generate an event if the contact status has changed, and either
+                # there is a history for this host, or it is coming online (otherwise
+                # we would spam "lost contact" messages until first success).
+                if contact != last_contact and (last_contact != None or contact == True):
+                    HostContactEvent(host = host, state = contact).save()
 
         return raw_data
 

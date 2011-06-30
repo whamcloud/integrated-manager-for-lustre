@@ -182,7 +182,7 @@ def events(request):
             except KeyError:
                 pass
 
-    event_set = [e.downcast() for e in Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')]
+    event_set = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
     return render_to_response('events.html', RequestContext(request, {
         'form': form,
         'events': event_set}))

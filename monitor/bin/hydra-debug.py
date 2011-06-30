@@ -129,10 +129,8 @@ class HydraDebug(cmd.Cmd, object):
         tms = list(TargetMount.objects.all())
         for i in range(0, count):
             tm = tms[randint(0, len(tms))]
-            ev = TargetOnlineEvent(target_mount = tm, started = False)
-            ev.save()
-            ev = TargetOnlineEvent(target_mount = tm, started = True)
-            ev.save()
+            TargetOnlineEvent(target_mount = tm, state = False).save()
+            TargetOnlineEvent(target_mount = tm, state = True).save()
 
 if __name__ == '__main__':
     cmdline = HydraDebug
