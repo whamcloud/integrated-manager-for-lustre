@@ -17,7 +17,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: Django >= 1.3, mod_wsgi, httpd
+Requires: Django >= 1.3, mod_wsgi, httpd, rrdtool-python, lmt-server
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
@@ -59,6 +59,8 @@ if [ ! -f database.db ]; then
     chown apache.apache /usr/share/hydra-server/database.db
     # start apache at boot time
     chkconfig httpd on
+    # start cerebrod at boot time
+    chkconfig cerebrod on
 fi
 popd >/dev/null
 
