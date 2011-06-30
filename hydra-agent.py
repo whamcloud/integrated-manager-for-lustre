@@ -91,6 +91,11 @@ class LocalLustreAudit:
                     if mount_device == device:
                         mount_point = mntpnt
 
+                if not mount_point:
+                    # Deal with the situation where a target on its way down
+                    # may appear in /proc/fs/lustre but not in /proc/mounts
+                    continue
+
                 running_target_info[name] = {"recovery_status": recovery_status, "uuid": uuid, "mount_point": mount_point}
                 lustre_devices.add(device)
 
