@@ -39,13 +39,28 @@ class LocalLustreAudit:
             return re.search("^\\w+-(\\w\\w\\w)", name).group(1)
 
     def get_local_targets(self):
-        devices_file = "/proc/fs/lustre/devices"
-        targets = {}
+        # List of devices to scan, from /proc and fstab
+        lustre_devices = set()
+
+        # Information about running lustre targets learned from /proc
+        running_target_info = {}
+
         # Find running devices in /proc and extract any info that we won't 
         # get from tunefs.lustre later.
+        devices_file = "/proc/fs/lustre/devices"
         if os.path.exists(devices_file):
+            # NB assume that if proc/fs/lustre/devices exists then 
+            # version file will also exist
+            version_file = "/proc/fs/lustre/version"
+            version_text = open(version_file).read()
+            (major, minor, patch) = re.search("lustre: (\\d+).(\\d+).(\\w+)", version_text).groups()
             for line in open(devices_file).readlines():
-                target_types = {"obdfilter": "OST", "mdt": "MDT", "mgs": "MGS"}
+                # Device names are different in lustre 1.x versus lustre 2.x
+                if int(major) < 2:
+                    target_types = {"obdfilter": "OST", "mds": "MDT", "mgs": "MGS"}
+                else:
+                    target_types = {"obdfilter": "OST", "mdt": "MDT", "mgs": "MGS"}
+
                 try:
                     (local_id, state, type, name, uuid, some_other_id) = line.split()
                 except ValueError:
@@ -56,27 +71,31 @@ class LocalLustreAudit:
 
                 recovery_status = {}
                 if type != "mgs":
-                    recovery_file = glob.glob("/proc/fs/lustre/*/%s/recovery_status" % name)[0]
-                    recovery_status_text = open(recovery_file).read()
-                    for line in recovery_status_text.split("\n"):
-                        tokens = line.split(":")
-                        if len(tokens) != 2:
-                            continue
-                        k = tokens[0].strip()
-                        v = tokens[1].strip()
-                        recovery_status[k] = v
+                    try:
+                        recovery_file = glob.glob("/proc/fs/lustre/*/%s/recovery_status" % name)[0]
+                        recovery_status_text = open(recovery_file).read()
+                        for line in recovery_status_text.split("\n"):
+                            tokens = line.split(":")
+                            if len(tokens) != 2:
+                                continue
+                            k = tokens[0].strip()
+                            v = tokens[1].strip()
+                            recovery_status[k] = v
+                    except IndexError:
+                        pass
 
                 device = self.normalize_device(open(glob.glob("/proc/fs/lustre/*/%s/mntdev" % name)[0]).read())
-
                 # For mounted devices, we can learn the mount point from /proc/mounts
                 mount_point = None
                 for mount_device, mntpnt, fstype in self.mounts:
                     if mount_device == device:
                         mount_point = mntpnt
 
-                targets[device] = {"recovery_status": recovery_status, "uuid": uuid, "running": True, "mount_point": mount_point}
+                running_target_info[name] = {"recovery_status": recovery_status, "uuid": uuid, "mount_point": mount_point}
+                lustre_devices.add(device)
 
-        mntpnts = {}
+        # Information about particular devices learned from fstab
+        device_info = {}
 
         # Get all 'lustre' targets from fstab, and merge info with
         # what we learned from /proc or create fresh entries for 
@@ -87,22 +106,17 @@ class LocalLustreAudit:
 
             device = self.normalize_device(device)
             if os.path.exists(device):
-                info = {"mount_point": mntpnt, "recovery_status": {}}
-                if targets.has_key(device):
-                    targets[device] = dict(targets[device].items() + info.items())
-                else:
-                    targets[device] = info
-            else:
-                # TODO: log warning that we found a device that doesn't exist unless
-                # it's a client-looking 'device'
-                pass
+                device_info[device] = {"mount_point": mntpnt}
+                lustre_devices.add(device)
 
+        result = []
         # Interrogate each target that we found in proc or fstab
-        for device,device_info in targets.items():
+        for device in lustre_devices:
             tunefs_text = subprocess.Popen(["tunefs.lustre", "--dryrun", device], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.read()
             try:
                 name = re.search("Target:\\s+(.*)\n", tunefs_text).group(1)
                 fs_name = re.search("Lustre FS:\\s+([^\n]*)\n", tunefs_text).group(1)
+                flags = int(re.search("Flags:\\s+(0x[a-fA-F0-9]+)\n", tunefs_text).group(1), 16)
                 params_re = re.search("Parameters:\\ ([^\n]+)\n", tunefs_text)
                 if params_re:
                     # Dictionary of parameter name to list of instance values
@@ -115,28 +129,39 @@ class LocalLustreAudit:
                 else:
                     params = {}
 
-                # If no 'running' set for the device before, then it wasn't
-                # interrogated from /proc and is therefore not running
-                if device_info.has_key('running'):
-                    running = device_info['running']
-                else:
-                    running = False
+                running = (name in running_target_info)
+                try:
+                    mount_point = running_target_info[name]['mount_point']
+                except KeyError:
+                    mount_point = device_info[device]['mount_point']
 
-                targets[device] = dict(targets[device].items() + {
-                    "running": running,
-                    "kind": self.name2kind(name),
-                    "name": name,
-                    "filesystem": fs_name,
-                    "params": params,
-                    "device": device
-                    }.items())
+                real_names = [name]
+                if flags & 0x5:
+                    real_names.append("MGS")
+
+                for real_name in real_names:
+                    try:
+                        recovery_status = running_target_info[real_name]['recovery_status']
+                    except:
+                        recovery_status = {}
+
+                    result.append(dict(device_info.items() + {
+                        "recovery_status": recovery_status,
+                        "mount_point": mount_point,
+                        "running": running,
+                        "kind": self.name2kind(real_name),
+                        "name": real_name,
+                        "filesystem": fs_name,
+                        "params": params,
+                        "device": device
+                        }.items()))
             except Exception,e:
                 del targets[device]
                 # Failed to get tunefs output, probably not a lustre-formatted
                 # volume
                 pass
 
-        return targets.values()
+        return result
 
     def get_client_mounts(self):
         """Parse 'fstab' and 'mount' to get a list of configured clients
