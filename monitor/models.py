@@ -1,4 +1,5 @@
 from django.db import models
+from polymorphic.models import DowncastMetaclass
 
 from collections_24 import defaultdict
 
@@ -26,11 +27,6 @@ class Host(models.Model):
     def __str__(self):
         return self.pretty_name()
 
-    def get_mountables(self):
-        """Like mountable_set.all() but downcasting to their most 
-           specific class rather than returning a bunch of Mountable"""
-        return [m.downcast() for m in self.mountable_set.all()]
-
     def pretty_name(self):
         if self.address[-12:] == ".localdomain":
             return self.address[:-12]
@@ -40,7 +36,6 @@ class Host(models.Model):
     def role(self):
         roles = set()
         for mountable in self.mountable_set.all():
-            mountable = mountable.downcast()
             if isinstance(mountable, TargetMount):
                 target = mountable.target.downcast()
                 if target.__class__ == ManagementTarget:
@@ -63,7 +58,7 @@ class Host(models.Model):
 
     def status_string(self):
         # Green if all targets are online
-        target_status_set = set([t.status_string() for t in self.get_mountables() if not hasattr(t, 'client')])
+        target_status_set = set([t.status_string() for t in self.mountable_set.all() if isinstance(t, TargetMount)])
         if len(target_status_set) > 0:
             good_states = ["STARTED", "REDUNDANT", "SPARE"]
             if set(good_states) >= target_status_set:
@@ -138,6 +133,7 @@ class Filesystem(models.Model):
 class Mountable(models.Model):
     """Something that can be mounted on a particular host (roughly
        speaking a line in fstab."""
+    __metaclass__ = DowncastMetaclass
     host = models.ForeignKey('Host')
     mount_point = models.CharField(max_length = 512, null = True, blank = True)
 
@@ -146,26 +142,12 @@ class Mountable(models.Model):
         raise NotImplementedError()
 
     def role(self):
-        return self.downcast().role()
-
-    def downcast(self):
-        if self.__class__ != Mountable and isinstance(self, Mountable):
-            return self
-            
-        try:
-            return self.targetmount
-        except TargetMount.DoesNotExist:
-            pass
-
-        try:
-            return self.client
-        except Client.DoesNotExist:
-            pass
-
-        raise NotImplementedError
+        """To be implemented by child classes"""
+        raise NotImplementedError()
 
     def status_string(self):
-        raise NotImplementedError
+        """To be implemented by child classes"""
+        raise NotImplementedError()
 
     def status_rag(self):
         return status_style(self.status_string())
@@ -275,26 +257,11 @@ class TargetMount(Mountable):
 class Target(models.Model):
     """A Lustre filesystem target (MGS, MDT, OST) in the abstract, which
        may be accessible through 1 or more hosts via TargetMount"""
+    __metaclass__ = DowncastMetaclass
     # Like testfs-OST0001
     # Nullable because when manager creates a Target it doesn't know the name
     # until it's formatted+started+audited
     name = models.CharField(max_length = 64, null = True, blank = True)
-
-    def downcast(self):
-        try:
-            return self.metadatatarget
-        except MetadataTarget.DoesNotExist:
-            pass
-        try:
-            return self.objectstoretarget
-        except ObjectStoreTarget.DoesNotExist:
-            pass
-        try:
-            return self.managementtarget
-        except ManagementTarget.DoesNotExist:
-            pass
-
-        raise NotImplementedError
 
     def name_no_fs(self):
         """Something like OST0001 rather than testfs1-OST0001"""
@@ -356,7 +323,6 @@ class Client(Mountable, FilesystemMember):
         return "%s-client %d" % (self.filesystem.name, self.id)
 
 
-from polymorphic.models import DowncastMetaclass
 class Event(models.Model):
     __metaclass__ = DowncastMetaclass
 

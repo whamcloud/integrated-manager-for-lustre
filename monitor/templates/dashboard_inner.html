@@ -45,7 +45,7 @@
     {% for host in hosts %}
     <li class="host collapsible"><span class='name'>{{host.pretty_name}}</span> ({{host.role}}) <span class='status {{host.status_string}}'>{{host.status_string}}</span>
     <ul class="tree">
-        {% for mountable in host.get_mountables %}
+        {% for mountable in host.mountable_set.all %}
         <li class="target">
         {{mountable}} <span class='status {{mountable.status_rag}}'>{{mountable.status_string}}</span>
         </li>
