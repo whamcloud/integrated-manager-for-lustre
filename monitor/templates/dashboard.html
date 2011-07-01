@@ -54,7 +54,7 @@
     function load_inner() {
         console.log("load_inner");
         reload_request = $.get("dashboard_inner/", function(response, status) {
-            /*reload_timeout = setTimeout('load_inner()', 2000);*/
+            reload_timeout = setTimeout('load_inner()', 2000);
 
             if (status == 'error') {
                 $('#inner').html("Error loading status, check connection between browser and Hydra server");
