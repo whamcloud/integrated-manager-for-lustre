@@ -27,6 +27,13 @@ class Host(models.Model):
     def __str__(self):
         return self.pretty_name()
 
+    def save(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        MIN_LENGTH = 1
+        if len(self.address) < MIN_LENGTH:
+            raise ValidationError("Address '%s' is too short" % self.address)
+        super(Host, self).save(*args, **kwargs)
+
     def pretty_name(self):
         if self.address[-12:] == ".localdomain":
             return self.address[:-12]

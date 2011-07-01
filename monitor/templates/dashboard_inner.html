@@ -54,6 +54,18 @@
     </li>
     {% endfor %}
 </ul>
+
+<script type='text/javascript'>
+$(document).ready(function() {
+    $('.add_host_button').button()
+    $('.add_host_button').click(function(ev) {
+        $('#add_host_dialog').dialog('open');
+        $('#add_host_tabs').tabs('select', "#add_host_prompt");
+    });
+});
+</script>
+<div style="text-align: right;">
+    <a href='#' class='add_host_button'>Add host...</a>
 </div>
 
 </td></tr>
