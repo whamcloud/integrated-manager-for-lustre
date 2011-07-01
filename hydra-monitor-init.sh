@@ -16,6 +16,15 @@ export PYTHONPATH=/usr/share/hydra-server
 
 start() {
     echo -n "Starting the Hydra monitoring daemon: "
+    # create the database
+    pushd /usr/share/hydra-server >/dev/null
+    if [ ! -f database.db ]; then
+        # but don't clobber one that's already there!
+        PYTHONPATH=$(pwd) python manage.py syncdb --noinput >/dev/null
+        # and the database, of course
+        chown apache.apache database.db
+    fi
+    popd >/dev/null
     daemon --pidfile /var/run/hydra-monitor.pid '/usr/share/hydra-server/monitor/bin/hydra-monitor.py >/dev/null & echo "$!" > /var/run/hydra-monitor.pid'
     echo
 }

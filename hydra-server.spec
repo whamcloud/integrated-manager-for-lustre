@@ -1,6 +1,6 @@
 %define name hydra-server
-%define version 0.1
-%define unmangled_version 0.1
+%define version 0.2
+%define unmangled_version 0.2
 %define release 1
 
 Summary: The Whamcloud Lustre Monitoring and Adminisration Interface
@@ -17,7 +17,8 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: Django >= 1.3, mod_wsgi, httpd
+Requires: Django >= 1.3, mod_wsgi, httpd, rrdtool-python, lmt-server
+Requires(post): django-pagination
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
@@ -44,18 +45,18 @@ w
 q
 EOF
 
-# create the database
-pushd /usr/share/hydra-server >/dev/null
-if [ ! -f database.db ]; then
-    # but don't clobber one that's already there!
-    PYTHONPATH=$(pwd) python manage.py syncdb --noinput >/dev/null
-    # if a sql.log debug file was created, make sure apache owns it so
-    # it can write to it
+# make sure a sql.log debug file exists and apache owns it so
+# it can write to it
+if [ ! -f /tmp/sql.log ]; then
+    touch /tmp/sql.log
     chown apache.apache /tmp/sql.log
-    # and the database, of course
-    chown apache.apache /usr/share/hydra-server/database.db
+    # need to set the selinux context on it too
+    chcon "system_u:object_r:httpd_log_t" /tmp/sql.log 
 fi
-popd >/dev/null
+# start apache at boot time
+chkconfig httpd on
+# start cerebrod at boot time
+chkconfig cerebrod on
 
 chkconfig --add hydra-monitor
 
