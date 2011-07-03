@@ -45,7 +45,7 @@
     {% for host in hosts %}
     <li class="host collapsible"><span class='name'>{{host.pretty_name}}</span> ({{host.role}}) <span class='status {{host.status_string}}'>{{host.status_string}}</span>
     <ul class="tree">
-        {% for mountable in host.get_mountables %}
+        {% for mountable in host.mountable_set.all %}
         <li class="target">
         {{mountable}} <span class='status {{mountable.status_rag}}'>{{mountable.status_string}}</span>
         </li>
@@ -54,6 +54,18 @@
     </li>
     {% endfor %}
 </ul>
+
+<script type='text/javascript'>
+$(document).ready(function() {
+    $('.add_host_button').button()
+    $('.add_host_button').click(function(ev) {
+        $('#add_host_dialog').dialog('open');
+        $('#add_host_tabs').tabs('select', "#add_host_prompt");
+    });
+});
+</script>
+<div style="text-align: right;">
+    <a href='#' class='add_host_button'>Add host...</a>
 </div>
 
 </td></tr>

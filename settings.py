@@ -96,6 +96,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'pagination.middleware.PaginationMiddleware',
+    'middleware.ExceptionPrinterMiddleware'
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (

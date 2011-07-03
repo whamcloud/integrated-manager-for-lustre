@@ -2,7 +2,7 @@
 
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 
 from monitor.models import *
 from monitor.lib.graph_helper import load_graph,dyn_load_graph
@@ -187,4 +187,79 @@ def events(request):
         'form': form,
         'events': event_set}))
 
+#def ajax_exception(fn):
+#    def wrapped(*args, **kwargs):
+#        try:
+#            return fn(*args, **kwargs)
+#        except Exception,e:
+#            return HttpResponse(json.dumps({'error': "%s" % e}), mimetype = 'application/json', status=500)
+#
+#    return wrapped
+
+def ajax_exception(fn):
+    def wrapped(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except Exception,e:
+            return HttpResponse(json.dumps({'error': "%s" % e}), mimetype = 'application/json', status=500)
+
+    return wrapped
+
+@ajax_exception
+def host(request):
+    if request.method != 'POST':
+        return HttpResponseBadRequest()
+
+    commit = json.loads(request.POST['commit'])
+    address = request.POST['address']
+
+    if commit:
+        h = Host(address = address)
+        from django.db.utils import IntegrityError
+        try:
+            h.save()
+        except IntegrityError,e:
+            raise RuntimeError("Cannot add '%s', possible duplicate address. (%s)" % (address, e))
+
+        result = {'success': True}
+    else:
+        import socket
+        try:
+            addresses = socket.getaddrinfo(address, "22")
+            resolve = True
+        except socket.gaierror:
+            resolve = False
+
+        ping = False
+        if resolve:
+            from subprocess import call
+            # TODO: sanitize address!!!!! FIXME XXX NO REALLY DO IT!    
+            ping = (0 == call(['ping', '-c 1', address]))
+
+        # Don't depend on ping to try invoking agent, could well have 
+        # SSH but no ping
+        agent = False
+        if resolve:
+            from monitor.lib.lustre_audit import AGENT_PATH
+            from ClusterShell.Task import task_self, NodeSet
+            task = task_self()
+            task.shell(AGENT_PATH, nodes = NodeSet.fromlist([address.__str__()]));
+            task.resume()
+            for o, nodes in task.iter_buffers():
+                output = "%s" % o
+
+            import simplejson
+            try:
+                json.loads(output)
+                agent = True
+            except simplejson.decoder.JSONDecodeError:
+                agent = False
+            
+        result = {
+                'address': address,
+                'resolve': resolve,
+                'ping': ping,
+                'agent': agent,
+                }
+    return HttpResponse(json.dumps(result), mimetype = 'application/json')
 

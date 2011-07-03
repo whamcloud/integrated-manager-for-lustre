@@ -128,7 +128,6 @@ class LustreAudit:
         # Any TargetMounts which we didn't get data for may need to emit offline events
         # (unless we failed to audit their host, in which case don't)
         for mountable in Mountable.objects.all():
-            mountable = mountable.downcast()
             try:
                 audit_host = AuditHost.objects.get(audit = self.audit, host = mountable.host)
             except AuditHost.DoesNotExist:
@@ -349,7 +348,6 @@ class LustreAudit:
 
                     mountable = None
                     for target_val in Target.objects.filter(name = mount_info['name']):
-                        target_val = target_val.downcast()
                         if not isinstance(target_val, FilesystemMember):
                             continue
 

@@ -45,7 +45,9 @@ div.dashtree li.collapsible {
 
 div.dashtree ul.tree {
     padding-left: 0px;
+    padding-right: 0px;
     margin-top: 6px;
+    margin-right: 0px;
     width: 400px;
 }
 
@@ -56,7 +58,7 @@ div.dashtree ul.fullwidth {
 /* each child -24 for icon+padding, then -4 for rhs padding */
 
 div.dashtree ul.tree ul.tree {
-    width: 372px;
+    width: 100%;
 }
 
 div.dashtree ul.fullwidth ul.fullwidth {
@@ -93,7 +95,8 @@ div.dashtree span.name {
 
 div.dashtree span.status {
     position: absolute;
-    left: 300px;
+    /*left: 300px;*/
+    right: 24px;
     font-size: 0.85em;
     font-weight: bold;
 
@@ -472,3 +475,17 @@ div.pagination {
     color: #09f;
 }
 
+/* dashboard add host */
+td.success {
+    background-image: url('../images/icon_tick.png');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 16px;
+}
+
+td.failure {
+    background-image: url('../images/dialog-error.png');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 16px;
+}

@@ -62,8 +62,6 @@
                 $('#inner').html(response);
             }
 
-            setTimeout('load_inner()', 2000);
-
             $('li.collapsible').each(function() {
                 /* Insert expand all and collapse all links */
                 if ($(this).find('li.collapsible').size() == 0) {
@@ -91,6 +89,14 @@
                 event.stopPropagation();
             });
 
+            function collapsible_empty(element) {
+                if (element.find('ul.tree').find('li').size() == 0) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
             $('li.collapsible').each(function(item) {
                 /* Set 'closed' on anything with an 'OK' status */
                 if ($(this).children('span.status').first().hasClass('OK')) {
@@ -101,17 +107,36 @@
                 if ($(this).getPath() in closed_states) {
                     $(this).toggleClass('closed', closed_states[$(this).getPath()])
                 }
+
+                if (collapsible_empty($(this))) {
+                    $(this).toggleClass('closed', true);
+                }
             });
 
-            $('li.collapsible').each(function(item) {
+            /* Hide children of nodes with 'closed' class */
+            $('li.collapsible').each(function() {
                 if ($(this).hasClass('closed')) {
                     $(this).children('ul').hide();
+                }
+            });
+
+            /* Apply open/closed icon overlays */
+            $('li.collapsible').each(function() {
+                if (collapsible_empty($(this))) {
+                    return;
+                }
+                if ($(this).hasClass('closed')) {
                     $("<div class='closed_icon'></div>").insertBefore($(this).children('ul'));
                 } else {
                     $("<div class='open_icon'></div>").insertBefore($(this).children('ul'));
                 }
             });
+
+            /* Add click handler */
             $('li.collapsible').click(function(event) {
+                if (collapsible_empty($(this))) {
+                    return;
+                }
                 toggle_closed($(this));
                 event.stopPropagation();
             });
@@ -121,8 +146,6 @@
     $(document).ready(function() {
             load_inner();
     });
-
-
 </script>
 {% endblock %}
 
@@ -143,5 +166,156 @@
 </ul>
 </div>
 -->
+
+<script type='text/javascript'>
+    $(document).ajaxSend(function(event, xhr, settings) {
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie != '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = jQuery.trim(cookies[i]);
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        function sameOrigin(url) {
+            // url could be relative or scheme relative or absolute
+            var host = document.location.host; // host + port
+            var protocol = document.location.protocol;
+            var sr_origin = '//' + host;
+            var origin = protocol + sr_origin;
+            // Allow absolute or scheme relative URLs to same origin
+            return (url == origin || url.slice(0, origin.length + 1) == origin + '/') ||
+                (url == sr_origin || url.slice(0, sr_origin.length + 1) == sr_origin + '/') ||
+                // or any other URL that isn't scheme relative or absolute i.e relative.
+                !(/^(\/\/|http:|https:).*/.test(url));
+        }
+        function safeMethod(method) {
+            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+        }
+
+        if (!safeMethod(settings.type) && sameOrigin(settings.url)) {
+            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+        }
+    });
+    $(document).ready(function() {
+            console.log("ready");
+            $('#add_host_dialog').dialog({
+                autoOpen: false,
+                title: "Add host",
+                resizable: false
+            });
+            $('#add_host_tabs').tabs()
+
+            $('.add_host_close_button').button()
+            $('.add_host_confirm_button').button()
+            $('.add_host_submit_button').button()
+            $('.add_host_back_button').button()
+
+            $('.add_host_submit_button').click(function(ev) {
+                $('#add_host_tabs').tabs('select', '#add_host_loading');
+
+                $.post('host/', {address: $('#add_host_address').attr('value'), commit: false})
+                .success(function(data, textStatus, jqXHR) {
+                    $('#add_host_tabs').tabs('select', '#add_host_confirm');
+
+                    $('#add_host_address_label').html(data['address']);
+                    $('#add_host_resolve').toggleClass('success', data['resolve']);
+                    $('#add_host_resolve').toggleClass('failure', !data['resolve']);
+                    $('#add_host_ping').toggleClass('success', data['ping']);
+                    $('#add_host_ping').toggleClass('failure', !data['ping']);
+                    $('#add_host_agent').toggleClass('success', data['agent']);
+                    $('#add_host_agent').toggleClass('failure', !data['agent']);
+                })
+                .error(function(event) {
+                    console.log(event.responseText);
+                    data = $.parseJSON(event.responseText);
+                    $('#add_host_tabs').tabs('select', '#add_host_error');
+                    $('#add_host_error_message').html(data['error']);
+                });
+                ev.stopPropagation();
+            });
+
+            $('.add_host_confirm_button').click(function(ev) {
+                    $.post('host/', {address: $('#add_host_address_label').html(), commit: true})
+                .success(function(data, textStatus, jqXHR) {
+                    $('#add_host_tabs').tabs('select', '#add_host_complete');
+                })
+                .error(function(event) {
+                    console.log(event.responseText);
+                    data = $.parseJSON(event.responseText);
+                    $('#add_host_tabs').tabs('select', '#add_host_error');
+                    $('#add_host_error_message').html(data['error']);
+                });
+
+                ev.stopPropagation();
+            });
+
+            $('.add_host_close_button').click(function(ev) {
+                $('#add_host_dialog').dialog('close')
+
+                ev.stopPropagation();
+            });
+
+            $('.add_host_back_button').click(function(ev) {
+                $('#add_host_tabs').tabs('select', '#add_host_prompt')
+
+                ev.stopPropagation();
+            });
+    });
+</script>
+</div>
+
+<div id="add_host_dialog">
+    <div id="add_host_tabs">
+        <ul style="display:none;">
+            <li><a href="#add_host_prompt">foo</a></li>
+            <li> <a href="#add_host_loading">foo</a></li>
+            <li> <a href="#add_host_confirm">foo</a></li>
+            <li> <a href="#add_host_complete">foo</a></li>
+            <li> <a href="#add_host_error">foo</a></li>
+        </ul>
+    <div id="add_host_prompt">
+        <form style="margin-bottom:0px;">
+            <!-- nb not submitting csrf_token with the form, but having it here ensures
+                 csrf_token cookie gets set -->
+            {% csrf_token %}
+            <label style="margin-right: 6px;" for='add_host_address'>Hostname:</label><input style="width:100%;" type='entry' id='add_host_address'/>
+            <div style="text-align: right;">
+                <a style="margin-top: 6px;" class="add_host_submit_button" type='submit'>Continue</a>
+            </div>
+        </form>
+    </div>
+    <div id="add_host_loading">
+        <img src='{{STATIC_URL}}/images/ajax-loader.gif'/>
+        <span class='loading_placeholder'>Checking connectivity...</span>
+    </div>
+    <div id='add_host_confirm'>
+        <p style="margin-bottom: 0px;margin-top:0px;">Host: <span style="font-weight: bold;" id="add_host_address_label"></span></p>
+        <table style="margin-bottom: 6px;">
+            <tr><td>Resolve: </td>     <td id="add_host_resolve">&nbsp;</td></tr>
+            <tr><td>Ping: </td>        <td id="add_host_ping">&nbsp;</td></tr>
+            <tr><td>Invoke agent: </td><td id="add_host_agent">&nbsp;</td></tr>
+        </table>
+        <a href="#" class="add_host_back_button">Back</a>
+        <a href="#" class="add_host_confirm_button">Confirm</a>
+    </div>
+    <div id='add_host_complete'>
+        <p>Host added.</p>
+        <a href='#' class="add_host_close_button">Close</a>
+        <a href='#' class="add_host_back_button">Add another</a>
+    </div>
+    <div id='add_host_error'>
+        <p style="margin-bottom: 6px;"><span style='font-weight: bold;' id="add_host_error_message"></span></p>
+        <a href='#' class="add_host_back_button">Back</a>
+    </div>
+    </div>
+</div>
 
 {% endblock %}
