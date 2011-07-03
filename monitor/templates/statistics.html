@@ -119,28 +119,64 @@
 
 {% block content %}
 
-<table class="twocolumns">
-  <tr>
-    <td>
-<div class="dashtree">
+<div class="dashtree fullwidth">
 <h1>Filesystems</h1>
-<ul class="tree">
+<ul class="tree fullwidth">
 {% for filesystem in filesystems %}
 <li class="filesystem collapsible"><span class='name'>{{filesystem.name}}</span>
-    <ul class="tree">
+    <ul class="tree fullwidth">
+        <li class="target collapsible">
+            <span class="name">Aggregate</span>
+                <ul class="tree fullwidth">
+                    <li class="target collapsible">
+                      <span class="name">Metadata</span>
+                        <ul class="tree fullwidth">
+                          <li>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},mdt_space:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},mdt_space:small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},fhstats:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},fhstats:small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},linkstats:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},linkstats:small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},dirstats:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},dirstats:small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},objstats:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},objstats:small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},attrstats:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},attrstats:small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},statfs:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},statfs:small"></span>
+                          </li>
+                        </ul>
+                    </li>
+                    <li class="target collapsible">
+                      <span class="name">Object Storage</span>
+                       <ul class="tree fullwidth">
+                         <li>
+                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},ost_space:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},ost_space:small"></span>
+                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},bw:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},bw:small"></span>
+                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},lock:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},lock:small"></span>
+                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},iops:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},iops:small"></span>
+                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},clients:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},clients:small"></span>
+                         </li>
+                       </ul>
+                    </li>
+                 </ul>
+        </li>
     {% for target in filesystem.get_filesystem_targets %}
         <li class="target collapsible">
           <span class="name">{{target.name_no_fs}}</span>
-          <ul class="tree">
+          <ul class="tree fullwidth">
           <li>
           {% if target.metadatatarget %}
               <span class="graph"><img class="graph" id="target/{{target.name}},space:small" src="/monitor/dyngraphs/target/{{target.name}},space:small"></span>
-              <span class="graph"><img class="graph" id="target/{{target.name}},inodes:small" src="/monitor/dyngraphs/target/{{target.name}},inodes:small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},fhstats:small" src="/monitor/dyngraphs/target/{{target.name}},fhstats:small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},dirstats:small" src="/monitor/dyngraphs/target/{{target.name}},dirstats:small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},linkstats:small" src="/monitor/dyngraphs/target/{{target.name}},linkstats:small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},objstats:small" src="/monitor/dyngraphs/target/{{target.name}},objstats:small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},attrstats:small" src="/monitor/dyngraphs/target/{{target.name}},attrstats:small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},statfs:small" src="/monitor/dyngraphs/target/{{target.name}},statfs:small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},mknod:small" src="/monitor/dyngraphs/target/{{target.name}},mknod:small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},rename:small" src="/monitor/dyngraphs/target/{{target.name}},rename:small"></span>
           {% else %}
+              <span class="graph"><img class="graph" id="target/{{target.name}},space:small" src="/monitor/dyngraphs/target/{{target.name}},space:small"></span>
               <span class="graph"><img class="graph" id="target/{{target.name}},bw:small" src="/monitor/dyngraphs/target/{{target.name}},bw:small"></span>
-            <span class="graph"><img class="graph" id="target/{{target.name}},ops:small" src="/monitor/dyngraphs/target/{{target.name}},ops:small"></span></li>
-            <li><span class="graph"><img class="graph" id="target/{{target.name}},lock:small" src="/monitor/dyngraphs/target/{{target.name}},lock:small"></span>
-            <span class="graph"><img class="graph" id="target/{{target.name}},clients:small" src="/monitor/dyngraphs/target/{{target.name}},clients:small"></span>
+            <span class="graph"><img class="graph" id="target/{{target.name}},lock:small" src="/monitor/dyngraphs/target/{{target.name}},lock:small"></span>
+            <span class="graph"><img class="graph" id="target/{{target.name}},ops:small" src="/monitor/dyngraphs/target/{{target.name}},ops:small"></span>
+            <span class="graph"><img class="graph" id="target/{{target.name}},exports:small" src="/monitor/dyngraphs/target/{{target.name}},exports:small"></span>
             {% endif %}
             </li>
           </ul>
@@ -151,10 +187,11 @@
 {% endfor %}
 </ul>
 </div>
-    </td>
-    <td>
+
 <div class="dashtree">
 <h1>Servers</h1>
+<ul class="tree">
+<li class="foo collapsible">
 <ul class="tree">
   {% for host in hosts %}
   <li class="host collapsible">
@@ -163,9 +200,8 @@
   </li>
   {% endfor %}
 </ul>
+</li>
+</ul>
 </div>
-    </td>
-  </tr>
-</table>
 
 {% endblock %}

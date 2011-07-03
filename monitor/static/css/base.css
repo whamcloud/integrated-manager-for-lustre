@@ -18,6 +18,10 @@ div.dashtree {
     margin-right: 12px;
 }
 
+div.fullwidth {
+    width: 100%;
+}
+
 div.dashtree h1 {
     font-size: 1.1em;
     margin: 0px;
@@ -45,15 +49,26 @@ div.dashtree ul.tree {
     width: 400px;
 }
 
+div.dashtree ul.fullwidth {
+    width: 100%;
+}
+
 /* each child -24 for icon+padding, then -4 for rhs padding */
 
 div.dashtree ul.tree ul.tree {
     width: 372px;
 }
 
+div.dashtree ul.fullwidth ul.fullwidth {
+    width: 100%;
+}
 
 div.dashtree ul.tree ul.tree ul.tree {
     width: 344px;
+}
+
+div.dashtree ul.fullwidth ul.fullwidth ul.fullwidth{
+    width: 100%;
 }
 
 div.dashtree ul.tree li {
