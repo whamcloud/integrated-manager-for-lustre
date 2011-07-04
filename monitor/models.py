@@ -367,7 +367,7 @@ class LearnEvent(Event):
         elif isinstance(self.learned_item, Target):
             return "Discovered formatted target %s" % (self.learned_item)
         elif isinstance(self.learned_item, Filesystem):
-            return "Dicovered filesystem %s on MGS %s" % (self.learned_item, self.learned_item.mgs.targetmount_set.get(primary = True).host)
+            return "Discovered filesystem %s on MGS %s" % (self.learned_item, self.learned_item.mgs.targetmount_set.get(primary = True).host)
         else:
             return "Discovered %s" % self.learned_item
 
@@ -384,17 +384,11 @@ class GenericEvent(Event):
 class BooleanStateEvent(Event):
     # Did we successfully audit
     state = models.BooleanField()
-
-from django.db.models.signals import pre_save
-from django.dispatch import receiver
-@receiver(pre_save)
-def populate_severity(sender, instance, **kwargs):
-    if isinstance(instance, BooleanStateEvent):
+    def save(self, *args, **kwargs):
         from logging import WARNING, INFO
-        if instance.state:
-            instance.severity = INFO
-        else:
-            instance.severity = WARNING
+        if self.state != None and self.severity == None:
+            self.severity = {True: INFO, False: WARNING}[self.state]
+        super(BooleanStateEvent, self).save(*args, **kwargs)
 
 class TargetOnlineEvent(BooleanStateEvent):
     # Which target and where it happened
@@ -440,6 +434,11 @@ class TargetRecoveryEvent(BooleanStateEvent):
     @staticmethod
     def type_name():
         return "Target recovery"
+
+    def save(self, *args, **kwargs):
+        from logging import WARNING, INFO
+        self.severity = {True: WARNING, False: INFO}[self.state]
+        super(TargetRecoveryEvent, self).save(*args, **kwargs)
 
     def message(self):
         if self.state:
