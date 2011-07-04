@@ -59,16 +59,18 @@ div.dashtree ul.tree ul.tree ul.tree {
 }
 
 div.dashtree ul.tree li {
-    background-color: #c9c9cf;
     list-style: none;
-
 }
 
-div.dashtree ul.tree ul.tree li {
+div.dashtree > ul.tree > li {
+    background-color: #c9c9cf;
+}
+
+div.dashtree > ul.tree > li > ul.tree > li {
     background-color: #d9d9df;
 }
 
-div.dashtree ul.tree ul.tree ul.tree li {
+div.dashtree > ul.tree > li > ul.tree > li > ul.tree > li {
     background-color: #e9e9ef;
 }
 
@@ -81,7 +83,7 @@ div.dashtree span.name {
 div.dashtree span.status {
     position: absolute;
     /*left: 300px;*/
-    right: 24px;
+    right: 32px;
     font-size: 0.85em;
     font-weight: bold;
 
