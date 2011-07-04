@@ -271,7 +271,6 @@ class LustreAudit:
 
                         try:
                             primary = is_primary(host, local_target)
-                            print target, host, primary, local_target['mount_point'], local_target['device']
                             (tm, created) = TargetMount.objects.get_or_create(target = target,
                                     host = host, primary = primary,
                                     mount_point = local_target['mount_point'],
