@@ -2,6 +2,7 @@ VERSION = 0.2
 RELEASE = 1
 
 tarball:
+	rm -f MANIFEST
 	python setup.py sdist
 
 rpms: tarball
