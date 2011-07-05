@@ -155,9 +155,13 @@ class LocalLustreAudit:
                 except KeyError:
                     mount_point = device_info[device]['mount_point']
 
-                real_names = [name]
-                if flags & 0x5:
-                    real_names.append("MGS")
+                real_names = set([name])
+                # include/lustre_disk.h
+                #define LDD_F_SV_TYPE_MDT   0x0001
+                #define LDD_F_SV_TYPE_OST   0x0002
+                #define LDD_F_SV_TYPE_MGS   0x0004
+                if flags & 0x0004:
+                    real_names.add("MGS")
 
                 for real_name in real_names:
                     try:
