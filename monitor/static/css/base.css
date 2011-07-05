@@ -9,10 +9,6 @@ div.dashtree {
     position: relative;
 
     margin-bottom: 4px;
-    -webkit-border-radius: 4px;
-    -moz-border-radius: 4px;
-    border-radius: 4px;
-
     border-left: 3px solid #09f;
     border-right: 3px solid #09f;
     margin-right: 12px;
@@ -74,16 +70,18 @@ div.dashtree ul.fullwidth ul.fullwidth ul.fullwidth{
 }
 
 div.dashtree ul.tree li {
-    background-color: #c9c9cf;
     list-style: none;
-
 }
 
-div.dashtree ul.tree ul.tree li {
+div.dashtree > ul.tree > li {
+    background-color: #c9c9cf;
+}
+
+div.dashtree > ul.tree > li > ul.tree > li {
     background-color: #d9d9df;
 }
 
-div.dashtree ul.tree ul.tree ul.tree li {
+div.dashtree > ul.tree > li > ul.tree > li > ul.tree > li {
     background-color: #e9e9ef;
 }
 
@@ -96,7 +94,7 @@ div.dashtree span.name {
 div.dashtree span.status {
     position: absolute;
     /*left: 300px;*/
-    right: 24px;
+    right: 32px;
     font-size: 0.85em;
     font-weight: bold;
 
@@ -344,6 +342,12 @@ span.log_message {
 }
 
 /* Event list */
+p.empty_table_text {
+    margin: 0px;
+    padding: 4px;
+    margin: 6px 0px 0px 0px;
+}
+
 div#event_filter {
     margin-left: 16px;
     width: 150px;
@@ -381,24 +385,33 @@ div#event_list {
     float:left;
     margin-left: 16px;
     margin-top: 16px;
+    width: 800px;
 }
 
 table.event_list {
     border-collapse: collapse;
     font-size: 0.9em;
     color: black;
-    width: 800px;
+    width: 100%;
 
     padding-bottom: 3px;
     padding-top: 3px;
-    border-top: 2px solid #09f;
-    border-bottom: 2px solid #09f;
-    border-left: 1px solid #09f; 
-    border-right: 1px solid #09f; 
+    border: 1px solid #09f; 
 }
 
 table.event_list td {
     padding: 3px;
+}
+
+table.event_list th {
+    padding: 1px 3px 1px 3px;
+    border-bottom: 2px solid #09f;
+    text-align: left;
+    background-color: #bee5ff;
+    font-weight: normal;
+    font-style: italic;
+    font-size: 0.9em;
+
 }
 
 table.event_list tr {
@@ -412,7 +425,11 @@ table.event_list tr.warning {
     background: #FFBF00;
 }
 table.event_list tr.error {
-    background: #500;
+    background: #c55;
+    border-left: 2px solid #f00;
+    border-right: 2px solid #f00;
+    font-weight: bold;
+    border-bottom: 1px solid #f00;
 }
 
 table.event_list td.event_created_at {
@@ -421,8 +438,21 @@ table.event_list td.event_created_at {
     min-width: 12em;
 }
 
+table.event_list td.event_created_at_short{
+    font-size: 0.9em;
+    font-style: italic;
+    min-width: 8.5em;
+}
+
 table.event_list td.event_severity {
     min-width: 16px;
+}
+
+table.event_list td.alert_item {
+}
+
+table.event_list td.alert_message {
+    width: 100%;
 }
 
 table.event_list td.event_message {
@@ -444,6 +474,66 @@ table.event_list tr.warning td.event_severity {
     background-image: url(../images/dialog-warning.png);
     background-repeat: no-repeat;
     background-position: 3px 3px;
+}
+
+table.event_list tr.error td.event_severity {
+    width: 22px;
+    height: 22px;
+    background-image: url(../images/dialog-error.png);
+    background-repeat: no-repeat;
+    background-position: 3px 3px;
+}
+
+/* alerts list */
+p.alerts_all_ok {
+    padding: 4px 4px 4px 24px;
+    margin: 6px 0px 0px 0px;
+    background-image: url(../images/icon_tick.png);
+    background-repeat: no-repeat;
+    background-position: 4px 4px;
+    border: 1px solid #0a0;
+    background-color: #dfd;
+    border-radius: 6px;
+}
+
+div.alert_list {
+    padding: 12px;
+}
+
+div.alert_list h1 {
+    margin: 0px 0px 6px 0px;
+    font-size: 1.2em;
+}
+
+/* small lists on dashboard */
+div.smalltable h1 {
+    font-size: 1.1em;
+    margin: 0px 0px 6px 0px;
+}
+
+div.smalltable {
+    font-family: verdana, arial, helvetica, sans-serif;
+    font-size: 0.8em;
+    padding: 6px;
+    background: #eee;
+    border: 1px solid #ccc;
+    width: 415px;
+
+    margin-bottom: 4px;
+    border-left: 3px solid #09f;
+    border-right: 3px solid #09f;
+    margin-right: 12px;
+}
+
+div.smalltable div.more_link {
+    margin-top: 3px;
+    font-size: 0.8em;
+    font-style: italic;
+    text-align: right;
+}
+
+div.smalltable span.more_link a {
+    text-decoration: none;
 }
 
 /* django-pagination */

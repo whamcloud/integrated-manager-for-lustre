@@ -22,6 +22,9 @@
 {% autopaginate events 20 %}
 
 <div id="event_list">
+    {% if events.count == 0 %}
+    <p class='empty_table_text'>No events found</p>
+    {% endif %}
     <table class='event_list'>
         <tbody>
             {% for event in events %}
@@ -36,5 +39,6 @@
     </table>
     {% paginate %}
 </div>
+
 
 {% endblock %}

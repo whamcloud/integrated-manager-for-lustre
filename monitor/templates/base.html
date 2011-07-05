@@ -16,13 +16,16 @@
 
     <title>Hydra Monitor</title>
     <div id="header" class="span-31 last"> 
-        <div id="logo"></div>
+        <a href="http://www.whamcloud.com/">
+            <div id="logo"></div>
+        </a>
         <div id="navigation"> 
             <ul> 
-              <li><a href="/monitor/">Dashboard</a></li> 
-              <li><a href="/monitor/statistics/">Statistics</a></li> 
-              <li><a href="/monitor/log_viewer/">Log Viewer</a></li> 
-              <li><a href="/monitor/events/">Events</a></li> 
+              <li><a href="{% url monitor.views.dashboard %}">Dashboard</a></li> 
+              <li><a href="{% url monitor.views.statistics %}">Statistics</a></li> 
+              <li><a href="{% url monitor.views.log_viewer %}">Log Viewer</a></li> 
+              <li><a href="{% url monitor.views.events %}">Events</a></li> 
+              <li><a href="{% url monitor.views.alerts %}">Alerts</a></li> 
             </ul> 
         </div>
     </div> 

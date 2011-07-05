@@ -11,4 +11,5 @@ urlpatterns = patterns('',
     (r'^dyngraphs/((\w+)/[\w\.\-]+),(\w+)(:\w+)?$', dyn_graph_loader),
     (r'^log_viewer/$', log_viewer),
     (r'^events/$', events),
+    (r'^alerts/$', alerts),
 )

@@ -5,6 +5,8 @@ from collections_24 import defaultdict
 
 import simplejson as json
 
+from logging import INFO, WARNING
+
 def status_style(status):
         return {
                 "STARTED": "OK",
@@ -367,98 +369,164 @@ class LearnEvent(Event):
         elif isinstance(self.learned_item, Target):
             return "Discovered formatted target %s" % (self.learned_item)
         elif isinstance(self.learned_item, Filesystem):
-            return "Dicovered filesystem %s on MGS %s" % (self.learned_item, self.learned_item.mgs.targetmount_set.get(primary = True).host)
+            return "Discovered filesystem %s on MGS %s" % (self.learned_item, self.learned_item.mgs.targetmount_set.get(primary = True).host)
         else:
             return "Discovered %s" % self.learned_item
 
-class GenericEvent(Event):
+class AlertEvent(Event):
     message_str = models.CharField(max_length = 512)
+    alert = models.ForeignKey('AlertState')
 
     @staticmethod
     def type_name():
-        return "Message"
+        return "Alert"
 
     def message(self):
         return self.message_str
 
-class BooleanStateEvent(Event):
-    # Did we successfully audit
-    state = models.BooleanField()
+class AlertState(models.Model):
+    """Records a period of time during which a particular
+       issue affected a particular element of the system"""
+    __metaclass__ = DowncastMetaclass
 
-from django.db.models.signals import pre_save
-from django.dispatch import receiver
-@receiver(pre_save)
-def populate_severity(sender, instance, **kwargs):
-    if isinstance(instance, BooleanStateEvent):
-        from logging import WARNING, INFO
-        if instance.state:
-            instance.severity = INFO
+    alert_item_type = models.ForeignKey(ContentType, related_name='alertstate_alert_item_type')
+    alert_item_id = models.PositiveIntegerField()
+    alert_item = GenericForeignKey('alert_item_type', 'alert_item_id')
+
+    begin = models.DateTimeField()
+    end = models.DateTimeField()
+    active = models.BooleanField()
+
+    def duration(self):
+        return self.end - self.begin
+
+    @classmethod
+    def notify(alert_klass, alert_item, active):
+        if active:
+            alert_klass.high(alert_item)
         else:
-            instance.severity = WARNING
+            alert_klass.low(alert_item)
 
-class TargetOnlineEvent(BooleanStateEvent):
-    # Which target and where it happened
-    target_mount = models.ForeignKey(TargetMount)
+    @classmethod
+    def get_existing(alert_klass, alert_item):
+        """Do a normal .get() with the alert_item converted to explicit id+type info
+           for GenericForeignKey"""
+        return alert_klass.objects.get(
+                active = True,
+                alert_item_id = alert_item.id,
+                alert_item_type__model = alert_item.__class__.__name__.lower(),
+                alert_item_type__app_label = alert_item.__class__._meta.app_label)
 
-    @staticmethod
-    def type_name():
-        return "Target"
+    @classmethod
+    def high(alert_klass, alert_item):
+        import datetime
+        now = datetime.datetime.now()
+        try:
+            alert_state = alert_klass.get_existing(alert_item)
+            alert_state.end = now
+            alert_state.save()
+        except alert_klass.DoesNotExist:
+            alert_state = alert_klass(
+                    active = True,
+                    begin = now,
+                    end = now,
+                    alert_item = alert_item)
+            alert_state.save()
+            alert_state.begin_event().save()
 
+        return alert_state
+
+    @classmethod
+    def low(alert_klass, alert_item):
+        import datetime
+        now = datetime.datetime.now()
+        try:
+            alert_state = alert_klass.get_existing(alert_item)
+            alert_state.end = now
+            alert_state.active = False
+            alert_state.save()
+            alert_state.end_event().save()
+        except alert_klass.DoesNotExist:
+            alert_state = None
+
+        return alert_state
+
+class MountableOfflineAlert(AlertState):
     def message(self):
-        if self.state:
-            return "Target '%s' started" % self.target_mount.target.name
+        if isinstance(self.alert_item, TargetMount):
+            return "Target offline"
+        elif isinstance(self.alert_item, Client):
+            return "Client offline"
         else:
-            return "Target '%s' stopped" % self.target_mount.target.name
+            raise NotImplementedError
 
-class HostContactEvent(BooleanStateEvent):
-    @staticmethod
-    def type_name():
-        return "Host contact"
+    def begin_event(self):
+        return AlertEvent(
+                message_str = "%s stopped" % self.alert_item,
+                host = self.alert_item.host,
+                alert = self,
+                severity = WARNING)
+        
+    def end_event(self):
+        return AlertEvent(
+                message_str = "%s started" % self.alert_item,
+                host = self.alert_item.host,
+                alert = self,
+                severity = INFO)
 
+class HostContactAlert(AlertState):
     def message(self):
-        if self.state:
-            return "Established contact with host %s" % self.host
-        else:
-            return "Lost contact with host %s" % self.host
+        return "Host contact lost"
 
-class LNetOnlineEvent(BooleanStateEvent):
-    host = models.ForeignKey(Host)
+    def begin_event(self):
+        return AlertEvent(
+                message_str = "Lost contact with host %s" % self.alert_item,
+                host = self.alert_item,
+                alert = self,
+                severity = WARNING)
 
-    @staticmethod
-    def type_name():
-        return "LNet online"
+    def end_event(self):
+        return AlertEvent(
+                message_str = "Re-established contact with host %s" % self.alert_item,
+                host = self.alert_item,
+                alert = self,
+                severity = INFO)
 
+class TargetRecoveryAlert(AlertState):
     def message(self):
-        if self.state:
-            return "LNet started on host %s" % self.host
-        else:
-            return "LNet stopped on host %s" % self.host
+        return "Target in recovery"
 
-class TargetRecoveryEvent(BooleanStateEvent):
-    target_mount = models.ForeignKey(TargetMount)
+    def begin_event(self):
+        return AlertEvent(
+                message_str = "Target '%s' went into recovery" % self.alert_item,
+                host = self.alert_item.host,
+                alert = self,
+                severity = WARNING)
 
-    @staticmethod
-    def type_name():
-        return "Target recovery"
+    def end_event(self):
+        return AlertEvent(
+                message_str = "Target '%s' completed recovery" % self.alert_item,
+                host = self.alert_item.host,
+                alert = self,
+                severity = INFO)
 
+class LNetOfflineAlert(AlertState):
     def message(self):
-        if self.state:
-            return "Recovery started on target %s" % self.target_mount.target
-        else:
-            return "Recovery finished on target %s" % self.target_mount.target
+        return "LNet offline"
 
-class ClientOnlineEvent(BooleanStateEvent):
-    client = models.ForeignKey(Client)
+    def begin_event(self):
+        return AlertEvent(
+                message_str = "LNet stopped on host '%s'" % self.alert_item,
+                host = self.alert_item,
+                alert = self,
+                severity = WARNING)
 
-    @staticmethod
-    def type_name():
-        return "Client online"
-
-    def message(self):
-        if self.state:
-            return "Client started on host %s" % self.client.host
-        else:
-            return "Client stopped on host %s" % self.client.host
+    def end_event(self):
+        return AlertEvent(
+                message_str = "LNet started on host '%s'" % self.alert_item,
+                host = self.alert_item,
+                alert = self,
+                severity = INFO)
 
 class Audit(models.Model):
     """Represent an attempt to audit some hosts"""
@@ -595,11 +663,6 @@ admin.site.register(Target)
 admin.site.register(TargetMount)
 
 admin.site.register(Event)
-admin.site.register(TargetOnlineEvent)
-admin.site.register(TargetRecoveryEvent)
-admin.site.register(HostContactEvent)
-admin.site.register(ClientOnlineEvent)
-admin.site.register(LNetOnlineEvent)
 admin.site.register(LearnEvent)
-admin.site.register(GenericEvent)
+admin.site.register(AlertEvent)
 

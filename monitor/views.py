@@ -44,6 +44,8 @@ def dashboard_inner(request):
                 "filesystems": Filesystem.objects.all().order_by('name'),
                 "hosts": Host.objects.all().order_by('address'),
                 "clients": Client.objects.all(),
+                "events": Event.objects.all().order_by('-created_at'),
+                "alerts": AlertState.objects.filter(active = True).order_by('end'),
                 "last_audit_time": last_audit_time
                 }))
 
@@ -138,7 +140,7 @@ def log_viewer(request):
 
 def events(request):
     def type_choices():
-        klasses = [HostContactEvent, TargetOnlineEvent, GenericEvent]
+        klasses = Event.__subclasses__()
         choices = [("", "Any")]
         for klass in klasses:
             choices.append((klass.__name__, klass.type_name()))
@@ -187,14 +189,12 @@ def events(request):
         'form': form,
         'events': event_set}))
 
-#def ajax_exception(fn):
-#    def wrapped(*args, **kwargs):
-#        try:
-#            return fn(*args, **kwargs)
-#        except Exception,e:
-#            return HttpResponse(json.dumps({'error': "%s" % e}), mimetype = 'application/json', status=500)
-#
-#    return wrapped
+def alerts(request):
+    alert_set = AlertState.objects.filter(active = True).order_by('end')
+    alert_history_set = AlertState.objects.filter(active = False).order_by('end')
+    return render_to_response('alerts.html', RequestContext(request, {
+        'alerts': alert_set,
+        'alert_history': alert_history_set}))
 
 def ajax_exception(fn):
     def wrapped(*args, **kwargs):

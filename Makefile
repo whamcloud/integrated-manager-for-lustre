@@ -2,6 +2,7 @@ VERSION = 0.2
 RELEASE = 1
 
 tarball:
+	rm -f MANIFEST
 	python setup.py sdist
 
 rpms: tarball
@@ -18,4 +19,4 @@ install:
 	#install -d -p $(DESTDIR)/etc/hydra-server
 	#cp -a settings.py $(DESTDIR)/etc/hydra-server
 	install -d -p $(DESTDIR)/usr/share/hydra-server
-	cp -a collections_24.py __init__.py manage.py monitor monitor.wsgi polymorphic settings.py urls.py $(DESTDIR)/usr/share/hydra-server
+	cp -a collections_24.py __init__.py manage.py middleware.py monitor monitor.wsgi polymorphic settings.py urls.py $(DESTDIR)/usr/share/hydra-server
