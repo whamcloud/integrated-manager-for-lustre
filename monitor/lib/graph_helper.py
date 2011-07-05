@@ -152,7 +152,7 @@ def dyn_load_graph(subdir, name, graph_type, size):
             cdef_num_clients += ",%d,/,2,-" % len(osts)
             args.extend([
                 cdef_num_clients,
-                "LINE2:agg_num_clients#ff0000:clients",
+                "LINE2:agg_num_clients#0000ff:clients",
                 "GPRINT:agg_num_clients:LAST:%.0lf%s clients",
             ])
         else:
@@ -244,16 +244,16 @@ def dyn_load_graph(subdir, name, graph_type, size):
             if graph_type == "ops":
                 args.extend([
                     "DEF:iops=%s:iops:AVERAGE" % rrd,
-                    "LINE2:iops#00ff00:IOPS",
+                    "LINE2:iops#ff0000:IOPS",
                     "GPRINT:iops:LAST:%.2lf IOPS"
                 ])
             elif graph_type == "lock":
                 args.extend([
                     "DEF:grant_rate=%s:grant_rate:AVERAGE" % rrd,
                     "DEF:cancel_rate=%s:cancel_rate:AVERAGE" % rrd,
-                    "LINE2:grant_rate#00fc00:lock grants/s",
+                    "LINE2:grant_rate#ff0000:lock grants/s",
                     "GPRINT:grant_rate:LAST:%.2lf grants/s",
-                    "LINE2:cancel_rate#fc0000:lock cancels/s",
+                    "LINE2:cancel_rate#0000ff:lock cancels/s",
                     "GPRINT:cancel_rate:LAST:%.2lf cancels/s",
                 ])
             elif graph_type == "exports":
