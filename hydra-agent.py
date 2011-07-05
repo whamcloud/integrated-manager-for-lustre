@@ -82,10 +82,23 @@ class LocalLustreAudit:
                             v = tokens[1].strip()
                             recovery_status[k] = v
                     except IndexError:
+                        # If the recovery_status file doesn't exist,
+                        # we will return an empty dict for recovery info
                         pass
 
-                device = self.normalize_device(open(glob.glob("/proc/fs/lustre/*/%s/mntdev" % name)[0]).read())
-                # For mounted devices, we can learn the mount point from /proc/mounts
+                try:
+                    device_file = glob.glob("/proc/fs/lustre/*/%s/mntdev" % name)[0]
+                    device = self.normalize_device(open(device_file).read())
+                except IndexError:
+                    # Oops, the device file went away, probably we're 
+                    # scanning something while it's being unmounted
+                    continue
+                except IOError:
+                    # We got as far as finding the device file but couldn't
+                    # read it, probably we're scanning something while
+                    # it's being unmounted
+                    continue
+
                 mount_point = None
                 for mount_device, mntpnt, fstype in self.mounts:
                     if mount_device == device:
