@@ -67,9 +67,71 @@ $(document).ready(function() {
 <div style="text-align: right;">
     <a href='#' class='add_host_button'>Add host...</a>
 </div>
+</div>
+
+        <div class='smalltable'>
+        {% load rel_time %}
+        {% load pagination_tags %}
+        {% autopaginate alerts 5 %}
+        <h1>Alerts</h1>
+        {% if alerts.count == 0 %}
+        <p class='alerts_all_ok'>
+        No active alerts
+        </p>
+        {% else %}
+        <table class='event_list'>
+            <tr>
+                <th>Raised</th>
+                <th></th>
+                <th>Item</th>
+                <th>Message</th>
+        {% for alert in alerts %}
+        <tr class='error'>
+            <td class='event_created_at_short'>{{alert.begin|small_timesince}} ago</td>
+            <td class='event_severity'></td>
+            <td class='alert_item'>{{alert.alert_item}}</td>
+            <td class='alert_message'>{{alert.message}}</td>
+        </tr>
+        {% endfor %}
+        </table>
+        <!--{% paginate %}-->
+        <!-- NB need to do some work around refreshing to be able to page through -->
+        {% endif %}
+        <div class='more_link'>(<a href="{% url monitor.views.alerts %}">All alerts...</a>)</div>
+        </div>
+
+        <div class='smalltable'>
+        {% autopaginate events 5 %}
+        <h1>Events</h1> 
+        {% if events.count == 0 %}
+        <p class='empty_table_text'>No events found</p>
+        {% else %}
+        <table class='event_list'>
+        {% for event in events %}
+        <tr class='{{event.severity_class}}'>
+            <td class='event_created_at_short'>{{event.created_at|small_timesince}} ago</td>
+            <td class='event_host'>{{event.host.pretty_name}}</td>
+            <td class='event_severity'></td>
+            <td class='event_message'>{{event.message}}</td>
+        </tr>
+        {% endfor %}
+        </table>
+        <!-- NB need to do some work around refreshing to be able to page through -->
+        <!--{% paginate %}-->
+        <div class='more_link'>(<a href="{% url monitor.views.events %}">All events...</a>)</div>
+        {% endif %}
+        </div>
 
 </td></tr>
-<tr><td></td><td class='audit_time'>Last system audit: {{last_audit_time}}</td>
+<tr>
+    <td>
+
+    </td>
+    <td>
+
+    </td>
+</tr>
+<tr><td></td><td class='audit_time'>Last system audit: {{last_audit_time}}</td></tr>
 </table>
 
 <p class="audit_time"></span>

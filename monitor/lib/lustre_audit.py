@@ -135,7 +135,7 @@ class LustreAudit:
             try:
                 audited = AuditMountable.objects.get(audit = self.audit, mountable = mountable)
             except AuditMountable.DoesNotExist:
-                self.mountable_online_event(mountable, False)
+                MountableOfflineAlert.notify(mountable, True)
                 audit_mountable = AuditMountable(audit = self.audit,
                         mountable = mountable, mounted = False)
                 audit_mountable.save()
@@ -281,40 +281,6 @@ class LustreAudit:
                         except NoLNetInfo:
                             log().warning("Cannot set up target %s on %s until LNet is running" % (name, host.address))
 
-    def mountable_online_event(self, mountable, mounted):
-        """Generate an event if the mountable's status has changed"""
-        try:
-            old_mounted = AuditMountable.objects.filter(mountable = mountable).latest('audit__created_at').mounted
-        except AuditMountable.DoesNotExist:
-            old_mounted = None
-
-        if old_mounted != mounted:
-            if isinstance(mountable, TargetMount):
-                TargetOnlineEvent(host = mountable.host, target_mount = mountable, state = mounted).save()
-            elif isinstance(mountable, Client):
-                ClientOnlineEvent(host = mountable.host, client = mountable, state = mounted).save()
-            else:
-                raise NotImplementedError
-            
-    def target_recovery_event(self, target_mount, in_recovery):
-        try:
-            old_in_recovery = AuditRecoverable.objects.filter(mountable = target_mount).latest('audit__created_at').is_recovering()
-        except:
-            old_in_recovery = None
-
-        if old_in_recovery != in_recovery and (old_in_recovery != None or in_recovery == True):
-            TargetRecoveryEvent(host = target_mount.host, target_mount = target_mount, state = in_recovery).save()
-
-    def host_lnet_event(self, host, lnet_up):
-        """Generate an event if the host's LNet has changed state"""
-        try:
-            old_lnet_up = AuditHost.objects.filter(host = host).latest('audit__created_at').lnet_up
-        except:
-            old_lnet_up = None
-
-        if old_lnet_up != lnet_up:
-            LNetOnlineEvent(host = host, state = lnet_up).save()
-
     def learn_event(self, host, learned_item):
         from logging import INFO
         LearnEvent(severity = INFO, host = host, learned_item = learned_item).save()
@@ -325,7 +291,8 @@ class LustreAudit:
                 if mount_info['kind'] == 'MGS':
                     target = ManagementTarget.get_by_host(audit_host.host)
                     mountable = target.targetmount_set.get(host = audit_host.host, mount_point = mount_info['mount_point'])
-                    self.mountable_online_event(mountable, mount_info['running'])
+                    
+                    MountableOfflineAlert.notify(mountable, not mount_info['running'])
                     audit_mountable = AuditMountable(audit = self.audit,
                             mountable = mountable, mounted = mount_info['running'])
                 else:
@@ -363,8 +330,8 @@ class LustreAudit:
                             mountable = mountable, mounted = mount_info['running'],
                             recovery_status = json.dumps(mount_info["recovery_status"]))
 
-                    self.mountable_online_event(mountable, mount_info['running'])
-                    self.target_recovery_event(mountable, audit_mountable.is_recovering())
+                    MountableOfflineAlert.notify(mountable, not mount_info['running'])
+                    TargetRecoveryAlert.notify(mountable, audit_mountable.is_recovering())
 
                 audit_mountable.save()
                 # Fill out an AuditTarget object as well, potentially multiple times if
@@ -403,7 +370,7 @@ class LustreAudit:
                     log().info("Learned client %s" % client)
                     self.learn_event(audit_host.host, client)
 
-                self.mountable_online_event(client, client_info['mounted'])
+                MountableOfflineAlert.notify(client, not client_info['mounted'])
                 audit_mountable = AuditMountable(audit = self.audit, mountable = client, mounted = client_info['mounted'])
                 audit_mountable.save()
 
@@ -453,27 +420,14 @@ class LustreAudit:
                     data = json.loads(output)
                     audit_host = AuditHost(audit = self.audit, host = host, lnet_up = data['lnet_up'])
                     audit_host.save()
-                    self.host_lnet_event(host, data['lnet_up'])
+                    LNetOfflineAlert.notify(host, not data['lnet_up'])
                     raw_data[audit_host] = data
                     contact = True
                 except Exception,e:
                     log().error("bad output from %s: %s '%s'" % (str(node), e, output))
                     contact = False
 
-                # See if we could contact the host last time, in order to detect a
-                # transition between contactable and uncontactable states and generate
-                # a HostContactEvent if necessary.
-                try:
-                    last_audit = Audit.objects.filter(attempted_hosts = host, complete = True).latest('created_at')
-                    last_contact = last_audit.audithost_set.filter(host = host).count() > 0
-                except Audit.DoesNotExist:
-                    last_contact = None
-
-                # Only generate an event if the contact status has changed, and either
-                # there is a history for this host, or it is coming online (otherwise
-                # we would spam "lost contact" messages until first success).
-                if contact != last_contact and (last_contact != None or contact == True):
-                    HostContactEvent(host = host, state = contact).save()
+                HostContactAlert.notify(host, not contact)
 
         return raw_data
 
