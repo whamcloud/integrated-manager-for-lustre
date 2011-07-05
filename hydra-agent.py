@@ -155,13 +155,19 @@ class LocalLustreAudit:
                 except KeyError:
                     mount_point = device_info[device]['mount_point']
 
-                real_names = set([name])
                 # include/lustre_disk.h
                 #define LDD_F_SV_TYPE_MDT   0x0001
                 #define LDD_F_SV_TYPE_OST   0x0002
                 #define LDD_F_SV_TYPE_MGS   0x0004
-                if flags & 0x0004:
-                    real_names.add("MGS")
+
+                # In the case of a combined MGS+MDT volume, it tunefs reports
+                # an MDT name.  We detect that it's also an MGS from the flags,
+                # and synthesize an additional name.  The resulting output
+                # has two entries, one named "<fsname>-MDTxxxx" and one named
+                # "MGS" which refer to the same block device.
+                real_names = [name]
+                if (flags & 0x0005) == 0x0005:
+                    real_names.append("MGS")
 
                 for real_name in real_names:
                     try:
