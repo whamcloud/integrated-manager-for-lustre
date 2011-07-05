@@ -90,6 +90,8 @@ class LocalLustreAudit:
                 for mount_device, mntpnt, fstype in self.mounts:
                     if mount_device == device:
                         mount_point = mntpnt
+                    elif self.normalize_device(mount_device) == device:
+                        mount_point = mntpnt
 
                 if not mount_point:
                     # Deal with the situation where a target on its way down
