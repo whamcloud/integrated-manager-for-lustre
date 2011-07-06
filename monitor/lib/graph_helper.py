@@ -28,7 +28,6 @@ def dyn_load_graph(subdir, name, graph_type, in_params):
     args = [
         "-",
         "--start", "%s" % params["start"],
-        "--width", "250",
     ]
     if subdir == "aggregate":
         fs = Filesystem.objects.get(name=re.sub('aggregate/', '', name))
@@ -315,6 +314,10 @@ def dyn_load_graph(subdir, name, graph_type, in_params):
     elif params["size"] == "micro":
         args.extend([
                     "--only-graph", "--width", "50", "--height", "15",
+        ])
+    else:
+        args.extend([
+                    "--width", "250",
         ])
 
     image_data = rrdtool.graph2str([(a.encode('ascii')) for a in args])
