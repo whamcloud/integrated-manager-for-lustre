@@ -8,7 +8,6 @@
     load_inner = function() {
         console.log('load_inner');
         reload_request = $.get("dashboard_inner/", function(response, status) {
-            console.log('response');
             reload_timeout = setTimeout('load_inner()', 2000);
 
             if (status == 'error') {
@@ -20,7 +19,6 @@
             dashtree();
             $('li.collapsible').each(function() {
                 if ($(this).children('span.status').first().hasClass('OK')) {
-                    console.log('closing');
                     dashtree_suggest_closed($(this));
                 }
             });
@@ -38,18 +36,6 @@
 <div id='inner'>
     <span class='loading_placeholder'>Loading...</span>
 </div>
-<!--
-<div class="dashtree">
-<h1>Clients</h1>
-<ul class="tree">
-    {% for client in clients %}
-    <li class="client">
-    {{client.host.address}} ({{client.mount_point}}) <span class='status {{client.status_string}}'>{{client.status_string}}</span>
-    </li>
-    {% endfor %}
-</ul>
-</div>
--->
 
 <script type='text/javascript'>
     $(document).ajaxSend(function(event, xhr, settings) {
@@ -101,6 +87,14 @@
             $('.add_host_submit_button').button()
             $('.add_host_back_button').button()
 
+            $('#add_host_address').keypress(function(ev) {
+                if (ev.which == 13) {
+                    $('.add_host_submit_button').click();
+                    ev.stopPropagation();
+                }
+                /* TODO: would also like to have enter work
+                     for going confirm->complete */
+            });
             $('.add_host_submit_button').click(function(ev) {
                 $('#add_host_tabs').tabs('select', '#add_host_loading');
 
