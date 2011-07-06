@@ -112,12 +112,12 @@
             event.stopPropagation();
         });
 
+        now = (new Date().getTime() / 1000).toFixed(0)
+        hour = now - 3600
+        day = now - 86400
+        week = now - (86400 * 7)
+        month = now - ((86400 * 7) * 4)
         $('img.graph').each(function(item) {
-            now = (new Date().getTime() / 1000).toFixed(0)
-            hour = now - 3600
-            day = now - 86400
-            week = now - (86400 * 7)
-            month = now - ((86400 * 7) * 4)
             newsrc = $(this).attr('src').replace(/size=.*/, "size=normal")
             newid = $(this).attr('id').replace(/size=.*/, "size=normal")
             qchar = $(this).attr('id').indexOf("?") < 0 ? "?" : "&";
