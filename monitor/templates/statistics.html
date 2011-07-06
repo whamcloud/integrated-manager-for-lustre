@@ -57,10 +57,10 @@
 {% for filesystem in filesystems %}
 <li class="filesystem collapsible"><span class='name'>{{filesystem.name}}</span>
     <ul class="tree fullwidth">
-        <li class="target collapsible">
+        <li class="target collapsible closed">
             <span class="name">Aggregate</span>
                 <ul class="tree fullwidth">
-                    <li class="target collapsible">
+                    <li class="target collapsible closed">
                       <span class="name">Metadata</span>
                         <ul class="tree fullwidth">
                           <li>
@@ -74,7 +74,7 @@
                           </li>
                         </ul>
                     </li>
-                    <li class="target collapsible">
+                    <li class="target collapsible closed">
                       <span class="name">Object Storage</span>
                        <ul class="tree fullwidth">
                          <li>
@@ -89,7 +89,7 @@
                  </ul>
         </li>
     {% for target in filesystem.get_filesystem_targets %}
-        <li class="target collapsible">
+        <li class="target collapsible closed">
           <span class="name">{{target.name_no_fs}}</span>
           <ul class="tree fullwidth">
           <li>
@@ -124,7 +124,7 @@
 <h1>Servers</h1>
 <ul class="tree">
   {% for host in hosts %}
-  <li class="host collapsible">
+  <li class="host collapsible closed">
     <span class='name'>{{host.address}}</span> ({{host.role}})
     <ul class='tree'>
     <li>
