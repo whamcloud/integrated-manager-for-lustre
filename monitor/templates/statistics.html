@@ -2,55 +2,8 @@
 {% extends 'base.html' %}
 
 {% block scripts %}
+<script type='text/javascript' src="{{STATIC_URL}}js/dashtree.js"></script>
 <script type="text/javascript">
-    /* http://stackoverflow.com/questions/2068272/getting-a-jquery-selector-for-an-element */
-    jQuery.fn.getPath = function () {
-        if (this.length != 1) throw 'Requires one element.';
-
-        var path, node = this;
-        while (node.length) {
-            var realNode = node[0], name = realNode.localName;
-            if (!name) break;
-            name = name.toLowerCase();
-
-            var parent = node.parent();
-
-            var siblings = parent.children(name);
-            if (siblings.length > 1) { 
-                name += ':eq(' + siblings.index(realNode) + ')';
-            }
-
-            path = name + (path ? '>' + path : '');
-            node = parent;
-        }
-
-        return path;
-    };
-
-    closed_states = {};
-    function toggle_closed(item, state, duration) {
-        /* state==true means 'closed' */
-        if (state == null) {
-            state = !item.hasClass('closed')
-        }
-        if (state != item.hasClass('closed')) {
-            if (state) {
-                var style = 'hide';
-            } else {
-                var style = 'show'; 
-            }
-            item.children('ul').animate({height: style, opacity: style}, duration); 
-            item.toggleClass('closed', state)
-            closed_states[item.getPath()] = state;
-            if (state) {
-                console.log(item.children('div.open_icon'));
-                item.children('div.open_icon').replaceWith("<div class='closed_icon'></div>");
-            } else {
-                item.children('div.closed_icon').replaceWith("<div class='open_icon'></div>");
-            }
-        }
-    }
-
     function refresh_images() {
         $('img.graph').each(function(item) {
             if (!$(this).parents("li.collapsible").hasClass("closed")) {
@@ -63,55 +16,6 @@
     }
 
     $(document).ready(function() {
-        $('li.collapsible').each(function() {
-            /* Insert expand all and collapse all links */
-            if ($(this).find('li.collapsible').size() == 0) {
-                return;
-            }
-            
-            $("<a href='#' class='tree_all expand_all'>Show all</a>").insertBefore($(this).children('ul'))
-            $("<span>&nbsp;/&nbsp;</span><a href='#' class='tree_all collapse_all'>Hide all</a>").insertBefore($(this).children('ul'));
-
-        });
-
-        $('a.expand_all').click(function(event) {
-            toggle_closed($(this).parent(), false, 0);
-            $(this).parent().find('li.collapsible').each(function() {
-                toggle_closed($(this), false, 0);
-            });
-            event.stopPropagation();
-        });
-
-        $('a.collapse_all').click(function(event) {
-            $(this).parent().find('li.collapsible').each(function() {
-                toggle_closed($(this), true, 0);
-            });
-            toggle_closed($(this).parent(), true, 0);
-            event.stopPropagation();
-        });
-
-        $('li.collapsible').each(function(item) {
-            $(this).addClass('closed')
-
-            /* Apply any closedness states stored in closed_states */
-            if ($(this).getPath() in closed_states) {
-                $(this).toggleClass('closed', closed_states[$(this).getPath()])
-            }
-        });
-
-        $('li.collapsible').each(function(item) {
-            if ($(this).hasClass('closed')) {
-                $(this).children('ul').hide();
-                $("<div class='closed_icon'></div>").insertBefore($(this).children('ul'));
-            } else {
-                $("<div class='open_icon'></div>").insertBefore($(this).children('ul'));
-            }
-        });
-        $('li.collapsible').click(function(event) {
-            toggle_closed($(this));
-            event.stopPropagation();
-        });
-
         $('img.graph').each(function(item) {
             now = (new Date().getTime() / 1000).toFixed(0)
             hour = now - 3600
@@ -138,10 +42,10 @@
               }
             });
         });
+
+        refresh_images();
+        dashtree();
     });
-
-    refresh_images();
-
 </script>
 {% endblock %}
 
@@ -219,16 +123,16 @@
 <div class="dashtree">
 <h1>Servers</h1>
 <ul class="tree">
-<li class="foo collapsible">
-<ul class="tree">
   {% for host in hosts %}
   <li class="host collapsible">
     <span class='name'>{{host.address}}</span> ({{host.role}})
-    <span class="graph"><img class="graph" id="server/{{host.pretty_name}},cpumem" src="/monitor/dyngraphs/server/{{host.pretty_name}},cpumem"></span>
+    <ul class='tree'>
+    <li>
+        <span class="graph"><img class="graph" id="server/{{host.pretty_name}},cpumem" src="/monitor/dyngraphs/server/{{host.pretty_name}},cpumem"></span>
+    </li>
+    </ul>
   </li>
   {% endfor %}
-</ul>
-</li>
 </ul>
 </div>
 
