@@ -1,21 +1,15 @@
 
+
 div.dashtree {
     font-family: verdana, arial, helvetica, sans-serif;
     background: #eee;
     border: 1px solid #ccc;
     padding: 6px;
     font-size: 0.8em;
-    width: 416px;
     position: relative;
 
-    margin-bottom: 4px;
     border-left: 3px solid #09f;
     border-right: 3px solid #09f;
-    margin-right: 12px;
-}
-
-div.fullwidth {
-    width: 98%;
 }
 
 div.dashtree h1 {
@@ -44,31 +38,9 @@ div.dashtree ul.tree {
     padding-right: 0px;
     margin-top: 6px;
     margin-right: 0px;
-    width: 400px;
-}
-
-div.dashtree ul.fullwidth {
-    width: 100%;
 }
 
 /* each child -24 for icon+padding, then -4 for rhs padding */
-
-div.dashtree ul.tree ul.tree {
-    width: 100%;
-}
-
-div.dashtree ul.fullwidth ul.fullwidth {
-    width: 100%;
-}
-
-div.dashtree ul.tree ul.tree ul.tree {
-    width: 344px;
-}
-
-div.dashtree ul.fullwidth ul.fullwidth ul.fullwidth{
-    width: 100%;
-}
-
 div.dashtree ul.tree li {
     list-style: none;
 }
@@ -157,8 +129,14 @@ div.dashtree li.client {
     background-position: 4px 4px;
 }
 
-table.twocolumns td {
-   vertical-align: text-top; 
+table.dashboard_panes {
+   margin: 12px;
+}
+
+table.dashboard_panes td {
+   vertical-align: top; 
+   padding-right: 6px;
+   width: 416px;
 }
 
 div.dashtree a.tree_all {
@@ -517,12 +495,9 @@ div.smalltable {
     padding: 6px;
     background: #eee;
     border: 1px solid #ccc;
-    width: 415px;
 
-    margin-bottom: 4px;
     border-left: 3px solid #09f;
     border-right: 3px solid #09f;
-    margin-right: 12px;
 }
 
 div.smalltable div.more_link {
@@ -578,4 +553,9 @@ td.failure {
     background-repeat: no-repeat;
     width: 16px;
     height: 16px;
+}
+
+/* statistics page */
+div.stats_tree {
+    padding: 12px;
 }

@@ -55,19 +55,19 @@
 {% endblock %}
 
 {% block content %}
-
-<div class="dashtree fullwidth">
+<div class="stats_tree">
+<div class="dashtree">
 <h1>Filesystems</h1>
-<ul class="tree fullwidth">
+<ul class="tree">
 {% for filesystem in filesystems %}
 <li class="filesystem collapsible"><span class='name'>{{filesystem.name}}</span>
-    <ul class="tree fullwidth">
+    <ul class="tree">
         <li class="target collapsible closed">
             <span class="name">Aggregate</span>
-                <ul class="tree fullwidth">
+                <ul class="tree">
                     <li class="target collapsible closed">
                       <span class="name">Metadata</span>
-                        <ul class="tree fullwidth">
+                        <ul class="tree">
                           <li>
                             <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},mdt_space?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},mdt_space?size=small"></span>
                             <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},fhstats?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},fhstats?size=small"></span>
@@ -81,7 +81,7 @@
                     </li>
                     <li class="target collapsible closed">
                       <span class="name">Object Storage</span>
-                       <ul class="tree fullwidth">
+                       <ul class="tree">
                          <li>
                           <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},ost_space?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},ost_space?size=small"></span>
                           <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},bw?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},bw?size=small"></span>
@@ -96,7 +96,7 @@
     {% for target in filesystem.get_filesystem_targets %}
         <li class="target collapsible closed">
           <span class="name">{{target.name_no_fs}}</span>
-          <ul class="tree fullwidth">
+          <ul class="tree">
           <li>
           {% if target.metadatatarget %}
               <span class="graph"><img class="graph" id="target/{{target.name}},space?size=small" src="/monitor/dyngraphs/target/{{target.name}},space?size=small"></span>
@@ -124,21 +124,24 @@
 {% endfor %}
 </ul>
 </div>
+</div>
 
-<div class="dashtree">
-<h1>Servers</h1>
-<ul class="tree">
-  {% for host in hosts %}
-  <li class="host collapsible closed">
-    <span class='name'>{{host.address}}</span> ({{host.role}})
-    <ul class='tree'>
-    <li>
-        <span class="graph"><img class="graph" id="server/{{host.pretty_name}},cpumem" src="/monitor/dyngraphs/server/{{host.pretty_name}},cpumem"></span>
-    </li>
-    </ul>
-  </li>
-  {% endfor %}
-</ul>
+<div class='stats_tree'>
+    <div class="dashtree">
+        <h1>Servers</h1>
+        <ul class="tree">
+          {% for host in hosts %}
+          <li class="host collapsible closed">
+            <span class='name'>{{host.address}}</span> ({{host.role}})
+            <ul class='tree'>
+                <li>
+                    <span class="graph"><img class="graph" id="server/{{host.pretty_name}},cpumem" src="/monitor/dyngraphs/server/{{host.pretty_name}},cpumem"></span>
+                </li>
+            </ul>
+          </li>
+          {% endfor %}
+        </ul>
+    </div>
 </div>
 
 {% endblock %}
