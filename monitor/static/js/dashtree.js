@@ -39,7 +39,6 @@
             item.toggleClass('closed', state)
             closed_states[item.getPath()] = state;
             if (state) {
-                console.log(item.children('div.open_icon'));
                 item.children('div.open_icon').replaceWith("<div class='closed_icon'></div>");
             } else {
                 item.children('div.closed_icon').replaceWith("<div class='open_icon'></div>");
