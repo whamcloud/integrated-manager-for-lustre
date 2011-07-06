@@ -248,11 +248,10 @@ def host(request):
             for o, nodes in task.iter_buffers():
                 output = "%s" % o
 
-            import simplejson
             try:
                 json.loads(output)
                 agent = True
-            except simplejson.decoder.JSONDecodeError:
+            except ValueError:
                 agent = False
             
         result = {
