@@ -144,7 +144,7 @@ def dyn_load_graph(subdir, name, graph_type, in_params):
         elif graph_type == "clients":
             if len(osts) < 2:
                 newname = "target/%s" % osts[0]
-                return dyn_load_graph("target", newname, graph_type, params)
+                return dyn_load_graph("target", newname, "exports", params)
 
             cdef_num_clients = "CDEF:agg_num_clients=%s_num_exports,%s_num_exports,+" % (osts[0], osts[1])
             for i in range(len(osts)):
@@ -246,7 +246,7 @@ def dyn_load_graph(subdir, name, graph_type, in_params):
                     "GPRINT:rename:LAST:%.2lf%s rename/sec",
                 ])
         else:
-            if graph_type == "ops":
+            if graph_type == "iops":
                 args.extend([
                     "DEF:iops=%s:iops:AVERAGE" % rrd,
                     "LINE2:iops#ff0000:IOPS",
