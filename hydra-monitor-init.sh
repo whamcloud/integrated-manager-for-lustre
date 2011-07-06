@@ -22,7 +22,7 @@ start() {
         # but don't clobber one that's already there!
         PYTHONPATH=$(pwd) python manage.py syncdb --noinput >/dev/null
         # and the database, of course
-        chown apache.apache database.db
+        chown apache.apache database.db /monitor.lib.lustre_audit.log
     fi
     popd >/dev/null
     daemon --pidfile /var/run/hydra-monitor.pid '/usr/share/hydra-server/monitor/bin/hydra-monitor.py >/dev/null & echo "$!" > /var/run/hydra-monitor.pid'
