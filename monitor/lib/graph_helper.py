@@ -12,18 +12,24 @@ def load_graph(name):
     image_data = open(graph_path, "rb").read()
     return image_data, "image/%s" % image_type
 
-def dyn_load_graph(subdir, name, graph_type, size):
+def dyn_load_graph(subdir, name, graph_type, in_params):
     # TODO: Refactor the hell out of this stuff.  Maybe switch to OO-style
     # organization?
     image_type = "png"
     rrd_home = "/var/lib/cerebro/rrds"
     rrd = "%s/%s.rrd" % (rrd_home, name)
+    params = in_params.copy()
+    # TODO: properly handle required params
+    if not params.has_key("size"):
+        params["size"] = "normal" 
+    if not params.has_key("start"):
+        params["start"] = "%d" % (time.time() - 600)
+
     args = [
         "-",
-        "--start", "%d" % (time.time() - 600),
+        "--start", "%s" % params["start"],
         "--width", "250",
     ]
-
     if subdir == "aggregate":
         fs = Filesystem.objects.get(name=re.sub('aggregate/', '', name))
         osts = []
@@ -37,7 +43,7 @@ def dyn_load_graph(subdir, name, graph_type, size):
         if graph_type == "ost_space":
             if len(osts) < 2:
                 newname = "target/%s" % osts[0]
-                return dyn_load_graph("target", newname, "space", size)
+                return dyn_load_graph("target", newname, "space", params)
 
             free_kb_cdef = "CDEF:agg_kb_free=%s_kb_free,%s_kb_free,+" % (osts[0], osts[1])
             used_kb_cdef = "CDEF:agg_kb_used=%s_kb_used,%s_kb_used,+" % (osts[0], osts[1])
@@ -72,11 +78,11 @@ def dyn_load_graph(subdir, name, graph_type, size):
         elif graph_type == "mdt_space":
             # just kick down to the individual target for now
             newname = "target/%s" % mdts[0]
-            return dyn_load_graph("target", newname, "space", size)
+            return dyn_load_graph("target", newname, "space", params)
         elif graph_type == "bw":
             if len(osts) < 2:
                 newname = "target/%s" % osts[0]
-                return dyn_load_graph("target", newname, graph_type, size)
+                return dyn_load_graph("target", newname, graph_type, params)
 
             cdef_read = "CDEF:agg_read=%s_read_bytes,%s_read_bytes,+" % (osts[0], osts[1])
             cdef_write = "CDEF:agg_write=%s_write_bytes,%s_write_bytes,+" % (osts[0], osts[1])
@@ -99,7 +105,7 @@ def dyn_load_graph(subdir, name, graph_type, size):
         elif graph_type == "lock":
             if len(osts) < 2:
                 newname = "target/%s" % osts[0]
-                return dyn_load_graph("target", newname, graph_type, size)
+                return dyn_load_graph("target", newname, graph_type, params)
 
             cdef_grant_rate = "CDEF:agg_grant_rate=%s_grant_rate,%s_grant_rate,+" % (osts[0], osts[1])
             cdef_cancel_rate = "CDEF:agg_cancel_rate=%s_cancel_rate,%s_cancel_rate,+" % (osts[0], osts[1])
@@ -122,7 +128,7 @@ def dyn_load_graph(subdir, name, graph_type, size):
         elif graph_type == "iops":
             if len(osts) < 2:
                 newname = "target/%s" % osts[0]
-                return dyn_load_graph("target", newname, graph_type, size)
+                return dyn_load_graph("target", newname, graph_type, params)
 
             cdef_iops = "CDEF:agg_iops=%s_iops,%s_iops,+" % (osts[0], osts[1])
             for i in range(len(osts)):
@@ -139,7 +145,7 @@ def dyn_load_graph(subdir, name, graph_type, size):
         elif graph_type == "clients":
             if len(osts) < 2:
                 newname = "target/%s" % osts[0]
-                return dyn_load_graph("target", newname, graph_type, size)
+                return dyn_load_graph("target", newname, graph_type, params)
 
             cdef_num_clients = "CDEF:agg_num_clients=%s_num_exports,%s_num_exports,+" % (osts[0], osts[1])
             for i in range(len(osts)):
@@ -159,7 +165,7 @@ def dyn_load_graph(subdir, name, graph_type, size):
             # Assume this is an MDT stat and kick down to the single
             # MDT for now.
             newname = "target/%s" % mdts[0]
-            return dyn_load_graph("target", newname, graph_type, size)
+            return dyn_load_graph("target", newname, graph_type, params)
 
     if subdir == "target":
         if re.search("MDT", name):
@@ -298,15 +304,15 @@ def dyn_load_graph(subdir, name, graph_type, size):
         else:
             raise NotImplementedError
 
-    if size == ":small":
+    if params["size"] == "small":
         args.extend([
                     "--width", "75", "--height", "100",
         ])
-    elif size == ":tiny":
+    elif params["size"] == "tiny":
         args.extend([
                     "--only-graph", "--width", "100", "--height", "36",
         ])
-    elif size == ":micro":
+    elif params["size"] == "micro":
         args.extend([
                     "--only-graph", "--width", "50", "--height", "15",
         ])

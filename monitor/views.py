@@ -8,7 +8,7 @@ from monitor.models import *
 from monitor.lib.graph_helper import load_graph,dyn_load_graph
 
 def dyn_graph_loader(request, name, subdir, graph_type, size):
-    image_data, mime_type = dyn_load_graph(subdir, name, graph_type, size)
+    image_data, mime_type = dyn_load_graph(subdir, name, graph_type, request.GET)
     return HttpResponse(image_data, mime_type)
 
 def graph_loader(request, name, subdir):

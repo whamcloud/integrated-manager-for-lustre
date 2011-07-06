@@ -54,7 +54,8 @@
     function refresh_images() {
         $('img.graph').each(function(item) {
             if (!$(this).parents("li.collapsible").hasClass("closed")) {
-                $(this).attr("src", "/monitor/dyngraphs/" + $(this).attr('id') + "?time=" + new Date().getTime());
+                qchar = $(this).attr('id').indexOf("?") < 0 ? "?" : "&";
+                $(this).attr("src", "/monitor/dyngraphs/" + $(this).attr('id') + qchar + "time=" + new Date().getTime());
             }
         });
 
@@ -109,7 +110,34 @@
         $('li.collapsible').click(function(event) {
             toggle_closed($(this));
             event.stopPropagation();
-        });    
+        });
+
+        $('img.graph').each(function(item) {
+            now = (new Date().getTime() / 1000).toFixed(0)
+            hour = now - 3600
+            day = now - 86400
+            week = now - (86400 * 7)
+            month = now - ((86400 * 7) * 4)
+            newsrc = $(this).attr('src').replace(/size=.*/, "size=normal")
+            newid = $(this).attr('id').replace(/size=.*/, "size=normal")
+            qchar = $(this).attr('id').indexOf("?") < 0 ? "?" : "&";
+            content = '<img id="' + newid + '" src="' + newsrc + qchar + 'start=' + hour + '"><br/>'
+            content += '<img id="' + newid + '" src="' + newsrc + qchar + 'start=' + day + '"><br/>'
+            content += '<img id="' + newid + '" src="' + newsrc + qchar + 'start=' + week + '"><br/>'
+            content += '<img id="' + newid + '" src="' + newsrc + qchar + 'start=' + month + '"><br/>'
+            $(this).qtip({
+              content: content,
+              style: {
+                width: 350,
+              },
+              position: {
+                corner: {
+                  target: 'topLeft',
+                  tooltip: 'topLeft'
+                }
+              }
+            });
+        });
     });
 
     refresh_images();
@@ -132,13 +160,13 @@
                       <span class="name">Metadata</span>
                         <ul class="tree fullwidth">
                           <li>
-                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},mdt_space:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},mdt_space:small"></span>
-                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},fhstats:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},fhstats:small"></span>
-                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},linkstats:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},linkstats:small"></span>
-                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},dirstats:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},dirstats:small"></span>
-                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},objstats:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},objstats:small"></span>
-                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},attrstats:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},attrstats:small"></span>
-                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},statfs:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},statfs:small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},mdt_space?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},mdt_space?size=small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},fhstats?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},fhstats?size=small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},linkstats?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},linkstats?size=small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},dirstats?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},dirstats?size=small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},objstats?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},objstats?size=small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},attrstats?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},attrstats?size=small"></span>
+                            <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},statfs?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},statfs?size=small"></span>
                           </li>
                         </ul>
                     </li>
@@ -146,11 +174,11 @@
                       <span class="name">Object Storage</span>
                        <ul class="tree fullwidth">
                          <li>
-                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},ost_space:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},ost_space:small"></span>
-                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},bw:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},bw:small"></span>
-                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},lock:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},lock:small"></span>
-                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},iops:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},iops:small"></span>
-                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},clients:small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},clients:small"></span>
+                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},ost_space?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},ost_space?size=small"></span>
+                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},bw?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},bw?size=small"></span>
+                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},lock?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},lock?size=small"></span>
+                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},iops?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},iops?size=small"></span>
+                          <span class="graph"><img class="graph" id="aggregate/{{filesystem.name}},clients?size=small" src="/monitor/dyngraphs/aggregate/{{filesystem.name}},clients?size=small"></span>
                          </li>
                        </ul>
                     </li>
@@ -162,21 +190,21 @@
           <ul class="tree fullwidth">
           <li>
           {% if target.metadatatarget %}
-              <span class="graph"><img class="graph" id="target/{{target.name}},space:small" src="/monitor/dyngraphs/target/{{target.name}},space:small"></span>
-              <span class="graph"><img class="graph" id="target/{{target.name}},fhstats:small" src="/monitor/dyngraphs/target/{{target.name}},fhstats:small"></span>
-              <span class="graph"><img class="graph" id="target/{{target.name}},dirstats:small" src="/monitor/dyngraphs/target/{{target.name}},dirstats:small"></span>
-              <span class="graph"><img class="graph" id="target/{{target.name}},linkstats:small" src="/monitor/dyngraphs/target/{{target.name}},linkstats:small"></span>
-              <span class="graph"><img class="graph" id="target/{{target.name}},objstats:small" src="/monitor/dyngraphs/target/{{target.name}},objstats:small"></span>
-              <span class="graph"><img class="graph" id="target/{{target.name}},attrstats:small" src="/monitor/dyngraphs/target/{{target.name}},attrstats:small"></span>
-              <span class="graph"><img class="graph" id="target/{{target.name}},statfs:small" src="/monitor/dyngraphs/target/{{target.name}},statfs:small"></span>
-              <span class="graph"><img class="graph" id="target/{{target.name}},mknod:small" src="/monitor/dyngraphs/target/{{target.name}},mknod:small"></span>
-              <span class="graph"><img class="graph" id="target/{{target.name}},rename:small" src="/monitor/dyngraphs/target/{{target.name}},rename:small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},space?size=small" src="/monitor/dyngraphs/target/{{target.name}},space?size=small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},fhstats?size=small" src="/monitor/dyngraphs/target/{{target.name}},fhstats?size=small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},dirstats?size=small" src="/monitor/dyngraphs/target/{{target.name}},dirstats?size=small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},linkstats?size=small" src="/monitor/dyngraphs/target/{{target.name}},linkstats?size=small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},objstats?size=small" src="/monitor/dyngraphs/target/{{target.name}},objstats?size=small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},attrstats?size=small" src="/monitor/dyngraphs/target/{{target.name}},attrstats?size=small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},statfs?size=small" src="/monitor/dyngraphs/target/{{target.name}},statfs?size=small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},mknod?size=small" src="/monitor/dyngraphs/target/{{target.name}},mknod?size=small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},rename?size=small" src="/monitor/dyngraphs/target/{{target.name}},rename?size=small"></span>
           {% else %}
-              <span class="graph"><img class="graph" id="target/{{target.name}},space:small" src="/monitor/dyngraphs/target/{{target.name}},space:small"></span>
-              <span class="graph"><img class="graph" id="target/{{target.name}},bw:small" src="/monitor/dyngraphs/target/{{target.name}},bw:small"></span>
-            <span class="graph"><img class="graph" id="target/{{target.name}},lock:small" src="/monitor/dyngraphs/target/{{target.name}},lock:small"></span>
-            <span class="graph"><img class="graph" id="target/{{target.name}},ops:small" src="/monitor/dyngraphs/target/{{target.name}},ops:small"></span>
-            <span class="graph"><img class="graph" id="target/{{target.name}},exports:small" src="/monitor/dyngraphs/target/{{target.name}},exports:small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},space?size=small" src="/monitor/dyngraphs/target/{{target.name}},space?size=small"></span>
+              <span class="graph"><img class="graph" id="target/{{target.name}},bw?size=small" src="/monitor/dyngraphs/target/{{target.name}},bw?size=small"></span>
+            <span class="graph"><img class="graph" id="target/{{target.name}},lock?size=small" src="/monitor/dyngraphs/target/{{target.name}},lock?size=small"></span>
+            <span class="graph"><img class="graph" id="target/{{target.name}},ops?size=small" src="/monitor/dyngraphs/target/{{target.name}},ops?size=small"></span>
+            <span class="graph"><img class="graph" id="target/{{target.name}},exports?size=small" src="/monitor/dyngraphs/target/{{target.name}},exports?size=small"></span>
             {% endif %}
             </li>
           </ul>
