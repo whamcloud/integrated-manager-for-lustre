@@ -1,3 +1,4 @@
+
 # Create your views here.
 
 from django.shortcuts import render_to_response
@@ -6,6 +7,8 @@ from django.http import HttpResponse, HttpResponseBadRequest
 
 from monitor.models import *
 from monitor.lib.graph_helper import load_graph,dyn_load_graph
+
+from settings import SYSLOG_PATH
 
 def dyn_graph_loader(request, name, subdir, graph_type, size):
     image_data, mime_type = dyn_load_graph(subdir, name, graph_type, request.GET)
@@ -49,14 +52,17 @@ def dashboard_inner(request):
                 "last_audit_time": last_audit_time
                 }))
 
-from django import forms
 
 MONTHS=('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
+int_to_month = dict(zip(range(1,13), MONTHS))
+month_to_int = dict(zip(MONTHS, range(1,13)))
 
-def get_log_data(for_date, only_lustre):
+def get_log_data(display_month, display_day, only_lustre):
+    for_date = "%s %2d " % (int_to_month[display_month], display_day)
+
     matched = False
     log_data = []
-    for line in open("/var/log/hydra"):
+    for line in open(SYSLOG_PATH):
         if line == "":
             break
         if only_lustre and line.find(" Lustre") < 0:
@@ -72,7 +78,7 @@ def get_log_data(for_date, only_lustre):
                 typ = "normal"
             log_data.append((line, typ))
         else:
-    	# bail out early
+            # We overshot our date, break.
             if matched:
                 break
 
@@ -80,16 +86,20 @@ def get_log_data(for_date, only_lustre):
     return log_data
 
 def log_viewer(request):
-    class LogViewerForm(forms.Form):
-        start_month = forms.ChoiceField(label = "Starting Month")
-        start_day = forms.ChoiceField(label = "Starting Day")
-        only_lustre = forms.BooleanField(required = False,
-                                         label = "Only Lustre messages?")
-
-    log_file = open("/var/log/hydra")
     # get the date of the first line
+    try:
+        log_file = open(SYSLOG_PATH)
+    except IOError:
+        return render_to_response('log_viewer.html', RequestContext(request, {
+            "error": "Cannot open '%s'.  Check your syslog configuration, or \
+modify settings.SYSLOG_PATH." % SYSLOG_PATH}))
+
     line = log_file.readline()
-    (start_m, start_d, junk) = line.split(None, 2)
+    try:
+        (start_m, start_d, junk) = line.split(None, 2)
+    except ValueError:
+        return render_to_response('log_viewer.html', RequestContext(request, {
+            "error": "File '%s' is empty or malformed." % SYSLOG_PATH}))
     
     # and now the last line
     log_file.seek(-1000, 2)
@@ -97,47 +107,45 @@ def log_viewer(request):
         last_line = line
     
     (end_m, end_d, junk) = last_line.split(None, 2)
-    
-    display_month = end_m
+
+    display_month = month_to_int[end_m]
     display_day = int(end_d)
-    display_date = "%s %2d " % (display_month, display_day)
+
+    import datetime
+    start_month_choices = [(i, datetime.date(1970, i, 1).strftime('%B')) for i in range(1,13)]
+    start_day_choices = [(i, "%2d" % i) for i in range(1,31)]
+
+    from django import forms
+    class LogViewerForm(forms.Form):
+        start_month = forms.ChoiceField(label = "Month",
+                initial = "%d" % display_month,
+                choices = start_month_choices)
+        start_day = forms.ChoiceField(label = "Day",
+                initial = "%d" % display_day,
+                choices = start_day_choices)
+        only_lustre = forms.BooleanField(required = False,
+                                         initial = True,
+                                         label = "Only Lustre messages?")
 
     if request.method == 'POST': # If the form has been submitted...
         form = LogViewerForm(request.POST) # A form bound to the POST data
-        form.fields['start_month'].choices.append(("6", "Jun"))
-        for day in range(int(start_d), int(end_d) + 1):
-            form.fields['start_day'].choices.append((day, day))
-        #form.fields['only_lustre'].initial = only_lustre
+
         if form.is_valid(): # All validation rules pass
-            only_lustre = True
-            display_month = form.cleaned_data['start_month']
-            display_day = form.cleaned_data['start_day']
+            display_month = int(form.cleaned_data['start_month'])
+            display_day = int(form.cleaned_data['start_day'])
             only_lustre = form.cleaned_data['only_lustre']
-            display_date = "%s %2d" % (MONTHS[int(display_month) - 1],
-                                       int(display_day))
 
-            log_data = get_log_data(display_date, only_lustre)
+            log_data = get_log_data(display_month, display_day, only_lustre)
         else:
-            print "form validation failed"
             log_data = []
-        return render_to_response('log_viewer.html', { 'form': form, },
-                                      RequestContext(request,
-                                                     { "log_data": log_data, }))
+
     else:
-        only_lustre = True
         form = LogViewerForm() # An unbound form
-        form.fields['start_month'].choices.append(("6", "Jun"))
-        for day in range(int(start_d), int(end_d) + 1):
-            form.fields['start_day'].choices.append((day, day))
-        form.fields['start_month'].initial = display_month
-        form.fields['start_day'].initial = display_day
-        form.fields['only_lustre'].initial = only_lustre
+        log_data = get_log_data(display_month, display_day, form.fields['only_lustre'].initial)
 
-        log_data = get_log_data(display_date, only_lustre)
-        return render_to_response('log_viewer.html', { 'form': form, },
-                                  RequestContext(request,
-                                                 { "log_data": log_data, }))
-
+    return render_to_response('log_viewer.html', RequestContext(request, {
+                                                 "log_data": log_data,
+                                                 "form": form}))
 def events(request):
     def type_choices():
         klasses = Event.__subclasses__()
@@ -195,6 +203,8 @@ def alerts(request):
     return render_to_response('alerts.html', RequestContext(request, {
         'alerts': alert_set,
         'alert_history': alert_history_set}))
+
+
 
 def ajax_exception(fn):
     def wrapped(*args, **kwargs):

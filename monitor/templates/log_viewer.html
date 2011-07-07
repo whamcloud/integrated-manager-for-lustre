@@ -22,7 +22,6 @@
         {{ form.only_lustre }}
     </div>
     <input type="submit" value="Update" />
-
 </form>
 </div>
 
@@ -31,6 +30,10 @@
 {% for text,class in log_data %}
 <div class="log_line {{class}}">{{text|pretty_log_line}}</div>
 {% endfor %}
+
+{% if error %}
+<p>{{error}}</p>
+{% endif %}
 </div>
 
 {% endblock %}

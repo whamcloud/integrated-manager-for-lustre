@@ -163,3 +163,5 @@ LOGGING = {
         },
     }
 }
+
+SYSLOG_PATH = '/var/log/messages'
