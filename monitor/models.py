@@ -84,6 +84,104 @@ class Host(models.Model):
             else:
                 return "OFFLINE"
 
+class SshMonitor(models.Model):
+    DEFAULT_AGENT_PATH = '/root/hydra-agent.py'
+    DEFAULT_USERNAME = 'root'
+
+    host = models.OneToOneField(Host)
+
+    username = models.CharField(max_length = 64, blank = True, null = True)
+    port = models.IntegerField(blank = True, null = True)
+    agent_path = models.CharField(max_length = 512, blank = True, null = True)
+    def get_agent_path(self):
+        if self.agent_path:
+            return self.agent_path
+        else:
+            return SshMonitor.DEFAULT_AGENT_PATH
+
+    def get_username(self):
+        if self.username:
+            return self.username
+        else:
+            return SshMonitor.DEFAULT_USERNAME
+
+    @staticmethod
+    def from_string(address, agent_path = None):
+        """Return an unsaved SshMonitor instance, with the Host either set to 
+           an existing Host with the right address, or a new unsaved Host."""
+        if address.find("@") != -1:
+            user,host = address.split("@")
+        else:
+            user = None
+            host = address
+
+        if host.find(":") != -1:
+            host, port = host.split(":")
+        else:
+            port = None
+
+        agent_path = SshMonitor.DEFAULT_AGENT_PATH
+        try:
+            host = Host.objects.get(address = address)
+        except Host.DoesNotExist:
+            host = Host(address = address)
+
+        return host, SshMonitor(
+                host = host,
+                username = user,
+                port = port,
+                agent_path = agent_path)
+
+    def ssh_address_str(self):
+        return "%s@%s" % (self.get_username(), self.host.address.__str__())
+
+    def invoke(self):
+        """Safe to call on an SshMonitor which has a host assigned, neither
+        need to have been saved"""
+        data = SshMonitor._invoke_many({self.host: self})
+        result = data[self.host]
+        if isinstance(result, Exception):
+            raise result
+        else:
+            return result
+
+    @staticmethod
+    def invoke_many(hosts):
+        """Only safe to call on hosts with SshMonitor children where
+        both have been saved"""
+        return SshMonitor._invoke_many(dict([[h, h.sshmonitor] for h in hosts]))
+
+    @staticmethod
+    def _invoke_many(host_ssh_map):
+
+        # Build map of address to host for lookup after clustershell is 
+        # invoked.
+        host_map = dict([[v.ssh_address_str(), k] for k,v in host_ssh_map.items()])
+        # TODO use sshmonitor.port if set (clustershell doesn't seem 
+        # to support setting the port!?!)
+        from ClusterShell.Task import task_self, NodeSet
+        task = task_self()
+        for host, ssh_monitor in host_ssh_map.items():
+            task.shell(
+                    ssh_monitor.get_agent_path(),
+                    nodes = NodeSet.fromlist([ssh_monitor.ssh_address_str()]));
+        task.resume()
+
+        result = {}
+        for output, nodes in task.iter_buffers():
+            for node in nodes:
+                host = host_map[node]
+                try:
+                    data = json.loads("%s" % output)
+                except ValueError,e:
+                    print "JSON parse failed: '%s'" % output
+                    data = e
+                
+                result[host] = data
+
+        return result
+
+
 class Nid(models.Model):
     """Simplified NID representation for monitoring only"""
     host = models.ForeignKey(Host)

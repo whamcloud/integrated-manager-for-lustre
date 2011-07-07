@@ -117,11 +117,13 @@ class HydraDebug(cmd.Cmd, object):
         screen(table.draw())
 
     def do_add_host(self, line):
-        """add_host <address>
+        """add_host [user@]<hostname>[:port]
         Add a host to be monitored"""
-        (host, created) = Host.objects.get_or_create(address = line)
-        if not created:
-            screen("Host '%s' already exists" % line)
+        host, ssh_monitor = SshMonitor.from_string(line)
+        host.save()
+        host.save()
+        ssh_monitor.host = host
+        ssh_monitor.save()
 
     def do_test_fake_events(self, line):
         from random import randint

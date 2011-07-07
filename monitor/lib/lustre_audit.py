@@ -6,9 +6,6 @@ setup_environ(settings)
 # Access to 'monitor' database
 from monitor.models import *
 
-# Using clustershell
-from ClusterShell.Task import task_self, NodeSet
-
 import re
 import sys
 import traceback
@@ -400,34 +397,32 @@ class LustreAudit:
     def get_raw_data(self, hosts):
         # Invoke hydra-agent remotely
         # ===========================
-        addresses = [str(h.address) for h in hosts]
-        log().debug("Auditing hosts: %s" % ", ".join(addresses))
-        task = task_self()
-        task.shell(AGENT_PATH, nodes = NodeSet.fromlist(addresses))
-        task.resume()
-
-        # Map of ManagementTarget to list of nids
-        mgs_nids = defaultdict(list)
+        log().debug("Auditing hosts: %s" % ", ".join([h.__str__() for h in hosts]))
+        data = SshMonitor.invoke_many(hosts)
 
         # Map of AuditHost to output of hydra-agent
-        raw_data = {}
-        for output, nodes in task.iter_buffers():
-            for node in nodes:
-                host = Host.objects.get(address = node)
-                try:
-                    log().debug("Parsing JSON from %s" % str(node))
-                    output = "%s" % output
-                    data = json.loads(output)
-                    audit_host = AuditHost(audit = self.audit, host = host, lnet_up = data['lnet_up'])
-                    audit_host.save()
-                    LNetOfflineAlert.notify(host, not data['lnet_up'])
-                    raw_data[audit_host] = data
-                    contact = True
-                except Exception,e:
-                    log().error("bad output from %s: %s '%s'" % (str(node), e, output))
-                    contact = False
+        result = {}
+        for host, host_data in data.items():
+            if isinstance(host_data, Exception):
+                log().error("bad output from %s: %s '%s'" % (str(node), e, output))
+                contact = False
+            else:
+                assert(isinstance(host_data, dict))
+                assert(host_data.has_key('lnet_up'))
+                # FIXME: we assume any valid JSON we receive is a
+                # valid report.  This means we're not very
+                # robust in the face of hydra-agent bugs, both here
+                # and in subsequent processing on the data
 
-                HostContactAlert.notify(host, not contact)
+                audit_host = AuditHost(
+                        audit = self.audit,
+                        host = host,
+                        lnet_up = host_data['lnet_up'])
+                audit_host.save()
+                LNetOfflineAlert.notify(host, not host_data['lnet_up'])
+                result[audit_host] = host_data
+                contact = True
+            HostContactAlert.notify(host, not contact)
 
-        return raw_data
+        return result
 

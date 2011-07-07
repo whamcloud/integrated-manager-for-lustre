@@ -204,13 +204,17 @@ def alerts(request):
         'alerts': alert_set,
         'alert_history': alert_history_set}))
 
-
-
 def ajax_exception(fn):
     def wrapped(*args, **kwargs):
         try:
             return fn(*args, **kwargs)
         except Exception,e:
+            from django.db import transaction
+
+            # Roll back any active transaction
+            if transaction.is_dirty():
+                transaction.rollback()
+
             return HttpResponse(json.dumps({'error': "%s" % e}), mimetype = 'application/json', status=500)
 
     return wrapped
@@ -221,13 +225,17 @@ def host(request):
         return HttpResponseBadRequest()
 
     commit = json.loads(request.POST['commit'])
-    address = request.POST['address']
+    address = request.POST['address'].__str__()
+
+    # TODO: let user specify agent path
+    host, ssh_monitor = SshMonitor.from_string(address)
 
     if commit:
-        h = Host(address = address)
         from django.db.utils import IntegrityError
         try:
-            h.save()
+            host.save()
+            ssh_monitor.host = host
+            ssh_monitor.save()
         except IntegrityError,e:
             raise RuntimeError("Cannot add '%s', possible duplicate address. (%s)" % (address, e))
 
@@ -237,31 +245,24 @@ def host(request):
         try:
             addresses = socket.getaddrinfo(address, "22")
             resolve = True
+            resolved_address = addresses[0][4][0]
         except socket.gaierror:
             resolve = False
 
         ping = False
         if resolve:
             from subprocess import call
-            # TODO: sanitize address!!!!! FIXME XXX NO REALLY DO IT!    
-            ping = (0 == call(['ping', '-c 1', address]))
+            ping = (0 == call(['ping', '-c 1', resolved_address]))
 
         # Don't depend on ping to try invoking agent, could well have 
         # SSH but no ping
         agent = False
         if resolve:
-            from monitor.lib.lustre_audit import AGENT_PATH
-            from ClusterShell.Task import task_self, NodeSet
-            task = task_self()
-            task.shell(AGENT_PATH, nodes = NodeSet.fromlist([address.__str__()]));
-            task.resume()
-            for o, nodes in task.iter_buffers():
-                output = "%s" % o
-
             try:
-                json.loads(output)
+                result = ssh_monitor.invoke()
                 agent = True
-            except ValueError:
+            except ValueError,e:
+                print "Error trying to invoke agent on '%s': %s" % (resolved_address, e)
                 agent = False
             
         result = {
