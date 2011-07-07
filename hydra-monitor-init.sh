@@ -24,6 +24,10 @@ start() {
         # and the database, of course
         chown apache.apache database.db
     fi
+    if [ ! -f /monitor.lib.lustre_audit.log ]; then
+        touch /monitor.lib.lustre_audit.log
+        chown apache.apache /monitor.lib.lustre_audit.log
+    fi
     popd >/dev/null
     daemon --pidfile /var/run/hydra-monitor.pid '/usr/share/hydra-server/monitor/bin/hydra-monitor.py >/dev/null & echo "$!" > /var/run/hydra-monitor.pid'
     echo
