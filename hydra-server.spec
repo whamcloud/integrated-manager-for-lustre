@@ -19,7 +19,7 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 Requires: Django >= 1.3, mod_wsgi, httpd, rrdtool-python, lmt-server
-Requires(post): django-pagination djkombu djcelery
+Requires(post): django-pagination django-kombu django-celery
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
