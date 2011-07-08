@@ -122,9 +122,9 @@ class SshMonitor(models.Model):
 
         agent_path = SshMonitor.DEFAULT_AGENT_PATH
         try:
-            host = Host.objects.get(address = address)
+            host = Host.objects.get(address = host)
         except Host.DoesNotExist:
-            host = Host(address = address)
+            host = Host(address = host)
 
         return host, SshMonitor(
                 host = host,

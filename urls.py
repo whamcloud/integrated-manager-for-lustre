@@ -9,6 +9,8 @@ urlpatterns = patterns('',
     # Example:
     (r'^monitor/', include('monitor.urls')),
 
+    (r'^djcelery/', include('djcelery.urls')),
+
     # Uncomment the admin/doc line below to enable admin documentation:
     # (r'^admin/doc/', include('django.contrib.admindocs.urls')),
 

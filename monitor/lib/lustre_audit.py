@@ -404,7 +404,7 @@ class LustreAudit:
         result = {}
         for host, host_data in data.items():
             if isinstance(host_data, Exception):
-                log().error("bad output from %s: %s '%s'" % (str(node), e, output))
+                log().error("bad output from %s: %s '%s'" % (host, e, output))
                 contact = False
             else:
                 assert(isinstance(host_data, dict))

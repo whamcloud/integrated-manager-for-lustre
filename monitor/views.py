@@ -241,35 +241,10 @@ def host(request):
 
         result = {'success': True}
     else:
-        import socket
-        try:
-            addresses = socket.getaddrinfo(address, "22")
-            resolve = True
-            resolved_address = addresses[0][4][0]
-        except socket.gaierror:
-            resolve = False
+        from tasks import test_host_contact
+        print host, ssh_monitor
+        job = test_host_contact.delay(host, ssh_monitor)
+        result = {'task_id': job.task_id, 'success': True}
 
-        ping = False
-        if resolve:
-            from subprocess import call
-            ping = (0 == call(['ping', '-c 1', resolved_address]))
-
-        # Don't depend on ping to try invoking agent, could well have 
-        # SSH but no ping
-        agent = False
-        if resolve:
-            try:
-                result = ssh_monitor.invoke()
-                agent = True
-            except ValueError,e:
-                print "Error trying to invoke agent on '%s': %s" % (resolved_address, e)
-                agent = False
-            
-        result = {
-                'address': address,
-                'resolve': resolve,
-                'ping': ping,
-                'agent': agent,
-                }
     return HttpResponse(json.dumps(result), mimetype = 'application/json')
 

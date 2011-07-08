@@ -10,6 +10,7 @@ rpms: tarball
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/hydra-server-$(VERSION).tar.gz _topdir/SOURCES
 	cp hydra-monitor-init.sh hydra-server.conf _topdir/SOURCES
+	cp hydra-worker-init.sh _topdir/SOURCES
 	cp hydra-server.spec _topdir/SPECS
 	rpmbuild -bb --define "_topdir $$(pwd)/_topdir" _topdir/SPECS/hydra-server.spec
 	mv _topdir/RPMS/noarch/hydra-server-$(VERSION)-$(RELEASE).noarch.rpm dist/
