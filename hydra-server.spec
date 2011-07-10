@@ -47,14 +47,6 @@ w
 q
 EOF
 
-# make sure a sql.log debug file exists and apache owns it so
-# it can write to it
-if [ ! -f /tmp/sql.log ]; then
-    touch /tmp/sql.log
-    chown apache.apache /tmp/sql.log
-    # need to set the selinux context on it too
-    chcon "system_u:object_r:httpd_log_t" /tmp/sql.log 
-fi
 # start apache at boot time
 chkconfig httpd on
 # start cerebrod at boot time

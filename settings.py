@@ -150,11 +150,6 @@ LOGGING = {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler'
         },
-        'sql_log_file': {
-            'level': 'ERROR',
-            'class': 'logging.FileHandler',
-            'filename': '/tmp/sql.log'
-        }
     },
     'loggers': {
         'django.request':{
@@ -163,11 +158,19 @@ LOGGING = {
             'propagate': True,
         },
         'django.db.backends':{
-            'handlers': ['sql_log_file'],
+            'handlers': [],
             'level': 'DEBUG',
             'propagate': True,
         },
     }
 }
+
+ENABLE_SQL_LOG = False
+if ENABLE_SQL_LOG:
+    LOGGING['handlers']['sql_log_file'] = {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'sql.log'}
+    LOGGING['loggers']['django.db.backends']['handlers'].append('sql_log_file')
 
 SYSLOG_PATH = '/var/log/messages'
