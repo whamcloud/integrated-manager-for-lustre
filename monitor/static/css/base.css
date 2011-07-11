@@ -63,6 +63,18 @@ div.dashtree span.name {
     /*font-variant: small-caps;*/
 }
 
+div.dashtree span.sparkline {
+    float: left;
+    text-align: left;
+    width: 100px;
+}
+
+div.dashtree span.spakvals {
+    float: right;
+    text-align: right;
+    font-size: 0.95em;
+}
+
 div.dashtree span.status {
     position: absolute;
     /*left: 300px;*/

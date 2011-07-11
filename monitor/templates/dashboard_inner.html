@@ -6,6 +6,7 @@
 <h1>Filesystem status</h1>
 <ul class="tree">
     {% for filesystem in filesystems %}
+        <li class="sparklines"><span class="sparkline" id="aggregate/{{filesystem.name}}/bw"></span><span class="sparkvals" id="aggregate/{{filesystem.name}}/bw"></span></li>
         <li class="filesystem collapsible"><span class='name'>{{filesystem.name}}</span> <span class="status {{filesystem.status_rag}}">{{filesystem.status_string}}</span>
         <!-- List of targets -->
         <ul class="tree">

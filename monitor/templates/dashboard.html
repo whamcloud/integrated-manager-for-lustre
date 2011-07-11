@@ -4,6 +4,7 @@
 {% block scripts %}
 
 <script type='text/javascript' src="{{STATIC_URL}}js/dashtree.js" ></script>
+<script type='text/javascript' src="{{STATIC_URL}}js/jquery.sparkline.js" ></script>
 <script type="text/javascript">
     load_inner = function() {
         console.log('load_inner');
@@ -74,6 +75,7 @@
             xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
         }
     });
+
     $(document).ready(function() {
             $('#add_host_dialog').dialog({
                 autoOpen: false,
@@ -145,6 +147,8 @@
 
                 ev.stopPropagation();
             });
+
+            refresh_sparklines();
     });
 </script>
 </div>

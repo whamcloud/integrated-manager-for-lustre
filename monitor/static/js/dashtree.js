@@ -129,4 +129,84 @@
             });
     }
 
+    // borrowed ideas from rrdgraph
+    function si_scale_value(value, suffix, base, decimals) {
+        // work around lack of default parameter vals
+        var base = typeof(base) != 'undefined' ? base : 1000;
+        var decimals = typeof(decimals) != 'undefined' ? decimals : 2;
 
+        var units = [
+            "a",        // 10e-18 Atto
+            "f",        // 10e-15 Femto
+            "p",        // 10e-12 Pico
+            "n",        // 10e-9  Nano
+            "u",        // 10e-6  Micro
+            "m",        // 10e-3  Milli
+            " ",        // Base
+            "k",        // 10e3   Kilo
+            "M",        // 10e6   Mega
+            "G",        // 10e9   Giga
+            "T",        // 10e12  Tera
+            "P",        // 10e15  Peta
+            "E"         // 10e18  Exa
+        ];
+        var uindex;
+        var magfact;
+        var newval = value * 1.0;
+        var pivot = 6;
+        var unit = "?";
+
+        if (value == 0.0 || isNaN(value)) {
+            uindex = 0;
+            magfact = 1.0;
+        } else {
+            uindex = Math.floor(Math.log(Math.abs(value)) / Math.log(base));
+            magfact = Math.pow(base, uindex);
+            newval = value / magfact;
+        }
+        if (uindex <= pivot && uindex >= -pivot) {
+            unit = units[pivot + uindex];
+        }
+
+        return newval.toFixed(decimals) + unit + suffix;
+    }
+
+    var spark_hash = {};
+    var line_color = "blue";
+    function refresh_sparklines() {
+        $('span.sparkline').each(function(item) {
+            var span_id = $(this).attr('id');
+            $.getJSON('/monitor/sparklines/' + span_id, function(data) {
+                var span_vals = new Array();
+                $.each(data, function(k, v) {
+                    var data_id = span_id + '_' + k;
+                    var spark_span = 'span.sparkline[id=' + span_id + ']';
+                    var val_span = 'span.sparkvals[id=' + span_id + ']';
+                    if (typeof spark_hash[data_id] == 'undefined') {
+                        var vals = new Array();
+                        spark_hash[data_id] = vals;
+                    }
+                    span_vals.push(k + ": " + si_scale_value(v, "B/s"));
+                    // 30 data points * 5sec == 2.5min of data -- useful
+                    // for a "telemetry squiggle". 
+                    spark_hash[data_id].push(v);
+                    if (spark_hash[data_id].length > 30) {
+                        spark_hash[data_id].shift();
+                    }
+                    $(spark_span).sparkline(spark_hash[data_id], { composite: true, lineColor: line_color });
+                    $(val_span).html(span_vals.join(", "));
+                    // This is really kind of awful -- but it serves the
+                    // purpose of usefully compositing two sparklines
+                    // in one span.  If we need to display more than two
+                    // we'll figure something else out.
+                    if (line_color == "blue") {
+                      line_color = "red";
+                    } else {
+                      line_color = "blue";
+                    }
+                });
+            });
+        });
+
+        setTimeout('refresh_sparklines()', 5000);
+    }
