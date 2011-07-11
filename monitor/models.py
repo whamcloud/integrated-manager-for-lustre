@@ -201,7 +201,12 @@ class Filesystem(models.Model):
         return [self.mgs] + self.get_filesystem_targets()
 
     def get_filesystem_targets(self):
-        return list(MetadataTarget.objects.filter(filesystem = self).all()) + list(ObjectStoreTarget.objects.filter(filesystem = self).all())
+        osts = list(ObjectStoreTarget.objects.filter(filesystem = self).all())
+        # NB using __str__ instead of name because name may not 
+        # be set in all cases
+        osts.sort(lambda i,j: cmp(i.__str__()[-4:], j.__str__()[-4:]))
+
+        return list(MetadataTarget.objects.filter(filesystem = self).all()) + osts
 
     def get_servers(self):
         targets = self.get_targets()
