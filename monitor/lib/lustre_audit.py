@@ -94,32 +94,56 @@ class LustreAudit:
 
         return mgs
 
-    def audit_hosts(self, hosts):
-        if len(hosts) == 0:
-            return
+    def audit_complete(self, audit, results):
+        self.audit = audit
+        self.raw_data = {}
+        for host, text in results:
+            print host
+            try:
+                host_data = json.loads(text)
+            except Exception, e:
+                host_data = e
 
-        # Record start of audit
-        self.audit = Audit(complete=False)
-        self.audit.save()
-        for h in hosts:
-            self.audit.attempted_hosts.add(h)
+            # Map of AuditHost to output of hydra-agent
+            if isinstance(host_data, Exception):
+                log().error("bad output from %s: %s" % (host, host_data))
+                contact = False
+            else:
+                assert(isinstance(host_data, dict))
+                assert(host_data.has_key('lnet_up'))
+                # FIXME: we assume any valid JSON we receive is a
+                # valid report.  This means we're not very
+                # robust in the face of hydra-agent bugs, both here
+                # and in subsequent processing on the data
 
-        # Invoke hydra-agent
-        self.raw_data = self.get_raw_data(hosts)
+                audit_host = AuditHost(
+                        audit = self.audit,
+                        host = host,
+                        lnet_up = host_data['lnet_up'])
+                audit_host.save()
+                LNetOfflineAlert.notify(host, not host_data['lnet_up'])
+                self.raw_data[audit_host] = host_data
+                contact = True
+            HostContactAlert.notify(host, not contact)
 
         # Update the Nids associated with each Host
+        print "a"
         self.learn_nids()
 
         # Build a temporary map of where named targets were found on hosts
+        print "b"
         self.target_locations = self.get_target_locations()
 
         # Create Filesystem, Target and TargetMount objects
+        print "c"
         self.learn_fs_targets()
 
         # Set 'mounted' status on Target objects
+        print "d"
         self.learn_target_states()
 
         # Create and get state of Client objects
+        print "e"
         self.learn_clients()
 
         # Any TargetMounts which we didn't get data for may need to emit offline events
@@ -393,36 +417,4 @@ class LustreAudit:
                 filesystem_targets[fs] = targets
 
             self.learn_mgs_targets(filesystem_targets, audit_host.host, normalize_nids(data['lnet_nids']))
-
-    def get_raw_data(self, hosts):
-        # Invoke hydra-agent remotely
-        # ===========================
-        log().debug("Auditing hosts: %s" % ", ".join([h.__str__() for h in hosts]))
-        data = SshMonitor.invoke_many(hosts)
-
-        # Map of AuditHost to output of hydra-agent
-        result = {}
-        for host, host_data in data.items():
-            if isinstance(host_data, Exception):
-                log().error("bad output from %s: %s" % (host, host_data))
-                contact = False
-            else:
-                assert(isinstance(host_data, dict))
-                assert(host_data.has_key('lnet_up'))
-                # FIXME: we assume any valid JSON we receive is a
-                # valid report.  This means we're not very
-                # robust in the face of hydra-agent bugs, both here
-                # and in subsequent processing on the data
-
-                audit_host = AuditHost(
-                        audit = self.audit,
-                        host = host,
-                        lnet_up = host_data['lnet_up'])
-                audit_host.save()
-                LNetOfflineAlert.notify(host, not host_data['lnet_up'])
-                result[audit_host] = host_data
-                contact = True
-            HostContactAlert.notify(host, not contact)
-
-        return result
 

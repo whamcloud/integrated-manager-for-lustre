@@ -24,7 +24,10 @@ def status_style(status):
 
 # Create your models here.
 class Host(models.Model):
-    address = models.CharField(max_length = 256, unique = True)
+    # FIXME: either need to make address non-unique, or need to
+    # associate objects with a child object, because there
+    # can be multiple servers on one hostname, eg ddn10ke
+    address = models.CharField(max_length = 256)
 
     def __str__(self):
         return self.pretty_name()
@@ -84,11 +87,24 @@ class Host(models.Model):
             else:
                 return "OFFLINE"
 
-class SshMonitor(models.Model):
+class Monitor(models.Model):
+    host = models.OneToOneField(Host)
+
+    def invoke(self):
+        """Safe to call on an SshMonitor which has a host assigned, neither
+        need to have been saved"""
+        from celery.task import chord
+        from celery.task.sets import TaskSet
+        from tasks import agent_exec, audit_complete
+        tasks = []
+        for host, ssh_monitor in host_ssh_map.items():
+            tasks.append(agent_exec.subtask((host, ssh_monitor)))
+
+        chord(tasks)(audit_complete.subtask(()))
+
+class SshMonitor(Monitor):
     DEFAULT_AGENT_PATH = '/root/hydra-agent.py'
     DEFAULT_USERNAME = 'root'
-
-    host = models.OneToOneField(Host)
 
     username = models.CharField(max_length = 64, blank = True, null = True)
     port = models.IntegerField(blank = True, null = True)
@@ -134,53 +150,6 @@ class SshMonitor(models.Model):
 
     def ssh_address_str(self):
         return "%s@%s" % (self.get_username(), self.host.address.__str__())
-
-    def invoke(self):
-        """Safe to call on an SshMonitor which has a host assigned, neither
-        need to have been saved"""
-        data = SshMonitor._invoke_many({self.host: self})
-        result = data[self.host]
-        if isinstance(result, Exception):
-            raise result
-        else:
-            return result
-
-    @staticmethod
-    def invoke_many(hosts):
-        """Only safe to call on hosts with SshMonitor children where
-        both have been saved"""
-        return SshMonitor._invoke_many(dict([[h, h.sshmonitor] for h in hosts]))
-
-    @staticmethod
-    def _invoke_many(host_ssh_map):
-
-        # Build map of address to host for lookup after clustershell is 
-        # invoked.
-        host_map = dict([[v.ssh_address_str(), k] for k,v in host_ssh_map.items()])
-        # TODO use sshmonitor.port if set (clustershell doesn't seem 
-        # to support setting the port!?!)
-        from ClusterShell.Task import task_self, NodeSet
-        task = task_self()
-        for host, ssh_monitor in host_ssh_map.items():
-            task.shell(
-                    ssh_monitor.get_agent_path(),
-                    nodes = NodeSet.fromlist([ssh_monitor.ssh_address_str()]));
-        task.resume()
-
-        result = {}
-        for output, nodes in task.iter_buffers():
-            for node in nodes:
-                host = host_map[node]
-                try:
-                    data = json.loads("%s" % output)
-                except ValueError,e:
-                    print "JSON parse failed: '%s'" % output
-                    data = e
-                
-                result[host] = data
-
-        return result
-
 
 class Nid(models.Model):
     """Simplified NID representation for monitoring only"""
@@ -366,6 +335,9 @@ class TargetMount(Mountable):
         # Fall through, do nothing
         return self.block_device
 
+#class TargetGroup(models.Model):
+#    name = models.CharField(max_length = 64, null = True, blank = True)
+
 class Target(models.Model):
     """A Lustre filesystem target (MGS, MDT, OST) in the abstract, which
        may be accessible through 1 or more hosts via TargetMount"""
@@ -374,6 +346,8 @@ class Target(models.Model):
     # Nullable because when manager creates a Target it doesn't know the name
     # until it's formatted+started+audited
     name = models.CharField(max_length = 64, null = True, blank = True)
+
+#    target_group = models.ForeignKey(TargetGroup, null = True, blank = True)
 
     def name_no_fs(self):
         """Something like OST0001 rather than testfs1-OST0001"""
