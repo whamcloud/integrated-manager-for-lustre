@@ -36,6 +36,8 @@ def dashboard(request):
 
 def dashboard_inner(request):
     try:
+        # NB this is now the last time *any* host was audited, so doesn't indicate
+        # an overall "this all is up to date since X", so maybe shouldn't display it?
         last_audit = Audit.objects.filter(complete = True).latest('id')
         last_audit_time = last_audit.created_at.strftime("%H:%M:%S %Z %z");
     except Audit.DoesNotExist:

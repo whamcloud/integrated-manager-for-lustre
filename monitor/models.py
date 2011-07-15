@@ -88,19 +88,12 @@ class Host(models.Model):
                 return "OFFLINE"
 
 class Monitor(models.Model):
+    __metaclass__ = DowncastMetaclass
+
     host = models.OneToOneField(Host)
 
     def invoke(self):
-        """Safe to call on an SshMonitor which has a host assigned, neither
-        need to have been saved"""
-        from celery.task import chord
-        from celery.task.sets import TaskSet
-        from tasks import agent_exec, audit_complete
-        tasks = []
-        for host, ssh_monitor in host_ssh_map.items():
-            tasks.append(agent_exec.subtask((host, ssh_monitor)))
-
-        chord(tasks)(audit_complete.subtask(()))
+        raise NotImplementedError
 
 class SshMonitor(Monitor):
     DEFAULT_AGENT_PATH = '/root/hydra-agent.py'
@@ -109,6 +102,25 @@ class SshMonitor(Monitor):
     username = models.CharField(max_length = 64, blank = True, null = True)
     port = models.IntegerField(blank = True, null = True)
     agent_path = models.CharField(max_length = 512, blank = True, null = True)
+
+    def invoke(self):
+        """Safe to call on an SshMonitor which has a host assigned, neither
+        need to have been saved"""
+        from ClusterShell.Task import task_self, NodeSet
+        task = task_self()
+        task.shell(
+                self.get_agent_path(),
+                nodes = NodeSet.fromlist([self.ssh_address_str()]));
+        task.resume()
+        result = None
+        for output, nodes in task.iter_buffers():
+            result = "%s" % output
+
+            try:
+                return json.loads(result)
+            except Exception, e:
+                return e
+
     def get_agent_path(self):
         if self.agent_path:
             return self.agent_path
@@ -335,9 +347,6 @@ class TargetMount(Mountable):
         # Fall through, do nothing
         return self.block_device
 
-#class TargetGroup(models.Model):
-#    name = models.CharField(max_length = 64, null = True, blank = True)
-
 class Target(models.Model):
     """A Lustre filesystem target (MGS, MDT, OST) in the abstract, which
        may be accessible through 1 or more hosts via TargetMount"""
@@ -346,8 +355,6 @@ class Target(models.Model):
     # Nullable because when manager creates a Target it doesn't know the name
     # until it's formatted+started+audited
     name = models.CharField(max_length = 64, null = True, blank = True)
-
-#    target_group = models.ForeignKey(TargetGroup, null = True, blank = True)
 
     def name_no_fs(self):
         """Something like OST0001 rather than testfs1-OST0001"""
@@ -606,15 +613,14 @@ class LNetOfflineAlert(AlertState):
                 severity = INFO)
 
 class Audit(models.Model):
-    """Represent an attempt to audit some hosts"""
+    """A (potentially ongoing) attempt to audit a particular host"""
+    host = models.ForeignKey(Host)
     created_at = models.DateTimeField(auto_now = True)
     complete = models.BooleanField()
-    attempted_hosts = models.ManyToManyField(Host)
 
 class AuditHost(models.Model):
     """Represent a particular host which was successfully 
        contacted during an audit"""
-    host = models.ForeignKey(Host)
     audit = models.ForeignKey(Audit)
     lnet_up = models.BooleanField()
 
@@ -622,12 +628,12 @@ class AuditHost(models.Model):
     def lnet_status_string(host):
         # Latest audit that tried to contact our host
         try:
-            audit = Audit.objects.filter(attempted_hosts = host, complete = True).latest('id')
+            audit = Audit.objects.filter(host = host, complete = True).latest('id')
         except Audit.DoesNotExist:
             return "???"
 
         try:
-            audit_host = audit.audithost_set.get(host = host)
+            audit_host = audit.audithost_set.get()
             return {True: "UP", False: "DOWN"}[audit_host.lnet_up]
         except AuditHost.DoesNotExist:
             # Last audit attempt on this host failed
@@ -642,12 +648,27 @@ class AuditTarget(models.Model):
     target = models.ForeignKey(Target)
 
     @staticmethod
+    def target_param(target, key):
+        """Return a list of values for the Lustre config param 'key' for the target 'target'.  It is a 
+           list because Lustre allows more than one value with the same key"""
+        result = []
+        try:
+            audit_target = AuditTarget.objects.filter(target = target, audit__complete = True).latest('audit__created_at') 
+            for param in audit_target.auditparam_set.filter(key = key):
+                result.append(param.value)
+        except AuditTarget.DoesNotExist:
+            pass
+
+        return result
+
+    @staticmethod
     def target_params(target):
-        """Unlike what we do for TargetMount status, when there isn't an up to date
+        """Return a list of 2-tuples of key,value for all Lustre config params for the target 'target'.
+           Note: Unlike what we do for TargetMount status, when there isn't an up to date
            AuditTarget, we will return the last known parameters rather than '???'"""
         result = []
         try:
-            audit_target = AuditTarget.objects.filter(target = target).latest('audit__created_at') 
+            audit_target = AuditTarget.objects.filter(target = target, audit__complete = True).latest('audit__created_at') 
             for param in audit_target.auditparam_set.all():
                 result.append((param.key, param.value))
         except AuditTarget.DoesNotExist:
@@ -676,12 +697,12 @@ class AuditMountable(models.Model):
     def mountable_status_string(mountable):
         # Latest audit that tried to contact our host
         try:
-            audit = Audit.objects.filter(attempted_hosts = mountable.host, complete = True).latest('id')
+            audit = Audit.objects.filter(host = mountable.host, complete = True).latest('id')
         except Audit.DoesNotExist:
             return "???"
 
         try:
-            audit_host = audit.audithost_set.get(host = mountable.host)
+            audit_host = audit.audithost_set.get()
             try:
                 audit_mountable = audit.auditmountable_set.get(mountable = mountable)
                 try:
