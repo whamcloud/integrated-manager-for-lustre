@@ -99,9 +99,12 @@ class SshMonitor(Monitor):
     DEFAULT_AGENT_PATH = '/root/hydra-agent.py'
     DEFAULT_USERNAME = 'root'
 
+    # Substituted with DEFAULT_USERNAME in get_username if None
     username = models.CharField(max_length = 64, blank = True, null = True)
-    port = models.IntegerField(blank = True, null = True)
+    # Substituted with DEFAULT_AGENT_PATH in get_agent_path if None
     agent_path = models.CharField(max_length = 512, blank = True, null = True)
+    # Not passed on if None (let SSH library decide which port to use)
+    port = models.IntegerField(blank = True, null = True)
 
     def invoke(self):
         """Safe to call on an SshMonitor which has a host assigned, neither

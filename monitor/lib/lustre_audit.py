@@ -49,27 +49,49 @@ class LustreAudit:
         self.target_locations = None
         self.audit = None
     
+    def discover_hosts(self):
+        import os
+        for host_name in os.popen("cerebro-stat -m cluster_nodes").readlines():
+            if host_name.find('=') != -1:
+                # Cerebro 1.12 puts a "MODULE DIR =" line at the start of 
+                # cerebro-stat's output: skip lines like that
+                continue
+
+            host_name = host_name.rstrip()
+            host, created = Host.objects.get_or_create(address = host_name)
+            if created:
+                log().info("Discovered host %s from cerebro" % host_name)
+                from logging import INFO
+                LearnEvent(severity = INFO, host = host, learned_item = host).save()
+
+            try:
+                sm = host.monitor
+            except Monitor.DoesNotExist:
+                sm = SshMonitor(host = host)
+                sm.save()
+
     def is_primary(self, local_target_info):
         local_nids = [n.nid_string for n in self.host.nid_set.all()]
 
         if not local_target_info['params'].has_key('failover.node'):
-            # If the target has no failover nodes, then it is accessed by only 
-            # one (primary) host, i.e. this one
-            primary = True
+             # If the target has no failover nodes, then it is accessed by only 
+             # one (primary) host, i.e. this one
+             primary = True
         elif len(local_nids) > 0:
-            # We know this hosts's nids, and which nids are secondaries for this target,
-            # so we can work out whether we're primary by a process of elimination
-            secondary_nids = set(normalize_nids(local_target_info['params']['failover.node']))
-            primary = True
-            for nid in local_nids:
-                if nid in secondary_nids:
-                    primary = False
+             # We know this hosts's nids, and which nids are secondaries for this target,
+             # so we can work out whether we're primary by a process of elimination
+             secondary_nids = set(normalize_nids(local_target_info['params']['failover.node']))
+             primary = True
+             for nid in local_nids:
+                 if nid in secondary_nids:
+                     primary = False
         else:
-            # If we got no local NID info, and the target has some failnode info, then
-            # error out because we can't figure out whether we're primary.
-            raise NoLNetInfo("Cannot setup target %s without LNet info" % local_target_info['name'])
-
+             # If we got no local NID info, and the target has some failnode info, then
+             # error out because we can't figure out whether we're primary.
+             raise NoLNetInfo("Cannot setup target %s without LNet info" % local_target_info['name'])
+  
         return primary
+
 
     def nids_to_mgs(self, nid_strings):
         nids = Nid.objects.filter(nid_string__in = nid_strings)
@@ -212,8 +234,9 @@ class LustreAudit:
                 mgs_hosts |= set([mgs_host])
 
             if len(mgs_host_nids) == 0:
-                    log().warning("Cannot map targets on MGS to local locations because MGS nids are not yet known -- LNet is probably down on the MGS?")
-                    continue
+                log().warning("mgs = %s %d, mounts=%s" % (mgs, mgs.id, mgs.targetmount_set.all()))
+                log().warning("Cannot map targets on MGS to local locations because MGS nids are not yet known -- LNet is probably down on the MGS?")
+                continue
 
             for local_info in self.host_data['local_targets']:
                 # Build a list of MGS nids for this local target
