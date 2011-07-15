@@ -9,8 +9,7 @@ Version: %{version}
 Release: %{release}
 Source0: %{name}-%{unmangled_version}.tar.gz
 Source1: hydra-server.conf
-Source2: hydra-monitor-init.sh
-Source3: hydra-worker-init.sh
+Source2: hydra-worker-init.sh
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -34,8 +33,7 @@ python setup.py build
 make install DESTDIR=$RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc/{init,httpd/conf}.d 
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d/hydra-server.conf
-cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/hydra-monitor
-cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/hydra-worker
+cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/hydra-worker
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -52,7 +50,6 @@ chkconfig httpd on
 # start cerebrod at boot time
 chkconfig cerebrod on
 
-chkconfig --add hydra-monitor
 chkconfig --add hydra-worker
 
 %files
@@ -60,5 +57,4 @@ chkconfig --add hydra-worker
 %dir %attr(0755,apache,apache)/usr/share/hydra-server
 /usr/share/hydra-server/*
 /etc/httpd/conf.d/hydra-server.conf
-%attr(0755,root,root)/etc/init.d/hydra-monitor
 %attr(0755,root,root)/etc/init.d/hydra-worker
