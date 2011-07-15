@@ -76,17 +76,17 @@ class LustreAudit:
         self.audit = None
     
     def discover_hosts(self):
-        for host in os.popen("cerebro-stat -m cluster_nodes").readlines():
-            host = host.rstrip()
-            try:
-                Host.objects.get(address = host)
-            except:
-                h = Host(address = host)
-                from django.db.utils import IntegrityError
-                try:
-                    h.save()
-                except IntegrityError,e:
-                    raise RuntimeError("Cannot add '%s', possible duplicate address. (%s)" % (host, e))
+        for host_name in os.popen("cerebro-stat -m cluster_nodes").readlines():
+            if host_name.find('=') != -1:
+                # Cerebro 1.12 puts a "MODULE DIR =" line at the start of 
+                # cerebro-stat's output: skip lines like that
+                continue
+
+            host_name = host_name.rstrip()
+            host, created = Host.objects.get_or_create(address = host_name)
+            if created:
+                log().info("Discovered host %s from cerebro" % host_name)
+                self.learn_event(host, host)
 
     def audit_all(self):
         hosts = Host.objects.all()
