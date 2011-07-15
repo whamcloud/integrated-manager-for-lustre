@@ -16,6 +16,7 @@ if __name__=='__main__':
             LustreAudit().audit_all()
         else:
             while(True):
+                LustreAudit().discover_hosts()
                 LustreAudit().audit_all()
                 sleep(5)
 

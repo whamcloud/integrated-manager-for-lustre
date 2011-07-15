@@ -10,6 +10,7 @@ from monitor.models import *
 from ClusterShell.Task import task_self, NodeSet
 
 import re
+import os
 import sys
 import traceback
 import simplejson as json
@@ -74,6 +75,19 @@ class LustreAudit:
         self.target_locations = None
         self.audit = None
     
+    def discover_hosts(self):
+        for host in os.popen("cerebro-stat -m cluster_nodes").readlines():
+            host = host.rstrip()
+            try:
+                Host.objects.get(address = host)
+            except:
+                h = Host(address = host)
+                from django.db.utils import IntegrityError
+                try:
+                    h.save()
+                except IntegrityError,e:
+                    raise RuntimeError("Cannot add '%s', possible duplicate address. (%s)" % (host, e))
+
     def audit_all(self):
         hosts = Host.objects.all()
         self.audit_hosts(hosts)
