@@ -455,7 +455,10 @@ class Event(models.Model):
     def severity_class(self):
         # CSS class from an Event severity -- FIXME: this should be a templatetag
         from logging import INFO, WARNING, ERROR
-        return {INFO: 'info', WARNING: 'warning', ERROR: 'error'}[self.severity]
+        try:
+            return {INFO: 'info', WARNING: 'warning', ERROR: 'error'}[self.severity]
+        except KeyError:
+            return ""
 
     def message(self):
         raise NotImplementedError
