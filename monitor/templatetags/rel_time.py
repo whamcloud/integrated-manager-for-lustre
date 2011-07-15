@@ -12,7 +12,9 @@ def small_timesince(date):
     elif delta < timedelta(minutes=60):
         result = "%s minutes" % (delta.seconds / 60)
     else:
-        result = "%sh %sm" % (delta.seconds / 3600, delta.seconds / 60)
+        hours = delta.seconds / 3600
+        minutes = (delta.seconds / 60) % 60
+        result = "%sh %sm" % (hours, minutes)
 
     return mark_safe("%s" % result)
 
