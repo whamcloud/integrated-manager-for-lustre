@@ -92,7 +92,7 @@ class LustreAudit:
 
         # Map of AuditHost to output of hydra-agent
         if isinstance(host_data, Exception):
-            log().error("bad output from %s: %s" % (host, host_data))
+            log().error("bad output from %s: %s" % (self.host, host_data))
             contact = False
         else:
             assert(isinstance(host_data, dict))
@@ -138,11 +138,6 @@ class LustreAudit:
 
         HostContactAlert.notify(self.host, not contact)
 
-        self.audit.complete = True
-        self.audit.save()
-
-        return self.audit
-
     def learn_nids(self):
         new_host_nids = set(normalize_nids(self.host_data['lnet_nids']))
         old_host_nids = set([n.nid_string for n in self.host.nid_set.all()])
@@ -182,7 +177,7 @@ class LustreAudit:
 
             try:
                 primary = self.is_primary(mgs_local_info)
-                tm,created = TargetMount.get_or_create(target = mgs, host = self.host, primary = primary, mount_point = mgs_local_info['mount_point'], block_device = mgs_local_info['device'])
+                tm,created = TargetMount.objects.get_or_create(target = mgs, host = self.host, primary = primary, mount_point = mgs_local_info['mount_point'], block_device = mgs_local_info['device'])
                 if created:
                     log().info("Learned MGS mount on %s" % self.host)
                     self.learn_event(tm)
@@ -215,9 +210,6 @@ class LustreAudit:
                 mgs_host = mgs_mount.host
                 mgs_host_nids |= set(normalize_nids([n.nid_string for n in mgs_host.nid_set.all()]))
                 mgs_hosts |= set([mgs_host])
-
-            print mgs_hosts
-            print mgs_host_nids
 
             if len(mgs_host_nids) == 0:
                     log().warning("Cannot map targets on MGS to local locations because MGS nids are not yet known -- LNet is probably down on the MGS?")

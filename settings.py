@@ -174,3 +174,6 @@ if ENABLE_SQL_LOG:
     LOGGING['loggers']['django.db.backends']['handlers'].append('sql_log_file')
 
 SYSLOG_PATH = '/var/log/messages'
+
+# In seconds
+AUDIT_PERIOD = 10
