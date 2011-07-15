@@ -100,8 +100,10 @@ def dyn_load_graph(subdir, name, graph_type, in_params):
                 "GPRINT:agg_read:LAST:read %.2lf%sB/sec",
                 "LINE2:agg_write#0000ff:write bytes/sec",
                 "GPRINT:agg_write:LAST:write %.2lf%sB/sec",
+                "PRINT:agg_read:LAST:read bw\:%.0lf",
+                "PRINT:agg_write:LAST:write bw\:%.0lf",
             ])
-        elif graph_type == "lock":
+        elif graph_type == "lock_rate":
             if len(osts) < 2:
                 newname = "target/%s" % osts[0]
                 return dyn_load_graph("target", newname, graph_type, params)
@@ -124,6 +126,23 @@ def dyn_load_graph(subdir, name, graph_type, in_params):
                 "LINE2:agg_cancel_rate#0000ff:lock cancels/sec",
                 "GPRINT:agg_cancel_rate:LAST:%.2lf%s cancels/sec",
             ])
+        elif graph_type == "locks":
+            if len(osts) < 2:
+                newname = "target/%s" % osts[0]
+                return dyn_load_graph("target", newname, graph_type, params)
+
+            cdef_lock_count = "CDEF:agg_lock_count=%s_lock_count,%s_lock_count,+" % (osts[0], osts[1])
+            for i in range(len(osts)):
+                args.extend([
+                    "DEF:%s_lock_count=%s/target/%s.rrd:lock_count:AVERAGE" % (osts[i], rrd_home, osts[i]),
+                ])
+                if i > 1:
+                    cdef_lock_count += ",%s_lock_count,+" % osts[i]
+            args.extend([
+                cdef_lock_count,
+                "LINE2:agg_lock_count#0000ff:locks",
+                "GPRINT:agg_lock_count:LAST:%.0lf%s locks",
+            ])
         elif graph_type == "iops":
             if len(osts) < 2:
                 newname = "target/%s" % osts[0]
@@ -138,8 +157,8 @@ def dyn_load_graph(subdir, name, graph_type, in_params):
                     cdef_iops += ",%s_iops,+" % osts[i]
             args.extend([
                 cdef_iops,
-                "LINE2:agg_iops#ff0000:IOPS",
-                "GPRINT:agg_iops:LAST:%.2lf%s IOPS",
+                "LINE2:agg_iops#ff0000:I/Os per RPC",
+                "GPRINT:agg_iops:LAST:%.2lf%s I/Os per RPC",
             ])
         elif graph_type == "clients":
             if len(osts) < 2:
@@ -249,10 +268,10 @@ def dyn_load_graph(subdir, name, graph_type, in_params):
             if graph_type == "iops":
                 args.extend([
                     "DEF:iops=%s:iops:AVERAGE" % rrd,
-                    "LINE2:iops#ff0000:IOPS",
-                    "GPRINT:iops:LAST:%.2lf IOPS"
+                    "LINE2:iops#ff0000:I/Os per RPC",
+                    "GPRINT:iops:LAST:%.2lf I/Os per RPC"
                 ])
-            elif graph_type == "lock":
+            elif graph_type == "lock_rate":
                 args.extend([
                     "DEF:grant_rate=%s:grant_rate:AVERAGE" % rrd,
                     "DEF:cancel_rate=%s:cancel_rate:AVERAGE" % rrd,
@@ -260,6 +279,12 @@ def dyn_load_graph(subdir, name, graph_type, in_params):
                     "GPRINT:grant_rate:LAST:%.2lf grants/s",
                     "LINE2:cancel_rate#0000ff:lock cancels/s",
                     "GPRINT:cancel_rate:LAST:%.2lf cancels/s",
+                ])
+            elif graph_type == "locks":
+                args.extend([
+                    "DEF:lock_count=%s:lock_count:AVERAGE" % rrd,
+                    "LINE2:lock_count#0000fb:locks",
+                    "GPRINT:lock_count:LAST:%.0lf locks"
                 ])
             elif graph_type == "exports":
                 args.extend([
@@ -320,5 +345,11 @@ def dyn_load_graph(subdir, name, graph_type, in_params):
                     "--width", "250",
         ])
 
-    image_data = rrdtool.graph2str([(a.encode('ascii')) for a in args])
-    return image_data[3], "image/%s" % image_type
+    if params["size"] == "sparkline":
+        args[0] = "/dev/null"
+        image_data = rrdtool.graph([(a.encode('ascii')) for a in args])
+        return dict(d.split(":") for d in image_data[2])
+    else:
+        image_data = rrdtool.graph2str([(a.encode('ascii')) for a in args])
+        return image_data[3], "image/%s" % image_type
+
