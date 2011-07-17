@@ -11,6 +11,7 @@ from monitor.lib.graph_helper import load_graph,dyn_load_graph
 from settings import SYSLOG_PATH
 
 def sparkline_data(request, name, subdir, graph_type):
+    return HttpResponse(200)
     params = request.GET.copy()
     params['size'] = 'sparkline'
     data = dyn_load_graph(subdir, name, graph_type, params)
@@ -49,15 +50,26 @@ def dashboard_inner(request):
     except Audit.DoesNotExist:
         last_audit_time = "never"
         
+    all_statuses = {}
+    for mount in Mountable.objects.all():
+        all_statuses[mount] = mount.status_string()
+    for target in Target.objects.all():
+        target_mountable_statuses = dict(
+                [(m, all_statuses[m]) for m in target.targetmount_set.all()])
+        all_statuses[target] = target.status_string(target_mountable_statuses)
+    for filesystem in Filesystem.objects.all():
+        fs_target_statuses = dict(
+                [(t, all_statuses[t]) for t in filesystem.get_targets()])
+        all_statuses[filesystem] = filesystem.status_string(fs_target_statuses)
+
     return render_to_response("dashboard_inner.html",
             RequestContext(request, {
-                "management_targets": ManagementTarget.objects.all(),
                 "filesystems": Filesystem.objects.all().order_by('name'),
                 "hosts": Host.objects.all().order_by('address'),
-                "clients": Client.objects.all(),
                 "events": Event.objects.all().order_by('-created_at'),
                 "alerts": AlertState.objects.filter(active = True).order_by('end'),
-                "last_audit_time": last_audit_time
+                "last_audit_time": last_audit_time,
+                "all_statuses": all_statuses,
                 }))
 
 

@@ -7,21 +7,6 @@ import simplejson as json
 
 from logging import INFO, WARNING
 
-def status_style(status):
-        return {
-                "STARTED": "OK",
-                "FAILOVER": "WARNING",
-                "HA WARN": "WARNING",
-                "RECOVERY": "WARNING",
-                "REDUNDANT": "OK",
-                "SPARE": "OK",
-                "STOPPED": "OFFLINE",
-                "???": "",
-                "OFFLINE": "OFFLINE",
-                "OK": "OK",
-                "WARNING": "WARNING"
-                }[status]
-
 # Create your models here.
 class Host(models.Model):
     # FIXME: either need to make address non-unique, or need to
@@ -69,23 +54,17 @@ class Host(models.Model):
         return "/".join(roles)
 
     def status_string(self):
-        # Green if all targets are online
-        target_status_set = set([t.status_string() for t in self.mountable_set.all() if isinstance(t, TargetMount)])
-        if len(target_status_set) > 0:
-            good_states = ["STARTED", "REDUNDANT", "SPARE"]
-            if set(good_states) >= target_status_set:
-                return "OK"
-            elif len(set(good_states) & target_status_set) == 0:
-                return "OFFLINE"
-            else:
-                return "WARNING"
+        alerts = AlertState.filter_by_item(self)
+        alert_klasses = [a.__class__ for a in alerts]
+        if len(alerts) == 0:
+            return "OK"
+        elif HostContactAlert in alert_klasses:
+            return "OFFLINE"
+        elif LNetOfflineAlert in alert_klasses:
+            return "WARNING"
         else:
-            # No local targets, just report lnet status
-            lnet_status = AuditHost.lnet_status_string(self)
-            if lnet_status == "UP":
-                return "OK"
-            else:
-                return "OFFLINE"
+            raise NotImplementedError("Unknown host alert state %s" % alerts)
+        # TODO: bring back in WARNING when some targets are down
 
 class Monitor(models.Model):
     __metaclass__ = DowncastMetaclass
@@ -228,25 +207,27 @@ class Filesystem(models.Model):
         # (http://stackoverflow.com/questions/4764110/django-template-cant-loop-defaultdict)
         return dict(servers)
 
-    def status_string(self):
-        fs_statuses = set([t.status_string() for t in self.get_filesystem_targets()])
+    def status_string(self, target_statuses = None):
+        if not target_statuses:
+            target_statuses = {}
+            for t in self.get_targets():
+                target_statuses[t] = t.status_string()
 
+        filesystem_targets_statuses = [v for k,v in target_statuses.items() if not k.__class__ == ManagementTarget]
+        all_statuses = target_statuses.values()
+
+        # TODO: update how 'good' statuses are specified
         good_status = set(["STARTED", "REDUNDANT", "SPARE"])
         # If all my targets are down, I'm red, even if my MGS is up
-        if not good_status & fs_statuses:
+        if not good_status & set(filesystem_targets_statuses):
             return "OFFLINE"
 
-        all_statuses = fs_statuses | set([self.mgs.status_string()])
-
         # If all my targets are up including the MGS, then I'm green
-        if all_statuses <= good_status:
+        if set(all_statuses) <= good_status:
             return "OK"
 
         # Else I'm orange
         return "WARNING"
-
-    def status_rag(self):
-        return status_style(self.status_string())
 
     def __str__(self):
         return self.name
@@ -269,9 +250,6 @@ class Mountable(models.Model):
     def status_string(self):
         """To be implemented by child classes"""
         raise NotImplementedError()
-
-    def status_rag(self):
-        return status_style(self.status_string())
 
 class FilesystemMember(models.Model):
     """A Mountable for a particular filesystem, such as 
@@ -322,39 +300,20 @@ class TargetMount(Mountable):
         return self.block_device
 
     def status_string(self):
-        this_status = AuditMountable.mountable_status_string(self)
-        other_status = []
-        for target_mount in self.target.targetmount_set.all():
-            if target_mount != self:
-                other_status.append(AuditMountable.mountable_status_string(target_mount))
-
-        if len(other_status) == 0:
-            return this_status
-        else:
-            if self.primary and this_status != "STARTED":
-                if "STARTED" in other_status:
-                    return "FAILOVER"
-                else:
-                    return "STOPPED"
-
-            if self.primary and this_status == "STARTED":
-                if "???" in other_status:
-                    return "HA WARN"
-                else:
-                    return "REDUNDANT"
-
-            if not self.primary:
-                if this_status == "STARTED":
-                    return "FAILOVER"
-                elif this_status == "???":
-                    return "???"
-                else:
-                    return "SPARE"
-
-        raise NotImplementedError
-
-    def status_rag(self):
-        return status_style(self.status_string())
+        # Look for alerts that can affect this item:
+        # statuses are STARTED STOPPED RECOVERY
+        alerts = AlertState.objects.filter(active = True, 
+                alert_item_id = self.id,
+                alert_item_type__model = self.__class__.__name__.lower(),
+                alert_item_type__app_label = self.__class__._meta.app_label)
+        alert_klasses = [a.__class__ for a in alerts]
+        if len(alerts) == 0:
+            return "STARTED"
+        if TargetRecoveryAlert in alert_klasses:
+            return "RECOVERY"
+        if MountableOfflineAlert in alert_klasses:
+            return "STOPPED"
+        raise NotImplementedError("Unhandled target alert %s" % alert_klasses)
 
     def pretty_block_device(self):
         # Truncate to iSCSI iqn if possible
@@ -394,19 +353,16 @@ class Target(models.Model):
         else:
             return self.downcast().role()
 
-    def status_string(self):
-        mount_statuses = set([target_mount.status_string() for target_mount in self.targetmount_set.all()])
-        if "REDUNDANT" in mount_statuses:
-            return "REDUNDANT"
-        elif "FAILOVER" in mount_statuses:
-            return "FAILOVER"
-        elif "STARTED" in mount_statuses:
+    def status_string(self, mount_statuses = None):
+        if not mount_statuses:
+            mount_statuses = dict([(m, m.status_string()) for m in self.targetmount_set.all()])
+        if "STARTED" in mount_statuses.values():
             return "STARTED"
+        elif "RECOVERY" in mount_statuses.values():
+            return "RECOVERY"
         else:
             return "STOPPED"
-
-    def status_rag(self):
-        return status_style(self.status_string())
+        # TODO: give statuses that reflect primary/secondaryness for FAILOVER
 
     def params(self):
         return AuditTarget.target_params(self)
@@ -438,7 +394,15 @@ class Client(Mountable, FilesystemMember):
         return "Client"
 
     def status_string(self):
-        return AuditMountable.mountable_status_string(self)
+        # Look for alerts that can affect this item:
+        # statuses are STARTED STOPPED
+        alerts = AlertState.filter_by_item(self)
+        alert_klasses = [a.__class__ for a in alerts]
+        if len(alerts) == 0:
+            return "STARTED"
+        if MountableOfflineAlert in alert_klasses:
+            return "STOPPED"
+        raise NotImplementedError("Unhandled target alert %s" % alert_klasses)
 
     def __str__(self):
         return "%s-client %d" % (self.filesystem.name, self.id)
@@ -514,6 +478,13 @@ class AlertState(models.Model):
 
     def duration(self):
         return self.end - self.begin
+
+    @staticmethod
+    def filter_by_item(item):
+        return AlertState.objects.filter(active = True, 
+                alert_item_id = item.id,
+                alert_item_type__model = item.__class__.__name__.lower(),
+                alert_item_type__app_label = item.__class__._meta.app_label)
 
     @classmethod
     def notify(alert_klass, alert_item, active):
@@ -723,34 +694,6 @@ class AuditMountable(models.Model):
 
     def __str__(self):
         return "Audit %s %s %s" % (self.audit.created_at, self.mountable.host, self.mountable)
-
-    @staticmethod
-    def mountable_status_string(mountable):
-        # Latest audit that tried to contact our host
-        try:
-            audit = Audit.objects.filter(host = mountable.host, complete = True).latest('id')
-        except Audit.DoesNotExist:
-            return "???"
-
-        try:
-            audit_host = audit.audithost_set.get()
-            try:
-                audit_mountable = audit.auditmountable_set.get(mountable = mountable)
-                try:
-                    if audit_mountable.auditrecoverable.is_recovering():
-                        return "RECOVERY"
-                except AuditRecoverable.DoesNotExist:
-                    pass
-
-                return {True: "STARTED", False: "STOPPED"}[audit_mountable.mounted]
-            except AuditMountable.DoesNotExist:
-                # Does not appear in our scan: could just be unmounted on 
-                # an fstabless host
-                return "STOPPED"
-
-        except AuditHost.DoesNotExist:
-            # Last audit attempt on this host failed
-            return "???"
 
 class AuditRecoverable(AuditMountable):
     # When a volume is present, we will have been able to interrogate 
