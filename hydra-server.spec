@@ -1,6 +1,6 @@
 %define name hydra-server
-%define version 0.2
-%define unmangled_version 0.2
+%define version 0.3
+%define unmangled_version 0.3
 %define release 1
 
 Summary: The Whamcloud Lustre Monitoring and Adminisration Interface
@@ -18,7 +18,8 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 Requires: Django >= 1.3, mod_wsgi, httpd, rrdtool-python, lmt-server
-Requires(post): django-pagination django-kombu django-celery
+Requires(post): django-pagination, django-kombu, django-celery
+Requires: python-dateutil, python-uuid, python-multiprocessing, python-paramiko
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
