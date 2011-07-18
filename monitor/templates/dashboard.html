@@ -8,14 +8,11 @@
 <script type="text/javascript">
     load_inner = function() {
         console.log('load_inner');
-        reload_request = $.get("dashboard_inner/", function(response, status) {
+        reload_request = $.get("dashboard_inner/")
+        .success(function(data, textStatus, jqXHR) {
+            console.log('response: ' + textStatus);
             reload_timeout = setTimeout('load_inner()', 2000);
-
-            if (status == 'error') {
-                $('#inner').html("Error loading status, check connection between browser and Hydra server");
-            } else {
-                $('#inner').html(response);
-            }
+            $('#inner').html(data);
 
             dashtree();
             $('li.collapsible').each(function() {
@@ -23,7 +20,12 @@
                     dashtree_suggest_closed($(this));
                 }
             });
-        });
+        })
+        .error(function(event) {
+                console.log(event.responseText);
+                $('#inner').html("Error loading status, check connection between browser and Hydra server");
+                reload_timeout = setTimeout('load_inner()', 10000);
+            });
     };
 
     $(document).ready(function() {
