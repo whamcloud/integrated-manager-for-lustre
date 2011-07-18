@@ -11,7 +11,6 @@ from monitor.lib.graph_helper import load_graph,dyn_load_graph
 from settings import SYSLOG_PATH
 
 def sparkline_data(request, name, subdir, graph_type):
-    return HttpResponse(200)
     params = request.GET.copy()
     params['size'] = 'sparkline'
     data = dyn_load_graph(subdir, name, graph_type, params)
@@ -41,6 +40,77 @@ def dashboard(request):
     return render_to_response("dashboard.html",
             RequestContext(request, {}))
 
+class Dashboard:
+    class StatusItem:
+        def __init__(self, dashboard, item):
+            self.dashboard = dashboard
+            self.item = item
+
+        def status(self):
+            return self.dashboard.all_statuses[self.item]
+
+    def __init__(self):
+        self.all_statuses = {}
+        # 1 query for getting all targetmoun
+        for mount in TargetMount.objects.all():
+            # 1 query per targetmount to get any alerts
+            self.all_statuses[mount] = mount.status_string()
+
+        from collections_24 import defaultdict
+        target_mounts_by_target = defaultdict(list)
+        target_mounts_by_host = defaultdict(list)
+        target_params_by_target = defaultdict(list)
+        for target_klass in ManagementTarget, MetadataTarget, ObjectStoreTarget:
+            # 1 query to get all targets of a type
+            for target in target_klass.objects.all():
+                # 1 query per target to get the targetmounts
+                target_mounts = target.targetmount_set.all()
+                try:
+                    target_mountable_statuses = dict(
+                            [(m, self.all_statuses[m]) for m in target_mounts])
+                except KeyError:
+                    continue
+                target_mounts_by_target[target].extend(target_mounts)
+                for tm in target_mounts:
+                    target_mounts_by_host[tm.host_id].append(tm)
+                self.all_statuses[target] = target.status_string(target_mountable_statuses)
+
+                target_params_by_target[target] = target.get_params()
+
+        self.filesystems = []
+        # 1 query to get all filesystems
+        for filesystem in Filesystem.objects.all():
+            # 3 queries to get targets (of each type)
+            targets = filesystem.get_targets()
+            try:
+                fs_target_statuses = dict(
+                        [(t, self.all_statuses[t]) for t in targets])
+            except KeyError:
+                continue
+            self.all_statuses[filesystem] = filesystem.status_string(fs_target_statuses)
+
+            fs_status_item = Dashboard.StatusItem(self, filesystem)
+            fs_status_item.targets = []
+            for target in targets:
+                target_status_item = Dashboard.StatusItem(self, target)
+                target_status_item.target_mounts = []
+                for tm in target_mounts_by_target[target]:
+                    target_mount_status_item = Dashboard.StatusItem(self, tm)
+                    target_mount_status_item.target_params = target_params_by_target[target]
+                    target_status_item.target_mounts.append(target_mount_status_item)
+                fs_status_item.targets.append(target_status_item)
+
+            self.filesystems.append(fs_status_item)
+
+        self.hosts = []
+        # 1 query to get all hosts
+        for host in Host.objects.all():
+            # 1 query to get alerts
+            self.all_statuses[host] = host.status_string()
+            host_status_item = Dashboard.StatusItem(self, host)
+            host_status_item.target_mounts = [Dashboard.StatusItem(self, tm) for tm in target_mounts_by_host[host.id]]
+            self.hosts.append(host_status_item)
+
 def dashboard_inner(request):
     try:
         # NB this is now the last time *any* host was audited, so doesn't indicate
@@ -49,27 +119,15 @@ def dashboard_inner(request):
         last_audit_time = last_audit.created_at.strftime("%H:%M:%S %Z %z");
     except Audit.DoesNotExist:
         last_audit_time = "never"
-        
-    all_statuses = {}
-    for mount in Mountable.objects.all():
-        all_statuses[mount] = mount.status_string()
-    for target in Target.objects.all():
-        target_mountable_statuses = dict(
-                [(m, all_statuses[m]) for m in target.targetmount_set.all()])
-        all_statuses[target] = target.status_string(target_mountable_statuses)
-    for filesystem in Filesystem.objects.all():
-        fs_target_statuses = dict(
-                [(t, all_statuses[t]) for t in filesystem.get_targets()])
-        all_statuses[filesystem] = filesystem.status_string(fs_target_statuses)
+
+    dashboard_data = Dashboard()
 
     return render_to_response("dashboard_inner.html",
             RequestContext(request, {
-                "filesystems": Filesystem.objects.all().order_by('name'),
-                "hosts": Host.objects.all().order_by('address'),
                 "events": Event.objects.all().order_by('-created_at'),
                 "alerts": AlertState.objects.filter(active = True).order_by('end'),
                 "last_audit_time": last_audit_time,
-                "all_statuses": all_statuses,
+                "dashboard_data": dashboard_data
                 }))
 
 

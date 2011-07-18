@@ -165,15 +165,17 @@ LOGGING = {
     }
 }
 
-ENABLE_SQL_LOG = False
-if ENABLE_SQL_LOG:
-    LOGGING['handlers']['sql_log_file'] = {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'sql.log'}
-    LOGGING['loggers']['django.db.backends']['handlers'].append('sql_log_file')
-
 SYSLOG_PATH = '/var/log/messages'
 
 # In seconds
 AUDIT_PERIOD = 10
+
+try:
+    LOCAL_SETTINGS
+except NameError:
+    try:
+        from local_settings import *
+    except ImportError:
+        pass
+
+

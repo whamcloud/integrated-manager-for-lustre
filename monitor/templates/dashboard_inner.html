@@ -7,28 +7,25 @@
 <div class="dashtree">
 <h1>Filesystem status</h1>
 <ul class="tree">
-    {% for filesystem in filesystems %}
-    {% status_lookup filesystem as filesystem_status%}
-        <li class="sparklines"><span class="sparkline" id="aggregate/{{filesystem.name}}/bw"></span><span class="sparkvals" id="aggregate/{{filesystem.name}}/bw"></span></li>
-        <li class="filesystem collapsible"><span class='name'>{{filesystem.name}}</span> <span class="status {{filesystem_status|status_class}}">{{filesystem_status}}</span>
+    {% for filesystem in dashboard_data.filesystems %}
+        <li class="sparklines"><span class="sparkline" id="aggregate/{{filesystem.item.name}}/bw"></span><span class="sparkvals" id="aggregate/{{filesystem.item.name}}/bw"></span></li>
+        <li class="filesystem collapsible"><span class='name'>{{filesystem.item.name}}</span> <span class="status {{filesystem.status|status_class}}">{{filesystem.status}}</span>
         <!-- List of targets -->
         <ul class="tree">
-        {% for target in filesystem.get_targets %}
-        {% status_lookup target as target_status %}
+        {% for target in filesystem.targets %}
             <li class= "target collapsible">
-            <span class='name'>{{target.name}}</span><span class="status {{target_status|status_class}}">{{target_status}}</span>
+            <span class='name'>{{target.item.name}}</span><span class="status {{target.status|status_class}}">{{target.status}}</span>
             <!-- List of mountables -->
             <ul class="tree">
-            {% for targetmountable in target.targetmount_set.all %}
-            {% status_lookup targetmountable as targetmountable_status %}
+            {% for target_mount in target.target_mounts %}
                 <li class="target collapsible noautoshow">
-                <span class='name'>{{targetmountable.host.pretty_name}}</span>
-                <span class="status {{targetmountable_status|status_class}}">{{targetmountable_status}}</span>
+                <span class='name'>{{target_mount.item.host.pretty_name}}</span>
+                <span class="status {{target_mount.status|status_class}}">{{target_mount.status}}</span>
                 <!-- List of target mountable properties -->
                 <ul class="tree compact_list">
-                <li><span class="param_key">Device:</span> {{targetmountable.block_device}}</li>
-                <li><span class="param_key">Mount path:</span> {{targetmountable.mount_point}}</li>
-                {% for key,val in targetmountable.target.params %}
+                <li><span class="param_key">Device:</span> {{target_mount.item.block_device}}</li>
+                <li><span class="param_key">Mount path:</span> {{target_mount.item.mount_point}}</li>
+                {% for key,val in target_mount.target_params %}
                     <li class="lustre_param"><span class="param_key">{{key}}</span>: {{val}}</li>
                 {% endfor %}
                 </ul>
@@ -45,16 +42,16 @@
 
 </td><td>
 
+
 <div class="dashtree">
 <h1>Server status</h1>
 <ul class="tree">
-    {% for host in hosts %}
-    <li class="host collapsible"><span class='name'>{{host.pretty_name}}</span> ({{host.role}}) <span class='status {{host.status_string}}'>{{host.status_string}}</span>
+    {% for host in dashboard_data.hosts %}
+    <li class="host collapsible"><span class='name'>{{host.item.pretty_name}}</span> ({{host.item.role}}) <span class='status {{host.status}}'>{{host.status}}</span>
     <ul class="tree">
-        {% for mountable in host.mountable_set.all %}
-        {% status_lookup mountable as mountable_status %}
+        {% for mountable in host.target_mounts %}
         <li class="target">
-        {{mountable}} <span class='status {{mountable_status|status_class}}'>{{mountable_status}}</span>
+        {{mountable.item}} <span class='status {{mountable.status|status_class}}'>{{mountable.status}}</span>
         </li>
         {% endfor %}
     </ul>

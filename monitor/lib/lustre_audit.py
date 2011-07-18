@@ -112,7 +112,6 @@ class LustreAudit:
         self.host = audit.host
         self.host_data = host_data
 
-        # Map of AuditHost to output of hydra-agent
         if isinstance(host_data, Exception):
             log().error("bad output from %s: %s" % (self.host, host_data))
             contact = False
@@ -124,10 +123,8 @@ class LustreAudit:
             # robust in the face of hydra-agent bugs, both here
             # and in subsequent processing on the data
 
-            audit_host = AuditHost(
-                    audit = self.audit,
-                    lnet_up = host_data['lnet_up'])
-            audit_host.save()
+            self.audit.lnet_up = host_data['lnet_up']
+            self.audit.save()
             LNetOfflineAlert.notify(self.host, not host_data['lnet_up'])
             contact = True
 
@@ -146,7 +143,6 @@ class LustreAudit:
             # Create and get state of Client objects
             self.learn_clients()
 
-
             # Any TargetMounts which we didn't get data for may need to emit offline events
             for mountable in Mountable.objects.filter(host = self.host):
                 try:
@@ -160,19 +156,18 @@ class LustreAudit:
 
         HostContactAlert.notify(self.host, not contact)
 
+        return contact
+
     def learn_nids(self):
         new_host_nids = set(normalize_nids(self.host_data['lnet_nids']))
         old_host_nids = set([n.nid_string for n in self.host.nid_set.all()])
         create_nids = new_host_nids - old_host_nids
         for n in create_nids:
             self.host.nid_set.create(nid_string = n)
+
         if len(new_host_nids) > 0:
             delete_nids = old_host_nids - new_host_nids
             self.host.nid_set.filter(nid_string = delete_nids).delete()
-
-        for nid_str in new_host_nids:
-            audit_host = self.audit.audithost_set.get()
-            audit_host.auditnid_set.create(nid_string = nid_str)
 
     def learn_mgs(self, mgs_local_info):
         try:
@@ -183,7 +178,7 @@ class LustreAudit:
             existing_mgs = None
             for mgs in ManagementTarget.objects.all():
                 if mgs_local_info['params'].has_key('failover.node'):
-                    failovers = set(normalize_nids(AuditTarget.target_param(mgs, 'failover.node')))
+                    failovers = set(normalize_nids(mgs.get_param('failover.node')))
                     local_nids = set(normalize_nids([n.nid_string for n in self.host.nid_set.all()]))
                     if local_nids & failovers:
                         existing_mgs = mgs
@@ -376,14 +371,22 @@ class LustreAudit:
                 TargetRecoveryAlert.notify(mountable, audit_mountable.is_recovering())
 
             audit_mountable.save()
-            # Fill out an AuditTarget object as well, potentially multiple times if
-            # we encounter the target on multiple hosts
-            audit_target,created = self.audit.audittarget_set.get_or_create(
-                    target = mountable.target, audit = self.audit)
-            if created:
-                for key, val_list in mount_info['params'].items():
-                    for val in val_list:
-                        audit_target.auditparam_set.get_or_create(key = key, value = val)
+
+            # Sync the learned parameters to TargetParam
+            target = audit_mountable.mountable.target
+            old_params = set(target.get_params())
+
+            new_params = set()
+            for key, value_list in mount_info['params'].items():
+                for value in value_list:
+                    new_params.add((key, value))
+            
+            for del_param in old_params - new_params:
+                target.targetparam_set.get(key = del_param[0], value = del_param[1]).delete()
+                log().info("del_param: %s" % (del_param,))
+            for add_param in new_params - old_params:
+                target.targetparam_set.create(key = add_param[0], value = add_param[1])
+                log().info("add_param: %s" % (add_param,))
 
     def learn_clients(self):
         for mount_point, client_info in self.host_data['client_mounts'].items():

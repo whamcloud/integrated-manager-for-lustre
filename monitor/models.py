@@ -302,10 +302,7 @@ class TargetMount(Mountable):
     def status_string(self):
         # Look for alerts that can affect this item:
         # statuses are STARTED STOPPED RECOVERY
-        alerts = AlertState.objects.filter(active = True, 
-                alert_item_id = self.id,
-                alert_item_type__model = self.__class__.__name__.lower(),
-                alert_item_type__app_label = self.__class__._meta.app_label)
+        alerts = AlertState.filter_by_item(self)
         alert_klasses = [a.__class__ for a in alerts]
         if len(alerts) == 0:
             return "STARTED"
@@ -364,8 +361,12 @@ class Target(models.Model):
             return "STOPPED"
         # TODO: give statuses that reflect primary/secondaryness for FAILOVER
 
-    def params(self):
-        return AuditTarget.target_params(self)
+    def get_param(self, key):
+        params = self.targetparam_set.filter(key = key)
+        return [p.value for p in params]
+
+    def get_params(self):
+        return [(p.key,p.value) for p in self.targetparam_set.all()]
 
     def __str__(self):
         if self.name:
@@ -470,6 +471,8 @@ class AlertState(models.Model):
 
     alert_item_type = models.ForeignKey(ContentType, related_name='alertstate_alert_item_type')
     alert_item_id = models.PositiveIntegerField()
+    # FIXME: generic foreign key does not automatically set up deletion
+    # of this when the alert_item is deleted -- do it manually
     alert_item = GenericForeignKey('alert_item_type', 'alert_item_id')
 
     begin = models.DateTimeField()
@@ -618,75 +621,17 @@ class Audit(models.Model):
     """A (potentially ongoing) attempt to audit a particular host"""
     host = models.ForeignKey(Host)
     created_at = models.DateTimeField(auto_now = True)
+    lnet_up = models.BooleanField(default = False)
+    error = models.BooleanField(default = True)
     complete = models.BooleanField()
 
-class AuditHost(models.Model):
-    """Represent a particular host which was successfully 
-       contacted during an audit"""
-    audit = models.ForeignKey(Audit)
-    lnet_up = models.BooleanField()
-
-    @staticmethod
-    def lnet_status_string(host):
-        # Latest audit that tried to contact our host
-        try:
-            audit = Audit.objects.filter(host = host, complete = True).latest('id')
-        except Audit.DoesNotExist:
-            return "???"
-
-        try:
-            audit_host = audit.audithost_set.get()
-            return {True: "UP", False: "DOWN"}[audit_host.lnet_up]
-        except AuditHost.DoesNotExist:
-            # Last audit attempt on this host failed
-            return "???"
-
-class AuditNid(models.Model):
-    audit_host = models.ForeignKey(AuditHost)
-    nid_string = models.CharField(max_length=128)
-
-class AuditTarget(models.Model):
-    audit = models.ForeignKey(Audit)
+class TargetParam(models.Model):
     target = models.ForeignKey(Target)
-
-    @staticmethod
-    def target_param(target, key):
-        """Return a list of values for the Lustre config param 'key' for the target 'target'.  It is a 
-           list because Lustre allows more than one value with the same key"""
-        result = []
-        try:
-            audit_target = AuditTarget.objects.filter(target = target, audit__complete = True).latest('audit__created_at') 
-            for param in audit_target.auditparam_set.filter(key = key):
-                result.append(param.value)
-        except AuditTarget.DoesNotExist:
-            pass
-
-        return result
-
-    @staticmethod
-    def target_params(target):
-        """Return a list of 2-tuples of key,value for all Lustre config params for the target 'target'.
-           Note: Unlike what we do for TargetMount status, when there isn't an up to date
-           AuditTarget, we will return the last known parameters rather than '???'"""
-        result = []
-        try:
-            audit_target = AuditTarget.objects.filter(target = target, audit__complete = True).latest('audit__created_at') 
-            for param in audit_target.auditparam_set.all():
-                result.append((param.key, param.value))
-        except AuditTarget.DoesNotExist:
-            pass
-
-        return result
-
-class AuditParam(models.Model):
-    audit_target = models.ForeignKey(AuditTarget)
     key = models.CharField(max_length=128)
     value = models.CharField(max_length=512)
 
 class AuditMountable(models.Model):
     """Everything we learned about a Mountable when auditing a Host"""
-    # Reference audit and audithost in order to allow for the case
-    # where we audit the volume on the 'wrong' host
     audit = models.ForeignKey(Audit)
 
     mountable = models.ForeignKey(Mountable)
@@ -715,13 +660,10 @@ class AuditRecoverable(AuditMountable):
             return "N/A"
 
 from django.contrib import admin
-admin.site.register(AuditHost)
 admin.site.register(Audit)
 admin.site.register(AuditMountable)
-admin.site.register(AuditNid)
-admin.site.register(AuditParam)
 admin.site.register(AuditRecoverable)
-admin.site.register(AuditTarget)
+admin.site.register(TargetParam)
 admin.site.register(Client)
 admin.site.register(Filesystem)
 admin.site.register(Host)
