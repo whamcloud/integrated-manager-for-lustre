@@ -37,12 +37,15 @@ def audit_all():
         # Creating an Audit and inserting a monitor_exec job must be 
         # done together in one transaction, to avoid the possibility 
         # of having orphaned incomplete Audits
-        with transaction.commit_on_success():
+        @transaction.commit_on_success
+        def create_and_exec_audit():
             from monitor.models import Audit
             audit = Audit(complete=False, host = monitor.host)
             audit.save()
 
             monitor_exec.delay(h.monitor, audit)
+
+        create_and_exec_audit()
 
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def discover_hosts():
