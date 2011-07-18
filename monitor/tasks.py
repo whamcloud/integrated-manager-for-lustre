@@ -21,9 +21,7 @@ from settings import AUDIT_PERIOD
 def audit_all():
     from monitor.models import Host, Audit
     hosts = Host.objects.all()
-    for h in hosts:
-        monitor = h.monitor
-
+    for monitor in Monitor.objects.all():
         try:
             open_audit = Audit.objects.get(host = monitor.host, complete = False)
             # The last audit hasn't finished yet
@@ -43,7 +41,7 @@ def audit_all():
             audit = Audit(complete=False, host = monitor.host)
             audit.save()
 
-            monitor_exec.delay(h.monitor, audit)
+            monitor_exec.delay(monitor, audit)
 
         create_and_exec_audit()
 
