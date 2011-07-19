@@ -19,8 +19,7 @@ def monitor_exec(monitor, audit):
 from settings import AUDIT_PERIOD
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def audit_all():
-    from monitor.models import Host, Audit
-    hosts = Host.objects.all()
+    from monitor.models import Monitor, Audit
     for monitor in Monitor.objects.all():
         try:
             open_audit = Audit.objects.get(host = monitor.host, complete = False)
