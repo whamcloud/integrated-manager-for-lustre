@@ -79,7 +79,7 @@ class Dashboard:
 
         self.filesystems = []
         # 1 query to get all filesystems
-        for filesystem in Filesystem.objects.all():
+        for filesystem in Filesystem.objects.all().order_by('name'):
             # 3 queries to get targets (of each type)
             targets = filesystem.get_targets()
             try:
@@ -104,7 +104,7 @@ class Dashboard:
 
         self.hosts = []
         # 1 query to get all hosts
-        for host in Host.objects.all():
+        for host in Host.objects.all().order_by('address'):
             # 1 query to get alerts
             self.all_statuses[host] = host.status_string()
             host_status_item = Dashboard.StatusItem(self, host)
