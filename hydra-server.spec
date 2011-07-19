@@ -17,9 +17,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: Django >= 1.3, mod_wsgi, httpd, rrdtool-python, lmt-server
-Requires(post): django-pagination, django-kombu, django-celery
-Requires: python-dateutil, python-uuid, python-multiprocessing, python-paramiko
+Requires: Django >= 1.3, mod_wsgi, httpd, rrdtool-python, lmt-server, python-dateutil, python-uuid, python-multiprocessing, python-paramiko, django-pagination, django-kombu, django-celery
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
