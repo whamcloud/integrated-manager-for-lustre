@@ -105,10 +105,12 @@ class Dashboard:
         self.hosts = []
         # 1 query to get all hosts
         for host in Host.objects.all().order_by('address'):
+            host_tms = target_mounts_by_host[host.id]
             # 1 query to get alerts
-            self.all_statuses[host] = host.status_string()
+            host_tm_statuses = dict([(tm, self.all_statuses[tm]) for tm in host_tms])
+            self.all_statuses[host] = host.status_string(host_tm_statuses)
             host_status_item = Dashboard.StatusItem(self, host)
-            host_status_item.target_mounts = [Dashboard.StatusItem(self, tm) for tm in target_mounts_by_host[host.id]]
+            host_status_item.target_mounts = [Dashboard.StatusItem(self, tm) for tm in host_tms]
             self.hosts.append(host_status_item)
 
 def dashboard_inner(request):
@@ -246,8 +248,6 @@ def events(request):
         form = EventFilterForm()
     elif request.method == 'POST':
         form = EventFilterForm(data = request.POST)
-        print form.is_valid()
-        print form.errors
         if form.is_valid():
             try:
                 host_id = request.POST['host']
@@ -320,7 +320,6 @@ def host(request):
         result = {'success': True}
     else:
         from tasks import test_host_contact
-        print host, ssh_monitor
         job = test_host_contact.delay(host, ssh_monitor)
         result = {'task_id': job.task_id, 'success': True}
 

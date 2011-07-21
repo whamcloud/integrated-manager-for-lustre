@@ -53,18 +53,20 @@ class Host(models.Model):
 
         return "/".join(roles)
 
-    def status_string(self):
+    def status_string(self, targetmount_statuses = None):
+        if not targetmount_statuses:
+            targetmount_statuses = dict([(tm, tm.status_string()) for tm in self.targetmount_set.all()])
+
+        tm_states = set(targetmount_statuses.values())
+
         alerts = AlertState.filter_by_item(self)
         alert_klasses = [a.__class__ for a in alerts]
-        if len(alerts) == 0:
-            return "OK"
-        elif HostContactAlert in alert_klasses:
+        if HostContactAlert in alert_klasses:
             return "OFFLINE"
-        elif LNetOfflineAlert in alert_klasses:
+        elif LNetOfflineAlert in alert_klasses or not (set(["STARTED", "SPARE"]) >= tm_states):
             return "WARNING"
         else:
-            raise NotImplementedError("Unknown host alert state %s" % alerts)
-        # TODO: bring back in WARNING when some targets are down
+            return "OK"
 
 class Monitor(models.Model):
     __metaclass__ = DowncastMetaclass
@@ -209,21 +211,18 @@ class Filesystem(models.Model):
 
     def status_string(self, target_statuses = None):
         if not target_statuses:
-            target_statuses = {}
-            for t in self.get_targets():
-                target_statuses[t] = t.status_string()
+            target_statuses = dict([(t, t.status_string()) for t in self.get_targets()])
 
         filesystem_targets_statuses = [v for k,v in target_statuses.items() if not k.__class__ == ManagementTarget]
         all_statuses = target_statuses.values()
 
-        # TODO: update how 'good' statuses are specified
-        good_status = set(["STARTED", "REDUNDANT", "SPARE"])
+        good_status = set(["STARTED", "FAILOVER"])
         # If all my targets are down, I'm red, even if my MGS is up
         if not good_status & set(filesystem_targets_statuses):
             return "OFFLINE"
 
         # If all my targets are up including the MGS, then I'm green
-        if set(all_statuses) <= good_status:
+        if set(all_statuses) <= set(["STARTED"]):
             return "OK"
 
         # Else I'm orange
@@ -305,11 +304,16 @@ class TargetMount(Mountable):
         alerts = AlertState.filter_by_item(self)
         alert_klasses = [a.__class__ for a in alerts]
         if len(alerts) == 0:
-            return "STARTED"
+            if self.primary:
+                return "STARTED"
+            else:
+                return "SPARE"
         if TargetRecoveryAlert in alert_klasses:
             return "RECOVERY"
         if MountableOfflineAlert in alert_klasses:
             return "STOPPED"
+        if FailoverActiveAlert in alert_klasses:
+            return "FAILOVER"
         raise NotImplementedError("Unhandled target alert %s" % alert_klasses)
 
     def pretty_block_device(self):
@@ -353,10 +357,13 @@ class Target(models.Model):
     def status_string(self, mount_statuses = None):
         if not mount_statuses:
             mount_statuses = dict([(m, m.status_string()) for m in self.targetmount_set.all()])
+
         if "STARTED" in mount_statuses.values():
             return "STARTED"
         elif "RECOVERY" in mount_statuses.values():
             return "RECOVERY"
+        elif "FAILOVER" in mount_statuses.values():
+            return "FAILOVER"
         else:
             return "STOPPED"
         # TODO: give statuses that reflect primary/secondaryness for FAILOVER
@@ -559,6 +566,24 @@ class MountableOfflineAlert(AlertState):
     def end_event(self):
         return AlertEvent(
                 message_str = "%s started" % self.alert_item,
+                host = self.alert_item.host,
+                alert = self,
+                severity = INFO)
+
+class FailoverActiveAlert(AlertState):
+    def message(self):
+        return "Failover active"
+
+    def begin_event(self):
+        return AlertEvent(
+                message_str = "%s failover mounted" % self.alert_item,
+                host = self.alert_item.host,
+                alert = self,
+                severity = WARNING)
+        
+    def end_event(self):
+        return AlertEvent(
+                message_str = "%s failover unmounted" % self.alert_item,
                 host = self.alert_item.host,
                 alert = self,
                 severity = INFO)

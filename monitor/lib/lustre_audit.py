@@ -149,7 +149,10 @@ class LustreAudit:
                     audited = AuditMountable.objects.get(
                             audit = self.audit, mountable = mountable)
                 except AuditMountable.DoesNotExist:
-                    MountableOfflineAlert.notify(mountable, True)
+                    if isinstance(mountable, TargetMount) and not mountable.primary:
+                        FailoverActiveAlert.notify(mountable, False)
+                    else:
+                        MountableOfflineAlert.notify(mountable, True)
                     audit_mountable = AuditMountable(audit = self.audit,
                             mountable = mountable, mounted = False)
                     audit_mountable.save()
@@ -326,7 +329,12 @@ class LustreAudit:
                 target = ManagementTarget.get_by_host(self.host)
                 mountable = target.targetmount_set.get(host = self.host, mount_point = mount_info['mount_point'])
                 
-                MountableOfflineAlert.notify(mountable, not mount_info['running'])
+
+                if mountable.primary:
+                    MountableOfflineAlert.notify(mountable, not mount_info['running'])
+                else:
+                    FailoverActiveAlert.notify(mountable, mount_info['running'])
+
                 audit_mountable = AuditMountable(audit = self.audit,
                         mountable = mountable, mounted = mount_info['running'])
             else:
@@ -367,7 +375,10 @@ class LustreAudit:
                         mountable = mountable, mounted = mount_info['running'],
                         recovery_status = json.dumps(mount_info["recovery_status"]))
 
-                MountableOfflineAlert.notify(mountable, not mount_info['running'])
+                if mountable.primary:
+                    MountableOfflineAlert.notify(mountable, not mount_info['running'])
+                else:
+                    FailoverActiveAlert.notify(mountable, mount_info['running'])
                 TargetRecoveryAlert.notify(mountable, audit_mountable.is_recovering())
 
             audit_mountable.save()
