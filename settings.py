@@ -1,5 +1,10 @@
 # Django settings for hydra project.
 
+try:
+    import debug_toolbar
+except:
+    debug_toolbar = None
+
 import os
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
@@ -97,8 +102,8 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.transaction.TransactionMiddleware',
     'pagination.middleware.PaginationMiddleware',
-    'middleware.ExceptionPrinterMiddleware'
-)
+    'middleware.ExceptionPrinterMiddleware',
+) + ((lambda:'debug_toolbar.middleware.DebugToolbarMiddleware', lambda:())[debug_toolbar==None](),)
 
 TEMPLATE_CONTEXT_PROCESSORS = (
     "django.core.context_processors.auth",
@@ -122,6 +127,7 @@ import djcelery
 djcelery.setup_loader()
 BROKER_BACKEND = "djkombu.transport.DatabaseTransport"
 
+
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -135,7 +141,32 @@ INSTALLED_APPS = (
     'djkombu',
     'pagination',
     'monitor',
-)
+    ) + ((lambda:'debug_toolbar', lambda:())[debug_toolbar==None](),)
+
+INTERNAL_IPS = ('192.168.0.4',)
+
+def custom_show_toolbar(request):
+    return DEBUG
+
+DEBUG_TOOLBAR_CONFIG = {
+    'INTERCEPT_REDIRECTS': False,
+    'SHOW_TOOLBAR_CALLBACK': custom_show_toolbar,
+    'EXTRA_SIGNALS': [],
+    'HIDE_DJANGO_SQL': False,
+    'TAG': 'div',
+    }
+
+DEBUG_TOOLBAR_PANELS = (
+    'debug_toolbar.panels.version.VersionDebugPanel',
+    'debug_toolbar.panels.timer.TimerDebugPanel',
+    'debug_toolbar.panels.settings_vars.SettingsVarsDebugPanel',
+    'debug_toolbar.panels.headers.HeaderDebugPanel',
+    'debug_toolbar.panels.request_vars.RequestVarsDebugPanel',
+    'debug_toolbar.panels.template.TemplateDebugPanel',
+    'debug_toolbar.panels.sql.SQLDebugPanel',
+    'debug_toolbar.panels.signals.SignalDebugPanel',
+    'debug_toolbar.panels.logger.LoggingPanel',
+    )
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
