@@ -1,0 +1,45 @@
+
+{% extends 'base.html' %}
+
+{% block scripts %}
+{% endblock %}
+
+{% block content %}
+<h2>Management servers</h2>
+<table>
+{% for mgs in mgss %}
+<tr>
+    <td>{{mgs.primary_host}}</td>
+    <td><a href="{% url configure.views.create_fs mgs_id=mgs.id%}">Create filesystem</a></td>
+</tr>
+{% endfor %}
+</table>
+
+<h2>Filesystems</h2>
+<ul>
+{% for filesystem in filesystems %}
+<li>{{filesystem.name}}</li>
+{% endfor %}
+</ul>
+
+<h2>Hosts</h2>
+<table>
+{% for host in hosts %}
+<tr>
+    <td>{{host}}</td>
+    <td>
+        {%if not host.is_mgs %}
+        <a href="{% url configure.views.create_mgs host_id=host.id%}">Create MGS</a>
+        {% endif %}
+    </td>
+    <td>
+        {% if can_create_mdt %}
+        <a href="{% url configure.views.create_mds host_id=host.id%}">Create MDS</a>
+        {% endif %}
+    </td>
+    <td><a href="{% url configure.views.create_oss host_id=host.id%}">Create OSS</a></td>
+</tr>
+{% endfor %}
+</table>
+
+{% endblock%}

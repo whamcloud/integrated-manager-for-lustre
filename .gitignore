@@ -1,5 +1,7 @@
 *.py[co]
 *.sw?
+*.log
+local_settings.py
 database.db
 monitor.lib.lustre_audit.log
 sql.log

@@ -1,0 +1,28 @@
+
+{% extends 'base.html' %}
+
+{% block scripts %}
+{% endblock %}
+
+{% block content %}
+<h2>Create OSS</h2>
+<p>Selected host: {{host}}</p>
+<form method='post'>
+    {% csrf_token %}
+    <table>
+        {{ form.as_table}}
+        {% for node_form in node_forms %}
+        <tr>
+            <td>
+                {{ node_form.use}}
+            </td>
+            <td>
+                {{node_form.node.path}}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    <input type='submit' value='Create'/>
+</form>
+{% endblock %}
+

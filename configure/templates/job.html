@@ -1,0 +1,46 @@
+
+
+
+{% extends 'base.html' %}
+
+{% block scripts %}
+{% endblock %}
+
+{% block content %}
+
+<h2>Job {{job.id}}</h2>
+<ul>
+    <li>Paused: {{job.paused}}</li>
+    <li>Complete: {{job.complete}}</li>
+    <li>Errored: {{job.errored}}</li>
+</ul>
+
+<h3>Steps</h3>
+
+<table>
+    <tr>
+        <th>Id</th>
+        <th>Task id</th>
+        <th>info</th>
+        <th>State</th>
+    </tr>
+{% for step in job.steprecord_set.all %}
+
+<tr>
+    <td>{{step.id}}</td>
+    <td>{{step.task_id}}</td>
+    <td>
+        <ul>
+        {% for k,v in step.info.items %}
+        <li>{{k}}: {{v}}</li>
+        {% endfor %}
+        </ul>
+    </td>
+    <td>{{step.state}}</td>
+</tr>
+
+{% endfor %}
+</table>
+
+{% endblock %}
+

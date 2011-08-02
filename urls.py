@@ -6,8 +6,8 @@ admin.autodiscover()
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = patterns('',
-    # Example:
     (r'^monitor/', include('monitor.urls')),
+    (r'^configure/', include('configure.urls')),
 
     (r'^djcelery/', include('djcelery.urls')),
 

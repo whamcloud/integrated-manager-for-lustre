@@ -121,7 +121,6 @@ class HydraDebug(cmd.Cmd, object):
         Add a host to be monitored"""
         host, ssh_monitor = SshMonitor.from_string(line)
         host.save()
-        host.save()
         ssh_monitor.host = host
         ssh_monitor.save()
 

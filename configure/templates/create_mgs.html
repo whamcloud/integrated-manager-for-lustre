@@ -1,0 +1,18 @@
+
+{% extends 'base.html' %}
+
+{% block scripts %}
+{% endblock %}
+
+{% block content %}
+<h2>Create MGS</h2>
+<p>Selected host: {{host}}</p>
+<form method='post'>
+    {% csrf_token %}
+    <table>
+        {{ form.as_table}}
+    </table>
+    <input type='submit' value='Create'>
+</form>
+{% endblock %}
+

@@ -7,7 +7,6 @@ import simplejson as json
 
 from logging import INFO, WARNING
 
-# Create your models here.
 class Host(models.Model):
     # FIXME: either need to make address non-unique, or need to
     # associate objects with a child object, because there
@@ -30,17 +29,21 @@ class Host(models.Model):
         else:
             return self.address
     
-    def role(self):
+    def _role_strings(self):
         roles = set()
         for mountable in self.mountable_set.all():
             if isinstance(mountable, TargetMount):
                 target = mountable.target.downcast()
-                if target.__class__ == ManagementTarget:
-                    roles.add("MGS")
-                elif target.__class__ == MetadataTarget:
-                    roles.add("MDS")
-                elif target.__class__ == ObjectStoreTarget:
-                    roles.add("OSS")
+                if mountable.primary:
+                    if isinstance(target, ManagementTarget):
+                        roles.add("MGS")
+                    elif isinstance(target, MetadataTarget):
+                        roles.add("MDS")
+                    elif isinstance(target, ObjectStoreTarget):
+                        roles.add("OSS")
+                else:
+                    roles.add("Failover")
+
 
             if isinstance(mountable, Client):
                 roles.add("Client")
@@ -48,14 +51,36 @@ class Host(models.Model):
         if self.router_set.count() > 0:
             roles.add("Router")
 
-        if len(roles) == 0:
-            roles.add("Unused")
+        return roles
 
-        return "/".join(roles)
+    def is_unused(self):
+        return (len(self._role_strings()) == 0)
+
+    def is_mgs(self):
+        try:
+            ManagementTarget.objects.get(targetmount__host = self)
+            return True
+        except ManagementTarget.DoesNotExist:
+            return False
+
+    def available_lun_nodes(self):
+        candidates = LunNode.objects.filter(host = self, used_hint = False)
+        users = TargetMount.objects.filter(block_device__host = self)
+        used_candidates = [u.block_device for u in users]
+        candidates = set(candidates) - set(used_candidates)
+
+        return candidates
+
+    def role(self):
+        roles = self._role_strings()
+        if len(roles) == 0:
+            return "Unused"
+        else:
+            return "/".join(roles)
 
     def status_string(self, targetmount_statuses = None):
-        if not targetmount_statuses:
-            targetmount_statuses = dict([(tm, tm.status_string()) for tm in self.targetmount_set.all()])
+        if targetmount_statuses == None:
+            targetmount_statuses = dict([(tm, tm.status_string()) for tm in self.mountable_set.all() if isinstance(tm, TargetMount)])
 
         tm_states = set(targetmount_statuses.values())
 
@@ -67,6 +92,20 @@ class Host(models.Model):
             return "WARNING"
         else:
             return "OK"
+
+class Lun(models.Model):
+    # The WWN from a device, available for some hardware
+    # Support not yet implemented in lustre_audit
+    #wwn = models.CharField(max_length = 16, blank = True, null = True)
+    # The UUID from a filesystem on this Lun, available after formatting
+    fs_uuid = models.CharField(max_length = 32, blank = True, null = True)
+
+class LunNode(models.Model):
+    lun = models.ForeignKey(Lun, blank = True, null = True)
+    host = models.ForeignKey(Host)
+    path = models.CharField(max_length = 512)
+
+    used_hint = models.BooleanField()
 
 class Monitor(models.Model):
     __metaclass__ = DowncastMetaclass
@@ -163,11 +202,18 @@ class SshMonitor(Monitor):
         except Host.DoesNotExist:
             host = Host(address = host)
 
-        return host, SshMonitor(
-                host = host,
-                username = user,
-                port = port,
-                agent_path = agent_path)
+        try:
+            return host, SshMonitor.objects.get(
+                    host = host,
+                    username = user,
+                    port = port,
+                    agent_path = agent_path)
+        except SshMonitor.DoesNotExist:
+            return host, SshMonitor(
+                    host = host,
+                    username = user,
+                    port = port,
+                    agent_path = agent_path)
 
     def ssh_address_str(self):
         return "%s@%s" % (self.get_username(), self.host.address.__str__())
@@ -188,7 +234,7 @@ class Filesystem(models.Model):
         unique_together = ('name', 'mgs')
 
     def get_targets(self):
-        return [self.mgs] + self.get_filesystem_targets()
+        return [self.mgs.downcast()] + self.get_filesystem_targets()
 
     def get_filesystem_targets(self):
         osts = list(ObjectStoreTarget.objects.filter(filesystem = self).all())
@@ -210,7 +256,7 @@ class Filesystem(models.Model):
         return dict(servers)
 
     def status_string(self, target_statuses = None):
-        if not target_statuses:
+        if target_statuses == None:
             target_statuses = dict([(t, t.status_string()) for t in self.get_targets()])
 
         filesystem_targets_statuses = [v for k,v in target_statuses.items() if not k.__class__ == ManagementTarget]
@@ -255,6 +301,18 @@ class FilesystemMember(models.Model):
        MDT, OST or Client"""
     filesystem = models.ForeignKey(Filesystem)
 
+    def mgsnode_spec(self):
+        """Return a list of strings of --mgsnode arguments suitable for use with mkfs"""
+        result = []
+        mgs = self.filesystem.mgs
+        for target_mount in mgs.targetmount_set.all():
+            host = target_mount.host
+            nids = ",".join([n.nid_string for n in host.nid_set.all()])
+            assert(nids != "")
+            result.append("--mgsnode=%s" % nids)
+            
+        return result
+
     # Use of abstract base classes to avoid django bug #12002
     class Meta:
         abstract = True
@@ -262,9 +320,10 @@ class FilesystemMember(models.Model):
 class TargetMount(Mountable):
     """A mountable (host+mount point+device()) which associates a Target
        with a particular location to mount as primary or as failover"""
-    # Like /dev/disk/by-path/ip-asdasdasd
-    block_device = models.CharField(max_length = 512, null = True, blank = True)
+    block_device = models.ForeignKey(LunNode, blank = True, null = True)
     primary = models.BooleanField()
+    target = models.ForeignKey('Target')
+    # FIXME: duplication of host reference from Mountable and LunNode
 
     def save(self, force_insert = False, force_update = False, using = None):
         # If primary is true, then target must be unique
@@ -290,13 +349,11 @@ class TargetMount(Mountable):
 
         return super(TargetMount, self).save(force_insert, force_update, using)
 
-    target = models.ForeignKey('Target')
-
     def __str__(self):
         return "%s" % (self.target)
 
     def device(self):
-        return self.block_device
+        return self.block_device.path
 
     def status_string(self):
         # Look for alerts that can affect this item:
@@ -318,17 +375,17 @@ class TargetMount(Mountable):
 
     def pretty_block_device(self):
         # Truncate to iSCSI iqn if possible
-        parts = self.block_device.split("-iscsi-")
+        parts = self.block_device.path.split("-iscsi-")
         if len(parts) == 2:
             return parts[1]
         
         # Strip /dev/mapper if possible
-        parts = self.block_device.split("/dev/mapper/")
+        parts = self.block_device.path.split("/dev/mapper/")
         if len(parts) == 2:
             return parts[1]
 
         # Strip /dev if possible
-        parts = self.block_device.split("/dev/")
+        parts = self.block_device.path.split("/dev/")
         if len(parts) == 2:
             return parts[1]
 
@@ -355,7 +412,7 @@ class Target(models.Model):
             return self.downcast().role()
 
     def status_string(self, mount_statuses = None):
-        if not mount_statuses:
+        if mount_statuses == None:
             mount_statuses = dict([(m, m.status_string()) for m in self.targetmount_set.all()])
 
         if "STARTED" in mount_statuses.values():
@@ -375,13 +432,19 @@ class Target(models.Model):
     def get_params(self):
         return [(p.key,p.value) for p in self.targetparam_set.all()]
 
+    def primary_host(self):
+        return TargetMount.objects.get(target = self, primary = True).host
+
     def __str__(self):
         if self.name:
             return self.name
         else:
-            return "%s %s" % (self.__class__.__name__, self.id)
+            return "Unregistered %s" % (self.id)
 
 class MetadataTarget(Target, FilesystemMember):
+    # TODO: constraint to allow only one MetadataTarget per MGS.  The reason
+    # we don't just use a OneToOneField is to use FilesystemMember to represent
+    # MDTs and OSTs together in a convenient way
     def role(self):
         return "MDT"
 
@@ -684,24 +747,29 @@ class AuditRecoverable(AuditMountable):
         else:
             return "N/A"
 
-from django.contrib import admin
-admin.site.register(Audit)
-admin.site.register(AuditMountable)
-admin.site.register(AuditRecoverable)
-admin.site.register(TargetParam)
-admin.site.register(Client)
-admin.site.register(Filesystem)
-admin.site.register(Host)
-admin.site.register(ManagementTarget)
-admin.site.register(MetadataTarget)
-admin.site.register(Mountable)
-admin.site.register(Nid)
-admin.site.register(ObjectStoreTarget)
-admin.site.register(Router)
-admin.site.register(Target)
-admin.site.register(TargetMount)
+# Only do admin registration if we are not being imported
+# by the configure app
+#try:
+#    CONFIGURE_MODELS
+#except NameError:
+#    from django.contrib import admin
+#    admin.site.register(Audit)
+#    admin.site.register(AuditMountable)
+#    admin.site.register(AuditRecoverable)
+#    admin.site.register(TargetParam)
+#    admin.site.register(Client)
+#    admin.site.register(Filesystem)
+#    admin.site.register(Host)
+#    admin.site.register(ManagementTarget)
+#    admin.site.register(MetadataTarget)
+#    admin.site.register(Mountable)
+#    admin.site.register(Nid)
+#    admin.site.register(ObjectStoreTarget)
+#    admin.site.register(Router)
+#    admin.site.register(Target)
+#    admin.site.register(TargetMount)
 
-admin.site.register(Event)
-admin.site.register(LearnEvent)
-admin.site.register(AlertEvent)
+#    admin.site.register(Event)
+#    admin.site.register(LearnEvent)
+#    admin.site.register(AlertEvent)
 

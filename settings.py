@@ -141,6 +141,7 @@ INSTALLED_APPS = (
     'djkombu',
     'pagination',
     'monitor',
+    'configure'
     ) + ((lambda:'debug_toolbar', lambda:())[debug_toolbar==None](),)
 
 INTERNAL_IPS = ('192.168.0.4',)
@@ -209,4 +210,34 @@ except NameError:
     except ImportError:
         pass
 
+CELERY_QUEUES = {
+        "default": {
+            "exchange": "default",
+            "binding_key": "default"
+        },
+        "ssh": {
+            "exchange": "default",
+            "binding_key": "monitor.ssh"
+            },
+        "jobs": {
+            "exchange": "default",
+            "binding_key": "configure.jobs"
+            },
 
+        }
+
+CELERY_ROUTES = (
+        {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
+        {"monitor.tasks.audit_all": {"queue": "ssh"}},
+        {"configure.tasks.run_job_step": {"queue": "jobs"}},
+        {"configure.tasks.periodic": {"queue": "jobs"}},
+        {"configure.tasks.other": {"queue": "jobs"}},
+        )
+
+CELERY_DEFAULT_QUEUE = "default"
+CELERY_DEFAULT_EXCHANGE = "default"
+CELERY_DEFAULT_EXCHANGE_TYPE = "direct"
+CELERY_DEFAULT_ROUTING_KEY = "default"
+
+# This allows us to easily check whether a task has started running
+CELERY_TRACK_STARTED = True
