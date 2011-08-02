@@ -1,6 +1,6 @@
 %define name hydra-server
-%define version 0.3
-%define unmangled_version 0.3
+%define version 0.3.20110802112610
+%define unmangled_version 0.3.20110802112610
 %define release 1
 
 Summary: The Whamcloud Lustre Monitoring and Adminisration Interface
@@ -17,7 +17,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: Django >= 1.3, mod_wsgi, httpd, rrdtool-python, lmt-server, python-dateutil, python-uuid, python-multiprocessing, python-paramiko, django-pagination, django-kombu, django-celery
+Requires: Django >= 1.3, mod_wsgi, httpd, rrdtool-python, lmt-server, python-dateutil, python-uuid, python-multiprocessing, python-paramiko, django-pagination, django-kombu, django-celery, rsyslog
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
@@ -48,6 +48,8 @@ EOF
 chkconfig httpd on
 # start cerebrod at boot time
 chkconfig cerebrod on
+# start rsyslog at boot time
+chkconfig rsyslog on
 
 chkconfig --add hydra-worker
 
