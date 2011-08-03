@@ -1,6 +1,6 @@
 %define name hydra-server
-%define version 0.3.20110802112610
-%define unmangled_version 0.3.20110802112610
+%define version @VERSION@
+%define unmangled_version @VERSION@
 %define release 1
 
 Summary: The Whamcloud Lustre Monitoring and Adminisration Interface

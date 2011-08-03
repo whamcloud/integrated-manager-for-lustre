@@ -10,9 +10,9 @@ production:
 	
 tarball:
 	rm -f MANIFEST
-	echo -e "/^      version =/s/ '.*',$$/ '$(VERSION)',/\nwq" | ed setup.py
-	echo -e "/^%define version /s/ version .*$$/ version $(VERSION)/\nwq" | ed hydra-server.spec
-	echo -e "/^%define unmangled_version /s/_version .*$$/_version $(VERSION)/\nwq" | ed hydra-server.spec
+	for file in hydra-server.spec setup.py; do \
+		sed -e 's/@VERSION@/$(VERSION)/g' < $$file.in > $$file; \
+	done
 	python setup.py sdist
 
 rpms: production cleandist tarball
