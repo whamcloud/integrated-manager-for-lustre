@@ -12,9 +12,12 @@ class LocalLustreAudit:
         """Try to convert device paths to their /dev/disk/by-path equivalent where possible,
            so that the server can use this is the canonical identifier for devices (it has 
            the best chance of being the same between hosts using shared storage"""
+
         BY_PATH = "/dev/disk/by-path"
+
         if not hasattr(self, 'device_lookup'):
             self.device_lookup = {}
+            # Lookup devices to their by-path equivalent if possible
             try:
                 for f in os.listdir(BY_PATH):
                     self.device_lookup[os.path.realpath(os.path.join(BY_PATH, f))] = os.path.join(BY_PATH, f)
@@ -22,21 +25,94 @@ class LocalLustreAudit:
                 # by-path doesn't exist, don't add anything to device_lookup
                 pass
 
-        device = device.strip()
-        if os.path.commonprefix([BY_PATH, device]) != BY_PATH:
+            # Resolve the /dev/root node to its real device
+            # NB /dev/root may be a symlink on your system, but it's not on all!
             try:
-                return self.device_lookup[os.path.realpath(device)]
-            except KeyError:
-                return device
-        else:
-            return device
+                root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read()).group(1)
+                # TODO: resolve UUID= type arguments a la ubuntu
+                try:
+                    self.device_lookup['/dev/root'] = self.device_lookup[os.path.realpath(root)]
+                except KeyError:
+                    self.device_lookup['/dev/root'] = root
+            except:
+                pass
 
+
+
+        device = device.strip()
+        try:
+            return self.device_lookup[os.path.realpath(device)]
+        except KeyError:
+            pass
+
+        return os.path.realpath(device)
 
     def name2kind(self, name):
         if name == "MGS":
             return "MGS"
         else:
             return re.search("^\\w+-(\\w\\w\\w)", name).group(1)
+
+    def get_device_nodes(self):
+        mount_devices = set([self.normalize_device(i[0]) for i in self.mounts if os.path.exists(i[0])])
+        fstab_devices = set([self.normalize_device(i[0]) for i in self.fstab if os.path.exists(i[0])])
+        scsi_devices = set([self.normalize_device(path) for path in glob.glob("/dev/disk/by-path/*-scsi-*")])
+        lvm_devices = set(glob.glob("/dev/mapper/*")) - set(["/dev/mapper/control"])
+
+        def is_block_device(path):
+            from stat import S_ISBLK
+            s = os.stat(path)
+            return S_ISBLK(s.st_mode)
+
+        all_devices = mount_devices | fstab_devices | scsi_devices | lvm_devices
+        all_devices = set([d for d in all_devices if is_block_device(d)])
+
+        partitions = {}
+        for line in open('/proc/partitions').readlines()[2:]:
+            # Store the number of blocks to identify blocks=1 
+            # partitions (i.e. extended partitions)
+            blocks = int(line.split()[2])
+            dev = "/dev/%s" % self.normalize_device(line.split()[3])
+            partitions[dev] = blocks
+
+        uuids = {}
+        for line in os.popen('blkid').readlines():
+            match =  re.search("^([^:]+).*UUID=\"([^\"]+)\"", line)
+            if match:
+                dev, uuid = match.groups()
+                uuid = uuid.replace("-", "")
+                assert(len(uuid) == 32)
+                uuids[self.normalize_device(dev)] = uuid
+
+        result = []
+        for device in all_devices:
+            mounted = device in mount_devices
+            try:
+                uuid = uuids[device]
+            except KeyError:
+                uuid = ""
+
+            try:
+                extended_partition = (partitions[device] == 1)
+            except KeyError:
+                extended_partition = False
+            used = device in mount_devices or device in fstab_devices or extended_partition
+
+            if device in scsi_devices:
+                kind = 'scsi'
+            elif device in lvm_devices:
+                kind = 'lvm'
+            else:
+                kind = ''
+
+            result.append({
+                'path': device,
+                'kind': kind,
+                'mounted': mounted,
+                'used': used,
+                'fs_uuid': uuid
+                })
+        return result
 
     def get_local_targets(self):
         # List of devices to scan, from /proc and fstab
@@ -175,7 +251,7 @@ class LocalLustreAudit:
                     except:
                         recovery_status = {}
 
-                    result.append(dict(device_info.items() + {
+                    result.append({
                         "recovery_status": recovery_status,
                         "mount_point": mount_point,
                         "running": running,
@@ -184,9 +260,8 @@ class LocalLustreAudit:
                         "filesystem": fs_name,
                         "params": params,
                         "device": device
-                        }.items()))
+                        })
             except Exception,e:
-                del targets[device]
                 # Failed to get tunefs output, probably not a lustre-formatted
                 # volume
                 pass
@@ -330,8 +405,13 @@ class LocalLustreAudit:
     def read_fstab(self):
         self.fstab = []
         for line in open("/etc/fstab").readlines():
-            (device, mntpnt, fstype) = line.split()[0:3]
-            self.fstab.append((device, mntpnt, fstype))
+            line = line.split('#')[0]
+            try:
+                (device, mntpnt, fstype) = line.split()[0:3]
+                self.fstab.append((device, mntpnt, fstype))
+            except ValueError:
+                # Empty or malformed line
+                pass
 
     def audit_info(self):
         self.read_mounts()
@@ -339,6 +419,7 @@ class LocalLustreAudit:
 
         local_targets = self.get_local_targets()
         mgs_targets = self.get_mgs_targets(local_targets)
+        device_nodes = self.get_device_nodes()
         client_mounts = self.get_client_mounts()
         lnet_up, lnet_nids = self.get_lnet_nids()
 
@@ -351,6 +432,7 @@ class LocalLustreAudit:
             "mgs_pings": mgs_pings,
             "lnet_up": lnet_up,
             "lnet_nids": lnet_nids,
+            "device_nodes": device_nodes,
             "client_mounts": client_mounts}, indent=2)
 
 if __name__ == '__main__':
