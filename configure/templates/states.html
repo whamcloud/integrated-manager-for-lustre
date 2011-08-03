@@ -1,0 +1,23 @@
+
+
+{% extends 'base.html' %}
+
+{% block scripts %}
+{% endblock %}
+
+{% block content %}
+<h2>States</h2>
+<table>
+{% for stateful_object in stateful_objects %}
+<tr>
+    <td>
+        {{stateful_object}}
+    </td>
+    <td>
+        {{stateful_object.state}}
+    </td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}
+

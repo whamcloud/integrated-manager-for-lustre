@@ -313,7 +313,7 @@ class FilesystemMember(models.Model):
             
         return result
 
-    # Use of abstract base classes to avoid django bug #12002
+    # uSE OF ABSTRACT BASE CLASSES TO AVOID DJANGO BUG #12002
     class Meta:
         abstract = True
 
@@ -329,8 +329,8 @@ class TargetMount(Mountable):
         # If primary is true, then target must be unique
         if self.primary:
             from django.db.models import Q
-            other_primaries = TargetMount.objects.filter(~Q(id = self.id), target = self.target).count()
-            if other_primaries > 0:
+            other_primaries = TargetMount.objects.filter(~Q(id = self.id), target = self.target, primary = True)
+            if other_primaries.count() > 0:
                 from django.core.exceptions import ValidationError
                 raise ValidationError("Cannot have multiple primary mounts for target %s" % self.target)
 

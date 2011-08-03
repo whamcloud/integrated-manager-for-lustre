@@ -180,6 +180,7 @@ class LustreAudit:
             try:
                 existing_node = LunNode.objects.get(path = node_info['path'], host = self.host)
                 # TODO: update existing nodes
+                # (create an underlying Lun if we have a UUID where we didn't before, and try to tally it with a LunNode on another host for failover)
             except LunNode.DoesNotExist:
                 if len(node_info['fs_uuid']) > 0:
                     try:

@@ -38,7 +38,7 @@ class HydraDebug(cmd.Cmd, object):
         raise KeyboardInterrupt()
 
     def _create_target_mounts(self, node, target, failover_host):
-        TargetMount.objects.get_or_create(
+        ManagedTargetMount.objects.get_or_create(
             block_device = node,
             target = target,
             host = node.host, 
@@ -48,13 +48,13 @@ class HydraDebug(cmd.Cmd, object):
         if failover_host:
             # NB have to do this the long way because get_or_create will do the wrong thing on block_device=None 
             try:
-                tm = TargetMount.objects.get(
+                tm = ManagedTargetMount.objects.get(
                     target = target,
                     host = failover_host, 
                     mount_point = target.default_mount_path(failover_host),
                     primary = False)
-            except TargetMount.DoesNotExist:
-                tm = TargetMount(
+            except ManagedTargetMount.DoesNotExist:
+                tm = ManagedTargetMount(
                     block_device = None,
                     target = target,
                     host = failover_host, 
@@ -82,7 +82,7 @@ class HydraDebug(cmd.Cmd, object):
         # the risk of double-using a LUN.
 
         for host_info in data['hosts']:
-            host = Host.objects.get_or_create(address = host_info['address'])
+            host = ManagedHost.objects.get_or_create(address = host_info['address'])
             host, ssh_monitor = SshMonitor.from_string(host_info['address'])
             host.save()
             ssh_monitor.host = host
@@ -136,32 +136,46 @@ class HydraDebug(cmd.Cmd, object):
         FormatTargetJob(target).run()
 
     def do_setup(self, args):
-        from configure.tasks import SetupFilesystemJob
+        from configure.tasks import FormatTargetJob
         fs = Filesystem.objects.all()[0]
-        print "do_setup: %s" % fs
-        SetupFilesystemJob(fs).run()
+        for target in fs.get_targets():
+            if target.state == 'unformatted':
+                FormatTargetJob(target).run()
 
     def do_start(self, args):
-        from configure.tasks import StartFilesystemJob
+        from configure.tasks import StartTargetMountJob
         fs = Filesystem.objects.all()[0]
-        print "do_start: %s" % fs
-        StartFilesystemJob(fs).run()
+        for target in fs.get_targets():
+            tm = target.targetmount_set.get(primary = True).downcast()
+            if tm.state == 'unmounted':
+                StartTargetMountJob(tm).run()
 
     def do_stop(self, args):
-        from configure.tasks import StopFilesystemJob
+        from configure.tasks import StopTargetMountJob
         fs = Filesystem.objects.all()[0]
-        print "do_stop: %s" % fs
-        StopFilesystemJob(fs).run()
+        for target in fs.get_targets():
+            tm = target.targetmount_set.get(primary = True).downcast()
+            if tm.state == 'mounted':
+                StopTargetMountJob(tm).run()
 
+    def do_transition(self, args):
+        from configure.lib.state_manager import StateManager
+        s = StateManager()
+        s.set_state(ManagedMgs.objects.get(), 'formatted')
 
+    def do_lnet_up(self, args):
+        from configure.tasks import LoadLNetJob
+        from configure.tasks import StartLNetJob
+        for host in ManagedHost.objects.all():
+            LoadLNetJob(host).run()
+            StartLNetJob(host).run()
 
-    def do_stop(self, args):
-        from configure.tasks import StopFilesystemJob
-        fs = Filesystem.objects.all()[0]
-        print "do_stop: %s" % fs
-        StopFilesystemJob(fs).run()
-
-
+    def do_lnet_down(self, args):
+        from configure.tasks import StopLNetJob
+        from configure.tasks import UnloadLNetJob
+        for host in ManagedHost.objects.all():
+            StopLNetJob(host).run()
+            UnloadLNetJob(host).run()
 
 if __name__ == '__main__':
     cmdline = HydraDebug

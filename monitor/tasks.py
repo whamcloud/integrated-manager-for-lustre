@@ -16,6 +16,10 @@ def monitor_exec(monitor, audit):
         audit.error = not success
         audit.save()
 
+@periodic_task(run_every=timedelta(seconds=5))
+def print_hi():
+    print "hi"
+
 from settings import AUDIT_PERIOD
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def audit_all():
@@ -42,6 +46,7 @@ def audit_all():
 
             monitor_exec.delay(monitor, audit)
 
+        print "%s" % monitor.host
         create_and_exec_audit()
 
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))

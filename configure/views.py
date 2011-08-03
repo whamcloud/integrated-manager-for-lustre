@@ -25,7 +25,7 @@ def setup(request):
         }))
 
 def _create_target_mounts(node, target, failover_host = None):
-    tm = TargetMount(
+    tm = ManagedTargetMount(
         block_device = node,
         target = target,
         host = node.host, 
@@ -34,7 +34,7 @@ def _create_target_mounts(node, target, failover_host = None):
     tm.save()
 
     if failover_host:
-        tm = TargetMount(
+        tm = ManagedTargetMount(
             block_device = None,
             target = target,
             host = failover_host, 
@@ -210,5 +210,15 @@ def job(request, job_id):
     job = get_object_or_404(JobRecord, id = job_id)
     return render_to_response("job.html", RequestContext(request, {
         'job': job
+        }))
+
+def states(request):
+    klasses = [ManagedTarget, ManagedHost, ManagedTargetMount]
+    items = []
+    for klass in klasses:
+        items.extend(list(klass.objects.all()))
+
+    return render_to_response("states.html", RequestContext(request, {
+        'stateful_objects': items
         }))
 

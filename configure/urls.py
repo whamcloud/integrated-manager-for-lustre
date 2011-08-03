@@ -10,4 +10,5 @@ urlpatterns = patterns('',
     (r'^create_oss/(?P<host_id>\w+)/$', create_oss),
     (r'^jobs/$', jobs),
     (r'^job/(?P<job_id>\w+)/$', job),
+    (r'^states/$', states),
 )

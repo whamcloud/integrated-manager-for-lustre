@@ -3,16 +3,36 @@ from django.db import models
 CONFIGURE_MODELS = True
 from monitor import models as monitor_models
 
+class StatefulObject(models.Model):
+    # Use of abstract base classes to avoid django bug #12002
+    class Meta:
+        abstract = True
 
+    state = models.CharField(max_length = 32)
 
-class ConfiguredTarget(models.Model):
-    states = ['configured', 'formatted', 'registered', 'removed']
+    def __init__(self, *args, **kwargs):
+        super(StatefulObject, self).__init__(*args, **kwargs)
+
+        if not self.state:
+            print "Initializing state"
+            self.state = self.initial_state
+
+    def get_deps(self, state = None):
+        """Return static dependencies, e.g. a targetmount in state
+           mounted has a dependency on a host in state lnet_started but
+           can get rid of it by moving to state unmounted"""
+        return []
+
+class ManagedTarget(StatefulObject):
+    # unformatted: I exist in theory in the database 
+    # formatted: I've been mkfs'd
+    # registered: the mgs knows about me
+    # removed: this target no longer exists in real life
+    states = ['unformatted', 'formatted', 'registered', 'removed']
+    initial_state = 'unformatted'
     # Additional states needed for 'deactivated'?
 
-    state = models.CharField(max_length = 32,
-            choices = [(s,s) for s in states])
-
-class ManagedOst(monitor_models.ObjectStoreTarget, ConfiguredTarget):
+class ManagedOst(monitor_models.ObjectStoreTarget, ManagedTarget):
     def default_mount_path(self, host):
         counter = 0
         while True:
@@ -23,15 +43,38 @@ class ManagedOst(monitor_models.ObjectStoreTarget, ConfiguredTarget):
             except monitor_models.Mountable.DoesNotExist:
                 return candidate
 
-class ManagedMdt(monitor_models.MetadataTarget, ConfiguredTarget):
+class ManagedMdt(monitor_models.MetadataTarget, ManagedTarget):
     def default_mount_path(self, host):
         return "/mnt/%s/mdt" % self.filesystem.name
 
-class ManagedMgs(monitor_models.ManagementTarget, ConfiguredTarget):
+class ManagedMgs(monitor_models.ManagementTarget, ManagedTarget):
     def default_mount_path(self, host):
         return "/mnt/mgs"
 
+class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
+    # unconfigured: I only exist in theory in the database
+    # mounted: I am in fstab on the host and mounted
+    # unmounted: I am in fstab on the host and unmounted
+    states = ['unconfigured', 'mounted', 'unmounted']
+    # TODO: implement fstab configuration, until then start in 'unmounted'
+    initial_state = 'unmounted'
 
+    def get_deps(self, state = None):
+        if not state:
+            state = self.state
+
+        deps = []
+        if state == 'mounted':
+            deps.append((self.host, 'lnet_up', 'unmounted'))
+
+        if state == 'mounted' or state =='unmounted':
+            deps.append((self.target, 'registered', 'unconfigured'))
+
+        return deps
+
+class ManagedHost(monitor_models.Host, StatefulObject):
+    states = ['lnet_unloaded', 'lnet_down', 'lnet_up']
+    initial_state = 'lnet_unloaded'
 
 # Configure a pair:
 #  select two servers
@@ -72,10 +115,11 @@ class JobRecord(models.Model):
     errored = models.BooleanField(default = False)
     cancelled = models.BooleanField(default = False)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, job, *args, **kwargs):
         super(JobRecord, self).__init__(*args, **kwargs)
+        self.job = job
         if self.id != None:
-            # TODO: bring back self.steps
+            # TODO: bring back self.steps from persisting it somewhere
             pass
 
     def set_steps(self, steps):
@@ -96,8 +140,17 @@ class JobRecord(models.Model):
             self._append_step(instance)
 
         from configure.lib.job import FinalStep
-        step = FinalStep(self, {})
-        self._append_step(step)
+        from configure.tasks import StateChangeJob
+        if isinstance(self.job, StateChangeJob):
+            print "scheduling final state %s for job %s" % (self.job.__class__.state_transition[2], self.job)
+            final_step = FinalStep(self, {
+                'stateful_object_class': self.job.stateful_object.__class__.__name__,
+                'stateful_object_id': self.job.stateful_object.id,
+                'final_state': self.job.__class__.state_transition[2]
+                })
+        else:
+            final_step = FinalStep(self, {})
+        self._append_step(final_step)
 
     def pause(self):
         # This will cause any future steps in the queue to reschedule themselves

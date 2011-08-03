@@ -36,12 +36,13 @@ class Step(object):
         job_record = JobRecord.objects.get(id = self.job_record_id)
         if job_record.paused:
             raise StepPaused()
-        try:
-            return self.run(self.args)
-        except Exception, e:
-            self.mark_job_errored(e)
-            # Re-raise so that celery can record for us that this task failed
-            raise e
+        #try:
+        #    return self.run(self.args)
+        #except Exception, e:
+        #    self.mark_job_errored(e)
+        #    # Re-raise so that celery can record for us that this task failed
+        #    raise e
+        return self.run(self.args)
 
     def mark_job_errored(self, exception):
         from celery.task.control import revoke
@@ -63,6 +64,7 @@ class Step(object):
         job_record.save()
 
     def mark_job_complete(self):
+        # TODO: if the job is a StateChangeJob then animate the state
         job_record = JobRecord.objects.get(id = self.job_record_id)
         job_record.complete = True
         job_record.save()
@@ -72,14 +74,32 @@ class Step(object):
 
 class Job(object):
     def __init__(self, steps):
-        self.job_record = JobRecord()
+        self.job_record = JobRecord(self)
         self.job_record.set_steps(steps)
 
     def run(self):
         self.job_record.run()
 
+    def get_deps(self):
+        return []
+
 class FinalStep(Step):
     def run(self, kwargs):
         self.mark_job_complete()
+
+        # FIXME: there's not an esp. good reason for doing this in a step rather than inside
+        # mark_job_complete, except for the fact that we don't persist the original Job anywhere
+        # so we stash the final state info in a step.
+        if kwargs.has_key('stateful_object_id') and kwargs.has_key('final_state'):
+            from configure.models import StatefulObject
+            # FIXME: security
+            from monitor.models import *
+            from configure.models import *
+            klass = eval(kwargs['stateful_object_class'])
+            stateful_object = klass.objects.get(id = kwargs['stateful_object_id'])
+            stateful_object.state = kwargs['final_state']
+            stateful_object.save()
+            print "set state %s on %s %s" % (kwargs['final_state'], stateful_object, stateful_object.id)
+
 
 
