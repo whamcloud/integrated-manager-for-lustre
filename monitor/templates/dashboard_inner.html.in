@@ -135,7 +135,7 @@ $(document).ready(function() {
 
     </td>
 </tr>
-<tr><td></td><td class='audit_time'>Last system audit: {{last_audit_time}}</td></tr>
+<tr><td></td><td class='audit_time'>Version: @VERSION@</td></tr>
 </table>
 
 <p class="audit_time"></span>

@@ -10,7 +10,7 @@ production:
 	
 tarball:
 	rm -f MANIFEST
-	for file in hydra-server.spec setup.py; do \
+	for file in hydra-server.spec setup.py monitor/templates/dashboard_inner.html; do \
 		sed -e 's/@VERSION@/$(VERSION)/g' < $$file.in > $$file; \
 	done
 	python setup.py sdist
