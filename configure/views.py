@@ -202,12 +202,14 @@ def create_mds(request, host_id):
         }))
 
 def jobs(request):
+    jobs = Job.objects.all().order_by("-id")
     return render_to_response("jobs.html", RequestContext(request, {
-        'jobs': JobRecord.objects.all()
+        'jobs': jobs
         }))
 
 def job(request, job_id):
-    job = get_object_or_404(JobRecord, id = job_id)
+    job = get_object_or_404(Job, id = job_id)
+    
     return render_to_response("job.html", RequestContext(request, {
         'job': job
         }))
@@ -218,7 +220,30 @@ def states(request):
     for klass in klasses:
         items.extend(list(klass.objects.all()))
 
+    from configure.lib.state_manager import StateManager
+    state_manager = StateManager()
+
+    from django.contrib.contenttypes.models import ContentType
+    stateful_objects = []
+    for i in items:
+        stateful_objects.append({
+            "object": i,
+            "available_transitions": state_manager.available_transitions(i),
+            "content_type": ContentType.objects.get_for_model(i).id
+            })
+
     return render_to_response("states.html", RequestContext(request, {
-        'stateful_objects': items
+        'stateful_objects': stateful_objects
         }))
+
+def set_state(request, content_type_id, stateful_object_id, new_state):
+    stateful_object_klass = ContentType.objects.get(id = content_type_id).model_class()
+    stateful_object = stateful_object_klass.objects.get(id = stateful_object_id)
+
+    from configure.lib.state_manager import StateManager
+    transition_job = StateManager().set_state(stateful_object, new_state)
+    # TODO UI if the job wasn't created
+
+    return redirect(job, job_id = transition_job.id)
+
 

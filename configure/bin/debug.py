@@ -128,54 +128,49 @@ class HydraDebug(cmd.Cmd, object):
 
                         self._create_target_mounts(node, oss, failover_host)
 
-    def do_format(self, args):
-        from configure.models import ManagedMgs
-        from configure.tasks import FormatTargetJob
-        target = ManagedMgs.objects.all()[0]
-        print "do_format: %s" % target
-        FormatTargetJob(target).run()
-
-    def do_setup(self, args):
-        from configure.tasks import FormatTargetJob
+    def do_format_fs(self, args):
+        from configure.models import FormatTargetJob
         fs = Filesystem.objects.all()[0]
         for target in fs.get_targets():
             if target.state == 'unformatted':
-                FormatTargetJob(target).run()
+                FormatTargetJob(target = target).run()
 
-    def do_start(self, args):
-        from configure.tasks import StartTargetMountJob
-        fs = Filesystem.objects.all()[0]
+    def do_start(self, fs_name):
+        from configure.models import StartTargetMountJob
+        fs = Filesystem.objects.get(name = fs_name)
         for target in fs.get_targets():
             tm = target.targetmount_set.get(primary = True).downcast()
             if tm.state == 'unmounted':
-                StartTargetMountJob(tm).run()
+                StartTargetMountJob(target_mount = tm).run()
 
-    def do_stop(self, args):
-        from configure.tasks import StopTargetMountJob
-        fs = Filesystem.objects.all()[0]
+    def do_stop(self, fs_name):
+        from configure.models import StopTargetMountJob
+        fs = Filesystem.objects.get(name = fs_name)
         for target in fs.get_targets():
             tm = target.targetmount_set.get(primary = True).downcast()
             if tm.state == 'mounted':
-                StopTargetMountJob(tm).run()
+                StopTargetMountJob(target_mount = tm).run()
 
     def do_transition(self, args):
         from configure.lib.state_manager import StateManager
         s = StateManager()
-        s.set_state(ManagedMgs.objects.get(), 'formatted')
+
+        #s.set_state(ManagedMdt.objects.get(), 'registered')
+        s.set_state(ManagedMdt.objects.get().targetmount_set.get(primary=True).downcast(), 'mounted')
 
     def do_lnet_up(self, args):
-        from configure.tasks import LoadLNetJob
-        from configure.tasks import StartLNetJob
+        from configure.models import LoadLNetJob
+        from configure.models import StartLNetJob
         for host in ManagedHost.objects.all():
-            LoadLNetJob(host).run()
-            StartLNetJob(host).run()
+            LoadLNetJob(host = host).run()
+            StartLNetJob(host = host).run()
 
     def do_lnet_down(self, args):
-        from configure.tasks import StopLNetJob
-        from configure.tasks import UnloadLNetJob
+        from configure.models import StopLNetJob
+        from configure.models import UnloadLNetJob
         for host in ManagedHost.objects.all():
-            StopLNetJob(host).run()
-            UnloadLNetJob(host).run()
+            StopLNetJob(host = host).run()
+            UnloadLNetJob(host = host).run()
 
 if __name__ == '__main__':
     cmdline = HydraDebug

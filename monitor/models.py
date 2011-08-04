@@ -107,6 +107,9 @@ class LunNode(models.Model):
 
     used_hint = models.BooleanField()
 
+    def __str__(self):
+        return self.path
+
 class Monitor(models.Model):
     __metaclass__ = DowncastMetaclass
 
@@ -482,7 +485,7 @@ class Client(Mountable, FilesystemMember):
 class Event(models.Model):
     __metaclass__ = DowncastMetaclass
 
-    created_at = models.DateTimeField(auto_now = True)
+    created_at = models.DateTimeField(auto_now_add = True)
     severity = models.IntegerField()
     host = models.ForeignKey(Host, blank = True, null = True)
 
@@ -708,7 +711,7 @@ class LNetOfflineAlert(AlertState):
 class Audit(models.Model):
     """A (potentially ongoing) attempt to audit a particular host"""
     host = models.ForeignKey(Host)
-    created_at = models.DateTimeField(auto_now = True)
+    created_at = models.DateTimeField(auto_now_add = True)
     lnet_up = models.BooleanField(default = False)
     error = models.BooleanField(default = True)
     complete = models.BooleanField()

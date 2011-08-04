@@ -11,10 +11,15 @@
 {% for stateful_object in stateful_objects %}
 <tr>
     <td>
-        {{stateful_object}}
+        {{stateful_object.object}}
     </td>
     <td>
-        {{stateful_object.state}}
+        {{stateful_object.object.state}}
+    </td>
+    <td>
+        {% for transition in stateful_object.available_transitions %}
+            <a href='{% url configure.views.set_state stateful_object.content_type, stateful_object.object.id, transition %}'>{{transition}}</a>
+        {% endfor %}
     </td>
 </tr>
 {% endfor %}

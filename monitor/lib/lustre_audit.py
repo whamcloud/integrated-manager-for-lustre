@@ -371,14 +371,9 @@ class LustreAudit:
         except TargetMount.DoesNotExist:
             # We are detecting a target anew, or detecting a new mount for an already-named target
             candidates = Target.objects.filter(name = name)
-            print "count = %d" % candidates.count()
             for target in candidates:
                 if isinstance(target, FilesystemMember) and target.filesystem.mgs.downcast() == mgs:
                     return target
-                else:
-                    print target.filesystem.mgs.__class__, target.filesystem.mgs, target.filesystem.mgs.id
-                    print mgs.__class__, mgs, mgs.id
-                    print "reject %s" % target
 
             # Fall through, no targets with that name exist on this MGS
             #target = klass(name = name, filesystem = filesystem)
@@ -400,7 +395,7 @@ class LustreAudit:
                 except ManagementTarget.DoesNotExist:
                     log().error("No Managementtarget for host %s, but it reports an MGS target" % selfhost)
                     continue
-                mountable = target.targetmount_set.get(host = self.host, mount_point = mount_info['mount_point'])
+                mountable = target.targetmount_set.get(host = self.host, mount_point = mount_info['mount_point']).downcast()
 
                 if mountable.primary:
                     MountableOfflineAlert.notify(mountable, not mount_info['running'])
@@ -436,10 +431,6 @@ class LustreAudit:
                             mountable = target_val.targetmount_set.get(host = self.host,
                                             mount_point = mount_info['mount_point'])
                         except:
-                            print "Target but no mountable"
-                            print self.host, mount_info['mount_point']
-                            for tm in target_val.targetmount_set.all():
-                                print tm.host, tm.mount_point
                             mountable = None
                         break
 

@@ -11,4 +11,5 @@ urlpatterns = patterns('',
     (r'^jobs/$', jobs),
     (r'^job/(?P<job_id>\w+)/$', job),
     (r'^states/$', states),
+    (r'^set_state/(?P<content_type_id>\w+)/(?P<stateful_object_id>\w+)/(?P<new_state>\w+)/$', set_state),
 )

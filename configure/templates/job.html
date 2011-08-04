@@ -24,10 +24,11 @@
         <th>info</th>
         <th>State</th>
     </tr>
-{% for step in job.steprecord_set.all %}
+{% for step in job.stepattempt_set.all %}
 
 <tr>
     <td>{{step.id}}</td>
+    <td>{{step.step_index}}</td>
     <td>{{step.task_id}}</td>
     <td>
         <ul>

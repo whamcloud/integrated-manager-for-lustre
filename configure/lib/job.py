@@ -1,7 +1,12 @@
 
-from configure.models import JobRecord, StepRecord
+from configure.models import Job
 
 class StepPaused(Exception):
+    """A step did not execute because the job is paused."""
+    pass
+
+class StepAborted(Exception):
+    """A step did not execute because the job has errored."""
     pass
 
 class StepCleanError(Exception):
@@ -21,9 +26,15 @@ class StepDirtyError(Exception):
 STEP_PAUSE_DELAY = 10
 
 class Step(object):
-    def __init__(self, job_record, args):
+    def __init__(self, job, args):
         self.args = args
-        self.job_record_id = job_record.id
+        self.job_id = job.id
+
+        # This step is the final one in the job
+        self.final = False
+
+    def mark_final(self):
+        self.final = True
 
     def is_idempotent(self):
         """Indicate whether the step is idempotent.  For example, mounting 
@@ -33,23 +44,37 @@ class Step(object):
 
     def wrap_run(self):
         print "Running %s" % self
-        job_record = JobRecord.objects.get(id = self.job_record_id)
-        if job_record.paused:
+        job = Job.objects.get(id = self.job_id)
+        if job.paused:
             raise StepPaused()
-        #try:
-        #    return self.run(self.args)
-        #except Exception, e:
-        #    self.mark_job_errored(e)
-        #    # Re-raise so that celery can record for us that this task failed
-        #    raise e
-        return self.run(self.args)
+        
+        if job.errored:
+            raise StepAborted()
+
+        try:
+            result = self.run(self.args)
+        except Exception, e:
+            import sys
+            import traceback
+            exc_info = sys.exc_info()
+            print '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            self.mark_job_errored(e)
+            # Re-raise so that celery can record for us that this task failed
+            raise e
+
+        if self.final:
+            print "step complete, final"
+            self.mark_job_complete()
+        else:
+            print "step complete, not final"
+        return result
 
     def mark_job_errored(self, exception):
         from celery.task.control import revoke
 
         print "Step %s failed: %s'%s'" % (self, exception.__class__, exception)
-        job_record = JobRecord.objects.get(id = self.job_record_id)
-        for step_record in job_record.steprecord_set.all():
+        job = Job.objects.get(id = self.job_id)
+        #for step_record in job.steprecord_set.all():
             # TODO: revoking sends the ID of the task to all workers
             # and they put it in a list of tasks not to action.  But is the task
             # itself somehow pull from the queue when using DB backend?  Or do we
@@ -58,48 +83,211 @@ class Step(object):
             # back to life after a worker restart!)
             
             # FIXME: revoke is NOOP when using djkombu
-            revoke(step_record.task_id, terminate = True)
+        #    revoke(step_record.task_id, terminate = True)
 
-        job_record.errored = True
-        job_record.save()
+        job.errored = True
+        job.save()
 
     def mark_job_complete(self):
         # TODO: if the job is a StateChangeJob then animate the state
-        job_record = JobRecord.objects.get(id = self.job_record_id)
-        job_record.complete = True
-        job_record.save()
+        job = Job.objects.get(id = self.job_id).downcast()
+        job.mark_complete()
 
     def run(self):
         raise NotImplementedError
 
-class Job(object):
-    def __init__(self, steps):
-        self.job_record = JobRecord(self)
-        self.job_record.set_steps(steps)
+    def retry(self):
+        steps = self.get_steps()
+        # Which one failed?
 
-    def run(self):
-        self.job_record.run()
+class StateChangeJob(object):
+    """Subclasses must define a class attribute 'stateful_object'
+       identifying another attribute which returns a StatefulObject"""
+    def get_stateful_object(self):
+        print self
+        print self.stateful_object
+        print getattr(self, "%s_id" % self.stateful_object)
+        stateful_object = getattr(self, self.stateful_object)
+        assert(isinstance(stateful_object, StatefulObject))
+        return stateful_object
 
-    def get_deps(self):
-        return []
+def debug_ssh(host, command):
+    ssh_monitor = host.monitor.downcast()
 
-class FinalStep(Step):
+    import paramiko
+    import socket
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    from settings import AUDIT_PERIOD
+    # How long it may take to establish a TCP connection
+    SOCKET_TIMEOUT = 3600
+    # How long it may take to get the output of our agent
+    # (including tunefs'ing N devices)
+    SSH_READ_TIMEOUT = 3600
+
+    args = {"hostname": ssh_monitor.host.address,
+            "username": ssh_monitor.get_username(),
+            "timeout": SOCKET_TIMEOUT}
+    if ssh_monitor.port:
+        args["port"] = ssh_monitor.port
+    # Note: paramiko has a hardcoded 15 second timeout on SSH handshake after
+    # successful TCP connection (Transport.banner_timeout).
+    ssh.connect(**args)
+    transport = ssh.get_transport()
+    channel = transport.open_session()
+    channel.settimeout(SSH_READ_TIMEOUT)
+    channel.exec_command(command)
+    result_stdout = channel.makefile('rb').read()
+    result_stderr = channel.makefile_stderr('rb').read()
+    result_code = channel.recv_exit_status()
+    ssh.close()
+
+    print result_code, command
+    if result_code != 0:
+        print result_stdout
+        print result_stderr
+    return result_code, result_stdout, result_stderr
+
+
+from monitor.models import *
+from configure.models import *
+
+class MkfsStep(Step):
+    def _mkfs_command(self, target):
+        args = []
+        primary_mount = target.targetmount_set.get(primary = True)
+
+        args.append({
+            ManagedMgs: "--mgs",
+            ManagedMdt: "--mdt",
+            ManagedOst: "--ost"
+            }[target.__class__])
+
+        if isinstance(target, FilesystemMember):
+            args.append("--fsname=%s" % target.filesystem.name)
+            args.extend(target.mgsnode_spec())
+
+        args.append("--reformat")
+
+        for secondary_mount in target.targetmount_set.filter(primary = False):
+            host = secondary_mount.host
+            nids = ",".join([n.nid_string for n in host.nid_set.all()])
+            assert nids != "", RuntimeError("No NIDs known for host %s" % host)
+            args.append("--failover=%s" % nids)
+
+        args.append(primary_mount.block_device.path)
+
+        return "/usr/sbin/mkfs.lustre %s" % " ".join(args)
+
     def run(self, kwargs):
-        self.mark_job_complete()
+        target_id = kwargs['target_id']
+        target = Target.objects.get(id = target_id).downcast()
 
-        # FIXME: there's not an esp. good reason for doing this in a step rather than inside
-        # mark_job_complete, except for the fact that we don't persist the original Job anywhere
-        # so we stash the final state info in a step.
-        if kwargs.has_key('stateful_object_id') and kwargs.has_key('final_state'):
-            from configure.models import StatefulObject
-            # FIXME: security
-            from monitor.models import *
-            from configure.models import *
-            klass = eval(kwargs['stateful_object_class'])
-            stateful_object = klass.objects.get(id = kwargs['stateful_object_id'])
-            stateful_object.state = kwargs['final_state']
-            stateful_object.save()
-            print "set state %s on %s %s" % (kwargs['final_state'], stateful_object, stateful_object.id)
+        assert(isinstance(target, ManagedTarget))
+        host = target.targetmount_set.get(primary = True).host
+        command = self._mkfs_command(target)
+
+        code, out, err = debug_ssh(host, command)
+        # Assume nonzero returns from mkfs mean it didn't touch anything
+        if code != 0:
+            from configure.lib.job import StepDirtyError
+            raise StepDirtyError()
+
+class NullStep(Step):
+    def run(self, kwargs):
+        pass
+
+class MountStep(Step):
+    def _mount_command(self, target_mount):
+        return "mount -t lustre %s %s" % (target_mount.block_device.path, target_mount.mount_point)
+
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        target_mount_id = kwargs['target_mount_id']
+        target_mount = TargetMount.objects.get(id = target_mount_id)
+
+        code, out, err = debug_ssh(target_mount.host, self._mount_command(target_mount))
+        if code != 0 and code != 17 and code != 114:
+            from configure.lib.job import StepCleanError
+            print code, out, err
+            print StepCleanError
+            raise StepCleanError()
+
+class StartLNetStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        host = Host.objects.get(id = kwargs['host_id'])
+
+        code, out, err = debug_ssh(host, "/usr/sbin/lctl network up")
+        if code != 0:
+            from configure.lib.job import StepCleanError
+            print code, out, err
+            print StepCleanError
+            raise StepCleanError()
+
+class StopLNetStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        host = Host.objects.get(id = kwargs['host_id'])
+
+        code, out, err = debug_ssh(host, "/root/hydra-rmmod.py ptlrpc; /usr/sbin/lctl network down")
+        if code != 0:
+            from configure.lib.job import StepCleanError
+            print code, out, err
+            print StepCleanError
+            raise StepCleanError()
 
 
+class LoadLNetStep(Step):
+    def is_idempotent(self):
+        return True
 
+    def run(self, kwargs):
+        host = Host.objects.get(id = kwargs['host_id'])
+
+        code, out, err = debug_ssh(host, "/sbin/modprobe lnet")
+        if code != 0:
+            from configure.lib.job import StepCleanError
+            print code, out, err
+            print StepCleanError
+            raise StepCleanError()
+
+class UnloadLNetStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        host = Host.objects.get(id = kwargs['host_id'])
+
+        code, out, err = debug_ssh(host, "/root/hydra-rmmod.py lnet")
+        if code != 0:
+            from configure.lib.job import StepCleanError
+            print code, out, err
+            print StepCleanError
+            raise StepCleanError()
+
+class UnmountStep(Step):
+    def _unmount_command(self, target_mount):
+        return "umount -t lustre %s" % (target_mount.mount_point)
+
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        target_mount_id = kwargs['target_mount_id']
+        target_mount = TargetMount.objects.get(id = target_mount_id)
+
+        code, out, err = debug_ssh(target_mount.host, self._unmount_command(target_mount))
+        # FIXME: assuming code=1 is an 'already unmounted' therefore ok
+        if (code != 0) and (code != 1):
+            from configure.lib.job import StepCleanError
+            print code, out, err
+            print StepCleanError
+            raise StepCleanError()

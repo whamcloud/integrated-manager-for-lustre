@@ -11,9 +11,8 @@ def subclasses(obj):
     return sc_recr
 
 class StateManager(object):
-    def get_transition_job(self, instance, new_state):
+    def stateful_object_class(self, instance):
         klass = instance.__class__
-        old_state = instance.state
         # If e.g. klass is ManagedMgs and we have transitions
         # defined for ManagedTarget, then we have to do a more
         # complex lookup
@@ -27,16 +26,23 @@ class StateManager(object):
             if not found:
                 raise RuntimeError()
 
+        return klass
+
+    def get_transition_job(self, instance, new_state):
+        old_state = instance.state
+        klass = self.stateful_object_class(instance)
 
         try:
             job_klass = self.transition_map[klass][(old_state, new_state)]
-            return job_klass(instance)
+            stateful_object_attr = job_klass.stateful_object
+            kwargs = {stateful_object_attr: instance}
+            return job_klass(**kwargs)
         except KeyError:
             print "Cannot find transition %s->%s for %s" % (old_state, new_state, klass)
             raise RuntimeError()
 
     def __init__(self):
-        from configure.tasks import StateChangeJob, state_change_job_classes
+        from configure.lib.job import StateChangeJob
         from configure.models import StatefulObject
 
         # Map of StatefulObject subclass to map of
@@ -48,6 +54,7 @@ class StateManager(object):
         self.transition_options_map = {}
 
         self.stateful_object_classes = subclasses(StatefulObject)
+        state_change_job_classes = subclasses(StateChangeJob)
 
         self.transition_map = defaultdict(dict)
         self.transition_options_map = defaultdict(lambda : defaultdict(list)) 
@@ -57,12 +64,46 @@ class StateManager(object):
             self.transition_map[statefulobject][(oldstate,newstate)] = c
             self.transition_options_map[statefulobject][oldstate].append(newstate)
 
+    def available_transitions(self, stateful_object):
+        klass = self.stateful_object_class(stateful_object)
+        return self.transition_options_map[klass][stateful_object.state]
+
     def set_state(self, instance, new_state):
         from configure.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
+        if new_state == instance.state:
+            raise RuntimeError("already in state %s" % new_state)
         transition_job = self.get_transition_job(instance, new_state)
         dependencies = self.collect_dependencies(transition_job, new_state)
+
+        dependencies.reverse()
+        cleaned_dependencies = []
+        seen_deps = set()
+        for d in dependencies:
+            if not d in seen_deps:
+                cleaned_dependencies.append(d)
+
+            seen_deps.add(d)
+
+        dependencies = cleaned_dependencies
+        print "cleaned deps: %s" % dependencies
+
+        jobs = []
+        for d in dependencies:
+            job = self.get_transition_job(d[0], d[1])
+            jobs.append(job)
+        jobs.append(transition_job)
+
         print dependencies
+        print transition_job
+        print jobs
+
+        print "Starting %d jobs" % len(jobs)
+        for j in jobs:
+            print "Running job %s" % j
+            j.run()
+
+        return transition_job
 
     def collect_dependencies(self, root_job, new_state):
         deps = []
@@ -76,7 +117,7 @@ class StateManager(object):
                 deps.extend(self.collect_dependencies(job, required_state))
             
         # What will statically be required in our new state?
-        stateful_deps = root_job.stateful_object.get_deps(new_state)
+        stateful_deps = root_job.get_stateful_object().get_deps(new_state)
         for depended_on, depended_state, fix_state in stateful_deps:
             if depended_on.state != depended_state:
                 print "New state requires %s in state %s from state %s" % (depended_on, depended_state, depended_on.state)
@@ -89,9 +130,9 @@ class StateManager(object):
             for instance in klass.objects.all():
                 instance_deps = instance.get_deps()
                 for depended_on, depended_state, fix_state in instance_deps:
-                    if depended_on == root_job.stateful_object:
-                        print "%s depended on %s" % (instance, root_job.stateful_object)
+                    if depended_on == root_job.get_stateful_object():
                         if depended_state != new_state:
+                            print "%s depended on %s" % (instance, root_job.get_stateful_object())
                             print "%s doesn't like new state %s" % (instance, new_state)
                             deps.append((instance, fix_state))
                             job = self.get_transition_job(instance, fix_state)
