@@ -376,8 +376,8 @@ class LustreAudit:
                     return target
 
             # Fall through, no targets with that name exist on this MGS
-            #target = klass(name = name, filesystem = filesystem)
-            #target.save()
+            target = klass(name = name, filesystem = filesystem)
+            target.save()
             log().info("%s %s %s" % (mgs.id, name, device_node_path))
             log().info("Learned %s %s" % (klass.__name__, name))
             self.learn_event(target)

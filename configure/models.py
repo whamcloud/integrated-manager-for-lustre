@@ -57,8 +57,15 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
     # mounted: I am in fstab on the host and mounted
     # unmounted: I am in fstab on the host and unmounted
     states = ['unconfigured', 'mounted', 'unmounted']
-    # TODO: implement fstab configuration, until then start in 'unmounted'
-    initial_state = 'unmounted'
+    initial_state = 'unconfigured'
+
+    def __str__(self):
+        if self.primary:
+            kind_string = "primary"
+        else:
+            kind_string = "failover"
+
+        return "%s:%s:%s" % (self.host, kind_string, self.target)
 
     def get_deps(self, state = None):
         if not state:
@@ -68,11 +75,11 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
         if state == 'mounted':
             deps.append((self.host.managedhost, 'lnet_up', 'unmounted'))
 
-        # This will only make sense once 'unconfigured' is implemented, otherwise
-        # we are initially in 'unmounted' and expecting the mgs to be 'registered'
-        # before anything's ever happened
-        #if state == 'mounted' or state =='unmounted':
-        #    deps.append((self.target.downcast(), 'registered', 'unconfigured'))
+        # We allow an 'unmounted' targetmount for a target which is not
+        # registered, because creating the targetmount is a necessary
+        # part of registration
+        if state == 'mounted':
+            deps.append((self.target.downcast(), 'registered', 'unmounted'))
 
         return deps
 
@@ -82,15 +89,83 @@ class ManagedHost(monitor_models.Host, StatefulObject):
 
 class Job(models.Model):
     __metaclass__ = DowncastMetaclass
-    paused = models.BooleanField(default = False)
-    complete = models.BooleanField(default = False)
+
+    states = ('pending', 'tasked', 'complete')
+    state = models.CharField(max_length = 16, default = 'pending')
+
     errored = models.BooleanField(default = False)
+    paused = models.BooleanField(default = False)
     cancelled = models.BooleanField(default = False)
+
+    created_at = models.DateTimeField(auto_now_add = True)
+
+    dependencies = models.ManyToManyField('Job')
+
+    class DependenciesFailed(Exception):
+        pass
+
+    def ready_to_run(self):
+        for dep in self.dependencies.all():
+            if dep.state == 'pending':
+                return False
+        return True 
+
+    from django.db import transaction
+    @staticmethod
+    @transaction.commit_on_success
+    def run_next():
+        # If there's already something underway, then no need to run anything
+        running_jobs = Job.objects.filter(state = 'tasked').count()
+        if running_jobs > 0:
+            return
+
+        # Choose the next Job to run
+        # TODO: respect paused flag (should it hold up the queue or 
+        # just prevent that one job from executing?)
+        for job in Job.objects.filter(state = 'pending').order_by('created_at'):
+            deps_done = True
+            for dep in job.dependencies.all():
+                if dep.state == 'pending':
+                    if dep.ready_to_run():
+                        try:
+                            dep.run()
+                            return
+                        except Exception,e:
+                            print "Exception %s" % e
+                            pass
+                    else:
+                        deps_done = False
+
+            if deps_done:
+                try:
+                    job.run()
+                    return
+                except Exception, e:
+                    print "Exception %s" % e
 
     def get_deps(self):
         return []
 
     def run(self):
+        print "Job.run %s" % self
+        assert(self.state == 'pending')
+
+        # So that someone can do SomeJob().run()
+        if not self.pk:
+            self.save()
+        else:
+            print self.pk
+
+        # Check my dependencies are complete and successful
+        for dep in self.dependencies.all():
+            if not (dep.state == 'complete' and dep.errored == False):
+                self.state = 'complete'
+                self.errored = True
+                self.save()
+                print "Cancelling job %s because dependency %s is errored" % (self, dep)
+                raise Job.DependenciesFailed()
+
+        self.state = 'tasked'
         self.save()
 
         i = 0
@@ -118,37 +193,39 @@ class Job(models.Model):
             i = i + 1
 
     def pause(self):
-        # This will cause any future steps in the queue to reschedule themselves
-        self.paused = True
-        self.save()
-
-        # Get a list of all incomplete steps
-        # if any of them are 
-
-
-        # TODO: shoot currently running tasks in the head
-        # TODO: provide a mechanism for tasks to recover when shot in the head
-
-    def cancel(self):
-        # TODO: shoot all tasks in the head
-        self.complete = True
-        self.cancelled = True
-        self.save()
-
-    def unpause(self):
-        self.paused = False
-        self.save()
+        # In case of races, ignore someone trying to pause a 
+        # task which has completed
+        if self.state == 'complete':
+            return
+       
+        assert(self.state == 'tasked')
+        #self.paused = True
+        # TODO: kill the currently active task if it's idempotent (we'll run 
+        # it again when we resume) or let it finish if not.
 
     def retry(self):
         """Start running the job from the last step that did not complete
            successfully (i.e. try running the last failed step again"""
-        assert(self.complete)
-        #assert(at least one non-OK step)
+        assert(self.state == 'complete')
+        # TODO
 
     def restart(self):
         """Start running the job from square 1, even if some steps had
            already completed"""
-        assert(self.complete)
+        assert(self.state == 'complete')
+        # TODO
+
+    def mark_errored(self):
+        # TODO: revoke celery tasks
+        # (currently tasks check the errored flag on run)
+        # NB: if we allow restarting an errored task then we need to make sure
+        # that any tasks from the first run aren't hanging around and going to 
+        # run when we clear the errored flag
+        print "mark errored %s" % self
+        self.state = 'complete'
+        self.errored = True
+        self.save()
+        Job.run_next()
 
     def mark_complete(self):
         if isinstance(self, StateChangeJob):
@@ -157,8 +234,9 @@ class Job(models.Model):
             obj.state = new_state
             print "StateChangeJob complete, setting state %s on %s" % (new_state, obj)
             obj.save()
-        self.complete = True
+        self.state = 'complete'
         self.save()
+        Job.run_next()
 
 class StepAttempt(models.Model):
     job = models.ForeignKey(Job)
@@ -181,23 +259,48 @@ class DependencyAbsent(Exception):
     """A Job wants to depend on something that doesn't exist"""
     pass
 
+class ConfigureTargetMountJob(Job, StateChangeJob):
+    state_transition = (ManagedTargetMount, 'unconfigured', 'unmounted')
+    stateful_object = 'target_mount'
+    state_verb = "Configure"
+    target_mount = models.ForeignKey('ManagedTargetMount')
+
+    def description(self):
+        return "Configuring mount %s on %s" % (self.target_mount.mount_point, self.target_mount.host)
+
+    def get_steps(self):
+        from configure.lib.job import MkdirStep
+        return [(MkdirStep, {'target_mount_id': self.target_mount.id})]
+
 class RegisterTargetJob(Job, StateChangeJob):
     # FIXME: this really isn't ManagedTarget, it's FilesystemMember+ManagedTarget
     state_transition = (ManagedTarget, 'formatted', 'registered')
-    target = models.ForeignKey('ManagedTarget')
     stateful_object = 'target'
+    state_verb = "Register"
+    target = models.ForeignKey('ManagedTarget')
+
+    def description(self):
+        target = self.target.downcast()
+        if isinstance(target, ManagedMgs):
+            return "Register MGS"
+        elif isinstance(target, ManagedOst):
+            return "Register OST to filesystem %s" % target.filesystem.name
+        elif isinstance(target, ManagedMdt):
+            return "Register MDT to filesystem %s" % target.filesystem.name
+        else:
+            raise NotImplementedError()
 
     def get_steps(self):
         steps = []
         # FIXME: somehow need to avoid advertising this transition for MGS targets
         # currently as hack this is just a no-op for MGSs which marks them registered
         from configure.lib.job import MountStep, UnmountStep, NullStep
-        print self.target
-        if isinstance(self.target, ManagedMgs):
+        target = self.target.downcast()
+        if isinstance(target, ManagedMgs):
             steps.append((NullStep, {}))
-        if isinstance(self.target, monitor_models.FilesystemMember):
-            steps.append((MountStep, {"target_mount_id": self.target.targetmount_set.get(primary = True).id}))
-            steps.append((UnmountStep, {"target_mount_id": self.target.targetmount_set.get(primary = True).id}))
+        if isinstance(target, monitor_models.FilesystemMember):
+            steps.append((MountStep, {"target_mount_id": target.targetmount_set.get(primary = True).id}))
+            steps.append((UnmountStep, {"target_mount_id": target.targetmount_set.get(primary = True).id}))
 
         print "register steps=%s" % steps
 
@@ -205,6 +308,8 @@ class RegisterTargetJob(Job, StateChangeJob):
 
     def get_deps(self):
         deps = []
+
+        deps.append((self.target.targetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
 
         # Registering an OST depends on the MDT having already been registered,
         # because in Lustre >= 2.0 MDT registration wipes previous OST registrations
@@ -222,12 +327,19 @@ class RegisterTargetJob(Job, StateChangeJob):
             mgs = self.target.filesystem.mgs
             deps.append((mgs.targetmount_set.get(primary = True).downcast(), "mounted"))
 
+        # Depend on state 'unmounted' to make sure it's configured (i.e. mount point exists)
+        deps.append((self.target.targetmount_set.get(primary = True).downcast(), "unmounted"))
+
         return deps
 
 class StartTargetMountJob(Job, StateChangeJob):
     stateful_object = 'target_mount'
     state_transition = (ManagedTargetMount, 'unmounted', 'mounted')
+    state_verb = "Start"
     target_mount = models.ForeignKey(ManagedTargetMount)
+
+    def description(self):
+        return "Starting target %s" % self.target_mount.target
 
     def get_steps(self):
         from configure.lib.job import MountStep
@@ -236,7 +348,11 @@ class StartTargetMountJob(Job, StateChangeJob):
 class StopTargetMountJob(Job, StateChangeJob):
     stateful_object = 'target_mount'
     state_transition = (ManagedTargetMount, 'mounted', 'unmounted')
+    state_verb = "Stop"
     target_mount = models.ForeignKey(ManagedTargetMount)
+
+    def description(self):
+        return "Stopping target %s" % self.target_mount.target
 
     def get_steps(self):
         from configure.lib.job import UnmountStep
@@ -246,6 +362,18 @@ class FormatTargetJob(Job, StateChangeJob):
     state_transition = (ManagedTarget, 'unformatted', 'formatted')
     target = models.ForeignKey(ManagedTarget)
     stateful_object = 'target'
+    state_verb = 'Format'
+
+    def description(self):
+        target = self.target.downcast()
+        if isinstance(target, ManagedMgs):
+            return "Formatting MGS on %s" % target.targetmount_set.get(primary = True).host
+        elif isinstance(target, ManagedMdt):
+            return "Formatting MDT for filesystem %s" % target.filesystem.name
+        elif isinstance(target, ManagedOst):
+            return "Formatting OST for filesystem %s" % target.filesystem.name
+        else:
+            raise NotImplementedError()
 
     def get_steps(self):
         from configure.lib.job import MkfsStep
@@ -255,6 +383,10 @@ class LoadLNetJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'lnet_unloaded', 'lnet_down')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
+    state_verb = 'Load LNet'
+
+    def description(self):
+        return "Loading LNet module on %s" % self.host
 
     def get_steps(self):
         from configure.lib.job import LoadLNetStep
@@ -264,6 +396,10 @@ class UnloadLNetJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'lnet_down', 'lnet_unloaded')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
+    state_verb = 'Unload LNet'
+
+    def description(self):
+        return "Unloading LNet module on %s" % self.host
 
     def get_steps(self):
         from configure.lib.job import UnloadLNetStep
@@ -273,6 +409,10 @@ class StartLNetJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'lnet_down', 'lnet_up')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
+    state_verb = 'Start LNet'
+
+    def description(self):
+        return "Start LNet on %s" % self.host
 
     def get_steps(self):
         from configure.lib.job import StartLNetStep
@@ -282,38 +422,12 @@ class StopLNetJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'lnet_up', 'lnet_down')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
+    state_verb = 'Stop LNet'
+
+    def description(self):
+        return "Stop LNet on %s" % self.host
 
     def get_steps(self):
         from configure.lib.job import StopLNetStep
         return [(StopLNetStep, {'host_id': self.host.id})]
-
-class StartFilesystemJob(Job):
-    filesystem = models.ForeignKey(monitor_models.Filesystem)
-
-    def get_steps(self):
-        mgs = self.filesystem.mgs
-        mdt = ManagedMdt.objects.get(filesystem = self.filesystem)
-        ost_list = ManagedOst.objects.filter(filesystem = self.filesystem)
-
-        steps = []
-        steps.append((MountStep, {'target_mount_id': mgs.targetmount_set.get(primary = True).id}))
-        steps.append((MountStep, {'target_mount_id': mdt.targetmount_set.get(primary = True).id}))
-        steps.extend([(MountStep, {'target_mount_id': ost.targetmount_set.get(primary = True).id}) for ost in ost_list])
-
-        return steps
-
-class StopFilesystemJob(Job):
-    filesystem = models.ForeignKey(monitor_models.Filesystem)
-
-    def get_steps(self):
-        mgs = self.filesystem.mgs
-        mdt = ManagedMdt.objects.get(filesystem = self.filesystem)
-        ost_list = ManagedOst.objects.filter(filesystem = self.filesystem)
-
-        steps = []
-        steps.append((UnmountStep, {'target_mount_id': mgs.targetmount_set.get(primary = True).id}))
-        steps.append((UnmountStep, {'target_mount_id': mdt.targetmount_set.get(primary = True).id}))
-        steps.extend([(UnmountStep, {'target_mount_id': ost.targetmount_set.get(primary = True).id}) for ost in ost_list])
-
-        return steps
 

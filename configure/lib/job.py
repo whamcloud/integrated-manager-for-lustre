@@ -54,6 +54,7 @@ class Step(object):
         try:
             result = self.run(self.args)
         except Exception, e:
+            print "wrap_run caught error, marking job errored"
             import sys
             import traceback
             exc_info = sys.exc_info()
@@ -74,19 +75,7 @@ class Step(object):
 
         print "Step %s failed: %s'%s'" % (self, exception.__class__, exception)
         job = Job.objects.get(id = self.job_id)
-        #for step_record in job.steprecord_set.all():
-            # TODO: revoking sends the ID of the task to all workers
-            # and they put it in a list of tasks not to action.  But is the task
-            # itself somehow pull from the queue when using DB backend?  Or do we
-            # depend on the worker staying alive long enough to hit it?  Check!
-            # (If the behaviour isn't what we want then revoked tasks my come 
-            # back to life after a worker restart!)
-            
-            # FIXME: revoke is NOOP when using djkombu
-        #    revoke(step_record.task_id, terminate = True)
-
-        job.errored = True
-        job.save()
+        job.mark_errored()
 
     def mark_job_complete(self):
         # TODO: if the job is a StateChangeJob then animate the state
@@ -104,9 +93,6 @@ class StateChangeJob(object):
     """Subclasses must define a class attribute 'stateful_object'
        identifying another attribute which returns a StatefulObject"""
     def get_stateful_object(self):
-        print self
-        print self.stateful_object
-        print getattr(self, "%s_id" % self.stateful_object)
         stateful_object = getattr(self, self.stateful_object)
         assert(isinstance(stateful_object, StatefulObject))
         return stateful_object
@@ -166,7 +152,7 @@ class MkfsStep(Step):
 
         if isinstance(target, FilesystemMember):
             args.append("--fsname=%s" % target.filesystem.name)
-            args.extend(target.mgsnode_spec())
+            args.extend(target.filesystem.mgsnode_spec())
 
         args.append("--reformat")
 
@@ -211,6 +197,24 @@ class MountStep(Step):
 
         code, out, err = debug_ssh(target_mount.host, self._mount_command(target_mount))
         if code != 0 and code != 17 and code != 114:
+            from configure.lib.job import StepCleanError
+            print code, out, err
+            print StepCleanError
+            raise StepCleanError()
+
+class MkdirStep(Step):
+    def _mkdir_command(self, target_mount):
+        return "/bin/mkdir -p %s" % (target_mount.mount_point)
+
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        target_mount_id = kwargs['target_mount_id']
+        target_mount = TargetMount.objects.get(id = target_mount_id)
+
+        code, out, err = debug_ssh(target_mount.host, self._mkdir_command(target_mount))
+        if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
             print StepCleanError

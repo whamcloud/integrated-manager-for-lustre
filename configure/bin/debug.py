@@ -135,28 +135,33 @@ class HydraDebug(cmd.Cmd, object):
             if target.state == 'unformatted':
                 FormatTargetJob(target = target).run()
 
-    def do_start(self, fs_name):
-        from configure.models import StartTargetMountJob
+    def do_start_fs(self, fs_name):
+        from configure.lib.state_manager import StateManager
         fs = Filesystem.objects.get(name = fs_name)
+        s = StateManager()
         for target in fs.get_targets():
-            tm = target.targetmount_set.get(primary = True).downcast()
-            if tm.state == 'unmounted':
-                StartTargetMountJob(target_mount = tm).run()
+            if not target.state == 'mounted':
+                s.set_state(target.targetmount_set.get(primary = True).downcast(), 'mounted')
 
-    def do_stop(self, fs_name):
-        from configure.models import StopTargetMountJob
+    def do_stop_fs(self, fs_name):
+        from configure.lib.state_manager import StateManager
         fs = Filesystem.objects.get(name = fs_name)
+        s = StateManager()
         for target in fs.get_targets():
-            tm = target.targetmount_set.get(primary = True).downcast()
-            if tm.state == 'mounted':
-                StopTargetMountJob(target_mount = tm).run()
+            if not target.state == 'unmounted':
+                s.set_state(target.targetmount_set.get(primary = True).downcast(), 'unmounted')
+
+
+    def do_stop_fs(self, fs_name):
+        from configure.models import StopFilesystemJob
+        fs = Filesystem.objects.get(name = fs_name)
+        StopFilesystemJob(filesystem = fs).run()
 
     def do_transition(self, args):
         from configure.lib.state_manager import StateManager
         s = StateManager()
 
-        #s.set_state(ManagedMdt.objects.get(), 'registered')
-        s.set_state(ManagedMdt.objects.get().targetmount_set.get(primary=True).downcast(), 'mounted')
+        s.set_state(ManagedOst.objects.all()[0], 'registered')
 
     def do_lnet_up(self, args):
         from configure.models import LoadLNetJob

@@ -2,27 +2,109 @@
 
 {% extends 'base.html' %}
 
+{% block css %}
+<link rel="stylesheet" type='text/css' href="{{STATIC_URL}}css/jobs.css"/>
+{% endblock %}
+
 {% block scripts %}
 {% endblock %}
 
 {% block content %}
 <h2>States</h2>
-<table>
-{% for stateful_object in stateful_objects %}
-<tr>
-    <td>
-        {{stateful_object.object}}
-    </td>
-    <td>
-        {{stateful_object.object.state}}
-    </td>
-    <td>
-        {% for transition in stateful_object.available_transitions %}
-            <a href='{% url configure.views.set_state stateful_object.content_type, stateful_object.object.id, transition %}'>{{transition}}</a>
-        {% endfor %}
-    </td>
-</tr>
-{% endfor %}
-</table>
+<ul id='stateful_objects'>
+</ul>
+
+<ul id='jobs'>
+</ul>
+
+<script type='text/javascript'>
+    stateful_object_markup = function(container, stateful_object) {
+        container.children('.name').html(stateful_object['__str__']);
+
+        var new_state = stateful_object['state'];
+        var old_state = container.children('.state').html()
+        container.children('.state').html(new_state)
+        if (new_state != old_state && old_state != "") {
+            container.children('.state').effect('pulsate');
+        }
+
+        transition_elements = $('<span></span>').addClass('transitions');
+        stateful_object['available_transitions'].forEach(function(transition) {
+            url =  "/configure/set_state/" + stateful_object['content_type_id'] + "/" + stateful_object['id'] + "/" + transition['state'] + "/";
+            link = $('<a>' + transition['verb'] + '</a>').attr({'href': url}).click(function(event) {
+                event.preventDefault();
+                link = $(this)
+                url = link.attr('href');
+                console.log('transition attempt ' + url);
+                transition_request = $.get(url)
+                    .success(function(data, textStatus, jqXHR) {
+                        link.html("");
+                        console.log('transition success');
+                    })
+                    .error(function(event) {
+                        setTimeout('jobs_update();', 1000);
+                        console.log(event);
+                    });
+            });
+            transition_elements.append(link);
+        });
+        /*container.children('.transitions').html(transition_elements);*/
+        container.children('.transitions').replaceWith(transition_elements);
+    }
+
+    job_markup = function(container, job) {
+        container.children('.description').html(
+                    "<a href='/configure/job/" + job['id'] + "/'>" + job['description']+ "</a>"
+                );
+
+        if (job['state'] == 'complete' && !job['errored']) {
+            container.children('.icon').attr('src', "{{STATIC_URL}}/images/icon_tick.png");
+        } else if (job['state'] == 'pending') {
+            container.children('.icon').attr('src', "{{STATIC_URL}}/images/icon_hourglass.png");
+        } else if (job['state'] == 'tasked') {
+            container.children('.icon').attr('src', "{{STATIC_URL}}/images/ajax-loader.gif");
+        } else if (job['errored']) {
+            container.children('.icon').attr('src', "{{STATIC_URL}}/images/dialog-error.png");
+        } else {
+            console.log('no icon for job ' + job);
+        }
+    }
+
+    jobs_update = function() {
+        jobs_request = $.get("{% url configure.views.jobs_json %}")
+            .success(function(data, textStatus, jqXHR) {
+                setTimeout('jobs_update();', 1000);
+                jobs = data['jobs']
+                jobs.forEach(function(job) {
+                    id = "job_" + job['id'];
+                    if($('#' + id).length == 0) {
+                        $('#jobs').prepend(
+                            $("<li><img class='icon'/></span><span class='description'></span></li>").attr({'id': id})
+                        )
+                    }
+                    job_markup($('#' + id), job);
+                });
+
+                stateful_objects = data['stateful_objects'];
+                stateful_objects.forEach(function(stateful_object) {
+                    id = "stateful_object_" + stateful_object['content_type_id'] + "_" + stateful_object['id'];
+                    if($('#' + id).length == 0) {
+                    $('#stateful_objects').append($("<li><span class='name'></span><span class='state'></span><span class='transitions'></span></li>").attr({'id': id}))
+                    }
+                    stateful_object_markup($('#' + id), stateful_object);
+                });
+            })
+            .error(function(event) {
+                setTimeout('jobs_update();', 1000);
+                console.log(event);
+            });
+    }
+    $(document).ready(function() {
+        jobs_update();
+
+
+    });
+</script>
+
 {% endblock %}
 

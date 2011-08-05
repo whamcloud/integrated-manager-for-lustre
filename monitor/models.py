@@ -8,6 +8,7 @@ import simplejson as json
 from logging import INFO, WARNING
 
 class Host(models.Model):
+    __metaclass__ = DowncastMetaclass
     # FIXME: either need to make address non-unique, or need to
     # associate objects with a child object, because there
     # can be multiple servers on one hostname, eg ddn10ke
@@ -277,6 +278,33 @@ class Filesystem(models.Model):
         # Else I'm orange
         return "WARNING"
 
+    def mgsnode_spec(self):
+        """Return a list of strings of --mgsnode arguments suitable for use with mkfs"""
+        result = []
+        mgs = self.mgs
+        for target_mount in mgs.targetmount_set.all():
+            host = target_mount.host
+            nids = ",".join([n.nid_string for n in host.nid_set.all()])
+            assert(nids != "")
+            result.append("--mgsnode=%s" % nids)
+            
+        return result
+
+    def mgs_spec(self):
+        """Return a string which is foo in <foo>:/lustre for client mounts"""
+        mgs = self.mgs
+        nid_specs = []
+        for target_mount in mgs.targetmount_set.all():
+            host = target_mount.host
+            nids = ",".join([n.nid_string for n in host.nid_set.all()])
+            assert(nids != "")
+            nid_specs.append(nids)
+            
+        return ":".join(nid_specs)
+
+    def mount_example(self):
+        return "mount -t lustre %s:/%s /mnt/client" % (self.mgs_spec(), self.name)
+
     def __str__(self):
         return self.name
 
@@ -303,18 +331,6 @@ class FilesystemMember(models.Model):
     """A Mountable for a particular filesystem, such as 
        MDT, OST or Client"""
     filesystem = models.ForeignKey(Filesystem)
-
-    def mgsnode_spec(self):
-        """Return a list of strings of --mgsnode arguments suitable for use with mkfs"""
-        result = []
-        mgs = self.filesystem.mgs
-        for target_mount in mgs.targetmount_set.all():
-            host = target_mount.host
-            nids = ",".join([n.nid_string for n in host.nid_set.all()])
-            assert(nids != "")
-            result.append("--mgsnode=%s" % nids)
-            
-        return result
 
     # uSE OF ABSTRACT BASE CLASSES TO AVOID DJANGO BUG #12002
     class Meta:
@@ -414,6 +430,9 @@ class Target(models.Model):
         else:
             return self.downcast().role()
 
+    def primary_server(self):
+        return self.targetmount_set.get(primary = True).host
+
     def status_string(self, mount_statuses = None):
         if mount_statuses == None:
             mount_statuses = dict([(m, m.status_string()) for m in self.targetmount_set.all()])
@@ -459,6 +478,7 @@ class ManagementTarget(Target):
     def get_by_host(host):
         return ManagementTarget.objects.get(targetmount__host = host)
 
+    
 class ObjectStoreTarget(Target, FilesystemMember):
     def role(self):
         return "OST"

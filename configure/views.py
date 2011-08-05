@@ -207,12 +207,63 @@ def jobs(request):
         'jobs': jobs
         }))
 
+def jobs_json(request):
+    import json
+    from datetime import timedelta, datetime
+    from django.db.models import Q
+    jobs = Job.objects.filter(~Q(state = 'complete') | Q(created_at__gte=datetime.now() - timedelta(minutes=60)))
+    jobs_dicts = []
+    for job in jobs:
+        jobs_dicts.append({
+            'id': job.id,
+            'state': job.state,
+            'errored': job.errored,
+            'description': job.description()
+        })
+    jobs_json = json.dumps(jobs_dicts)
+
+    klasses = [ManagedTarget, ManagedHost, ManagedTargetMount]
+    items = []
+    for klass in klasses:
+        items.extend(list(klass.objects.all()))
+
+    from configure.lib.state_manager import StateManager
+    state_manager = StateManager()
+
+    from django.contrib.contenttypes.models import ContentType
+    stateful_objects = []
+    for i in items:
+        stateful_objects.append({
+            "id": i.id,
+            "__str__": "%s" % i,
+            "state": i.state,
+            "available_transitions": state_manager.available_transitions(i),
+            "content_type_id": ContentType.objects.get_for_model(i).id
+            })
+
+    body = json.dumps({
+                'jobs': jobs_dicts,
+                'stateful_objects': stateful_objects
+            }, indent = 4)
+
+    return HttpResponse(body, 'application/json')
+
+
 def job(request, job_id):
     job = get_object_or_404(Job, id = job_id)
     
     return render_to_response("job.html", RequestContext(request, {
         'job': job
         }))
+
+def filesystem(request, filesystem_id):
+    filesystem = get_object_or_404(Filesystem, id = filesystem_id)
+    
+    return render_to_response("filesystem.html", RequestContext(request, {
+        'filesystem': filesystem
+        }))
+
+
 
 def states(request):
     klasses = [ManagedTarget, ManagedHost, ManagedTargetMount]

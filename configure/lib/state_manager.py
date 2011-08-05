@@ -28,19 +28,6 @@ class StateManager(object):
 
         return klass
 
-    def get_transition_job(self, instance, new_state):
-        old_state = instance.state
-        klass = self.stateful_object_class(instance)
-
-        try:
-            job_klass = self.transition_map[klass][(old_state, new_state)]
-            stateful_object_attr = job_klass.stateful_object
-            kwargs = {stateful_object_attr: instance}
-            return job_klass(**kwargs)
-        except KeyError:
-            print "Cannot find transition %s->%s for %s" % (old_state, new_state, klass)
-            raise RuntimeError()
-
     def __init__(self):
         from configure.lib.job import StateChangeJob
         from configure.models import StatefulObject
@@ -62,80 +49,188 @@ class StateManager(object):
         for c in state_change_job_classes:
             statefulobject, oldstate, newstate = c.state_transition
             self.transition_map[statefulobject][(oldstate,newstate)] = c
-            self.transition_options_map[statefulobject][oldstate].append(newstate)
+            self.transition_options_map[statefulobject][oldstate].append(c)
 
     def available_transitions(self, stateful_object):
+        # If the object is subject to an incomplete StateChangeJob
+        # then don't offer any other transitions.
+        # TODO: extend this to include 'state locking' 
+        from configure.models import Job
+        from configure.lib.job import StateChangeJob
+        from django.db.models import Q
+        locked_objects = set()
+        for job in Job.objects.filter(~Q(state = 'complete')):
+            if isinstance(job, StateChangeJob):
+                locked_objects.add(job.get_stateful_object())
+
+        if stateful_object in locked_objects:
+            return []
+
+        available_jobs = set()
+        seen_states = set()
+        def recurse(klass, initial_state, explore_job = None):
+            if explore_job == None:
+                explore_state = initial_state
+            elif explore_job.state_transition[2] == initial_state:
+                return
+            else:
+                available_jobs.add(explore_job)
+                explore_state = explore_job.state_transition[2]
+
+            if explore_state in seen_states:
+                return
+            seen_states.add(explore_state)
+            for next_state in self.transition_options_map[klass][explore_state]:
+                recurse(klass, initial_state, next_state)
+
         klass = self.stateful_object_class(stateful_object)
-        return self.transition_options_map[klass][stateful_object.state]
+        recurse(klass, stateful_object.state)
+
+        klass = self.stateful_object_class(stateful_object)
+        #transition_classes = self.transition_options_map[klass][stateful_object.state]
+        return [
+                {"state": tc.state_transition[2],
+                "verb": tc.state_verb} for tc in available_jobs]
 
     def set_state(self, instance, new_state):
         from configure.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
         if new_state == instance.state:
             raise RuntimeError("already in state %s" % new_state)
-        transition_job = self.get_transition_job(instance, new_state)
-        dependencies = self.collect_dependencies(transition_job, new_state)
 
-        dependencies.reverse()
-        cleaned_dependencies = []
-        seen_deps = set()
-        for d in dependencies:
-            if not d in seen_deps:
-                cleaned_dependencies.append(d)
 
-            seen_deps.add(d)
+        self.deps = set()
+        self.edges = set()
+        root_dep = self.emit_transition_deps(instance, instance.state, new_state)
 
-        dependencies = cleaned_dependencies
-        print "cleaned deps: %s" % dependencies
+        from settings import DEBUG
+        if DEBUG:
+            for e in self.edges:
+                for i in e:
+                    if not i in self.deps:
+                        print "EDGE parent %s has no dep in %s!" % (i, e)
+                        raise RuntimeError()
 
-        jobs = []
-        for d in dependencies:
-            job = self.get_transition_job(d[0], d[1])
-            jobs.append(job)
-        jobs.append(transition_job)
+        jobs = {}
+        # We enter a transaction so that no jobs can be started
+        # before we've finished wiring up dependencies
+        from django.db import transaction
+        # FIXME: what happens if we're already in a transaction from a view?
+        @transaction.commit_on_success
+        def instantiate_jobs():
+            from django.db.models import Q
+            from configure.models import Job
+            incomplete_jobs = Job.objects.filter(~Q(state = 'complete'))
+            for job in incomplete_jobs:
+                from configure.lib.job import StateChangeJob
+                if isinstance(job, StateChangeJob):
+                    old_state, new_state = job.state_transition[1:3]
+                    dep = (job.get_stateful_object().downcast(), old_state, new_state)
 
-        print dependencies
-        print transition_job
-        print jobs
+                    print "existing job %s->%s" % (dep, job)
+                    jobs[dep] = job
 
-        print "Starting %d jobs" % len(jobs)
-        for j in jobs:
-            print "Running job %s" % j
-            j.run()
+            for d in self.deps:
+                if not d in jobs:
+                    job = self.dep_to_job(d)
+                    job.save()
+                    jobs[d] = job
+                else:
+                    print "recognised existing job %s for dep %s" % (jobs[d], d)
+            for e in self.edges:
+                parent_dep, child_dep = e
+                parent = jobs[parent_dep]
+                child = jobs[child_dep]
+                parent.dependencies.add(child)
 
-        return transition_job
+        instantiate_jobs()
 
-    def collect_dependencies(self, root_job, new_state):
-        deps = []
+        from configure.models import Job
+        Job.run_next()
+
+        return jobs[root_dep]
+
+    def dep_to_job(self, dep):
+        instance, old_state, new_state = dep
+        klass = self.stateful_object_class(instance)
+        job_klass = self.transition_map[klass][(old_state, new_state)]
+        stateful_object_attr = job_klass.stateful_object
+        kwargs = {stateful_object_attr: instance}
+        return job_klass(**kwargs)
+
+    def emit_transition_deps(self, instance, old_state, new_state):
+        if (instance, old_state, new_state) in self.deps:
+            return (instance, old_state, new_state)
+        klass = self.stateful_object_class(instance)
+
+        try:
+            job_klass = self.transition_map[klass][(old_state, new_state)]
+            dep = (instance, old_state, new_state)
+            self.deps.add(dep)
+            self.collect_dependencies(dep)
+            return dep
+
+        except KeyError:
+            # Crude: explore all paths from current state until we find one with
+            # the desired state
+            class FoundState(Exception):
+                def __init__(self, path):
+                    self.path = path
+
+            def recurse(stack, klass, initial_state, goal_state, explore_state = None):
+                if explore_state == initial_state:
+                    return
+                if explore_state == None:
+                    explore_state = initial_state
+
+                stack.append(explore_state)
+
+                if explore_state == goal_state:
+                    raise FoundState(stack)
+                for next_state in [tc.state_transition[2] for tc in self.transition_options_map[klass][explore_state]]:
+                    recurse(stack, klass, initial_state, goal_state, next_state)
+
+            try:
+                recurse([], klass, old_state, new_state)
+                raise RuntimeError()
+            except FoundState, s:
+                route = s.path
+                prev = None
+                for i in range(0, len(route) - 1):
+                    a = route[i]
+                    b = route[i + 1]
+                    dep = (instance, a, b)
+                    self.deps.add(dep)
+                    self.collect_dependencies(dep)
+                    if prev:
+                        self.edges.add((dep, prev))
+                    prev = dep
+
+                return prev
+
+            raise RuntimeError()
+
+    def collect_dependencies(self, root_dep):
         # What is explicitly required for this state transition?
-        transition_deps = root_job.get_deps()
+        transition_deps = self.dep_to_job(root_dep).get_deps()
         for stateful_object, required_state in transition_deps:
             if stateful_object.state != required_state:
-                print "Transition %s required %s in state %s from state %s" % (root_job, stateful_object, required_state, stateful_object.state)
-                deps.append((stateful_object, required_state))
-                job = self.get_transition_job(stateful_object, required_state)
-                deps.extend(self.collect_dependencies(job, required_state))
+                dep = self.emit_transition_deps(stateful_object, stateful_object.state, required_state)
+                self.edges.add((root_dep, dep))
             
         # What will statically be required in our new state?
-        stateful_deps = root_job.get_stateful_object().get_deps(new_state)
+        stateful_deps = root_dep[0].get_deps(root_dep[2])
         for depended_on, depended_state, fix_state in stateful_deps:
             if depended_on.state != depended_state:
-                print "New state requires %s in state %s from state %s" % (depended_on, depended_state, depended_on.state)
-                deps.append((depended_on, depended_state))
-                job = self.get_transition_job(depended_on, depended_state)
-                deps.extend(self.collect_dependencies(job, depended_state))
+                dep = self.emit_transition_deps(depended_on, depended_on.state, depended_state)
+                self.edges.add((root_dep, dep))
 
         # What was depending on our old state?
         for klass in self.stateful_object_classes:
             for instance in klass.objects.all():
                 instance_deps = instance.get_deps()
                 for depended_on, depended_state, fix_state in instance_deps:
-                    if depended_on == root_job.get_stateful_object():
-                        if depended_state != new_state:
-                            print "%s depended on %s" % (instance, root_job.get_stateful_object())
-                            print "%s doesn't like new state %s" % (instance, new_state)
-                            deps.append((instance, fix_state))
-                            job = self.get_transition_job(instance, fix_state)
-                            deps.extend(self.collect_dependencies(job, fix_state))
-      
-        return deps
+                    if depended_on == root_dep[0]:
+                        if depended_state != root_dep[2]:
+                            dep = self.emit_transition_deps(instance, instance.state, fix_state)
+                            self.edges.add((root_dep, dep))
