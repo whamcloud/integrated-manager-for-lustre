@@ -138,33 +138,34 @@ def debug_ssh(host, command):
 
 from monitor.models import *
 from configure.models import *
+from hydra_agent.cmds import lustre
 
 class MkfsStep(Step):
     def _mkfs_command(self, target):
-        args = []
+        kwargs = {}
         primary_mount = target.targetmount_set.get(primary = True)
 
-        args.append({
-            ManagedMgs: "--mgs",
-            ManagedMdt: "--mdt",
-            ManagedOst: "--ost"
-            }[target.__class__])
+        kwargs['target_types'] = {
+            ManagedMgs: "mgs",
+            ManagedMdt: "mdt",
+            ManagedOst: "ost"
+            }[target.__class__]
 
         if isinstance(target, FilesystemMember):
-            args.append("--fsname=%s" % target.filesystem.name)
-            args.extend(target.filesystem.mgsnode_spec())
+            kwargs['fsname'] = target.filesystem.name
+            kwargs['mgsnode'] = target.filesystem.mgs_nids()
 
-        args.append("--reformat")
+        kwargs['reformat'] = True
 
         for secondary_mount in target.targetmount_set.filter(primary = False):
             host = secondary_mount.host
-            nids = ",".join([n.nid_string for n in host.nid_set.all()])
-            assert nids != "", RuntimeError("No NIDs known for host %s" % host)
-            args.append("--failover=%s" % nids)
+            nids = [n.nid_string for n in host.nid_set.all()]
+            if len(nids) > 0:
+                kwargs['failnode'] = nids
 
-        args.append(primary_mount.block_device.path)
+        kwargs['device'] = primary_mount.block_device.path
 
-        return "/usr/sbin/mkfs.lustre %s" % " ".join(args)
+        return lustre.mkfs(**kwargs)
 
     def run(self, kwargs):
         target_id = kwargs['target_id']
