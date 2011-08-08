@@ -54,7 +54,7 @@ class LocalLustreAudit:
     def get_device_nodes(self):
         mount_devices = set([self.normalize_device(i[0]) for i in self.mounts if os.path.exists(i[0])])
         fstab_devices = set([self.normalize_device(i[0]) for i in self.fstab if os.path.exists(i[0])])
-        scsi_devices = set([self.normalize_device(path) for path in glob.glob("/dev/disk/by-path/*-scsi-*")])
+        scsi_devices = set([self.normalize_device(path) for path in glob.glob("/dev/disk/by-path/*scsi-*")])
         lvm_devices = set(glob.glob("/dev/mapper/*")) - set(["/dev/mapper/control"])
 
         def is_block_device(path):
