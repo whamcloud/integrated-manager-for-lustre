@@ -278,16 +278,25 @@ class Filesystem(models.Model):
         # Else I'm orange
         return "WARNING"
 
-    def mgsnode_spec(self):
-        """Return a list of strings of --mgsnode arguments suitable for use with mkfs"""
-        result = []
+    # FIXME: should this be defined in the ManagementTarget class?
+    def mgs_nids(self):
+        """Return a list of mgs nid strings"""
+        nids = []
         mgs = self.mgs
         for target_mount in mgs.targetmount_set.all():
             host = target_mount.host
-            nids = ",".join([n.nid_string for n in host.nid_set.all()])
-            assert(nids != "")
-            result.append("--mgsnode=%s" % nids)
-            
+            nids.extend([n.nid_string for n in host.nid_set.all()])
+
+        return nids
+
+    def mgsnode_spec(self):
+        """Return a list of strings of --mgsnode arguments suitable for use with mkfs"""
+        result = []
+
+        nids = ",".join(self.mgs_nids())
+        assert(nids != "")
+        result.append("--mgsnode=%s" % nids)
+
         return result
 
     def mgs_spec(self):
@@ -331,7 +340,6 @@ class FilesystemMember(models.Model):
     """A Mountable for a particular filesystem, such as 
        MDT, OST or Client"""
     filesystem = models.ForeignKey(Filesystem)
-
     # uSE OF ABSTRACT BASE CLASSES TO AVOID DJANGO BUG #12002
     class Meta:
         abstract = True
