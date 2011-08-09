@@ -289,7 +289,7 @@ class UnloadLNetStep(Step):
 
 class UnmountStep(Step):
     def _unmount_command(self, target_mount):
-        return lustre.unmount(dir=target_mount.mount_point)
+        return lustre.umount(dir=target_mount.mount_point)
 
     def is_idempotent(self):
         return True
