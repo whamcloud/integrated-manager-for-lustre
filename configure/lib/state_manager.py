@@ -55,9 +55,21 @@ class StateManager(object):
         # If the object is subject to an incomplete StateChangeJob
         # then don't offer any other transitions.
         # TODO: extend this to include 'state locking' 
-        from configure.models import Job
+        from configure.models import Job, StateReadLock, StateWriteLock
         from configure.lib.job import StateChangeJob
         from django.db.models import Q
+
+        # We don't advertise transitions for anything which is currently
+        # locked by an incomplete job.  We could alternatively advertise
+        # which jobs would actually be legal to add by skipping this check and
+        # using get_expected_state in place of .state below.
+        active_read_locks = StateReadLock.filter_by_locked_item(stateful_object).filter(~Q(job__state = 'complete')).count()
+        if active_read_locks > 0:
+            return []
+        active_write_locks = StateWriteLock.filter_by_locked_item(stateful_object).filter(~Q(job__state = 'complete')).count()
+        if active_write_locks > 0:
+            return []
+
         locked_objects = set()
         for job in Job.objects.filter(~Q(state = 'complete')):
             if isinstance(job, StateChangeJob):
@@ -84,6 +96,8 @@ class StateManager(object):
                 recurse(klass, initial_state, next_state)
 
         klass = self.stateful_object_class(stateful_object)
+        # TODO: use expected_state here if you want to advertise 
+        # what jobs can really be added
         recurse(klass, stateful_object.state)
 
         klass = self.stateful_object_class(stateful_object)
@@ -92,24 +106,85 @@ class StateManager(object):
                 {"state": tc.state_transition[2],
                 "verb": tc.state_verb} for tc in available_jobs]
 
+    def get_expected_state(self, stateful_object_instance):
+        try:
+            return self.expected_states[stateful_object_instance]
+        except KeyError:
+            return stateful_object_instance.state
+                    
     def set_state(self, instance, new_state):
+        """Return a Job or None if the object is already in new_state"""
         from configure.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
         if new_state == instance.state:
-            raise RuntimeError("already in state %s" % new_state)
+            return None
 
+        # Work out the eventual states (and which writelock'ing job to depend on to 
+        # ensure that state) from all non-'complete' jobs in the queue
+
+        self.expected_states = {}
+        # TODO: find out how to do a DB query that just gives us the latest WL for 
+        # each locked_item (same result for less iterations of this loop)
+        from configure.models import StateWriteLock
+        from django.db.models import Q
+        for wl in StateWriteLock.objects.filter(~Q(job__state = 'complete')).order_by('id'):
+            self.expected_states[wl.locked_item] = wl.end_state
+
+        if new_state == self.get_expected_state(instance):
+            return None
 
         self.deps = set()
         self.edges = set()
-        root_dep = self.emit_transition_deps(instance, instance.state, new_state)
+        root_dep = self.emit_transition_deps(
+                instance,
+                self.get_expected_state(instance),
+                new_state)
 
-        from settings import DEBUG
-        if DEBUG:
-            for e in self.edges:
-                for i in e:
-                    if not i in self.deps:
-                        print "EDGE parent %s has no dep in %s!" % (i, e)
-                        raise RuntimeError()
+        def sort_graph(objects, edges):
+            """Sort items in a graph by their longest path from a leaf.  Items
+               at the start of the result are the leaves.  Roots come last."""
+            object_edges = defaultdict(list)
+            for e in edges:
+                parent, child = e
+                object_edges[parent].append(child)
+
+            leaf_distance_cache = {}
+            def leaf_distance(obj, depth = 0, hops = 0):
+                if obj in leaf_distance_cache:
+                    return leaf_distance_cache[obj] + hops
+                depth = depth + 1
+                #print " " * depth + "leaf_distance %s %s" % (obj, hops)
+                max_child_hops = hops
+                for child in object_edges[obj]:
+                    child_hops = leaf_distance(child, depth, hops + 1)
+                    max_child_hops = max(child_hops, max_child_hops)
+                
+                leaf_distance_cache[obj] = max_child_hops - hops;
+
+                return max_child_hops
+
+            object_leaf_distances = []
+            for o in objects:
+                object_leaf_distances.append((o, leaf_distance(o)))
+
+            object_leaf_distances.sort(lambda x,y: cmp(x[1], y[1]))
+            #for obj, ld in object_leaf_distances:
+                #print ld, obj
+                #for c in object_edges[obj]:
+                #    print "\t%s" % (c,)
+            return [obj for obj, ld in object_leaf_distances]
+
+        # XXX
+        # VERY IMPORTANT: this sort is what gives us the following rule:
+        #  The order of the rows in the Job table corresponds to the order in which
+        #  the jobs would run (including accounting for dependecies) in the absence 
+        #  of parallelism.
+        # XXX
+        self.deps = sort_graph(self.deps, self.edges)
+        if False:
+            print "Sorted deps:"
+            for d in self.deps:
+                print "\t%s" % (d,)
 
         jobs = {}
         # We enter a transaction so that no jobs can be started
@@ -118,30 +193,18 @@ class StateManager(object):
         # FIXME: what happens if we're already in a transaction from a view?
         @transaction.commit_on_success
         def instantiate_jobs():
-            from django.db.models import Q
-            from configure.models import Job
-            incomplete_jobs = Job.objects.filter(~Q(state = 'complete'))
-            for job in incomplete_jobs:
-                from configure.lib.job import StateChangeJob
-                if isinstance(job, StateChangeJob):
-                    old_state, new_state = job.state_transition[1:3]
-                    dep = (job.get_stateful_object().downcast(), old_state, new_state)
-
-                    print "existing job %s->%s" % (dep, job)
-                    jobs[dep] = job
-
             for d in self.deps:
-                if not d in jobs:
-                    job = self.dep_to_job(d)
-                    job.save()
-                    jobs[d] = job
-                else:
-                    print "recognised existing job %s for dep %s" % (jobs[d], d)
-            for e in self.edges:
-                parent_dep, child_dep = e
-                parent = jobs[parent_dep]
-                child = jobs[child_dep]
-                parent.dependencies.add(child)
+                job = self.dep_to_job(d)
+                job.save()
+                job.create_locks()
+                job.create_dependencies()
+                jobs[d] = job
+
+            #for e in self.edges:
+            #    parent_dep, child_dep = e
+            #    parent = jobs[parent_dep]
+            #    child = jobs[child_dep]
+            #    parent.dependencies.add(child)
 
         instantiate_jobs()
 
@@ -196,6 +259,8 @@ class StateManager(object):
             except FoundState, s:
                 route = s.path
                 prev = None
+                # TODO: this code is ugly and uses the first path it finds: it
+                # should be finding the shortest path
                 for i in range(0, len(route) - 1):
                     a = route[i]
                     b = route[i + 1]
@@ -206,6 +271,7 @@ class StateManager(object):
                         self.edges.add((dep, prev))
                     prev = dep
 
+                assert(prev != None)
                 return prev
 
             raise RuntimeError()
@@ -214,23 +280,37 @@ class StateManager(object):
         # What is explicitly required for this state transition?
         transition_deps = self.dep_to_job(root_dep).get_deps()
         for stateful_object, required_state in transition_deps:
-            if stateful_object.state != required_state:
-                dep = self.emit_transition_deps(stateful_object, stateful_object.state, required_state)
+            old_state = self.get_expected_state(stateful_object)
+            if old_state != required_state:
+                dep = self.emit_transition_deps(stateful_object, old_state, required_state)
                 self.edges.add((root_dep, dep))
             
         # What will statically be required in our new state?
         stateful_deps = root_dep[0].get_deps(root_dep[2])
+        # For everything we depend on
         for depended_on, depended_state, fix_state in stateful_deps:
-            if depended_on.state != depended_state:
-                dep = self.emit_transition_deps(depended_on, depended_on.state, depended_state)
+            # When we start running it will be in old_state
+            old_state = self.get_expected_state(depended_on)
+            # Is old_state not what we want?
+            if old_state != depended_state:
+                # Emit some transitions to get depended_on into depended_state
+                dep = self.emit_transition_deps(depended_on, old_state, depended_state)
+                # Record that root_dep depends on depended_on making it into depended_state
                 self.edges.add((root_dep, dep))
 
         # What was depending on our old state?
         for klass in self.stateful_object_classes:
             for instance in klass.objects.all():
-                instance_deps = instance.get_deps()
+                # FIXME: this is a bit broken, this 'expected state' is at the start
+                # of all jobs in this set_state call, but we should be querying 
+                # the expected state right before this particular root_dep
+                instance_state = self.get_expected_state(instance)
+                instance_deps = instance.get_deps(instance_state)
+                # This other guy depended on...
                 for depended_on, depended_state, fix_state in instance_deps:
-                    if depended_on == root_dep[0]:
-                        if depended_state != root_dep[2]:
-                            dep = self.emit_transition_deps(instance, instance.state, fix_state)
+                    # He depended on the root_dep object in a state other than
+                    # what we're about to put it into: we must change his state
+                    # to allow root_dep to transition
+                    if depended_on == root_dep[0] and depended_state != root_dep[2]:
+                            dep = self.emit_transition_deps(instance, instance_state, fix_state)
                             self.edges.add((root_dep, dep))

@@ -6,3 +6,5 @@ database.db
 monitor.lib.lustre_audit.log
 sql.log
 MANIFEST
+celerybeat-schedule
+celerystate.db

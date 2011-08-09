@@ -3,7 +3,9 @@
         {"address": "flint01"},
         {"address": "flint02"},
         {"address": "flint03"},
-        {"address": "flint04"}
+        {"address": "flint04"},
+        {"address": "flint05"},
+        {"address": "flint06"}
     ],
     "mgss": [
         {
@@ -31,6 +33,16 @@
                     "/dev/disk/by-path/pci-0000:00:06.0-scsi-0:0:3:0"
                 ],
                 "failover_host": "flint04"
+            },
+            {
+                "host": "flint05",
+                "device_nodes": [
+                    "/dev/disk/by-path/pci-0000:00:06.0-scsi-0:0:0:0",
+                    "/dev/disk/by-path/pci-0000:00:06.0-scsi-0:0:1:0",
+                    "/dev/disk/by-path/pci-0000:00:06.0-scsi-0:0:2:0",
+                    "/dev/disk/by-path/pci-0000:00:06.0-scsi-0:0:3:0"
+                ],
+                "failover_host": "flint06"
             }
         ]
         }

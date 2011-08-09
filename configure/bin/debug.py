@@ -72,6 +72,8 @@ class HydraDebug(cmd.Cmd, object):
 
         return node, host, failover_host
 
+    from django.db import transaction
+    @transaction.commit_on_success
     def do_load_config(self, config_file):
         import json
         text = open(config_file).read()
@@ -82,11 +84,12 @@ class HydraDebug(cmd.Cmd, object):
         # the risk of double-using a LUN.
 
         for host_info in data['hosts']:
-            host = ManagedHost.objects.get_or_create(address = host_info['address'])
-            host, ssh_monitor = SshMonitor.from_string(host_info['address'])
-            host.save()
-            ssh_monitor.host = host
-            ssh_monitor.save()
+            host, created = ManagedHost.objects.get_or_create(address = host_info['address'])
+            if created:
+                host, ssh_monitor = SshMonitor.from_string(host_info['address'])
+                host.save()
+                ssh_monitor.host = host
+                ssh_monitor.save()
 
         for mgs_info in data['mgss']:
             node, host, failover_host = self._load_target_config(mgs_info)
@@ -128,21 +131,33 @@ class HydraDebug(cmd.Cmd, object):
 
                         self._create_target_mounts(node, oss, failover_host)
 
-    def do_format_fs(self, args):
-        from configure.models import FormatTargetJob
-        fs = Filesystem.objects.all()[0]
+    def do_format_fs(self, fs_name):
+        fs = Filesystem.objects.get(name = fs_name)
         for target in fs.get_targets():
             if target.state == 'unformatted':
-                FormatTargetJob(target = target).run()
+                s.set_state(target, 'formatted')
 
     def do_start_fs(self, fs_name):
         from configure.lib.state_manager import StateManager
         fs = Filesystem.objects.get(name = fs_name)
         s = StateManager()
         for target in fs.get_targets():
-            if not target.state == 'mounted':
-                s.set_state(target.targetmount_set.get(primary = True).downcast(), 'mounted')
+            s.set_state(target.targetmount_set.get(primary = True).downcast(), 'mounted')
 
+    def do_test(self, args):
+        from configure.tasks import increment_test
+        from configure.models import Test
+        t = Test()
+        t.save()
+        jobs = []
+        for n in range(0, 50):
+            jobs.append(increment_test.delay(t.id))
+
+        from time import sleep
+        sleep(5)
+        
+        t = Test.objects.get(pk = t.id)
+        print t.i
     def do_stop_fs(self, fs_name):
         from configure.lib.state_manager import StateManager
         fs = Filesystem.objects.get(name = fs_name)
@@ -151,31 +166,26 @@ class HydraDebug(cmd.Cmd, object):
             if not target.state == 'unmounted':
                 s.set_state(target.targetmount_set.get(primary = True).downcast(), 'unmounted')
 
-
-    def do_stop_fs(self, fs_name):
-        from configure.models import StopFilesystemJob
-        fs = Filesystem.objects.get(name = fs_name)
-        StopFilesystemJob(filesystem = fs).run()
-
-    def do_transition(self, args):
+    def do_lnet_up(self, args):
         from configure.lib.state_manager import StateManager
         s = StateManager()
-
-        s.set_state(ManagedOst.objects.all()[0], 'registered')
-
-    def do_lnet_up(self, args):
-        from configure.models import LoadLNetJob
-        from configure.models import StartLNetJob
         for host in ManagedHost.objects.all():
-            LoadLNetJob(host = host).run()
-            StartLNetJob(host = host).run()
-
+            s.set_state(host, 'lnet_up')
     def do_lnet_down(self, args):
-        from configure.models import StopLNetJob
-        from configure.models import UnloadLNetJob
+        from configure.lib.state_manager import StateManager
+        s = StateManager()
         for host in ManagedHost.objects.all():
-            StopLNetJob(host = host).run()
-            UnloadLNetJob(host = host).run()
+            s.set_state(host, 'lnet_down')
+
+    def do_lnet_unload(self, args):
+        from configure.lib.state_manager import StateManager
+        s = StateManager()
+        for host in ManagedHost.objects.all():
+            s.set_state(host, 'lnet_unloaded')
+
+    def do_poke_queue(self, args):
+        from configure.models import Job
+        Job.run_next()
 
 if __name__ == '__main__':
     cmdline = HydraDebug

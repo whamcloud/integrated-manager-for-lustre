@@ -64,10 +64,14 @@ class Step(object):
             raise e
 
         if self.final:
-            print "step complete, final"
             self.mark_job_complete()
         else:
-            print "step complete, not final"
+            job = Job.objects.get(id = self.job_id)
+            # FIXME: this is probably really dangerous, what happens if we 'run_step' out 
+            # successor and then get our power cord pulled, we're not yet complete and 
+            # could run again?
+            job.downcast().run_step(self.index + 1)
+
         return result
 
     def mark_job_errored(self, exception):
@@ -75,7 +79,7 @@ class Step(object):
 
         print "Step %s failed: %s'%s'" % (self, exception.__class__, exception)
         job = Job.objects.get(id = self.job_id)
-        job.mark_errored()
+        job.mark_complete(errored = True)
 
     def mark_job_complete(self):
         # TODO: if the job is a StateChangeJob then animate the state
@@ -97,6 +101,9 @@ class StateChangeJob(object):
         assert(isinstance(stateful_object, StatefulObject))
         return stateful_object
 
+from logging import getLogger, FileHandler, DEBUG
+getLogger('ssh').setLevel(DEBUG)
+getLogger('ssh').addHandler(FileHandler("ssh.log"))
 def debug_ssh(host, command):
     ssh_monitor = host.monitor.downcast()
 
@@ -129,12 +136,13 @@ def debug_ssh(host, command):
     result_code = channel.recv_exit_status()
     ssh.close()
 
-    print result_code, command
+    getLogger('ssh').debug("%s: %s" % (host, command))
+
+    print "debug_ssh:%s:%s:%s" % (host, result_code, command)
     if result_code != 0:
         print result_stdout
         print result_stderr
     return result_code, result_stdout, result_stderr
-
 
 from monitor.models import *
 from configure.models import *
@@ -186,6 +194,7 @@ class NullStep(Step):
 
 class MountStep(Step):
     def _mount_command(self, target_mount):
+        assert(target_mount.block_device.path != None)
         return "mount -t lustre %s %s" % (target_mount.block_device.path, target_mount.mount_point)
 
     def is_idempotent(self):

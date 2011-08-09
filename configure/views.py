@@ -251,6 +251,7 @@ def jobs_json(request):
 
 def job(request, job_id):
     job = get_object_or_404(Job, id = job_id)
+    job = job.downcast()
     
     return render_to_response("job.html", RequestContext(request, {
         'job': job

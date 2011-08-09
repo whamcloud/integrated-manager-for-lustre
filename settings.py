@@ -229,6 +229,7 @@ CELERY_QUEUES = {
 CELERY_ROUTES = (
         {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
         {"monitor.tasks.audit_all": {"queue": "ssh"}},
+        {"monitor.tasks.discover_hosts": {"queue": "ssh"}},
         {"configure.tasks.run_job_step": {"queue": "jobs"}},
         {"configure.tasks.periodic": {"queue": "jobs"}},
         {"configure.tasks.other": {"queue": "jobs"}},
