@@ -12,6 +12,8 @@ class StatefulObject(models.Model):
         abstract = True
 
     state = models.CharField(max_length = MAX_STATE_STRING)
+    states = None
+    initial_state = None
 
     def __init__(self, *args, **kwargs):
         super(StatefulObject, self).__init__(*args, **kwargs)
@@ -64,6 +66,8 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
     def __str__(self):
         if self.primary:
             kind_string = "primary"
+        elif not self.block_device:
+            kind_string = "failover_nodev"
         else:
             kind_string = "failover"
 
@@ -89,33 +93,27 @@ class ManagedHost(monitor_models.Host, StatefulObject):
     states = ['lnet_unloaded', 'lnet_down', 'lnet_up']
     initial_state = 'lnet_unloaded'
 
-class StateLock(object):
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.generic import GenericForeignKey
+class StateLock(models.Model):
+    __metaclass__ = DowncastMetaclass
+    job = models.ForeignKey('Job')
+
+    locked_item_type = models.ForeignKey(ContentType, related_name = 'locked_item')
+    locked_item_id = models.PositiveIntegerField()
+    locked_item = GenericForeignKey('locked_item_type', 'locked_item_id')
+
     @classmethod
     def filter_by_locked_item(cls, stateful_object):
         ctype = ContentType.objects.get_for_model(stateful_object)
         return cls.objects.filter(locked_item_type = ctype, locked_item_id = stateful_object.id)
 
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.generic import GenericForeignKey
-class StateReadLock(models.Model, StateLock):
-    job = models.ForeignKey('Job')
-
-    locked_item_type = models.ForeignKey(ContentType)
-    locked_item_id = models.PositiveIntegerField()
-    locked_item = GenericForeignKey('locked_item_type', 'locked_item_id')
-
+class StateReadLock(StateLock):
     locked_state = models.CharField(max_length = MAX_STATE_STRING)
 
-class StateWriteLock(models.Model, StateLock):
-    job = models.ForeignKey('Job')
-
-    locked_item_type = models.ForeignKey(ContentType)
-    locked_item_id = models.PositiveIntegerField()
-    locked_item = GenericForeignKey('locked_item_type', 'locked_item_id')
-
+class StateWriteLock(StateLock):
     begin_state = models.CharField(max_length = MAX_STATE_STRING)
     end_state = models.CharField(max_length = MAX_STATE_STRING)
-
 
 # Lock is the wrong word really, these objects exist for the lifetime of the Job, 
 # to allow 
@@ -158,45 +156,44 @@ class Job(models.Model):
         from django.db.models import Q
         from configure.models import Job
 
-        for wl in self.statewritelock_set.all():
-            # Depend on the most recent pending write to this stateful object,
-            # trust that it will have depended on any before that.
-            try:
-                prior_write_lock = StateWriteLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).latest('id')
-                assert(wl.begin_state == prior_write_lock.end_state)
-                self.depend_on.add(prior_write_lock.job)
-                # We will only wait_for read locks after this write lock, as it
-                # will have wait_for'd any before it.
-                read_barrier_id = prior_write_lock.job.id
-            except StateWriteLock.DoesNotExist:
-                print "No prior write locks for write lock %s of job %s" % (wl, self)
-                read_barrier_id = 0
-                pass
+        for lock in self.statelock_set.all():
+            if isinstance(lock, StateWriteLock):
+                wl = lock
+                # Depend on the most recent pending write to this stateful object,
+                # trust that it will have depended on any before that.
+                try:
+                    prior_write_lock = StateWriteLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).latest('id')
+                    assert(wl.begin_state == prior_write_lock.end_state)
+                    self.depend_on.add(prior_write_lock.job)
+                    # We will only wait_for read locks after this write lock, as it
+                    # will have wait_for'd any before it.
+                    read_barrier_id = prior_write_lock.job.id
+                except StateWriteLock.DoesNotExist:
+                    print "No prior write locks for write lock %s of job %s" % (wl, self)
+                    read_barrier_id = 0
+                    pass
 
-            # Wait for any reads of the stateful object between the last write and
-            # our position.
-            prior_read_locks = StateWriteLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).filter(job__id__gte = read_barrier_id)
-            for i in prior_read_locks:
-                self.wait_for.add(i.job)
-
-        for rl in self.statereadlock_set.all():
-            try:
-                prior_write_lock = StateWriteLock.filter_by_locked_item(rl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).latest('id')
-                assert(prior_write_lock.end_state == rl.locked_state)
-                self.depend_on.add(prior_write_lock.job)
-            except StateWriteLock.DoesNotExist:
-                print "No prior write locks for read lock %s of job %s" % (rl, self)
-                pass
+                # Wait for any reads of the stateful object between the last write and
+                # our position.
+                prior_read_locks = StateWriteLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).filter(job__id__gte = read_barrier_id)
+                for i in prior_read_locks:
+                    self.wait_for.add(i.job)
+            elif isinstance(lock, StateReadLock):
+                rl = lock
+                try:
+                    prior_write_lock = StateWriteLock.filter_by_locked_item(rl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).latest('id')
+                    assert(prior_write_lock.end_state == rl.locked_state)
+                    self.depend_on.add(prior_write_lock.job)
+                except StateWriteLock.DoesNotExist:
+                    print "No prior write locks for read lock %s of job %s" % (rl, self)
+                    pass
 
     def create_locks(self):
         from configure.lib.job import StateChangeJob
         # Take read lock on everything from self.get_deps
         for d in self.get_deps():
             depended_on, depended_state = d
-            self.statereadlock_set.create(locked_item = depended_on, locked_state = depended_state)
-
-        print "create_locks: %d deps" % len(self.get_deps())
-        print "create_locks: is SCJ: %s" % isinstance(self, StateChangeJob)
+            StateReadLock.objects.create(job = self, locked_item = depended_on, locked_state = depended_state)
 
         if isinstance(self, StateChangeJob):
             stateful_object = self.get_stateful_object()
@@ -206,27 +203,10 @@ class Job(models.Model):
             # this is a StateChangeJob
             for d in stateful_object.get_deps(new_state):
                 depended_on, depended_state, fix_state = d
-                self.statereadlock_set.create(locked_item = depended_on, locked_state = depended_state)
+                StateReadLock.objects.create(job = self, locked_item = depended_on, locked_state = depended_state)
 
             # Take a write lock on get_stateful_object if this is a StateChangeJob
-            self.statewritelock_set.create(locked_item = self.get_stateful_object(), begin_state = old_state, end_state = new_state)
-
-    def locks_ok(self):
-        for readlock in self.statereadlock_set.all():
-            writers = StateWriteLock.filter_by_locked_item(readlock.locked_item).filter(job__state = 'tasked')
-            if writers > 0:
-                return False
-
-        for writelock in self.statewritelock_set.all():
-            writers = StateWriteLock.filter_by_locked_item(readlock.locked_item).filter(job__state = 'tasked')
-            if writers > 0:
-                return False
-
-            readers = StateReadLock.filter_by_locked_item(readlock.locked_item).filter(job__state = 'tasked')
-            if readers > 0:
-                return False
-
-        return True
+            StateWriteLock.objects.create(job = self, locked_item = self.get_stateful_object(), begin_state = old_state, end_state = new_state)
 
     def dependencies_complete(self):
         from django.db.models import Q
@@ -456,8 +436,8 @@ class RegisterTargetJob(Job, StateChangeJob):
         # holding a read lock on it.  Little messy but isn't invalid.  Will 
         # potentially result in downstream jobs both wait_for'ing and depend_on'ing
         # the same job.
-        self.statewritelock_set.create(locked_item = tm,
-                begin_state = 'unmounted', end_state = 'unmounted')
+        StateWriteLock(job = self, locked_item = tm,
+                begin_state = 'unmounted', end_state = 'unmounted').save()
         super(RegisterTargetJob, self).create_locks(*args, **kwargs)
 
     def description(self):

@@ -120,24 +120,43 @@ class LustreAudit:
 
         return mgs
 
+    def is_valid(self):
+        try:
+            assert(isinstance(self.host_data, dict))
+            assert(self.host_data.has_key('lnet_up'))
+            assert(self.host_data.has_key('lnet_loaded'))
+            assert(self.host_data.has_key('mgs_targets'))
+            assert(self.host_data.has_key('local_targets'))
+            assert(self.host_data.has_key('device_nodes'))
+            # TODO: more thorough validation
+            return True
+        except AssertionError:
+            return False
+
     def audit_complete(self, audit, host_data):
         self.audit = audit
         self.host = audit.host
         self.host_data = host_data
 
         if isinstance(host_data, Exception):
-            log().error("bad output from %s: %s" % (self.host, host_data))
+            log().error("exception contacting %s: %s" % (self.host, host_data))
+            contact = False
+        elif not self.is_valid():
+            log().error("invalid output from %s: %s" % (self.host, host_data))
             contact = False
         else:
-            assert(isinstance(host_data, dict))
-            assert(host_data.has_key('lnet_up'))
-            # FIXME: we assume any valid JSON we receive is a
-            # valid report.  This means we're not very
-            # robust in the face of hydra-agent bugs, both here
-            # and in subsequent processing on the data
-
             self.audit.lnet_up = host_data['lnet_up']
             self.audit.save()
+
+            try:
+                from configure.lib.state_manager import StateManager
+            except ImportError:
+                StateManager = None
+            if StateManager:
+                state = {(False, False): 'lnet_unloaded',
+                        (True, False): 'lnet_down',
+                        (True, True): 'lnet_up'}[(host_data['lnet_loaded'], host_data['lnet_up'])]
+                StateManager.notify_state(self.host.downcast(), state, ['lnet_unloaded', 'lnet_down', 'lnet_up'])
             LNetOfflineAlert.notify(self.host, not host_data['lnet_up'])
             contact = True
 
@@ -160,10 +179,17 @@ class LustreAudit:
             self.learn_clients()
 
             # Any TargetMounts which we didn't get data for may need to emit offline events
+            # Also use this loop to update StateManager
+            try:
+                from configure.lib.state_manager import StateManager
+            except ImportError:
+                StateManager = None
+
             for mountable in Mountable.objects.filter(host = self.host):
                 try:
-                    audited = AuditMountable.objects.get(
+                    audit_mountable = AuditMountable.objects.get(
                             audit = self.audit, mountable = mountable)
+
                 except AuditMountable.DoesNotExist:
                     if isinstance(mountable, TargetMount) and not mountable.primary:
                         FailoverActiveAlert.notify(mountable, False)
@@ -172,6 +198,13 @@ class LustreAudit:
                     audit_mountable = AuditMountable(audit = self.audit,
                             mountable = mountable, mounted = False)
                     audit_mountable.save()
+
+                if StateManager:
+                    # FIXME: potentially get confused with a removed 
+                    # targetmount, need to only do this update if the
+                    # targetmount is not in a 'deleted' state.
+                    state = {True: 'mounted', False: 'unmounted'}[audit_mountable.mounted]
+                    StateManager.notify_state(mountable, state, ['mounted', 'unmounted'])
 
         HostContactAlert.notify(self.host, not contact)
 
@@ -192,15 +225,21 @@ class LustreAudit:
         for node_info in self.host_data['device_nodes']:
             try:
                 existing_node = LunNode.objects.get(path = node_info['path'], host = self.host)
-                # TODO: update existing nodes
-                # (create an underlying Lun if we have a UUID where we didn't before, and try to tally it with a LunNode on another host for failover)
+                if len(node_info['fs_uuid']) > 0:
+                    if existing_node.lun and existing_node.lun.fs_uuid != node_info['fs_uuid']:
+                        existing_node.lun.fs_uuid = node_info['fs_uuid']
+                        existing_node.save()
+                    elif not existing_node.lun:
+                        lun, created = Lun.objects.get_or_create(fs_uuid = node_info['fs_uuid'])
+                        existing_node.lun = lun
+                        existing_node.save()
+                        log().info("Associated lun %s with node %s" % (lun, existing_node))
+
             except LunNode.DoesNotExist:
                 if len(node_info['fs_uuid']) > 0:
-                    try:
-                        lun = Lun.objects.get(fs_uuid = node_info['fs_uuid'])
-                    except Lun.DoesNotExist:
-                        lun = Lun(fs_uuid = node_info['fs_uuid'])
-                        lun.save()
+                    lun, created = Lun.objects.get_or_create(fs_uuid = node_info['fs_uuid'])
+                    if created:
+                        log().info("Discovered Lun %s" % (lun))
                 else:
                     # Create LunNodes with no Lun when there is no unique ID for the Lun available
                     lun = None
@@ -210,6 +249,19 @@ class LustreAudit:
                         path = node_info['path'],
                         used_hint = node_info['used'])
                 node.save()
+                log().info("Discovered node %s (lun %s)" % (node, lun))
+
+        for tm in TargetMount.objects.filter(host = self.host, primary = False, block_device = None):
+            lun = tm.target.targetmount_set.get(primary = True).block_device.lun
+            if not lun:
+                continue
+            try:
+                node = LunNode.objects.get(lun = lun, host = self.host)
+                tm.block_device = node
+                tm.save()
+                log().info("Associated failover target mount %s:%s with node %s" % (tm.host, tm, node))
+            except LunNode.DoesNotExist:
+                pass
 
     def learn_mgs(self, mgs_local_info):
         try:

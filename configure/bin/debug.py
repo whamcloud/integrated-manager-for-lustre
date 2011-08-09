@@ -46,6 +46,13 @@ class HydraDebug(cmd.Cmd, object):
             primary = True)
 
         if failover_host:
+            if node.lun:
+                try:
+                    failover_node = LunNode.objects.get(host = failover_host, lun = node.lun)
+                except LunNode.DoesNotExist:
+                    failover_node = None
+            else:
+                failover_node = None
             # NB have to do this the long way because get_or_create will do the wrong thing on block_device=None 
             try:
                 tm = ManagedTargetMount.objects.get(
@@ -55,7 +62,7 @@ class HydraDebug(cmd.Cmd, object):
                     primary = False)
             except ManagedTargetMount.DoesNotExist:
                 tm = ManagedTargetMount(
-                    block_device = None,
+                    block_device = failover_node,
                     target = target,
                     host = failover_host, 
                     mount_point = target.default_mount_path(failover_host),

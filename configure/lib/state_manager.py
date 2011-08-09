@@ -2,6 +2,10 @@
 
 from collections_24 import defaultdict
 
+from logging import getLogger, FileHandler, DEBUG
+getLogger('Job').setLevel(DEBUG)
+getLogger('Job').addHandler(FileHandler("Job.log"))
+
 def subclasses(obj):
     sc_recr = []
     for sc_obj in obj.__subclasses__():
@@ -111,7 +115,25 @@ class StateManager(object):
             return self.expected_states[stateful_object_instance]
         except KeyError:
             return stateful_object_instance.state
-                    
+
+    @classmethod
+    def notify_state(cls, instance, new_state, from_states):
+        """from_states: list of states it's valid to transition from"""
+        if not instance.state in from_states:
+            return
+
+        from django.db.models import Q
+        from configure.models import StateLock
+        from configure.models import StatefulObject
+        assert(isinstance(instance, StatefulObject))
+        if new_state != instance.state:
+            outstanding_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
+            if outstanding_locks == 0:
+                getLogger('Job').info("notify_state: Updating state of item %d (%s) to %s" % (instance.id, instance, new_state))
+                # TODO: for concurrency, should insert this state change as a job
+                instance.state = new_state
+                instance.save()
+
     def set_state(self, instance, new_state):
         """Return a Job or None if the object is already in new_state"""
         from configure.models import StatefulObject
@@ -181,10 +203,6 @@ class StateManager(object):
         #  of parallelism.
         # XXX
         self.deps = sort_graph(self.deps, self.edges)
-        if False:
-            print "Sorted deps:"
-            for d in self.deps:
-                print "\t%s" % (d,)
 
         jobs = {}
         # We enter a transaction so that no jobs can be started
