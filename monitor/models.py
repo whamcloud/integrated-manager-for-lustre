@@ -101,6 +101,9 @@ class Lun(models.Model):
     # The UUID from a filesystem on this Lun, available after formatting
     fs_uuid = models.CharField(max_length = 32, blank = True, null = True)
 
+    def __str__(self):
+        return "Lun:%s" % self.fs_uuid
+
 class LunNode(models.Model):
     lun = models.ForeignKey(Lun, blank = True, null = True)
     host = models.ForeignKey(Host)
@@ -109,7 +112,7 @@ class LunNode(models.Model):
     used_hint = models.BooleanField()
 
     def __str__(self):
-        return self.path
+        return "%s:%s" % (self.host, self.path)
 
 class Monitor(models.Model):
     __metaclass__ = DowncastMetaclass

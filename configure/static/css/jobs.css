@@ -1,0 +1,35 @@
+
+#jobs li {
+    list-style: none;
+}
+
+img.icon {
+}
+
+.job_complete {
+    background-image: url('../images/icon_tick.png');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 16px;
+}
+
+.job_tasked {
+    background-image: url('../images/ajax-loader.gif');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 16px;
+}
+
+.job_pending {
+    background-image: url('../images/icon_hourglass.png');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 16px;
+}
+
+.job_error {
+    background-image: url('../images/dialog-error.png');
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 16px;
+}
