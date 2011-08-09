@@ -190,10 +190,6 @@ class StateManager(object):
                 object_leaf_distances.append((o, leaf_distance(o)))
 
             object_leaf_distances.sort(lambda x,y: cmp(x[1], y[1]))
-            #for obj, ld in object_leaf_distances:
-                #print ld, obj
-                #for c in object_edges[obj]:
-                #    print "\t%s" % (c,)
             return [obj for obj, ld in object_leaf_distances]
 
         # XXX
@@ -205,10 +201,9 @@ class StateManager(object):
         self.deps = sort_graph(self.deps, self.edges)
 
         jobs = {}
-        # We enter a transaction so that no jobs can be started
-        # before we've finished wiring up dependencies
+        # Important: the Job must not land in the database until all
+        # its dependencies and locks are in.
         from django.db import transaction
-        # FIXME: what happens if we're already in a transaction from a view?
         @transaction.commit_on_success
         def instantiate_jobs():
             for d in self.deps:
@@ -218,14 +213,10 @@ class StateManager(object):
                 job.create_dependencies()
                 jobs[d] = job
 
-            #for e in self.edges:
-            #    parent_dep, child_dep = e
-            #    parent = jobs[parent_dep]
-            #    child = jobs[child_dep]
-            #    parent.dependencies.add(child)
-
         instantiate_jobs()
 
+        from django.db import transaction
+        transaction.commit()
         from configure.models import Job
         Job.run_next()
 

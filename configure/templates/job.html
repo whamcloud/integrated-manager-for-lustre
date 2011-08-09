@@ -16,14 +16,14 @@
     <li>Cancelled: {{job.cancelled}}</li>
 </ul>
 
-<h3>Wait for:</h3>
+<h3>Wait for {{job.wait_for_completions}}/{{job.wait_for_count}}:</h3>
 <ul>
     {% for dep in job.wait_for.all %}
     <li>{{dep}}</li>
     {% endfor %}
 </ul>
 
-<h3>Depend on:</h3>
+<h3>Depend on {{job.depend_on_completions}}/{{job.depend_on_count}}:</h3>
 <ul>
     {% for dep in job.depend_on.all %}
     <li>{{dep}}</li>

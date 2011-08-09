@@ -6,6 +6,12 @@ from polymorphic.models import DowncastMetaclass
 
 MAX_STATE_STRING = 32
 
+
+from logging import getLogger, FileHandler, StreamHandler, DEBUG
+getLogger('Job').setLevel(DEBUG)
+getLogger('Job').addHandler(FileHandler("Job.log"))
+getLogger('Job').addHandler(StreamHandler())
+
 class StatefulObject(models.Model):
     # Use of abstract base classes to avoid django bug #12002
     class Meta:
@@ -120,10 +126,6 @@ class StateWriteLock(StateLock):
 # All locks depend on the last pending job to write to a stateful object on which
 # they hold claim read or write lock.
 
-from logging import getLogger, FileHandler, DEBUG
-getLogger('Job').setLevel(DEBUG)
-getLogger('Job').addHandler(FileHandler("Job.log"))
-
 class Test(models.Model):
     i = models.IntegerField(default = 0)
 
@@ -144,8 +146,26 @@ class Job(models.Model):
 
     created_at = models.DateTimeField(auto_now_add = True)
 
+    wait_for_count = models.PositiveIntegerField(default = 0)
+    wait_for_completions = models.PositiveIntegerField(default = 0)
     wait_for = models.ManyToManyField('Job', symmetrical = False, related_name = 'wait_for_job')
+
+    depend_on_count = models.PositiveIntegerField(default = 0)
+    depend_on_completions = models.PositiveIntegerField(default = 0)
     depend_on = models.ManyToManyField('Job', symmetrical = False, related_name = 'depend_on_job')
+
+    def notify_wait_for_complete(self):
+        """Called by a wait_for job to notify that it is complete"""
+        from django.db.models import F
+        Job.objects.get_or_create(pk = self.id)
+        Job.objects.filter(pk = self.id).update(wait_for_completions = F('wait_for_completions')+1)
+   
+    def notify_depend_on_complete(self):
+        """Called by a depend_on job to notify that it is complete"""
+        from django.db.models import F
+        Job.objects.get_or_create(pk = self.id)
+        Job.objects.filter(pk = self.id).update(depend_on_completions = F('depend_on_completions')+1)
+   
 
     def create_dependencies(self):
         """Examine overlaps between self's statelocks and those of 
@@ -188,6 +208,10 @@ class Job(models.Model):
                     print "No prior write locks for read lock %s of job %s" % (rl, self)
                     pass
 
+        self.wait_for_count = self.wait_for.count()
+        self.depend_on_count = self.depend_on.count()
+        self.save()
+
     def create_locks(self):
         from configure.lib.job import StateChangeJob
         # Take read lock on everything from self.get_deps
@@ -208,55 +232,20 @@ class Job(models.Model):
             # Take a write lock on get_stateful_object if this is a StateChangeJob
             StateWriteLock.objects.create(job = self, locked_item = self.get_stateful_object(), begin_state = old_state, end_state = new_state)
 
-    def dependencies_complete(self):
-        from django.db.models import Q
-        return self.wait_for.filter(~Q(state = 'complete')).count() == 0 and self.depend_on.filter(~Q(state = 'complete')).count() == 0
+    @classmethod
+    def run_next(cls):
+        from django.db.models import F
+        runnable_jobs = Job.objects \
+            .filter(wait_for_completions = F('wait_for_count')) \
+            .filter(depend_on_completions = F('depend_on_count')) \
+            .filter(state = 'pending')
 
-    from django.db import transaction
-    @staticmethod
-    @transaction.commit_on_success
-    def run_next():
-        # TODO: take a job argument for when something's just completed, and limit
-        # search to pending jobs which wait_for or depend_on it.
-
-        # Choose the next Job to run
-        # TODO: respect paused flag (should it hold up the queue or 
-        # just prevent that one job from executing?)
-        pending_jobs = list(Job.objects.filter(state = 'pending').order_by('id'))
-        print "run_next: %d pending jobs" % len(pending_jobs)
-        job_log("run_next: %d pending jobs" % len(pending_jobs))
-
-        # TODO: don't run a job until all earlier jobs with a writelock on something it has
-        # a readlock on have run.
-    
-        # Scan down the jobs, and run until a lock is in conflict
-        for job in pending_jobs:
-            if not job.dependencies_complete():
-                print "job %d:'%s' blocked by deps" %  (job.id, job.description())
-                for d in job.depend_on.all():
-                    print "\tdepend_on: %d: %s %s %s" % (d.id, d.state, d.errored, d.description())
-                for d in job.wait_for.all():
-                    print "\twait_for: %d: %s %s %s" % (d.id, d.state, d.errored, d.description())
-                continue
-
-            print "job %d: clear to run" % job.id
-
-            try:
-                job.run()
-            except Exception, e:
-                print "Exception calling job.run(): '%s'" % e
-                import sys
-                import traceback
-                exc_info = sys.exc_info()
-                print '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-
-    def run_dependents(job):
-        dependent_ids = set([i['id'] for i in job.depend_on_job.all().values('id')])
-        dependent_ids |= set([i['id'] for i in job.wait_for_job.all().values('id')])
-        for d in dependent_ids:
-            dependent = Job.objects.get(pk = d)
-            if dependent.dependencies_complete():
-                dependent.downcast().run()
+        getLogger('Job').info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (runnable_jobs.count(), Job.objects.filter(state = 'pending').count(), Job.objects.filter(state = 'tasked').count()))
+        for job in runnable_jobs:
+            print "%d %d" % (job.wait_for_count, job.wait_for_completions)
+            print "%d %d" % (job.depend_on_count, job.depend_on_completions)
+            print job.state
+            job.run()
 
     def get_deps(self):
         return []
@@ -370,10 +359,16 @@ class Job(models.Model):
         self.state = 'complete'
         self.errored = errored
         self.save()
+
+        getLogger('Job').info("job %d complete, notifying dependents" % self.id)
+        for dependent in self.depend_on_job.all():
+            dependent.notify_depend_on_complete()
+        for dependent in self.wait_for_job.all():
+            dependent.notify_wait_for_complete()
+
         from django.db import transaction
         transaction.commit()
-
-        self.run_dependents()
+        Job.run_next()
 
     def description(self):
         raise NotImplementedError
