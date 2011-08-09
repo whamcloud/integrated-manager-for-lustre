@@ -1,13 +1,12 @@
-%define name hydra-agent
-%define version @VERSION@
-%define unmangled_version @VERSION@
-%define release 1
+%{!?name: %define name hydra-agent}
+%{?!version: %define version 0.0.1}
+%{?!release: %define release 1}
 
 Summary: The Whamcloud Lustre Monitoring and Adminisration Interface Agent
 Name: %{name}
 Version: %{version}
 Release: %{release}
-Source0: %{name}-%{unmangled_version}.tar.gz
+Source0: %{name}-%{version}.tar.gz
 Source1: hydra-server.conf
 Source2: hydra-worker-init.sh
 License: Proprietary
@@ -23,17 +22,20 @@ Requires: lmt-server-agent, python-simplejson
 This is the Whamcloud Monitoring and Adminstration Interface
 
 %prep
-%setup -n %{name}-%{unmangled_version}
+%setup -n %{name}-%{version}
 
 %build
-python setup.py build
+%{__python} setup.py build
 
 %install
-make install DESTDIR=$RPM_BUILD_ROOT
+rm -rf %{buildroot}
+%{__python} setup.py install --skip-build --root=%{buildroot}
 
 %clean
-rm -rf $RPM_BUILD_ROOT
+rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root)
-/root/*
+%{_bindir}/hydra-agent.py
+%{_bindir}/hydra-rmmod.py
+%{python_sitelib}/*
