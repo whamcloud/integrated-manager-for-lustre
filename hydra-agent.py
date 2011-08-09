@@ -37,8 +37,6 @@ class LocalLustreAudit:
             except:
                 pass
 
-
-
         device = device.strip()
         try:
             return self.device_lookup[os.path.realpath(device)]
@@ -76,8 +74,8 @@ class LocalLustreAudit:
             partitions[dev] = blocks
 
         uuids = {}
-        for line in os.popen('blkid').readlines():
-            match =  re.search("^([^:]+).*UUID=\"([^\"]+)\"", line)
+        for line in os.popen("blkid %s" % " ".join(all_devices)).readlines():
+            match = re.search("^(.+): .*UUID=\"([^\"]+)\"", line)
             if match:
                 dev, uuid = match.groups()
                 uuid = uuid.replace("-", "")
@@ -374,6 +372,13 @@ class LocalLustreAudit:
         """Parse /proc for running LNet NIDs, and return a 2-tuple of 
            (whether lnet is up, list of NID strings)"""
         lnet_nids = []
+
+        lnet_loaded = False
+        for module_line in open("/proc/modules").readlines():
+            if module_line.startswith("lnet "):
+                lnet_loaded = True
+                break
+
         lnet_up = os.path.exists("/proc/sys/lnet/stats")
         if lnet_up:
             lines = open("/proc/sys/lnet/nis").readlines()
@@ -383,7 +388,7 @@ class LocalLustreAudit:
                 if tokens[0] != "0@lo":
                     lnet_nids.append(tokens[0])
 
-        return lnet_up, lnet_nids
+        return lnet_loaded, lnet_up, lnet_nids
 
     def read_mounts(self):
         # NB we must use /proc/mounts instead of `mount` because `mount` sometimes
@@ -421,7 +426,7 @@ class LocalLustreAudit:
         mgs_targets = self.get_mgs_targets(local_targets)
         device_nodes = self.get_device_nodes()
         client_mounts = self.get_client_mounts()
-        lnet_up, lnet_nids = self.get_lnet_nids()
+        lnet_loaded, lnet_up, lnet_nids = self.get_lnet_nids()
 
         # Don't do this in general, it'll be slow with many targets
         #mgs_pings = get_mgs_pings(mgs_targets)
@@ -430,6 +435,7 @@ class LocalLustreAudit:
         return json.dumps({"local_targets": local_targets,
             "mgs_targets": mgs_targets,
             "mgs_pings": mgs_pings,
+            "lnet_loaded": lnet_loaded,
             "lnet_up": lnet_up,
             "lnet_nids": lnet_nids,
             "device_nodes": device_nodes,
