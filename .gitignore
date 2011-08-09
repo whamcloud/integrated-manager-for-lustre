@@ -1,0 +1,5 @@
+MANIFEST
+hydra-agent.spec
+setup.py
+dist/
+*.swp
