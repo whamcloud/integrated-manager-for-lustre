@@ -187,7 +187,8 @@ class NullStep(Step):
 
 class MountStep(Step):
     def _mount_command(self, target_mount):
-        return "mount -t lustre %s %s" % (target_mount.block_device.path, target_mount.mount_point)
+        return lustre.mount(device=target_mount.block_device.path,
+                            dir=target_mount.mount_point)
 
     def is_idempotent(self):
         return True
@@ -228,7 +229,7 @@ class StartLNetStep(Step):
     def run(self, kwargs):
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, "/usr/sbin/lctl network up")
+        code, out, err = debug_ssh(host, lustre.lnet_start())
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
@@ -242,13 +243,12 @@ class StopLNetStep(Step):
     def run(self, kwargs):
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, "/root/hydra-rmmod.py ptlrpc; /usr/sbin/lctl network down")
+        code, out, err = debug_ssh(host, lustre.lnet_stop())
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
             print StepCleanError
             raise StepCleanError()
-
 
 class LoadLNetStep(Step):
     def is_idempotent(self):
@@ -257,7 +257,7 @@ class LoadLNetStep(Step):
     def run(self, kwargs):
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, "/sbin/modprobe lnet")
+        code, out, err = debug_ssh(host, lustre.lnet_load())
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
@@ -271,7 +271,7 @@ class UnloadLNetStep(Step):
     def run(self, kwargs):
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, "/root/hydra-rmmod.py lnet")
+        code, out, err = debug_ssh(host, lustre.lnet_unload())
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
@@ -280,7 +280,7 @@ class UnloadLNetStep(Step):
 
 class UnmountStep(Step):
     def _unmount_command(self, target_mount):
-        return "umount -t lustre %s" % (target_mount.mount_point)
+        return lustre.unmount(dir=target_mount.mount_point)
 
     def is_idempotent(self):
         return True
