@@ -202,14 +202,6 @@ SYSLOG_PATH = '/var/log/messages'
 # In seconds
 AUDIT_PERIOD = 10
 
-try:
-    LOCAL_SETTINGS
-except NameError:
-    try:
-        from local_settings import *
-    except ImportError:
-        pass
-
 CELERY_QUEUES = {
         "default": {
             "exchange": "default",
@@ -242,3 +234,12 @@ CELERY_DEFAULT_ROUTING_KEY = "default"
 
 # This allows us to easily check whether a task has started running
 CELERY_TRACK_STARTED = True
+
+try:
+    LOCAL_SETTINGS
+except NameError:
+    try:
+        from local_settings import *
+    except ImportError:
+        pass
+
