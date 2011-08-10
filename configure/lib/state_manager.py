@@ -59,7 +59,7 @@ class StateManager(object):
         # If the object is subject to an incomplete StateChangeJob
         # then don't offer any other transitions.
         # TODO: extend this to include 'state locking' 
-        from configure.models import Job, StateReadLock, StateWriteLock
+        from configure.models import Job, StateLock
         from configure.lib.job import StateChangeJob
         from django.db.models import Q
 
@@ -67,19 +67,8 @@ class StateManager(object):
         # locked by an incomplete job.  We could alternatively advertise
         # which jobs would actually be legal to add by skipping this check and
         # using get_expected_state in place of .state below.
-        active_read_locks = StateReadLock.filter_by_locked_item(stateful_object).filter(~Q(job__state = 'complete')).count()
-        if active_read_locks > 0:
-            return []
-        active_write_locks = StateWriteLock.filter_by_locked_item(stateful_object).filter(~Q(job__state = 'complete')).count()
-        if active_write_locks > 0:
-            return []
-
-        locked_objects = set()
-        for job in Job.objects.filter(~Q(state = 'complete')):
-            if isinstance(job, StateChangeJob):
-                locked_objects.add(job.get_stateful_object())
-
-        if stateful_object in locked_objects:
+        active_locks = StateLock.filter_by_locked_item(stateful_object).filter(~Q(job__state = 'complete')).count()
+        if active_locks > 0:
             return []
 
         available_jobs = set()
@@ -219,6 +208,12 @@ class StateManager(object):
         transaction.commit()
         from configure.models import Job
         Job.run_next()
+
+        # FIXME RACE! 
+        # If a job completes around the time we insert a new job which 
+        # depends on the completing job, then we might add a job with a 
+        # dependency count of 1, but the completing job may not see
+        # our new job to increment the dependency count on it.
 
         return jobs[root_dep]
 

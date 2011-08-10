@@ -6,12 +6,6 @@ from polymorphic.models import DowncastMetaclass
 
 MAX_STATE_STRING = 32
 
-
-from logging import getLogger, FileHandler, StreamHandler, DEBUG
-getLogger('Job').setLevel(DEBUG)
-getLogger('Job').addHandler(FileHandler("Job.log"))
-getLogger('Job').addHandler(StreamHandler())
-
 class StatefulObject(models.Model):
     # Use of abstract base classes to avoid django bug #12002
     class Meta:
@@ -129,11 +123,6 @@ class StateWriteLock(StateLock):
 class Test(models.Model):
     i = models.IntegerField(default = 0)
 
-def job_log(string):
-    import os
-    string = "%s: %s" % (os.getpid(), string)
-    getLogger('Job').info(string)
-
 class Job(models.Model):
     __metaclass__ = DowncastMetaclass
 
@@ -189,7 +178,6 @@ class Job(models.Model):
                     # will have wait_for'd any before it.
                     read_barrier_id = prior_write_lock.job.id
                 except StateWriteLock.DoesNotExist:
-                    print "No prior write locks for write lock %s of job %s" % (wl, self)
                     read_barrier_id = 0
                     pass
 
@@ -205,7 +193,6 @@ class Job(models.Model):
                     assert(prior_write_lock.end_state == rl.locked_state)
                     self.depend_on.add(prior_write_lock.job)
                 except StateWriteLock.DoesNotExist:
-                    print "No prior write locks for read lock %s of job %s" % (rl, self)
                     pass
 
         self.wait_for_count = self.wait_for.count()
@@ -242,9 +229,6 @@ class Job(models.Model):
 
         getLogger('Job').info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (runnable_jobs.count(), Job.objects.filter(state = 'pending').count(), Job.objects.filter(state = 'tasked').count()))
         for job in runnable_jobs:
-            print "%d %d" % (job.wait_for_count, job.wait_for_completions)
-            print "%d %d" % (job.depend_on_count, job.depend_on_completions)
-            print job.state
             job.run()
 
     def get_deps(self):
@@ -254,6 +238,7 @@ class Job(models.Model):
         raise NotImplementedError()
 
     def run(self):
+        from configure.lib.job import job_log
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
@@ -261,12 +246,11 @@ class Job(models.Model):
 
         if updated == 0:
             # Someone else already started this job, bug out
-            print "updated == 0"
+            job_log.debug("job %d already started running, backing off" % self.id)
             return
         assert(updated == 1)
 
-        print "Job.run %s" % self
-        job_log("Job.run %d" % self.id)
+        job_log.info("Job.run %d" % self.id)
 
         # My wait_for are complete, and I don't care if they're errored, just
         # that they aren't running any more.
@@ -279,7 +263,7 @@ class Job(models.Model):
                 self.state = 'complete'
                 self.errored = True
                 self.save()
-                print "Cancelling job %s because depend_on %s is errored" % (self, dep)
+                job_log.warning("Cancelling job %s because depend_on %s is errored" % (self, dep))
                 return
 
         self.state = 'tasked'
@@ -288,42 +272,29 @@ class Job(models.Model):
         self.run_step(0)
 
     def run_step(self, idx):
-        print "run_step %d" % idx
-        i = 0
+        from configure.lib.job import job_log
+        job_log.debug("job %d: run_step %d" % (self.id, idx))
         steps = self.get_steps()
         if len(steps) == 0:
             raise RuntimeError("Jobs must have at least 1 step (%s)" % self)
 
-        for klass, args in steps:
-            # Create a Step and push it to the 'run_job_step' celery task
-            step = klass(self, args)
-            if i == len(steps) - 1:
-                step.mark_final()
-            step.index = i
-            from configure.lib.job import Step
-            assert isinstance(step, Step), ValueError("%s is not a Step" % step)
-            from configure.tasks import run_job_step
+        klass, args = steps[idx]
+        # Create a Step and push it to the 'run_job_step' celery task
+        step = klass(self, args)
+        if i == len(steps) - 1:
+            step.mark_final()
+        step.index = idx
+        from configure.lib.job import Step
+        assert isinstance(step, Step), ValueError("%s is not a Step" % step)
+        from configure.tasks import run_job_step
 
-            if i == idx:
-                print "submitted step %d:%s" % (i,step)
-                celery_job = run_job_step.delay(step)
+        celery_job = run_job_step.delay(step)
 
-                # FIXME: this is just for debug before we have retry:
-                # consistency check that we're not adding extra tasks
-                try:
-                    existing = self.stepattempt_set.get(step_index = i)
-                    raise RuntimeError("Trying to double submit step %d of job %d" % (i, self.id))
-                except:
-                    pass
-
-
-                # Record this attempt to run a step
-                self.stepattempt_set.create(
-                        task_id = celery_job.task_id,
-                        step_index = i)
-            else:
-                print "passing over step %d" % i
-            i = i + 1
+        # Record this attempt to run a step
+        step_attempt = self.stepattempt_set.create(
+                task_id = celery_job.task_id,
+                step_index = i)
+        job_log.debug("submitted job %d step %d stepattempt %d" % (self.id, idx, step_attempt.id))
 
     def pause(self):
         # In case of races, ignore someone trying to pause a 
@@ -493,7 +464,7 @@ class StartTargetMountJob(Job, StateChangeJob):
     target_mount = models.ForeignKey(ManagedTargetMount)
 
     def description(self):
-        return "Starting target %s" % self.target_mount.target
+        return "Starting target %s" % self.target_mount.target.downcast()
 
     def get_steps(self):
         from configure.lib.job import MountStep
@@ -506,7 +477,7 @@ class StopTargetMountJob(Job, StateChangeJob):
     target_mount = models.ForeignKey(ManagedTargetMount)
 
     def description(self):
-        return "Stopping target %s" % self.target_mount.target
+        return "Stopping target %s" % self.target_mount.target.downcast()
 
     def get_steps(self):
         from configure.lib.job import UnmountStep

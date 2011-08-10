@@ -215,13 +215,17 @@ CELERY_QUEUES = {
             "exchange": "default",
             "binding_key": "configure.jobs"
             },
+        "periodic": {
+            "exchange": "default",
+            "binding_key": "monitor.periodic"
+            },
 
         }
 
 CELERY_ROUTES = (
         {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
-        {"monitor.tasks.audit_all": {"queue": "ssh"}},
-        {"monitor.tasks.discover_hosts": {"queue": "ssh"}},
+        {"monitor.tasks.audit_all": {"queue": "periodic"}},
+        {"monitor.tasks.discover_hosts": {"queue": "periodic"}},
         {"configure.tasks.run_job_step": {"queue": "jobs"}},
         {"configure.tasks.periodic": {"queue": "jobs"}},
         {"configure.tasks.other": {"queue": "jobs"}},
@@ -232,8 +236,13 @@ CELERY_DEFAULT_EXCHANGE = "default"
 CELERY_DEFAULT_EXCHANGE_TYPE = "direct"
 CELERY_DEFAULT_ROUTING_KEY = "default"
 
-# This allows us to easily check whether a task has started running
-CELERY_TRACK_STARTED = True
+#CELERY_TRACK_STARTED = True
+CELERY_TRACK_STARTED = False
+
+# This is really important, it makes celery try a task again when a worker
+# crashes
+CELERY_ACKS_LATE = True
+
 
 try:
     LOCAL_SETTINGS

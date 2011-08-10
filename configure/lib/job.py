@@ -1,6 +1,17 @@
 
 from configure.models import Job
 
+from logging import getLogger, FileHandler, StreamHandler, DEBUG, INFO
+job_log = getLogger('Job')
+job_log.setLevel(DEBUG)
+job_log.addHandler(FileHandler("Job.log"))
+import settings
+if settings.DEBUG:
+    job_log.setLevel(DEBUG)
+    job_log.addHandler(StreamHandler())
+else:
+    job_log.setLevel(INFO)
+
 class StepPaused(Exception):
     """A step did not execute because the job is paused."""
     pass
@@ -43,7 +54,8 @@ class Step(object):
         return False
 
     def wrap_run(self):
-        print "Running %s" % self
+        job_log.info("wrap_run: %s" % self)
+
         job = Job.objects.get(id = self.job_id)
         if job.paused:
             raise StepPaused()
@@ -54,11 +66,11 @@ class Step(object):
         try:
             result = self.run(self.args)
         except Exception, e:
-            print "wrap_run caught error, marking job errored"
+            job_log.error("wrap_run caught error, marking job %d errored" % self.job_id)
             import sys
             import traceback
             exc_info = sys.exc_info()
-            print '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            job_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
             self.mark_job_errored(e)
             # Re-raise so that celery can record for us that this task failed
             raise e
@@ -77,12 +89,10 @@ class Step(object):
     def mark_job_errored(self, exception):
         from celery.task.control import revoke
 
-        print "Step %s failed: %s'%s'" % (self, exception.__class__, exception)
         job = Job.objects.get(id = self.job_id)
         job.mark_complete(errored = True)
 
     def mark_job_complete(self):
-        # TODO: if the job is a StateChangeJob then animate the state
         job = Job.objects.get(id = self.job_id).downcast()
         job.mark_complete()
 
@@ -138,10 +148,10 @@ def debug_ssh(host, command):
 
     getLogger('ssh').debug("%s: %s" % (host, command))
 
-    print "debug_ssh:%s:%s:%s" % (host, result_code, command)
+    job_log.debug("debug_ssh:%s:%s:%s" % (host, result_code, command))
     if result_code != 0:
-        print result_stdout
-        print result_stderr
+        job_log.error(result_stdout)
+        job_log.error(result_stderr)
     return result_code, result_stdout, result_stderr
 
 from monitor.models import *

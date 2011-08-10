@@ -99,7 +99,7 @@ class Lun(models.Model):
     # Support not yet implemented in lustre_audit
     #wwn = models.CharField(max_length = 16, blank = True, null = True)
     # The UUID from a filesystem on this Lun, available after formatting
-    fs_uuid = models.CharField(max_length = 32, blank = True, null = True)
+    fs_uuid = models.CharField(max_length = 32, blank = True, null = True, unique = True)
 
     def __str__(self):
         return "Lun:%s" % self.fs_uuid
@@ -470,6 +470,12 @@ class MetadataTarget(Target, FilesystemMember):
     # TODO: constraint to allow only one MetadataTarget per MGS.  The reason
     # we don't just use a OneToOneField is to use FilesystemMember to represent
     # MDTs and OSTs together in a convenient way
+    def __str__(self):
+        if not self.name:
+            return "Unregistered %s-MDT" % (self.filesystem.name)
+        else:
+            return self.name
+
     def role(self):
         return "MDT"
 
@@ -483,6 +489,12 @@ class ManagementTarget(Target):
 
     
 class ObjectStoreTarget(Target, FilesystemMember):
+    def __str__(self):
+        if not self.name:
+            return "Unregistered %s-OST" % (self.filesystem.name)
+        else:
+            return self.name
+
     def role(self):
         return "OST"
 
@@ -737,7 +749,13 @@ class Audit(models.Model):
     created_at = models.DateTimeField(auto_now_add = True)
     lnet_up = models.BooleanField(default = False)
     error = models.BooleanField(default = True)
-    complete = models.BooleanField()
+    started = models.BooleanField(default = False)
+    complete = models.BooleanField(default = False)
+    task_id = models.CharField(max_length=36)
+
+    def task_state(self):
+        from celery.result import AsyncResult
+        return AsyncResult(self.task_id).state
 
 class TargetParam(models.Model):
     target = models.ForeignKey(Target)

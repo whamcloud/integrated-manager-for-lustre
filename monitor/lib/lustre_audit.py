@@ -11,11 +11,14 @@ import sys
 import traceback
 import simplejson as json
 
-from logging import getLogger, FileHandler, StreamHandler, INFO
-getLogger(__name__).setLevel(INFO)
-getLogger(__name__).addHandler(FileHandler("%s.log" % __name__))
+from logging import getLogger, FileHandler, StreamHandler, DEBUG, WARNING
+audit_log = getLogger('audit')
+audit_log.addHandler(FileHandler("audit.log"))
 if settings.DEBUG:
-    getLogger(__name__).addHandler(StreamHandler())
+    audit_log.setLevel(DEBUG)
+    audit_log.addHandler(StreamHandler())
+else:
+    audit_log.setLevel(WARNING)
 
 def log():
     return getLogger(__name__)
@@ -150,13 +153,16 @@ class LustreAudit:
 
             try:
                 from configure.lib.state_manager import StateManager
+                from configure.models import StatefulObject
             except ImportError:
                 StateManager = None
-            if StateManager:
-                state = {(False, False): 'lnet_unloaded',
-                        (True, False): 'lnet_down',
-                        (True, True): 'lnet_up'}[(host_data['lnet_loaded'], host_data['lnet_up'])]
-                StateManager.notify_state(self.host.downcast(), state, ['lnet_unloaded', 'lnet_down', 'lnet_up'])
+            if StateManager :
+                host = self.host.downcast()
+                if isinstance(host, StatefulObject):
+                    state = {(False, False): 'lnet_unloaded',
+                            (True, False): 'lnet_down',
+                            (True, True): 'lnet_up'}[(host_data['lnet_loaded'], host_data['lnet_up'])]
+                    StateManager.notify_state(self.host.downcast(), state, ['lnet_unloaded', 'lnet_down', 'lnet_up'])
             LNetOfflineAlert.notify(self.host, not host_data['lnet_up'])
             contact = True
 
@@ -230,6 +236,8 @@ class LustreAudit:
                         existing_node.lun.fs_uuid = node_info['fs_uuid']
                         existing_node.save()
                     elif not existing_node.lun:
+                        # FIXME: http://stackoverflow.com/questions/2235318/how-do-i-deal-with-this-race-condition-in-django
+                        # We can detect the same Lun UUID concurrently from two hosts
                         lun, created = Lun.objects.get_or_create(fs_uuid = node_info['fs_uuid'])
                         existing_node.lun = lun
                         existing_node.save()
