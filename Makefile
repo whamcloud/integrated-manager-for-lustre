@@ -1,4 +1,5 @@
 VERSION = $(shell python -c 'from hydra_agent import __version__; print __version__')
+RELEASE ?= $(shell date +%Y%m%d%H%M%S)
 
 all: rpms
 
@@ -19,6 +20,7 @@ rpms: production cleandist tarball
 	cp hydra-agent.spec _topdir/SPECS
 	rpmbuild --define "_topdir $$(pwd)/_topdir" \
 		--define "version $(VERSION)" \
+		--define "release $(RELEASE)" \
 		-bb _topdir/SPECS/hydra-agent.spec
 	mv _topdir/RPMS/noarch/hydra-agent-*.noarch.rpm dist/
 	rm -rf _topdir
