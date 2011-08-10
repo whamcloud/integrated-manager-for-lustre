@@ -57,12 +57,13 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
             if len(arg) > 0:
                 options += "--%s=%s " % (name, ",".join(arg))
                 
+    # so i guess the ternary operator is evil, or something?
     flag_options = {
-        'dryrun': '--dryrun' if dryrun else '',
-        'reformat': '--reformat' if reformat else '',
-        'iam_dir': '--iam-dir' if iam_dir else '',
-        'verbose': '--iam-dir' if verbose else '',
-        'quiet': '--iam-dir' if quiet else '',
+        'dryrun': (dryrun and ['--dryrun'] or [''])[0],
+        'reformat': (reformat and ['--reformat'] or  [''])[0],
+        'iam_dir': (iam_dir and ['--iam-dir'] or [''])[0],
+        'verbose': (verbose and ['--verbose'] or [''])[0],
+        'quiet': (quiet and ['--quiet'] or [''])[0],
     }
     for option in flag_options.values():
         options += "%s " % option
