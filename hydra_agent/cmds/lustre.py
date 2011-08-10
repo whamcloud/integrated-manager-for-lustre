@@ -39,6 +39,7 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
          reformat=False, stripe_count_hint="", iam_dir=False,
          dryrun=False, verbose=False, quiet=False):
 
+    # freeze a view of the namespace before we start messing with it
     args = locals()
     types = ""
     options = ""
@@ -57,16 +58,16 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
             if len(arg) > 0:
                 options += "--%s=%s " % (name, ",".join(arg))
                 
-    # so i guess the ternary operator is evil, or something?
     flag_options = {
-        'dryrun': (dryrun and ['--dryrun'] or [''])[0],
-        'reformat': (reformat and ['--reformat'] or  [''])[0],
-        'iam_dir': (iam_dir and ['--iam-dir'] or [''])[0],
-        'verbose': (verbose and ['--verbose'] or [''])[0],
-        'quiet': (quiet and ['--quiet'] or [''])[0],
+        'dryrun': '--dryrun',
+        'reformat': '--reformat',
+        'iam_dir': '--iam-dir',
+        'verbose': '--verbose',
+        'quiet': '--quiet',
     }
-    for option in flag_options.values():
-        options += "%s " % option
+    for arg in flag_options:
+        if args[arg]:
+            options += "%s " % flag_options[arg]
 
     dict_options = "param".split()
     for name in dict_options:
