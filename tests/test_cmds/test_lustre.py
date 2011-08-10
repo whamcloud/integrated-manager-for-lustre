@@ -1,6 +1,50 @@
 from hydra_agent.cmds import lustre
 import unittest
 
+class TestLustreTunefsCommand(unittest.TestCase):
+    def test_mdt_tunefs(self):
+        cmd = lustre.tunefs(device='/dev/foo',
+                            target_types=['mdt'])
+        assert cmd == "tunefs.lustre --mdt /dev/foo"
+
+    def test_mgs_tunefs(self):
+        cmd = lustre.tunefs(device='/dev/foo',
+                            target_types=['mgs'])
+        assert cmd == "tunefs.lustre --mgs /dev/foo"
+
+    def test_ost_tunefs(self):
+        cmd = lustre.tunefs(device='/dev/foo',
+                            target_types=['ost'])
+        assert cmd == "tunefs.lustre --ost /dev/foo"
+
+    # this test does double-duty in testing tuple opts and also
+    # the multiple target_types special case
+    def test_tuple_opts(self):
+        cmd = lustre.tunefs(device='/dev/foo',
+                            target_types=['mgs', 'mdt'])
+        assert cmd == "tunefs.lustre --mgs --mdt /dev/foo"
+
+    def test_dict_opts(self):
+        cmd = lustre.tunefs(param={'foo': 'bar', 'baz': 'qux thud'})
+        assert cmd == 'tunefs.lustre --param foo=bar --param baz="qux thud"'
+
+    def test_flag_opts(self):
+        cmd = lustre.tunefs(dryrun=True)
+        assert cmd == "tunefs.lustre --dryrun"
+
+    def test_other_opts(self):
+        cmd = lustre.tunefs(index='42',
+                            mountfsoptions='-x 30 --y --z=83')
+        assert cmd == 'tunefs.lustre --index=42 --mountfsoptions="-x 30 --y --z=83"'
+
+    def test_unknown_opt(self):
+        try:
+            cmd = lustre.tunefs(unknown='whatever')
+        except TypeError:
+            pass
+        else:
+            fail("Expected TypeError")
+
 class TestLustreMkfsCommand(unittest.TestCase):
     def test_mdt_mkfs(self):
         cmd = lustre.mkfs(device='/dev/foo',
