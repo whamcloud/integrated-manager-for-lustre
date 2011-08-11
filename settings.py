@@ -125,8 +125,14 @@ TEMPLATE_DIRS = (
 
 import djcelery
 djcelery.setup_loader()
-BROKER_BACKEND = "djkombu.transport.DatabaseTransport"
 
+BROKER_HOST = "localhost"
+BROKER_PORT = 5672
+BROKER_USER = "hydra"
+BROKER_PASSWORD = "hydra123"
+BROKER_VHOST = "hydravhost"
+CELERY_RESULT_BACKEND = "database"
+CELERY_RESULT_DBURI = "mysql://root:@localhost/hydra"
 
 INSTALLED_APPS = (
     'django.contrib.auth',
@@ -138,7 +144,6 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.admindocs',
     'djcelery',
-    'djkombu',
     'pagination',
     'monitor',
     'configure'
@@ -202,45 +207,24 @@ SYSLOG_PATH = '/var/log/messages'
 # In seconds
 AUDIT_PERIOD = 10
 
-CELERY_QUEUES = {
-        "default": {
-            "exchange": "default",
-            "binding_key": "default"
-        },
-        "ssh": {
-            "exchange": "default",
-            "binding_key": "monitor.ssh"
-            },
-        "jobs": {
-            "exchange": "default",
-            "binding_key": "configure.jobs"
-            },
-        "periodic": {
-            "exchange": "default",
-            "binding_key": "monitor.periodic"
-            },
-
-        }
-
 CELERY_ROUTES = (
         {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
         {"monitor.tasks.audit_all": {"queue": "periodic"}},
         {"monitor.tasks.discover_hosts": {"queue": "periodic"}},
-        {"configure.tasks.run_job_step": {"queue": "jobs"}},
+        {"configure.tasks.run_job": {"queue": "jobs"}},
         {"configure.tasks.periodic": {"queue": "jobs"}},
         {"configure.tasks.other": {"queue": "jobs"}},
         )
 
-CELERY_DEFAULT_QUEUE = "default"
-CELERY_DEFAULT_EXCHANGE = "default"
-CELERY_DEFAULT_EXCHANGE_TYPE = "direct"
-CELERY_DEFAULT_ROUTING_KEY = "default"
+#CELERY_DEFAULT_QUEUE = "default"
+#CELERY_DEFAULT_EXCHANGE = "default"
+#CELERY_DEFAULT_EXCHANGE_TYPE = "direct"
+#CELERY_DEFAULT_ROUTING_KEY = "default"
 
-#CELERY_TRACK_STARTED = True
-CELERY_TRACK_STARTED = False
+CELERY_TRACK_STARTED = True
 
 # This is really important, it makes celery try a task again when a worker
-# crashes
+# crashes (only works with proper AMQP backend like RabbitMQ, not DJKombu)
 CELERY_ACKS_LATE = True
 
 

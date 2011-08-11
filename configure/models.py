@@ -143,6 +143,16 @@ class Job(models.Model):
     depend_on_completions = models.PositiveIntegerField(default = 0)
     depend_on = models.ManyToManyField('Job', symmetrical = False, related_name = 'depend_on_job')
 
+    task_id = models.CharField(max_length=36, blank = True, null = True)
+    def task_state(self):
+        from celery.result import AsyncResult
+        return AsyncResult(self.task_id).state
+
+    # Set to a step index before that step starts running
+    started_step = models.PositiveIntegerField(default = None, blank = True, null = True)
+    # Set to a step index when that step has finished and its result is committed
+    finished_step = models.PositiveIntegerField(default = None, blank = True, null = True)
+
     def notify_wait_for_complete(self):
         """Called by a wait_for job to notify that it is complete"""
         from django.db.models import F
@@ -154,7 +164,6 @@ class Job(models.Model):
         from django.db.models import F
         Job.objects.get_or_create(pk = self.id)
         Job.objects.filter(pk = self.id).update(depend_on_completions = F('depend_on_completions')+1)
-   
 
     def create_dependencies(self):
         """Examine overlaps between self's statelocks and those of 
@@ -183,7 +192,7 @@ class Job(models.Model):
 
                 # Wait for any reads of the stateful object between the last write and
                 # our position.
-                prior_read_locks = StateWriteLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).filter(job__id__gte = read_barrier_id)
+                prior_read_locks = StateReadLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).filter(job__id__gte = read_barrier_id)
                 for i in prior_read_locks:
                     self.wait_for.add(i.job)
             elif isinstance(lock, StateReadLock):
@@ -211,23 +220,32 @@ class Job(models.Model):
             target_klass, old_state, new_state = self.state_transition
 
             # Take read lock on everything from get_stateful_object's get_deps if 
-            # this is a StateChangeJob
-            for d in stateful_object.get_deps(new_state):
+            # this is a StateChangeJob.  We do things depended on by both the old
+            # and the new state: e.g. if we are taking a mount from unmounted->mounted
+            # then we need to lock the new state's requirement of lnet_up, whereas
+            # if we're going from mounted->unmounted we need to lock the old state's 
+            # requirement of lnet_up (to prevent someone stopping lnet while 
+            # we're still running)
+            from itertools import chain
+            for d in chain(stateful_object.get_deps(old_state), stateful_object.get_deps(new_state)):
                 depended_on, depended_state, fix_state = d
-                StateReadLock.objects.create(job = self, locked_item = depended_on, locked_state = depended_state)
+                StateReadLock.objects.create(job = self,
+                        locked_item = depended_on,
+                        locked_state = depended_state)
 
             # Take a write lock on get_stateful_object if this is a StateChangeJob
             StateWriteLock.objects.create(job = self, locked_item = self.get_stateful_object(), begin_state = old_state, end_state = new_state)
 
     @classmethod
     def run_next(cls):
+        from configure.lib.job import job_log
         from django.db.models import F
         runnable_jobs = Job.objects \
             .filter(wait_for_completions = F('wait_for_count')) \
             .filter(depend_on_completions = F('depend_on_count')) \
             .filter(state = 'pending')
 
-        getLogger('Job').info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (runnable_jobs.count(), Job.objects.filter(state = 'pending').count(), Job.objects.filter(state = 'tasked').count()))
+        job_log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (runnable_jobs.count(), Job.objects.filter(state = 'pending').count(), Job.objects.filter(state = 'tasked').count()))
         for job in runnable_jobs:
             job.run()
 
@@ -260,16 +278,19 @@ class Job(models.Model):
         for dep in self.depend_on.all():
             assert(dep.state == 'complete')
             if dep.errored:
-                self.state = 'complete'
-                self.errored = True
-                self.save()
+                self.mark_complete(errored = True)
                 job_log.warning("Cancelling job %s because depend_on %s is errored" % (self, dep))
                 return
 
         self.state = 'tasked'
         self.save()
 
-        self.run_step(0)
+        from configure.tasks import run_job
+        celery_job = run_job.delay(self.id)
+
+        self.task_id = celery_job.task_id
+        self.save()
+
 
     def run_step(self, idx):
         from configure.lib.job import job_log
@@ -281,57 +302,67 @@ class Job(models.Model):
         klass, args = steps[idx]
         # Create a Step and push it to the 'run_job_step' celery task
         step = klass(self, args)
-        if i == len(steps) - 1:
+        if idx == len(steps) - 1:
             step.mark_final()
         step.index = idx
         from configure.lib.job import Step
         assert isinstance(step, Step), ValueError("%s is not a Step" % step)
-        from configure.tasks import run_job_step
+        from django.db import transaction
+        # Transaction to ensure a commmit between creating step attempt
+        # and submitting celery job
+        @transaction.commit_on_success()
+        def create_stepattempt():
+            # Record this attempt to run a step
+            return self.stepattempt_set.create(
+                    task_id = None,
+                    step_index = idx)
+        
+        step_attempt = create_stepattempt()
 
-        celery_job = run_job_step.delay(step)
 
-        # Record this attempt to run a step
-        step_attempt = self.stepattempt_set.create(
-                task_id = celery_job.task_id,
-                step_index = i)
+        step_attempt.task_id = celery_job.task_id
+        step_attempt.save()
         job_log.debug("submitted job %d step %d stepattempt %d" % (self.id, idx, step_attempt.id))
 
     def pause(self):
-        # In case of races, ignore someone trying to pause a 
-        # task which has completed
         if self.state == 'complete':
             return
-       
-        assert(self.state == 'tasked')
-        #self.paused = True
-        # TODO: kill the currently active task if it's idempotent (we'll run 
-        # it again when we resume) or let it finish if not.
+
+        assert(self.state == 'pending' or self.state == 'tasked')
+        # TODO
 
     def retry(self):
         """Start running the job from the last step that did not complete
            successfully (i.e. try running the last failed step again"""
-        assert(self.state == 'complete')
+        assert(self.state == 'complete' and self.errored)
         # TODO
 
     def restart(self):
         """Start running the job from square 1, even if some steps had
            already completed"""
-        assert(self.state == 'complete')
+        assert(self.state == 'complete' and self.errored)
         # TODO
 
+    @classmethod
+    def cancel_job(cls, job_id):
+        job = Job.objects.get(pk = job_id)
+        if job.state != 'tasked':
+            return None
+
     def mark_complete(self, errored = False):
+        from configure.lib.job import job_log
         if not errored and isinstance(self, StateChangeJob):
             new_state = self.state_transition[2]
             obj = self.get_stateful_object()
             obj.state = new_state
-            print "StateChangeJob complete, setting state %s on %s" % (new_state, obj)
+            job_log.info("StateChangeJob complete, setting state %s on %s" % (new_state, obj))
             obj.save()
 
         self.state = 'complete'
         self.errored = errored
         self.save()
 
-        getLogger('Job').info("job %d complete, notifying dependents" % self.id)
+        job_log.info("job %d complete, notifying dependents" % self.id)
         for dependent in self.depend_on_job.all():
             dependent.notify_depend_on_complete()
         for dependent in self.wait_for_job.all():
@@ -350,23 +381,6 @@ class Job(models.Model):
         except NotImplementedError:
             return "<Job %d>" % self.id
 
-class StepAttempt(models.Model):
-    job = models.ForeignKey(Job)
-    step_index = models.PositiveIntegerField()
-    # djcelery.models.TaskState stores task_id as UUID
-    task_id = models.CharField(max_length=36)
-    created_at = models.DateTimeField(auto_now_add = True)
-
-    def debug_step(self):
-        return self.job.downcast().get_steps()[self.step_index]
-    
-    def info(self):
-        from celery.result import AsyncResult
-        return AsyncResult(self.task_id).info
-
-    def state(self):
-        from celery.result import AsyncResult
-        return AsyncResult(self.task_id).state
 
 from configure.lib.job import StateChangeJob
 
@@ -428,8 +442,6 @@ class RegisterTargetJob(Job, StateChangeJob):
         if isinstance(target, monitor_models.FilesystemMember):
             steps.append((MountStep, {"target_mount_id": target.targetmount_set.get(primary = True).id}))
             steps.append((UnmountStep, {"target_mount_id": target.targetmount_set.get(primary = True).id}))
-
-        print "register steps=%s" % steps
 
         return steps
 

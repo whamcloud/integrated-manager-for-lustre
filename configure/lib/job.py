@@ -2,13 +2,13 @@
 from configure.models import Job
 
 from logging import getLogger, FileHandler, StreamHandler, DEBUG, INFO
-job_log = getLogger('Job')
+job_log = getLogger('job')
 job_log.setLevel(DEBUG)
-job_log.addHandler(FileHandler("Job.log"))
+job_log.addHandler(FileHandler("job.log"))
 import settings
 if settings.DEBUG:
     job_log.setLevel(DEBUG)
-    job_log.addHandler(StreamHandler())
+    #job_log.addHandler(StreamHandler())
 else:
     job_log.setLevel(INFO)
 
@@ -18,6 +18,12 @@ class StepPaused(Exception):
 
 class StepAborted(Exception):
     """A step did not execute because the job has errored."""
+    pass
+
+class StepFailed(Exception):
+    """A step executed and returned an exception.  The job has been marked as errored."""
+    def __init__(self, step_exception):
+        self.step_exception = step_exception
     pass
 
 class StepCleanError(Exception):
@@ -33,6 +39,7 @@ class StepDirtyError(Exception):
        through a mkfs operation: we don't know if the filesystem is formatted
        or not"""
     pass
+
 
 STEP_PAUSE_DELAY = 10
 
@@ -52,49 +59,6 @@ class Step(object):
            a target.  Step subclasses which are idempotent should override this and
            return True."""
         return False
-
-    def wrap_run(self):
-        job_log.info("wrap_run: %s" % self)
-
-        job = Job.objects.get(id = self.job_id)
-        if job.paused:
-            raise StepPaused()
-        
-        if job.errored:
-            raise StepAborted()
-
-        try:
-            result = self.run(self.args)
-        except Exception, e:
-            job_log.error("wrap_run caught error, marking job %d errored" % self.job_id)
-            import sys
-            import traceback
-            exc_info = sys.exc_info()
-            job_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
-            self.mark_job_errored(e)
-            # Re-raise so that celery can record for us that this task failed
-            raise e
-
-        if self.final:
-            self.mark_job_complete()
-        else:
-            job = Job.objects.get(id = self.job_id)
-            # FIXME: this is probably really dangerous, what happens if we 'run_step' out 
-            # successor and then get our power cord pulled, we're not yet complete and 
-            # could run again?
-            job.downcast().run_step(self.index + 1)
-
-        return result
-
-    def mark_job_errored(self, exception):
-        from celery.task.control import revoke
-
-        job = Job.objects.get(id = self.job_id)
-        job.mark_complete(errored = True)
-
-    def mark_job_complete(self):
-        job = Job.objects.get(id = self.job_id).downcast()
-        job.mark_complete()
 
     def run(self):
         raise NotImplementedError

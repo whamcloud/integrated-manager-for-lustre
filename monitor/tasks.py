@@ -5,9 +5,10 @@ from datetime import timedelta, datetime
 from monitor.lib.lustre_audit import audit_log
 
 @task()
-def monitor_exec(monitor, audit_id):
+def monitor_exec(monitor_id, audit_id):
     audit_log.debug("monitor_exec: audit %d" % audit_id)
-    from monitor.models import Audit
+    from monitor.models import Audit, Monitor
+
 
     from django.db import transaction
     # Transaction to ensure that 'started' flag is committed before proceeding
@@ -26,7 +27,9 @@ def monitor_exec(monitor, audit_id):
     else:
         mark_begin(audit)
 
+    monitor = Monitor.objects.get(pk = monitor_id)
     raw_data = monitor.downcast().invoke()
+
     success = False
     try:
         from monitor.lib.lustre_audit import LustreAudit
@@ -48,7 +51,7 @@ def audit_monitor(monitor):
         audit_log.debug("audit_all: host %s audit (%d) still in progress" % (monitor.host, audit.id))
     else:
         from monitor.models import Audit
-        async_result = monitor_exec.delay(monitor, audit.id)
+        async_result = monitor_exec.delay(monitor.id, audit.id)
         audit.task_id = async_result.task_id
         audit.save()
 

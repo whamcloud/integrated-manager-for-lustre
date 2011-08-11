@@ -124,11 +124,11 @@ class StateManager(object):
                 instance.save()
 
     def set_state(self, instance, new_state):
+        # TODO: make this a SERIALIZABLE transaction
+
         """Return a Job or None if the object is already in new_state"""
         from configure.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
-        if new_state == instance.state:
-            return None
 
         # Work out the eventual states (and which writelock'ing job to depend on to 
         # ensure that state) from all non-'complete' jobs in the queue
@@ -143,6 +143,7 @@ class StateManager(object):
 
         if new_state == self.get_expected_state(instance):
             return None
+
 
         self.deps = set()
         self.edges = set()
@@ -305,7 +306,7 @@ class StateManager(object):
         # What was depending on our old state?
         for klass in self.stateful_object_classes:
             for instance in klass.objects.all():
-                # FIXME: this is a bit broken, this 'expected state' is at the start
+                # FIXME: this is a bit wrong, this 'expected state' is at the start
                 # of all jobs in this set_state call, but we should be querying 
                 # the expected state right before this particular root_dep
                 instance_state = self.get_expected_state(instance)

@@ -108,13 +108,17 @@ class LustreAudit:
         if set(nid_strings) == set(["0@lo"]) or len(nid_strings) == 0:
             return ManagementTarget.objects.get(targetmount__host = self.host)
 
-        nids = Nid.objects.filter(nid_string__in = nid_strings)
-        # Limit selecting nids to unique ones
-        nids = [n for n in nids if Nid.objects.filter(nid_string = n.nid_string).count() == 1]
-        hosts = Host.objects.filter(nid__in = nids)
+        from django.db.models import Count
+        nids = Nid.objects.values('nid_string').filter(nid_string__in = nid_strings).annotate(Count('id'))
+        unique_nids = [n['nid_string'] for n in nids if n['id__count'] == 1]
+
+        if len(unique_nids) == 0:
+            audit_log.warning("nids_to_mgs: No unique NIDs among %s!" % nids)
+        hosts = list(Host.objects.filter(nid__nid_string__in = unique_nids).distinct())
         try:
-            mgs = ManagementTarget.objects.get(targetmount__host__in = hosts)
+            mgs = ManagementTarget.objects.distinct().get(targetmount__host__in = hosts)
         except ManagementTarget.MultipleObjectsReturned:
+            audit_log.error("Unhandled case: two MGSs have mounts on host(s) %s for nids %s" % (hosts, unique_nids))
             # TODO: detect and report the pathological case where someone has given
             # us two NIDs that refer to different hosts which both have a 
             # targetmount for a ManagementTarget, but they're not the
