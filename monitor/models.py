@@ -75,7 +75,7 @@ class Monitor(models.Model):
         raise NotImplementedError
 
 class SshMonitor(Monitor):
-    DEFAULT_AGENT_PATH = '/root/hydra-agent.py'
+    DEFAULT_AGENT_PATH = '/usr/bin/hydra-agent.py'
     DEFAULT_USERNAME = 'root'
 
     # Substituted with DEFAULT_USERNAME in get_username if None
