@@ -20,9 +20,6 @@ if settings.DEBUG:
 else:
     audit_log.setLevel(WARNING)
 
-def log():
-    return getLogger(__name__)
-
 class HostAuditError(Exception):
     def __init__(self, host, *args, **kwargs):
         self.host = host
@@ -70,7 +67,7 @@ class LustreAudit:
                 host, created = Host.objects.get_or_create(address = host_name)
 
             if created:
-                log().info("Discovered host %s from cerebro" % host_name)
+                audit_log.info("Discovered host %s from cerebro" % host_name)
                 from logging import INFO
                 LearnEvent(severity = INFO, host = host, learned_item = host).save()
 
@@ -81,7 +78,7 @@ class LustreAudit:
                 sm.save()
 
     def is_primary(self, local_target_info):
-        local_nids = [n.nid_string for n in self.host.nid_set.all()]
+        local_nids = set([n.nid_string for n in self.host.nid_set.all()])
 
         if not local_target_info['params'].has_key('failover.node'):
              # If the target has no failover nodes, then it is accessed by only 
@@ -90,11 +87,12 @@ class LustreAudit:
         elif len(local_nids) > 0:
              # We know this hosts's nids, and which nids are secondaries for this target,
              # so we can work out whether we're primary by a process of elimination
-             secondary_nids = set(normalize_nids(local_target_info['params']['failover.node']))
-             primary = True
-             for nid in local_nids:
-                 if nid in secondary_nids:
-                     primary = False
+             failover_nids = []
+             for failover_str in local_target_info['params']['failover.node']:
+                 failover_nids.extend(failover_str.split(","))
+             failover_nids = set(normalize_nids(failover_nids))
+
+             primary = not (local_nids & failover_nids)
         else:
              # If we got no local NID info, and the target has some failnode info, then
              # error out because we can't figure out whether we're primary.
@@ -146,10 +144,10 @@ class LustreAudit:
         self.host_data = host_data
 
         if isinstance(host_data, Exception):
-            log().error("exception contacting %s: %s" % (self.host, host_data))
+            audit_log.error("exception contacting %s: %s" % (self.host, host_data))
             contact = False
         elif not self.is_valid():
-            log().error("invalid output from %s: %s" % (self.host, host_data))
+            audit_log.error("invalid output from %s: %s" % (self.host, host_data))
             contact = False
         else:
             self.audit.lnet_up = host_data['lnet_up']
@@ -160,7 +158,7 @@ class LustreAudit:
                 from configure.models import StatefulObject
             except ImportError:
                 StateManager = None
-            if StateManager :
+            if StateManager:
                 host = self.host.downcast()
                 if isinstance(host, StatefulObject):
                     state = {(False, False): 'lnet_unloaded',
@@ -209,7 +207,7 @@ class LustreAudit:
                             mountable = mountable, mounted = False)
                     audit_mountable.save()
 
-                if StateManager:
+                if StateManager and isinstance(mountable, StatefulObject):
                     # FIXME: potentially get confused with a removed 
                     # targetmount, need to only do this update if the
                     # targetmount is not in a 'deleted' state.
@@ -235,23 +233,27 @@ class LustreAudit:
         for node_info in self.host_data['device_nodes']:
             try:
                 existing_node = LunNode.objects.get(path = node_info['path'], host = self.host)
+                if existing_node.used_hint != node_info['used']:
+                    existing_node.used_hint = node_info['used']
+                    existing_node.save()
+
                 if len(node_info['fs_uuid']) > 0:
                     if existing_node.lun and existing_node.lun.fs_uuid != node_info['fs_uuid']:
                         existing_node.lun.fs_uuid = node_info['fs_uuid']
                         existing_node.save()
                     elif not existing_node.lun:
                         # FIXME: http://stackoverflow.com/questions/2235318/how-do-i-deal-with-this-race-condition-in-django
-                        # We can detect the same Lun UUID concurrently from two hosts
+                        # We may erroneously try to create the same Lun UUID concurrently from two hosts
                         lun, created = Lun.objects.get_or_create(fs_uuid = node_info['fs_uuid'])
                         existing_node.lun = lun
                         existing_node.save()
-                        log().info("Associated lun %s with node %s" % (lun, existing_node))
+                        audit_log.info("Associated lun %s with node %s" % (lun, existing_node))
 
             except LunNode.DoesNotExist:
                 if len(node_info['fs_uuid']) > 0:
                     lun, created = Lun.objects.get_or_create(fs_uuid = node_info['fs_uuid'])
                     if created:
-                        log().info("Discovered Lun %s" % (lun))
+                        audit_log.info("Discovered Lun %s" % (lun))
                 else:
                     # Create LunNodes with no Lun when there is no unique ID for the Lun available
                     lun = None
@@ -261,7 +263,7 @@ class LustreAudit:
                         path = node_info['path'],
                         used_hint = node_info['used'])
                 node.save()
-                log().info("Discovered node %s (lun %s)" % (node, lun))
+                audit_log.info("Discovered node %s (lun %s)" % (node, lun))
 
         for tm in TargetMount.objects.filter(host = self.host, primary = False, block_device = None):
             lun = tm.target.targetmount_set.get(primary = True).block_device.lun
@@ -271,63 +273,59 @@ class LustreAudit:
                 node = LunNode.objects.get(lun = lun, host = self.host)
                 tm.block_device = node
                 tm.save()
-                log().info("Associated failover target mount %s:%s with node %s" % (tm.host, tm, node))
+                audit_log.info("Associated failover target mount %s:%s with node %s" % (tm.host, tm, node))
             except LunNode.DoesNotExist:
                 pass
 
+    # This is in a transaction to ensure that we never create a ManagementTarget object
+    # without at least one TargetMount object (without the TargetMount object we can't
+    # recognise the MGS as the same one next time, and we would create dupes)
+    from django.db import transaction
+    @transaction.commit_on_success
     def learn_mgs(self, mgs_local_info):
         try:
             mgs = ManagementTarget.objects.get(targetmount__host = self.host)
         except ManagementTarget.DoesNotExist:
-            # FIXME: when there is no LNet info for self.host, we cannot be 
-            # sure if this is a new MGS or a failover for an existing one
-            existing_mgs = None
-            for mgs in ManagementTarget.objects.all():
-                if mgs_local_info['params'].has_key('failover.node'):
-                    failovers = set(normalize_nids(mgs.get_param('failover.node')))
-                    local_nids = set(normalize_nids([n.nid_string for n in self.host.nid_set.all()]))
-                    if local_nids & failovers:
-                        existing_mgs = mgs
-                        break
+            try:
+                lunnode = LunNode.objects.get(path = mgs_local_info['device'], host = self.host)
+            except LunNode.DoesNotExist:
+                audit_log.warning("No LunNode for MGS device path '%s'" % mgs_local_info['device'])
+                return None
 
-            if not existing_mgs:
-                mgs = ManagementTarget(name = "MGS")
-                mgs.save()
-                log().info("Learned MGS on %s" % self.host)
-                self.learn_event(mgs)
-            else:
-                mgs = existing_mgs
+            if not lunnode.lun:
+                # In this case we cannot be sure of correctly correlating this device
+                # with any existing ManagementTarget object, so have to fail out.
+                # But it should never happen if learn_device_nodes is succeeding.
+                audit_log.error("A LunNode with an MGS on it does not have a Lun set (lunnode %d, %s on %s)" % (lunnode.id, lunnode.path, lunnode.host))
+                return None
 
             try:
                 primary = self.is_primary(mgs_local_info)
-                try:
-                    lunnode = LunNode.objects.get(path = mgs_local_info['device'], host = self.host)
-                    tm,created = TargetMount.objects.get_or_create(
-                            target = mgs,
-                            host = self.host,
-                            primary = primary,
-                            mount_point = mgs_local_info['mount_point'],
-                            block_device = lunnode)
-                    if created:
-                        log().info("Learned MGS mount on %s" % self.host)
-                        self.learn_event(tm)
-                except LunNode.DoesNotExist:
-                    log().warning("No LunNode for MGS device path '%s'" % mgs_local_info['device'])
-            except NoLNetInfo:
-                log().warning("Cannot fully set up MGS on %s until LNet is running")
+            except NoLnetInfo:
+                audit_log.warning("Cannot set up MGS on %s until LNet is running")
+                return None
 
-            # Find the local_targets info for the MGS
-            #  * if it has no failnode, then this is definitely primary (+ if
-            #    it's configured on more than one host then that's an error)
-            #  * if it has one or more failnodes, then this is the primary if 
-            #    none of the failnode NIDs match a local NID of this host.
+            try:
+                mgs = ManagementTarget.objects.distinct().get(targetmount__block_device__lun = lunnode.lun)
+            except ManagementTarget.DoesNotExist:
+                mgs = None
 
-            mgs_local_info = None
-            for target in self.host_data['local_targets']:
-                if target['kind'] == 'MGS':
-                    mgs_local_info = target
-            if mgs_local_info == None:
-                raise RuntimeError("Got mgs_targets but no MGS local_target!")
+            if mgs == None:
+                # We didn't find an existing ManagementTarget referring to
+                # this LUN, create one
+                mgs = ManagementTarget(name = "MGS")
+                mgs.save()
+                audit_log.info("Learned MGS on %s" % self.host)
+                self.learn_event(mgs)
+
+            tm = TargetMount.objects.create(
+                    target = mgs,
+                    host = self.host,
+                    primary = primary,
+                    mount_point = mgs_local_info['mount_point'],
+                    block_device = lunnode)
+            audit_log.info("Learned MGS mount at %s on %s" % (tm.mount_point, tm.host))
+            self.learn_event(tm)
             
         return mgs
 
@@ -354,7 +352,7 @@ class LustreAudit:
             try:
                 mgs = self.nids_to_mgs(tgt_mgs_nids)
             except ManagementTarget.DoesNotExist:
-                log().warning("Can't find MGS for target with nids %s" % tgt_mgs_nids)
+                audit_log.warning("Can't find MGS for target with nids %s" % tgt_mgs_nids)
                 continue
 
             # TODO: detect case where we find a targetmount that matches one 
@@ -378,7 +376,7 @@ class LustreAudit:
                     if isinstance(target, FilesystemMember) and target.filesystem.mgs == mgs:
                         matched_target = target
             except Target.DoesNotExist:
-                log().warning("Target %s has mount point on %s but has not been detected on any MGS" % (name_val, self.host))
+                audit_log.warning("Target %s has mount point on %s but has not been detected on any MGS" % (name_val, self.host))
 
             if not matched_target:
                 continue
@@ -391,12 +389,12 @@ class LustreAudit:
                         mount_point = local_info['mount_point'],
                         block_device = lunnode)
                 if created:
-                    log().info("Learned association %d between %s and host %s" % (tm.id, local_info['name'], self.host))
+                    audit_log.info("Learned association %d between %s and host %s" % (tm.id, local_info['name'], self.host))
                     self.learn_event(tm)
             except LunNode.DoesNotExist:
-                log().warning("No LunNode for target device '%s'" % local_info['device'])
+                audit_log.warning("No LunNode for target device '%s'" % local_info['device'])
             except NoLNetInfo:
-                log().warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], self.address))
+                audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], self.address))
 
     def get_or_create_target(self, mgs, name, device_node_path):
         if name.find("-MDT") != -1:
@@ -408,7 +406,7 @@ class LustreAudit:
         try:
             filesystem = Filesystem.objects.get(name = fsname, mgs = mgs)
         except Filesystem.DoesNotExist:
-            log().warning("Encountered target for unknown filesystem %s on mgs %s" % (fsname, mgs.primary_server()))
+            audit_log.warning("Encountered target for unknown filesystem %s on mgs %s" % (fsname, mgs.primary_server()))
             return None
 
         try:
@@ -418,7 +416,7 @@ class LustreAudit:
             if target.name == None:
                 target.name = name
                 target.save()
-                log().info("Learned name for configured target %s" % (target))
+                audit_log.info("Learned name for configured target %s" % (target))
 
             return target
         except TargetMount.DoesNotExist:
@@ -431,8 +429,8 @@ class LustreAudit:
             # Fall through, no targets with that name exist on this MGS
             target = klass(name = name, filesystem = filesystem)
             target.save()
-            log().info("%s %s %s" % (mgs.id, name, device_node_path))
-            log().info("Learned %s %s" % (klass.__name__, name))
+            audit_log.info("%s %s %s" % (mgs.id, name, device_node_path))
+            audit_log.info("Learned %s %s" % (klass.__name__, name))
             self.learn_event(target)
             return target
 
@@ -446,7 +444,7 @@ class LustreAudit:
                 try:
                     target = ManagementTarget.get_by_host(self.host)
                 except ManagementTarget.DoesNotExist:
-                    log().error("No Managementtarget for host %s, but it reports an MGS target" % selfhost)
+                    audit_log.error("No Managementtarget for host %s, but it reports an MGS target" % selfhost)
                     continue
                 mountable = target.targetmount_set.get(host = self.host, mount_point = mount_info['mount_point']).downcast()
 
@@ -464,14 +462,14 @@ class LustreAudit:
                     try:
                         mgs = self.nids_to_mgs(mgsnode_nids)
                     except ManagementTarget.DoesNotExist:
-                        log().warning("Cannot find MGS for target %s (nids %s) on host %s" % (mount_info['name'], mgsnode_nids, self.host.address))
+                        audit_log.warning("Cannot find MGS for target %s (nids %s) on host %s" % (mount_info['name'], mgsnode_nids, self.host.address))
                         continue
                 else:
                     # The MGS is local
                     try:
                         mgs = ManagementTarget.objects.get(targetmount__host = self.host)
                     except ManagementTarget.DoesNotExist:
-                        log().error("Cannot find local MGS for target %s on %s which has no mgsnode param" % (mount_info['name'], self.host))
+                        audit_log.error("Cannot find local MGS for target %s on %s which has no mgsnode param" % (mount_info['name'], self.host))
                         continue
 
                 mountable = None
@@ -488,7 +486,7 @@ class LustreAudit:
                         break
 
                 if mountable == None:
-                    log().warning("Cannot find target %s for mgs %d" % (mount_info['name'], mgs.id))
+                    audit_log.warning("Cannot find target %s for mgs %d" % (mount_info['name'], mgs.id))
                     continue
 
                 audit_mountable = AuditRecoverable(audit = self.audit, 
@@ -514,10 +512,10 @@ class LustreAudit:
             
             for del_param in old_params - new_params:
                 target.targetparam_set.get(key = del_param[0], value = del_param[1]).delete()
-                log().info("del_param: %s" % (del_param,))
+                audit_log.info("del_param: %s" % (del_param,))
             for add_param in new_params - old_params:
                 target.targetparam_set.create(key = add_param[0], value = add_param[1])
-                log().info("add_param: %s" % (add_param,))
+                audit_log.info("add_param: %s" % (add_param,))
 
     def learn_clients(self):
         for mount_point, client_info in self.host_data['client_mounts'].items():
@@ -526,21 +524,21 @@ class LustreAudit:
                 client_mgs_nids = set(normalize_nids(client_info['nid'].split(":")))
                 mgs = self.nids_to_mgs(client_mgs_nids)
             except ManagementTarget.DoesNotExist:
-                log().warning("Ignoring client mount for unknown mgs %s" % client_info['nid'])
+                audit_log.warning("Ignoring client mount for unknown mgs %s" % client_info['nid'])
                 continue
 
             # Find the filesystem
             try:
                 fs = Filesystem.objects.get(name = client_info['filesystem'], mgs = mgs)
             except Filesystem.DoesNotExist:
-                log().warning("Ignoring client mount for unknown filesystem '%s' on %s" % (client_info['filesystem'], self.host))
+                audit_log.warning("Ignoring client mount for unknown filesystem '%s' on %s" % (client_info['filesystem'], self.host))
                 continue
 
             # Instantiate Client
             (client, created) = Client.objects.get_or_create(
                     host = self.host, mount_point = mount_point, filesystem = fs)
             if created:
-                log().info("Learned client %s" % client)
+                audit_log.info("Learned client %s" % client)
                 self.learn_event(client)
 
             MountableOfflineAlert.notify(client, not client_info['mounted'])
@@ -558,14 +556,14 @@ class LustreAudit:
 
         # Learn an MGS target and a TargetMount for this host
         mgs = self.learn_mgs(mgs_local_info)
+        if not mgs:
+            return
 
         # Create Filesystem objects for all those in this MGS
-        filesystem_targets = {}
         for fs_name, targets in self.host_data['mgs_targets'].items():
             (fs, created) = Filesystem.objects.get_or_create(name = fs_name, mgs = mgs)
             if created:
-                log().info("Learned filesystem '%s'" % fs_name)
+                audit_log.info("Learned filesystem '%s'" % fs_name)
                 self.learn_event(fs)
-            filesystem_targets[fs] = targets
 
 
