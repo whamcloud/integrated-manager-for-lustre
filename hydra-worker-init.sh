@@ -14,23 +14,21 @@ test -f /usr/share/hydra-server/manage.py || exit 0
 export PYTHONPATH=/usr/share/hydra-server 
 
 start() {
-    if [ $1 = 1 ]; then
-        # only on first install...
-        #if [ -d /var/lib/mysql/test ]; then
-        #    # remove the test database and user from mysqld
-        #    /usr/bin/mysql_secure_installation
-        #fi
-        if [ ! -d /var/lib/mysql/hydra ]; then
-            pushd /usr/share/hydra-server
-            # create the hydra database
-            #PYTHONPATH=$(pwd) python manage.py dbshell << EOF
+    # only on first install...
+    #if [ -d /var/lib/mysql/test ]; then
+    #    # remove the test database and user from mysqld
+    #    /usr/bin/mysql_secure_installation
+    #fi
+    if [ ! -d /var/lib/mysql/hydra ]; then
+        pushd /usr/share/hydra-server
+        # create the hydra database
+        #PYTHONPATH=$(pwd) python manage.py dbshell << EOF
 #create database hydra
 #EOF
-	    echo "create database hydra" | mysql
-            # and populate it
-            PYTHONPATH=$(pwd) python manage.py syncdb --noinput
-            popd
-        fi
+        echo "create database hydra" | mysql
+        # and populate it
+        PYTHONPATH=$(pwd) python manage.py syncdb --noinput
+        popd
     fi
 
     echo -n "Starting the Hydra worker daemon: "
