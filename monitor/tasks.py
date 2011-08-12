@@ -18,8 +18,15 @@ def monitor_exec(monitor_id, audit_id):
         audit.save()
         audit_log.debug("Audit %d marked started" % audit_id)
 
+    try:
+        audit = Audit.objects.get(pk = audit_id)
+    except Audit.DoesNotExist:
+        # This can happen if we crashed again while deleting a 
+        # worker from a previous crash
+        audit_log.warn("Audit %d not found." % audit_id)
+        return
+
     # Use 'started' flag to detect whether this is a clean first run 
-    audit = Audit.objects.get(pk = audit_id)
     if audit.started:
         audit_log.warn("Audit %d found unfinished (worker crash).  Deleting." % audit_id)
         audit.delete()
@@ -43,12 +50,25 @@ def monitor_exec(monitor_id, audit_id):
 from django.db import transaction
 # Transaction to ensure that an Audit doesn't get committed
 # without task_id set
-@transaction.commit_on_success
 def audit_monitor(monitor):
     from monitor.models import Audit
-    audit, created = Audit.objects.get_or_create(host = monitor.host, complete = False)
+
+    # Transaction to make sure audit is committed before task runs
+    @transaction.commit_on_success
+    def create_audit():
+        return Audit.objects.get_or_create(host = monitor.host, complete = False)
+
+    audit, created = create_audit()
     if not created:
         audit_log.debug("audit_all: host %s audit (%d) still in progress" % (monitor.host, audit.id))
+        if not audit.task_id:
+            # Whatever created this got killed somewhere between creating audit and 
+            # saving task ID.  No way to know if celery task has been created.  Assume
+            # the worst and mark the audit complete so that it won't hold us up.
+            audit_log.debug("audit_all: host %s audit %d has no task_id, marking complete." % (monitor.host, audit.id))
+            audit.complete = True
+            audit.error = True
+            audit.save()
     else:
         from monitor.models import Audit
         async_result = monitor_exec.delay(monitor.id, audit.id)
