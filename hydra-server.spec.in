@@ -17,13 +17,14 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: Django >= 1.3, mod_wsgi, httpd, rrdtool-python, lmt-server, python-dateutil, python-uuid, python-multiprocessing, python-paramiko, django-pagination, django-kombu, django-celery, rsyslog, mysql-python >= 1.2.1p2
+Requires: Django >= 1.3, mod_wsgi, httpd, rrdtool-python, lmt-server, python-dateutil, python-uuid, python-multiprocessing, python-paramiko, django-pagination, django-kombu, django-celery, rsyslog, MySQL-python >= 1.2.1p2
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
 
 %prep
 %setup -n %{name}-%{unmangled_version}
+echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py
 
 %build
 python setup.py build
@@ -54,17 +55,6 @@ chkconfig rsyslog on
 chkconfig --add hydra-worker
 # start mysqld at boot time
 chkconfig mysqld on
-if [ -f /var/lib/mysql/test ]; then
-    # remove the test database and user from mysqld
-    /usr/bin/mysql_secure_installation
-fi
-cd /usr/share/hydra-server
-# create the hydra database
-PYTHONPATH=$(pwd) python manage.py dbshell << EOF
-create database hydra
-EOF
-# and populate it
-PYTHONPATH=$(pwd) python manage.py syncdb --noinput
 
 %files
 %defattr(-,root,root)

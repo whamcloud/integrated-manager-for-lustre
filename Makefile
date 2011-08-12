@@ -4,9 +4,6 @@ RELEASE = 1
 cleandist:
 	rm -rf  dist
 	mkdir dist
-
-production:
-	echo -e "/^DEBUG =/s/= .*$$/= False/\nwq" | ed settings.py
 	
 tarball:
 	rm -f MANIFEST
@@ -15,7 +12,7 @@ tarball:
 	done
 	python setup.py sdist
 
-rpms: production cleandist tarball
+rpms: cleandist tarball
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/hydra-server-$(VERSION).tar.gz _topdir/SOURCES
