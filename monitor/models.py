@@ -65,12 +65,8 @@ class Host(models.Model):
             return False
 
     def available_lun_nodes(self):
-        candidates = LunNode.objects.filter(host = self, used_hint = False)
-        users = TargetMount.objects.filter(block_device__host = self)
-        used_candidates = [u.block_device for u in users]
-        candidates = set(candidates) - set(used_candidates)
-
-        return candidates
+        from django.db.models import Q
+        return LunNode.objects.filter(targetmount = None, host = self, used_hint = False).filter(~Q(lun__lunnode__used_hint = True))
 
     def role(self):
         roles = self._role_strings()
@@ -467,7 +463,7 @@ class Target(models.Model):
         if self.name:
             return self.name
         else:
-            return "Unregistered %s" % (self.id)
+            return "Unregistered %s %s" % (self.downcast().role(), self.id)
 
 class MetadataTarget(Target, FilesystemMember):
     # TODO: constraint to allow only one MetadataTarget per MGS.  The reason
