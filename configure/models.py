@@ -4,7 +4,23 @@ CONFIGURE_MODELS = True
 from monitor import models as monitor_models
 from polymorphic.models import DowncastMetaclass
 
+from django.db.models import Q
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.generic import GenericForeignKey
+
+from collections_24 import defaultdict
+
 MAX_STATE_STRING = 32
+
+def _subclasses(obj):
+    """Used to introspect all descendents of a class.  Used because metaclasses
+       are a PITA when doing multiple inheritance"""
+    sc_recr = []
+    for sc_obj in obj.__subclasses__():
+        sc_recr.append(sc_obj)
+        for sc in _subclasses(sc_obj):
+            sc_recr.append(sc)
+    return sc_recr
 
 class StatefulObject(models.Model):
     # Use of abstract base classes to avoid django bug #12002
@@ -14,6 +30,8 @@ class StatefulObject(models.Model):
     state = models.CharField(max_length = MAX_STATE_STRING)
     states = None
     initial_state = None
+
+    reverse_deps = {}
 
     def __init__(self, *args, **kwargs):
         super(StatefulObject, self).__init__(*args, **kwargs)
@@ -26,6 +44,147 @@ class StatefulObject(models.Model):
            mounted has a dependency on a host in state lnet_started but
            can get rid of it by moving to state unmounted"""
         return []
+
+    @staticmethod
+    def so_child(klass):
+        """Find the ancestor of klass which is a direct descendent of StatefulObject"""
+        # We do this because if I'm e.g. a ManagedMgs, I need to get my parent ManagedTarget
+        # class in order to find out what jobs are applicable to me.
+        assert(issubclass(klass, StatefulObject))
+
+        if StatefulObject in klass.__bases__:
+            return klass
+        else:
+            for b in klass.__bases__:
+                if issubclass(b, StatefulObject):
+                    return StatefulObject.so_child(b)
+
+    @classmethod
+    def _build_maps(cls):
+        """Populate route_map and transition_map attributes by introspection of 
+           this class and related StateChangeJob classes.  It is legal to call this
+           twice or concurrently."""
+        cls = StatefulObject.so_child(cls)
+
+        transition_classes = [s for s in _subclasses(StateChangeJob) if s.state_transition[0] == cls]
+        transition_options = defaultdict(list)
+        job_class_map = {}
+        for c in transition_classes:
+            from_state, to_state = c.state_transition[1], c.state_transition[2]
+            transition_options[from_state].append(to_state)
+            job_class_map[(from_state, to_state)] = c
+
+        transition_map = defaultdict(list)
+        route_map = {}
+        shortest_routes = []
+        for begin_state in cls.states:
+            all_routes = set()
+            # Enumerate all possible routes from this state
+            def get_routes(stack, explore_state):
+                if explore_state in stack:
+                    all_routes.add(tuple(stack))
+                    return
+
+                stack = stack + [explore_state]
+
+                if len(transition_options[explore_state]) == 0:
+                    if len(stack) > 1:
+                        all_routes.add(tuple(stack))
+                    return
+
+                for next_state in transition_options[explore_state]:
+                    get_routes(stack, next_state)
+
+
+
+            get_routes([], begin_state)
+
+            # For all valid routes with more than 2 states, 
+            # all truncations of 2 or more states are also valid routes.
+            truncations = set()
+            for r in all_routes:
+                for i in range(2, len(r)):
+                    truncations.add(tuple(r[0:i]))
+            all_routes = all_routes | truncations
+
+            routes = defaultdict(list)
+            # Build a map of end state to list of ways of getting there
+            for route in all_routes:
+                routes[route[-1]].append(route)
+
+            # Pick the shortest route to each end state
+            for (end_state, possible_routes) in routes.items():
+                possible_routes.sort(lambda a,b: cmp(len(a), len(b)))
+                shortest_route = possible_routes[0]
+
+                transition_map[begin_state].append(end_state)
+                route_map[(begin_state, end_state)] = shortest_route
+
+        cls.route_map = route_map
+        cls.transition_map = transition_map
+        cls.job_class_map = job_class_map
+
+    @classmethod
+    def get_route(cls, begin_state, end_state):
+        """Return an iterable of state strings, which is navigable using StateChangeJobs"""
+        for s in begin_state, end_state:
+            if not s in cls.states:
+                raise RuntimeError("%s not legal state for %s, legal states are %s" % (s, cls, cls.states))
+
+        if not hasattr(cls, 'route_map'):
+            cls._build_maps()
+
+        try:
+            return cls.route_map[(begin_state, end_state)]
+        except KeyError:
+            raise RuntimeError("%s->%s not legal state transition for %s" % (begin_state, end_state, cls))
+
+    @classmethod
+    def get_available_states(cls, begin_state):
+        if not begin_state in cls.states:
+            raise RuntimeError("%s not legal state for %s, legal states are %s" % (begin_state, cls, cls.states))
+
+        if not hasattr(cls, 'transition_map'):
+            cls._build_maps()
+
+        return cls.transition_map[begin_state]     
+
+    @classmethod
+    def get_verb(cls, begin_state, end_state):
+        """begin_state need not be adjacent but there must be a route between them"""
+        if not hasattr(cls, 'route_map') or not hasattr(cls, 'job_class_map'):
+            cls._build_maps()
+
+        route = cls.route_map[(begin_state, end_state)]
+        job_cls = cls.job_class_map[(route[-2], route[-1])]
+        return job_cls.state_verb
+
+    @classmethod
+    def get_job_class(cls, begin_state, end_state):
+        """begin_state and end_state must be adjacent (i.e. get from one to another
+           with one StateChangeJob)"""
+        if not hasattr(cls, 'route_map') or not hasattr(cls, 'job_class_map'):
+            cls._build_maps()
+
+        return cls.job_class_map[(begin_state, end_state)]
+
+    def get_dependent_objects(self):
+        """Get all objects which MAY be depending on the state of this object"""
+
+        # Cache mapping a class to a list of functions for getting
+        # dependents of an instance of that class.
+        if not hasattr(StatefulObject, 'reverse_deps_map'):
+            reverse_deps_map = defaultdict(list)
+            for klass in _subclasses(StatefulObject):
+                for class_name, lookup_fn in klass.reverse_deps.items():
+                    so_class = ContentType.objects.get_by_natural_key('configure', class_name).model_class()
+                    reverse_deps_map[so_class].append(lookup_fn)
+            StatefulObject.reverse_deps_map = reverse_deps_map
+
+        from itertools import chain
+        lookup_fns = StatefulObject.reverse_deps_map[self.__class__]
+        querysets = [fn(self) for fn in lookup_fns]
+        return chain(*querysets)
 
 class ManagedTarget(StatefulObject):
     __metaclass__ = DowncastMetaclass
@@ -56,6 +215,10 @@ class ManagedMgs(monitor_models.ManagementTarget, ManagedTarget):
     def default_mount_path(self, host):
         return "/mnt/mgs"
 
+class ManagedHost(monitor_models.Host, StatefulObject):
+    states = ['lnet_unloaded', 'lnet_down', 'lnet_up']
+    initial_state = 'lnet_unloaded'
+
 class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
     # unconfigured: I only exist in theory in the database
     # mounted: I am in fstab on the host and mounted
@@ -80,7 +243,6 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
         deps = []
         if state == 'mounted':
             deps.append((self.host.managedhost, 'lnet_up', 'unmounted'))
-            from django.db.models import Q
             for tm in self.target.targetmount_set.filter(~Q(pk = self.id)):
                 deps.append((tm, 'unmounted', 'unmounted'))
 
@@ -89,12 +251,20 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
 
         return deps
 
-class ManagedHost(monitor_models.Host, StatefulObject):
-    states = ['lnet_unloaded', 'lnet_down', 'lnet_up']
-    initial_state = 'lnet_unloaded'
+    # Reverse dependencies are records of other classes which must check
+    # our get_deps when they change state.
+    # It tells them how, given an instance of the other class, to find 
+    # instances of this class which may depend on it.
+    reverse_deps = {
+            # We depend on lnet_state
+            'ManagedHost': (lambda mh: ManagedTargetMount.objects.filter(host = mh)),
+            # We depend on state 'registered'
+            'ManagedTarget': (lambda mt: ManagedTargetMount.objects.filter(target = mt)),
+            # A TargetMount may depend on other targetmounts for the same target
+            'ManagedTargetMount': (lambda mtm: mtm.target.targetmount_set.filter(~Q(pk = mtm.id)))
+            }
 
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.generic import GenericForeignKey
+
 class StateLock(models.Model):
     __metaclass__ = DowncastMetaclass
     job = models.ForeignKey('Job')
@@ -171,9 +341,6 @@ class Job(models.Model):
            dependencies when we have a write lock and they have a read lock
            or generate depend_on dependencies when we have a read or write lock and
            they have a write lock"""
-        from django.db.models import Q
-        from configure.models import Job
-
         for lock in self.statelock_set.all():
             if isinstance(lock, StateWriteLock):
                 wl = lock
@@ -257,18 +424,24 @@ class Job(models.Model):
 
     def run(self):
         from configure.lib.job import job_log
+        job_log.info("Job %d: Job.run" % self.id)
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
-        updated = Job.objects.filter(pk = self.id, state = 'pending').update(state = 'tasked')
+        from django.db import transaction
+        @transaction.commit_on_success()
+        def mark_tasked():
+            return Job.objects.filter(pk = self.id, state = 'pending').update(state = 'tasked')
+
+        updated = mark_tasked()
 
         if updated == 0:
             # Someone else already started this job, bug out
             job_log.debug("job %d already started running, backing off" % self.id)
             return
-        assert(updated == 1)
-
-        job_log.info("Job.run %d" % self.id)
+        else:
+            assert(updated == 1)
+            job_log.debug("job %d pending->tasked" % self.id)
 
         # My wait_for are complete, and I don't care if they're errored, just
         # that they aren't running any more.
@@ -362,14 +535,12 @@ class Job(models.Model):
         self.errored = errored
         self.save()
 
-        job_log.info("job %d complete, notifying dependents" % self.id)
+        job_log.info("job %d complete (errored=%s), notifying dependents" % (self.id, self.errored))
         for dependent in self.depend_on_job.all():
             dependent.notify_depend_on_complete()
         for dependent in self.wait_for_job.all():
             dependent.notify_wait_for_complete()
 
-        from django.db import transaction
-        transaction.commit()
         Job.run_next()
 
     def description(self):

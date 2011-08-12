@@ -6,59 +6,13 @@ from logging import getLogger, FileHandler, DEBUG
 getLogger('Job').setLevel(DEBUG)
 getLogger('Job').addHandler(FileHandler("Job.log"))
 
-def subclasses(obj):
-    sc_recr = []
-    for sc_obj in obj.__subclasses__():
-        sc_recr.append(sc_obj)
-        for sc in subclasses(sc_obj):
-            sc_recr.append(sc)
-    return sc_recr
-
 class StateManager(object):
-    def stateful_object_class(self, instance):
-        klass = instance.__class__
-        # If e.g. klass is ManagedMgs and we have transitions
-        # defined for ManagedTarget, then we have to do a more
-        # complex lookup
-        if not klass in self.transition_map.keys():
-            found = False
-            for statefulobject_klass in self.transition_map.keys():
-                if issubclass(klass, statefulobject_klass):
-                    klass = statefulobject_klass
-                    found = True
-                    break
-            if not found:
-                raise RuntimeError()
-
-        return klass
-
-    def __init__(self):
-        from configure.lib.job import StateChangeJob
-        from configure.models import StatefulObject
-
-        # Map of StatefulObject subclass to map of
-        # (oldstate, newstate) to StateChangeJob subclass
-        self.transition_map = {}
-
-        # Map of statefulobject subclass to map of 
-        # (oldstate) to list of possible newstates
-        self.transition_options_map = {}
-
-        self.stateful_object_classes = subclasses(StatefulObject)
-        state_change_job_classes = subclasses(StateChangeJob)
-
-        self.transition_map = defaultdict(dict)
-        self.transition_options_map = defaultdict(lambda : defaultdict(list)) 
-
-        for c in state_change_job_classes:
-            statefulobject, oldstate, newstate = c.state_transition
-            self.transition_map[statefulobject][(oldstate,newstate)] = c
-            self.transition_options_map[statefulobject][oldstate].append(c)
-
     def available_transitions(self, stateful_object):
+        """Return a list states to which the object can be set from 
+           its current state, or None if the object is currently
+           locked by a Job"""
         # If the object is subject to an incomplete StateChangeJob
         # then don't offer any other transitions.
-        # TODO: extend this to include 'state locking' 
         from configure.models import Job, StateLock
         from configure.lib.job import StateChangeJob
         from django.db.models import Q
@@ -69,35 +23,17 @@ class StateManager(object):
         # using get_expected_state in place of .state below.
         active_locks = StateLock.filter_by_locked_item(stateful_object).filter(~Q(job__state = 'complete')).count()
         if active_locks > 0:
-            return []
+            return None
 
-        available_jobs = set()
-        seen_states = set()
-        def recurse(klass, initial_state, explore_job = None):
-            if explore_job == None:
-                explore_state = initial_state
-            elif explore_job.state_transition[2] == initial_state:
-                return
-            else:
-                available_jobs.add(explore_job)
-                explore_state = explore_job.state_transition[2]
-
-            if explore_state in seen_states:
-                return
-            seen_states.add(explore_state)
-            for next_state in self.transition_options_map[klass][explore_state]:
-                recurse(klass, initial_state, next_state)
-
-        klass = self.stateful_object_class(stateful_object)
-        # TODO: use expected_state here if you want to advertise 
-        # what jobs can really be added
-        recurse(klass, stateful_object.state)
-
-        klass = self.stateful_object_class(stateful_object)
-        #transition_classes = self.transition_options_map[klass][stateful_object.state]
+        # XXX: could alternatively use expected_state here if you want to advertise 
+        # what jobs can really be added (i.e. advertise transitions which will
+        # be available when current jobs are complete)
+        #from_state = self.get_expected_state(stateful_object)
+        from_state = stateful_object.state
+        available_states = stateful_object.get_available_states(from_state)
         return [
-                {"state": tc.state_transition[2],
-                "verb": tc.state_verb} for tc in available_jobs]
+                {"state": to_state,
+                "verb": stateful_object.get_verb(from_state, to_state)} for to_state in available_states]
 
     def get_expected_state(self, stateful_object_instance):
         try:
@@ -143,7 +79,6 @@ class StateManager(object):
 
         if new_state == self.get_expected_state(instance):
             return None
-
 
         self.deps = set()
         self.edges = set()
@@ -219,9 +154,10 @@ class StateManager(object):
         return jobs[root_dep]
 
     def dep_to_job(self, dep):
+        """Generate a StateChangeJob instance for a transition on 
+           a particular StatefulObject instance"""
         instance, old_state, new_state = dep
-        klass = self.stateful_object_class(instance)
-        job_klass = self.transition_map[klass][(old_state, new_state)]
+        job_klass = instance.get_job_class(old_state, new_state)
         stateful_object_attr = job_klass.stateful_object
         kwargs = {stateful_object_attr: instance}
         return job_klass(**kwargs)
@@ -229,57 +165,22 @@ class StateManager(object):
     def emit_transition_deps(self, instance, old_state, new_state):
         if (instance, old_state, new_state) in self.deps:
             return (instance, old_state, new_state)
-        klass = self.stateful_object_class(instance)
 
-        try:
-            job_klass = self.transition_map[klass][(old_state, new_state)]
-            dep = (instance, old_state, new_state)
+        # E.g. for 'unformatted'->'registered' for a ManagedTarget we
+        # would get ['unformatted', 'formatted', 'registered']
+        route = instance.get_route(old_state, new_state)
+
+        # Add to self.deps and self.edges for each step in the route
+        prev = None
+        for i in range(0, len(route) - 1):
+            dep = (instance, route[i], route[i + 1])
             self.deps.add(dep)
             self.collect_dependencies(dep)
-            return dep
+            if prev:
+                self.edges.add((dep, prev))
+            prev = dep
 
-        except KeyError:
-            # Crude: explore all paths from current state until we find one with
-            # the desired state
-            class FoundState(Exception):
-                def __init__(self, path):
-                    self.path = path
-
-            def recurse(stack, klass, initial_state, goal_state, explore_state = None):
-                if explore_state == initial_state:
-                    return
-                if explore_state == None:
-                    explore_state = initial_state
-
-                stack.append(explore_state)
-
-                if explore_state == goal_state:
-                    raise FoundState(stack)
-                for next_state in [tc.state_transition[2] for tc in self.transition_options_map[klass][explore_state]]:
-                    recurse(stack, klass, initial_state, goal_state, next_state)
-
-            try:
-                recurse([], klass, old_state, new_state)
-                raise RuntimeError()
-            except FoundState, s:
-                route = s.path
-                prev = None
-                # TODO: this code is ugly and uses the first path it finds: it
-                # should be finding the shortest path
-                for i in range(0, len(route) - 1):
-                    a = route[i]
-                    b = route[i + 1]
-                    dep = (instance, a, b)
-                    self.deps.add(dep)
-                    self.collect_dependencies(dep)
-                    if prev:
-                        self.edges.add((dep, prev))
-                    prev = dep
-
-                assert(prev != None)
-                return prev
-
-            raise RuntimeError()
+        return prev
 
     def collect_dependencies(self, root_dep):
         # What is explicitly required for this state transition?
@@ -303,19 +204,12 @@ class StateManager(object):
                 # Record that root_dep depends on depended_on making it into depended_state
                 self.edges.add((root_dep, dep))
 
-        # What was depending on our old state?
-        for klass in self.stateful_object_classes:
-            for instance in klass.objects.all():
-                # FIXME: this is a bit wrong, this 'expected state' is at the start
-                # of all jobs in this set_state call, but we should be querying 
-                # the expected state right before this particular root_dep
-                instance_state = self.get_expected_state(instance)
-                instance_deps = instance.get_deps(instance_state)
-                # This other guy depended on...
-                for depended_on, depended_state, fix_state in instance_deps:
-                    # He depended on the root_dep object in a state other than
-                    # what we're about to put it into: we must change his state
-                    # to allow root_dep to transition
-                    if depended_on == root_dep[0] and depended_state != root_dep[2]:
-                            dep = self.emit_transition_deps(instance, instance_state, fix_state)
-                            self.edges.add((root_dep, dep))
+        for dependent in root_dep[0].get_dependent_objects():
+            # Dependent MAY depend on root_dep[0]
+            dependent_state = self.get_expected_state(dependent)
+            # dependent depends on root_dep[0] being in state dependent_on_state, but it 
+            # won't any more if we put dependent in fix_state
+            for dependent_on, dependent_on_state, fix_state in dependent.get_deps(dependent_state):
+                if dependent_on == root_dep[0] and dependent_on_state != root_dep[2]:
+                    dep = self.emit_transition_deps(dependent, dependent_state, fix_state)
+                    self.edges.add((root_dep, dep))
