@@ -1,6 +1,7 @@
 %{!?name: %define name hydra-agent}
 %{?!version: %define version 0.0.1}
 %{?!release: %define release 1}
+%{?!python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 Summary: The Whamcloud Lustre Monitoring and Adminisration Interface Agent
 Name: %{name}
@@ -36,6 +37,6 @@ rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root)
-%{_bindir}/hydra-agent.py
-%{_bindir}/hydra-rmmod.py
+%{_bindir}/hydra-agent.py*
+%{_bindir}/hydra-rmmod.py*
 %{python_sitelib}/*
