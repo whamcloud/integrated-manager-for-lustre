@@ -1,5 +1,8 @@
-VERSION = $(shell python -c 'from hydra_agent import __version__; print __version__')
-RELEASE ?= $(shell date +%Y%m%d%H%M%S)
+VERSION := $(shell python -c 'from hydra_agent import __version__; print __version__')
+ifeq ($(origin RELEASE), undefined)
+  RELEASE := $(shell date +%Y%m%d%H%M%S)
+endif
+
 
 all: rpms
 
