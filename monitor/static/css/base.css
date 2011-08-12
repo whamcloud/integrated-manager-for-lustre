@@ -571,3 +571,7 @@ td.failure {
 div.stats_tree {
     padding: 12px;
 }
+
+/* Override some jquery-ui defaults */
+.ui-button-text-only .ui-button-text { padding: .2em .4em; }
+.ui-widget { font-size: 0.8em; }
