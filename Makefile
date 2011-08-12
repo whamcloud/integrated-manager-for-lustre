@@ -1,5 +1,5 @@
-VERSION = 0.3.$(shell date +%Y%m%d%H%M%S)
-RELEASE = 1
+VERSION := 0.3.$(shell date +%Y%m%d%H%M%S)
+RELEASE := 1
 
 cleandist:
 	rm -rf  dist
