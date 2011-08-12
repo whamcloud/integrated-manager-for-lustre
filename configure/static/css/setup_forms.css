@@ -1,0 +1,62 @@
+
+div#content {
+    margin-left: 12px;
+    font-size: 0.9em;
+}
+
+h2 {
+    text-shadow: #aaa 2px 2px 3px;
+    margin-bottom: 6px;
+    margin-top: 0px;
+}
+
+div.button_bar {
+    text-align: right;
+    padding-right: 12px;
+}
+
+span.target_form {
+    /*background: rgb(245, 252, 255);*/
+    padding: 6px;
+    /*border-radius: 12px;*/
+    /*border: 2px solid #09f;*/
+    display: inline-block;
+    color: #222;
+    margin-top: 12px;
+}
+
+span.target_form table {
+    font-size: 1.0em;
+    margin-left: 15px;
+}
+
+span.target_form th, span.target_form td {
+    text-align: left;
+}
+
+span.target_form h3 {
+    margin-top: 12px;
+    margin-bottom: 6px;
+    text-shadow: #aaa 2px 2px 3px;
+    font-size: 1.05em;
+}
+
+span.target_form ul {
+    margin-top: 6px;
+    padding-left: 20px;
+    font-weight: normal;
+}
+
+span.target_form ul li {
+    list-style: none;
+}
+
+div.form_help {
+    font-style: italic;
+    margin-left: 8px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    font-weight: normal;
+}
+
+

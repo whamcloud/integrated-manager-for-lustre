@@ -1,18 +1,41 @@
 
-{% extends 'base.html' %}
+{% extends 'create_form_base.html' %}
 
 {% block scripts %}
+{{ block.super }}
+
+<script type='text/javascript'>
+$(document).ready(function() {
+    function button_sensitivity() {
+        var name = $('#id_name').attr('value')
+        $('input[type=submit]').button('option', 'disabled', !name.length)
+    }
+
+    button_sensitivity()
+    $('#id_name').keydown(function() {
+        console.log('settimeout');
+        setTimeout(function() {
+            console.log('settimeout called');
+            button_sensitivity(name);
+        }, 100);
+    });
+});
+</script>
+
 {% endblock %}
 
-{% block content %}
-<h2>Create Filesystem</h2>
-<p>Selected MGS: {{mgs}}</p>
+{% block form_title %}Create filesystem (MGS {{mgs.primary_server}}){% endblock %}
+
+{% block form_body %}
 <form method='post'>
     {% csrf_token %}
     <table>
         {{ form.as_table}}
     </table>
-    <input type='submit' value='Create'>
+    <div class='button_bar'>
+        <a href="{% url configure.views.states %}">Go back</a>
+        <input type='submit' value='Create filesystem'/>
+    </div>
 </form>
 {% endblock %}
 

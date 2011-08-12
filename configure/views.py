@@ -222,12 +222,14 @@ def create_mds(request, host_id):
         form = CreateMdtForm(request.POST)
 
         if form.is_valid():
+            print "valid"
             node = LunNode.objects.get(id = form.cleaned_data['device'])
             if form.cleaned_data['failover_partner'] and form.cleaned_data['failover_partner'] != 'None':
                 failover_host = Host.objects.get(id = form.cleaned_data['failover_partner'])
             else:
                 failover_host = None
             filesystem = Filesystem.objects.get(id=form.cleaned_data['filesystem'])
+            print "filesystem = %s" % filesystem
 
             target = ManagedMdt(filesystem = filesystem)
             target.save()
@@ -236,7 +238,6 @@ def create_mds(request, host_id):
             _set_target_states(form, [target], mounts)
 
             return redirect('configure.views.states')
-
     else:
         return HttpResponseBadRequest
 

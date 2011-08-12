@@ -1,0 +1,30 @@
+
+{% extends 'base.html' %}
+
+{% block scripts %}
+    <script type='text/javascript'>
+        $(document).ready(function() {
+            $("div.button_bar input").button();
+            $("div.button_bar a").button();
+
+            $("label").click(function() {
+                $('#' + $(this).attr('for')).change();
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/setup_forms.css"/>
+{% endblock %}
+
+{% block content %}
+<span class='ui-state-default target_form'>
+    <h2>{% block form_title %}{% endblock %}</h2>
+
+{% block form_body %}
+{% endblock %}
+
+</span>
+{% endblock %}
+

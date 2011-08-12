@@ -1,11 +1,8 @@
 
-{% extends 'base.html' %}
-
-{% block css %}
-    <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/setup_forms.css"/>
-{% endblock %}
+{% extends 'create_form_base.html' %}
 
 {% block scripts %}
+    {{ block.super }}
     <script type='text/javascript'>
         $(document).ready(function() {
             function button_sensitivity() {
@@ -19,14 +16,7 @@
                 $("input[type=submit]").button('option', 'disabled', !any_selected);
             }
 
-            $("div.button_bar input").button();
-            $("div.button_bar a").button();
             button_sensitivity();
-
-            $("ul.device_list label").click(function() {
-                $('#' + $(this).attr('for')).change();
-            });
-
             $("ul.device_list input[type=checkbox]").change(function(ev) {
                 button_sensitivity();
             });
@@ -34,11 +24,17 @@
     </script>
 {% endblock %}
 
-{% block content %}
-<span class='ui-state-default target_form'>
-<h2>Setup OSS ({{host}})</h2>
-<form method='post' class='create_target'>
+{% block form_title %}Setup OSS ({{host}}){% endblock %}
+
+{% block form_body %}
+<form method='post'>
     {% csrf_token %}
+    {% for error_item, error_message in form.errors.items %}
+        <div class="ui-widget ui-state-error ui-corner-all" style="padding: 6px;"> 
+            <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span> 
+            {{error_item}}: {{error_message}}
+        </div>
+    {% endfor %}
     <h3>OSS options</h3>
     <table>
         <tr>
@@ -78,7 +74,6 @@
         <input type='submit' value='Create targets'/>
     </div>
 </form>
-</div>
 
 {% endblock %}
 
