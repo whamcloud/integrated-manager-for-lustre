@@ -8,7 +8,10 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from monitor.models import *
 from monitor.lib.graph_helper import load_graph,dyn_load_graph
 
-from settings import SYSLOG_PATH
+from settings import SYSLOG_PATH, VERSION
+
+def context_processor_app_data(request):
+    return {'APP_VERSION': VERSION}
 
 def sparkline_data(request, name, subdir, graph_type):
     params = request.GET.copy()

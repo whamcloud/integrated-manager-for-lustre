@@ -163,7 +163,7 @@ span.loading_placeholder {
     font-style: italic;
 }
 
-td.audit_time {
+span.audit_time {
     font-size: 0.8em;
     text-align: right;
 }
@@ -571,3 +571,8 @@ td.failure {
 div.stats_tree {
     padding: 12px;
 }
+
+div#footer {
+    clear: both;
+    margin: 16px 16px 0 16px;
+ }

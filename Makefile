@@ -4,10 +4,11 @@ RELEASE := 1
 cleandist:
 	rm -rf  dist
 	mkdir dist
-	
+
 tarball:
 	rm -f MANIFEST
-	for file in hydra-server.spec setup.py monitor/templates/dashboard_inner.html; do \
+	echo 'VERSION = "$(VERSION)"' > production_version.py
+	for file in hydra-server.spec setup.py; do \
 		sed -e 's/@VERSION@/$(VERSION)/g' < $$file.in > $$file; \
 	done
 	python setup.py sdist
@@ -26,4 +27,4 @@ install:
 	#install -d -p $(DESTDIR)/etc/hydra-server
 	#cp -a settings.py $(DESTDIR)/etc/hydra-server
 	install -d -p $(DESTDIR)/usr/share/hydra-server
-	cp -a collections_24.py __init__.py manage.py middleware.py monitor monitor.wsgi polymorphic settings.py urls.py $(DESTDIR)/usr/share/hydra-server
+	cp -a collections_24.py __init__.py manage.py middleware.py monitor monitor.wsgi polymorphic settings.py production_version.py urls.py $(DESTDIR)/usr/share/hydra-server

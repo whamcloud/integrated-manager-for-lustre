@@ -102,13 +102,14 @@ MIDDLEWARE_CLASSES = (
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
-    "django.core.context_processors.auth",
+    "django.contrib.auth.context_processors.auth", #     "django.core.context_processors.auth",
     "django.core.context_processors.debug",
     "django.core.context_processors.i18n",
     "django.core.context_processors.media",
     "django.core.context_processors.static",
     "django.core.context_processors.request",
     "django.contrib.messages.context_processors.messages",
+    'monitor.views.context_processor_app_data',
 )
 
 ROOT_URLCONF = 'urls'
@@ -172,11 +173,14 @@ SYSLOG_PATH = '/var/log/messages'
 AUDIT_PERIOD = 10
 
 try:
+    from production_version import VERSION
+except ImportError:
+    VERSION = "dev"
+
+try:
     LOCAL_SETTINGS
 except NameError:
     try:
         from local_settings import *
     except ImportError:
         pass
-
-
