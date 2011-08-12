@@ -6,6 +6,8 @@ from configure.lib.job import StepPaused, StepAborted, StepDirtyError, StepClean
 @task()
 def run_job(job_id):
     from configure.lib.job import job_log
+    job_log.debug("Job %d: run_job" % job_id)
+
     from configure.models import Job
     job = Job.objects.get(pk = job_id)
 
@@ -47,6 +49,7 @@ def run_job(job_id):
         klass, args = steps[step_index]
         step = klass(job, args)
         try:
+            job_log.debug("Job %d running step %d" % (job.id, step_index))
             step.run(args)
             job_log.debug("Job %d step %d successful" % (job.id, step_index))
         except Exception, e:
@@ -61,6 +64,7 @@ def run_job(job_id):
         mark_finish_step(step_index)
         step_index = step_index + 1
 
+    job_log.info("Job %d finished %d steps successfully" % (job.id, job.finish_step + 1))
     job.mark_complete(errored = False)
 
     return None
