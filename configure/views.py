@@ -25,22 +25,56 @@ def setup(request):
         }))
 
 def _create_target_mounts(node, target, failover_host = None):
-    tm = ManagedTargetMount(
+    primary = ManagedTargetMount(
         block_device = node,
         target = target,
         host = node.host, 
         mount_point = target.default_mount_path(node.host),
         primary = True)
-    tm.save()
+    primary.save()
 
     if failover_host:
-        tm = ManagedTargetMount(
+        failover = ManagedTargetMount(
             block_device = None,
             target = target,
             host = failover_host, 
-            mount_point = target.default_mount_path(failoverhost),
+            mount_point = target.default_mount_path(failover_host),
             primary = False)
-        tm.save()
+        failover.save()
+        return [primary, failover]
+    else:
+        return [primary]
+
+def _set_target_states(form, targets, mounts):
+    assert(isinstance(form, CreateTargetsForm))
+    from configure.lib.state_manager import StateManager
+    if form.cleaned_data['start_now']:
+        for mount in mounts:
+            if mount.primary:
+                StateManager().set_state(mount, 'mounted')
+    elif form.cleaned_data['register_now']:
+        for target in targets:
+            StateManager().set_state(target, 'registered')
+    elif form.cleaned_data['format_now']:
+        for target in targets:
+            StateManager().set_state(target, 'formatted')
+
+
+class CreateTargetsForm(forms.Form):
+    format_now = forms.BooleanField(required = False, initial = True)
+    register_now = forms.BooleanField(required = False, initial = True)
+    start_now = forms.BooleanField(required = False, initial = True)
+
+    def clean(self):
+        cleaned_data = self.cleaned_data
+        format_now = cleaned_data.get("format_now")
+        register_now = cleaned_data.get("register_now")
+        start_now = cleaned_data.get("start_now")
+
+        if register_now and not format_now:
+            raise forms.ValidationError("A target must be formatted to be registered.")
+
+        return cleaned_data
 
 def create_mgs(request, host_id):
     host = get_object_or_404(Host, id = int(host_id))
@@ -48,7 +82,7 @@ def create_mgs(request, host_id):
     nodes = LunNode.objects.filter(host = host, used_hint = False) 
     other_hosts = [h for h in Host.objects.all() if h != host]
 
-    class CreateMgsForm(forms.Form):
+    class CreateMgsForm(CreateTargetsForm):
         device = forms.ChoiceField(choices = [(n.id, n.path) for n in nodes])
         failover_partner = forms.ChoiceField(choices = [(None, 'None')] + [(h.id, h) for h in other_hosts])
 
@@ -65,9 +99,10 @@ def create_mgs(request, host_id):
 
             target = ManagedMgs(name='MGS')
             target.save()
-            _create_target_mounts(node, target, failover_host)
+            mounts = _create_target_mounts(node, target, failover_host)
+            _set_target_states(form, [target], mounts)
 
-            return redirect('configure.views.setup')
+            return redirect('configure.views.states')
 
     else:
         return HttpResponseBadRequest
@@ -92,7 +127,7 @@ def create_fs(request, mgs_id):
         if form.is_valid():
             fs = Filesystem(mgs = mgs, name = form.cleaned_data['name'])
             fs.save()
-            return redirect('configure.views.setup')
+            return redirect('configure.views.states')
     else:
         return HttpResponseBadRequest
 
@@ -107,10 +142,13 @@ def create_oss(request, host_id):
     nodes = host.available_lun_nodes()
     other_hosts = [h for h in Host.objects.all() if h != host]
 
-    class CreateOssForm(forms.Form):
+    class CreateOssForm(CreateTargetsForm):
         filesystem = forms.ChoiceField(choices = [(f.id, f.name) for f in Filesystem.objects.all()])
         failover_partner = forms.ChoiceField(choices = [(None, 'None')] + [(h.id, h) for h in other_hosts])
-
+        def __init__(self, *args, **kwargs):
+            super(CreateTargetsForm, self).__init__(*args, **kwargs)
+            self.fields.keyOrder = ['filesystem', 'failover_partner', 'format_now', 'register_now', 'start_now']
+        
     class CreateOssNodeForm(forms.Form):
         def __init__(self, node, *args, **kwargs):
             self.node = node
@@ -142,15 +180,20 @@ def create_oss(request, host_id):
                 failover_host = None
             filesystem = Filesystem.objects.get(id=form.cleaned_data['filesystem'])
 
+            all_targets = []
+            all_mounts = []
             for node_form in node_forms:
                 if node_form.cleaned_data['use']:
                     node = node_form.node
 
-                    ost = ManagedOst(filesystem = filesystem)
-                    ost.save()
-                    _create_target_mounts(node, ost, failover_host)
+                    target = ManagedOst(filesystem = filesystem)
+                    target.save()
+                    all_targets.append(target)
+                    mounts = _create_target_mounts(node, target, failover_host)
+                    all_mounts.extend(mounts)
 
-            return redirect('configure.views.setup')
+            _set_target_states(form, all_targets, all_mounts)
+            return redirect('configure.views.states')
     else:
         return HttpResponseBadRequest
 
@@ -166,10 +209,9 @@ def create_mds(request, host_id):
     nodes = host.available_lun_nodes()
     other_hosts = [h for h in Host.objects.all() if h != host]
 
-    filesystems_with_mdt = [mdt.filesystem for mdt in MetadataTarget.objects.all()]
-    filesystems = [f for f in Filesystem.objects.all() if not f in filesystems_with_mdt]
+    filesystems = Filesystem.objects.filter(metadatatarget = None)
 
-    class CreateMdtForm(forms.Form):
+    class CreateMdtForm(CreateTargetsForm):
         filesystem = forms.ChoiceField(choices = [(f.id, f.name) for f in filesystems])
         device = forms.ChoiceField(choices = [(n.id, n.path) for n in nodes])
         failover_partner = forms.ChoiceField(choices = [(None, 'None')] + [(h.id, h) for h in other_hosts])
@@ -189,9 +231,11 @@ def create_mds(request, host_id):
 
             target = ManagedMdt(filesystem = filesystem)
             target.save()
-            _create_target_mounts(node, target, failover_host)
+            mounts = _create_target_mounts(node, target, failover_host)
 
-            return redirect('configure.views.setup')
+            _set_target_states(form, [target], mounts)
+
+            return redirect('configure.views.states')
 
     else:
         return HttpResponseBadRequest
@@ -222,23 +266,64 @@ def jobs_json(request):
         })
     jobs_json = json.dumps(jobs_dicts)
 
-    klasses = [ManagedTarget, ManagedHost, ManagedTargetMount]
-    items = []
-    for klass in klasses:
-        items.extend(list(klass.objects.all()))
-
     from configure.lib.state_manager import StateManager
     state_manager = StateManager()
 
+    from django.core.urlresolvers import reverse
     from django.contrib.contenttypes.models import ContentType
+    from itertools import chain
     stateful_objects = []
-    for i in items:
+    klasses = [ManagedTarget, ManagedHost, ManagedTargetMount]
+    for i in chain(*[k.objects.all() for k in klasses]):
+        actions = []
+        transitions = state_manager.available_transitions(i)
+        if transitions == None:
+            busy = True
+        else:
+            busy = False
+            for transition in transitions:
+                actions.append({
+                    "name": transition['state'],
+                    "caption": transition['verb'],
+                    "url": reverse('configure.views.set_state', kwargs={
+                        "content_type_id": "%s" % i.content_type_id,
+                        "stateful_object_id": "%s" % i.id,
+                        "new_state": transition['state']
+                        }),
+                    "ajax": True
+                    })
+        
+        can_create_mds = (MetadataTarget.objects.count() != Filesystem.objects.count())
+        can_create_oss = MetadataTarget.objects.count() > 0
+        if isinstance(i, ManagedHost):
+            if not i.is_mgs():
+                actions.append({
+                    "name": "create_mgs",
+                    "caption": "Setup MGS",
+                    "url": reverse('configure.views.create_mgs', kwargs={"host_id": i.id}),
+                    "ajax": False
+                    })
+            if can_create_mds:
+                actions.append({
+                    "name": "create_mgs",
+                    "caption": "Setup MDS",
+                    "url": reverse('configure.views.create_mds', kwargs={"host_id": i.id})
+                    })
+
+            if can_create_oss:
+                actions.append({
+                    "name": "create_mgs",
+                    "caption": "Setup OSS",
+                    "url": reverse('configure.views.create_oss', kwargs={"host_id": i.id})
+                    })
+                
         stateful_objects.append({
             "id": i.id,
             "__str__": "%s" % i,
             "state": i.state,
-            "available_transitions": state_manager.available_transitions(i),
-            "content_type_id": ContentType.objects.get_for_model(i).id
+            "actions": actions,
+            "content_type_id": i.content_type_id,
+            "busy": busy
             })
 
     body = json.dumps({
@@ -294,8 +379,10 @@ def set_state(request, content_type_id, stateful_object_id, new_state):
 
     from configure.lib.state_manager import StateManager
     transition_job = StateManager().set_state(stateful_object, new_state)
-    # TODO UI if the job wasn't created
 
-    return redirect(job, job_id = transition_job.id)
+    if transition_job:
+        return HttpResponse(status = 201)
+    else:
+        return HttpResponse(status = 200)
 
 

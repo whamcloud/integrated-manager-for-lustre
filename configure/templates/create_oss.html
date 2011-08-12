@@ -1,28 +1,84 @@
 
 {% extends 'base.html' %}
 
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/setup_forms.css"/>
+{% endblock %}
+
 {% block scripts %}
+    <script type='text/javascript'>
+        $(document).ready(function() {
+            function button_sensitivity() {
+                var any_selected = false;
+                $("ul.device_list input[type=checkbox]").each(function() {
+                    if ($(this).attr('value')) {
+                        any_selected = true;
+                        return false;
+                    }
+                });
+                $("input[type=submit]").button('option', 'disabled', !any_selected);
+            }
+
+            $("div.button_bar input").button();
+            $("div.button_bar a").button();
+            button_sensitivity();
+
+            $("ul.device_list label").click(function() {
+                $('#' + $(this).attr('for')).change();
+            });
+
+            $("ul.device_list input[type=checkbox]").change(function(ev) {
+                button_sensitivity();
+            });
+        });
+    </script>
 {% endblock %}
 
 {% block content %}
-<h2>Create OSS</h2>
-<p>Selected host: {{host}}</p>
-<form method='post'>
+<span class='ui-state-default target_form'>
+<h2>Setup OSS ({{host}})</h2>
+<form method='post' class='create_target'>
     {% csrf_token %}
+    <h3>OSS options</h3>
     <table>
-        {{ form.as_table}}
-        {% for node_form in node_forms %}
         <tr>
-            <td>
-                {{ node_form.use}}
-            </td>
-            <td>
-                {{node_form.node.path}}
-            </td>
+            <td>{{form.filesystem.label_tag}}:</td>
+            <td>{{form.filesystem}}</td>
         </tr>
-        {% endfor %}
+        <tr>
+            <td>{{form.failover_partner.label_tag}}:</td>
+            <td>{{form.failover_partner}}</td>
+        </tr>
     </table>
-    <input type='submit' value='Create'/>
+    <h3>OST block devices</h3>
+    <div class='ui-widget ui-corner-all form_help'>
+        <span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+        Select one or more available block devices to use as OSTs
+    </div>
+    <ul class='device_list'>
+    {% for node_form in node_forms %}
+        <li>
+            {{node_form.use}}
+            <label for="id_{{node_form.use.html_name}}">{{node_form.node.path}}</label>
+        </li>
+    {% endfor %}
+    </ul>
+    <h3>OST actions:</h3>
+    <div class='ui-widget ui-corner-all form_help'>
+        <span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+        Selected actions will be performed on newly created targets
+    </div>
+    <ul>
+        <li>{{form.format_now}} {{form.format_now.label_tag}}</li>
+        <li>{{form.register_now}} {{form.register_now.label_tag}}</li>
+        <li>{{form.start_now}} {{form.start_now.label_tag}}</li>
+    </ul>
+    <div class='button_bar'>
+        <a href="{% url configure.views.states %}">Go back</a>
+        <input type='submit' value='Create targets'/>
+    </div>
 </form>
+</div>
+
 {% endblock %}
 

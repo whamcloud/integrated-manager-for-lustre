@@ -29,24 +29,25 @@
         }
 
         transition_elements = $('<span></span>').addClass('transitions');
-        stateful_object['available_transitions'].forEach(function(transition) {
-            url =  "/configure/set_state/" + stateful_object['content_type_id'] + "/" + stateful_object['id'] + "/" + transition['state'] + "/";
-            link = $('<a>' + transition['verb'] + '</a>').attr({'href': url}).click(function(event) {
-                event.preventDefault();
-                link = $(this)
-                url = link.attr('href');
-                console.log('transition attempt ' + url);
-                transition_request = $.get(url)
-                    .success(function(data, textStatus, jqXHR) {
-                        link.html("");
-                        console.log('transition success');
-                    })
-                    .error(function(event) {
-                        setTimeout('jobs_update();', 1000);
-                        console.log(event);
-                    });
-            });
-            transition_elements.append($('<span>&nbsp;|&nbsp;</span>'));
+        stateful_object['actions'].forEach(function(transition) {
+            link = $('<a>' + transition['caption'] + '</a>').attr({'href': transition['url']})
+            if (transition['ajax']) {
+                link.click(function(event) {
+                    event.preventDefault();
+                    link = $(this)
+                    url = link.attr('href');
+                    console.log('transition attempt ' + url);
+                    transition_request = $.get(url)
+                        .success(function(data, textStatus, jqXHR) {
+                            console.log('transition success');
+                        })
+                        .error(function(event) {
+                            setTimeout('jobs_update();', 1000);
+                            console.log(event);
+                        });
+                });
+            }
+            link.button();
             transition_elements.append(link);
         });
         container.find('.transitions').replaceWith(transition_elements);
@@ -84,12 +85,16 @@
                     }
                     job_markup($('#' + id), job);
                 });
-
+                
                 stateful_objects = data['stateful_objects'];
                 stateful_objects.forEach(function(stateful_object) {
                     id = "stateful_object_" + stateful_object['content_type_id'] + "_" + stateful_object['id'];
                     if($('#' + id).length == 0) {
-                    $('#stateful_objects').append($("<tr><td><span class='name'></span></td><td><span class='state'></span></td><td><span class='transitions'></span></td></tr>").attr({'id': id}))
+                    $('#stateful_objects').append($(
+                            "<tr><td><span class='name'></span>" + 
+                            "</td><td><span class='state'></span></td>" +
+                            "<td><span class='transitions'></span></td>" +
+                            "</tr>").attr({'id': id}))
                     }
                     stateful_object_markup($('#' + id), stateful_object);
                 });

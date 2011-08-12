@@ -573,5 +573,5 @@ div.stats_tree {
 }
 
 /* Override some jquery-ui defaults */
-.ui-button-text-only .ui-button-text { padding: .2em .4em; }
+.ui-button-text-only .ui-button-text { padding: .3em .6em; }
 .ui-widget { font-size: 0.8em; }
