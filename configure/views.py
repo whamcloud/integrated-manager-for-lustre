@@ -41,13 +41,13 @@ def _set_target_states(form, targets, mounts):
     if form.cleaned_data['start_now']:
         for mount in mounts:
             if mount.primary:
-                StateManager().set_state(mount, 'mounted')
+                StateManager.set_state(mount, 'mounted')
     elif form.cleaned_data['register_now']:
         for target in targets:
-            StateManager().set_state(target, 'registered')
+            StateManager.set_state(target, 'registered')
     elif form.cleaned_data['format_now']:
         for target in targets:
-            StateManager().set_state(target, 'formatted')
+            StateManager.set_state(target, 'formatted')
 
 
 class CreateTargetsForm(forms.Form):
@@ -374,11 +374,8 @@ def set_state(request, content_type_id, stateful_object_id, new_state):
     stateful_object = stateful_object_klass.objects.get(id = stateful_object_id)
 
     from configure.lib.state_manager import StateManager
-    transition_job = StateManager().set_state(stateful_object, new_state)
+    transition_job = StateManager.set_state(stateful_object, new_state)
 
-    if transition_job:
-        return HttpResponse(status = 201)
-    else:
-        return HttpResponse(status = 200)
+    return HttpResponse(status = 201)
 
 

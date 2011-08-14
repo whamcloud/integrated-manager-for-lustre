@@ -54,6 +54,34 @@ def janitor():
     remove_old_jobs()
 
 @task()
+def set_state(content_type, object_id, new_state):
+    """content_type: a ContentType natural key tuple
+       object_id: the pk of a StatefulObject instance
+       new_state: the string of a state in the StatefulObject's states attribute"""
+    # This is done in an async task for two reasons:
+    #  1. At time of writing, StateManager.set_state's logic is not safe against
+    #     concurrent runs that might schedule multiple jobs for the same objects.
+    #     Submitting to a single-worker queue is a simpler and more efficient
+    #     way of serializing than locking the table in the database, as we don't
+    #     exclude workers from setting there completion and advancing the queue
+    #     while we're scheduling new jobs.
+    #  2. Calculating the dependencies of a new state is not trivial, because operation
+    #     may have thousands of dependencies (think stopping a filesystem with thousands
+    #     of OSTs).  We want views like those that create+format a target to return
+    #     snappily.
+    #
+    #  nb. there is an added bonus that StateManager uses some cached tables
+    #      built from introspecting StatefulObject and StateChangeJob classes,
+    #      and a long-lived worker process keeps those in memory for you.
+
+    from django.contrib.contenttypes.models import ContentType
+    model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
+    instance = model_klass.objects.get(pk = object_id).downcast()
+
+    from configure.lib.state_manager import StateManager
+    StateManager()._set_state(instance, new_state)
+
+@task()
 def run_job(job_id):
     from configure.lib.job import job_log
     job_log.debug("Job %d: run_job" % job_id)

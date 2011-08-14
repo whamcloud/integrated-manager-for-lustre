@@ -5,6 +5,7 @@ setup_environ(settings)
 
 from monitor.models import *
 from configure.models import *
+from configure.lib.state_manager import StateManager
 
 from collections_24 import defaultdict
 import sys
@@ -142,53 +143,29 @@ class HydraDebug(cmd.Cmd, object):
         fs = Filesystem.objects.get(name = fs_name)
         for target in fs.get_targets():
             if target.state == 'unformatted':
-                s.set_state(target, 'formatted')
+                StateManager.set_state(target, 'formatted')
 
     def do_start_fs(self, fs_name):
-        from configure.lib.state_manager import StateManager
         fs = Filesystem.objects.get(name = fs_name)
-        s = StateManager()
         for target in fs.get_targets():
-            s.set_state(target.targetmount_set.get(primary = True).downcast(), 'mounted')
+            StateManager.set_state(target.targetmount_set.get(primary = True).downcast(), 'mounted')
 
-    def do_test(self, args):
-        from configure.tasks import increment_test
-        from configure.models import Test
-        t = Test()
-        t.save()
-        jobs = []
-        for n in range(0, 50):
-            jobs.append(increment_test.delay(t.id))
-
-        from time import sleep
-        sleep(5)
-        
-        t = Test.objects.get(pk = t.id)
-        print t.i
     def do_stop_fs(self, fs_name):
-        from configure.lib.state_manager import StateManager
         fs = Filesystem.objects.get(name = fs_name)
-        s = StateManager()
         for target in fs.get_targets():
             if not target.state == 'unmounted':
-                s.set_state(target.targetmount_set.get(primary = True).downcast(), 'unmounted')
+                StateManager.set_state(target.targetmount_set.get(primary = True).downcast(), 'unmounted')
 
     def do_lnet_up(self, args):
-        from configure.lib.state_manager import StateManager
-        s = StateManager()
         for host in ManagedHost.objects.all():
-            s.set_state(host, 'lnet_up')
+            StateManager.set_state(host, 'lnet_up')
     def do_lnet_down(self, args):
-        from configure.lib.state_manager import StateManager
-        s = StateManager()
         for host in ManagedHost.objects.all():
-            s.set_state(host, 'lnet_down')
+            StateManager.set_state(host, 'lnet_down')
 
     def do_lnet_unload(self, args):
-        from configure.lib.state_manager import StateManager
-        s = StateManager()
         for host in ManagedHost.objects.all():
-            s.set_state(host, 'lnet_unloaded')
+            StateManager.set_state(host, 'lnet_unloaded')
 
     def do_poke_queue(self, args):
         from configure.models import Job

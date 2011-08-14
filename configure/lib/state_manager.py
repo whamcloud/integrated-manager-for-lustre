@@ -7,7 +7,8 @@ getLogger('Job').setLevel(DEBUG)
 getLogger('Job').addHandler(FileHandler("Job.log"))
 
 class StateManager(object):
-    def available_transitions(self, stateful_object):
+    @classmethod
+    def available_transitions(cls, stateful_object):
         """Return a list states to which the object can be set from 
            its current state, or None if the object is currently
            locked by a Job"""
@@ -59,9 +60,16 @@ class StateManager(object):
                 instance.state = new_state
                 instance.save()
 
-    def set_state(self, instance, new_state):
-        # TODO: make this a SERIALIZABLE transaction
 
+    @classmethod
+    def set_state(cls, instance, new_state):
+        import configure.tasks
+        return configure.tasks.set_state.delay(
+                instance.content_type.natural_key(),
+                instance.id,
+                new_state)
+
+    def _set_state(self, instance, new_state):
         """Return a Job or None if the object is already in new_state"""
         from configure.models import StatefulObject
         assert(isinstance(instance, StatefulObject))

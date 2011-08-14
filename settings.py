@@ -216,13 +216,14 @@ CELERY_ROUTES = (
         {"monitor.tasks.discover_hosts": {"queue": "periodic"}},
         {"monitor.tasks.janitor": {"queue": "periodic"}},
         {"configure.tasks.janitor": {"queue": "periodic"}},
+        {"configure.tasks.set_state": {"queue": "serialize"}},
         {"configure.tasks.run_job": {"queue": "jobs"}},
         {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
         )
 
 CELERY_TRACK_STARTED = True
 
-# This is really important, it makes celery try a task again when a worker
+# CELERY_ACKS_LATE is really important, it makes celery try a task again when a worker
 # crashes (only works with proper AMQP backend like RabbitMQ, not DJKombu)
 CELERY_ACKS_LATE = True
 
