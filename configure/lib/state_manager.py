@@ -44,7 +44,9 @@ class StateManager(object):
 
     @classmethod
     def notify_state(cls, instance, new_state, from_states):
-        """from_states: list of states it's valid to transition from"""
+        """from_states: list of states it's valid to transition from.  This lets
+           the audit code safely update the state of e.g. a mount it doesn't find
+           to 'unmounted' without risking incorrectly transitioning from 'unconfigured'"""
         if not instance.state in from_states:
             return
 
@@ -55,7 +57,7 @@ class StateManager(object):
         if new_state != instance.state:
             outstanding_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
             if outstanding_locks == 0:
-                getLogger('Job').info("notify_state: Updating state of item %d (%s) to %s" % (instance.id, instance, new_state))
+                job_log.info("notify_state: Updating state of item %d (%s) to %s" % (instance.id, instance, new_state))
                 # TODO: for concurrency, should insert this state change as a job
                 instance.state = new_state
                 instance.save()
