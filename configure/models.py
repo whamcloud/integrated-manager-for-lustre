@@ -303,6 +303,7 @@ class Job(models.Model):
     paused = models.BooleanField(default = False)
     cancelled = models.BooleanField(default = False)
 
+    modified_at = models.DateTimeField(auto_now = True)
     created_at = models.DateTimeField(auto_now_add = True)
 
     wait_for_count = models.PositiveIntegerField(default = 0)

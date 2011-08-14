@@ -204,22 +204,21 @@ LOGGING = {
 
 SYSLOG_PATH = '/var/log/messages'
 
-# In seconds
+# Periods given in seconds
 AUDIT_PERIOD = 10
+JANITOR_PERIOD = 60
+
+JOB_MAX_AGE = 3600 * 24 * 7
+AUDIT_MAX_AGE = 3600 * 24
 
 CELERY_ROUTES = (
-        {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
         {"monitor.tasks.audit_all": {"queue": "periodic"}},
         {"monitor.tasks.discover_hosts": {"queue": "periodic"}},
+        {"monitor.tasks.janitor": {"queue": "periodic"}},
+        {"configure.tasks.janitor": {"queue": "periodic"}},
         {"configure.tasks.run_job": {"queue": "jobs"}},
-        {"configure.tasks.periodic": {"queue": "jobs"}},
-        {"configure.tasks.other": {"queue": "jobs"}},
+        {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
         )
-
-#CELERY_DEFAULT_QUEUE = "default"
-#CELERY_DEFAULT_EXCHANGE = "default"
-#CELERY_DEFAULT_EXCHANGE_TYPE = "direct"
-#CELERY_DEFAULT_ROUTING_KEY = "default"
 
 CELERY_TRACK_STARTED = True
 

@@ -4,11 +4,30 @@ from datetime import timedelta, datetime
 
 from monitor.lib.lustre_audit import audit_log
 
+import settings
+
+def remove_old_audits():
+    try:
+        from settings import AUDIT_MAX_AGE
+    except ImportError:
+        AUDIT_MAX_AGE = None
+
+    from monitor.models import Audit
+    if AUDIT_MAX_AGE:
+        retirees = Audit.objects.filter(created_at__lt = datetime.now() - timedelta(seconds=AUDIT_MAX_AGE))
+        for audit in retirees:
+            audit_log.info("Deleting too-old Audit %d" % audit.id)
+            audit.delete()
+
+@periodic_task(run_every = timedelta(seconds = settings.JANITOR_PERIOD))
+def janitor():
+    """Invoke periodic housekeeping tasks"""
+    remove_old_audits()    
+
 @task()
 def monitor_exec(monitor_id, audit_id):
     audit_log.debug("monitor_exec: audit %d" % audit_id)
     from monitor.models import Audit, Monitor
-
 
     from django.db import transaction
     # Transaction to ensure that 'started' flag is committed before proceeding

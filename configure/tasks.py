@@ -1,7 +1,57 @@
 
-from celery.decorators import task
+from celery.decorators import task, periodic_task
 
 from configure.lib.job import StepPaused, StepAborted, StepDirtyError, StepCleanError
+
+import settings
+from datetime import datetime, timedelta
+
+def complete_orphan_jobs():
+    """This task applies timeouts to cover for crashes/bugs which cause
+       something to die between putting the DB in a state which expects
+       to be advanced by a celery task, and creating the celery task.
+       Also covers situation where we lose comms with AMQP backend and
+       adding tasks fails, although ideally task-adders should catch
+       that exception themselves."""
+    from configure.lib.job import job_log
+
+    # The max. time we will allow between a job committing its
+    # state as 'tasked' and committing its task_id to the database.
+    # TODO: reconcile this vs. whatever timeout celery is using to talk to AMQP
+    # TODO: reconcile this vs. whatever timeout django.db is using to talk to MySQL
+    grace_period = timedelta(seconds = 60)
+
+    from configure.models import Job
+    orphans = Job.objects.filter(state = 'tasked') \
+        .filter(task_id = None) \
+        .filter(modified_at__lt = datetime.now() - grace_period)
+    for job in orphans:
+        job_log.error("Job %d found by janitor (tasked by no task_id since %s), marking errored" % (job.id, job.modified_at))
+        job.mark_complete(errored = True)
+
+def remove_old_jobs():
+    """Avoid an unlimited buildup of Job objects over long periods of time.  Set
+       JOB_MAX_AGE to None to have immortal Jobs."""
+    from configure.lib.job import job_log
+
+    try:
+        from settings import JOB_MAX_AGE
+    except ImportError:
+        JOB_MAX_AGE = None
+
+    from configure.models import Job
+    old_jobs = Job.objects.filter(created_at__lt = datetime.now() - timedelta(seconds = JOB_MAX_AGE))
+    if old_jobs.count() > 0:
+        job_log.info("Removing %d old Job objects" % old_jobs.count())
+        # Jobs cannot be deleted in one go because of intra-job foreign keys
+        for j in old_jobs:
+            j.delete()
+
+@periodic_task(run_every = timedelta(seconds = settings.JANITOR_PERIOD))
+def janitor():
+    """Invoke periodic housekeeping tasks"""
+    complete_orphan_jobs()
+    remove_old_jobs()
 
 @task()
 def run_job(job_id):
