@@ -11,18 +11,8 @@ from configure.models import *
 # These views are implicitly transactions.  If you create an object and then 
 # submit a celery job that does something to it, the job could execute before
 # the transaction is committed, and fail because the object doesn't exist.
-# We hopefully don't have that problem with the djkombu backend (it's all going into
-# the same database, but bear it in mind!
-
-def setup(request):
-    can_create_mdt = (MetadataTarget.objects.count() != Filesystem.objects.count())
-
-    return render_to_response("setup.html", RequestContext(request, {
-        'mgss': ManagementTarget.objects.all(),
-        'filesystems': Filesystem.objects.all(),
-        'hosts': Host.objects.all(),
-        'can_create_mdt': can_create_mdt
-        }))
+# If you create an object which you're going to refer to in a celery job,
+# then commit your transaction before starting your celery job
 
 def _create_target_mounts(node, target, failover_host = None):
     primary = ManagedTargetMount(
@@ -222,14 +212,12 @@ def create_mds(request, host_id):
         form = CreateMdtForm(request.POST)
 
         if form.is_valid():
-            print "valid"
             node = LunNode.objects.get(id = form.cleaned_data['device'])
             if form.cleaned_data['failover_partner'] and form.cleaned_data['failover_partner'] != 'None':
                 failover_host = Host.objects.get(id = form.cleaned_data['failover_partner'])
             else:
                 failover_host = None
             filesystem = Filesystem.objects.get(id=form.cleaned_data['filesystem'])
-            print "filesystem = %s" % filesystem
 
             target = ManagedMdt(filesystem = filesystem)
             target.save()
@@ -296,6 +284,13 @@ def jobs_json(request):
         
         can_create_mds = (MetadataTarget.objects.count() != Filesystem.objects.count())
         can_create_oss = MetadataTarget.objects.count() > 0
+        if isinstance(i, ManagedMgs):
+            actions.append({
+                "name": "create_fs",
+                "caption": "Create filesystem",
+                "url": reverse('configure.views.create_fs', kwargs={"mgs_id": i.id}),
+                "ajax": False
+                })
         if isinstance(i, ManagedHost):
             if not i.is_mgs():
                 actions.append({

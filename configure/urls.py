@@ -3,7 +3,7 @@ from django.conf.urls.defaults import *
 from configure.views import *
 
 urlpatterns = patterns('',
-    (r'^$', setup),
+    (r'^$', states),
     (r'^create_mgs/(?P<host_id>\d+)/$', create_mgs),
     (r'^create_filesystem/(?P<mgs_id>\d+)/$', create_fs),
     (r'^create_mds/(?P<host_id>\d+)/$', create_mds),
