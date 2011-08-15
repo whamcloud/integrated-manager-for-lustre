@@ -1,35 +1,80 @@
 
+
+#stateful_objects {
+    padding-left: 0px;
+}
+
+#stateful_objects li {
+    list-style: none;
+    margin-top: 6px;
+    border-radius: 6px;
+    border: 1px solid #09f;
+    padding: 6px;
+    font-size: 0.9em;
+    font-weight: normal;
+    color: #222;
+}
+
+#stateful_objects li span.name {
+    font-weight: bold;
+    text-shadow: #aaa 2px 2px 3px;
+}
+
+#stateful_objects li span.state_label {
+    font-size: 0.95em;
+    float: right;
+}
+
+#stateful_objects li span.state {
+    font-style: italic;
+    font-size: 0.95em;
+    float: right;
+}
+
+span.hshrink {
+    display: inline-block;
+    float: left;
+    margin-right: 12px;
+    padding-left: 6px;
+    border-left: 1px solid gray;
+}
+
+#jobs {
+    padding: 3px;
+    padding-left: 0px;
+}
+
+div#content {
+    padding: 12px;
+}
+
+h2 {
+    text-shadow: #aaa 2px 2px 3px;
+    margin-bottom: 6px;
+    margin-top: 0px;
+}
+
 #jobs li {
     list-style: none;
+    margin-bottom: 3px;
+    font-size: 0.9em;
+    color: #222;
+    font-weight: normal;
+}
+
+#jobs li span.description {
+    font-style: italic;
+}
+
+#jobs li a {
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+#jobs li span.time {
+    margin-left: 12px;
 }
 
 img.icon {
 }
 
-.job_complete {
-    background-image: url('../images/icon_tick.png');
-    background-repeat: no-repeat;
-    width: 16px;
-    height: 16px;
-}
-
-.job_tasked {
-    background-image: url('../images/ajax-loader.gif');
-    background-repeat: no-repeat;
-    width: 16px;
-    height: 16px;
-}
-
-.job_pending {
-    background-image: url('../images/icon_hourglass.png');
-    background-repeat: no-repeat;
-    width: 16px;
-    height: 16px;
-}
-
-.job_error {
-    background-image: url('../images/dialog-error.png');
-    background-repeat: no-repeat;
-    width: 16px;
-    height: 16px;
-}

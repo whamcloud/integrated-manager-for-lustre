@@ -296,7 +296,7 @@ class Test(models.Model):
 class Job(models.Model):
     __metaclass__ = DowncastMetaclass
 
-    states = ('pending', 'tasked', 'complete')
+    states = ('pending', 'tasked', 'complete', 'cancelling')
     state = models.CharField(max_length = 16, default = 'pending')
 
     errored = models.BooleanField(default = False)
@@ -423,16 +423,61 @@ class Job(models.Model):
     def get_steps(self):
         raise NotImplementedError()
 
+    def cancel(self):
+        from configure.lib.job import job_log
+        job_log.debug("Job %d: Job.cancel" % self.id)
+        # Important: multiple connections are allowed to call run() on a job
+        # that they see as pending, but only one is allowed to proceed past this
+        # point and spawn tasks.
+        from django.db import transaction
+        @transaction.commit_on_success()
+        def mark_cancelling():
+            return Job.objects.filter(~Q(state = 'complete'), pk = self.id).update(state = 'cancelling')
+
+        updated = mark_cancelling()
+        if updated == 0:
+            # Someone else already started this job, bug out
+            job_log.debug("job %d already completed, not cancelling" % self.id)
+            return
+
+        if self.task_id:
+            job_log.debug("job %d: revoking task %s" % (self.id, self.task_id))
+            from celery.result import AsyncResult
+            from celery.task.control import revoke
+            revoke(self.task_id, terminate = True)
+            self.task_id = None
+
+        self.complete(cancelled = True)
+
     def run(self):
         from configure.lib.job import job_log
         job_log.info("Job %d: Job.run" % self.id)
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
+
+
+        # My wait_for are complete, and I don't care if they're errored, just
+        # that they aren't running any more.
+        # My depend_on, however, must have completed successfully in order
+        # to guarantee that my state dependencies have been met, so I will
+        # error out if any depend_on are errored.
+        for dep in self.depend_on.all():
+            # My deps might have completed at some point in the past, or they
+            # might be in the process of finishing and invoking their dependents
+            # (of which I am one)
+            assert(dep.state == 'complete' or dep.state == 'completing')
+            if dep.errored or dep.cancelled:
+                self.complete(cancelled = True)
+                job_log.warning("Job %d: cancelling because depend_on %d was not successful" % (self.id, dep.id))
+                return
+
+        # Set state to 'tasked'
+        # =====================
         from django.db import transaction
         @transaction.commit_on_success()
         def mark_tasked():
-            return Job.objects.filter(pk = self.id, state = 'pending').update(state = 'tasked')
+            return Job.objects.filter(pk = self.id, state = 'pending').update(state = 'tasking')
 
         updated = mark_tasked()
 
@@ -442,61 +487,19 @@ class Job(models.Model):
             return
         else:
             assert(updated == 1)
-            job_log.debug("job %d pending->tasked" % self.id)
+            job_log.debug("job %d pending->tasking" % self.id)
+            self.state = 'tasking'
 
-        # My wait_for are complete, and I don't care if they're errored, just
-        # that they aren't running any more.
-        # My depend_on, however, must have completed successfully in order
-        # to guarantee that my state dependencies have been met, so I will
-        # error out if any depend_on are errored.
-        for dep in self.depend_on.all():
-            assert(dep.state == 'complete')
-            if dep.errored:
-                self.mark_complete(errored = True)
-                job_log.warning("Cancelling job %s because depend_on %s is errored" % (self, dep))
-                return
-
-        self.state = 'tasked'
-        self.save()
-
+        # Generate a celery task
+        # ======================
         from configure.tasks import run_job
         celery_job = run_job.delay(self.id)
 
+        # Save the celery task ID
+        # =======================
         self.task_id = celery_job.task_id
+        self.state = 'tasked'
         self.save()
-
-
-    def run_step(self, idx):
-        from configure.lib.job import job_log
-        job_log.debug("job %d: run_step %d" % (self.id, idx))
-        steps = self.get_steps()
-        if len(steps) == 0:
-            raise RuntimeError("Jobs must have at least 1 step (%s)" % self)
-
-        klass, args = steps[idx]
-        # Create a Step and push it to the 'run_job_step' celery task
-        step = klass(self, args)
-        if idx == len(steps) - 1:
-            step.mark_final()
-        step.index = idx
-        from configure.lib.job import Step
-        assert isinstance(step, Step), ValueError("%s is not a Step" % step)
-        from django.db import transaction
-        # Transaction to ensure a commmit between creating step attempt
-        # and submitting celery job
-        @transaction.commit_on_success()
-        def create_stepattempt():
-            # Record this attempt to run a step
-            return self.stepattempt_set.create(
-                    task_id = None,
-                    step_index = idx)
-        
-        step_attempt = create_stepattempt()
-
-
-        step_attempt.task_id = celery_job.task_id
-        step_attempt.save()
-        job_log.debug("submitted job %d step %d stepattempt %d" % (self.id, idx, step_attempt.id))
 
     def pause(self):
         if self.state == 'complete':
@@ -505,44 +508,39 @@ class Job(models.Model):
         assert(self.state == 'pending' or self.state == 'tasked')
         # TODO
 
-    def retry(self):
-        """Start running the job from the last step that did not complete
-           successfully (i.e. try running the last failed step again"""
-        assert(self.state == 'complete' and self.errored)
-        # TODO
-
-    def restart(self):
-        """Start running the job from square 1, even if some steps had
-           already completed"""
-        assert(self.state == 'complete' and self.errored)
-        # TODO
-
     @classmethod
     def cancel_job(cls, job_id):
         job = Job.objects.get(pk = job_id)
         if job.state != 'tasked':
             return None
 
-    def mark_complete(self, errored = False):
+    def complete(self, errored = False, cancelled = False):
         from configure.lib.job import job_log
-        if not errored and isinstance(self, StateChangeJob):
+        success = not (errored or cancelled)
+        if success and isinstance(self, StateChangeJob):
             new_state = self.state_transition[2]
             obj = self.get_stateful_object()
             obj.state = new_state
             job_log.info("StateChangeJob complete, setting state %s on %s" % (new_state, obj))
             obj.save()
 
-        self.state = 'complete'
+        self.state = 'completing'
         self.errored = errored
+        self.cancelled = cancelled
         self.save()
 
-        job_log.info("job %d complete (errored=%s), notifying dependents" % (self.id, self.errored))
+        job_log.info("job %d completing (errored=%s), notifying dependents" % (self.id, self.errored))
         for dependent in self.depend_on_job.all():
             dependent.notify_depend_on_complete()
         for dependent in self.wait_for_job.all():
             dependent.notify_wait_for_complete()
 
         Job.run_next()
+
+        self.state = 'complete'
+        self.errored = errored
+        self.cancelled = cancelled
+        self.save()
 
     def description(self):
         raise NotImplementedError

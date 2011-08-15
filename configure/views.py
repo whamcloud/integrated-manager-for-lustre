@@ -240,29 +240,39 @@ def jobs(request):
         'jobs': jobs
         }))
 
-def jobs_json(request):
+def _jobs_json():
     import json
+    from django.core.urlresolvers import reverse
     from datetime import timedelta, datetime
     from django.db.models import Q
     jobs = Job.objects.filter(~Q(state = 'complete') | Q(created_at__gte=datetime.now() - timedelta(minutes=60)))
     jobs_dicts = []
     for job in jobs:
+        if job.state != 'complete':
+            cancel_url = reverse('configure.views.job_cancel', kwargs={"job_id": job.id})
+        else:
+            cancel_url = None
+
         jobs_dicts.append({
             'id': job.id,
             'state': job.state,
             'errored': job.errored,
-            'description': job.description()
+            'cancelled': job.cancelled,
+            'created_at': "%s" % job.created_at,
+            'description': job.description(),
+            'cancel_url': cancel_url
         })
     jobs_json = json.dumps(jobs_dicts)
 
     from configure.lib.state_manager import StateManager
     state_manager = StateManager()
 
-    from django.core.urlresolvers import reverse
     from django.contrib.contenttypes.models import ContentType
     from itertools import chain
     stateful_objects = []
     klasses = [ManagedTarget, ManagedHost, ManagedTargetMount]
+    can_create_mds = (MetadataTarget.objects.count() != Filesystem.objects.count())
+    can_create_oss = MetadataTarget.objects.count() > 0
     for i in chain(*[k.objects.all() for k in klasses]):
         actions = []
         transitions = state_manager.available_transitions(i)
@@ -282,8 +292,6 @@ def jobs_json(request):
                     "ajax": True
                     })
         
-        can_create_mds = (MetadataTarget.objects.count() != Filesystem.objects.count())
-        can_create_oss = MetadataTarget.objects.count() > 0
         if isinstance(i, ManagedMgs):
             actions.append({
                 "name": "create_fs",
@@ -322,12 +330,13 @@ def jobs_json(request):
             "busy": busy
             })
 
-    body = json.dumps({
+    return json.dumps({
                 'jobs': jobs_dicts,
                 'stateful_objects': stateful_objects
             }, indent = 4)
 
-    return HttpResponse(body, 'application/json')
+def jobs_json(request):
+    return HttpResponse(_jobs_json(), 'application/json')
 
 
 def job(request, job_id):
@@ -344,8 +353,6 @@ def filesystem(request, filesystem_id):
     return render_to_response("filesystem.html", RequestContext(request, {
         'filesystem': filesystem
         }))
-
-
 
 def states(request):
     klasses = [ManagedTarget, ManagedHost, ManagedTargetMount]
@@ -366,7 +373,7 @@ def states(request):
             })
 
     return render_to_response("states.html", RequestContext(request, {
-        'stateful_objects': stateful_objects
+        'initial_data': _jobs_json()
         }))
 
 def set_state(request, content_type_id, stateful_object_id, new_state):
@@ -378,4 +385,9 @@ def set_state(request, content_type_id, stateful_object_id, new_state):
 
     return HttpResponse(status = 201)
 
+def job_cancel(request, job_id):
+    job = get_object_or_404(Job, pk = job_id)
+    job.cancel()
+
+    return HttpResponse(status = 200)
 
