@@ -163,7 +163,7 @@ span.loading_placeholder {
     font-style: italic;
 }
 
-td.audit_time {
+span.audit_time {
     font-size: 0.8em;
     text-align: right;
 }
@@ -257,6 +257,11 @@ border-right: 1px solid #0099ff;
         padding: 0px 10px;
 	color: #0099ff;
 	background-color: #fff;
+}
+
+div#footer {
+    clear: both;
+    margin: 16px 16px 0 16px;
 }
 
 /* Log viewer styles */

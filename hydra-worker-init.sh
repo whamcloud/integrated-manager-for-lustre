@@ -16,6 +16,23 @@ test -f ${MANAGE_PY} || exit 0
 export PYTHONPATH=${PROJECT_PATH}
 
 start() {
+    # only on first install...
+    #if [ -d /var/lib/mysql/test ]; then
+    #    # remove the test database and user from mysqld
+    #    /usr/bin/mysql_secure_installation
+    #fi
+    if [ ! -d /var/lib/mysql/hydra ]; then
+        pushd /usr/share/hydra-server
+        # create the hydra database
+        #PYTHONPATH=$(pwd) python manage.py dbshell << EOF
+#create database hydra
+#EOF
+        echo "create database hydra" | mysql
+        # and populate it
+        PYTHONPATH=$(pwd) python manage.py syncdb --noinput
+        popd
+    fi
+
     echo -n "Starting the Hydra worker daemon: "
     python ${MANAGE_PY} celeryd_multi start serial ssh jobs -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -c:serial 1 --autoscale:ssh=10,100 --autoscale:jobs=10,100 --pidfile=/var/run/hydra-worker_%n.pid --logfile=./var/log/hydra-worker_%n.log
     echo

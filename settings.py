@@ -19,12 +19,13 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': os.path.join(SITE_ROOT, 'database.db'),                      # Or path to database file if using sqlite3.
-        'USER': '',                      # Not used with sqlite3.
+        'ENGINE': 'django.db.backends.mysql', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': 'hydra',                 # Or path to database file if using sqlite3.
+        'USER': 'root',                  # Not used with sqlite3.
         'PASSWORD': '',                  # Not used with sqlite3.
         'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
         'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+        'OPTIONS': {'init_command': 'SET storage_engine=INNODB'}
     }
 }
 
@@ -106,14 +107,15 @@ MIDDLEWARE_CLASSES = (
 ) + ((lambda:'debug_toolbar.middleware.DebugToolbarMiddleware', lambda:())[debug_toolbar==None](),)
 
 TEMPLATE_CONTEXT_PROCESSORS = (
-    "django.core.context_processors.auth",
+    "django.contrib.auth.context_processors.auth", #     "django.core.context_processors.auth",
     "django.core.context_processors.debug",
     "django.core.context_processors.i18n",
     "django.core.context_processors.media",
     "django.core.context_processors.static",
     "django.core.context_processors.request",
     "django.contrib.messages.context_processors.messages",
-    "context_processors.menu_items"
+    "context_processors.menu_items",
+    'monitor.views.context_processor_app_data',
 )
 
 ROOT_URLCONF = 'urls'
@@ -228,6 +230,11 @@ CELERY_TRACK_STARTED = True
 # crashes (only works with proper AMQP backend like RabbitMQ, not DJKombu)
 CELERY_ACKS_LATE = True
 
+
+try:
+    from production_version import VERSION
+except ImportError:
+    VERSION = "dev"
 
 try:
     LOCAL_SETTINGS
