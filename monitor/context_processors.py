@@ -1,4 +1,8 @@
 
+def app_data(request):
+    from settings import VERSION
+    return {'APP_VERSION': VERSION}
+
 def menu_items(request):
     items = []
     from django.core.urlresolvers import reverse
