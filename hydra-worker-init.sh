@@ -9,8 +9,10 @@
 # Source function library.
 . /etc/init.d/functions
 
-export PROJECT_PATH = /usr/share/hydra-server 
-export MANAGE_PY = ${PROJECT_PATH}/manage.py
+export PROJECT_PATH=/usr/share/hydra-server 
+export MANAGE_PY=${PROJECT_PATH}/manage.py
+export PIDFILE=/var/run/hydra-worker_%n.pid
+export LOGFILE=/var/log/hydra/hydra-worker_%n.log
 test -f ${MANAGE_PY} || exit 0
 
 export PYTHONPATH=${PROJECT_PATH}
@@ -34,13 +36,13 @@ start() {
     fi
 
     echo -n "Starting the Hydra worker daemon: "
-    python ${MANAGE_PY} celeryd_multi start serial ssh jobs -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -c:serial 1 --autoscale:ssh=10,100 --autoscale:jobs=10,100 --pidfile=/var/run/hydra-worker_%n.pid --logfile=./var/log/hydra-worker_%n.log
+    python ${MANAGE_PY} celeryd_multi start serial ssh jobs -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -c:serial 1 --autoscale:ssh=10,100 --autoscale:jobs=10,100 --pidfile=$PIDFILE --logfile=$LOGFILE
     echo
 }
 
 stop() {
     echo -n "Stopping the Hydra worker daemon: "
-    python /usr/share/hydra-server/manage.py celeryd_multi stop serial ssh jobs --pidfile=/var/run/hydra-worker_%n.pid --logfile=./var/log/hydra-worker_%n.log
+    python /usr/share/hydra-server/manage.py celeryd_multi stop serial ssh jobs --pidfile=$PIDFILE --logfile=$LOGFILE
     echo
 }
 

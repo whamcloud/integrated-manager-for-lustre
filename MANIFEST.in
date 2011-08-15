@@ -4,6 +4,9 @@ include monitor/templates/*
 include monitor/templatetags/*
 include monitor/bin/*.py
 include monitor/fixtures/*
+include configure/templates/*
+include configure/bin/*.py
 graft polymorphic
 graft monitor/static
+graft configure/static
 global-exclude .*.swp

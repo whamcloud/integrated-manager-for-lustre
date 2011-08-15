@@ -1,11 +1,10 @@
 
-from configure.models import Job
-
 from logging import getLogger, FileHandler, StreamHandler, DEBUG, INFO
+import settings
+
 job_log = getLogger('job')
 job_log.setLevel(DEBUG)
-job_log.addHandler(FileHandler("job.log"))
-import settings
+job_log.addHandler(FileHandler(settings.JOB_LOG_PATH))
 if settings.DEBUG:
     job_log.setLevel(DEBUG)
     #job_log.addHandler(StreamHandler())
@@ -71,13 +70,11 @@ class StateChangeJob(object):
     """Subclasses must define a class attribute 'stateful_object'
        identifying another attribute which returns a StatefulObject"""
     def get_stateful_object(self):
+        from configure.models import StatefulObject
         stateful_object = getattr(self, self.stateful_object)
         assert(isinstance(stateful_object, StatefulObject))
         return stateful_object
 
-from logging import getLogger, FileHandler, DEBUG
-getLogger('ssh').setLevel(DEBUG)
-getLogger('ssh').addHandler(FileHandler("ssh.log"))
 def debug_ssh(host, command):
     ssh_monitor = host.monitor.downcast()
 
@@ -110,19 +107,17 @@ def debug_ssh(host, command):
     result_code = channel.recv_exit_status()
     ssh.close()
 
-    getLogger('ssh').debug("%s: %s" % (host, command))
-
     job_log.debug("debug_ssh:%s:%s:%s" % (host, result_code, command))
     if result_code != 0:
         job_log.error(result_stdout)
         job_log.error(result_stderr)
     return result_code, result_stdout, result_stderr
 
-from monitor.models import *
-from configure.models import *
 
 class MkfsStep(Step):
     def _mkfs_command(self, target):
+        from monitor.models import FilesystemMember
+        from configure.models import ManagedMgs, ManagedMdt, ManagedOst
         args = []
         primary_mount = target.targetmount_set.get(primary = True)
 
@@ -149,6 +144,8 @@ class MkfsStep(Step):
         return "/usr/sbin/mkfs.lustre %s" % " ".join(args)
 
     def run(self, kwargs):
+        from monitor.models import Target
+        from configure.models import ManagedTarget
         target_id = kwargs['target_id']
         target = Target.objects.get(id = target_id).downcast()
 
@@ -175,6 +172,7 @@ class MountStep(Step):
         return True
 
     def run(self, kwargs):
+        from monitor.models import TargetMount
         target_mount_id = kwargs['target_mount_id']
         target_mount = TargetMount.objects.get(id = target_mount_id)
 
@@ -193,6 +191,7 @@ class MkdirStep(Step):
         return True
 
     def run(self, kwargs):
+        from monitor.models import TargetMount
         target_mount_id = kwargs['target_mount_id']
         target_mount = TargetMount.objects.get(id = target_mount_id)
 
@@ -208,6 +207,7 @@ class StartLNetStep(Step):
         return True
 
     def run(self, kwargs):
+        from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
         code, out, err = debug_ssh(host, "/usr/sbin/lctl network up")
@@ -222,6 +222,7 @@ class StopLNetStep(Step):
         return True
 
     def run(self, kwargs):
+        from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
         code, out, err = debug_ssh(host, "/root/hydra-rmmod.py ptlrpc; /usr/sbin/lctl network down")
@@ -237,6 +238,7 @@ class LoadLNetStep(Step):
         return True
 
     def run(self, kwargs):
+        from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
         code, out, err = debug_ssh(host, "/sbin/modprobe lnet")
@@ -251,6 +253,7 @@ class UnloadLNetStep(Step):
         return True
 
     def run(self, kwargs):
+        from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
         code, out, err = debug_ssh(host, "/root/hydra-rmmod.py lnet")
@@ -268,6 +271,7 @@ class UnmountStep(Step):
         return True
 
     def run(self, kwargs):
+        from monitor.models import TargetMount
         target_mount_id = kwargs['target_mount_id']
         target_mount = TargetMount.objects.get(id = target_mount_id)
 

@@ -230,6 +230,13 @@ CELERY_TRACK_STARTED = True
 # crashes (only works with proper AMQP backend like RabbitMQ, not DJKombu)
 CELERY_ACKS_LATE = True
 
+# Development defaults for log output
+if DEBUG:
+    JOB_LOG_PATH = "job.log"
+    AUDIT_LOG_PATH = "audit.log"
+else:
+    JOB_LOG_PATH = "/var/log/hydra/job.log"
+    AUDIT_LOG_PATH = "/var/log/hydra/audit.log"
 
 try:
     from production_version import VERSION

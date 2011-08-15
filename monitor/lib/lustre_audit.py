@@ -13,7 +13,7 @@ import simplejson as json
 
 from logging import getLogger, FileHandler, StreamHandler, DEBUG, WARNING
 audit_log = getLogger('audit')
-audit_log.addHandler(FileHandler("audit.log"))
+audit_log.addHandler(FileHandler(settings.AUDIT_LOG_PATH))
 if settings.DEBUG:
     audit_log.setLevel(DEBUG)
     audit_log.addHandler(StreamHandler())

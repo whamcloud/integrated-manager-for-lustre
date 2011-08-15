@@ -45,6 +45,14 @@ w
 q
 EOF
 
+mkdir -p /var/log/hydra
+touch /var/log/hydra/job.log
+touch /var/log/hydra/audit.log
+chown -R apache:apache /var/log/hydra
+
+
+PYTHONPATH=/usr/share/hydra-server python /usr/share/hydra-server/manage.py collectstatic --noinput
+
 # start apache at boot time
 chkconfig httpd on
 # start cerebrod at boot time
