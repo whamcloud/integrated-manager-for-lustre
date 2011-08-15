@@ -25,7 +25,7 @@ class HostAuditError(Exception):
         self.host = host
         super(HostAuditError, self).__init__(*args, **kwargs)
 
-AGENT_PATH = "/root/hydra-agent.py"
+AGENT_PATH = "/usr/bin/hydra-agent.py"
 
 def normalize_nid(string):
     """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow 

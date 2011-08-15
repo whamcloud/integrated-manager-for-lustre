@@ -116,32 +116,33 @@ def debug_ssh(host, command):
 
 class MkfsStep(Step):
     def _mkfs_command(self, target):
+        from hydra_agent.cmds import lustre
         from monitor.models import FilesystemMember
         from configure.models import ManagedMgs, ManagedMdt, ManagedOst
-        args = []
+        kwargs = {}
         primary_mount = target.targetmount_set.get(primary = True)
 
-        args.append({
-            ManagedMgs: "--mgs",
-            ManagedMdt: "--mdt",
-            ManagedOst: "--ost"
-            }[target.__class__])
+        kwargs['target_types'] = {
+            ManagedMgs: "mgs",
+            ManagedMdt: "mdt",
+            ManagedOst: "ost"
+            }[target.__class__]
 
         if isinstance(target, FilesystemMember):
-            args.append("--fsname=%s" % target.filesystem.name)
-            args.extend(target.filesystem.mgsnode_spec())
+            kwargs['fsname'] = target.filesystem.name
+            kwargs['mgsnode'] = target.filesystem.mgs_nids()
 
-        args.append("--reformat")
+        kwargs['reformat'] = True
 
         for secondary_mount in target.targetmount_set.filter(primary = False):
             host = secondary_mount.host
-            nids = ",".join([n.nid_string for n in host.nid_set.all()])
-            assert nids != "", RuntimeError("No NIDs known for host %s" % host)
-            args.append("--failover=%s" % nids)
+            nids = [n.nid_string for n in host.nid_set.all()]
+            if len(nids) > 0:
+                kwargs['failnode'] = nids
 
-        args.append(primary_mount.block_device.path)
+        kwargs['device'] = primary_mount.block_device.path
 
-        return "/usr/sbin/mkfs.lustre %s" % " ".join(args)
+        return lustre.mkfs(**kwargs)
 
     def run(self, kwargs):
         from monitor.models import Target
@@ -165,8 +166,10 @@ class NullStep(Step):
 
 class MountStep(Step):
     def _mount_command(self, target_mount):
+        from hydra_agent.cmds import lustre
         assert(target_mount.block_device.path != None)
-        return "mount -t lustre %s %s" % (target_mount.block_device.path, target_mount.mount_point)
+        return lustre.mount(device=target_mount.block_device.path,
+                            dir=target_mount.mount_point)
 
     def is_idempotent(self):
         return True
@@ -207,10 +210,11 @@ class StartLNetStep(Step):
         return True
 
     def run(self, kwargs):
+        from hydra_agent.cmds import lustre
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, "/usr/sbin/lctl network up")
+        code, out, err = debug_ssh(host, lustre.lnet_start())
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
@@ -222,26 +226,27 @@ class StopLNetStep(Step):
         return True
 
     def run(self, kwargs):
+        from hydra_agent.cmds import lustre
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, "/root/hydra-rmmod.py ptlrpc; /usr/sbin/lctl network down")
+        code, out, err = debug_ssh(host, lustre.lnet_stop())
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
             print StepCleanError
             raise StepCleanError()
 
-
 class LoadLNetStep(Step):
     def is_idempotent(self):
         return True
 
     def run(self, kwargs):
+        from hydra_agent.cmds import lustre
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, "/sbin/modprobe lnet")
+        code, out, err = debug_ssh(host, lustre.lnet_load())
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
@@ -256,7 +261,7 @@ class UnloadLNetStep(Step):
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, "/root/hydra-rmmod.py lnet")
+        code, out, err = debug_ssh(host, lustre.lnet_unload())
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
@@ -265,7 +270,8 @@ class UnloadLNetStep(Step):
 
 class UnmountStep(Step):
     def _unmount_command(self, target_mount):
-        return "umount -t lustre %s" % (target_mount.mount_point)
+        from hydra_agent.cmds import lustre
+        return lustre.umount(dir=target_mount.mount_point)
 
     def is_idempotent(self):
         return True
