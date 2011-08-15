@@ -104,7 +104,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.transaction.TransactionMiddleware',
     'pagination.middleware.PaginationMiddleware',
     'middleware.ExceptionPrinterMiddleware',
-) + ((lambda:'debug_toolbar.middleware.DebugToolbarMiddleware', lambda:())[debug_toolbar==None](),)
+) + [('debug_toolbar.middleware.DebugToolbarMiddleware',), ()][debug_toolbar==None]
 
 TEMPLATE_CONTEXT_PROCESSORS = (
     "django.contrib.auth.context_processors.auth", #     "django.core.context_processors.auth",
@@ -150,7 +150,7 @@ INSTALLED_APPS = (
     'pagination',
     'monitor',
     'configure'
-    ) + ((lambda:'debug_toolbar', lambda:())[debug_toolbar==None](),)
+    ) + [('debug_toolbar',), ()][debug_toolbar==None]
 
 INTERNAL_IPS = ('192.168.0.4',)
 
