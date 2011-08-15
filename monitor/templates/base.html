@@ -24,11 +24,9 @@
         </a>
         <div id="navigation"> 
             <ul> 
-              <li><a href="{% url monitor.views.dashboard %}">Dashboard</a></li> 
-              <li><a href="{% url monitor.views.statistics %}">Statistics</a></li> 
-              <li><a href="{% url monitor.views.log_viewer %}">Log Viewer</a></li> 
-              <li><a href="{% url monitor.views.events %}">Events</a></li> 
-              <li><a href="{% url monitor.views.alerts %}">Alerts</a></li> 
+              {% for menu_item in menu_items %}
+              <li><a href="{{menu_item.url }}">{{menu_item.caption}}</a></li> 
+              {% endfor %}
             </ul> 
         </div>
     </div> 
