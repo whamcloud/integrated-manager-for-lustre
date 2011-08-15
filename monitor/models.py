@@ -589,36 +589,34 @@ class AlertState(models.Model):
     def duration(self):
         return self.end - self.begin
 
-    @staticmethod
-    def filter_by_item(item):
-        return AlertState.objects.filter(active = True, 
-                alert_item_id = item.id,
-                alert_item_type__model = item.__class__.__name__.lower(),
-                alert_item_type__app_label = item.__class__._meta.app_label)
+    @classmethod
+    def filter_by_item(cls, item):
+        if hasattr(item, 'content_type'):
+            # A DowncastMetaclass object
+            return cls.objects.filter(active = True, 
+                    alert_item_id = item.id,
+                    alert_item_type = item.content_type)
+        else:
+            return cls.objects.filter(active = True, 
+                    alert_item_id = item.id,
+                    alert_item_type__model = item.__class__.__name__.lower(),
+                    alert_item_type__app_label = item.__class__._meta.app_label)
 
     @classmethod
     def notify(alert_klass, alert_item, active):
+        alert_item = alert_item.downcast()
+
         if active:
             alert_klass.high(alert_item)
         else:
             alert_klass.low(alert_item)
 
     @classmethod
-    def get_existing(alert_klass, alert_item):
-        """Do a normal .get() with the alert_item converted to explicit id+type info
-           for GenericForeignKey"""
-        return alert_klass.objects.get(
-                active = True,
-                alert_item_id = alert_item.id,
-                alert_item_type__model = alert_item.__class__.__name__.lower(),
-                alert_item_type__app_label = alert_item.__class__._meta.app_label)
-
-    @classmethod
     def high(alert_klass, alert_item):
         import datetime
         now = datetime.datetime.now()
         try:
-            alert_state = alert_klass.get_existing(alert_item)
+            alert_state = alert_klass.filter_by_item(alert_item).get()
             alert_state.end = now
             alert_state.save()
         except alert_klass.DoesNotExist:
@@ -637,7 +635,7 @@ class AlertState(models.Model):
         import datetime
         now = datetime.datetime.now()
         try:
-            alert_state = alert_klass.get_existing(alert_item)
+            alert_state = alert_klass.filter_by_item(alert_item).get()
             alert_state.end = now
             alert_state.active = False
             alert_state.save()
