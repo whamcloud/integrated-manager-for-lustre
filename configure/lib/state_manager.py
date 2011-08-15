@@ -2,9 +2,7 @@
 
 from collections_24 import defaultdict
 
-from logging import getLogger, FileHandler, DEBUG
-getLogger('Job').setLevel(DEBUG)
-getLogger('Job').addHandler(FileHandler("Job.log"))
+from configure.lib.job import job_log
 
 class StateManager(object):
     @classmethod
