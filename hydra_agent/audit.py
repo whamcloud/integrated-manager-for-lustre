@@ -4,7 +4,12 @@ import os
 import sys
 import re
 import glob
-import simplejson as json
+try:
+    # Python >= 2.5
+    import json
+except ImportError:
+    # Python 2.4
+    import simplejson as json
 import subprocess
 
 class LocalLustreAudit:
