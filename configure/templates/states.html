@@ -58,7 +58,6 @@
         actions_list.children().each(function() {
             if (valid_urls.indexOf($(this).attr('href')) == -1) {
                 $(this).remove()
-                console.log($(this))
             }
         });
     }
@@ -69,28 +68,32 @@
         );
 
         container.children('.time').html(job['created_at']);
-        if (job['cancel_url']) {
-            if (container.children('.cancel').children().length == 0) {
-
-                link = $("<a href='" + job['cancel_url'] + "'>[cancel]</a>")
+        action_container = container.children('.actions')
+        valid_urls = []
+        job['actions'].forEach(function(action) {
+            valid_urls.push(action['url']);
+            if(action_container.children('a[href="' + action['url'] + '"]').length == 0) {
+                link = $("<a href='" + action['url'] + "'>" + action['caption'] + "</a>")
                 link.click(function(event){
                     event.preventDefault();
-                    url = $(this).attr('href');
-                    action_request = $.get(url)
+                    action_request = $.get(action['url'])
                         .error(function(event) {
                             console.log(event);
                         });
                 });
-
-                container.children('.cancel').append(link);
+                link.button();
+                action_container.append(link);
             }
-        } else {
-            container.children('.cancel').html("");
-        }
+        });
+        action_container.children().each(function() {
+            if (valid_urls.indexOf($(this).attr('href')) == -1) {
+                $(this).remove()
+            }
+        });
 
         if (job['state'] == 'pending') {
             container.children('.icon').attr('src', "{{STATIC_URL}}/images/icon_hourglass.png");
-        } else if (job['state'] == 'tasked') {
+        } else if (job['state'] == 'tasked' || job['state'] == 'tasking' || job['state'] == 'completing') {
             container.children('.icon').attr('src', "{{STATIC_URL}}/images/ajax-loader.gif");
         } else if (job['errored']) {
             container.children('.icon').attr('src', "{{STATIC_URL}}/images/dialog-error.png");
@@ -98,8 +101,11 @@
             container.children('.icon').attr('src', "{{STATIC_URL}}/images/gtk-cancel.png");
         } else if (job['state'] == 'complete') {
             container.children('.icon').attr('src', "{{STATIC_URL}}/images/icon_tick.png");
+        } else if (job['state'] == 'paused') {
+            container.children('.icon').attr('src', "{{STATIC_URL}}/images/gtk-media-pause.png");
         } else {
-            console.log('no icon for job ' + job);
+            console.log('no icon for job:');
+            console.log(job);
         }
     }
 
@@ -113,7 +119,6 @@
                         "<img class='icon'/>" + 
                         "<span class='description'></span>" + 
                         "<span class='actions'></span>" + 
-                        "<span class='cancel'></span>" + 
                         "<span class='time'></span>" + 
                         "</li>").attr({'id': id})
                 )

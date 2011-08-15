@@ -296,7 +296,7 @@ class Test(models.Model):
 class Job(models.Model):
     __metaclass__ = DowncastMetaclass
 
-    states = ('pending', 'tasked', 'complete', 'cancelling')
+    states = ('pending', 'tasked', 'complete', 'completing', 'cancelling', 'paused')
     state = models.CharField(max_length = 16, default = 'pending')
 
     errored = models.BooleanField(default = False)
@@ -449,6 +449,41 @@ class Job(models.Model):
 
         self.complete(cancelled = True)
 
+    def pause(self):
+        from configure.lib.job import job_log
+        job_log.debug("Job %d: Job.pause" % self.id)
+        print "Hey! pause!"
+        # Important: multiple connections are allowed to call run() on a job
+        # that they see as pending, but only one is allowed to proceed past this
+        # point and spawn tasks.
+        from django.db import transaction
+        @transaction.commit_on_success()
+        def mark_paused():
+            return Job.objects.filter(state = 'pending', pk = self.id).update(state = 'paused')
+
+        updated = mark_paused()
+        if updated != 1:
+            job_log.warning("Job %d: failed to pause, it had already left state 'pending'")
+
+    def unpause(self):
+        from configure.lib.job import job_log
+        job_log.debug("Job %d: Job.unpause" % self.id)
+        # Important: multiple connections are allowed to call run() on a job
+        # that they see as pending, but only one is allowed to proceed past this
+        # point and spawn tasks.
+        from django.db import transaction
+        @transaction.commit_on_success()
+        def mark_unpaused():
+            return Job.objects.filter(state = 'paused', pk = self.id).update(state = 'pending')
+
+        updated = mark_unpaused()
+        if updated != 1:
+            job_log.warning("Job %d: failed to pause, it had already left state 'pending'" % self.id)
+        else:
+            job_log.warning("Job %d: unpaused, running any available jobs" % self.id)
+            Job.run_next()
+
+
     def run(self):
         from configure.lib.job import job_log
         job_log.info("Job %d: Job.run" % self.id)
@@ -500,13 +535,6 @@ class Job(models.Model):
         self.task_id = celery_job.task_id
         self.state = 'tasked'
         self.save()
-
-    def pause(self):
-        if self.state == 'complete':
-            return
-
-        assert(self.state == 'pending' or self.state == 'tasked')
-        # TODO
 
     @classmethod
     def cancel_job(cls, job_id):

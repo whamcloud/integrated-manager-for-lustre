@@ -13,9 +13,7 @@ $(document).ready(function() {
 
     button_sensitivity()
     $('#id_name').keydown(function() {
-        console.log('settimeout');
         setTimeout(function() {
-            console.log('settimeout called');
             button_sensitivity(name);
         }, 100);
     });

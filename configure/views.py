@@ -248,10 +248,19 @@ def _jobs_json():
     jobs = Job.objects.filter(~Q(state = 'complete') | Q(created_at__gte=datetime.now() - timedelta(minutes=60)))
     jobs_dicts = []
     for job in jobs:
+        actions = []
         if job.state != 'complete':
-            cancel_url = reverse('configure.views.job_cancel', kwargs={"job_id": job.id})
-        else:
-            cancel_url = None
+            actions.append({
+                'url': reverse('configure.views.job_cancel', kwargs={"job_id": job.id}),
+                'caption': "Cancel"})
+        if job.state == 'pending':
+            actions.append({
+                'url': reverse('configure.views.job_pause', kwargs={"job_id": job.id}),
+                'caption': "Pause"})
+        if job.state == 'paused':
+            actions.append({
+                'url': reverse('configure.views.job_unpause', kwargs={"job_id": job.id}),
+                'caption': "Unpause"})
 
         jobs_dicts.append({
             'id': job.id,
@@ -260,7 +269,7 @@ def _jobs_json():
             'cancelled': job.cancelled,
             'created_at': "%s" % job.created_at,
             'description': job.description(),
-            'cancel_url': cancel_url
+            'actions': actions
         })
     jobs_json = json.dumps(jobs_dicts)
 
@@ -391,3 +400,16 @@ def job_cancel(request, job_id):
 
     return HttpResponse(status = 200)
 
+def job_pause(request, job_id):
+    print "hey! job_pause"
+    job = get_object_or_404(Job, pk = job_id)
+    print "job = %s" % job
+    job.pause()
+
+    return HttpResponse(status = 200)
+
+def job_unpause(request, job_id):
+    job = get_object_or_404(Job, pk = job_id)
+    job.unpause()
+
+    return HttpResponse(status = 200)
