@@ -39,6 +39,14 @@ start() {
     rabbitmqctl list_vhosts | grep "^hydravhost$" > /dev/null || rabbitmqctl add_vhost hydravhost
     rabbitmqctl set_permissions -p hydravhost hydra ".*" ".*" ".*"
 
+    # Django: Build the hydra-server project's /static directory
+    # Note: this would naturally be in %post, but some some build
+    # environments run those in the wrong order, so it's here.
+    if [ ! -d /usr/share/hydra-server/static ]; then
+        PYTHONPATH=/usr/share/hydra-server python /usr/share/hydra-server/manage.py collectstatic --noinput
+    fi
+
+
     echo -n "Starting the Hydra worker daemon: "
     python ${MANAGE_PY} celeryd_multi start serial ssh jobs -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -B:serial -c:serial 1 --autoscale:ssh=10,100 --autoscale:jobs=10,100 --pidfile=$PIDFILE --logfile=$LOGFILE
     echo
