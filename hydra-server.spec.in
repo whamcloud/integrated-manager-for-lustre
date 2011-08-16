@@ -51,6 +51,10 @@ touch /var/log/hydra/job.log
 touch /var/log/hydra/audit.log
 chown -R apache:apache /var/log/hydra
 
+# This is required for opening connections between
+# httpd and rabbitmq-server
+setsebool -P httpd_can_network_connect 1
+
 # start apache at boot time
 chkconfig httpd on
 # start cerebrod at boot time
