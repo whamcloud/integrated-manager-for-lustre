@@ -202,11 +202,17 @@ class SshMonitor(Monitor):
         else:
             port = None
 
+        try:
+            from configure.models import ManagedHost
+            host_klass = ManagedHost
+        except ImportError:
+            host_klass = Host
+
         agent_path = SshMonitor.DEFAULT_AGENT_PATH
         try:
-            host = Host.objects.get(address = host)
-        except Host.DoesNotExist:
-            host = Host(address = host)
+            host = host_klass.objects.get(address = host)
+        except host_klass.DoesNotExist:
+            host = host_klass(address = host)
 
         try:
             return host, SshMonitor.objects.get(
