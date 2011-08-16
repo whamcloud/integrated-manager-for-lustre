@@ -16,6 +16,8 @@ export LOGFILE=/var/log/hydra/hydra-worker_%n.log
 test -f ${MANAGE_PY} || exit 0
 
 export PYTHONPATH=${PROJECT_PATH}
+# needed so that ssh can find it's keys
+export HOME=/root
 
 start() {
     # only on first install...
@@ -24,12 +26,10 @@ start() {
     #    /usr/bin/mysql_secure_installation
     #fi
     if [ ! -d /var/lib/mysql/hydra ]; then
-        pushd /usr/share/hydra-server
         # create the hydra database
         echo "create database hydra" | mysql
         # and populate it
-        PYTHONPATH=$(pwd) python manage.py syncdb --noinput
-        popd
+        python $PYTHONPATH/manage.py syncdb --noinput
     fi
 
     # RabbitMQ: Configure default hydra user if it's not already set up
