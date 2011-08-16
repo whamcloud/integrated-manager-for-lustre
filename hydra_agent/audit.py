@@ -337,7 +337,9 @@ class LocalLustreAudit:
             for entry in entries:
                 tokens = entry.split()
                 step_num = tokens[0]
-                (code,action) = re.search("^\\((\d+)\\)(\w+)$", tokens[1]).groups()
+                # ([\w=]+) covers all possible token[0] from
+                # lustre/utils/llog_reader.c @ 0f8dca08a4f68cba82c2c822998ecc309d3b7aaf
+                (code,action) = re.search("^\\((\d+)\\)([\w=]+)$", tokens[1]).groups()
                 if action == 'setup':
                     volume = re.search("0:(\w+-\w+)-\w+", tokens[2]).group(1)
                     uuid = re.search("1:(.*)", tokens[3]).group(1)
