@@ -1,6 +1,7 @@
+import re
 
-def _sanitize_arg(arg):
-    if " " in arg:
+def __sanitize_arg(arg):
+    if re.search(r'\s', arg):
         arg = '"%s"' % arg
 
     return arg
@@ -74,7 +75,7 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
         arg = args[name]
         for key in arg:
             if arg[key] is not None:
-                options += "--%s %s=%s " % (name, key, _sanitize_arg(arg[key]))
+                options += "--%s %s=%s " % (name, key, __sanitize_arg(arg[key]))
 
     # everything else
     handled = set(flag_options.keys() + tuple_options + dict_options)
@@ -83,7 +84,7 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
             continue
         value = args[name]
         if value != '':
-            options += "--%s=%s " % (name, _sanitize_arg(value))
+            options += "--%s=%s " % (name, __sanitize_arg(value))
 
     # NB: Use $PATH instead of relying on hard-coded paths
     cmd = "tunefs.lustre %s %s %s" % (types, options, device)
@@ -131,7 +132,7 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
         arg = args[name]
         for key in arg:
             if arg[key] is not None:
-                options += "--%s %s=%s " % (name, key, _sanitize_arg(arg[key]))
+                options += "--%s %s=%s " % (name, key, __sanitize_arg(arg[key]))
 
     # everything else
     handled = set(flag_options.keys() + tuple_options + dict_options)
@@ -140,7 +141,7 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
             continue
         value = args[name]
         if value != '':
-            options += "--%s=%s " % (name, _sanitize_arg(value))
+            options += "--%s=%s " % (name, __sanitize_arg(value))
 
     # NB: Use $PATH instead of relying on hard-coded paths
     cmd = "mkfs.lustre %s %s %s" % (types, options, device)
