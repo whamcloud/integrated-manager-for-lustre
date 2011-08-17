@@ -66,7 +66,11 @@ class Host(models.Model):
 
     def available_lun_nodes(self):
         from django.db.models import Q
-        return LunNode.objects.filter(targetmount = None, host = self, used_hint = False).filter(~Q(lun__lunnode__used_hint = True))
+        return LunNode.objects.filter(
+                ~Q(lun__lunnode__used_hint = True),
+                targetmount = None,
+                host = self,
+                used_hint = False)
 
     def role(self):
         roles = self._role_strings()
@@ -104,6 +108,7 @@ class LunNode(models.Model):
     lun = models.ForeignKey(Lun, blank = True, null = True)
     host = models.ForeignKey(Host)
     path = models.CharField(max_length = 512)
+    size = models.BigIntegerField()
 
     used_hint = models.BooleanField()
 
@@ -112,6 +117,40 @@ class LunNode(models.Model):
 
     def __str__(self):
         return "%s:%s" % (self.host, self.path)
+
+    def pretty_string(self):
+        if self.path.startswith('/dev/disk/by-path/'):
+            short_name = self.path.replace('/dev/disk/by-path/', '', 1)
+
+            # e.g. ip-192.168.122.1:3260-iscsi-iqn.2011-08.com.whamcloud.lab.hydra-1.sdb-lun-0
+            if short_name.startswith("ip-") and short_name.index("-iscsi-") != -1:
+                iscsi_iqn = "".join(short_name.split("-iscsi-")[1:])
+                short_name = "iSCSI %s" % iscsi_iqn
+
+            # e.g. /dev/disk/by-path/pci-0000:00:06.0-scsi-0:0:3:0    
+            if short_name.startswith("pci-") and short_name.index("-scsi-") != -1:
+                scsi_id = "".join(short_name.split("-scsi-")[1:])
+                short_name = "SCSI %s" % scsi_id
+        elif self.path.startswith('/dev/mapper/'):
+            # e.g. /dev/mapper/VolGroup00-blob0
+            short_name = self.path.replace('/dev/mapper/', '', 1)
+            short_name = "LVM %s" % short_name
+        elif self.path.startswith('/dev/'):
+            # e.g. /dev/sda
+            short_name = self.path.replace('/dev/', '', 1)
+        else:
+            short_name = self.path
+
+        def sizeof_fmt(num):
+            # http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size/1094933#1094933
+            for x in ['bytes','KB','MB','GB','TB', 'EB', 'ZB', 'YB']:
+                if num < 1024.0:
+                    return "%3.1f%s" % (num, x)
+                num /= 1024.0
+
+        human_size = sizeof_fmt(self.size)
+
+        return "%s (%s)" % (short_name, human_size)
 
 class Monitor(models.Model):
     __metaclass__ = DowncastMetaclass

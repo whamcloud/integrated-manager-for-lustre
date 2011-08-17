@@ -261,9 +261,10 @@ class LustreAudit:
                         lun = lun,
                         host = self.host,
                         path = node_info['path'],
+                        size = node_info['size'],
                         used_hint = node_info['used'])
                 node.save()
-                audit_log.info("Discovered node %s (lun %s)" % (node, lun))
+                audit_log.info("Discovered node %s (lun %s, size %d)" % (node, lun, node_info['size']))
 
         for tm in TargetMount.objects.filter(host = self.host, primary = False, block_device = None):
             lun = tm.target.targetmount_set.get(primary = True).block_device.lun

@@ -73,7 +73,7 @@ def create_mgs(request, host_id):
     other_hosts = [h for h in Host.objects.all() if h != host]
 
     class CreateMgsForm(CreateTargetsForm):
-        device = forms.ChoiceField(choices = [(n.id, n.path) for n in nodes])
+        device = forms.ChoiceField(choices = [(n.id, n.pretty_string()) for n in nodes])
         failover_partner = forms.ChoiceField(choices = [(None, 'None')] + [(h.id, h) for h in other_hosts])
 
     if request.method == 'GET':
@@ -150,7 +150,7 @@ def create_oss(request, host_id):
         for node in nodes:
             node_forms.append(CreateOssNodeForm(node, initial = {
                 'node_id': node.id,
-                'node_name': node.path,
+                'node_name': node.pretty_string(),
                 'use': False
                 }, prefix = "%d" % node.id))
 
@@ -203,7 +203,7 @@ def create_mds(request, host_id):
 
     class CreateMdtForm(CreateTargetsForm):
         filesystem = forms.ChoiceField(choices = [(f.id, f.name) for f in filesystems])
-        device = forms.ChoiceField(choices = [(n.id, n.path) for n in nodes])
+        device = forms.ChoiceField(choices = [(n.id, n.pretty_string()) for n in nodes])
         failover_partner = forms.ChoiceField(choices = [(None, 'None')] + [(h.id, h) for h in other_hosts])
 
     if request.method == 'GET':
