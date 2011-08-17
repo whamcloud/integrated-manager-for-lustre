@@ -67,6 +67,14 @@ class LocalLustreAudit:
             s = os.stat(path)
             return S_ISBLK(s.st_mode)
 
+        def block_device_size(path):
+            fd = os.open(path, os.O_RDONLY)
+            try:
+                # os.SEEK_END = 2 (integer required for python 2.4)
+                return os.lseek(fd, 0, 2)
+            finally:
+                os.close(fd)
+
         all_devices = mount_devices | fstab_devices | scsi_devices | lvm_devices
         all_devices = set([d for d in all_devices if is_block_device(d)])
 
@@ -113,7 +121,8 @@ class LocalLustreAudit:
                 'kind': kind,
                 'mounted': mounted,
                 'used': used,
-                'fs_uuid': uuid
+                'fs_uuid': uuid,
+                'size': block_device_size(device)
                 })
         return result
 
