@@ -58,8 +58,8 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
 
     # freeze a view of the namespace before we start messing with it
     args = locals()
-    types = ""
-    options = ""
+    types = []
+    options = []
 
     tuple_options = "target_types mgsnode failnode servicenode network".split()
     for name in tuple_options:
@@ -70,10 +70,10 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
 
         if name == "target_types":
             for type in arg:
-                types += "--%s " % type
+                types.append("--%s" % type)
         else:
             if len(arg) > 0:
-                options += "--%s=%s " % (name, ",".join(arg))
+                options.append("--%s=%s" % (name, ",".join(arg)))
 
     flag_options = {
         'erase_params': '--erase-params',
@@ -85,14 +85,14 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
     }
     for arg in flag_options:
         if args[arg]:
-            options += "%s " % flag_options[arg]
+            options.append("%s" % flag_options[arg])
 
     dict_options = "param".split()
     for name in dict_options:
         arg = args[name]
         for key in arg:
             if arg[key] is not None:
-                options += "--%s %s=%s " % (name, key, __sanitize_arg(arg[key]))
+                options.append("--%s %s=%s" % (name, key, __sanitize_arg(arg[key])))
 
     # everything else
     handled = set(flag_options.keys() + tuple_options + dict_options)
@@ -101,10 +101,10 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
             continue
         value = args[name]
         if value != '':
-            options += "--%s=%s " % (name, __sanitize_arg(value))
+            options.append("--%s=%s" % (name, __sanitize_arg(value)))
 
     # NB: Use $PATH instead of relying on hard-coded paths
-    cmd = "tunefs.lustre %s %s %s" % (types, options, device)
+    cmd = "tunefs.lustre %s %s %s" % (" ".join(types), " ".join(options), device)
 
     return ' '.join(cmd.split())
 
@@ -118,8 +118,8 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
 
     # freeze a view of the namespace before we start messing with it
     args = locals()
-    types = ""
-    options = ""
+    types = []
+    options = []
 
     tuple_options = "target_types mgsnode failnode servicenode network".split()
     for name in tuple_options:
@@ -130,10 +130,10 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
 
         if name == "target_types":
             for type in arg:
-                types += "--%s " % type
+                types.append("--%s" % type)
         else:
             if len(arg) > 0:
-                options += "--%s=%s " % (name, ",".join(arg))
+                options.append("--%s=%s" % (name, ",".join(arg)))
                 
     flag_options = {
         'dryrun': '--dryrun',
@@ -144,14 +144,14 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
     }
     for arg in flag_options:
         if args[arg]:
-            options += "%s " % flag_options[arg]
+            options.append("%s" % flag_options[arg])
 
     dict_options = "param".split()
     for name in dict_options:
         arg = args[name]
         for key in arg:
             if arg[key] is not None:
-                options += "--%s %s=%s " % (name, key, __sanitize_arg(arg[key]))
+                options.append("--%s %s=%s" % (name, key, __sanitize_arg(arg[key])))
 
     # everything else
     handled = set(flag_options.keys() + tuple_options + dict_options)
@@ -160,9 +160,9 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
             continue
         value = args[name]
         if value != '':
-            options += "--%s=%s " % (name, __sanitize_arg(value))
+            options.append("--%s=%s" % (name, __sanitize_arg(value)))
 
     # NB: Use $PATH instead of relying on hard-coded paths
-    cmd = "mkfs.lustre %s %s %s" % (types, options, device)
+    cmd = "mkfs.lustre %s %s %s" % (" ".join(types), " ".join(options), device)
 
     return ' '.join(cmd.split())
