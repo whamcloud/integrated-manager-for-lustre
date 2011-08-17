@@ -124,6 +124,15 @@ class HydraDebug(cmd.Cmd, object):
         ssh_monitor.host = host
         ssh_monitor.save()
 
+    def do_host_list(self, line):
+        """host_list
+        Display all known hosts"""
+        table = Texttable()
+        table.header(['id', 'name'])
+        for host in Host.objects.all():
+            table.add_row([host.id, host.address])
+        screen(table.draw())
+
     def do_test_fake_events(self, line):
         from random import randint
         count = int(line)
