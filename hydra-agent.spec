@@ -17,7 +17,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: lmt-server-agent, python-simplejson
+Requires: python-simplejson
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface

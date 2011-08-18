@@ -4,7 +4,12 @@ import os
 import sys
 import re
 import glob
-import simplejson as json
+try:
+    # Python >= 2.5
+    import json
+except ImportError:
+    # Python 2.4
+    import simplejson as json
 import subprocess
 
 class LocalLustreAudit:
@@ -62,6 +67,14 @@ class LocalLustreAudit:
             s = os.stat(path)
             return S_ISBLK(s.st_mode)
 
+        def block_device_size(path):
+            fd = os.open(path, os.O_RDONLY)
+            try:
+                # os.SEEK_END = 2 (integer required for python 2.4)
+                return os.lseek(fd, 0, 2)
+            finally:
+                os.close(fd)
+
         all_devices = mount_devices | fstab_devices | scsi_devices | lvm_devices
         all_devices = set([d for d in all_devices if is_block_device(d)])
 
@@ -108,7 +121,8 @@ class LocalLustreAudit:
                 'kind': kind,
                 'mounted': mounted,
                 'used': used,
-                'fs_uuid': uuid
+                'fs_uuid': uuid,
+                'size': block_device_size(device)
                 })
         return result
 
@@ -332,7 +346,9 @@ class LocalLustreAudit:
             for entry in entries:
                 tokens = entry.split()
                 step_num = tokens[0]
-                (code,action) = re.search("^\\((\d+)\\)(\w+)$", tokens[1]).groups()
+                # ([\w=]+) covers all possible token[0] from
+                # lustre/utils/llog_reader.c @ 0f8dca08a4f68cba82c2c822998ecc309d3b7aaf
+                (code,action) = re.search("^\\((\d+)\\)([\w=]+)$", tokens[1]).groups()
                 if action == 'setup':
                     volume = re.search("0:(\w+-\w+)-\w+", tokens[2]).group(1)
                     uuid = re.search("1:(.*)", tokens[3]).group(1)
