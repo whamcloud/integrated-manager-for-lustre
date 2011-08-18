@@ -5,6 +5,11 @@ try:
 except:
     debug_toolbar = None
 
+try:
+    import django_extensions
+except:
+    django_exceptions = None
+
 import os
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
@@ -106,6 +111,7 @@ MIDDLEWARE_CLASSES = (
     'middleware.ExceptionPrinterMiddleware',
 ) + [('debug_toolbar.middleware.DebugToolbarMiddleware',), ()][debug_toolbar==None]
 
+
 TEMPLATE_CONTEXT_PROCESSORS = (
     "django.contrib.auth.context_processors.auth", #     "django.core.context_processors.auth",
     "django.core.context_processors.debug",
@@ -150,7 +156,8 @@ INSTALLED_APPS = (
     'pagination',
     'monitor',
     'configure'
-    ) + [('debug_toolbar',), ()][debug_toolbar==None]
+    ) + [('debug_toolbar',), ()][debug_toolbar==None] \
+      + [('django_extensions',), ()][django_extensions==None]
 
 INTERNAL_IPS = ('192.168.0.4',)
 
