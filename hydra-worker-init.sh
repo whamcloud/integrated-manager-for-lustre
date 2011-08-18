@@ -48,13 +48,13 @@ start() {
 
 
     echo -n "Starting the Hydra worker daemon: "
-    python ${MANAGE_PY} celeryd_multi start serial ssh jobs -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -B:serial -c:serial 1 --autoscale:ssh=10,100 --autoscale:jobs=10,100 --pidfile=$PIDFILE --logfile=$LOGFILE
+    python ${MANAGE_PY} celeryd_multi start serial ssh jobs -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -B:serial -c:serial 1 --autoscale:ssh=100,10 --autoscale:jobs=100,10 --pidfile=$PIDFILE --logfile=$LOGFILE
     echo
 }
 
 restart() {
     echo -n "Restarting the Hydra worker daemon: "
-    python ${MANAGE_PY} celeryd_multi restart serial ssh jobs -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -B:serial -c:serial 1 --autoscale:ssh=10,100 --autoscale:jobs=10,100 --pidfile=$PIDFILE --logfile=$LOGFILE
+    python ${MANAGE_PY} celeryd_multi restart serial ssh jobs -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -B:serial -c:serial 1 --autoscale:ssh=100,10 --autoscale:jobs=100,10 --pidfile=$PIDFILE --logfile=$LOGFILE
     echo
 }
 
