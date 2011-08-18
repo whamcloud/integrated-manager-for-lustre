@@ -69,6 +69,14 @@ class Step(object):
 class StateChangeJob(object):
     """Subclasses must define a class attribute 'stateful_object'
        identifying another attribute which returns a StatefulObject"""
+
+    # Tuple of (StatefulObjectSubclass, old_state, new_state)
+    state_transition = None
+    # Name of an attribute which is a ForeignKey to a StatefulObject
+    stateful_object = None
+    # Terse human readable verb, e.g. "Change this" (for buttons)
+    state_verb = None
+
     def get_stateful_object(self):
         from configure.models import StatefulObject
         stateful_object = getattr(self, self.stateful_object)
