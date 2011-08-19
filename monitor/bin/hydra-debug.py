@@ -40,9 +40,8 @@ class HydraDebug(cmd.Cmd, object):
         table.add_row([
             vol.id,
             vol.role(),
-            vol.host.address,
             vol.name,
-            AuditMountable.mountable_status_string(vol)
+            vol.status_string()
             ])
 
     def __filesystem_title(self, filesystem):
@@ -51,11 +50,10 @@ class HydraDebug(cmd.Cmd, object):
 
     def __list_volumes_filesystem(self, filesystem):
         table = Texttable()
-        table.header(['id', 'kind', 'host', 'name', 'status'])
+        table.header(['id', 'kind', 'name', 'status'])
 
         try:
-            mgs = ManagementTarget.objects.get(filesystems = filesystem)
-            self.__volume_row(mgs, table)
+            self.__volume_row(filesystem.mgs, table)
         except ManagementTarget.DoesNotExist:
             pass
 
@@ -112,7 +110,7 @@ class HydraDebug(cmd.Cmd, object):
         table.header(['id', 'address', 'kind', 'lnet status'])
         for host in Host.objects.all():
             if host.mountable_set.count() > 0:
-                table.add_row([host.id, host.address, host.role(), AuditHost.lnet_status_string(host)])
+                table.add_row([host.id, host.address, host.role(), host.status_string()])
 
         screen(table.draw())
 
@@ -128,9 +126,9 @@ class HydraDebug(cmd.Cmd, object):
         """host_list
         Display all known hosts"""
         table = Texttable()
-        table.header(['id', 'name'])
+        table.header(['id', 'name', 'status'])
         for host in Host.objects.all():
-            table.add_row([host.id, host.address])
+            table.add_row([host.id, host.address, host.status_string()])
         screen(table.draw())
 
     def do_test_fake_events(self, line):
