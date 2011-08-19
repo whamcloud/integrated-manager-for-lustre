@@ -117,6 +117,7 @@ def debug_ssh(host, command):
 
     job_log.debug("debug_ssh:%s:%s:%s" % (host, result_code, command))
     if result_code != 0:
+        job_log.error("debug_ssh:%s:%s:%s" % (host, result_code, command))
         job_log.error(result_stdout)
         job_log.error(result_stderr)
     return result_code, result_stdout, result_stderr
