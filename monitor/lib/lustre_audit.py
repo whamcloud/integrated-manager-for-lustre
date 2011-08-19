@@ -467,7 +467,7 @@ class LustreAudit:
                 recovering = TargetMountRecoveryInfo.update(mountable, mount_info["recovery_status"])
                 TargetRecoveryAlert.notify(mountable, recovering)
 
-            self.audited_mountables.append(mountable)
+            self.audited_mountables.append(mountable.downcast())
             if mountable.primary:
                 MountableOfflineAlert.notify(mountable, not mount_info['running'])
             else:
@@ -501,7 +501,7 @@ class LustreAudit:
                 audit_log.info("Learned client %s" % client)
                 self.learn_event(client)
 
-            self.audited_mountables.append(client)
+            self.audited_mountables.append(client.downcast())
             MountableOfflineAlert.notify(client, not client_info['mounted'])
 
     def learn_mgs_info(self):
