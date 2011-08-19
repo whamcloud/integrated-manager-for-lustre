@@ -6,100 +6,42 @@ from monitor.lib.lustre_audit import audit_log
 
 import settings
 
-def remove_old_audits():
-    try:
-        from settings import AUDIT_MAX_AGE
-    except ImportError:
-        AUDIT_MAX_AGE = None
-
-    from monitor.models import Audit
-    if AUDIT_MAX_AGE:
-        retirees = Audit.objects.filter(created_at__lt = datetime.now() - timedelta(seconds=AUDIT_MAX_AGE))
-        for audit in retirees:
-            audit_log.info("Deleting too-old Audit %d" % audit.id)
-            audit.delete()
-
-@periodic_task(run_every = timedelta(seconds = settings.JANITOR_PERIOD))
-def janitor():
-    """Invoke periodic housekeeping tasks"""
-    remove_old_audits()    
-
 @task()
-def monitor_exec(monitor_id, audit_id):
-    audit_log.debug("monitor_exec: audit %d" % audit_id)
-    from monitor.models import Audit, Monitor
-
-    from django.db import transaction
-    # Transaction to ensure that 'started' flag is committed before proceeding
-    @transaction.commit_on_success
-    def mark_begin(audit):
-        audit.started = True
-        audit.save()
-        audit_log.debug("Audit %d marked started" % audit_id)
-
-    try:
-        audit = Audit.objects.get(pk = audit_id)
-    except Audit.DoesNotExist:
-        # This can happen if we crashed again while deleting a 
-        # worker from a previous crash
-        audit_log.warn("Audit %d not found." % audit_id)
-        return
-
-    # Use 'started' flag to detect whether this is a clean first run 
-    if audit.started:
-        audit_log.warn("Audit %d found unfinished (worker crash).  Deleting." % audit_id)
-        audit.delete()
-        return
-    else:
-        mark_begin(audit)
-
+def monitor_exec(monitor_id, counter):
+    from monitor.models import Monitor
     monitor = Monitor.objects.get(pk = monitor_id)
-    raw_data = monitor.downcast().invoke()
 
-    success = False
+    # Conditions indicating that we've restarted or that 
+    if not (monitor.state in ['tasked', 'tasking']):
+        audit_log.warn("Host %s monitor found unfinished (crash recovery).  Ending task." % (monitor.host))
+        return 
+    elif monitor.counter != counter:
+        audit_log.warn("Host %s monitor found bad counter %s != %s.  Ending task." % (monitor.host,  monitor.counter, counter))
+        return 
+
+    monitor.update(state = 'started')
     try:
         from monitor.lib.lustre_audit import LustreAudit
-        success = LustreAudit().audit_complete(audit, raw_data)
+        raw_data = monitor.downcast().invoke()
+        success = LustreAudit().audit_complete(monitor.host, raw_data)
+    except Exception, e:
+        audit_log.error("Exception auditing host %s" % monitor.host)
+        import sys
+        import traceback
+        exc_info = sys.exc_info()
+        audit_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
     finally:
-        audit.complete = True
-        audit.error = not success
-        audit_log.debug("Audit %d marked complete" % audit_id)
-        audit.save()
-
-from django.db import transaction
-# Transaction to ensure that an Audit doesn't get committed
-# without task_id set
-def audit_monitor(monitor):
-    from monitor.models import Audit
-
-    # Transaction to make sure audit is committed before task runs
-    @transaction.commit_on_success
-    def create_audit():
-        return Audit.objects.get_or_create(host = monitor.host, complete = False)
-
-    audit, created = create_audit()
-    if not created:
-        audit_log.debug("audit_all: host %s audit (%d) still in progress" % (monitor.host, audit.id))
-        if not audit.task_id:
-            # Whatever created this got killed somewhere between creating audit and 
-            # saving task ID.  No way to know if celery task has been created.  Assume
-            # the worst and mark the audit complete so that it won't hold us up.
-            audit_log.debug("audit_all: host %s audit %d has no task_id, marking complete." % (monitor.host, audit.id))
-            audit.complete = True
-            audit.error = True
-            audit.save()
-    else:
-        from monitor.models import Audit
-        async_result = monitor_exec.delay(monitor.id, audit.id)
-        audit.task_id = async_result.task_id
-        audit.save()
+        monitor.update(state = 'idle', task_id = None)
+        return None
 
 from settings import AUDIT_PERIOD
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def audit_all():
     from monitor.models import Monitor
     for monitor in Monitor.objects.all():
-        audit_monitor(monitor)
+        tasked = monitor.try_schedule()
+        if not tasked:
+            audit_log.info("audit_all: host %s audit (%d) still in progress" % (monitor.host, monitor.counter))
 
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def discover_hosts():

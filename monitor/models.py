@@ -157,7 +157,38 @@ class Monitor(models.Model):
 
     host = models.OneToOneField(Host)
 
+    #idle, tasking, tasked, started, 
+    state = models.CharField(max_length = 32, default = 'idle')
+    task_id = models.CharField(max_length=36, blank = True, null = True, default = None)
+    counter = models.IntegerField(default = 0)
+
+    from django.db import transaction
+    @transaction.commit_on_success
+    def update(self, **kwargs):
+        for k,v in kwargs.items():
+            setattr(self, k, v)
+        self.save()
+
+    def try_schedule(self):
+        """Return True if a run was scheduled, else False"""
+        from monitor.tasks import monitor_exec
+        from monitor.lib.lustre_audit import audit_log
+
+        if self.state == 'tasking':
+            audit_log.warn("Monitor %d found in state 'tasking' (crash recovery).  Going to idle." % self.id)
+            self.update(state = 'idle')
+
+        if self.state == 'idle':
+            self.update(state = 'tasking', counter = self.counter + 1)
+            celery_task = monitor_exec.delay(self.id, self.counter)
+            self.update(state = 'tasked', task_id = celery_task.task_id)
+
+            return True
+        else:
+            return False
+
     def invoke(self):
+        """Subclasses implement this, return a dict"""
         raise NotImplementedError
 
 class SshMonitor(Monitor):
@@ -803,33 +834,52 @@ class Audit(models.Model):
     complete = models.BooleanField(default = False)
     task_id = models.CharField(max_length=36)
 
-    def task_state(self):
-        from celery.result import AsyncResult
-        return AsyncResult(self.task_id).state
+
 
 class TargetParam(models.Model):
     target = models.ForeignKey(Target)
     key = models.CharField(max_length=128)
     value = models.CharField(max_length=512)
 
-class AuditMountable(models.Model):
-    """Everything we learned about a Mountable when auditing a Host"""
-    audit = models.ForeignKey(Audit)
+    @staticmethod
+    def update_params(target, params):
+        from monitor.lib.lustre_audit import audit_log
 
-    mountable = models.ForeignKey(Mountable)
-    mounted = models.BooleanField()
+        old_params = set(target.get_params())
 
-    def __str__(self):
-        return "Audit %s %s %s" % (self.audit.created_at, self.mountable.host, self.mountable)
+        new_params = set()
+        for key, value_list in params.items():
+            for value in value_list:
+                new_params.add((key, value))
+        
+        for del_param in old_params - new_params:
+            target.targetparam_set.get(key = del_param[0], value = del_param[1]).delete()
+            audit_log.info("del_param: %s" % (del_param,))
+        for add_param in new_params - old_params:
+            target.targetparam_set.create(key = add_param[0], value = add_param[1])
+            audit_log.info("add_param: %s" % (add_param,))
 
-class AuditRecoverable(AuditMountable):
+class TargetMountRecoveryInfo(models.Model):
     # When a volume is present, we will have been able to interrogate 
     # its recovery status
     # JSON-encoded dict parsed from /proc/fs/lustre/*/*/recovery_status
-    recovery_status = models.CharField(max_length=512)
+    recovery_status = models.TextField()
 
-    def is_recovering(self):
-        data = json.loads(self.recovery_status)
+    target_mount = models.ForeignKey(TargetMount)
+
+    from django.db import transaction
+    @staticmethod
+    @transaction.commit_on_success
+    def update(target_mount, recovery_status):
+        TargetMountRecoveryInfo.objects.filter(target_mount = target_mount).delete()
+        instance = TargetMountRecoveryInfo.objects.create(
+                target_mount = target_mount,
+                recovery_status = json.dumps(recovery_status))
+        return instance.is_recovering(recovery_status) 
+
+    def is_recovering(self, data = None):
+        if not data:
+            data = json.loads(self.recovery_status)
         return (data.has_key("status") and data["status"] == "RECOVERING")
 
     def recovery_status_str(self):
@@ -847,9 +897,6 @@ class AuditRecoverable(AuditMountable):
 #    CONFIGURE_MODELS
 #except NameError:
 #    from django.contrib import admin
-#    admin.site.register(Audit)
-#    admin.site.register(AuditMountable)
-#    admin.site.register(AuditRecoverable)
 #    admin.site.register(TargetParam)
 #    admin.site.register(Client)
 #    admin.site.register(Filesystem)

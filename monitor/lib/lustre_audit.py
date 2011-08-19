@@ -47,7 +47,7 @@ class LustreAudit:
     def __init__(self):
         self.raw_data = None
         self.target_locations = None
-        self.audit = None
+        self.audited_mountables = []
     
     def discover_hosts(self):
         import os
@@ -138,9 +138,8 @@ class LustreAudit:
         except AssertionError:
             return False
 
-    def audit_complete(self, audit, host_data):
-        self.audit = audit
-        self.host = audit.host
+    def audit_complete(self, host, host_data):
+        self.host = host
         self.host_data = host_data
 
         if isinstance(host_data, Exception):
@@ -150,9 +149,6 @@ class LustreAudit:
             audit_log.error("invalid output from %s: %s" % (self.host, host_data))
             contact = False
         else:
-            self.audit.lnet_up = host_data['lnet_up']
-            self.audit.save()
-
             try:
                 from configure.lib.state_manager import StateManager
                 from configure.models import StatefulObject
@@ -175,7 +171,7 @@ class LustreAudit:
             self.learn_device_nodes()
 
             # Create Filesystem and Target objects
-            self.learn_fs_targets()
+            self.learn_mgs_info()
 
             # Create TargetMount objects
             self.learn_target_mounts()
@@ -194,25 +190,15 @@ class LustreAudit:
                 StateManager = None
 
             for mountable in Mountable.objects.filter(host = self.host):
-                try:
-                    audit_mountable = AuditMountable.objects.get(
-                            audit = self.audit, mountable = mountable)
-
-                except AuditMountable.DoesNotExist:
+                mounted = False
+                if not mountable in self.audited_mountables:
                     if isinstance(mountable, TargetMount) and not mountable.primary:
-                        FailoverActiveAlert.notify(mountable, False)
+                        FailoverActiveAlert.notify(mountable, mounted)
                     else:
-                        MountableOfflineAlert.notify(mountable, True)
-                    audit_mountable = AuditMountable(audit = self.audit,
-                            mountable = mountable, mounted = False)
-                    audit_mountable.save()
+                        MountableOfflineAlert.notify(mountable, not mounted)
 
                 if StateManager and isinstance(mountable, StatefulObject):
-                    # FIXME: potentially get confused with a removed 
-                    # targetmount, need to only do this update if the
-                    # targetmount is not in a 'deleted' state.
-                    state = {True: 'mounted', False: 'unmounted'}[audit_mountable.mounted]
-                    StateManager.notify_state(mountable, state, ['mounted', 'unmounted'])
+                    StateManager.notify_state(mountable, 'unmounted', ['mounted', 'unmounted'])
 
         HostContactAlert.notify(self.host, not contact)
 
@@ -395,7 +381,7 @@ class LustreAudit:
             except LunNode.DoesNotExist:
                 audit_log.warning("No LunNode for target device '%s'" % local_info['device'])
             except NoLNetInfo:
-                audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], self.address))
+                audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], self.host))
 
     def get_or_create_target(self, mgs, name, device_node_path):
         if name.find("-MDT") != -1:
@@ -447,15 +433,10 @@ class LustreAudit:
                 except ManagementTarget.DoesNotExist:
                     audit_log.error("No Managementtarget for host %s, but it reports an MGS target" % selfhost)
                     continue
-                mountable = target.targetmount_set.get(host = self.host, mount_point = mount_info['mount_point']).downcast()
+                mountable = target.targetmount_set.get(
+                        host = self.host,
+                        mount_point = mount_info['mount_point']).downcast()
 
-                if mountable.primary:
-                    MountableOfflineAlert.notify(mountable, not mount_info['running'])
-                else:
-                    FailoverActiveAlert.notify(mountable, mount_info['running'])
-
-                audit_mountable = AuditMountable(audit = self.audit,
-                        mountable = mountable, mounted = mount_info['running'])
             else:
                 if mount_info['params'].has_key('mgsnode') and mount_info['params']['mgsnode'] != ("0@lo",):
                     # Find the MGS based on mount_info['params']['mgsnode']
@@ -490,33 +471,18 @@ class LustreAudit:
                     audit_log.warning("Cannot find target %s for mgs %d" % (mount_info['name'], mgs.id))
                     continue
 
-                audit_mountable = AuditRecoverable(audit = self.audit, 
-                        mountable = mountable, mounted = mount_info['running'],
-                        recovery_status = json.dumps(mount_info["recovery_status"]))
+                recovering = TargetMountRecoveryInfo.update(mountable, mount_info["recovery_status"])
+                TargetRecoveryAlert.notify(mountable, recovering)
 
-                if mountable.primary:
-                    MountableOfflineAlert.notify(mountable, not mount_info['running'])
-                else:
-                    FailoverActiveAlert.notify(mountable, mount_info['running'])
-                TargetRecoveryAlert.notify(mountable, audit_mountable.is_recovering())
-
-            audit_mountable.save()
+            self.audited_mountables.append(mountable)
+            if mountable.primary:
+                MountableOfflineAlert.notify(mountable, not mount_info['running'])
+            else:
+                FailoverActiveAlert.notify(mountable, mount_info['running'])
 
             # Sync the learned parameters to TargetParam
-            target = audit_mountable.mountable.target
-            old_params = set(target.get_params())
+            TargetParam.update_params(mountable.target, mount_info['params'])
 
-            new_params = set()
-            for key, value_list in mount_info['params'].items():
-                for value in value_list:
-                    new_params.add((key, value))
-            
-            for del_param in old_params - new_params:
-                target.targetparam_set.get(key = del_param[0], value = del_param[1]).delete()
-                audit_log.info("del_param: %s" % (del_param,))
-            for add_param in new_params - old_params:
-                target.targetparam_set.create(key = add_param[0], value = add_param[1])
-                audit_log.info("add_param: %s" % (add_param,))
 
     def learn_clients(self):
         for mount_point, client_info in self.host_data['client_mounts'].items():
@@ -542,11 +508,10 @@ class LustreAudit:
                 audit_log.info("Learned client %s" % client)
                 self.learn_event(client)
 
+            self.audited_mountables.append(client)
             MountableOfflineAlert.notify(client, not client_info['mounted'])
-            audit_mountable = AuditMountable(audit = self.audit, mountable = client, mounted = client_info['mounted'])
-            audit_mountable.save()
 
-    def learn_fs_targets(self):
+    def learn_mgs_info(self):
         found_mgs = False
         for volume in self.host_data['local_targets']:
             if volume['kind'] == "MGS":

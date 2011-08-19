@@ -142,6 +142,20 @@ class HydraDebug(cmd.Cmd, object):
             TargetOnlineEvent(target_mount = tm, state = False).save()
             TargetOnlineEvent(target_mount = tm, state = True).save()
 
+    def do_audit_list(self, line):
+        for m in Monitor.objects.all():
+            from celery.result import AsyncResult
+            if m.task_id:
+                task_state = AsyncResult(m.task_id).state
+            else:
+                task_state = ""
+            print "%s %s %s %s" % (m.host, m.state, m.task_id, task_state)
+    def do_audit_clear(self, line):
+        for m in Monitor.objects.all():
+            m.update(state = 'idle', task_id = None)
+
+
+
 if __name__ == '__main__':
     cmdline = HydraDebug
 
