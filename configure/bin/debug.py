@@ -24,7 +24,6 @@ def screen(string):
 
 
 import cmd
-from texttable import Texttable
 
 class HydraDebug(cmd.Cmd, object):
     def __init__(self):
