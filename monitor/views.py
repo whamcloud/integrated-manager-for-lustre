@@ -114,21 +114,12 @@ class Dashboard:
             self.hosts.append(host_status_item)
 
 def dashboard_inner(request):
-    try:
-        # NB this is now the last time *any* host was audited, so doesn't indicate
-        # an overall "this all is up to date since X", so maybe shouldn't display it?
-        last_audit = Audit.objects.filter(complete = True).latest('id')
-        last_audit_time = last_audit.created_at.strftime("%H:%M:%S %Z %z");
-    except Audit.DoesNotExist:
-        last_audit_time = "never"
-
     dashboard_data = Dashboard()
 
     return render_to_response("dashboard_inner.html",
             RequestContext(request, {
                 "events": Event.objects.all().order_by('-created_at'),
                 "alerts": AlertState.objects.filter(active = True).order_by('end'),
-                "last_audit_time": last_audit_time,
                 "dashboard_data": dashboard_data
                 }))
 

@@ -824,18 +824,6 @@ class LNetOfflineAlert(AlertState):
                 alert = self,
                 severity = INFO)
 
-class Audit(models.Model):
-    """A (potentially ongoing) attempt to audit a particular host"""
-    host = models.ForeignKey(Host)
-    created_at = models.DateTimeField(auto_now_add = True)
-    lnet_up = models.BooleanField(default = False)
-    error = models.BooleanField(default = True)
-    started = models.BooleanField(default = False)
-    complete = models.BooleanField(default = False)
-    task_id = models.CharField(max_length=36)
-
-
-
 class TargetParam(models.Model):
     target = models.ForeignKey(Target)
     key = models.CharField(max_length=128)
