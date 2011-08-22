@@ -40,7 +40,7 @@ class LustreAudit:
     def __init__(self):
         self.raw_data = None
         self.target_locations = None
-        self.audited_mountables = []
+        self.audited_mountables = {}
     
     def discover_hosts(self):
         import os
@@ -175,23 +175,32 @@ class LustreAudit:
             # Create and get state of Client objects
             self.learn_clients()
 
-            # Any TargetMounts which we didn't get data for may need to emit offline events
-            # Also use this loop to update StateManager
+            # We will update StateManager if it is present
             try:
                 from configure.lib.state_manager import StateManager
             except ImportError:
                 StateManager = None
 
+            # Loop over all mountables we expected on this host, whether they
+            # were actually seen in the results or not.
             for mountable in Mountable.objects.filter(host = self.host):
-                mounted = False
                 if not mountable in self.audited_mountables:
-                    if isinstance(mountable, TargetMount) and not mountable.primary:
-                        FailoverActiveAlert.notify(mountable, mounted)
-                    else:
-                        MountableOfflineAlert.notify(mountable, not mounted)
+                    # We didn't find this mountable, it must be unmounted
+                    mounted = False
+                else:
+                    # We found this mountable and know its state
+                    mounted = self.audited_mountables[mountable]
 
+                # Update AlertStates
+                if isinstance(mountable, TargetMount) and not mountable.primary:
+                    FailoverActiveAlert.notify(mountable, mounted)
+                else:
+                    MountableOfflineAlert.notify(mountable, not mounted)
+
+                # Update StatefulObjects
                 if StateManager and isinstance(mountable, StatefulObject):
-                    StateManager.notify_state(mountable, 'unmounted', ['mounted', 'unmounted'])
+                    state = {False: 'unmounted', True: 'mounted'}[mounted]
+                    StateManager.notify_state(mountable, state, ['mounted', 'unmounted'])
 
         HostContactAlert.notify(self.host, not contact)
 
@@ -467,11 +476,7 @@ class LustreAudit:
                 recovering = TargetMountRecoveryInfo.update(mountable, mount_info["recovery_status"])
                 TargetRecoveryAlert.notify(mountable, recovering)
 
-            self.audited_mountables.append(mountable.downcast())
-            if mountable.primary:
-                MountableOfflineAlert.notify(mountable, not mount_info['running'])
-            else:
-                FailoverActiveAlert.notify(mountable, mount_info['running'])
+            self.audited_mountables[mountable.downcast()] = mount_info['running']
 
             # Sync the learned parameters to TargetParam
             TargetParam.update_params(mountable.target, mount_info['params'])
@@ -501,8 +506,7 @@ class LustreAudit:
                 audit_log.info("Learned client %s" % client)
                 self.learn_event(client)
 
-            self.audited_mountables.append(client.downcast())
-            MountableOfflineAlert.notify(client, not client_info['mounted'])
+            self.audited_mountables[client.downcast()] = client_info['mounted']
 
     def learn_mgs_info(self):
         found_mgs = False
