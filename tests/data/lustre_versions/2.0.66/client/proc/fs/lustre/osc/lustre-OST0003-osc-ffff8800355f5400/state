@@ -1,0 +1,4 @@
+current_state: FULL
+state_history:
+ - [1314633364, CONNECTING]
+ - [1314633364, FULL]

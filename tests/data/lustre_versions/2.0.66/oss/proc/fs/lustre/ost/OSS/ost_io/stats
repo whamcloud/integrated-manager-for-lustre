@@ -1,0 +1,10 @@
+snapshot_time             1314641982.450463 secs.usecs
+req_waittime              269560 samples [usec] 6 76653 46288023 165502073485
+req_qdepth                269560 samples [reqs] 0 20 348 1554
+req_active                269560 samples [reqs] 1 40 1216398 19828428
+req_timeout               269560 samples [sec] 1 42 2372256 75263422
+reqbuf_avail              536487 samples [bufs] 47 64 33748630 2125141066
+ost_read                  7463 samples [usec] 290 6956057 523454340 775413653596618
+ost_write                 60573 samples [usec] 330 22742817 28677401427 131125681633322855
+ost_destroy               201016 samples [usec] 39 6871949 504853816 1315101390001090
+ost_punch                 508 samples [usec] 24 1256630 2466526 2288254334000

@@ -1,0 +1,8 @@
+  0 UP mgc MGC10.141.0.1@tcp 11758898-aa88-b37f-32e5-2205b17c0dbd 5
+  1 UP lov lustre-clilov-ffff8800355f5400 aa0d2ca1-19e8-11e8-1563-bffaacd37e6c 4
+  2 UP lmv lustre-clilmv-ffff8800355f5400 aa0d2ca1-19e8-11e8-1563-bffaacd37e6c 4
+  3 UP mdc lustre-MDT0000-mdc-ffff8800355f5400 aa0d2ca1-19e8-11e8-1563-bffaacd37e6c 5
+  4 UP osc lustre-OST0000-osc-ffff8800355f5400 aa0d2ca1-19e8-11e8-1563-bffaacd37e6c 5
+  5 UP osc lustre-OST0001-osc-ffff8800355f5400 aa0d2ca1-19e8-11e8-1563-bffaacd37e6c 5
+  6 UP osc lustre-OST0002-osc-ffff8800355f5400 aa0d2ca1-19e8-11e8-1563-bffaacd37e6c 5
+  7 UP osc lustre-OST0003-osc-ffff8800355f5400 aa0d2ca1-19e8-11e8-1563-bffaacd37e6c 5

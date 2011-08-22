@@ -1,0 +1,9 @@
+  0 UP mgs MGS MGS 9
+  1 UP mgc MGC10.141.0.1@tcp 2ac2bff7-7117-fd5c-c5fd-7fb726394fa5 5
+  2 UP lov lustre-MDT0000-mdtlov lustre-MDT0000-mdtlov_UUID 4
+  3 UP mdt lustre-MDT0000 lustre-MDT0000_UUID 5
+  4 UP mds mdd_obd-lustre-MDT0000 mdd_obd_uuid-lustre-MDT0000 3
+  5 UP osc lustre-OST0000-osc-MDT0000 lustre-MDT0000-mdtlov_UUID 5
+  6 UP osc lustre-OST0001-osc-MDT0000 lustre-MDT0000-mdtlov_UUID 5
+  7 UP osc lustre-OST0002-osc-MDT0000 lustre-MDT0000-mdtlov_UUID 5
+  8 UP osc lustre-OST0003-osc-MDT0000 lustre-MDT0000-mdtlov_UUID 5

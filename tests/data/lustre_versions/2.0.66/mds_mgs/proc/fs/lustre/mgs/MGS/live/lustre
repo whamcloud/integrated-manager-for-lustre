@@ -1,0 +1,9 @@
+fsname: lustre
+flags: 0x20     gen: 24
+lustre-MDT0000
+lustre-OST0000
+lustre-OST0001
+lustre-OST0002
+lustre-OST0003
+
+Secure RPC Config Rules:

@@ -4,7 +4,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydra_agent.audit import LocalLustreAudit
+from hydra_agent.legacy_audit import LocalLustreAudit
 
 import argparse
 import sys
