@@ -2,6 +2,7 @@
 from django.shortcuts import render_to_response, redirect, get_object_or_404
 from django.template import RequestContext
 from django.http import HttpResponse, HttpResponseBadRequest
+from django.db import transaction
 from django import forms
 
 from monitor.models import *
@@ -90,6 +91,9 @@ def create_mgs(request, host_id):
             target = ManagedMgs(name='MGS')
             target.save()
             mounts = _create_target_mounts(node, target, failover_host)
+
+            # Commit before spawning celery tasks
+            transaction.commit()
             _set_target_states(form, [target], mounts)
 
             return redirect('configure.views.states')
@@ -175,13 +179,14 @@ def create_oss(request, host_id):
             for node_form in node_forms:
                 if node_form.cleaned_data['use']:
                     node = node_form.node
-
                     target = ManagedOst(filesystem = filesystem)
                     target.save()
                     all_targets.append(target)
                     mounts = _create_target_mounts(node, target, failover_host)
                     all_mounts.extend(mounts)
 
+            # Commit before spawning celery tasks
+            transaction.commit()
             _set_target_states(form, all_targets, all_mounts)
             return redirect('configure.views.states')
     else:
@@ -223,6 +228,8 @@ def create_mds(request, host_id):
             target.save()
             mounts = _create_target_mounts(node, target, failover_host)
 
+            # Commit before spawning celery tasks
+            transaction.commit()
             _set_target_states(form, [target], mounts)
 
             return redirect('configure.views.states')
