@@ -108,7 +108,10 @@ class LunNode(models.Model):
     lun = models.ForeignKey(Lun, blank = True, null = True)
     host = models.ForeignKey(Host)
     path = models.CharField(max_length = 512)
-    size = models.BigIntegerField()
+
+    # Size may be null for LunNodes created when setting up 
+    # from a JSON file which just tells us a path.
+    size = models.BigIntegerField(blank = True, null = True)
 
     used_hint = models.BooleanField()
 
