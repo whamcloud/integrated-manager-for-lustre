@@ -14,12 +14,15 @@ def monitor_exec(monitor_id, counter):
     # Conditions indicating that we've restarted or that 
     if not (monitor.state in ['tasked', 'tasking']):
         audit_log.warn("Host %s monitor found unfinished (crash recovery).  Ending task." % (monitor.host))
+        monitor.update(state = 'idle', task_id = None)
         return 
     elif monitor.counter != counter:
         audit_log.warn("Host %s monitor found bad counter %s != %s.  Ending task." % (monitor.host,  monitor.counter, counter))
+        monitor.update(state = 'idle', task_id = None)
         return 
 
     monitor.update(state = 'started')
+    audit_log.debug("Monitor %d started" % monitor_id)
     try:
         from monitor.lib.lustre_audit import LustreAudit
         raw_data = monitor.downcast().invoke()
@@ -32,6 +35,7 @@ def monitor_exec(monitor_id, counter):
         audit_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
     finally:
         monitor.update(state = 'idle', task_id = None)
+        audit_log.debug("Monitor %d completed" % monitor_id)
         return None
 
 from settings import AUDIT_PERIOD
