@@ -8,7 +8,7 @@ except:
 try:
     import django_extensions
 except:
-    django_exceptions = None
+    django_extensions = None
 
 import os
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
