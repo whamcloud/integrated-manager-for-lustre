@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+#
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
 from django.core.management import setup_environ
 import settings
 setup_environ(settings)

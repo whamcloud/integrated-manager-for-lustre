@@ -1,4 +1,8 @@
 
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
 from django import template
 from django.utils.safestring import mark_safe
 from django.utils.html import conditional_escape

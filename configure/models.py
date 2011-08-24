@@ -1,3 +1,8 @@
+
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
 from django.db import models
 
 CONFIGURE_MODELS = True

@@ -1,3 +1,8 @@
+
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
 import time
 import re
 import os, sys, fcntl

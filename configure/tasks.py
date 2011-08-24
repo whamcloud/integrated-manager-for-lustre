@@ -1,4 +1,8 @@
 
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
 from celery.decorators import task, periodic_task
 
 from configure.lib.job import StepPaused, StepAborted, StepDirtyError, StepCleanError
