@@ -1,3 +1,8 @@
+
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
 """Library of functions which return shell code suitable for local or 
 remote execution on Lustre servers.  Performs minimal sanity-checking
 in-library in favor of letting the shell commands themselves handle

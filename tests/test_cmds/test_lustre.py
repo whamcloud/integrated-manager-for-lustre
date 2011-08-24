@@ -1,3 +1,8 @@
+
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
 from hydra_agent.cmds import lustre
 import unittest
 
