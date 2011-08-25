@@ -376,7 +376,7 @@ class LocalLustreAudit:
                 if os.path.getsize(tmpfile) == 0:
                     # Work around LU-632, wherein an empty config log causes llog_reader to hit
                     # an infinite loop.
-                    continue
+                    return
                 client_log = subprocess.Popen(["llog_reader", tmpfile], stdout=subprocess.PIPE).stdout.read()
 
                 entries = client_log.split("\n#")[1:]
