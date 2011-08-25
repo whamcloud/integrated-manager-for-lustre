@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+#
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
 
 import os
 import sys
@@ -61,6 +65,11 @@ class LocalLustreAudit:
         fstab_devices = set([self.normalize_device(i[0]) for i in self.fstab if os.path.exists(i[0])])
         scsi_devices = set([self.normalize_device(path) for path in glob.glob("/dev/disk/by-path/*scsi-*")])
         lvm_devices = set(glob.glob("/dev/mapper/*")) - set(["/dev/mapper/control"])
+        virtio_devices = set(glob.glob("/dev/vd*"))
+        xen_devices = set(glob.glob("/dev/xvd*"))
+        pv_devices = set()
+        for line in os.popen("pvs --noheadings -o pv_name").readlines():
+            pv_devices.add(line.strip())
 
         def is_block_device(path):
             from stat import S_ISBLK
@@ -68,14 +77,18 @@ class LocalLustreAudit:
             return S_ISBLK(s.st_mode)
 
         def block_device_size(path):
-            fd = os.open(path, os.O_RDONLY)
             try:
-                # os.SEEK_END = 2 (integer required for python 2.4)
-                return os.lseek(fd, 0, 2)
-            finally:
-                os.close(fd)
+                fd = os.open(path, os.O_RDONLY)
+                try:
+                    # os.SEEK_END = 2 (integer required for python 2.4)
+                    return os.lseek(fd, 0, 2)
+                finally:
+                    os.close(fd)
+            except:
+                return 0
+                
 
-        all_devices = mount_devices | fstab_devices | scsi_devices | lvm_devices
+        all_devices = mount_devices | fstab_devices | scsi_devices | lvm_devices | virtio_devices | xen_devices
         all_devices = set([d for d in all_devices if is_block_device(d)])
 
         partitions = {}
@@ -83,7 +96,7 @@ class LocalLustreAudit:
             # Store the number of blocks to identify blocks=1 
             # partitions (i.e. extended partitions)
             blocks = int(line.split()[2])
-            dev = "/dev/%s" % self.normalize_device(line.split()[3])
+            dev = self.normalize_device("/dev/" + line.split()[3])
             partitions[dev] = blocks
 
         uuids = {}
@@ -104,10 +117,15 @@ class LocalLustreAudit:
                 uuid = ""
 
             try:
+                is_partitioned = (partitions[device + "1"] > 0)
+            except KeyError:
+                is_partitioned = False
+
+            try:
                 extended_partition = (partitions[device] == 1)
             except KeyError:
                 extended_partition = False
-            used = device in mount_devices or device in fstab_devices or extended_partition
+            used = device in mount_devices or device in fstab_devices or device in pv_devices or extended_partition or is_partitioned
 
             if device in scsi_devices:
                 kind = 'scsi'
@@ -355,6 +373,10 @@ class LocalLustreAudit:
                     # dump worked by looking for output file
                     return
 
+                if os.path.getsize(tmpfile) == 0:
+                    # Work around LU-632, wherein an empty config log causes llog_reader to hit
+                    # an infinite loop.
+                    continue
                 client_log = subprocess.Popen(["llog_reader", tmpfile], stdout=subprocess.PIPE).stdout.read()
 
                 entries = client_log.split("\n#")[1:]

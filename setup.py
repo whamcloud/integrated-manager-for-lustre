@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+#
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
 
 from distutils.core import setup
 from hydra_agent import __version__

@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+#
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
 
 from hydra_agent.audit import LocalLustreAudit
 
