@@ -1,0 +1,53 @@
+div#content {
+    margin-left: 12px;
+    font-size: 0.9em;
+}
+
+h2 {
+    text-shadow: #aaa 2px 2px 3px;
+    margin-bottom: 6px;
+    margin-top: 12px;
+}
+
+h3 {
+    text-shadow: #aaa 2px 2px 3px;
+}
+
+table.properties {
+    border: 2px solid #09f;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+table.properties th, table.properties td {
+    border: 1px solid #09f;
+    padding: 2px;
+}
+
+table.properties th {
+    font-weight: bold;
+    text-align: left;
+}
+
+table.conf_params {
+    border: 2px solid #09f;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+
+table.conf_params td {
+    background: #cef5ff;
+}
+
+table.conf_params td, table.conf_params th{
+    border-bottom: 1px solid #09f;
+    padding: 2px;
+}
+
+table.conf_params th {
+    font-weight: bold;
+    background: #bee5ff;
+    padding-right: 6px;
+    text-align: left;
+}

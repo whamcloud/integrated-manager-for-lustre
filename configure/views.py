@@ -1,5 +1,6 @@
 
 from django.shortcuts import render_to_response, redirect, get_object_or_404
+from django.contrib.contenttypes.models import ContentType
 from django.template import RequestContext
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.db import transaction
@@ -119,7 +120,7 @@ def create_fs(request, mgs_id):
     elif request.method == 'POST':
         form = CreateFsForm(request.POST)
         if form.is_valid():
-            fs = Filesystem(mgs = mgs, name = form.cleaned_data['name'])
+            fs = ManagedFilesystem(mgs = mgs, name = form.cleaned_data['name'])
             fs.save()
             return redirect('configure.views.states')
     else:
@@ -137,7 +138,7 @@ def create_oss(request, host_id):
     other_hosts = [h for h in Host.objects.all() if h != host]
 
     class CreateOssForm(CreateTargetsForm):
-        filesystem = forms.ChoiceField(choices = [(f.id, f.name) for f in Filesystem.objects.all()])
+        filesystem = forms.ChoiceField(choices = [(f.id, f.name) for f in ManagedFilesystem.objects.all()])
         failover_partner = forms.ChoiceField(choices = [(None, 'None')] + [(h.id, h) for h in other_hosts])
         def __init__(self, *args, **kwargs):
             super(CreateTargetsForm, self).__init__(*args, **kwargs)
@@ -172,7 +173,7 @@ def create_oss(request, host_id):
                 failover_host = Host.objects.get(id = form.cleaned_data['failover_partner'])
             else:
                 failover_host = None
-            filesystem = Filesystem.objects.get(id=form.cleaned_data['filesystem'])
+            filesystem = ManagedFilesystem.objects.get(id=form.cleaned_data['filesystem'])
 
             all_targets = []
             all_mounts = []
@@ -204,7 +205,7 @@ def create_mds(request, host_id):
     nodes = host.available_lun_nodes()
     other_hosts = [h for h in Host.objects.all() if h != host]
 
-    filesystems = Filesystem.objects.filter(metadatatarget = None)
+    filesystems = ManagedFilesystem.objects.filter(metadatatarget = None)
 
     class CreateMdtForm(CreateTargetsForm):
         filesystem = forms.ChoiceField(choices = [(f.id, f.name) for f in filesystems])
@@ -222,7 +223,7 @@ def create_mds(request, host_id):
                 failover_host = Host.objects.get(id = form.cleaned_data['failover_partner'])
             else:
                 failover_host = None
-            filesystem = Filesystem.objects.get(id=form.cleaned_data['filesystem'])
+            filesystem = ManagedFilesystem.objects.get(id=form.cleaned_data['filesystem'])
 
             target = ManagedMdt(filesystem = filesystem)
             target.save()
@@ -283,30 +284,33 @@ def _jobs_json():
     from configure.lib.state_manager import StateManager
     state_manager = StateManager()
 
-    from django.contrib.contenttypes.models import ContentType
     from itertools import chain
     stateful_objects = []
-    klasses = [ManagedTarget, ManagedHost, ManagedTargetMount]
-    can_create_mds = (MetadataTarget.objects.count() != Filesystem.objects.count())
+    klasses = [ManagedTarget, ManagedHost, ManagedTargetMount, ManagedFilesystem]
+    can_create_mds = (MetadataTarget.objects.count() != ManagedFilesystem.objects.count())
     can_create_oss = MetadataTarget.objects.count() > 0
     for i in chain(*[k.objects.all() for k in klasses]):
         actions = []
-        transitions = state_manager.available_transitions(i)
-        if transitions == None:
-            busy = True
+        if isinstance(i, StatefulObject):
+            state = i.state
+            transitions = state_manager.available_transitions(i)
+            if transitions == None:
+                busy = True
+            else:
+                busy = False
+                for transition in transitions:
+                    actions.append({
+                        "name": transition['state'],
+                        "caption": transition['verb'],
+                        "url": reverse('configure.views.set_state', kwargs={
+                            "content_type_id": "%s" % i.content_type_id,
+                            "stateful_object_id": "%s" % i.id,
+                            "new_state": transition['state']
+                            }),
+                        "ajax": True
+                        })
         else:
-            busy = False
-            for transition in transitions:
-                actions.append({
-                    "name": transition['state'],
-                    "caption": transition['verb'],
-                    "url": reverse('configure.views.set_state', kwargs={
-                        "content_type_id": "%s" % i.content_type_id,
-                        "stateful_object_id": "%s" % i.id,
-                        "new_state": transition['state']
-                        }),
-                    "ajax": True
-                    })
+            state = ""
         
         if isinstance(i, ManagedMgs):
             actions.append({
@@ -337,13 +341,21 @@ def _jobs_json():
                     "url": reverse('configure.views.create_oss', kwargs={"host_id": i.id})
                     })
                 
+        if isinstance(i, ManagedFilesystem): 
+            url = reverse('configure.views.filesystem', kwargs={"filesystem_id": i.id})
+        elif isinstance(i, ManagedTarget):
+            url = reverse('configure.views.target', kwargs={"target_id": i.id})
+        else:
+            url = None
+
         stateful_objects.append({
             "id": i.id,
             "__str__": "%s" % i,
-            "state": i.state,
+            "state": state,
             "actions": actions,
-            "content_type_id": i.content_type_id,
-            "busy": busy
+            "content_type_id": ContentType.objects.get_for_model(i).id,
+            "busy": busy,
+            "url": url
             })
 
     return json.dumps({
@@ -363,12 +375,104 @@ def job(request, job_id):
         'job': job
         }))
 
+class ConfParamForm(forms.Form):
+    value = forms.CharField(min_length = 0, max_length = 512)
+
+    def clean(self):
+        from configure.lib.conf_param import all_params
+        cleaned_data = self.cleaned_data
+        key = cleaned_data.get('key')
+        try:
+            model_klass, param_value_obj = all_params[key]
+        except KeyError:
+            self._errors["key"] = self.error_class(["Key '%s' unknown" % key])
+            del cleaned_data['key']
+            return cleaned_data
+
+        value = cleaned_data.get('value')
+        try:
+            param_value_obj.validate(value)
+        except ValueError, param_error:
+            self._errors["value"] = self.error_class([param_error.__str__()])
+            del cleaned_data['value']
+
+        return cleaned_data
+
+    def save(self, mgs, **kwargs):
+        key = self.cleaned_data['key']
+        value = self.cleaned_data['value']
+
+        from configure.lib.conf_param import all_params
+        model_klass, param_value_obj = all_params[key]
+
+        # TODO: avoid using "" to signify param removal, so that 
+        # params can in theory be set to empty strings
+        if len(value) == 0:
+            value = None
+
+        p = model_klass(
+                key = key,
+                value = value,
+                **kwargs)
+        mgs.downcast().set_conf_params([p])
+
+def _handle_conf_param_form(request, form_klass):
+    if request.method == 'GET':
+        form = form_klass()
+    elif request.method == 'POST':
+        form = form_klass(data = request.POST)
+        if form.is_valid():
+            form.save(filesystem.mgs, filesystem = filesystem)
+            from configure.models import ApplyConfParams
+            from configure.lib.state_manager import StateManager
+            StateManager().add_job(ApplyConfParams(mgs = filesystem.mgs.downcast()))
+            form = form_klass()
+
+    return form
+
 def filesystem(request, filesystem_id):
-    filesystem = get_object_or_404(Filesystem, id = filesystem_id)
+    filesystem = get_object_or_404(ManagedFilesystem, id = filesystem_id)
+
+    from configure.lib.conf_param import all_params
+    class FilesystemConfParamForm(ConfParamForm):
+        key = forms.ChoiceField(choices = [(i[0],i[0]) for i in all_params.items() if i[1][0] in [FilesystemClientConfParam, FilesystemGlobalConfParam]])
+
+    conf_param_form = _handle_conf_param_form(request, FilesystemConfParamForm)
     
     return render_to_response("filesystem.html", RequestContext(request, {
-        'filesystem': filesystem
+        'filesystem': filesystem,
+        'conf_param_list': filesystem.get_conf_params(),
+        'conf_param_form': conf_param_form
         }))
+
+def target(request, target_id):
+    from monitor.models import Target
+    target = get_object_or_404(Target, pk = target_id).downcast()
+    assert(isinstance(target, ManagedTarget))
+
+    if isinstance(target, ManagedMgs):
+        conf_param_form = None
+    elif isinstance(target, ManagedMdt):
+        from configure.lib.conf_param import all_params
+        class MdtConfParamForm(ConfParamForm):
+            key = forms.ChoiceField(choices = [(i[0],i[0]) for i in all_params.items() if i[1][0] == MdtConfParam])
+        conf_param_form = MdtConfParamForm
+    elif isinstance(target, ManagedOst):
+        from configure.lib.conf_param import all_params
+        class OstConfParamForm(ConfParamForm):
+            key = forms.ChoiceField(choices = [(i[0],i[0]) for i in all_params.items() if i[1][0] == OstConfParam])
+        conf_param_form = OstConfParamForm
+    else:
+        raise NotImplementedError
+
+    return render_to_response("target.html", RequestContext(request, {
+        'target': target,
+        'conf_param_list': target.get_conf_params(),
+        'conf_param_form': conf_param_form,
+        'target_size': target.targetmount_set.get(primary = True).block_device.size
+
+        }))
+
 
 def states(request):
     klasses = [ManagedTarget, ManagedHost, ManagedTargetMount]
@@ -379,7 +483,6 @@ def states(request):
     from configure.lib.state_manager import StateManager
     state_manager = StateManager()
 
-    from django.contrib.contenttypes.models import ContentType
     stateful_objects = []
     for i in items:
         stateful_objects.append({
@@ -408,9 +511,7 @@ def job_cancel(request, job_id):
     return HttpResponse(status = 200)
 
 def job_pause(request, job_id):
-    print "hey! job_pause"
     job = get_object_or_404(Job, pk = job_id)
-    print "job = %s" % job
     job.pause()
 
     return HttpResponse(status = 200)

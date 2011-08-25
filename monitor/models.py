@@ -387,13 +387,18 @@ class Filesystem(models.Model):
         for target_mount in mgs.targetmount_set.all():
             host = target_mount.host
             nids = ",".join([n.nid_string for n in host.nid_set.all()])
-            assert(nids != "")
+            if nids == "":
+                raise ValueError("NIDs for MGS host %s not known" % host)
+
             nid_specs.append(nids)
             
         return ":".join(nid_specs)
 
     def mount_example(self):
-        return "mount -t lustre %s:/%s /mnt/client" % (self.mgs_spec(), self.name)
+        try:
+            return "mount -t lustre %s:/%s /mnt/client" % (self.mgs_spec(), self.name)
+        except ValueError,e:
+            return "Not ready to mount: %s" % e
 
     def __str__(self):
         return self.name
@@ -521,6 +526,9 @@ class Target(models.Model):
 
     def primary_server(self):
         return self.targetmount_set.get(primary = True).host
+
+    def failover_servers(self):
+        return self.targetmount_set.get(primary = False).host
 
     def status_string(self, mount_statuses = None):
         if mount_statuses == None:

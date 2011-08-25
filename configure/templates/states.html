@@ -24,7 +24,11 @@
 
 <script type='text/javascript'>
     stateful_object_markup = function(container, stateful_object) {
-        container.find('.name').html(stateful_object['__str__']);
+        if (stateful_object['url']) {
+            container.find('.name').html("<a href='" + stateful_object['url'] + "'>" + stateful_object['__str__'] + "</a>");
+        } else {
+            container.find('.name').html(stateful_object['__str__']);
+        }
 
         var new_state = stateful_object['state'];
         var old_state = container.find('.state').html()

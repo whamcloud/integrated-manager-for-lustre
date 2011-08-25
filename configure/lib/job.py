@@ -7,7 +7,7 @@ job_log.setLevel(DEBUG)
 job_log.addHandler(FileHandler(settings.JOB_LOG_PATH))
 if settings.DEBUG:
     job_log.setLevel(DEBUG)
-    #job_log.addHandler(StreamHandler())
+    job_log.addHandler(StreamHandler())
 else:
     job_log.setLevel(INFO)
 
@@ -297,3 +297,31 @@ class UnmountStep(Step):
             print code, out, err
             print StepCleanError
             raise StepCleanError()
+
+class ConfParamStep(Step):
+    def is_idempotent(self):
+        return False
+
+    def run(self, kwargs):
+        from configure.models import ConfParam
+        conf_param = ConfParam.objects.get(pk = kwargs['conf_param_id']).downcast()
+
+        if conf_param.value:
+            lctl_command = "lctl conf_param %s=%s" % (conf_param.get_key(), conf_param.value)
+        else:
+            lctl_command = "lctl conf_param -d %s" % conf_param.get_key()
+        code, out, err = debug_ssh(conf_param.mgs.primary_server(), lctl_command)
+        if (code != 0):
+            from configure.lib.job import StepCleanError
+            job_log.error(code, out, err)
+            raise StepDirtyError()
+
+class ConfParamVersionStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from configure.models import ManagedMgs
+        ManagedMgs.objects.\
+            filter(pk = kwargs['mgs_id']).\
+            update(conf_param_version_applied = kwargs['version'])

@@ -121,6 +121,11 @@ def set_state(content_type, object_id, new_state):
     StateManager()._set_state(instance, new_state)
 
 @task()
+def add_job(job):
+    from configure.lib.state_manager import StateManager
+    StateManager()._add_job(job)
+
+@task()
 def run_job(job_id):
     from configure.lib.job import job_log
     job_log.info("Job %d: run_job" % job_id)

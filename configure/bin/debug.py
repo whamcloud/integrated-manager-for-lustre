@@ -112,7 +112,7 @@ class HydraDebug(cmd.Cmd, object):
         for filesystem_info in data['filesystems']:
             fs_mgs_host = Host.objects.get(address = filesystem_info['mgs'])
             mgs = ManagedMgs.objects.get(targetmount__host = fs_mgs_host)
-            filesystem, created = Filesystem.objects.get_or_create(name = filesystem_info['name'], mgs = mgs)
+            filesystem, created = ManagedFilesystem.objects.get_or_create(name = filesystem_info['name'], mgs = mgs)
 
             mds_info = filesystem_info['mds']
             mdt_node, mdt_host, mdt_failover_host = self._load_target_config(mds_info)
@@ -139,18 +139,18 @@ class HydraDebug(cmd.Cmd, object):
                         self._create_target_mounts(node, oss, failover_host)
 
     def do_format_fs(self, fs_name):
-        fs = Filesystem.objects.get(name = fs_name)
+        fs = ManagedFilesystem.objects.get(name = fs_name)
         for target in fs.get_targets():
             if target.state == 'unformatted':
                 StateManager.set_state(target, 'formatted')
 
     def do_start_fs(self, fs_name):
-        fs = Filesystem.objects.get(name = fs_name)
+        fs = ManagedFilesystem.objects.get(name = fs_name)
         for target in fs.get_targets():
             StateManager.set_state(target.targetmount_set.get(primary = True).downcast(), 'mounted')
 
     def do_stop_fs(self, fs_name):
-        fs = Filesystem.objects.get(name = fs_name)
+        fs = ManagedFilesystem.objects.get(name = fs_name)
         for target in fs.get_targets():
             if not target.state == 'unmounted':
                 StateManager.set_state(target.targetmount_set.get(primary = True).downcast(), 'unmounted')
@@ -169,6 +169,12 @@ class HydraDebug(cmd.Cmd, object):
     def do_poke_queue(self, args):
         from configure.models import Job
         Job.run_next()
+
+    def do_apply_conf_param(self, args):
+        from configure.models import ManagedMgs, ApplyConfParams
+        job = ApplyConfParams(mgs = ManagedMgs.objects.get())
+        from configure.lib.state_manager import StateManager
+        StateManager().add_job(job)
 
 if __name__ == '__main__':
     cmdline = HydraDebug

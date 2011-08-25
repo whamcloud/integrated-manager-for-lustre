@@ -1,0 +1,49 @@
+
+
+
+{% extends 'base.html' %}
+
+{% block scripts %}
+<script type='text/javascript'>
+    $(document).ready(function() {
+            $('input[type=submit]').button();
+    });
+</script>
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/properties.css"/>
+{% endblock %}
+
+{% block content %}
+<h2>{% block title %}{% endblock %}</h2>
+
+<h3>Properties</h3>
+{% block properties %}
+{% endblock %}
+</p>
+
+<h3>Lustre conf_params</h3>
+{% if not conf_param_list %}
+<p>No persistent configuration parameters set.</p>
+{% else %}
+<table class='conf_params'>
+    {% for conf_param in conf_param_list %}
+    <tr>
+        <th>{{conf_param.key}}</th>
+        <td>{{conf_param.value}}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+
+{% if conf_param_form %}
+<h3>Set a conf_param</h3>
+<form method='post'>
+    {% csrf_token %}
+    {{conf_param_form.key}}={{conf_param_form.value}}<input type='submit' value='Set param'/>
+</form>
+{% endif %}
+
+{% endblock %}
+

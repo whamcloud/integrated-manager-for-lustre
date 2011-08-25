@@ -1,0 +1,29 @@
+
+{% extends 'properties_base.html' %}
+
+{% block title %}
+{{target}}
+{% endblock %}
+
+{% block properties %}
+
+<table class='properties'>
+    <tr><th>Primary server: </th><td>{{target.primary_server}}</td></tr>
+    <tr><th>Failover servers: </th><td>{{ target.failover_servers|join:", " }}</td></tr>
+    <tr><th>Size: </th><td>{{target_size|filesizeformat}}</td></tr>
+    <tr><th>State: </th><td>{{target.state}}</td></tr>
+</table>
+
+<h3>Mount locations</h3>
+{% for target_mount in target.targetmount_set.all %}
+<table class='properties'>
+    <tr><th>Host: </th><td>{{target_mount.host}}</td></th>
+    <tr><th>Primary: </th><td>{{target_mount.primary}}</td></th>
+    <tr><th>Device path: </th><td>{{target_mount.block_device.path}}</td></th>
+    <tr><th>Mount path: </th><td>{{target_mount.mount_point}}</td></th>
+    <tr><th>State: </th><td>{{target_mount.state}}</td></tr>
+</table>
+{% endfor %}
+
+{% endblock %}
+

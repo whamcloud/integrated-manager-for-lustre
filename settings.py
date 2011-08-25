@@ -226,6 +226,7 @@ CELERY_ROUTES = (
         {"monitor.tasks.discover_hosts": {"queue": "periodic"}},
         {"configure.tasks.janitor": {"queue": "periodic"}},
         {"configure.tasks.set_state": {"queue": "serialize"}},
+        {"configure.tasks.add_job": {"queue": "serialize"}},
         {"configure.tasks.run_job": {"queue": "jobs"}},
         {"monitor.tasks.test_host_contact": {"queue": "ssh"}},
         {"monitor.tasks.monitor_exec": {"queue": "ssh"}},

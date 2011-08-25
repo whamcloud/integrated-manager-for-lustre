@@ -22,7 +22,7 @@ def monitor_exec(monitor_id, counter):
         return 
 
     monitor.update(state = 'started')
-    audit_log.debug("Monitor %d started" % monitor_id)
+    audit_log.debug("Monitor %s started" % monitor.host)
     try:
         from monitor.lib.lustre_audit import LustreAudit
         raw_data = monitor.downcast().invoke()
@@ -35,7 +35,7 @@ def monitor_exec(monitor_id, counter):
         audit_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
     finally:
         monitor.update(state = 'idle', task_id = None)
-        audit_log.debug("Monitor %d completed" % monitor_id)
+        audit_log.debug("Monitor %s completed" % monitor.host)
         return None
 
 from settings import AUDIT_PERIOD
@@ -75,7 +75,7 @@ def test_host_contact(host, ssh_monitor):
             result = ssh_monitor.invoke()
             agent = True
         except ValueError,e:
-            print "Error trying to invoke agent on '%s': %s" % (resolved_address, e)
+            audit_log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
             agent = False
         
     return {

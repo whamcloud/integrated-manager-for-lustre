@@ -60,9 +60,37 @@ class StateManager(object):
                 instance.state = new_state
                 instance.save()
 
+    @classmethod
+    def add_job(cls, job):
+        from configure.tasks import add_job
+        celery_task = add_job.delay(job)
+        job_log.debug("add_job: celery task %s" % celery_task.task_id)
+
+    def _add_job(self, job):
+        """Add a job, and any others which are required in order to reach its prerequisite state"""
+        for dependency, dependency_state in job.get_deps():
+            print "calling _set_state for %s:%s" % (dependency, dependency_state)
+            self._set_state(dependency, dependency_state)
+
+        # Important: the Job must not be committed until all
+        # its dependencies and locks are in.
+        from django.db import transaction
+        @transaction.commit_on_success
+        def instantiate_job():
+            job.save()
+            job.create_locks()
+            job.create_dependencies()
+        instantiate_job()
+        print "Saved job %s" % job.id
+
+        from django.db import transaction
+        transaction.commit()
+        from configure.models import Job
+        Job.run_next()
 
     @classmethod
     def set_state(cls, instance, new_state):
+        """Add a 0 or more Jobs to have 'instance' reach 'new_state'"""
         import configure.tasks
         return configure.tasks.set_state.delay(
                 instance.content_type.natural_key(),

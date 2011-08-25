@@ -1,19 +1,14 @@
 
+{% extends 'properties_base.html' %}
 
-
-{% extends 'base.html' %}
-
-{% block scripts %}
+{% block title %}
+Filesystem {{filesystem.name}}
 {% endblock %}
 
-{% block content %}
-<h2>Filesystem {{filesystem.name}}</h2>
-
+{% block properties %}
 <p>MGS: {{filesystem.mgs.primary_server}}</p>
 <p>MDS: {{filesystem.metadatatarget_set.get.primary_server}}</p>
 <p>Mount command:<br>
 <tt style='margin-left: 24px;'>{{filesystem.mount_example}}</tt>
-</p>
-
 {% endblock %}
 
