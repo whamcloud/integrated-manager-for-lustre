@@ -65,6 +65,11 @@ class LocalLustreAudit:
         fstab_devices = set([self.normalize_device(i[0]) for i in self.fstab if os.path.exists(i[0])])
         scsi_devices = set([self.normalize_device(path) for path in glob.glob("/dev/disk/by-path/*scsi-*")])
         lvm_devices = set(glob.glob("/dev/mapper/*")) - set(["/dev/mapper/control"])
+        virtio_devices = set(glob.glob("/dev/vd*"))
+        xen_devices = set(glob.glob("/dev/xvd*"))
+        pv_devices = set()
+        for line in os.popen("pvs --noheadings -o pv_name").readlines():
+            pv_devices.add(line.strip())
 
         def is_block_device(path):
             from stat import S_ISBLK
@@ -79,7 +84,7 @@ class LocalLustreAudit:
             finally:
                 os.close(fd)
 
-        all_devices = mount_devices | fstab_devices | scsi_devices | lvm_devices
+        all_devices = mount_devices | fstab_devices | scsi_devices | lvm_devices | virtio_devices | xen_devices
         all_devices = set([d for d in all_devices if is_block_device(d)])
 
         partitions = {}
@@ -87,7 +92,7 @@ class LocalLustreAudit:
             # Store the number of blocks to identify blocks=1 
             # partitions (i.e. extended partitions)
             blocks = int(line.split()[2])
-            dev = "/dev/%s" % self.normalize_device(line.split()[3])
+            dev = self.normalize_device("/dev/" + line.split()[3])
             partitions[dev] = blocks
 
         uuids = {}
@@ -108,10 +113,15 @@ class LocalLustreAudit:
                 uuid = ""
 
             try:
+                is_partitioned = (partitions[device + "1"] > 0)
+            except KeyError:
+                is_partitioned = False
+
+            try:
                 extended_partition = (partitions[device] == 1)
             except KeyError:
                 extended_partition = False
-            used = device in mount_devices or device in fstab_devices or extended_partition
+            used = device in mount_devices or device in fstab_devices or device in pv_devices or extended_partition or is_partitioned
 
             if device in scsi_devices:
                 kind = 'scsi'
@@ -343,6 +353,9 @@ class LocalLustreAudit:
         for fs in filesystems:
             tmpfile = "/tmp/debugfs.tmp"
             debugfs_rc = subprocess.Popen(["debugfs", "-c", "-R", "dump CONFIGS/%s-client %s" % (fs, tmpfile), dev], stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+            # LU-632
+            if os.path.getsize(tmpfile) == 0:
+                continue
             client_log = subprocess.Popen(["llog_reader", tmpfile], stdout=subprocess.PIPE).stdout.read()
 
             entries = client_log.split("\n#")[1:]
