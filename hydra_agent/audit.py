@@ -316,17 +316,20 @@ class LocalLustreAudit:
     def get_mgs_targets(self, local_targets):
         """If there is an MGS in local_targets, use debugfs to 
            get a list of targets.  Return a dict of filesystem->(list of targets)"""
+        TARGET_NAME_REGEX = "(\w+)-(MDT|OST)\w+"
         mgs_target = None
         for t in local_targets:
             if t["kind"] == "MGS":
                 mgs_target = t
         if not mgs_target:
-            return {}
+            return ({}, {})
 
+        conf_params = {}
         mgs_targets = {}
         dev = mgs_target["device"]
         ls = subprocess.Popen(["debugfs", "-c", "-R", "ls -l CONFIGS/", dev], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.read()
         filesystems = []
+        targets = []
         for line in ls.split("\n"):
             try:
                 name = line.split()[8]
@@ -336,32 +339,96 @@ class LocalLustreAudit:
             if match != None:
                 filesystems.append(match.group(1).__str__())
 
+            match = re.search(TARGET_NAME_REGEX, name)
+            if match != None:
+                targets.append(match.group(0).__str__())
+
+
+        def read_log(conf_param_type, conf_param_name, log_name):
+            # NB: would use NamedTemporaryFile if we didn't support python 2.4
+            from tempfile import mktemp
+            tmpfile = mktemp()
+            try:
+                debugfs_rc = subprocess.Popen(["debugfs", "-c", "-R", "dump CONFIGS/%s %s" % (log_name, tmpfile), dev], stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+                if not os.path.exists(tmpfile):
+                    # debugfs returns 0 whether it succeeds or not, find out whether
+                    # dump worked by looking for output file
+                    return
+
+                client_log = subprocess.Popen(["llog_reader", tmpfile], stdout=subprocess.PIPE).stdout.read()
+
+                entries = client_log.split("\n#")[1:]
+                for entry in entries:
+                    tokens = entry.split()
+                    step_num = tokens[0]
+                    # ([\w=]+) covers all possible token[0] from
+                    # lustre/utils/llog_reader.c @ 0f8dca08a4f68cba82c2c822998ecc309d3b7aaf
+                    (code,action) = re.search("^\\((\d+)\\)([\w=]+)$", tokens[1]).groups()
+                    if conf_param_type == 'filesystem' and action == 'setup':
+                        # e.g. entry="#09 (144)setup     0:flintfs-MDT0000-mdc  1:flintfs-MDT0000_UUID  2:192.168.122.105@tcp"
+                        volume = re.search("0:(\w+-\w+)-\w+", tokens[2]).group(1)
+                        fs_name = volume.split("-")[0]
+                        uuid = re.search("1:(.*)", tokens[3]).group(1)
+                        nid = re.search("2:(.*)", tokens[4]).group(1)
+
+                        mgs_targets[fs_name].append({
+                            "uuid": uuid,
+                            "name": volume,
+                            "nid": nid})
+                    elif action == "param" or (action == 'SKIP' and tokens[2] == 'param'):
+                        if action == 'SKIP':
+                            clear = True
+                            tokens = tokens[1:]
+                        else:
+                            clear = False
+                        
+                        # e.g. entry="#29 (112)param 0:flintfs-client  1:llite.max_cached_mb=247.9"
+                        # has conf_param name "flintfs.llite.max_cached_mb"
+                        object = tokens[2][2:]
+                        if len(object) == 0:
+                            # e.g. "0: 1:sys.at_max=1200" in an OST log: it is a systemwide
+                            # setting
+                            param_type = conf_param_type
+                            param_name = conf_param_name
+                        elif re.search(TARGET_NAME_REGEX, object):
+                            # Identify target params
+                            param_type = 'target'
+                            param_name = re.search(TARGET_NAME_REGEX, object).group(0)
+                        else:
+                            # Fall through here for things like 0:testfs-llite, 0:testfs-clilov
+                            param_type = conf_param_type
+                            param_name = conf_param_name
+                            
+                        if tokens[3][2:].find("=") != -1:
+                            key, val = tokens[3][2:].split("=")
+                        else:
+                            key = tokens[3][2:]
+                            val = True
+
+                        if clear:
+                            val = None
+
+                        if not conf_params.has_key(param_type):
+                            conf_params[param_type] = {}
+                        if not conf_params[param_type].has_key(param_name):
+                            conf_params[param_type][param_name] = {}
+                        conf_params[param_type][param_name][key] = val
+            finally:
+                if os.path.exists(tmpfile):
+                    os.unlink(tmpfile)
+                    
+        # Read config log "<fsname>-client" for each filesystem
         for fs in filesystems:
-            tmpfile = "/tmp/debugfs.tmp"
-            debugfs_rc = subprocess.Popen(["debugfs", "-c", "-R", "dump CONFIGS/%s-client %s" % (fs, tmpfile), dev], stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
-            client_log = subprocess.Popen(["llog_reader", tmpfile], stdout=subprocess.PIPE).stdout.read()
+            mgs_targets[fs] = []
+            read_log("filesystem", fs, "%s-client" % fs)
+            read_log("filesystem", fs, "%s-param" % fs)
 
-            entries = client_log.split("\n#")[1:]
-            fs_targets = []
-            for entry in entries:
-                tokens = entry.split()
-                step_num = tokens[0]
-                # ([\w=]+) covers all possible token[0] from
-                # lustre/utils/llog_reader.c @ 0f8dca08a4f68cba82c2c822998ecc309d3b7aaf
-                (code,action) = re.search("^\\((\d+)\\)([\w=]+)$", tokens[1]).groups()
-                if action == 'setup':
-                    volume = re.search("0:(\w+-\w+)-\w+", tokens[2]).group(1)
-                    uuid = re.search("1:(.*)", tokens[3]).group(1)
-                    nid = re.search("2:(.*)", tokens[4]).group(1)
+        # Read config logs "testfs-MDT0000" etc
+        for target in targets:
+            read_log("target", target, target)
 
-                    fs_targets.append({
-                        "uuid": uuid,
-                        "name": volume,
-                        "nid": nid})
 
-            mgs_targets[fs] = fs_targets
-
-        return mgs_targets
+        return (mgs_targets, conf_params)
 
     def get_mgs_pings(self, mgs_targets):
         """Attempt to 'lctl ping' all NIDs of targets configured
@@ -439,7 +506,7 @@ class LocalLustreAudit:
         self.read_fstab()
 
         local_targets = self.get_local_targets()
-        mgs_targets = self.get_mgs_targets(local_targets)
+        mgs_targets, mgs_conf_params = self.get_mgs_targets(local_targets)
         device_nodes = self.get_device_nodes()
         client_mounts = self.get_client_mounts()
         lnet_loaded, lnet_up, lnet_nids = self.get_lnet_nids()
@@ -450,6 +517,7 @@ class LocalLustreAudit:
 
         return json.dumps({"local_targets": local_targets,
             "mgs_targets": mgs_targets,
+            "mgs_conf_params": mgs_conf_params,
             "mgs_pings": mgs_pings,
             "lnet_loaded": lnet_loaded,
             "lnet_up": lnet_up,
