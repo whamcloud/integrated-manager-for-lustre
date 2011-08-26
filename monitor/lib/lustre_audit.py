@@ -486,7 +486,10 @@ class LustreAudit:
         for mount_point, client_info in self.host_data['client_mounts'].items():
             # Find the MGS
             try:
-                client_mgs_nids = set(normalize_nids(client_info['nid'].split(":")))
+                # Lustre lets you use either
+                # a comma or a colon as a delimiter
+                nids = re.split("[:,]", client_info['nid'])
+                client_mgs_nids = set(normalize_nids(nids))
                 mgs = self.nids_to_mgs(client_mgs_nids)
             except ManagementTarget.DoesNotExist:
                 audit_log.warning("Ignoring client mount for unknown mgs %s" % client_info['nid'])
