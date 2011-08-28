@@ -5,8 +5,28 @@
 
 {% block scripts %}
 <script type='text/javascript'>
+
+    function update_conf_param_help(select_element) {
+        var conf_param_name = select_element.attr('value');
+        $('#conf_param_help').load(
+                "/configure/conf_param_help/" + conf_param_name + "/",
+                function(){
+                    inner = $('#conf_param_help').html()
+                    if (inner.length == 0) {
+                        $('#conf_param_help').parents('div.help').hide()
+                    } else {
+                        $('#conf_param_help').parents('div.help').show()
+                    }
+                }
+        );
+    }
     $(document).ready(function() {
-            $('input[type=submit]').button();
+        $('input[type=submit]').button();
+ 
+        update_conf_param_help($('select#id_key'));
+        $('select#id_key').change(function(){
+            update_conf_param_help($(this));
+        });
     });
 </script>
 {% endblock %}
@@ -43,6 +63,11 @@
     {% csrf_token %}
     {{conf_param_form.key}}={{conf_param_form.value}}<input type='submit' value='Set param'/>
 </form>
+    <div class='ui-widget ui-corner-all help'>
+        <span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+        <span id='conf_param_help'>
+        </span>
+    </div>
 {% endif %}
 
 {% endblock %}

@@ -383,7 +383,7 @@ class ConfParamForm(forms.Form):
         cleaned_data = self.cleaned_data
         key = cleaned_data.get('key')
         try:
-            model_klass, param_value_obj = all_params[key]
+            model_klass, param_value_obj, help_text = all_params[key]
         except KeyError:
             self._errors["key"] = self.error_class(["Key '%s' unknown" % key])
             del cleaned_data['key']
@@ -403,7 +403,7 @@ class ConfParamForm(forms.Form):
         value = self.cleaned_data['value']
 
         from configure.lib.conf_param import all_params
-        model_klass, param_value_obj = all_params[key]
+        model_klass, param_value_obj, help_text = all_params[key]
 
         # TODO: avoid using "" to signify param removal, so that 
         # params can in theory be set to empty strings
@@ -416,16 +416,16 @@ class ConfParamForm(forms.Form):
                 **kwargs)
         mgs.downcast().set_conf_params([p])
 
-def _handle_conf_param_form(request, form_klass):
+def _handle_conf_param_form(request, mgs, form_klass, **kwargs):
     if request.method == 'GET':
         form = form_klass()
     elif request.method == 'POST':
         form = form_klass(data = request.POST)
         if form.is_valid():
-            form.save(filesystem.mgs, filesystem = filesystem)
+            form.save(mgs, **kwargs)
             from configure.models import ApplyConfParams
             from configure.lib.state_manager import StateManager
-            StateManager().add_job(ApplyConfParams(mgs = filesystem.mgs.downcast()))
+            StateManager().add_job(ApplyConfParams(mgs = mgs))
             form = form_klass()
 
     return form
@@ -433,11 +433,11 @@ def _handle_conf_param_form(request, form_klass):
 def filesystem(request, filesystem_id):
     filesystem = get_object_or_404(ManagedFilesystem, id = filesystem_id)
 
-    from configure.lib.conf_param import all_params
+    from configure.lib.conf_param import get_conf_params
     class FilesystemConfParamForm(ConfParamForm):
-        key = forms.ChoiceField(choices = [(i[0],i[0]) for i in all_params.items() if i[1][0] in [FilesystemClientConfParam, FilesystemGlobalConfParam]])
+        key = forms.ChoiceField(choices = [(i,i) for i in get_conf_params([FilesystemClientConfParam, FilesystemGlobalConfParam])])
 
-    conf_param_form = _handle_conf_param_form(request, FilesystemConfParamForm)
+    conf_param_form = _handle_conf_param_form(request, filesystem.mgs.downcast(), FilesystemConfParamForm, filesystem = filesystem)
     
     return render_to_response("filesystem.html", RequestContext(request, {
         'filesystem': filesystem,
@@ -450,18 +450,31 @@ def target(request, target_id):
     target = get_object_or_404(Target, pk = target_id).downcast()
     assert(isinstance(target, ManagedTarget))
 
+    from configure.lib.conf_param import get_conf_params
     if isinstance(target, ManagedMgs):
         conf_param_form = None
     elif isinstance(target, ManagedMdt):
-        from configure.lib.conf_param import all_params
+        # Create a variant of ConfParamForm showing the options available
+        # for an MDT
         class MdtConfParamForm(ConfParamForm):
-            key = forms.ChoiceField(choices = [(i[0],i[0]) for i in all_params.items() if i[1][0] == MdtConfParam])
-        conf_param_form = MdtConfParamForm
+            key = forms.ChoiceField(choices = [(i,i) for i in get_conf_params([MdtConfParam])])
+
+        conf_param_form = _handle_conf_param_form(
+                request,
+                target.filesystem.mgs.downcast(),
+                MdtConfParamForm,
+                mdt = target)
     elif isinstance(target, ManagedOst):
-        from configure.lib.conf_param import all_params
+        # Create a variant of ConfParamForm showing the options available
+        # for an OST
         class OstConfParamForm(ConfParamForm):
-            key = forms.ChoiceField(choices = [(i[0],i[0]) for i in all_params.items() if i[1][0] == OstConfParam])
-        conf_param_form = OstConfParamForm
+            key = forms.ChoiceField(choices = [(i,i) for i in get_conf_params([OstConfParam])])
+
+        conf_param_form = _handle_conf_param_form(
+                request,
+                target.filesystem.mgs.downcast(),
+                OstConfParamForm,
+                ost = target)
     else:
         raise NotImplementedError
 
@@ -521,3 +534,13 @@ def job_unpause(request, job_id):
     job.unpause()
 
     return HttpResponse(status = 200)
+
+def conf_param_help(request, conf_param_name):
+    try:
+        from configure.lib.conf_param import all_params
+        model_klass, param_value_obj, help_text = all_params[conf_param_name]
+    except KeyError:
+        help_text = ""
+
+    return HttpResponse(help_text, mimetype = 'text/plain')
+

@@ -140,7 +140,16 @@ def run_job(job_id):
         return None
 
     job = job.downcast()
-    steps = job.get_steps()
+    try:
+        steps = job.get_steps()
+    except Exception, e:
+        job_log.error("Job %d run_steps encountered an error" % (job.id, step_index))
+        import sys
+        import traceback
+        exc_info = sys.exc_info()
+        job_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
+        job.complete(errored = True)
+        return None
 
     restart_from = 0
     if job.started_step:

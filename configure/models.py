@@ -900,8 +900,8 @@ class MdtConfParam(ConfParam):
     # all MDT on an MGS (and set this param for MDT in RegisterTargetJob)
     mdt = models.ForeignKey(ManagedMdt)
     def __init__(self, *args, **kwargs):
-        super(MdtConfParam, self).__init(*args, **kwargs)
-        self.mgs = self.mdt.filesystem.mgs
+        super(MdtConfParam, self).__init__(*args, **kwargs)
+        self.mgs = self.mdt.filesystem.mgs.downcast()
 
     def get_key(self):
         return "%s.%s" % (self.mdt.name, self.key)
@@ -911,8 +911,8 @@ class OstConfParam(ConfParam):
     # all OSTs on an MGS (and set this param for OSTs in RegisterTargetJob)
     ost = models.ForeignKey(ManagedOst)
     def __init__(self, *args, **kwargs):
-        super(OstConfParam, self).__init(*args, **kwargs)
-        self.mgs = self.ost.filesystem.mgs
+        super(OstConfParam, self).__init__(*args, **kwargs)
+        self.mgs = self.ost.filesystem.mgs.downcast()
 
     def get_key(self):
         return "%s.%s" % (self.ost.name, self.key)

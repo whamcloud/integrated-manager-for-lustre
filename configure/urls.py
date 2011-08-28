@@ -18,4 +18,5 @@ urlpatterns = patterns('',
     (r'^set_state/(?P<content_type_id>\d+)/(?P<stateful_object_id>\d+)/(?P<new_state>\w+)/$', set_state),
     (r'^filesystem/(?P<filesystem_id>\d+)/$', filesystem),
     (r'^target/(?P<target_id>\d+)/$', target),
+    (r'^conf_param_help/(?P<conf_param_name>[\w\._-]+)/$', conf_param_help),
 )
