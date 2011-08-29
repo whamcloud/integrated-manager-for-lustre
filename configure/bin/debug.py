@@ -10,29 +10,12 @@ from configure.lib.state_manager import StateManager
 from collections_24 import defaultdict
 import sys
 
-from logging import getLogger, FileHandler, INFO, StreamHandler
-file_log_name = __name__
-getLogger(file_log_name).setLevel(INFO)
-getLogger(file_log_name).addHandler(FileHandler("%s.log" % 'hydra'))
-
-def log():
-    return getLogger(file_log_name)
-
-def screen(string):
-    print string 
-    log().debug(string)
-
-
 import cmd
 
 class HydraDebug(cmd.Cmd, object):
     def __init__(self):
         super(HydraDebug, self).__init__()
         self.prompt = "Hydra> "
-
-    def precmd(self, line):
-        log().debug("> %s" % line)
-        return line
 
     def do_EOF(self, line):
         raise KeyboardInterrupt()
@@ -176,6 +159,42 @@ class HydraDebug(cmd.Cmd, object):
         from configure.lib.state_manager import StateManager
         StateManager().add_job(job)
 
+    def _conf_param_test_instance(self, key, val, klass):
+        if klass == MdtConfParam:
+            try:
+                mdt = ManagedMdt.objects.latest('id')
+                return MdtConfParam(mdt = mdt, key = key, value = val)
+            except ManagedMdt.DoesNotExist:
+                return None
+        elif klass == OstConfParam:
+            try:
+                ost = ManagedOst.objects.latest('id')
+                return OstConfParam(ost = ost, key = key, value = val)
+            except ManagedOst.DoesNotExist:
+                return None
+        elif klass in [FilesystemClientConfParam, FilesystemGlobalConfParam]:
+            try:
+                fs = ManagedFilesystem.objects.latest('id')
+                return klass(filesystem = fs, key = key, value = val)
+            except ManagedFilesystem.DoesNotExist:
+                return None
+        else:
+            raise NotImplementedError()
+    
+    def do_test_conf_param(self, args):
+        from configure.lib.conf_param import all_params
+        from sys import stderr, stdout
+        stdout.write("#!/bin/bash\n")
+        stdout.write("set -e\n")
+        for p,(param_obj_klass, param_validator, help_text) in all_params.items():
+            for test_val in param_validator.test_vals():
+                instance = self._conf_param_test_instance(p, test_val, param_obj_klass)
+                if not instance:
+                    stderr.write("Cannot create test instance for %s\n" % p)
+                else:
+                    stdout.write("echo lctl conf_param %s=%s\n" % (instance.get_key(), test_val))
+                    stdout.write("lctl conf_param %s=%s\n" % (instance.get_key(), test_val))
+
 if __name__ == '__main__':
     cmdline = HydraDebug
 
@@ -183,7 +202,7 @@ if __name__ == '__main__':
         try:
             cmdline().cmdloop()
         except KeyboardInterrupt:
-            screen("Exiting...")
+            print "Exiting..."
     else:
         cmdline().onecmd(" ".join(sys.argv[1:]))
 
