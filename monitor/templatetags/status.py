@@ -1,4 +1,8 @@
 
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
 from django import template
 
 def status_class(status_string):

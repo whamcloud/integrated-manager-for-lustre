@@ -1,4 +1,8 @@
 
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
 from logging import getLogger, FileHandler, StreamHandler, DEBUG, INFO
 import settings
 

@@ -1,4 +1,8 @@
 
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
 from django.shortcuts import render_to_response, redirect, get_object_or_404
 from django.contrib.contenttypes.models import ContentType
 from django.template import RequestContext

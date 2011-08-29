@@ -1,3 +1,8 @@
+
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
 from django.conf.urls.defaults import *
 
 from configure.views import *
