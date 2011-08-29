@@ -5,23 +5,46 @@ class ParamType(object):
         """Opportunity for subclasses to validate and/or transform"""
         raise NotImplementedError
 
-class BooleanParam(ParamType):
-    def validate(self, val):
-        if not val in [True, False]:
-            raise ValueError
+    def test_vals(self):
+        raise NotImplementedError()
+
+
 
 class IntegerParam(ParamType):
     def __init__(self, min_val = None, max_val = None):
+        if min_val and max_val:
+            assert(max_val >= min_val)
+
         self.min_val = min_val
-        self.max_val = min_val
+        self.max_val = max_val
 
     def validate(self, val):
-        if self.min_val and val < self.min_val:
+        if self.min_val != None and val < self.min_val:
             raise ValueError
-        if self.max_val and val > self.min_val:
+        if self.max_val != None and val > self.min_val:
             raise ValueError
 
+    def test_vals(self):
+        vals = []
+        if self.min_val != None:
+            vals.append(self.min_val)
+        if self.max_val != None:
+            vals.append(self.max_val)
+        if self.min_val == None and self.max_val == None:
+            vals.append(20)
+
+        if self.max_val != None and self.min_val != None and (self.max_val - self.min_val > 1):
+            vals.append(self.min_val + (self.max_val - self.min_val) / 2)
+
+        return vals
+
+class BooleanParam(IntegerParam):
+    """Value is 0 or 1"""
+    def __init__(self):
+        super(BooleanParam, self).__init__(min_val = 0, max_val = 1)
+
 class EnumParam(ParamType):
+    """Value is one of self.options"""
     def __init__(self, options):
         self.options = options
 
@@ -29,19 +52,47 @@ class EnumParam(ParamType):
         if not val in self.options:
             raise ValueError
 
-# For params read with lprocfs_write_frac_u64
-# Valid postfixes are [ptgmkPTGMK]
+    def test_vals(self):
+        return self.options
+
 class BytesParam(ParamType):
-    """If units attribute is non-null, this just stores an integer"""
+    """A size in bytes, written with a unit letter at the end in the format supported
+       by lprocfs_write_frac_u64.  e.g. "40m", "20G".  Valid postfixes are [ptgmkPTGMK].
+
+       If units attribute is non-null, this just stores an integer, i.e. for settings
+       where the unit is built into the name of the setting.  Use BytesParam instead of 
+       integerparam so that for presentation it is possible to display "40MB" instead of
+       just displaying "40" and leaving it to the user to notice that the setting ends _mb."""
     def __init__(self, units = None, min_val = None, max_val = None):
         self.min_val = min_val
         self.max_val = max_val
+
+        # Check we don't have a lower bound bigger than the upper
+        if self.min_val != None and self.max_val != None:
+            assert(self._str_to_bytes(self.min_val) <= self._str_to_bytes(self.max_val))
+
+        # Check that units is something like 'm' or 'G'
         if units != None:
             if not len(units) == 1:
                 raise RuntimeError()
             if not units in "ptgmkPTGMK":
                 raise RuntimeError()
         self.units = units
+
+    def test_vals(self):
+        vals = []
+        if self.min_val:
+            vals.append(self.min_val)
+        if self.max_val:
+            vals.append(self.max_val)
+
+        if self.max_val == None and self.min_val == None:
+            if self.units:
+                vals.append("20%s" % self.units)
+            else:
+                vals.append("20m")
+
+        return vals
 
     def _str_to_bytes(self, val):
         units = 1
@@ -53,7 +104,7 @@ class BytesParam(ParamType):
             units = 1
             number = val
 
-        real_val = float(number, 10)
+        real_val = float(number)
         real_val *= units
 
         return real_val
@@ -121,15 +172,16 @@ all_params = {
 
     # "Using OSS Read Cache"
     # ======================
-    'obdfilter.read_cache_enable': (OstConfParam, IntegerParam(min_val = 0, max_val = 1), "read_cache_enable controls whether data read from disk during a read request is kept in memory and available for later read requests for the same data, without having to re-read it from disk. By default, read cache is enabled (read_cache_enable = 1)."),
-    'obdfilter.writethrough_cache_enable': (OstConfParam, IntegerParam(min_val = 0, max_val = 1), "writethrough_cache_enable controls whether data sent to the OSS as a write request is kept in the read cache and available for later reads, or if it is discarded from cache when the write is completed. By default, writethrough cache is enabled (writethrough_cache_enable = 1)."),
-    'obdfilter.readcache_max_filesize': (OstConfParam, BytesParam(), "readcache_max_filesize controls the maximum size of a file that both the read cache and writethrough cache will try to keep in memory. Files larger than readcache_max_filesize will not be kept in cache for either reads or writes."),
+    # NB these ost.* names correspond to obdfilter.* set_param names
+    'ost.read_cache_enable': (OstConfParam, BooleanParam(), "read_cache_enable controls whether data read from disk during a read request is kept in memory and available for later read requests for the same data, without having to re-read it from disk. By default, read cache is enabled (read_cache_enable = 1)."),
+    'ost.writethrough_cache_enable': (OstConfParam, BooleanParam(), "writethrough_cache_enable controls whether data sent to the OSS as a write request is kept in the read cache and available for later reads, or if it is discarded from cache when the write is completed. By default, writethrough cache is enabled (writethrough_cache_enable = 1)."),
+    'ost.readcache_max_filesize': (OstConfParam, BytesParam(), "readcache_max_filesize controls the maximum size of a file that both the read cache and writethrough cache will try to keep in memory. Files larger than readcache_max_filesize will not be kept in cache for either reads or writes."),
 
     # OSS Asynchronous Journal Commit
     # ===============================
 
-    'obdfilter.sync_jornal': (OstConfParam, IntegerParam(min_val = 0, max_val = 1), "To enable asynchronous journal commit, set the sync_journal parameter to zero (sync_journal=0)"),
-    'obdfilter.sync_on_lock_cancel': (OstConfParam, EnumParam(['always', 'blocking', 'never']), """When asynchronous journal commit is used, clients keep a page reference until the journal transaction commits. This can cause problems when a client receives a blocking callback, because pages need to be removed from the page cache, but they cannot be removed because of the extra page reference.
+    'ost.sync_journal': (OstConfParam, BooleanParam(), "To enable asynchronous journal commit, set the sync_journal parameter to zero (sync_journal=0)"),
+    'ost.sync_on_lock_cancel': (OstConfParam, EnumParam(['always', 'blocking', 'never']), """When asynchronous journal commit is used, clients keep a page reference until the journal transaction commits. This can cause problems when a client receives a blocking callback, because pages need to be removed from the page cache, but they cannot be removed because of the extra page reference.
 This problem is solved by forcing a journal flush on lock cancellation. When this happens, the client is granted the metadata blocks that have hit the disk, and it can safely release the page reference before processing the blocking callback. The parameter which controls this action is sync_on_lock_cancel, which can be set to the following values:
 • always: Always force a journal flush on lock cancellation
 • blocking: Force a journal flush only when the local cancellation is due to a blocking callback
@@ -138,12 +190,14 @@ This problem is solved by forcing a journal flush on lock cancellation. When thi
 
     # mballoc3 Tunables
     # =================
-    # TODO: lquota.stats, osc.stats, mds.stats, llite.stats, mgs.stats, mdt.stats ldlm.stats, ost.stats, bdfilter.stats
+    # XXX: these don't seem to be here?  Manual bug?
 
     # 'Locking'
-    # TODO: lru_size (conf_param testfs-OST000.ldlm.lru_size doesn't work for me on 2.x)
-
-
+    # =========
+    # XXX: Lustre does not let us conf_Param lru_size
+    # http://www.mail-archive.com/lustre-discuss@lists.lustre.org/msg05278.html
+    # https://bugzilla.lustre.org/show_bug.cgi?id=21084
+    # TODO: I can't see how to build the conf_param path for ldlm.services.ldlm_canceld and ldlm.services.ldlm_cbd
 
     # "Configuring adapative timeouts"
     # ================================
@@ -159,7 +213,13 @@ Note: It is possible that slow hardware might validly cause the service estimate
 'sys.at_extra': (FilesystemGlobalConfParam, IntegerParam(), """Sets the incremental amount of time that a server asks for, with each early reply. The server does not know how much time the RPC will take, so it asks for a fixed value. Default value is 30. When a server finds a queued request about to time out (and needs to send an early reply out), the server adds the at_extra value. If the time expires, the Lustre client enters recovery status and reconnects to restore it to normal status.
 
 If you see multiple early replies for the same RPC asking for multiple 30-second increases, change the at_extra value to a larger number to cut down on early replies sent and, therefore, network load."""),
-'sys.ldlm_enqueue_min': (FilesystemGlobalConfParam, IntegerParam(), " Sets the minimum lock enqueue time. Default value is 100. The ldlm_enqueue  time is the maximum of the measured enqueue estimate (influenced by at_min and at_max parameters), multiplied by a weighting factor, and the ldlm_enqueue_min setting. LDLM lock enqueues were based on the obd_timeout  value; now they have a dedicated minimum value. Lock enqueues increase as the measured enqueue times increase (similar to adaptive timeouts)."),
+# ldlm_enqueue_min does not appear to be conf_param'able
+#'sys.ldlm_enqueue_min': (FilesystemGlobalConfParam, IntegerParam(), "Sets the minimum lock enqueue time. Default value is 100. The ldlm_enqueue  time is the maximum of the measured enqueue estimate (influenced by at_min and at_max parameters), multiplied by a weighting factor, and the ldlm_enqueue_min setting. LDLM lock enqueues were based on the obd_timeout  value; now they have a dedicated minimum value. Lock enqueues increase as the measured enqueue times increase (similar to adaptive timeouts)."),
+
+# "Lustre Timeouts"
+# =================
+'sys.timeout': (FilesystemGlobalConfParam, IntegerParam(), "This is the time period that a client waits for a server to complete an RPC (default is 100s). Servers wait half of this time for a normal client RPC to complete and a quarter of this time for a single bulk request (read or write of up to 1 MB) to complete. The client pings recoverable targets (MDS and OSTs) at one quarter of the timeout, and the server waits one and a half times the timeout before evicting a client for being \"stale.\""),
+'sys.ldlm_timeout': (FilesystemGlobalConfParam, IntegerParam(), "This is the time period for which a server will wait for a client to reply to an initial AST (lock cancellation request) where default is 20s for an OST and 6s for an MDS. If the client replies to the AST, the server will give it a normal timeout (half of the client timeout) to flush any dirty data and release the lock."),
 }
 
 # "Setting MDS and OSS Thread Counts"
@@ -172,7 +232,6 @@ for service in ['ost.OSS.ost', 'ost.OSS.ost_io', 'ost.OSS.ost_create']:
     for param in ['thread_min', 'thread_max', 'thread_started']:
         all_params[service + "." + param] = (OstConfParam, IntegerParam(), "")
 
-# TODO: I can't see how to build the conf_param path for ldlm.services.ldlm_canceld and ldlm.services.ldlm_cbd
 
 
 def get_conf_params(klasses):
