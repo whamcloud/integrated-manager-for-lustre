@@ -61,9 +61,13 @@ class HydraDebug(cmd.Cmd, object):
         from configure.models import Job
         Job.run_next()
 
-    def do_apply_conf_param(self, args):
+    def do_apply_conf_params(self, mgs_host_name):
+        # Create an ApplyConfParams job for this MGS
         from configure.models import ManagedMgs, ApplyConfParams
-        job = ApplyConfParams(mgs = ManagedMgs.objects.get())
+        mgs = ManagedMgs.objects.get(targetmount__host__address = mgs_host_name)
+        job = ApplyConfParams(mgs = mgs)
+
+        # Submit the job
         from configure.lib.state_manager import StateManager
         StateManager().add_job(job)
 

@@ -1,5 +1,7 @@
 # vim:fileencoding=utf-8
 
+import re
+
 class ParamType(object):
     def validate(self, val):
         """Opportunity for subclasses to validate and/or transform"""

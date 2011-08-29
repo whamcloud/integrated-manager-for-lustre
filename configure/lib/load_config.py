@@ -48,6 +48,18 @@ def _load_target_config(info):
 
     return node, host, failover_host
 
+def _validate_conf_params(conf_params):
+    from configure.lib.conf_param import all_params
+    for key,val in conf_params.items():
+        try:
+            model_klass, param_value_obj, help_text = all_params[key]
+            param_value_obj.validate(val)
+        except KeyError:
+            # Let users set params we've never heard of, good luck.
+            pass
+
+ 
+
 # FIXME: we rely on the good faith of the .json file's author to use
 # our canonical names for devices.  We must normalize them to avoid
 # the risk of double-using a LUN.
@@ -76,12 +88,32 @@ def _load(text):
         _create_target_mounts(node, mgs, failover_host)
 
     for filesystem_info in data['filesystems']:
+        # We collect up ConfParams for all targets and set them at the end for each filesystem
+        from configure.lib.conf_param import all_params
+        conf_param_objects = []
+
+        # Look for the MGS that the user specified by hostname
         fs_mgs_host = ManagedHost.objects.get(address = filesystem_info['mgs'])
         mgs = ManagedMgs.objects.get(targetmount__host = fs_mgs_host)
         filesystem, created = ManagedFilesystem.objects.get_or_create(name = filesystem_info['name'], mgs = mgs)
 
+        fs_conf_params = {}
+        if filesystem_info.has_key('conf_params'):
+            fs_conf_params = filesystem_info['conf_params']
+            _validate_conf_params(fs_conf_params)
+        for k,v in fs_conf_params.items():
+            try:
+                klass, ignore, ignore = all_params[k]
+            except:
+                # If we don't know anything about this param, then
+                # fall back to ClientConfParam (i.e. set it for the
+                # filesystem but don't re-set it when targets change)
+                klass = FilesystemClientConfParam
+            conf_param_objects.append(klass(filesystem = filesystem, key = k, value = v))
+
         mds_info = filesystem_info['mds']
         mdt_node, mdt_host, mdt_failover_host = _load_target_config(mds_info)
+
         try:
             mdt = ManagedMdt.objects.get(targetmount__block_device = mdt_node)
         except ManagedMdt.DoesNotExist:
@@ -90,19 +122,38 @@ def _load(text):
 
         _create_target_mounts(mdt_node, mdt, mdt_failover_host)
 
+        mds_conf_params = {}
+        if mds_info.has_key('conf_params'):
+            mds_conf_params = mds_info['conf_params']
+            _validate_conf_params(mds_conf_params)
+        for k,v in mds_conf_params.items():
+            conf_param_objects.append(MdtConfParam(mdt = mdt, key = k, value = v))
+
         for oss_info in filesystem_info['osss']:
+            oss_conf_params = {}
+            if oss_info.has_key('conf_params'):
+                oss_conf_params = oss_info['conf_params']
+                _validate_conf_params(oss_conf_params)
+
             for device_node in oss_info['device_nodes']:
                 tmp_oss_info = oss_info
                 oss_info['device_node'] = device_node
                 node, host, failover_host = _load_target_config(tmp_oss_info)
 
                 try:
-                    oss = ManagedOst.objects.get(targetmount__block_device = node)
+                    ost = ManagedOst.objects.get(targetmount__block_device = node)
                 except ManagedOst.DoesNotExist:
-                    oss = ManagedOst(filesystem = filesystem)
-                    oss.save()
+                    ost = ManagedOst(filesystem = filesystem)
+                    ost.save()
 
                     _create_target_mounts(node, oss, failover_host)
+
+                # Add any conf params whether the OST is new or not
+                for k,v in oss_conf_params.items():
+                    conf_param_objects.append(OstConfParam(ost = ost, key = k, value = v))
+        mgs.set_conf_params(conf_param_objects)
+                                    
+            
 
 from django.db import transaction
 @transaction.commit_on_success
