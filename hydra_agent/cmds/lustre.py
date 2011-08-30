@@ -136,6 +136,9 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
         if name == "target_types":
             for type in arg:
                 types.append("--%s" % type)
+        elif name == 'mgsnode':
+            for mgsnode in arg:
+                options.append("--%s=%s" % (name, mgsnode))
         else:
             if len(arg) > 0:
                 options.append("--%s=%s" % (name, ",".join(arg)))
