@@ -17,7 +17,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: python-simplejson
+Requires: python-simplejson python-argparse
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
@@ -40,3 +40,4 @@ rm -rf %{buildroot}
 %{_bindir}/hydra-agent.py*
 %{_bindir}/hydra-rmmod.py*
 %{python_sitelib}/*
+/usr/lib/ocf/resource.d/hydra/Target
