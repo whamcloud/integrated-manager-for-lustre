@@ -646,11 +646,19 @@ class ConfigureTargetMountJob(Job, StateChangeJob):
     target_mount = models.ForeignKey('ManagedTargetMount')
 
     def description(self):
-        return "Configuring mount %s on %s" % (self.target_mount.mount_point, self.target_mount.host)
+        return "Configuring mount %s and HA for %s on %s" % (self.target_mount.mount_point, self.target_mount.target.name, self.target_mount.host)
 
     def get_steps(self):
-        from configure.lib.job import MkdirStep
-        return [(MkdirStep, {'target_mount_id': self.target_mount.id})]
+        from configure.lib.job import ConfigurePacemakerStep
+        return[(ConfigurePacemakerStep,
+                      {'target_mount_id': self.target_mount.id})]
+
+    def get_deps(self):
+        deps = []
+
+        deps.append((self.target_mount.target.downcast(), "registered"))
+
+        return deps
 
 class RegisterTargetJob(Job, StateChangeJob):
     # FIXME: this really isn't ManagedTarget, it's FilesystemMember+ManagedTarget
@@ -686,13 +694,12 @@ class RegisterTargetJob(Job, StateChangeJob):
         steps = []
         # FIXME: somehow need to avoid advertising this transition for MGS targets
         # currently as hack this is just a no-op for MGSs which marks them registered
-        from configure.lib.job import MountStep, UnmountStep, NullStep
+        from configure.lib.job import RegisterTargetStep, NullStep
         target = self.target.downcast()
         if isinstance(target, ManagedMgs):
             steps.append((NullStep, {}))
         if isinstance(target, monitor_models.FilesystemMember):
-            steps.append((MountStep, {"target_mount_id": target.targetmount_set.get(primary = True).id}))
-            steps.append((UnmountStep, {"target_mount_id": target.targetmount_set.get(primary = True).id}))
+            steps.append((RegisterTargetStep, {"target_mount_id": target.targetmount_set.get(primary = True).id}))
 
         return steps
 
@@ -714,9 +721,6 @@ class RegisterTargetJob(Job, StateChangeJob):
         if isinstance(self.target, monitor_models.FilesystemMember):
             mgs = self.target.filesystem.mgs
             deps.append((mgs.targetmount_set.get(primary = True).downcast(), "mounted"))
-
-        # Depend on state 'unmounted' to make sure it's configured (i.e. mount point exists)
-        deps.append((self.target.targetmount_set.get(primary = True).downcast(), "unmounted"))
 
         return deps
 

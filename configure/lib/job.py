@@ -5,6 +5,7 @@
 
 from logging import getLogger, FileHandler, StreamHandler, DEBUG, INFO
 import settings
+import time
 
 job_log = getLogger('job')
 job_log.setLevel(DEBUG)
@@ -178,12 +179,6 @@ class NullStep(Step):
         pass
 
 class MountStep(Step):
-    def _mount_command(self, target_mount):
-        from hydra_agent.cmds import lustre
-        assert(target_mount.block_device.path != None)
-        return lustre.mount(device=target_mount.block_device.path,
-                            dir=target_mount.mount_point)
-
     def is_idempotent(self):
         return True
 
@@ -192,17 +187,16 @@ class MountStep(Step):
         target_mount_id = kwargs['target_mount_id']
         target_mount = TargetMount.objects.get(id = target_mount_id)
 
-        code, out, err = debug_ssh(target_mount.host, self._mount_command(target_mount))
+        code, out, err = debug_ssh(target_mount.host,
+                                   "hydra-agent.py --start_target %s" %
+                                   target_mount.target.name)
         if code != 0 and code != 17 and code != 114:
             from configure.lib.job import StepCleanError
             print code, out, err
             print StepCleanError
             raise StepCleanError()
 
-class MkdirStep(Step):
-    def _mkdir_command(self, target_mount):
-        return "/bin/mkdir -p %s" % (target_mount.mount_point)
-
+class RegisterTargetStep(Step):
     def is_idempotent(self):
         return True
 
@@ -211,7 +205,46 @@ class MkdirStep(Step):
         target_mount_id = kwargs['target_mount_id']
         target_mount = TargetMount.objects.get(id = target_mount_id)
 
-        code, out, err = debug_ssh(target_mount.host, self._mkdir_command(target_mount))
+        code, out, err = debug_ssh(target_mount.host,
+                                   "hydra-agent.py --register_target %s %s" %
+                                   (target_mount.block_device.path,
+                                    target_mount.mount_point))
+        if code != 0:
+            from configure.lib.job import StepCleanError
+            print code, out, err
+            print StepCleanError
+            raise StepCleanError()
+
+class ConfigurePacemakerStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from monitor.models import TargetMount
+        target_mount_id = kwargs['target_mount_id']
+        target_mount = TargetMount.objects.get(id = target_mount_id)
+        # due to devices where it's not entirely obvious that sharing is
+        # going on, it takes an audit cycle to find a shared device after
+        # it's been registered.  we need to wait for that audit cycle.
+        x = 0
+        while (target_mount.block_device == None or
+               target_mount.target.name == None) and x < 10:
+            print "waiting for the target's name"
+            time.sleep(10)
+            target_mount = TargetMount.objects.get(id = target_mount_id)
+            x = x + 1
+        if target_mount.block_device == None or target_mount.target.name == None:
+            from configure.lib.job import StepCleanError
+            print "failed to get the target's name after %d tries" % x
+            print StepCleanError
+            raise StepCleanError()
+
+        code, out, err = debug_ssh(target_mount.host,
+                                   "hydra-agent.py --configure_ha %s %s %s %s" %
+                                   (target_mount.block_device.path,
+                                    target_mount.target.name,
+                                    target_mount.primary,
+                                    target_mount.mount_point))
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
