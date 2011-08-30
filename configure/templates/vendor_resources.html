@@ -1,0 +1,22 @@
+
+
+{% extends 'base.html' %}
+
+{% block scripts %}
+{% endblock %}
+
+{% block css %}
+{% endblock %}
+
+{% block content %}
+<h2>Vendor resources</h2>
+
+<ul>
+{% for r in resources %}
+<li><a href="{% url configure.views.vendor_resource r.get_handle %}">{{r}}</a></li>
+{% endfor %}
+</ul>
+
+
+{% endblock %}
+

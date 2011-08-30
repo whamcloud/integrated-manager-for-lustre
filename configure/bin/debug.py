@@ -107,6 +107,21 @@ class HydraDebug(cmd.Cmd, object):
                     stdout.write("echo lctl conf_param %s=%s\n" % (instance.get_key(), test_val))
                     stdout.write("lctl conf_param %s=%s\n" % (instance.get_key(), test_val))
 
+    def do_create_lvm_host(self, hostname):
+        """Development placeholder for UI for creating
+           arbitrary parentless VendorResources e.g. inputting
+           IP addresses of controllers"""
+        from configure.lib.vendor_plugin import vendor_plugin_manager
+        vendor_plugin_manager.create_root_resource('configure.plugins.lvm', 'LvmHost', hostname = hostname)
+
+    def do_load_vendor_plugin(self, module_name):
+        """Development stub for quickly loading and scanning storage
+           plugins."""
+        from configure.lib.vendor_plugin import vendor_plugin_manager
+        klass = vendor_plugin_manager.load_plugin(module_name)
+        instance = klass()
+        instance.initial_scan()
+
 if __name__ == '__main__':
     cmdline = HydraDebug
 

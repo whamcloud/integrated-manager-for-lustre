@@ -548,3 +548,15 @@ def conf_param_help(request, conf_param_name):
 
     return HttpResponse(help_text, mimetype = 'text/plain')
 
+def vendor_resources(request):
+    from configure.lib.vendor_plugin import vendor_plugin_manager
+    resources = vendor_plugin_manager.get_all_resources()
+    return render_to_response("vendor_resources.html",
+            RequestContext(request, {"resources": resources}))
+
+def vendor_resource(request, vrr_id):
+    from configure.lib.vendor_plugin import vendor_plugin_manager
+    resource = vendor_plugin_manager.get_resource(vrr_id)
+    return render_to_response("vendor_resource.html",
+            RequestContext(request, {"resource": resource}))
+
