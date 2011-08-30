@@ -43,6 +43,7 @@
 {% endblock %}
 </p>
 
+{% if conf_param_form %}
 <h3>Lustre conf_params</h3>
 {% if not conf_param_list %}
 <p>No persistent configuration parameters set.</p>
@@ -57,7 +58,6 @@
 </table>
 {% endif %}
 
-{% if conf_param_form %}
 <h3>Set a conf_param</h3>
 <form method='post'>
     {% csrf_token %}
