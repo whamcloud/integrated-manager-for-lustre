@@ -232,6 +232,8 @@ class MkfsStep(Step):
         # Assume nonzero returns from mkfs mean it didn't touch anything
         if code != 0:
             from configure.lib.job import StepDirtyError
+            job_log.error(out)
+            job_log.error(err)
             raise StepDirtyError()
         else:
             data = json.loads(out)
@@ -240,11 +242,11 @@ class MkfsStep(Step):
             assert(target_mount.block_device != None)
             lun_node = target_mount.block_device
             if lun_node.lun:
-                lun = target_mount.lun
+                lun = lun_node.lun
                 lun.fs_uuid = fs_uuid
                 lun.save()
             else:
-                lun = Lun(fs_uuid = uuid)
+                lun = Lun(fs_uuid = fs_uuid)
                 lun.save()
                 target_mount.lun = lun
                 target_mount.save()
