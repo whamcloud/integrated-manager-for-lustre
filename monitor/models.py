@@ -104,7 +104,7 @@ class Lun(models.Model):
     # Support not yet implemented in lustre_audit
     #wwn = models.CharField(max_length = 16, blank = True, null = True)
     # The UUID from a filesystem on this Lun, available after formatting
-    fs_uuid = models.CharField(max_length = 32, blank = True, null = True, unique = True)
+    fs_uuid = models.CharField(max_length = 36, blank = True, null = True, unique = True)
 
     def __str__(self):
         return "Lun:%s" % self.fs_uuid
