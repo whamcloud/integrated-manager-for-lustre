@@ -104,8 +104,7 @@ class LocalLustreAudit:
             match = re.search("^(.+): .*UUID=\"([^\"]+)\"", line)
             if match:
                 dev, uuid = match.groups()
-                uuid = uuid.replace("-", "")
-                assert(len(uuid) == 32)
+                assert(len(uuid) == 36)
                 uuids[self.normalize_device(dev)] = uuid
 
         result = []

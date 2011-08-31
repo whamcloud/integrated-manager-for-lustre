@@ -31,9 +31,46 @@ if __name__ == '__main__':
     parser.add_argument('--unmount_target', nargs = 1, help='unmount a target')
     parser.add_argument('--start_target', nargs = 1, help='start a target')
     parser.add_argument('--stop_target', nargs = 1, help='stop a target')
+    parser.add_argument('--format_target', nargs = 1, help='format a target')
+    parser.add_argument('--locate_device', nargs = 1, help='find a device node path from a filesystem UUID')
 
     args = parser.parse_args()
     
+    if args.locate_device != None:
+        uuid = args.locate_device[0]
+        lla = LocalLustreAudit()
+        lla.read_mounts()
+        lla.read_fstab()
+        device_nodes = lla.get_device_nodes()
+        node_result = None
+        for d in device_nodes:
+            if d['fs_uuid'] == uuid:
+                node_result = d
+        print json.dumps(node_result) 
+        sys.exit(0)
+
+    if args.format_target != None:
+        from hydra_agent.cmds import lustre
+        import shlex, subprocess
+
+        kwargs = json.loads(args.format_target[0])
+        cmdline = lustre.mkfs(**kwargs)
+
+        rc = subprocess.call(shlex.split(cmdline), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if rc != 0:
+            sys.exit(rc)
+
+        p = subprocess.Popen(["blkid", "-o", "value", "-s", "UUID", kwargs['device']], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        rc = p.wait()
+        if rc != 0:
+            sys.exit(rc)
+
+        uuid = stdout.strip()
+
+        print json.dumps({'uuid': uuid})
+        sys.exit(0)
+
     if args.register_target != None:
         bdev = args.register_target[0]
         mntpt = args.register_target[1]
