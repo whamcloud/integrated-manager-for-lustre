@@ -146,7 +146,7 @@ def _load(text):
                     ost = ManagedOst(filesystem = filesystem)
                     ost.save()
 
-                    _create_target_mounts(node, oss, failover_host)
+                    _create_target_mounts(node, ost, failover_host)
 
                 # Add any conf params whether the OST is new or not
                 for k,v in oss_conf_params.items():
