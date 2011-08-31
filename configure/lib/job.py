@@ -3,6 +3,8 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import json
+
 from logging import getLogger, FileHandler, StreamHandler, DEBUG, INFO
 import settings
 
@@ -126,9 +128,64 @@ def debug_ssh(host, command):
         job_log.error(result_stderr)
     return result_code, result_stdout, result_stderr
 
+class FindDeviceStep(Step):
+    """Given a TargetMount whose Target's primary TargetMount's LunNode's Lun has
+       a fs_uuid populated (i.e. post-formatting), identify the device node on 
+       this TargetMount's host which has that fs_uuid, and ensure there is a 
+       LunNode object for it linked to the correct Lun""" 
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+       from configure.models import ManagedTargetMount
+       target_mount = ManagedTargetMount.objects.get(pk = kwargs['target_mount_id'])
+
+       if target_mount.primary:
+           # This is a primary target mount, so it should already have a LunNode
+           assert(target_mount.block_device)
+           return
+
+       if target_mount.block_device:
+           # The LunNode was already populated, do nothing
+           return
+
+       # Go up to the target, then back down to the primary mount to get the Lun
+       lun = target_mount.target.targetmount_set.get(primary = True).block_device.lun
+       # This step must only be run after the target using this lun is formatted
+       assert(lun.fs_uuid)
+
+       # Contact the host to find the path to the block device
+       code, out, err = debug_ssh(target_mount.host, "hydra-agent.py --locate_device %s" % lun.fs_uuid)
+       if code != 0:
+            from configure.lib.job import StepCleanError
+            print code, out, err
+            raise StepCleanError()
+       else:
+            node_info = json.loads(out)
+            if not node_info:
+                raise RuntimeError("Cannot locate target %s device on %s by uuid %s" % (target_mount.target, target_mount.host, lun.fs_uuid))
+            try:
+                lun_node = LunNode.objects.get(
+                        host = target_mount.host, path = data['path'])
+                lun_node.lun = lun
+                lun_node.save()
+            except LunNode.DoesNotExist:
+                # Corner case: we are finding a device that LustreAudit never saw before us (maybe the host just came up for the first time at just this moment)
+                lun_node = LunNode(
+                        lun = lun,
+                        host = self.host,
+                        path = node_info['path'],
+                        size = node_info['size'],
+                        used_hint = node_info['used'])
+                lun_node.save()
+
+            target_mount.block_device = existing_lun_node()
+            target_mount.save()
+                
+
 
 class MkfsStep(Step):
-    def _mkfs_command(self, target):
+    def _mkfs_args(self, target):
         from hydra_agent.cmds import lustre
         from monitor.models import FilesystemMember
         from configure.models import ManagedMgs, ManagedMdt, ManagedOst
@@ -155,23 +212,42 @@ class MkfsStep(Step):
 
         kwargs['device'] = primary_mount.block_device.path
 
-        return lustre.mkfs(**kwargs)
+        return kwargs
 
     def run(self, kwargs):
-        from monitor.models import Target
+        from monitor.models import Target, Lun
         from configure.models import ManagedTarget
+        from re import escape
+
         target_id = kwargs['target_id']
         target = Target.objects.get(id = target_id).downcast()
 
         assert(isinstance(target, ManagedTarget))
-        host = target.targetmount_set.get(primary = True).host
-        command = self._mkfs_command(target)
+        target_mount = target.targetmount_set.get(primary = True)
+        host = target_mount.host
+        args = self._mkfs_args(target)
+        command = "hydra-agent.py --format_target %s" % escape(json.dumps(args))
 
         code, out, err = debug_ssh(host, command)
         # Assume nonzero returns from mkfs mean it didn't touch anything
         if code != 0:
             from configure.lib.job import StepDirtyError
             raise StepDirtyError()
+        else:
+            data = json.loads(out)
+            fs_uuid = data['uuid']
+            # This is a primary target mount so must have a LunNode
+            assert(target_mount.block_device != None)
+            lun_node = target_mount.block_device
+            if lun_node.lun:
+                lun = target_mount.lun
+                lun.fs_uuid = fs_uuid
+                lun.save()
+            else:
+                lun = Lun(fs_uuid = uuid)
+                lun.save()
+                target_mount.lun = lun
+                target_mount.save()
 
 class NullStep(Step):
     def run(self, kwargs):
@@ -196,7 +272,6 @@ class MountStep(Step):
         if code != 0 and code != 17 and code != 114:
             from configure.lib.job import StepCleanError
             print code, out, err
-            print StepCleanError
             raise StepCleanError()
 
 class MkdirStep(Step):
@@ -215,7 +290,6 @@ class MkdirStep(Step):
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
-            print StepCleanError
             raise StepCleanError()
 
 class StartLNetStep(Step):
@@ -231,7 +305,6 @@ class StartLNetStep(Step):
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
-            print StepCleanError
             raise StepCleanError()
 
 class StopLNetStep(Step):
@@ -247,7 +320,6 @@ class StopLNetStep(Step):
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
-            print StepCleanError
             raise StepCleanError()
 
 class LoadLNetStep(Step):
@@ -263,7 +335,6 @@ class LoadLNetStep(Step):
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
-            print StepCleanError
             raise StepCleanError()
 
 class UnloadLNetStep(Step):
@@ -278,7 +349,6 @@ class UnloadLNetStep(Step):
         if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
-            print StepCleanError
             raise StepCleanError()
 
 class UnmountStep(Step):
@@ -299,7 +369,6 @@ class UnmountStep(Step):
         if (code != 0) and (code != 1):
             from configure.lib.job import StepCleanError
             print code, out, err
-            print StepCleanError
             raise StepCleanError()
 
 class ConfParamStep(Step):

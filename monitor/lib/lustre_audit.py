@@ -237,6 +237,8 @@ class LustreAudit:
                     elif not existing_node.lun:
                         # FIXME: http://stackoverflow.com/questions/2235318/how-do-i-deal-with-this-race-condition-in-django
                         # We may erroneously try to create the same Lun UUID concurrently from two hosts
+
+                        #FIXME: this competes with creating Lun objects by fs_uuid post-formatting in configure.lib.job.MkfsStep: maybe we should only do Lun creation here for SCSI IDs?
                         lun, created = Lun.objects.get_or_create(fs_uuid = node_info['fs_uuid'])
                         existing_node.lun = lun
                         existing_node.save()
