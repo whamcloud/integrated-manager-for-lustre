@@ -4,7 +4,7 @@
 # ==============================
 
 from configure.models import *
-from monitor.models import LunNode
+from monitor.models import LunNode, SshMonitor
 
 def _create_target_mounts(node, target, failover_host):
     ManagedTargetMount.objects.get_or_create(
