@@ -14,6 +14,7 @@ setup(
     author_email = "info@whamcloud.com",
     packages = ['hydra_agent', 'hydra_agent/cmds'],
     scripts = ['bin/hydra-agent.py', 'bin/hydra-rmmod.py'],
+    data_files=[('/usr/lib/ocf/resource.d/hydra', ['Target'])],
     url = 'http://www.whamcloud.com/',
     license = 'Proprietary',
     description = 'The Whamcloud Lustre Monitoring and Adminisration Interface Agent', 
