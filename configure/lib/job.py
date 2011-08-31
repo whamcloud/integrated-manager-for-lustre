@@ -214,6 +214,11 @@ class RegisterTargetStep(Step):
             print code, out, err
             print StepCleanError
             raise StepCleanError()
+        else:
+            data = json.loads(out)
+            target = target_mount.target
+            target.name = data['label']
+            target.save()
 
 class ConfigurePacemakerStep(Step):
     def is_idempotent(self):
