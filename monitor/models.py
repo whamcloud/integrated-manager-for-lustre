@@ -450,6 +450,8 @@ class TargetMount(Mountable):
             other_primaries = TargetMount.objects.filter(~Q(id = self.id), target = self.target, primary = True)
             if other_primaries.count() > 0:
                 from django.core.exceptions import ValidationError
+                raise ValidationError("Cannot have multiple primary mounts for target %s" % self.target)
+
 
         # If this is an MGS, there may not be another MGS on 
         # this host
