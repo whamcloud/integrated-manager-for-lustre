@@ -54,6 +54,7 @@ if __name__ == '__main__':
         # get the label to pass back to the server
         label = os.popen("blkid -o value -s LABEL %s" % bdev).readline().rstrip()
 
+        print json.dumps({'label': label})
         sys.exit(0)
 
     if args.configure_ha != None:
