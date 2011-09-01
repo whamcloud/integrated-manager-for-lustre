@@ -51,6 +51,9 @@ touch /var/log/hydra/job.log
 touch /var/log/hydra/audit.log
 chown -R apache:apache /var/log/hydra
 
+# Django: Build the hydra-server project's /static directory
+PYTHONPATH=/usr/share/hydra-server python /usr/share/hydra-server/manage.py collectstatic --noinput
+
 # This is required for opening connections between
 # httpd and rabbitmq-server
 setsebool -P httpd_can_network_connect 1
