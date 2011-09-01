@@ -156,7 +156,7 @@ class FindDeviceStep(Step):
        assert(lun.fs_uuid)
 
        # Contact the host to find the path to the block device
-       code, out, err = debug_ssh(target_mount.host, "hydra-agent.py --locate_device %s" % lun.fs_uuid)
+       code, out, err = debug_ssh(target_mount.host, "hydra-agent.py locate-device %s" % lun.fs_uuid)
        if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
@@ -227,7 +227,7 @@ class MkfsStep(Step):
         target_mount = target.targetmount_set.get(primary = True)
         host = target_mount.host
         args = self._mkfs_args(target)
-        command = "hydra-agent.py --format_target %s" % escape(json.dumps(args))
+        command = "hydra-agent.py format-target --args %s" % escape(json.dumps(args))
 
         code, out, err = debug_ssh(host, command)
         # Assume nonzero returns from mkfs mean it didn't touch anything
@@ -266,7 +266,7 @@ class AnyTargetMountStep(Step):
         from configure.models import ManagedTargetMount
         from configure.lib.job import StepCleanError
         for tm in ManagedTargetMount.objects.filter(target = target, host__managedhost__state = 'lnet_up', state = 'configured').order_by('-host__monitor__last_success'):
-            job_log.debug("MountStep on target %s trying targetmount %s" % (target, tm))
+            job_log.debug("command '%s' on target %s trying targetmount %s" % (command, target, tm))
             
             code, out, err = debug_ssh(tm.host, command)
             if code != 0:
@@ -288,7 +288,7 @@ class MountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = Target.objects.get(id = target_id)
 
-        self._run_command(target, "hydra-agent.py --start_target %s" % target.name)
+        self._run_command(target, "hydra-agent.py start-target --label %s" % target.name)
 
 class UnmountStep(AnyTargetMountStep):
     def is_idempotent(self):
@@ -299,7 +299,7 @@ class UnmountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = Target.objects.get(id = target_id)
 
-        self._run_command(target, "hydra-agent.py --stop_target %s" % target.name)
+        self._run_command(target, "hydra-agent.py stop-target --label %s" % target.name)
 
 class RegisterTargetStep(Step):
     def is_idempotent(self):
@@ -311,7 +311,7 @@ class RegisterTargetStep(Step):
         target_mount = TargetMount.objects.get(id = target_mount_id)
 
         code, out, err = debug_ssh(target_mount.host,
-                                   "hydra-agent.py --register_target %s %s" %
+                                   "hydra-agent.py register-target --device %s --mountpoint %s" %
                                    (target_mount.block_device.path,
                                     target_mount.mount_point))
         if code != 0:
@@ -339,7 +339,8 @@ class ConfigurePacemakerStep(Step):
         x = 0
         while (target_mount.block_device == None or
                target_mount.target.name == None) and x < 10:
-            print "waiting for the target's name"
+            print "waiting for the target's name: %s %s" % \
+                (target_mount.block_device, target_mount.target.name)
             time.sleep(10)
             target_mount = TargetMount.objects.get(id = target_mount_id)
             x = x + 1
@@ -350,10 +351,10 @@ class ConfigurePacemakerStep(Step):
             raise StepCleanError()
 
         code, out, err = debug_ssh(target_mount.host,
-                                   "hydra-agent.py --configure_ha %s %s %s %s" %
+                                   "hydra-agent.py configure-ha --device %s --label %s %s --mountpoint %s" %
                                    (target_mount.block_device.path,
                                     target_mount.target.name,
-                                    target_mount.primary,
+                                    target_mount.primary and "--primary" or "",
                                     target_mount.mount_point))
         if code != 0:
             from configure.lib.job import StepCleanError
@@ -418,7 +419,6 @@ class UnloadLNetStep(Step):
             from configure.lib.job import StepCleanError
             print code, out, err
             raise StepCleanError()
-
 
 class ConfParamStep(Step):
     def is_idempotent(self):

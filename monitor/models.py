@@ -239,7 +239,7 @@ class SshMonitor(Monitor):
             transport = ssh.get_transport()
             channel = transport.open_session()
             channel.settimeout(SSH_READ_TIMEOUT)
-            channel.exec_command(self.get_agent_path())
+            channel.exec_command("%s audit" % self.get_agent_path())
             result = channel.makefile('rb').read()
             ssh.close()
         except socket.timeout,e:
@@ -451,6 +451,8 @@ class TargetMount(Mountable):
             other_primaries = TargetMount.objects.filter(~Q(id = self.id), target = self.target, primary = True)
             if other_primaries.count() > 0:
                 from django.core.exceptions import ValidationError
+                raise ValidationError("Cannot have multiple primary mounts for target %s" % self.target)
+
 
         # If this is an MGS, there may not be another MGS on 
         # this host
