@@ -539,7 +539,7 @@ class LocalLustreAudit:
 
         audit = LocalAudit()
 
-        return json.dumps({"local_targets": local_targets,
+        return {"local_targets": local_targets,
             "mgs_targets": mgs_targets,
             "mgs_conf_params": mgs_conf_params,
             "mgs_pings": mgs_pings,
@@ -548,7 +548,7 @@ class LocalLustreAudit:
             "lnet_nids": lnet_nids,
             "device_nodes": device_nodes,
             "client_mounts": client_mounts,
-            "metrics": audit.metrics()}, indent=2)
+            "metrics": audit.metrics()}
 
 if __name__ == '__main__':
     print LocalLustreAudit().audit_info()
