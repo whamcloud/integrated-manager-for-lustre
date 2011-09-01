@@ -4,6 +4,7 @@
 # ==============================
 
 import json
+import pickle
 
 from logging import getLogger, FileHandler, StreamHandler, DEBUG, INFO
 import settings
@@ -129,6 +130,28 @@ def debug_ssh(host, command):
         job_log.error(result_stderr)
     return result_code, result_stdout, result_stderr
 
+def invoke_agent(host, cmdline):
+    code, out, err = debug_ssh(host, "hydra-agent.py %s" % cmdline)
+    if code == 0:
+        # May raise a ValueError
+        data = json.loads(out)
+
+        try:
+            if data['success']:
+                result = data['result']
+                return result
+            else:
+                exception = pickle.loads(data['exception'])
+                backtrace = data['backtrace']
+                job_log.error("Agent returned exception from host %s running '%s': %s" % (host, cmdline, backtrace))
+                raise exception
+        except KeyError:
+            raise RuntimeError("Malformed output from agent: %s" % out)
+
+    else:
+        raise RuntimeError("Error running agent on %s" % host)
+
+
 class FindDeviceStep(Step):
     """Given a TargetMount whose Target's primary TargetMount's LunNode's Lun has
        a fs_uuid populated (i.e. post-formatting), identify the device node on 
@@ -138,55 +161,46 @@ class FindDeviceStep(Step):
         return True
 
     def run(self, kwargs):
-       from configure.models import ManagedTargetMount
-       from monitor.models import LunNode
-       target_mount = ManagedTargetMount.objects.get(pk = kwargs['target_mount_id'])
+        from configure.models import ManagedTargetMount
+        from monitor.models import LunNode
+        target_mount = ManagedTargetMount.objects.get(pk = kwargs['target_mount_id'])
 
-       if target_mount.primary:
-           # This is a primary target mount, so it should already have a LunNode
-           assert(target_mount.block_device)
-           job_log.debug("FindDeviceStep: target_mount %s is primary, skipping" % target_mount)
-           return
+        if target_mount.primary:
+            # This is a primary target mount, so it should already have a LunNode
+            assert(target_mount.block_device)
+            job_log.debug("FindDeviceStep: target_mount %s is primary, skipping" % target_mount)
+            return
 
-       if target_mount.block_device:
-           # The LunNode was already populated, do nothing
-           job_log.debug("FindDeviceStep: LunNode for target_mount %s already set" % target_mount)
-           return
+        if target_mount.block_device:
+            # The LunNode was already populated, do nothing
+            job_log.debug("FindDeviceStep: LunNode for target_mount %s already set" % target_mount)
+            return
 
-       # Go up to the target, then back down to the primary mount to get the Lun
-       lun = target_mount.target.targetmount_set.get(primary = True).block_device.lun
-       # This step must only be run after the target using this lun is formatted
-       assert(lun.fs_uuid)
+        # Go up to the target, then back down to the primary mount to get the Lun
+        lun = target_mount.target.targetmount_set.get(primary = True).block_device.lun
+        # This step must only be run after the target using this lun is formatted
+        assert(lun.fs_uuid)
 
-       # Contact the host to find the path to the block device
-       code, out, err = debug_ssh(target_mount.host, "hydra-agent.py locate-device --uuid %s" % lun.fs_uuid)
-       if code != 0:
-            from configure.lib.job import StepCleanError
-            print code, out, err
-            raise StepCleanError()
-       else:
-            node_info = json.loads(out)
-            if not node_info:
-                raise RuntimeError("Cannot locate target %s device on %s by uuid %s" % (target_mount.target, target_mount.host, lun.fs_uuid))
-            try:
-                lun_node = LunNode.objects.get(
-                        host = target_mount.host, path = node_info['path'])
-                lun_node.lun = lun
-                lun_node.save()
-            except LunNode.DoesNotExist:
-                # Corner case: we are finding a device that LustreAudit never saw before us (maybe the host just came up for the first time at just this moment)
-                lun_node = LunNode(
-                        lun = lun,
-                        host = target_mount.host,
-                        path = node_info['path'],
-                        size = node_info['size'],
-                        used_hint = node_info['used'])
-                lun_node.save()
+        # NB May throw any agent error (don't care, idempotent)
+        node_info = invoke_agent(target_mount.host, "locate-device --uuid %s" % lun.fs_uuid)
+        try:
+            lun_node = LunNode.objects.get(
+                    host = target_mount.host, path = node_info['path'])
+            lun_node.lun = lun
+            lun_node.save()
+        except LunNode.DoesNotExist:
+            # Corner case: we are finding a device that LustreAudit never
+            # saw before us (maybe the host just came up for the first time at just this moment)
+            lun_node = LunNode(
+                    lun = lun,
+                    host = target_mount.host,
+                    path = node_info['path'],
+                    size = node_info['size'],
+                    used_hint = node_info['used'])
+            lun_node.save()
 
-            target_mount.block_device = lun_node
-            target_mount.save()
-                
-
+        target_mount.block_device = lun_node
+        target_mount.save()
 
 class MkfsStep(Step):
     def _mkfs_args(self, target):
@@ -204,6 +218,7 @@ class MkfsStep(Step):
 
         if isinstance(target, FilesystemMember):
             kwargs['fsname'] = target.filesystem.name
+            assert(len(target.filesystem.mgs_nids()) > 0)
             kwargs['mgsnode'] = target.filesystem.mgs_nids()
 
         kwargs['reformat'] = True
@@ -228,41 +243,31 @@ class MkfsStep(Step):
 
         assert(isinstance(target, ManagedTarget))
         target_mount = target.targetmount_set.get(primary = True)
-        host = target_mount.host
-        args = self._mkfs_args(target)
-        command = "hydra-agent.py format-target --args %s" % escape(json.dumps(args))
+        # This is a primary target mount so must have a LunNode
+        assert(target_mount.block_device != None)
 
-        code, out, err = debug_ssh(host, command)
-        # Assume nonzero returns from mkfs mean it didn't touch anything
-        if code != 0:
-            from configure.lib.job import StepDirtyError
-            job_log.error(out)
-            job_log.error(err)
-            raise StepDirtyError()
+        args = self._mkfs_args(target)
+        result = invoke_agent(target_mount.host, "format-target --args %s" % escape(json.dumps(args)))
+        fs_uuid = result['uuid']
+        lun_node = target_mount.block_device
+        if lun_node.lun:
+            job_log.debug("Updating target_mount %s Lun after formatting with uuid %s" % (target_mount, fs_uuid))
+            lun = lun_node.lun
+            lun.fs_uuid = fs_uuid
+            lun.save()
         else:
-            data = json.loads(out)
-            fs_uuid = data['uuid']
-            # This is a primary target mount so must have a LunNode
-            assert(target_mount.block_device != None)
-            lun_node = target_mount.block_device
-            if lun_node.lun:
-                job_log.debug("Updating target_mount %s Lun after formatting with uuid %s" % (target_mount, fs_uuid))
-                lun = lun_node.lun
-                lun.fs_uuid = fs_uuid
-                lun.save()
-            else:
-                job_log.debug("Creating target_mount %s Lun after formatting with uuid %s" % (target_mount, fs_uuid))
-                lun = Lun(fs_uuid = fs_uuid)
-                lun.save()
-                lun_node.lun = lun
-                lun_node.save()
+            job_log.debug("Creating target_mount %s Lun after formatting with uuid %s" % (target_mount, fs_uuid))
+            lun = Lun(fs_uuid = fs_uuid)
+            lun.save()
+            lun_node.lun = lun
+            lun_node.save()
 
 class NullStep(Step):
     def run(self, kwargs):
         pass
 
 class AnyTargetMountStep(Step):
-    def _run_command(self, target, command):
+    def _run_agent_command(self, target, command):
         # There is a set of hosts that we can try to contact to start the target: assume
         # that anything with a TargetMount on is part of the corosync cluster and can be
         # used to issue a command to start this resource.
@@ -273,12 +278,13 @@ class AnyTargetMountStep(Step):
         for tm in ManagedTargetMount.objects.filter(target = target, host__managedhost__state = 'lnet_up', state = 'configured').order_by('-host__monitor__last_success'):
             job_log.debug("command '%s' on target %s trying targetmount %s" % (command, target, tm))
             
-            code, out, err = debug_ssh(tm.host, command)
-            if code != 0:
-                job_log.warning("Cannot run '%' on %s: %s %s %s" % (command, tm.host, code, out, err))
-            else:
-                # Success
+            try:
+                invoke_agent(tm.host, command)
+                # Success!
                 return
+            except Exception, e:
+                job_log.warning("Cannot run '%s' on %s." % (command, tm.host))
+                # Failure, keep trying TargetMounts
 
         job_log.error("No targetmounts of target %s could run '%s'." % (target, command))
         # Fall through, none succeeded
@@ -293,7 +299,7 @@ class MountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = Target.objects.get(id = target_id)
 
-        self._run_command(target, "hydra-agent.py start-target --label %s" % target.name)
+        self._run_agent_command(target, "start-target --label %s" % target.name)
 
 class UnmountStep(AnyTargetMountStep):
     def is_idempotent(self):
@@ -304,7 +310,7 @@ class UnmountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = Target.objects.get(id = target_id)
 
-        self._run_command(target, "hydra-agent.py stop-target --label %s" % target.name)
+        self._run_agent_command(target, "stop-target --label %s" % target.name)
 
 class RegisterTargetStep(Step):
     def is_idempotent(self):
@@ -315,21 +321,12 @@ class RegisterTargetStep(Step):
         target_mount_id = kwargs['target_mount_id']
         target_mount = TargetMount.objects.get(id = target_mount_id)
 
-        code, out, err = debug_ssh(target_mount.host,
-                                   "hydra-agent.py register-target --device %s --mountpoint %s" %
-                                   (target_mount.block_device.path,
-                                    target_mount.mount_point))
-        if code != 0:
-            from configure.lib.job import StepCleanError
-            print code, out, err
-            print StepCleanError
-            raise StepCleanError()
-        else:
-            data = json.loads(out)
-            target = target_mount.target
-            job_log.debug("Registration complete, updating target %d with name=%s" % (target.id, data['label']))
-            target.name = data['label']
-            target.save()
+        result = invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.block_device.path, target_mount.mount_point))
+        label = result['label']
+        target = target_mount.target
+        job_log.debug("Registration complete, updating target %d with name=%s" % (target.id, label))
+        target.name = label
+        target.save()
 
 class ConfigurePacemakerStep(Step):
     def is_idempotent(self):
@@ -348,16 +345,11 @@ class ConfigurePacemakerStep(Step):
             print StepCleanError
             raise StepCleanError()
 
-        code, out, err = debug_ssh(target_mount.host,
-                                   "hydra-agent.py configure-ha --device %s --label %s %s --mountpoint %s" %
-                                   (target_mount.block_device.path,
+        invoke_agent(target_mount.host, "configure-ha --device %s --label %s %s --mountpoint %s" % (
+                                    target_mount.block_device.path,
                                     target_mount.target.name,
                                     target_mount.primary and "--primary" or "",
                                     target_mount.mount_point))
-        if code != 0:
-            from configure.lib.job import StepCleanError
-            print code, out, err
-            raise StepCleanError()
 
 class StartLNetStep(Step):
     def is_idempotent(self):
