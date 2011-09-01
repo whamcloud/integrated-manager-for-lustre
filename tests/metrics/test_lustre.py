@@ -113,3 +113,32 @@ class TestObdfilterMetrics(unittest.TestCase):
     def test_obdfilter_filestotal(self):
         """Test that obdfilter int metrics are sane."""
         assert self.metrics['lustre-OST0003']['filestotal'] == 128000
+
+    def test_obdfilter_brw_stats(self):
+        """Test that obdfilter brw_stats are collected at all."""
+        assert 'brw_stats' in self.metrics['lustre-OST0000']
+
+    def test_obdfilter_brw_stats_histograms(self):
+        """Test that obdfilter brw_stats are grouped by histograms."""
+        hist_list = "pages discont_pages discont_blocks dio_frags rpc_hist io_time disk_iosize".split()
+        for name in hist_list:
+            assert name in self.metrics['lustre-OST0000']['brw_stats'].keys()
+
+    def test_obdfilter_brw_stats_hist_vals(self):
+        """Test that obdfilter brw_stats contain sane values."""
+        hist = self.metrics['lustre-OST0000']['brw_stats']['disk_iosize']
+        assert hist['units'] == "ios"
+        assert hist['buckets']['128K']['read']['count'] == 784
+        assert hist['buckets']['8K']['read']['pct'] == 0
+        assert hist['buckets']['64K']['read']['cum_pct'] == 23
+
+        hist = self.metrics['lustre-OST0000']['brw_stats']['discont_blocks']
+        assert hist['units'] == "rpcs"
+        assert hist['buckets']['1']['write']['count'] == 288
+        assert hist['buckets']['17']['write']['pct'] == 0
+        assert hist['buckets']['31']['write']['cum_pct'] == 100
+
+    def test_obdfilter_brw_stats_empty_buckets(self):
+        """Test that brw_stats hists on a fresh OST (no traffic) have empty buckets."""
+        hist = self.metrics['lustre-OST0003']['brw_stats']['pages']
+        assert hist['buckets'] == {}

@@ -202,10 +202,79 @@ class ObdfilterAudit(TargetAudit):
             'tot_pending': 'tot_pending'
         })
 
+    def read_brw_stats(self, target):
+        """Return a dict representation of an OST's brw_stats histograms."""
+        histograms = {}
+
+        # I know these hist names are fugly, but they match the names in the
+        # Lustre source.  When possible, we should retain Lustre names
+        # for things to make life easier for archaeologists.
+        hist_map = {
+            'pages per bulk r/w': 'pages',
+            'discontiguous pages': 'discont_pages',
+            'discontiguous blocks': 'discont_blocks',
+            'disk fragmented I/Os': 'dio_frags',
+            'disk I/Os in flight': 'rpc_hist',
+            'I/O time (1/1000s)': 'io_time', # 1000 == CFS_HZ (fingers crossed)
+            'disk I/O size': 'disk_iosize'
+        }
+
+        header_re = re.compile("""
+        # e.g.
+        # disk I/O size          ios   % cum % |  ios   % cum %
+        # discontiguous blocks   rpcs  % cum % |  rpcs  % cum %
+        ^(?P<name>.+?)\s+(?P<units>\w+)\s+%
+        """, re.VERBOSE)
+
+        bucket_re = re.compile("""
+        # e.g.
+        # 0:               187  87  87   | 13986  91  91
+        # 128K:            784  76 100   | 114654  82 100
+        ^
+        (?P<name>[\w]+):\s+
+        (?P<read_count>\d+)\s+(?P<read_pct>\d+)\s+(?P<read_cum_pct>\d+)
+        \s+\|\s+
+        (?P<write_count>\d+)\s+(?P<write_pct>\d+)\s+(?P<write_cum_pct>\d+)
+        $
+        """, re.VERBOSE)
+
+        path = os.path.join(self.target_root, target, "brw_stats")
+        hist_key = None
+        for line in self.read_lines(path):
+            header = re.match(header_re, line)
+            if header is not None:
+                hist_key = hist_map[header.group('name')]
+                histograms[hist_key] = {}
+                histograms[hist_key]['units'] = header.group('units')
+                histograms[hist_key]['buckets'] = {}
+                continue
+
+            bucket = re.match(bucket_re, line)
+            if bucket is not None:
+                assert hist_key is not None
+
+                name = bucket.group('name')
+                bucket_vals = {
+                          'read': {
+                            'count': int(bucket.group('read_count')),
+                            'pct': int(bucket.group('read_pct')),
+                            'cum_pct': int(bucket.group('read_cum_pct'))
+                          },
+                          'write': {
+                            'count': int(bucket.group('write_count')),
+                            'pct': int(bucket.group('write_pct')),
+                            'cum_pct': int(bucket.group('write_cum_pct'))
+                          }
+                }
+                histograms[hist_key]['buckets'][name] = bucket_vals
+
+        return histograms
+
     def _gather_raw_metrics(self):
         for ost in [dev for dev in self.devices() if dev['type'] == 'obdfilter']:
             self.raw_metrics['lustre']['target'][ost['name']] = self.read_int_metrics(ost['name'])
             self.raw_metrics['lustre']['target'][ost['name']]['stats'] = self.read_stats(ost['name'])
+            self.raw_metrics['lustre']['target'][ost['name']]['brw_stats'] = self.read_brw_stats(ost['name'])
 
 class LnetAudit(LustreAudit):
     def parse_lnet_stats(self):
