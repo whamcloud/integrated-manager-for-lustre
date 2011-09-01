@@ -147,7 +147,7 @@ def run_job(job_id):
     try:
         steps = job.get_steps()
     except Exception, e:
-        job_log.error("Job %d run_steps encountered an error" % (job.id, step_index))
+        job_log.error("Job %d run_steps encountered an error" % (job.id))
         import sys
         import traceback
         exc_info = sys.exc_info()
