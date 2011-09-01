@@ -13,7 +13,6 @@ import os
 import shlex, subprocess
 import tempfile
 import simplejson as json
-import time
 
 LIBDIR = "/var/lib/hydra"
 
@@ -87,10 +86,6 @@ if __name__ == '__main__':
         if rc < 0:
             sys.exit(rc)
 
-        # XXX - wait for the monitor to catch up
-        #       should be removed when we can pass the name back to the server
-        time.sleep(10)
-        print >>sys.stderr, "unmountng %s: " % args.mountpoint
         try:
             rc = subprocess.call(shlex.split("umount %s" % args.mountpoint),
                                  stdout=open(os.devnull, "w"))
@@ -99,7 +94,9 @@ if __name__ == '__main__':
         except OSError, e:
             print >>sys.stderr, "failed to execute subprocess: ", e
             rc = -1
-        sys.exit(rc)
+
+        if rc < 0:
+            sys.exit(rc)
 
         # get the label to pass back to the server
         try:
@@ -112,8 +109,12 @@ if __name__ == '__main__':
         except OSError, e:
             print >>sys.stderr, "failed to execute subprocess: ", e
             rc = -1
+
+        if rc < 0:
+            sys.exit(rc)
+
         print json.dumps({'label': label})
-        sys.exit(rc)
+        sys.exit(0)
 
     def configure_ha(args):
         if args.primary:
