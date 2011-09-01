@@ -67,7 +67,7 @@ Target_start() {
     fi
 
     # start the target
-    if ! hydra-agent.py --mount_target $TARGET; then
+    if ! hydra-agent.py mount-target --label $TARGET; then
         ocf_log err "Couldn't start target $TARGET"
         return $OCF_ERR_GENERIC
     fi
@@ -85,7 +85,7 @@ Target_stop() {
         # woo!  nothing to do.
         rc=$OCF_SUCCESS
     else
-        hydra-agent.py --unmount_target $TARGET
+        hydra-agent.py unmount-target --label $TARGET
     fi
 
     return $rc
