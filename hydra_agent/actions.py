@@ -5,7 +5,7 @@
 
 """ Library of actions that the hydra-agent can be asked to carry out."""
 
-from hydra_agent.audit import LocalLustreAudit
+from hydra_agent.legacy_audit import LocalLustreAudit
 import sys
 import errno
 import os
