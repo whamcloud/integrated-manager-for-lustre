@@ -5,156 +5,87 @@
 # ==============================
 
 from hydra_agent.legacy_audit import LocalLustreAudit
+import hydra_agent.actions as actions
 
-import argparse
-import sys
-import os
-import tempfile
+import pickle
 import simplejson as json
-import time
-
-LIBDIR = "/var/lib/hydra"
+import argparse
 
 if __name__ == '__main__':
-    def create_libdir():
-        try:
-            os.makedirs(LIBDIR)
-        except:
-            pass
-
     parser = argparse.ArgumentParser(description = 'Hydra Agent.')
-    parser.add_argument('--register_target', nargs = 2,
-                        help='register a target')
-    parser.add_argument('--configure_ha', nargs = 4,
-                        help='configure a target\'s HA parameters')
-    parser.add_argument('--mount_target', nargs = 1, help='mount a target')
-    parser.add_argument('--unmount_target', nargs = 1, help='unmount a target')
-    parser.add_argument('--start_target', nargs = 1, help='start a target')
-    parser.add_argument('--stop_target', nargs = 1, help='stop a target')
-    parser.add_argument('--format_target', nargs = 1, help='format a target')
-    parser.add_argument('--locate_device', nargs = 1, help='find a device node path from a filesystem UUID')
+    subparsers = parser.add_subparsers()
 
-    args = parser.parse_args()
-    
-    if args.locate_device != None:
-        uuid = args.locate_device[0]
-        lla = LocalLustreAudit()
-        lla.read_mounts()
-        lla.read_fstab()
-        device_nodes = lla.get_device_nodes()
-        node_result = None
-        for d in device_nodes:
-            if d['fs_uuid'] == uuid:
-                node_result = d
-        print json.dumps(node_result) 
-        sys.exit(0)
+    parser_register_target = subparsers.add_parser('register-target',
+                                                   help='register a target')
+    parser_register_target.add_argument('--device', required=True,
+                                        help='device for target')
+    parser_register_target.add_argument('--mountpoint', required=True,
+                                         help='mountpoint for target')
+    parser_register_target.set_defaults(func=actions.register_target)
 
-    if args.format_target != None:
-        from hydra_agent.cmds import lustre
-        import shlex, subprocess
+    parser_configure_ha = subparsers.add_parser('configure-ha',
+                                 help='configure a target\'s HA parameters')
+    parser_configure_ha.add_argument('--device', required=True,
+                                     help='device for target')
+    parser_configure_ha.add_argument('--label', required=True,
+                                     help='label for target')
+    parser_configure_ha.add_argument('--primary', action='store_true',
+                                     help='target is primary on this node')
+    parser_configure_ha.add_argument('--mountpoint', required=True,
+                                     help='mountpoint for target')
+    parser_configure_ha.set_defaults(func=actions.configure_ha)
 
-        kwargs = json.loads(args.format_target[0])
-        cmdline = lustre.mkfs(**kwargs)
+    parser_mount_target = subparsers.add_parser('mount-target',
+                                                help='mount a target')
+    parser_mount_target.add_argument('--label', required=True,
+                                     help='label of target to mount')
+    parser_mount_target.set_defaults(func=actions.mount_target)
 
-        rc = subprocess.call(shlex.split(cmdline), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if rc != 0:
-            sys.exit(rc)
+    parser_unmount_target = subparsers.add_parser('unmount-target',
+                                                  help='unmount a target')
+    parser_unmount_target.add_argument('--label', required=True,
+                                       help='label of target to unmount')
+    parser_unmount_target.set_defaults(func=actions.unmount_target)
 
-        p = subprocess.Popen(["blkid", "-o", "value", "-s", "UUID", kwargs['device']], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        rc = p.wait()
-        if rc != 0:
-            sys.exit(rc)
+    parser_start_target = subparsers.add_parser('start-target',
+                                                help='start a target')
+    parser_start_target.add_argument('--label', required=True,
+                                       help='label of target to start')
+    parser_start_target.set_defaults(func=actions.start_target)
 
-        uuid = stdout.strip()
+    parser_stop_target = subparsers.add_parser('stop-target',
+                                                help='stop a target')
+    parser_stop_target.add_argument('--label', required=True,
+                                    help='label of target to stop')
+    parser_stop_target.set_defaults(func=actions.stop_target)
 
-        print json.dumps({'uuid': uuid})
-        sys.exit(0)
+    parser_format_target = subparsers.add_parser('format-target',
+                                                 help='format a target')
+    parser_format_target.add_argument('--args', required=True,
+                                      help='format arguments')
+    parser_format_target.set_defaults(func=actions.format_target)
 
-    if args.register_target != None:
-        bdev = args.register_target[0]
-        mntpt = args.register_target[1]
+    parser_locate_device = subparsers.add_parser('locate-device',
+                        help='find a device node path from a filesystem UUID')
+    parser_locate_device.add_argument('--uuid', required=True,
+                                      help='label of target to find')
+    parser_locate_device.set_defaults(func=actions.locate_device)
 
-        create_libdir()
+    parser_audit = subparsers.add_parser('audit', help='report lustre status')
+    parser_audit.set_defaults(func=actions.audit)
 
-        try:
-            os.makedirs(mntpt)
-        except:
-            pass
+    try:
+        args = parser.parse_args()
+        result = args.func(args)
+        print json.dumps({'success': True, 'result': result}, indent = 2)
+    except Exception, e:
+        import sys
+        import traceback
+        exc_info = sys.exc_info()
+        backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+        sys.stderr.write("%s\n" % backtrace)
 
-        os.system("mount -t lustre %s %s" % (bdev, mntpt))
-        # XXX - wait for the monitor to catch up
-        #       should be removed when we can pass the name back to the server
-        time.sleep(10)
-        os.system("umount %s" % mntpt)
+        print json.dumps({'success': False, 'exception': pickle.dumps(e), 'backtrace': backtrace}, indent=2)
+        # NB having caught the exception, we will finally return 0.  This is done in order to distinguish between internal errors in hydra-agent (nonzero return value) and exceptions while running command errors (zero return value, exception serialized and output)
 
-        # get the label to pass back to the server
-        label = os.popen("blkid -o value -s LABEL %s" % bdev).readline().rstrip()
-
-        print json.dumps({'label': label})
-        sys.exit(0)
-
-    if args.configure_ha != None:
-        bdev = args.configure_ha[0]
-        label = args.configure_ha[1]
-        primary = args.configure_ha[2]
-        mntpt = args.configure_ha[3]
-
-        if primary == "True":
-            # now configure pacemaker for this target
-            # XXX - crm is a python script -- should look into interfacing
-            #       with it directly
-            os.system("crm configure primitive %s ocf:hydra:Target meta target-role=\"stopped\" operations \$id=\"%s-operations\" op monitor interval=\"120\" timeout=\"60\" op start interval=\"0\" timeout=\"300\" op stop interval=\"0\" timeout=\"300\" params target=\"%s\"" % (label, label, label))
-
-        create_libdir()
-
-        try:
-            os.makedirs(mntpt)
-        except:
-            pass
-
-        # save the metadata for the mount
-        file = open("%s/%s" % (LIBDIR, label), 'w')
-        json.dump({"bdev": bdev, "mntpt": mntpt}, file)
-        file.close()
-
-        sys.exit(0)
-
-    if args.mount_target != None:
-        label = args.mount_target[0]
-
-        file = open("%s/%s" % (LIBDIR, label), 'r')
-        j = json.load(file)
-        file.close()
- 
-        os.system("mount -t lustre %s %s" % (j['bdev'], j['mntpt']))
-
-        sys.exit(0)
-
-    if args.unmount_target != None:
-        label = args.unmount_target[0]
-
-        file = open("%s/%s" % (LIBDIR, label), 'r')
-        j = json.load(file)
-        file.close()
- 
-        os.system("umount %s" % j['bdev'])
-
-        sys.exit(0)
-
-    if args.start_target != None:
-        label = args.start_target[0]
-
-        os.system("crm resource start %s" % label)
-
-        sys.exit(0)
-
-    if args.stop_target != None:
-        label = args.stop_target[0]
-
-        os.system("crm resource stop %s" % label)
-
-        sys.exit(0)
-
-    print LocalLustreAudit().audit_info()
 
