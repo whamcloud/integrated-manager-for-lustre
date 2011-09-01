@@ -156,7 +156,7 @@ class FindDeviceStep(Step):
        assert(lun.fs_uuid)
 
        # Contact the host to find the path to the block device
-       code, out, err = debug_ssh(target_mount.host, "hydra-agent.py --locate_device %s" % lun.fs_uuid)
+       code, out, err = debug_ssh(target_mount.host, "hydra-agent.py locate-device %s" % lun.fs_uuid)
        if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
@@ -227,7 +227,7 @@ class MkfsStep(Step):
         target_mount = target.targetmount_set.get(primary = True)
         host = target_mount.host
         args = self._mkfs_args(target)
-        command = "hydra-agent.py --format_target %s" % escape(json.dumps(args))
+        command = "hydra-agent.py format-target --args %s" % escape(json.dumps(args))
 
         code, out, err = debug_ssh(host, command)
         # Assume nonzero returns from mkfs mean it didn't touch anything
@@ -266,7 +266,7 @@ class MountStep(Step):
         target_mount = TargetMount.objects.get(id = target_mount_id)
 
         code, out, err = debug_ssh(target_mount.host,
-                                   "hydra-agent.py --start_target %s" %
+                                   "hydra-agent.py start-target --label %s" %
                                    target_mount.target.name)
         if code != 0 and code != 17 and code != 114:
             from configure.lib.job import StepCleanError
@@ -283,7 +283,7 @@ class RegisterTargetStep(Step):
         target_mount = TargetMount.objects.get(id = target_mount_id)
 
         code, out, err = debug_ssh(target_mount.host,
-                                   "hydra-agent.py --register_target %s %s" %
+                                   "hydra-agent.py register-target --device %s --mountpoint %s" %
                                    (target_mount.block_device.path,
                                     target_mount.mount_point))
         if code != 0:
@@ -311,7 +311,8 @@ class ConfigurePacemakerStep(Step):
         x = 0
         while (target_mount.block_device == None or
                target_mount.target.name == None) and x < 10:
-            print "waiting for the target's name"
+            print "waiting for the target's name: %s %s" % \
+                (target_mount.block_device, target_mount.target.name)
             time.sleep(10)
             target_mount = TargetMount.objects.get(id = target_mount_id)
             x = x + 1
@@ -322,10 +323,10 @@ class ConfigurePacemakerStep(Step):
             raise StepCleanError()
 
         code, out, err = debug_ssh(target_mount.host,
-                                   "hydra-agent.py --configure_ha %s %s %s %s" %
+                                   "hydra-agent.py configure-ha --device %s --label %s %s --mountpoint %s" %
                                    (target_mount.block_device.path,
                                     target_mount.target.name,
-                                    target_mount.primary,
+                                    target_mount.primary and "--primary" or "",
                                     target_mount.mount_point))
         if code != 0:
             from configure.lib.job import StepCleanError

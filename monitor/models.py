@@ -238,7 +238,7 @@ class SshMonitor(Monitor):
             transport = ssh.get_transport()
             channel = transport.open_session()
             channel.settimeout(SSH_READ_TIMEOUT)
-            channel.exec_command(self.get_agent_path())
+            channel.exec_command("%s audit" % self.get_agent_path())
             result = channel.makefile('rb').read()
             ssh.close()
         except socket.timeout,e:
