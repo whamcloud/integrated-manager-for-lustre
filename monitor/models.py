@@ -169,6 +169,7 @@ class Monitor(models.Model):
     state = models.CharField(max_length = 32, default = 'idle')
     task_id = models.CharField(max_length=36, blank = True, null = True, default = None)
     counter = models.IntegerField(default = 0)
+    last_success = models.DateTimeField(blank = True, null = True)
 
     from django.db import transaction
     @transaction.commit_on_success

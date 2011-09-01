@@ -205,7 +205,9 @@ class LustreAudit:
                 # Update StatefulObjects
                 if StateManager and isinstance(mountable, StatefulObject):
                     state = {False: 'unmounted', True: 'mounted'}[mounted]
-                    StateManager.notify_state(mountable, state, ['mounted', 'unmounted'])
+                    # TODO: notify StateManager of which targetmount is active
+                    # for a given Target
+                    #StateManager.notify_state(mountable, state, ['mounted', 'unmounted'])
 
         HostContactAlert.notify(self.host, not contact)
 

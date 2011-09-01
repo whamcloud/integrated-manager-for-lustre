@@ -256,22 +256,50 @@ class NullStep(Step):
     def run(self, kwargs):
         pass
 
-class MountStep(Step):
+class AnyTargetMountStep(Step):
+    def _run_command(self, target, command):
+        # There is a set of hosts that we can try to contact to start the target: assume
+        # that anything with a TargetMount on is part of the corosync cluster and can be
+        # used to issue a command to start this resource.
+
+        # Try and use each targetmount, the one with the most recent successful audit first
+        from configure.models import ManagedTargetMount
+        from configure.lib.job import StepCleanError
+        for tm in ManagedTargetMount.objects.filter(target = target, host__managedhost__state = 'lnet_up', state = 'configured').order_by('-host__monitor__last_success'):
+            job_log.debug("MountStep on target %s trying targetmount %s" % (target, tm))
+            
+            code, out, err = debug_ssh(tm.host, command)
+            if code != 0:
+                job_log.warning("Cannot run '%' on %s: %s %s %s" % (command, tm.host, code, out, err))
+            else:
+                # Success
+                return
+
+        job_log.error("No targetmounts of target %s could run '%s'." % (target, command))
+        # Fall through, none succeeded
+        raise StepCleanError()
+
+class MountStep(AnyTargetMountStep):
     def is_idempotent(self):
         return True
 
     def run(self, kwargs):
-        from monitor.models import TargetMount
-        target_mount_id = kwargs['target_mount_id']
-        target_mount = TargetMount.objects.get(id = target_mount_id)
+        from monitor.models import Target
+        target_id = kwargs['target_id']
+        target = Target.objects.get(id = target_id)
 
-        code, out, err = debug_ssh(target_mount.host,
-                                   "hydra-agent.py --start_target %s" %
-                                   target_mount.target.name)
-        if code != 0 and code != 17 and code != 114:
-            from configure.lib.job import StepCleanError
-            print code, out, err
-            raise StepCleanError()
+        self._run_command(target, "hydra-agent.py --start_target %s" % target.name)
+
+class UnmountStep(AnyTargetMountStep):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from monitor.models import Target
+        target_id = kwargs['target_id']
+        target = Target.objects.get(id = target_id)
+
+        self._run_command(target, "hydra-agent.py --stop_target %s" % target.name)
 
 class RegisterTargetStep(Step):
     def is_idempotent(self):
@@ -391,25 +419,6 @@ class UnloadLNetStep(Step):
             print code, out, err
             raise StepCleanError()
 
-class UnmountStep(Step):
-    def _unmount_command(self, target_mount):
-        from hydra_agent.cmds import lustre
-        return lustre.umount(dir=target_mount.mount_point)
-
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from monitor.models import TargetMount
-        target_mount_id = kwargs['target_mount_id']
-        target_mount = TargetMount.objects.get(id = target_mount_id)
-
-        code, out, err = debug_ssh(target_mount.host, self._unmount_command(target_mount))
-        # FIXME: assuming code=1 is an 'already unmounted' therefore ok
-        if (code != 0) and (code != 1):
-            from configure.lib.job import StepCleanError
-            print code, out, err
-            raise StepCleanError()
 
 class ConfParamStep(Step):
     def is_idempotent(self):

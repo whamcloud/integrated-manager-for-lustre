@@ -201,11 +201,33 @@ class ManagedTarget(StatefulObject):
     __metaclass__ = DowncastMetaclass
     # unformatted: I exist in theory in the database 
     # formatted: I've been mkfs'd
-    # registered: the mgs knows about me
+    # unmounted: I've registered with the MGS, I'm not mounted
+    # mounted: I've registered with the MGS, I'm mounted
     # removed: this target no longer exists in real life
     # Additional states needed for 'deactivated'?
-    states = ['unformatted', 'formatted', 'registered', 'removed']
+    states = ['unformatted', 'formatted', 'unmounted', 'mounted', 'removed']
     initial_state = 'unformatted'
+
+    def get_deps(self, state = None):
+        if not state:
+            state = self.state
+        
+        deps = []
+        if state == 'mounted':
+            for tm in self.targetmount_set.all():
+                # TODO: rewrite this dependency to 'at least one targetmount
+                # host must have LNET up' such that we will attempt to 
+                # bring up LNET on all but not stop unless none succeed.
+                deps.append((tm.host.downcast(), 'lnet_up', 'unmounted'))
+
+                # TODO: rewrite this dependency to depend on there being at
+                # least one configured targetmount in order to mount a managedtarget
+                # and add a dep to teh job for unconfiguring a targetmount to 
+                # ensure that this target is down when that happens (but let
+                # it come up again if there is at least one remaining targetmount)
+                deps.append((tm.downcast(), 'configured', 'unmounted'))
+
+        return deps
 
 class ManagedOst(monitor_models.ObjectStoreTarget, ManagedTarget):
     def get_conf_params(self):
@@ -267,7 +289,7 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
     # unconfigured: I only exist in theory in the database
     # mounted: I am in fstab on the host and mounted
     # unmounted: I am in fstab on the host and unmounted
-    states = ['unconfigured', 'mounted', 'unmounted']
+    states = ['unconfigured', 'configured']
     initial_state = 'unconfigured'
 
     def __str__(self):
@@ -285,14 +307,11 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
             state = self.state
 
         deps = []
-        if state == 'mounted':
-            deps.append((self.host.managedhost, 'lnet_up', 'unmounted'))
-            for tm in self.target.targetmount_set.filter(~Q(pk = self.id)):
-                deps.append((tm, 'unmounted', 'unmounted'))
-
-        if state == 'mounted':
-            deps.append((self.target.downcast(), 'registered', 'unmounted'))
-
+        if state == 'configured':
+            # TODO: depend on target in state unmounted OR mounted
+            # in order to get this unconfigured when the target is removed.
+            #deps.append(self.target.downcast(), ['mounted', 'unmounted'], 'unconfigured']
+            pass
         return deps
 
     # Reverse dependencies are records of other classes which must check
@@ -386,6 +405,8 @@ class Job(models.Model):
            dependencies when we have a write lock and they have a read lock
            or generate depend_on dependencies when we have a read or write lock and
            they have a write lock"""
+        from configure.lib.job import job_log
+
         for lock in self.statelock_set.all():
             if isinstance(lock, StateWriteLock):
                 wl = lock
@@ -393,7 +414,7 @@ class Job(models.Model):
                 # trust that it will have depended on any before that.
                 try:
                     prior_write_lock = StateWriteLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).latest('id')
-                    assert(wl.begin_state == prior_write_lock.end_state)
+                    assert (wl.begin_state == prior_write_lock.end_state), "%s locks %s in state %s but previous %s leaves it in state %s" % (self, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state)
                     self.depend_on.add(prior_write_lock.job)
                     # We will only wait_for read locks after this write lock, as it
                     # will have wait_for'd any before it.
@@ -640,7 +661,7 @@ class DependencyAbsent(Exception):
     pass
 
 class ConfigureTargetMountJob(Job, StateChangeJob):
-    state_transition = (ManagedTargetMount, 'unconfigured', 'unmounted')
+    state_transition = (ManagedTargetMount, 'unconfigured', 'configured')
     stateful_object = 'target_mount'
     state_verb = "Configure"
     target_mount = models.ForeignKey('ManagedTargetMount')
@@ -656,28 +677,18 @@ class ConfigureTargetMountJob(Job, StateChangeJob):
     def get_deps(self):
         deps = []
 
-        deps.append((self.target_mount.target.downcast(), "registered"))
+        # TODO: depend on unmounted OR mounted, to support adding a targetmount
+        # to a target which is already up and running
+        deps.append((self.target_mount.target.downcast(), "unmounted"))
 
         return deps
 
 class RegisterTargetJob(Job, StateChangeJob):
     # FIXME: this really isn't ManagedTarget, it's FilesystemMember+ManagedTarget
-    state_transition = (ManagedTarget, 'formatted', 'registered')
+    state_transition = (ManagedTarget, 'formatted', 'unmounted')
     stateful_object = 'target'
     state_verb = "Register"
     target = models.ForeignKey('ManagedTarget')
-
-    def create_locks(self, *args, **kwargs):
-        # Create a write lock on the target mount that we're going to 
-        # mount and unmount in order to register this target
-        tm = self.target.targetmount_set.get(primary = True)
-        # NB because we also depend on it in get_deps, we will also be 
-        # holding a read lock on it.  Little messy but isn't invalid.  Will 
-        # potentially result in downstream jobs both wait_for'ing and depend_on'ing
-        # the same job.
-        StateWriteLock(job = self, locked_item = tm,
-                begin_state = 'unmounted', end_state = 'unmounted').save()
-        super(RegisterTargetJob, self).create_locks(*args, **kwargs)
 
     def description(self):
         target = self.target.downcast()
@@ -708,47 +719,49 @@ class RegisterTargetJob(Job, StateChangeJob):
 
         deps.append((self.target.targetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
 
+        # HYD-209
         # Registering an OST depends on the MDT having already been registered,
         # because in Lustre >= 2.0 MDT registration wipes previous OST registrations
         # such that for first mount you must already do mgs->mdt->osts
-        if isinstance(self.target, ManagedOst):
-            try:
-                mdt = ManagedMdt.objects.get(filesystem = self.target.filesystem)
-            except ManagedMdt.DoesNotExist:
-                raise DependencyAbsent("Cannot register OSTs for filesystem %s until an MDT is created" % self.target.filesystem)
-            deps.append((mdt, "registered"))
+        #if isinstance(self.target, ManagedOst):
+        #    try:
+        #        mdt = ManagedMdt.objects.get(filesystem = self.target.filesystem)
+        #    except ManagedMdt.DoesNotExist:
+        #        raise DependencyAbsent("Cannot register OSTs for filesystem %s until an MDT is created" % self.target.filesystem)
+        #    # TODO: depend on mdt in unmounted or mounted (i.e. registered)
+        #    deps.append((mdt, "registered"))
 
         if isinstance(self.target, monitor_models.FilesystemMember):
-            mgs = self.target.filesystem.mgs
-            deps.append((mgs.targetmount_set.get(primary = True).downcast(), "mounted"))
+            mgs = self.target.filesystem.mgs.downcast()
+            deps.append((mgs, "mounted"))
 
         return deps
 
-class StartTargetMountJob(Job, StateChangeJob):
-    stateful_object = 'target_mount'
-    state_transition = (ManagedTargetMount, 'unmounted', 'mounted')
+class StartTargetJob(Job, StateChangeJob):
+    stateful_object = 'target'
+    state_transition = (ManagedTarget, 'unmounted', 'mounted')
     state_verb = "Start"
-    target_mount = models.ForeignKey(ManagedTargetMount)
+    target = models.ForeignKey(ManagedTarget)
 
     def description(self):
-        return "Starting target %s" % self.target_mount.target.downcast()
+        return "Starting target %s" % self.target.downcast()
 
     def get_steps(self):
         from configure.lib.job import MountStep
-        return [(MountStep, {"target_mount_id": self.target_mount.id})]
+        return [(MountStep, {"target_id": self.target.id})]
 
 class StopTargetMountJob(Job, StateChangeJob):
-    stateful_object = 'target_mount'
-    state_transition = (ManagedTargetMount, 'mounted', 'unmounted')
+    stateful_object = 'target'
+    state_transition = (ManagedTarget, 'mounted', 'unmounted')
     state_verb = "Stop"
-    target_mount = models.ForeignKey(ManagedTargetMount)
+    target = models.ForeignKey(ManagedTarget)
 
     def description(self):
-        return "Stopping target %s" % self.target_mount.target.downcast()
+        return "Stopping target %s" % self.target.downcast()
 
     def get_steps(self):
         from configure.lib.job import UnmountStep
-        return [(UnmountStep, {"target_mount_id": self.target_mount.id})]
+        return [(UnmountStep, {"target_id": self.target.id})]
 
 class FormatTargetJob(Job, StateChangeJob):
     state_transition = (ManagedTarget, 'unformatted', 'formatted')

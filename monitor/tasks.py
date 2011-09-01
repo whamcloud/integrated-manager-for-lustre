@@ -31,6 +31,9 @@ def monitor_exec(monitor_id, counter):
         from monitor.lib.lustre_audit import LustreAudit
         raw_data = monitor.downcast().invoke()
         success = LustreAudit().audit_complete(monitor.host, raw_data)
+        if success:
+            import datetime
+            monitor.update(last_success = datetime.datetime.now())
     except Exception, e:
         audit_log.error("Exception auditing host %s" % monitor.host)
         import sys
