@@ -24,12 +24,20 @@ def lnet_load():
 
 def lnet_unload():
     """Returns shell code for unloading LNet module(s)."""
-    return "lustre_rmmod || lctl net down && lustre_rmmod"
+    return "lustre_rmmod"
 
 def lnet_start():
     """Returns shell code for starting LNet."""
     return "lctl net up"
 
+# Works in a confusing way: lustre_rmmod will try to remove all
+# modules including lnet.  If lnet is not already down, and FS modules
+# are loaded, then we will:
+# * try to net down
+# * fail b/c FS modules are loaded
+# * call lustre_rmmod, which will fail because lnet is up, but 
+#   has the side effect of removing FS modules
+# * call net down which will succeed this time
 def lnet_stop():
     """Returns shell code for stopping LNet."""
     return "lctl net down || (lustre_rmmod; lctl net down)"
