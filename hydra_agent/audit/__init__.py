@@ -7,8 +7,7 @@ def local_audit_classes(fscontext=None):
 class BaseAudit(object):
     """Base Audit class."""
     def __init__(self, **kwargs):
-        from collections import defaultdict
-        self.raw_metrics = defaultdict(lambda: defaultdict())
+        self.raw_metrics = {}
 
     def metrics(self):
         raise NotImplementedError

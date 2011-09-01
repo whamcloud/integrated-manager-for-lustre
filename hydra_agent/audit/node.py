@@ -8,6 +8,8 @@ class NodeAudit(BaseAudit, FileSystemMixin):
         if fscontext:
             self.fscontext = fscontext
 
+        self.raw_metrics['node'] = {}
+
     def parse_meminfo(self):
         """Returns a dict representation of /proc/meminfo"""
         return dict((k, int(re.sub('[^\d]*','',v))) for k, v in

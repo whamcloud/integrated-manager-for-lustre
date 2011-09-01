@@ -29,8 +29,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         if fscontext:
             self.fscontext = fscontext
 
-        from collections import defaultdict
-        self.raw_metrics['lustre'] = defaultdict(lambda: defaultdict(lambda: defaultdict()))
+        self.raw_metrics['lustre'] = {}
 
     def stats_dict_from_file(self, file):
         """Creates a dict from Lustre stats file contents."""
@@ -119,6 +118,8 @@ class TargetAudit(LustreAudit):
             'filesfree': 'filesfree',
             'num_exports': 'num_exports'
         }
+
+        self.raw_metrics['lustre']['target'] = {}
 
     def read_stats(self, target):
         """Returns a dict containing target stats."""
