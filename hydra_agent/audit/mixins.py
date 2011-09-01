@@ -14,13 +14,14 @@ class FileSystemMixin(object):
             self.__fscontext = FileSystemContext(ctx)
 
     def __get_fscontext(self):
+        # This bit of hackery is necessary due to the fact that mixins
+        # can't have an __init__() to set things up.
+        if not '_FileSystemMixin__fscontext' in self.__dict__:
+            self.__fscontext = FileSystemContext()
         return self.__fscontext
 
     fscontext = property(__get_fscontext, __set_fscontext, doc="""
         The filesystem context (defaults to "/")""")
-
-    def __init__(self):
-        self.__set_fscontext("/")
 
     def read_lines(self, filename, filter_f=None):
         """Read/strip all lines from filename and return them as a list.
