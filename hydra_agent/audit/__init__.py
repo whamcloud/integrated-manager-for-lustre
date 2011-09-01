@@ -1,6 +1,4 @@
-from hydra_agent.fscontext import FileSystemContext
-
-def local_audit_classes(fscontext=FileSystemContext()):
+def local_audit_classes(fscontext=None):
     classes = []
     classes.extend(lustre.local_audit_classes(fscontext))
     classes.append(getattr(node, 'NodeAudit'))
@@ -8,7 +6,7 @@ def local_audit_classes(fscontext=FileSystemContext()):
 
 class BaseAudit(object):
     """Base Audit class."""
-    def __init__(self):
+    def __init__(self, **kwargs):
         from collections import defaultdict
         self.raw_metrics = defaultdict(lambda: defaultdict())
 

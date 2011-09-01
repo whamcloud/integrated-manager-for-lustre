@@ -3,7 +3,6 @@ import tempfile
 import os, shutil
 import hydra_agent.audit.lustre
 from hydra_agent.audit.lustre import *
-from hydra_agent.fscontext import FileSystemContext
 
 class TestLustreAuditScanner(unittest.TestCase):
     def setUp(self):
@@ -12,15 +11,14 @@ class TestLustreAuditScanner(unittest.TestCase):
 
     def test_audit_scanner(self):
         list = [cls.__name__ for cls in
-                hydra_agent.audit.lustre.local_audit_classes(FileSystemContext(self.test_root))]
+                hydra_agent.audit.lustre.local_audit_classes(self.test_root)]
         assert list == ['LnetAudit', 'MdtAudit', 'MgsAudit']
 
 class TestLustreAudit:
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        self.audit = LustreAudit()
-        self.audit.fscontext = self.test_root
+        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        self.audit = LustreAudit(fscontext=test_root)
 
     def test_version(self):
         assert self.audit.version() == "2.0.66"
@@ -35,8 +33,7 @@ class TestLustreAuditGoodHealth:
         f = open(os.path.join(self.test_root, "proc/fs/lustre/health_check"), "w+")
         f.write("healthy\n")
         f.close()
-        self.audit = LustreAudit()
-        self.audit.fscontext = self.test_root
+        self.audit = LustreAudit(fscontext=self.test_root)
 
     def test_health_check_healthy(self):
         assert self.audit.health_check() == "healthy"
@@ -54,8 +51,7 @@ class TestLustreAuditBadHealth:
         f = open(os.path.join(self.test_root, "proc/fs/lustre/health_check"), "w+")
         f.write("NOT HEALTHY\n")
         f.close()
-        self.audit = LustreAudit()
-        self.audit.fscontext = self.test_root
+        self.audit = LustreAudit(fscontext=self.test_root)
 
     def test_health_check_not_healthy(self):
         assert self.audit.health_check() == "NOT HEALTHY"
@@ -70,28 +66,25 @@ class TestMdtAudit(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        self.audit = MdtAudit()
-        self.audit.fscontext = self.test_root
+        self.audit = MdtAudit(fscontext=self.test_root)
 
     def test_module_is_loaded(self):
-        assert MdtAudit.kmod_is_loaded(FileSystemContext(self.test_root)) == True
+        assert MdtAudit.kmod_is_loaded(self.test_root) == True
 
 class TestLnetAudit(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        self.audit = LnetAudit()
-        self.audit.fscontext = self.test_root
+        self.audit = LnetAudit(fscontext=self.test_root)
 
     def test_module_is_loaded(self):
-        assert LnetAudit.kmod_is_loaded(FileSystemContext(self.test_root)) == True
+        assert LnetAudit.kmod_is_loaded(self.test_root) == True
 
 class TestObdfilterAudit(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/oss")
-        self.audit = ObdfilterAudit()
-        self.audit.fscontext = self.test_root
+        self.audit = ObdfilterAudit(fscontext=self.test_root)
 
     def test_module_is_loaded(self):
-        assert ObdfilterAudit.kmod_is_loaded(FileSystemContext(self.test_root)) == True
+        assert ObdfilterAudit.kmod_is_loaded(self.test_root) == True

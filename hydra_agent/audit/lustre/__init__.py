@@ -1,14 +1,13 @@
 import re, os
 from hydra_agent.audit import BaseAudit
-from hydra_agent.fscontext import FileSystemContext
 from hydra_agent.audit.mixins import FileSystemMixin
 
-def local_audit_classes(fscontext=FileSystemContext()):
+def local_audit_classes(fscontext=None):
     import hydra_agent.audit.lustre
     return [cls for cls in 
-                [getattr(hydra_agent.audit.lustre, name)
-                    for name in dir(hydra_agent.audit.lustre)
-                        if name.endswith('Audit') and name is not 'LustreAudit']
+                [getattr(hydra_agent.audit.lustre, name) for name in
+                    dir(hydra_agent.audit.lustre) if name.endswith('Audit')
+                                                  and name is not 'LustreAudit']
             if hasattr(cls, 'kmod_is_loaded') and cls.kmod_is_loaded(fscontext)]
 
 class LustreAudit(BaseAudit, FileSystemMixin):
@@ -17,17 +16,19 @@ class LustreAudit(BaseAudit, FileSystemMixin):
     Contains methods which are common to all Lustre cluster component types.
     """
     @classmethod
-    def kmod_is_loaded(cls, fscontext=FileSystemContext()):
+    def kmod_is_loaded(cls, fscontext=None):
         """Returns a boolean based whether or not this class' corresponding Lustre module is loaded."""
         modname = cls.__name__.replace('Audit', '').lower()
         filter = lambda line: line.startswith(modname)
-        obj = cls()
-        obj.fscontext = fscontext
+        obj = cls(fscontext=fscontext)
         list = obj.read_lines("/proc/modules", filter)
         return len(list) == 1
 
-    def __init__(self):
-        super(LustreAudit, self).__init__()
+    def __init__(self, fscontext=None, **kwargs):
+        super(LustreAudit, self).__init__(**kwargs)
+        if fscontext:
+            self.fscontext = fscontext
+
         from collections import defaultdict
         self.raw_metrics['lustre'] = defaultdict(lambda: defaultdict(lambda: defaultdict()))
 
@@ -108,8 +109,8 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         return {"raw": self.raw_metrics}
 
 class TargetAudit(LustreAudit):
-    def __init__(self):
-        super(TargetAudit, self).__init__()
+    def __init__(self, **kwargs):
+        super(TargetAudit, self).__init__(**kwargs)
         self.int_metric_map = {
             'kbytestotal': 'kbytestotal',
             'kbytesfree': 'kbytesfree',
@@ -155,8 +156,8 @@ class TargetAudit(LustreAudit):
         return metrics
 
 class MdtAudit(TargetAudit):
-    def __init__(self):
-        super(MdtAudit, self).__init__()
+    def __init__(self,**kwargs):
+        super(MdtAudit, self).__init__(**kwargs)
         self.target_root = '/proc/fs/lustre'
         self.int_metric_map.update({
             'kbytestotal': 'osd-ldiskfs/%s/kbytestotal',
@@ -171,8 +172,8 @@ class MdtAudit(TargetAudit):
             self.raw_metrics['lustre']['target'][mdt['name']] = self.read_int_metrics(mdt['name'])
 
 class MgsAudit(TargetAudit):
-    def __init__(self):
-        super(MgsAudit, self).__init__()
+    def __init__(self, **kwargs):
+        super(MgsAudit, self).__init__(**kwargs)
         self.target_root = '/proc/fs/lustre/mgs'
         self.int_metric_map.update({
             'num_exports': 'num_exports',
@@ -191,8 +192,8 @@ class MgsAudit(TargetAudit):
         self.raw_metrics['lustre']['target']['MGS']['stats'] = self.read_stats('MGS')
 
 class ObdfilterAudit(TargetAudit):
-    def __init__(self):
-        super(ObdfilterAudit, self).__init__()
+    def __init__(self, **kwargs):
+        super(ObdfilterAudit, self).__init__(**kwargs)
         self.target_root = '/proc/fs/lustre/obdfilter'
         self.int_metric_map.update({
             'tot_dirty': 'tot_dirty',

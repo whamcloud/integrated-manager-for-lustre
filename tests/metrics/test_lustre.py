@@ -31,10 +31,9 @@ class TestLocalLustreMetrics(unittest.TestCase):
 class TestMdtMetrics(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        self.audit = MdtAudit()
-        self.audit.fscontext = self.test_root
-        self.metrics = self.audit.metrics()['raw']['lustre']['target']
+        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        audit = MdtAudit(fscontext=test_root)
+        self.metrics = audit.metrics()['raw']['lustre']['target']
 
     def test_mdt_int_metrics(self):
         """Test that the mdt simple integer metrics are collected."""
@@ -49,10 +48,9 @@ class TestMdtMetrics(unittest.TestCase):
 class TestLnetMetrics(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        self.audit = LnetAudit()
-        self.audit.fscontext = self.test_root
-        self.metrics = self.audit.metrics()
+        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        audit = LnetAudit(fscontext=test_root)
+        self.metrics = audit.metrics()
 
     def test_lnet_send_count(self):
         """Test that LNet metrics look sane."""
@@ -61,10 +59,9 @@ class TestLnetMetrics(unittest.TestCase):
 class TestMgsMetrics(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        self.audit = MgsAudit()
-        self.audit.fscontext = self.test_root
-        self.metrics = self.audit.metrics()['raw']['lustre']['target']['MGS']
+        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        audit = MgsAudit(fscontext=test_root)
+        self.metrics = audit.metrics()['raw']['lustre']['target']['MGS']
 
     def test_mgs_stats_list(self):
         """Test that a representative sample of mgs stats is collected."""
@@ -90,10 +87,9 @@ class TestMgsMetrics(unittest.TestCase):
 class TestObdfilterMetrics(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/oss")
-        self.audit = ObdfilterAudit()
-        self.audit.fscontext = self.test_root
-        self.metrics = self.audit.metrics()['raw']['lustre']['target']
+        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/oss")
+        audit = ObdfilterAudit(fscontext=test_root)
+        self.metrics = audit.metrics()['raw']['lustre']['target']
 
     def test_obdfilter_stats_list(self):
         """Test that a representative sample of obdfilter stats is collected."""

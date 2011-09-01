@@ -5,9 +5,8 @@ from hydra_agent.audit.node import NodeAudit
 class TestNodeMetrics(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        self.audit = NodeAudit()
-        self.audit.fscontext = self.test_root
+        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        self.audit = NodeAudit(fscontext=test_root)
         self.metrics = self.audit.metrics()
 
     def test_node_cpustats(self):
