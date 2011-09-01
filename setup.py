@@ -12,7 +12,7 @@ setup(
     version = __version__,
     author = "Whamcloud, Inc.",
     author_email = "info@whamcloud.com",
-    packages = ['hydra_agent', 'hydra_agent/cmds'],
+    packages = ['hydra_agent', 'hydra_agent/cmds', 'hydra_agent/audit', 'hydra_agent/audit/lustre'],
     scripts = ['bin/hydra-agent.py', 'bin/hydra-rmmod.py'],
     data_files=[('/usr/lib/ocf/resource.d/hydra', ['Target'])],
     url = 'http://www.whamcloud.com/',
