@@ -1,15 +1,15 @@
 import re, os
 from hydra_agent.audit import BaseAudit
-from hydra_agent.context import Context
+from hydra_agent.fscontext import FileSystemContext
 from hydra_agent.audit.mixins import FileSystemMixin
 
-def local_audit_classes(context=Context()):
+def local_audit_classes(fscontext=FileSystemContext()):
     import hydra_agent.audit.lustre
     return [cls for cls in 
                 [getattr(hydra_agent.audit.lustre, name)
                     for name in dir(hydra_agent.audit.lustre)
                         if name.endswith('Audit') and name is not 'LustreAudit']
-            if hasattr(cls, 'kmod_is_loaded') and cls.kmod_is_loaded(context)]
+            if hasattr(cls, 'kmod_is_loaded') and cls.kmod_is_loaded(fscontext)]
 
 class LustreAudit(BaseAudit, FileSystemMixin):
     """Parent class for LustreAudit entities.
@@ -17,12 +17,12 @@ class LustreAudit(BaseAudit, FileSystemMixin):
     Contains methods which are common to all Lustre cluster component types.
     """
     @classmethod
-    def kmod_is_loaded(cls, context=Context()):
+    def kmod_is_loaded(cls, fscontext=FileSystemContext()):
         """Returns a boolean based whether or not this class' corresponding Lustre module is loaded."""
         modname = cls.__name__.replace('Audit', '').lower()
         filter = lambda line: line.startswith(modname)
         obj = cls()
-        obj.context = context
+        obj.fscontext = fscontext
         list = obj.read_lines("/proc/modules", filter)
         return len(list) == 1
 

@@ -1,6 +1,6 @@
 import os
 
-class Context:
+class FileSystemContext:
     """Filesystem abstraction which allows us to more easily unit-test
     our code."""
 

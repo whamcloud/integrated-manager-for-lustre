@@ -12,7 +12,7 @@ class TestLocalLustreMetrics(unittest.TestCase):
     def test_mdsmgs_metrics(self):
         """Test that the various MGS/MDS metrics are collected and aggregated."""
         audit = LocalAudit()
-        audit.context = os.path.join(self.tests,
+        audit.fscontext = os.path.join(self.tests,
                                      "data/lustre_versions/2.0.66/mds_mgs")
         metrics = audit.metrics()['raw']['lustre']
         assert metrics['target']['lustre-MDT0000']['filesfree'] == 511954
@@ -22,7 +22,7 @@ class TestLocalLustreMetrics(unittest.TestCase):
     def test_oss_metrics(self):
         """Test that the various OSS metrics are collected and aggregated."""
         audit = LocalAudit()
-        audit.context = os.path.join(self.tests,
+        audit.fscontext = os.path.join(self.tests,
                                      "data/lustre_versions/2.0.66/oss")
         metrics = audit.metrics()['raw']['lustre']
         assert metrics['target']['lustre-OST0000']['filesfree'] == 127575
@@ -33,7 +33,7 @@ class TestMdtMetrics(unittest.TestCase):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
         self.audit = MdtAudit()
-        self.audit.context = self.test_root
+        self.audit.fscontext = self.test_root
         self.metrics = self.audit.metrics()['raw']['lustre']['target']
 
     def test_mdt_int_metrics(self):
@@ -51,7 +51,7 @@ class TestLnetMetrics(unittest.TestCase):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
         self.audit = LnetAudit()
-        self.audit.context = self.test_root
+        self.audit.fscontext = self.test_root
         self.metrics = self.audit.metrics()
 
     def test_lnet_send_count(self):
@@ -63,7 +63,7 @@ class TestMgsMetrics(unittest.TestCase):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
         self.audit = MgsAudit()
-        self.audit.context = self.test_root
+        self.audit.fscontext = self.test_root
         self.metrics = self.audit.metrics()['raw']['lustre']['target']['MGS']
 
     def test_mgs_stats_list(self):
@@ -92,7 +92,7 @@ class TestObdfilterMetrics(unittest.TestCase):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/oss")
         self.audit = ObdfilterAudit()
-        self.audit.context = self.test_root
+        self.audit.fscontext = self.test_root
         self.metrics = self.audit.metrics()['raw']['lustre']['target']
 
     def test_obdfilter_stats_list(self):

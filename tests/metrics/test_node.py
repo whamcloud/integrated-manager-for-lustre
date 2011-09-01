@@ -7,7 +7,7 @@ class TestNodeMetrics(unittest.TestCase):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
         self.audit = NodeAudit()
-        self.audit.context = self.test_root
+        self.audit.fscontext = self.test_root
         self.metrics = self.audit.metrics()
 
     def test_node_cpustats(self):

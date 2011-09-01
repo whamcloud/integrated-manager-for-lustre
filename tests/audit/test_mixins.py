@@ -18,7 +18,7 @@ build:  1.8.3-20100409182943-PRISTINE-2.6.18-164.11.1.el5_lustre.1.8.3
         class TestAudit(BaseAudit, FileSystemMixin):
             pass
         self.audit = TestAudit()
-        self.audit.context = self.test_root
+        self.audit.fscontext = self.test_root
 
 
     def test_readlines(self):

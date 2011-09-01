@@ -12,7 +12,7 @@ class LocalAudit(BaseAudit, FileSystemMixin):
     # FIXME: This probably ought to be a memoized property, but I'm lazy.
     def audit_classes(self):
         if not hasattr(self, 'audit_classes_list'):
-            self.audit_classes_list = hydra_agent.audit.local_audit_classes(self.context)
+            self.audit_classes_list = hydra_agent.audit.local_audit_classes(self.fscontext)
         return self.audit_classes_list
 
     # Flagrantly "borrowed" from:
@@ -53,7 +53,7 @@ class LocalAudit(BaseAudit, FileSystemMixin):
         agg_raw = {}
         for cls in self.audit_classes():
             audit = cls()
-            audit.context = self.context
+            audit.fscontext = self.fscontext
             audit_metrics = audit.metrics()
             agg_raw = self.__mergedicts(agg_raw, audit_metrics['raw'])
 

@@ -1,8 +1,8 @@
-from hydra_agent.context import Context
+from hydra_agent.fscontext import FileSystemContext
 
-def local_audit_classes(context=Context()):
+def local_audit_classes(fscontext=FileSystemContext()):
     classes = []
-    classes.extend(lustre.local_audit_classes(context))
+    classes.extend(lustre.local_audit_classes(fscontext))
     classes.append(getattr(node, 'NodeAudit'))
     return classes
 
