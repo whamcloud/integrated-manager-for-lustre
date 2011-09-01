@@ -103,8 +103,10 @@ class Lun(models.Model):
     # The WWN from a device, available for some hardware
     # Support not yet implemented in lustre_audit
     #wwn = models.CharField(max_length = 16, blank = True, null = True)
-    # The UUID from a filesystem on this Lun, available after formatting
-    fs_uuid = models.CharField(max_length = 36, blank = True, null = True, unique = True)
+
+    # The UUID from a filesystem on this Lun, populated after formatting
+    # over-long entry to accomodate arbitrary hyphenation
+    fs_uuid = models.CharField(max_length = 64, blank = True, null = True, unique = True)
 
     def __str__(self):
         return "Lun:%s" % self.fs_uuid
@@ -240,7 +242,7 @@ class SshMonitor(Monitor):
             channel = transport.open_session()
             channel.settimeout(SSH_READ_TIMEOUT)
             channel.exec_command("%s audit" % self.get_agent_path())
-            result = channel.makefile('rb').read()
+            output = channel.makefile('rb').read()
             ssh.close()
         except socket.timeout,e:
             return e
@@ -249,10 +251,14 @@ class SshMonitor(Monitor):
         except paramiko.SSHException,e:
             return e
 
-        try:
-            return json.loads(result)
-        except Exception, e:
-            return e
+        # NB this may throw exceptions, to be handled by monitor_exec
+        output = json.loads(output)
+        if output['success']:
+            return output['result']
+        else:
+            audit_log.error("Exception from hydra-agent on %s" % self.host)
+            audit_log.error(output['backtrace'])
+            raise pickle.loads(output['exception'])
 
     def get_agent_path(self):
         if self.agent_path:
@@ -535,7 +541,8 @@ class Target(models.Model):
         return self.targetmount_set.get(primary = True).host
 
     def failover_servers(self):
-        return self.targetmount_set.get(primary = False).host
+        for tm in self.targetmount_set.filter(primary = False):
+            yield tm.host
 
     def status_string(self, mount_statuses = None):
         if mount_statuses == None:
