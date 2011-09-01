@@ -130,7 +130,7 @@ class TestLustreLNetCommands(unittest.TestCase):
         assert lustre.lnet_load() == "modprobe lnet"
 
     def test_lnet_unload(self):
-        assert lustre.lnet_unload() == "lustre_rmmod || lctl net down && lustre_rmmod"
+        assert lustre.lnet_unload() == "lustre_rmmod"
 
     def test_lnet_start(self):
         assert lustre.lnet_start() == "lctl net up"
