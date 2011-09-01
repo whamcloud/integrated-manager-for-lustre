@@ -139,15 +139,18 @@ class FindDeviceStep(Step):
 
     def run(self, kwargs):
        from configure.models import ManagedTargetMount
+       from monitor.models import LunNode
        target_mount = ManagedTargetMount.objects.get(pk = kwargs['target_mount_id'])
 
        if target_mount.primary:
            # This is a primary target mount, so it should already have a LunNode
            assert(target_mount.block_device)
+           job_log.debug("FindDeviceStep: target_mount %s is primary, skipping" % target_mount)
            return
 
        if target_mount.block_device:
            # The LunNode was already populated, do nothing
+           job_log.debug("FindDeviceStep: LunNode for target_mount %s already set" % target_mount)
            return
 
        # Go up to the target, then back down to the primary mount to get the Lun
@@ -156,7 +159,7 @@ class FindDeviceStep(Step):
        assert(lun.fs_uuid)
 
        # Contact the host to find the path to the block device
-       code, out, err = debug_ssh(target_mount.host, "hydra-agent.py locate-device %s" % lun.fs_uuid)
+       code, out, err = debug_ssh(target_mount.host, "hydra-agent.py locate-device --uuid %s" % lun.fs_uuid)
        if code != 0:
             from configure.lib.job import StepCleanError
             print code, out, err
@@ -167,20 +170,20 @@ class FindDeviceStep(Step):
                 raise RuntimeError("Cannot locate target %s device on %s by uuid %s" % (target_mount.target, target_mount.host, lun.fs_uuid))
             try:
                 lun_node = LunNode.objects.get(
-                        host = target_mount.host, path = data['path'])
+                        host = target_mount.host, path = node_info['path'])
                 lun_node.lun = lun
                 lun_node.save()
             except LunNode.DoesNotExist:
                 # Corner case: we are finding a device that LustreAudit never saw before us (maybe the host just came up for the first time at just this moment)
                 lun_node = LunNode(
                         lun = lun,
-                        host = self.host,
+                        host = target_mount.host,
                         path = node_info['path'],
                         size = node_info['size'],
                         used_hint = node_info['used'])
                 lun_node.save()
 
-            target_mount.block_device = existing_lun_node()
+            target_mount.block_device = lun_node
             target_mount.save()
                 
 
@@ -243,14 +246,16 @@ class MkfsStep(Step):
             assert(target_mount.block_device != None)
             lun_node = target_mount.block_device
             if lun_node.lun:
+                job_log.debug("Updating target_mount %s Lun after formatting with uuid %s" % (target_mount, fs_uuid))
                 lun = lun_node.lun
                 lun.fs_uuid = fs_uuid
                 lun.save()
             else:
+                job_log.debug("Creating target_mount %s Lun after formatting with uuid %s" % (target_mount, fs_uuid))
                 lun = Lun(fs_uuid = fs_uuid)
                 lun.save()
-                target_mount.lun = lun
-                target_mount.save()
+                lun_node.lun = lun
+                lun_node.save()
 
 class NullStep(Step):
     def run(self, kwargs):
@@ -322,6 +327,7 @@ class RegisterTargetStep(Step):
         else:
             data = json.loads(out)
             target = target_mount.target
+            job_log.debug("Registration complete, updating target %d with name=%s" % (target.id, data['label']))
             target.name = data['label']
             target.save()
 
@@ -333,17 +339,9 @@ class ConfigurePacemakerStep(Step):
         from monitor.models import TargetMount
         target_mount_id = kwargs['target_mount_id']
         target_mount = TargetMount.objects.get(id = target_mount_id)
-        # due to devices where it's not entirely obvious that sharing is
-        # going on, it takes an audit cycle to find a shared device after
-        # it's been registered.  we need to wait for that audit cycle.
-        x = 0
-        while (target_mount.block_device == None or
-               target_mount.target.name == None) and x < 10:
-            print "waiting for the target's name: %s %s" % \
-                (target_mount.block_device, target_mount.target.name)
-            time.sleep(10)
-            target_mount = TargetMount.objects.get(id = target_mount_id)
-            x = x + 1
+
+        # target.name should have been populated by RegisterTarget
+        # target_mount.block_device  should have been populated by FindDeviceStep
         if target_mount.block_device == None or target_mount.target.name == None:
             from configure.lib.job import StepCleanError
             print "failed to get the target's name after %d tries" % x
