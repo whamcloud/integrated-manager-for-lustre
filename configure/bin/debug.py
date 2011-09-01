@@ -38,13 +38,13 @@ class HydraDebug(cmd.Cmd, object):
     def do_start_fs(self, fs_name):
         fs = ManagedFilesystem.objects.get(name = fs_name)
         for target in fs.get_targets():
-            StateManager.set_state(target.targetmount_set.get(primary = True).downcast(), 'mounted')
+            StateManager.set_state(target.downcast(), 'mounted')
 
     def do_stop_fs(self, fs_name):
         fs = ManagedFilesystem.objects.get(name = fs_name)
         for target in fs.get_targets():
             if not target.state == 'unmounted':
-                StateManager.set_state(target.targetmount_set.get(primary = True).downcast(), 'unmounted')
+                StateManager.set_state(target.downcast(), 'unmounted')
 
     def do_lnet_up(self, args):
         for host in ManagedHost.objects.all():

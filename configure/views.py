@@ -45,12 +45,11 @@ def _set_target_states(form, targets, mounts):
     assert(isinstance(form, CreateTargetsForm))
     from configure.lib.state_manager import StateManager
     if form.cleaned_data['start_now']:
-        for mount in mounts:
-            if mount.primary:
-                StateManager.set_state(mount, 'mounted')
+        for target in targets:
+            StateManager.set_state(target, 'mounted')
     elif form.cleaned_data['register_now']:
         for target in targets:
-            StateManager.set_state(target, 'registered')
+            StateManager.set_state(target, 'unmounted')
     elif form.cleaned_data['format_now']:
         for target in targets:
             StateManager.set_state(target, 'formatted')
@@ -486,9 +485,7 @@ def target(request, target_id):
         'target': target,
         'conf_param_list': target.get_conf_params(),
         'conf_param_form': conf_param_form,
-        'target_size': target.targetmount_set.get(primary = True).block_device.size
-
-        }))
+        'target_size': target.targetmount_set.get(primary = True).block_device.size}))
 
 
 def states(request):
