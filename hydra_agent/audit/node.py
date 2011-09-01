@@ -3,6 +3,11 @@ from hydra_agent.audit import BaseAudit
 from hydra_agent.audit.mixins import FileSystemMixin
 
 class NodeAudit(BaseAudit, FileSystemMixin):
+    def __init__(self, fscontext=None, **kwargs):
+        super(NodeAudit, self).__init__(**kwargs)
+        if fscontext:
+            self.fscontext = fscontext
+
     def parse_meminfo(self):
         """Returns a dict representation of /proc/meminfo"""
         return dict((k, int(re.sub('[^\d]*','',v))) for k, v in

@@ -1,7 +1,6 @@
 import unittest
 import tempfile
 import os, shutil
-from hydra_agent.context import Context
 import hydra_agent.audit
 from hydra_agent.audit.local import LocalAudit
 from hydra_agent.audit.node import NodeAudit
@@ -13,16 +12,17 @@ class TestAuditScanner(unittest.TestCase):
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
 
     def test_audit_scanner(self):
-        list = [cls.__name__ for cls in
-                hydra_agent.audit.local_audit_classes(Context(self.test_root))]
-        assert list == ['LnetAudit', 'MdtAudit', 'MgsAudit', 'NodeAudit']
+        """hydra_agent.audit.local_audit_classes() should return a list of classes."""
+        list = [cls for cls in
+                hydra_agent.audit.local_audit_classes(self.test_root)]
+        assert list == [LnetAudit, MdtAudit, MgsAudit, NodeAudit]
 
 class TestLocalAudit(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        self.audit = LocalAudit()
-        self.audit.context = self.test_root
+        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        self.audit = LocalAudit(fscontext=test_root)
 
     def test_localaudit_audit_classes(self):
+        """LocalAudit.audit_classes() should return a list of classes."""
         assert self.audit.audit_classes() == [LnetAudit, MdtAudit, MgsAudit, NodeAudit]

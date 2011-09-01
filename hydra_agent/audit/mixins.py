@@ -1,4 +1,4 @@
-from hydra_agent.context import Context
+from hydra_agent.fscontext import FileSystemContext
 
 class FileSystemMixin(object):
     """Mixin for Audit subclasses.  Classes that inherit from
@@ -7,20 +7,20 @@ class FileSystemMixin(object):
     default filesystem context ("/") for unit testing.
     """
 
-    def __set_context(self, ctx):
+    def __set_fscontext(self, ctx):
         if hasattr(ctx, "root"):
-            self.__context = ctx
+            self.__fscontext = ctx
         else:
-            self.__context = Context(ctx)
+            self.__fscontext = FileSystemContext(ctx)
 
-    def __get_context(self):
-        return self.__context
+    def __get_fscontext(self):
+        return self.__fscontext
 
-    context = property(__get_context, __set_context, doc="""
+    fscontext = property(__get_fscontext, __set_fscontext, doc="""
         The filesystem context (defaults to "/")""")
 
     def __init__(self):
-        self.__set_context("/")
+        self.__set_fscontext("/")
 
     def read_lines(self, filename, filter_f=None):
         """Read/strip all lines from filename and return them as a list.
@@ -28,7 +28,7 @@ class FileSystemMixin(object):
         If the optional filter_f argument is supplied, it will be applied
         prior to stripping each line.
         """
-        fh = open(self.context.abs(filename))
+        fh = open(self.fscontext.abs(filename))
         try:
             return [line.rstrip("\n") for line in 
                     filter_f and filter(filter_f, fh.readlines()) or fh.readlines()]

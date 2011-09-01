@@ -4,15 +4,15 @@ from hydra_agent.audit import BaseAudit
 from hydra_agent.audit.mixins import FileSystemMixin
 
 class LocalAudit(BaseAudit, FileSystemMixin):
-    def __init__(self):
-        # Multiple inheritance is fun!
-        BaseAudit.__init__(self)
-        FileSystemMixin.__init__(self)
+    def __init__(self, fscontext=None, **kwargs):
+        super(LocalAudit, self).__init__(**kwargs)
+        if fscontext:
+            self.fscontext = fscontext
 
     # FIXME: This probably ought to be a memoized property, but I'm lazy.
     def audit_classes(self):
         if not hasattr(self, 'audit_classes_list'):
-            self.audit_classes_list = hydra_agent.audit.local_audit_classes(self.context)
+            self.audit_classes_list = hydra_agent.audit.local_audit_classes(self.fscontext)
         return self.audit_classes_list
 
     # Flagrantly "borrowed" from:
@@ -52,8 +52,7 @@ class LocalAudit(BaseAudit, FileSystemMixin):
         """Returns an aggregated dict of all subclass metrics."""
         agg_raw = {}
         for cls in self.audit_classes():
-            audit = cls()
-            audit.context = self.context
+            audit = cls(fscontext=self.fscontext)
             audit_metrics = audit.metrics()
             agg_raw = self.__mergedicts(agg_raw, audit_metrics['raw'])
 
