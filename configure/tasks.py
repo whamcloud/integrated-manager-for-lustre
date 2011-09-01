@@ -31,7 +31,7 @@ def complete_orphan_jobs():
         .filter(modified_at__lt = datetime.now() - grace_period)
     for job in orphans:
         job_log.error("Job %d found by janitor (tasking since %s), marking errored" % (job.id, job.modified_at))
-        job.mark_complete(errored = True)
+        job.complete(errored = True)
 
     # Once jobs are tasked, if they fail then they will get resumed by celery, with the exception
     # of ones that we call .cancel on, which could die after revoking their tasks in 'cancelling'
