@@ -4,6 +4,23 @@ import os, shutil
 import hydra_agent.audit.lustre
 from hydra_agent.audit.lustre import *
 
+class TestLustreAuditClassMethods:
+    def setUp(self):
+        tests = os.path.join(os.path.dirname(__file__), '..')
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+
+    def test_kmod_is_loaded(self):
+        """Test that LustreAudit.kmod_is_loaded() works."""
+        assert MgsAudit.kmod_is_loaded(self.test_root)
+
+    def test_device_is_present(self):
+        """Test that LustreAudit.device_is_present() works."""
+        assert MdtAudit.device_is_present(self.test_root)
+
+    def test_is_available(self):
+        """Test that LustreAudit.is_available() works."""
+        assert LnetAudit.is_available(self.test_root)
+
 class TestLustreAuditScanner(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
@@ -17,8 +34,8 @@ class TestLustreAuditScanner(unittest.TestCase):
 class TestLustreAudit:
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        self.audit = LustreAudit(fscontext=test_root)
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        self.audit = LustreAudit(fscontext=self.test_root)
 
     def test_version(self):
         assert self.audit.version() == "2.0.66"
@@ -68,8 +85,8 @@ class TestMdtAudit(unittest.TestCase):
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
         self.audit = MdtAudit(fscontext=self.test_root)
 
-    def test_module_is_loaded(self):
-        assert MdtAudit.kmod_is_loaded(self.test_root) == True
+    def test_audit_is_available(self):
+        assert MdtAudit.is_available(self.test_root) == True
 
 class TestLnetAudit(unittest.TestCase):
     def setUp(self):
@@ -77,8 +94,8 @@ class TestLnetAudit(unittest.TestCase):
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
         self.audit = LnetAudit(fscontext=self.test_root)
 
-    def test_module_is_loaded(self):
-        assert LnetAudit.kmod_is_loaded(self.test_root) == True
+    def test_audit_is_available(self):
+        assert LnetAudit.is_available(self.test_root) == True
 
 class TestObdfilterAudit(unittest.TestCase):
     def setUp(self):
@@ -86,5 +103,5 @@ class TestObdfilterAudit(unittest.TestCase):
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/oss")
         self.audit = ObdfilterAudit(fscontext=self.test_root)
 
-    def test_module_is_loaded(self):
-        assert ObdfilterAudit.kmod_is_loaded(self.test_root) == True
+    def test_audit_is_available(self):
+        assert ObdfilterAudit.is_available(self.test_root) == True

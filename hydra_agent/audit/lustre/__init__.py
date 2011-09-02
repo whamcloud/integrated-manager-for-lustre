@@ -6,9 +6,8 @@ def local_audit_classes(fscontext=None):
     import hydra_agent.audit.lustre
     return [cls for cls in 
                 [getattr(hydra_agent.audit.lustre, name) for name in
-                    dir(hydra_agent.audit.lustre) if name.endswith('Audit')
-                                                  and name is not 'LustreAudit']
-            if hasattr(cls, 'kmod_is_loaded') and cls.kmod_is_loaded(fscontext)]
+                    dir(hydra_agent.audit.lustre) if name.endswith('Audit')]
+            if hasattr(cls, 'is_available') and cls.is_available(fscontext)]
 
 class LustreAudit(BaseAudit, FileSystemMixin):
     """Parent class for LustreAudit entities.
@@ -16,8 +15,39 @@ class LustreAudit(BaseAudit, FileSystemMixin):
     Contains methods which are common to all Lustre cluster component types.
     """
     @classmethod
+    def is_available(cls, fscontext=None):
+        """Returns a boolean indicating whether or not this audit class should
+        be instantiated.
+        """
+        available = False
+        available = cls.kmod_is_loaded(fscontext)
+        available = cls.device_is_present(fscontext)
+
+        return available
+
+    @classmethod
+    def device_is_present(cls, fscontext=None):
+        """Returns a boolean indicating whether or not this class
+        has any corresponding Lustre device entries.
+        """
+        modname = cls.__name__.replace('Audit', '').lower()
+
+        # There are some modules which can be loaded but don't have
+        # corresponding device entries.  In these cases, just wink and
+        # move on.
+        exceptions = "lnet".split()
+        if modname in exceptions:
+            return True
+
+        obj = cls(fscontext=fscontext)
+        entries = [dev for dev in obj.devices() if dev['type'] == modname]
+        return len(entries) > 0
+
+    @classmethod
     def kmod_is_loaded(cls, fscontext=None):
-        """Returns a boolean based whether or not this class' corresponding Lustre module is loaded."""
+        """Returns a boolean indicating whether or not this class'
+        corresponding Lustre module is loaded.
+        """
         modname = cls.__name__.replace('Audit', '').lower()
         filter = lambda line: line.startswith(modname)
         obj = cls(fscontext=fscontext)

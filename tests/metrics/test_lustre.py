@@ -28,6 +28,50 @@ class TestLocalLustreMetrics(unittest.TestCase):
         assert metrics['target']['lustre-OST0000']['filesfree'] == 127575
         assert metrics['lnet']['recv_count'] == 547181
 
+class TestPathologicalUseCases(unittest.TestCase):
+    # AKA: The world will always build a better idiot! ;)
+    def test_loaded_module_no_device(self):
+        """Loaded module with no device entry should be skipped."""
+        # We can hit this case fairly readily simply by unmounting
+        # targets and leaving modules loaded.  We can simulate it
+        # by creating a /proc/modules file with one of our Audit
+        # classes' modules in it and an empty /proc/fs/lustre/devices
+        # file.
+        self.test_root = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.test_root, "proc/fs/lustre"))
+
+        # Create a modules file with...  I dunno, lnet and mgs entries.
+        f = open(os.path.join(self.test_root, "proc/modules"), "w+")
+        f.write("""
+lnet 233888 3 ptlrpc,ksocklnd,obdclass, Live 0xffffffffa076e000
+exportfs 4202 1 fsfilt_ldiskfs, Live 0xffffffffa0d22000
+mgs 153919 1 - Live 0xffffffffa0cfa000
+mgc 50620 2 mgs, Live 0xffffffffa0a90000
+        """)
+        f.close()
+
+        # Create an empty devices file
+        open(os.path.join(self.test_root, "proc/fs/lustre/devices"), "w").close()
+
+        # Ideally, our audit aggregator should never instantiate the
+        # audit in the first place.
+        audit = LocalAudit(fscontext=self.test_root)
+        assert MgsAudit not in audit.audit_classes()
+
+        # On the other hand, some modules don't have a corresponding
+        # device entry, and therefore the audit should be instantiated.
+        audit = LocalAudit(fscontext=self.test_root)
+        assert LnetAudit in audit.audit_classes()
+
+        shutil.rmtree(self.test_root)
+
+    def tearDown(self):
+        # Just to make super-duper sure it's gone.
+        try:
+            shutil.rmtree(self.test_root)
+        except OSError:
+            pass
+
 class TestMdtMetrics(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
