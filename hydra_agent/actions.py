@@ -34,8 +34,9 @@ def locate_device(args):
             node_result = d
     return node_result
 
-def try_run(arg_list):
-    p = subprocess.Popen(arg_list, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+def try_run(arg_list, shell = False):
+    p = subprocess.Popen(arg_list, shell = shell, stdout = subprocess.PIPE,
+                         stderr = subprocess.PIPE)
     stdout, stderr = p.communicate()
     rc = p.wait()
     if rc != 0:
@@ -119,8 +120,16 @@ def unmount_target(args):
 def start_target(args):
     try_run(["crm", "resource", "start", args.label])
 
+    # now wait for it
+    try_run("while ! crm resource status %s 2>&1 | grep -q \"is running\"; do sleep 1; done" % \
+            args.label, shell=True)
+
 def stop_target(args):
     try_run(["crm", "resource", "stop", args.label])
+
+    # now wait for it
+    try_run("while ! crm resource status %s 2>&1 | grep -q \"is NOT running\"; do sleep 1; done" % \
+            args.label, shell=True)
 
 def audit(args):
     return LocalLustreAudit().audit_info()
