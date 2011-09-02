@@ -71,6 +71,20 @@ if __name__ == '__main__':
                                       help='label of target to find')
     parser_locate_device.set_defaults(func=actions.locate_device)
 
+    parser_migrate_target = subparsers.add_parser('migrate-target',
+                                            help='migrate a target to a node')
+    parser_migrate_target.add_argument('--label', required=True,
+                                        help='label of target to migrate')
+    parser_migrate_target.add_argument('--node', required=True,
+                                        help='node to migrate target to')
+    parser_migrate_target.set_defaults(func=actions.migrate_target)
+
+    parser_unmigrate_target = subparsers.add_parser('unmigrate-target',
+                                         help='cancel prevous target migrate')
+    parser_unmigrate_target.add_argument('--label', required=True,
+                                help='label of target to cancel migration of')
+    parser_unmigrate_target.set_defaults(func=actions.unmigrate_target)
+
     parser_audit = subparsers.add_parser('audit', help='report lustre status')
     parser_audit.set_defaults(func=actions.audit)
 

@@ -81,6 +81,15 @@ def configure_ha(args):
         # XXX - crm is a python script -- should look into interfacing
         #       with it directly
         try_run(shlex.split("crm configure primitive %s ocf:hydra:Target meta target-role=\"stopped\" operations \$id=\"%s-operations\" op monitor interval=\"120\" timeout=\"60\" op start interval=\"0\" timeout=\"300\" op stop interval=\"0\" timeout=\"300\" params target=\"%s\"" % (args.label, args.label, args.label)))
+        score = 20
+        preference = "primary"
+    else:
+        score = 10
+        preference = "secondary"
+
+    try_run(shlex.split("crm configure location %s-%s %s %s: %s" % \
+                        (args.label, preference, args.label, score,
+                         os.uname()[1])))
 
     create_libdir()
 
@@ -130,6 +139,17 @@ def stop_target(args):
     # now wait for it
     try_run("while ! crm resource status %s 2>&1 | grep -q \"is NOT running\"; do sleep 1; done" % \
             args.label, shell=True)
+
+def migrate_target(args):
+    # a migration scores at 500 to force it higher than stickiness
+    score = 500
+    try_run(shlex.split("crm configure location %s-migrated %s %s: %s" % \
+                        (args.label, args.label, score, args.node)))
+
+def unmigrate_target(args):
+    # just remove the migration constraint
+    try_run("crm configure delete %s-migrated && (sleep 1; crm resource stop %s && crm resource start %s)" % \
+                        (args.label, args.label, args.label), shell = True)
 
 def audit(args):
     return LocalLustreAudit().audit_info()
