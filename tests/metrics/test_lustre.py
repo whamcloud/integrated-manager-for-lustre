@@ -35,6 +35,20 @@ class TestMdtMetrics(unittest.TestCase):
         audit = MdtAudit(fscontext=test_root)
         self.metrics = audit.metrics()['raw']['lustre']['target']
 
+    def test_mdt_stats_list(self):
+        """Test that a representative sample of mdt stats is collected."""
+        stats_list = "req_waittime req_qdepth req_active req_timeout reqbuf_avail mds_getattr mds_connect mds_getstatus mds_statfs mds_sync mds_getxattr open close unlink mkdir rmdir getxattr".split()
+        for stat in stats_list:
+            assert stat in self.metrics['lustre-MDT0000']['stats'].keys()
+
+    def test_mdt_stats_vals(self):
+        """Test that the mdt stats contain the correct values."""
+        stats = self.metrics['lustre-MDT0000']['stats']
+        assert stats['mds_getattr']['units'] == "usec"
+        assert stats['mds_sync']['sum'] == 4480017
+        assert stats['mkdir']['units'] == "reqs"
+        assert stats['unlink']['count'] == 50254
+
     def test_mdt_int_metrics(self):
         """Test that the mdt simple integer metrics are collected."""
         int_list = "num_exports kbytestotal kbytesfree filestotal filesfree".split()

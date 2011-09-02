@@ -168,9 +168,18 @@ class MdtAudit(TargetAudit):
             'num_exports': 'mdt/%s/num_exports',
         })
 
+    def read_stats(self, target):
+        """Aggregate mish-mash of MDT stats into one stats dict."""
+        stats = {}
+        for stats_file in "mdt/stats md_stats".split():
+            path = os.path.join(self.target_root, "mdt", target, stats_file)
+            stats.update(self.stats_dict_from_file(path))
+        return stats
+
     def _gather_raw_metrics(self):
         for mdt in [dev for dev in self.devices() if dev['type'] == 'mdt']:
             self.raw_metrics['lustre']['target'][mdt['name']] = self.read_int_metrics(mdt['name'])
+            self.raw_metrics['lustre']['target'][mdt['name']]['stats'] = self.read_stats(mdt['name'])
 
 class MgsAudit(TargetAudit):
     def __init__(self, **kwargs):
