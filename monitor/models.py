@@ -9,6 +9,7 @@ from polymorphic.models import DowncastMetaclass
 from collections_24 import defaultdict
 
 import simplejson as json
+import pickle
 
 from logging import INFO, WARNING
 
