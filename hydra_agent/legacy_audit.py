@@ -556,10 +556,8 @@ class LocalLustreAudit:
         stdout, stderr = p.communicate()
         rc = p.wait()
         if rc != 0:
-            # Something is wrong with corosync, make sure someone notices
-            # TODO: don't interrupt the whole audit for this, should have a list
-            # of errors somewhere to append to.
-            raise RuntimeError("`crm_resource -l` failed (%d): %s %s" % (rc, stdout, stderr))
+            # Probably corosync isn't running?
+            return None
         else:
             lines = stdout.strip().split("\n")
             for line in lines:
