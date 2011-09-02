@@ -75,7 +75,7 @@ def create_mgs(request, host_id):
     host = get_object_or_404(Host, id = int(host_id))
     # TODO: some UI for forcing it to accept a node which has used_hint=True
     nodes = LunNode.objects.filter(host = host, used_hint = False) 
-    other_hosts = [h for h in Host.objects.all() if h != host]
+    other_hosts = [h for h in Host.objects.all() if h.id != host.id]
 
     class CreateMgsForm(CreateTargetsForm):
         device = forms.ChoiceField(choices = [(n.id, n.pretty_string()) for n in nodes])
@@ -138,7 +138,7 @@ def create_oss(request, host_id):
     host = get_object_or_404(Host, id = int(host_id))
     # TODO: some UI for forcing it to accept a node which has used_hint=True
     nodes = host.available_lun_nodes()
-    other_hosts = [h for h in Host.objects.all() if h != host]
+    other_hosts = [h for h in Host.objects.all() if h.id != host.id]
 
     class CreateOssForm(CreateTargetsForm):
         filesystem = forms.ChoiceField(choices = [(f.id, f.name) for f in ManagedFilesystem.objects.all()])
@@ -206,7 +206,7 @@ def create_mds(request, host_id):
     host = get_object_or_404(Host, id = int(host_id))
     # TODO: some UI for forcing it to accept a node which has used_hint=True
     nodes = host.available_lun_nodes()
-    other_hosts = [h for h in Host.objects.all() if h != host]
+    other_hosts = [h for h in Host.objects.all() if h.id != host.id]
 
     filesystems = ManagedFilesystem.objects.filter(metadatatarget = None)
 
