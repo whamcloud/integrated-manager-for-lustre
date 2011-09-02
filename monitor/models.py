@@ -133,14 +133,20 @@ class LunNode(models.Model):
             short_name = self.path.replace('/dev/disk/by-path/', '', 1)
 
             # e.g. ip-192.168.122.1:3260-iscsi-iqn.2011-08.com.whamcloud.lab.hydra-1.sdb-lun-0
-            if short_name.startswith("ip-") and short_name.index("-iscsi-") != -1:
+            if short_name.startswith("ip-") and short_name.find("-iscsi-") != -1:
                 iscsi_iqn = "".join(short_name.split("-iscsi-")[1:])
                 short_name = "iSCSI %s" % iscsi_iqn
 
             # e.g. /dev/disk/by-path/pci-0000:00:06.0-scsi-0:0:3:0    
-            if short_name.startswith("pci-") and short_name.index("-scsi-") != -1:
+            if short_name.startswith("pci-") and short_name.find("-scsi-") != -1:
                 scsi_id = "".join(short_name.split("-scsi-")[1:])
                 short_name = "SCSI %s" % scsi_id
+
+            # e.g. /dev/disk/by-path/pci-0000:0a:00.0-fc-0x21000001ff040a42:0x0006000000000000
+            if short_name.startswith("pci-") and short_name.find("-fc-") != -1:
+                fc_id = "".join(short_name.split("-fc-")[1:])
+                short_name = "FC %s" % fc_id
+
         elif self.path.startswith('/dev/mapper/'):
             # e.g. /dev/mapper/VolGroup00-blob0
             short_name = self.path.replace('/dev/mapper/', '', 1)
@@ -219,6 +225,7 @@ class SshMonitor(Monitor):
 
         import paramiko
         import socket
+        from monitor.lib.lustre_audit import audit_log
         ssh = paramiko.SSHClient()
         # TODO: manage host keys
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
