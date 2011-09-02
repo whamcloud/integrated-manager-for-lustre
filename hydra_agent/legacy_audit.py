@@ -65,6 +65,7 @@ class LocalLustreAudit:
         mount_devices = set([self.normalize_device(i[0]) for i in self.mounts if os.path.exists(i[0])])
         fstab_devices = set([self.normalize_device(i[0]) for i in self.fstab if os.path.exists(i[0])])
         scsi_devices = set([self.normalize_device(path) for path in glob.glob("/dev/disk/by-path/*scsi-*")])
+        fc_devices = set([self.normalize_device(path) for path in glob.glob("/dev/disk/by-path/*fc-*")])
         lvm_devices = set(glob.glob("/dev/mapper/*")) - set(["/dev/mapper/control"])
         virtio_devices = set(glob.glob("/dev/vd*"))
         xen_devices = set(glob.glob("/dev/xvd*"))
@@ -89,7 +90,7 @@ class LocalLustreAudit:
                 return 0
                 
 
-        all_devices = mount_devices | fstab_devices | scsi_devices | lvm_devices | virtio_devices | xen_devices
+        all_devices = mount_devices | fstab_devices | scsi_devices | fc_devices | lvm_devices | virtio_devices | xen_devices
         all_devices = set([d for d in all_devices if is_block_device(d)])
 
         partitions = {}
