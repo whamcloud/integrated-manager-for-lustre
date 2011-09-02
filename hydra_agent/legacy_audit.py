@@ -23,17 +23,19 @@ class LocalLustreAudit:
            so that the server can use this is the canonical identifier for devices (it has 
            the best chance of being the same between hosts using shared storage"""
 
-        BY_PATH = "/dev/disk/by-path"
-
+        # Exceptions where we prefer a symlink to the real node, 
+        # to get more human-readable device nodes where possible
+        allowed_paths = ["/dev/disk/by-path", "/dev/mapper"]
         if not hasattr(self, 'device_lookup'):
             self.device_lookup = {}
-            # Lookup devices to their by-path equivalent if possible
-            try:
-                for f in os.listdir(BY_PATH):
-                    self.device_lookup[os.path.realpath(os.path.join(BY_PATH, f))] = os.path.join(BY_PATH, f)
-            except OSError:
-                # by-path doesn't exist, don't add anything to device_lookup
-                pass
+            for allowed_path in allowed_paths:
+                # Lookup devices to their by-path equivalent if possible
+                try:
+                    for f in os.listdir(allowed_path):
+                        self.device_lookup[os.path.realpath(os.path.join(allowed_path, f))] = os.path.join(allowed_path, f)
+                except OSError:
+                    # by-path doesn't exist, don't add anything to device_lookup
+                    pass
 
             # Resolve the /dev/root node to its real device
             # NB /dev/root may be a symlink on your system, but it's not on all!
