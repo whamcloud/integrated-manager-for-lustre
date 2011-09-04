@@ -151,5 +151,9 @@ def unmigrate_target(args):
     try_run("crm configure delete %s-migrated && (sleep 1; crm resource stop %s && crm resource start %s)" % \
                         (args.label, args.label, args.label), shell = True)
 
+def fail_node(args):
+    # force a manual failover by failing a node
+    try_run("sync; sync; init 0", shell = True)
+
 def audit(args):
     return LocalLustreAudit().audit_info()

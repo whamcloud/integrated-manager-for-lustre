@@ -85,6 +85,10 @@ if __name__ == '__main__':
                                 help='label of target to cancel migration of')
     parser_unmigrate_target.set_defaults(func=actions.unmigrate_target)
 
+    parser_fail_node = subparsers.add_parser('fail-node',
+                                       help='fail (i.e. shut down) this node')
+    parser_fail_node.set_defaults(func=actions.fail_node)
+
     parser_audit = subparsers.add_parser('audit', help='report lustre status')
     parser_audit.set_defaults(func=actions.audit)
 
