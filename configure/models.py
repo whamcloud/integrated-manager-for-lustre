@@ -13,6 +13,9 @@ from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
 
+# Classes used to emit dependencies from Jobs and StatefulObjects
+from configure.lib.job import DependOn, DependAny, DependAll
+
 from collections_24 import defaultdict
 
 MAX_STATE_STRING = 32
@@ -48,7 +51,7 @@ class StatefulObject(models.Model):
         """Return static dependencies, e.g. a targetmount in state
            mounted has a dependency on a host in state lnet_started but
            can get rid of it by moving to state unmounted"""
-        return []
+        return DependAll()
 
     @staticmethod
     def so_child(klass):
@@ -207,27 +210,34 @@ class ManagedTarget(StatefulObject):
     # Additional states needed for 'deactivated'?
     states = ['unformatted', 'formatted', 'unmounted', 'mounted', 'removed']
     initial_state = 'unformatted'
+    active_mount = models.ForeignKey('ManagedTargetMount', blank = True, null = True)
 
     def get_deps(self, state = None):
         if not state:
             state = self.state
         
         deps = []
-        if state == 'mounted':
-            for tm in self.targetmount_set.all():
-                # TODO: rewrite this dependency to 'at least one targetmount
-                # host must have LNET up' such that we will attempt to 
-                # bring up LNET on all but not stop unless none succeed.
-                deps.append((tm.host.downcast(), 'lnet_up', 'unmounted'))
+        # TODO: ensure that active_mount is always set if 'mounted' by
+        # having the agent return the active mount from the 'start' command.
+        if state == 'mounted' and self.active_mount:
+            # Depend on the TargetMount which is currently active being 
+            # in state 'configured' and its host being in state 'lnet_up'
+            # (in order to ensure that when lnet is stopped, this target will
+            # be stopped, and if a TM is unconfigured then we will be 
+            # unmounted while it happens)
+            target_mount = self.active_mount
+            deps.append(target_mount.host.downcast(), 'lnet_up', 'unmounted')
+            deps.append(target_mount.downcast(), 'configured', 'unmounted')
 
-                # TODO: rewrite this dependency to depend on there being at
-                # least one configured targetmount in order to mount a managedtarget
-                # and add a dep to teh job for unconfiguring a targetmount to 
-                # ensure that this target is down when that happens (but let
-                # it come up again if there is at least one remaining targetmount)
-                deps.append((tm.downcast(), 'configured', 'unmounted'))
+            # TODO: also express that this situation may be resolved by migrating
+            # the target instead of stopping it.
 
-        return deps
+        return DependAll(deps)
+
+    reverse_deps = {
+            'ManagedTargetMount': (lambda mtm: ManagedTarget.objects.filter(pk = mtm.target_id)),
+            'ManagedHost': lambda mh: set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)])
+            }
 
 class ManagedOst(monitor_models.ObjectStoreTarget, ManagedTarget):
     def get_conf_params(self):
@@ -306,25 +316,20 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
         if not state:
             state = self.state
 
-        deps = []
         if state == 'configured':
-            # TODO: depend on target in state unmounted OR mounted
+            # Depend on target in state unmounted OR mounted
             # in order to get this unconfigured when the target is removed.
-            #deps.append(self.target.downcast(), ['mounted', 'unmounted'], 'unconfigured']
-            pass
-        return deps
+            return DependOn(self.target.downcast(), 'unmounted', acceptable_states = ['mounted', 'unmounted'], fix_state = 'unconfigured')
+        else:
+            return DependAll()
 
     # Reverse dependencies are records of other classes which must check
     # our get_deps when they change state.
     # It tells them how, given an instance of the other class, to find 
     # instances of this class which may depend on it.
     reverse_deps = {
-            # We depend on lnet_state
-            'ManagedHost': (lambda mh: ManagedTargetMount.objects.filter(host = mh)),
-            # We depend on state 'registered'
+            # We depend on it being in a registered state
             'ManagedTarget': (lambda mt: ManagedTargetMount.objects.filter(target = mt)),
-            # A TargetMount may depend on other targetmounts for the same target
-            'ManagedTargetMount': (lambda mtm: mtm.target.targetmount_set.filter(~Q(pk = mtm.id)))
             }
 
 
@@ -342,11 +347,19 @@ class StateLock(models.Model):
         return cls.objects.filter(locked_item_type = ctype, locked_item_id = stateful_object.id)
 
 class StateReadLock(StateLock):
-    locked_state = models.CharField(max_length = MAX_STATE_STRING)
+    #locked_state = models.CharField(max_length = MAX_STATE_STRING)
+    # NB we don't actually need to know the readlock state, although
+    # it would be useful to store the acceptable_states of the DependOn
+    # to validate that write locks left it in the right state.
+    def __str__(self):
+        return "Job %d readlock on %s" % (self.job.id, self.locked_item)
 
 class StateWriteLock(StateLock):
     begin_state = models.CharField(max_length = MAX_STATE_STRING)
     end_state = models.CharField(max_length = MAX_STATE_STRING)
+
+    def __str__(self):
+        return "Job %d writelock on %s %s->%s" % (self.job.id, self.locked_item, self.begin_state, self.end_state)
 
 # Lock is the wrong word really, these objects exist for the lifetime of the Job, 
 # to allow 
@@ -373,10 +386,6 @@ class Job(models.Model):
     wait_for_completions = models.PositiveIntegerField(default = 0)
     wait_for = models.ManyToManyField('Job', symmetrical = False, related_name = 'wait_for_job')
 
-    depend_on_count = models.PositiveIntegerField(default = 0)
-    depend_on_completions = models.PositiveIntegerField(default = 0)
-    depend_on = models.ManyToManyField('Job', symmetrical = False, related_name = 'depend_on_job')
-
     task_id = models.CharField(max_length=36, blank = True, null = True)
     def task_state(self):
         from celery.result import AsyncResult
@@ -393,12 +402,6 @@ class Job(models.Model):
         Job.objects.get_or_create(pk = self.id)
         Job.objects.filter(pk = self.id).update(wait_for_completions = F('wait_for_completions')+1)
    
-    def notify_depend_on_complete(self):
-        """Called by a depend_on job to notify that it is complete"""
-        from django.db.models import F
-        Job.objects.get_or_create(pk = self.id)
-        Job.objects.filter(pk = self.id).update(depend_on_completions = F('depend_on_completions')+1)
-
     def create_dependencies(self):
         """Examine overlaps between self's statelocks and those of 
            earlier jobs which are still pending, and generate wait_for
@@ -407,6 +410,7 @@ class Job(models.Model):
            they have a write lock"""
         from configure.lib.job import job_log
 
+        wait_fors = set()
         for lock in self.statelock_set.all():
             if isinstance(lock, StateWriteLock):
                 wl = lock
@@ -414,8 +418,8 @@ class Job(models.Model):
                 # trust that it will have depended on any before that.
                 try:
                     prior_write_lock = StateWriteLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).latest('id')
-                    assert (wl.begin_state == prior_write_lock.end_state), "%s locks %s in state %s but previous %s leaves it in state %s" % (self, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state)
-                    self.depend_on.add(prior_write_lock.job)
+                    assert (wl.begin_state == prior_write_lock.end_state), ("%s locks %s in state %s but previous %s leaves it in state %s" % (self, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state))
+                    wait_fors.add(prior_write_lock.job)
                     # We will only wait_for read locks after this write lock, as it
                     # will have wait_for'd any before it.
                     read_barrier_id = prior_write_lock.job.id
@@ -427,26 +431,27 @@ class Job(models.Model):
                 # our position.
                 prior_read_locks = StateReadLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).filter(job__id__gte = read_barrier_id)
                 for i in prior_read_locks:
-                    self.wait_for.add(i.job)
+                    wait_fors.add(i.job)
             elif isinstance(lock, StateReadLock):
                 rl = lock
                 try:
                     prior_write_lock = StateWriteLock.filter_by_locked_item(rl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).latest('id')
-                    assert(prior_write_lock.end_state == rl.locked_state)
-                    self.depend_on.add(prior_write_lock.job)
+                    # See comment by locked_state in StateReadLock
+                    #assert(prior_write_lock.end_state == rl.locked_state)
+                    wait_fors.add(prior_write_lock.job)
                 except StateWriteLock.DoesNotExist:
                     pass
 
+        for j in wait_fors:
+            self.wait_for.add(j)
         self.wait_for_count = self.wait_for.count()
-        self.depend_on_count = self.depend_on.count()
         self.save()
 
     def create_locks(self):
         from configure.lib.job import StateChangeJob
         # Take read lock on everything from self.get_deps
-        for d in self.get_deps():
-            depended_on, depended_state = d
-            StateReadLock.objects.create(job = self, locked_item = depended_on, locked_state = depended_state)
+        for dependency in self.get_deps().all():
+            StateReadLock.objects.create(job = self, locked_item = dependency.stateful_object)
 
         if isinstance(self, StateChangeJob):
             stateful_object = self.get_stateful_object()
@@ -460,11 +465,9 @@ class Job(models.Model):
             # requirement of lnet_up (to prevent someone stopping lnet while 
             # we're still running)
             from itertools import chain
-            for d in chain(stateful_object.get_deps(old_state), stateful_object.get_deps(new_state)):
-                depended_on, depended_state, fix_state = d
+            for d in chain(stateful_object.get_deps(old_state).all(), stateful_object.get_deps(new_state).all()):
                 StateReadLock.objects.create(job = self,
-                        locked_item = depended_on,
-                        locked_state = depended_state)
+                        locked_item = d.stateful_object)
 
             # Take a write lock on get_stateful_object if this is a StateChangeJob
             StateWriteLock.objects.create(
@@ -479,15 +482,17 @@ class Job(models.Model):
         from django.db.models import F
         runnable_jobs = Job.objects \
             .filter(wait_for_completions = F('wait_for_count')) \
-            .filter(depend_on_completions = F('depend_on_count')) \
             .filter(state = 'pending')
 
-        job_log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (runnable_jobs.count(), Job.objects.filter(state = 'pending').count(), Job.objects.filter(state = 'tasked').count()))
+        job_log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
+            runnable_jobs.count(),
+            Job.objects.filter(state = 'pending').count(),
+            Job.objects.filter(state = 'tasked').count()))
         for job in runnable_jobs:
-            job.run()
+            job.downcast().run()
 
     def get_deps(self):
-        return []
+        return DependAll()
 
     def get_steps(self):
         raise NotImplementedError()
@@ -521,7 +526,6 @@ class Job(models.Model):
     def pause(self):
         from configure.lib.job import job_log
         job_log.debug("Job %d: Job.pause" % self.id)
-        print "Hey! pause!"
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
@@ -552,6 +556,20 @@ class Job(models.Model):
             job_log.warning("Job %d: unpaused, running any available jobs" % self.id)
             Job.run_next()
 
+    def all_deps(self):
+        # This is not necessarily 100% consistent with the dependencies used by StateManager
+        # when the job was submitted (e.g. other models which get_deps queries may have
+        # changed), but that is a *good thing* -- this is a last check before running
+        # which will safely cancel the job if something has changed that breaks our deps.
+        if isinstance(self, StateChangeJob):
+            target_klass, old_state, new_state = self.state_transition
+            return DependAll(
+                    self.get_deps(),
+                    self.get_stateful_object().get_deps(new_state),
+                    DependOn(self.get_stateful_object(), old_state)
+                    )
+        else:
+            return self.get_deps()
 
     def run(self):
         from configure.lib.job import job_log
@@ -560,21 +578,29 @@ class Job(models.Model):
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
 
+        # All the complexity of StateManager's dependency calculation doesn't
+        # matter here: we've reached our point in the queue, all I need to check now
+        # is - are this Job's immediate dependencies satisfied?  And are any deps
+        # for a statefulobject's new state satisfied?  If so, continue.  If not, cancel.
+        
+        try:
+            deps_satisfied = self.all_deps().satisfied()
+        except Exception, e:
+            # Catchall exception handler to ensure progression even if Job
+            # subclasses have bugs in their get_deps etc.
+            job_log.error("Job %d: internal error %s" % (self.id, e))
+            self.complete(errored = True)
+            return
 
-        # My wait_for are complete, and I don't care if they're errored, just
-        # that they aren't running any more.
-        # My depend_on, however, must have completed successfully in order
-        # to guarantee that my state dependencies have been met, so I will
-        # error out if any depend_on are errored.
-        for dep in self.depend_on.all():
-            # My deps might have completed at some point in the past, or they
-            # might be in the process of finishing and invoking their dependents
-            # (of which I am one)
-            assert(dep.state == 'complete' or dep.state == 'completing')
-            if dep.errored or dep.cancelled:
-                self.complete(cancelled = True)
-                job_log.warning("Job %d: cancelling because depend_on %d was not successful" % (self.id, dep.id))
-                return
+        if not deps_satisfied:
+            self.complete(cancelled = True)
+            # TODO: tell someone WHICH dependency
+            job_log.warning("Job %d: cancelling because of failed dependency" % (self.id))
+            return
+
+        job_log.debug("Job %d: deps okay" % self.id)
+        for d in self.all_deps().all():
+            job_log.debug("  %s %s (actual %s) %s" % (d.stateful_object, d.acceptable_states, d.stateful_object.state, d.satisfied()))
 
         # Set state to 'tasked'
         # =====================
@@ -604,7 +630,7 @@ class Job(models.Model):
         self.task_id = celery_job.task_id
         self.state = 'tasked'
         self.save()
-        job_log.debug("job %d tasking->tasked (%s)" % (self.id, self.task_id))
+        job_log.debug("Job %d tasking->tasked (%s)" % (self.id, self.task_id))
 
     @classmethod
     def cancel_job(cls, job_id):
@@ -619,7 +645,7 @@ class Job(models.Model):
             new_state = self.state_transition[2]
             obj = self.get_stateful_object()
             obj.state = new_state
-            job_log.info("StateChangeJob complete, setting state %s on %s" % (new_state, obj))
+            job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.pk, new_state, obj))
             obj.save()
 
         self.state = 'completing'
@@ -627,9 +653,7 @@ class Job(models.Model):
         self.cancelled = cancelled
         self.save()
 
-        job_log.info("job %d completing (errored=%s), notifying dependents" % (self.id, self.errored))
-        for dependent in self.depend_on_job.all():
-            dependent.notify_depend_on_complete()
+        job_log.info("Job %d completing (errored=%s, cancelled=%s), notifying dependents" % (self.id, self.errored, self.cancelled))
         for dependent in self.wait_for_job.all():
             dependent.notify_wait_for_complete()
 
@@ -675,13 +699,9 @@ class ConfigureTargetMountJob(Job, StateChangeJob):
                (ConfigurePacemakerStep, {'target_mount_id': self.target_mount.id})]
 
     def get_deps(self):
-        deps = []
-
-        # TODO: depend on unmounted OR mounted, to support adding a targetmount
-        # to a target which is already up and running
-        deps.append((self.target_mount.target.downcast(), "unmounted"))
-
-        return deps
+        # To configure a TM for a target, required that it is in a 
+        # registered state
+        return DependOn(self.target_mount.target.downcast(), preferred_state = 'unmounted', acceptable_states = ['unmounted', 'mounted'])
 
 class RegisterTargetJob(Job, StateChangeJob):
     # FIXME: this really isn't ManagedTarget, it's FilesystemMember+ManagedTarget
@@ -717,25 +737,13 @@ class RegisterTargetJob(Job, StateChangeJob):
     def get_deps(self):
         deps = []
 
-        deps.append((self.target.targetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
-
-        # HYD-209
-        # Registering an OST depends on the MDT having already been registered,
-        # because in Lustre >= 2.0 MDT registration wipes previous OST registrations
-        # such that for first mount you must already do mgs->mdt->osts
-        #if isinstance(self.target, ManagedOst):
-        #    try:
-        #        mdt = ManagedMdt.objects.get(filesystem = self.target.filesystem)
-        #    except ManagedMdt.DoesNotExist:
-        #        raise DependencyAbsent("Cannot register OSTs for filesystem %s until an MDT is created" % self.target.filesystem)
-        #    # TODO: depend on mdt in unmounted or mounted (i.e. registered)
-        #    deps.append((mdt, "registered"))
+        deps.append(DependOn(self.target.downcast().targetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
 
         if isinstance(self.target, monitor_models.FilesystemMember):
             mgs = self.target.filesystem.mgs.downcast()
-            deps.append((mgs, "mounted"))
+            deps.append(DependOn(mgs, "mounted"))
 
-        return deps
+        return DependAll(deps)
 
 class StartTargetJob(Job, StateChangeJob):
     stateful_object = 'target'
@@ -745,6 +753,17 @@ class StartTargetJob(Job, StateChangeJob):
 
     def description(self):
         return "Starting target %s" % self.target.downcast()
+
+    def get_deps(self):
+        # Depend on there being at least one targetmount which is in configured 
+        # and whose host is in state lnet_up
+        deps = []
+        for tm in self.target.downcast().targetmount_set.all():
+            deps.append(DependAll(
+                DependOn(tm.downcast(), 'configured', fix_state = 'unmounted'),
+                DependOn(tm.host.downcast(), 'lnet_up', fix_state = 'unmounted')
+                ))
+        return DependAny(deps)
 
     def get_steps(self):
         from configure.lib.job import MountStep
@@ -867,7 +886,7 @@ class ApplyConfParams(Job):
         return steps
 
     def get_deps(self):
-        return [(self.mgs.targetmount_set.get(primary = True).downcast(), 'mounted')]
+        return DependOn(self.mgs.targetmount_set.get(primary = True).downcast(), 'mounted')
 
 class ConfParam(models.Model):
     __metaclass__ = DowncastMetaclass

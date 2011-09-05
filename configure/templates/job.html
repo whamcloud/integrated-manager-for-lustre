@@ -16,17 +16,27 @@
     <li>Cancelled: {{job.cancelled}}</li>
 </ul>
 
-<h3>Wait for {{job.wait_for_completions}}/{{job.wait_for_count}}:</h3>
+<h3>Debug: Wait for {{job.wait_for_completions}}/{{job.wait_for_count}}:</h3>
 <ul>
     {% for dep in job.wait_for.all %}
     <li>{{dep}}</li>
     {% endfor %}
 </ul>
 
-<h3>Depend on {{job.depend_on_completions}}/{{job.depend_on_count}}:</h3>
+<h3>Debug: Dependencies</h3>
+<pre>
+{{job.all_deps.debug_list}}
+</pre>
 <ul>
-    {% for dep in job.depend_on.all %}
-    <li>{{dep}}</li>
+    {% for dep in job.all_deps.all %}
+    <li>{{dep.stateful_object}},{{dep.acceptable_states}},{{dep.stateful_object.state}},{{dep.satisfied}}</li>
+    {% endfor %}
+</ul>
+
+<h3>Debug: locks</h3>
+<ul>
+    {% for l in job.statelock_set.all %}
+    <li>{{l}}</li>
     {% endfor %}
 </ul>
 

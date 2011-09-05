@@ -19,6 +19,92 @@ if settings.DEBUG:
 else:
     job_log.setLevel(INFO)
 
+class Dependable(object):
+    def all(self):
+        if hasattr(self, 'objects'):
+            for o in self.objects:
+                for i in o.all():
+                    yield i
+        else:
+            yield self
+
+    def debug_list(self):
+        if hasattr(self, 'objects'):
+            result = []
+            for o in self.objects:
+                result.append((o.__class__.__name__, o.debug_list()))
+            return result
+        else:
+            return [self.stateful_object, self.acceptable_states]
+
+    def satisfied(self):
+        """Return True or False for whether this and all child
+           dependencies are satisfied (i.e. their required state
+           is set on their object)"""
+        return NotImplementedError
+
+class DependOn(Dependable):
+    def __init__(self, stateful_object, preferred_state, acceptable_states = None, fix_state = None):
+        """preferred_state: what we will try to put the dependency into if 
+           it is not already in one of acceptable_states.
+           fix_state: what we will try to put the depender into if his 
+           dependency can no longer be satisfied."""
+        if not acceptable_states:
+            self.acceptable_states = [preferred_state]
+        else:
+            if not preferred_state in acceptable_states:
+                self.acceptable_states = acceptable_states + [preferred_state]
+            else:
+                self.acceptable_states = acceptable_states
+
+        # Preferred state is a piece of metadata which tells callers how to 
+        # get our stateful_object into an acceptable state -- i.e. "If X is not
+        # in one of Y then put it into Z" where X is stateful_object, Y is 
+        # acceptable_states, Z is preferred_state.
+        self.preferred_state = preferred_state
+
+        # fix_state is a piece of metadata which tells callers how to eliminate
+        # this dependency, i.e. "I depend on X in Y but I wouldn't if I was in 
+        # state Z" where X is stateful_object, Y is acceptable_states, Z is 
+        # fix_state.
+        self.fix_state = fix_state
+        self.stateful_object = stateful_object
+
+    def satisfied(self):
+        result = self.stateful_object.state in self.acceptable_states
+        return self.stateful_object.state in self.acceptable_states
+
+class MultiDependable(Dependable):
+    def __init__(self, *args):
+        from collections import Iterable
+        if len(args) == 1 and isinstance(args[0], Iterable):
+            self.objects = args[0]
+        else:
+            self.objects = args
+
+class DependAll(MultiDependable):
+    """Stores a list of Dependables, all of which must be in the
+       desired state for this dependency to be true"""
+    def satisfied(self):
+        for o in self.objects:
+            if not o.satisfied():
+                return False
+
+        return True
+
+class DependAny(MultiDependable):
+    """Stores a list of Dependables, one or more of which must be in the
+       desired state for this dependency to be true"""
+    def satisfied(self):
+        if len(self.objects) == 0:
+            return True
+
+        for o in self.objects:
+            if o.satisfied():
+                return True
+
+        return False
+
 class StepPaused(Exception):
     """A step did not execute because the job is paused."""
     pass
@@ -341,8 +427,6 @@ class ConfigurePacemakerStep(Step):
         # target_mount.block_device  should have been populated by FindDeviceStep
         if target_mount.block_device == None or target_mount.target.name == None:
             from configure.lib.job import StepCleanError
-            print "failed to get the target's name after %d tries" % x
-            print StepCleanError
             raise StepCleanError()
 
         invoke_agent(target_mount.host, "configure-ha --device %s --label %s %s --mountpoint %s" % (
@@ -363,7 +447,7 @@ class StartLNetStep(Step):
         code, out, err = debug_ssh(host, lustre.lnet_start())
         if code != 0:
             from configure.lib.job import StepCleanError
-            print code, out, err
+            job_log.debug("%s %s %s" % (code, out, err))
             raise StepCleanError()
 
 class StopLNetStep(Step):
@@ -378,7 +462,7 @@ class StopLNetStep(Step):
         code, out, err = debug_ssh(host, lustre.lnet_stop())
         if code != 0:
             from configure.lib.job import StepCleanError
-            print code, out, err
+            job_log.debug("%s %s %s" % (code, out, err))
             raise StepCleanError()
 
 class LoadLNetStep(Step):
@@ -393,7 +477,7 @@ class LoadLNetStep(Step):
         code, out, err = debug_ssh(host, lustre.lnet_load())
         if code != 0:
             from configure.lib.job import StepCleanError
-            print code, out, err
+            job_log.debug("%s %s %s" % (code, out, err))
             raise StepCleanError()
 
 class UnloadLNetStep(Step):
@@ -407,7 +491,7 @@ class UnloadLNetStep(Step):
         code, out, err = debug_ssh(host, lustre.lnet_unload())
         if code != 0:
             from configure.lib.job import StepCleanError
-            print code, out, err
+            job_log.debug("%s %s %s" % (code, out, err))
             raise StepCleanError()
 
 class ConfParamStep(Step):

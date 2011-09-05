@@ -490,6 +490,48 @@ class LustreAudit:
             # Sync the learned parameters to TargetParam
             TargetParam.update_params(mountable.target, mount_info['params'])
 
+        # If we got some corosync resource information, use it to update ManagedTarget
+        try:
+            from configure.models import ManagedTarget, ManagedHost, ManagedTargetMount
+            from configure.lib.state_manager import StateManager
+            configure_enable = True
+        except ImportError:
+            configure_enable = False
+
+        # TODO: get rid of confusing situation of having ManagedTarget.active_mount for configured systems, but relying on 
+        # TargetMount Alerts for unconfigured systems (because they may well not have the corosync stuff we check here, and
+        # even if they do, we can't expect that their resources are named the way we name them (HYD-231)
+        if self.host_data['resource_locations'] and configure_enable and ManagedTargetMount.objects.filter(host = self.host).count() > 0:
+            # There are hydra-configured mounts on this host, and we got some corosync resource information
+            for target_name, node_name in self.host_data['resource_locations'].items():
+                try:
+                    # TODO: cope with multiple targets having the same name, put something unique in
+                    # the resource names.
+                    target = Target.objects.get(name = target_name).downcast()
+                except Target.DoesNotExist:
+                    audit_log.warning("Resource %s on host %s is not a known target" % (target_name, self.host))
+                    continue
+
+                if node_name == None:
+                    active_mount = None
+                else:
+                    try: 
+                        host = ManagedHost.objects.get(address = node_name)
+                        try:
+                            active_mount = ManagedTargetMount.objects.get(target = target, host = host)
+                        except ManagedTargetMount.DoesNotExist:
+                            audit_log.warning("Resource for target '%s' is running on host '%s', but there is no such TargetMount" % (target, host))
+                            active_mount = None
+                    except ManagedHost.DoesNotExist:
+                        audit_log.warning("Resource location node '%s' does not match any Host" % (node_name))
+                        active_mount = None
+
+                if active_mount != target.active_mount:
+                    target.active_mount = active_mount
+                    target.save()
+
+                state = ['unmounted', 'mounted'][active_mount != None]
+                StateManager.notify_state(target, state, ['mounted', 'unmounted'])
 
     def learn_clients(self):
         for mount_point, client_info in self.host_data['client_mounts'].items():

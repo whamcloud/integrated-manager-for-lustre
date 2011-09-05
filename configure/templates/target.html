@@ -12,6 +12,7 @@
     <tr><th>Failover servers: </th><td>{{ target.failover_servers|join:", " }}</td></tr>
     <tr><th>Size: </th><td>{{target_size|filesizeformat}}</td></tr>
     <tr><th>State: </th><td>{{target.state}}</td></tr>
+    <tr><th>Active mount: </th><td>{{target.active_mount.host}}</td></tr>
 </table>
 
 <h3>Mount locations</h3>
