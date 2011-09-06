@@ -522,3 +522,35 @@ class ConfParamVersionStep(Step):
         ManagedMgs.objects.\
             filter(pk = kwargs['mgs_id']).\
             update(conf_param_version_applied = kwargs['version'])
+
+class DeleteTargetStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from monitor.models import Target
+        Target.delete(kwargs['target_id'])
+
+class DeleteTargetMountStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from configure.models import ManagedTargetMount
+        ManagedTargetMount.delete(kwargs['target_mount_id'])
+
+class DeleteFilesystemStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from configure.models import ManagedTargetMount
+        ManagedFilesystem.delete(kwargs['filesystem_id'])
+
+class UnconfigureTargetMountStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        # TODO: implement unconfigure on the agent
+        pass

@@ -20,11 +20,16 @@ class DeletableManager(DowncastManager):
 
 from polymorphic.models import PolymorphicMetaclass
 class DeletableDowncastableMetaclass(PolymorphicMetaclass):
-
     def __new__(cls, name, bases, dct):
-        def delete(self):
-            self.deleted = True
-            self.save()
+        @classmethod
+        def delete(cls, id):
+            # Not implemented as an instance method because
+            # we will need to use _base_manager to ensure
+            # we can get at the object
+            instance = self._base_manager.get(pk = id)
+            if not instance.deleted:
+                instance.deleted = True
+                instance.save()
 
         dct['objects'] = DeletableManager()
         dct['delete']  = delete
@@ -353,6 +358,7 @@ class Router(models.Model):
     host = models.ForeignKey(Host)
 
 class Filesystem(models.Model):
+    __metaclass__ = DeletableDowncastableMetaclass
     name = models.CharField(max_length=8)
     mgs = models.ForeignKey('ManagementTarget')
 
