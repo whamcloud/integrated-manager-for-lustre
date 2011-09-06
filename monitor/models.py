@@ -26,7 +26,7 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
             # Not implemented as an instance method because
             # we will need to use _base_manager to ensure
             # we can get at the object
-            instance = self._base_manager.get(pk = id)
+            instance = cls._base_manager.get(pk = id)
             if not instance.deleted:
                 instance.deleted = True
                 instance.save()

@@ -247,8 +247,8 @@ class ManagedTarget(StatefulObject):
             # be stopped, and if a TM is unconfigured then we will be 
             # unmounted while it happens)
             target_mount = self.active_mount
-            deps.append(target_mount.host.downcast(), 'lnet_up', 'unmounted')
-            deps.append(target_mount.downcast(), 'configured', 'unmounted')
+            deps.append(DependOn(target_mount.host.downcast(), 'lnet_up', fix_state='unmounted'))
+            deps.append(DependOn(target_mount.downcast(), 'configured', fix_state='unmounted'))
 
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
@@ -717,7 +717,7 @@ class RemoveFilesystemJob(Job, StateChangeJob):
         from configure.lib.job import DeleteTargetStep
         return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
 
-class RemoveTargetJob(Job,StateChangeJob):
+class RemoveRegisteredTargetJob(Job,StateChangeJob):
     state_transition = (ManagedTarget, 'unmounted', 'removed')
     stateful_object = 'target'
     state_verb = "Remove"
@@ -730,7 +730,7 @@ class RemoveTargetJob(Job,StateChangeJob):
         # TODO: actually do something with Lustre before deleting this from our DB
         from configure.lib.job import DeleteTargetStep
         return [(DeleteTargetStep, {'target_id': self.target.id})]
-   
+
 class RemoveTargetMountJob(Job, StateChangeJob):
     state_transition = (ManagedTarget, 'configured', 'removed')
     stateful_object = 'target_mount'
@@ -761,7 +761,11 @@ class ConfigureTargetMountJob(Job, StateChangeJob):
     def get_deps(self):
         # To configure a TM for a target, required that it is in a 
         # registered state
-        return DependOn(self.target_mount.target.downcast(), preferred_state = 'unmounted', acceptable_states = ['unmounted', 'mounted'])
+        deps = []
+        deps.append(DependOn(self.target_mount.target.downcast(), preferred_state = 'unmounted', acceptable_states = ['unmounted', 'mounted']))
+        if not self.target_mount.primary:
+            deps.append(DependOn(self.target_mount.target.targetmount_set.get(primary=True).downcast(), 'configured'))
+        return DependAll(deps)
 
 class RegisterTargetJob(Job, StateChangeJob):
     # FIXME: this really isn't ManagedTarget, it's FilesystemMember+ManagedTarget
