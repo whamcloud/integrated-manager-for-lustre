@@ -730,8 +730,6 @@ class RemoveTargetJob(Job,StateChangeJob):
         # TODO: actually do something with Lustre before deleting this from our DB
         from configure.lib.job import DeleteTargetStep
         return [(DeleteTargetStep, {'target_id': self.target.id})]
-
-return cls
    
 class RemoveTargetMountJob(Job, StateChangeJob):
     state_transition = (ManagedTarget, 'configured', 'removed')
