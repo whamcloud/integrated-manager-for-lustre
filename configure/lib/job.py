@@ -174,6 +174,7 @@ class StateChangeJob(object):
     def get_stateful_object(self):
         from configure.models import StatefulObject
         stateful_object = getattr(self, self.stateful_object)
+        stateful_object = stateful_object.downcast()
         assert(isinstance(stateful_object, StatefulObject))
         return stateful_object
 

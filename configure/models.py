@@ -201,7 +201,6 @@ class ManagedFilesystem(monitor_models.Filesystem):
         return ConfParam.get_latest_params(params)
 
 class ManagedTarget(StatefulObject):
-    __metaclass__ = DowncastMetaclass
     # unformatted: I exist in theory in the database 
     # formatted: I've been mkfs'd
     # unmounted: I've registered with the MGS, I'm not mounted
@@ -211,6 +210,11 @@ class ManagedTarget(StatefulObject):
     states = ['unformatted', 'formatted', 'unmounted', 'mounted', 'removed']
     initial_state = 'unformatted'
     active_mount = models.ForeignKey('ManagedTargetMount', blank = True, null = True)
+
+    # ManagedTarget has to be abstract because ManagedOst et al are already
+    # inheriting from Target.
+    class Meta:
+        abstract = True
 
     def get_deps(self, state = None):
         if not state:
@@ -235,7 +239,7 @@ class ManagedTarget(StatefulObject):
         return DependAll(deps)
 
     reverse_deps = {
-            'ManagedTargetMount': (lambda mtm: ManagedTarget.objects.filter(pk = mtm.target_id)),
+            'ManagedTargetMount': (lambda mtm: monitor_models.Target.objects.filter(pk = mtm.target_id).downcast()),
             'ManagedHost': lambda mh: set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)])
             }
 
@@ -708,7 +712,7 @@ class RegisterTargetJob(Job, StateChangeJob):
     state_transition = (ManagedTarget, 'formatted', 'unmounted')
     stateful_object = 'target'
     state_verb = "Register"
-    target = models.ForeignKey('ManagedTarget')
+    target = models.ForeignKey(monitor_models.Target)
 
     def description(self):
         target = self.target.downcast()
@@ -749,7 +753,7 @@ class StartTargetJob(Job, StateChangeJob):
     stateful_object = 'target'
     state_transition = (ManagedTarget, 'unmounted', 'mounted')
     state_verb = "Start"
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(monitor_models.Target)
 
     def description(self):
         return "Starting target %s" % self.target.downcast()
@@ -773,7 +777,7 @@ class StopTargetMountJob(Job, StateChangeJob):
     stateful_object = 'target'
     state_transition = (ManagedTarget, 'mounted', 'unmounted')
     state_verb = "Stop"
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(monitor_models.Target)
 
     def description(self):
         return "Stopping target %s" % self.target.downcast()
@@ -784,7 +788,7 @@ class StopTargetMountJob(Job, StateChangeJob):
 
 class FormatTargetJob(Job, StateChangeJob):
     state_transition = (ManagedTarget, 'unformatted', 'formatted')
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(monitor_models.Target)
     stateful_object = 'target'
     state_verb = 'Format'
 

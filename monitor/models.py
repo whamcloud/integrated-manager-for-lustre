@@ -13,8 +13,29 @@ import pickle
 
 from logging import INFO, WARNING
 
+from polymorphic.models import DowncastManager
+class DeletableManager(DowncastManager):
+    def get_query_set(self):
+        return super(DeletableManager, self).get_query_set().filter(deleted = False)
+
+from polymorphic.models import PolymorphicMetaclass
+class DeletableDowncastableMetaclass(PolymorphicMetaclass):
+
+    def __new__(cls, name, bases, dct):
+        def delete(self):
+            self.deleted = True
+            self.save()
+
+        dct['objects'] = DeletableManager()
+        dct['delete']  = delete
+        # Conditional to only create the 'deleted' attribute on the immediate 
+        # user of the metaclass, not again on subclasses.
+        if issubclass(dct.get('__metaclass__', type), DeletableDowncastableMetaclass):
+            dct['deleted'] = models.BooleanField(default = False)
+        return super(DeletableDowncastableMetaclass, cls).__new__(cls, name, bases, dct)
+
 class Host(models.Model):
-    __metaclass__ = DowncastMetaclass
+    __metaclass__ = DeletableDowncastableMetaclass
     # FIXME: either need to make address non-unique, or need to
     # associate objects with a child object, because there
     # can be multiple servers on one hostname, eg ddn10ke
@@ -426,7 +447,7 @@ class Filesystem(models.Model):
 class Mountable(models.Model):
     """Something that can be mounted on a particular host (roughly
        speaking a line in fstab."""
-    __metaclass__ = DowncastMetaclass
+    __metaclass__ = DeletableDowncastableMetaclass
     host = models.ForeignKey('Host')
     mount_point = models.CharField(max_length = 512, null = True, blank = True)
 
@@ -529,7 +550,7 @@ class TargetMount(Mountable):
 class Target(models.Model):
     """A Lustre filesystem target (MGS, MDT, OST) in the abstract, which
        may be accessible through 1 or more hosts via TargetMount"""
-    __metaclass__ = DowncastMetaclass
+    __metaclass__ = DeletableDowncastableMetaclass
     # Like testfs-OST0001
     # Nullable because when manager creates a Target it doesn't know the name
     # until it's formatted+started+audited

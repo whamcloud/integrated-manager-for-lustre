@@ -289,7 +289,7 @@ def _jobs_json():
 
     from itertools import chain
     stateful_objects = []
-    klasses = [ManagedTarget, ManagedHost, ManagedTargetMount, ManagedFilesystem]
+    klasses = [ManagedOst, ManagedMdt, ManagedMgs, ManagedHost, ManagedTargetMount, ManagedFilesystem]
     can_create_mds = (MetadataTarget.objects.count() != ManagedFilesystem.objects.count())
     can_create_oss = MetadataTarget.objects.count() > 0
     for i in chain(*[k.objects.all() for k in klasses]):
@@ -489,22 +489,6 @@ def target(request, target_id):
 
 
 def states(request):
-    klasses = [ManagedTarget, ManagedHost, ManagedTargetMount]
-    items = []
-    for klass in klasses:
-        items.extend(list(klass.objects.all()))
-
-    from configure.lib.state_manager import StateManager
-    state_manager = StateManager()
-
-    stateful_objects = []
-    for i in items:
-        stateful_objects.append({
-            "object": i,
-            "available_transitions": state_manager.available_transitions(i),
-            "content_type": ContentType.objects.get_for_model(i).id
-            })
-
     return render_to_response("states.html", RequestContext(request, {
         'initial_data': _jobs_json()
         }))
