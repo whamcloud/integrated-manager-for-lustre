@@ -16,14 +16,18 @@ import sys
 import traceback
 import simplejson as json
 
-from logging import getLogger, FileHandler, StreamHandler, DEBUG, WARNING
-audit_log = getLogger('audit')
-audit_log.addHandler(FileHandler(settings.AUDIT_LOG_PATH))
+import logging
+audit_log = logging.getLogger('audit')
+audit_log.setLevel(logging.DEBUG)
+handler = logging.FileHandler(settings.JOB_LOG_PATH)
+handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+audit_log.addHandler(handler)
 if settings.DEBUG:
-    audit_log.setLevel(DEBUG)
-    audit_log.addHandler(StreamHandler())
+    audit_log.setLevel(logging.DEBUG)
+    audit_log.addHandler(logging.StreamHandler())
 else:
-    audit_log.setLevel(WARNING)
+    audit_log.setLevel(logging.INFO)
+
 
 def normalize_nid(string):
     """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow 

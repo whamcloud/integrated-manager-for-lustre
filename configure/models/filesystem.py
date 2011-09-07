@@ -1,0 +1,56 @@
+
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
+from django.db import models
+from monitor import models as monitor_models
+from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll
+from configure.models.jobs import StatefulObject, Job
+
+class ManagedFilesystem(monitor_models.Filesystem, StatefulObject):
+    states = ['created', 'removed']
+    initial_state = 'created'
+
+    class Meta:
+        app_label = 'configure'
+
+    def get_conf_params(self):
+        from itertools import chain
+        params = chain(self.filesystemclientconfparam_set.all(),self.filesystemglobalconfparam_set.all())
+        return ConfParam.get_latest_params(params)
+
+    def get_deps(self, state = None):
+        if not state:
+            state = self.state
+        
+        allowed_mgs_states = set(ManagedTarget.states) - set(['removed'])
+        return DependOn(self.mgs.downcast(),
+                'unmounted',
+                acceptable_states = allowed_mgs_states,
+                fix_state = 'removed')
+
+    reverse_deps = {
+            'ManagedMgs': lambda mmgs: ManagedFilesystem.objects.filter(mgs = mmgs)
+            }
+
+class RemoveFilesystemJob(Job, StateChangeJob):
+    state_transition = (ManagedFilesystem, 'created', 'removed')
+    stateful_object = 'filesystem'
+    state_verb = "Remove"
+    filesystem = models.ForeignKey('ManagedFilesystem')
+
+    class Meta:
+        app_label = 'configure'
+
+    def description(self):
+        return "Removing filesystem %s from configuration" % (self.filesystem.name)
+
+    def get_steps(self):
+        from configure.lib.job import DeleteFilesystemStep
+        return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
+
+MyModel = type('MyModel', (models.Model,), {
+    'field': models.BooleanField(),
+    '__module__': __name__,
+})

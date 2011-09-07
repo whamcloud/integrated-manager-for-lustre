@@ -4,19 +4,12 @@
 # ==============================
 
 from django.db import models
-
-CONFIGURE_MODELS = True
-from monitor import models as monitor_models
-from polymorphic.models import DowncastMetaclass
-
-from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
-
-# Classes used to emit dependencies from Jobs and StatefulObjects
-from configure.lib.job import DependOn, DependAny, DependAll
-
+from django.db.models import Q
 from collections_24 import defaultdict
+from polymorphic.models import DowncastMetaclass
+from configure.lib.job import StateChangeJob, DependOn, DependAll, DependAny
 
 MAX_STATE_STRING = 32
 
@@ -34,6 +27,7 @@ class StatefulObject(models.Model):
     # Use of abstract base classes to avoid django bug #12002
     class Meta:
         abstract = True
+        app_label = 'configure'
 
     state = models.CharField(max_length = MAX_STATE_STRING)
     states = None
@@ -200,172 +194,9 @@ class StatefulObject(models.Model):
         querysets = [fn(self) for fn in lookup_fns]
         return chain(*querysets)
 
-class ManagedFilesystem(monitor_models.Filesystem, StatefulObject):
-    states = ['created', 'removed']
-    initial_state = 'created'
 
-    def get_conf_params(self):
-        from itertools import chain
-        params = chain(self.filesystemclientconfparam_set.all(),self.filesystemglobalconfparam_set.all())
-        return ConfParam.get_latest_params(params)
 
-    def get_deps(self, state = None):
-        if not state:
-            state = self.state
-        
-        allowed_mgs_states = set(ManagedTarget.states) - set(['removed'])
-        return DependOn(self.mgs.downcast(),
-                'unmounted',
-                acceptable_states = allowed_mgs_states,
-                fix_state = 'removed')
 
-    reverse_deps = {
-            'ManagedMgs': lambda mmgs: ManagedFilesystem.objects.filter(mgs = mmgs)
-            }
-
-class ManagedTarget(StatefulObject):
-    # unformatted: I exist in theory in the database 
-    # formatted: I've been mkfs'd
-    # unmounted: I've registered with the MGS, I'm not mounted
-    # mounted: I've registered with the MGS, I'm mounted
-    # removed: this target no longer exists in real life
-    # Additional states needed for 'deactivated'?
-    states = ['unformatted', 'formatted', 'unmounted', 'mounted', 'removed']
-    initial_state = 'unformatted'
-    active_mount = models.ForeignKey('ManagedTargetMount', blank = True, null = True)
-
-    # ManagedTarget has to be abstract because ManagedOst et al are already
-    # inheriting from Target.
-    class Meta:
-        abstract = True
-
-    def get_deps(self, state = None):
-        if not state:
-            state = self.state
-        
-        deps = []
-        # TODO: ensure that active_mount is always set if 'mounted' by
-        # having the agent return the active mount from the 'start' command.
-        if state == 'mounted' and self.active_mount:
-            # Depend on the TargetMount which is currently active being 
-            # in state 'configured' and its host being in state 'lnet_up'
-            # (in order to ensure that when lnet is stopped, this target will
-            # be stopped, and if a TM is unconfigured then we will be 
-            # unmounted while it happens)
-            target_mount = self.active_mount
-            deps.append(DependOn(target_mount.host.downcast(), 'lnet_up', fix_state='unmounted'))
-            deps.append(DependOn(target_mount.downcast(), 'configured', fix_state='unmounted'))
-
-            # TODO: also express that this situation may be resolved by migrating
-            # the target instead of stopping it.
-
-        if isinstance(self, monitor_models.FilesystemMember) and self.state != 'removed':
-            # Make sure I'm removed if filesystem goes 'created'->'removed'
-            deps.append(DependOn(self.filesystem.downcast(), 'created', fix_state='removed'))
-
-        return DependAll(deps)
-
-    reverse_deps = {
-            'ManagedTargetMount': (lambda mtm: monitor_models.Target.objects.filter(pk = mtm.target_id)),
-            'ManagedHost': lambda mh: set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)]),
-            'ManagedFilesystem': lambda mfs: [t.downcast() for t in mfs.get_filesystem_targets()]
-            }
-
-class ManagedOst(monitor_models.ObjectStoreTarget, ManagedTarget):
-    def get_conf_params(self):
-        return ConfParam.get_latest_params(self.ostconfparam_set.all())
-
-    def default_mount_path(self, host):
-        counter = 0
-        while True:
-            candidate = "/mnt/%s/ost%d" % (self.filesystem.name, counter)
-            try:
-                monitor_models.Mountable.objects.get(host = host, mount_point = candidate)
-                counter = counter + 1
-            except monitor_models.Mountable.DoesNotExist:
-                return candidate
-
-class ManagedMdt(monitor_models.MetadataTarget, ManagedTarget):
-    def get_conf_params(self):
-        return ConfParam.get_latest_params(self.mdtconfparam_set.all())
-
-    def default_mount_path(self, host):
-        return "/mnt/%s/mdt" % self.filesystem.name
-
-class ManagedMgs(monitor_models.ManagementTarget, ManagedTarget):
-    conf_param_version = models.IntegerField(default = 0)
-    conf_param_version_applied = models.IntegerField(default = 0)
-
-    def default_mount_path(self, host):
-        return "/mnt/mgs"
-
-    def set_conf_params(self, params):
-        """params is a list of unsaved ConfParam objects"""
-
-        # Obtain a version
-        from django.db import transaction
-        @transaction.commit_on_success()
-        def get_version():
-            from django.db.models import F
-            ManagedMgs.objects.filter(pk = self.id).update(conf_param_version = F('conf_param_version') + 1)
-            return ManagedMgs.objects.get(pk = self.id).conf_param_version
-
-        version = get_version()
-
-        @transaction.commit_on_success()
-        def create_params():
-            for p in params:
-                p.version = version
-                p.save()
-
-        create_params()
-
-    def get_conf_params(self):
-        return ConfParam.get_latest_params(self.confparam_set.all())
-
-class ManagedHost(monitor_models.Host, StatefulObject):
-    states = ['lnet_unloaded', 'lnet_down', 'lnet_up']
-    initial_state = 'lnet_unloaded'
-
-class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
-    # unconfigured: I only exist in theory in the database
-    # mounted: I am in fstab on the host and mounted
-    # unmounted: I am in fstab on the host and unmounted
-    states = ['unconfigured', 'configured', 'removed']
-    initial_state = 'unconfigured'
-
-    def __str__(self):
-        if self.primary:
-            kind_string = "primary"
-        elif not self.block_device:
-            kind_string = "failover_nodev"
-        else:
-            kind_string = "failover"
-
-        return "%s:%s:%s" % (self.host, kind_string, self.target)
-
-    def get_deps(self, state = None):
-        if not state:
-            state = self.state
-
-        if state == 'configured':
-            # Depend on target in state unmounted OR mounted
-            # in order to get this unconfigured when the target is removed.
-            return DependOn(self.target.downcast(), 'unmounted', acceptable_states = ['mounted', 'unmounted'], fix_state = 'removed')
-        elif state == 'unconfigured':
-            acceptable_target_states = set(ManagedTarget.states) - set(['removed'])
-            return DependOn(self.target.downcast(), 'unmounted', acceptable_states = acceptable_target_states, fix_state = 'removed')
-        else:
-            return DependAll()
-
-    # Reverse dependencies are records of other classes which must check
-    # our get_deps when they change state.
-    # It tells them how, given an instance of the other class, to find 
-    # instances of this class which may depend on it.
-    reverse_deps = {
-            # We depend on it being in a registered state
-            'ManagedTarget': (lambda mt: ManagedTargetMount.objects.filter(target = mt)),
-            }
 
 class StateLock(models.Model):
     __metaclass__ = DowncastMetaclass
@@ -374,6 +205,9 @@ class StateLock(models.Model):
     locked_item_type = models.ForeignKey(ContentType, related_name = 'locked_item')
     locked_item_id = models.PositiveIntegerField()
     locked_item = GenericForeignKey('locked_item_type', 'locked_item_id')
+
+    class Meta:
+        app_label = 'configure'
 
     @classmethod
     def filter_by_locked_item(cls, stateful_object):
@@ -385,12 +219,20 @@ class StateReadLock(StateLock):
     # NB we don't actually need to know the readlock state, although
     # it would be useful to store the acceptable_states of the DependOn
     # to validate that write locks left it in the right state.
+
+    class Meta:
+        app_label = 'configure'
+
     def __str__(self):
         return "Job %d readlock on %s" % (self.job.id, self.locked_item)
+
 
 class StateWriteLock(StateLock):
     begin_state = models.CharField(max_length = MAX_STATE_STRING)
     end_state = models.CharField(max_length = MAX_STATE_STRING)
+
+    class Meta:
+        app_label = 'configure'
 
     def __str__(self):
         return "Job %d writelock on %s %s->%s" % (self.job.id, self.locked_item, self.begin_state, self.end_state)
@@ -399,9 +241,6 @@ class StateWriteLock(StateLock):
 # to allow 
 # All locks depend on the last pending job to write to a stateful object on which
 # they hold claim read or write lock.
-
-class Test(models.Model):
-    i = models.IntegerField(default = 0)
 
 class Job(models.Model):
     __metaclass__ = DowncastMetaclass
@@ -421,14 +260,18 @@ class Job(models.Model):
     wait_for = models.ManyToManyField('Job', symmetrical = False, related_name = 'wait_for_job')
 
     task_id = models.CharField(max_length=36, blank = True, null = True)
-    def task_state(self):
-        from celery.result import AsyncResult
-        return AsyncResult(self.task_id).state
 
     # Set to a step index before that step starts running
     started_step = models.PositiveIntegerField(default = None, blank = True, null = True)
     # Set to a step index when that step has finished and its result is committed
     finished_step = models.PositiveIntegerField(default = None, blank = True, null = True)
+
+    class Meta:
+        app_label = 'configure'
+
+    def task_state(self):
+        from celery.result import AsyncResult
+        return AsyncResult(self.task_id).state
 
     def notify_wait_for_complete(self):
         """Called by a wait_for job to notify that it is complete"""
@@ -659,11 +502,11 @@ class Job(models.Model):
 
         if updated == 0:
             # Someone else already started this job, bug out
-            job_log.debug("job %d already started running, backing off" % self.id)
+            job_log.debug("Job %d already started running, backing off" % self.id)
             return
         else:
             assert(updated == 1)
-            job_log.debug("job %d pending->tasking" % self.id)
+            job_log.debug("Job %d pending->tasking" % self.id)
             self.state = 'tasking'
 
         # Generate a celery task
@@ -722,375 +565,3 @@ class Job(models.Model):
             return "%s (Job %s)" % (self.description(), id)
         except NotImplementedError:
             return "<Job %s>" % id
-
-from configure.lib.job import StateChangeJob
-
-class DependencyAbsent(Exception):
-    """A Job wants to depend on something that doesn't exist"""
-    pass
-
-class RemoveFilesystemJob(Job, StateChangeJob):
-    state_transition = (ManagedFilesystem, 'created', 'removed')
-    stateful_object = 'filesystem'
-    state_verb = "Remove"
-    filesystem = models.ForeignKey('ManagedFilesystem')
-    def description(self):
-        return "Removing filesystem %s from configuration" % (self.filesystem.name)
-
-    def get_steps(self):
-        from configure.lib.job import DeleteFilesystemStep
-        return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
-
-MyModel = type('MyModel', (models.Model,), {
-    'field': models.BooleanField(),
-    '__module__': __name__,
-})
-
-class RemoveRegisteredTargetJob(Job,StateChangeJob):
-    state_transition = (ManagedTarget, 'unmounted', 'removed')
-    stateful_object = 'target'
-    state_verb = "Remove"
-    target = models.ForeignKey(monitor_models.Target)
-
-    def description(self):
-        return "Removing target %s from configuration" % (self.target.downcast())
-
-    def get_steps(self):
-        # TODO: actually do something with Lustre before deleting this from our DB
-        from configure.lib.job import DeleteTargetStep
-        return [(DeleteTargetStep, {'target_id': self.target.id})]
-
-
-for origin in ['unformatted', 'formatted']:
-    def description(self):
-        return "Removing target %s from configuration" % (self.target.downcast())
-
-    def get_steps(self):
-        from configure.lib.job import DeleteTargetStep
-        return [(DeleteTargetStep, {'target_id': self.target.id})]
-
-    name = "RemoveTargetJob_%s" % origin
-    cls = type(name, (Job, StateChangeJob), {
-        'state_transition': (ManagedTarget, origin, 'removed'),
-        'stateful_object': 'target',
-        'state_verb': "Remove",
-        'target': models.ForeignKey(monitor_models.Target),
-        'description': description,
-        'get_steps': get_steps,
-        '__module__': __name__,
-    })
-    import sys
-    this_module = sys.modules[__name__]
-    setattr(this_module, name, cls)
-
-class RemoveTargetMountJob(Job, StateChangeJob):
-    state_transition = (ManagedTargetMount, 'configured', 'removed')
-    stateful_object = 'target_mount'
-    state_verb = "Remove"
-    target_mount = models.ForeignKey('ManagedTargetMount')
-    def description(self):
-        return "Removing target mount %s from configuration" % (self.target_mount.downcast())
-
-    def get_steps(self):
-        from configure.lib.job import UnconfigurePacemakerStep, DeleteTargetMountStep
-        return [(UnconfigurePacemakerStep, {'target_mount_id': self.target_mount.id}),
-                (DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
-
-class RemoveUnconfiguredTargetMountJob(Job, StateChangeJob):
-    state_transition = (ManagedTargetMount, 'unconfigured', 'removed')
-    stateful_object = 'target_mount'
-    state_verb = "Remove"
-    target_mount = models.ForeignKey('ManagedTargetMount')
-    def description(self):
-        return "Removing target mount %s from configuration" % (self.target_mount.downcast())
-
-    def get_steps(self):
-        from configure.lib.job import UnconfigureTargetMountStep, DeleteTargetMountStep
-        return [(DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
-
-class ConfigureTargetMountJob(Job, StateChangeJob):
-    state_transition = (ManagedTargetMount, 'unconfigured', 'configured')
-    stateful_object = 'target_mount'
-    state_verb = "Configure"
-    target_mount = models.ForeignKey('ManagedTargetMount')
-
-    def description(self):
-        return "Configuring mount %s and HA for %s on %s" % (self.target_mount.mount_point, self.target_mount.target.name, self.target_mount.host)
-
-    def get_steps(self):
-        from configure.lib.job import ConfigurePacemakerStep, FindDeviceStep
-        return[(FindDeviceStep, {'target_mount_id': self.target_mount.id}),
-               (ConfigurePacemakerStep, {'target_mount_id': self.target_mount.id})]
-
-    def get_deps(self):
-        # To configure a TM for a target, required that it is in a 
-        # registered state
-        deps = []
-        deps.append(DependOn(self.target_mount.target.downcast(), preferred_state = 'unmounted', acceptable_states = ['unmounted', 'mounted']))
-        if not self.target_mount.primary:
-            deps.append(DependOn(self.target_mount.target.targetmount_set.get(primary=True).downcast(), 'configured'))
-        return DependAll(deps)
-
-class RegisterTargetJob(Job, StateChangeJob):
-    # FIXME: this really isn't ManagedTarget, it's FilesystemMember+ManagedTarget
-    state_transition = (ManagedTarget, 'formatted', 'unmounted')
-    stateful_object = 'target'
-    state_verb = "Register"
-    target = models.ForeignKey(monitor_models.Target)
-
-    def description(self):
-        target = self.target.downcast()
-        if isinstance(target, ManagedMgs):
-            return "Register MGS"
-        elif isinstance(target, ManagedOst):
-            return "Register OST to filesystem %s" % target.filesystem.name
-        elif isinstance(target, ManagedMdt):
-            return "Register MDT to filesystem %s" % target.filesystem.name
-        else:
-            raise NotImplementedError()
-
-    def get_steps(self):
-        steps = []
-        # FIXME: somehow need to avoid advertising this transition for MGS targets
-        # currently as hack this is just a no-op for MGSs which marks them registered
-        from configure.lib.job import RegisterTargetStep, NullStep
-        target = self.target.downcast()
-        if isinstance(target, ManagedMgs):
-            steps.append((NullStep, {}))
-        if isinstance(target, monitor_models.FilesystemMember):
-            steps.append((RegisterTargetStep, {"target_mount_id": target.targetmount_set.get(primary = True).id}))
-
-        return steps
-
-    def get_deps(self):
-        deps = []
-
-        deps.append(DependOn(self.target.downcast().targetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
-
-        if isinstance(self.target, monitor_models.FilesystemMember):
-            mgs = self.target.filesystem.mgs.downcast()
-            deps.append(DependOn(mgs, "mounted"))
-
-        return DependAll(deps)
-
-class StartTargetJob(Job, StateChangeJob):
-    stateful_object = 'target'
-    state_transition = (ManagedTarget, 'unmounted', 'mounted')
-    state_verb = "Start"
-    target = models.ForeignKey(monitor_models.Target)
-
-    def description(self):
-        return "Starting target %s" % self.target.downcast()
-
-    def get_deps(self):
-        # Depend on there being at least one targetmount which is in configured 
-        # and whose host is in state lnet_up
-        deps = []
-        for tm in self.target.downcast().targetmount_set.all():
-            deps.append(DependAll(
-                DependOn(tm.downcast(), 'configured', fix_state = 'unmounted'),
-                DependOn(tm.host.downcast(), 'lnet_up', fix_state = 'unmounted')
-                ))
-        return DependAny(deps)
-
-    def get_steps(self):
-        from configure.lib.job import MountStep
-        return [(MountStep, {"target_id": self.target.id})]
-
-class StopTargetMountJob(Job, StateChangeJob):
-    stateful_object = 'target'
-    state_transition = (ManagedTarget, 'mounted', 'unmounted')
-    state_verb = "Stop"
-    target = models.ForeignKey(monitor_models.Target)
-
-    def description(self):
-        return "Stopping target %s" % self.target.downcast()
-
-    def get_steps(self):
-        from configure.lib.job import UnmountStep
-        return [(UnmountStep, {"target_id": self.target.id})]
-
-class FormatTargetJob(Job, StateChangeJob):
-    state_transition = (ManagedTarget, 'unformatted', 'formatted')
-    target = models.ForeignKey(monitor_models.Target)
-    stateful_object = 'target'
-    state_verb = 'Format'
-
-    def description(self):
-        target = self.target.downcast()
-        if isinstance(target, ManagedMgs):
-            return "Formatting MGS"
-        elif isinstance(target, ManagedMdt):
-            return "Formatting MDT for filesystem %s" % target.filesystem.name
-        elif isinstance(target, ManagedOst):
-            return "Formatting OST for filesystem %s" % target.filesystem.name
-        else:
-            raise NotImplementedError()
-
-    def get_steps(self):
-        from configure.lib.job import MkfsStep
-        return [(MkfsStep, {'target_id': self.target.id})]
-
-class LoadLNetJob(Job, StateChangeJob):
-    state_transition = (ManagedHost, 'lnet_unloaded', 'lnet_down')
-    stateful_object = 'host'
-    host = models.ForeignKey(ManagedHost)
-    state_verb = 'Load LNet'
-
-    def description(self):
-        return "Loading LNet module on %s" % self.host
-
-    def get_steps(self):
-        from configure.lib.job import LoadLNetStep
-        return [(LoadLNetStep, {'host_id': self.host.id})]
-
-class UnloadLNetJob(Job, StateChangeJob):
-    state_transition = (ManagedHost, 'lnet_down', 'lnet_unloaded')
-    stateful_object = 'host'
-    host = models.ForeignKey(ManagedHost)
-    state_verb = 'Unload LNet'
-
-    def description(self):
-        return "Unloading LNet module on %s" % self.host
-
-    def get_steps(self):
-        from configure.lib.job import UnloadLNetStep
-        return [(UnloadLNetStep, {'host_id': self.host.id})]
-    
-class StartLNetJob(Job, StateChangeJob):
-    state_transition = (ManagedHost, 'lnet_down', 'lnet_up')
-    stateful_object = 'host'
-    host = models.ForeignKey(ManagedHost)
-    state_verb = 'Start LNet'
-
-    def description(self):
-        return "Start LNet on %s" % self.host
-
-    def get_steps(self):
-        from configure.lib.job import StartLNetStep
-        return [(StartLNetStep, {'host_id': self.host.id})]
-
-class StopLNetJob(Job, StateChangeJob):
-    state_transition = (ManagedHost, 'lnet_up', 'lnet_down')
-    stateful_object = 'host'
-    host = models.ForeignKey(ManagedHost)
-    state_verb = 'Stop LNet'
-
-    def description(self):
-        return "Stop LNet on %s" % self.host
-
-    def get_steps(self):
-        from configure.lib.job import StopLNetStep
-        return [(StopLNetStep, {'host_id': self.host.id})]
-
-class ApplyConfParams(Job):
-    mgs = models.ForeignKey(ManagedMgs)
-
-    def description(self):
-        return "Update conf_params on %s" % (self.mgs.primary_server())
-
-    def get_steps(self):
-        from configure.models import ConfParam
-        from configure.lib.job import job_log
-        new_params = ConfParam.objects.filter(version__gt = self.mgs.conf_param_version_applied).order_by('version')
-        steps = []
-        
-        new_param_count = new_params.count()
-        if new_param_count > 0:
-            job_log.info("ApplyConfParams %d, applying %d new conf_params" % (self.id, new_param_count))
-            # If we have some new params, create N ConfParamSteps and one ConfParamVersionStep
-            from configure.lib.job import ConfParamStep, ConfParamVersionStep
-            highest_version = 0
-            for param in new_params:
-                steps.append((ConfParamStep, {"conf_param_id": param.id}))
-                highest_version = max(highest_version, param.version)
-            steps.append((ConfParamVersionStep, {"mgs_id": self.mgs.id, "version": highest_version}))
-        else:
-            # If we have no new params, no-op
-            job_log.warning("ApplyConfParams %d, mgs %d has no params newer than %d" % (self.id, self.mgs.id, self.mgs.conf_param_version_applied))
-            from configure.lib.job import NullStep
-            steps.append((NullStep, {}))
-
-        return steps
-
-    def get_deps(self):
-        return DependOn(self.mgs.targetmount_set.get(primary = True).downcast(), 'mounted')
-
-class ConfParam(models.Model):
-    __metaclass__ = DowncastMetaclass
-    mgs = models.ForeignKey(ManagedMgs)
-    key = models.CharField(max_length = 512)
-    # A None value means "lctl conf_param -d", i.e. clear the setting
-    value = models.CharField(max_length = 512, blank = True, null = True)
-    version = models.IntegerField()
-
-    @staticmethod
-    def get_latest_params(queryset):
-        # Assumption: conf params don't experience high flux, so it's not 
-        # obscenely inefficient to pull all historical values out of the DB before picking
-        # the latest ones.
-        from collections_24 import defaultdict
-        by_key = defaultdict(list)
-        for conf_param in queryset:
-            by_key[conf_param.get_key()].append(conf_param)
-
-        result_list = []
-        for key, conf_param_list in by_key.items():
-            conf_param_list.sort(lambda a,b: cmp(b.version, a.version))
-            result_list.append(conf_param_list[0])
-
-        return result_list
-
-    def get_key(self):
-        """Subclasses to return the fully qualified key, e.g. a FilesystemConfParam
-           prepends the filesystem name to self.key"""
-        return self.key
-
-class FilesystemClientConfParam(ConfParam):
-    filesystem = models.ForeignKey(ManagedFilesystem)
-    def __init__(self, *args, **kwargs):
-        super(FilesystemClientConfParam, self).__init__(*args, **kwargs)
-        self.mgs = self.filesystem.mgs.downcast()
-
-    def get_key(self):
-        return "%s.%s" % (self.filesystem.name, self.key)
-
-class FilesystemGlobalConfParam(ConfParam):
-    filesystem = models.ForeignKey(ManagedFilesystem)
-    def __init__(self, *args, **kwargs):
-        super(FilesystemGlobalConfParam, self).__init__(*args, **kwargs)
-        self.mgs = self.filesystem.mgs.downcast()
-
-    def get_key(self):
-        return "%s.%s" % (self.filesystem.name, self.key)
-
-class MdtConfParam(ConfParam):
-    # TODO: allow setting MDT to None to allow setting the param for 
-    # all MDT on an MGS (and set this param for MDT in RegisterTargetJob)
-    mdt = models.ForeignKey(ManagedMdt)
-    def __init__(self, *args, **kwargs):
-        super(MdtConfParam, self).__init__(*args, **kwargs)
-        self.mgs = self.mdt.filesystem.mgs.downcast()
-
-    def get_key(self):
-        return "%s.%s" % (self.mdt.name, self.key)
-
-class OstConfParam(ConfParam):
-    # TODO: allow setting OST to None to allow setting the param for 
-    # all OSTs on an MGS (and set this param for OSTs in RegisterTargetJob)
-    ost = models.ForeignKey(ManagedOst)
-    def __init__(self, *args, **kwargs):
-        super(OstConfParam, self).__init__(*args, **kwargs)
-        self.mgs = self.ost.filesystem.mgs.downcast()
-
-    def get_key(self):
-        return "%s.%s" % (self.ost.name, self.key)
-
-class VendorResourceRecord(models.Model):
-    vendor_plugin = models.CharField(max_length = 256)
-    vendor_class_str = models.TextField()
-    vendor_id_str = models.TextField()
-    vendor_id_scope = models.ForeignKey('VendorResourceRecord', blank = True, null = True)
-    parents = models.ManyToManyField('VendorResourceRecord', related_name = 'resource_parent')
-    vendor_dict_str = models.TextField()
-

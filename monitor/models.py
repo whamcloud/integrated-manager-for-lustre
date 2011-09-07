@@ -981,9 +981,6 @@ class TargetMountRecoveryInfo(models.Model):
 
 # Only do admin registration if we are not being imported
 # by the configure app
-#try:
-#    CONFIGURE_MODELS
-#except NameError:
 #    from django.contrib import admin
 #    admin.site.register(TargetParam)
 #    admin.site.register(Client)

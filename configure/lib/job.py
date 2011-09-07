@@ -6,18 +6,20 @@
 import json
 import pickle
 
-from logging import getLogger, FileHandler, StreamHandler, DEBUG, INFO
+import logging
 import settings
 import time
 
-job_log = getLogger('job')
-job_log.setLevel(DEBUG)
-job_log.addHandler(FileHandler(settings.JOB_LOG_PATH))
+job_log = logging.getLogger('job')
+job_log.setLevel(logging.DEBUG)
+handler = logging.FileHandler(settings.JOB_LOG_PATH)
+handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+job_log.addHandler(handler)
 if settings.DEBUG:
-    job_log.setLevel(DEBUG)
-    job_log.addHandler(StreamHandler())
+    job_log.setLevel(logging.DEBUG)
+    job_log.addHandler(logging.StreamHandler())
 else:
-    job_log.setLevel(INFO)
+    job_log.setLevel(logging.INFO)
 
 class Dependable(object):
     def all(self):
