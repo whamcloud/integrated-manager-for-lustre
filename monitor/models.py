@@ -15,20 +15,47 @@ from logging import INFO, WARNING
 
 from polymorphic.models import DowncastManager
 class DeletableManager(DowncastManager):
+    """Filters results to return only not-deleted records"""
     def get_query_set(self):
-        return super(DeletableManager, self).get_query_set().filter(deleted = False)
+        return super(DeletableManager, self).get_query_set().filter(not_deleted = True)
 
 from polymorphic.models import PolymorphicMetaclass
 class DeletableDowncastableMetaclass(PolymorphicMetaclass):
+    """Make a django model 'downcastable and 'deletable'.
+
+    This combines the DowncastMetaclass behavior with the not_deleted attribute,
+    the delete() method and the DeletableManager.
+
+    The not_deleted attribute is logically a True/False 'deleted' attribute, but is
+    implemented this (admittedly ugly) way in order to work with django's 
+    unique_together option.  When 'not_deleted' is included in the unique_together
+    tuple, the uniqeness constraint is applied only to objects which have not
+    been deleted -- e.g. an MGS can only have one filesystem with a given name, but
+    once you've deleted that filesystem you should be able to create more with the 
+    same name.
+
+    The manager we set is a subclass of polymorphic.models.DowncastManager, so we inherit the
+    full DowncastMetaclass behaviour.
+    """
     def __new__(cls, name, bases, dct):
         @classmethod
-        def delete(cls, id):
+        def delete(clss, id):
+            """Mark a record as deleted, returns nothing.
+            
+            Looks up the model instance by pk, sets the not_deleted attribute
+            to None and saves the model instance.
+
+            This is provided as a class method which takes an ID rather than as an
+            instance method, in order to use ._base_manager rather than .objects -- this
+            allows us to find the object even if it was already deleted, making this
+            operation idempotent rather than throwing a DoesNotExist on the second try.
+            """
             # Not implemented as an instance method because
             # we will need to use _base_manager to ensure
             # we can get at the object
-            instance = cls._base_manager.get(pk = id)
-            if not instance.deleted:
-                instance.deleted = True
+            instance = clss._base_manager.get(pk = id)
+            if instance.not_deleted:
+                instance.not_deleted = None
                 instance.save()
 
         dct['objects'] = DeletableManager()
@@ -36,7 +63,16 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
         # Conditional to only create the 'deleted' attribute on the immediate 
         # user of the metaclass, not again on subclasses.
         if issubclass(dct.get('__metaclass__', type), DeletableDowncastableMetaclass):
-            dct['deleted'] = models.BooleanField(default = False)
+            # Please forgive me.  Logically this would be a field called 'deleted' which would
+            # be True or False.  Instead, it is a field called 'not_deleted' which can be
+            # True or None.  The reason is: unique_together constraints.
+            dct['not_deleted'] = models.NullBooleanField(default = True)
+
+        if dct.has_key('Meta'):
+            if hasattr(dct['Meta'], 'unique_together'):
+                if not 'not_deleted' in dct['Meta'].unique_together:
+                    dct['Meta'].unique_together = dct['Meta'].unique_together + ('not_deleted',)
+
         return super(DeletableDowncastableMetaclass, cls).__new__(cls, name, bases, dct)
 
 class Host(models.Model):
@@ -98,9 +134,10 @@ class Host(models.Model):
 
     def available_lun_nodes(self):
         from django.db.models import Q
+        used_lun_nodes = [i['block_device'] for i in TargetMount.objects.filter(~Q(block_device = None), host = self).values('block_device')]
         return LunNode.objects.filter(
                 ~Q(lun__lunnode__used_hint = True),
-                targetmount = None,
+                ~Q(id__in = used_lun_nodes),
                 host = self,
                 used_hint = False)
 
@@ -191,7 +228,10 @@ class LunNode(models.Model):
                     return "%3.1f%s" % (num, x)
                 num /= 1024.0
 
-        human_size = sizeof_fmt(self.size)
+        if self.size:
+            human_size = sizeof_fmt(self.size)
+        else:
+            human_size = "[size unknown]"
 
         return "%s (%s)" % (short_name, human_size)
 
@@ -363,7 +403,7 @@ class Filesystem(models.Model):
     mgs = models.ForeignKey('ManagementTarget')
 
     class Meta:
-        unique_together = ('name', 'mgs')
+        unique_together = ('name', 'mgs',)
 
     def get_targets(self):
         return [self.mgs.downcast()] + self.get_filesystem_targets()

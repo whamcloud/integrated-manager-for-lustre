@@ -150,6 +150,11 @@ class StateManager(object):
             self.get_expected_state(instance),
             new_state))
 
+        for d in self.deps:
+            job_log.debug("dep %s" % (d,))
+        for e in self.edges:
+            job_log.debug("edge [%s]->[%s]" % (e))
+
         def sort_graph(objects, edges):
             """Sort items in a graph by their longest path from a leaf.  Items
                at the start of the result are the leaves.  Roots come last."""
@@ -218,9 +223,12 @@ class StateManager(object):
         if transition in self.deps:
             return transition
 
+        job_log.debug("emit_transition_deps: %s %s->%s" % (transition.stateful_object, transition.old_state, transition.new_state))
+
         # E.g. for 'unformatted'->'registered' for a ManagedTarget we
         # would get ['unformatted', 'formatted', 'registered']
         route = transition.stateful_object.get_route(transition.old_state, transition.new_state)
+        job_log.debug("emit_transition_deps: route %s" % (route,))
 
         # Add to self.deps and self.edges for each step in the route
         prev = None
@@ -276,7 +284,8 @@ class StateManager(object):
                 if dependency.stateful_object == root_transition.stateful_object \
                         and not root_transition.new_state in dependency.acceptable_states:
                     assert dependency.fix_state != None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
+                    job_log.debug("Reverse dependency: %s required us to be in state %s, fixing by setting it to state %s" % (dependent, dependency.acceptable_states, dependency.fix_state))
                     dep_transition = self.emit_transition_deps(Transition(
-                            dependency.stateful_object,
+                            dependent,
                             dependent_state, dependency.fix_state))
-                    self.edges.add((dep_transition, dep))
+                    self.edges.add((root_transition, dep_transition))

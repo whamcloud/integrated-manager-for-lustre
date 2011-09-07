@@ -82,6 +82,7 @@ class StatefulObject(models.Model):
             transition_options[from_state].append(to_state)
             job_class_map[(from_state, to_state)] = c
 
+
         transition_map = defaultdict(list)
         route_map = {}
         shortest_routes = []
@@ -192,8 +193,10 @@ class StatefulObject(models.Model):
                     reverse_deps_map[so_class].append(lookup_fn)
             StatefulObject.reverse_deps_map = reverse_deps_map
 
+        klass = StatefulObject.so_child(self.__class__)
+
         from itertools import chain
-        lookup_fns = StatefulObject.reverse_deps_map[self.__class__]
+        lookup_fns = StatefulObject.reverse_deps_map[klass]
         querysets = [fn(self) for fn in lookup_fns]
         return chain(*querysets)
 
@@ -210,12 +213,15 @@ class ManagedFilesystem(monitor_models.Filesystem, StatefulObject):
         if not state:
             state = self.state
         
-        # XXX should we actually express this as a reverse dep from the Targets?
-        if state == 'removed':
-            targets = self.get_filesystem_targets()
-            return DependAll([DependOn(t.downcast(), 'removed') for t in targets])
-        else:
-            return DependAll()
+        allowed_mgs_states = set(ManagedTarget.states) - set(['removed'])
+        return DependOn(self.mgs.downcast(),
+                'unmounted',
+                acceptable_states = allowed_mgs_states,
+                fix_state = 'removed')
+
+    reverse_deps = {
+            'ManagedMgs': lambda mmgs: ManagedFilesystem.objects.filter(mgs = mmgs)
+            }
 
 class ManagedTarget(StatefulObject):
     # unformatted: I exist in theory in the database 
@@ -253,11 +259,16 @@ class ManagedTarget(StatefulObject):
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
 
+        if isinstance(self, monitor_models.FilesystemMember) and self.state != 'removed':
+            # Make sure I'm removed if filesystem goes 'created'->'removed'
+            deps.append(DependOn(self.filesystem.downcast(), 'created', fix_state='removed'))
+
         return DependAll(deps)
 
     reverse_deps = {
             'ManagedTargetMount': (lambda mtm: monitor_models.Target.objects.filter(pk = mtm.target_id)),
-            'ManagedHost': lambda mh: set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)])
+            'ManagedHost': lambda mh: set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)]),
+            'ManagedFilesystem': lambda mfs: [t.downcast() for t in mfs.get_filesystem_targets()]
             }
 
 class ManagedOst(monitor_models.ObjectStoreTarget, ManagedTarget):
@@ -341,6 +352,9 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
             # Depend on target in state unmounted OR mounted
             # in order to get this unconfigured when the target is removed.
             return DependOn(self.target.downcast(), 'unmounted', acceptable_states = ['mounted', 'unmounted'], fix_state = 'removed')
+        elif state == 'unconfigured':
+            acceptable_target_states = set(ManagedTarget.states) - set(['removed'])
+            return DependOn(self.target.downcast(), 'unmounted', acceptable_states = acceptable_target_states, fix_state = 'removed')
         else:
             return DependAll()
 
@@ -352,7 +366,6 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
             # We depend on it being in a registered state
             'ManagedTarget': (lambda mt: ManagedTargetMount.objects.filter(target = mt)),
             }
-
 
 class StateLock(models.Model):
     __metaclass__ = DowncastMetaclass
@@ -584,7 +597,19 @@ class Job(models.Model):
         # which will safely cancel the job if something has changed that breaks our deps.
         if isinstance(self, StateChangeJob):
             target_klass, old_state, new_state = self.state_transition
+
+            # Generate dependencies (which will fail) for any dependents
+            # which depend on our old state (bit of a roundabout way of doing it)
+            dependent_deps = []
+            dependents = self.get_stateful_object().get_dependent_objects()
+            for dependent in dependents:
+                for dependent_dependency in dependent.get_deps().all():
+                    if dependent_dependency.stateful_object == self.get_stateful_object() \
+                            and not new_state in dependent_dependency.acceptable_states:
+                        dependent_deps.append(DependOn(dependent, dependent_dependency.fix_state))
+
             return DependAll(
+                    DependAll(dependent_deps),
                     self.get_deps(),
                     self.get_stateful_object().get_deps(new_state),
                     DependOn(self.get_stateful_object(), old_state)
@@ -713,9 +738,13 @@ class RemoveFilesystemJob(Job, StateChangeJob):
         return "Removing filesystem %s from configuration" % (self.filesystem.name)
 
     def get_steps(self):
-        # TODO: actually do something with Lustre before deleting this from our DB
-        from configure.lib.job import DeleteTargetStep
+        from configure.lib.job import DeleteFilesystemStep
         return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
+
+MyModel = type('MyModel', (models.Model,), {
+    'field': models.BooleanField(),
+    '__module__': __name__,
+})
 
 class RemoveRegisteredTargetJob(Job,StateChangeJob):
     state_transition = (ManagedTarget, 'unmounted', 'removed')
@@ -731,8 +760,44 @@ class RemoveRegisteredTargetJob(Job,StateChangeJob):
         from configure.lib.job import DeleteTargetStep
         return [(DeleteTargetStep, {'target_id': self.target.id})]
 
+
+for origin in ['unformatted', 'formatted']:
+    def description(self):
+        return "Removing target %s from configuration" % (self.target.downcast())
+
+    def get_steps(self):
+        from configure.lib.job import DeleteTargetStep
+        return [(DeleteTargetStep, {'target_id': self.target.id})]
+
+    name = "RemoveTargetJob_%s" % origin
+    cls = type(name, (Job, StateChangeJob), {
+        'state_transition': (ManagedTarget, origin, 'removed'),
+        'stateful_object': 'target',
+        'state_verb': "Remove",
+        'target': models.ForeignKey(monitor_models.Target),
+        'description': description,
+        'get_steps': get_steps,
+        '__module__': __name__,
+    })
+    import sys
+    this_module = sys.modules[__name__]
+    setattr(this_module, name, cls)
+
 class RemoveTargetMountJob(Job, StateChangeJob):
-    state_transition = (ManagedTarget, 'configured', 'removed')
+    state_transition = (ManagedTargetMount, 'configured', 'removed')
+    stateful_object = 'target_mount'
+    state_verb = "Remove"
+    target_mount = models.ForeignKey('ManagedTargetMount')
+    def description(self):
+        return "Removing target mount %s from configuration" % (self.target_mount.downcast())
+
+    def get_steps(self):
+        from configure.lib.job import UnconfigurePacemakerStep, DeleteTargetMountStep
+        return [(UnconfigurePacemakerStep, {'target_mount_id': self.target_mount.id}),
+                (DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
+
+class RemoveUnconfiguredTargetMountJob(Job, StateChangeJob):
+    state_transition = (ManagedTargetMount, 'unconfigured', 'removed')
     stateful_object = 'target_mount'
     state_verb = "Remove"
     target_mount = models.ForeignKey('ManagedTargetMount')
@@ -741,8 +806,7 @@ class RemoveTargetMountJob(Job, StateChangeJob):
 
     def get_steps(self):
         from configure.lib.job import UnconfigureTargetMountStep, DeleteTargetMountStep
-        return [(UnconfigureTargetMountStep, {'target_mount_id': self.target_mount.id}),
-                (DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
+        return [(DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
 
 class ConfigureTargetMountJob(Job, StateChangeJob):
     state_transition = (ManagedTargetMount, 'unconfigured', 'configured')
@@ -855,7 +919,7 @@ class FormatTargetJob(Job, StateChangeJob):
     def description(self):
         target = self.target.downcast()
         if isinstance(target, ManagedMgs):
-            return "Formatting MGS on %s" % target.targetmount_set.get(primary = True).host
+            return "Formatting MGS"
         elif isinstance(target, ManagedMdt):
             return "Formatting MDT for filesystem %s" % target.filesystem.name
         elif isinstance(target, ManagedOst):

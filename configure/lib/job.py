@@ -174,7 +174,10 @@ class StateChangeJob(object):
     def get_stateful_object(self):
         from configure.models import StatefulObject
         stateful_object = getattr(self, self.stateful_object)
-        stateful_object = stateful_object.downcast()
+
+        # Get a fresh instance every time, we don't want one hanging around in the job
+        # run procedure because steps might be modifying it
+        stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk).downcast()
         assert(isinstance(stateful_object, StatefulObject))
         return stateful_object
 
@@ -426,15 +429,30 @@ class ConfigurePacemakerStep(Step):
 
         # target.name should have been populated by RegisterTarget
         # target_mount.block_device  should have been populated by FindDeviceStep
-        if target_mount.block_device == None or target_mount.target.name == None:
-            from configure.lib.job import StepCleanError
-            raise StepCleanError()
+        assert(target_mount.block_device != None and target_mount.target.name != None)
 
         invoke_agent(target_mount.host, "configure-ha --device %s --label %s %s --mountpoint %s" % (
                                     target_mount.block_device.path,
                                     target_mount.target.name,
                                     target_mount.primary and "--primary" or "",
                                     target_mount.mount_point))
+
+class UnconfigurePacemakerStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from monitor.models import TargetMount
+        target_mount_id = kwargs['target_mount_id']
+        target_mount = TargetMount.objects.get(id = target_mount_id)
+
+        # we would never have succeeded configuring in the first place if target
+        # didn't have its name
+        assert(target_mount.target.name != None)
+
+        invoke_agent(target_mount.host, "unconfigure-ha --label %s %s" % (
+                                    target_mount.target.name,
+                                    target_mount.primary and "--primary" or ""))
 
 class StartLNetStep(Step):
     def is_idempotent(self):
@@ -544,13 +562,6 @@ class DeleteFilesystemStep(Step):
         return True
 
     def run(self, kwargs):
-        from configure.models import ManagedTargetMount
+        from configure.models import ManagedFilesystem
         ManagedFilesystem.delete(kwargs['filesystem_id'])
 
-class UnconfigureTargetMountStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        # TODO: implement unconfigure on the agent
-        pass
