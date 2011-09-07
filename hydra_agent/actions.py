@@ -75,6 +75,21 @@ def register_target(args):
 
     return {'label': blkid_output.strip()}
 
+def _mount_config_file(label):
+    return os.path.join(LIBDIR, label)
+
+def unconfigure_ha(args):
+    if args.primary:
+        try_run(["crm", "configure", "delete", args.label])
+
+    try:
+        os.unlink(_mount_config_file(args.label))
+    except OSError, e:
+        if e.errno == errno.ENOENT:
+            pass
+        else:
+            raise e
+
 def configure_ha(args):
     if args.primary:
         # now configure pacemaker for this target
@@ -102,7 +117,7 @@ def configure_ha(args):
             raise e
 
     # Save the metadata for the mount (may throw an IOError)
-    file = open("%s/%s" % (LIBDIR, args.label), 'w')
+    file = open(_mount_config_file(args.label), 'w')
     json.dump({"bdev": args.device, "mntpt": args.mountpoint}, file)
     file.close()
 

@@ -23,6 +23,7 @@ if __name__ == '__main__':
                                          help='mountpoint for target')
     parser_register_target.set_defaults(func=actions.register_target)
 
+
     parser_configure_ha = subparsers.add_parser('configure-ha',
                                  help='configure a target\'s HA parameters')
     parser_configure_ha.add_argument('--device', required=True,
@@ -34,6 +35,16 @@ if __name__ == '__main__':
     parser_configure_ha.add_argument('--mountpoint', required=True,
                                      help='mountpoint for target')
     parser_configure_ha.set_defaults(func=actions.configure_ha)
+
+
+    parser_configure_ha = subparsers.add_parser('unconfigure-ha',
+                                 help='unconfigure a target\'s HA parameters')
+    parser_configure_ha.add_argument('--label', required=True,
+                                     help='label for target')
+    parser_configure_ha.add_argument('--primary', action='store_true',
+                                     help='target is primary on this node')
+    parser_configure_ha.set_defaults(func=actions.unconfigure_ha)
+
 
     parser_mount_target = subparsers.add_parser('mount-target',
                                                 help='mount a target')
