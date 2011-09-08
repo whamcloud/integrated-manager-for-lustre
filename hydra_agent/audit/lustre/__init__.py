@@ -19,11 +19,8 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         """Returns a boolean indicating whether or not this audit class should
         be instantiated.
         """
-        available = False
-        available = cls.kmod_is_loaded(fscontext)
-        available = cls.device_is_present(fscontext)
-
-        return available
+        return (cls.kmod_is_loaded(fscontext) and
+                cls.device_is_present(fscontext))
 
     @classmethod
     def device_is_present(cls, fscontext=None):
@@ -124,10 +121,13 @@ class LustreAudit(BaseAudit, FileSystemMixin):
 
     def devices(self):
         """Returns a list of Lustre devices local to this node."""
-        return [{'index': a, 'state': b, 'type': c, 'name': d,
-                 'uuid': e, 'refcount': f} for a, b, c, d, e, f in
-            [re.split('\s+', line)[1:] for line in
-                self.read_lines('/proc/fs/lustre/devices')]]
+        try:
+            return [{'index': a, 'state': b, 'type': c, 'name': d,
+                    'uuid': e, 'refcount': f} for a, b, c, d, e, f in
+                [re.split('\s+', line)[1:] for line in
+                    self.read_lines('/proc/fs/lustre/devices')]]
+        except IOError:
+            return []
    
     def _gather_raw_metrics(self):
         raise NotImplementedError
