@@ -34,11 +34,19 @@ def locate_device(args):
             node_result = d
     return node_result
 
-def try_run(arg_list, shell = False):
+def run(arg_list, shell = False):
+    """Run a subprocess, and return a tuple of rc, stdout, stderr"""
     p = subprocess.Popen(arg_list, shell = shell, stdout = subprocess.PIPE,
                          stderr = subprocess.PIPE)
     stdout, stderr = p.communicate()
     rc = p.wait()
+
+    return rc, stdout, stderr
+
+def try_run(arg_list, shell = False):
+    """Run a subprocess, and raise an exception if it returns nonzero.  Return
+    stdout string."""
+    rc, stdout, stderr = run(arg_list, shell)
     if rc != 0:
         raise RuntimeError("Error running '%s': '%s' '%s'" % (" ".join(arg_list), stdout, stderr))
 
@@ -79,8 +87,25 @@ def _mount_config_file(label):
     return os.path.join(LIBDIR, label)
 
 def unconfigure_ha(args):
+    # NB: 'crm configure delete' returns zero if it fails 
+    # because the resource because it's running.  Helpful.
+    # We do an ugly check on the stderr to detect the message
+    # from that case.
     if args.primary:
-        try_run(["crm", "configure", "delete", args.label])
+        cmd = ["crm", "configure", "delete", args.label]
+        rc, stdout, stderr = run(cmd)
+        if rc != 0:
+            if rc == 1 and stderr.find("does not exist") != -1:
+                # Removing something which is already removed is
+                # a success: idempotency.
+                pass
+            else:
+                raise RuntimeError("Error running '%s': %s" % (cmd, stderr))
+        elif stderr.find("is running, can't delete it") != -1:
+            # Messages like: "WARNING: resource flintfs-MDT0000 is running, can't delete it"
+            # FIXME: this conditional may break oWARNING: resource flintfs-MDT0000 is running, can't delete itn non-english
+            # systems or new versions of pacemaker
+            raise RuntimeError("Error unconfiguring %s: it is running" % (args.label))
 
     try:
         os.unlink(_mount_config_file(args.label))
@@ -145,6 +170,7 @@ def start_target(args):
     try_run(["crm", "resource", "start", args.label])
 
     # now wait for it
+    # FIXME: this may break on non-english systems or new versions of pacemaker
     try_run("while ! crm resource status %s 2>&1 | grep -q \"is running\"; do sleep 1; done" % \
             args.label, shell=True)
 
@@ -152,6 +178,7 @@ def stop_target(args):
     try_run(["crm", "resource", "stop", args.label])
 
     # now wait for it
+    # FIXME: this may break on non-english systems or new versions of pacemaker
     try_run("while ! crm resource status %s 2>&1 | grep -q \"is NOT running\"; do sleep 1; done" % \
             args.label, shell=True)
 
