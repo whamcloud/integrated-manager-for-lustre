@@ -81,7 +81,7 @@ class RemoveUnconfiguredTargetMountJob(Job, StateChangeJob):
         return "Removing target mount %s from configuration" % (self.target_mount.downcast())
 
     def get_steps(self):
-        from configure.lib.job import UnconfigureTargetMountStep, DeleteTargetMountStep
+        from configure.lib.job import DeleteTargetMountStep
         return [(DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
 
 class ConfigureTargetMountJob(Job, StateChangeJob):
