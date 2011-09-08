@@ -506,6 +506,7 @@ class UnloadLNetStep(Step):
         return True
 
     def run(self, kwargs):
+        from hydra_agent.cmds import lustre
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
@@ -566,4 +567,12 @@ class DeleteFilesystemStep(Step):
     def run(self, kwargs):
         from configure.models import ManagedFilesystem
         ManagedFilesystem.delete(kwargs['filesystem_id'])
+
+class DeleteHostStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost
+        ManagedHost.delete(kwargs['host_id'])
 

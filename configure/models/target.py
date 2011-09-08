@@ -7,6 +7,7 @@ from django.db import models
 from monitor import models as monitor_models
 from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll
 from configure.models.jobs import StatefulObject, Job
+from configure.models.target_mount import ManagedTargetMount
 
 class ManagedTarget(StatefulObject):
     # unformatted: I exist in theory in the database 
@@ -52,9 +53,16 @@ class ManagedTarget(StatefulObject):
 
         return DependAll(deps)
 
+    def managed_host_to_managed_targets(mh):
+        """Return iterable of all ManagedTargets which could potentially depend on the state
+           of a managed host"""
+        # Break this out into a function to avoid importing ManagedTargetMount at module scope
+        from configure.models.target_mount import ManagedTargetMount
+        return set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)])
+
     reverse_deps = {
             'ManagedTargetMount': (lambda mtm: monitor_models.Target.objects.filter(pk = mtm.target_id)),
-            'ManagedHost': lambda mh: set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)]),
+            'ManagedHost': managed_host_to_managed_targets,
             'ManagedFilesystem': lambda mfs: [t.downcast() for t in mfs.get_filesystem_targets()]
             }
 
@@ -136,6 +144,8 @@ class RemoveRegisteredTargetJob(Job,StateChangeJob):
         from configure.lib.job import DeleteTargetStep
         return [(DeleteTargetStep, {'target_id': self.target.id})]
 
+# FIXME: this is a pretty horrible way of generating job classes for
+# a number of originating states to the same end state
 for origin in ['unformatted', 'formatted']:
     def description(self):
         return "Removing target %s from configuration" % (self.target.downcast())

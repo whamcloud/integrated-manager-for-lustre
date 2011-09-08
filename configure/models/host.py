@@ -10,7 +10,8 @@ from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll
 
 
 class ManagedHost(monitor_models.Host, StatefulObject):
-    states = ['lnet_unloaded', 'lnet_down', 'lnet_up']
+    # TODO: separate the LNET state [unloaded, down, up] from the host state [created, removed]
+    states = ['lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'lnet_unloaded'
 
     class Meta:
@@ -79,3 +80,19 @@ class StopLNetJob(Job, StateChangeJob):
     def get_steps(self):
         from configure.lib.job import StopLNetStep
         return [(StopLNetStep, {'host_id': self.host.id})]
+
+class RemoveHostJob(Job, StateChangeJob):
+    state_transition = (ManagedHost, 'lnet_unloaded', 'removed')
+    stateful_object = 'host'
+    host = models.ForeignKey(ManagedHost)
+    state_verb = 'Remove'
+
+    class Meta:
+        app_label = 'configure'
+
+    def description(self):
+        return "Remove host %s from configuration" % self.host
+
+    def get_steps(self):
+        from configure.lib.job import DeleteHostStep
+        return [(DeleteHostStep, {'host_id': self.host.id})]

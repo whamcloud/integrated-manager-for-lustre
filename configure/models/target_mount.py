@@ -32,15 +32,25 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
         if not state:
             state = self.state
 
+        deps = []
+
         if state == 'configured':
             # Depend on target in state unmounted OR mounted
             # in order to get this unconfigured when the target is removed.
-            return DependOn(self.target.downcast(), 'unmounted', acceptable_states = ['mounted', 'unmounted'], fix_state = 'removed')
+            deps.append(DependOn(self.target.downcast(), 'unmounted', acceptable_states = ['mounted', 'unmounted'], fix_state = 'removed'))
         elif state == 'unconfigured':
             acceptable_target_states = set(self.target.downcast().states) - set(['removed'])
-            return DependOn(self.target.downcast(), 'unmounted', acceptable_states = acceptable_target_states, fix_state = 'removed')
-        else:
-            return DependAll()
+            deps.append(DependOn(self.target.downcast(), 'unmounted', acceptable_states = acceptable_target_states, fix_state = 'removed'))
+
+        if state != 'removed':
+            # In all states but removed, depend on the host not being removed
+            acceptable_host_states = set(self.host.downcast().states) - set(['removed'])
+            # FIXME: the 'preferred' state is actually irrelevant in calls like this
+            # which only exist to get our fix_state set when the dependency leaves the set of
+            # acceptable states, it's noise.
+            deps.append(DependOn(self.host.downcast(), 'lnet_up', acceptable_states = acceptable_host_states, fix_state = 'removed'))
+
+        return DependAll(deps)
 
     # Reverse dependencies are records of other classes which must check
     # our get_deps when they change state.
@@ -49,6 +59,7 @@ class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
     reverse_deps = {
             # We depend on it being in a registered state
             'ManagedTarget': (lambda mt: ManagedTargetMount.objects.filter(target = mt)),
+            'ManagedHost': (lambda mh: ManagedTargetMount.objects.filter(host = mh)),
             }
 
 class RemoveTargetMountJob(Job, StateChangeJob):
