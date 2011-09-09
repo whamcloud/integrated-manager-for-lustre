@@ -16,6 +16,27 @@
     <li>Cancelled: {{job.cancelled}}</li>
 </ul>
 
+<h3>Output</h3>
+
+{% for step_result in job.stepresult_set.all %}
+    <h4>Step {{step_result.step_number}} of {{step_result.step_count}}</h4>
+    <p>Step class: {{step_result.step_klass_name}}</p>
+    <p>Parameters: {{step_result.args}}</p>
+    <p>State: {{step_result.state}}</p>
+    <p>Started at {{step_result.created_at}}, last updated at {{step_result.modified_at}}</p>
+    <h5>Console output</h5>
+    <pre>{{step_result.console}}</pre>
+    {% if step_result.exception %}
+        <h5>Exception</h5>
+        <pre>{{step_result.exception}}</pre>
+        {% if step_result.backtrace %}
+        <h5>Backtrace</h5>
+        <pre>{{step_result.backtrace}}</pre>
+        {% endif %}
+    {% endif %}
+
+{% endfor %}
+
 <h3>Debug: Wait for {{job.wait_for_completions}}/{{job.wait_for_count}}:</h3>
 <ul>
     {% for dep in job.wait_for.all %}
@@ -39,35 +60,6 @@
     <li>{{l}}</li>
     {% endfor %}
 </ul>
-
-<h3>Steps</h3>
-
-<table>
-    <tr>
-        <th>Id</th>
-        <th>Task id</th>
-        <th>info</th>
-        <th>State</th>
-    </tr>
-{% for step in job.stepattempt_set.all %}
-
-<tr>
-    <td>{{step.id}}</td>
-    <td>{{step.debug_step}}</td>
-    <td>{{step.step_index}}</td>
-    <td>{{step.task_id}}</td>
-    <td>
-        <ul>
-        {% for k,v in step.info.items %}
-        <li>{{k}}: {{v}}</li>
-        {% endfor %}
-        </ul>
-    </td>
-    <td>{{step.state}}</td>
-</tr>
-
-{% endfor %}
-</table>
 
 {% endblock %}
 

@@ -138,10 +138,34 @@ class StepDirtyError(Exception):
 
 STEP_PAUSE_DELAY = 10
 
+class AgentException(Exception):
+    def __init__(self, host_id = None, cmdline = None, agent_exception = None, agent_backtrace = None):
+        # NB we accept construction without arguments in order to be picklable
+        self.host_id = host_id
+        self.cmdline = cmdline
+        self.agent_exception = agent_exception
+        self.agent_backtrace = agent_backtrace
+
+    def __str__(self):
+        from configure.models import ManagedHost
+        return """AgentException
+Host: %s
+Command: %s
+Exception: %s (%s)
+%s
+""" % (ManagedHost.objects.get(pk = self.host_id),
+        self.cmdline,
+        self.agent_exception,
+        self.agent_exception.__class__.__name__,
+        self.agent_backtrace)
+
 class Step(object):
-    def __init__(self, job, args):
+    def __init__(self, job, args, result):
         self.args = args
         self.job_id = job.id
+
+        # A StepResult object
+        self.result = result
 
         # This step is the final one in the job
         self.final = False
@@ -155,12 +179,94 @@ class Step(object):
            return True."""
         return False
 
-    def run(self):
+    def run(self, kwargs):
         raise NotImplementedError
 
     def retry(self):
         steps = self.get_steps()
         # Which one failed?
+
+    def debug_ssh(self, host, command):
+        ssh_monitor = host.monitor.downcast()
+
+        import paramiko
+        import socket
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        from settings import AUDIT_PERIOD
+        # How long it may take to establish a TCP connection
+        SOCKET_TIMEOUT = 3600
+        # How long it may take to get the output of our agent
+        # (including tunefs'ing N devices)
+        SSH_READ_TIMEOUT = 3600
+
+        args = {"hostname": ssh_monitor.host.address,
+                "username": ssh_monitor.get_username(),
+                "timeout": SOCKET_TIMEOUT}
+        if ssh_monitor.port:
+            args["port"] = ssh_monitor.port
+        # Note: paramiko has a hardcoded 15 second timeout on SSH handshake after
+        # successful TCP connection (Transport.banner_timeout).
+        ssh.connect(**args)
+        transport = ssh.get_transport()
+        channel = transport.open_session()
+        channel.settimeout(SSH_READ_TIMEOUT)
+
+        header = "====\nSSH %s\nCommand: '%s'\n====\n\n" % (host, command)
+        self.result.console = self.result.console + header
+
+        channel.exec_command(command)
+
+        stderr_buf = ""
+        stdout_buf = ""
+        while (not channel.exit_status_ready()) or channel.recv_ready() or channel.recv_stderr_ready():
+            while channel.recv_ready():
+                chunk = channel.recv(4096)
+                stdout_buf = stdout_buf + chunk
+            while channel.recv_stderr_ready():
+                chunk = channel.recv_stderr(4096)
+                stderr_buf = stderr_buf + chunk
+                self.result.console = self.result.console + chunk
+                self.result.save()
+
+            time.sleep(0.1)
+
+        result_code = channel.recv_exit_status()
+
+        ssh.close()
+
+        job_log.debug("debug_ssh:%s:%s:%s" % (host, result_code, command))
+        if result_code != 0:
+            job_log.error("debug_ssh: nonzero rc %d" % result_code)
+            job_log.error(stdout_buf)
+            job_log.error(stderr_buf)
+        return result_code, stdout_buf, stderr_buf
+
+    def invoke_agent(self, host, cmdline):
+        code, out, err = self.debug_ssh(host, "hydra-agent.py %s" % cmdline)
+
+        if code == 0:
+            # May raise a ValueError
+            try:
+                data = json.loads(out)
+            except ValueError:
+                raise RuntimeError()
+
+            try:
+                if data['success']:
+                    result = data['result']
+                    return result
+                else:
+                    exception = pickle.loads(data['exception'])
+                    backtrace = data['backtrace']
+                    job_log.error("Agent returned exception from host %s running '%s': %s" % (host, cmdline, backtrace))
+                    raise AgentException(host.id, cmdline, exception, backtrace)
+            except KeyError:
+                raise RuntimeError("Malformed output from agent: '%s'" % out)
+
+        else:
+            raise RuntimeError("Error running agent on %s" % (host))
 
 class StateChangeJob(object):
     """Subclasses must define a class attribute 'stateful_object'
@@ -182,67 +288,6 @@ class StateChangeJob(object):
         stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk).downcast()
         assert(isinstance(stateful_object, StatefulObject))
         return stateful_object
-
-def debug_ssh(host, command):
-    ssh_monitor = host.monitor.downcast()
-
-    import paramiko
-    import socket
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    from settings import AUDIT_PERIOD
-    # How long it may take to establish a TCP connection
-    SOCKET_TIMEOUT = 3600
-    # How long it may take to get the output of our agent
-    # (including tunefs'ing N devices)
-    SSH_READ_TIMEOUT = 3600
-
-    args = {"hostname": ssh_monitor.host.address,
-            "username": ssh_monitor.get_username(),
-            "timeout": SOCKET_TIMEOUT}
-    if ssh_monitor.port:
-        args["port"] = ssh_monitor.port
-    # Note: paramiko has a hardcoded 15 second timeout on SSH handshake after
-    # successful TCP connection (Transport.banner_timeout).
-    ssh.connect(**args)
-    transport = ssh.get_transport()
-    channel = transport.open_session()
-    channel.settimeout(SSH_READ_TIMEOUT)
-    channel.exec_command(command)
-    result_stdout = channel.makefile('rb').read()
-    result_stderr = channel.makefile_stderr('rb').read()
-    result_code = channel.recv_exit_status()
-    ssh.close()
-
-    job_log.debug("debug_ssh:%s:%s:%s" % (host, result_code, command))
-    if result_code != 0:
-        job_log.error("debug_ssh:%s:%s:%s" % (host, result_code, command))
-        job_log.error(result_stdout)
-        job_log.error(result_stderr)
-    return result_code, result_stdout, result_stderr
-
-def invoke_agent(host, cmdline):
-    code, out, err = debug_ssh(host, "hydra-agent.py %s" % cmdline)
-    if code == 0:
-        # May raise a ValueError
-        data = json.loads(out)
-
-        try:
-            if data['success']:
-                result = data['result']
-                return result
-            else:
-                exception = pickle.loads(data['exception'])
-                backtrace = data['backtrace']
-                job_log.error("Agent returned exception from host %s running '%s': %s" % (host, cmdline, backtrace))
-                raise exception
-        except KeyError:
-            raise RuntimeError("Malformed output from agent: %s" % out)
-
-    else:
-        raise RuntimeError("Error running agent on %s" % host)
-
 
 class FindDeviceStep(Step):
     """Given a TargetMount whose Target's primary TargetMount's LunNode's Lun has
@@ -274,7 +319,7 @@ class FindDeviceStep(Step):
         assert(lun.fs_uuid)
 
         # NB May throw any agent error (don't care, idempotent)
-        node_info = invoke_agent(target_mount.host, "locate-device --uuid %s" % lun.fs_uuid)
+        node_info = self.invoke_agent(target_mount.host, "locate-device --uuid %s" % lun.fs_uuid)
         try:
             lun_node = LunNode.objects.get(
                     host = target_mount.host, path = node_info['path'])
@@ -339,7 +384,7 @@ class MkfsStep(Step):
         assert(target_mount.block_device != None)
 
         args = self._mkfs_args(target)
-        result = invoke_agent(target_mount.host, "format-target --args %s" % escape(json.dumps(args)))
+        result = self.invoke_agent(target_mount.host, "format-target --args %s" % escape(json.dumps(args)))
         fs_uuid = result['uuid']
         lun_node = target_mount.block_device
         if lun_node.lun:
@@ -371,7 +416,7 @@ class AnyTargetMountStep(Step):
             job_log.debug("command '%s' on target %s trying targetmount %s" % (command, target, tm))
             
             try:
-                invoke_agent(tm.host, command)
+                self.invoke_agent(tm.host, command)
                 # Success!
                 return
             except Exception, e:
@@ -413,7 +458,7 @@ class RegisterTargetStep(Step):
         target_mount_id = kwargs['target_mount_id']
         target_mount = TargetMount.objects.get(id = target_mount_id)
 
-        result = invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.block_device.path, target_mount.mount_point))
+        result = self.invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.block_device.path, target_mount.mount_point))
         label = result['label']
         target = target_mount.target
         job_log.debug("Registration complete, updating target %d with name=%s" % (target.id, label))
@@ -433,7 +478,7 @@ class ConfigurePacemakerStep(Step):
         # target_mount.block_device  should have been populated by FindDeviceStep
         assert(target_mount.block_device != None and target_mount.target.name != None)
 
-        invoke_agent(target_mount.host, "configure-ha --device %s --label %s %s --mountpoint %s" % (
+        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s %s --mountpoint %s" % (
                                     target_mount.block_device.path,
                                     target_mount.target.name,
                                     target_mount.primary and "--primary" or "",
@@ -452,7 +497,7 @@ class UnconfigurePacemakerStep(Step):
         # didn't have its name
         assert(target_mount.target.name != None)
 
-        invoke_agent(target_mount.host, "unconfigure-ha --label %s %s" % (
+        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s %s" % (
                                     target_mount.target.name,
                                     target_mount.primary and "--primary" or ""))
 
@@ -465,7 +510,7 @@ class StartLNetStep(Step):
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, lustre.lnet_start())
+        code, out, err = self.debug_ssh(host, lustre.lnet_start())
         if code != 0:
             from configure.lib.job import StepCleanError
             job_log.debug("%s %s %s" % (code, out, err))
@@ -480,7 +525,7 @@ class StopLNetStep(Step):
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, lustre.lnet_stop())
+        code, out, err = self.debug_ssh(host, lustre.lnet_stop())
         if code != 0:
             from configure.lib.job import StepCleanError
             job_log.debug("%s %s %s" % (code, out, err))
@@ -495,7 +540,7 @@ class LoadLNetStep(Step):
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, lustre.lnet_load())
+        code, out, err = self.debug_ssh(host, lustre.lnet_load())
         if code != 0:
             from configure.lib.job import StepCleanError
             job_log.debug("%s %s %s" % (code, out, err))
@@ -510,7 +555,7 @@ class UnloadLNetStep(Step):
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
 
-        code, out, err = debug_ssh(host, lustre.lnet_unload())
+        code, out, err = self.debug_ssh(host, lustre.lnet_unload())
         if code != 0:
             from configure.lib.job import StepCleanError
             job_log.debug("%s %s %s" % (code, out, err))
@@ -528,7 +573,7 @@ class ConfParamStep(Step):
             lctl_command = "lctl conf_param %s=%s" % (conf_param.get_key(), conf_param.value)
         else:
             lctl_command = "lctl conf_param -d %s" % conf_param.get_key()
-        code, out, err = debug_ssh(conf_param.mgs.primary_server(), lctl_command)
+        code, out, err = self.debug_ssh(conf_param.mgs.primary_server(), lctl_command)
         if (code != 0):
             from configure.lib.job import StepCleanError
             job_log.error(code, out, err)

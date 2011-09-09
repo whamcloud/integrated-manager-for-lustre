@@ -6,6 +6,7 @@
 from celery.decorators import task, periodic_task
 
 from configure.lib.job import StepPaused, StepAborted, StepDirtyError, StepCleanError
+from configure.lib.job import AgentException
 
 import settings
 from datetime import datetime, timedelta
@@ -134,7 +135,7 @@ def run_job(job_id):
     from configure.lib.job import job_log
     job_log.info("Job %d: run_job" % job_id)
 
-    from configure.models import Job
+    from configure.models import Job, StepResult
     job = Job.objects.get(pk = job_id)
 
     # This can happen if we lose power after calling .complete but before returning,
@@ -167,6 +168,10 @@ def run_job(job_id):
         else:
             job_log.info("Job %d will re-start from step %d" % (job.id, job.started_step + 1))
 
+        # If we're picking up after a previous run crashed, go back and mark
+        # any incomplete StepResults as complete.
+        job.stepresult_set.filter(state = 'incomplete').update(state = 'crashed')
+
     from django.db import transaction
     @transaction.commit_on_success()
     def mark_start_step(i):
@@ -183,19 +188,52 @@ def run_job(job_id):
     while(step_index < len(steps)):
         mark_start_step(step_index)
         klass, args = steps[step_index]
-        step = klass(job, args)
+
+        result = StepResult(
+                step_klass = klass,
+                args = args,
+                step_index = step_index,
+                step_count = len(steps),
+                job = job)
+        result.save()
+
+        step = klass(job, args, result)
+
         try:
             job_log.debug("Job %d running step %d" % (job.id, step_index))
             step.run(args)
             job_log.debug("Job %d step %d successful" % (job.id, step_index))
+
+            result.state = 'success'
+        except AgentException, e:
+            job_log.error("Job %d step %d encountered an agent error" % (job.id, step_index))
+            job.complete(errored = True)
+
+            result.exception = e
+            # Don't bother storing the backtrace to invoke_agent, the interesting part
+            # is the backtrace inside the AgentException
+            result.state = 'failed'
+            result.save()
+
+            return None
+
         except Exception, e:
             job_log.error("Job %d step %d encountered an error" % (job.id, step_index))
             import sys
             import traceback
             exc_info = sys.exc_info()
-            job_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
+            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            job_log.error(backtrace)
             job.complete(errored = True)
+
+            result.exception = e
+            result.backtrace = backtrace
+            result.state = 'failed'
+            result.save()
+            
             return None
+        finally:
+            result.save()
 
         mark_finish_step(step_index)
         step_index = step_index + 1

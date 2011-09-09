@@ -199,6 +199,11 @@ class StatefulObject(models.Model):
 
 
 class StateLock(models.Model):
+    """Lock is the wrong word really, these objects exist for the lifetime of the Job.
+    All locks depend on the last pending job to write to a stateful object on which
+    they hold claim read or write lock.
+    """
+
     __metaclass__ = DowncastMetaclass
     job = models.ForeignKey('Job')
 
@@ -237,10 +242,6 @@ class StateWriteLock(StateLock):
     def __str__(self):
         return "Job %d writelock on %s %s->%s" % (self.job.id, self.locked_item, self.begin_state, self.end_state)
 
-# Lock is the wrong word really, these objects exist for the lifetime of the Job, 
-# to allow 
-# All locks depend on the last pending job to write to a stateful object on which
-# they hold claim read or write lock.
 
 class Job(models.Model):
     __metaclass__ = DowncastMetaclass
@@ -565,3 +566,34 @@ class Job(models.Model):
             return "%s (Job %s)" % (self.description(), id)
         except NotImplementedError:
             return "<Job %s>" % id
+
+from picklefield.fields import PickledObjectField
+class StepResult(models.Model):
+    job = models.ForeignKey(Job)
+    step_klass = PickledObjectField()
+    args = PickledObjectField()
+
+    step_index = models.IntegerField()
+    step_count = models.IntegerField()
+
+    console = models.TextField()
+    exception = PickledObjectField(blank = True, null = True, default = None)
+    backtrace = models.TextField()
+
+    state = models.CharField(max_length = 32, default='incomplete')
+
+    modified_at = models.DateTimeField(auto_now = True)
+    created_at = models.DateTimeField(auto_now_add = True)
+    
+    def step_number(self):
+        """Template helper"""
+        return self.step_index + 1
+
+    def step_klass_name(self):
+        """Template helper"""
+        return self.step_klass.__name__
+
+    class Meta:
+        app_label = 'configure'
+
+
