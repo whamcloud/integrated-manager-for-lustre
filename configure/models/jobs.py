@@ -593,6 +593,9 @@ class StepResult(models.Model):
         """Template helper"""
         return self.step_klass.__name__
 
+    def describe(self):
+        return self.step_klass.describe(self.args)
+
     class Meta:
         app_label = 'configure'
 

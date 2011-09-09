@@ -1,0 +1,18 @@
+
+div#content {
+    padding: 12px;
+}
+
+pre.console {
+    background: #fff380;
+    color: #000;
+    font-weight: bold;
+    padding: 6px;
+    border: 1px solid gray;
+    margin-top: 6px;
+    margin-bottom: 12px;
+}
+
+h5 {
+    margin-bottom: 0px;
+}

@@ -170,6 +170,10 @@ class Step(object):
         # This step is the final one in the job
         self.final = False
 
+    @classmethod
+    def describe(cls, kwargs):
+        return "%s: %s" % (cls.__name__, kwargs)
+
     def mark_final(self):
         self.final = True
 
@@ -297,6 +301,11 @@ class FindDeviceStep(Step):
     def is_idempotent(self):
         return True
 
+    def describe(self, kwargs):
+        from configure.models import ManagedTargetMount
+        target_mount = ManagedTargetMount.objects.get(pk = kwargs['target_mount_id'])
+        return "Looking up device node for %s" % target_mount
+
     def run(self, kwargs):
         from configure.models import ManagedTargetMount
         from monitor.models import LunNode
@@ -370,6 +379,14 @@ class MkfsStep(Step):
 
         return kwargs
 
+    @classmethod
+    def describe(cls, kwargs):
+        from monitor.models import Target
+        target_id = kwargs['target_id']
+        target = Target.objects.get(id = target_id).downcast()
+        target_mount = target.targetmount_set.get(primary = True)
+        return "Format %s on %s" % (target, target_mount.host)
+    
     def run(self, kwargs):
         from monitor.models import Target, Lun
         from configure.models import ManagedTarget
