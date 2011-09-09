@@ -37,13 +37,13 @@ if __name__ == '__main__':
     parser_configure_ha.set_defaults(func=actions.configure_ha)
 
 
-    parser_configure_ha = subparsers.add_parser('unconfigure-ha',
+    parser_unconfigure_ha = subparsers.add_parser('unconfigure-ha',
                                  help='unconfigure a target\'s HA parameters')
-    parser_configure_ha.add_argument('--label', required=True,
+    parser_unconfigure_ha.add_argument('--label', required=True,
                                      help='label for target')
-    parser_configure_ha.add_argument('--primary', action='store_true',
+    parser_unconfigure_ha.add_argument('--primary', action='store_true',
                                      help='target is primary on this node')
-    parser_configure_ha.set_defaults(func=actions.unconfigure_ha)
+    parser_unconfigure_ha.set_defaults(func=actions.unconfigure_ha)
 
 
     parser_mount_target = subparsers.add_parser('mount-target',
