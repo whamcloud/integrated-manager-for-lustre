@@ -65,6 +65,40 @@ mgc 50620 2 mgs, Live 0xffffffffa0a90000
 
         shutil.rmtree(self.test_root)
 
+    def test_no_lustre_modules_loaded(self):
+        """Audit shouldn't fail if there are no Lustre modules loaded."""
+        self.test_root = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.test_root, "proc"))
+
+        # Create a modules file with no Lustre modules in it.
+        f = open(os.path.join(self.test_root, "proc/modules"), "w+")
+        f.write("""
+lockd 74268 1 nfs, Live 0xffffffffa0105000
+fscache 46761 1 nfs, Live 0xffffffffa00ef000 (T)
+nfs_acl 2613 1 nfs, Live 0xffffffffa00e9000
+auth_rpcgss 44925 1 nfs, Live 0xffffffffa00d6000
+sunrpc 242277 18 nfs,lockd,nfs_acl,auth_rpcgss, Live 0xffffffffa0082000
+sd_mod 38196 6 - Live 0xffffffffa006b000
+crc_t10dif 1507 1 sd_mod, Live 0xffffffffa0065000
+e1000 167605 0 - Live 0xffffffffa0030000
+ahci 40197 5 - Live 0xffffffffa001e000
+dm_mod 75539 2 dm_mirror,dm_log, Live 0xffffffffa0000000
+        """)
+        f.close()
+
+        # Create dummy nodestats files
+        f = open(os.path.join(self.test_root, "proc/meminfo"), "w")
+        f.write("MemTotal:        3991680 kB\n")
+        f.close()
+        f = open(os.path.join(self.test_root, "proc/stat"), "w")
+        f.write("cpu  24601 2 33757 3471279 10892 6 676 0 0\n")
+        f.close()
+
+        audit = LocalAudit(fscontext=self.test_root)
+        assert audit.metrics() == {'raw': {'node': {'cpustats': {'usage': 59042, 'total': 3541213}, 'meminfo': {'MemTotal': 3991680}}}}
+
+        shutil.rmtree(self.test_root)
+
     def tearDown(self):
         # Just to make super-duper sure it's gone.
         try:
