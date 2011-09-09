@@ -6,7 +6,6 @@
 """ Library of actions that the hydra-agent can be asked to carry out."""
 
 from hydra_agent.legacy_audit import LocalLustreAudit
-import sys
 import errno
 import os
 import shlex, subprocess
@@ -34,14 +33,75 @@ def locate_device(args):
             node_result = d
     return node_result
 
-def run(arg_list, shell = False):
-    """Run a subprocess, and return a tuple of rc, stdout, stderr"""
-    p = subprocess.Popen(arg_list, shell = shell, stdout = subprocess.PIPE,
-                         stderr = subprocess.PIPE)
-    stdout, stderr = p.communicate()
-    rc = p.wait()
 
-    return rc, stdout, stderr
+
+
+def run(arg_list, shell = False):
+    """Run a subprocess, and return a tuple of rc, stdout, stderr.
+
+    Note: we buffer all output, so do not run commands with large outputs 
+    using this function.
+    """
+
+    import sys
+    import pty
+    import fcntl, os
+    import select
+
+    # Create a PTY in order to get libc in child processes
+    # to use line-buffered instead of buffered mode on stdout
+    master, slave = pty.openpty()
+    stdout_file = os.fdopen(master)
+
+    p = subprocess.Popen(arg_list, shell = shell,
+                         stdout = slave,
+                         stderr = subprocess.PIPE,
+                         close_fds = True)
+
+    # Set O_NONBLOCK on stdout and stderr, in order to use select.poll later
+    flags = fcntl.fcntl(master, fcntl.F_GETFL)
+    fcntl.fcntl(master, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+    flags = fcntl.fcntl(p.stderr, fcntl.F_GETFL)
+    fcntl.fcntl(p.stderr, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+    # Create a poll object and register
+    all_poll_flags = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR | select.POLLNVAL
+    poll = select.poll()
+    poll.register(p.stderr, all_poll_flags)
+    poll.register(master, all_poll_flags)
+
+    # We will iterate on poll.poll until we have seen HUPs on both
+    # stdout and stderr.
+    stdout_buf = ""
+    stderr_buf = ""
+
+    stdout_closed = False
+    stderr_closed = False
+    while (not stdout_closed) and (not stderr_closed):
+        result = poll.poll(100)
+        for fd, mask in result:
+            if fd == master and mask & (select.POLLIN | select.POLLPRI):
+                import os
+                stdout = stdout_file.read(select.PIPE_BUF)
+                stdout_buf = stdout_buf + stdout
+                sys.stderr.write(stdout)
+            elif fd == p.stderr.fileno() and mask & (select.POLLIN | select.POLLPRI):
+                stderr = p.stderr.read(select.PIPE_BUF)
+                stderr_buf = stderr_buf + stderr
+                sys.stderr.write(stderr)
+            elif mask & select.POLLHUP:
+                if fd == master:
+                    stdout_closed = True
+                elif fd == p.stderr.fileno():
+                    stderr_closed = True
+                else:
+                    raise RuntimeError("Unexpected select() result %s" % ((fd, mask),))
+            else:
+                raise RuntimeError("Unexpected select() result %s" % ((fd, mask),))
+    rc = p.poll()
+
+    return rc, stdout_buf, stderr_buf
+
 
 def try_run(arg_list, shell = False):
     """Run a subprocess, and raise an exception if it returns nonzero.  Return
