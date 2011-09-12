@@ -16,3 +16,7 @@ class VendorResourceRecord(models.Model):
     class Meta:
         app_label = 'configure'
 
+class VendorResourceAttribute(models.Model):
+    key = models.CharField(max_length = 64)
+    value = models.TextField()
+

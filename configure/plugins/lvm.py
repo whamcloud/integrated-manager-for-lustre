@@ -3,9 +3,9 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.lib.vendor_plugin import VendorResource, VendorPlugin
-from configure.lib.vendor_plugin import LocalId, GlobalId
-from configure.lib.vendor_plugin import ResourceAttribute
+from configure.lib.storage_plugin import VendorResource, VendorPlugin
+from configure.lib.storage_plugin import LocalId, GlobalId
+from configure.lib.storage_plugin import ResourceAttribute
 
 class LvmPlugin(VendorPlugin):
     def simple_ssh(self, hostname, command):
@@ -59,7 +59,7 @@ class LvmPlugin(VendorPlugin):
                 self.log.info("Learned VG %s %s %s" % (name, uuid, size))
                 group = LvmGroup(uuid = uuid, name = name, size = size)
                 group.add_parent(lvm_host_resource)
-                self.add_resource(group)
+                self.register_resource(group)
                 vol_group_resources.append(group)
 
             for vgr in vol_group_resources:
@@ -75,7 +75,29 @@ class LvmPlugin(VendorPlugin):
                     self.log.info("Learned LV %s %s %s" % (name, uuid, size))
                     vol = LvmVolume(uuid = uuid, name = name, size = size)
                     vol.add_parent(vgr)
-                    self.add_resource(vol)
+                    self.register_resource(vol)
+
+    def update_scan(self):
+        # Get the list of user-configured hosts to scan
+        root_resources = self.get_root_resources()
+        for lvm_host_resource in root_resources:
+            hostname = lvm_host_resource.hostname
+            code, out, err = self.simple_ssh(hostname, "vgs --units b --noheadings -o vg_name,vg_uuid,vg_size")
+            if code != 0:
+                self.log.error("Bad code %s from SSH call: %s %s" %(code, out, err))
+                continue
+
+            vol_group_resources = []
+            lines = [l for l in out.split("\n") if len(l) > 0]
+            for line in lines:
+                name, uuid, size_str = line.split()
+                size = int(size_str[0:-1], 10)
+                self.log.info("Learned VG %s %s %s" % (name, uuid, size))
+                group = LvmGroup(uuid = uuid, name = name, size = size)
+                group.add_parent(lvm_host_resource)
+                self.register_resource(group)
+                vol_group_resources.append(group)
+
 
                 
 class LvmGroup(VendorResource):
