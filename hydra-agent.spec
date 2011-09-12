@@ -17,7 +17,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: python-simplejson python-argparse
+Requires: python-simplejson python-argparse rsyslog
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
@@ -34,6 +34,9 @@ rm -rf %{buildroot}
 
 %clean
 rm -rf %{buildroot}
+
+%post
+chkconfig rsyslog on
 
 %files
 %defattr(-,root,root)

@@ -263,5 +263,38 @@ def fail_node(args):
     # force a manual failover by failing a node
     try_run("sync; sync; init 0", shell = True)
 
+def unconfigure_rsyslog(args):
+    args.node = ""
+    configure_rsyslog(args)
+
+def configure_rsyslog(args):
+    from tempfile import mkstemp
+    tmp_f, tmp_name = mkstemp(dir = '/etc')
+    f = open('/etc/rsyslog.conf', 'r')
+    skip = False
+    for line in f.readlines():
+        if skip:
+            if line == "# added by hydra-agent\n":
+                skip = False
+                continue
+        if line == "# added by hydra-agent\n":
+            skip = True
+            continue
+        if not skip:
+            os.write(tmp_f, line)
+    f.close()
+    if args.node != "":
+        os.write(tmp_f, "# added by hydra-agent\n*.* @@%s\n" \
+                        "# added by hydra-agent\n" % args.node)
+    os.close(tmp_f)
+    os.chmod(tmp_name, 0644)
+    os.rename(tmp_name, "/etc/rsyslog.conf")
+
+    # signal the process
+    f = open('/var/run/rsyslogd.pid', 'r')
+    pid = f.readline().rstrip()
+    try_run(['service', 'rsyslog', 'reload'])
+    f.close()
+
 def audit(args):
     return LocalLustreAudit().audit_info()

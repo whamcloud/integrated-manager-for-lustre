@@ -100,6 +100,16 @@ if __name__ == '__main__':
                                        help='fail (i.e. shut down) this node')
     parser_fail_node.set_defaults(func=actions.fail_node)
 
+    parser_configure_rsyslog = subparsers.add_parser('configure-rsyslog',
+                                       help='configure rsyslog to forward to another node')
+    parser_configure_rsyslog.add_argument('--node', required=True,
+                                        help='node to direct syslog to')
+    parser_configure_rsyslog.set_defaults(func=actions.configure_rsyslog)
+
+    parser_unconfigure_rsyslog = subparsers.add_parser('unconfigure-rsyslog',
+                                       help='unconfigure rsyslog to forward to another node')
+    parser_unconfigure_rsyslog.set_defaults(func=actions.unconfigure_rsyslog)
+
     parser_audit = subparsers.add_parser('audit', help='report lustre status')
     parser_audit.set_defaults(func=actions.audit)
 
