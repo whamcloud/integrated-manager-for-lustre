@@ -81,29 +81,23 @@ class LvmPlugin(VendorPlugin):
 class LvmGroup(VendorResource):
     identifier = GlobalId('uuid')
 
-    _fields = {
-        'uuid': ResourceAttribute(),
-        'name': ResourceAttribute(),
-        'size': ResourceAttribute()
-    }
+    uuid = ResourceAttribute()
+    name = ResourceAttribute()
+    size = ResourceAttribute()
 
 class LvmVolume(VendorResource):
     # LVM Volumes actually have a UUID but we're using a LocalId to 
     # exercise the code path
     identifier = LocalId(LvmGroup, 'name')
     
-    _fields = {
-        'uuid': ResourceAttribute(),
-        'name': ResourceAttribute(),
-        'size': ResourceAttribute()
-    }
+    uuid = ResourceAttribute()
+    name = ResourceAttribute()
+    size = ResourceAttribute()
 
 class LvmHost(VendorResource):    
     """A host on which we wish to identify LVM managed storage.
        Assumed to be accessible by passwordless SSH as the hydra
        user: XXX NOT WRITTEN FOR PRODUCTION USE"""
     identifier = GlobalId('hostname')
-    _fields = {
-        'hostname': ResourceAttribute() 
-    }
+    hostname = ResourceAttribute() 
 

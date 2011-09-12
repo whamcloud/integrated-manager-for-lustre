@@ -333,9 +333,20 @@ class ResourceAttribute(object):
            1024 => 1kB"""
         return value
 
+class VendorResourceMetaclass(type):
+    def __new__(cls, name, bases, dct):
+        if not name == 'VendorResource':
+            fields = {}
+            for field_name, field_obj in dct.items():
+                if isinstance(field_obj, ResourceAttribute):
+                    fields[field_name] = (field_obj)
+                    del dct[field_name]
+            dct['_vendor_attributes'] = fields 
+        return super(VendorResourceMetaclass, cls).__new__(cls, name, bases, dct)
+
 class VendorResource(object):
+    __metaclass__ = VendorResourceMetaclass
     def __init__(self, **kwargs):
-        self._vendor_attributes = self._fields
         self._vendor_dict = {}
         self._handle = None
         self._parents = []
@@ -395,7 +406,7 @@ class VendorResource(object):
 
         for k,a in self._vendor_attributes.items():
             if not k in self._vendor_dict and not a.optional:
-                raise ValueError("Missing mandator attribute %s" % k)
+                raise ValueError("Missing mandatory attribute %s" % k)
 
 class LocalId(object):
     """An Id which is unique within the ancestor resource of type parent_klass"""
