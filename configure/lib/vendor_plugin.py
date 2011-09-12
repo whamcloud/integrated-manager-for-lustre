@@ -32,7 +32,7 @@ class VendorPlugin(object):
 
     def initial_scan(self):
         """To be implemented by subclasses.  Identify all resources
-           present at this time and call add_resource on them.
+           present at this time and call register_resource on them.
            
            Any plugin which throws an exception from here is assumed
            to be broken - this will not be retried.  If one of your
@@ -73,7 +73,7 @@ class VendorPlugin(object):
 
         return resources
 
-    def add_resource(self, resource):
+    def register_resource(self, resource):
         """Register a resource:
            * Validate its attributes
            * Create a VendorResourceRecord if it doesn't already
@@ -127,6 +127,14 @@ class VendorPlugin(object):
                 raise RuntimeError("Parent resources must be registered before their children")
             parent_record = VendorResourceRecord.objects.get(pk = parent._handle)
             record.parents.add(parent_record)
+
+    def deregister_resource(self, resource):
+        if not resource._handle:
+            raise RuntimeError("Cannot deregister resource which has not been registered")
+
+        # TODO: what happens when there are related objects?
+        VendorResourceRecord.objects.get(pk = resource._handle).delete()
+
 
 class LoadedPlugin(object):
     """Convenience store of introspected information about loaded 
@@ -260,7 +268,8 @@ class VendorPluginManager(object):
         # Finally loop over all loaded resources and populate ._parents
         for pk, resource in pk_to_resource.items():
             for parent_id in resource_parents[pk]:
-                resource.add_parent(pk_to_resource[parent_id])
+                # NB don't use add_parent in order to avoid dirtying the object
+                resource._parents.append(pk_to_resource[parent_id])
 
         return pk_to_resource.values()
 
@@ -350,6 +359,8 @@ class VendorResource(object):
         self._vendor_dict = {}
         self._handle = None
         self._parents = []
+        self._attributes_dirty = False
+        self._parents_dirty = False
 
         for k,v in kwargs.items():
             if not k in self._vendor_attributes:
@@ -367,12 +378,45 @@ class VendorResource(object):
             object.__setattr__(self, key, value)
         else:
             self._vendor_dict[key] = value
+            self._attributes_dirty = True
 
     def __getattr__(self, key):
         if key.startswith("_") or not key in self._vendor_attributes:
             raise AttributeError
         else:
             return self._vendor_dict[key]
+
+    def dirty(self):
+        return self._attributes_dirty or self._parents_dirty
+
+    def commit(self):
+        if not self._handle:
+            raise RuntimeError("Cannot commit unregistered resource")
+        if not self.dirty():
+            return
+
+        record = VendorResourceRecord.objects.get(pk = self._handle)
+
+        if self._attributes_dirty:
+            record.vendor_dict_str = json.dumps(resource._vendor_dict)
+            self._attributes_dirty = False
+
+        if self._parents_dirty:
+            existing_parents = record.parents.all()
+
+            new_parent_handles = [r._handle for r in self._parents]
+            for ep in existing_parents:
+                if not ep.pk in new_parent_handles:
+                    record.parents.remove(ep)
+                    # TODO: discover if this now means the parent is an orphan
+
+            existing_parent_handles = [ep.pk for ep in existing_parents]
+            for p in self._parents:
+                if not p._handle in existing_parent_handles:
+                    record.parents.add(VendResourceRecord.objects.get(pk = p._handle))
+            
+
+        record.save()
 
     def id_str(self):
         """Serialized ID for use in VendorResourceRecord.vendor_id_str"""
@@ -396,6 +440,7 @@ class VendorResource(object):
 
     def add_parent(self, parent_resource):
         self._parents.append(parent_resource)
+        self._parents_dirty = True
 
     def validate(self):
         """Call validate() on the ResourceAttribute for all _vendor_dict items, and
