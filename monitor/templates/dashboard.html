@@ -126,7 +126,8 @@
                             console.log(data);
                             submit_complete(data['task']['result']);
                         } else if (task_status == 'FAILURE') {
-                            /* TODO report error */
+                            console.log(event.responseText);
+                            add_host_error("Internal error.");
                         } else {
                             /* Incomplete, schedule re-check */
                             setTimeout(function() {submit_poll(task_id)}, 1000);
