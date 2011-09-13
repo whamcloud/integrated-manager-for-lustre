@@ -6,9 +6,8 @@
 """This modules defines the VendorResource class, which VendorPlugins subclass use
 to define their system elements"""
 
-import json
-
 from configure.lib.storage_plugin.attributes import ResourceAttribute
+from configure.lib.storage_plugin.statistics import ResourceStatistic
 from configure.lib.storage_plugin.log import vendor_plugin_log
 from configure.models import VendorResourceRecord
 
@@ -16,11 +15,18 @@ class VendorResourceMetaclass(type):
     def __new__(cls, name, bases, dct):
         if not name == 'VendorResource':
             fields = {}
+            stats = {}
             for field_name, field_obj in dct.items():
                 if isinstance(field_obj, ResourceAttribute):
-                    fields[field_name] = (field_obj)
+                    fields[field_name] = field_obj
                     del dct[field_name]
+                elif isinstance(field_obj, ResourceStatistic):
+                    stats[field_name] = field_obj
+                    del dct[field_name]
+
             dct['_vendor_attributes'] = fields 
+            dct['_vendor_statistics'] = fields 
+
         return super(VendorResourceMetaclass, cls).__new__(cls, name, bases, dct)
 
 class VendorResource(object):
@@ -29,7 +35,7 @@ class VendorResource(object):
         self._vendor_dict = {}
         self._handle = None
         self._parents = []
-        self._attributes_dirty = False
+        self._dirty_attributes = set()
         self._parents_dirty = False
 
         for k,v in kwargs.items():
@@ -48,28 +54,34 @@ class VendorResource(object):
             object.__setattr__(self, key, value)
         else:
             self._vendor_dict[key] = value
-            self._attributes_dirty = True
+            self._dirty_attributes.add(key)
 
     def __getattr__(self, key):
+        print "blah %s" % self._vendor_dict
         if key.startswith("_") or not key in self._vendor_attributes:
             raise AttributeError
         else:
             return self._vendor_dict[key]
 
     def dirty(self):
-        return self._attributes_dirty or self._parents_dirty
+        return (len(self._dirty_attributes) > 0) or self._parents_dirty
 
-    def commit(self):
+    def save(self):
         if not self._handle:
-            raise RuntimeError("Cannot commit unregistered resource")
+            raise RuntimeError("Cannot save unregistered resource")
         if not self.dirty():
             return
 
         record = VendorResourceRecord.objects.get(pk = self._handle)
 
-        if self._attributes_dirty:
-            record.vendor_dict_str = json.dumps(resource._vendor_dict)
-            self._attributes_dirty = False
+        for attr in self._dirty_attributes:
+            record.update_attributes(self._vendor_dict)
+            if self._vendor_dict.has_key(attr):
+                record.update_attribute(attr, self._vendor_dict[attr])
+            else:
+                record.delete_attribute(attr)
+
+        self._dirty_attributes.clear()
 
         if self._parents_dirty:
             existing_parents = record.parents.all()
@@ -90,6 +102,7 @@ class VendorResource(object):
 
     def id_str(self):
         """Serialized ID for use in VendorResourceRecord.vendor_id_str"""
+        import json
         identifier_val = []
         for f in self.identifier.id_fields:
             identifier_val.append(getattr(self, f))

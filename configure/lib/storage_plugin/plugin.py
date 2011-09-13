@@ -3,10 +3,9 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-import json
-import pickle
 import settings
 from collections_24 import defaultdict
+from django.db import transaction
 
 from configure.models import VendorResourceRecord
 from configure.lib.storage_plugin.resource import VendorResource, LocalId, GlobalId
@@ -43,26 +42,33 @@ class VendorPlugin(object):
            a controller and therefore need no hints from us."""
         from configure.lib.storage_plugin import vendor_plugin_manager 
         records = VendorResourceRecord.objects.\
-               filter(vendor_plugin = self.__class__.__module__).\
+               filter(resource_class__vendor_plugin__module_name = self.__class__.__module__).\
                filter(parents = None)
-        #from django.db.models import Count,F
-        #records = VendorResourceRecord.objects.\
-        #       filter(vendor_plugin = self.__class__.__module__).\
-        #       annotate(Count('parents')).\
-        #       filter(F('parents__count') = 0)
 
         resources = []
         for vrr in records:
-            klass = vendor_plugin_manager.get_plugin_resource_class(vrr.vendor_plugin, vrr.vendor_class_str)
+            klass = vendor_plugin_manager.get_plugin_resource_class(
+                    vrr.resource_class.vendor_plugin.module_name,
+                    vrr.resource_class.class_name)
             assert(issubclass(klass, VendorResource))
-            # Skip populating VendorResource._parents
-            vendor_dict = json.loads(vrr.vendor_dict_str)
+            # Skip populating VendorResource._parents, as this is a root
+            # resource and it won't have any
+            vendor_dict = {}
+            for attr in vrr.vendorresourceattribute_set.all():
+                vendor_dict[attr.key] = attr.value
+
             resource = klass(**vendor_dict)
             resource._handle = vrr.id
             resources.append(resource)
 
         return resources
 
+    # commit_on_success is important, because
+    # if someone is registering a resource with parents
+    # and something goes wrong, we must not accidently
+    # leave it without parents, as that would cause the
+    # it to incorrectly be considered a 'root' resource
+    @transaction.commit_on_success
     def register_resource(self, resource):
         """Register a resource:
            * Validate its attributes
@@ -98,20 +104,23 @@ class VendorPlugin(object):
             id_scope = VendorResourceRecord.objects.get(pk=scope_parent._handle)
 
         record, created = VendorResourceRecord.objects.get_or_create(
-                vendor_plugin = resource.__class__.__module__,
-                vendor_class_str = resource.__class__.__name__,
+                resource_class_id = resource.vendor_resource_class_id,
                 vendor_id_str = id_string,
                 vendor_id_scope = id_scope)
 
-        record.vendor_dict_str = json.dumps(resource._vendor_dict)
-        record.save()
-
         resource._handle = record.pk
-        if created:
-            vendor_plugin_log.info("Created VendorResourceRecord for %s id=%s" % (resource.__class__.__name__, id_string))
-        else:
-            vendor_plugin_log.debug("Looked up VendorResourceRecord %s for %s id=%s" % (record.id, resource.__class__.__name__, id_string))
 
+        # TODO: remove any attributes in the database but 
+        # not in resource._vendor_dict (schemalessness)
+        resource.save()
+
+        vendor_plugin_log.debug("Looked up VendorResourceRecord %s for %s id=%s (created=%s)" % (record.id, resource.__class__.__name__, id_string, created))
+
+        # TODO: if there were any existing parent relations which are now absent, remove
+        # them.
+        # TODO: if there were any children whose alleged parents are now not mentioning
+        # them, remove that parent relationship, and if a child has no parents (and 
+        # by implication is also not a root resource) then delete it.
         for parent in resource._parents:
             if not parent._handle:
                 raise RuntimeError("Parent resources must be registered before their children")
