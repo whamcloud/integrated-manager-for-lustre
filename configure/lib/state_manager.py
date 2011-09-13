@@ -97,8 +97,9 @@ class StateManager(object):
 
     def _add_job(self, job):
         """Add a job, and any others which are required in order to reach its prerequisite state"""
-        for dependency, dependency_state in job.get_deps():
-            self._set_state(dependency, dependency_state)
+        for dependency in job.get_deps().all():
+            if not dependency.stateful_object.state in dependency.acceptable_states:
+                self._set_state(dependency.stateful_object, dependency.preferred_state)
 
         # Important: the Job must not be committed until all
         # its dependencies and locks are in.
