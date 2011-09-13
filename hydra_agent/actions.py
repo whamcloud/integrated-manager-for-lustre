@@ -74,6 +74,12 @@ def run(arg_list, shell = False):
     # stdout and stderr.
     stdout_buf = ""
     stderr_buf = ""
+    
+    # Support older pythons which don't define select.PIPE_BUF
+    try:
+        pipe_buf = select.PIPE_BUF
+    except AttributeError:
+        pipe_buf = 4096
 
     stdout_closed = False
     stderr_closed = False
@@ -82,11 +88,11 @@ def run(arg_list, shell = False):
         for fd, mask in result:
             if fd == master and mask & (select.POLLIN | select.POLLPRI):
                 import os
-                stdout = stdout_file.read(select.PIPE_BUF)
+                stdout = stdout_file.read(pipe_buf)
                 stdout_buf = stdout_buf + stdout
                 sys.stderr.write(stdout)
             elif fd == p.stderr.fileno() and mask & (select.POLLIN | select.POLLPRI):
-                stderr = p.stderr.read(select.PIPE_BUF)
+                stderr = p.stderr.read(pipe_buf)
                 stderr_buf = stderr_buf + stderr
                 sys.stderr.write(stderr)
             elif mask & select.POLLHUP:
