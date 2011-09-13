@@ -81,7 +81,7 @@ def test_host_contact(host, ssh_monitor):
         try:
             result = ssh_monitor.invoke()
             agent = True
-        except ValueError,e:
+        except Exception,e:
             audit_log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
             agent = False
         
