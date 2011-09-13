@@ -104,7 +104,7 @@ def run(arg_list, shell = False):
                     raise RuntimeError("Unexpected select() result %s" % ((fd, mask),))
             else:
                 raise RuntimeError("Unexpected select() result %s" % ((fd, mask),))
-    rc = p.poll()
+    rc = p.wait()
 
     return rc, stdout_buf, stderr_buf
 
@@ -114,7 +114,7 @@ def try_run(arg_list, shell = False):
     stdout string."""
     rc, stdout, stderr = run(arg_list, shell)
     if rc != 0:
-        raise RuntimeError("Error running '%s': '%s' '%s'" % (" ".join(arg_list), stdout, stderr))
+        raise RuntimeError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr))
 
     return stdout
 
