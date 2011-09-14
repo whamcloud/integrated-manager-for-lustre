@@ -69,6 +69,13 @@ chkconfig rabbitmq-server on
 # configure rsyslog.conf
 ed /etc/rsyslog.conf <<EOF
 /^# Added by hydra-server/;/^# Added by hydra-server/d
+/^# Added by hydra-server/;/^# Added by hydra-server/d
+/\$InputTCPServerRun 514$/a
+# Added by hydra-server
+# MySQL logging
+$ModLoad ommysql
+# Added by hydra-server
+.
 $a
 # Added by hydra-server
 *.*       :ommysql:localhost,hydra,root
