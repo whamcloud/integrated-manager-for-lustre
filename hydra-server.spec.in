@@ -66,17 +66,25 @@ chkconfig --add hydra-worker
 # start mysqld at boot time
 chkconfig mysqld on
 chkconfig rabbitmq-server on
+
 # configure rsyslog.conf
-ed /etc/rsyslog.conf <<EOF
+while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do 
+    ed /etc/rsyslog.conf <<EOF
 /^# Added by hydra-server/;/^# Added by hydra-server/d
-/^# Added by hydra-server/;/^# Added by hydra-server/d
+w
+q
+EOF
+done 
+
+ed /etc/rsyslog.conf <<EOF >/dev/null
 /\$InputTCPServerRun 514$/a
 # Added by hydra-server
 # MySQL logging
-$ModLoad ommysql
+\$ModLoad ommysql
 # Added by hydra-server
 .
-$a
+$
+a
 # Added by hydra-server
 *.*       :ommysql:localhost,hydra,root
 # Added by hydra-server
@@ -85,6 +93,18 @@ w
 q
 EOF
 
+%postun
+# remove rsyslog entries if this the last version being removed.
+if [[ $1 -eq 0 ]]; then
+    # configure rsyslog.conf
+    while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do 
+        ed /etc/rsyslog.conf <<EOF
+/^# Added by hydra-server/;/^# Added by hydra-server/d
+w
+q
+EOF
+    done 
+fi
 
 %files
 %defattr(-,root,root)
