@@ -30,7 +30,7 @@ def monitor_exec(monitor_id, counter):
     try:
         from monitor.lib.lustre_audit import LustreAudit
         raw_data = monitor.downcast().invoke()
-        success = LustreAudit().audit_complete(monitor.host, raw_data)
+        success = LustreAudit().audit_complete(monitor.host.pk, raw_data)
         if success:
             import datetime
             monitor.update(last_success = datetime.datetime.now())
@@ -40,16 +40,21 @@ def monitor_exec(monitor_id, counter):
         import traceback
         exc_info = sys.exc_info()
         audit_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
-    finally:
-        monitor.update(state = 'idle', task_id = None)
-        audit_log.debug("Monitor %s completed" % monitor.host)
-        return None
+
+    monitor.update(state = 'idle', task_id = None)
+    audit_log.debug("Monitor %s completed" % monitor.host)
+    return None
 
 from settings import AUDIT_PERIOD
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def audit_all():
-    from monitor.models import Monitor
-    for monitor in Monitor.objects.all():
+    from monitor.models import Host
+    for host in Host.objects.all():
+        if host.monitor:
+            monitor = host.monitor
+        else:
+            continue
+
         tasked = monitor.try_schedule()
         if not tasked:
             audit_log.info("audit_all: host %s audit (%d) still in progress" % (monitor.host, monitor.counter))

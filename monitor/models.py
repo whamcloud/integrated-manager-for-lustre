@@ -3,8 +3,10 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from django.db import models
+from django.db import models, transaction
 from polymorphic.models import DowncastMetaclass
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.generic import GenericForeignKey
 
 from collections_24 import defaultdict
 
@@ -12,6 +14,34 @@ import simplejson as json
 import pickle
 
 from logging import INFO, WARNING
+
+class WorkaroundGenericForeignKey(GenericForeignKey):
+    """TEMPORARY workaround for django bug #16048 while we wait for
+       a fixed django to get released"""
+    def __get__(self, instance, instance_type=None):
+        if instance is None:
+            return self
+
+        try:
+            return getattr(instance, self.cache_attr)
+        except AttributeError:
+            rel_obj = None
+
+            # Make sure to use ContentType.objects.get_for_id() to ensure that
+            # lookups are cached (see ticket #5570). This takes more code than
+            # the naive ``getattr(instance, self.ct_field)``, but has better
+            # performance when dealing with GFKs in loops and such.
+            f = self.model._meta.get_field(self.ct_field)
+            ct_id = getattr(instance, f.get_attname(), None)
+            if ct_id:
+                ct = self.get_content_type(id=ct_id, using=instance._state.db)
+                try:
+                    rel_obj = ct.model_class()._base_manager.using(ct._state.db).get(pk=getattr(instance, self.fk_field))
+
+                except ObjectDoesNotExist:
+                    pass
+            setattr(instance, self.cache_attr, rel_obj)
+            return rel_obj
 
 from polymorphic.models import DowncastManager
 class DeletableManager(DowncastManager):
@@ -39,11 +69,16 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
     """
     def __new__(cls, name, bases, dct):
         @classmethod
+        # commit_on_success to ensure that the object is only marked deleted
+        # if the updates to alerts also succeed
+        @transaction.commit_on_success
         def delete(clss, id):
             """Mark a record as deleted, returns nothing.
             
             Looks up the model instance by pk, sets the not_deleted attribute
             to None and saves the model instance.
+
+            Additionally marks any AlertStates referring to this item as inactive.
 
             This is provided as a class method which takes an ID rather than as an
             instance method, in order to use ._base_manager rather than .objects -- this
@@ -57,6 +92,10 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
             if instance.not_deleted:
                 instance.not_deleted = None
                 instance.save()
+
+            from monitor.lib.lustre_audit import audit_log
+            updated = AlertState.filter_by_item_id(clss, id).update(active = False)
+            audit_log.info("Lowered %d alerts while deleting %s %s" % (updated, clss, id))
 
         dct['objects'] = DeletableManager()
         dct['delete']  = delete
@@ -716,13 +755,11 @@ class Event(models.Model):
     def message(self):
         raise NotImplementedError
 
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.generic import GenericForeignKey
 class LearnEvent(Event):
     # Every environment at some point reinvents void* :-)
     learned_item_type = models.ForeignKey(ContentType)
     learned_item_id = models.PositiveIntegerField()
-    learned_item = GenericForeignKey('learned_item_type', 'learned_item_id')
+    learned_item = WorkaroundGenericForeignKey('learned_item_type', 'learned_item_id')
 
     @staticmethod
     def type_name():
@@ -758,7 +795,7 @@ class AlertState(models.Model):
     alert_item_id = models.PositiveIntegerField()
     # FIXME: generic foreign key does not automatically set up deletion
     # of this when the alert_item is deleted -- do it manually
-    alert_item = GenericForeignKey('alert_item_type', 'alert_item_id')
+    alert_item = WorkaroundGenericForeignKey('alert_item_type', 'alert_item_id')
 
     begin = models.DateTimeField()
     end = models.DateTimeField()
@@ -776,10 +813,17 @@ class AlertState(models.Model):
                     alert_item_type = item.content_type)
         else:
             return cls.objects.filter(active = True, 
-                    alert_item_id = item.id,
+                    alert_item_id = item.pk,
                     alert_item_type__model = item.__class__.__name__.lower(),
                     alert_item_type__app_label = item.__class__._meta.app_label)
 
+    @classmethod
+    def filter_by_item_id(cls, item_class, item_id):
+        return cls.objects.filter(active = True, 
+                alert_item_id = item_id,
+                alert_item_type__model = item_class.__name__.lower(),
+                alert_item_type__app_label = item_class._meta.app_label)
+    
     @classmethod
     def notify(alert_klass, alert_item, active):
         alert_item = alert_item.downcast()
@@ -830,6 +874,8 @@ class MountableOfflineAlert(AlertState):
         elif isinstance(self.alert_item, Client):
             return "Client offline"
         else:
+            print self.id
+            print self.alert_item
             raise NotImplementedError
 
     def begin_event(self):

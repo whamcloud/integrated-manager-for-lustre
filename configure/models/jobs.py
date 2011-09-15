@@ -5,7 +5,10 @@
 
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.generic import GenericForeignKey
+
+from monitor.models import WorkaroundGenericForeignKey
+#from django.contrib.contenttypes.generic import GenericForeignKey
+
 from django.db.models import Q
 from collections_24 import defaultdict
 from polymorphic.models import DowncastMetaclass
@@ -209,7 +212,7 @@ class StateLock(models.Model):
 
     locked_item_type = models.ForeignKey(ContentType, related_name = 'locked_item')
     locked_item_id = models.PositiveIntegerField()
-    locked_item = GenericForeignKey('locked_item_type', 'locked_item_id')
+    locked_item = WorkaroundGenericForeignKey('locked_item_type', 'locked_item_id')
 
     class Meta:
         app_label = 'configure'

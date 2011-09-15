@@ -10,6 +10,7 @@ setup_environ(settings)
 
 # Access to 'monitor' database
 from monitor.models import *
+from django.db import transaction
 
 import re
 import sys
@@ -140,7 +141,14 @@ class LustreAudit:
         except AssertionError:
             return False
 
-    def audit_complete(self, host, host_data):
+    @transaction.commit_on_success
+    def audit_complete(self, host_id, host_data):
+        host = Host.objects.get(pk = host_id)
+        # Inside our audit update transaction, check that the host isn't
+        # deleted to avoid raising alerts for a deleted host
+        if not host.not_deleted:
+            return
+
         self.host = host
         self.host_data = host_data
 
@@ -279,11 +287,6 @@ class LustreAudit:
             except LunNode.DoesNotExist:
                 pass
 
-    # This is in a transaction to ensure that we never create a ManagementTarget object
-    # without at least one TargetMount object (without the TargetMount object we can't
-    # recognise the MGS as the same one next time, and we would create dupes)
-    from django.db import transaction
-    @transaction.commit_on_success
     def learn_mgs(self, mgs_local_info):
         try:
             mgs = ManagementTarget.objects.get(targetmount__host = self.host)
