@@ -45,7 +45,7 @@ class ApplyConfParams(Job):
         return steps
 
     def get_deps(self):
-        return DependOn(self.mgs.targetmount_set.get(primary = True).downcast(), 'mounted')
+        return DependOn(self.mgs.downcast(), 'mounted')
 
 class ConfParam(models.Model):
     __metaclass__ = DowncastMetaclass
@@ -104,6 +104,9 @@ class FilesystemGlobalConfParam(ConfParam):
     def get_key(self):
         return "%s.%s" % (self.filesystem.name, self.key)
 
+    class Meta:
+        app_label = 'configure'
+
 class MdtConfParam(ConfParam):
     # TODO: allow setting MDT to None to allow setting the param for 
     # all MDT on an MGS (and set this param for MDT in RegisterTargetJob)
@@ -115,6 +118,9 @@ class MdtConfParam(ConfParam):
     def get_key(self):
         return "%s.%s" % (self.mdt.name, self.key)
 
+    class Meta:
+        app_label = 'configure'
+
 class OstConfParam(ConfParam):
     # TODO: allow setting OST to None to allow setting the param for 
     # all OSTs on an MGS (and set this param for OSTs in RegisterTargetJob)
@@ -125,3 +131,7 @@ class OstConfParam(ConfParam):
 
     def get_key(self):
         return "%s.%s" % (self.ost.name, self.key)
+
+    class Meta:
+        app_label = 'configure'
+

@@ -71,6 +71,7 @@ class ManagedOst(monitor_models.ObjectStoreTarget, ManagedTarget):
         app_label = 'configure'
 
     def get_conf_params(self):
+        from configure.models.conf_param import ConfParam
         return ConfParam.get_latest_params(self.ostconfparam_set.all())
 
     def default_mount_path(self, host):
@@ -88,6 +89,7 @@ class ManagedMdt(monitor_models.MetadataTarget, ManagedTarget):
         app_label = 'configure'
 
     def get_conf_params(self):
+        from configure.models.conf_param import ConfParam
         return ConfParam.get_latest_params(self.mdtconfparam_set.all())
 
     def default_mount_path(self, host):
@@ -125,6 +127,7 @@ class ManagedMgs(monitor_models.ManagementTarget, ManagedTarget):
         create_params()
 
     def get_conf_params(self):
+        from configure.models.conf_param import ConfParam
         return ConfParam.get_latest_params(self.confparam_set.all())
 
 class RemoveRegisteredTargetJob(Job,StateChangeJob):

@@ -17,6 +17,7 @@ class ManagedFilesystem(monitor_models.Filesystem, StatefulObject):
 
     def get_conf_params(self):
         from itertools import chain
+        from configure.models.conf_param import ConfParam
         params = chain(self.filesystemclientconfparam_set.all(),self.filesystemglobalconfparam_set.all())
         return ConfParam.get_latest_params(params)
 
