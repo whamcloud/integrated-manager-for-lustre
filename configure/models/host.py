@@ -17,6 +17,14 @@ class ManagedHost(monitor_models.Host, StatefulObject):
     class Meta:
         app_label = 'configure'
 
+    def save(self, *args, **kwargs):
+        new = (self.pk == None)
+        super(ManagedHost, self).save(*args, **kwargs)
+        if new:
+            assert(self.pk != None)
+            from configure.lib.state_manager import StateManager
+            StateManager().add_job(AddHostJob(host = self))
+
 class LoadLNetJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'lnet_unloaded', 'lnet_down')
     stateful_object = 'host'
@@ -96,3 +104,16 @@ class RemoveHostJob(Job, StateChangeJob):
     def get_steps(self):
         from configure.lib.job import DeleteHostStep
         return [(DeleteHostStep, {'host_id': self.host.id})]
+
+class AddHostJob(Job):
+    host = models.ForeignKey(ManagedHost)
+    class Meta:
+        app_label = 'configure'
+
+    def description(self):
+        return "Adding new host %s" % self.host
+
+    def get_steps(self):
+        from configure.lib.job import AddHostStep
+        return [(AddHostStep, {'host_id': self.host.id})]
+
