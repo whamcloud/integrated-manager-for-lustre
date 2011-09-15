@@ -193,6 +193,7 @@ class LunNode(models.Model):
         return "%s:%s" % (self.host, self.path)
 
     def pretty_string(self):
+        from monitor.lib.util import sizeof_fmt
         if self.path.startswith('/dev/disk/by-path/'):
             short_name = self.path.replace('/dev/disk/by-path/', '', 1)
 
@@ -220,13 +221,6 @@ class LunNode(models.Model):
             short_name = self.path.replace('/dev/', '', 1)
         else:
             short_name = self.path
-
-        def sizeof_fmt(num):
-            # http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size/1094933#1094933
-            for x in ['bytes','KB','MB','GB','TB', 'EB', 'ZB', 'YB']:
-                if num < 1024.0:
-                    return "%3.1f%s" % (num, x)
-                num /= 1024.0
 
         if self.size:
             human_size = sizeof_fmt(self.size)

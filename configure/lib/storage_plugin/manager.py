@@ -37,7 +37,6 @@ class LoadedPlugin(object):
                 # TODO: wrap this up somehow neater than just decorating the class
                 # with an extra attribute
                 cls.vendor_resource_class_id = vrc.id
-                #cls.plugin_record_id = self.plugin_record.id
 
                 for name, stat_obj in cls._vendor_statistics.items():
                     class_stat, created = VendorResourceClassStatistic.objects.get_or_create(
@@ -74,6 +73,8 @@ class VendorPluginManager(object):
         # XXX should we let people modify root records?  e.g. change the IP
         # address of a controller rather than deleting it, creating a new 
         # one and letting the pplugin repopulate us with 'new' resources?
+        # This will present the challenge of what to do with instances of
+        # VendorResource subclasses which are already present in running plugins.
         record = VendorResourceRecord(
                 resource_class_id = resource_class.vendor_resource_class_id,
                 vendor_id_str = resource.id_str())
@@ -100,7 +101,7 @@ class VendorPluginManager(object):
         get the attributes.  If you want ancestors too, call get_resource_tree."""
 
         vrr = VendorResourceRecord.objects.get(pk = vrr_id)
-        plugin_module = vrr.vendor_plugin
+        plugin_module = vrr.resource_class.vendor_plugin.module_name
         # We have to make sure the plugin is loaded before we
         # try to unpickle the VendorResource class
         try:
@@ -109,7 +110,9 @@ class VendorPluginManager(object):
             vendor_plugin_log.error("Cannot load plugin %s for VendorResourceRecord %d" % (plugin_module, vrr.id))
             errored_plugins.add(plugin_module)
 
-        klass = self.get_plugin_resource_class(vrr.vendor_plugin, vrr.vendor_class_str)
+        klass = self.get_plugin_resource_class(
+                vrr.resource_class.vendor_plugin.module_name,
+                vrr.resource_class.class_name)
         assert(issubclass(klass, VendorResource))
         vendor_dict = {}
         for attr in vrr.vendorresourceattribute_set.all():

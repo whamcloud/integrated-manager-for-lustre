@@ -41,6 +41,9 @@ class VendorResourceRecord(models.Model):
     parents = models.ManyToManyField('VendorResourceRecord',
             related_name = 'resource_parent')
 
+    def __str__(self):
+        return "%s (record %s)" % (self.resource_class.class_name, self.pk)
+
     def update_attributes(self, vendor_dict):
         import json
 

@@ -13,19 +13,28 @@ from configure.models import VendorResourceRecord
 
 class VendorResourceMetaclass(type):
     def __new__(cls, name, bases, dct):
-        if not name == 'VendorResource':
-            fields = {}
-            stats = {}
-            for field_name, field_obj in dct.items():
-                if isinstance(field_obj, ResourceAttribute):
-                    fields[field_name] = field_obj
-                    del dct[field_name]
-                elif isinstance(field_obj, ResourceStatistic):
-                    stats[field_name] = field_obj
-                    del dct[field_name]
+        dct['_vendor_attributes'] = {}
+        dct['_vendor_statistics'] = {}
 
-            dct['_vendor_attributes'] = fields 
-            dct['_vendor_statistics'] = fields 
+        for base in bases:
+            if hasattr(base, '_vendor_attributes'):
+                dct['_vendor_attributes'].update(base._vendor_attributes)
+            if hasattr(base, '_vendor_statistics'):
+                dct['_vendor_statistics'].update(base._vendor_statistics)
+
+        #print "* %s" % name
+        for field_name, field_obj in dct.items():
+            from configure.lib.storage_plugin.attributes import PosixPath
+        #    print "** %s %s %s %s" % (field_name, field_obj, isinstance(field_obj, ResourceAttribute), isinstance(field_obj, PosixPath))
+            
+            if isinstance(field_obj, ResourceAttribute):
+                dct['_vendor_attributes'][field_name] = field_obj
+                del dct[field_name]
+            elif isinstance(field_obj, ResourceStatistic):
+                dct['_vendor_attributes'][field_name] = field_obj
+                del dct[field_name]
+
+        #print "%s._vendor_attributes = %s" % (name, dct['_vendor_attributes'])
 
         return super(VendorResourceMetaclass, cls).__new__(cls, name, bases, dct)
 
@@ -53,11 +62,20 @@ class VendorResource(object):
         if key.startswith("_") or not key in self._vendor_attributes:
             object.__setattr__(self, key, value)
         else:
+            # First see if the new val is the same as an existing
+            # value if there is an existing value, and if so return.
+            try:
+                old_val = self._vendor_dict[key]
+                if old_val == value:
+                    return
+            except KeyError:
+                pass
+
+            # Value is new or changed, set it and mark dirty
             self._vendor_dict[key] = value
             self._dirty_attributes.add(key)
 
     def __getattr__(self, key):
-        print "blah %s" % self._vendor_dict
         if key.startswith("_") or not key in self._vendor_attributes:
             raise AttributeError
         else:

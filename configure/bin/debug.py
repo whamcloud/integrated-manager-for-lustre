@@ -118,9 +118,14 @@ class HydraDebug(cmd.Cmd, object):
         """Development stub for quickly loading and scanning storage
            plugins."""
         from configure.lib.storage_plugin import vendor_plugin_manager
+        import time
         klass = vendor_plugin_manager.load_plugin(module_name)
         instance = klass()
-        instance.initial_scan()
+        instance.do_initial_scan()
+        while True:
+            instance.do_periodic_update()
+            time.sleep(5)
+            
 
 if __name__ == '__main__':
     cmdline = HydraDebug

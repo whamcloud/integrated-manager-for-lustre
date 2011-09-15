@@ -24,4 +24,56 @@ class ResourceAttribute(object):
            1024 => 1kB"""
         return value
 
+class String(ResourceAttribute):
+    def __init__(self, max_length = None, *args, **kwargs):
+        self.max_length = max_length
+        super(String, self).__init__(*args, **kwargs)
+
+    def validate(self, value):
+        if self.max_length != None and len(value) > self.max_length:
+            raise RuntimeError("Value '%s' too long (max %s)" % (value, self.max_length))
+
+class Integer(ResourceAttribute):
+    def __init__(self, min_val = None, max_val = None, *args, **kwargs):
+        self.min_val = min_val
+        self.max_val = max_val
+        super(Integer, self).__init__(*args, **kwargs)
+
+    def validate(self, value):
+        if self.min_val != None and value < self.min_val:
+            raise RuntimeError("Value %s too low (min %s)" % (value, self.min_val))
+        if self.max_val != None and value > self.max_val:
+            raise RuntimeError("Value %s too high (max %s)" % (value, self.max_val))
+
+class Bytes(ResourceAttribute):
+    def human_readable(self, value):
+        from monitor.lib.util import sizeof_fmt
+        return sizeof_fmt(value)
+
+class Enum(ResourceAttribute):
+    def __init__(self, options = None, *args, **kwargs):
+        if not self.options:
+            raise ValueError("Enum ResourceAttribute must be given 'options' argument")
+
+        super(Enum, self).__init__(*args, **kwargs)
+
+    def validate(self, value):
+        if not value in self.options:
+            raise ValueError("Value '%s' is not one of %s" % (value, self.options))
+
+class Uuid(ResourceAttribute):
+    def validate(self, value):
+        stripped = value.replace("-", "")
+        if not len(stripped) == 32:
+            raise ValueError("'%s' is not a valid UUID" % value)
+
+
+class PosixPath(ResourceAttribute):
+    pass
+
+class HostName(ResourceAttribute):
+    pass
+
+
+
 

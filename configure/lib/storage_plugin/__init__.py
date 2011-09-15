@@ -9,6 +9,6 @@ to hydra."""
 from attributes import ResourceAttribute
 from statistics import ResourceStatistic
 from resource import VendorResource, LocalId, GlobalId
-from plugin import VendorPlugin
+from plugin import VendorPlugin, ResourceNotFound
 from manager import VendorPluginManager, vendor_plugin_manager
 
