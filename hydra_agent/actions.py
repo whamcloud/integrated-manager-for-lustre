@@ -291,8 +291,6 @@ def configure_rsyslog(args):
     os.rename(tmp_name, "/etc/rsyslog.conf")
 
     # signal the process
-    f = open('/var/run/rsyslogd.pid', 'r')
-    pid = f.readline().rstrip()
     try_run(['service', 'rsyslog', 'reload'])
     f.close()
 
