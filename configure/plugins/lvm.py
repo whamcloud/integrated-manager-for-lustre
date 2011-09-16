@@ -10,6 +10,79 @@ from configure.lib.storage_plugin import ResourceAttribute
 from configure.lib.storage_plugin import attributes
 
 class LvmPlugin(VendorPlugin):
+    def initial_scan(self):
+        # Get the list of user-configured hosts to scan
+        root_resources = self.get_root_resources()
+        for lvm_host_resource in root_resources:
+            assert(isinstance(lvm_host_resource, LvmHost))
+            hostname = lvm_host_resource.hostname
+
+            vol_group_resources = []
+            for name, uuid, size in LvmScanner(self.log).get_vgs(hostname):
+                self.log.info("Learned VG %s %s %s" % (name, uuid, size))
+                group = self.register_resource2(LvmGroup, [lvm_host_resource], uuid = uuid, name = name, size = size)
+                vol_group_resources.append(group)
+
+            for vgr in vol_group_resources:
+                for name, uuid, size, path in LvmScanner(self.log).get_lvs(hostname, vgr.name):
+                    self.log.info("Learned LV %s %s %s" % (name, uuid, size))
+                    vol = self.register_resource2(LvmVolume, [vgr], uuid = uuid, name = name, size = size)
+                    node = self.register_resource2(LvmDeviceNode, [vol], host = lvm_host_resource.hostname, path = path)
+
+    def update_scan(self):
+        # Get the list of user-configured hosts to scan
+        root_resources = self.get_root_resources()
+
+        for lvm_host_resource in root_resources:
+            hostname = lvm_host_resource.hostname
+
+            # Update or add VGs
+            found_groups = set()
+            for name, uuid, size in LvmScanner(self.log).get_vgs(hostname):
+                found_groups.add(uuid)
+                try:
+                    group_resource = self.lookup_global_resource(LvmGroup, uuid = uuid, name = name, size = size)
+                    group_resource.name = name
+                    group_resource.size = size
+                except ResourceNotFound:
+                    group = LvmGroup(uuid = uuid, name = name, size = size)
+                    group.add_parent(lvm_host_resource)
+                    self.register_resource(group)
+
+            # Deregister any previously-registered VGs which were not found on this scan
+            for vg in self.lookup_children(lvm_host_resource, LvmGroup):
+                if not vg.uuid in found_groups:
+                    self.deregister_resource(vg)
+
+            found_vols = set()
+            for vg in self.lookup_children(lvm_host_resource, LvmGroup):
+                # Update or add LVs
+                for name, uuid, size, path in LvmScanner(self.log).get_lvs(hostname, vg.name):
+                    found_vols.add(name)
+                    try:
+                        vol_resource = self.lookup_local_resource(vg, LvmVolume, uuid = uuid, name = name, size = size)
+                        vol_resource.name = name
+                        vol_resource.size = size
+                    except ResourceNotFound:
+                        vol = LvmVolume(uuid = uuid, name = name, size = size)
+                        vol.add_parent(vg)
+                        self.register_resource(vol)
+                        node = LvmDeviceNode(host = lvm_host_resource.hostname, path = path)
+                        node.add_parent(vol)
+                        self.register_resource(node)
+
+                # Deregister any previously-registered LVs which were not found on this scan
+                for lv in self.lookup_children(vg, LvmVolume):
+                    if not lv.name in found_vols:
+                        self.deregister_resource(lv)
+
+class LvmScanner(object):
+    """This module is independent of hydra's plugin framework and provides an
+    example of an existing library to access storage information"""
+
+    def __init__(self, log):
+        self.log = log
+
     def simple_ssh(self, hostname, command):
         """Like configure.lib.job.debug_ssh but doesn't require a Host instance"""
         import paramiko
@@ -43,108 +116,32 @@ class LvmPlugin(VendorPlugin):
             self.log.error(result_stderr)
         return result_code, result_stdout, result_stderr
 
-    def initial_scan(self):
-        # Get the list of user-configured hosts to scan
-        root_resources = self.get_root_resources()
-        for lvm_host_resource in root_resources:
-            assert(isinstance(lvm_host_resource, LvmHost))
-            hostname = lvm_host_resource.hostname
-            code, out, err = self.simple_ssh(hostname, "vgs --units b --noheadings -o vg_name,vg_uuid,vg_size")
-            if code != 0:
-                self.log.error("Bad code %s from SSH call: %s %s" %(code, out, err))
-                raise RuntimeError()
+    def get_vgs(self, hostname):
+        code, out, err = self.simple_ssh(hostname, "vgs --units b --noheadings -o vg_name,vg_uuid,vg_size")
+        if code != 0:
+            self.log.error("Bad code %s from SSH call: %s %s" % (code, out, err))
+            raise RuntimeError()
 
-            vol_group_resources = []
-            lines = [l for l in out.split("\n") if len(l) > 0]
-            for line in lines:
-                name, uuid, size_str = line.split()
-                size = int(size_str[0:-1], 10)
-                self.log.info("Learned VG %s %s %s" % (name, uuid, size))
+        vol_group_resources = []
+        lines = [l for l in out.split("\n") if len(l) > 0]
+        for line in lines:
+            name, uuid, size_str = line.split()
+            size = int(size_str[0:-1], 10)
+            yield (name, uuid, size)
 
-                #group = LvmGroup(uuid = uuid, name = name, size = size)
-                #group.add_parent(lvm_host_resource)
-                #self.register_resource(group)
-                group = self.register_resource2(LvmGroup, [lvm_host_resource], uuid = uuid, name = name, size = size)
+    def get_lvs(self, hostname, vg_name):
+        code, out, err = self.simple_ssh(hostname, "lvs --units b --noheadings -o lv_name,lv_uuid,lv_size,lv_path %s" % vg_name)
+        if code != 0:
+            self.log.error("Bad code %s from lvs call for %s: %s %s" % (code, vg_name, out, err))
+            raise RuntimeError()
 
-                vol_group_resources.append(group)
+        lines = [l for l in out.split("\n") if len(l) > 0]
+        for line in lines:
+            name, uuid, size_str, path = line.split()
+            size = int(size_str[0:-1], 10)
+            yield (name, uuid, size, path)
 
-            for vgr in vol_group_resources:
-                code, out, err = self.simple_ssh(hostname, "lvs --units b --noheadings -o lv_name,lv_uuid,lv_size,lv_path %s" % vgr.name)
-                if code != 0:
-                    self.log.error("Bad code %s from lvs call for %s: %s %s" % (code, vgr.name, out, err))
-                    raise RuntimeError()
 
-                lines = [l for l in out.split("\n") if len(l) > 0]
-                for line in lines:
-                    name, uuid, size_str, path = line.split()
-                    size = int(size_str[0:-1], 10)
-                    self.log.info("Learned LV %s %s %s" % (name, uuid, size))
-                    #vol = LvmVolume(uuid = uuid, name = name, size = size)
-                    #vol.add_parent(vgr)
-                    #self.register_resource(vol)
-                    vol = self.register_resource2(LvmVolume, [vgr], uuid = uuid, name = name, size = size)
-
-                    #node = LvmDeviceNode(host = lvm_host_resource.hostname, path = path)
-                    #node.add_parent(vol)
-                    #self.register_resource(node)
-                    node = self.register_resource2(LvmDeviceNode, [vol], host = lvm_host_resource.hostname, path = path)
-
-    def update_scan(self):
-        # Get the list of user-configured hosts to scan
-        root_resources = self.get_root_resources()
-
-        for lvm_host_resource in root_resources:
-            hostname = lvm_host_resource.hostname
-            code, out, err = self.simple_ssh(hostname, "vgs --units b --noheadings -o vg_name,vg_uuid,vg_size")
-            if code != 0:
-                self.log.error("Bad code %s from SSH call: %s %s" %(code, out, err))
-                raise RuntimeError()
-
-            vol_group_resources = []
-            lines = [l for l in out.split("\n") if len(l) > 0]
-            found_groups = set()
-            for line in lines:
-                name, uuid, size_str = line.split()
-                size = int(size_str[0:-1], 10)
-                found_groups.add(uuid)
-                try:
-                    group_resource = self.lookup_global_resource(LvmGroup, uuid = uuid, name = name, size = size)
-                    group_resource.name = name
-                    group_resource.size = size
-                except ResourceNotFound:
-                    group = LvmGroup(uuid = uuid, name = name, size = size)
-                    group.add_parent(lvm_host_resource)
-                    self.register_resource(group)
-
-            for vg in self.lookup_children(lvm_host_resource, LvmGroup):
-                if not vg.uuid in found_groups:
-                    self.deregister_resource(vg)
-                code, out, err = self.simple_ssh(hostname, "lvs --units b --noheadings -o lv_name,lv_uuid,lv_size,lv_path %s" % vg.name)
-                if code != 0:
-                    self.log.error("Bad code %s from lvs call for %s: %s %s" % (code, vgr.name, out, err))
-                    raise RuntimeError()
-
-                lines = [l for l in out.split("\n") if len(l) > 0]
-                found_vols = set()
-                for line in lines:
-                    name, uuid, size_str, path = line.split()
-                    size = int(size_str[0:-1], 10)
-                    found_vols.add(name)
-                    try:
-                        vol_resource = self.lookup_local_resource(vg, LvmVolume, uuid = uuid, name = name, size = size)
-                        vol_resource.name = name
-                        vol_resource.size = size
-                    except ResourceNotFound:
-                        vol = LvmVolume(uuid = uuid, name = name, size = size)
-                        vol.add_parent(vg)
-                        self.register_resource(vol)
-                        node = LvmDeviceNode(host = lvm_host_resource.hostname, path = path)
-                        node.add_parent(vol)
-                        self.register_resource(node)
-
-                for lv in self.lookup_children(vg, LvmVolume):
-                    if not lv.name in found_vols:
-                        self.deregister_resource(lv)
 
 class LvmGroup(VendorResource):
     identifier = GlobalId('uuid')
