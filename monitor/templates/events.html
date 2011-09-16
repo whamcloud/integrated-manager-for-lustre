@@ -6,7 +6,7 @@
 
 <div id="event_filter">
     <h2 class="filter_title">Filter events</h2>
-    <form method='post'>
+    <form method='get'>
         {% csrf_token %}
         {% for field in form %}
             <p>{{field.label_tag}}<br>{{field}}</p>

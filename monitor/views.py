@@ -239,31 +239,20 @@ def events(request):
     filter_args = []
     filter_kwargs = {}
 
-    if request.method == 'GET':
+    if request.method == 'GET' and not 'host' in request.GET:
         form = EventFilterForm()
-    elif request.method == 'POST':
-        form = EventFilterForm(data = request.POST)
+    else:
+        form = EventFilterForm(data = request.GET)
         if form.is_valid():
-            try:
-                host_id = request.POST['host']
-                if len(host_id) > 0:
-                    filter_kwargs['host'] = host_id
-            except:
-                pass
-            try:
-                severity = request.POST['severity']
-                if len(severity) > 0:
-                    filter_kwargs['severity'] = severity
-            except:
-                pass
-            try:
-                klass = request.POST['event_type']
-                if len(klass) > 0:
-                    from django.db.models import Q
-                    klass_lower = klass.lower()
-                    filter_args.append(~Q(**{klass_lower: None}))
-            except KeyError:
-                pass
+            if form.cleaned_data['host']:
+                filter_kwargs['host'] = form.cleaned_data['host']
+            if form.cleaned_data['severity']:
+                filter_kwargs['severity'] = form.cleaned_data['severity']
+            klass = form.cleaned_data['event_type']
+            if klass:
+                from django.db.models import Q
+                klass_lower = klass.lower()
+                filter_args.append(~Q(**{klass_lower: None}))
 
     event_set = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
     return render_to_response('events.html', RequestContext(request, {
