@@ -139,11 +139,12 @@ class HydraDebug(cmd.Cmd, object):
     def do_test_fake_events(self, line):
         from random import randint
         count = int(line)
-        tms = list(TargetMount.objects.all())
+        hosts = list(Host.objects.all())
         for i in range(0, count):
-            tm = tms[randint(0, len(tms))]
-            TargetOnlineEvent(target_mount = tm, state = False).save()
-            TargetOnlineEvent(target_mount = tm, state = True).save()
+            import logging
+            idx = randint(0, len(hosts) - 1)
+            host = hosts[idx]
+            LearnEvent(learned_item = host, severity = logging.INFO).save()
 
     def do_audit_list(self, line):
         for m in Monitor.objects.all():
