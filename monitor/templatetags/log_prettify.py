@@ -30,16 +30,11 @@ def normalize_nid(string):
 
     return string
 
-def pretty_log_line(line):
-    first_part = line.split(": ")[0]
-    message = ": ".join(line.split(": ")[1:])
-    date_len = len("Jun 16 15:38:54")
-    date = first_part[0:date_len]
-    host_and_service = first_part[date_len:]
-    try:
-        host,service = host_and_service.split()
-    except ValueError:
-        return line
+def pretty_log_line(log_entry):
+    message = log_entry.message
+    service = log_entry.syslogtag
+    date = log_entry.devicereportedtime.strftime("%b %d %H:%M:%S")
+    host = log_entry.fromhost
 
     date = conditional_escape(date)
     host = conditional_escape(host)
@@ -73,5 +68,9 @@ def pretty_log_line(line):
 
     return mark_safe("<span class='log_date'>%s</span> <span class='log_host'>%s</span> <span class='log_service'>%s</span>: <span class='log_message'>%s</span>" % (date, host, service, message))
 
+def systemevent_css_class(systemevent):
+    return mark_safe("log_line %s" % systemevent.get_message_class())
+
 register = template.Library()
 register.filter('pretty_log_line', pretty_log_line)
+register.filter('systemevent_css_class', systemevent_css_class)
