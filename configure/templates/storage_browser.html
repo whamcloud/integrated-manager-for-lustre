@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block scripts %}
+{% endblock %}
+
+{% block css %}
+{% endblock %}
+
+{% block content %}
+
+<form method='post'>
+    {% csrf_token %}
+    {{ resource_form.as_p }}
+    <input type='submit' value='Go'/>
+</form>
+
+<script type='text/javascript'>
+    function render_resource(resource) {
+        var resource_name = $(document.createElement('p'))
+        resource_name.html(resource['human_string'])
+
+        var children_ul = $(document.createElement('ul'))
+        var children = resource['children']
+        for (var i = 0; i < children.length; i++) {
+            children_ul.append(render_resource(children[i]));
+        }
+
+        var resource_li = $(document.createElement('li'));
+        resource_li.append(resource_name);
+        resource_li.append(children_ul);
+        return resource_li;
+    }
+
+    $(document).ready(function() {
+        var resource_tree = {{resource_tree|safe}};
+        var tree_base = $('ul#resource_tree');
+        for (var i = 0; i < resource_tree.length; ++i) {
+            tree_base.append(render_resource(resource_tree[i]));
+        }
+    });
+</script>
+
+<ul id='resource_tree'>
+</ul>
+
+{% endblock %}

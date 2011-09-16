@@ -530,14 +530,54 @@ def conf_param_help(request, conf_param_name):
     return HttpResponse(help_text, mimetype = 'text/plain')
 
 def vendor_resources(request):
-    from configure.lib.storage_plugin import vendor_plugin_manager
-    resources = vendor_plugin_manager.get_all_resources()
+    from configure.lib.storage_plugin import ResourceQuery
+    resources = ResourceQuery().get_all_resources()
     return render_to_response("vendor_resources.html",
             RequestContext(request, {"resources": resources}))
 
 def vendor_resource(request, vrr_id):
-    from configure.lib.storage_plugin import vendor_plugin_manager
-    resource = vendor_plugin_manager.get_resource(vrr_id)
+    from configure.lib.storage_plugin import ResourceQuery
+    resource = ResourceQuery().get_resource(vrr_id)
     return render_to_response("vendor_resource.html",
             RequestContext(request, {"resource": resource}))
+
+
+
+def _resource_tree(plugin, klass):
+    from configure.lib.storage_plugin import ResourceQuery
+    tree = ResourceQuery().get_resource_tree(plugin, klass)
+
+    class ResourceJsonEncoder(json.JSONEncoder):
+        def default(self, o):
+            from configure.lib.storage_plugin import VendorResource
+            if isinstance(o, VendorResource):
+                return o.to_json()
+            else:
+                return super(ResourceJsonEncoder, self).default(o)
+
+    return json.dumps(tree, cls = ResourceJsonEncoder, indent=4)
+
+def storage_browser(request):
+    from configure.models import VendorResourceClass
+
+    class ResourceForm(forms.Form):
+        resource = forms.ModelChoiceField(queryset = VendorResourceClass.objects.all())
+
+    if request.method == 'GET':
+        resource_form = ResourceForm()
+        resource_tree = json.dumps([])
+    elif request.method == 'POST':
+        resource_form = ResourceForm(request.POST)
+        if resource_form.is_valid():
+            vendor_resource_class = resource_form.cleaned_data['resource']
+            vendor_plugin = vendor_resource_class.vendor_plugin
+            resource_tree = _resource_tree(vendor_plugin.module_name, vendor_resource_class.class_name)
+        else:
+            resource_tree = json.dumps([])
+
+    return render_to_response('storage_browser.html', RequestContext(request, {
+        'resource_form': resource_form,
+        'resource_tree': resource_tree
+        }))
+
 

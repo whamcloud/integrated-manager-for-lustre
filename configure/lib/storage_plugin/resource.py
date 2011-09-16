@@ -52,11 +52,31 @@ class VendorResource(object):
                 raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._vendor_attributes.keys()))
             setattr(self, k, v)
 
+    def to_json(self, stack = []):
+        dct = {}
+        dct['human_string'] = self.human_string(stack)
+        dct.update(self.get_attributes_display())
+        dct['children'] = []
+        
+        stack = stack + [self]
+        # This is a bit ropey, .children is actually only added when doing a resource_tree from resourcemanager
+        for c in self._children:
+            dct['children'].append(c.to_json(stack))
+
+        return dct
+
     def get_handle(self):
         return self._handle
 
     def __str__(self):
         return "<%s %s>" % (self.__class__.__name__, self._handle)
+
+    def human_string(self, ancestors=[]):
+        """Subclasses should implement a function which formats a string for
+        presentation, possibly in a tree display as a child of 'parent' (a 
+        VendorResource instance) or if parent is None then for display 
+        on its own."""
+        return self.__str__()
 
     def __setattr__(self, key, value):
         if key.startswith("_") or not key in self._vendor_attributes:
@@ -129,19 +149,20 @@ class VendorResource(object):
     def get_attributes_display(self):
         """Return a list of 2-tuples for names and human readable
            values for all resource attributes (i.e. _vendor_dict)"""
-        attributes = []
+        attributes = {}
         for k,v in self._vendor_dict.items():
             try:
                 attribute_obj = self._vendor_attributes[k]
             except KeyError:
                 # For non-declared fields, fall back to generic field
                 attribute_obj = ResourceAttribute()
-            attributes.append((k, attribute_obj.human_readable(v))) 
+            attributes[k] = attribute_obj.human_readable(v) 
         return attributes
 
     def add_parent(self, parent_resource):
-        self._parents.append(parent_resource)
-        self._parents_dirty = True
+        if not parent_resource in self._parents:
+            self._parents.append(parent_resource)
+            self._parents_dirty = True
 
     def validate(self):
         """Call validate() on the ResourceAttribute for all _vendor_dict items, and
@@ -153,6 +174,18 @@ class VendorResource(object):
         for k,a in self._vendor_attributes.items():
             if not k in self._vendor_dict and not a.optional:
                 raise ValueError("Missing mandatory attribute %s" % k)
+                
+    def get_parent(self, parent_klass):
+        """Return one member of self._parents of class 'parent_klass'.  Raises 
+           an exception if there are multiple matches or no matches."""
+        parents_filtered = [p for p in self._parents if isinstance(p, parent_klass)]
+        if len(parents_filtered) == 0:
+            print self._parents
+            raise RuntimeError("No parents of class %s" % parent_klass)   
+        elif len(parents_filtered) > 1:
+            raise RuntimeError("Multiple parents of class %s" % parent_klass)
+        else:
+            return parents_filtered[0]
 
 class LocalId(object):
     """An Id which is unique within the ancestor resource of type parent_klass"""

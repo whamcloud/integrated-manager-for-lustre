@@ -12,7 +12,7 @@
 
 <h3>Attributes</h3>
 <ul>
-{% for k,v in resource.get_attributes_display %}
+{% for k,v in resource.get_attributes_display.items %}
 <li>{{k}}: {{v}}</li>
 {% endfor %}
 </ul>

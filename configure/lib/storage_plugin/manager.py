@@ -43,6 +43,118 @@ class LoadedPlugin(object):
                             resource_class = vrc,
                             name = name)
 
+class ResourceQuery(object):
+    def __init__(self):
+        # Map VendorResourceRecord ID to instantiated VendorResource
+        self._pk_to_resource = {}
+        
+        # Record plugins which fail to load
+        self._errored_plugins = set()
+        
+    def _record_to_resource_parents(self, record):
+        if record.pk in self._pk_to_resource:
+            return self._pk_to_resource[record.pk]
+        else:
+            resource = self._record_to_resource(record)
+            resource._parents = [self._record_to_resource_parents(p) for p in record.parents.all()]
+            return resource
+
+    def _record_to_resource(self, record):
+        """'record' may be a VendorResourceRecord or an ID.  Returns a
+        VendorResource, or None if the required plugin is unavailable"""
+        
+        if not isinstance(record, VendorResourceRecord):
+            if record in self._pk_to_resource:
+                return self._pk_to_resource[record]
+            record = VendorResourceRecord.objects.get(pk=record)
+        else:
+            if record.pk in self._pk_to_resource:
+                return self._pk_to_resource[record.pk]
+            
+        plugin_module = record.resource_class.vendor_plugin.module_name
+        if plugin_module in self._errored_plugins:
+            return None
+            
+        # We have to make sure the plugin is loaded before we
+        # try to unpickle the VendorResource class
+        try:
+            vendor_plugin_manager.load_plugin(plugin_module)
+        except:
+            vendor_plugin_log.error("Cannot load plugin %s for VendorResourceRecord %d" % (plugin_module, record.id))
+            self._errored_plugins.add(plugin_module)
+
+        klass = vendor_plugin_manager.get_plugin_resource_class(
+                record.resource_class.vendor_plugin.module_name,
+                record.resource_class.class_name)
+        assert(issubclass(klass, VendorResource))
+        vendor_dict = {}
+        for attr in record.vendorresourceattribute_set.all():
+            vendor_dict[attr.key] = attr.value
+        resource = klass(**vendor_dict)
+        resource._handle = record.id
+
+        return resource
+
+    # These get_ functions are wrapped in transactions to ensure that 
+    # e.g. after reading a parent relationship the parent record will really
+    # still be there when we SELECT it.
+    # XXX this could potentially cause problems if used from a view function
+    # which depends on transaction behaviour, as we would commit their transaction
+    # halfway through -- maybe use nested_commit_on_success?
+    @transaction.commit_on_success()
+    def get_resource(self, vrr_id):
+        """Return a VendorResource corresponding to a VendorResourceRecord
+        identified by vrr_id.  May raise an exception if the plugin for that
+        vrr cannot be loaded for any reason.
+
+        Note: resource._parents will not be populated, you will only
+        get the attributes."""
+
+        vrr = VendorResourceRecord.objects.get(pk = vrr_id)
+        return self._record_to_resource(vrr)
+
+    @transaction.commit_on_success()
+    def get_all_resources(self):
+        """Return list of all resources for all plugins"""
+        records = VendorResourceRecord.objects.all()
+
+        resources = []
+        resource_parents = {}
+        for vrr in records:
+            r = self._record_to_resource(vrr)
+            if r:
+                resources.append(r)
+                for p in vrr.parents.all():
+                    r._parents.append(self._record_to_resource(p))
+
+        return resources
+
+    def _load_record_and_children(self, record):
+        resource = self._record_to_resource_parents(record)
+        children_records = VendorResourceRecord.objects.filter(
+            parents = record)
+            
+        children_resources = []
+        for c in children_records:
+            child_resource = self._load_record_and_children(c)
+            children_resources.append(child_resource)
+
+        resource._children = children_resources
+        return resource
+
+    def get_resource_tree(self, plugin_module, root_klass):
+        """For a given plugin and resource class, find all instances of that class
+        and return a tree of resource instances (with additional 'children' attribute)"""
+        records = VendorResourceRecord.objects.filter(
+            resource_class__class_name = root_klass,
+            resource_class__vendor_plugin__module_name = plugin_module)
+            
+        tree = []
+        for record in records:
+            tree.append(self._load_record_and_children(record))
+        
+        return tree    
+
 class VendorPluginManager(object):
     def __init__(self):
         self.loaded_plugins = {}
@@ -84,99 +196,6 @@ class VendorPluginManager(object):
                     key = name, value = value)
             
         vendor_plugin_log.debug("create_root_resource created %d" % (record.id))
-
-    # These get_ functions are wrapped in transactions to ensure that 
-    # e.g. after reading a parent relationship the parent record will really
-    # still be there when we SELECT it.
-    # XXX this could potentially cause problems if used from a view function
-    # which depends on transaction behaviour, as we would commit their transaction
-    # halfway through -- maybe use nested_commit_on_success?
-    @transaction.commit_on_success()
-    def get_resource(self, vrr_id):
-        """Return a VendorResource corresponding to a VendorResourceRecord
-        identified by vrr_id.  May raise an exception if the plugin for that
-        vrr cannot be loaded for any reason.
-
-        Note: resource._parents will not be populated, you will only
-        get the attributes.  If you want ancestors too, call get_resource_tree."""
-
-        vrr = VendorResourceRecord.objects.get(pk = vrr_id)
-        plugin_module = vrr.resource_class.vendor_plugin.module_name
-        # We have to make sure the plugin is loaded before we
-        # try to unpickle the VendorResource class
-        try:
-            self.load_plugin(plugin_module)
-        except:
-            vendor_plugin_log.error("Cannot load plugin %s for VendorResourceRecord %d" % (plugin_module, vrr.id))
-            errored_plugins.add(plugin_module)
-
-        klass = self.get_plugin_resource_class(
-                vrr.resource_class.vendor_plugin.module_name,
-                vrr.resource_class.class_name)
-        assert(issubclass(klass, VendorResource))
-        vendor_dict = {}
-        for attr in vrr.vendorresourceattribute_set.all():
-            vendor_dict[attr.key] = attr.value
-        resource = klass(**vendor_dict)
-        resource._handle = vrr.id
-
-        return resource
-
-    @transaction.commit_on_success()
-    def get_resource_tree(self, vrr_id):
-        """Like get_resource, but look up all a resource's ancestor's too"""
-        # TODO: implement me.
-        raise NotImplementedError()
-
-    @transaction.commit_on_success()
-    def get_all_resources(self):
-        """Return list of all resources for all plugins"""
-        records = VendorResourceRecord.objects.all()
-
-        # Map VendorResourceRecord ID to instantiated VendorResource
-        pk_to_resource = {}
-
-        # Stash the list of parent IDs for each resource so that
-        # we can populate the parents at the end when all resources
-        # are loaded.
-        resource_parents = defaultdict(list)
-
-        errored_plugins = set()
-        resources = []
-        for vrr in records:
-            plugin_module = vrr.resource_class.vendor_plugin.module_name
-
-            # Once we've realised a plugin isn't loadable, avoid
-            # logging an error for every record that used it.
-            if plugin_module in errored_plugins:
-                continue
-
-            # We have to make sure the plugin is loaded before we
-            # try to unpickle the VendorResource class
-            try:
-                self.load_plugin(plugin_module)
-            except:
-                vendor_plugin_log.error("Cannot load plugin %s for VendorResourceRecord %d: further records using this plugin will be ignored" % (plugin_module, vrr.id))
-                errored_plugins.add(plugin_module)
-
-            klass = self.get_plugin_resource_class(
-                    vrr.resource_class.vendor_plugin.module_name,
-                    vrr.resource_class.class_name)
-            assert(issubclass(klass, VendorResource))
-            vendor_dict = {}
-            for key,val in vrr.items():
-                vendor_dict[key] = val
-            resource = klass(**vendor_dict)
-            resource._handle = vrr.id
-            pk_to_resource[vrr.id] = resource
-
-        # Finally loop over all loaded resources and populate ._parents
-        for pk, resource in pk_to_resource.items():
-            for parent_id in resource_parents[pk]:
-                # NB don't use add_parent in order to avoid dirtying the object
-                resource._parents.append(pk_to_resource[parent_id])
-
-        return pk_to_resource.values()
 
     def register_plugin(self, plugin_instance):
         """Register a particular instance of a VendorPlugin"""

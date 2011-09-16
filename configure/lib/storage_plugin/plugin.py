@@ -189,6 +189,54 @@ class VendorPlugin(object):
                 pass
         return child_resources
 
+    def register_resource2(self, klass, parents, **attrs):
+        if isinstance(klass.identifier, LocalId):
+            # To lookup a LocalId resource, we have to find something that
+            # matches the attrs, then look at its ancestry to its scope
+            # object, then see if that scope object is equal to or an 
+            # ancestor of any of the parents named here
+            from django.db.models import Q
+            records = VendorResourceRecord.objects.\
+                   filter(resource_class__class_name = klass.__name__).\
+                   filter(resource_class__vendor_plugin__module_name = self.__class__.__module__).\
+                   filter(vendor_id_str = klass(**attrs).id_str()).\
+                   filter(~Q(vendor_id_scope = None))
+            for r in records:
+                # is r.vendor_id_scope in the ancestry of our new resource?
+                # FIXME: actually explore ancestors as well as parents
+                if r.vendor_id_scope.pk in [i._handle for i in parents]:
+                    if r.pk in self._resource_cache:
+                        resource = self._resource_cache[r.pk]
+                        for p in parents:
+                            resource.add_parent(p)
+                        resource.save()
+                        return resource
+                        
+            # Either it's not in the DB or it's in the DB but not loaded            
+            resource = klass(**attrs)
+            for p in parents:
+                resource.add_parent(p)
+            self.register_resource(resource)
+            return resource
+
+        elif isinstance(klass.identifier, GlobalId):
+            try:
+                resource = self.lookup_global_resource(klass, **attrs)
+                for p in parents:
+                    # Ensure that the resource (which may have been created under
+                    # another root) has all the parents that this register-caller 
+                    # wants it to
+                    resource.add_parent(p)
+                resource.save() 
+            except ResourceNotFound:
+                resource = klass(**attrs)
+                for p in parents:
+                    resource.add_parent(p)
+                self.register_resource(resource)
+            return resource        
+        else:
+            raise NotImplementedError
+
     def register_resource(self, resource):
         """Register a resource:
            * Validate its attributes

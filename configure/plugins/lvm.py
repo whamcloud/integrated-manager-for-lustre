@@ -60,9 +60,12 @@ class LvmPlugin(VendorPlugin):
                 name, uuid, size_str = line.split()
                 size = int(size_str[0:-1], 10)
                 self.log.info("Learned VG %s %s %s" % (name, uuid, size))
-                group = LvmGroup(uuid = uuid, name = name, size = size)
-                group.add_parent(lvm_host_resource)
-                self.register_resource(group)
+
+                #group = LvmGroup(uuid = uuid, name = name, size = size)
+                #group.add_parent(lvm_host_resource)
+                #self.register_resource(group)
+                group = self.register_resource2(LvmGroup, [lvm_host_resource], uuid = uuid, name = name, size = size)
+
                 vol_group_resources.append(group)
 
             for vgr in vol_group_resources:
@@ -76,12 +79,15 @@ class LvmPlugin(VendorPlugin):
                     name, uuid, size_str, path = line.split()
                     size = int(size_str[0:-1], 10)
                     self.log.info("Learned LV %s %s %s" % (name, uuid, size))
-                    vol = LvmVolume(uuid = uuid, name = name, size = size)
-                    vol.add_parent(vgr)
-                    self.register_resource(vol)
-                    node = LvmDeviceNode(host = lvm_host_resource.hostname, path = path)
-                    node.add_parent(vol)
-                    self.register_resource(node)
+                    #vol = LvmVolume(uuid = uuid, name = name, size = size)
+                    #vol.add_parent(vgr)
+                    #self.register_resource(vol)
+                    vol = self.register_resource2(LvmVolume, [vgr], uuid = uuid, name = name, size = size)
+
+                    #node = LvmDeviceNode(host = lvm_host_resource.hostname, path = path)
+                    #node.add_parent(vol)
+                    #self.register_resource(node)
+                    node = self.register_resource2(LvmDeviceNode, [vol], host = lvm_host_resource.hostname, path = path)
 
     def update_scan(self):
         # Get the list of user-configured hosts to scan
@@ -147,6 +153,9 @@ class LvmGroup(VendorResource):
     name = attributes.String()
     size = attributes.Bytes()
 
+    def human_string(self, parent = None):
+        return self.name
+
 class LvmVolume(VendorResource):
     # LVM Volumes actually have a UUID but we're using a LocalId to 
     # exercise the code path
@@ -156,11 +165,36 @@ class LvmVolume(VendorResource):
     name = attributes.String()
     size = attributes.Bytes()
 
+    def human_string(self, ancestors = []):
+        if LvmGroup in [a.__class__ for a in ancestors]:
+            return self.name
+        else:
+            group = self.get_parent(LvmGroup) 
+            return "%s-%s" % (group.name, self.name)
+
 from configure.lib.storage_plugin import base_resources
 class LvmDeviceNode(base_resources.DeviceNode):
     identifier = GlobalId('host', 'path')
     # Just using the built in HostName and PosixPath from DeviceNode
-    pass
+    def human_string(self, ancestors = []):
+        ancestor_klasses = dict([(i.__class__, i) for i in ancestors])
+        print "ak=%s" % ancestor_klasses
+        print "*ak=%s" % (LvmVolume in ancestor_klasses)
+        if LvmHost in ancestor_klasses and LvmVolume in ancestor_klasses:
+            # Host .. Volume .. me
+            # I'm just my path
+            return self.path
+        elif LvmVolume in ancestor_klasses:
+            # Volume .. me
+            # I'm my host and my path
+            return "%s: %s" % (self.host, self.path)
+        else:
+            # .. me
+            # I'm my host, volume and path
+            vol = self.get_parent(LvmVolume)
+            group = vol.get_parent(LvmGroup)
+            return "%s-%s %s: %s" % (group.name, vol.name, self.host, self.path)
+
 
 class LvmHost(VendorResource):    
     """A host on which we wish to identify LVM managed storage.
@@ -168,4 +202,7 @@ class LvmHost(VendorResource):
        user: XXX NOT WRITTEN FOR PRODUCTION USE"""
     identifier = GlobalId('hostname')
     hostname = ResourceAttribute() 
+
+    def human_string(self, ancestors = []):
+        return self.hostname
 

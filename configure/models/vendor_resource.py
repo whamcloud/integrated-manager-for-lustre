@@ -24,6 +24,9 @@ class VendorResourceClass(models.Model):
     vendor_plugin = models.ForeignKey(VendorPluginRecord)
     class_name = models.CharField(max_length = MAX_NAME_LENGTH)
 
+    def __str__(self):
+        return "%s/%s" % (self.vendor_plugin.module_name, self.class_name)
+
     class Meta:
         unique_together = ('vendor_plugin', 'class_name')
         app_label = 'configure'

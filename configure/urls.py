@@ -26,4 +26,5 @@ urlpatterns = patterns('',
     (r'^conf_param_help/(?P<conf_param_name>[\w\._-]+)/$', conf_param_help),
     (r'^vendor_resources/$', vendor_resources),
     (r'^vendor_resource/(?P<vrr_id>\d+)/$', vendor_resource),
+    (r'^storage_browser/$', storage_browser),
 )
