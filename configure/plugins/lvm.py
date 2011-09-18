@@ -8,6 +8,7 @@ from configure.lib.storage_plugin import LocalId, GlobalId
 from configure.lib.storage_plugin import ResourceAttribute
 
 from configure.lib.storage_plugin import attributes
+from configure.lib.storage_plugin import base_resources
 
 class LvmPlugin(VendorPlugin):
     def initial_scan(self):
@@ -141,19 +142,20 @@ class LvmScanner(object):
             size = int(size_str[0:-1], 10)
             yield (name, uuid, size, path)
 
-
-
-class LvmGroup(VendorResource):
+class LvmGroup(base_resources.StoragePool):
     identifier = GlobalId('uuid')
 
     uuid = attributes.Uuid()
     name = attributes.String()
     size = attributes.Bytes()
 
+    icon = 'lvm_vg'
+    human_name = 'VG'
+
     def human_string(self, parent = None):
         return self.name
 
-class LvmVolume(VendorResource):
+class LvmVolume(base_resources.VirtualDisk):
     # LVM Volumes actually have a UUID but we're using a LocalId to 
     # exercise the code path
     identifier = LocalId(LvmGroup, 'name')
@@ -162,6 +164,9 @@ class LvmVolume(VendorResource):
     name = attributes.String()
     size = attributes.Bytes()
 
+    icon = 'lvm_lv'
+    human_name = 'LV'
+
     def human_string(self, ancestors = []):
         if LvmGroup in [a.__class__ for a in ancestors]:
             return self.name
@@ -169,7 +174,6 @@ class LvmVolume(VendorResource):
             group = self.get_parent(LvmGroup) 
             return "%s-%s" % (group.name, self.name)
 
-from configure.lib.storage_plugin import base_resources
 class LvmDeviceNode(base_resources.DeviceNode):
     identifier = GlobalId('host', 'path')
     # Just using the built in HostName and PosixPath from DeviceNode
@@ -179,19 +183,14 @@ class LvmDeviceNode(base_resources.DeviceNode):
             # Host .. Volume .. me
             # I'm just my path
             return self.path
-        elif LvmVolume in ancestor_klasses:
+        else:
             # Volume .. me
+            # or just 'me'
             # I'm my host and my path
             return "%s: %s" % (self.host, self.path)
-        else:
-            # .. me
-            # I'm my host, volume and path
-            vol = self.get_parent(LvmVolume)
-            group = vol.get_parent(LvmGroup)
-            return "%s-%s %s: %s" % (group.name, vol.name, self.host, self.path)
 
 
-class LvmHost(VendorResource):    
+class LvmHost(base_resources.Host):    
     """A host on which we wish to identify LVM managed storage.
        Assumed to be accessible by passwordless SSH as the hydra
        user: XXX NOT WRITTEN FOR PRODUCTION USE"""

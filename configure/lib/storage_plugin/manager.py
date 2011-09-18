@@ -12,6 +12,7 @@ from configure.lib.storage_plugin.plugin import VendorPlugin
 from configure.lib.storage_plugin.log import vendor_plugin_log
 from configure.models import *
 from django.db import transaction
+import json
 
 class LoadedPlugin(object):
     """Convenience store of introspected information about loaded 
@@ -53,10 +54,12 @@ class ResourceQuery(object):
         
     def _record_to_resource_parents(self, record):
         if record.pk in self._pk_to_resource:
+            vendor_plugin_log.debug("Got record %s from cache" % record)
             return self._pk_to_resource[record.pk]
         else:
             resource = self._record_to_resource(record)
-            resource._parents = [self._record_to_resource_parents(p) for p in record.parents.all()]
+            if resource:
+                resource._parents = [self._record_to_resource_parents(p) for p in record.parents.all()]
             return resource
 
     def _record_to_resource(self, record):
@@ -79,9 +82,10 @@ class ResourceQuery(object):
         # try to unpickle the VendorResource class
         try:
             vendor_plugin_manager.load_plugin(plugin_module)
-        except:
-            vendor_plugin_log.error("Cannot load plugin %s for VendorResourceRecord %d" % (plugin_module, record.id))
+        except Exception,e:
+            vendor_plugin_log.error("Cannot load plugin %s for VendorResourceRecord %d: %s" % (plugin_module, record.id, e))
             self._errored_plugins.add(plugin_module)
+            return None
 
         klass = vendor_plugin_manager.get_plugin_resource_class(
                 record.resource_class.vendor_plugin.module_name,
@@ -93,6 +97,7 @@ class ResourceQuery(object):
         resource = klass(**vendor_dict)
         resource._handle = record.id
 
+        self._pk_to_resource[record.pk] = resource
         return resource
 
     # These get_ functions are wrapped in transactions to ensure that 
@@ -137,24 +142,28 @@ class ResourceQuery(object):
         return resources
 
     def _load_record_and_children(self, record):
+        vendor_plugin_log.debug("load_record_and_children: %s" % record)
         resource = self._record_to_resource_parents(record)
-        children_records = VendorResourceRecord.objects.filter(
-            parents = record)
-            
-        children_resources = []
-        for c in children_records:
-            child_resource = self._load_record_and_children(c)
-            children_resources.append(child_resource)
+        if resource:
+            children_records = VendorResourceRecord.objects.filter(
+                parents = record)
+                
+            children_resources = []
+            for c in children_records:
+                child_resource = self._load_record_and_children(c)
+                children_resources.append(child_resource)
 
-        resource._children = children_resources
+            resource._children = children_resources
         return resource
 
     def get_resource_tree(self, root_records):
         """For a given plugin and resource class, find all instances of that class
         and return a tree of resource instances (with additional 'children' attribute)"""
+        vendor_plugin_log.debug(">> get_resource_tree")
         tree = []
         for record in root_records:
             tree.append(self._load_record_and_children(record))
+        vendor_plugin_log.debug("<< get_resource_tree")
         
         return tree    
 
@@ -163,6 +172,7 @@ class VendorPluginManager(object):
         self.loaded_plugins = {}
         self.plugin_sessions = {}
 
+    @transaction.commit_on_success
     def create_root_resource(self, plugin_mod, resource_class_name, **kwargs):
         vendor_plugin_log.debug("create_root_resource %s %s %s" % (plugin_mod, resource_class_name, kwargs))
         plugin_class = self.load_plugin(plugin_mod)
@@ -196,7 +206,8 @@ class VendorPluginManager(object):
         record.save()
         for name, value in kwargs.items():
             VendorResourceAttribute.objects.create(resource = record,
-                    key = name, value = value)
+                    key = name, value = json.dumps(value))
+
             
         vendor_plugin_log.debug("create_root_resource created %d" % (record.id))
 

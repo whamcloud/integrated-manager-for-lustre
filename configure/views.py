@@ -532,11 +532,8 @@ def conf_param_help(request, conf_param_name):
 def storage_resource(request, vrr_id):
     from configure.lib.storage_plugin import ResourceQuery
     resource = ResourceQuery().get_resource_parents(vrr_id)
-    root_resources = list(VendorResourceRecord.objects.filter(parents=vrr_id))
-    resource_tree = _resource_tree(root_resources)
     return render_to_response("storage_resource.html", RequestContext(request, {
-                "resource": resource,
-                'resource_tree': resource_tree
+                "resource": resource
                 }))
 
 
@@ -557,11 +554,25 @@ def _resource_tree(root_records):
         for c in resource_dict['children']:
             decorate_urls(c)
 
+    def decorate_jstree(resource_dict):
+        from settings import STATIC_URL
+        from django.core.urlresolvers import reverse
+        resource_dict['attr'] = {
+                'vrr_url': "%s" %  reverse('configure.views.storage_resource', kwargs={'vrr_id': resource_dict['id']}),
+                'vrr_id': resource_dict['id']
+                }
+        resource_dict['data'] = {
+                "title": resource_dict['human_string'],
+                "icon": "%simages/storage_plugin/%s.png" % (STATIC_URL, resource_dict['icon'])}
+        for c in resource_dict['children']:
+            decorate_jstree(c)
+
     class ResourceJsonEncoder(json.JSONEncoder):
         def default(self, o):
             from configure.lib.storage_plugin import VendorResource
             if isinstance(o, VendorResource):
                 resource_dict = o.to_json()
+                decorate_jstree(resource_dict)
                 decorate_urls(resource_dict)
                 return resource_dict
             else:
@@ -572,20 +583,25 @@ def _resource_tree(root_records):
 def storage_browser(request):
     from configure.models import VendorResourceClass
 
-    class ResourceForm(forms.Form):
-        resource = forms.ModelChoiceField(queryset = VendorResourceClass.objects.all())
+    if VendorResourceClass.objects.count() == 0:
+        return render_to_response('storage_browser_disabled.html', RequestContext(request))
 
-    if request.method == 'GET':
-        resource_form = ResourceForm()
-        resource_tree = json.dumps([])
-    elif request.method == 'POST':
-        resource_form = ResourceForm(request.POST)
-        if resource_form.is_valid():
-            vendor_resource_class = resource_form.cleaned_data['resource']
-            vendor_plugin = vendor_resource_class.vendor_plugin
-            resource_tree = _resource_class_tree(vendor_plugin.module_name, vendor_resource_class.class_name)
-        else:
-            resource_tree = json.dumps([])
+    default_resource = VendorResourceClass.objects.get(class_name = 'LvmHost')
+
+    class ResourceForm(forms.Form):
+        resource = forms.ModelChoiceField(queryset = VendorResourceClass.objects.all(), required = True, empty_label = None)
+
+    if 'resource' in request.GET:
+        resource_form = ResourceForm(request.GET)
+    else:
+        resource_form = ResourceForm(initial = {'resource': default_resource.pk})
+    if resource_form.is_valid():
+        vendor_resource_class = resource_form.cleaned_data['resource']
+    else:
+        vendor_resource_class = default_resource
+
+    vendor_plugin = vendor_resource_class.vendor_plugin
+    resource_tree = _resource_class_tree(vendor_plugin.module_name, vendor_resource_class.class_name)
 
     return render_to_response('storage_browser.html', RequestContext(request, {
         'resource_form': resource_form,

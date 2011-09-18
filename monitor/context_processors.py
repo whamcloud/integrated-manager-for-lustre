@@ -18,7 +18,8 @@ def menu_items(request):
 
     try:
         import configure
-        items.append({"url": reverse('configure.views.states'), "caption": "Setup"})
+        items.append({"url": reverse('configure.views.states'), "caption": "Filesystem setup"})
+        items.append({"url": reverse('configure.views.storage_browser'), "caption": "Storage setup"})
     except ImportError:
         pass
 

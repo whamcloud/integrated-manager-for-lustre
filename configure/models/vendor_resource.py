@@ -4,7 +4,9 @@
 # ==============================
 
 from django.db import models
-from picklefield.fields import PickledObjectField
+from jsonfield.fields import JSONField
+import json
+
 
 # Our limit on the length of python names where we put
 # them in CharFields -- python doesn't impose a limit, so this
@@ -48,15 +50,20 @@ class VendorResourceRecord(models.Model):
         return "%s (record %s)" % (self.resource_class.class_name, self.pk)
 
     def update_attributes(self, vendor_dict):
-        import json
-
+        # TODO: remove existing attrs not in vendor_dict
         existing_attrs = [i['key'] for i in VendorResourceAttribute.objects.filter(resource = self).values('key')]
 
+        print "update_attributes: %s" % vendor_dict
         for key, value in vendor_dict.items():
-            attr, created = VendorResourceAttribute.objects.get_or_create(
-                    resource = self, key = key)
-            attr.value = json.dumps(value)
-            attr.save()
+            try:
+                existing = VendorResourceAttribute.objects.get(resource = self, key = key)
+                if existing.value != value:
+                    existing.value = json.dumps(value)
+                    existing.save()
+            except VendorResourceAttribute.DoesNotExist:
+                attr = VendorResourceAttribute(resource = self, key = key, value = json.dumps(value))
+                attr.save()
+                print "Created attr %s" % attr.pk
 
     def update_attribute(self, key, val):
         # Try to update an existing record
@@ -68,7 +75,7 @@ class VendorResourceRecord(models.Model):
             VendorResourceAttribute.objects.create(
                     resource = self,
                     key = key,
-                    value = value)
+                    value = json.dumps(value))
 
     def delete_attribute(self, attr_name):
         try:
@@ -102,7 +109,7 @@ class VendorResourceAttribute(models.Model):
     # TODO: use JSON instead of pickling for storing 'arbitrary'
     # values to improve readability when debugging the database
     # and avoid risk of python junk in the DB
-    value = PickledObjectField()
+    value = JSONField()
     key = models.CharField(max_length = 64)
 
     class Meta:

@@ -1,61 +1,10 @@
 
-{% extends 'base.html' %}
+<h2>{{resource.human_string}}</h2>
 
-{% block scripts %}
-{% endblock %}
-
-{% block css %}
-{% endblock %}
-
-{% block content %}
-<h2>{{resource.human_string}} ({{resource.class_name}})</h2>
-
-<h3>Attributes</h3>
+<h3>{{resource.human_class}} attributes</h3>
 <ul>
 {% for k,v in resource.get_attributes_display.items %}
 <li>{{k}}: {{v}}</li>
 {% endfor %}
 </ul>
-
-<script type='text/javascript'>
-    function render_resource(resource) {
-        var resource_name = $(document.createElement('a'))
-        resource_name.html(resource['human_string'])
-        resource_name.attr('href', resource['url']);
-
-        var children_ul = $(document.createElement('ul'))
-        var children = resource['children']
-        for (var i = 0; i < children.length; i++) {
-            children_ul.append(render_resource(children[i]));
-        }
-
-        var resource_li = $(document.createElement('li'));
-        resource_li.append(resource_name);
-        resource_li.append(children_ul);
-        return resource_li;
-    }
-
-    $(document).ready(function() {
-        var resource_tree = {{resource_tree|safe}};
-        var tree_base = $('ul#resource_tree');
-        for (var i = 0; i < resource_tree.length; ++i) {
-            tree_base.append(render_resource(resource_tree[i]));
-        }
-    });
-</script>
-
-<h3>Parents</h3>
-<ul>
-{% for p in resource.get_parents %}
-<li>
-<a href='{% url configure.views.storage_resource p.get_handle %}'>{{p.human_string}}</a>
-</li>
-{% endfor %}
-</ul>
-
-<h3>Children</h3>
-<ul id='resource_tree'>
-</ul>
-
-{% endblock %}
 

@@ -40,6 +40,9 @@ class VendorResourceMetaclass(type):
 
 class VendorResource(object):
     __metaclass__ = VendorResourceMetaclass
+
+    icon = 'default'
+
     def __init__(self, **kwargs):
         self._vendor_dict = {}
         self._handle = None
@@ -56,6 +59,8 @@ class VendorResource(object):
         dct = {}
         dct['id'] = self._handle
         dct['human_string'] = self.human_string(stack)
+        dct['human_class'] = self.human_class()
+        dct['icon'] = self.icon
         dct.update(self.get_attributes_display())
         dct['children'] = []
         
@@ -154,6 +159,7 @@ class VendorResource(object):
             except KeyError:
                 # For non-declared fields, fall back to generic field
                 attribute_obj = ResourceAttribute()
+            
             attributes[k] = attribute_obj.human_readable(v) 
         return attributes
 
@@ -193,6 +199,12 @@ class VendorResource(object):
         """Template helper"""
         return self._handle
 
+    @classmethod
+    def human_class(cls):
+        if hasattr(cls, 'human_name'):
+            return cls.human_name
+        else:
+            return cls.__name__
 
 class LocalId(object):
     """An Id which is unique within the ancestor resource of type parent_klass"""
