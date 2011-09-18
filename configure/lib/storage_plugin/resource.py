@@ -54,6 +54,7 @@ class VendorResource(object):
 
     def to_json(self, stack = []):
         dct = {}
+        dct['id'] = self._handle
         dct['human_string'] = self.human_string(stack)
         dct.update(self.get_attributes_display())
         dct['children'] = []
@@ -64,9 +65,6 @@ class VendorResource(object):
             dct['children'].append(c.to_json(stack))
 
         return dct
-
-    def get_handle(self):
-        return self._handle
 
     def __str__(self):
         return "<%s %s>" % (self.__class__.__name__, self._handle)
@@ -186,6 +184,15 @@ class VendorResource(object):
             raise RuntimeError("Multiple parents of class %s" % parent_klass)
         else:
             return parents_filtered[0]
+
+    def get_parents(self):
+        """Template helper b/c templates aren't allowed to touch _members"""
+        return self._parents
+
+    def get_handle(self):
+        """Template helper"""
+        return self._handle
+
 
 class LocalId(object):
     """An Id which is unique within the ancestor resource of type parent_klass"""

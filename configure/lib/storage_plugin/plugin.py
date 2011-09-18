@@ -190,6 +190,10 @@ class VendorPlugin(object):
         return child_resources
 
     def register_resource2(self, klass, parents, **attrs):
+        """This returns either an existing resource or a newly registered one if it does not exist.
+           It is like register_resource, but it checks for pre-existing resources.  If the resource
+           already exists, then this function will make sure all of 'parents' are in its parent 
+           list before returning"""
         if isinstance(klass.identifier, LocalId):
             # To lookup a LocalId resource, we have to find something that
             # matches the attrs, then look at its ancestry to its scope

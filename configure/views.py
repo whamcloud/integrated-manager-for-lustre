@@ -529,29 +529,41 @@ def conf_param_help(request, conf_param_name):
 
     return HttpResponse(help_text, mimetype = 'text/plain')
 
-def vendor_resources(request):
+def storage_resource(request, vrr_id):
     from configure.lib.storage_plugin import ResourceQuery
-    resources = ResourceQuery().get_all_resources()
-    return render_to_response("vendor_resources.html",
-            RequestContext(request, {"resources": resources}))
+    resource = ResourceQuery().get_resource_parents(vrr_id)
+    root_resources = list(VendorResourceRecord.objects.filter(parents=vrr_id))
+    resource_tree = _resource_tree(root_resources)
+    return render_to_response("storage_resource.html", RequestContext(request, {
+                "resource": resource,
+                'resource_tree': resource_tree
+                }))
 
-def vendor_resource(request, vrr_id):
+
+def _resource_class_tree(plugin, klass):
+    """Resource tree using all instances of 'klass' as origins"""
+    records = VendorResourceRecord.objects.filter(
+        resource_class__class_name = klass,
+        resource_class__vendor_plugin__module_name = plugin)
+    return _resource_tree(records)
+
+def _resource_tree(root_records):
     from configure.lib.storage_plugin import ResourceQuery
-    resource = ResourceQuery().get_resource(vrr_id)
-    return render_to_response("vendor_resource.html",
-            RequestContext(request, {"resource": resource}))
+    tree = ResourceQuery().get_resource_tree(root_records)
 
-
-
-def _resource_tree(plugin, klass):
-    from configure.lib.storage_plugin import ResourceQuery
-    tree = ResourceQuery().get_resource_tree(plugin, klass)
+    def decorate_urls(resource_dict):
+        from django.core.urlresolvers import reverse
+        resource_dict['url'] = reverse('configure.views.storage_resource', kwargs={'vrr_id': resource_dict['id']})
+        for c in resource_dict['children']:
+            decorate_urls(c)
 
     class ResourceJsonEncoder(json.JSONEncoder):
         def default(self, o):
             from configure.lib.storage_plugin import VendorResource
             if isinstance(o, VendorResource):
-                return o.to_json()
+                resource_dict = o.to_json()
+                decorate_urls(resource_dict)
+                return resource_dict
             else:
                 return super(ResourceJsonEncoder, self).default(o)
 
@@ -571,7 +583,7 @@ def storage_browser(request):
         if resource_form.is_valid():
             vendor_resource_class = resource_form.cleaned_data['resource']
             vendor_plugin = vendor_resource_class.vendor_plugin
-            resource_tree = _resource_tree(vendor_plugin.module_name, vendor_resource_class.class_name)
+            resource_tree = _resource_class_tree(vendor_plugin.module_name, vendor_resource_class.class_name)
         else:
             resource_tree = json.dumps([])
 

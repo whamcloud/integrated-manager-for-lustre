@@ -114,6 +114,13 @@ class ResourceQuery(object):
         return self._record_to_resource(vrr)
 
     @transaction.commit_on_success()
+    def get_resource_parents(self, vrr_id):
+        """Like get_resource by also fills out entire ancestry"""
+
+        vrr = VendorResourceRecord.objects.get(pk = vrr_id)
+        return self._record_to_resource_parents(vrr)
+
+    @transaction.commit_on_success()
     def get_all_resources(self):
         """Return list of all resources for all plugins"""
         records = VendorResourceRecord.objects.all()
@@ -142,15 +149,11 @@ class ResourceQuery(object):
         resource._children = children_resources
         return resource
 
-    def get_resource_tree(self, plugin_module, root_klass):
+    def get_resource_tree(self, root_records):
         """For a given plugin and resource class, find all instances of that class
         and return a tree of resource instances (with additional 'children' attribute)"""
-        records = VendorResourceRecord.objects.filter(
-            resource_class__class_name = root_klass,
-            resource_class__vendor_plugin__module_name = plugin_module)
-            
         tree = []
-        for record in records:
+        for record in root_records:
             tree.append(self._load_record_and_children(record))
         
         return tree    

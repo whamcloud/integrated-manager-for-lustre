@@ -48,7 +48,6 @@ class Integer(ResourceAttribute):
 class Bytes(ResourceAttribute):
     def human_readable(self, value):
         from monitor.lib.util import sizeof_fmt
-        print "value = '%s'" % int(value)
         return sizeof_fmt(int(value))
 
 class Enum(ResourceAttribute):

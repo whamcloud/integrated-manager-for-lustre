@@ -175,8 +175,6 @@ class LvmDeviceNode(base_resources.DeviceNode):
     # Just using the built in HostName and PosixPath from DeviceNode
     def human_string(self, ancestors = []):
         ancestor_klasses = dict([(i.__class__, i) for i in ancestors])
-        print "ak=%s" % ancestor_klasses
-        print "*ak=%s" % (LvmVolume in ancestor_klasses)
         if LvmHost in ancestor_klasses and LvmVolume in ancestor_klasses:
             # Host .. Volume .. me
             # I'm just my path
