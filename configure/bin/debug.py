@@ -126,6 +126,22 @@ class HydraDebug(cmd.Cmd, object):
             instance.do_periodic_update()
             time.sleep(5)
             
+    def do_storage_graph(self, arg_string):
+        from configure.lib.storage_plugin import ResourceQuery
+        resources = ResourceQuery().get_all_resources()
+        import pygraphviz as pgv
+        G = pgv.AGraph(directed=True)
+        for r in resources:
+            G.add_node(r._handle, label="%s:%s" % (r.human_class(), r.human_string()))
+
+        for r in resources:
+            for p in r.get_parents():
+                G.add_edge(r._handle, p._handle)
+
+        G.layout(prog='dot')
+        output_file = 'resources.png'
+        G.draw(output_file)
+        print "Wrote graph to %s" % output_file
 
 if __name__ == '__main__':
     cmdline = HydraDebug
