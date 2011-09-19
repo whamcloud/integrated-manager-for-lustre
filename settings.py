@@ -155,7 +155,9 @@ INSTALLED_APPS = (
     'djcelery',
     'pagination',
     'monitor',
-    'configure'
+    'configure',
+    'hydraapi',
+    'hydradashboard'
     ) + [('debug_toolbar',), ()][debug_toolbar==None] \
       + [('django_extensions',), ()][django_extensions==None]
 
