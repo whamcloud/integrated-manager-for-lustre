@@ -117,18 +117,7 @@ class VendorPlugin(object):
                 resources.append(self._resource_cache[vrr.pk])
                 continue
 
-            klass = vendor_plugin_manager.get_plugin_resource_class(
-                    vrr.resource_class.vendor_plugin.module_name,
-                    vrr.resource_class.class_name)
-            assert(issubclass(klass, VendorResource))
-            # Skip populating VendorResource._parents, as this is a root
-            # resource and it won't have any
-            vendor_dict = {}
-            for attr in vrr.vendorresourceattribute_set.all():
-                vendor_dict[attr.key] = attr.value
-
-            resource = klass(**vendor_dict)
-            resource._handle = vrr.pk
+            resource = vrr.to_resource()
             self._resource_cache[vrr.pk] = resource
             resources.append(resource)
 
@@ -275,8 +264,13 @@ class VendorPlugin(object):
 
             id_scope = VendorResourceRecord.objects.get(pk=scope_parent._handle)
 
+        from configure.lib.storage_plugin import vendor_plugin_manager
+        resource_class_id = vendor_plugin_manager.get_plugin_resource_class_id(
+                resource.__class__.__module__,
+                resource.__class__.__name__
+                )
         record, created = VendorResourceRecord.objects.get_or_create(
-                resource_class_id = resource.vendor_resource_class_id,
+                resource_class_id = resource_class_id,
                 vendor_id_str = id_string,
                 vendor_id_scope = id_scope)
 
@@ -294,6 +288,7 @@ class VendorPlugin(object):
             attrs_set = resource._vendor_dict.keys()
             record.vendorresourceattribute_set.filter(~Q(key__in = attrs_set)).delete()
 
+        # save will write the VendorResourceAttribute records
         resource.save()
 
         vendor_plugin_log.debug("Looked up VendorResourceRecord %s for %s id=%s (created=%s)" % (record.id, resource.__class__.__name__, id_string, created))

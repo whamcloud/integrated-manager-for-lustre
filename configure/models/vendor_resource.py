@@ -4,7 +4,6 @@
 # ==============================
 
 from django.db import models
-from jsonfield.fields import JSONField
 import json
 
 
@@ -49,16 +48,49 @@ class VendorResourceRecord(models.Model):
     def __str__(self):
         return "%s (record %s)" % (self.resource_class.class_name, self.pk)
 
+    @classmethod
+    def create_root(cls, resource_class, attrs):
+        from configure.lib.storage_plugin import vendor_plugin_manager
+        # Root resource do not have parents so they must be globally identified
+        from configure.lib.storage_plugin import GlobalId
+        if not isinstance(resource_class.identifier, GlobalId):
+            raise RuntimeError("Cannot create root resource of class %s, it is not globally identified" % resource_class_name)
+
+        id_str = resource_class.attrs_to_id_str(attrs)
+        plugin_mod = resource_class.__module__
+        class_name = resource_class.__name__
+        resource_class_id = vendor_plugin_manager.get_plugin_resource_class_id(plugin_mod, class_name)
+
+        # See if you're trying to create something which already exists
+        try:
+            existing_record = VendorResourceRecord.objects.get(
+                    resource_class = resource_class_id,
+                    vendor_id_str = id_str,
+                    vendor_id_scope = None)
+            raise RuntimeError("Cannot create root resource %s %s %s, a resource with the same global identifier already exists" % (plugin_mod, resource_class.__name__, attrs))
+        except VendorResourceRecord.DoesNotExist:
+            # Great, nothing in the way
+            pass
+        record = VendorResourceRecord(
+                resource_class_id = resource_class_id,
+                vendor_id_str = id_str)
+        record.save()
+        for name, value in attrs.items():
+            VendorResourceAttribute.objects.create(resource = record,
+                    key = name, value = json.dumps(value))
+
+        return record
+
     def update_attributes(self, vendor_dict):
         # TODO: remove existing attrs not in vendor_dict
         existing_attrs = [i['key'] for i in VendorResourceAttribute.objects.filter(resource = self).values('key')]
 
-        print "update_attributes: %s" % vendor_dict
         for key, value in vendor_dict.items():
             try:
                 existing = VendorResourceAttribute.objects.get(resource = self, key = key)
-                if existing.value != value:
-                    existing.value = json.dumps(value)
+                encoded_val = json.dumps(value)
+                if existing.value != encoded_val:
+                    existing.value = encoded_val
                     existing.save()
             except VendorResourceAttribute.DoesNotExist:
                 attr = VendorResourceAttribute(resource = self, key = key, value = json.dumps(value))
@@ -69,7 +101,7 @@ class VendorResourceRecord(models.Model):
         # Try to update an existing record
         updated = VendorResourceAttribute.objects.filter(
                     resource = self,
-                    key = key).update(value = val)
+                    key = key).update(value = json.dumps(val))
         # If there was no existing record, create one
         if updated == 0:
             VendorResourceAttribute.objects.create(
@@ -89,6 +121,18 @@ class VendorResourceRecord(models.Model):
         for i in self.vendorresourceattribute_set.all():
             yield (i.key, i.value)
 
+    def to_resource(self):
+        from configure.lib.storage_plugin import vendor_plugin_manager
+        klass = vendor_plugin_manager.get_plugin_resource_class(
+                self.resource_class.vendor_plugin.module_name,
+                self.resource_class.class_name)
+        vendor_dict = {}
+        for attr in self.vendorresourceattribute_set.all():
+            vendor_dict[attr.key] = json.loads(attr.value)
+        resource = klass(**vendor_dict)
+        resource._handle = self.id
+        return resource
+
     class Meta:
         # Can't have this constraint because vendor_id_str is a blob
         #unique_together = ('resource_class', 'vendor_id_str', 'vendor_id_scope')
@@ -106,10 +150,7 @@ class VendorResourceAttribute(models.Model):
     resource = models.ForeignKey(VendorResourceRecord)
     # TODO: specialized attribute tables for common types like 
     # short strings, integers
-    # TODO: use JSON instead of pickling for storing 'arbitrary'
-    # values to improve readability when debugging the database
-    # and avoid risk of python junk in the DB
-    value = JSONField()
+    value = models.TextField()
     key = models.CharField(max_length = 64)
 
     class Meta:

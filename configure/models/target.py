@@ -285,5 +285,3 @@ class FormatTargetJob(Job, StateChangeJob):
         from configure.lib.job import MkfsStep
         return [(MkfsStep, {'target_id': self.target.id})]
 
-
-

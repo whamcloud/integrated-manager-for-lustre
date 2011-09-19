@@ -536,6 +536,20 @@ def storage_resource(request, vrr_id):
                 "resource": resource
                 }))
 
+def storage_resource_delete(request, vrr_id):
+    record = get_object_or_404(VendorResourceRecord, id = vrr_id)
+
+    # TODO: the real implementation
+    # * should we stop all running instances of the plugin, remove it, and start 
+    #   them again?  Could be interesting trying to do that safely.
+    # * should we send a message to a running plugin asking it to delete?  (Imposes
+    #   more coding on plugin author, may have to wait for running scans to complete
+    #   anyway, so not much responsiveness advantage over just bouncing the plugin)
+    # * should we try to do this synchronously, given that it might take a few seconds
+    #   at least, or should we use configure.models.Jobs or should we have our own jobs?
+    # * should we let people remove any object, or just roots?
+
+    return redirect('configure.views.states')
 
 def _resource_class_tree(plugin, klass):
     """Resource tree using all instances of 'klass' as origins"""

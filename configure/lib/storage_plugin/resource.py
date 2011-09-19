@@ -141,6 +141,15 @@ class VendorResource(object):
 
         record.save()
 
+    @classmethod
+    def attrs_to_id_str(cls, attrs):
+        """Serialized ID for use in VendorResourceRecord.vendor_id_str"""
+        import json
+        identifier_val = []
+        for f in cls.identifier.id_fields:
+            identifier_val.append(attrs[f])
+        return json.dumps(identifier_val)
+
     def id_str(self):
         """Serialized ID for use in VendorResourceRecord.vendor_id_str"""
         import json

@@ -14,6 +14,13 @@ from configure.models import *
 from django.db import transaction
 import json
 
+class LoadedResourceClass(object):
+    """Convenience store of introspected information about VendorResource 
+       subclasses from loaded modules."""
+    def __init__(self, resource_class, resource_class_id):
+        self.resource_class = resource_class
+        self.resource_class_id = resource_class_id
+
 class LoadedPlugin(object):
     """Convenience store of introspected information about loaded 
        plugin modules."""
@@ -30,14 +37,11 @@ class LoadedPlugin(object):
                 # FIXME: this limits plugin authors to putting everything in the same
                 # module, don't forget to tell them that!  Doesn't mean they can't break
                 # code up between files, but names must all be in the module.
-                self.resource_classes[name] = cls
                 vrc, created = VendorResourceClass.objects.get_or_create(
                         vendor_plugin = self.plugin_record,
                         class_name = name)
 
-                # TODO: wrap this up somehow neater than just decorating the class
-                # with an extra attribute
-                cls.vendor_resource_class_id = vrc.id
+                self.resource_classes[name] = LoadedResourceClass(cls, vrc.id)
 
                 for name, stat_obj in cls._vendor_statistics.items():
                     class_stat, created = VendorResourceClassStatistic.objects.get_or_create(
@@ -87,16 +91,7 @@ class ResourceQuery(object):
             self._errored_plugins.add(plugin_module)
             return None
 
-        klass = vendor_plugin_manager.get_plugin_resource_class(
-                record.resource_class.vendor_plugin.module_name,
-                record.resource_class.class_name)
-        assert(issubclass(klass, VendorResource))
-        vendor_dict = {}
-        for attr in record.vendorresourceattribute_set.all():
-            vendor_dict[attr.key] = attr.value
-        resource = klass(**vendor_dict)
-        resource._handle = record.id
-
+        resource = record.to_resource()
         self._pk_to_resource[record.pk] = resource
         return resource
 
@@ -179,36 +174,16 @@ class VendorPluginManager(object):
 
         # Try to find the resource class in the plugin module
         resource_class = self.get_plugin_resource_class(plugin_mod, resource_class_name)
-        assert(issubclass(resource_class, VendorResource))
 
-        # Root resource do not have parents so they must be globally identified
-        assert(isinstance(resource_class.identifier, GlobalId))
-        resource = resource_class(**kwargs)
+        # Construct a record
+        record = VendorResourceRecord.create_root(resource_class, kwargs)
 
-        # See if you're trying to create something which already exists
-        try:
-            existing_record = VendorResourceRecord.objects.get(
-                    resource_class__vendor_plugin__module_name = plugin_mod,
-                    vendor_id_str = resource.id_str(),
-                    vendor_id_scope = None)
-            raise RuntimeError("Cannot create root resource %s %s %s, a resource with the same global identifier already exists" % (plugin_mod, resource_class_name, kwargs))
-        except VendorResourceRecord.DoesNotExist:
-            # Great, nothing in the way
-            pass
         # XXX should we let people modify root records?  e.g. change the IP
         # address of a controller rather than deleting it, creating a new 
         # one and letting the pplugin repopulate us with 'new' resources?
         # This will present the challenge of what to do with instances of
         # VendorResource subclasses which are already present in running plugins.
-        record = VendorResourceRecord(
-                resource_class_id = resource_class.vendor_resource_class_id,
-                vendor_id_str = resource.id_str())
-        record.save()
-        for name, value in kwargs.items():
-            VendorResourceAttribute.objects.create(resource = record,
-                    key = name, value = json.dumps(value))
 
-            
         vendor_plugin_log.debug("create_root_resource created %d" % (record.id))
 
     def register_plugin(self, plugin_instance):
@@ -222,8 +197,15 @@ class VendorPluginManager(object):
         return session_id
 
     def get_plugin_resource_class(self, plugin_module, resource_class_name):
+        """Return a VendorResource subclass"""
         loaded_plugin = self.loaded_plugins[plugin_module]
-        return loaded_plugin.resource_classes[resource_class_name]
+        return loaded_plugin.resource_classes[resource_class_name].resource_class
+
+    def get_plugin_resource_class_id(self, plugin_module, resource_class_name):
+        """Return a VendorResourceClass primary key"""
+        loaded_plugin = self.loaded_plugins[plugin_module]
+        return loaded_plugin.resource_classes[resource_class_name].resource_class_id
+
 
     def load_plugin(self, module):
         """Load a VendorPlugin class from a module given a
