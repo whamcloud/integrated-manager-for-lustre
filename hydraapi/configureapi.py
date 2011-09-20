@@ -7,15 +7,16 @@ from django.core.management import setup_environ
 
 # Hydra server imports
 import settings
-
-from configure.models import (ManagedFilesystem)
-from configure.lib.state_manager import (StateManager)
-
-from requesthandler import (AnonymousRequestHandler,
-                            extract_request_args)
-
 setup_environ(settings)
 
+from configure.models import (ManagedFilesystem,
+                              ManagedHost,
+                              ManagedMgs,
+                              ManagedMdt,
+                              ManagedOst)
+from configure.lib.state_manager import (StateManager)
+from requesthandler import (AnonymousRequestHandler,
+                            extract_request_args)
 # Lpgger Settings
 from logging import (getLogger, 
                      FileHandler, 
@@ -120,8 +121,6 @@ class RemoveHost(AnonymousRequestHandler):
     @extract_request_args(host_id='hostid')
     def remove_host(self,request,host_id):
         try: 
-            from configure.models import ManagedHost
-            from configure.lib.state_manager import StateManager
             host =  ManagedHost.objects.get(id = host_id)
             StateManager.set_state(host,'removed')
             return {    
@@ -172,3 +171,105 @@ class RemoveClient(AnonymousRequestHandler):
                    }
         except:
             raise Exception('Unable to remove client with id %s' % client_id)
+
+class ListManagedFileSystems(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.list_managedfilesystems)
+
+    @classmethod
+    def list_managedfilesystems(self,request):
+        return [
+            {
+                'id' : managedfilesystem.id,
+                'name': managedfilesystem.name,
+                'status' : managedfilesystem.status_string()
+            }
+            for managedfilesystem in ManagedFilesystem.objects.all()
+        ]
+     
+class ListManagedHosts(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.list_managedhosts)
+
+    @classmethod
+    def list_managedhosts(self,request):
+        return [
+            {
+                'id' : managedhost.id,
+                'name': managedhost.name,
+                'status' : managedhost.status_string()
+            }
+            for managedhost in ManagedHost.objects.all()
+        ]
+
+class ListManagedMgs(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.list_managedmgs)
+
+    @classmethod
+    def list_managedmgs(self,request):
+        return [
+            {
+                'id' : managedmgs.id,
+                'name': managedmgs.name,
+                'status' : managedmgs.status_string()
+            }
+            for managedmgs in ManagedMgs.objects.all()
+        ]
+
+class ListManagedMdt(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.list_managedmdt)
+
+    @classmethod
+    def list_managedmdt(self,request):
+        return [
+            {
+                'id' : managedmdt.id,
+                'name': managedmdt.name,
+                'status' : managedmdt.status_string()
+            }
+            for managedmdt in ManagedMdt.objects.all()
+        ]
+
+class ListManagedOst(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.list_managedost)
+
+    @classmethod
+    def list_managedost(self,request):
+        return [
+            {
+                'id' : managedost.id,
+                'name': managedost.name,
+                'status' : managedost.status_string()
+            }
+            for managedost in ManagedOst.objects.all()
+        ]
+
+
+
+
+class GetManagedFSConfParams(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.get_managed_fs_conf_param)
+
+    @classmethod
+    @extract_request_args(filesystem_name='filesystem')
+    def get_managed_fs_conf_param(self,request,filesystem_name):
+        managedfilesystem = ManagedFilesystem.objects.get(name = filesystem_name)
+        confparam_list = managedfilesystem.get_conf_params(managedfilesystem)
+        return [
+            {
+                'id' : managedfilesystem.id,
+                'name': managedfilesystem.name,
+                'status' : managedfilesystem.status_string()
+            }
+            for confparam in confparam_list
+        ]

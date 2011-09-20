@@ -7,7 +7,7 @@ from django.core.management import setup_environ
 
 # Hydra server imports
 import settings
-
+setup_environ(settings)
 
 from requesthandler import (AnonymousRequestHandler,
                             extract_request_args)
@@ -18,8 +18,6 @@ from monitor.models import (Filesystem,
                             Client,
                             Host,
                             SshMonitor)
-
-setup_environ(settings)
 
 # Logger Settings
 from logging import (getLogger, 
