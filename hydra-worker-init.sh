@@ -19,6 +19,13 @@ export PYTHONPATH=${PROJECT_PATH}
 # needed so that ssh can find it's keys
 export HOME=/root
 
+run_celeryd() {
+    local op=$1
+
+    python ${MANAGE_PY} celeryd_multi $op serial ssh jobs parselog -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -Q:parselog parselog -B:serial -c:serial 1 --autoscale:ssh=100,10 --autoscale:jobs=100,10 --pidfile=$PIDFILE --logfile=$LOGFILE
+
+}
+
 start() {
     # only on first install...
     #if [ -d /var/lib/mysql/test ]; then
@@ -48,13 +55,13 @@ start() {
 
 
     echo -n "Starting the Hydra worker daemon: "
-    python ${MANAGE_PY} celeryd_multi start serial ssh jobs -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -B:serial -c:serial 1 --autoscale:ssh=100,10 --autoscale:jobs=100,10 --pidfile=$PIDFILE --logfile=$LOGFILE
+    run_celeryd start
     echo
 }
 
 restart() {
     echo -n "Restarting the Hydra worker daemon: "
-    python ${MANAGE_PY} celeryd_multi restart serial ssh jobs -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -B:serial -c:serial 1 --autoscale:ssh=100,10 --autoscale:jobs=100,10 --pidfile=$PIDFILE --logfile=$LOGFILE
+    run_celeryd restart
     echo
 }
 

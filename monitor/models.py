@@ -786,6 +786,16 @@ class AlertEvent(Event):
     def message(self):
         return self.message_str
 
+class SyslogEvent(Event):
+    message_str = models.CharField(max_length = 512)
+
+    @staticmethod
+    def type_name():
+        return "Syslog"
+
+    def message(self):
+        return self.message_str
+
 class AlertState(models.Model):
     """Records a period of time during which a particular
        issue affected a particular element of the system"""
@@ -1074,6 +1084,9 @@ class Systemevents(models.Model):
             return "lustre"
         else:
             return "normal"
+
+class LastSystemeventsProcessed(models.Model):
+    last = models.IntegerField(default = 0)
 
 # Only do admin registration if we are not being imported
 # by the configure app

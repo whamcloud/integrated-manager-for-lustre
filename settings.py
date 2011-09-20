@@ -226,6 +226,7 @@ AUDIT_MAX_AGE = 3600 * 24
 CELERY_ROUTES = (
         {"monitor.tasks.audit_all": {"queue": "periodic"}},
         {"monitor.tasks.discover_hosts": {"queue": "periodic"}},
+        {"monitor.tasks.parse_log_entries": {"queue": "parselog"}},
         {"configure.tasks.janitor": {"queue": "periodic"}},
         {"configure.tasks.set_state": {"queue": "serialize"}},
         {"configure.tasks.add_job": {"queue": "serialize"}},
