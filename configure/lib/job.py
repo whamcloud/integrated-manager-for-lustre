@@ -329,6 +329,8 @@ class FindDeviceStep(Step):
 
         # NB May throw any agent error (don't care, idempotent)
         node_info = self.invoke_agent(target_mount.host, "locate-device --uuid %s" % lun.fs_uuid)
+        if node_info == None:
+            raise RuntimeError("Cannot find LUN with FS UUID %s on %s" % (lun.fs_uuid, target_mount.host))
         try:
             lun_node = LunNode.objects.get(
                     host = target_mount.host, path = node_info['path'])
