@@ -107,14 +107,21 @@ class HydraDebug(cmd.Cmd, object):
                     stdout.write("echo lctl conf_param %s=%s\n" % (instance.get_key(), test_val))
                     stdout.write("lctl conf_param %s=%s\n" % (instance.get_key(), test_val))
 
-    def do_create_lvm_host(self, hostname):
+    def do_create_storage_resource(self, args):
         """Development placeholder for UI for creating
            arbitrary parentless VendorResources e.g. inputting
            IP addresses of controllers"""
+        args = args.split()
+        plugin, resource = args[0:2]
+        kwargs_list = args[2:]
+        kwargs = {}
+        for k in kwargs_list:
+            tokens = k.split('=')
+            kwargs[tokens[0]] = tokens[1]
         from configure.lib.storage_plugin import vendor_plugin_manager
-        vendor_plugin_manager.create_root_resource('configure.plugins.lvm', 'LvmHost', hostname = hostname)
+        vendor_plugin_manager.create_root_resource(plugin, resource, **kwargs)
 
-    def do_load_vendor_plugin(self, module_name):
+    def do_run_storage_plugin(self, module_name):
         """Development stub for quickly loading and scanning storage
            plugins."""
         from configure.lib.storage_plugin import vendor_plugin_manager
