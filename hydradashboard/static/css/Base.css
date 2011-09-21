@@ -119,6 +119,8 @@ p
 td, td a, th, th a, span
 {
 	line-height: 2.3333em;
+	font-size: 12px;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
 }
 
 blockquote
@@ -191,11 +193,53 @@ sup
 
 #container 
 {
-
-margin:0 auto 10px;
 text-align:left;
-width:1000px;
-}
+border-top-left-radius:2em;
+border-top-right-radius:2em;
+border-bottom-right-radius:2em;
+border-bottom-left-radius:2em; 
+border:1px solid #333333;
+	}
+	
+#container1 
+{
+text-align:left;
+border-top-left-radius:2em;
+border-top-right-radius:2em;
+border-bottom-right-radius:2em;
+border-bottom-left-radius:2em; 
+border:1px solid #333333;
+	}
+#container2 
+{
+text-align:left;
+border-top-left-radius:2em;
+border-top-right-radius:2em;
+border-bottom-right-radius:2em;
+border-bottom-left-radius:2em; 
+border:1px solid #333333;
+	}
+#container3
+{
+text-align:left;
+border-top-left-radius:2em;
+border-top-right-radius:2em;
+border-bottom-right-radius:2em;
+border-bottom-left-radius:2em; 
+border:1px solid #333333;
+	}
+
+.round-table
+{
+text-align:left;
+height:100%;
+border-top-left-radius:2em;
+border-top-right-radius:2em;
+border-bottom-right-radius:2em;
+border-bottom-left-radius:2em; 
+border:1px solid #333333;
+	}
+	
 .breadCrumbHolder
 {
 	margin:0 0 20px 0;
@@ -228,4 +272,10 @@ pre
 	color:#888;
 }
 
-
+.leftPanelTD{
+border-top-left-radius:2em;
+border-top-right-radius:2em;
+border-bottom-right-radius:2em;
+border-bottom-left-radius:2em; 
+border:1px solid #333333;
+}

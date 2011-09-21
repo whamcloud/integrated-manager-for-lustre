@@ -5,861 +5,157 @@
 
         <link rel="stylesheet" href="{{STATIC_URL}}css/Base.css" type="text/css" />
         <link href="{{STATIC_URL}}css/BreadCrumb.css" rel="stylesheet" type="text/css" />
+        <link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
         <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
         <script type="text/javascript" src="{{STATIC_URL}}js/query.easing.1.3.js"></script>
         <script type="text/javascript" src="{{STATIC_URL}}js/jquery.jBreadCrumb.1.1.js"></script>
         <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
-
         <link href="{{STATIC_URL}}css/jquery-ui-1.8.9.custom.css" rel="stylesheet" type="text/css" />
         <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>
-        
         <script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js" ></script>	
+        <script type="text/javascript" src="{{STATIC_URL}}js/custom_dashboard.js" ></script>
+        <script type="text/javascript" src="{{STATIC_URL}}js/custom_filesystem.js" ></script>
+        <script type="text/javascript" src="{{STATIC_URL}}js/custom_oss.js" ></script>
+        <script type="text/javascript" src="{{STATIC_URL}}js/custom_ost.js" ></script>
 
-        <style type="text/css">
-            body { background:none !important }
-            
-            .legendClass
-            {
-            	font-size: 12px;
-            	background-color:#CFCFCF;
-            }
-            
-			#leftnav li a {
-				font:bold 12px Arial, Helvetica, sans-serif;
-				text-decoration:none;
-				color:#fff;
-				display:block;
-				padding:5px;
-				color:#7a848b;
-				padding-left:10px;
-			}
-			#leftnav li a:hover {
-				color:#697a84;		/**/
-				display:block;
-				background:#fff url({{STATIC_URL}}images/arrowmenu.png) no-repeat 96% 10px;
-				padding:5px 0px 5px 10px;
-			}
-			#leftnav li .active {
-				color:#697a84;
-				display:block;
-				background:#98aab6 url({{STATIC_URL}}images/arrowmenu.png) no-repeat 96% 10px;
-				padding:5px 0px 5px 10px;
-				color:#fff;
-			}
-			#leftnav li .active:hover {
-				color: #697a84;
-				display:block;
-				background:#fff url({{STATIC_URL}}images/arrowmenu.png) no-repeat 96% 10px;
-				padding:5px 0px 5px 10px;
-			}
-			
-			
-			ul.tabs {
-				margin: 0;
-				padding: 0;
-				float: left;
-				list-style: none;
-				height: 32px; /*--Set height of tabs--*/
-				border-bottom: 1px solid #999;
-				border-left: 1px solid #999;
-				width: 100%;
-			}
-			ul.tabs li {
-				float: left;
-				margin: 0;
-				padding: 0;
-				height: 31px; /*--Subtract 1px from the height of the unordered list--*/
-				line-height: 31px; /*--Vertically aligns the text within the tab--*/
-				border: 1px solid #999;
-				border-left: none;
-				margin-bottom: -1px; /*--Pull the list item down 1px--*/
-				overflow: hidden;
-				position: relative;
-				background: #e0e0e0;
-			}
-			ul.tabs li a {
-				text-decoration: none;
-				color: #000;
-				display: block;
-				font-size: 1.2em;
-				padding: 0 20px;
-				border: 1px solid #fff; /*--Gives the bevel look with a 1px white border inside the list item--*/
-				outline: none;
-			}
-			ul.tabs li a:hover {
-				background: #ccc;
-			}
-			html ul.tabs li.active, html ul.tabs li.active a:hover  { /*--Makes sure that the active tab does not listen to the hover properties--*/
-				background: #fff;
-				border-bottom: 1px solid #fff; /*--Makes the active tab look like it's connected with its content--*/
-			}
-			.tab_container {
-				border: 1px solid #999;
-				border-top: none;
-				overflow: hidden;
-				clear: both;
-				float: left; width: 100%;
-				background: #fff;
-			}
-			.tab_content {
-				padding: 20px;
-				font-size: 1.2em;
-			}
-		</style>
-<script id="source" language="javascript" type="text/javascript">
-	$(function () 
-	{
-		$('#fsSelect').attr("value","");
-		$.get("http://clo-centos6-x64-vm2.clogeny.com:8000/api/listfilesystems")
-        .success(function(data, textStatus, jqXHR) {
-        })
-		.error(function(event) {
-		});
-	});
-    
-    var chart;
-	$(document).ready(function() {
-		chart = new Highcharts.Chart({
-			chart: {
-				renderTo: 'container'
-			},
-			title: {
-				text: 'File System Used Vs Free Capacity'
-			},
-			xAxis: {
-				categories: ['Used', 'Free']
-			},
-			yAxis: {
-				title: {
-					text: 'Usage (%)'
-				},
-			},
-			tooltip: {
-				formatter: function() {
-					var s;
-					if (this.point.name) { // the pie chart
-						s = ''+
-							this.point.name +': '+ this.y +' fruits';
-					} else {
-						s = ''+
-							this.x  +': '+ this.y;
-					}
-					return s;
-				}
-			},
-			labels: {
-				items: [{
-					html: '',
-					style: {
-						left: '40px',
-						top: '8px',
-						color: 'black'				
-					}
-				}]
-			},
-			series: [{
-				type: 'column',
-				name: 'File System Used',
-				data: [80, 20]
-			}, {
-				type: 'column',
-				name: 'Free Capacity',
-				data: [60, 40]
-			}]
-		});
-		chart = new Highcharts.Chart({
-			chart: {
-				renderTo: 'container1'
-			},
-			title: {
-				text: 'File System Used Vs Free Capacity'
-			},
-			xAxis: {
-				categories: ['Used', 'Free']
-			},
-			yAxis: {
-				title: {
-					text: 'Usage (%)'
-				},
-			},
-			tooltip: {
-				formatter: function() {
-					var s;
-					if (this.point.name) { // the pie chart
-						s = ''+
-							this.point.name +': '+ this.y +' fruits';
-					} else {
-						s = ''+
-							this.x  +': '+ this.y;
-					}
-					return s;
-				}
-			},
-			labels: {
-				items: [{
-					html: '',
-					style: {
-						left: '40px',
-						top: '8px',
-						color: 'black'				
-					}
-				}]
-			},
-			series: [{
-				type: 'column',
-				name: 'File System Used',
-				data: [80, 20]
-			}, {
-				type: 'column',
-				name: 'Free Capacity',
-				data: [60, 40]
-			}]
-		});
-		chart = new Highcharts.Chart({
-			chart: {
-				renderTo: 'container2',
-				plotBackgroundColor: null,
-				plotBorderWidth: null,
-				plotShadow: false
-			},
-			title: {
-				text: 'All File System Space Usage'
-			},
-			tooltip: {
-				formatter: function() {
-					return '<b>'+ this.point.name +'</b>: '+ this.y +' %';
-				}
-			},
-			plotOptions: {
-				pie: {
-					allowPointSelect: true,
-					cursor: 'pointer',
-					dataLabels: {
-						enabled: true,
-						color: '#000000',
-						connectorColor: '#000000',
-						formatter: function() {
-							return '<b>'+ this.point.name +'</b>: '+ this.y +' %';
-						}
-					}
-				}
-			},
-		    series: [{
-				type: 'pie',
-				name: 'Browser share',
-				data: [
-					['Free',    80],
-					['Used',    20]
-				]
-			}]
-		});
-		chart = new Highcharts.Chart({
-			chart: {
-				renderTo: 'container3',
-				plotBackgroundColor: null,
-				plotBorderWidth: null,
-				plotShadow: false
-			},
-			title: {
-				text: 'All File System File Usage'
-			},
-			tooltip: {
-				formatter: function() {
-					return '<b>'+ this.point.name +'</b>: '+ this.y +' %';
-				}
-			},
-			plotOptions: {
-				pie: {
-					allowPointSelect: true,
-					cursor: 'pointer',
-					dataLabels: {
-						enabled: true,
-						color: '#000000',
-						connectorColor: '#000000',
-						formatter: function() {
-							return '<b>'+ this.point.name +'</b>: '+ this.y +' %';
-						}
-					}
-				}
-			},
-			series: [{
-				type: 'pie',
-				name: 'Browser share',
-				data: [
-					['Free',40],
-					['Used',60]
-				]
-			}]
-		});
-		
-		$('.text').mouseover(function() {
-			$(this).css("border","2px solid #0040FF");
-		});
-		$('.text').mouseout(function() {
-			$(this).css("border","1px solid black");
-		});
-		
-		$("#breadCrumb0").jBreadCrumb();
-		
-		$("#plusImg").click(function(){
-			$(".panel").toggle("slow");
-			$("#plusImg").hide();$("#minusImg").show();
-			$(this).toggleClass("active");
-			return false;
-		});
-		$("#minusImg").click(function(){
-			$(".panel").toggle("slow");
-			$(this).toggleClass("active");
-			$("#minusImg").hide();$("#plusImg").show();
-			return false;
-		});
-		
-		$("#intervalSelect").change(function(){
-			var intervalValue = $(this).val();
-			var unitSelectOptions = "";
-			if(intervalValue == "")
+		<script id="source" language="javascript" type="text/javascript">
+			$(function () 
 			{
-				unitSelectOptions = "<option value=''>Select</option>";
-			}
-			else if(intervalValue == "hour")
-			{
-				unitSelectOptions = "<option value=''>Select</option><option value='1'>1</option><option value='2'>2</option><option value='3'>3</option><option value='4'>4</option><option value='5'>5</option><option value='6'>6</option><option value='7'>7</option><option value='8'>8</option><option value='9'>9</option><option value='10'>10</option>"+
-									"<option value='11'>11</option><option value='12'>12</option><option value='13'>13</option><option value='14'>14</option><option value='15'>15</option><option value='16'>16</option><option value='17'>17</option><option value='18'>18</option><option value='19'>19</option><option value='20'>20</option>"+
-									"<option value='21'>21</option><option value='22'>22</option><option value='23'>23</option>";
-			}
-			else if(intervalValue == "day")
-			{
-				unitSelectOptions = "<option value=''>Select</option><option value='1'>1</option><option value='2'>2</option><option value='3'>3</option><option value='4'>4</option><option value='5'>5</option><option value='6'>6</option><option value='7'>7</option><option value='8'>8</option><option value='9'>9</option><option value='10'>10</option>"+
-									"<option value='11'>11</option><option value='12'>12</option><option value='13'>13</option><option value='14'>14</option><option value='15'>15</option><option value='16'>16</option><option value='17'>17</option><option value='18'>18</option><option value='19'>19</option><option value='20'>20</option>"+
-									"<option value='21'>21</option><option value='22'>22</option><option value='23'>23</option>";
-			}
-			else if(intervalValue == "week")
-			{
-				unitSelectOptions = "<option value=''>Select</option><option value='1'>1</option><option value='2'>2</option><option value='3'>3</option><option value='4'>";
-			}
-			else if(intervalValue == "month")
-			{
-				unitSelectOptions = "<option value=''>Select</option><option value='1'>1</option><option value='2'>2</option><option value='3'>3</option><option value='4'>4</option><option value='5'>5</option><option value='6'>6</option><option value='7'>7</option><option value='8'>8</option><option value='9'>9</option><option value='10'>10</option>"+
-									"<option value='11'>11</option><option value='12'>12</option>";
-			}
-			$("#unitSelect").html(unitSelectOptions);
-		});
-		
-		$("#fsSelect").change(function(){
-			if($(this).val()!="")
-			{
-				 $('#dashboardDiv').hide();$('#ossInfoDiv').hide();$('#ostInfoDiv').hide();
-				 $('#fileSystemDiv').slideDown("slow");
-				 var breadCrumbHtml = "<ul>"+
-				 "<li><a href='/dashboard'>Home</a></li>"+
-				 "<li><a href='/dashboard'>All FileSystems</a></li>"+
-				 "<li>"+$('#fsSelect :selected').text()+"</li>"+
-				 "<li>"+
-                 "<select id='ossSelect'>"+
-                 "<option value=''>Select OSS</option>"+
-                 "<option value='oss1'>flnOSS1</option>"+
-                 "<option value='oss2'>flnOSS2</option>"+
-                 "<option value='oss3'>flnOSS3</option>";
-                 
-				 $.getJSON("/Context/REST/Namespace/"+$(this).val()+"/getAllOssForFileSystem",function(json) 
-			     {
-			    	for(var i=0;i<json.length;i++)
-		    		{
-		    			var ossId = json[i].ossId;
-		    			var ossName = json[i].ossName;
-		    			breadCrumbHtml = breadCrumbHtml + "<option value="+ossId+">"+ossName+"+</option>";
-		    		}
-			     });
-                 
-				 breadCrumbHtml = breadCrumbHtml +      	
-                 "</select>"+
-                 "</li>"+
-             	 "</ul>";
-	             $("#breadCrumb1").html(breadCrumbHtml);
-				 $("#breadCrumb1").jBreadCrumb();
-			}
-		});
-		
-		$("#ossSelect").live('change', function (){
-			if($(this).val()!="")
-			{
-				$('#dashboardDiv').hide();$('#fileSystemDiv').hide();$('#ostInfoDiv').hide();
-				$('#ossInfoDiv').slideDown("slow");
-				 var breadCrumbHtml = "<ul>"+
-				 "<li><a href='/dashboard'>Home</a></li>"+
-				 "<li><a href='/dashboard'>All FileSystems</a></li>"+
-				 "<li><a href='#' onclick='showFSInfo()'>"+$('#fsSelect :selected').text()+"</a></li>"+
-				 "<li>"+$('#ossSelect :selected').text()+"</li>"+
-                 "<li>"+
-                 "<select id='ostSelect'>"+
-                 "<option value=''>Select OST</option>"+
-                 "<option value='ost1'>flnOST1</option>"+
-                 "<option value='ost2'>flnOST2</option>"+
-                 "<option value='ost3'>flnOST3</option>";
-                 
-                 $.getJSON("/Context/REST/Namespace/"+$(this).val()+"/getAllOstForOss",function(json) 
-               	 {
-   			    	for(var i=0;i<json.length;i++)
-   		    		{
-   		    			var ostId = json[i].ossId;
-   		    			var ostName = json[i].ossName;
-   		    			breadCrumbHtml = breadCrumbHtml + "<option value="+ostId+">"+ostName+"+</option>";
-   		    		}
-   			     });
-                                
-               	breadCrumbHtml = breadCrumbHtml +      	
-                "</select>"+
-                "</li>"+
-                "</ul>";
-             $("#breadCrumb2").html(breadCrumbHtml);
-			 $("#breadCrumb2").jBreadCrumb();
-			}
-	    });
-		
-		$("#ostSelect").live('change', function (){
-			if($(this).val()!="")
-			{
-				$('#dashboardDiv').hide();$('#fileSystemDiv').hide();$('#ossInfoDiv').hide();
-				$('#ostInfoDiv').slideDown("slow");
-				 var breadCrumbHtml = "<ul>"+
-				 "<li><a href='/dashboard'>Home</a></li>"+
-				 "<li><a href='/dashboard'>All FileSystems</a></li>"+
-				 "<li><a href='#' onclick='showFSInfo()'>"+$('#fsSelect :selected').text()+"</a></li>"+
-				 "<li><a href='#' onclick='showOSSInfo()'>"+$('#ossSelect :selected').text()+"</a></li>"+
-				 "<li>"+$('#ostSelect :selected').text()+"</li>"+
-             "</ul>";
-             $("#breadCrumb3").html(breadCrumbHtml);
-			 $("#breadCrumb3").jBreadCrumb();
-			}
-	    });
-		
-		$(".tab_content").hide(); //Hide all content
-		$("ul.tabs li:first").addClass("active").show(); //Activate first tab
-		$(".tab_content:first").show(); //Show first tab content
-
-		//On Click Event
-		$("ul.tabs li").click(function() {
-
-			$("ul.tabs li").removeClass("active"); //Remove any "active" class
-			$(this).addClass("active"); //Add "active" class to selected tab
-			$(".tab_content").hide(); //Hide all tab content
-
-			var activeTab = $(this).find("a").attr("href"); //Find the href attribute value to identify the active tab + content
-			$(activeTab).fadeIn(); //Fade in the active ID content
-			return false;
-		});
-
-		// Dialog			
-		$('#dialog').dialog({
-			autoOpen: false,
-			width: 800,
-			height:400,
-			show: "clip",
-			modal: true,
-			buttons: {
-				"Ok": function() { 
-					$(this).dialog("close"); 
-				}/*, 
-				"Cancel": function() { 
-					$(this).dialog("close"); 
-				} */
-			}
-		});
-		
-		// Dialog Link
-		$('input[name=popUpButton]').click(function(){
-			$('#dialog').dialog('open');
-			return false;
-		});
-		
-		$('input[name=popUpButton]').hover(function() {
-			$(this).css('cursor','pointer');
-			}, function() {
-			$(this).css('cursor','auto');
+				$('#fsSelect').attr("value","");
+				$('#intervalSelect').attr("value","");
+		        $.get("/api/listfilesystems")
+		        .success(function(data, textStatus, jqXHR) {
+		            var innerContent = "<option value=''>Select File System</option>";
+		            $.each(data, function(key, val) {
+		                if(key=='success' && val == true)
+		                {
+		                    $.each(data, function(key1, val1) {
+		                    if(key1=='response')
+		                    {
+		                        $.each(val1, function(resKey, resValue) {
+		                            innerContent = innerContent + "<option value="+resValue.name+">"+resValue.name+"</option>";
+		                        });
+		                    }
+		                    });
+		                }
+		            });
+		            $('#fsSelect').html(innerContent);
+		        })
+				.error(function(event) {
+				});
+				
+				$("#alertAnchor").click();
 			});
-
-        chart = new Highcharts.Chart({
-                    chart: {
-                           renderTo: 'avgReadDiv',
-                           defaultSeriesType: 'line',
-                           marginRight: 0,
-                           marginBottom: 25
-                           },
-                    title: {
-                           text: 'Avg Disk Read',
-                           x: -20 //center
-                           },
-                    xAxis: {
-                           categories: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
-                           },
-                    yAxis: {
-                            title: {
-                                   text: 'KB'
-                                   },
-                           plotLines: [{value: 0,width: 1,color: '#808080'                                                                                                                                                                        }]                                                                                                                                                                                                                                                                                    },
-                   legend: {
-                            layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 100,borderWidth: 0
-                   },
-                   series: [{
-                                name: 'FS1',
-                                data: [7.0, 6.9, 9.5, 14.5, 18.2, 21.5, 25.2, 26.5, 15.5, 10.2]
-                            }, {
-                                 name: 'FS2',
-                                 data: [0.2, 0.8, 5.7, 11.3, 17.0, 22.0, 24.8, 24.1, 24.3, 12.2]
-                            }]
-          });
-
-         chart = new Highcharts.Chart({
-                     chart: {
-                             renderTo: 'avgWriteDiv',
-                             defaultSeriesType: 'line',
-                             marginRight: 0,
-                             marginBottom: 25
-                           },
-                     title: {
-                            text: 'Avg Disk Write',
-                            x: -20 //center
-                    },
-                    xAxis: {
-                            categories: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
-                    },
-                    yAxis: {
-                            title: {
-                                    text: 'KB'
-                            },
-                            plotLines: [{value: 0,width: 1,color: '#808080'                                                                                                                                                                        }]                                                                                                                                                                                                                                                                                    },
-                    legend: {
-                            layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 100,borderWidth: 0
-                    },
-                    series: [{
-                            name: 'OSS1',
-                            data: [8.0, 8.9, 9.5, 9.3, 9.3, 9.3, 8.7, 5.5, 5.2, 5.2]
-                    }, {
-                    name: 'OSS2',
-                            data: [0.2, 0.8, 0.9, 0.9, 0.9, 0.5, 0.4, 0.6, 0.6, 0.6]
-                    }]
-            });
-
-    chart = new Highcharts.Chart({
-        chart: {
-            renderTo: 'mgsavgReadDiv',
-            defaultSeriesType: 'line',
-            marginRight: 0,
-            marginBottom: 25
-        },
-        title: {
-            text: 'Avg MDT Disk Read',
-            x: -20 //center
-        },
-        xAxis: {
-            categories: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
-        },
-        yAxis: {
-            title: {
-                text: 'KB'
-            },
-            plotLines: [{
-                value: 0,
-                width: 1,
-                color: '#808080'
-            }]
-        },
-        tooltip: {
-            formatter: function() {
-                    return '<b>'+ this.series.name +'</b><br/>'+
-                    this.x +': '+ this.y +'';
-            }
-        },
-        legend: {
-            layout: 'vertical',
-            align: 'right',
-            verticalAlign: 'top',
-            x: 0,
-            y: 100,
-            borderWidth: 0
-        },
-        series: [{
-            name: 'OSS1',
-            data: [6.0, 6.1, 6.1, 6.1, 6.2, 6.2, 6.2, 6.4, 6.4, 6.4]
-        }, {
-            name: 'OSS2',
-            data: [3.0, 3.1, 3.2, 3.1, 3.1, 3.2, 3.1, 3.1, 3.1, 3.1]
-        }]
-    });
-
-        chart = new Highcharts.Chart({
-            chart: {
-                renderTo: 'mgsavgWriteDiv',
-                defaultSeriesType: 'line',
-                marginRight: 0,
-                marginBottom: 25
-            },
-            title: {
-                text: 'Avg MDT Disk Write',
-                x: -20 //center
-            },
-            xAxis: {
-                categories: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
-            },
-            yAxis: {
-                title: {
-                    text: 'KB'
-                },
-                plotLines: [{
-                    value: 0,
-                    width: 1,
-                    color: '#808080'
-                }]
-            },
-            tooltip: {
-                formatter: function() {
-                        return '<b>'+ this.series.name +'</b><br/>'+
-                        this.x +': '+ this.y +'';
-                }
-            },
-            legend: {
-                layout: 'vertical',
-                align: 'right',
-                verticalAlign: 'top',
-                x: 0,
-                y: 100,
-                borderWidth: 0
-            },
-            series: [{
-                name: 'OSS1',
-                data: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
-            }, {
-                name: 'OSS2',
-                data: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-            }]
-        });
-        
-        chart = new Highcharts.Chart({
-            chart: {
-                renderTo: 'avgCPUDiv',
-                defaultSeriesType: 'line',
-                marginRight: 0,
-                marginBottom: 25
-            },
-            title: {
-                text: 'CPU Usage',
-                x: -20 //center
-            },
-            xAxis: {
-                categories: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
-            },
-            yAxis: {
-                title: {
-                    text: '%'
-                },
-                plotLines: [{
-                    value: 0,
-                    width: 1,
-                    color: '#808080'
-                }]
-            },
-            tooltip: {
-                formatter: function() {
-                        return '<b>'+ this.series.name +'</b><br/>'+
-                        this.x +': '+ this.y +'';
-                }
-            },
-            legend: {
-                layout: 'vertical',
-                align: 'right',
-                verticalAlign: 'top',
-                x: 0,
-                y: 100,
-                borderWidth: 0
-            },
-            series: [{
-                name: 'MDT',
-                data: [10, 20, 30, 30, 30, 30, 30, 32, 32, 32]
-            }]
-        });
-        
-        chart = new Highcharts.Chart({
-            chart: {
-                renderTo: 'avgMemoryDiv',
-                defaultSeriesType: 'line',
-                marginRight: 0,
-                marginBottom: 25
-            },
-            title: {
-                text: 'Memory Utilization',
-                x: -20 //center
-            },
-            xAxis: {
-                categories: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
-            },
-            yAxis: {
-                title: {
-                    text: '%'
-                },
-                plotLines: [{
-                    value: 0,
-                    width: 1,
-                    color: '#808080'
-                }]
-            },
-            tooltip: {
-                formatter: function() {
-                        return '<b>'+ this.series.name +'</b><br/>'+
-                        this.x +': '+ this.y +'';
-                }
-            },
-            legend: {
-                layout: 'vertical',
-                align: 'right',
-                verticalAlign: 'top',
-                x: 0,
-                y: 100,
-                borderWidth: 0
-            },
-            series: [{
-                name: 'MDT',
-                data: [30, 30, 30, 30, 30, 25, 25, 25, 25, 25]
-            }]
-        });
-        
-        chart = new Highcharts.Chart({
-            chart: {
-                renderTo: 'mgsavgCPUDiv',
-                defaultSeriesType: 'line',
-                marginRight: 0,
-                marginBottom: 25
-            },
-            title: {
-                text: 'CPU Usage',
-                x: -20 //center
-            },
-            xAxis: {
-                categories: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
-            },
-            yAxis: {
-                title: {
-                    text: '%'
-                },
-                plotLines: [{
-                    value: 0,
-                    width: 1,
-                    color: '#808080'
-                }]
-            },
-            tooltip: {
-                formatter: function() {
-                        return '<b>'+ this.series.name +'</b><br/>'+
-                        this.x +': '+ this.y +'';
-                }
-            },
-            legend: {
-                layout: 'vertical',
-                align: 'right',
-                verticalAlign: 'top',
-                x: 0,
-                y: 100,
-                borderWidth: 0
-            },
-            series: [{
-                name: 'MDT',
-                data: [10, 4, 8, 15, 13, 9, 12, 10, 18, 16]
-            }]
-        });
-        
-        chart = new Highcharts.Chart({
-            chart: {
-                renderTo: 'mgsavgMemoryDiv',
-                defaultSeriesType: 'line',
-                marginRight: 0,
-                marginBottom: 25
-            },
-            title: {
-                text: 'Memory Utilization',
-                x: -20 //center
-            },
-            xAxis: {
-                categories: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
-            },
-            yAxis: {
-                title: {
-                    text: '%'
-                },
-                plotLines: [{
-                    value: 0,
-                    width: 1,
-                    color: '#808080'
-                }]
-            },
-            tooltip: {
-                formatter: function() {
-                        return '<b>'+ this.series.name +'</b><br/>'+
-                        this.x +': '+ this.y +'';
-                }
-            },
-            legend: {
-                layout: 'vertical',
-                align: 'right',
-                verticalAlign: 'top',
-                x: 0,
-                y: 100,
-                borderWidth: 0
-            },
-            series: [{
-                name: 'MDT',
-                data: [10, 20, 22, 25, 8, 9, 30, 35, 20, 20]
-            }]
-        });
-	});
-
-
-    function showOSSInfo(){
-	    $("#ossSelect").change();
-    }
-    function showFSInfo(){
-	    $("#fsSelect").change();
-    }
-</script>
-</head>
-    <body>
-        <table width="100%" border="2" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
+		    
+		    function showOSSInfo(){
+			    $("#ossSelect").change();
+		    }
+		    function showFSInfo(){
+			    $("#fsSelect").change();
+		    }
+		</script>
+<style type="text/css">
+<!--
+.style11 {font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 10px; }
+.open-close {
+cursor:pointer;
+}
+.open-close:hover {
+text-decoration:underline;
+cursor:pointer;
+}
+-->
+</style>
+</style>
+	</head>
+    <body bgcolor="#EEEEEE">
+        <table width="100%" border="2" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: black" >
         <tr><!-- #CFCFCF -->
-        <td width="1%" bgcolor="" valign="top" id="panelTD"><div><img id="plusImg" src="{{STATIC_URL}}images/plus.png" alt="" /></div>
-        <div class="panel" style="display: none;width: 100px">
-        <div style="float: right"><img id="minusImg" src="{{STATIC_URL}}images/minus.png" alt="" /></div><br/>
-        <ul id="leftnav">
-	        <li><a href="#">Alerts</a></li>
-	        <li><a href="#">Events</a></li>
-	        <li><a href="#">Jobs</a></li>
-        </ul>
-        <div id="outputDiv"></div>
-		</div>
+        <td width="1%" bgcolor="" valign="top" id="panelTD">
+        	<div><b id="plusImg" class="open-close"> [Open] </b></div>
+        	<div class="panel" style="display: none;width: 300px">
+        	<div style="float: right"><b id="minusImg" class="open-close"> [Close] </b></div><br/>
+	        <ul id="leftnav">
+		        <li><a href="#" id="alertAnchor">Alerts</a></li>
+                <div id="alertsDiv" style=""><table bgcolor="#33FFFF" width="100%" border="" cellpadding="0" cellspacing="0" bordercolor="#FFFFFF">
+  <tr>
+    <td bgcolor="#F2F2FF"><table width="100%" border="0" cellspacing="1" cellpadding="0">
+      <tr>
+        <td width="19%" bgcolor="#FFFFFF"><span class="style11">5h 17m ago</span></td>
+        <td width="38%" bgcolor="#FFFFFF"><span class="style11">clo-centos6-x64-oss2</span></td>
+        <td width="6%" align="center" bgcolor="#FFFFFF"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
+        <td width="37%" bgcolor="#FFFFFF"><span class="style11">Discovered mount point of neofs01-OST0001 on clo-centos6-x64-oss2</span></td>
+      </tr>
+      <tr>
+        <td bgcolor="#FFFFFF"><span class="style11">5h 18m ago</span></td>
+        <td bgcolor="#FFFFFF"><table cellspacing="0" cellpadding="0">
+          <tr>
+            <td class="style11">clo-centos6-x64-oss2</td>
+          </tr>
+        </table>        </td>
+        <td align="center" bgcolor="#FFFFFF"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
+        <td bgcolor="#FFFFFF"><span class="style11">Discovered formatted target neofs01-OST0001</span></td>
+      </tr>
+      <tr>
+        <td bgcolor="#FFFFFF"><span class="style11">5h 20m ago</span></td>
+        <td bgcolor="#FFFFFF"><span class="style11">clo-centos6-x64-oss2</span></td>
+        <td align="center" bgcolor="#FFFFFF"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
+        <td bgcolor="#FFFFFF"><span class="style11">Discovered mount point of neofs01-OST0003 on clo-centos6-x64-oss2</span></td>
+      </tr>
+      <tr>
+        <td bgcolor="#FFFFFF"><span class="style11">5h 20m ago</span></td>
+        <td bgcolor="#FFFFFF"><span class="style11">clo-centos6-x64-oss2</span></td>
+        <td align="center" bgcolor="#FFFFFF"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
+        <td bgcolor="#FFFFFF"><span class="style11">Discovered formatted target neofs01-OST0003</span></td>
+      </tr>
+      <tr>
+        <td bgcolor="#FFFFFF"><span class="style11">5h 20m ago</span></td>
+        <td bgcolor="#FFFFFF"><span class="style11">clo-centos6-x64-oss2</span></td>
+        <td align="center" bgcolor="#FFFFFF"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
+        <td bgcolor="#FFFFFF"><table cellspacing="0" cellpadding="0">
+          <tr>
+            <td class="style11">Discovered mount point of neofs01-OST0002 on clo-centos6-x64-oss2</td>
+          </tr>
+        </table>        </td>
+      </tr>
+    </table></td>
+  </tr>
+</table></div>
+		        <li><a href="#" id="eventsAnchor">Events</a></li>
+                <div id="eventsDiv"  style="display:none;">No active events</div>
+		        <li><a href="#" id="jobsAnchor">Jobs</a></li>
+                <div id="jobsDiv"  style="display:none;">No active jobs</div>
+	        </ul>
+	        <div id="outputDiv"></div>
+			</div>
 		</td>
-        <td width="80%">
+        <td width="99%">
+          <!-- Dashboard Div - Start -->
 		  <div id="dashboardDiv">
-		       
-		  <table width="100%" border="2" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
+		  <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
 		  <tr>
-		  	<td>
-		  			<div class="breadCrumbHolder module">
-		                <div id="breadCrumb0" class="breadCrumb module">
-		                    <ul>
-		                        <li>
-		                            <a href="/dashboard">Home</a>
-		                        </li>
-		                        <li>
-		                            <a href="/dashboard">All FileSystems</a>
-		                        </li>
-		                        <li>
-		                            <select id="fsSelect">
-		                            	<option value="">Select File System</option>
-		                            	<option value="fs1">flntfs01</option>
-		                            	<option value="fs2">sobofs01</option>
-		                            	<option value="fs3">lexfs01</option>
-		                            </select>
-		                        </li>
-		                    </ul>
-		                </div>
-		            </div>
+		  	<td width="100%">
+	  			<div class="breadCrumbHolder module">
+	                <div id="breadCrumb0" class="breadCrumb module">
+	                    <ul>
+	                        <li>
+	                            <a href="/dashboard">Home</a>
+	                        </li>
+	                        <li>
+	                            <a href="/dashboard">All FileSystems</a>
+	                        </li>
+	                        <li>
+	                            <select id="fsSelect">
+	                            	<option value="">Select File System</option>
+	                            	<option value="fs1">flntfs01</option>
+	                            	<option value="fs2">sobofs01</option>
+	                            	<option value="fs3">lexfs01</option>
+	                            </select>
+	                        </li>
+	                    </ul>
+	                </div>
+	            </div>
+               
 		    </td>
 		  </tr>
 		  <tr>
@@ -882,19 +178,19 @@
 		  	<form>
 			  <fieldset>
 			    <legend class="legendClass">All Filesystems Usage Summary</legend>
-			    <table width="100%" border="2">
+			    <table width="100%" border="0"><tr>
 			    <td  valign="top" class="text" width="25%" align="center">
-		    	<div id="container" style="width: 250px; height: 200px; margin: 0 auto"></div>
+		    	<div id="container" style="width: 250px; height: 200px; margin: 0 auto; padding-left:22px; padding-right:20px;"></div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   <div id="container1" style="width: 250px; height: 200px; margin: 0 auto"></div>
+			   <div id="container1" style="width: 250px; height: 200px; margin: 0 auto; padding-left:22px; padding-right:20px;"></div>
 			   </td>
 			    <td  valign="top" class="text" width="25%" align="center">
-		    	<div id="container2" style="width: 250px; height: 200px; margin: 0 auto"></div>
+		    	<div id="container2" style="width: 250px; height: 200px; margin: 0 auto; padding-left:22px; padding-right:20px;"></div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   <div id="container3" style="width: 250px; height: 200px; margin: 0 auto"></div>
-			   </td>
+			   <div id="container3" style="width: 250px; height: 200px; margin: 0 auto; padding-left:22px; padding-right:20px;"></div>
+			   </td></tr>
 			   </table>
 			  </fieldset>
 			</form>
@@ -905,19 +201,19 @@
 		  	<form>
 			  <fieldset>
 			    <legend class="legendClass">All Filesystems Performance Summary</legend>
-			    <table width="100%" border="2">
+			    <table width="100%" border="0" cellpadding="0" cellspacing="0"><tr>
 			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="avgCPUDiv" style="width: 250px; height: 200px; margin: 0 auto;">Filesystems Avg CPU</div>
+		    		<div id="avgCPUDiv"  style="width: 250px; height: 200px; margin: 0 auto; padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg CPU</div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="avgMemoryDiv" style="width: 250px; height: 200px; margin: 0 auto">Filesystems Avg Memory</div>
+			   		<div id="avgMemoryDiv"  style="width: 250px; height: 200px; margin: 0 auto; padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Memory</div>
 			   </td>
 			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="avgReadDiv" style="width: 250px; height: 200px; margin: 0 auto">File System Avg Read</div>
+		    		<div id="avgReadDiv"  class="round-table" style="width: 250px; height: 200px; margin: 0 auto; padding-left:20px; padding-right:20px;">File System Avg Read</div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="avgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto">Filesystems Avg Write</div>
-			   </td>
+			   		<div id="avgWriteDiv"  class="round-table" style="width: 250px; height: 200px; margin: 0 auto; padding-left:20px; padding-right:20px;">Filesystems Avg Write</div>
+			   </td></tr>
 			   </table>
 			  </fieldset>
 			</form>
@@ -928,19 +224,19 @@
 		  	<form>
 			  <fieldset>
 			    <legend class="legendClass">All MDS/MGS Performance Summary</legend>
-			    <table width="100%" border="2">
+			    <table width="100%" border="0" cellpadding="0" cellspacing="0"><tr height="220">
 			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="mgsavgCPUDiv" style="width: 250px; height: 200px; margin: 0 auto;">Filesystems Avg CPU</div>
+		    		<div id="mgsavgCPUDiv" class="round-table" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" >Filesystems Avg CPU</div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="mgsavgMemoryDiv" style="width: 250px; height: 200px; margin: 0 auto">Filesystems Avg Memory</div>
+			   		<div id="mgsavgMemoryDiv" class="round-table" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" >Filesystems Avg Memory</div>
 			   </td>
 			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="mgsavgReadDiv" style="width: 250px; height: 200px; margin: 0 auto">File System Avg Read</div>
+		    		<div id="mgsavgReadDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table" >File System Avg Read</div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="mgsavgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto">Filesystems Avg Write</div>
-			   </td>
+			   		<div id="mgsavgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Write</div>
+			   </td></tr>
 			   </table>
 			  </fieldset>
 			</form>
@@ -948,9 +244,11 @@
 		  </tr>
 		</table>
 		</div>
-
+		<!-- Dashboard Div - End -->
+		
+		<!-- FileSystem Div - Start -->
 		<div id="fileSystemDiv" style="display: none">
-		  <table width="100%" border="2" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
+		  <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
 		  <tr>
 		  	<td>
 		  			<div class="breadCrumbHolder module">
@@ -962,7 +260,7 @@
 		  </tr>
 		  <tr>
 		  	<td>Time Interval: &nbsp;
-		  		<select id="intervalSelect">
+		  		<select id="">
 		  			<option value="">Select</option>	
 		  			<option value="hour">Hour</option>
 		  			<option value="day">Day</option>
@@ -977,23 +275,23 @@
 		  </tr>
 		  <tr>
 		  	<td colspan="4">
-		  	  <form>
-			  <fieldset>
-			    <legend class="legendClass">Filesystems Usage Summary</legend>
-			    <table width="100%" border="2">
-			    <td colspan="2"  valign="top" class="text" width="60%" align="center">
-		    		All File System information comes here<br /><br /><br /><br /><br /><br /><br />
-		    		<input id="dialog_link" name="popUpButton" type="button" value="Alerts" align="left" style="border: 1px solid red;background-color: #4F0F0F;font-weight: bold;color: red"/>&nbsp;&nbsp;<input name="popUpButton" type="button" value="Events" style="border: 1px solid #DFC137;background-color: #6F4B0D;font-weight: bold;color: #DFC137">
-		    	</td>
-			    <td colspan="1" valign="top" class="text"  align="center">
-		    	<div id="container2" style="width: 250px; height: 200px; margin: 0 auto">Usage Used Vs Free</div>
-		    	</td>
-			   <td colspan="1"  valign="top" class="text"  align="center">
-			   <div id="container3" style="width: 250px; height: 200px; margin: 0 auto">No. Of Files Vs i-Nodes</div>
-			   </td>
-			   </table>
-			  </fieldset>
-			</form> 
+			  	<form>
+				  <fieldset>
+				    <legend class="legendClass">Filesystems Usage Summary</legend>
+					    <table width="100%" border="0">
+						    <td colspan="2"  valign="top" class="text" width="60%" align="center">
+					    		All File System information comes here<br /><br /><br /><br /><br /><br /><br />
+					    		<input id="dialog_link" name="alertsPopUpBtn" type="button" value="Alerts" align="left" style="border: 1px solid red;background-color: #4F0F0F;font-weight: bold;color: red"/>&nbsp;&nbsp;<input name="eventsPopUpBtn" type="button" value="Events" style="border: 1px solid #DFC137;background-color: #6F4B0D;font-weight: bold;color: #DFC137">
+					    	</td>
+						    <td colspan="1" valign="top" class="text"  align="center">
+					    		<div id="fs_container2" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Usage Used Vs Free</div>
+					    	</td>
+						   <td colspan="1"  valign="top" class="text"  align="center">
+						   		<div id="fs_container3" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table"">No. Of Files Vs i-Nodes</div>
+						   </td>
+					    </table>
+				  </fieldset>
+				</form> 
 			</td>
 		  </tr>
 		  <tr>
@@ -1001,22 +299,22 @@
 		  	<form>
 			  <fieldset>
 			    <legend class="legendClass">File System Performance Summary</legend>
-			    <table width="100%" border="2">
-			    <tr>
-			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="avgCPUDiv" style="width: 250px; height: 200px; margin: 0 auto;">Filesystems Avg CPU</div>
-		    	</td>
-			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="avgMemoryDiv" style="width: 250px; height: 200px; margin: 0 auto">Filesystems Avg Memory</div>
-			   </td>
-			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="avgReadDiv" style="width: 250px; height: 200px; margin: 0 auto">File System Avg Read</div>
-		    	</td>
-			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="avgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto">Filesystems Avg Write</div>
-			   </td>
-			   </tr>
-			   </table>
+				    <table width="100%" border="0">
+					    <tr>
+						    <td  valign="top" class="text" width="25%" align="center">
+					    		<div id="fs_avgCPUDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table"">Filesystems Avg CPU</div>
+					    	</td>
+						   <td  valign="top" class="text" width="25%" align="center">
+						   		<div id="fs_avgMemoryDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table"">Filesystems Avg Memory</div>
+						   </td>
+						    <td  valign="top" class="text" width="25%" align="center">
+					    		<div id="fs_avgReadDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table"">File System Avg Read</div>
+					    	</td>
+						   <td  valign="top" class="text" width="25%" align="center">
+						   		<div id="fs_avgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table"">Filesystems Avg Write</div>
+						   </td>
+					   </tr>
+				   </table>
 			  </fieldset>
 			</form>
 			</h3></td>
@@ -1026,43 +324,44 @@
 		  	<form>
 			  <fieldset>
 			    <legend class="legendClass">File System MDS/MGS Performance Summary</legend>
-			    <table width="100%" border="2">
-			    <tr>
-			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="mgsavgCPUDiv" style="width: 250px; height: 200px; margin: 0 auto;">Filesystems Avg CPU</div>
-		    	</td>
-			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="mgsavgMemoryDiv" style="width: 250px; height: 200px; margin: 0 auto">Filesystems Avg Memory</div>
-			   </td>
-			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="mgsavgReadDiv" style="width: 250px; height: 200px; margin: 0 auto">File System Avg Read</div>
-		    	</td>
-			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="mgsavgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto">Filesystems Avg Write</div>
-			   </td>
-			   </tr>
-			   </table>
+				    <table width="100%" border="0">
+					    <tr>
+					    <td  valign="top" class="text" width="25%" align="center">
+				    		<div id="fs_mgsavgCPUDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg CPU</div>
+				    	</td>
+					   <td  valign="top" class="text" width="25%" align="center">
+					   		<div id="fs_mgsavgMemoryDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Memory</div>
+					   </td>
+					    <td  valign="top" class="text" width="25%" align="center">
+				    		<div id="fs_mgsavgReadDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">File System Avg Read</div>
+				    	</td>
+					   <td  valign="top" class="text" width="25%" align="center">
+					   		<div id="fs_mgsavgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Write</div>
+					   </td>
+					   </tr>
+				   </table>
 			  </fieldset>
 			</form>
 			</h3></td>
 		  </tr>
 		  </table>
 		</div>
-
+		<!-- FileSystem Div - End -->
+		
+		<!-- OSS Div - Start -->
 		<div id="ossInfoDiv" style="display: none">
-		  <table width="100%" border="2" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
+		  <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
 		  <tr>
 		  	<td>
-		  			<div class="breadCrumbHolder module">
-		                <div id="breadCrumb2" class="breadCrumb module">
-		                   
-		                </div>
-		            </div>
+	  			<div class="breadCrumbHolder module">
+	                <div id="breadCrumb2" class="breadCrumb module">
+	                </div>
+	            </div>
 		    </td>
 		  </tr>
 		  <tr>
 		  	<td>Time Interval: &nbsp;
-		  		<select id="intervalSelect">
+		  		<select id="">
 		  			<option value="">Select</option>	
 		  			<option value="hour">Hour</option>
 		  			<option value="day">Day</option>
@@ -1081,47 +380,46 @@
 			    <li><a href="#tab1">Usage Summary</a></li>
 			    <li><a href="#tab2">Overview</a></li>
 			</ul>
-			
 			<div class="tab_container">
 			    <div id="tab1" class="tab_content">
-			      <form>
-					<fieldset>
-					    <legend class="legendClass">OSS Usage Summary</legend>
-					    <table width="100%" border="2">
-						    <tr>
-							    <td colspan="2"  valign="top" class="text" width="60%" align="center">
-						    		OSS information comes here
-						    		<input id="dialog_link" name="popUpButton" type="button" value="Alerts" align="left" style="border: 1px solid red;background-color: #4F0F0F;font-weight: bold;color: red"/>&nbsp;&nbsp;<input name="popUpButton" type="button" value="Events" style="border: 1px solid #DFC137;background-color: #6F4B0D;font-weight: bold;color: #DFC137">
-						    	</td>
-							    <td colspan="1" valign="top" class="text"  align="center">
-						    		<div id="container2" style="width: 250px; height: 200px; margin: 0 auto">Usage Used Vs Free</div>
-						    	</td>
-							    <td colspan="1"  valign="top" class="text"  align="center">
-							   		<div id="container3" style="width: 250px; height: 200px; margin: 0 auto">No. Of Files Vs i-Nodes</div>
-							    </td>
-							</tr>
-					    </table>
-					</fieldset>
-				</form> 
-				<form>
-				  <fieldset>
-				    <legend class="legendClass">OSS Performance Summary</legend>
-				    <table width="100%" border="2">
-					    <td  valign="top" class="text" width="25%" align="center">
-				    		<div id="avgCPUDiv" style="width: 250px; height: 200px; margin: 0 auto;">Filesystems Avg CPU</div>
-				    	</td>
-					    <td  valign="top" class="text" width="25%" align="center">
-					   		<div id="avgMemoryDiv" style="width: 250px; height: 200px; margin: 0 auto">Filesystems Avg Memory</div>
-					    </td>
-					    <td  valign="top" class="text" width="25%" align="center">
-				    		<div id="avgReadDiv" style="width: 250px; height: 200px; margin: 0 auto">File System Avg Read</div>
-				    	</td>
-					    <td  valign="top" class="text" width="25%" align="center">
-					   		<div id="avgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto">Filesystems Avg Write</div>
-					    </td>
-				   </table>
-				  </fieldset>
-				</form>
+				    <form>
+						<fieldset>
+						    <legend class="legendClass">OSS Usage Summary</legend>
+						    <table width="100%" border="0">
+							    <tr>
+								    <td colspan="2"  valign="top" class="text" width="60%" align="center">
+							    		OSS information comes here<br /><br /><br /><br /><br /><br /><br />
+					    		<input id="dialog_link" name="alertsPopUpBtn" type="button" value="Alerts" align="left" style="border: 1px solid red;background-color: #4F0F0F;font-weight: bold;color: red"/>&nbsp;&nbsp;<input name="eventsPopUpBtn" type="button" value="Events" style="border: 1px solid #DFC137;background-color: #6F4B0D;font-weight: bold;color: #DFC137">
+					    	</td>
+								    <td colspan="1" valign="top" class="text"  align="center">
+							    		<div id="oss_container2" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Usage Used Vs Free</div>
+							    	</td>
+								    <td colspan="1"  valign="top" class="text"  align="center">
+								   		<div id="oss_container3" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">No. Of Files Vs i-Nodes</div>
+								    </td>
+								</tr>
+						    </table>
+						</fieldset>
+					</form> 
+					<form>
+					  <fieldset>
+					    <legend class="legendClass">OSS Performance Summary</legend>
+					    <table width="100%" border="0">
+						    <td  valign="top" class="text" width="25%" align="center">
+					    		<div id="oss_avgCPUDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg CPU</div>
+					    	</td>
+						    <td  valign="top" class="text" width="25%" align="center">
+						   		<div id="oss_avgMemoryDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Memory</div>
+						    </td>
+						    <td  valign="top" class="text" width="25%" align="center">
+					    		<div id="oss_avgReadDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">File System Avg Read</div>
+					    	</td>
+						    <td  valign="top" class="text" width="25%" align="center">
+						   		<div id="oss_avgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Write</div>
+						    </td>
+					   </table>
+					  </fieldset>
+					</form>
 			    </div>
 			    <div id="tab2" class="tab_content">
 			     	<table width="100%" border="2">
@@ -1141,37 +439,37 @@
 			     		    <td  valign="top" class="text" width="%100" align="center">
 					    		<div id="heatMap1" align="center">
 				            		Heat Map
-				            		<br /><br /><br /><br /><br /><br /><br /><br />
+				            		<br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
 				        		</div>
 				    		</td>
 				    	</tr>
 				   </table>
 			    </div>
-			</div>
-			</td>
+			</div>	<!-- end of tab_container  -->
+		  </td>
 		  </tr>
 		  <tr>
 		  	<td colspan="3">
-		  			
 			</td>
 		  </tr>
 		  </table>
 		</div>
+		<!-- OSS Div - End -->
 
+		<!-- OST Div - Start -->
 		<div id="ostInfoDiv" style="display: none">
-		  <table width="100%" border="2" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
+		  <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
 		  <tr>
 		  	<td>
-		  			<div class="breadCrumbHolder module">
-		                <div id="breadCrumb3" class="breadCrumb module">
-		                   
-		                </div>
-		            </div>
+	  			<div class="breadCrumbHolder module">
+	                <div id="breadCrumb3" class="breadCrumb module">
+	                </div>
+	            </div>
 		    </td>
 		  </tr>
 		  <tr>
 		  	<td>Time Interval: &nbsp;
-		  		<select id="intervalSelect">
+		  		<select id="">
 		  			<option value="">Select</option>	
 		  			<option value="hour">Hour</option>
 		  			<option value="day">Day</option>
@@ -1187,48 +485,57 @@
 		  <tr>
 		  	<td colspan="4">
 		  	  <form>
-			  <fieldset>
-			    <legend class="legendClass">OST Usage Summary</legend>
-			    <table width="100%" border="2">
-			   <td colspan="2"  valign="top" class="text" width="60%" align="center">
-		    		OST information comes here
-		    		<input id="dialog_link" name="popUpButton" type="button" value="Alerts" align="left" style="border: 1px solid red;background-color: #4F0F0F;font-weight: bold;color: red"/>&nbsp;&nbsp;<input name="popUpButton" type="button" value="Events" style="border: 1px solid #DFC137;background-color: #6F4B0D;font-weight: bold;color: #DFC137">
-			   </td>
-			    <td colspan="1" valign="top" class="text"  align="center">
-		    	<div id="container2" style="width: 250px; height: 200px; margin: 0 auto">Usage Used Vs Free</div>
-		    	</td>
-			   <td colspan="1"  valign="top" class="text"  align="center">
-			   <div id="container3" style="width: 250px; height: 200px; margin: 0 auto">No. Of Files Vs i-Nodes</div>
-			   </td>
-			   </table>
-			  </fieldset>
-			</form> 
+				  <fieldset>
+				    <legend class="legendClass">OST Usage Summary</legend>
+				    <table width="100%" border="0">
+				      <tr>
+					   <td colspan="2"  valign="top" class="text" width="60%" align="center">
+				    		OST information comes here
+				    		<br /><br /><br /><br /><br /><br /><br />
+					    		<input id="dialog_link" name="alertsPopUpBtn" type="button" value="Alerts" align="left" style="border: 1px solid red;background-color: #4F0F0F;font-weight: bold;color: red"/>&nbsp;&nbsp;<input name="eventsPopUpBtn" type="button" value="Events" style="border: 1px solid #DFC137;background-color: #6F4B0D;font-weight: bold;color: #DFC137">
+					    	</td>
+					    <td colspan="1" valign="top" class="text"  align="center">
+				    		<div id="ost_container2" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Usage Used Vs Free</div>
+				    	</td>
+					   <td colspan="1"  valign="top" class="text"  align="center">
+					   		<div id="ost_container3" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">No. Of Files Vs i-Nodes</div>
+					   </td>
+					   </tr>
+				   </table>
+				  </fieldset>
+			   </form> 
 			</td>
 		  </tr>
 		  <tr>
 		  	<td colspan="3">
-		  	<form>
-			  <fieldset>
-			    <legend class="legendClass">OST Performance Summary</legend>
-			    <table width="100%" border="2">
-			    <td  valign="top" class="text" width="50%" align="center">
-		    		<div id="avgReadDiv" style="width: 250px; height: 200px; margin: 0 auto">OST Disk Read</div>
-		    	</td>
-			    <td  valign="top" class="text" width="50%" align="center">
-			   		<div id="avgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto">OST Disk Write</div>
-			    </td>
-			   </table>
-			  </fieldset>
-			</form>
+			  	<form>
+				  <fieldset>
+				    <legend class="legendClass">OST Performance Summary</legend>
+				    <table width="100%" border="0">
+				      <tr>
+					    <td  valign="top" class="text" width="50%" align="center">
+				    		<div id="ost_avgReadDiv" style="width: 500px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">OST Disk Read</div>
+				    	</td>
+					    <td  valign="top" class="text" width="50%" align="center">
+					   		<div id="ost_avgWriteDiv" style="width: 500px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">OST Disk Write</div>
+					    </td>
+				      </tr>
+				   </table>
+				  </fieldset>
+				</form>
 			</h3></td>
 		  </tr>
 		  </table>
 		</div>
-	</td>
-</tr>
+		<!-- OST Div - End -->
+		</td>
+        </tr>
         </table>
-        <div id="dialog" title="Dialog Title">
-			<p></p>
+		<div id="alerts_dialog" title="Alerts">
+			<p>All alerts listing will come here</p>
 		</div>
-    </body>
+        <div id="events_dialog" title="Events">
+			<p>All events listing will come here</p>
+		</div>
+	</body>
 </html>
