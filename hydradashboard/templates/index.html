@@ -53,77 +53,94 @@
 		    function showFSInfo(){
 			    $("#fsSelect").change();
 		    }
+		    
 		</script>
-<style type="text/css">
-<!--
-.style11 {font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 10px; }
-.open-close {
-cursor:pointer;
-}
-.open-close:hover {
-text-decoration:underline;
-cursor:pointer;
-}
--->
-</style>
-</style>
 	</head>
-    <body bgcolor="#EEEEEE">
-        <table width="100%" border="2" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: black" >
+    <body bgcolor="#EEEEEE" style="margin: 0px 0px 0px 0px; padding: 0px; ">
+        <table width="100%" cellspacing="0" cellpadding="1" align="center" style="border: 1px solid #DEDEDE">
         <tr><!-- #CFCFCF -->
-        <td width="1%" bgcolor="" valign="top" id="panelTD">
+        <td width="1%" bgcolor="" valign="top" id="panelTD" style="border-right: 2px solid #DEDEDE">
         	<div><b id="plusImg" class="open-close"> [Open] </b></div>
         	<div class="panel" style="display: none;width: 300px">
         	<div style="float: right"><b id="minusImg" class="open-close"> [Close] </b></div><br/>
-	        <ul id="leftnav">
-		        <li><a href="#" id="alertAnchor">Alerts</a></li>
-                <div id="alertsDiv" style=""><table bgcolor="#33FFFF" width="100%" border="" cellpadding="0" cellspacing="0" bordercolor="#FFFFFF">
-  <tr>
-    <td bgcolor="#F2F2FF"><table width="100%" border="0" cellspacing="1" cellpadding="0">
-      <tr>
-        <td width="19%" bgcolor="#FFFFFF"><span class="style11">5h 17m ago</span></td>
-        <td width="38%" bgcolor="#FFFFFF"><span class="style11">clo-centos6-x64-oss2</span></td>
-        <td width="6%" align="center" bgcolor="#FFFFFF"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
-        <td width="37%" bgcolor="#FFFFFF"><span class="style11">Discovered mount point of neofs01-OST0001 on clo-centos6-x64-oss2</span></td>
-      </tr>
-      <tr>
-        <td bgcolor="#FFFFFF"><span class="style11">5h 18m ago</span></td>
-        <td bgcolor="#FFFFFF"><table cellspacing="0" cellpadding="0">
-          <tr>
-            <td class="style11">clo-centos6-x64-oss2</td>
-          </tr>
-        </table>        </td>
-        <td align="center" bgcolor="#FFFFFF"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
-        <td bgcolor="#FFFFFF"><span class="style11">Discovered formatted target neofs01-OST0001</span></td>
-      </tr>
-      <tr>
-        <td bgcolor="#FFFFFF"><span class="style11">5h 20m ago</span></td>
-        <td bgcolor="#FFFFFF"><span class="style11">clo-centos6-x64-oss2</span></td>
-        <td align="center" bgcolor="#FFFFFF"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
-        <td bgcolor="#FFFFFF"><span class="style11">Discovered mount point of neofs01-OST0003 on clo-centos6-x64-oss2</span></td>
-      </tr>
-      <tr>
-        <td bgcolor="#FFFFFF"><span class="style11">5h 20m ago</span></td>
-        <td bgcolor="#FFFFFF"><span class="style11">clo-centos6-x64-oss2</span></td>
-        <td align="center" bgcolor="#FFFFFF"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
-        <td bgcolor="#FFFFFF"><span class="style11">Discovered formatted target neofs01-OST0003</span></td>
-      </tr>
-      <tr>
-        <td bgcolor="#FFFFFF"><span class="style11">5h 20m ago</span></td>
-        <td bgcolor="#FFFFFF"><span class="style11">clo-centos6-x64-oss2</span></td>
-        <td align="center" bgcolor="#FFFFFF"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
-        <td bgcolor="#FFFFFF"><table cellspacing="0" cellpadding="0">
-          <tr>
-            <td class="style11">Discovered mount point of neofs01-OST0002 on clo-centos6-x64-oss2</td>
-          </tr>
-        </table>        </td>
-      </tr>
-    </table></td>
-  </tr>
-</table></div>
-		        <li><a href="#" id="eventsAnchor">Events</a></li>
-                <div id="eventsDiv"  style="display:none;">No active events</div>
-		        <li><a href="#" id="jobsAnchor">Jobs</a></li>
+	        <div><a href="#" id="alertAnchor">Alerts</a></div>
+                <div id="alertsDiv" class="transbox">
+					  <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
+					  <tr>
+					    <td>
+					    <table width="100%" border="0" cellspacing="1" cellpadding="0">
+					      <tr>
+						      <th class="fontStyle" align="left" style="border:1px solid red;">Begin</th>
+						      <th class="fontStyle" align="left" style="border:1px solid red;">End</th>
+						      <th class="fontStyle" align="left" style="border:1px solid red;">Item</th>
+						      <th class="fontStyle" align="left" style="border:1px solid red;">Message</th>	
+					      </tr>
+					      <tr bgcolor="#FF6161">
+					        <td width="25%" class="fontStyle">Sept. 15, 2011, 4:34 a.m.</td>
+					        <td width="25%" ><span class="fontStyle">Sept. 15, 2011, 4:41 a.m.</span></td>
+					        <td width="20%" align="center" ><img src="{{STATIC_URL}}images/dialog-error.png" width="16" height="16" />oss21</td>
+					        <td width="30%" ><span class="fontStyle">	Host contact lost</span></td>
+					      </tr>
+					      <tr bgcolor="#FF6161">
+					        <td width="25%" class="fontStyle">Sept. 15, 2011, 4:33 a.m.</td>
+					        <td width="25%" ><span class="fontStyle">Sept. 15, 2011, 4:42 a.m.</span></td>
+					        <td width="20%" align="center" ><img src="{{STATIC_URL}}images/dialog-error.png" width="16" height="16" />oss21 : primary : MGS</td>
+					        <td width="30%" ><span class="fontStyle">	Target offline</span></td>
+					      </tr>
+					      <tr><td colspan="4" style="border-bottom: 1px solid red"></td></tr>
+					      <tr>
+					      	<td align="right" colspan="4" style="text-decoration: underline;color: black"><font style="font-style: italic;color:red;font-weight: bold;"><a href="#">(All Alerts)</a></font></td>
+					      </tr>
+					    </table>
+					    </td>
+					  </tr>
+					</table>
+				</div>
+		       <div><a href="#" id="eventsAnchor">Events</a></div>
+                <div id="eventsDiv"  style="display:none;">
+                	 <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
+                	  <tr>
+					    <td >
+					    <table width="100%" border="0" cellspacing="1" cellpadding="0">
+					    <tr>
+					      <th class="fontStyle" align="left" style="border:1px solid #0040FF;">Time</th>
+					      <th class="fontStyle" align="left" style="border:1px solid #0040FF;">Item</th>
+					      <th class="fontStyle" align="left" style="border:1px solid #0040FF;">Message</th>
+					  	</tr>
+					      <tr bgcolor="#B8E9FF">
+					        <td width="20%"><span class="fontStyle">5h 17m ago</span>
+							<td width="42%"><span class="fontStyle">clo-centos6-x64-oss2</span><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
+					        <td width="38%" ><span class="fontStyle">Discovered mount point of neofs01-OST0001 on clo-centos6-x64-oss2</span></td>
+					      </tr>
+					      <tr bgcolor="#FFCF40">
+					        <td ><span class="fontStyle">5h 18m ago</span></td>
+					        <td ><span class="fontStyle">clo-centos6-x64-oss2</span><img src="{{STATIC_URL}}images/dialog-warning.png" width="16" height="16" /></td>
+					        <td ><span class="fontStyle">Discovered formatted target neofs01-OST0001</span></td>
+					      </tr>
+					      <tr bgcolor="#B8E9FF">
+					        <td ><span class="fontStyle">5h 20m ago</span></td>
+					        <td ><span class="fontStyle">clo-centos6-x64-oss2</span><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
+					        <td ><span class="fontStyle">Discovered mount point of neofs01-OST0003 on clo-centos6-x64-oss2</span></td>
+					      </tr>
+					      <tr bgcolor="#B8E9FF">
+					        <td ><span class="fontStyle">5h 20m ago</span></td>
+					        <td ><span class="fontStyle">clo-centos6-x64-oss2</span><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
+					        <td ><span class="fontStyle">Discovered formatted target neofs01-OST0003</span></td>
+					      </tr>
+					      <tr bgcolor="#B8E9FF">
+					        <td ><span class="fontStyle">5h 20m ago</span></td>
+					        <td ><span class="fontStyle">clo-centos6-x64-oss2</span><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" /></td>
+					        <td ><span class="fontStyle">Discovered mount point of neofs01-OST0002 on clo-centos6-x64-oss2</td>
+					      </tr>
+					      <tr>
+					      	<td align="right" colspan="4" style="text-decoration: underline;color: black"><font style="font-style: italic;color:black;font-weight: bold;"><a href="#">(All Events)</a></font></td>
+					      </tr>
+					    </table>
+					    </td>
+					  </tr>
+					</table>
+				</div>
+				<div><a href="#" id="jobsAnchor">Jobs</a></div>
                 <div id="jobsDiv"  style="display:none;">No active jobs</div>
 	        </ul>
 	        <div id="outputDiv"></div>
@@ -180,16 +197,16 @@ cursor:pointer;
 			    <legend class="legendClass">All Filesystems Usage Summary</legend>
 			    <table width="100%" border="0"><tr>
 			    <td  valign="top" class="text" width="25%" align="center">
-		    	<div id="container" style="width: 250px; height: 200px; margin: 0 auto; padding-left:22px; padding-right:20px;"></div>
+		    	<div id="container" class="round-table"></div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   <div id="container1" style="width: 250px; height: 200px; margin: 0 auto; padding-left:22px; padding-right:20px;"></div>
+			   <div id="container1" class="round-table"></div>
 			   </td>
 			    <td  valign="top" class="text" width="25%" align="center">
-		    	<div id="container2" style="width: 250px; height: 200px; margin: 0 auto; padding-left:22px; padding-right:20px;"></div>
+		    	<div id="container2" class="round-table"></div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   <div id="container3" style="width: 250px; height: 200px; margin: 0 auto; padding-left:22px; padding-right:20px;"></div>
+			   <div id="container3" class="round-table"></div>
 			   </td></tr>
 			   </table>
 			  </fieldset>
@@ -203,16 +220,16 @@ cursor:pointer;
 			    <legend class="legendClass">All Filesystems Performance Summary</legend>
 			    <table width="100%" border="0" cellpadding="0" cellspacing="0"><tr>
 			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="avgCPUDiv"  style="width: 250px; height: 200px; margin: 0 auto; padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg CPU</div>
+		    		<div id="avgCPUDiv" class="round-table">Filesystems Avg CPU</div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="avgMemoryDiv"  style="width: 250px; height: 200px; margin: 0 auto; padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Memory</div>
+			   		<div id="avgMemoryDiv" class="round-table">Filesystems Avg Memory</div>
 			   </td>
 			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="avgReadDiv"  class="round-table" style="width: 250px; height: 200px; margin: 0 auto; padding-left:20px; padding-right:20px;">File System Avg Read</div>
+		    		<div id="avgReadDiv" class="round-table">File System Avg Read</div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="avgWriteDiv"  class="round-table" style="width: 250px; height: 200px; margin: 0 auto; padding-left:20px; padding-right:20px;">Filesystems Avg Write</div>
+			   		<div id="avgWriteDiv" class="round-table">Filesystems Avg Write</div>
 			   </td></tr>
 			   </table>
 			  </fieldset>
@@ -226,16 +243,16 @@ cursor:pointer;
 			    <legend class="legendClass">All MDS/MGS Performance Summary</legend>
 			    <table width="100%" border="0" cellpadding="0" cellspacing="0"><tr height="220">
 			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="mgsavgCPUDiv" class="round-table" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" >Filesystems Avg CPU</div>
+		    		<div id="mgsavgCPUDiv" class="round-table">Filesystems Avg CPU</div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="mgsavgMemoryDiv" class="round-table" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" >Filesystems Avg Memory</div>
+			   		<div id="mgsavgMemoryDiv" class="round-table">Filesystems Avg Memory</div>
 			   </td>
 			    <td  valign="top" class="text" width="25%" align="center">
-		    		<div id="mgsavgReadDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table" >File System Avg Read</div>
+		    		<div id="mgsavgReadDiv" class="round-table">File System Avg Read</div>
 		    	</td>
 			   <td  valign="top" class="text" width="25%" align="center">
-			   		<div id="mgsavgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Write</div>
+			   		<div id="mgsavgWriteDiv" class="round-table">Filesystems Avg Write</div>
 			   </td></tr>
 			   </table>
 			  </fieldset>
@@ -279,15 +296,15 @@ cursor:pointer;
 				  <fieldset>
 				    <legend class="legendClass">Filesystems Usage Summary</legend>
 					    <table width="100%" border="0">
-						    <td colspan="2"  valign="top" class="text" width="60%" align="center">
+						    <td colspan="2"  valign="top" class="text" width="50%" align="center">
 					    		All File System information comes here<br /><br /><br /><br /><br /><br /><br />
 					    		<input id="dialog_link" name="alertsPopUpBtn" type="button" value="Alerts" align="left" style="border: 1px solid red;background-color: #4F0F0F;font-weight: bold;color: red"/>&nbsp;&nbsp;<input name="eventsPopUpBtn" type="button" value="Events" style="border: 1px solid #DFC137;background-color: #6F4B0D;font-weight: bold;color: #DFC137">
 					    	</td>
-						    <td colspan="1" valign="top" class="text"  align="center">
-					    		<div id="fs_container2" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Usage Used Vs Free</div>
+						    <td width="25%" valign="top" class="text"  align="center">
+					    		<div id="fs_container2" class="round-table">Usage Used Vs Free</div>
 					    	</td>
-						   <td colspan="1"  valign="top" class="text"  align="center">
-						   		<div id="fs_container3" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table"">No. Of Files Vs i-Nodes</div>
+						   <td width="25%"  valign="top" class="text"  align="center">
+						   		<div id="fs_container3" class="round-table"">No. Of Files Vs i-Nodes</div>
 						   </td>
 					    </table>
 				  </fieldset>
@@ -302,16 +319,16 @@ cursor:pointer;
 				    <table width="100%" border="0">
 					    <tr>
 						    <td  valign="top" class="text" width="25%" align="center">
-					    		<div id="fs_avgCPUDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table"">Filesystems Avg CPU</div>
+					    		<div id="fs_avgCPUDiv" class="round-table"">Filesystems Avg CPU</div>
 					    	</td>
 						   <td  valign="top" class="text" width="25%" align="center">
-						   		<div id="fs_avgMemoryDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table"">Filesystems Avg Memory</div>
+						   		<div id="fs_avgMemoryDiv" class="round-table"">Filesystems Avg Memory</div>
 						   </td>
 						    <td  valign="top" class="text" width="25%" align="center">
-					    		<div id="fs_avgReadDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table"">File System Avg Read</div>
+					    		<div id="fs_avgReadDiv" class="round-table"">File System Avg Read</div>
 					    	</td>
 						   <td  valign="top" class="text" width="25%" align="center">
-						   		<div id="fs_avgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table"">Filesystems Avg Write</div>
+						   		<div id="fs_avgWriteDiv" class="round-table"">Filesystems Avg Write</div>
 						   </td>
 					   </tr>
 				   </table>
@@ -327,16 +344,16 @@ cursor:pointer;
 				    <table width="100%" border="0">
 					    <tr>
 					    <td  valign="top" class="text" width="25%" align="center">
-				    		<div id="fs_mgsavgCPUDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg CPU</div>
+				    		<div id="fs_mgsavgCPUDiv" class="round-table">Filesystems Avg CPU</div>
 				    	</td>
 					   <td  valign="top" class="text" width="25%" align="center">
-					   		<div id="fs_mgsavgMemoryDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Memory</div>
+					   		<div id="fs_mgsavgMemoryDiv" class="round-table">Filesystems Avg Memory</div>
 					   </td>
 					    <td  valign="top" class="text" width="25%" align="center">
-				    		<div id="fs_mgsavgReadDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">File System Avg Read</div>
+				    		<div id="fs_mgsavgReadDiv" class="round-table">File System Avg Read</div>
 				    	</td>
 					   <td  valign="top" class="text" width="25%" align="center">
-					   		<div id="fs_mgsavgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Write</div>
+					   		<div id="fs_mgsavgWriteDiv" class="round-table">Filesystems Avg Write</div>
 					   </td>
 					   </tr>
 				   </table>
@@ -384,18 +401,18 @@ cursor:pointer;
 			    <div id="tab1" class="tab_content">
 				    <form>
 						<fieldset>
-						    <legend class="legendClass">OSS Usage Summary</legend>
+						    <legend class="legendClass" style="font-size: 90%;">OSS Usage Summary</legend>
 						    <table width="100%" border="0">
 							    <tr>
-								    <td colspan="2"  valign="top" class="text" width="60%" align="center">
+								    <td colspan="2"  valign="top" class="text" width="50%" align="center">
 							    		OSS information comes here<br /><br /><br /><br /><br /><br /><br />
 					    		<input id="dialog_link" name="alertsPopUpBtn" type="button" value="Alerts" align="left" style="border: 1px solid red;background-color: #4F0F0F;font-weight: bold;color: red"/>&nbsp;&nbsp;<input name="eventsPopUpBtn" type="button" value="Events" style="border: 1px solid #DFC137;background-color: #6F4B0D;font-weight: bold;color: #DFC137">
 					    	</td>
-								    <td colspan="1" valign="top" class="text"  align="center">
-							    		<div id="oss_container2" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Usage Used Vs Free</div>
+								    <td width="25%" valign="top" class="text"  align="center">
+							    		<div id="oss_container2" class="round-table">Usage Used Vs Free</div>
 							    	</td>
-								    <td colspan="1"  valign="top" class="text"  align="center">
-								   		<div id="oss_container3" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">No. Of Files Vs i-Nodes</div>
+								    <td width="25%"  valign="top" class="text"  align="center">
+								   		<div id="oss_container3" class="round-table">No. Of Files Vs i-Nodes</div>
 								    </td>
 								</tr>
 						    </table>
@@ -406,16 +423,16 @@ cursor:pointer;
 					    <legend class="legendClass">OSS Performance Summary</legend>
 					    <table width="100%" border="0">
 						    <td  valign="top" class="text" width="25%" align="center">
-					    		<div id="oss_avgCPUDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg CPU</div>
+					    		<div id="oss_avgCPUDiv" class="round-table">Filesystems Avg CPU</div>
 					    	</td>
 						    <td  valign="top" class="text" width="25%" align="center">
-						   		<div id="oss_avgMemoryDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Memory</div>
+						   		<div id="oss_avgMemoryDiv" class="round-table">Filesystems Avg Memory</div>
 						    </td>
 						    <td  valign="top" class="text" width="25%" align="center">
-					    		<div id="oss_avgReadDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">File System Avg Read</div>
+					    		<div id="oss_avgReadDiv" class="round-table">File System Avg Read</div>
 					    	</td>
 						    <td  valign="top" class="text" width="25%" align="center">
-						   		<div id="oss_avgWriteDiv" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Filesystems Avg Write</div>
+						   		<div id="oss_avgWriteDiv" class="round-table">Filesystems Avg Write</div>
 						    </td>
 					   </table>
 					  </fieldset>
@@ -439,7 +456,7 @@ cursor:pointer;
 			     		    <td  valign="top" class="text" width="%100" align="center">
 					    		<div id="heatMap1" align="center">
 				            		Heat Map
-				            		<br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
+				            		<br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
 				        		</div>
 				    		</td>
 				    	</tr>
@@ -489,16 +506,16 @@ cursor:pointer;
 				    <legend class="legendClass">OST Usage Summary</legend>
 				    <table width="100%" border="0">
 				      <tr>
-					   <td colspan="2"  valign="top" class="text" width="60%" align="center">
+					   <td colspan="2"  valign="top" class="text" width="50%" align="center">
 				    		OST information comes here
 				    		<br /><br /><br /><br /><br /><br /><br />
 					    		<input id="dialog_link" name="alertsPopUpBtn" type="button" value="Alerts" align="left" style="border: 1px solid red;background-color: #4F0F0F;font-weight: bold;color: red"/>&nbsp;&nbsp;<input name="eventsPopUpBtn" type="button" value="Events" style="border: 1px solid #DFC137;background-color: #6F4B0D;font-weight: bold;color: #DFC137">
 					    	</td>
-					    <td colspan="1" valign="top" class="text"  align="center">
-				    		<div id="ost_container2" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">Usage Used Vs Free</div>
+					    <td width="25%" valign="top" class="text"  align="center">
+				    		<div id="ost_container2" class="round-table">Usage Used Vs Free</div>
 				    	</td>
-					   <td colspan="1"  valign="top" class="text"  align="center">
-					   		<div id="ost_container3" style="width: 250px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">No. Of Files Vs i-Nodes</div>
+					   <td width="25%" valign="top" class="text"  align="center">
+					   		<div id="ost_container3" class="round-table">No. Of Files Vs i-Nodes</div>
 					   </td>
 					   </tr>
 				   </table>
@@ -514,10 +531,10 @@ cursor:pointer;
 				    <table width="100%" border="0">
 				      <tr>
 					    <td  valign="top" class="text" width="50%" align="center">
-				    		<div id="ost_avgReadDiv" style="width: 500px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">OST Disk Read</div>
+				    		<div id="ost_avgReadDiv" style="width: 500px" class="round-table">OST Disk Read</div>
 				    	</td>
 					    <td  valign="top" class="text" width="50%" align="center">
-					   		<div id="ost_avgWriteDiv" style="width: 500px; height: 200px; margin: 0 auto;padding-left:20px; padding-right:20px;" class="round-table">OST Disk Write</div>
+					   		<div id="ost_avgWriteDiv" style="width: 500px" class="round-table">OST Disk Write</div>
 					    </td>
 				      </tr>
 				   </table>

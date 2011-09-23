@@ -238,7 +238,12 @@ border-top-right-radius:2em;
 border-bottom-right-radius:2em;
 border-bottom-left-radius:2em; 
 border:1px solid #333333;
-	}
+width: 250px;
+height: 200px;
+margin: 0 auto;
+padding-left:20px;
+padding-right:20px;
+}
 	
 .breadCrumbHolder
 {
@@ -279,3 +284,24 @@ border-bottom-right-radius:2em;
 border-bottom-left-radius:2em; 
 border:1px solid #333333;
 }
+
+.fontStyle {font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 10px; font-weight: bold; }
+.open-close {
+cursor:pointer;
+}
+.open-close:hover {
+text-decoration:underline;
+cursor:pointer;
+}
+.alertsDiv
+  {
+  width:800px;
+  /*height:180px;
+  margin:30px 50px;*/
+  background-color:#ffffff;
+  /*border:1px solid black;*/
+  opacity:1.0;
+  filter:alpha(opacity=60); /* For IE8 and earlier */
+  position: absolute;
+  z-index: 10;
+  }

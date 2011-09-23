@@ -4,11 +4,17 @@ body { background:none !important }
 {
 	font-size: 14px;
 	font-weight:bold;
-	background-color:#CFCFCF;
-	border-top-left-radius:2em;
-	border-top-right-radius:2em;
-	border-bottom-right-radius:2em;
-	border-bottom-left-radius:2em; 
+	background-color:#5E8BC0;
+	border-top-left-radius:1em;
+	border-top-right-radius:1em;
+	border-bottom-right-radius:1em;
+	border-bottom-left-radius:1em; 
+	
+  /*padding: 0.2em 0.5em;*/
+  border:1px solid black;
+  color:white;
+  font-size:90%;
+  text-align:right;
 }
          
 #leftnav li a {
@@ -89,6 +95,6 @@ html ul.tabs li.active, html ul.tabs li.active a:hover  { /*--Makes sure that th
 	background: #fff;
 }
 .tab_content {
-	padding: 20px;
-	font-size: 1.2em;
+	/*padding: 20px;
+	font-size: 1.2em;*/
 }

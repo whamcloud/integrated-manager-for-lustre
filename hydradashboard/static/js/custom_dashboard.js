@@ -655,7 +655,7 @@
 	});
 	$("#eventsAnchor").click(function(){
 		$("#eventsDiv").toggle("slideUp");
-		$("#eventsAnchor").css("color",'red');
+		$("#eventsAnchor").css("color",'#0040FF');
 		$("#alertsDiv").hide();
 		$("#alertAnchor").css("color",'#7A848B');
 		$("#jobsDiv").hide();
@@ -663,7 +663,7 @@
 	});
 	$("#jobsAnchor").click(function(){
 		$("#jobsDiv").toggle("slideUp");
-		$("#jobsAnchor").css("color",'red');
+		$("#jobsAnchor").css("color",'green');
 		$("#alertsDiv").hide();
 		$("#alertAnchor").css("color",'#7A848B');
 		$("#eventsDiv").hide();
@@ -719,11 +719,8 @@
 			 "<li>"+
              "<select id='ossSelect'>"+
              "<option value=''>Select OSS</option>"+
-             "<option value='mdt1'>MDT1</option>"+
-             "<option value='mdt2'>MDT2</option>"+
-             "<option value='mdt3'>MDT3</option>"+
 
-		     $.post("http://clo-centos6-x64-vm2.clogeny.com:8000/api/getvolumes/",{filesystem:"neofs"}) 
+		     $.get("/api/listservers") 
 		    .success(function(data, textStatus, jqXHR) {
 		        $.each(data, function(key, val) {
 		            if(key=='success' && val == true)
@@ -733,9 +730,9 @@
 		                {
 		                   $.each(val1, function(resKey, resValue) 
 		                   {
-		                        if(resValue.kind=='MGS')
+		                        if(resValue.kind=='OSS' || resValue.kind.indexOf('OSS')>0)
 		                        {
-		                          breadCrumbHtml  =  breadCrumbHtml + "<option value="+resValue.name+">"+resValue.name+"</option>";
+		                          breadCrumbHtml  =  breadCrumbHtml + "<option value="+resValue.host_address+">"+resValue.host_address+"</option>";
 		                        }
 		                   });
 		                }
@@ -744,7 +741,7 @@
 		        });
 		    })
 		    .error(function(event) {
-		        $('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
+		        //$('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
 		    })
 		    .complete(function(event){
 		         breadCrumbHtml = breadCrumbHtml +
@@ -769,28 +766,40 @@
 			 "<li>"+$('#ossSelect :selected').text()+"</li>"+
              "<li>"+
              "<select id='ostSelect'>"+
-             "<option value=''>Select OST</option>"+
-             "<option value='ost1'>flnOST1</option>"+
-             "<option value='ost2'>flnOST2</option>"+
-             "<option value='ost3'>flnOST3</option>";
+             "<option value=''>Select OST</option>";
              
-             $.getJSON("/Context/REST/Namespace/"+$(this).val()+"/getAllOstForOss",function(json) 
-           	 {
-		    	for(var i=0;i<json.length;i++)
-	    		{
-	    			var ostId = json[i].ossId;
-	    			var ostName = json[i].ossName;
-	    			breadCrumbHtml = breadCrumbHtml + "<option value="+ostId+">"+ostName+"+</option>";
-	    		}
-		     });
-                            
-           	breadCrumbHtml = breadCrumbHtml +      	
-            "</select>"+
-            "</li>"+
-            "</ul>";
-         $("#breadCrumb2").html(breadCrumbHtml);
-		 $("#breadCrumb2").jBreadCrumb();
-		}
+			 $.post("/api/getvolumes/",{filesystem:"neofs01"}) 
+			    .success(function(data, textStatus, jqXHR) {
+			        $.each(data, function(key, val) {
+			            if(key=='success' && val == true)
+			            {
+			                $.each(data, function(key1, val1) {
+			                if(key1=='response')
+			                {
+			                   $.each(val1, function(resKey, resValue) 
+			                   {
+			                        if(resValue.kind=='OST')
+			                        {
+			                          breadCrumbHtml  =  breadCrumbHtml + "<option value="+resValue.name+">"+resValue.name+"</option>";
+			                        }
+			                   });
+			                }
+			                });
+			            }
+			        });
+			    })
+			    .error(function(event) {
+			        //$('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
+			    })
+			    .complete(function(event){
+			    	breadCrumbHtml = breadCrumbHtml +      	
+		            "</select>"+
+		            "</li>"+
+		            "</ul>";
+		         $("#breadCrumb2").html(breadCrumbHtml);
+				 $("#breadCrumb2").jBreadCrumb();
+			    });
+        }
     });
 	
 	$("#ostSelect").live('change', function (){
