@@ -17,18 +17,6 @@ from configure.models import (ManagedFilesystem,
 from configure.lib.state_manager import (StateManager)
 from requesthandler import (AnonymousRequestHandler,
                             extract_request_args)
-# Lpgger Settings
-from logging import (getLogger, 
-                     FileHandler, 
-                     INFO)
-file_log_name = __name__
-getLogger(file_log_name).setLevel(INFO)
-getLogger(file_log_name).addHandler(FileHandler("%s.log" % 'hydraapi'))
-def log():
-    return getLogger(file_log_name)
-def screen(string):
-    print string
-    log().debug(string)
 #
 class FormatFileSystem(AnonymousRequestHandler):
     

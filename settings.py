@@ -244,9 +244,11 @@ CELERY_ACKS_LATE = True
 if DEBUG:
     JOB_LOG_PATH = "job.log"
     AUDIT_LOG_PATH = "audit.log"
+    API_LOG_PATH = "hydraapi.log"
 else:
     JOB_LOG_PATH = "/var/log/hydra/job.log"
     AUDIT_LOG_PATH = "/var/log/hydra/audit.log"
+    API_LOG_PATH = "/var/log/hydra/hydraapi.log" 
 
 try:
     from production_version import VERSION

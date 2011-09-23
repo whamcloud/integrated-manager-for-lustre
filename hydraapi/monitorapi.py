@@ -20,17 +20,18 @@ from monitor.models import (Filesystem,
                             SshMonitor)
 
 # Logger Settings
-from logging import (getLogger, 
-                     FileHandler, 
-                     INFO)
-file_log_name = __name__
-getLogger(file_log_name).setLevel(INFO)
-getLogger(file_log_name).addHandler(FileHandler("%s.log" % 'hydraapi'))
-def log():
-    return getLogger(file_log_name)
-def screen(string):
-    print string
-    log().debug(string)
+import logging
+hydraapi_log = logging.getLogger('hydraapi')
+hydraapi_log.setLevel(logging.DEBUG)
+handler = logging.FileHandler(settings.API_LOG_PATH)
+handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+hydraapi_log.addHandler(handler)
+if settings.DEBUG:
+    hydraapi_log.setLevel(logging.DEBUG)
+    hydraapi_log.addHandler(logging.StreamHandler())
+else:
+    hydraapi_log.setLevel(logging.INFO)
+
 #
 class ListFileSystems(AnonymousRequestHandler):
 
