@@ -11,6 +11,16 @@ from configure.lib.storage_plugin.statistics import ResourceStatistic
 from configure.lib.storage_plugin.log import vendor_plugin_log
 from configure.models import VendorResourceRecord
 
+class AlertCondition(object):
+    def __init__(self, error_values, warning_values, info_values):
+        self.error_values = error_values
+        self.warning_values = warning_values
+        self.info_values = info_values
+
+class Statistic(object):
+    def __init__(self):
+        pass
+
 class VendorResourceMetaclass(type):
     def __new__(cls, name, bases, dct):
         dct['_vendor_attributes'] = {}

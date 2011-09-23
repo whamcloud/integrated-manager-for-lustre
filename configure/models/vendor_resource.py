@@ -95,7 +95,6 @@ class VendorResourceRecord(models.Model):
             except VendorResourceAttribute.DoesNotExist:
                 attr = VendorResourceAttribute(resource = self, key = key, value = json.dumps(value))
                 attr.save()
-                print "Created attr %s" % attr.pk
 
     def update_attribute(self, key, val):
         # Try to update an existing record

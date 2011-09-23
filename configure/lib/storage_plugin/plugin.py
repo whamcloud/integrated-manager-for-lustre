@@ -82,6 +82,8 @@ class VendorPlugin(object):
             c.parents.remove(resourcerecord)
             if c.parents.count() == 0:
                 self.cull_resource(c)
+            else:
+                vendor_plugin_log.info("resource %s still has %d parents" % (c, c.parents.count()))
 
         if resourcerecord.pk in self._resource_cache:
             del self._resource_cache[resourcerecord.pk]
@@ -123,15 +125,17 @@ class VendorPlugin(object):
 
         return resources
 
-    def lookup_global_resource(self, klass, **attrs):
+    def _lookup_global_resource(self, klass, **attrs):
         """Helper for VendorPlugin subclasses to retrieve resources
            which they have already registered, by global ID.  Implementors
            could equally maintain their own store after initial_scan, this
            is purely to save time in cases where a global ID is available."""
 
-        return self.lookup_local_resource(None, klass, **attrs)
+        return self._lookup_local_resource(None, klass, **attrs)
 
-    def lookup_local_resource(self, scope_resource, klass, **attrs):
+    def _lookup_local_resource(self, scope_resource, klass, **attrs):
+        """Note: finds only resources registered in this plugin instance -- if it is
+        found in the database but not in _resource_cache then raises an exception"""
         assert(issubclass(klass, VendorResource))
 
         if scope_resource:
@@ -149,11 +153,10 @@ class VendorPlugin(object):
             vendor_plugin_log.debug("ResourceNotFound: %s %s %s" % (klass.__name__, self.__class__.__module__, klass(**attrs).id_str()))
             raise ResourceNotFound()
 
-        if not record.pk in self._resource_cache:
-            vendor_plugin_log.debug("Attempted to lookup resource which this plugin instance has not registered (%s, %s)" % (klass, attrs))
-            raise ResourceNotFound("Attempted to lookup resource which this plugin instance has not registered (%s, %s)" % (klass, attrs))
-        else:
+        try:
             return self._resource_cache[record.pk]
+        except KeyError:
+            raise ResourceNotFound()
 
     def lookup_children(self, parent, child_klass = None):
         """Helper for VendorPlugin subclasses to retrieve all children
@@ -178,59 +181,55 @@ class VendorPlugin(object):
                 pass
         return child_resources
 
-    def register_resource2(self, klass, parents, **attrs):
-        """This returns either an existing resource or a newly registered one if it does not exist.
-           It is like register_resource, but it checks for pre-existing resources.  If the resource
-           already exists, then this function will make sure all of 'parents' are in its parent 
-           list before returning"""
-        if isinstance(klass.identifier, LocalId):
-            # To lookup a LocalId resource, we have to find something that
-            # matches the attrs, then look at its ancestry to its scope
-            # object, then see if that scope object is equal to or an 
-            # ancestor of any of the parents named here
-            from django.db.models import Q
-            records = VendorResourceRecord.objects.\
-                   filter(resource_class__class_name = klass.__name__).\
-                   filter(resource_class__vendor_plugin__module_name = self.__class__.__module__).\
-                   filter(vendor_id_str = klass(**attrs).id_str()).\
-                   filter(~Q(vendor_id_scope = None))
-            for r in records:
-                # is r.vendor_id_scope in the ancestry of our new resource?
-                # FIXME: actually explore ancestors as well as parents
-                if r.vendor_id_scope.pk in [i._handle for i in parents]:
-                    if r.pk in self._resource_cache:
-                        resource = self._resource_cache[r.pk]
-                        for p in parents:
-                            resource.add_parent(p)
-                        resource.save()
-                        return resource
-                        
-            # Either it's not in the DB or it's in the DB but not loaded            
+    def _find_ancestor_of_type(self, klass, root):
+        """Given a VendorResource 'root', find a resource
+           in the ancestor tree (including root) which is 
+           of type klass."""
+        if isinstance(root, klass):
+            return root
+        else:
+            for p in root._parents:
+                try:
+                    return self._find_ancestor_of_type(klass, p)
+                except ResourceNotFound:
+                    pass
+
+        # Fall through: root wasn't of type klass, and none of
+        # its ancestors were either
+        raise ResourceNotFound()
+
+    def lookup_resource(self, klass, parents = [], **attrs):
+        if isinstance(klass.identifier, GlobalId):
+            return self._lookup_global_resource(klass, **attrs)
+        elif isinstance(klass.identifier, LocalId):
+            # Find the scope ancestor
+            scope_resource = None
+            for p in parents:
+                try:
+                    scope_resource = self._find_ancestor_of_type(klass.identifier.parent_klass, p)
+                except ResourceNotFound:
+                    pass
+            if not scope_resource:
+                raise ResourceNotFound()
+                           
+            return self._lookup_local_resource(scope_resource, klass, **attrs)
+
+    def update_or_create(self, klass, parents = [], **attrs):
+        try:
+            existing = self.lookup_resource(klass, parents = parents, **attrs)
+            for k,v in attrs.items():
+                setattr(existing, k, v)
+            for p in parents:
+                existing.add_parent(p)
+            return existing, False
+        except ResourceNotFound:
             resource = klass(**attrs)
             for p in parents:
                 resource.add_parent(p)
-            self.register_resource(resource)
-            return resource
+            self._register_resource(resource)
+            return resource, True
 
-        elif isinstance(klass.identifier, GlobalId):
-            try:
-                resource = self.lookup_global_resource(klass, **attrs)
-                for p in parents:
-                    # Ensure that the resource (which may have been created under
-                    # another root) has all the parents that this register-caller 
-                    # wants it to
-                    resource.add_parent(p)
-                resource.save() 
-            except ResourceNotFound:
-                resource = klass(**attrs)
-                for p in parents:
-                    resource.add_parent(p)
-                self.register_resource(resource)
-            return resource        
-        else:
-            raise NotImplementedError
-
-    def register_resource(self, resource):
+    def _register_resource(self, resource):
         """Register a resource:
            * Validate its attributes
            * Create a VendorResourceRecord if it doesn't already
@@ -252,11 +251,13 @@ class VendorPlugin(object):
         if isinstance(resource.identifier, GlobalId):
             id_scope = None
         elif isinstance(resource.identifier, LocalId):
-            # TODO: support ancestors rather than just parents
             scope_parent = None
             for p in resource._parents:
-                if isinstance(p, resource.identifier.parent_klass):
-                    scope_parent = p
+                try:
+                    scope_parent = self._find_ancestor_of_type(resource.identifier.parent_klass, p)
+                except ResourceNotFound:
+                    pass
+
             if not scope_parent:
                 raise RuntimeError("Resource %s scoped to resource of type %s, but has no parent of that type!  Its parents are: %s" % (resource, resource.identifier.parent_klass, resource._parents))
             if not scope_parent._handle:
@@ -300,6 +301,12 @@ class VendorPlugin(object):
             record.parents.add(parent_record)
 
         self._resource_cache[resource._handle] = resource        
+
+    def notify_alert(self, resource, message, alert_name = None, attribute = None):
+        pass
+
+    def update_statistic(self, resource, stat, value):
+        pass
 
     def deregister_resource(self, resource):
         if not resource._handle:

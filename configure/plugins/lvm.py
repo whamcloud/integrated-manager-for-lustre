@@ -21,14 +21,17 @@ class LvmPlugin(VendorPlugin):
             vol_group_resources = []
             for name, uuid, size in LvmScanner(self.log).get_vgs(hostname):
                 self.log.info("Learned VG %s %s %s" % (name, uuid, size))
-                group = self.register_resource2(LvmGroup, [lvm_host_resource], uuid = uuid, name = name, size = size)
+                group, created = self.update_or_create(LvmGroup, parents=[lvm_host_resource],
+                        uuid = uuid, name = name, size = size)
                 vol_group_resources.append(group)
 
             for vgr in vol_group_resources:
                 for name, uuid, size, path in LvmScanner(self.log).get_lvs(hostname, vgr.name):
                     self.log.info("Learned LV %s %s %s" % (name, uuid, size))
-                    vol = self.register_resource2(LvmVolume, [vgr], uuid = uuid, name = name, size = size)
-                    node = self.register_resource2(LvmDeviceNode, [vol], host = lvm_host_resource.hostname, path = path)
+                    vol,created = self.update_or_create(LvmVolume, parents = [vgr],
+                            uuid = uuid, name = name, size = size)
+                    node,created = self.update_or_create(LvmDeviceNode, parents = [vol],
+                            host = lvm_host_resource.hostname, path = path)
 
     def update_scan(self):
         # Get the list of user-configured hosts to scan
@@ -41,14 +44,8 @@ class LvmPlugin(VendorPlugin):
             found_groups = set()
             for name, uuid, size in LvmScanner(self.log).get_vgs(hostname):
                 found_groups.add(uuid)
-                try:
-                    group_resource = self.lookup_global_resource(LvmGroup, uuid = uuid, name = name, size = size)
-                    group_resource.name = name
-                    group_resource.size = size
-                except ResourceNotFound:
-                    group = LvmGroup(uuid = uuid, name = name, size = size)
-                    group.add_parent(lvm_host_resource)
-                    self.register_resource(group)
+                resource,created = self.update_or_create(LvmGroup, parents=[lvm_host_resource],
+                        uuid = uuid, name = name, size = size)
 
             # Deregister any previously-registered VGs which were not found on this scan
             for vg in self.lookup_children(lvm_host_resource, LvmGroup):
@@ -60,17 +57,8 @@ class LvmPlugin(VendorPlugin):
                 # Update or add LVs
                 for name, uuid, size, path in LvmScanner(self.log).get_lvs(hostname, vg.name):
                     found_vols.add(name)
-                    try:
-                        vol_resource = self.lookup_local_resource(vg, LvmVolume, uuid = uuid, name = name, size = size)
-                        vol_resource.name = name
-                        vol_resource.size = size
-                    except ResourceNotFound:
-                        vol = LvmVolume(uuid = uuid, name = name, size = size)
-                        vol.add_parent(vg)
-                        self.register_resource(vol)
-                        node = LvmDeviceNode(host = lvm_host_resource.hostname, path = path)
-                        node.add_parent(vol)
-                        self.register_resource(node)
+                    vol, created = self.update_or_create(LvmVolume, parents=[vg], uuid = uuid, name = name, size = size)
+                    node, created = self.update_or_create(LvmDeviceNode, parents=[vol], host = lvm_host_resource.hostname, path = path)
 
                 # Deregister any previously-registered LVs which were not found on this scan
                 for lv in self.lookup_children(vg, LvmVolume):

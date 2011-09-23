@@ -45,17 +45,24 @@ class Integer(ResourceAttribute):
         if self.max_val != None and value > self.max_val:
             raise RuntimeError("Value %s too high (max %s)" % (value, self.max_val))
 
+# TODO: This is useful if the caller can give you an exact number of bytes
+# , but where the caller has a "10GB" or somesuch, that's rounded
+# and we should have an explicitly inexact Bytes class which would take
+# a string and parse it to a rounded number of bytes.
+
 class Bytes(ResourceAttribute):
     def human_readable(self, value):
         from monitor.lib.util import sizeof_fmt
         return sizeof_fmt(int(value))
 
 class Enum(ResourceAttribute):
-    def __init__(self, options = None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        self.options = *args
+
         if not self.options:
             raise ValueError("Enum ResourceAttribute must be given 'options' argument")
 
-        super(Enum, self).__init__(*args, **kwargs)
+        super(Enum, self).__init__(**kwargs)
 
     def validate(self, value):
         if not value in self.options:
