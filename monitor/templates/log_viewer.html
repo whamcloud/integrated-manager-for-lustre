@@ -4,7 +4,7 @@
 {% block content %}
 
 <div id="log_filter">
-<form action="/monitor/log_viewer/" method="post">{% csrf_token %}
+<form action="/monitor/log_viewer/" method="get">{% csrf_token %}
     {{ form.non_field_errors }}
     <div class="log_viewer_input_widget">
         {{ form.start_month.errors }}
@@ -25,12 +25,17 @@
 </form>
 </div>
 
+{% load pagination_tags %}
+
+{% autopaginate log_data 100 %}
+
 <div class='log_view'>
 {% load log_prettify %}
-{% for text,class in log_data %}
-<div class="log_line {{class}}">{{text|pretty_log_line}}</div>
+{% for line in log_data %}
+<div class="{{line|systemevent_css_class}}">{{line|pretty_log_line}}</div>
 {% endfor %}
 
+{% paginate %}
 {% if error %}
 <p>{{error}}</p>
 {% endif %}
