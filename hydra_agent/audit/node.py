@@ -1,4 +1,5 @@
 import re
+import socket
 from hydra_agent.audit import BaseAudit
 from hydra_agent.audit.mixins import FileSystemMixin
 
@@ -30,6 +31,7 @@ class NodeAudit(BaseAudit, FileSystemMixin):
         return {'usage': usage, 'total': total}
 
     def _gather_raw_metrics(self):
+        self.raw_metrics['node']['hostname'] = socket.gethostname()
         self.raw_metrics['node']['meminfo'] = self.parse_meminfo()
         self.raw_metrics['node']['cpustats'] = self.parse_cpustats()
         
