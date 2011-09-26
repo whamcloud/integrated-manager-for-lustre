@@ -537,7 +537,7 @@ def storage_resource(request, vrr_id):
                 }))
 
 def storage_resource_delete(request, vrr_id):
-    record = get_object_or_404(VendorResourceRecord, id = vrr_id)
+    record = get_object_or_404(StorageResourceRecord, id = vrr_id)
 
     # TODO: the real implementation
     # * should we stop all running instances of the plugin, remove it, and start 
@@ -553,9 +553,9 @@ def storage_resource_delete(request, vrr_id):
 
 def _resource_class_tree(plugin, klass):
     """Resource tree using all instances of 'klass' as origins"""
-    records = VendorResourceRecord.objects.filter(
+    records = StorageResourceRecord.objects.filter(
         resource_class__class_name = klass,
-        resource_class__vendor_plugin__module_name = plugin)
+        resource_class__storage_plugin__module_name = plugin)
     return _resource_tree(records)
 
 def _resource_tree(root_records):
@@ -583,8 +583,8 @@ def _resource_tree(root_records):
 
     class ResourceJsonEncoder(json.JSONEncoder):
         def default(self, o):
-            from configure.lib.storage_plugin import VendorResource
-            if isinstance(o, VendorResource):
+            from configure.lib.storage_plugin import StorageResource
+            if isinstance(o, StorageResource):
                 resource_dict = o.to_json()
                 decorate_jstree(resource_dict)
                 decorate_urls(resource_dict)
@@ -595,27 +595,27 @@ def _resource_tree(root_records):
     return json.dumps(tree, cls = ResourceJsonEncoder, indent=4)
 
 def storage_browser(request):
-    from configure.models import VendorResourceClass
+    from configure.models import StorageResourceClass
 
-    if VendorResourceClass.objects.count() == 0:
+    if StorageResourceClass.objects.count() == 0:
         return render_to_response('storage_browser_disabled.html', RequestContext(request))
 
-    default_resource = VendorResourceClass.objects.get(class_name = 'LvmHost')
+    default_resource = StorageResourceClass.objects.get(class_name = 'LvmHost')
 
     class ResourceForm(forms.Form):
-        resource = forms.ModelChoiceField(queryset = VendorResourceClass.objects.all(), required = True, empty_label = None)
+        resource = forms.ModelChoiceField(queryset = StorageResourceClass.objects.all(), required = True, empty_label = None)
 
     if 'resource' in request.GET:
         resource_form = ResourceForm(request.GET)
     else:
         resource_form = ResourceForm(initial = {'resource': default_resource.pk})
     if resource_form.is_valid():
-        vendor_resource_class = resource_form.cleaned_data['resource']
+        storage_resource_class = resource_form.cleaned_data['resource']
     else:
-        vendor_resource_class = default_resource
+        storage_resource_class = default_resource
 
-    vendor_plugin = vendor_resource_class.vendor_plugin
-    resource_tree = _resource_class_tree(vendor_plugin.module_name, vendor_resource_class.class_name)
+    storage_plugin = storage_resource_class.storage_plugin
+    resource_tree = _resource_class_tree(storage_plugin.module_name, storage_resource_class.class_name)
 
     return render_to_response('storage_browser.html', RequestContext(request, {
         'resource_form': resource_form,

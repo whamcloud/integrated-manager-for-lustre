@@ -5,11 +5,11 @@
 # ==============================
 
 """This module defines ResourceAttribute and its subclasses, which represent
-the datatypes that VendorResource objects may store as attributes"""
+the datatypes that StorageResource objects may store as attributes"""
 
 class ResourceAttribute(object):
-    """Base class for declared attributes of VendorResource.  This is
-       to VendorResource as models.fields.Field is to models.Model"""
+    """Base class for declared attributes of StorageResource.  This is
+       to StorageResource as models.fields.Field is to models.Model"""
     def __init__(self, optional = False):
         self.optional = optional
 

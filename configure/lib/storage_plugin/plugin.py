@@ -7,25 +7,25 @@ import settings
 from collections_24 import defaultdict
 from django.db import transaction
 
-from configure.models import VendorResourceRecord
-from configure.lib.storage_plugin.resource import VendorResource, LocalId, GlobalId
-from configure.lib.storage_plugin.log import vendor_plugin_log
+from configure.models import StorageResourceRecord
+from configure.lib.storage_plugin.resource import StorageResource, LocalId, GlobalId
+from configure.lib.storage_plugin.log import storage_plugin_log
 
 class ResourceNotFound(Exception):
     pass
 
-class VendorPlugin(object):
+class StoragePlugin(object):
     def __init__(self):
-        from configure.lib.storage_plugin import vendor_plugin_manager
-        self._handle = vendor_plugin_manager.register_plugin(self)
+        from configure.lib.storage_plugin import storage_plugin_manager
+        self._handle = storage_plugin_manager.register_plugin(self)
 
-        # Resource cache is a map of VendorResourceRecord PK to 
-        # VendorResource instance, including everything that's 
+        # Resource cache is a map of StorageResourceRecord PK to 
+        # StorageResource instance, including everything that's 
         # registered by this instance of the plugin.
 
         self._resource_cache = {}
         # TODO: give each one its own log, or at least a prefix
-        self.log = vendor_plugin_log
+        self.log = storage_plugin_log
 
         self._dirty_alerts = set()
         self._alerts = {}
@@ -63,11 +63,11 @@ class VendorPlugin(object):
         # report all its children too.
         
         for pk, resource in self._resource_cache.items():
-            record = VendorResourceRecord.objects.get(pk = pk)
+            record = StorageResourceRecord.objects.get(pk = pk)
             
-            for c in VendorResourceRecord.objects.filter(parents = record):
+            for c in StorageResourceRecord.objects.filter(parents = record):
                 if not c.pk in self._resource_cache:
-                    vendor_plugin_log.info("Culling resource %s" % c)
+                    storage_plugin_log.info("Culling resource %s" % c)
                     c.parents.remove(record)
                     if c.parents.count() == 0:
                         self.cull_resource(c)
@@ -79,14 +79,14 @@ class VendorPlugin(object):
         # If we have ended up with an orphaned database record which
         # is also in the set of resources reported by the running
         # plugin then something has gone seriously wrong.
-        vendor_plugin_log.info("cull_resource: %s" % resourcerecord)
+        storage_plugin_log.info("cull_resource: %s" % resourcerecord)
 
-        for c in VendorResourceRecord.objects.filter(parents = resourcerecord):
+        for c in StorageResourceRecord.objects.filter(parents = resourcerecord):
             c.parents.remove(resourcerecord)
             if c.parents.count() == 0:
                 self.cull_resource(c)
             else:
-                vendor_plugin_log.info("resource %s still has %d parents" % (c, c.parents.count()))
+                storage_plugin_log.info("resource %s still has %d parents" % (c, c.parents.count()))
 
         if resourcerecord.pk in self._resource_cache:
             del self._resource_cache[resourcerecord.pk]
@@ -106,11 +106,11 @@ class VendorPlugin(object):
         for (resource,attribute,alert_class) in self._dirty_alerts:
             active = self._alerts[(resource,attribute,alert_class)]
 
-            from configure.models import VendorResourceRecord
+            from configure.models import StorageResourceRecord
             from configure.models import StorageResourceAlert
             try:
-                vrr = VendorResourceRecord.objects.get(pk = resource._handle)
-            except VendorResourceRecord.DoesNotExist:
+                vrr = StorageResourceRecord.objects.get(pk = resource._handle)
+            except StorageResourceRecord.DoesNotExist:
                 # Handle a lingering alert from a now-deleted object
                 del self._alerts[(resource,attribute,alert_class)]
 
@@ -130,9 +130,9 @@ class VendorPlugin(object):
            to initial_scan, because some plugins may either use 
            their own autodiscovery mechanism or run locally on 
            a controller and therefore need no hints from us."""
-        from configure.lib.storage_plugin import vendor_plugin_manager 
-        records = VendorResourceRecord.objects.\
-               filter(resource_class__vendor_plugin__module_name = self.__class__.__module__).\
+        from configure.lib.storage_plugin import storage_plugin_manager 
+        records = StorageResourceRecord.objects.\
+               filter(resource_class__storage_plugin__module_name = self.__class__.__module__).\
                filter(parents = None)
 
         resources = []
@@ -148,7 +148,7 @@ class VendorPlugin(object):
         return resources
 
     def _lookup_global_resource(self, klass, **attrs):
-        """Helper for VendorPlugin subclasses to retrieve resources
+        """Helper for StoragePlugin subclasses to retrieve resources
            which they have already registered, by global ID.  Implementors
            could equally maintain their own store after initial_scan, this
            is purely to save time in cases where a global ID is available."""
@@ -158,7 +158,7 @@ class VendorPlugin(object):
     def _lookup_local_resource(self, scope_resource, klass, **attrs):
         """Note: finds only resources registered in this plugin instance -- if it is
         found in the database but not in _resource_cache then raises an exception"""
-        assert(issubclass(klass, VendorResource))
+        assert(issubclass(klass, StorageResource))
 
         if scope_resource:
             scope_resource_pk = scope_resource._handle
@@ -166,13 +166,13 @@ class VendorPlugin(object):
             scope_resource_pk = None
 
         try:
-            record = VendorResourceRecord.objects.\
+            record = StorageResourceRecord.objects.\
                    filter(resource_class__class_name = klass.__name__).\
-                   filter(resource_class__vendor_plugin__module_name = self.__class__.__module__).\
-                   filter(vendor_id_str = klass(**attrs).id_str()).\
-                   filter(vendor_id_scope = scope_resource_pk).get()
-        except VendorResourceRecord.DoesNotExist:
-            vendor_plugin_log.debug("ResourceNotFound: %s %s %s" % (klass.__name__, self.__class__.__module__, klass(**attrs).id_str()))
+                   filter(resource_class__storage_plugin__module_name = self.__class__.__module__).\
+                   filter(storage_id_str = klass(**attrs).id_str()).\
+                   filter(storage_id_scope = scope_resource_pk).get()
+        except StorageResourceRecord.DoesNotExist:
+            storage_plugin_log.debug("ResourceNotFound: %s %s %s" % (klass.__name__, self.__class__.__module__, klass(**attrs).id_str()))
             raise ResourceNotFound()
 
         try:
@@ -181,16 +181,16 @@ class VendorPlugin(object):
             raise ResourceNotFound()
 
     def lookup_children(self, parent, child_klass = None):
-        """Helper for VendorPlugin subclasses to retrieve all children
+        """Helper for StoragePlugin subclasses to retrieve all children
            that they have registered of a resource which they have
            registered, optionally filtered to only children of a particular
            class"""
-        child_records = VendorResourceRecord.objects.\
-               filter(resource_class__vendor_plugin__module_name = self.__class__.__module__).\
+        child_records = StorageResourceRecord.objects.\
+               filter(resource_class__storage_plugin__module_name = self.__class__.__module__).\
                filter(parents = parent._handle)
 
         if child_klass:
-            assert(issubclass(child_klass, VendorResource))
+            assert(issubclass(child_klass, StorageResource))
             child_records = child_records.filter(resource_class__class_name = child_klass.__name__)
 
         child_resources = []
@@ -204,7 +204,7 @@ class VendorPlugin(object):
         return child_resources
 
     def _find_ancestor_of_type(self, klass, root):
-        """Given a VendorResource 'root', find a resource
+        """Given a StorageResource 'root', find a resource
            in the ancestor tree (including root) which is 
            of type klass."""
         if isinstance(root, klass):
@@ -254,15 +254,15 @@ class VendorPlugin(object):
     def _register_resource(self, resource):
         """Register a resource:
            * Validate its attributes
-           * Create a VendorResourceRecord if it doesn't already
+           * Create a StorageResourceRecord if it doesn't already
              exist.
-           * Update VendorResourceRecord.vendor_dict from resource._vendor_dict
+           * Update StorageResourceRecord.storage_dict from resource._storage_dict
            * Populate its _handle attribute with a reference
-             to a VendorResourceRecord.
+             to a StorageResourceRecord.
              
            You may only call this once per plugin instance on 
            a particular resource."""
-        assert(isinstance(resource, VendorResource))
+        assert(isinstance(resource, StorageResource))
         assert(self._handle)
         assert(not resource._handle)
 
@@ -285,17 +285,17 @@ class VendorPlugin(object):
             if not scope_parent._handle:
                 raise RuntimeError("Resource %s's scope parent %s has not been registered yet (parents must be registered before children)" % (resource, scope_parent))
 
-            id_scope = VendorResourceRecord.objects.get(pk=scope_parent._handle)
+            id_scope = StorageResourceRecord.objects.get(pk=scope_parent._handle)
 
-        from configure.lib.storage_plugin import vendor_plugin_manager
-        resource_class_id = vendor_plugin_manager.get_plugin_resource_class_id(
+        from configure.lib.storage_plugin import storage_plugin_manager
+        resource_class_id = storage_plugin_manager.get_plugin_resource_class_id(
                 resource.__class__.__module__,
                 resource.__class__.__name__
                 )
-        record, created = VendorResourceRecord.objects.get_or_create(
+        record, created = StorageResourceRecord.objects.get_or_create(
                 resource_class_id = resource_class_id,
-                vendor_id_str = id_string,
-                vendor_id_scope = id_scope)
+                storage_id_str = id_string,
+                storage_id_scope = id_scope)
 
         if self._resource_cache.has_key(record.pk):
             # NB an alternative strategy would be to have register return a ref
@@ -308,18 +308,18 @@ class VendorPlugin(object):
             # In case any attributes which existed last time have now gone away, 
             # remove anything saved which is not present on this new instance.
             from django.db.models import Q
-            attrs_set = resource._vendor_dict.keys()
-            record.vendorresourceattribute_set.filter(~Q(key__in = attrs_set)).delete()
+            attrs_set = resource._storage_dict.keys()
+            record.storageresourceattribute_set.filter(~Q(key__in = attrs_set)).delete()
 
-        # save will write the VendorResourceAttribute records
+        # save will write the StorageResourceAttribute records
         resource.save()
 
-        vendor_plugin_log.debug("Looked up VendorResourceRecord %s for %s id=%s (created=%s)" % (record.id, resource.__class__.__name__, id_string, created))
+        storage_plugin_log.debug("Looked up StorageResourceRecord %s for %s id=%s (created=%s)" % (record.id, resource.__class__.__name__, id_string, created))
 
         for parent in resource._parents:
             if not parent._handle:
                 raise RuntimeError("Parent resources must be registered before their children")
-            parent_record = VendorResourceRecord.objects.get(pk = parent._handle)
+            parent_record = StorageResourceRecord.objects.get(pk = parent._handle)
             record.parents.add(parent_record)
 
         self._resource_cache[resource._handle] = resource        
@@ -345,7 +345,7 @@ class VendorPlugin(object):
         if not resource._handle:
             raise RuntimeError("Cannot deregister resource which has not been registered")
 
-        record = VendorResourceRecord.objects.get(pk = resource._handle)
+        record = StorageResourceRecord.objects.get(pk = resource._handle)
         self.cull_resource(record)
 
 

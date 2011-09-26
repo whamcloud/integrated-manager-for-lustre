@@ -4,18 +4,18 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-"""This module defines VendorPluginManager which loads and provides
-access to VendorPlugins and their VendorResources"""
+"""This module defines StoragePluginManager which loads and provides
+access to StoragePlugins and their StorageResources"""
 
-from configure.lib.storage_plugin.resource import VendorResource, GlobalId, LocalId
-from configure.lib.storage_plugin.plugin import VendorPlugin
-from configure.lib.storage_plugin.log import vendor_plugin_log
+from configure.lib.storage_plugin.resource import StorageResource, GlobalId, LocalId
+from configure.lib.storage_plugin.plugin import StoragePlugin
+from configure.lib.storage_plugin.log import storage_plugin_log
 from configure.models import *
 from django.db import transaction
 import json
 
 class LoadedResourceClass(object):
-    """Convenience store of introspected information about VendorResource 
+    """Convenience store of introspected information about StorageResource 
        subclasses from loaded modules."""
     def __init__(self, resource_class, resource_class_id):
         self.resource_class = resource_class
@@ -29,28 +29,28 @@ class LoadedPlugin(object):
         self.resource_classes = {}
         self.module = module
         self.plugin_class = plugin_class
-        self.plugin_record, created = VendorPluginRecord.objects.get_or_create(module_name = module.__name__)
+        self.plugin_record, created = StoragePluginRecord.objects.get_or_create(module_name = module.__name__)
 
         import inspect
         for name, cls in inspect.getmembers(module):
-            if inspect.isclass(cls) and issubclass(cls, VendorResource) and cls != VendorResource:
+            if inspect.isclass(cls) and issubclass(cls, StorageResource) and cls != StorageResource:
                 # FIXME: this limits plugin authors to putting everything in the same
                 # module, don't forget to tell them that!  Doesn't mean they can't break
                 # code up between files, but names must all be in the module.
-                vrc, created = VendorResourceClass.objects.get_or_create(
-                        vendor_plugin = self.plugin_record,
+                vrc, created = StorageResourceClass.objects.get_or_create(
+                        storage_plugin = self.plugin_record,
                         class_name = name)
 
                 self.resource_classes[name] = LoadedResourceClass(cls, vrc.id)
 
-                for name, stat_obj in cls._vendor_statistics.items():
-                    class_stat, created = VendorResourceClassStatistic.objects.get_or_create(
+                for name, stat_obj in cls._storage_statistics.items():
+                    class_stat, created = StorageResourceClassStatistic.objects.get_or_create(
                             resource_class = vrc,
                             name = name)
 
 class ResourceQuery(object):
     def __init__(self):
-        # Map VendorResourceRecord ID to instantiated VendorResource
+        # Map StorageResourceRecord ID to instantiated StorageResource
         self._pk_to_resource = {}
         
         # Record plugins which fail to load
@@ -58,7 +58,7 @@ class ResourceQuery(object):
         
     def _record_to_resource_parents(self, record):
         if record.pk in self._pk_to_resource:
-            vendor_plugin_log.debug("Got record %s from cache" % record)
+            storage_plugin_log.debug("Got record %s from cache" % record)
             return self._pk_to_resource[record.pk]
         else:
             resource = self._record_to_resource(record)
@@ -67,27 +67,27 @@ class ResourceQuery(object):
             return resource
 
     def _record_to_resource(self, record):
-        """'record' may be a VendorResourceRecord or an ID.  Returns a
-        VendorResource, or None if the required plugin is unavailable"""
+        """'record' may be a StorageResourceRecord or an ID.  Returns a
+        StorageResource, or None if the required plugin is unavailable"""
         
-        if not isinstance(record, VendorResourceRecord):
+        if not isinstance(record, StorageResourceRecord):
             if record in self._pk_to_resource:
                 return self._pk_to_resource[record]
-            record = VendorResourceRecord.objects.get(pk=record)
+            record = StorageResourceRecord.objects.get(pk=record)
         else:
             if record.pk in self._pk_to_resource:
                 return self._pk_to_resource[record.pk]
             
-        plugin_module = record.resource_class.vendor_plugin.module_name
+        plugin_module = record.resource_class.storage_plugin.module_name
         if plugin_module in self._errored_plugins:
             return None
             
         # We have to make sure the plugin is loaded before we
-        # try to unpickle the VendorResource class
+        # try to unpickle the StorageResource class
         try:
-            vendor_plugin_manager.load_plugin(plugin_module)
+            storage_plugin_manager.load_plugin(plugin_module)
         except Exception,e:
-            vendor_plugin_log.error("Cannot load plugin %s for VendorResourceRecord %d: %s" % (plugin_module, record.id, e))
+            storage_plugin_log.error("Cannot load plugin %s for StorageResourceRecord %d: %s" % (plugin_module, record.id, e))
             self._errored_plugins.add(plugin_module)
             return None
 
@@ -103,27 +103,27 @@ class ResourceQuery(object):
     # halfway through -- maybe use nested_commit_on_success?
     @transaction.commit_on_success()
     def get_resource(self, vrr_id):
-        """Return a VendorResource corresponding to a VendorResourceRecord
+        """Return a StorageResource corresponding to a StorageResourceRecord
         identified by vrr_id.  May raise an exception if the plugin for that
         vrr cannot be loaded for any reason.
 
         Note: resource._parents will not be populated, you will only
         get the attributes."""
 
-        vrr = VendorResourceRecord.objects.get(pk = vrr_id)
+        vrr = StorageResourceRecord.objects.get(pk = vrr_id)
         return self._record_to_resource(vrr)
 
     @transaction.commit_on_success()
     def get_resource_parents(self, vrr_id):
         """Like get_resource by also fills out entire ancestry"""
 
-        vrr = VendorResourceRecord.objects.get(pk = vrr_id)
+        vrr = StorageResourceRecord.objects.get(pk = vrr_id)
         return self._record_to_resource_parents(vrr)
 
     @transaction.commit_on_success()
     def get_all_resources(self):
         """Return list of all resources for all plugins"""
-        records = VendorResourceRecord.objects.all()
+        records = StorageResourceRecord.objects.all()
 
         resources = []
         resource_parents = {}
@@ -137,10 +137,10 @@ class ResourceQuery(object):
         return resources
 
     def _load_record_and_children(self, record):
-        vendor_plugin_log.debug("load_record_and_children: %s" % record)
+        storage_plugin_log.debug("load_record_and_children: %s" % record)
         resource = self._record_to_resource_parents(record)
         if resource:
-            children_records = VendorResourceRecord.objects.filter(
+            children_records = StorageResourceRecord.objects.filter(
                 parents = record)
                 
             children_resources = []
@@ -154,67 +154,67 @@ class ResourceQuery(object):
     def get_resource_tree(self, root_records):
         """For a given plugin and resource class, find all instances of that class
         and return a tree of resource instances (with additional 'children' attribute)"""
-        vendor_plugin_log.debug(">> get_resource_tree")
+        storage_plugin_log.debug(">> get_resource_tree")
         tree = []
         for record in root_records:
             tree.append(self._load_record_and_children(record))
-        vendor_plugin_log.debug("<< get_resource_tree")
+        storage_plugin_log.debug("<< get_resource_tree")
         
         return tree    
 
-class VendorPluginManager(object):
+class StoragePluginManager(object):
     def __init__(self):
         self.loaded_plugins = {}
         self.plugin_sessions = {}
 
     @transaction.commit_on_success
     def create_root_resource(self, plugin_mod, resource_class_name, **kwargs):
-        vendor_plugin_log.debug("create_root_resource %s %s %s" % (plugin_mod, resource_class_name, kwargs))
+        storage_plugin_log.debug("create_root_resource %s %s %s" % (plugin_mod, resource_class_name, kwargs))
         plugin_class = self.load_plugin(plugin_mod)
 
         # Try to find the resource class in the plugin module
         resource_class = self.get_plugin_resource_class(plugin_mod, resource_class_name)
 
         # Construct a record
-        record = VendorResourceRecord.create_root(resource_class, kwargs)
+        record = StorageResourceRecord.create_root(resource_class, kwargs)
 
         # XXX should we let people modify root records?  e.g. change the IP
         # address of a controller rather than deleting it, creating a new 
         # one and letting the pplugin repopulate us with 'new' resources?
         # This will present the challenge of what to do with instances of
-        # VendorResource subclasses which are already present in running plugins.
+        # StorageResource subclasses which are already present in running plugins.
 
-        vendor_plugin_log.debug("create_root_resource created %d" % (record.id))
+        storage_plugin_log.debug("create_root_resource created %d" % (record.id))
 
     def register_plugin(self, plugin_instance):
-        """Register a particular instance of a VendorPlugin"""
+        """Register a particular instance of a StoragePlugin"""
         # FIXME: only supporting one instance of a plugin class at a time
         session_id = plugin_instance.__class__.__name__
         assert(not session_id in self.plugin_sessions)
 
         self.plugin_sessions[session_id] = plugin_instance
-        vendor_plugin_log.info("Registered plugin instance %s with id %s" % (plugin_instance, session_id))
+        storage_plugin_log.info("Registered plugin instance %s with id %s" % (plugin_instance, session_id))
         return session_id
 
     def get_plugin_resource_class(self, plugin_module, resource_class_name):
-        """Return a VendorResource subclass"""
+        """Return a StorageResource subclass"""
         loaded_plugin = self.loaded_plugins[plugin_module]
         return loaded_plugin.resource_classes[resource_class_name].resource_class
 
     def get_plugin_resource_class_id(self, plugin_module, resource_class_name):
-        """Return a VendorResourceClass primary key"""
+        """Return a StorageResourceClass primary key"""
         loaded_plugin = self.loaded_plugins[plugin_module]
         return loaded_plugin.resource_classes[resource_class_name].resource_class_id
 
 
     def load_plugin(self, module):
-        """Load a VendorPlugin class from a module given a
+        """Load a StoragePlugin class from a module given a
            python path like 'configure.lib.lvm',
            or simply return it if it was already loaded.  Note that the 
-           VendorPlugin within the module will not be instantiated when this
+           StoragePlugin within the module will not be instantiated when this
            returns, caller is responsible for instantiating it.
 
-           @return A subclass of VendorPlugin"""
+           @return A subclass of StoragePlugin"""
         if module in self.loaded_plugins:
             return self.loaded_plugins[module].plugin_class
 
@@ -225,25 +225,25 @@ class VendorPluginManager(object):
             mod = getattr(mod, comp)
         plugin = mod
 
-        # Find all VendorPlugin subclasses in the module
+        # Find all StoragePlugin subclasses in the module
         plugin_klasses = []
         import inspect
         for name, cls in inspect.getmembers(plugin):
-            if inspect.isclass(cls) and issubclass(cls, VendorPlugin) and cls != VendorPlugin:
+            if inspect.isclass(cls) and issubclass(cls, StoragePlugin) and cls != StoragePlugin:
                 plugin_klasses.append(cls)
                 
-        # Make sure we have exactly one VendorPlugin subclass
+        # Make sure we have exactly one StoragePlugin subclass
         if len(plugin_klasses) > 1:
-            raise RuntimeError("Module %s defines more than one VendorPlugin: %s!" % (module, plugin_klasses))
+            raise RuntimeError("Module %s defines more than one StoragePlugin: %s!" % (module, plugin_klasses))
         elif len(plugin_klasses) == 0:
-            raise RuntimeError("Module %s does not define a VendorPlugin!" % module)
+            raise RuntimeError("Module %s does not define a StoragePlugin!" % module)
         else:
             plugin_klass = plugin_klasses[0]
 
         self.loaded_plugins[plugin_klass.__module__] = LoadedPlugin(plugin, plugin_klass)
         return plugin_klass
 
-vendor_plugin_manager = VendorPluginManager()
+storage_plugin_manager = StoragePluginManager()
 
 
 

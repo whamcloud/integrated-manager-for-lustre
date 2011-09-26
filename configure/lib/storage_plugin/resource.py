@@ -3,62 +3,62 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-"""This modules defines the VendorResource class, which VendorPlugins subclass use
+"""This modules defines the StorageResource class, which StoragePlugins subclass use
 to define their system elements"""
 
 from configure.lib.storage_plugin.attributes import ResourceAttribute
 from configure.lib.storage_plugin.statistics import ResourceStatistic
 from configure.lib.storage_plugin.alert_conditions import AlertCondition
-from configure.lib.storage_plugin.log import vendor_plugin_log
-from configure.models import VendorResourceRecord
+from configure.lib.storage_plugin.log import storage_plugin_log
+from configure.models import StorageResourceRecord
 
 class Statistic(object):
     def __init__(self):
         pass
 
-class VendorResourceMetaclass(type):
+class StorageResourceMetaclass(type):
     def __new__(cls, name, bases, dct):
-        dct['_vendor_attributes'] = {}
-        dct['_vendor_statistics'] = {}
+        dct['_storage_attributes'] = {}
+        dct['_storage_statistics'] = {}
         dct['_alert_conditions'] = {}
 
         for base in bases:
-            if hasattr(base, '_vendor_attributes'):
-                dct['_vendor_attributes'].update(base._vendor_attributes)
-            if hasattr(base, '_vendor_statistics'):
-                dct['_vendor_statistics'].update(base._vendor_statistics)
+            if hasattr(base, '_storage_attributes'):
+                dct['_storage_attributes'].update(base._storage_attributes)
+            if hasattr(base, '_storage_statistics'):
+                dct['_storage_statistics'].update(base._storage_statistics)
             if hasattr(base, '_alert_conditions'):
                 dct['_alert_conditions'].update(base._alert_conditions)
 
         for field_name, field_obj in dct.items():
             if isinstance(field_obj, ResourceAttribute):
-                dct['_vendor_attributes'][field_name] = field_obj
+                dct['_storage_attributes'][field_name] = field_obj
                 del dct[field_name]
             elif isinstance(field_obj, ResourceStatistic):
-                dct['_vendor_attributes'][field_name] = field_obj
+                dct['_storage_attributes'][field_name] = field_obj
                 del dct[field_name]
             elif isinstance(field_obj, AlertCondition):
                 dct['_alert_conditions'][field_name] = field_obj
                 field_obj.set_name(field_name)
                 del dct[field_name]
 
-        return super(VendorResourceMetaclass, cls).__new__(cls, name, bases, dct)
+        return super(StorageResourceMetaclass, cls).__new__(cls, name, bases, dct)
 
-class VendorResource(object):
-    __metaclass__ = VendorResourceMetaclass
+class StorageResource(object):
+    __metaclass__ = StorageResourceMetaclass
 
     icon = 'default'
 
     def __init__(self, **kwargs):
-        self._vendor_dict = {}
+        self._storage_dict = {}
         self._handle = None
         self._parents = []
         self._dirty_attributes = set()
         self._parents_dirty = False
 
         for k,v in kwargs.items():
-            if not k in self._vendor_attributes:
-                raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._vendor_attributes.keys()))
+            if not k in self._storage_attributes:
+                raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._storage_attributes.keys()))
             setattr(self, k, v)
 
     def to_json(self, stack = []):
@@ -83,32 +83,32 @@ class VendorResource(object):
     def human_string(self, ancestors=[]):
         """Subclasses should implement a function which formats a string for
         presentation, possibly in a tree display as a child of 'parent' (a 
-        VendorResource instance) or if parent is None then for display 
+        StorageResource instance) or if parent is None then for display 
         on its own."""
         return self.__str__()
 
     def __setattr__(self, key, value):
-        if key.startswith("_") or not key in self._vendor_attributes:
+        if key.startswith("_") or not key in self._storage_attributes:
             object.__setattr__(self, key, value)
         else:
             # First see if the new val is the same as an existing
             # value if there is an existing value, and if so return.
             try:
-                old_val = self._vendor_dict[key]
+                old_val = self._storage_dict[key]
                 if old_val == value:
                     return
             except KeyError:
                 pass
 
             # Value is new or changed, set it and mark dirty
-            self._vendor_dict[key] = value
+            self._storage_dict[key] = value
             self._dirty_attributes.add(key)
 
     def __getattr__(self, key):
-        if key.startswith("_") or not key in self._vendor_attributes:
+        if key.startswith("_") or not key in self._storage_attributes:
             raise AttributeError
         else:
-            return self._vendor_dict[key]
+            return self._storage_dict[key]
 
     def dirty(self):
         return (len(self._dirty_attributes) > 0) or self._parents_dirty
@@ -119,12 +119,12 @@ class VendorResource(object):
         if not self.dirty():
             return
 
-        record = VendorResourceRecord.objects.get(pk = self._handle)
+        record = StorageResourceRecord.objects.get(pk = self._handle)
 
         for attr in self._dirty_attributes:
-            record.update_attributes(self._vendor_dict)
-            if self._vendor_dict.has_key(attr):
-                record.update_attribute(attr, self._vendor_dict[attr])
+            record.update_attributes(self._storage_dict)
+            if self._storage_dict.has_key(attr):
+                record.update_attribute(attr, self._storage_dict[attr])
             else:
                 record.delete_attribute(attr)
 
@@ -142,14 +142,14 @@ class VendorResource(object):
             existing_parent_handles = [ep.pk for ep in existing_parents]
             for p in self._parents:
                 if not p._handle in existing_parent_handles:
-                    record.parents.add(VendorResourceRecord.objects.get(pk = p._handle))
+                    record.parents.add(StorageResourceRecord.objects.get(pk = p._handle))
             
 
         record.save()
 
     @classmethod
     def attrs_to_id_str(cls, attrs):
-        """Serialized ID for use in VendorResourceRecord.vendor_id_str"""
+        """Serialized ID for use in StorageResourceRecord.storage_id_str"""
         import json
         identifier_val = []
         for f in cls.identifier.id_fields:
@@ -157,7 +157,7 @@ class VendorResource(object):
         return json.dumps(identifier_val)
 
     def id_str(self):
-        """Serialized ID for use in VendorResourceRecord.vendor_id_str"""
+        """Serialized ID for use in StorageResourceRecord.storage_id_str"""
         import json
         identifier_val = []
         for f in self.identifier.id_fields:
@@ -166,11 +166,11 @@ class VendorResource(object):
     
     def get_attributes_display(self):
         """Return a list of 2-tuples for names and human readable
-           values for all resource attributes (i.e. _vendor_dict)"""
+           values for all resource attributes (i.e. _storage_dict)"""
         attributes = {}
-        for k,v in self._vendor_dict.items():
+        for k,v in self._storage_dict.items():
             try:
-                attribute_obj = self._vendor_attributes[k]
+                attribute_obj = self._storage_attributes[k]
             except KeyError:
                 # For non-declared fields, fall back to generic field
                 attribute_obj = ResourceAttribute()
@@ -182,9 +182,9 @@ class VendorResource(object):
         """NB this is a DB-backed function for use outside the plugins themselves"""
         assert(self._handle != None)
         from configure.models import StorageResourceAlert
-        from configure.models import VendorResourceRecord
+        from configure.models import StorageResourceRecord
         resource_alerts = StorageResourceAlert.filter_by_item_id(
-                VendorResourceRecord, self._handle)
+                StorageResourceRecord, self._handle)
 
         return list(resource_alerts)
     
@@ -194,14 +194,14 @@ class VendorResource(object):
             self._parents_dirty = True
 
     def validate(self):
-        """Call validate() on the ResourceAttribute for all _vendor_dict items, and
-           ensure that all non-optional ResourceAttributes have a value in _vendor_dict"""
-        for k,v in self._vendor_dict.items():
-            if k in self._vendor_attributes:
-                self._vendor_attributes[k].validate(v)
+        """Call validate() on the ResourceAttribute for all _storage_dict items, and
+           ensure that all non-optional ResourceAttributes have a value in _storage_dict"""
+        for k,v in self._storage_dict.items():
+            if k in self._storage_attributes:
+                self._storage_attributes[k].validate(v)
 
-        for k,a in self._vendor_attributes.items():
-            if not k in self._vendor_dict and not a.optional:
+        for k,a in self._storage_attributes.items():
+            if not k in self._storage_dict and not a.optional:
                 raise ValueError("Missing mandatory attribute %s" % k)
                 
     def get_parent(self, parent_klass):

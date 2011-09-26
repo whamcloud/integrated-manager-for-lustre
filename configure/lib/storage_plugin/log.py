@@ -5,15 +5,15 @@
 # ==============================
 
 """This module defines a simple logger which is used by storage_plugin.* and 
-provided for use by VendorPlugin subclasses"""
+provided for use by StoragePlugin subclasses"""
 
 from logging import getLogger, DEBUG, WARNING, StreamHandler, FileHandler
 import settings
 
-vendor_plugin_log = getLogger('vendor_plugin_log')
-vendor_plugin_log.addHandler(FileHandler('vendor_plugin.log'))
+storage_plugin_log = getLogger('storage_plugin_log')
+storage_plugin_log.addHandler(FileHandler('storage_plugin.log'))
 if settings.DEBUG:
-    vendor_plugin_log.setLevel(DEBUG)
-    vendor_plugin_log.addHandler(StreamHandler())
+    storage_plugin_log.setLevel(DEBUG)
+    storage_plugin_log.addHandler(StreamHandler())
 else:
-    vendor_plugin_log.setLevel(WARNING)
+    storage_plugin_log.setLevel(WARNING)

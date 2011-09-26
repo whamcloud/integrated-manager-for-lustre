@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.lib.storage_plugin import VendorResource, VendorPlugin, ResourceNotFound
+from configure.lib.storage_plugin import StorageResource, StoragePlugin, ResourceNotFound
 from configure.lib.storage_plugin import LocalId, GlobalId
 from configure.lib.storage_plugin import ResourceAttribute
 
@@ -11,7 +11,7 @@ from configure.lib.storage_plugin import attributes
 from configure.lib.storage_plugin import base_resources
 from configure.lib.storage_plugin import alert_conditions
 
-class LvmPlugin(VendorPlugin):
+class LvmPlugin(StoragePlugin):
     def initial_scan(self):
         # Get the list of user-configured hosts to scan
         root_resources = self.get_root_resources()
