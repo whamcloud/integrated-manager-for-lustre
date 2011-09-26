@@ -126,7 +126,6 @@ class ResourceQuery(object):
         records = StorageResourceRecord.objects.all()
 
         resources = []
-        resource_parents = {}
         for vrr in records:
             r = self._record_to_resource(vrr)
             if r:
@@ -135,6 +134,14 @@ class ResourceQuery(object):
                     r._parents.append(self._record_to_resource(p))
 
         return resources
+
+    def get_class_resources(self, resource_class):
+        records = StorageResourceRecord.objects.filter(resource_class = resource_class)
+        resources = []
+        for r in records:
+            res = self._record_to_resource(r)
+            if res:
+                yield res
 
     def _load_record_and_children(self, record):
         storage_plugin_log.debug("load_record_and_children: %s" % record)

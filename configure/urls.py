@@ -26,4 +26,6 @@ urlpatterns = patterns('',
     (r'^conf_param_help/(?P<conf_param_name>[\w\._-]+)/$', conf_param_help),
     (r'^storage_resource/(?P<vrr_id>\d+)/$', storage_resource),
     (r'^storage_browser/$', storage_browser),
+    (r'^storage_table/$', storage_table),
+    (r'^storage_table_json/(?P<plugin_module>[\w\._-]+)/(?P<resource_class_name>[\w\._-]+)/$', storage_table_json),
 )

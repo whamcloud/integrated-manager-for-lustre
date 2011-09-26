@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block scripts %}
+<script type='text/javascript' src='{{STATIC_URL}}js/jquery.dataTables.js'></script>
+<script type='text/javascript'>
+    $(document).ready(function() {
+            $('#resource_table').dataTable({
+                "bJQueryUI": true,
+                "bProcessing": true,
+                "bPaginate": false,
+                "sAjaxSource": '{% url configure.views.storage_table_json plugin_module resource_class %}'
+                }); 
+    });
+</script>
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/datatable_page.css"/>
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/datatable.css"/>
+{% endblock %}
+
+{% block content %}
+
+<div style='float:left; margin: 6px; font-size: 10pt;border-right: 2px solid gray;padding-right: 6px;'>
+
+<form method='get' style='margin-bottom: 3px;'>
+    {% csrf_token %}
+    Class: {{ resource_form.resource }}
+    <script type='text/javascript'>
+        $(document).ready(function() {
+            $('#id_resource').change(function(){
+                $('#id_resource').parents('form').submit();
+                $('#children').html('<img src="{{STATIC_URL}}images/ajax-loader.gif"/>&nbsp;Loading...');
+            });
+        });
+    </script>
+</form>
+
+<table id='resource_table' class='display'>
+    <thead>
+        <tr>
+            {% for c in columns %}
+            <th>{{c}}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+</div>
+
+{% endblock %}

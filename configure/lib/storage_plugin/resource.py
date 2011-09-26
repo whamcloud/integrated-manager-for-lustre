@@ -35,7 +35,7 @@ class StorageResourceMetaclass(type):
                 dct['_storage_attributes'][field_name] = field_obj
                 del dct[field_name]
             elif isinstance(field_obj, ResourceStatistic):
-                dct['_storage_attributes'][field_name] = field_obj
+                dct['_storage_statistics'][field_name] = field_obj
                 del dct[field_name]
             elif isinstance(field_obj, AlertCondition):
                 dct['_alert_conditions'][field_name] = field_obj
@@ -60,6 +60,14 @@ class StorageResource(object):
             if not k in self._storage_attributes:
                 raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._storage_attributes.keys()))
             setattr(self, k, v)
+
+
+    @classmethod
+    def get_columns(cls):
+        if hasattr(cls, 'columns'):
+            return cls.columns
+        else:
+            return cls._storage_attributes.keys()
 
     def to_json(self, stack = []):
         dct = {}

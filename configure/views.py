@@ -594,12 +594,9 @@ def _resource_tree(root_records):
 
     return json.dumps(tree, cls = ResourceJsonEncoder, indent=4)
 
-def storage_browser(request):
+
+def _handle_resource_form(request):
     from configure.models import StorageResourceClass
-
-    if StorageResourceClass.objects.count() == 0:
-        return render_to_response('storage_browser_disabled.html', RequestContext(request))
-
     default_resource = StorageResourceClass.objects.get(class_name = 'LvmHost')
 
     class ResourceForm(forms.Form):
@@ -614,6 +611,15 @@ def storage_browser(request):
     else:
         storage_resource_class = default_resource
 
+    return resource_form, storage_resource_class
+
+def storage_browser(request):
+    from configure.models import StorageResourceClass
+    if StorageResourceClass.objects.count() == 0:
+        return render_to_response('storage_browser_disabled.html', RequestContext(request))
+
+    resource_form, storage_resource_class = _handle_resource_form(request)
+
     storage_plugin = storage_resource_class.storage_plugin
     resource_tree = _resource_class_tree(storage_plugin.module_name, storage_resource_class.class_name)
 
@@ -621,5 +627,47 @@ def storage_browser(request):
         'resource_form': resource_form,
         'resource_tree': resource_tree
         }))
+
+def storage_table(request):
+    from configure.models import StorageResourceClass
+    if StorageResourceClass.objects.count() == 0:
+        return render_to_response('storage_browser_disabled.html', RequestContext(request))
+
+    resource_form, storage_resource_class = _handle_resource_form(request)
+
+    # The StorageResource subclass as opposed to the DB reference for it
+    from configure.lib.storage_plugin import storage_plugin_manager
+    storage_plugin_manager.load_plugin(storage_resource_class.storage_plugin.module_name)
+    real_resource_class = storage_resource_class.get_class()
+
+    columns = real_resource_class._storage_attributes.keys()
+
+    return render_to_response('storage_table.html', RequestContext(request, {
+        'plugin_module': storage_resource_class.storage_plugin.module_name,
+        'resource_class': storage_resource_class.class_name,
+        'resource_form': resource_form,
+        'columns': columns
+        }))
+
+def storage_table_json(request, plugin_module, resource_class_name):
+    from configure.lib.storage_plugin import storage_plugin_manager
+    # FIXME: for now this effectively lets the caller 'import' whatever they want.
+    # need an INSTALLED_PLUGINS setting and limit this to one of those.
+    storage_plugin_manager.load_plugin(plugin_module)
+    from configure.lib.storage_plugin import ResourceQuery
+
+    resource_class = storage_plugin_manager.get_plugin_resource_class(plugin_module, resource_class_name)
+    resource_class_id = storage_plugin_manager.get_plugin_resource_class_id(plugin_module, resource_class_name)
+    columns = resource_class.get_columns()
+
+    resources = ResourceQuery().get_class_resources(resource_class_id)
+    rows = []
+    for r in resources: 
+        row = []
+        for c in columns:
+            row.append(getattr(r,c))
+        rows.append(row)    
+
+    return HttpResponse(json.dumps({'aaData': rows}), mimetype = 'application/json') 
 
 

@@ -28,6 +28,11 @@ class StorageResourceClass(models.Model):
     def __str__(self):
         return "%s/%s" % (self.storage_plugin.module_name, self.class_name)
 
+    def get_class(self):
+        from configure.lib.storage_plugin import storage_plugin_manager
+        return storage_plugin_manager.get_plugin_resource_class(
+                self.storage_plugin.module_name, self.class_name)
+
     class Meta:
         unique_together = ('storage_plugin', 'class_name')
         app_label = 'configure'
