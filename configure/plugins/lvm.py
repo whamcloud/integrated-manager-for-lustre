@@ -9,6 +9,7 @@ from configure.lib.storage_plugin import ResourceAttribute
 
 from configure.lib.storage_plugin import attributes
 from configure.lib.storage_plugin import base_resources
+from configure.lib.storage_plugin import alert_conditions
 
 class LvmPlugin(VendorPlugin):
     def initial_scan(self):
@@ -46,6 +47,9 @@ class LvmPlugin(VendorPlugin):
                 found_groups.add(uuid)
                 resource,created = self.update_or_create(LvmGroup, parents=[lvm_host_resource],
                         uuid = uuid, name = name, size = size)
+
+                if len(name) > 4:
+                    self.notify_alert(True, resource, 'test1', 'name')
 
             # Deregister any previously-registered VGs which were not found on this scan
             for vg in self.lookup_children(lvm_host_resource, LvmGroup):
@@ -154,6 +158,8 @@ class LvmVolume(base_resources.VirtualDisk):
 
     icon = 'lvm_lv'
     human_name = 'LV'
+
+    bad_names = alert_conditions.AttrValAlertCondition('name', error_states = 'LogVol01')
 
     def human_string(self, ancestors = []):
         if LvmGroup in [a.__class__ for a in ancestors]:

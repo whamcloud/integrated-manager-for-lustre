@@ -27,6 +27,9 @@ class VendorPlugin(object):
         # TODO: give each one its own log, or at least a prefix
         self.log = vendor_plugin_log
 
+        self._dirty_alerts = set()
+        self._alerts = {}
+
     def initial_scan(self):
         """To be implemented by subclasses.  Identify all resources
            present at this time and call register_resource on them.
@@ -95,6 +98,25 @@ class VendorPlugin(object):
         for pk, resource in self._resource_cache.items():
             if resource.dirty():
                 resource.save()
+            for name,ac in resource._alert_conditions.items():
+                alert_list = ac.test(resource)
+                for name, attribute, active in alert_list:
+                    self.notify_alert(active, resource, name, attribute)
+        
+        for (resource,attribute,alert_class) in self._dirty_alerts:
+            active = self._alerts[(resource,attribute,alert_class)]
+
+            from configure.models import VendorResourceRecord
+            from configure.models import StorageResourceAlert
+            try:
+                vrr = VendorResourceRecord.objects.get(pk = resource._handle)
+            except VendorResourceRecord.DoesNotExist:
+                # Handle a lingering alert from a now-deleted object
+                del self._alerts[(resource,attribute,alert_class)]
+
+            StorageResourceAlert.notify(vrr, active, alert_class=alert_class, attribute=attribute)
+        # TODO: lock _alerts
+        self._dirty_alerts.clear()
 
     def get_root_resources(self):
         """Return any existing resources for this plugin which
@@ -302,8 +324,19 @@ class VendorPlugin(object):
 
         self._resource_cache[resource._handle] = resource        
 
-    def notify_alert(self, resource, message, alert_name = None, attribute = None):
-        pass
+    def notify_alert(self, active, resource, alert_name, attribute = None):
+        # This will be flushed through to the database by update_scan
+        key = (resource,attribute,alert_name)
+        value = active
+        try:
+            existing = self._alerts[key]
+            if existing == (value):
+                return
+        except KeyError:
+            pass
+
+        self._alerts[key] = value
+        self._dirty_alerts.add(key)
 
     def update_statistic(self, resource, stat, value):
         pass

@@ -174,3 +174,26 @@ class VendorResourceStatistic(models.Model):
     class Meta:
         app_label = 'configure'
 
+from monitor.models import AlertState
+class StorageResourceAlert(AlertState):
+    """Used by configure.lib.storage_plugin"""
+
+    # Within the plugin referenced by the alert_item, what kind
+    # of alert is this?
+    alert_class = models.CharField(max_length = 512)
+    attribute = models.CharField(max_length = 128, blank = True, null = True)
+
+    def __str__(self):
+        return "<%s:%s %d>" % (self.alert_class, self.attribute, self.pk)
+    def message(self):
+        # TODO: map alert_class back to a message via the plugin
+        alert_message = self.alert_class
+        if self.attribute:
+            return "%s on attribute '%s'" % (self.alert_class, self.attribute)
+        else:
+            return "%s" % self.alert_class
+
+    class Meta:
+        app_label = 'configure'
+
+

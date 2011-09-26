@@ -8,14 +8,9 @@ to define their system elements"""
 
 from configure.lib.storage_plugin.attributes import ResourceAttribute
 from configure.lib.storage_plugin.statistics import ResourceStatistic
+from configure.lib.storage_plugin.alert_conditions import AlertCondition
 from configure.lib.storage_plugin.log import vendor_plugin_log
 from configure.models import VendorResourceRecord
-
-class AlertCondition(object):
-    def __init__(self, error_values, warning_values, info_values):
-        self.error_values = error_values
-        self.warning_values = warning_values
-        self.info_values = info_values
 
 class Statistic(object):
     def __init__(self):
@@ -25,26 +20,27 @@ class VendorResourceMetaclass(type):
     def __new__(cls, name, bases, dct):
         dct['_vendor_attributes'] = {}
         dct['_vendor_statistics'] = {}
+        dct['_alert_conditions'] = {}
 
         for base in bases:
             if hasattr(base, '_vendor_attributes'):
                 dct['_vendor_attributes'].update(base._vendor_attributes)
             if hasattr(base, '_vendor_statistics'):
                 dct['_vendor_statistics'].update(base._vendor_statistics)
+            if hasattr(base, '_alert_conditions'):
+                dct['_alert_conditions'].update(base._alert_conditions)
 
-        #print "* %s" % name
         for field_name, field_obj in dct.items():
-            from configure.lib.storage_plugin.attributes import PosixPath
-        #    print "** %s %s %s %s" % (field_name, field_obj, isinstance(field_obj, ResourceAttribute), isinstance(field_obj, PosixPath))
-            
             if isinstance(field_obj, ResourceAttribute):
                 dct['_vendor_attributes'][field_name] = field_obj
                 del dct[field_name]
             elif isinstance(field_obj, ResourceStatistic):
                 dct['_vendor_attributes'][field_name] = field_obj
                 del dct[field_name]
-
-        #print "%s._vendor_attributes = %s" % (name, dct['_vendor_attributes'])
+            elif isinstance(field_obj, AlertCondition):
+                dct['_alert_conditions'][field_name] = field_obj
+                field_obj.set_name(field_name)
+                del dct[field_name]
 
         return super(VendorResourceMetaclass, cls).__new__(cls, name, bases, dct)
 
@@ -182,6 +178,16 @@ class VendorResource(object):
             attributes[k] = attribute_obj.human_readable(v) 
         return attributes
 
+    def get_alerts(self):
+        """NB this is a DB-backed function for use outside the plugins themselves"""
+        assert(self._handle != None)
+        from configure.models import StorageResourceAlert
+        from configure.models import VendorResourceRecord
+        resource_alerts = StorageResourceAlert.filter_by_item_id(
+                VendorResourceRecord, self._handle)
+
+        return list(resource_alerts)
+    
     def add_parent(self, parent_resource):
         if not parent_resource in self._parents:
             self._parents.append(parent_resource)

@@ -57,7 +57,7 @@ class Bytes(ResourceAttribute):
 
 class Enum(ResourceAttribute):
     def __init__(self, *args, **kwargs):
-        self.options = *args
+        self.options = args
 
         if not self.options:
             raise ValueError("Enum ResourceAttribute must be given 'options' argument")

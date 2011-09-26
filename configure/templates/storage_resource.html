@@ -8,3 +8,10 @@
 {% endfor %}
 </ul>
 
+<h3>{{resource.human_class}} alerts</h3>
+<ul>
+{% for a in resource.get_alerts %}
+<li>{{a.message}}</li>
+{% endfor %}
+</ul>
+
