@@ -128,10 +128,6 @@ def dashboard_inner(request):
                 }))
 
 
-MONTHS=('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-int_to_month = dict(zip(range(1,13), MONTHS))
-month_to_int = dict(zip(MONTHS, range(1,13)))
-
 def get_log_data(display_month, display_day, only_lustre):
     import datetime
 
@@ -150,13 +146,6 @@ def get_log_data(display_month, display_day, only_lustre):
     return log_data
 
 def log_viewer(request):
-    # figure out the day and month of the last entry in the log
-    lines = Systemevents.objects.all()
-    line = Systemevents.objects.all()[lines.count() - 1]
-
-    display_month = line.devicereportedtime.month
-    display_day = line.devicereportedtime.day
-
     import datetime
     start_month_choices = [(i, datetime.date(1970, i, 1).strftime('%B')) for i in range(1,13)]
     start_day_choices = [(i, "%2d" % i) for i in range(1,31)]
@@ -164,10 +153,10 @@ def log_viewer(request):
     from django import forms
     class LogViewerForm(forms.Form):
         start_month = forms.ChoiceField(label = "Month",
-                initial = "%d" % display_month,
+                initial = "%d" % datetime.datetime.now().month,
                 choices = start_month_choices)
         start_day = forms.ChoiceField(label = "Day",
-                initial = "%d" % display_day,
+                initial = "%d" % datetime.datetime.now().day,
                 choices = start_day_choices)
         only_lustre = forms.BooleanField(required = False,
                                          initial = True,
