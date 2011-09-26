@@ -226,6 +226,7 @@ AUDIT_MAX_AGE = 3600 * 24
 CELERY_ROUTES = (
         {"monitor.tasks.audit_all": {"queue": "periodic"}},
         {"monitor.tasks.discover_hosts": {"queue": "periodic"}},
+        {"monitor.tasks.parse_log_entries": {"queue": "parselog"}},
         {"configure.tasks.janitor": {"queue": "periodic"}},
         {"configure.tasks.set_state": {"queue": "serialize"}},
         {"configure.tasks.add_job": {"queue": "serialize"}},
@@ -244,9 +245,11 @@ CELERY_ACKS_LATE = True
 if DEBUG:
     JOB_LOG_PATH = "job.log"
     AUDIT_LOG_PATH = "audit.log"
+    API_LOG_PATH = "hydraapi.log"
 else:
     JOB_LOG_PATH = "/var/log/hydra/job.log"
     AUDIT_LOG_PATH = "/var/log/hydra/audit.log"
+    API_LOG_PATH = "/var/log/hydra/hydraapi.log" 
 
 try:
     from production_version import VERSION

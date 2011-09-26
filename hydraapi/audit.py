@@ -9,10 +9,10 @@ from django.core.management import setup_environ
 
 # Hydra Server Imports
 import settings
+setup_environ(settings)
+
 from requesthandler import AnonymousRequestHandler
 from monitor.models import Monitor
-
-setup_environ(settings)
 
 #REST API Controler for Hydra audit related operations/actions
 class HydraAudit(AnonymousRequestHandler):

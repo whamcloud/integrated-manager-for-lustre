@@ -19,14 +19,14 @@ setup(name = 'hydra-server',
       long_description = 'This is the Whamcloud Monitoring and Adminstration Interface',
       url = 'http://www.whamcloud.com/',
       packages = ['', 'monitor', 'monitor/lib', 'configure', 'configure/lib', 'configure/models', 
-                  'configure/plugins', 'polymorphic'],
+                  'configure/plugins', 'polymorphic', 'hydraapi', 'hydradashboard'],
       scripts = [],
       package_data={'monitor': ['templates/*', 'static/css/*.css',
                                 'static/css/ui-lightness/*.css',
                                 'static/css/ui-lightness/images/*',
                                 'static/images/*', 'static/js/*'],
                     'configure': ['templates/*', 'static/css/*.css',
-                                  'static/images/*', 'static/js/*']
+                                  'static/images/\*.png', 'static/js/*']
                    }
       )
 

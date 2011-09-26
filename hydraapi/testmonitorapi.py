@@ -7,9 +7,9 @@
 from django.core.management import setup_environ
 import optparse
 import sys
-
 import settings
 setup_environ(settings)
+
 from jsonutils import make_json_call
 
 def main(args):

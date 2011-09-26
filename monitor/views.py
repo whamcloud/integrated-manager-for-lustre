@@ -133,58 +133,29 @@ int_to_month = dict(zip(range(1,13), MONTHS))
 month_to_int = dict(zip(MONTHS, range(1,13)))
 
 def get_log_data(display_month, display_day, only_lustre):
-    for_date = "%s %2d " % (int_to_month[display_month], display_day)
+    import datetime
 
-    matched = False
+    if display_month == 0:
+        start_date = datetime.datetime(1970, 1, 1)
+    else:
+        start_date = datetime.datetime(datetime.datetime.now().year,
+                                       display_month, display_day)
     log_data = []
-    for line in open(SYSLOG_PATH):
-        if line == "":
-            break
-        if only_lustre and line.find(" Lustre") < 0:
-            continue
-        if line.startswith(for_date):
-            matched = True
+    log_data = Systemevents.objects.filter(devicereportedtime__gt =
+                                           start_date).order_by('-devicereportedtime')
 
-            if line.find(" LustreError") > -1:
-                typ = "lustre_error"
-            elif line.find(" Lustre") > -1:
-                typ = "lustre"
-            else:
-                typ = "normal"
-            log_data.append((line, typ))
-        else:
-            # We overshot our date, break.
-            if matched:
-                break
+    if only_lustre:
+        log_data = log_data.filter(message__startswith=" Lustre")
 
-    log_data.reverse()
     return log_data
 
 def log_viewer(request):
-    # get the date of the first line
-    try:
-        log_file = open(SYSLOG_PATH)
-    except IOError:
-        return render_to_response('log_viewer.html', RequestContext(request, {
-            "error": "Cannot open '%s'.  Check your syslog configuration, or \
-modify settings.SYSLOG_PATH." % SYSLOG_PATH}))
+    # figure out the day and month of the last entry in the log
+    lines = Systemevents.objects.all()
+    line = Systemevents.objects.all()[lines.count() - 1]
 
-    line = log_file.readline()
-    try:
-        (start_m, start_d, junk) = line.split(None, 2)
-    except ValueError:
-        return render_to_response('log_viewer.html', RequestContext(request, {
-            "error": "File '%s' is empty or malformed." % SYSLOG_PATH}))
-    
-    # and now the last line
-    log_file.seek(-1000, 2)
-    for line in log_file.readlines():
-        last_line = line
-    
-    (end_m, end_d, junk) = last_line.split(None, 2)
-
-    display_month = month_to_int[end_m]
-    display_day = int(end_d)
+    display_month = line.devicereportedtime.month
+    display_day = line.devicereportedtime.day
 
     import datetime
     start_month_choices = [(i, datetime.date(1970, i, 1).strftime('%B')) for i in range(1,13)]
@@ -202,8 +173,9 @@ modify settings.SYSLOG_PATH." % SYSLOG_PATH}))
                                          initial = True,
                                          label = "Only Lustre messages?")
 
-    if request.method == 'POST': # If the form has been submitted...
-        form = LogViewerForm(request.POST) # A form bound to the POST data
+    if request.method == 'GET' and 'start_month' in request.GET:
+        # If the form has been submitted...
+        form = LogViewerForm(request.GET) # A form bound to the POST data
 
         if form.is_valid(): # All validation rules pass
             display_month = int(form.cleaned_data['start_month'])
@@ -216,7 +188,7 @@ modify settings.SYSLOG_PATH." % SYSLOG_PATH}))
 
     else:
         form = LogViewerForm() # An unbound form
-        log_data = get_log_data(display_month, display_day, form.fields['only_lustre'].initial)
+        log_data = get_log_data(0, 0, form.fields['only_lustre'].initial)
 
     return render_to_response('log_viewer.html', RequestContext(request, {
                                                  "log_data": log_data,

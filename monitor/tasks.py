@@ -64,6 +64,12 @@ def discover_hosts():
     from monitor.lib.lustre_audit import LustreAudit
     LustreAudit().discover_hosts()
 
+@periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
+def parse_log_entries():
+    from monitor.lib.systemevents import SystemEventsAudit
+    audit_log.info("parse_log_entries: running")
+    SystemEventsAudit().parse_log_entries()
+
 @task()
 def test_host_contact(host, ssh_monitor):
     import socket
