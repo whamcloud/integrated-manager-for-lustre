@@ -814,6 +814,11 @@ class AlertState(models.Model):
     def duration(self):
         return self.end - self.begin
 
+    def begin_event(self):
+        return None
+    def end_event(self):
+        return None
+
     @classmethod
     def filter_by_item(cls, item):
         if hasattr(item, 'content_type'):
@@ -833,22 +838,30 @@ class AlertState(models.Model):
                 alert_item_id = item_id,
                 alert_item_type__model = item_class.__name__.lower(),
                 alert_item_type__app_label = item_class._meta.app_label)
+
+    @classmethod
+    def filter_by_item_ids(cls, item_class, item_ids):
+        return cls.objects.filter(active = True, 
+                alert_item_id__in = item_ids,
+                alert_item_type__model = item_class.__name__.lower(),
+                alert_item_type__app_label = item_class._meta.app_label)
     
     @classmethod
-    def notify(alert_klass, alert_item, active):
-        alert_item = alert_item.downcast()
+    def notify(alert_klass, alert_item, active, **kwargs):
+        if hasattr(alert_item, 'content_type'):
+            alert_item = alert_item.downcast()
 
         if active:
-            alert_klass.high(alert_item)
+            alert_klass.high(alert_item, **kwargs)
         else:
-            alert_klass.low(alert_item)
+            alert_klass.low(alert_item, **kwargs)
 
     @classmethod
-    def high(alert_klass, alert_item):
+    def high(alert_klass, alert_item, **kwargs):
         import datetime
         now = datetime.datetime.now()
         try:
-            alert_state = alert_klass.filter_by_item(alert_item).get()
+            alert_state = alert_klass.filter_by_item(alert_item).get(**kwargs)
             alert_state.end = now
             alert_state.save()
         except alert_klass.DoesNotExist:
@@ -856,22 +869,27 @@ class AlertState(models.Model):
                     active = True,
                     begin = now,
                     end = now,
-                    alert_item = alert_item)
+                    alert_item = alert_item, **kwargs)
             alert_state.save()
-            alert_state.begin_event().save()
+            be = alert_state.begin_event()
+            if be:
+                be.save()
+            
 
         return alert_state
 
     @classmethod
-    def low(alert_klass, alert_item):
+    def low(alert_klass, alert_item, **kwargs):
         import datetime
         now = datetime.datetime.now()
         try:
-            alert_state = alert_klass.filter_by_item(alert_item).get()
+            alert_state = alert_klass.filter_by_item(alert_item).get(**kwargs)
             alert_state.end = now
             alert_state.active = False
             alert_state.save()
-            alert_state.end_event().save()
+            ee = alert_state.end_event()
+            if ee:
+                ee.save()
         except alert_klass.DoesNotExist:
             alert_state = None
 
