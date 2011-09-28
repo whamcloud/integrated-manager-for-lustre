@@ -597,7 +597,12 @@ def _resource_tree(root_records):
 
 def _handle_resource_form(request):
     from configure.models import StorageResourceClass
-    default_resource = StorageResourceClass.objects.get(class_name = 'LvmHost')
+
+    # Pick the first resource with no parents, and use its class
+    try:
+        default_resource = StorageResourceRecord.objects.filter(parents = None).latest('pk').resource_class
+    except StorageResourceRecord.DoesNotExist:
+        default_resource = StorageResourceRecord.objects.all()[0]
 
     class ResourceForm(forms.Form):
         resource = forms.ModelChoiceField(queryset = StorageResourceClass.objects.all(), required = True, empty_label = None)

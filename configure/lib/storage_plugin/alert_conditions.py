@@ -7,11 +7,12 @@ class AlertCondition(object):
         self._name = name
 
 class AttrValAlertCondition(AlertCondition):
-    def __init__(self, attribute, error_states = [], warn_states = [], info_states = [], *args, **kwargs):
+    def __init__(self, attribute, error_states = [], warn_states = [], info_states = [], message = None, *args, **kwargs):
         self.error_states = error_states
         self.warn_states = warn_states
         self.info_states = info_states
         self.attribute = attribute
+        self.message = message
         super(AttrValAlertCondition, self).__init__(*args, **kwargs)
 
     def test(self, resource):

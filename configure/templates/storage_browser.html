@@ -16,7 +16,7 @@
 
 <form method='get' style='margin-bottom: 3px;'>
     {% csrf_token %}
-    Class: {{ resource_form.resource }}
+    Class: {{ resource_form.resource }} (<a href='{% url configure.views.storage_table %}'>Table view</a> | Tree view)
     <script type='text/javascript'>
         $(document).ready(function() {
             $('#id_resource').change(function(){
@@ -54,7 +54,6 @@
             $('#resource').load(vrr_url);
             window.location.hash = a.attr('vrr_id');
         });
-
 
         /* HACK: timeout to make this happen after tree is actually realized */
         window.setTimeout(function() {

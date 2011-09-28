@@ -6,7 +6,6 @@
     $(document).ready(function() {
             $('#resource_table').dataTable({
                 "bJQueryUI": true,
-                "bProcessing": true,
                 "bPaginate": false,
                 "sAjaxSource": '{% url configure.views.storage_table_json plugin_module resource_class %}'
                 }); 
@@ -25,7 +24,7 @@
 
 <form method='get' style='margin-bottom: 3px;'>
     {% csrf_token %}
-    Class: {{ resource_form.resource }}
+    Class: {{ resource_form.resource }} (Table view | <a href='{% url configure.views.storage_browser %}'>Tree view</a>)
     <script type='text/javascript'>
         $(document).ready(function() {
             $('#id_resource').change(function(){
