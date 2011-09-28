@@ -20,7 +20,7 @@ import simplejson as json
 import logging
 audit_log = logging.getLogger('audit')
 audit_log.setLevel(logging.DEBUG)
-handler = logging.FileHandler(settings.JOB_LOG_PATH)
+handler = logging.FileHandler(settings.AUDIT_LOG_PATH)
 handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
 audit_log.addHandler(handler)
 if settings.DEBUG:
