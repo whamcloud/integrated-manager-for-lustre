@@ -6,6 +6,37 @@ import errno
 import os
 import shlex
 
+LIBDIR = "/var/lib/hydra"
+
+def create_libdir():
+    try:
+        os.makedirs(LIBDIR)
+    except OSError, e:
+        if e.errno == errno.EEXIST:
+            pass
+        else:
+            raise e
+
+def cibadmin(command_args):
+    from time import sleep
+
+    # try at most, 100 times
+    n = 100
+    rc = 10
+
+    while rc == 10 and n > 0:
+        rc, stdout, stderr = shell.run(shlex.split("cibadmin " + command_args))
+        if rc == 0:
+            break
+        sleep(1)
+        n -= 1
+
+    if rc != 0:
+        raise RuntimeError("Error (%s) running 'cibadmin %s': '%s' '%s'" % \
+                           (rc, command_args, stdout, stderr))
+
+    return rc, stdout, stderr
+
 def format_target(args):
     from hydra_agent.cmds import lustre
 
@@ -49,43 +80,48 @@ def unconfigure_ha(args):
     _unconfigure_ha(args.primary, args.label)
 
 def _unconfigure_ha(primary, label):
-    # NB: 'crm configure delete' returns zero if it fails 
-    # because the resource because it's running.  Helpful.
-    # We do an ugly check on the stderr to detect the message
-    # from that case.
     if primary:
-        cmd = ["crm", "configure", "delete", label]
-        rc, stdout, stderr = shell.run(cmd)
-        if rc != 0:
-            if rc == 1 and stderr.find("does not exist") != -1:
-                # Removing something which is already removed is
-                # a success: idempotency.
-                pass
-            else:
-                raise RuntimeError("Error running '%s': %s" % (cmd, stderr))
-        elif stderr.find("is running, can't delete it") != -1:
-            # Messages like: "WARNING: resource flintfs-MDT0000 is running, can't delete it"
-            # FIXME: this conditional may break oWARNING: resource flintfs-MDT0000 is running, can't delete itn non-english
-            # systems or new versions of pacemaker
-            raise RuntimeError("Error unconfiguring %s: it is running" % (label))
+        rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-primary\">'" %  label)
+        rc, stdout, stderr = cibadmin("-D -X '<primitive id=\"%s\">'" %  label)
+    else:
+        rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" %  label)
 
     store_remove_target_info(label)
 
 def configure_ha(args):
     if args.primary:
         # now configure pacemaker for this target
-        # XXX - crm is a python script -- should look into interfacing
-        #       with it directly
-        shell.try_run(shlex.split("crm configure primitive %s ocf:hydra:Target meta target-role=\"stopped\" operations \$id=\"%s-operations\" op monitor interval=\"120\" timeout=\"60\" op start interval=\"0\" timeout=\"300\" op stop interval=\"0\" timeout=\"300\" params target=\"%s\"" % (args.label, args.label, args.label)))
+        from tempfile import mkstemp
+        tmp_f, tmp_name = mkstemp()
+        os.write(tmp_f, "<primitive class=\"ocf\" provider=\"hydra\" type=\"Target\" id=\"%s\">\
+  <meta_attributes id=\"%s-meta_attributes\">\
+    <nvpair name=\"target-role\" id=\"%s-meta_attributes-target-role\" value=\"Stopped\"/>\
+  </meta_attributes>\
+  <operations id=\"%s-operations\">\
+    <op id=\"%s-monitor-120\" interval=\"120\" name=\"monitor\" timeout=\"60\"/>\
+    <op id=\"%s-start-0\" interval=\"0\" name=\"start\" timeout=\"300\"/>\
+    <op id=\"%s-stop-0\" interval=\"0\" name=\"stop\" timeout=\"300\"/>\
+  </operations>\
+  <instance_attributes id=\"%s-instance_attributes\">\
+    <nvpair id=\"%s-instance_attributes-target\" name=\"target\" value=\"%s\"/>\
+  </instance_attributes>\
+</primitive>" % (args.label, args.label, args.label, args.label, args.label,
+            args.label, args.label, args.label, args.label, args.label))
+        os.close(tmp_f)
+
+        rc, stdout, stderr = cibadmin("-o resources -C -x %s" % tmp_name)
         score = 20
         preference = "primary"
     else:
         score = 10
         preference = "secondary"
 
-    shell.try_run(shlex.split("crm configure location %s-%s %s %s: %s" % \
-                        (args.label, preference, args.label, score,
-                         os.uname()[1])))
+    rc, stdout, stderr = cibadmin("-o constraints -C -X '<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>'" % (args.label,
+                                                       preference,
+                                                       os.uname()[1],
+                                                       args.label, score))
+
+    create_libdir()
 
     try:
         os.makedirs(args.mountpoint)
