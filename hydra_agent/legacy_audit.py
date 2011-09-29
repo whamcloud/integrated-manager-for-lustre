@@ -8,33 +8,68 @@ import os
 import sys
 import re
 import glob
-try:
-    # Python >= 2.5
-    import json
-except ImportError:
-    # Python 2.4
-    import simplejson as json
 import subprocess
 from hydra_agent.audit.local import LocalAudit
 
+class Mounts(object):
+    def __init__(self):
+        # NB we must use /proc/mounts instead of `mount` because `mount` sometimes
+        # reports out of date information from /etc/mtab when a lustre service doesn't
+        # tear down properly.
+        self.mounts = []
+        mount_text = open("/proc/mounts").read()
+        for line in mount_text.split("\n"):
+            result = re.search("([^ ]+) ([^ ]+) ([^ ]+) ",line)
+            if not result:
+                continue
+            device,mntpnt,fstype = result.groups()
+
+            self.mounts.append((
+                device,
+                mntpnt,
+                fstype))
+
+    def all(self):
+        return self.mounts
+
+class Fstab(object):
+    def __init__(self):
+        self.fstab = []
+        for line in open("/etc/fstab").readlines():
+            line = line.split('#')[0]
+            try:
+                (device, mntpnt, fstype) = line.split()[0:3]
+                self.fstab.append((device, mntpnt, fstype))
+            except ValueError:
+                # Empty or malformed line
+                pass
+
+    def all(self):
+        return self.fstab
+
+
 class LocalLustreAudit:
+    def __init__(self):
+        self.mounts = Mounts()
+        self.fstab = Fstab()
+
     def normalize_device(self, device):
-        """Try to convert device paths to their /dev/disk/by-path equivalent where possible,
+        """Try to convert device paths to their /dev/disk/by-id equivalent where possible,
            so that the server can use this is the canonical identifier for devices (it has 
            the best chance of being the same between hosts using shared storage"""
 
         # Exceptions where we prefer a symlink to the real node, 
         # to get more human-readable device nodes where possible
-        allowed_paths = ["/dev/disk/by-path", "/dev/mapper"]
+        allowed_paths = ["/dev/disk/by-id", "/dev/mapper"]
         if not hasattr(self, 'device_lookup'):
             self.device_lookup = {}
             for allowed_path in allowed_paths:
-                # Lookup devices to their by-path equivalent if possible
+                # Lookup devices to their by-id equivalent if possible
                 try:
                     for f in os.listdir(allowed_path):
                         self.device_lookup[os.path.realpath(os.path.join(allowed_path, f))] = os.path.join(allowed_path, f)
                 except OSError:
-                    # by-path doesn't exist, don't add anything to device_lookup
+                    # Doesn't exist, don't add anything to device_lookup
                     pass
 
             # Resolve the /dev/root node to its real device
@@ -62,89 +97,6 @@ class LocalLustreAudit:
             return "MGS"
         else:
             return re.search("^\\w+-(\\w\\w\\w)", name).group(1)
-
-    def get_device_nodes(self):
-        mount_devices = set([self.normalize_device(i[0]) for i in self.mounts if os.path.exists(i[0])])
-        fstab_devices = set([self.normalize_device(i[0]) for i in self.fstab if os.path.exists(i[0])])
-        scsi_devices = set([self.normalize_device(path) for path in glob.glob("/dev/disk/by-path/*scsi-*")])
-        fc_devices = set([self.normalize_device(path) for path in glob.glob("/dev/disk/by-path/*fc-*")])
-        lvm_devices = set(glob.glob("/dev/mapper/*")) - set(["/dev/mapper/control"])
-        virtio_devices = set(glob.glob("/dev/vd*"))
-        xen_devices = set(glob.glob("/dev/xvd*"))
-        pv_devices = set()
-        for line in os.popen("pvs --noheadings -o pv_name").readlines():
-            pv_devices.add(line.strip())
-
-        def is_block_device(path):
-            from stat import S_ISBLK
-            s = os.stat(path)
-            return S_ISBLK(s.st_mode)
-
-        def block_device_size(path):
-            try:
-                fd = os.open(path, os.O_RDONLY)
-                try:
-                    # os.SEEK_END = 2 (integer required for python 2.4)
-                    return os.lseek(fd, 0, 2)
-                finally:
-                    os.close(fd)
-            except:
-                return 0
-                
-
-        all_devices = mount_devices | fstab_devices | scsi_devices | fc_devices | lvm_devices | virtio_devices | xen_devices
-        all_devices = set([d for d in all_devices if is_block_device(d)])
-
-        partitions = {}
-        for line in open('/proc/partitions').readlines()[2:]:
-            # Store the number of blocks to identify blocks=1 
-            # partitions (i.e. extended partitions)
-            blocks = int(line.split()[2])
-            dev = self.normalize_device("/dev/" + line.split()[3])
-            partitions[dev] = blocks
-
-        uuids = {}
-        for line in os.popen("blkid %s" % " ".join(all_devices)).readlines():
-            match = re.search("^(.+): .*UUID=\"([^\"]+)\"", line)
-            if match:
-                dev, uuid = match.groups()
-                uuids[self.normalize_device(dev)] = uuid
-
-        result = []
-        for device in all_devices:
-            mounted = device in mount_devices
-            try:
-                uuid = uuids[device]
-            except KeyError:
-                uuid = ""
-
-            try:
-                is_partitioned = (partitions[device + "1"] > 0)
-            except KeyError:
-                is_partitioned = False
-
-            try:
-                extended_partition = (partitions[device] == 1)
-            except KeyError:
-                extended_partition = False
-            used = device in mount_devices or device in fstab_devices or device in pv_devices or extended_partition or is_partitioned
-
-            if device in scsi_devices:
-                kind = 'scsi'
-            elif device in lvm_devices:
-                kind = 'lvm'
-            else:
-                kind = ''
-
-            result.append({
-                'path': device,
-                'kind': kind,
-                'mounted': mounted,
-                'used': used,
-                'fs_uuid': uuid,
-                'size': block_device_size(device)
-                })
-        return result
 
     def get_local_targets(self):
         # List of devices to scan, from /proc and fstab
@@ -208,7 +160,7 @@ class LocalLustreAudit:
                     continue
 
                 mount_point = None
-                for mount_device, mntpnt, fstype in self.mounts:
+                for mount_device, mntpnt, fstype in self.mounts.all():
                     if mount_device == device:
                         mount_point = mntpnt
                     elif self.normalize_device(mount_device) == device:
@@ -228,7 +180,7 @@ class LocalLustreAudit:
         # Get all 'lustre' targets from fstab, and merge info with
         # what we learned from /proc or create fresh entries for 
         # targets not previously known
-        for device, mntpnt, fstype in self.fstab:
+        for device, mntpnt, fstype in self.fstab.all():
             if not fstype == "lustre":
                 continue
 
@@ -317,12 +269,12 @@ class LocalLustreAudit:
             else:
                 return None
 
-        for device, mntpnt, fstype in self.fstab:
+        for device, mntpnt, fstype in self.fstab.all():
             info = client_info(device, mntpnt, fstype)
             if info:
                 client_mounts[mntpnt] = info
 
-        for device, mntpnt, fstype in self.mounts:
+        for device, mntpnt, fstype in self.mounts.all():
             if mntpnt in client_mounts:
                 client_mounts[mntpnt]['mounted'] = True
             else:
@@ -496,35 +448,6 @@ class LocalLustreAudit:
                     lnet_nids.append(tokens[0])
 
         return lnet_loaded, lnet_up, lnet_nids
-
-    def read_mounts(self):
-        # NB we must use /proc/mounts instead of `mount` because `mount` sometimes
-        # reports out of date information from /etc/mtab when a lustre service doesn't
-        # tear down properly.
-        self.mounts = []
-        mount_text = open("/proc/mounts").read()
-        for line in mount_text.split("\n"):
-            result = re.search("([^ ]+) ([^ ]+) ([^ ]+) ",line)
-            if not result:
-                continue
-            device,mntpnt,fstype = result.groups()
-
-            self.mounts.append((
-                device,
-                mntpnt,
-                fstype))
-
-    def read_fstab(self):
-        self.fstab = []
-        for line in open("/etc/fstab").readlines():
-            line = line.split('#')[0]
-            try:
-                (device, mntpnt, fstype) = line.split()[0:3]
-                self.fstab.append((device, mntpnt, fstype))
-            except ValueError:
-                # Empty or malformed line
-                pass
-
     def get_resource_location(self, resource_name):
         try:
             p = subprocess.Popen(['crm_resource', '--locate', '--resource', resource_name], stdout=subprocess.PIPE, stderr = subprocess.PIPE) 
@@ -569,12 +492,8 @@ class LocalLustreAudit:
         return locations
 
     def audit_info(self):
-        self.read_mounts()
-        self.read_fstab()
-
         local_targets = self.get_local_targets()
         mgs_targets, mgs_conf_params = self.get_mgs_targets(local_targets)
-        device_nodes = self.get_device_nodes()
         client_mounts = self.get_client_mounts()
         lnet_loaded, lnet_up, lnet_nids = self.get_lnet_nids()
 
@@ -591,7 +510,6 @@ class LocalLustreAudit:
             "lnet_loaded": lnet_loaded,
             "lnet_up": lnet_up,
             "lnet_nids": lnet_nids,
-            "device_nodes": device_nodes,
             "client_mounts": client_mounts,
             "resource_locations": self.get_resource_locations(),
             "metrics": audit.metrics()}

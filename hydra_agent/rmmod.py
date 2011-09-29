@@ -7,6 +7,9 @@
 import os
 import sys
 
+from hydra_agent.log import agent_log
+from hydra_agent import shell
+
 # Extra deps not expressed in lsmod's list of dependent modules
 extra_deps = {"lquota": set(["lov", "osc", "mgc", "mds", "mdc", "lmv"])}
 
@@ -19,15 +22,12 @@ class Module:
             self.dependents = set(parts[3].split(","))
         except IndexError:
             self.dependents = set([])
-        #if depcount != len(self.dependents): 
-        #    print "Non-module dependencies on %s" % self.name
-        #    sys.exit(-1)
-        
 
-def load_lsmod():
+def _load_lsmod():
     modules = {}
 
-    lines = os.popen("/sbin/lsmod").read().split("\n")[1:-1]
+    stdout = shell.try_run(["/sbin/lsmod"])
+    lines = [i for i in stdout.split("\n")[1:] if len(i) > 0]
     for line in lines:
         m = Module(line.strip())
         modules[m.name] = m
@@ -40,25 +40,28 @@ def load_lsmod():
 
     return modules
 
-def remove_module(name, modules):
+def _remove_module(name, modules):
     try:
         m = modules[name]
     except KeyError:
         # It's not loaded, do nothing.
         return
-    print "Removing %d dependents of %s : %s" % (len(m.dependents), name, m.dependents)
+    agent_log.info("Removing %d dependents of %s : %s" % (len(m.dependents), name, m.dependents))
     while (len(m.dependents) > 0):
-        remove_module(m.dependents.pop(), modules)
+        _remove_module(m.dependents.pop(), modules)
 
-    print "Removing %s" % name
-    rc = os.system("rmmod %s" % name)
-    if rc != 0:
-        raise "Failed to rmmod '%s'" % name
+    agent_log.info("Removing %s" % name)
+    shell.try_run(['rmmod', name])
 
     modules.pop(name)
     for m in modules.values():
         if name in m.dependents:
             m.dependents.remove(name)
 
-modules = load_lsmod()
-remove_module(sys.argv[1], modules)
+def rmmod(module_name):
+    modules = _load_lsmod()
+    _remove_module(module_name, modules)
+
+if __name__ == '__main__':
+    rmmod(sys.argv[1])
+

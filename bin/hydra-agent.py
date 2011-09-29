@@ -6,12 +6,15 @@
 
 from hydra_agent.legacy_audit import LocalLustreAudit
 import hydra_agent.actions as actions
+from hydra_agent.store import store_init
 
 import pickle
 import simplejson as json
 import argparse
 
 if __name__ == '__main__':
+    store_init()
+
     parser = argparse.ArgumentParser(description = 'Hydra Agent.')
     subparsers = parser.add_subparsers()
 
@@ -109,6 +112,22 @@ if __name__ == '__main__':
     parser_unconfigure_rsyslog = subparsers.add_parser('unconfigure-rsyslog',
                                        help='unconfigure rsyslog to forward to another node')
     parser_unconfigure_rsyslog.set_defaults(func=actions.unconfigure_rsyslog)
+
+    p = subparsers.add_parser('device-scan')
+    p.set_defaults(func=actions.device_scan)
+    p = subparsers.add_parser('set-conf-param')
+    p.add_argument('--args', required=True)
+    p.set_defaults(func=actions.set_conf_param)
+    p = subparsers.add_parser('stop-lnet')
+    p.set_defaults(func=actions.stop_lnet)
+    p = subparsers.add_parser('start-lnet')
+    p.set_defaults(func=actions.start_lnet)
+    p = subparsers.add_parser('load-lnet')
+    p.set_defaults(func=actions.load_lnet)
+    p = subparsers.add_parser('unload-lnet')
+    p.set_defaults(func=actions.unload_lnet)
+    p = subparsers.add_parser('clear-targets')
+    p.set_defaults(func=actions.clear_targets)
 
     parser_audit = subparsers.add_parser('audit', help='report lustre status')
     parser_audit.set_defaults(func=actions.audit)

@@ -41,6 +41,5 @@ chkconfig rsyslog on
 %files
 %defattr(-,root,root)
 %{_bindir}/hydra-agent.py*
-%{_bindir}/hydra-rmmod.py*
 %{python_sitelib}/*
 /usr/lib/ocf/resource.d/hydra/Target
