@@ -12,7 +12,17 @@ from monitorapi import (ListFileSystems,
                          GetVolumes,
                          GetClients,
                          GetServers,
-                         AddHost) 
+                         AddHost,
+                         GetFSDiskUsage,
+                         GetFSInodesUsage,
+                         GetServerCPUUsage,
+                         GetServerMemoryUsage,
+                         GetTargetReads,
+                         GetTargetWrites,
+                         GetEventsByFilter,
+                         GetLatestEvents,
+                         GetAlerts,
+                         GetJobs) 
 
 from configureapi import (FormatFileSystem,
                           StopFileSystem,
@@ -31,16 +41,31 @@ class CsrfExemptResource(Resource):
 # django-piston resource mapping.
 list_filesystems = CsrfExemptResource(ListFileSystems)
 get_filesystem = CsrfExemptResource(GetFileSystem)
+list_servers = CsrfExemptResource(GetServers)
+get_clients = CsrfExemptResource(GetClients)
+get_volumes = CsrfExemptResource(GetVolumes)
+
 format_filesystem = CsrfExemptResource(FormatFileSystem)
 stop_filesystem = CsrfExemptResource(StopFileSystem)
 start_filesystem = CsrfExemptResource(StartFileSystem)
-get_volumes = CsrfExemptResource(GetVolumes)
-list_servers = CsrfExemptResource(GetServers)
+
 add_host = CsrfExemptResource(AddHost)
 remove_host = CsrfExemptResource(RemoveHost)
-get_clients = CsrfExemptResource(GetClients)
+
 list_audit = CsrfExemptResource(HydraAudit)
 clear_audit = CsrfExemptResource(HydraAudit)
+
+get_fs_diskusage = CsrfExemptResource(GetFSDiskUsage)
+get_fs_inodeusage = CsrfExemptResource(GetFSInodesUsage)
+get_server_cpuusage = CsrfExemptResource(GetServerCPUUsage)
+get_server_memoryusage = CsrfExemptResource(GetServerMemoryUsage)
+get_target_reads = CsrfExemptResource(GetTargetReads)
+get_target_writes = CsrfExemptResource(GetTargetWrites)
+
+get_events_by_filter = CsrfExemptResource(GetEventsByFilter)
+get_latest_events = CsrfExemptResource(GetLatestEvents)
+get_alerts = CsrfExemptResource(GetAlerts)
+get_jobs = CsrfExemptResource(GetJobs)
 
 # hydra api urls definitions.
 urlpatterns = patterns('',
@@ -59,4 +84,17 @@ urlpatterns = patterns('',
     (r'^formatfilesystem/$',format_filesystem), 
     (r'^stopfilesystem/$',stop_filesystem), 
     (r'^startfilesystem/$',start_filesystem),
+
+    (r'^getfsdiskusage/$',get_fs_diskusage),
+    (r'^getfsinodeusage/$',get_fs_inodeusage),
+    (r'^getservercpuusage/$',get_server_cpuusage),
+    (r'^getservermemoryusage/$',get_server_memoryusage),
+    (r'^gettargetreads/$',get_target_reads),
+    (r'^gettargetwrites/$',get_target_writes),
+
+    (r'^geteventsbyfilter/$',get_events_by_filter),
+    (r'^getlatestevents/$',get_latest_events),
+    (r'^getalerts/$',get_alerts),
+    (r'^getjobs/$',get_jobs),
+
 )

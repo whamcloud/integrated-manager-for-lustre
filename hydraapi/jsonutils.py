@@ -21,6 +21,7 @@ def make_json_call(url, **params):
     # Add any outgoing parameters to the body of the request.
     if params:
         encoded_params = simplejson.dumps(params)
+        print "input_params=>%s" %encoded_params
         request.add_header('Content-Length', str(len(encoded_params)))
         request.add_header('Content-Type', 'application/json')
         request.add_data(encoded_params)
@@ -93,3 +94,4 @@ def construct_json_response(request, success, errors=None, response=None):
     response_dict['errors'] = errors
     response_dict['response'] =  response
     return DjangoTimeJSONEncoder().encode(request, response_dict)
+
