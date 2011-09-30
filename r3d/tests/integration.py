@@ -312,6 +312,7 @@ class PostCreateNewDs(TestCase):
         }
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)
+        #print json.dumps(expected, sort_keys=True, indent=2)
         #print json.dumps(actual, sort_keys=True, indent=2)
         self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
         self.assertEqual(sorted([r.keys() for r in expected.values()]),

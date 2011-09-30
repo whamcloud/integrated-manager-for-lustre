@@ -234,7 +234,7 @@ class Datasource(PoorMansStiModel):
             for rra in self.database.archives.all():
                 debug_print("Associating new DS with rra: %s" % rra.__dict__)
                 rra.create_ds_prep(self)
-                rra.create_ds_cdps(self)
+                rra.create_filler_cdps(self)
 
     # This seems to be necessary to avoid integrity errors on delete.  Grumble.
     def delete(self, *args, **kwargs):
@@ -377,15 +377,13 @@ class Archive(PoorMansStiModel):
     # ephemeral attributes
     steps_since_update = 0
 
-    def create_ds_cdps(self, ds):
-        # Make sure we're not creating duplicate CDP entities!
-        assert len(self.ds_cdps(ds)) == 0
-        for i in range(0, self.rows):
+    def create_filler_cdps(self, ds):
+        # When a DS has been added after the initial inserts, we need to
+        # create "filler" CDPs to make the number of DB rows match the RRA's
+        # current row count. This is ugly, but hopefully shouldn't happen
+        # too often.
+        for i in range(0, self.current_row):
             self.cdps.add(CDP.objects.create(archive=self, datasource=ds))
-
-    def seed_cdps(self):
-        for ds in self.database.datasources.all():
-            self.create_ds_cdps(ds)
 
     def create_ds_prep(self, ds):
         # This will result in a constraint violation if it's a duplicate.
@@ -398,9 +396,7 @@ class Archive(PoorMansStiModel):
 
     def save(self, *args, **kwargs):
         super(Archive, self).save(*args, **kwargs)
-        # On RRA create, we need to precreate the CDPs and CdpPreps.
-        if self.cdps.count() == 0:
-            self.seed_cdps()
+        # On RRA create, we need to precreate the CdpPreps.
         if self.preps.count() == 0:
             self.seed_preps()
 
@@ -419,10 +415,13 @@ class Archive(PoorMansStiModel):
         return self.preps.filter(datasource=ds)[0]
 
     def store_ds_cdp(self, ds, cdp_prep):
-        cdp = self.cdps.filter(datasource=ds)[self.current_row]
-        cdp.value = cdp_prep.primary
-        debug_print("saving %10.2f -> datapoints[%d]" % (cdp.value, self.current_row))
+        # First, create and insert the new CDP for this row.
+        cdp = CDP(archive=self, datasource=ds, value=cdp_prep.primary)
         cdp.save()
+        debug_print("saved %10.2f -> datapoints[%d]" % (cdp.value, self.current_row))
+        # Next, delete the oldest row, if we've hit the max number of rows.
+        if self.current_row == self.rows:
+            self.cdps.filter(datasource=ds)[0].delete()
 
     def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
         raise RuntimeError, "Method not implemented at this level"

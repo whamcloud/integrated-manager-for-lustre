@@ -290,7 +290,12 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step):
 
             debug_print("post fetch %d -- " % i, end=" ")
             for ds in ds_list:
-                results[dp_time][ds.name] = ds_cdps[ds][rra_pointer].value
+                try:
+                    results[dp_time][ds.name] = ds_cdps[ds][rra_pointer].value
+                except IndexError:
+                    # If we didn't find the DB record, then we've hit a
+                    # dead zone in the Archive rows, and we just return NaN.
+                    results[dp_time][ds.name] = DNAN
                 debug_print("%10.2f" % results[dp_time][ds.name], end=" ")
 
         debug_print("")
