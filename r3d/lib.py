@@ -142,14 +142,11 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_cou
         else:
             rra.steps_since_update = 0
 
-        prep_cache = {}
-        for prep in list(rra.preps.all()):
-            ds = [ds for ds in db.ds_cache if ds.id == prep.datasource_id][0]
-            prep_cache[ds] = prep
-
         row_updated = False
         for ds in db.ds_cache:
-            cdp_prep = prep_cache[ds]
+            cdp_prep = [prep for prep in db.prep_cache
+                        if (prep.datasource_id == ds.id
+                            and prep.archive_id == rra.id)][0]
 
             if rra.cdp_per_row > 1:
                 debug_print("%d: updating cdp counters" % rra.id)

@@ -94,9 +94,14 @@ class Database(models.Model):
         update_time, new_values = lib.parse_update_string(update_string)
         interval = float(update_time) - float(self.last_update)
 
+        # Try to preload stuff as much as possible.
+        self.ds_cache = list(self.datasources.order_by('id'))
+        self.rra_cache = list(self.archives.order_by('id'))
+        self.prep_cache = list(CdpPrep.objects.order_by('datasource', 'archive'))
+
         debug_print("vvv--------------------------------------------------vvv")
 
-        if len(new_values) != self.datasources.count():
+        if len(new_values) != len(self.ds_cache):
             raise BadUpdateString, "Update string DS count doesn't match database DS count"
 
         if update_time < self.last_update:
@@ -109,12 +114,6 @@ class Database(models.Model):
                                                   self.step,
                                                   update_time,
                                                   interval)
-
-        # Pass these around to avoid weird caching issues.
-        # FIXME: Is this actually necessary?  Need to revisit this
-        # after we've got things working and hopefully get rid of it.
-        self.ds_cache = list(self.datasources.order_by('id'))
-        self.rra_cache = list(self.archives.order_by('id'))
 
         # Update each DS's internal counters using the new reading.
         for idx in range(0, len(self.ds_cache)):
@@ -142,7 +141,7 @@ class Database(models.Model):
                                      pdp_count)
 
         self.last_update = update_time
-        self.save()
+        self.save(force_update=True)
 
         debug_print("^^^--------------------------------------------------^^^")
 
@@ -395,9 +394,14 @@ class Archive(PoorMansStiModel):
             self.create_ds_prep(ds)
 
     def save(self, *args, **kwargs):
+        new_rra = False
+        if self.id is None:
+            new_rra = True
+
         super(Archive, self).save(*args, **kwargs)
+
         # On RRA create, we need to precreate the CdpPreps.
-        if self.preps.count() == 0:
+        if new_rra:
             self.seed_preps()
 
     # This seems to be necessary to avoid integrity errors on delete.  Grumble.
@@ -417,7 +421,7 @@ class Archive(PoorMansStiModel):
     def store_ds_cdp(self, ds, cdp_prep):
         # First, create and insert the new CDP for this row.
         cdp = CDP(archive=self, datasource=ds, value=cdp_prep.primary)
-        cdp.save()
+        cdp.save(force_insert=True)
         debug_print("saved %10.2f -> datapoints[%d]" % (cdp.value, self.current_row))
         # Next, delete the oldest row, if we've hit the max number of rows.
         if self.current_row == self.rows:
@@ -647,9 +651,9 @@ class CdpPrep(models.Model):
             else:
                 self.value = rra.calculate_cdp_value(self, ds, elapsed_steps)
 
-        self.save()
+        self.save(force_update=True)
 
     def reset(self, ds, elapsed_steps):
         self.primary = ds.pdp_temp
         self.secondary = ds.pdp_temp
-        self.save()
+        self.save(force_udpate=True)
