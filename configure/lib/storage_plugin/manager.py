@@ -7,7 +7,7 @@
 """This module defines StoragePluginManager which loads and provides
 access to StoragePlugins and their StorageResources"""
 
-from configure.lib.storage_plugin.resource import StorageResource, GlobalId, LocalId
+from configure.lib.storage_plugin.resource import StorageResource, GlobalId, ScannableResource
 from configure.lib.storage_plugin.plugin import StoragePlugin
 from configure.lib.storage_plugin.log import storage_plugin_log
 from configure.models import *
@@ -30,10 +30,14 @@ class LoadedPlugin(object):
         self.module = module
         self.plugin_class = plugin_class
         self.plugin_record, created = StoragePluginRecord.objects.get_or_create(module_name = module.__name__)
+        self.scannable_resource_classes = []
 
         import inspect
         for name, cls in inspect.getmembers(module):
             if inspect.isclass(cls) and issubclass(cls, StorageResource) and cls != StorageResource:
+                if issubclass(cls, ScannableResource):
+                    self.scannable_resource_classes.append(name)
+
                 # FIXME: this limits plugin authors to putting everything in the same
                 # module, don't forget to tell them that!  Doesn't mean they can't break
                 # code up between files, but names must all be in the module.
@@ -57,9 +61,14 @@ class ResourceQuery(object):
         self._errored_plugins = set()
         
     def _record_to_resource_parents(self, record):
-        if record.pk in self._pk_to_resource:
+        if isinstance(record, StorageResourceRecord):
+            pk = record.pk
+        else:
+            pk = record
+
+        if pk in self._pk_to_resource:
             storage_plugin_log.debug("Got record %s from cache" % record)
-            return self._pk_to_resource[record.pk]
+            return self._pk_to_resource[pk]
         else:
             resource = self._record_to_resource(record)
             if resource:
@@ -70,6 +79,7 @@ class ResourceQuery(object):
         """'record' may be a StorageResourceRecord or an ID.  Returns a
         StorageResource, or None if the required plugin is unavailable"""
         
+        # Conditional to allow passing in a record or an ID
         if not isinstance(record, StorageResourceRecord):
             if record in self._pk_to_resource:
                 return self._pk_to_resource[record]
@@ -102,7 +112,7 @@ class ResourceQuery(object):
     # which depends on transaction behaviour, as we would commit their transaction
     # halfway through -- maybe use nested_commit_on_success?
     @transaction.commit_on_success()
-    def get_resource(self, vrr_id):
+    def get_resource(self, vrr):
         """Return a StorageResource corresponding to a StorageResourceRecord
         identified by vrr_id.  May raise an exception if the plugin for that
         vrr cannot be loaded for any reason.
@@ -110,7 +120,6 @@ class ResourceQuery(object):
         Note: resource._parents will not be populated, you will only
         get the attributes."""
 
-        vrr = StorageResourceRecord.objects.get(pk = vrr_id)
         return self._record_to_resource(vrr)
 
     @transaction.commit_on_success()
@@ -174,6 +183,13 @@ class StoragePluginManager(object):
         self.loaded_plugins = {}
         self.plugin_sessions = {}
 
+    def get_scannable_resource_ids(self, plugin):
+        loaded_plugin = self.loaded_plugins[plugin]
+        return StorageResourceRecord.objects.\
+               filter(resource_class__storage_plugin = loaded_plugin.plugin_record).\
+               filter(resource_class__class_name__in = loaded_plugin.scannable_resource_classes).\
+               filter(parents = None).values('id')
+
     @transaction.commit_on_success
     def create_root_resource(self, plugin_mod, resource_class_name, **kwargs):
         storage_plugin_log.debug("create_root_resource %s %s %s" % (plugin_mod, resource_class_name, kwargs))
@@ -195,9 +211,9 @@ class StoragePluginManager(object):
 
     def register_plugin(self, plugin_instance):
         """Register a particular instance of a StoragePlugin"""
-        # FIXME: only supporting one instance of a plugin class at a time
+        # FIXME: session ID not really used for anything, it's a vague
+        # nod to the future remote-run plugins.
         session_id = plugin_instance.__class__.__name__
-        assert(not session_id in self.plugin_sessions)
 
         self.plugin_sessions[session_id] = plugin_instance
         storage_plugin_log.info("Registered plugin instance %s with id %s" % (plugin_instance, session_id))
@@ -213,6 +229,8 @@ class StoragePluginManager(object):
         loaded_plugin = self.loaded_plugins[plugin_module]
         return loaded_plugin.resource_classes[resource_class_name].resource_class_id
 
+    def get_plugin_class(self, module):
+        return self.loaded_plugins[module].plugin_class
 
     def load_plugin(self, module):
         """Load a StoragePlugin class from a module given a

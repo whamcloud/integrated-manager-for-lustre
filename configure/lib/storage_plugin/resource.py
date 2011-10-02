@@ -10,7 +10,8 @@ from configure.lib.storage_plugin.attributes import ResourceAttribute
 from configure.lib.storage_plugin.statistics import ResourceStatistic
 from configure.lib.storage_plugin.alert_conditions import AlertCondition
 from configure.lib.storage_plugin.log import storage_plugin_log
-from configure.models import StorageResourceRecord
+
+import threading
 
 class Statistic(object):
     def __init__(self):
@@ -53,14 +54,27 @@ class StorageResource(object):
         self._storage_dict = {}
         self._handle = None
         self._parents = []
-        self._dirty_attributes = set()
-        self._parents_dirty = False
+
+        # Accumulate changes since last call to flush_deltas()
+        self._delta_lock = threading.Lock()
+        self._delta_attrs = {}
+        self._delta_parents = []
 
         for k,v in kwargs.items():
             if not k in self._storage_attributes:
                 raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._storage_attributes.keys()))
             setattr(self, k, v)
 
+
+    def flush_deltas(self):
+        with self._delta_lock:
+            deltas = {'attributes': self._delta_attrs,
+                      'parents': self._delta_parents}
+            self._delta_attrs.clear()
+            self._delta_parents = []
+
+        # Blackhawk down!
+        return deltas
 
     @classmethod
     def get_columns(cls):
@@ -99,6 +113,9 @@ class StorageResource(object):
         if key.startswith("_") or not key in self._storage_attributes:
             object.__setattr__(self, key, value)
         else:
+            # Validate the value
+            self._storage_attributes[key].validate(value)
+
             # First see if the new val is the same as an existing
             # value if there is an existing value, and if so return.
             try:
@@ -108,52 +125,15 @@ class StorageResource(object):
             except KeyError:
                 pass
 
-            # Value is new or changed, set it and mark dirty
             self._storage_dict[key] = value
-            self._dirty_attributes.add(key)
+            with self._delta_lock:
+                self._delta_attrs['key'] = value
 
     def __getattr__(self, key):
         if key.startswith("_") or not key in self._storage_attributes:
             raise AttributeError
         else:
             return self._storage_dict[key]
-
-    def dirty(self):
-        return (len(self._dirty_attributes) > 0) or self._parents_dirty
-
-    def save(self):
-        if not self._handle:
-            raise RuntimeError("Cannot save unregistered resource")
-        if not self.dirty():
-            return
-
-        record = StorageResourceRecord.objects.get(pk = self._handle)
-
-        for attr in self._dirty_attributes:
-            record.update_attributes(self._storage_dict)
-            if self._storage_dict.has_key(attr):
-                record.update_attribute(attr, self._storage_dict[attr])
-            else:
-                record.delete_attribute(attr)
-
-        self._dirty_attributes.clear()
-
-        if self._parents_dirty:
-            existing_parents = record.parents.all()
-
-            new_parent_handles = [r._handle for r in self._parents]
-            for ep in existing_parents:
-                if not ep.pk in new_parent_handles:
-                    record.parents.remove(ep)
-                    # TODO: discover if this now means the parent is an orphan
-
-            existing_parent_handles = [ep.pk for ep in existing_parents]
-            for p in self._parents:
-                if not p._handle in existing_parent_handles:
-                    record.parents.add(StorageResourceRecord.objects.get(pk = p._handle))
-            
-
-        record.save()
 
     @classmethod
     def attrs_to_id_str(cls, attrs):
@@ -186,20 +166,17 @@ class StorageResource(object):
             attributes[k] = attribute_obj.human_readable(v) 
         return attributes
 
-    def get_alerts(self):
-        """NB this is a DB-backed function for use outside the plugins themselves"""
-        assert(self._handle != None)
-        from configure.models import StorageResourceAlert
-        from configure.models import StorageResourceRecord
-        resource_alerts = StorageResourceAlert.filter_by_item_id(
-                StorageResourceRecord, self._handle)
-
-        return list(resource_alerts)
-    
     def add_parent(self, parent_resource):
+        # TODO: lock parents + Delta_parents
         if not parent_resource in self._parents:
             self._parents.append(parent_resource)
-            self._parents_dirty = True
+            self._delta_parents.append(parent_resource)
+
+    def remove_parent(self, parent_resource):
+        # TODO: lock parents + Delta_parents
+        if parent_resource in self._parents:
+            self._parents.remove(parent_resource)
+            self._delta_parents.append(parent_resource)
 
     def validate(self):
         """Call validate() on the ResourceAttribute for all _storage_dict items, and
@@ -239,14 +216,6 @@ class StorageResource(object):
         else:
             return cls.__name__
 
-class LocalId(object):
-    """An Id which is unique within the ancestor resource of type parent_klass"""
-    def __init__(self, parent_klass, *args):
-        args = list(args)
-        assert(len(args) > 0)
-        self.id_fields = args
-        self.parent_klass = parent_klass
-
 class GlobalId(object):
     """An Id which is globally unique"""
     def __init__(self, *args):
@@ -254,3 +223,10 @@ class GlobalId(object):
         assert(len(args) > 0)
         self.id_fields = args
 
+class ScannableId(GlobalId):
+    """An Id which is unique within a scannable resource"""
+    pass
+
+class ScannableResource(object):
+    """Used for marking which StorageResource subclasses are for scanning (like couplets, hosts)"""
+    pass

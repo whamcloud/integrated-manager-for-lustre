@@ -6,7 +6,7 @@
 from celery.decorators import task, periodic_task
 
 from configure.lib.job import StepPaused, StepAborted, StepDirtyError, StepCleanError
-from configure.lib.job import AgentException
+from configure.lib.agent import AgentException
 
 import settings
 from datetime import datetime, timedelta

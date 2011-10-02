@@ -42,13 +42,23 @@ class StorageResourceRecord(models.Model):
     resource_class = models.ForeignKey(StorageResourceClass)
 
     # Representing a configure.lib.storage_plugin.GlobalId or LocalId
-    storage_id_str = models.TextField()
+    # TODO: put some checking for id_strs longer than this field: they
+    # are considered 'unreasonable' and plugin authors should be
+    # conservative in what they use for an ID
+    storage_id_str = models.CharField(max_length = 256)
     storage_id_scope = models.ForeignKey('StorageResourceRecord',
             blank = True, null = True)
+
+    # XXX aargh when the id_scope is nullable a unique_together across it 
+    # doesn't enforce uniqueness for GlobalID resources
 
     # Parent-child relationships between resources
     parents = models.ManyToManyField('StorageResourceRecord',
             related_name = 'resource_parent')
+
+    class Meta:
+        app_label = 'configure'
+        unique_together = ('storage_id_str', 'storage_id_scope', 'resource_class')
 
     def __str__(self):
         return "%s (record %s)" % (self.resource_class.class_name, self.pk)
@@ -137,11 +147,6 @@ class StorageResourceRecord(models.Model):
         resource._handle = self.id
         return resource
 
-    class Meta:
-        # Can't have this constraint because storage_id_str is a blob
-        #unique_together = ('resource_class', 'storage_id_str', 'storage_id_scope')
-        app_label = 'configure'
-
 class StorageResourceAttribute(models.Model):
     """An attribute of a StorageResource instance.
     
@@ -197,8 +202,5 @@ class StorageResourceAlert(AlertState):
             return "%s on attribute '%s'" % (self.alert_class, self.attribute)
         else:
             return "%s" % self.alert_class
-
-    class Meta:
-        app_label = 'configure'
 
 
