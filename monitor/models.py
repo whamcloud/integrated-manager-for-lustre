@@ -833,6 +833,7 @@ class AlertEvent(Event):
 
 class SyslogEvent(Event):
     message_str = models.CharField(max_length = 512)
+    lustre_pid = models.IntegerField(null = True)
 
     @staticmethod
     def type_name():
@@ -840,6 +841,12 @@ class SyslogEvent(Event):
 
     def message(self):
         return self.message_str
+
+class ClientConnectEvent(SyslogEvent):
+
+    @staticmethod
+    def type_name():
+        return "ClientConnect"
 
 class AlertState(models.Model):
     """Records a period of time during which a particular
