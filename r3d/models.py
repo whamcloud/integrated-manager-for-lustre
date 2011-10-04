@@ -317,7 +317,11 @@ class Datasource(PoorMansStiModel):
             self.last_reading = new_reading
 
             # Make sure that we're inside the bounds defined by the DS.
-            rate = self.pdp_new / interval
+            try:
+                rate = self.pdp_new / interval
+            except ZeroDivisionError:
+                rate = DNAN
+
             if (not math.isnan(rate) and
                 ((not math.isnan(self.max_reading) and
                   rate > self.max_reading)) or
