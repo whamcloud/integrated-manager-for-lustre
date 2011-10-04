@@ -107,6 +107,7 @@ class LustreAudit:
             assert(self.host_data.has_key('lnet_loaded'))
             assert(self.host_data.has_key('mgs_targets'))
             assert(self.host_data.has_key('local_targets'))
+            assert(self.host_data.has_key('metrics'))
             # TODO: more thorough validation
             return True
         except AssertionError:
@@ -159,6 +160,9 @@ class LustreAudit:
 
             # Create and get state of Client objects
             self.learn_clients()
+
+            # Store received metrics
+            self.store_metrics()
 
             # We will update StateManager if it is present
             try:
@@ -502,4 +506,38 @@ class LustreAudit:
                 audit_log.info("Learned filesystem '%s'" % fs_name)
                 self.learn_event(fs)
 
+    def store_lustre_target_metrics(self, target_name, metrics):
+        try:
+            target = Target.objects.get(name=target_name,
+                                        targetmount__host=self.host)
+        except Target.DoesNotExist:
+            # Unknown target -- ignore metrics
+            audit_log.warning("Discarding metrics for unknown target: %s" % target_name)
+            return
 
+        target.downcast().metrics.update(metrics)
+
+    def store_lustre_lnet_metrics(self, key, metrics):
+        self.host.downcast().metrics.update({'lnet': metrics})
+
+    def store_node_metrics(self, metrics):
+        self.host.downcast().metrics.update(metrics)
+
+    def store_metrics(self):
+        """
+        Pass the received metrics into the metrics library for storage.
+        """
+        raw_metrics = self.host_data['metrics']['raw']
+
+        if 'lustre' in raw_metrics:
+            for group in raw_metrics['lustre']:
+                store_method = getattr(self,
+                                       "store_lustre_%s_metrics" % group)
+                if group == "lnet":
+                    store_method("lnet", raw_metrics['lustre'][group])
+                else:
+                    for key in raw_metrics['lustre'][group]:
+                        store_method(key, raw_metrics['lustre'][group][key])
+
+        if 'node' in raw_metrics:
+            self.store_node_metrics(raw_metrics['node'])
