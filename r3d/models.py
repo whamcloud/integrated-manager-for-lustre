@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes import generic
 import time, math
 from r3d.exceptions import *
 from r3d import lib
@@ -69,6 +71,12 @@ class Database(models.Model):
     step        = models.BigIntegerField(default=300)
     last_update = models.BigIntegerField(blank=True)
 
+    # Leverage the ContentTypes framework to allow R3D databases to be
+    # optinally associated with other apps' models.
+    content_type    = models.ForeignKey(ContentType, null=True)
+    object_id       = models.PositiveIntegerField(null=True)
+    content_object  = generic.GenericForeignKey('content_type', 'object_id')
+
     def save(self, *args, **kwargs):
         if not self.last_update:
             self.last_update = self.start
@@ -84,20 +92,8 @@ class Database(models.Model):
             rra.delete(*args, **kwargs)
         super(Database, self).delete(*args, **kwargs)
 
-    def update(self, update_string):
-        """
-        Receives an RRD-style update string (update_time:ds_val_0..ds_val_N)
-        and updates the corresponding DSes archives.
-
-        No return value.
-        """
-        update_time, new_values = lib.parse_update_string(update_string)
+    def single_update(self, update_time, new_values):
         interval = float(update_time) - float(self.last_update)
-
-        # Try to preload stuff as much as possible.
-        self.ds_cache = list(self.datasources.order_by('id'))
-        self.rra_cache = list(self.archives.order_by('id'))
-        self.prep_cache = list(CdpPrep.objects.order_by('datasource', 'archive'))
 
         debug_print("vvv--------------------------------------------------vvv")
 
@@ -145,6 +141,55 @@ class Database(models.Model):
 
         debug_print("^^^--------------------------------------------------^^^")
 
+    def load_cached_associations(self):
+        # Try to preload stuff as much as possible.
+        self.ds_cache = list(self.datasources.order_by('id'))
+        self.rra_cache = list(self.archives.order_by('id'))
+        self.prep_cache = list(CdpPrep.objects.order_by('datasource', 'archive'))
+
+    def parse_update_dict(self, update, missing_ds_block=None):
+        new_values = []
+
+        # First, get new readings for all of the DSes we know about.
+        for ds in self.ds_cache:
+            try:
+                new_values.append(update.pop(ds.name))
+            except KeyError:
+                new_values.append(DNAN)
+
+        # If there's anything left over, we'll let the caller create
+        # DS/RRA entries, if it bothered to try.
+        if len(update.keys()) > 0 and missing_ds_block:
+            for key in update.keys():
+                missing_ds_block(self, key)
+                new_values.append(update.pop(key))
+
+            # Reload caches
+            self.load_cached_associations()
+        elif len(update.keys()) > 0:
+            raise ValueError, "Unknown metrics: %s" % update.keys()
+
+        return new_values
+
+    def update(self, updates, missing_ds_block=None):
+        """
+        Receives either:
+        an RRD-style update string (update_time:ds_val_0..ds_val_N)
+        or a dict containing one or more update dicts {time: {ds_name: ds_val, ...}}
+        and updates the corresponding DS PDPs/CDPs.
+
+        No return value.
+        """
+        self.load_cached_associations()
+
+        try:
+            for update in sorted(updates.keys()):
+                new_values = self.parse_update_dict(updates[update],
+                                                     missing_ds_block)
+                self.single_update(update, new_values)
+        except AttributeError:
+            update_time, new_values = lib.parse_update_string(updates)
+            self.single_update(update_time, new_values)
 
     def fetch(self, archive_type, start_time=int(time.time() - 3600),
                                   end_time=int(time.time()),
@@ -656,4 +701,4 @@ class CdpPrep(models.Model):
     def reset(self, ds, elapsed_steps):
         self.primary = ds.pdp_temp
         self.secondary = ds.pdp_temp
-        self.save(force_udpate=True)
+        self.save(force_update=True)
