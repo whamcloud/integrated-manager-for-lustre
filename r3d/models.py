@@ -192,14 +192,14 @@ class Database(models.Model):
         """
         self.load_cached_associations()
 
-        try:
+        if hasattr(updates, "partition"):
+            update_time, new_values = lib.parse_update_string(updates)
+            self.single_update(update_time, new_values)
+        else:
             for update in sorted(updates.keys()):
                 new_values = self.parse_update_dict(updates[update],
                                                      missing_ds_block)
                 self.single_update(update, new_values)
-        except AttributeError:
-            update_time, new_values = lib.parse_update_string(updates)
-            self.single_update(update_time, new_values)
 
     def fetch(self, archive_type, start_time=int(time.time() - 3600),
                                   end_time=int(time.time()),
