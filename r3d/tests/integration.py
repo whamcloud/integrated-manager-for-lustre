@@ -1,4 +1,5 @@
 from django.test import TestCase
+import r3d.models
 from r3d.models import *
 import json
 
@@ -449,7 +450,7 @@ class PostCreateNewDsUpdateDict(TestCase):
         """.split():
             self.rrd.update(upd_str)
 
-        def missing_ds_fn(rrd, ds_name):
+        def missing_ds_fn(rrd, ds_name, ds_value):
             metric_map = {
                 'kbytes_free': Gauge
             }
@@ -468,6 +469,85 @@ class PostCreateNewDsUpdateDict(TestCase):
             920809500: {'kbytes_free': 1979619},
             920809800: {'kbytes_free': 1979618},
         }
+
+        self.rrd.update(updates, missing_ds_fn)
+
+        for upd_str in """
+        920810100:U:1979617 920810400:U:1979616 920810700:U:1979615
+        920811000:U:1979614 920811300:U:1979613 920811600:U:1979612
+        920811900:U:1979611 920812200:U:1979610 920812500:U:1979609
+        920812800:U:1979608 920813100:U:1979607 920813400:U:1979640
+        """.split():
+            self.rrd.update(upd_str)
+
+    def test_database_fetch(self):
+        """
+        Tests that what we get back from fetch() is correct.
+        """
+        self.maxDiff = None
+        self.assertEqual(self.rrd.last_update, 920813400)
+
+        expected = {
+            920806200L: {u'speed': 0.018666666666666699, u'kbytes_free': float("NaN")},
+            920808000L: {u'speed': 0.0233333333333334, u'kbytes_free': float("NaN")},
+            920809800L: {u'speed': 0.0088888888888888993, u'kbytes_free': 1979619.0},
+            920811600L: {u'speed': float("NaN"), u'kbytes_free': 1979614.5},
+            920813400L: {u'speed': float("NaN"), u'kbytes_free': 1979614.16666667},
+            920815200L: {u'speed': float("NaN"), u'kbytes_free': float("NaN")}
+        }
+
+        actual = self.rrd.fetch("Average", 920804400, 920813400)
+        #print json.dumps(expected, sort_keys=True, indent=2)
+        #print json.dumps(actual, sort_keys=True, indent=2)
+        self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
+        self.assertEqual(sorted([r.keys() for r in expected.values()]),
+                         sorted([r.keys() for r in actual.values()]))
+        self.assertEqual(json.dumps(expected), json.dumps(actual))
+
+    def tearDown(self):
+        self.rrd.delete()
+
+class PostCreateNewDsUpdateDictWithOpts(TestCase):
+    """
+    Same thing, but this time supplying the DS options via the update
+    dict and using them in missing_ds_fn.
+    """
+    def setUp(self):
+        self.rrd = Database.objects.create(name="test", start=920804400)
+        self.rrd.datasources.add(Counter.objects.create(name="speed",
+                                                        heartbeat=600,
+                                                        database=self.rrd))
+        self.rrd.archives.add(Average.objects.create(xff=0.5,
+                                                     cdp_per_row=1,
+                                                     rows=24,
+                                                     database=self.rrd))
+        self.rrd.archives.add(Average.objects.create(xff=0.5,
+                                                     cdp_per_row=6,
+                                                     rows=10,
+                                                     database=self.rrd))
+
+        for upd_str in """
+        920804700:12345 920805000:12357 920805300:12363
+        920805600:12363 920805900:12363 920806200:12373
+        920806500:12383 920806800:12393 920807100:12399
+        920807400:12405 920807700:12411 920808000:12415
+        920808300:12420 920808600:12422 920808900:12423
+        """.split():
+            self.rrd.update(upd_str)
+
+        updates = {
+            920809200: {'kbytes_free': {'value': 1979620, 'type': 'Gauge', 'heartbeat': 600}},
+            920809500: {'kbytes_free': {'value': 1979619, 'type': 'Gauge', 'heartbeat': 600}},
+            920809800: {'kbytes_free': {'value': 1979618, 'type': 'Gauge', 'heartbeat': 600}},
+        }
+
+        def missing_ds_fn(rrd, ds_name, ds_value):
+            ds_cls = getattr(r3d.models, ds_value['type'].capitalize())
+
+            ds = ds_cls.objects.create(name=ds_name,
+                                       heartbeat=600,
+                                       database=rrd)
+            rrd.datasources.add(ds)
 
         self.rrd.update(updates, missing_ds_fn)
 

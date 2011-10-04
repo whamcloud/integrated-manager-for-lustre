@@ -153,16 +153,26 @@ class Database(models.Model):
         # First, get new readings for all of the DSes we know about.
         for ds in self.ds_cache:
             try:
-                new_values.append(update.pop(ds.name))
+                ds_update = update.pop(ds.name)
+                # handle either style of update dict
+                try:
+                    new_values.append(ds_update['value'])
+                except TypeError:
+                    new_values.append(ds_update)
             except KeyError:
+                # no news is still news
                 new_values.append(DNAN)
 
-        # If there's anything left over, we'll let the caller create
+        # Now, if there's anything left over, we'll let the caller create
         # DS/RRA entries, if it bothered to try.
         if len(update.keys()) > 0 and missing_ds_block:
             for key in update.keys():
-                missing_ds_block(self, key)
-                new_values.append(update.pop(key))
+                missing_ds_block(self, key, update[key])
+                ds_update = update.pop(key)
+                try:
+                    new_values.append(ds_update['value'])
+                except TypeError:
+                    new_values.append(ds_update)
 
             # Reload caches
             self.load_cached_associations()
