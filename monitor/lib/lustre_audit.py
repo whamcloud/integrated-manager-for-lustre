@@ -387,7 +387,7 @@ class LustreAudit:
                 try:
                     target = ManagementTarget.get_by_host(self.host)
                 except ManagementTarget.DoesNotExist:
-                    audit_log.error("No Managementtarget for host %s, but it reports an MGS target" % selfhost)
+                    audit_log.error("No Managementtarget for host %s, but it reports an MGS target" % self.host)
                     continue
                 mountable = target.targetmount_set.get(
                         host = self.host,
@@ -446,7 +446,7 @@ class LustreAudit:
         # TODO: get rid of confusing situation of having ManagedTarget.active_mount for configured systems, but relying on 
         # TargetMount Alerts for unconfigured systems (because they may well not have the corosync stuff we check here, and
         # even if they do, we can't expect that their resources are named the way we name them (HYD-231)
-        if self.host_data['resource_locations'] and configure_enable and ManagedTargetMount.objects.filter(host = self.host).count() > 0:
+        if configure_enable and self.host_data['resource_locations'] and ManagedTargetMount.objects.filter(host = self.host).count() > 0:
             # There are hydra-configured mounts on this host, and we got some corosync resource information
             for target_name, node_name in self.host_data['resource_locations'].items():
                 try:
@@ -471,12 +471,14 @@ class LustreAudit:
                         audit_log.warning("Resource location node '%s' does not match any Host" % (node_name))
                         active_mount = None
 
-                if active_mount != target.active_mount:
-                    target.active_mount = active_mount
-                    target.save()
+                # If we're operating on a Managed* rather than a purely monitored target
+                if hasattr(target, 'active_mount'):
+                    if active_mount != target.active_mount:
+                        target.active_mount = active_mount
+                        target.save()
 
-                state = ['unmounted', 'mounted'][active_mount != None]
-                StateManager.notify_state(target, state, ['mounted', 'unmounted'])
+                    state = ['unmounted', 'mounted'][active_mount != None]
+                    StateManager.notify_state(target, state, ['mounted', 'unmounted'])
 
     def learn_clients(self):
         for mount_point, client_info in self.host_data['client_mounts'].items():
