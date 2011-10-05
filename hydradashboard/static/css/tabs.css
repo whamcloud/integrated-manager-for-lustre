@@ -1,5 +1,5 @@
-body { background:none !important }
-         
+<!--body { background:none !important }-->
+       
 .legendClass
 {
 	font-size: 14px;
@@ -14,7 +14,8 @@ body { background:none !important }
   border:1px solid black;
   color:white;
   font-size:90%;
-  text-align:right;
+  text-align:left;
+  font-family:Verdana, Arial, Helvetica, sans-serif;
 }
          
 #leftnav li a {
