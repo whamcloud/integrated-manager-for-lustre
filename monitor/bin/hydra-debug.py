@@ -30,7 +30,11 @@ def screen(string):
 
 
 import cmd
-from texttable import Texttable
+try:
+    from texttable import Texttable
+except ImportError:
+    print "[Warning, texttable not installed, some commands won't work]"
+    Texttable = None
 
 class HydraDebug(cmd.Cmd, object):
     def __init__(self):
