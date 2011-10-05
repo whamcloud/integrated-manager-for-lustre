@@ -29,49 +29,66 @@ def main(args):
         option_parser.print_help()
         exit(-1)
     base_url = options.url.rstrip('/')
-    # Test 1 : 
-    api_url = base_url + '/api/listfilesystems'
+    # Unit Test 1 : 
+    api_url = base_url + '/api/listfilesystems/'
     print 'api_url: %s' % api_url
     result  = make_json_call(api_url,
                              )
-    print '\n result:'
+    print '\nresult:'
     print result
     print '\n\n'
-    # Test 2 :
+    
+    # Unit Test 2 :
     api_url = base_url + '/api/getfilesystem/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.fsname,
                              )
-    print '\n result:'
+    print '\nresult:'
     print result
     print '\n\n'
-    # Test 3 :
+    
+    # Unit Test 3 :
     api_url = base_url + '/api/getvolumes/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.fsname,
                              )
-    print '\n result:'
+    print '\nresult:'
     print result
     print '\n\n'
-    # Test 4 :
+    
+    # Unit  Test 4 :
     api_url = base_url + '/api/listservers/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                             )
-    print '\n result:'
+    print '\nresult:'
     print result
     print '\n\n'
-    # Test 5 :
+    
+    # Unit  Test 5 :
     api_url = base_url + '/api/getclients/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.fsname,
                              )
-    print '\n result:'
+    print '\nresult:'
     print result
     print '\n\n'
+
+
+    # Unit Test 6 :
+    api_url = base_url + '/api/getdevices/'
+    print 'api_url: %s' % api_url
+    result = make_json_call(api_url,
+                             hostid='',
+                             )
+    print '\nresult:'
+    print result
+    print '\n\n'
+
     return 0
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
+

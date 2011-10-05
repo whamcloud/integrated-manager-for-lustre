@@ -158,7 +158,8 @@ INSTALLED_APPS = (
     'monitor',
     'configure',
     'hydraapi',
-    'hydradashboard'
+    'hydradashboard',
+    'hydracm'
     ) + [('debug_toolbar',), ()][debug_toolbar==None] \
       + [('django_extensions',), ()][django_extensions==None]
 
