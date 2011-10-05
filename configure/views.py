@@ -628,7 +628,7 @@ def _handle_resource_form(request):
 
 def storage_browser(request):
     from configure.models import StorageResourceClass
-    if StorageResourceClass.objects.count() == 0:
+    if StorageResourceRecord.objects.count() == 0:
         return render_to_response('storage_browser_disabled.html', RequestContext(request))
 
     resource_form, storage_resource_class = _handle_resource_form(request)
