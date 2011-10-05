@@ -4,13 +4,17 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import sys
+import os
+bin_dir = os.path.abspath(os.path.dirname(sys.modules['__main__'].__file__))
+project_dir = "/" + os.path.join(*(bin_dir.split(os.sep)[0:-2]))
+sys.path.append(project_dir)
+
 from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
 from monitor.models import *
-
-import sys
 
 from logging import getLogger, FileHandler, INFO, StreamHandler
 file_log_name = __name__
