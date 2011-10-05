@@ -181,6 +181,6 @@ if __name__ == '__main__':
     except Exception, e:
         daemon_log.error("Exception in main loop, terminating")
         daemon_log.error(e)
-        sys.exit(-1)
+        os._exit(-1)
 
 
