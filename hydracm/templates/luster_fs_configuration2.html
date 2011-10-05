@@ -1,0 +1,327 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Hydra Configuration</title>
+<link href="{{STATIC_URL}}css/cm-default.css" rel="stylesheet" type="text/css" />
+
+       <link rel="stylesheet" href="{{STATIC_URL}}css/Base.css" type="text/css" />
+        <link href="{{STATIC_URL}}css/BreadCrumb.css" rel="stylesheet" type="text/css" />
+        <link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
+        <link href="{{STATIC_URL}}css/jquery-ui-1.8.9.custom.css" rel="stylesheet" type="text/css" />
+        
+        <script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
+        <script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
+		<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
+        <script type="text/javascript" src="{{STATIC_URL}}js/tab_config_js.js"></script>
+        <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
+        <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>      
+         <script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
+        <script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
+        <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
+        <script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js" ></script>		
+        
+         <link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
+         <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
+<script language="javascript">
+	$(document).ready(function() {
+		loadMgtData(); 
+		loadMDTData(); 
+		loadOSTData(); 
+		loadExistingMGTData(); 
+		loadNewMGTData(); 
+		loadNewMDTData();
+		loadNewOSTData();
+		
+		var oTable = $('#example').dataTable( {
+			"bProcessing": true,
+			"bFilter": false,
+			"bPaginate": false
+		} );
+		
+		var oMgt = $('#mdt').dataTable( {
+			"bProcessing": true,
+			"bFilter": false,
+			"bPaginate": false
+		} );
+		
+		var oOst = $('#ost').dataTable( {
+			"bProcessing": true,
+		} );
+		
+		var oMgt = $('#popup-existing-mgt').dataTable( {
+			"bProcessing": true,
+			"bFilter": false,
+			"bPaginate": false
+		} );
+		
+		var oNewMgt = $('#popup-new-mgt').dataTable( {
+			"bProcessing": true,
+			"bFilter": false,
+			"bPaginate": false
+		} );
+		
+		var oNewMgt = $('#popup-new-mdt').dataTable( {
+			"bProcessing": true,
+			"bFilter": false,
+			"bPaginate": false
+		} );
+		
+		var oNewOst = $('#popup-new-ost').dataTable( {
+			"bProcessing": true,
+			"bFilter": false,
+			"bPaginate": false
+		} );
+	} );
+	</script>
+<style type="text/css">
+<!--
+a:link {
+	color: #003366;
+}
+-->
+</style></head>
+<body>
+<table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px;">
+  <tr>
+    <td width="30%" height="56" align="left" valign="top"><table width="77%" border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <td width="26%" height="56" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
+        <td width="27%" align="left" valign="top"><form id="form1" name="form1" method="post" action="">
+          <label>
+          <input type="text" name="textfield" id="textfield" style="width:100px;" />
+          </label>
+                </form></td>
+        <td width="37%" align="left" valign="top"><span id="launch_instance_btn"><span class="first-child">
+          <button type="button" id="launch_instance_btn-button">Configuration</button></span></span></td>
+      </tr>
+    </table></td>
+    <td width="70%" align="left" valign="top">
+    <fieldset>
+    <legend class="legendClass">Lustre FS Summary <a href="#"><img src="{{STATIC_URL}}images/close.png" class="closebutton"></a> | 
+                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;</legend>
+    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <td colspan="2" align="left" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:11px;">
+          <tr>
+            <td width="63%" align="left" valign="top">Total Capacity</td>
+            <td width="37%" align="left" valign="top">150 TB</td>
+          </tr>
+          <tr>
+            <td align="left" valign="top">Inodes</td>
+            <td align="left" valign="top">293874</td>
+          </tr>
+          <tr>
+            <td align="left" valign="top">Total No of OSS</td>
+            <td align="left" valign="top">5</td>
+          </tr>
+          <tr>
+            <td align="left" valign="top">Total No of OST</td>
+            <td align="left" valign="top">15</td>
+          </tr>
+        </table></td>
+        <td width="38%"><div class="magni"><a href="#"><img src="{{STATIC_URL}}images/mag.png"></a></div> <div style="clear:right;"></div><div id="capacity" class="round-table"></div></td>
+        <td width="38%"><div class="magni"><a href="#"><img src="{{STATIC_URL}}images/mag.png"></a></div> <div style="clear:right;"><div id="inodes" class="round-table"></div></td>
+      </tr>
+    </table>
+    </fieldset>    </td>
+  </tr>
+  <tr>
+    <td height="152" colspan="2" align="left" valign="top">
+    <fieldset>
+    <legend class="legendClass">Select MGT Configuration</legend>
+   <div class="buttonspacer"> <span id="launch_instance_btn"><span class="first-child"><button type="button" id="btnExistingMGT">Select From Existing MGT</button></span></span>
+    <span id="launch_instance_btn"><span class="first-child"><button type="button" id="btnNewMGT">Create new MGT</button></span></span></div>
+    <table cellpadding="0" cellspacing="0" border="0" class="display" id="example" width="100%">
+    <thead>
+ 		<tr>
+ 			<th width="15%">Target Path</th>
+			<th width="12%">Target Name</th>
+			<th width="7%">Kind</th>
+			<th width="7%">Server Name</th>
+			<th width="7%">Failover</th>
+            <th width="5%">Status</th>
+            <th width="13%">Action</th>
+		</tr>
+	</thead>
+    <tbody id="example_content"></tbody>
+	</table>
+	<div class="spacer"></div>
+    </fieldset>    </td>
+  </tr>
+  <tr>
+    <td height="109" colspan="2" align="left" valign="top"> 
+    <fieldset>
+    <legend class="legendClass">Select MDT Configuration</legend>
+    <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child"><button type="button" id="btnNewMDT">Create new MDT</button></span></span></div>
+    <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
+    <thead>
+ 		<tr>
+ 			<th width="13%">Target Path</th>
+			<th width="10%">Target Name</th>
+			<th width="7%">Kind</th>
+			<th width="12%">Server Name</th>
+			<th width="7%">Failover</th>
+            <th width="5%">Status</th>
+            <th width="13%">Action</th>
+		</tr>
+	</thead>
+    <tbody id="mdt_content">
+    </tbody>
+	</table>
+	<div class="spacer"></div>
+    </fieldset></td>
+  </tr>
+  <tr>
+    <td height="64" colspan="2" align="left" valign="top">
+    <fieldset>
+    <legend class="legendClass">Select OST Configuration</legend>
+    <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child"><button type="button" id="btnNewOST">Create new OST</button></span></span></div>
+    <table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
+    <thead>
+ 		<tr>
+ 			<th width="16%">Target Path</th>
+			<th width="10%">Target Name</th>
+			<th width="5%">Kind</th>
+			<th width="7%">Server Name</th>
+			<th width="7%">Failover</th>
+            <th width="7%">Status</th>
+            <th width="12%">Action</th>
+		</tr>
+	</thead>
+    <tbody id="ost_content"></tbody>
+	</table>
+	<div class="spacer"></div>
+    </fieldset>
+    </td>
+  </tr>
+</table>
+<div id="configParam" title="Configuration Parameters">
+<form id="form1" name="form1" method="post" action="">
+  <table width="75%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="center" valign="middle" class="fontStyle">Property</td>
+      <td align="center" class="fontStyle">Value</td>
+    </tr>
+    <tr>
+      <td width="59%" height="27" align="right" valign="middle" class="fntsize">lite.max_cachd_mb: </td>
+      <td width="41%"><label>
+        <input type="text" name="textfield" id="textfield" />
+      </label></td>
+    </tr>
+    <tr>
+      <td height="26" align="right" valign="middle" class="fntsize">lite.max_cached_mb:</td>
+      <td><input type="text" name="textfield2" id="textfield2" /></td>
+    </tr>
+    <tr>
+      <td height="25" align="right" valign="middle" class="fntsize">lite.max_read_ahead_mb:</td>
+      <td><input type="text" name="textfield3" id="textfield3" /></td>
+    </tr>
+    <tr>
+      <td height="27" align="right" valign="middle" class="fntsize">lite.max_cached_whole_mb:</td>
+      <td><input type="text" name="textfield4" id="textfield4" /></td>
+    </tr>
+    <tr>
+      <td height="28" align="right" valign="middle" class="fntsize">lite.max_statahead_max:</td>
+      <td><input type="text" name="textfield5" id="textfield5" /></td>
+    </tr>
+    <tr>
+      <td height="28" align="right" valign="middle" class="fntsize">sys.at_early_margin:</td>
+      <td><input type="text" name="textfield6" id="textfield6" /></td>
+    </tr>
+    <tr>
+      <td height="28" align="right" valign="middle" class="fntsize">sys.at_extra:</td>
+      <td><input type="text" name="textfield7" id="textfield7" /></td>
+    </tr>
+    <tr>
+      <td height="26" align="right" valign="middle" class="fntsize">sys.at_history:</td>
+      <td><input type="text" name="textfield8" id="textfield8" /></td>
+    </tr>
+    <tr>
+      <td height="27" align="right" valign="middle" class="fntsize">sys.at_max:</td>
+      <td><input type="text" name="textfield9" id="textfield9" /></td>
+    </tr>
+    <tr>
+      <td height="26" align="right" valign="middle" class="fntsize">sys.at_min:</td>
+      <td><input type="text" name="textfield10" id="textfield10" /></td>
+    </tr>
+    <tr>
+      <td height="28" align="right" valign="middle" class="fntsize">sys.ldlm_timeout:</td>
+      <td><input type="text" name="textfield11" id="textfield11" /></td>
+    </tr>
+    <tr>
+      <td align="right" valign="middle" class="fntsize">sys.timeout:</td>
+      <td><input type="text" name="textfield12" id="textfield12" /></td>
+    </tr>
+  </table>
+</form>
+</div>
+
+<!-- exsting mgt popup -->
+<div id="existingMGT" title="Select Target">
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-existing-mgt" width="100%">
+    <thead>
+ 		<tr>
+ 			<th width="16%">Select</th>
+			<th width="17%">Target Path</th>
+			<th width="16%">Server Name</th>
+			<th width="17%">Failover</th>
+			<th width="16%">Status</th>
+            <th width="17%">Capacity</th>
+		</tr>
+	</thead>
+    <tbody id="popup-existing-mgt_content"></tbody>
+</table>
+</div>
+
+<!-- new mgt popup -->
+<div id="newMGT" title="Select Target">
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-mgt" width="100%">
+    <thead>
+ 		<tr>
+ 			<th width="16%">Select</th>
+			<th width="17%">Target Path</th>
+			<th width="16%">Server Name</th>
+			<th width="17%">Failover</th>
+			<th width="16%">Status</th>
+            <th width="17%">Capacity</th>
+		</tr>
+	</thead>
+    <tbody id="popup-new-mgt_content"></tbody>
+</table>
+</div>
+
+<!-- new mdt popup -->
+<div id="newMDT" title="Select Target">
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-mdt" width="100%">
+    <thead>
+ 		<tr>
+ 			<th width='16%'>Select</th>
+			<th width='17%'>Target Path</th>
+			<th width='16%'>Server Name</th>
+			<th width='17%'>Failover</th>
+			<th width='16%'>Status</th>
+            <th width='17%'>Capacity</th>
+		</tr>
+	</thead>
+    <tbody id="popup-new-mdt_content"></tbody>
+</table>
+</div>
+
+<!-- new ost popup -->
+<div id="newOST" title="Select Target">
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
+   <thead>
+ 		<tr>
+ 			<th width="16%">Select</th>
+			<th width="17%">Target Path</th>
+			<th width="16%">Server Name</th>
+			<th width="17%">Failover</th>
+			<th width="16%">Status</th>
+            <th width="17%">Capacity</th>
+		</tr>
+	</thead>
+    <tbody id="popup-new-ost_content"></tbody>
+</table>
+</div>
+</body>
+</html>
