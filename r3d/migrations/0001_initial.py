@@ -1,3 +1,6 @@
+## Copyright 2011 Whamcloud, Inc.
+## Authors: Michael MacDonald <mjmac@whamcloud.com>
+
 # encoding: utf-8
 import datetime
 from south.db import db

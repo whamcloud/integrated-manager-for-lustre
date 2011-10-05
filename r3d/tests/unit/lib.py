@@ -1,3 +1,6 @@
+## Copyright 2011 Whamcloud, Inc.
+## Authors: Michael MacDonald <mjmac@whamcloud.com>
+
 import time, unittest
 import fudge
 from r3d.exceptions import *

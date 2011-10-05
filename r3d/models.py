@@ -1,3 +1,6 @@
+## Copyright 2011 Whamcloud, Inc.
+## Authors: Michael MacDonald <mjmac@whamcloud.com>
+
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic

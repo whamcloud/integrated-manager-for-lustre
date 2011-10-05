@@ -1,3 +1,6 @@
+## Copyright 2011 Whamcloud, Inc.
+## Authors: Michael MacDonald <mjmac@whamcloud.com>
+
 from r3d.models import *
 from django.contrib import admin
 
