@@ -8,26 +8,31 @@ from piston.resource import Resource
 
 # Hydra server imports
 from monitorapi import (ListFileSystems,
-                         GetFileSystem,
-                         GetVolumes,
-                         GetClients,
-                         GetServers,
-                         AddHost,
-                         GetFSDiskUsage,
-                         GetFSInodesUsage,
-                         GetServerCPUUsage,
-                         GetServerMemoryUsage,
-                         GetTargetReads,
-                         GetTargetWrites,
-                         GetEventsByFilter,
-                         GetLatestEvents,
-                         GetAlerts,
-                         GetJobs) 
+                        GetFileSystem,
+                        GetVolumes,
+                        GetClients,
+                        GetServers,
+                        AddHost,
+                        GetFSDiskUsage,
+                        GetFSInodesUsage,
+                        GetServerCPUUsage,
+                        GetServerMemoryUsage,
+                        GetTargetReads,
+                        GetTargetWrites,
+                        GetEventsByFilter,
+                        GetLatestEvents,
+                        GetAlerts,
+                        GetJobs)
 
 from configureapi import (FormatFileSystem,
                           StopFileSystem,
                           StartFileSystem,
-                          RemoveHost)
+                          RemoveHost,
+                          GetAvailableDevices,
+                          CreateFilesystem,
+                          CreateMGS,
+                          CreateOSS,
+                          CreateMDS)
 
 from audit import HydraAudit
 
@@ -48,7 +53,10 @@ get_volumes = CsrfExemptResource(GetVolumes)
 format_filesystem = CsrfExemptResource(FormatFileSystem)
 stop_filesystem = CsrfExemptResource(StopFileSystem)
 start_filesystem = CsrfExemptResource(StartFileSystem)
-
+create_filesystem = CsrfExemptResource(CreateFilesystem)
+create_mgs = CsrfExemptResource(CreateMGS)
+create_oss = CsrfExemptResource(CreateOSS)
+create_mds = CsrfExemptResource(CreateMDS)
 add_host = CsrfExemptResource(AddHost)
 remove_host = CsrfExemptResource(RemoveHost)
 
@@ -67,6 +75,8 @@ get_latest_events = CsrfExemptResource(GetLatestEvents)
 get_alerts = CsrfExemptResource(GetAlerts)
 get_jobs = CsrfExemptResource(GetJobs)
 
+get_available_devices = CsrfExemptResource(GetAvailableDevices)
+
 # hydra api urls definitions.
 urlpatterns = patterns('',
     (r'^listfilesystems/$', list_filesystems),
@@ -84,7 +94,11 @@ urlpatterns = patterns('',
     (r'^formatfilesystem/$',format_filesystem), 
     (r'^stopfilesystem/$',stop_filesystem), 
     (r'^startfilesystem/$',start_filesystem),
-
+    (r'^createfs/$',create_filesystem),
+    (r'^createmgt/$',create_mgs),
+    (r'^createost/$',create_oss),
+    (r'^createmdt/$',create_mds),
+    
     (r'^getfsdiskusage/$',get_fs_diskusage),
     (r'^getfsinodeusage/$',get_fs_inodeusage),
     (r'^getservercpuusage/$',get_server_cpuusage),
@@ -96,5 +110,6 @@ urlpatterns = patterns('',
     (r'^getlatestevents/$',get_latest_events),
     (r'^getalerts/$',get_alerts),
     (r'^getjobs/$',get_jobs),
-
+    
+    (r'^getdevices/$',get_available_devices),
 )

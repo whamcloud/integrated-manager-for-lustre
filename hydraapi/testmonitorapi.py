@@ -78,6 +78,16 @@ def main(args):
     print '\n\n'
 
 
+    # Unit Test 6 :
+    api_url = base_url + '/api/getdevices/'
+    print 'api_url: %s' % api_url
+    result = make_json_call(api_url,
+                             hostid='',
+                             )
+    print '\nresult:'
+    print result
+    print '\n\n'
+
     return 0
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

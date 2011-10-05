@@ -100,7 +100,8 @@ class GetVolumes(AnonymousRequestHandler):
                                {
                                 'id' : filesystem.id,
                                 'name': filesystem.name,
-                                #'kind': filesystem.role(),
+                                'targetpath': '', 
+                                'kind': 'FS', #filesystem.role(),
                                 'status' : filesystem.status_string()
                                 }
                                )
@@ -112,6 +113,7 @@ class GetVolumes(AnonymousRequestHandler):
                             {
                                 'id' : filesystem.mgs.id,
                                 'name': filesystem.mgs.name,
+                                'targetpath' : '',
                                 'kind': filesystem.mgs.role(),
                                 'status' : filesystem.mgs.status_string()
                             }
@@ -124,6 +126,7 @@ class GetVolumes(AnonymousRequestHandler):
                             {
                                 'id' : mdt.id,
                                 'name': mdt.name,
+                                'targetpath': '',
                                 'kind': mdt.role(),
                                 'status' : mdt.status_string()
                             }
@@ -136,6 +139,7 @@ class GetVolumes(AnonymousRequestHandler):
                                 {
                                  'id' : ost.id,
                                  'name': ost.name,
+                                 'targetpath': '',
                                  'kind': ost.role(),
                                  'status' : ost.status_string()
                                 }  
@@ -191,6 +195,7 @@ class GetServers (AnonymousRequestHandler):
                     { 
                      'id' : host.id,
                      'host_address' : host.address,
+                     'failnode':'',
                      'kind' : host.role() ,
                      'lnet_status' : host.status_string()
                     }
@@ -230,8 +235,8 @@ class GetFSDiskUsage(AnonymousRequestHandler):
         AnonymousRequestHandler.__init__(self,self.get_fs_diskusage)
 
     @classmethod
-    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime',time_interval='interval',data_function='datafunction')
-    def get_fs_diskusage(self,request,filesystem_name,start_time,end_time,time_interval,data_function):
+    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime' ,data_function='datafunction')
+    def get_fs_diskusage(self,request,filesystem_name,start_time,end_time ,data_function):
         from random import uniform
         try:
             if filesystem_name :
@@ -240,7 +245,7 @@ class GetFSDiskUsage(AnonymousRequestHandler):
                          'timestamp' : '1316847600',
                          'filesystem' : filesystem_name,
                          'kbytesfree' : uniform(0,4940388537.9860001),
-                         'kbytestotal': uniform(0,4940834834.4740801),
+                         'kbytestotal': '4940834834.4740801',
                         }
                        ]
             else :
@@ -249,12 +254,12 @@ class GetFSDiskUsage(AnonymousRequestHandler):
                          'timestamp' : '1316847600',
                          'filesystem' : filesystem.name,
                          'kbytesfree' : uniform(0,4940388537.9860001),
-                         'kbytestotal': uniform(0,4940834834.4740801),
+                         'kbytestotal': '4940834834.4740801',
                         }
                         for filesystem in Filesystem.objects.all() 
                 ]      
         except:
-            raise  Exception('POST call API_Exception:get_fs_diskusage(filesystem_name,start_time,end_time,time_interval,data_function) => Failed to get data for inputs filesystem=%s|starttime=%s|endtime%s|interval=%s|datafunction=%s' %filesystem_name %start_time %end_time %time_interval %data_function)
+            raise  Exception('POST call API_Exception:get_fs_diskusage(filesystem_name,start_time,end_time ,data_function) => Failed to get data for inputs filesystem=%s|starttime=%s|endtime%s |datafunction=%s' %filesystem_name %start_time %end_time   %data_function)
 
 #TODO:
 #     This chart data API call is a place holder for r3d layer interface data fetch
@@ -267,8 +272,8 @@ class GetFSInodesUsage(AnonymousRequestHandler):
         AnonymousRequestHandler.__init__(self,self.get_fs_indoesusage)
 
     @classmethod
-    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime',time_interval='interval',data_function='datafunction')
-    def get_fs_indoesusage(self,request,filesystem_name,start_time,end_time,time_interval,data_function):
+    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime' ,data_function='datafunction')
+    def get_fs_indoesusage(self,request,filesystem_name,start_time,end_time ,data_function):
         from random import randrange
         try:
             if filesystem_name :
@@ -277,7 +282,7 @@ class GetFSInodesUsage(AnonymousRequestHandler):
                          'timestamp' : '1316847600',
                          'filesystem' : filesystem_name,
                          'filesfree' : randrange(0,4940388537,3),
-                         'filestotal': randrange(0,4940834834,3),
+                         'filestotal': '4940834834',
                         }
                        ]
             else :
@@ -286,12 +291,12 @@ class GetFSInodesUsage(AnonymousRequestHandler):
                          'timestamp' : '1316847600',
                          'filesystem' : filesystem.name,
                          'filesfree' : randrange(0,4940388537,3),
-                         'filestotal': randrange(0,4940834834,3),
+                         'filestotal': '4940834834',
                         }
                         for filesystem in Filesystem.objects.all()
                 ]
         except:
-            raise  Exception('POST call API_Exception:get_fs_inodesusage(filesystem_name,start_time,end_time,time_interval,data_function) => Failed to get data for inputs filesystem=%s|starttime=%s|endtime%s|interval=%s|datafunction=%s' %filesystem_name %start_time %end_time %time_interval %data_function)
+            raise  Exception('POST call API_Exception:get_fs_inodesusage(filesystem_name,start_time,end_time ,data_function) => Failed to get data for inputs filesystem=%s|starttime=%s|endtime%s |datafunction=%s' %filesystem_name %start_time %end_time   %data_function)
 
 #TODO:
 #     This chart data API call is a place holder for r3d layer interface data fetch
@@ -304,8 +309,8 @@ class GetServerCPUUsage(AnonymousRequestHandler):
         AnonymousRequestHandler.__init__(self,self.get_server_cpuusage)
 
     @classmethod
-    @extract_request_args(host_name='hostname',start_time='starttime',end_time='endtime',time_interval='interval',data_function='datafunction')
-    def get_server_cpuusage(self,request,host_name,start_time,end_time,time_interval,data_function):
+    @extract_request_args(host_name='hostname',start_time='starttime',end_time='endtime' ,data_function='datafunction')
+    def get_server_cpuusage(self,request,host_name,start_time,end_time ,data_function):
         try:
             from  random import randrange
             data_slice = [] 
@@ -332,7 +337,7 @@ class GetServerCPUUsage(AnonymousRequestHandler):
                                          )
                 return data_slice                       
         except:
-            raise Exception('POST call API_Exception:get_server_cpuusage(host_name,start_time,end_time,time_interval,data_function) => Failed to get data for inputs hostname=%s|starttime=%s|endtime%s|interval=%s|datafunction=%s' %host_name %start_time %end_time %time_interval %data_function)
+            raise Exception('POST call API_Exception:get_server_cpuusage(host_name,start_time,end_time ,data_function) => Failed to get data for inputs hostname=%s|starttime=%s|endtime%s |datafunction=%s' %host_name %start_time %end_time   %data_function)
 
 #TODO:
 #     This chart data API call is a place holder for r3d layer interface data fetch
@@ -345,8 +350,8 @@ class GetServerMemoryUsage(AnonymousRequestHandler):
         AnonymousRequestHandler.__init__(self,self.get_server_memoryusage)
 
     @classmethod
-    @extract_request_args(host_name='hostname',start_time='starttime',end_time='endtime',time_interval='interval',data_function='datafunction')
-    def get_server_memoryusage(self,request,host_name,start_time,end_time,time_interval,data_function):
+    @extract_request_args(host_name='hostname',start_time='starttime',end_time='endtime' ,data_function='datafunction')
+    def get_server_memoryusage(self,request,host_name,start_time,end_time ,data_function):
         try:
             from  random import randrange
             data_slice = []
@@ -373,7 +378,7 @@ class GetServerMemoryUsage(AnonymousRequestHandler):
                                          )
                 return data_slice
         except:
-            raise  Exception('POST call API_Exception:get_server_memoryusage(host_name,start_time,end_time,time_interval,data_function) => Failed to get data for inputs hostname=%s|starttime=%s|endtime%s|interval=%s|datafunction=%s' %host_name %start_time %end_time %time_interval %data_function)
+            raise  Exception('POST call API_Exception:get_server_memoryusage(host_name,start_time,end_time ,data_function) => Failed to get data for inputs hostname=%s|starttime=%s|endtime%s |datafunction=%s' %host_name %start_time %end_time   %data_function)
 
 #TODO:
 #     This chart data API call is a place holder for r3d layer interface data fetch
@@ -386,8 +391,8 @@ class GetTargetReads(AnonymousRequestHandler):
         AnonymousRequestHandler.__init__(self,self.get_target_reads)
 
     @classmethod
-    @extract_request_args(target_name='targetname',start_time='starttime',end_time='endtime',time_interval='interval',data_function='datafunction')
-    def get_target_reads(self,request,target_name,start_time,end_time,time_interval,data_function):
+    @extract_request_args(target_name='targetname',start_time='starttime',end_time='endtime' ,data_function='datafunction')
+    def get_target_reads(self,request,target_name,start_time,end_time ,data_function):
         try:
             from random import randrange
             data_slice = []
@@ -420,7 +425,7 @@ class GetTargetReads(AnonymousRequestHandler):
                         mdt = MetadataTarget.objects.get(filesystem = fs)
                         volume_list.append(
                                            {
-                                            'timestamp' : '1316847600',
+                                            'timestamp' : slice,
                                             'targetname' : mdt.name,
                                             'reads' : randrange(1024,16384,3),
                                            }
@@ -433,7 +438,7 @@ class GetTargetReads(AnonymousRequestHandler):
                             for slice in current_slice:  
                                 data_slice.append(
                                                   {
-                                                   'timestamp' : '1316847600',
+                                                   'timestamp' :slice,
                                                    'targetname' : ost.name,
                                                    'reads' : randrange(1024,16384,3),
                                                   }
@@ -442,7 +447,7 @@ class GetTargetReads(AnonymousRequestHandler):
                         pass 
                     return data_slice
         except:
-            raise  Exception('POST call API_Exception:get_target_reads(target_name,start_time,end_time,time_interval,data_function) => Failed to get data for inputs targetname=%s|starttime=%s|endtime%s|interval=%s|datafunction=%s' %target_name %start_time %end_time %time_interval %data_function)
+            raise  Exception('POST call API_Exception:get_target_reads(target_name,start_time,end_time ,data_function) => Failed to get data for inputs targetname=%s|starttime=%s|endtime%s |datafunction=%s' %target_name %start_time %end_time   %data_function)
 
 #TODO:
 #     This chart data API call is a place holder for r3d layer interface data fetch
@@ -455,8 +460,8 @@ class GetTargetWrites(AnonymousRequestHandler):
         AnonymousRequestHandler.__init__(self,self.get_target_writes)
 
     @classmethod
-    @extract_request_args(target_name='targetname',start_time='starttime',end_time='endtime',time_interval='interval',data_function='datafunction')
-    def get_target_writes(self,request,target_name,start_time,end_time,time_interval,data_function):
+    @extract_request_args(target_name='targetname',start_time='starttime',end_time='endtime' ,data_function='datafunction')
+    def get_target_writes(self,request,target_name,start_time,end_time ,data_function):
         try:
             from random import randrange
             data_slice = []
@@ -489,7 +494,7 @@ class GetTargetWrites(AnonymousRequestHandler):
                         mdt = MetadataTarget.objects.get(filesystem = fs)
                         volume_list.append(
                                            {
-                                            'timestamp' : '1316847600',
+                                            'timestamp' : slice,
                                             'targetname' : mdt.name,
                                             'writes' : randrange(1024,16384,3),
                                            }
@@ -502,7 +507,7 @@ class GetTargetWrites(AnonymousRequestHandler):
                             for slice in current_slice:
                                 data_slice.append(
                                                   {
-                                                   'timestamp' : '1316847600',
+                                                   'timestamp' : slice,
                                                    'targetname' : ost.name,
                                                    'writes' : randrange(1024,16384,3),
                                                   }
@@ -511,7 +516,7 @@ class GetTargetWrites(AnonymousRequestHandler):
                         pass
                     return data_slice
         except:
-            raise Exception('POST call API_Exception:get_target_writes(target_name,start_time,end_time,time_interval,data_function) => Failed to get data for inputs targetname=%s|starttime=%s|endtime%s|interval=%s|datafunction=%s' %target_name %start_time %end_time %time_interval %data_function)
+            raise Exception('POST call API_Exception:get_target_writes(target_name,start_time,end_time ,data_function) => Failed to get data for inputs targetname=%s|starttime=%s|endtime%s |datafunction=%s' %target_name %start_time %end_time   %data_function)
 
 
 class GetEventsByFilter(AnonymousRequestHandler):
@@ -535,7 +540,7 @@ class GetEventsByFilter(AnonymousRequestHandler):
                     {
                      'event_created_at': event.created_at,
                      'event_host': event.host.pretty_name(),
-                     'event_severity':'',
+                     'event_severity':str(event.severity_class()),
                      'event_message': event.message(), 
                     }
                     for event in event_set
@@ -556,7 +561,7 @@ class GetLatestEvents(AnonymousRequestHandler):
                     {
                      'event_created_at': event.created_at,
                      'event_host': event.host.pretty_name(),
-                     'event_severity':'', # Still need to figure out wheather to pass enum or display string
+                     'event_severity':str(event.severity_class()), # Still need to figure out wheather to pass enum or display string
                      'event_message': event.message(),
                     }
                     for event in Event.objects.all().order_by('-created_at')
@@ -580,7 +585,7 @@ class GetAlerts(AnonymousRequestHandler):
                         {
                          'alert_created_at': alert.begin,
                          'alert_created_at_short': alert.begin,
-                         'alert_severity':'', # Still need to figure out wheather to pass enum or display string.
+                         'alert_severity':'alert', # Still need to figure out wheather to pass enum or display string.
                          'alert_item': str(alert.alert_item), 
                          'alert_message': alert.message(),
                         }
@@ -591,7 +596,7 @@ class GetAlerts(AnonymousRequestHandler):
                         {
                          'alert_created_at': alert.begin,
                          'alert_created_at_short': alert.begin,
-                         'alert_severity':'', # Still need to figure out wheather to pass enum or display string.
+                         'alert_severity':'alert', # Still need to figure out wheather to pass enum or display string.
                          'alert_item': str(alert.alert_item),
                          'alert_message': alert.message(),
                         }
@@ -632,7 +637,7 @@ class GetJobs(AnonymousRequestHandler):
             raise Exception('GET call API_Exception:get_jobs () => unable to retrive alerts')
 
 
-def gettimeslice(sample_size=50,interval=5):
+def gettimeslice(sample_size=10,interval=5):
     from datetime import timedelta,datetime
     current_time = datetime.now()
     data_slice = []

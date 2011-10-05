@@ -165,3 +165,249 @@ class RemoveClient(AnonymousRequestHandler):
         except:
             raise Exception('POST call API_Exception:remove_client(client_id) => Failed to remove the client with clientid=%s' % client_id)
 
+class GetAvailableDevices(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.get_available_devices)
+
+    @classmethod
+    @extract_request_args(host_id='hostid')
+    def get_available_devices(self,request,host_id):
+        try:
+            from monitor.models import Host
+            devices_list = []
+            if host_id:
+                host = Host.objects.get(id = host_id)
+                return self.get_available_devices_per_host(host)  
+            else:
+                for host in Host.objects.all():
+                    devices_list.extend(self.get_available_devices_per_host(host))
+                return devices_list 
+        except:
+            raise Exception('POST call API_Exception: =>get_available_devices => Failed to get the available devices')
+    @classmethod
+    def get_available_devices_per_host(self,host):
+        try:
+            devices_list = []
+            for node in  host.available_lun_nodes():
+                    devices_list.append(
+                                        {
+                                         'host': host.address,
+                                         'failover': {'failoverid':'','failoverhost':''}, 
+                                         'deviceid': node.id,
+                                         'devicepath': node.pretty_string(),
+                                         'devicecapacity': '',
+                                         'devicestatus': '',
+                                         }
+                                        )
+            return devices_list
+        except:
+            raise Exception('sub call API_Exception:__get_available_devices(host) => Failed to get the available devices')
+
+
+class CreateFilesystem(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.create_filesystem)
+
+    @classmethod
+    @extract_request_args(mgs_name='mgs',filesystem_name='fsname')
+    def create_filesystem(self,request,mgs_name,filesystem_name):
+        try:
+            from configure.models import ManagedFilesystem
+            fs = ManagedFilesystem(mgs=mgs_name,name = filesystem_name)
+            fs.save()
+        except:
+            raise Exception('POST call API_Exception:create_filesystem(mgs_name,filesystem_name) => Failed to create filesystem with mgs=%s fsname=%s' % mgs_name %filesystem_name)
+
+class CreateMGS(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.create_mgs)
+
+    @classmethod
+    @extract_request_args(host_id='hostid',node_id='nodeid',failover_id='failoverid')
+    def create_mgs(self,request,host_id,node_id,failover_id):
+        try:
+            from monitor.models import Host
+            from monitor.models import LunNode
+            from configure.models import ManagedMgs 
+            from django.db import transaction
+            #host = Host.objects.get(id=host_id) 
+            node = LunNode.objects.get(id=node_id)
+            failover_host = Host.objects.get(id=failover_id)
+            target = ManagedMgs(name='MGS')
+            target.save()
+            mounts = self._create_target_mounts(node,target,failover_host)
+            # Commit before spawning celery tasks
+            transaction.commit()
+            self._set_target_states([target], mounts)
+        except:
+            raise Exception('POST call API_Exception: =>create_mgs(hostid,nodeid,failoverid) Failed to create MGS using hostid=%s nodeid=%s failoverid=%s' %host_id %node_id %failover_id)
+
+    @classmethod
+    def _create_target_mounts(self,node, target, failover_host = None):
+        try:
+            from configure.models import ManagedTargetMount
+            primary = ManagedTargetMount(
+                block_device = node,
+                target = target,
+                host = node.host,
+                mount_point = target.default_mount_path(node.host),
+                primary = True)
+            primary.save()
+            if failover_host:
+                failover = ManagedTargetMount(
+                    block_device = None,
+                    target = target,
+                    host = failover_host,
+                    mount_point = target.default_mount_path(failover_host),
+                    primary = False)
+                failover.save()
+                return [primary, failover]
+
+        except:
+            raise Exception('sub call API Exception=> _create_target_mounts(node,target,failover_host) failed to save created MGS')
+
+    @classmethod
+    def _set_target_states(self,targets, mounts):
+        try:
+            from configure.lib.state_manager import StateManager
+            for target in targets:
+                StateManager.set_state(target, 'mounted')
+            for target in targets:
+                StateManager.set_state(target, 'unmounted')
+            for target in targets:
+                StateManager.set_state(target, 'formatted')
+        except:
+            raise Exception('sub call API Exception=>_set_target_states(targets,mounts) Failed to set states for created MGS')
+
+class CreateOSS(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.create_oss)
+
+    @classmethod
+    @extract_request_args(host_id='hostid',node_id='nodeid',failover_id='failoverid',filesystem_id='filesystemid')
+    def create_oss(self,request,host_id,node_id,failover_id,filesystem_id):
+        try:
+            from monitor.models import Host
+            from monitor.models import LunNode
+            from configure.models import ManagedOst
+            from django.db import transaction
+            #host = Host.objects.get(id=host_id)
+            filesystem = ManagedFilesystem.objects.get(id=filesystem_id)
+            node = LunNode.objects.get(id=node_id)
+            failover_host = Host.objects.get(id=failover_id)
+            target = ManagedOst(filesystem = filesystem)
+            target.save()
+            mounts = self._create_target_mounts(node,target,failover_host)
+            # Commit before spawning celery tasks
+            transaction.commit()
+            self._set_target_states([target], mounts)
+        except:
+            raise Exception('POST call API_Exception: =>create_oss(hostid,nodeid,failoverid,filesystemid) Failed to create OSS using hostid=%s nodeid=%s failoverid=%s filesystemid=%' %host_id %node_id %failover_id %filesystem_id)
+
+    @classmethod
+    def _create_target_mounts(self,node, target, failover_host = None):
+        try:
+            from configure.models import ManagedTargetMount
+            primary = ManagedTargetMount(
+                block_device = node,
+                target = target,
+                host = node.host,
+                mount_point = target.default_mount_path(node.host),
+                primary = True)
+            primary.save()
+            if failover_host:
+                failover = ManagedTargetMount(
+                    block_device = None,
+                    target = target,
+                    host = failover_host,
+                    mount_point = target.default_mount_path(failover_host),
+                    primary = False)
+                failover.save()
+                return [primary, failover]
+            else:
+                return [primary]
+        except:
+            raise Exception('sub call API Exception=> _create_target_mounts(node,target,failover_host) failed to save created OSS')
+
+    @classmethod
+    def _set_target_states(self,targets, mounts):
+        try:
+            from configure.lib.state_manager import StateManager
+            for target in targets:
+                StateManager.set_state(target, 'mounted')
+            for target in targets:
+                StateManager.set_state(target, 'unmounted')
+            for target in targets:
+                StateManager.set_state(target, 'formatted')
+        except:
+            raise Exception('sub call API Exception=>_set_target_states(targets,mounts) Failed to set states for created OSS')
+
+
+class CreateMDS(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.create_mds)
+
+    @classmethod
+    @extract_request_args(host_id='hostid',node_id='nodeid',failover_id='failoverid',filesystem_id='filesystemid')
+    def create_mds(self,request,host_id,node_id,failover_id,filesystem_id):
+        try:
+            from monitor.models import Host
+            from monitor.models import LunNode
+            from configure.models import ManagedMdt
+            from django.db import transaction
+            #host = Host.objects.get(id=host_id)
+            filesystem = ManagedFilesystem.objects.get(id=filesystem_id)
+            node = LunNode.objects.get(id=node_id)
+            failover_host = Host.objects.get(id=failover_id)
+            target = ManagedMdt(filesystem = filesystem)
+            target.save()
+            mounts = self._create_target_mounts(node,target,failover_host)
+            # Commit before spawning celery tasks
+            transaction.commit()
+            self._set_target_states([target], mounts)
+        except:
+            raise Exception('POST call API_Exception: =>create_oss(hostid,nodeid,failoverid,filesystemid) Failed to create MDS using hostid=%s nodeid=%s failoverid=%s filesystemid=%' %host_id %node_id %failover_id %filesystem_id)
+
+    @classmethod
+    def _create_target_mounts(self,node, target, failover_host = None):
+        try:
+            from configure.models import ManagedTargetMount
+            primary = ManagedTargetMount(
+                block_device = node,
+                target = target,
+                host = node.host,
+                mount_point = target.default_mount_path(node.host),
+                primary = True)
+            primary.save()
+            if failover_host:
+                failover = ManagedTargetMount(
+                    block_device = None,
+                    target = target,
+                    host = failover_host,
+                    mount_point = target.default_mount_path(failover_host),
+                    primary = False)
+                failover.save()
+                return [primary, failover]
+            else:
+                return [primary]
+        except:
+            raise Exception('sub call API Exception=> _create_target_mounts(node,target,failover_host) failed to save created MDS')
+
+    @classmethod
+    def _set_target_states(self,targets, mounts):
+        try:
+            from configure.lib.state_manager import StateManager
+            for target in targets:
+                StateManager.set_state(target, 'mounted')
+            for target in targets:
+                StateManager.set_state(target, 'unmounted')
+            for target in targets:
+                StateManager.set_state(target, 'formatted')
+        except:
+            raise Exception('sub call API Exception=>_set_target_states(targets,mounts) Failed to set states for created MDS')
+

@@ -31,8 +31,6 @@ def main(args):
                              help="start time slice for which chart data is to be retrieved")
     option_parser.add_option('--endtime', dest='end_time',
                              help="end time slice for chart data is to be retrieved")
-    option_parser.add_option('--interval', dest='time_interval',
-                             help="record time collection interval for which chart data is to be retrieved")
     option_parser.add_option('--datafunction', dest='data_function',
                              help="data function could be AVERAGE/MIN/MAX/ALL for which chart data is to be retrieved")
 
@@ -52,7 +50,6 @@ def main(args):
                              filesystem=options.filesystem_name,
                              starttime=options.start_time,
                              endtime=options.end_time,
-                             interval=options.time_interval,
                              datafunction=options.data_function,  
                              )
     print '\n result:'
@@ -66,7 +63,6 @@ def main(args):
                              filesystem=options.filesystem_name,
                              starttime=options.start_time,
                              endtime=options.end_time,
-                             interval=options.time_interval,
                              datafunction=options.data_function,
                              )
     print '\n result:'
@@ -80,7 +76,6 @@ def main(args):
                              hostname=options.host_name,
                              starttime=options.start_time,
                              endtime=options.end_time,
-                             interval=options.time_interval,
                              datafunction=options.data_function,
                              )
     print '\n result:'
@@ -94,7 +89,6 @@ def main(args):
                              hostname=options.host_name,
                              starttime=options.start_time,
                              endtime=options.end_time,
-                             interval=options.time_interval,
                              datafunction=options.data_function,
                              )
     print '\n result:'
@@ -108,7 +102,6 @@ def main(args):
                              targetname=options.target_name,
                              starttime=options.start_time,
                              endtime=options.end_time,
-                             interval=options.time_interval,
                              datafunction=options.data_function,
                              )
     print '\n result:'
@@ -122,7 +115,6 @@ def main(args):
                              targetname=options.target_name,
                              starttime=options.start_time,
                              endtime=options.end_time,
-                             interval=options.time_interval,
                              datafunction=options.data_function,
                              )
     print '\n result:'
