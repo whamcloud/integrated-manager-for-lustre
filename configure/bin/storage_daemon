@@ -70,7 +70,7 @@ class PluginSession(threading.Thread):
                     # If we've already retried recently, then start backing off.
                     retry_delay *= 2
 
-                daemon_log.warning("Exception in scan loop for resource %d, waiting %ss before restart" % (self.root_resource_id, retry_delay))
+                daemon_log.warning("Exception in scan loop for resource %s, waiting %ss before restart" % (self.root_resource_id, retry_delay))
                 import sys
                 import traceback
                 exc_info = sys.exc_info()
@@ -124,7 +124,8 @@ class StorageDaemon(object):
         """Return the PK of all StorageResourceRecords for 'plugin' which have no parents"""
         from configure.lib.storage_plugin import storage_plugin_manager
         # We will be polling, to need to commit to see new data
-        with transaction.commit_on_success():
+        with transaction.commit_manually():
+            transaction.commit()
             records = storage_plugin_manager.get_scannable_resource_ids(plugin)
         for r in records:
             yield r['id']
@@ -146,12 +147,12 @@ class StorageDaemon(object):
             for plugin,sessions in self.plugins.items():
                 for rrid in self.root_resource_ids(plugin):
                     if not rrid in sessions:
-                        daemon_log.info("StorageDaemon: new session for resource %d" % id)
+                        daemon_log.info("StorageDaemon: new session for resource %s" % rrid)
                         s = PluginSession(rrid)
                         sessions[rrid] = s
                         s.start()
         
-                daemon_log.info("StorageDaemon: leaving main loop")
+        daemon_log.info("StorageDaemon: leaving main loop")
 
         self._stop_sessions()
 
