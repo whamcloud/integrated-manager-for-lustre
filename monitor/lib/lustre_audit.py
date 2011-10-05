@@ -52,34 +52,6 @@ class LustreAudit:
         self.target_locations = None
         self.audited_mountables = {}
     
-    def discover_hosts(self):
-        import os
-        for host_name in os.popen("cerebro-stat -m cluster_nodes").readlines():
-            if host_name.find('=') != -1:
-                # Cerebro 1.12 puts a "MODULE DIR =" line at the start of 
-                # cerebro-stat's output: skip lines like that
-                continue
-
-            host_name = host_name.rstrip()
-
-            # Use 'configure' application if it's available
-            try:
-                from configure.models import ManagedHost
-                host, created = ManagedHost.objects.get_or_create(address = host_name)
-            except ImportError:
-                host, created = Host.objects.get_or_create(address = host_name)
-
-            if created:
-                audit_log.info("Discovered host %s from cerebro" % host_name)
-                from logging import INFO
-                LearnEvent(severity = INFO, host = host, learned_item = host).save()
-
-            try:
-                sm = host.monitor
-            except Monitor.DoesNotExist:
-                sm = SshMonitor(host = host)
-                sm.save()
-
     def is_primary(self, local_target_info):
         local_nids = set([n.nid_string for n in self.host.nid_set.all()])
 
