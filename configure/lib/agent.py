@@ -106,7 +106,7 @@ class Agent(object):
             try:
                 data = json.loads(out)
             except ValueError:
-                raise RuntimeError()
+                raise RuntimeError("Malformed JSON from agent on host %s" % host)
 
             try:
                 if data['success']:

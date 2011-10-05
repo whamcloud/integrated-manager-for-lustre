@@ -243,13 +243,17 @@ CELERY_ACKS_LATE = True
 
 # Development defaults for log output
 if DEBUG:
+    LOG_PATH = ""
     JOB_LOG_PATH = "job.log"
     AUDIT_LOG_PATH = "audit.log"
     API_LOG_PATH = "hydraapi.log"
 else:
+    LOG_PATH = "/var/log/hydra"
     JOB_LOG_PATH = "/var/log/hydra/job.log"
     AUDIT_LOG_PATH = "/var/log/hydra/audit.log"
     API_LOG_PATH = "/var/log/hydra/hydraapi.log" 
+
+INSTALLED_STORAGE_PLUGINS = ["linux"]
 
 try:
     from production_version import VERSION
@@ -263,4 +267,5 @@ except NameError:
         from local_settings import *
     except ImportError:
         pass
+
 

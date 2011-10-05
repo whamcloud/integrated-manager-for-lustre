@@ -10,7 +10,14 @@
 
 <h3>{{resource.human_class}} alerts</h3>
 <ul>
-{% for a in resource.get_alerts %}
+{% for a in alerts %}
+<li>{{a.message}}</li>
+{% endfor %}
+</ul>
+
+<h3>{{resource.human_class}} propagated alerts</h3>
+<ul>
+{% for a in propagated_alerts %}
 <li>{{a.message}}</li>
 {% endfor %}
 </ul>

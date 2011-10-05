@@ -135,7 +135,6 @@ class LustreAudit:
             assert(self.host_data.has_key('lnet_loaded'))
             assert(self.host_data.has_key('mgs_targets'))
             assert(self.host_data.has_key('local_targets'))
-            assert(self.host_data.has_key('device_nodes'))
             # TODO: more thorough validation
             return True
         except AssertionError:
@@ -176,9 +175,6 @@ class LustreAudit:
 
             # Update the Nids associated with each Host
             self.learn_nids()
-
-            # Update device nodes known on this Host
-            self.learn_device_nodes()
 
             # Create Filesystem and Target objects
             self.learn_mgs_info()
@@ -236,57 +232,6 @@ class LustreAudit:
             delete_nids = old_host_nids - new_host_nids
             self.host.nid_set.filter(nid_string = delete_nids).delete()
 
-    def learn_device_nodes(self):
-        for node_info in self.host_data['device_nodes']:
-            try:
-                existing_node = LunNode.objects.get(path = node_info['path'], host = self.host)
-                if existing_node.used_hint != node_info['used']:
-                    existing_node.used_hint = node_info['used']
-                    existing_node.save()
-
-                if len(node_info['fs_uuid']) > 0:
-                    if existing_node.lun and existing_node.lun.fs_uuid != node_info['fs_uuid']:
-                        existing_node.lun.fs_uuid = node_info['fs_uuid']
-                        existing_node.save()
-                    elif not existing_node.lun:
-                        # FIXME: http://stackoverflow.com/questions/2235318/how-do-i-deal-with-this-race-condition-in-django
-                        # We may erroneously try to create the same Lun UUID concurrently from two hosts
-
-                        #FIXME: this competes with creating Lun objects by fs_uuid post-formatting in configure.lib.job.MkfsStep: maybe we should only do Lun creation here for SCSI IDs?
-                        lun, created = Lun.objects.get_or_create(fs_uuid = node_info['fs_uuid'])
-                        existing_node.lun = lun
-                        existing_node.save()
-                        audit_log.info("Associated lun %s with node %s" % (lun, existing_node))
-
-            except LunNode.DoesNotExist:
-                if len(node_info['fs_uuid']) > 0:
-                    lun, created = Lun.objects.get_or_create(fs_uuid = node_info['fs_uuid'])
-                    if created:
-                        audit_log.info("Discovered Lun %s" % (lun))
-                else:
-                    # Create LunNodes with no Lun when there is no unique ID for the Lun available
-                    lun = None
-                node = LunNode(
-                        lun = lun,
-                        host = self.host,
-                        path = node_info['path'],
-                        size = node_info['size'],
-                        used_hint = node_info['used'])
-                node.save()
-                audit_log.info("Discovered node %s (lun %s, size %d)" % (node, lun, node_info['size']))
-
-        for tm in TargetMount.objects.filter(host = self.host, primary = False, block_device = None):
-            lun = tm.target.targetmount_set.get(primary = True).block_device.lun
-            if not lun:
-                continue
-            try:
-                node = LunNode.objects.get(lun = lun, host = self.host)
-                tm.block_device = node
-                tm.save()
-                audit_log.info("Associated failover target mount %s:%s with node %s" % (tm.host, tm, node))
-            except LunNode.DoesNotExist:
-                pass
-
     def learn_mgs(self, mgs_local_info):
         try:
             mgs = ManagementTarget.objects.get(targetmount__host = self.host)
@@ -295,13 +240,6 @@ class LustreAudit:
                 lunnode = LunNode.objects.get(path = mgs_local_info['device'], host = self.host)
             except LunNode.DoesNotExist:
                 audit_log.warning("No LunNode for MGS device path '%s'" % mgs_local_info['device'])
-                return None
-
-            if not lunnode.lun:
-                # In this case we cannot be sure of correctly correlating this device
-                # with any existing ManagementTarget object, so have to fail out.
-                # But it should never happen if learn_device_nodes is succeeding.
-                audit_log.error("A LunNode with an MGS on it does not have a Lun set (lunnode %d, %s on %s)" % (lunnode.id, lunnode.path, lunnode.host))
                 return None
 
             try:

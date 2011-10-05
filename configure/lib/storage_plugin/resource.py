@@ -19,9 +19,15 @@ class Statistic(object):
 
 class StorageResourceMetaclass(type):
     def __new__(cls, name, bases, dct):
+        # Maps of attribute name to object
         dct['_storage_attributes'] = {}
         dct['_storage_statistics'] = {}
         dct['_alert_conditions'] = {}
+        dct['_alert_classes'] = {}
+
+        # Lists of attribute names
+        dct['_provides'] = []
+        dct['_subscribes'] = []
 
         for base in bases:
             if hasattr(base, '_storage_attributes'):
@@ -35,12 +41,22 @@ class StorageResourceMetaclass(type):
             if isinstance(field_obj, ResourceAttribute):
                 dct['_storage_attributes'][field_name] = field_obj
                 del dct[field_name]
+                if field_obj.provide:
+                    dct['_provides'].append(field_name)
+                if field_obj.subscribe:
+                    dct['_subscribes'].append(field_name)
             elif isinstance(field_obj, ResourceStatistic):
                 dct['_storage_statistics'][field_name] = field_obj
                 del dct[field_name]
             elif isinstance(field_obj, AlertCondition):
                 dct['_alert_conditions'][field_name] = field_obj
                 field_obj.set_name(field_name)
+
+                # Build map to find the AlertCondition which
+                # generated a particular alert
+                for alert_class in field_obj.alert_classes():
+                    dct['_alert_classes'][alert_class] = field_obj
+
                 del dct[field_name]
 
         return super(StorageResourceMetaclass, cls).__new__(cls, name, bases, dct)
@@ -49,6 +65,10 @@ class StorageResource(object):
     __metaclass__ = StorageResourceMetaclass
 
     icon = 'default'
+
+    @classmethod
+    def alert_message(cls, alert_class):
+        return cls._alert_classes[alert_class].message
 
     def __init__(self, **kwargs):
         self._storage_dict = {}

@@ -147,7 +147,7 @@ class HydraDebug(cmd.Cmd, object):
         import pygraphviz as pgv
         G = pgv.AGraph(directed=True)
         for r in resources:
-            G.add_node(r._handle, label="%s:%s" % (r.human_class(), r.human_string()))
+            G.add_node(r._handle, label="%s:%s:%s" % (r._handle, r.human_class(), r.human_string()))
 
         for r in resources:
             for p in r.get_parents():

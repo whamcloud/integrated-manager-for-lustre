@@ -124,6 +124,16 @@ class Host(models.Model):
     def __str__(self):
         return self.pretty_name()
 
+    @classmethod
+    def create_from_string(cls, address_string):
+        host, ssh_monitor = SshMonitor.from_string(address_string)
+        host.save()
+        ssh_monitor.host = host
+        ssh_monitor.save()
+
+        from configure.lib.storage_plugin import storage_plugin_manager
+        storage_plugin_manager.create_root_resource('linux', 'HydraHostProxy', host_id = host.pk)
+
     def save(self, *args, **kwargs):
         from django.core.exceptions import ValidationError
         MIN_LENGTH = 1
@@ -173,12 +183,11 @@ class Host(models.Model):
 
     def available_lun_nodes(self):
         from django.db.models import Q
-        used_lun_nodes = [i['block_device'] for i in TargetMount.objects.filter(~Q(block_device = None), host = self).values('block_device')]
+
+        used_luns = [i['block_device__lun'] for i in TargetMount.objects.all().values('block_device__lun')]
         return LunNode.objects.filter(
-                ~Q(lun__lunnode__used_hint = True),
-                ~Q(id__in = used_lun_nodes),
-                host = self,
-                used_hint = False)
+                ~Q(lun__in = used_luns),
+                host = self)
 
     def role(self):
         roles = self._role_strings()
@@ -203,27 +212,33 @@ class Host(models.Model):
             return "OK"
 
 class Lun(models.Model):
-    # The WWN from a device, available for some hardware
-    # Support not yet implemented in lustre_audit
-    #wwn = models.CharField(max_length = 16, blank = True, null = True)
-
-    # The UUID from a filesystem on this Lun, populated after formatting
-    # over-long entry to accomodate arbitrary hyphenation
-    fs_uuid = models.CharField(max_length = 64, blank = True, null = True, unique = True)
-
     def __str__(self):
-        return "Lun:%s" % self.fs_uuid
+        return "Lun: %s" % self.fs_uuid
 
-class LunNode(models.Model):
-    lun = models.ForeignKey(Lun, blank = True, null = True)
-    host = models.ForeignKey(Host)
-    path = models.CharField(max_length = 512)
+    # FIXME: foreignkey vs. import order
+    storage_resource_id = models.IntegerField(blank = True, null = True)
 
     # Size may be null for LunNodes created when setting up 
     # from a JSON file which just tells us a path.
     size = models.BigIntegerField(blank = True, null = True)
 
-    used_hint = models.BooleanField()
+    # Whether this Lun will have only one LunNode, or multiple LunNodes
+    shared = models.BooleanField()
+
+class LunNode(models.Model):
+    lun = models.ForeignKey(Lun)
+    host = models.ForeignKey(Host)
+    path = models.CharField(max_length = 512)
+
+    # FIXME: foreignkey vs. import order
+    storage_resource_id = models.IntegerField(blank = True, null = True)
+
+    # Whether this LunNode should be used as the primary mount point
+    # for targets created on this Lun
+    primary = models.BooleanField(default = False)
+    # Whether this LunNode should be used at all for targets created
+    # on this Lun
+    use = models.BooleanField(default = True)
 
     class Meta:
         unique_together = ('host', 'path')
@@ -261,8 +276,9 @@ class LunNode(models.Model):
         else:
             short_name = self.path
 
-        if self.size:
-            human_size = sizeof_fmt(self.size)
+        size = self.lun.size
+        if size:
+            human_size = sizeof_fmt(size)
         else:
             human_size = "[size unknown]"
 
@@ -553,7 +569,7 @@ class FilesystemMember(models.Model):
 class TargetMount(Mountable):
     """A mountable (host+mount point+device()) which associates a Target
        with a particular location to mount as primary or as failover"""
-    block_device = models.ForeignKey(LunNode, blank = True, null = True)
+    block_device = models.ForeignKey(LunNode)
     primary = models.BooleanField()
     target = models.ForeignKey('Target')
     # FIXME: duplication of host reference from Mountable and LunNode
@@ -852,9 +868,9 @@ class AlertState(models.Model):
             alert_item = alert_item.downcast()
 
         if active:
-            alert_klass.high(alert_item, **kwargs)
+            return alert_klass.high(alert_item, **kwargs)
         else:
-            alert_klass.low(alert_item, **kwargs)
+            return alert_klass.low(alert_item, **kwargs)
 
     @classmethod
     def high(alert_klass, alert_item, **kwargs):
@@ -874,7 +890,6 @@ class AlertState(models.Model):
             be = alert_state.begin_event()
             if be:
                 be.save()
-            
 
         return alert_state
 

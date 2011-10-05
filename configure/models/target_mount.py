@@ -108,9 +108,8 @@ class ConfigureTargetMountJob(Job, StateChangeJob):
         return "Configuring mount %s and HA for %s on %s" % (self.target_mount.mount_point, self.target_mount.target.name, self.target_mount.host)
 
     def get_steps(self):
-        from configure.lib.job import ConfigurePacemakerStep, FindDeviceStep
-        return[(FindDeviceStep, {'target_mount_id': self.target_mount.id}),
-               (ConfigurePacemakerStep, {'target_mount_id': self.target_mount.id})]
+        from configure.lib.job import ConfigurePacemakerStep
+        return[(ConfigurePacemakerStep, {'target_mount_id': self.target_mount.id})]
 
     def get_deps(self):
         # To configure a TM for a target, required that it is in a 

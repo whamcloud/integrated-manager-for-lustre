@@ -59,6 +59,73 @@ class ResourceQuery(object):
         
         # Record plugins which fail to load
         self._errored_plugins = set()
+
+    def record_has_children(self, record_id):
+        n = StorageResourceRecord.objects.filter(parents = record_id).count()
+        return (n > 0)
+
+    def record_find_parent(self, record, parent_klass):
+        from configure.models import StorageResourceRecord
+
+        if not isinstance(record, StorageResourceRecord):
+            record = StorageResourceRecord.objects.get(pk=record)
+
+        if issubclass(record.to_resource_class(), parent_klass):
+            return record.pk
+
+        for p in record.parents.all():
+            found = self.record_find_parent(p, parent_klass)
+            if found:
+                return found
+
+        return None
+
+    def resource_get_alerts(self, resource):
+        # NB assumes resource is a out-of-plugin instance
+        # which has _handle set to a DB PK
+        assert(resource._handle != None)
+        from configure.models import StorageResourceAlert
+        from configure.models import StorageResourceRecord
+        resource_alerts = StorageResourceAlert.filter_by_item_id(
+                StorageResourceRecord, resource._handle)
+
+        return list(resource_alerts)
+
+    def resource_get_propagated_alerts(self, resource):
+        # NB assumes resource is a out-of-plugin instance
+        # which has _handle set to a DB PK
+        from configure.models import StorageAlertPropagated
+        alerts = []
+        for sap in StorageAlertPropagated.objects.filter(storage_resource = resource._handle):
+            alerts.append(sap.alert_state)
+        return alerts
+
+    def record_alert_message(self, record_id, alert_class):
+        # Get the StorageResourceRecord
+        record = StorageResourceRecord.objects.get(pk=record_id)
+
+        # Load the appropriate plugin
+        plugin_module = record.resource_class.storage_plugin.module_name
+        plugin_klass = storage_plugin_manager.load_plugin(plugin_module)
+
+        # Get the StorageResource class and have it translate the alert_class
+        klass = storage_plugin_manager.get_plugin_resource_class(
+            record.resource_class.storage_plugin.module_name,
+            record.resource_class.class_name)
+        msg = klass.alert_message(alert_class)
+        return msg
+
+    def record_class_and_instance_string(self, record):
+        # Load the appropriate plugin
+        plugin_module = record.resource_class.storage_plugin.module_name
+        plugin_klass = storage_plugin_manager.load_plugin(plugin_module)
+
+        # Get the StorageResource class and have it translate the alert_class
+        klass = storage_plugin_manager.get_plugin_resource_class(
+            record.resource_class.storage_plugin.module_name,
+            record.resource_class.class_name)
+
+        return klass.human_class(), record.to_resource().human_string()
         
     def _record_to_resource_parents(self, record):
         if isinstance(record, StorageResourceRecord):
@@ -144,14 +211,25 @@ class ResourceQuery(object):
 
         return resources
 
-    def get_class_resources(self, resource_class):
-        records = StorageResourceRecord.objects.filter(resource_class = resource_class)
-        resources = []
+    def get_class_resources(self, class_or_classes, **kwargs):
+        try:
+            n = len(class_or_classes)
+            classes = class_or_classes
+        except TypeError:
+            classes = [class_or_classes]
+            
+        records = StorageResourceRecord.objects.filter(resource_class__in = classes, **kwargs)
         for r in records:
             res = self._record_to_resource(r)
             if res:
                 yield res
 
+    def get_class_record_ids(self, resource_class):
+        records = StorageResourceRecord.objects.filter(
+                resource_class = resource_class).values('pk')
+        for r in records:
+            yield r['pk']
+    
     def _load_record_and_children(self, record):
         storage_plugin_log.debug("load_record_and_children: %s" % record)
         resource = self._record_to_resource_parents(record)
@@ -228,6 +306,11 @@ class StoragePluginManager(object):
         """Return a StorageResourceClass primary key"""
         loaded_plugin = self.loaded_plugins[plugin_module]
         return loaded_plugin.resource_classes[resource_class_name].resource_class_id
+
+    def get_all_resources(self):
+        for plugin in self.loaded_plugins.values():
+            for loaded_res in plugin.resource_classes.values():
+                yield (loaded_res.resource_class_id, loaded_res.resource_class)
 
     def get_plugin_class(self, module):
         return self.loaded_plugins[module].plugin_class

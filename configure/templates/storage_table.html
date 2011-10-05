@@ -4,11 +4,22 @@
 <script type='text/javascript' src='{{STATIC_URL}}js/jquery.dataTables.js'></script>
 <script type='text/javascript'>
     $(document).ready(function() {
-            $('#resource_table').dataTable({
+            var dataTable = $('#resource_table').dataTable({
                 "bJQueryUI": true,
                 "bPaginate": false,
                 "sAjaxSource": '{% url configure.views.storage_table_json plugin_module resource_class %}'
                 }); 
+
+            /* Column 0 is the internal ID column */
+            dataTable.fnSetColumnVis(0, false);
+
+            $('#resource_table tbody tr').live('click', function() {
+                var resource_record_id = $($('td', this)[0]).text();
+                $('#resource_popup').dialog({autoOpen: false})
+                $('#resource_popup_content').load("/configure/storage_resource/" + resource_record_id + "/")
+                $('#resource_popup').dialog('open');
+
+            });
     });
 </script>
 {% endblock %}
@@ -19,6 +30,11 @@
 {% endblock %}
 
 {% block content %}
+
+<div id="resource_popup">
+    <p id="resource_popup_content">
+    </p>
+</div>
 
 <div style='float:left; margin: 6px; font-size: 10pt;border-right: 2px solid gray;padding-right: 6px;'>
 

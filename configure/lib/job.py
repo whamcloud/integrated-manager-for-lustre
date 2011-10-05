@@ -4,6 +4,7 @@
 # ==============================
 
 import json
+from re import escape
 
 import logging
 import settings
@@ -175,7 +176,7 @@ class Step(object):
             self.result.console = self.result.console + chunk
             self.result.save()
         agent = Agent(job_log, console_callback = console_callback)
-        agent.invoke(host, command)
+        return agent.invoke(host, command)
 
 class StateChangeJob(object):
     """Subclasses must define a class attribute 'stateful_object'
@@ -197,63 +198,6 @@ class StateChangeJob(object):
         stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk).downcast()
         assert(isinstance(stateful_object, StatefulObject))
         return stateful_object
-
-class FindDeviceStep(Step):
-    """Given a TargetMount whose Target's primary TargetMount's LunNode's Lun has
-       a fs_uuid populated (i.e. post-formatting), identify the device node on 
-       this TargetMount's host which has that fs_uuid, and ensure there is a 
-       LunNode object for it linked to the correct Lun""" 
-    def is_idempotent(self):
-        return True
-
-    def describe(self, kwargs):
-        from configure.models import ManagedTargetMount
-        target_mount = ManagedTargetMount.objects.get(pk = kwargs['target_mount_id'])
-        return "Looking up device node for %s" % target_mount
-
-    def run(self, kwargs):
-        from configure.models import ManagedTargetMount
-        from monitor.models import LunNode
-        target_mount = ManagedTargetMount.objects.get(pk = kwargs['target_mount_id'])
-
-        if target_mount.primary:
-            # This is a primary target mount, so it should already have a LunNode
-            assert(target_mount.block_device)
-            job_log.debug("FindDeviceStep: target_mount %s is primary, skipping" % target_mount)
-            return
-
-        if target_mount.block_device:
-            # The LunNode was already populated, do nothing
-            job_log.debug("FindDeviceStep: LunNode for target_mount %s already set" % target_mount)
-            return
-
-        # Go up to the target, then back down to the primary mount to get the Lun
-        lun = target_mount.target.targetmount_set.get(primary = True).block_device.lun
-        # This step must only be run after the target using this lun is formatted
-        assert(lun.fs_uuid)
-
-        # NB May throw any agent error (don't care, idempotent)
-        node_info = self.invoke_agent(target_mount.host, "locate-device --uuid %s" % lun.fs_uuid)
-        if node_info == None:
-            raise RuntimeError("Cannot find LUN with FS UUID %s on %s" % (lun.fs_uuid, target_mount.host))
-        try:
-            lun_node = LunNode.objects.get(
-                    host = target_mount.host, path = node_info['path'])
-            lun_node.lun = lun
-            lun_node.save()
-        except LunNode.DoesNotExist:
-            # Corner case: we are finding a device that LustreAudit never
-            # saw before us (maybe the host just came up for the first time at just this moment)
-            lun_node = LunNode(
-                    lun = lun,
-                    host = target_mount.host,
-                    path = node_info['path'],
-                    size = node_info['size'],
-                    used_hint = node_info['used'])
-            lun_node.save()
-
-        target_mount.block_device = lun_node
-        target_mount.save()
 
 class MkfsStep(Step):
     def _mkfs_args(self, target):
@@ -296,7 +240,6 @@ class MkfsStep(Step):
     def run(self, kwargs):
         from monitor.models import Target, Lun
         from configure.models import ManagedTarget
-        from re import escape
 
         target_id = kwargs['target_id']
         target = Target.objects.get(id = target_id).downcast()
@@ -398,7 +341,6 @@ class ConfigurePacemakerStep(Step):
         target_mount = TargetMount.objects.get(id = target_mount_id)
 
         # target.name should have been populated by RegisterTarget
-        # target_mount.block_device  should have been populated by FindDeviceStep
         assert(target_mount.block_device != None and target_mount.target.name != None)
 
         self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s %s --mountpoint %s" % (
@@ -469,8 +411,8 @@ class ConfParamStep(Step):
         conf_param = ConfParam.objects.get(pk = kwargs['conf_param_id']).downcast()
 
         self.invoke_agent(conf_param.mgs.primary_server(),
-                "set-conf-param --args %s" % json.dumps({
-                    'key': conf_param.get_key(), 'value': conf_param.value}))
+                "set-conf-param --args %s" % escape(json.dumps({
+                    'key': conf_param.get_key(), 'value': conf_param.value})))
 
 class ConfParamVersionStep(Step):
     def is_idempotent(self):

@@ -27,10 +27,13 @@ class ManagedFilesystem(monitor_models.Filesystem, StatefulObject):
         
         mgs = self.mgs.downcast()
         allowed_mgs_states = set(mgs.states) - set(['removed'])
-        return DependOn(mgs,
-                'unmounted',
-                acceptable_states = allowed_mgs_states,
-                fix_state = 'removed')
+        if state != 'removed':
+            return DependOn(mgs,
+                    'unmounted',
+                    acceptable_states = allowed_mgs_states,
+                    fix_state = 'removed')
+        else:
+            return DependAll([])
 
     reverse_deps = {
             'ManagedMgs': lambda mmgs: ManagedFilesystem.objects.filter(mgs = mmgs)

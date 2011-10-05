@@ -250,20 +250,18 @@ def host(request):
     commit = json.loads(request.POST['commit'])
     address = request.POST['address'].__str__()
 
-    # TODO: let user specify agent path
-    host, ssh_monitor = SshMonitor.from_string(address)
-
     if commit:
         from django.db.utils import IntegrityError
         try:
-            host.save()
-            ssh_monitor.host = host
-            ssh_monitor.save()
+            Host.create_from_string(address)
         except IntegrityError,e:
             raise RuntimeError("Cannot add '%s', possible duplicate address. (%s)" % (address, e))
 
         result = {'success': True}
     else:
+        # TODO: let user specify agent path
+        host, ssh_monitor = SshMonitor.from_string(address)
+
         from tasks import test_host_contact
         job = test_host_contact.delay(host, ssh_monitor)
         result = {'task_id': job.task_id, 'success': True}
