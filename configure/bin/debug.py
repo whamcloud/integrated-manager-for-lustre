@@ -4,6 +4,12 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import sys
+import os
+bin_dir = os.path.abspath(os.path.dirname(sys.modules['__main__'].__file__))
+project_dir = "/" + os.path.join(*(bin_dir.split(os.sep)[0:-2]))
+sys.path.append(project_dir)
+
 from django.core.management import setup_environ
 import settings
 setup_environ(settings)
@@ -12,9 +18,7 @@ from monitor.models import *
 from configure.models import *
 from configure.lib.state_manager import StateManager
 
-from collections_24 import defaultdict
-import sys
-
+from collections import defaultdict
 import cmd
 
 class HydraDebug(cmd.Cmd, object):

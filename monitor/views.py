@@ -60,7 +60,7 @@ class Dashboard:
             # 1 query per targetmount to get any alerts
             self.all_statuses[mount] = mount.status_string()
 
-        from collections_24 import defaultdict
+        from collections import defaultdict
         target_mounts_by_target = defaultdict(list)
         target_mounts_by_host = defaultdict(list)
         target_params_by_target = defaultdict(list)

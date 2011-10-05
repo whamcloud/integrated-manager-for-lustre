@@ -10,7 +10,6 @@ setup_environ(settings)
 
 from monitor.models import *
 
-from collections_24 import defaultdict
 import sys
 
 from logging import getLogger, FileHandler, INFO, StreamHandler
@@ -122,10 +121,7 @@ class HydraDebug(cmd.Cmd, object):
     def do_add_host(self, line):
         """add_host [user@]<hostname>[:port]
         Add a host to be monitored"""
-        host, ssh_monitor = SshMonitor.from_string(line)
-        host.save()
-        ssh_monitor.host = host
-        ssh_monitor.save()
+        Host.create_from_string(line)
 
     def do_host_list(self, line):
         """host_list

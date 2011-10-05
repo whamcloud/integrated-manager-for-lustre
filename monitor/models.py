@@ -8,7 +8,7 @@ from polymorphic.models import DowncastMetaclass
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
 
-from collections_24 import defaultdict
+from collections import defaultdict
 
 import simplejson as json
 import pickle

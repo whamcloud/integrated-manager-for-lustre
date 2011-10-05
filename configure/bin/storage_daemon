@@ -4,6 +4,12 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import sys
+import os
+bin_dir = os.path.abspath(os.path.dirname(sys.modules['__main__'].__file__))
+project_dir = "/" + os.path.join(*(bin_dir.split(os.sep)[0:-2]))
+sys.path.append(project_dir)
+
 from django.core.management import setup_environ
 import settings
 setup_environ(settings)
@@ -15,7 +21,6 @@ import threading
 import time
 import datetime
 from django.db import transaction
-
 
 daemon_log = logging.getLogger('storage_daemon')
 daemon_log.setLevel(logging.DEBUG)
@@ -79,10 +84,12 @@ class PluginSession(threading.Thread):
                         time.sleep(1)
 
             else:
-                daemon_log.info("Dropped out of scan loop cleanly")
+                daemon_log.info("Session %s: out of scan loop cleanly" % self.root_resource_id)
+
+        daemon_log.info("Session %s: Dropped out of retry loop" % self.root_resource_id)
 
     def _scan_loop(self, plugin_klass, root_resource):
-        daemon_log.debug("Starting session for resource %s" % root_resource._handle)
+        daemon_log.debug("Session %s: starting scan loop" % root_resource._handle)
         instance = plugin_klass(self.root_resource_id)
         instance.do_initial_scan(root_resource)
         while not self.stopping:
@@ -144,14 +151,17 @@ class StorageDaemon(object):
                         sessions[rrid] = s
                         s.start()
         
+                daemon_log.info("StorageDaemon: leaving main loop")
+
+        self._stop_sessions()
+
+    def _stop_sessions(self):
         daemon_log.info("StorageDaemon: stopping sessions")
         for session in self.all_sessions():
             session.stop()
         daemon_log.info("StorageDaemon: joining sessions")
         for session in self.all_sessions():
             session.join()
-
-        daemon_log.info("StorageDaemon: leaving main loop")
 
     def stop(self):
         self.stopping = True
@@ -165,5 +175,11 @@ if __name__ == '__main__':
         daemon.stop()
     signal.signal(signal.SIGINT, signal_handler)
 
-    daemon.main_loop()
+    try:
+        daemon.main_loop()
+    except Exception, e:
+        daemon_log.error("Exception in main loop, terminating")
+        daemon_log.error(e)
+        sys.exit(-1)
+
 

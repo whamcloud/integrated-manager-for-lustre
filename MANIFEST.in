@@ -6,6 +6,7 @@ include monitor/bin/*.py
 include monitor/fixtures/*
 include configure/templates/*
 include configure/bin/*.py
+include configure/bin/storage-daemon
 graft polymorphic
 graft monitor/static
 graft configure/static

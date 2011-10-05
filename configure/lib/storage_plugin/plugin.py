@@ -4,7 +4,7 @@
 # ==============================
 
 import settings
-from collections_24 import defaultdict
+from collections import defaultdict
 from django.db import transaction
 
 from configure.lib.storage_plugin.resource import StorageResource, ScannableId, GlobalId

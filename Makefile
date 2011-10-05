@@ -17,7 +17,7 @@ rpms: cleandist tarball
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/hydra-server-$(VERSION).tar.gz _topdir/SOURCES
-	cp hydra-worker-init.sh hydra-server.conf _topdir/SOURCES
+	cp hydra-storage-init.sh hydra-worker-init.sh hydra-server.conf _topdir/SOURCES
 	cp hydra-server.spec _topdir/SPECS
 	rpmbuild -bb --define "_topdir $$(pwd)/_topdir" _topdir/SPECS/hydra-server.spec
 	mv _topdir/RPMS/noarch/hydra-server-$(VERSION)-$(RELEASE).noarch.rpm dist/
@@ -27,4 +27,4 @@ install:
 	#install -d -p $(DESTDIR)/etc/hydra-server
 	#cp -a settings.py $(DESTDIR)/etc/hydra-server
 	install -d -p $(DESTDIR)/usr/share/hydra-server
-	cp -a collections_24.py __init__.py manage.py middleware.py monitor hydraapi hydradashboard configure monitor.wsgi polymorphic settings.py production_version.py urls.py $(DESTDIR)/usr/share/hydra-server
+	cp -a __init__.py manage.py middleware.py monitor hydraapi hydradashboard configure monitor.wsgi polymorphic settings.py production_version.py urls.py $(DESTDIR)/usr/share/hydra-server

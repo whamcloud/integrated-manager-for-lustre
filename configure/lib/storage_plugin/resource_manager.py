@@ -217,11 +217,20 @@ class ResourceManager(object):
                         raise RuntimeError("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
 
                     lun = lun_get_or_create(device)
-                    lun_node, created = LunNode.objects.get_or_create(
-                        lun = lun,
-                        host = host,
-                        path = r.path,
-                        storage_resource_id = r._handle)
+                    try:
+                        lun_node = LunNode.objects.get(
+                                host = host,
+                                path = r.path)
+                        if not lun_node.storage_resource_id:
+                            lun_node.storage_resource_id = r._handle
+                            lun_node.save()
+
+                    except LunNode.DoesNotExist:
+                        lun_node = LunNode.objects.create(
+                            lun = lun,
+                            host = host,
+                            path = r.path,
+                            storage_resource_id = r._handle)
         log.info("<< session_open %s" % scannable_id)
 
     def session_update_resource(self, scannable_id, local_resource_id, attrs):

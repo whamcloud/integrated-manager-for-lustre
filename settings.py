@@ -10,6 +10,7 @@ try:
 except:
     django_extensions = None
 
+import sys
 import os
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
@@ -253,6 +254,8 @@ else:
     AUDIT_LOG_PATH = "/var/log/hydra/audit.log"
     API_LOG_PATH = "/var/log/hydra/hydraapi.log" 
 
+_plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'configure', 'plugins')
+sys.path.append(_plugins_path)
 INSTALLED_STORAGE_PLUGINS = ["linux"]
 
 try:
