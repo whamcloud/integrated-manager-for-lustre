@@ -44,7 +44,6 @@ def _create_mounts(target, mounts):
             pass
 
     if not lun:
-        print "create lun"
         lun = Lun.objects.create(shared = (len(mounts) > 1))
 
     for m in mounts:
@@ -52,7 +51,6 @@ def _create_mounts(target, mounts):
         try:
             lun_node = LunNode.objects.get(host = host, path = m['device_node'])
         except LunNode.DoesNotExist:
-            print "create lun node"
             lun_node = LunNode.objects.create(host = host, path = m['device_node'], lun = lun)
         if len(mounts) > 1:
             primary = m['primary']
@@ -64,14 +62,14 @@ def _create_mounts(target, mounts):
                     block_device = lun_node,
                     target = target,
                     host = host,
-                    primary = m['primary'])
+                    primary = primary)
         except:
             tm = ManagedTargetMount.objects.create(
                     block_device = lun_node,
                     target = target,
                     host = host,
                     mount_point = target.default_mount_path(host),
-                    primary = m['primary'])
+                    primary = primary)
 
 # FIXME: we rely on the good faith of the .json file's author to use
 # our canonical names for devices.  We must normalize them to avoid
