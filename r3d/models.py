@@ -228,7 +228,7 @@ class Database(models.Model):
         for ds in self.datasources.all():
             results[ds.name] = ds.last_reading
 
-        return {self.last_update: results}
+        return [self.last_update, results]
 
 # http://djangosnippets.org/snippets/2408/
 # Grumble.

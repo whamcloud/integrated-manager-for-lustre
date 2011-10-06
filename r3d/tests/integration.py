@@ -97,9 +97,9 @@ class SingleDsTutorialTest(TestCase):
                          sorted([r.keys() for r in actual.values()]))
         self.assertEqual(json.dumps(expected), json.dumps(actual))
 
-        expected = {
-            920808900L: {u'speed': 12423}
-        }
+        expected = [
+            920808900L, {u'speed': 12423}
+        ]
 
         actual = self.rrd.fetch_last()
         self.assertEqual(expected, actual)
@@ -197,9 +197,9 @@ class MultiDsTutorialTest(TestCase):
                          sorted([r.keys() for r in actual.values()]))
         self.assertEqual(json.dumps(expected), json.dumps(actual))
 
-        expected = {
-            920808900L: {u'speed': 12423, u'kbytes_free': 1979940}
-        }
+        expected = [
+            920808900L, {u'speed': 12423, u'kbytes_free': 1979940}
+        ]
 
         actual = self.rrd.fetch_last()
         self.assertEqual(expected, actual)
