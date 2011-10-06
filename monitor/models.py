@@ -7,6 +7,7 @@ from django.db import models, transaction
 from polymorphic.models import DowncastMetaclass
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
+from metrics import get_instance_metrics
 
 from collections import defaultdict
 
@@ -114,7 +115,15 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
 
         return super(DeletableDowncastableMetaclass, cls).__new__(cls, name, bases, dct)
 
-class Host(models.Model):
+class MeasuredEntity(object):
+    """Provides mix-in access to metrics specific to the instance."""
+    def __get_metrics(self):
+        self._metrics = get_instance_metrics(self)
+        return self._metrics
+
+    metrics = property(__get_metrics)
+
+class Host(models.Model, MeasuredEntity):
     __metaclass__ = DeletableDowncastableMetaclass
     # FIXME: either need to make address non-unique, or need to
     # associate objects with a child object, because there
@@ -443,10 +452,10 @@ class Nid(models.Model):
     host = models.ForeignKey(Host)
     nid_string = models.CharField(max_length=128)
 
-class Router(models.Model):
+class Router(models.Model, MeasuredEntity):
     host = models.ForeignKey(Host)
 
-class Filesystem(models.Model):
+class Filesystem(models.Model, MeasuredEntity):
     __metaclass__ = DeletableDowncastableMetaclass
     name = models.CharField(max_length=8)
     mgs = models.ForeignKey('ManagementTarget')
@@ -698,7 +707,7 @@ class Target(models.Model):
         else:
             return "Unregistered %s %s" % (self.downcast().role(), self.id)
 
-class MetadataTarget(Target, FilesystemMember):
+class MetadataTarget(Target, FilesystemMember, MeasuredEntity):
     # TODO: constraint to allow only one MetadataTarget per MGS.  The reason
     # we don't just use a OneToOneField is to use FilesystemMember to represent
     # MDTs and OSTs together in a convenient way
@@ -711,7 +720,7 @@ class MetadataTarget(Target, FilesystemMember):
     def role(self):
         return "MDT"
 
-class ManagementTarget(Target):
+class ManagementTarget(Target, MeasuredEntity):
     def role(self):
         return "MGS"
 
@@ -720,7 +729,7 @@ class ManagementTarget(Target):
         return ManagementTarget.objects.get(targetmount__host = host)
 
     
-class ObjectStoreTarget(Target, FilesystemMember):
+class ObjectStoreTarget(Target, FilesystemMember, MeasuredEntity):
     def __str__(self):
         if not self.name:
             return "Unregistered %s-OST" % (self.filesystem.name)
