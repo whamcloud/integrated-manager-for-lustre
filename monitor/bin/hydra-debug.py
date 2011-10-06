@@ -162,7 +162,33 @@ class HydraDebug(cmd.Cmd, object):
         for m in Monitor.objects.all():
             m.update(state = 'idle', task_id = None)
 
+    def _print_stat(self, metrics, stat_name):
+        import time
+        print "Latest:"
+        latest = metrics.fetch_last()
+        print latest[1]
+        print time.ctime(latest[0]), latest[1][stat_name]
+        print "Last minute:"
+        last_minute = metrics.fetch('Average', start_time = int(time.time()) - 60)
+        ts_list = last_minute.keys()
+        ts_list.sort()
+        for ts in ts_list:
+            values = last_minute[ts]
+            print time.ctime(ts), values[stat_name]
 
+    def do_resource_stat(self, line):
+        resource_id, stat_name = line.split()
+        from configure.models import StorageResourceRecord
+        from monitor.metrics import VendorMetricStore
+        record = StorageResourceRecord.objects.get(pk = int(resource_id))
+        metrics = VendorMetricStore(record, 1)
+        self._print_stat(metrics, stat_name)
+
+    def do_host_stat(self, line):
+        hostname, stat_name = line.split()
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(address = hostname)
+        self._print_stat(host.metrics, stat_name)
 
 if __name__ == '__main__':
     cmdline = HydraDebug
@@ -174,4 +200,5 @@ if __name__ == '__main__':
             screen("Exiting...")
     else:
         cmdline().onecmd(" ".join(sys.argv[1:]))
+
 
