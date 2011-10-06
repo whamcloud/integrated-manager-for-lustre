@@ -212,11 +212,7 @@ class LustreAudit:
         try:
             mgs = ManagementTarget.objects.get(targetmount__host = self.host)
         except ManagementTarget.DoesNotExist:
-            try:
-                lunnode = LunNode.objects.get(path = mgs_local_info['device'], host = self.host)
-            except LunNode.DoesNotExist:
-                audit_log.warning("No LunNode for MGS device path '%s'" % mgs_local_info['device'])
-                return None
+            lunnode = self.get_lun_node_for_target(None, self.host, mgs_local_info['device'])
 
             try:
                 primary = self.is_primary(mgs_local_info)
@@ -302,7 +298,7 @@ class LustreAudit:
 
             try:
                 primary = self.is_primary(local_info)
-                lunnode = LunNode.objects.get(path = local_info['device'], host = self.host)
+                lunnode = self.get_lun_node_for_target(target, self.host, local_info['device'])
                 (tm, created) = TargetMount.objects.get_or_create(target = matched_target,
                         host = self.host, primary = primary,
                         mount_point = local_info['mount_point'],
@@ -310,10 +306,19 @@ class LustreAudit:
                 if created:
                     audit_log.info("Learned association %d between %s and host %s" % (tm.id, local_info['name'], self.host))
                     self.learn_event(tm)
-            except LunNode.DoesNotExist:
-                audit_log.warning("No LunNode for target device '%s'" % local_info['device'])
             except NoLNetInfo:
                 audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], self.host))
+
+    def get_lun_node_for_target(self, target, host, path):
+        try:
+            return LunNode.objects.get(path = path, host = host)
+        except LunNode.DoesNotExist:
+            if target and target.targetmount_set.count() > 0:
+                lun = target.targetmount_set.all()[0].block_device.lun
+            else:
+                # TODO: get the size from somewhere
+                lun = Lun.objects.create(size = 0, shared = False)
+            return LunNode.objects.create(path = path, host = host, lun = lun)
 
     def get_or_create_target(self, mgs, name, device_node_path):
         if name.find("-MDT") != -1:
