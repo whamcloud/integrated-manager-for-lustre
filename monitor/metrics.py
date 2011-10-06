@@ -94,7 +94,7 @@ class R3dMetricStore(MetricStore):
         Creates a new R3D Database and associates it with the given
         measured object via ContentType.
         """
-        ct = ContentType.objects.get_for_model(measured_object)
+        ct = ContentType.objects.get_for_model(measured_object.downcast())
         self.r3d = Database.objects.create(name=measured_object.__str__(),
                                            object_id=measured_object.id,
                                            content_type=ct,
@@ -110,7 +110,7 @@ class R3dMetricStore(MetricStore):
         retrieves the existing associated R3D Database or creates one.
         """
         try:
-            ct = ContentType.objects.get_for_model(measured_object)
+            ct = ContentType.objects.get_for_model(measured_object.downcast())
             self.r3d = Database.objects.get(object_id=measured_object.id,
                                             content_type=ct)
         except Database.DoesNotExist:
@@ -416,11 +416,11 @@ def get_instance_metrics(measured_object):
     Returns the wrapper for known object types, or None.
     """
 
-    if hasattr(measured_object, "host_ptr"):
+    if hasattr(measured_object.downcast(), "host_ptr"):
         return HostMetricStore(measured_object)
-    elif hasattr(measured_object, "target_ptr"):
+    elif hasattr(measured_object.downcast(), "target_ptr"):
         return TargetMetricStore(measured_object)
-    elif hasattr(measured_object, "filesystem_ptr"):
+    elif hasattr(measured_object.downcast(), "filesystem_ptr"):
         return FilesystemMetricStore(measured_object)
     else:
         return None
