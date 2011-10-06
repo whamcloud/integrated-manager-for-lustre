@@ -610,7 +610,10 @@ def _handle_resource_form(request):
     try:
         default_resource = StorageResourceRecord.objects.filter(parents = None).latest('pk').resource_class
     except StorageResourceRecord.DoesNotExist:
-        default_resource = StorageResourceRecord.objects.all()[0]
+        try:
+            default_resource = StorageResourceRecord.objects.all()[0]
+        except IndexError:
+            default_resource = StorageResourceClass.objects.all()[0]
 
     class ResourceForm(forms.Form):
         resource = forms.ModelChoiceField(queryset = StorageResourceClass.objects.all(), required = True, empty_label = None)
@@ -628,7 +631,7 @@ def _handle_resource_form(request):
 
 def storage_browser(request):
     from configure.models import StorageResourceClass
-    if StorageResourceRecord.objects.count() == 0:
+    if StorageResourceClass.objects.count() == 0:
         return render_to_response('storage_browser_disabled.html', RequestContext(request))
 
     resource_form, storage_resource_class = _handle_resource_form(request)

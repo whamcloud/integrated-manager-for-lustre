@@ -113,6 +113,7 @@ class StoragePlugin(object):
     def do_initial_scan(self, root_resource):
         from configure.lib.storage_plugin.resource_manager import resource_manager 
         root_resource._handle = self.generate_handle()
+        self._index.add(root_resource)
 
         self.initial_scan(root_resource)
 

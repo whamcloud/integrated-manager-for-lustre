@@ -153,7 +153,14 @@ class StorageResource(object):
         if key.startswith("_") or not key in self._storage_attributes:
             raise AttributeError
         else:
-            return self._storage_dict[key]
+            try:
+                return self._storage_dict[key]
+            except KeyError:
+                attr = self._storage_attributes[key]
+                if attr.optional:
+                    return None
+                else:
+                    raise AttributeError("attribute %s not found")
 
     @classmethod
     def attrs_to_id_str(cls, attrs):

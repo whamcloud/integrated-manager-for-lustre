@@ -160,7 +160,7 @@ class ResourceManager(object):
                 del self._sessions[scannable_id]
 
             session = PluginSession(scannable_id)
-            session.local_id_to_global_id[scannable_local_id] = scannable_id
+            #session.local_id_to_global_id[scannable_local_id] = scannable_id
             self._sessions[scannable_id] = session
             self._persist_new_resources(session, initial_resources)
             
