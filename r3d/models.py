@@ -219,6 +219,17 @@ class Database(models.Model):
                                        end_time,
                                        step)
 
+    def fetch_last(self):
+        """
+        Fetches the last reading for each DS.
+        """
+        results = {}
+
+        for ds in self.datasources.all():
+            results[ds.name] = ds.last_reading
+
+        return {self.last_update: results}
+
 # http://djangosnippets.org/snippets/2408/
 # Grumble.
 from abc import abstractmethod
