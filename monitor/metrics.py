@@ -1,4 +1,7 @@
-import re, math
+
+import re
+import math
+import os
 from django.contrib.contenttypes.models import ContentType
 from r3d.models import *
 
@@ -6,7 +9,7 @@ import settings
 import logging
 metrics_log = logging.getLogger('metrics')
 metrics_log.setLevel(logging.DEBUG)
-handler = logging.FileHandler(settings.JOB_LOG_PATH)
+handler = logging.FileHandler(os.path.join(settings.LOG_PATH, 'metrics.log'))
 handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s',
                                        '%d/%b/%Y:%H:%M:%S'))
 metrics_log.addHandler(handler)
