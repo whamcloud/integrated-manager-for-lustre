@@ -97,7 +97,7 @@ class R3dMetricStore(MetricStore):
         Creates a new R3D Database and associates it with the given
         measured object via ContentType.
         """
-        ct = ContentType.objects.get_for_model(measured_object.downcast())
+        ct = ContentType.objects.get_for_model(measured_object)
         self.r3d = Database.objects.create(name=measured_object.__str__(),
                                            object_id=measured_object.id,
                                            content_type=ct,
@@ -113,7 +113,10 @@ class R3dMetricStore(MetricStore):
         retrieves the existing associated R3D Database or creates one.
         """
         try:
-            ct = ContentType.objects.get_for_model(measured_object.downcast())
+            if hasattr(measured_object, 'content_type'):
+                measured_object = measured_object.downcast()
+
+            ct = ContentType.objects.get_for_model(measured_object)
             self.r3d = Database.objects.get(object_id=measured_object.id,
                                             content_type=ct)
         except Database.DoesNotExist:
@@ -162,6 +165,21 @@ class R3dMetricStore(MetricStore):
         an optional list of metrics to filter output.
         """
         return self.r3d.fetch_last(fetch_metrics)
+
+class VendorMetricStore(R3dMetricStore):
+
+    def update(self, update_data):
+        def missing_ds_fn(db, key, payload):
+            ct = ContentType.objects.get(model=payload['type'])
+            ds_klass = ct.model_class()
+
+            db.datasources.add(ds_klass.objects.create(name=key,
+                                                       heartbeat=db.step * 2,
+                                                       database=db))
+            metrics_log.info("Added new DS to DB (%s -> %s)" % (key, db.name))
+
+        # Skipping sanitize
+        self.r3d.update({self._update_time(): update_data}, missing_ds_fn)
 
 class HostMetricStore(R3dMetricStore):
     """
@@ -404,12 +422,6 @@ class FilesystemMetricStore(R3dMetricStore):
                     results[1][metric] = tm[1][metric]
 
         return results
-
-class VendorMetricStore(R3dMetricStore):
-    """
-    Wrapper class for vendor-specific metrics.
-    """
-    pass
 
 def get_instance_metrics(measured_object):
     """
