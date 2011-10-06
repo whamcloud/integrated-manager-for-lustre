@@ -91,8 +91,11 @@ class R3dMetricStore(MetricStore):
                                            cdp_per_row=8640,
                                            rows=365))
 
-    def _create_r3d(self, measured_object, rra_create_fn=_default_rra_fn,
-                    **kwargs):
+    def _create_r3d(self,
+            measured_object,
+            sample_period,
+            rra_create_fn=_default_rra_fn,
+            **kwargs):
         """
         Creates a new R3D Database and associates it with the given
         measured object via ContentType.
@@ -101,13 +104,13 @@ class R3dMetricStore(MetricStore):
         self.r3d = Database.objects.create(name=measured_object.__str__(),
                                            object_id=measured_object.id,
                                            content_type=ct,
-                                           step=settings.AUDIT_PERIOD,
+                                           step=sample_period,
                                            **kwargs)
         rra_create_fn(self.r3d)
 
         metrics_log.info("Created R3D: %s (%s)" % (ct, measured_object))
 
-    def __init__(self, measured_object, **kwargs):
+    def __init__(self, measured_object, sample_period, **kwargs):
         """
         Given an object to wrap with MetricStore capabilities, either
         retrieves the existing associated R3D Database or creates one.
@@ -120,7 +123,7 @@ class R3dMetricStore(MetricStore):
             self.r3d = Database.objects.get(object_id=measured_object.id,
                                             content_type=ct)
         except Database.DoesNotExist:
-            self._create_r3d(measured_object, **kwargs)
+            self._create_r3d(measured_object, sample_period, **kwargs)
 
     def _sanitize_metric_name(self, prefix, dirty, suffix=None):
         """
@@ -432,10 +435,10 @@ def get_instance_metrics(measured_object):
     """
 
     if hasattr(measured_object.downcast(), "host_ptr"):
-        return HostMetricStore(measured_object)
+        return HostMetricStore(measured_object, settings.AUDIT_PERIOD)
     elif hasattr(measured_object.downcast(), "target_ptr"):
-        return TargetMetricStore(measured_object)
+        return TargetMetricStore(measured_object, settings.AUDIT_PERIOD)
     elif hasattr(measured_object.downcast(), "filesystem_ptr"):
-        return FilesystemMetricStore(measured_object)
+        return FilesystemMetricStore(measured_object, settings.AUDIT_PERIOD)
     else:
         return None
