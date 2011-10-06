@@ -142,12 +142,24 @@ def unmount_target(args):
     shell.try_run(["umount", info['bdev']])
 
 def start_target(args):
+    from time import sleep
     shell.try_run(["crm", "resource", "start", args.label])
 
-    # now wait for it
+    # now wait for it to start
     # FIXME: this may break on non-english systems or new versions of pacemaker
-    shell.try_run("while ! crm resource status %s 2>&1 | grep -q \"is running\"; do sleep 1; done" % \
-            args.label, shell=True)
+    while True:
+        stdout = shell.try_run("crm resource status %s 2>&1" % args.label,
+                               shell=True)
+        if stdout.startswith("resource %s is running on:" % args.label):
+            break
+        sleep(1)
+    # and make sure it didn't start but (the RA) fail(ed)
+    stdout = shell.try_run("crm status | grep \"^ %s\"" % args.label,
+                           shell=True)
+    if stdout.find("FAILED") > -1:
+        # first try to leave things in a sane state for a failed mount
+        shell.try_run(["crm", "resource", "stop", args.label])
+        raise RuntimeError("failed to start target %s" % args.label)
 
 def stop_target(args):
     _stop_target(args.label)
