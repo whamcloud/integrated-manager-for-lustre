@@ -177,7 +177,7 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_cou
             rra.save()
 
 # FIXME: This monster needs a serious refactoring.  At some point.
-def fetch_best_rra_rows(db, archive_type, start_time, end_time, step):
+def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metrics):
     best_full_rra = None
     best_part_rra = None
     best_full_step_diff = 0
@@ -265,7 +265,10 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step):
         debug_print("adjusted pointer to %d" % rra_pointer)
 
     results = {}
-    ds_list = db.datasources.all()
+    if fetch_metrics is None:
+        ds_list = db.datasources.all()
+    else:
+        ds_list = db.datasources.filter(name__in=fetch_metrics)
     ds_cdps = {}
     for ds in ds_list:
         ds_cdps[ds] = chosen_rra.ds_cdps(ds)

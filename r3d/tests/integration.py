@@ -204,6 +204,28 @@ class MultiDsTutorialTest(TestCase):
         actual = self.rrd.fetch_last()
         self.assertEqual(expected, actual)
 
+        expected = [
+            920808900L, {u'speed': 12423}
+        ]
+
+        actual = self.rrd.fetch_last(['speed'])
+        self.assertEqual(expected, actual)
+
+        expected = {
+            920800800L: {u'kbytes_free': float("NaN")},
+            920802600L: {u'kbytes_free': float("NaN")},
+            920804400L: {u'kbytes_free': float("NaN")},
+            920806200L: {u'kbytes_free': 1979617.5},
+            920808000L: {u'kbytes_free': 1979611.66666667},
+            920809800L: {u'kbytes_free': float("NaN")}
+        }
+
+        actual = self.rrd.fetch("Average",
+                                start_time=920799000,
+                                end_time=920809200,
+                                fetch_metrics=["kbytes_free"])
+        self.assertEqual(json.dumps(expected), json.dumps(actual))
+
     def tearDown(self):
         self.rrd.delete()
 

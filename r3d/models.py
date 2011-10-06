@@ -206,7 +206,8 @@ class Database(models.Model):
 
     def fetch(self, archive_type, start_time=int(time.time() - 3600),
                                   end_time=int(time.time()),
-                                  step=1):
+                                  step=1,
+                                  fetch_metrics=None):
         """
         Fetches the set of CDPs for the given archive type between the
         interval specified by start_time and end_time.
@@ -217,16 +218,24 @@ class Database(models.Model):
                                        archive_type,
                                        start_time,
                                        end_time,
-                                       step)
+                                       step,
+                                       fetch_metrics)
 
-    def fetch_last(self):
+    def fetch_last(self, fetch_metrics=None):
         """
-        Fetches the last reading for each DS.
+        fetch_last([fetch_metrics=["name"]])
+
+        Fetches the last reading for each DS.  Takes an optional
+        list of metric names as a filter for the query.
         """
         results = {}
 
-        for ds in self.datasources.all():
-            results[ds.name] = ds.last_reading
+        if fetch_metrics is None:
+            for ds in self.datasources.all():
+                results[ds.name] = ds.last_reading
+        else:
+            for ds in self.datasources.filter(name__in=fetch_metrics):
+                results[ds.name] = ds.last_reading
 
         return [self.last_update, results]
 
