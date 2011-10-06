@@ -215,7 +215,11 @@ class StoragePlugin(object):
             self._delta_alerts.add(key)
 
     def update_statistic(self, resource, stat, value):
-        pass
+        from configure.lib.storage_plugin.resource_manager import resource_manager 
+        update = {}
+        stat_obj = resource._storage_statistics[stat]
+        update[stat] = {'value': value, 'type': stat_obj.r3d_type()}
+        resource_manager.session_update_stat(self._scannable_id, resource._handle, update)
 
     def _register_resource(self, resource):
         """Register a newly created resource:

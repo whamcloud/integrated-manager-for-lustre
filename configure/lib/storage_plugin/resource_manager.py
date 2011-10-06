@@ -255,6 +255,38 @@ class ResourceManager(object):
             self._resource_modify_parent(record_pk, parent_pk, True)
             # TODO: potentially orphaning resources, find and cull them
 
+    def session_update_stat(self, scannable_id, local_resource_id, update_data):
+        # Note: intentionally lock-free, to be called synchronously during
+        # plugin execution (pass stats straight through rather than
+        # messing with them)
+
+        #XXX How safe is this really to be run without the _instance_lock, 
+        # as we're reading out of _sessions and local_id_to...
+        session = self._sessions[scannable_id]
+        record_pk = session.local_id_to_global_id[local_resource_id]
+        from configure.models import StorageResourceRecord
+        record = StorageResourceRecord.objects.get(pk = record_pk)
+        from monitor.metrics import VendorMetricStore
+        from django.db import transaction
+        # TODO: per-plugin update period
+        metric_store = VendorMetricStore(record, 5)
+        metric_store.update(update_data)
+
+        #import time
+        #import datetime
+        #t = int(time.time()) - 60
+
+        #print "Last minute since %s" % datetime.datetime.now()
+        #print ">>"
+        #points = metric_store.fetch('Average', start_time = t)
+        #ts_list = points.keys()
+        #ts_list.sort()
+        #for ts in ts_list:
+        #    vals = points[ts]
+        #    print time.ctime(ts), vals['test_stat']
+        #print "<<"
+        #print ""
+
     @transaction.autocommit
     def _resource_modify_parent(self, record_pk, parent_pk, remove):
         from configure.models import StorageResourceRecord
