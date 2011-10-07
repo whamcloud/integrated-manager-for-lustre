@@ -1,9 +1,33 @@
 /*******************************************************************************/
 // File name: custom_dashboard.js
-// Description:
-//
+// Description: Plots all the graphs for dashboard landing page.
+//------------------Configuration functions--------------------------------------
+// 1) chartConfig_Bar_DB	-	Bar chart configuration for space and inodes graph
+// 2) chartConfig_Pie_DB	-	Pie chart configuration for space and inodes graph
+// 3) chartConfig_Line_CpuUsage	-	Line chart configuration for cpu usage
+// 4) chartConfig_Line_MemoryUsage	-	Line chart configuration for memory usage
+// 5) chartConfig_Line_DiskRead	-	Line chart configuration for disk read
+// 6) chartConfig_Line_DiskWrite	-	Line chart configuration for disk write
+// 7) chartConfig_Mgs_Line_CpuUsage	-	Line chart configuration of MDS/MGS for cpu usage
+// 8) chartConfig_Mgs_Line_MemoryUsage	-	Line chart configuration of MDS/MGS for memory usage
+// 9) chartConfig_Mgs_Line_DiskRead	-	Line chart configuration of MDS/MGS for disk read
+// 10)chartConfig_Mgs_Line_DiskWrite	-	Line chart configuration of MDS/MGS for disk write
+
+//------------------ Data Loader functions--------------------------------------
+// 1) db_Bar_Space_Data(isZoom)
+// 2) db_Pie_Space_Data(isZoom)
+// 3) db_Bar_INodes_Data(isZoom)
+// 4) db_Pie_INodes_Data(isZoom)
+// 5) db_Line_CpuUsage_Data(isZoom)
+// 6) db_Line_MemoryUsage_Data(isZoom)
+// 7) db_Line_DiskRead_Data(isZoom)
+// 8) db_Line_DiskWrite_Data(isZoom)
+// 9) db_Mgs_Line_CpuUsage_Data(isZoom)
+// 10) db_Mgs_Line_MemoryUsage_Data(isZoom)
+// 11) db_Mgs_Line_DiskRead_Data(isZoom)
+// 12) db_Mgs_Line_DiskWrite_Data(isZoom)
 /*******************************************************************************/
-var barGraphOptions = 
+var chartConfig_Bar_DB = 
 {			
     chart:{
     renderTo: '',
@@ -14,7 +38,7 @@ var barGraphOptions =
     title:{text:'', style: { fontSize: '12px' } },
     zoomType: 'xy',
     xAxis:{ categories: ['Usage'], text: '' },
-    yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
+    yAxis:{max:100, min:0, startOnTick:false, title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
     credits:{ enabled:false },
     tooltip:
     {
@@ -38,7 +62,7 @@ var barGraphOptions =
      series: []
 };
 /*******************************************************************************/
-var pieDataOptions = 
+var chartConfig_Pie_DB = 
 {
     chart:{
     renderTo: '',
@@ -67,23 +91,25 @@ var pieDataOptions =
 /*********************************************************************************/	
 // For all file systems CPU Usage
 /*********************************************************************************/
-var lineDataOptions_CPUUsage = 
+var chartConfig_Line_CpuUsage = 
 {
 	chart:{
     renderTo: '',
     marginLeft: '50',
 	width: '250',
-	style:{ width:'100%',  height:'200px', position: 'inherit' },
+    height: '200',
+	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
     marginBottom: 25,
     zoomType: 'xy'
     },
-    title:{ text: '', x: -20, style: { fontSize: '12px' }, },
+    title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
-    xAxis:{ categories: [], text: '' },
-    yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
-    legend:{ layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 10,borderWidth: 0},
+    xAxis:{categories: [],title:{text:''},labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'bold'}}},
+    yAxis:{max:100, min:0, startOnTick:false, title:{text:''},labels:{style:{fontSize:'8px'}}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+    plotOptions:{series:{marker: {enabled: false}} },
     credits:{ enabled:false },
     tooltip:
     {
@@ -99,235 +125,251 @@ var lineDataOptions_CPUUsage =
 /*********************************************************************************/	
 //For all file systems Memory Usage
 /*********************************************************************************/
-var lineDataOptions_MemoryUsage =
+var chartConfig_Line_MemoryUsage =
 {
-    chart:{
+	chart:{
     renderTo: '',
     marginLeft: '50',
-    width: '250',
-    style:{ width:'100%',  height:'200px', position: 'inherit' },
+	width: '250',
+    height: '200',
+	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
     marginBottom: 25,
     zoomType: 'xy'
     },
-    title:{ text: '', x: -20, style: { fontSize: '12px' }, },
+    title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
-    xAxis:{ categories: [], text: '' },
-    yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
-    legend:{ layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 10,borderWidth: 0},
+    xAxis:{categories: [],title:{text:''},labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'bold'}}},
+    yAxis:{title:{text:''},labels:{style:{fontSize:'8px'}}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+    plotOptions:{series:{marker: {enabled: false}} },
     credits:{ enabled:false },
     tooltip:
     {
-        formatter: function()
+	    formatter: function() 
         {
-            return '<b>'+ this.series.name +'</b><br/>'+
-            this.x +': '+ this.y +'';
-        }
-    },
-    series: []
+	        return '<b>'+ this.series.name +'</b><br/>'+
+	        this.x +': '+ this.y +'';
+	    }
+	},
+	series: []
 };
 /*********************************************************************************/	
 //For all file systems Disk Read
 /*********************************************************************************/
-var lineDataOptions_DiskRead =
+var chartConfig_Line_DiskRead =
 {
-    chart:{
+	chart:{
     renderTo: '',
     marginLeft: '50',
-    width: '250',
-    style:{ width:'100%',  height:'200px', position: 'inherit' },
+	width: '250',
+    height: '200',
+	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
     marginBottom: 25,
     zoomType: 'xy'
     },
-    title:{ text: '', x: -20, style: { fontSize: '12px' }, },
+    title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
-    xAxis:{ categories: [], text: '' },
-    yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
-    legend:{ layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 10,borderWidth: 0},
+    xAxis:{categories: [],title:{text:''},labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'bold'}}},
+    yAxis:{title:{text:''},labels:{style:{fontSize:'8px'}}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+    plotOptions:{series:{marker: {enabled: false}} },
     credits:{ enabled:false },
     tooltip:
     {
-        formatter: function()
+	    formatter: function() 
         {
-            return '<b>'+ this.series.name +'</b><br/>'+
-            this.x +': '+ this.y +'';
-        }
-    },
-    series: []
+	        return '<b>'+ this.series.name +'</b><br/>'+
+	        this.x +': '+ this.y +'';
+	    }
+	},
+	series: []
 };
 /*********************************************************************************/	
 //For all file systems Disk Write
 /*********************************************************************************/
-var lineDataOptions_DiskWrite =
+var chartConfig_Line_DiskWrite =
 {
-    chart:{
+	chart:{
     renderTo: '',
     marginLeft: '50',
-    width: '250',
-    style:{ width:'100%',  height:'200px', position: 'inherit' },
+	width: '250',
+    height: '200',
+	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
     marginBottom: 25,
     zoomType: 'xy'
     },
-    title:{ text: '', x: -20, style: { fontSize: '12px' }, },
-    zoomType: 'xy', 
-    xAxis:{ categories: [], text: '' },
-    yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
-    legend:{ layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 10,borderWidth: 0},
+    title:{ text: '', style: { fontSize: '12px' }, },
+    zoomType: 'xy',
+    xAxis:{categories: [],title:{text:''},labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'bold'}}},
+    yAxis:{title:{text:''},labels:{style:{fontSize:'8px'}}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+    plotOptions:{series:{marker: {enabled: false}} },
     credits:{ enabled:false },
-    tooltip:        
-    {           
-        formatter: function()
-        {       
-            return '<b>'+ this.series.name +'</b><br/>'+
-            this.x +': '+ this.y +'';
-        }
-    },
-    series: []
+    tooltip:
+    {
+	    formatter: function() 
+        {
+	        return '<b>'+ this.series.name +'</b><br/>'+
+	        this.x +': '+ this.y +'';
+	    }
+	},
+	series: []
 };
 /*********************************************************************************/	
 // All MDS/MGS CPU Usage
 /*********************************************************************************/
-var lineDataOptions_Mgs_CPUUsage =
+var chartConfig_Mgs_Line_CpuUsage =
 {
-    chart:{
+	chart:{
     renderTo: '',
     marginLeft: '50',
-    width: '250',
-    style:{ width:'100%',  height:'200px', position: 'inherit' },
+	width: '250',
+    height: '200',
+	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
     marginBottom: 25,
     zoomType: 'xy'
     },
-    title:{ text: '', x: -20, style: { fontSize: '12px' }, },
+    title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
-    xAxis:{ categories: [], text: '' },
-    yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
-    legend:{ layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 10,borderWidth: 0},
+    xAxis:{categories: [],title:{text:''},labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'bold'}}},
+    yAxis:{max:100, min:0, startOnTick:false, title:{text:''},labels:{style:{fontSize:'8px'}}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+    plotOptions:{series:{marker: {enabled: false}} },
     credits:{ enabled:false },
     tooltip:
     {
-        formatter: function()
+	    formatter: function() 
         {
-            return '<b>'+ this.series.name +'</b><br/>'+
-            this.x +': '+ this.y +'';
-        }
-    },
-    series: []
+	        return '<b>'+ this.series.name +'</b><br/>'+
+	        this.x +': '+ this.y +'';
+	    }
+	},
+	series: []
 };
 /*********************************************************************************/	
 //All MDS/MGS Memory Usage
 /*********************************************************************************/
-var lineDataOptions_Mgs_MemoryUsage =
+var chartConfig_Mgs_Line_MemoryUsage =
 {
-    chart:{
+	chart:{
     renderTo: '',
     marginLeft: '50',
-    width: '250',
-    style:{ width:'100%',  height:'200px', position: 'inherit' },
+	width: '250',
+    height: '200',
+	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
     marginBottom: 25,
     zoomType: 'xy'
     },
-    title:{ text: '', x: -20, style: { fontSize: '12px' }, },
+    title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
-    xAxis:{ categories: [], text: '' },
-    yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
-    legend:{ layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 10,borderWidth: 0},
+    xAxis:{categories: [],title:{text:''},labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'bold'}}},
+    yAxis:{title:{text:''},labels:{style:{fontSize:'8px'}}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+    plotOptions:{series:{marker: {enabled: false}} },
     credits:{ enabled:false },
     tooltip:
     {
-        formatter: function()
+	    formatter: function() 
         {
-            return '<b>'+ this.series.name +'</b><br/>'+
-            this.x +': '+ this.y +'';
-        }
-    },
-    series: []
+	        return '<b>'+ this.series.name +'</b><br/>'+
+	        this.x +': '+ this.y +'';
+	    }
+	},
+	series: []
 };
 /*********************************************************************************/	
 //All MDS/MGS Disk Read
 /*********************************************************************************/
-var lineDataOptions_Mgs_DiskRead =
+var chartConfig_Mgs_Line_DiskRead =
 {
-    chart:{
+	chart:{
     renderTo: '',
     marginLeft: '50',
-    width: '250',
-    style:{ width:'100%',  height:'200px', position: 'inherit' },
+	width: '250',
+    height: '200',
+	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
     marginBottom: 25,
     zoomType: 'xy'
     },
-    title:{ text: '', x: -20, style: { fontSize: '12px' }, },
+    title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
-    xAxis:{ categories: [], text: '' },
-    yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
-    legend:{ layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 10,borderWidth: 0},
+    xAxis:{categories: [],title:{text:''},labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'bold'}}},
+    yAxis:{title:{text:''},labels:{style:{fontSize:'8px'}}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+    plotOptions:{series:{marker: {enabled: false}} },
     credits:{ enabled:false },
     tooltip:
     {
-        formatter: function()
+	    formatter: function() 
         {
-            return '<b>'+ this.series.name +'</b><br/>'+
-            this.x +': '+ this.y +'';
-        }
-    },
-    series: []
+	        return '<b>'+ this.series.name +'</b><br/>'+
+	        this.x +': '+ this.y +'';
+	    }
+	},
+	series: []
 };
 /*********************************************************************************/	
 //All MDS/MGS Disk Write
 /*********************************************************************************/
-var lineDataOptions_Mgs_DiskWrite =
+var chartConfig_Mgs_Line_DiskWrite =
 {
-    chart:{
+	chart:{
     renderTo: '',
     marginLeft: '50',
-    width: '250',
-    style:{ width:'100%',  height:'200px', position: 'inherit' },
+	width: '250',
+    height: '200',
+	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
     marginBottom: 25,
     zoomType: 'xy'
     },
-    title:{ text: '', x: -20, style: { fontSize: '12px' }, },
+    title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
-    xAxis:{ categories: [], text: '' },
-    yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
-    legend:{ layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 10,borderWidth: 0},
+    xAxis:{categories: [],title:{text:''},labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'bold'}}},
+    yAxis:{title:{text:''},labels:{style:{fontSize:'8px'}}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+    plotOptions:{series:{marker: {enabled: false}} },
     credits:{ enabled:false },
     tooltip:
     {
-        formatter: function()
+	    formatter: function() 
         {
-            return '<b>'+ this.series.name +'</b><br/>'+
-            this.x +': '+ this.y +'';
-        }
-    },
-    series: []
+	        return '<b>'+ this.series.name +'</b><br/>'+
+	        this.x +': '+ this.y +'';
+	    }
+	},
+	series: []
 };
 /*****************************************************************************/
-// Space Usage - Bar chart
+// Function for space usage for all file systems	- Bar Chart
+// Param - File System name, start date, end date, datafunction (average/min/max)
+// Return - Returns the graph plotted in container
 /*****************************************************************************/
-load_landingPageBar_disk = function(isZoom)
+
+	db_Bar_Space_Data = function(isZoom)
     {
         var free=0,used=0;
         var freeData = [],usedData = [],categories = [];
         $.post("/api/getfsdiskusage/",{endtime: "", datafunction: "", starttime: "", filesystem: ""})
 	    .success(function(data, textStatus, jqXHR) 
         {   
-      if(data.success)
+	    	if(data.success)
 		    {
 		        var response = data.response;
 			    var totalDiskSpace=0,totalFreeSpace=0;
-			    var fName = '';
 			    $.each(response, function(resKey, resValue) 
 		        {
 		    	    totalFreeSpace = resValue.kbytesfree/1024;
@@ -349,26 +391,26 @@ load_landingPageBar_disk = function(isZoom)
 	         // Display of appropriate error message
 	    })
         .complete(function(event){
-			obj_db_landingPageBar = barGraphOptions;
+			obj_db_Bar_Space_Data = chartConfig_Bar_DB;
 			if(isZoom == 'true')
 			{
-				obj_db_landingPageBar.chart.width = "780";
-				obj_db_landingPageBar.chart.height = "360";
-				obj_db_landingPageBar.chart.style.height = "360";
-				obj_db_landingPageBar.chart.style.width = "100%";
-				obj_db_landingPageBar.chart.renderTo = "dialog_container";
+				obj_db_Bar_Space_Data.chart.width = "780";
+				obj_db_Bar_Space_Data.chart.height = "360";
+				obj_db_Bar_Space_Data.chart.style.height = "360";
+				obj_db_Bar_Space_Data.chart.style.width = "100%";
+				obj_db_Bar_Space_Data.chart.renderTo = "dialog_container";
 			}
 			else
 			{
-				obj_db_landingPageBar.chart.renderTo = "container";
+				obj_db_Bar_Space_Data.chart.renderTo = "container";
 			}
-            obj_db_landingPageBar.xAxis.categories = categories;
-            obj_db_landingPageBar.title.text="All File System Space Usage";
-            obj_db_landingPageBar.yAxis.title.text = '%';
-            obj_db_landingPageBar.xAxis.labels = {
+            obj_db_Bar_Space_Data.xAxis.categories = categories;
+            obj_db_Bar_Space_Data.title.text="All File System Space Usage";
+            obj_db_Bar_Space_Data.yAxis.title.text = '%';
+            obj_db_Bar_Space_Data.xAxis.labels = {
                     rotation: 310,
             }
-            obj_db_landingPageBar.series = [
+            obj_db_Bar_Space_Data.series = [
             {   
                 type: 'column',
                 name: 'Used Capacity',
@@ -379,13 +421,15 @@ load_landingPageBar_disk = function(isZoom)
                 name: 'Free Capacity',
                 data: freeData
             }];
-            chart = new Highcharts.Chart(obj_db_landingPageBar);
+            chart = new Highcharts.Chart(obj_db_Bar_Space_Data);
         });
     }
 /*****************************************************************************/
-//  Space Usage - Pie chart
+// Function for space usage for all file systems	- Pie Chart
+// Param - File System name, start date, end date, datafunction (average/min/max)
+// Return - Returns the graph plotted in container
 /*****************************************************************************/
-    load_landingPagePie_disk = function()
+    db_Pie_Space_Data = function(isZoom)
     {
         var free=0,used=0;
         $.post("/api/getfsdiskusage/",{endtime: "", datafunction: "", starttime: "", filesystem: ""})
@@ -409,10 +453,10 @@ load_landingPageBar_disk = function(isZoom)
              // Display of appropriate error message
         })
         .complete(function(event){
-            obj_db_landingPagePie = pieDataOptions;
-            obj_db_landingPagePie.title.text="All File System Space Usage";
-            obj_db_landingPagePie.chart.renderTo = "container2";
-            obj_db_landingPagePie.series = [{
+            obj_db_Pie_Space_Data = chartConfig_Pie_DB;
+            obj_db_Pie_Space_Data.title.text="All File System Space Usage";
+            obj_db_Pie_Space_Data.chart.renderTo = "container2";
+            obj_db_Pie_Space_Data.series = [{
                 type: 'pie',
                 name: 'Browser share',
                 data: [
@@ -420,13 +464,15 @@ load_landingPageBar_disk = function(isZoom)
                     ['Used',    used]
                     ]
                 }];
-            chart = new Highcharts.Chart(obj_db_landingPagePie);
+            chart = new Highcharts.Chart(obj_db_Pie_Space_Data);
         });
     }
 /*****************************************************************************/
-// Files Vs Free Nodes - Bar chart
+// Function for free INodes	- Bar Chart
+// Param - File System name, start date, end date, datafunction (average/min/max)
+// Return - Returns the graph plotted in container
 /*****************************************************************************/
-load_landingPageBar_inodes = function()
+    db_Bar_INodes_Data = function(isZoom)
     {
       var free=0,used=0;
       var freeData = [],usedData = [],categories = [];
@@ -456,15 +502,15 @@ load_landingPageBar_inodes = function()
              // Display of appropriate error message
         })
         .complete(function(event){
-            load_landingPageBar_inodes = barGraphOptions;
-            load_landingPageBar_inodes.xAxis.categories = categories;
-            load_landingPageBar_inodes.title.text="Files Vs Free Nodes";
-            load_landingPageBar_inodes.yAxis.title.text = '%';
-            load_landingPageBar_inodes.chart.renderTo = "container1";
-            load_landingPageBar_inodes.xAxis.labels = {
+            obj_db_Bar_INodes_Data = chartConfig_Bar_DB;
+            obj_db_Bar_INodes_Data.xAxis.categories = categories;
+            obj_db_Bar_INodes_Data.title.text="Files Vs Free Nodes";
+            obj_db_Bar_INodes_Data.yAxis.title.text = '%';
+            obj_db_Bar_INodes_Data.chart.renderTo = "container1";
+            obj_db_Bar_INodes_Data.xAxis.labels = {
                     rotation: 310,
             }
-            load_landingPageBar_inodes.series = [
+            obj_db_Bar_INodes_Data.series = [
             {   
                 type: 'column',
                 name: 'Used Capacity',
@@ -475,13 +521,15 @@ load_landingPageBar_inodes = function()
                 name: 'Free Capacity',
                 data: freeData
             }];
-            chart = new Highcharts.Chart(load_landingPageBar_inodes);
+            chart = new Highcharts.Chart(obj_db_Bar_INodes_Data);
         });
     }
 /*****************************************************************************/
-//	Files Vs Free Nodes - Pie chart
+// Function for free INodes	- Pie Chart
+// Param - File System name, start date, end date, datafunction (average/min/max)
+// Return - Returns the graph plotted in container
 /*****************************************************************************/
-    load_landingPagePie_indoes = function()
+    db_Pie_INodes_Data = function(isZoom)
     {
         var free=0,used=0;
         $.post("/api/getfsinodeusage/",{endtime: "", datafunction: "", starttime: "", filesystem: ""})
@@ -506,10 +554,10 @@ load_landingPageBar_inodes = function()
         })
         .complete(function(event)
         {
-           load_landingPagePie_indoes = pieDataOptions;
-           load_landingPagePie_indoes.title.text="Files Vs Free Nodes";
-           load_landingPagePie_indoes.chart.renderTo = "container3";       
-           load_landingPagePie_indoes.series = [{
+           obj_db_Pie_INodes_Data = chartConfig_Pie_DB;
+           obj_db_Pie_INodes_Data.title.text="Files Vs Free Nodes";
+           obj_db_Pie_INodes_Data.chart.renderTo = "container3";       
+           obj_db_Pie_INodes_Data.series = [{
                type: 'pie',
                name: 'Browser share',
                data: [
@@ -517,470 +565,457 @@ load_landingPageBar_inodes = function()
                   ['Used',    used]
                ]
             }];
-            chart = new Highcharts.Chart(load_landingPagePie_indoes);
+            chart = new Highcharts.Chart(obj_db_Pie_INodes_Data);
         });
      }
 
 /*****************************************************************************/
-// All File System CPU Usage - Line Chart
+// Function for cpu usage - Line Chart
+// Param - File System name, start date, end date, datafunction (average/min/max)
+// Return - Returns the graph plotted in container
 /*****************************************************************************/
-load_LineChart_CpuUsage = function(isZoom)
+ db_Line_CpuUsage_Data = function(isZoom)
  {
         var count = 0;
         var optionData = [],categories = [];
-		obj_gn_line_CPUUsage = lineDataOptions_CPUUsage;
-		if(isZoom == 'true')
-		{
-			obj_gn_line_CPUUsage.chart.width = "780";
-			obj_gn_line_CPUUsage.chart.height = "360";
-			obj_gn_line_CPUUsage.chart.style.height = "360";
-			obj_gn_line_CPUUsage.chart.style.width = "100%";
-			obj_gn_line_CPUUsage.chart.renderTo = "dialog_avgCPUDiv";
-		}
-		else
-		{
-			obj_gn_line_CPUUsage.chart.renderTo = "avgCPUDiv";
-		}
-		
-        obj_gn_line_CPUUsage.title.text="CPU Usage";
-        $.post("/api/getservercpuusage/",{datafunction: "average", hostname: "", endtime: "29-20-2011", starttime: "29-20-2011"})
+		obj_db_Line_CpuUsage_Data = chartConfig_Line_CpuUsage;
+		$.post("/api/getservercpuusage/",{datafunction: "average", hostname: "", endtime: "29-20-2011", starttime: "29-20-2011"})
          .success(function(data, textStatus, jqXHR) 
           {
-            var ostName='';
+            var hostName='';
             var avgCPUApiResponse = data;
             if(avgCPUApiResponse.success)
             {
                  var response = avgCPUApiResponse.response;
                  $.each(response, function(resKey, resValue) 
                 {
-		          if (ostName != resValue.hostname && ostName !='')
+		          if (hostName != resValue.hostname && hostName !='')
 		          {
-		          obj_gn_line_CPUUsage.series[count] = {
-		                name: ostName,
+		          obj_db_Line_CpuUsage_Data.series[count] = {
+		                name: hostName,
 		                data: optionData
 		                   };
 		          optionData = [];
 		          categories = [];
 		          count++;
-		          ostName = resValue.hostname;
+		          hostName = resValue.hostname;
 		          optionData.push(resValue.cpu);
 		          categories.push(resValue.timestamp);
 			       }
 			       else
 			       {
-			        ostName = resValue.hostname;
+			        hostName = resValue.hostname;
 			        optionData.push(resValue.cpu);
 			        categories.push(resValue.timestamp);
 			       }
 			     });
-                 obj_gn_line_CPUUsage.series[count] = { name: ostName, data: optionData };
+                 obj_db_Line_CpuUsage_Data.series[count] = { name: hostName, data: optionData };
             }
        })
        .error(function(event) {
              // Display of appropriate error message
        })
        .complete(function(event){
-                obj_gn_line_CPUUsage.xAxis.categories = categories;
-                obj_gn_line_CPUUsage.yAxis.title.text = '%';
-                obj_gn_line_CPUUsage.xAxis.labels = {
-                    rotation: 310,
-                    step: 2
-                }
-                chart = new Highcharts.Chart(obj_gn_line_CPUUsage);
+                obj_db_Line_CpuUsage_Data.xAxis.categories = categories;
+                obj_db_Line_CpuUsage_Data.xAxis.title.text = 'Time (hh:mm:ss)';
+                obj_db_Line_CpuUsage_Data.yAxis.title.text = 'Percentage';
+                if(isZoom == 'true')
+        		{
+        			obj_db_Line_CpuUsage_Data.chart.width = "780";
+        			obj_db_Line_CpuUsage_Data.chart.height = "360";
+        			obj_db_Line_CpuUsage_Data.chart.style.height = "360";
+        			obj_db_Line_CpuUsage_Data.chart.style.width = "100%";
+        			obj_db_Line_CpuUsage_Data.chart.renderTo = "dg_db_cpu_usage";
+        		}
+        		else
+        		{
+        			obj_db_Line_CpuUsage_Data.chart.renderTo = "avgCPUDiv";
+        		}
+        		
+                obj_db_Line_CpuUsage_Data.title.text="CPU Usage";
+                chart = new Highcharts.Chart(obj_db_Line_CpuUsage_Data);
         });
     }
 
 /*****************************************************************************/
-// All File System Memory Usage - Line Chart
+//Function for memory usage - Line Chart
+//Param - File System name, start date, end date, datafunction (average/min/max)
+//Return - Returns the graph plotted in container
 /*****************************************************************************/
-load_LineChart_MemoryUsage = function()
+ db_Line_MemoryUsage_Data = function(isZoom)
  {
         var count = 0;
          var optionData = [],categories = [];
-        obj_gn_line_MemoryUsage = lineDataOptions_MemoryUsage;
-        obj_gn_line_MemoryUsage.title.text = "Memory Usage";
-        obj_gn_line_MemoryUsage.chart.renderTo = "avgMemoryDiv";
+        obj_db_Line_MemoryUsage_Data = chartConfig_Line_MemoryUsage;
+        obj_db_Line_MemoryUsage_Data.chart.renderTo = "avgMemoryDiv";
         $.post("/api/getservermemoryusage/",{datafunction: "average", hostname: "", endtime: "29-20-2011", starttime: "29-20-2011"})
          .success(function(data, textStatus, jqXHR) {
-            var ostName='';
+            var hostName='';
             var avgMemoryApiResponse = data;
             if(avgMemoryApiResponse.success)
              {
                  var response = avgMemoryApiResponse.response;
                  $.each(response, function(resKey, resValue)
                 {
-		          if (ostName != resValue.hostname && ostName !='')
+		          if (hostName != resValue.hostname && hostName !='')
 		          {
-		          obj_gn_line_MemoryUsage.series[count] = {
-		                name: ostName,
+		          obj_db_Line_MemoryUsage_Data.series[count] = {
+		                name: hostName,
 		                data: optionData
 		                   };
 		          optionData = [];
 		          categories = [];
 		          count++;
-		          ostName = resValue.hostname;
+		          hostName = resValue.hostname;
 		          optionData.push(resValue.memory);
 		          categories.push(resValue.timestamp);
 		          }
 		           else
 		           {
-		            ostName = resValue.hostname;
+		            hostName = resValue.hostname;
 		            optionData.push(resValue.memory);
 		            categories.push(resValue.timestamp);
 		           }
 		          });
-                 obj_gn_line_MemoryUsage.series[count] = { name: ostName, data: optionData };
+                 obj_db_Line_MemoryUsage_Data.series[count] = { name: hostName, data: optionData };
 		      }
        })
        .error(function(event) {
              // Display of appropriate error message
        })
        .complete(function(event){
-                obj_gn_line_MemoryUsage.xAxis.categories = categories;
-                obj_gn_line_MemoryUsage.yAxis.title.text = 'GB';
-                obj_gn_line_MemoryUsage.xAxis.labels = {
-                    rotation: 310,
-                    step: 2
-                }
-                chart = new Highcharts.Chart(obj_gn_line_MemoryUsage);
+                obj_db_Line_MemoryUsage_Data.xAxis.categories = categories;
+                obj_db_Line_MemoryUsage_Data.xAxis.title.text = 'Time (hh:mm:ss)';
+                obj_db_Line_MemoryUsage_Data.yAxis.title.text = 'GB';
+                obj_db_Line_MemoryUsage_Data.title.text = "Memory Usage";
+                
+                chart = new Highcharts.Chart(obj_db_Line_MemoryUsage_Data);
         });
 }
 
 /*****************************************************************************/
-// All File System Disk Read - Line Chart
+//Function for disk read - Line Chart
+//Param - File System name, start date, end date, datafunction (average/min/max)
+//Return - Returns the graph plotted in container
 /*****************************************************************************/
-load_LineChart_DiskRead = function()
+ db_Line_DiskRead_Data = function(isZoom)
  {
         var count = 0;
         var optionData = [],categories = [];
-        obj_gn_line_DiskRead = lineDataOptions_DiskRead;
-        obj_gn_line_DiskRead.title.text = "Disk Read";
-        obj_gn_line_DiskRead.chart.renderTo = "avgReadDiv";
+        obj_db_Line_DiskRead_Data = chartConfig_Line_DiskRead;
+        obj_db_Line_DiskRead_Data.title.text = "Disk Read";
+        obj_db_Line_DiskRead_Data.chart.renderTo = "avgReadDiv";
         $.post("/api/gettargetreads/",{datafunction: "average", endtime: "29-20-2011", targetname: "", hostname: "", starttime: "29-20-2011"})
          .success(function(data, textStatus, jqXHR) {
-            var ostName='';
+            var targetName='';
             var avgDiskReadApiResponse = data;
             if(avgDiskReadApiResponse.success)
              {
                  var response = avgDiskReadApiResponse.response;
                  $.each(response, function(resKey, resValue)
                 {
-		          if (ostName != resValue.targetname && ostName !='')
+		          if (targetName != resValue.targetname && targetName !='')
 		          {
-		          obj_gn_line_DiskRead.series[count] = {
-		                name: ostName,
+		          obj_db_Line_DiskRead_Data.series[count] = {
+		                name: targetName,
 		                data: optionData
 		                   };
 		          optionData = [];
 		          categories = [];
 		          count++;
-		          ostName = resValue.targetname;
+		          targetName = resValue.targetname;
 		          optionData.push(resValue.reads);
 		          categories.push(resValue.timestamp);
 		          }
 		           else
 		           {
-		            ostName = resValue.targetname;
+		            targetName = resValue.targetname;
 		            optionData.push(resValue.reads);
 		            categories.push(resValue.timestamp);
 		           }
 		          });
-                 obj_gn_line_DiskRead.series[count] = { name: ostName, data: optionData };
+                 obj_db_Line_DiskRead_Data.series[count] = { name: targetName, data: optionData };
 		       }
        })
        .error(function(event) {
              // Display of appropriate error message
        })
        .complete(function(event){
-                obj_gn_line_DiskRead.xAxis.categories = categories;
-                obj_gn_line_DiskRead.yAxis.title.text = 'KB';
-                obj_gn_line_DiskRead.xAxis.labels = {
-                    rotation: 310,
-                    step: 2
-                }
-                chart = new Highcharts.Chart(obj_gn_line_DiskRead);
+                obj_db_Line_DiskRead_Data.xAxis.categories = categories;
+                obj_db_Line_DiskRead_Data.yAxis.title.text = 'KB';
+                chart = new Highcharts.Chart(obj_db_Line_DiskRead_Data);
         });
 }
 
 /*****************************************************************************/
-// All File System Disk Write - Line Chart
+//Function for disk write - Line Chart
+//Param - File System name, start date, end date, datafunction (average/min/max)
+//Return - Returns the graph plotted in container
 /*****************************************************************************/
 
-load_LineChart_DiskWrite = function()
+ db_Line_DiskWrite_Data = function(isZoom)
  {
         var count = 0;
         var optionData = [],categories = [];
-        obj_gn_line_DiskWrite = lineDataOptions_DiskWrite;
-        obj_gn_line_DiskWrite.title.text = "Disk Write";
-        obj_gn_line_DiskWrite.chart.renderTo = "avgWriteDiv";
+        obj_db_Line_DiskWrite_Data = chartConfig_Line_DiskWrite;
+        obj_db_Line_DiskWrite_Data.title.text = "Disk Write";
+        obj_db_Line_DiskWrite_Data.chart.renderTo = "avgWriteDiv";
         $.post("/api/gettargetwrites/",{datafunction: "average", endtime: "29-20-2011", targetname: "", hostname: "", starttime: "29-20-2011"})
          .success(function(data, textStatus, jqXHR) {
-            var ostName='';
+            var targetName='';
             var avgDiskWriteApiResponse = data;
             if(avgDiskWriteApiResponse.success)
              {
                  var response = avgDiskWriteApiResponse.response;
                  $.each(response, function(resKey, resValue)
                 {
-		          if (ostName != resValue.targetname && ostName !='')
+		          if (targetName != resValue.targetname && targetName !='')
 		          {
-		          obj_gn_line_DiskWrite.series[count] = {
-		                name: ostName,
+		          obj_db_Line_DiskWrite_Data.series[count] = {
+		                name: targetName,
 		                data: optionData
 		                   };
 		          optionData = [];
 		          categories = [];
 		          count++;
-		          ostName = resValue.targetname;
+		          targetName = resValue.targetname;
 		          optionData.push(resValue.writes);
 		          categories.push(resValue.timestamp);
 		          }
 		           else
 		           {
-		            ostName = resValue.targetname;
+		            targetName = resValue.targetname;
 		            optionData.push(resValue.writes);
 		            categories.push(resValue.timestamp);
 		           }
 		          });
-                 obj_gn_line_DiskWrite.series[count] = { name: ostName, data: optionData };
+                 obj_db_Line_DiskWrite_Data.series[count] = { name: targetName, data: optionData };
 		       }
        })
        .error(function(event) {
              // Display of appropriate error message
        })
        .complete(function(event){
-                obj_gn_line_DiskWrite.xAxis.categories = categories;
-                obj_gn_line_DiskWrite.yAxis.title.text = 'KB';
-                obj_gn_line_DiskWrite.xAxis.labels = {
-                    rotation: 310,
-                    step: 2
-                }
-                chart = new Highcharts.Chart(obj_gn_line_DiskWrite);
+                obj_db_Line_DiskWrite_Data.xAxis.categories = categories;
+                obj_db_Line_DiskWrite_Data.yAxis.title.text = 'KB';
+                chart = new Highcharts.Chart(obj_db_Line_DiskWrite_Data);
         });
 }   
 
 /*****************************************************************************/
-// All MGS/MGT CPU Usage - Line Chart
+//Function for cpu usage for MDS/MGS - Line Chart
+//Param - File System name, start date, end date, datafunction (average/min/max)
+//Return - Returns the graph plotted in container
 /*****************************************************************************/
-load_LineChart_Mgs_CpuUsage = function()
+ db_Mgs_Line_CpuUsage_Data = function(isZoom)
  {
         var count = 0;
          var optionData = [],categories = [];
-        obj_gn_line_Mgs_CPUUsage = lineDataOptions_Mgs_CPUUsage;
-        obj_gn_line_Mgs_CPUUsage.title.text="CPU Usage";
-        obj_gn_line_Mgs_CPUUsage.chart.renderTo = "mgsavgCPUDiv";
+        obj_db_Mgs_Line_CpuUsage_Data = chartConfig_Mgs_Line_CpuUsage;
+        obj_db_Mgs_Line_CpuUsage_Data.title.text="CPU Usage";
+        obj_db_Mgs_Line_CpuUsage_Data.chart.renderTo = "mgsavgCPUDiv";
         $.post("/api/getservercpuusage/",{datafunction: "average", hostname: "", endtime: "29-20-2011", starttime: "29-20-2011"})
          .success(function(data, textStatus, jqXHR) {
-            var ostName='';
+            var hostName='';
             var avgCPUApiResponse = data;
             if(avgCPUApiResponse.success)
              {
                  var response = avgCPUApiResponse.response;
                  $.each(response, function(resKey, resValue) 
                 {
-		          if (ostName != resValue.hostname && ostName !='')
+		          if (hostName != resValue.hostname && hostName !='')
 		          {
-		          obj_gn_line_Mgs_CPUUsage.series[count] = {
-		                name: ostName,
+		          obj_db_Mgs_Line_CpuUsage_Data.series[count] = {
+		                name: hostName,
 		                data: optionData
 		                   };
 		          optionData = [];
 		          categories = [];
 		          count++;
-		          ostName = resValue.hostname;
+		          hostName = resValue.hostname;
 		          optionData.push(resValue.cpu);
 		          categories.push(resValue.timestamp);
 		          }
 		           else
 		           {
-		            ostName = resValue.hostname;
+		            hostName = resValue.hostname;
 		            optionData.push(resValue.cpu);
 		            categories.push(resValue.timestamp);
 		           }
 		          });
-                 obj_gn_line_Mgs_CPUUsage.series[count] = { name: ostName, data: optionData };
+                 obj_db_Mgs_Line_CpuUsage_Data.series[count] = { name: hostName, data: optionData };
              }
        })
        .error(function(event) {
              // Display of appropriate error message
        })
        .complete(function(event){
-                obj_gn_line_Mgs_CPUUsage.xAxis.categories = categories;
-                obj_gn_line_Mgs_CPUUsage.yAxis.title.text = '%';
-                obj_gn_line_Mgs_CPUUsage.xAxis.labels = {
-                    rotation: 310,
-                    step: 2
-                }
-                chart = new Highcharts.Chart(obj_gn_line_Mgs_CPUUsage);
+                obj_db_Mgs_Line_CpuUsage_Data.xAxis.categories = categories;
+                obj_db_Mgs_Line_CpuUsage_Data.yAxis.title.text = 'Percentage';
+                chart = new Highcharts.Chart(obj_db_Mgs_Line_CpuUsage_Data);
         });
     }
 
 /*****************************************************************************/
-// All MGS/MGT Memory Usage - Line Chart
+//Function for memory usage for MDS/MGS - Line Chart
+//Param - File System name, start date, end date, datafunction (average/min/max)
+//Return - Returns the graph plotted in container
 /*****************************************************************************/
-load_LineChart_Mgs_MemoryUsage = function()
+ db_Mgs_Line_MemoryUsage_Data = function(isZoom)
  {
         var count = 0;
          var optionData = [],categories = [];
-        obj_gn_line_Mgs_MemoryUsage = lineDataOptions_Mgs_MemoryUsage;
-        obj_gn_line_Mgs_MemoryUsage.title.text = "Memory Usage";
-        obj_gn_line_Mgs_MemoryUsage.chart.renderTo = "mgsavgMemoryDiv";
+        obj_db_Mgs_Line_MemoryUsage_Data = chartConfig_Mgs_Line_MemoryUsage;
+        obj_db_Mgs_Line_MemoryUsage_Data.title.text = "Memory Usage";
+        obj_db_Mgs_Line_MemoryUsage_Data.chart.renderTo = "mgsavgMemoryDiv";
         $.post("/api/getservermemoryusage/",{datafunction: "average", hostname: "", endtime: "29-20-2011", starttime: "29-20-2011"})
          .success(function(data, textStatus, jqXHR) {
-            var ostName='';
+            var hostName='';
             var avgMemoryApiResponse = data;
             if(avgMemoryApiResponse.success)
              {
                  var response = avgMemoryApiResponse.response;
                  $.each(response, function(resKey, resValue)
                 {
-		          if (ostName != resValue.hostname && ostName !='')
+		          if (hostName != resValue.hostname && hostName !='')
 		          {
-		          obj_gn_line_Mgs_MemoryUsage.series[count] = {
-		                name: ostName,
+		          obj_db_Mgs_Line_MemoryUsage_Data.series[count] = {
+		                name: hostName,
 		                data: optionData
 		                   };
 		          optionData = [];
 		          categories = [];
 		          count++;
-		          ostName = resValue.hostname;
+		          hostName = resValue.hostname;
 		          optionData.push(resValue.memory);
 		          categories.push(resValue.timestamp);
 		          }
 		           else
 		           {
-		            ostName = resValue.hostname;
+		            hostName = resValue.hostname;
 		            optionData.push(resValue.memory);
 		            categories.push(resValue.timestamp);
 		           }
 		          });
-                 obj_gn_line_Mgs_MemoryUsage.series[count] = { name: ostName, data: optionData };
+                 obj_db_Mgs_Line_MemoryUsage_Data.series[count] = { name: hostName, data: optionData };
 		       }
        })
        .error(function(event) {
              // Display of appropriate error message
        })
        .complete(function(event){
-                obj_gn_line_Mgs_MemoryUsage.xAxis.categories = categories;
-                obj_gn_line_Mgs_MemoryUsage.yAxis.title.text = 'GB';
-                obj_gn_line_Mgs_MemoryUsage.xAxis.labels = {
-                    rotation: 310,
-                    step: 2
-                }
-                chart = new Highcharts.Chart(obj_gn_line_Mgs_MemoryUsage);
+                obj_db_Mgs_Line_MemoryUsage_Data.xAxis.categories = categories;
+                obj_db_Mgs_Line_MemoryUsage_Data.yAxis.title.text = 'GB';
+                chart = new Highcharts.Chart(obj_db_Mgs_Line_MemoryUsage_Data);
         });
 }
 
 /*****************************************************************************/
-// All MGS/MGT Disk Read - Line Chart
+//Function for disk read for MDS/MGS - Line Chart
+//Param - File System name, start date, end date, datafunction (average/min/max)
+//Return - Returns the graph plotted in container
 /*****************************************************************************/
-load_LineChart_Mgs_DiskRead = function()
+ db_Mgs_Line_DiskRead_Data = function(isZoom)
  {
         var count = 0;
         var optionData = [],categories = [];
-        obj_gn_line_Mgs_DiskRead = lineDataOptions_Mgs_DiskRead;
-        obj_gn_line_Mgs_DiskRead.title.text = "Disk Read";
-        obj_gn_line_Mgs_DiskRead.chart.renderTo = "mgsavgReadDiv";
+        obj_db_Mgs_Line_DiskRead_Data = chartConfig_Mgs_Line_DiskRead;
+        obj_db_Mgs_Line_DiskRead_Data.title.text = "Disk Read";
+        obj_db_Mgs_Line_DiskRead_Data.chart.renderTo = "mgsavgReadDiv";
         $.post("/api/gettargetreads/",{datafunction: "average", endtime: "29-20-2011", targetname: "", hostname: "", starttime: "29-20-2011"})
          .success(function(data, textStatus, jqXHR) {
-            var ostName='';
+            var targetName='';
             var avgDiskReadApiResponse = data;
             if(avgDiskReadApiResponse.success)
              {
                  var response = avgDiskReadApiResponse.response;
                  $.each(response, function(resKey, resValue)
                 {
-		          if (ostName != resValue.targetname && ostName !='')
+		          if (targetName != resValue.targetname && targetName !='')
 		          {
-		          obj_gn_line_Mgs_DiskRead.series[count] = {
-		                name: ostName,
+		          obj_db_Mgs_Line_DiskRead_Data.series[count] = {
+		                name: targetName,
 		                data: optionData
 		                   };
 		          optionData = [];
 		          categories = [];
 		          count++;
-		          ostName = resValue.targetname;
+		          targetName = resValue.targetname;
 		          optionData.push(resValue.reads);
 		          categories.push(resValue.timestamp);
 		          }
 		           else
 		           {
-		            ostName = resValue.targetname;
+		            targetName = resValue.targetname;
 		            optionData.push(resValue.reads);
 		            categories.push(resValue.timestamp);
 		           }
 		          });
-                 obj_gn_line_Mgs_DiskRead.series[count] = { name: ostName, data: optionData };
+                 obj_db_Mgs_Line_DiskRead_Data.series[count] = { name: targetName, data: optionData };
 		       }
        })
        .error(function(event) {
              // Display of appropriate error message
        })
        .complete(function(event){
-                obj_gn_line_Mgs_DiskRead.xAxis.categories = categories;
-                obj_gn_line_Mgs_DiskRead.yAxis.title.text = 'KB';
-                obj_gn_line_Mgs_DiskRead.xAxis.labels = {
-                    rotation: 310,
-                    step: 2
-                }
-                chart = new Highcharts.Chart(obj_gn_line_Mgs_DiskRead);
+                obj_db_Mgs_Line_DiskRead_Data.xAxis.categories = categories;
+                obj_db_Mgs_Line_DiskRead_Data.yAxis.title.text = 'KB';
+                chart = new Highcharts.Chart(obj_db_Mgs_Line_DiskRead_Data);
         });
 }
 
-/*****************************************************************************/
-// All MGS/MGT Disk Write - Line Chart
+ /*****************************************************************************/
+//Function for disk write for MDS/MGS - Line Chart
+//Param - File System name, start date, end date, datafunction (average/min/max)
+//Return - Returns the graph plotted in container
 /*****************************************************************************/
 
-load_LineChart_Mgs_DiskWrite = function()
+ db_Mgs_Line_DiskWrite_Data = function(isZoom)
  {
         var count = 0;
         var optionData = [],categories = [];
-        obj_gn_line_Mgs_DiskWrite = lineDataOptions_Mgs_DiskWrite;
-        obj_gn_line_Mgs_DiskWrite.title.text = "Disk Write";
-        obj_gn_line_Mgs_DiskWrite.chart.renderTo = "mgsavgWriteDiv";
+        obj_db_Mgs_Line_DiskWrite_Data = chartConfig_Mgs_Line_DiskWrite;
+        obj_db_Mgs_Line_DiskWrite_Data.title.text = "Disk Write";
+        obj_db_Mgs_Line_DiskWrite_Data.chart.renderTo = "mgsavgWriteDiv";
         $.post("/api/gettargetwrites/",{datafunction: "average", endtime: "29-20-2011", targetname: "", hostname: "", starttime: "29-20-2011"})
          .success(function(data, textStatus, jqXHR) {
-            var ostName='';
+            var targetName='';
             var avgDiskWriteApiResponse = data;
             if(avgDiskWriteApiResponse.success)
              {
                  var response = avgDiskWriteApiResponse.response;
                  $.each(response, function(resKey, resValue)
                 {
-		          if (ostName != resValue.targetname && ostName !='')
+		          if (targetName != resValue.targetname && targetName !='')
 		          {
-		          obj_gn_line_Mgs_DiskWrite.series[count] = {
-		                name: ostName,
+		          obj_db_Mgs_Line_DiskWrite_Data.series[count] = {
+		                name: targetName,
 		                data: optionData
 		                   };
 		          optionData = [];
 		          categories = [];
 		          count++;
-		          ostName = resValue.targetname;
+		          targetName = resValue.targetname;
 		          optionData.push(resValue.writes);
 		          categories.push(resValue.timestamp);
 		          }
 		           else
 		           {
-		            ostName = resValue.targetname;
+		            targetName = resValue.targetname;
 		            optionData.push(resValue.writes);
 		            categories.push(resValue.timestamp);
 		           }
 		          });
-                 obj_gn_line_Mgs_DiskWrite.series[count] = { name: ostName, data: optionData };
+                 obj_db_Mgs_Line_DiskWrite_Data.series[count] = { name: targetName, data: optionData };
 		       }
        })
        .error(function(event) {
              // Display of appropriate error message
        })
        .complete(function(event){
-                obj_gn_line_Mgs_DiskWrite.xAxis.categories = categories;
-                obj_gn_line_Mgs_DiskWrite.yAxis.title.text = 'KB';
-                obj_gn_line_Mgs_DiskWrite.xAxis.labels = {
-                    rotation: 310,
-                    step: 2
-                }
-                chart = new Highcharts.Chart(obj_gn_line_Mgs_DiskWrite);
+                obj_db_Mgs_Line_DiskWrite_Data.xAxis.categories = categories;
+                obj_db_Mgs_Line_DiskWrite_Data.yAxis.title.text = 'KB';
+                chart = new Highcharts.Chart(obj_db_Mgs_Line_DiskWrite_Data);
         });
 }
 /******************************************************************************/

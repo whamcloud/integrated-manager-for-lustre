@@ -160,13 +160,14 @@ $(document).ready(function() {
 	
 	
 	// CPU Usage
-	$('#cpu_usage').click(function(){
-		$('#dg_cpu_usage').dialog('open');
+	$('#db_cpu_usage').click(function(){
+		$('#dg_db_cpu_usage').dialog('open');
+        
 		return false;
 	});
 	
 		// Dialog			
-	$('#dg_cpu_usage').dialog({
+	$('#dg_db_cpu_usage').dialog({
 		autoOpen: false,
 		width: 800,
 		height:480,

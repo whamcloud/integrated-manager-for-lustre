@@ -35,11 +35,11 @@
 	display: block;
 	height: 21px;
 	overflow: hidden;
-	width: 99.4%;
 	padding:5px;
 	/*border:solid 1px #dedede;*/
-	background-image:url(../images/line1.jpg);
-	background-repeat:repeat-x;
+	/*background-image:url(../images/line1.jpg);
+	background-repeat:repeat-x;*/
+	background-color:#5ed6ff;
 	/*background:#fff;*/
 }
 .breadCrumb ul

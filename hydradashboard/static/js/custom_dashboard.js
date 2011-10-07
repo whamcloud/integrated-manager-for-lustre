@@ -147,18 +147,18 @@ load_breadcrumbs = function()
 		             $("#breadCrumb1").html(breadCrumbHtml);
 		             $("#breadCrumb1").jBreadCrumb();
 			    });
-			     load_fsPagePie_disk($('#fsSelect').val(),"","","");
-			     load_fsPagePie_indoes($('#fsSelect').val(),"","","");
+                 fs_Pie_Space_Data($('#fsSelect').val(),"","","","false");
+                 fs_Pie_INodes_Data($('#fsSelect').val(),"","","","false");
 
-			     load_fsPageLine_CpuUsage("average",$('#fsSelect').val(),"29-20-2011","29-20-2011");
-			     load_fsPageLine_MemoryUsage("average",$('#fsSelect').val(),"29-20-2011","29-20-2011");
+                 fs_Line_CpuUsage_Data("average",$('#fsSelect').val(),"29-20-2011","29-20-2011","false");
+                 fs_Line_MemoryUsage_Data("average",$('#fsSelect').val(),"29-20-2011","29-20-2011","false");
+                 fs_Line_DiskRead_Data("average","29-20-2011",$('#fsSelect').val(),"29-20-2011","false");
+                 fs_Line_DiskWrite_Data("average","29-20-2011",$('#fsSelect').val(),"29-20-2011","false");
 
-			     load_fsPageLine_DiskRead("average","29-20-2011",$('#fsSelect').val(),"29-20-2011");
-			     load_fsPageLine_DiskWrite("average","29-20-2011",$('#fsSelect').val(),"29-20-2011");
-			     load_fsPageLine_Mgs_CpuUsage("average",$('#fsSelect').val(),"29-20-2011","29-20-2011");
-			     load_fsPageLine_Mgs_MemoryUsage("average",$('#fsSelect').val(),"29-20-2011","29-20-2011");
-			     load_fsPageLine_Mgs_DiskRead("average","29-20-2011",$('#fsSelect').val(),"29-20-2011");
-			     load_fsPageLine_Mgs_DiskWrite("average","29-20-2011",$('#fsSelect').val(),"29-20-2011");
+                 fs_Mgs_Line_CpuUsage_Data("average",$('#fsSelect').val(),"29-20-2011","29-20-2011","false");
+                 fs_Mgs_Line_MemoryUsage_Data("average",$('#fsSelect').val(),"29-20-2011","29-20-2011","false");
+                 fs_Mgs_Line_DiskRead_Data("average","29-20-2011",$('#fsSelect').val(),"29-20-2011","false");
+                 fs_Mgs_Line_DiskWrite_Data("average","29-20-2011",$('#fsSelect').val(),"29-20-2011","false");
 			}
 });         
 
@@ -206,22 +206,22 @@ load_breadcrumbs = function()
 				    });
 	        }
 			//call for OSS graphs
-			load_OSSPagePie_disk($('#ossSelect').val());
+			OSS_Pie_space_data($('#ossSelect').val());
 			
 			//call for inode select
-			load_INodePagePie_disk($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
+			OSS_Pie_inode_data($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
 			
 			//call for OSS CPU Usage
-			load_LineChart_CpuUsage_OSS($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
+			OSS_Line_Cpu_data($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
 			
 			//call for memory usage
-			load_LineChart_MemoryUsage_OSS($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
+			OSS_Line_Memory_Data($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
 	
 			//call for disk read
-			load_LineChart_DiskRead_OSS($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
+			OSS_Line_DiskRead_Data($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
 			
 			//call for disk write
-			loadLineChart_DiskWrite_OSS($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
+			OSS_Line_DiskWrite_Data($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
 	    });
 		
 /******************************************************************************/
@@ -244,16 +244,16 @@ load_breadcrumbs = function()
 			 	$("#breadCrumb3").jBreadCrumb();
 				}
 	//call for file system usage
-	load_OSSPagePie_disk_OST($("#ostSelect").val());
+	OST_Pie_Space_Data($("#ostSelect").val());
 	
 	//call for inode usage
-	load_INodePagePie_disk_OST($("#ostSelect").val(),'29-20-2011','29-20-2011','average');
+	OST_Pie_Inode_Data($("#ostSelect").val(),'29-20-2011','29-20-2011','average');
 	
 	//call for disk read
-	load_LineChart_DiskRead_OST($("#ostSelect").val(),'29-20-2011','29-20-2011','average');
+	OST_Line_DiskRead_Data($("#ostSelect").val(),'29-20-2011','29-20-2011','average');
 	
 	//call for disk write
-	loadLineChart_DiskWrite_OST($("#ostSelect").val(),'29-20-2011','29-20-2011','average');
+	OST_Line_DiskWrite_Data($("#ostSelect").val(),'29-20-2011','29-20-2011','average');
 	 });
 /******************************************************************************/
 // Function for controlling tabs on oss dashboard
@@ -326,24 +326,24 @@ load_breadcrumbs = function()
 				$(this).css('cursor','auto');
 		});
 
-       load_landingPageBar_disk('false');
-        load_landingPagePie_disk();
-        load_landingPageBar_inodes();
-        load_landingPagePie_indoes();
-        load_LineChart_CpuUsage('false');
-        load_LineChart_MemoryUsage();
-        load_LineChart_DiskRead();
-        load_LineChart_DiskWrite();
-        load_LineChart_Mgs_CpuUsage();
-        load_LineChart_Mgs_MemoryUsage();
-        load_LineChart_Mgs_DiskRead();
-        load_LineChart_Mgs_DiskWrite();	
-		
+	db_Bar_Space_Data('false');
+    db_Pie_Space_Data('false');
+    db_Bar_INodes_Data('false');
+    db_Pie_INodes_Data('false');
+    db_Line_CpuUsage_Data('false');
+    db_Line_MemoryUsage_Data('false');
+    db_Line_DiskRead_Data('false');
+    db_Line_DiskWrite_Data('false');
+    db_Mgs_Line_CpuUsage_Data('false');
+    db_Mgs_Line_MemoryUsage_Data('false');
+    db_Mgs_Line_DiskRead_Data('false');
+    db_Mgs_Line_DiskWrite_Data('false');
+	
 		$('#fs_space').click(function(){
 			load_landingPageBar_disk('true');						
 		});
 		
-		$('#cpu_usage').click(function(){
-			load_LineChart_CpuUsage('true');						
+		$('#db_cpu_usage').click(function(){
+            db_Line_CpuUsage_Data('true');
 		});
 });			// End Of document.ready funtion

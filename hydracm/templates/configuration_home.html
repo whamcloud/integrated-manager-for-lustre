@@ -1,39 +1,34 @@
-<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
-    <head>
-        <title>Hydra Configuration</title>
-
-        <link rel="stylesheet" href="{{STATIC_URL}}css/Base.css" type="text/css" />
-        <link href="{{STATIC_URL}}css/BreadCrumb.css" rel="stylesheet" type="text/css" />
-        <link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
-        <script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
-        <script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
-        <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.js"></script>
-		<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
-        <script type="text/javascript" src="{{STATIC_URL}}js/tab_config_js.js"></script>
-        <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
-        <link href="{{STATIC_URL}}css/jquery-ui-1.8.9.custom.css" rel="stylesheet" type="text/css" />
-        <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>      
-         <script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
-        <link href="{{STATIC_URL}}css/default.css" rel="stylesheet" type="text/css" />
-        <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js" ></script>
-        
-         <link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
-         <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
+<head>
+<title>Hydra Configuration</title>
+<link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
+<link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
+<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.js"></script>
+<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/tab_config_js.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
+<link href="{{STATIC_URL}}css/jquery-ui-1.8.9.custom.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js" ></script>
+<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
+<link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
 <style>
 .ui-widget-header {
 	background:none;
-    border: 0px solid #E78F08;
-	
+	border: 0px solid #E78F08;
 }
 .ui-widget-content {
-    background:none;
-    border: 0px solid #DDDDDD;
-    color: #FFFFFF;
+	background:none;
+	border: 0px solid #DDDDDD;
+	color: #FFFFFF;
 }
 </style>
-
-  <script>
+<script>
 	$(function() {
 		$( "#tabs" ).tabs({
 			ajaxOptions: {
@@ -52,101 +47,84 @@
 		} );
 	} );
 	</script>
-	</head>
-    <body style="margin: 0px 0px 0px 0px; padding: 0px;">
-    <div class="logohead"><div class="logo"></div><div style="clear:left;"></div></div>
-        <table height="100%" width="100%" cellspacing="0" cellpadding="1" align="center" style="border: 1px solid #DEDEDE">
-        <tr><!-- #CFCFCF -->
-        <td width="1%" bgcolor="" valign="top" id="panelTD" style="border-right: 2px solid #DEDEDE">
-        	<div><b id="plusImg" class="open-close"> [Open] </b></div>
-        	<div class="panel" style="display: none;width: 350px">
-        	<div style="float: right"><b id="minusImg" class="open-close"> [Close] </b></div><br/>
-	        <div><a href="#" id="alertAnchor">Alerts</a></div>
-               <div id="alertsDiv" class="transbox">
-					   <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
-                	  <tr>
-					    <td >
-					    <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="alert_content">
-					   	
-					    </table>
-					    </td>
-					  	</tr>
-						</table>
-				</div>
-		       <div><a href="#" id="eventsAnchor">Events</a></div>
-                <div id="eventsDiv"  style="display:none;">
-                	<table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
-					  <tr>
-					    <td bgcolor="#CCCCCC">
-					  <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
-                	  <tr>
-					    <td >
-					    <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="event_content">
-					    
-					    </table>
-					    </td>
-					  	</tr>
-						</table>
-                        </td>
-  						</tr>
-  					</table>
-				</div>
-                <div><a href="#" id="jobsAnchor">Jobs</a></div>
-				<div id="jobsDiv">
-                	<table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
-					  <tr>
-					    <td bgcolor="#CCCCCC">
-					  <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
-                	  <tr>
-					    <td >
-					    <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="job_content">
-					   
-					    </table>
-					    </td>
-					  	</tr>
-						</table>
-					</td>
-  					</tr>
-  					</table>
-                </div>
-	        </ul>
-	        <div id="outputDiv"></div>
-			</div>
-		</td>
-        <td height="100%" width="99%" valign="top">
-          <!-- Dashboard Div - Start -->
-		  <div id="dashboardDiv">
-		  <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="3" align="top" style="border: 1px;border-color: blue" >
-		  <tr>
-		  	<td width="100%" height="100%">
-    <div id="tabs">
-	<ul>
-		<li><a href="#lusterFS">Lustre FS Configuration</a></li>
-		<li><a href="#mgt">MGT Configuration</a></li>
-		<li><a href="#volume">Volume Configuration</a></li>
-		<li><a href="#server">Server Configuration</a></li>
-	</ul>
-    <div id="lusterFS">
-   		<iframe src="/hydracm/fstab" height="700px" width="100%" frameborder="no" ></iframe>
-	</div>
-    
-    <div id="mgt">
-   		<iframe src="/hydracm/mgttab" height="700px" width="100%" frameborder="no" ></iframe>
-	</div>
-    
-    <div id="volume">
-   		<iframe src="/hydracm/volumetab" height="700px" width="100%" frameborder="no" ></iframe>
-	</div>
-    
-    <div id="server">
-   		<iframe src="/hydracm/servertab" height="700px" width="100%" frameborder="no" ></iframe>
-	</div>
-</td>
-		  </tr>
-		</table>
-		</div>
-		</td>
-        </tr>
+</head>
+<body style="margin: 0px 0px 0px 0px; padding: 0px;">
+<div class="logohead">
+  <div class="logo"></div>
+  <div style="clear:left;"></div>
+</div>
+<table height="100%" width="100%" cellspacing="0" cellpadding="1" align="center" style="border: 1px solid #DEDEDE">
+  <tr>
+    <!-- #CFCFCF -->
+    <td width="1%" bgcolor="" valign="top" id="panelTD" style="border-right: 2px solid #DEDEDE; background-color:#cccccc;"><div><b id="plusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications.png" alt="" /></b></div>
+      <div class="panel" style="display: none;width: 350px">
+        <div style="float: right"><b id="minusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications_hor.png" alt="" /></b></div>
+        <br/>
+        <div><a href="#" id="alertAnchor">Alerts</a></div>
+        <div id="alertsDiv" class="transbox">
+          <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
+            <tr>
+              <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="alert_content">
+                </table></td>
+            </tr>
+          </table>
+        </div>
+        <div><a href="#" id="eventsAnchor">Events</a></div>
+        <div id="eventsDiv"  style="display:none;">
+          <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
+            <tr>
+              <td bgcolor="#CCCCCC"><table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
+                  <tr>
+                    <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="event_content">
+                      </table></td>
+                  </tr>
+                </table></td>
+            </tr>
+          </table>
+        </div>
+        <div><a href="#" id="jobsAnchor">Jobs</a></div>
+        <div id="jobsDiv">
+          <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
+            <tr>
+              <td bgcolor="#CCCCCC"><table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
+                  <tr>
+                    <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="job_content">
+                      </table></td>
+                  </tr>
+                </table></td>
+            </tr>
+          </table>
+        </div>
+        </ul>
+        <div id="outputDiv"></div>
+      </div></td>
+    <td height="100%" width="99%" valign="top"><!-- Dashboard Div - Start -->
+      <div id="dashboardDiv">
+        <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="3" align="top" style="border: 1px;border-color: blue" >
+          <tr>
+            <td width="100%" height="100%"><div id="tabs">
+              <ul>
+                <li><a href="#lusterFS">Lustre FS Configuration</a></li>
+                <li><a href="#mgt">MGT Configuration</a></li>
+                <li><a href="#volume">Volume Configuration</a></li>
+                <li><a href="#server">Server Configuration</a></li>
+              </ul>
+              <div id="lusterFS">
+                <iframe src="/hydracm/fstab" height="700px" width="100%" frameborder="no" ></iframe>
+              </div>
+              <div id="mgt">
+                <iframe src="/hydracm/mgttab" height="700px" width="100%" frameborder="no" ></iframe>
+              </div>
+              <div id="volume">
+                <iframe src="/hydracm/volumetab" height="700px" width="100%" frameborder="no" ></iframe>
+              </div>
+              <div id="server">
+                <iframe src="/hydracm/servertab" height="700px" width="100%" frameborder="no" ></iframe>
+              </div></td>
+          </tr>
         </table>
-	</body>
+      </div></td>
+  </tr>
+</table>
+</body>
 </html>

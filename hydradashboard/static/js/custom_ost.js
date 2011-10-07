@@ -1,5 +1,20 @@
+/**************************************************************************/
+//File Name - custome_ost.js
+//Description - Contains function to plot pie, line and bar charts on OST Screen
+//Functions - 
+//---------------------Chart Configurations function-----------------------
+//	1) pieDataOptions_OST - Pie chart configuration for space usage.
+//	2) pieDataOptions_Inode_OST - Pie chart configuration for Inode usgae.
+//	3) lineDataOptions_ost_disk_read - Line Chart configuration for disk read.
+//	4) lineDataOptions_ost_disk_write - Line chart configuration for disk write.
+//---------------------Data Loaders function-------------------------------
+//	1) load_OSSPagePie_disk_OST(fsName)
+//	2) load_INodePagePie_disk_OST(fsName, sDate, eDate, dataFunction)
+//	3) load_LineChart_DiskRead_OST(fsName, sDate, eDate, dataFunction)
+//	4) loadLineChart_DiskWrite_OST(fsName, sDate, eDate, dataFunction)
+/******************************************************************************/
 //for OST graph File system space usage
-var pieDataOptions_OST = 
+var ChartConfig_OST_Space = 
 {
     chart:{
     renderTo: '',
@@ -27,7 +42,7 @@ var pieDataOptions_OST =
 };	
 
 //for OST graph File system inode usage
-var pieDataOptions_Inode_OST = 
+var ChartConfig_OST_Inode =
 {
     chart:{
     renderTo: '',
@@ -56,23 +71,33 @@ var pieDataOptions_Inode_OST =
 
 
 //For OSS Disk Read
-var lineDataOptions_ost_disk_read= 
+var ChartConfig_Line_OST_DiskRead=
 {
 	chart:{
     renderTo: '',
     marginLeft: '50',
 	width: '500',
-	style:{ width:'100%',  height:'200px', position: 'inherit' },
+    height: '200',
+	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
     marginBottom: 25,
     zoomType: 'xy'
     },
-    title:{ text: '', x: -20, style: { fontSize: '12px' }, },
+    title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
-    xAxis:{ categories: [], text: '' },
-    yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
-    legend:{ layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 10,borderWidth: 0},
+    xAxis:{
+        categories: [], 
+        title:{text:''},
+        labels: {
+          rotation: 310,
+          step: 2,
+          style:{fontSize:'8px', fontWeight:'bold'}
+        } 
+    },
+    yAxis:{title:{text:''},labels:{style:{fontSize:'8px'}}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+    plotOptions:{series:{marker: {enabled: false}} },
     credits:{ enabled:false },
     tooltip:
     {
@@ -85,24 +110,34 @@ var lineDataOptions_ost_disk_read=
 	series: []
 };
 
-//For OSS Disk Read
-var lineDataOptions_ost_disk_write= 
+//For OSS Disk Write
+var ChartConfig_Line_OST_DiskWrite=
 {
 	chart:{
     renderTo: '',
     marginLeft: '50',
 	width: '500',
-	style:{ width:'100%',  height:'200px', position: 'inherit' },
+    height: '200',
+	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
     marginBottom: 25,
     zoomType: 'xy'
     },
-    title:{ text: '', x: -20, style: { fontSize: '12px' }, },
+    title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
-    xAxis:{ categories: [], text: '' },
-    yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
-    legend:{ layout: 'vertical',align: 'right',verticalAlign: 'top',x: 0,y: 10,borderWidth: 0},
+    xAxis:{
+        categories: [], 
+        title:{text:''},
+        labels: {
+          rotation: 310,
+          step: 2,
+          style:{fontSize:'8px', fontWeight:'bold'}
+        } 
+    },
+    yAxis:{title:{text:''},labels:{style:{fontSize:'8px'}}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+    plotOptions:{series:{marker: {enabled: false}} },
     credits:{ enabled:false },
     tooltip:
     {
@@ -120,12 +155,12 @@ var lineDataOptions_ost_disk_write=
 // Param - File System Name
 // Return - Returns the graph plotted in container
 /*****************************************************************************/
-load_OSSPagePie_disk_OST = function(fsName)
+OST_Pie_Space_Data = function(fsName)
 {
         var free=0,used=0;
-		obj_db_OSSPagePie = pieDataOptions_OST;
-        obj_db_OSSPagePie.title.text= fsName + " Space Usage";
-        obj_db_OSSPagePie.chart.renderTo = "ost_container2";		
+		obj_ost_pie_space = ChartConfig_OST_Space;
+        obj_ost_pie_space.title.text= fsName + " Space Usage";
+        obj_ost_pie_space.chart.renderTo = "ost_container2";		
         $.post("/api/getfsdiskusage/",{endtime: "", datafunction: "", starttime: "", filesystem: fsName})
         .success(function(data, textStatus, jqXHR)
         {
@@ -147,7 +182,7 @@ load_OSSPagePie_disk_OST = function(fsName)
              // Display of appropriate error message
         })
 		.complete(function(event) {
-	    obj_db_OSSPagePie.series = [{
+	    obj_ost_pie_space.series = [{
 				type: 'pie',
 				name: 'Browser share',
 				data: [
@@ -155,7 +190,7 @@ load_OSSPagePie_disk_OST = function(fsName)
 					['Used',    used]
 					]
 				}];
-		        chart = new Highcharts.Chart(obj_db_OSSPagePie);
+		        chart = new Highcharts.Chart(obj_ost_pie_space);
 		});
 }	
 
@@ -165,12 +200,12 @@ load_OSSPagePie_disk_OST = function(fsName)
 // Param - File System Name
 // Return - Returns the graph plotted in container
 /*****************************************************************************/
-load_INodePagePie_disk_OST = function(fsName, sDate, eDate, dataFunction)
+OST_Pie_Inode_Data = function(fsName, sDate, eDate, dataFunction) //250
 {
         var free=0,used=0;
-		obj_db_INodePagePie = pieDataOptions_Inode_OST;
-        obj_db_INodePagePie.title.text= fsName + " - Files vs Free Inodes";
-        obj_db_INodePagePie.chart.renderTo = "ost_container3";		
+		obj_ost_pie_inode = ChartConfig_OST_Inode;
+        obj_ost_pie_inode.title.text= fsName + " - Files vs Free Inodes";
+        obj_ost_pie_inode.chart.renderTo = "ost_container3";		
         $.post("/api/getfsinodeusage/",{endtime: eDate, datafunction: dataFunction, starttime: sDate, filesystem: fsName})
         .success(function(data, textStatus, jqXHR)
         {
@@ -192,7 +227,7 @@ load_INodePagePie_disk_OST = function(fsName, sDate, eDate, dataFunction)
              // Display of appropriate error message
         })
 		.complete(function(event) {
-	    obj_db_INodePagePie.series = [{
+	    obj_ost_pie_inode.series = [{
 				type: 'pie',
 				name: 'Browser share',
 				data: [
@@ -200,7 +235,7 @@ load_INodePagePie_disk_OST = function(fsName, sDate, eDate, dataFunction)
 					['Used',    used]
 					]
 				}];
-		        chart = new Highcharts.Chart(obj_db_INodePagePie);
+		        chart = new Highcharts.Chart(obj_ost_pie_inode);
 		});
 }
 
@@ -210,14 +245,14 @@ load_INodePagePie_disk_OST = function(fsName, sDate, eDate, dataFunction)
 // Param - File System name, start date, end date, datafunction (avergae/"")
 // Return - Returns the graph plotted in container
 /*****************************************************************************/	
-load_LineChart_DiskRead_OST = function(fsName, sDate, eDate, dataFunction)
+OST_Line_DiskRead_Data = function(fsName, sDate, eDate, dataFunction)
  {
         var count = 0;
         var optionData = [],categories = [];
 		var seriesUpdated = 0;
-        obj_gn_line_DiskRead = lineDataOptions_ost_disk_read;
-        obj_gn_line_DiskRead.title.text = "Disk Read";
-        obj_gn_line_DiskRead.chart.renderTo = "ost_avgReadDiv";
+        obj_ost_line_diskread = ChartConfig_Line_OST_DiskRead;
+        obj_ost_line_diskread.title.text = "Disk Read";
+        obj_ost_line_diskread.chart.renderTo = "ost_avgReadDiv";
         $.post("/api/gettargetreads/",{datafunction: dataFunction, endtime: eDate, targetname: "", hostname: fsName, starttime: sDate})
          .success(function(data, textStatus, jqXHR) {
             var ossName='';
@@ -229,7 +264,7 @@ load_LineChart_DiskRead_OST = function(fsName, sDate, eDate, dataFunction)
                 {
           if (ossName != resValue.targetname && ossName !='')
           {
-          obj_gn_line_DiskRead.series[count] = {
+          obj_ost_line_diskread.series[count] = {
                 name: ossName,
                 data: optionData
                    };
@@ -249,14 +284,14 @@ load_LineChart_DiskRead_OST = function(fsName, sDate, eDate, dataFunction)
            }
 		   if(seriesUpdated == 0)
 		   {
-			   obj_gn_line_DiskRead.series[0] = {
+			   obj_ost_line_diskread.series[0] = {
                 name: ossName,
                 data: optionData
                    };
 		   }
 		   else
 		   {
-			   obj_gn_line_DiskRead.series[count] = {
+			   obj_ost_line_diskread.series[count] = {
                 name: ossName,
                 data: optionData
                    };
@@ -268,13 +303,9 @@ load_LineChart_DiskRead_OST = function(fsName, sDate, eDate, dataFunction)
              // Display of appropriate error message
        })
        .complete(function(event){
-                obj_gn_line_DiskRead.xAxis.categories = categories;
-                obj_gn_line_DiskRead.yAxis.title.text = 'KB';
-                obj_gn_line_DiskRead.xAxis.labels = {
-                    rotation: 310,
-                    step: 10
-                }
-                chart = new Highcharts.Chart(obj_gn_line_DiskRead);
+                obj_ost_line_diskread.xAxis.categories = categories;
+                obj_ost_line_diskread.yAxis.title.text = 'KB';
+                chart = new Highcharts.Chart(obj_ost_line_diskread);
         });
 }
 
@@ -283,14 +314,14 @@ load_LineChart_DiskRead_OST = function(fsName, sDate, eDate, dataFunction)
 // Param - File System name, start date, end date, datafunction (avergae/"")
 // Return - Returns the graph plotted in container
 /*****************************************************************************/	
-loadLineChart_DiskWrite_OST = function(fsName, sDate, eDate, dataFunction)
+OST_Line_DiskWrite_Data = function(fsName, sDate, eDate, dataFunction)
  {
         var count = 0;
         var optionData = [],categories = [];
 		var seriesUpdated = 0;
-        obj_gn_line_DiskWrite = lineDataOptions_ost_disk_write;
-        obj_gn_line_DiskWrite.title.text = "Disk Write";
-        obj_gn_line_DiskWrite.chart.renderTo = "ost_avgWriteDiv";
+        obj_ost_line_diskwrite = ChartConfig_Line_OST_DiskWrite;
+        obj_ost_line_diskwrite.title.text = "Disk Write";
+        obj_ost_line_diskwrite.chart.renderTo = "ost_avgWriteDiv";
         $.post("/api/gettargetwrites/",{datafunction: dataFunction, endtime: eDate, targetname: "", hostname: fsName, starttime: sDate})
          .success(function(data, textStatus, jqXHR) {
             var ossName='';
@@ -302,7 +333,7 @@ loadLineChart_DiskWrite_OST = function(fsName, sDate, eDate, dataFunction)
                 {
           if (ossName != resValue.targetname && ossName !='')
           {
-          obj_gn_line_DiskWrite.series[count] = {
+          obj_ost_line_diskwrite.series[count] = {
                 name: ossName,
                 data: optionData
                    };
@@ -322,14 +353,14 @@ loadLineChart_DiskWrite_OST = function(fsName, sDate, eDate, dataFunction)
            }
 		   if(seriesUpdated == 0)
 		   {
-			   obj_gn_line_DiskWrite.series[0] = {
+			   obj_ost_line_diskwrite.series[0] = {
                 name: ossName,
                 data: optionData
                    };
 		   }
 		   else
 		   {
-			   obj_gn_line_DiskWrite.series[count] = {
+			   obj_ost_line_diskwrite.series[count] = {
                 name: ossName,
                 data: optionData
                    };
@@ -341,12 +372,8 @@ loadLineChart_DiskWrite_OST = function(fsName, sDate, eDate, dataFunction)
              // Display of appropriate error message
        })
        .complete(function(event){
-                obj_gn_line_DiskWrite.xAxis.categories = categories;
-                obj_gn_line_DiskWrite.yAxis.title.text = 'KB';
-                obj_gn_line_DiskWrite.xAxis.labels = {
-                    rotation: 310,
-                    step: 10
-                }
-                chart = new Highcharts.Chart(obj_gn_line_DiskWrite);
+                obj_ost_line_diskwrite.xAxis.categories = categories;
+                obj_ost_line_diskwrite.yAxis.title.text = 'KB';
+                chart = new Highcharts.Chart(obj_ost_line_diskwrite);
         });
 }   
