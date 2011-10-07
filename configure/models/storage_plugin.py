@@ -42,13 +42,23 @@ class StorageResourceRecord(models.Model):
     resource_class = models.ForeignKey(StorageResourceClass)
 
     # Representing a configure.lib.storage_plugin.GlobalId or LocalId
-    storage_id_str = models.TextField()
+    # TODO: put some checking for id_strs longer than this field: they
+    # are considered 'unreasonable' and plugin authors should be
+    # conservative in what they use for an ID
+    storage_id_str = models.CharField(max_length = 256)
     storage_id_scope = models.ForeignKey('StorageResourceRecord',
             blank = True, null = True)
+
+    # XXX aargh when the id_scope is nullable a unique_together across it 
+    # doesn't enforce uniqueness for GlobalID resources
 
     # Parent-child relationships between resources
     parents = models.ManyToManyField('StorageResourceRecord',
             related_name = 'resource_parent')
+
+    class Meta:
+        app_label = 'configure'
+        unique_together = ('storage_id_str', 'storage_id_scope', 'resource_class')
 
     def __str__(self):
         return "%s (record %s)" % (self.resource_class.class_name, self.pk)
@@ -137,10 +147,12 @@ class StorageResourceRecord(models.Model):
         resource._handle = self.id
         return resource
 
-    class Meta:
-        # Can't have this constraint because storage_id_str is a blob
-        #unique_together = ('resource_class', 'storage_id_str', 'storage_id_scope')
-        app_label = 'configure'
+    def to_resource_class(self):
+        from configure.lib.storage_plugin import storage_plugin_manager
+        klass = storage_plugin_manager.get_plugin_resource_class(
+                self.resource_class.storage_plugin.module_name,
+                self.resource_class.class_name)
+        return klass
 
 class StorageResourceAttribute(models.Model):
     """An attribute of a StorageResource instance.
@@ -179,7 +191,7 @@ class StorageResourceStatistic(models.Model):
     class Meta:
         app_label = 'configure'
 
-from monitor.models import AlertState
+from monitor.models import AlertState, AlertEvent
 class StorageResourceAlert(AlertState):
     """Used by configure.lib.storage_plugin"""
 
@@ -190,13 +202,50 @@ class StorageResourceAlert(AlertState):
 
     def __str__(self):
         return "<%s:%s %d>" % (self.alert_class, self.attribute, self.pk)
+
     def message(self):
-        # TODO: map alert_class back to a message via the plugin
-        alert_message = self.alert_class
-        if self.attribute:
-            return "%s on attribute '%s'" % (self.alert_class, self.attribute)
-        else:
-            return "%s" % self.alert_class
+        from configure.lib.storage_plugin import ResourceQuery
+        msg = ResourceQuery().record_alert_message(self.alert_item.pk, self.alert_class)
+        print "message: %s" % msg
+        return msg
+
+    def begin_event(self):
+        import logging
+        return AlertEvent(
+                message_str = "Storage alert: %s" % self.message(),
+                alert = self,
+                severity = logging.WARNING)
+
+    def begin_event(self):
+        import logging
+        return AlertEvent(
+                message_str = "Cleared storage alert: %s" % self.message(),
+                alert = self,
+                severity = logging.INFO)
+
+    class Meta:
+        app_label = 'configure'
+
+class StorageAlertPropagated(models.Model):
+    storage_resource = models.ForeignKey(StorageResourceRecord)
+    alert_state = models.ForeignKey(StorageResourceAlert)
+
+    class Meta:
+        unique_together = ('storage_resource', 'alert_state')
+        app_label = 'configure'
+
+from monitor.models import Event
+class StorageResourceLearnEvent(Event):
+    storage_resource = models.ForeignKey(StorageResourceRecord)
+
+    @staticmethod
+    def type_name():
+        return "Storage resource detection"
+
+    def message(self):
+        from configure.lib.storage_plugin import ResourceQuery
+        class_name, instance_name = ResourceQuery().record_class_and_instance_string(self.storage_resource)
+        return "Discovered %s '%s'" % (class_name, instance_name)
 
     class Meta:
         app_label = 'configure'

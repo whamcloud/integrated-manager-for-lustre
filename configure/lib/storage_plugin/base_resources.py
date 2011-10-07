@@ -32,8 +32,9 @@ class Enclosure(StorageResource):
     pass
 
 class DeviceNode(StorageResource):
-    host = attributes.HostName()
     path = attributes.PosixPath()
 
     human_name = 'Device node'
 
+class LogicalDrive(StorageResource):
+    size = attributes.Bytes()

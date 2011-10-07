@@ -10,7 +10,7 @@ from monitor.models import WorkaroundGenericForeignKey
 #from django.contrib.contenttypes.generic import GenericForeignKey
 
 from django.db.models import Q
-from collections_24 import defaultdict
+from collections import defaultdict
 from polymorphic.models import DowncastMetaclass
 from configure.lib.job import StateChangeJob, DependOn, DependAll, DependAny
 

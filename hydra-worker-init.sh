@@ -37,6 +37,7 @@ start() {
         echo "create database hydra" | mysql
         # and populate it
         python $PYTHONPATH/manage.py syncdb --noinput
+        python $PYTHONPATH/manage.py migrate
     fi
 
     # RabbitMQ: Configure default hydra user if it's not already set up

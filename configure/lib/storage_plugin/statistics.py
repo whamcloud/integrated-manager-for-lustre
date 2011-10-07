@@ -9,4 +9,12 @@
 class ResourceStatistic(object):
     pass
 
+class GaugeStatistic(ResourceStatistic):
+    def r3d_type(self):
+        return 'Gauge'
+
+class CounterStatistic(ResourceStatistic):
+    def r3d_type(self):
+        return 'Counter'
+
     

@@ -10,6 +10,7 @@ try:
 except:
     django_extensions = None
 
+import sys
 import os
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
@@ -152,6 +153,8 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.admin',
     'django.contrib.admindocs',
+    'south',
+    'r3d',
     'djcelery',
     'pagination',
     'monitor',
@@ -226,7 +229,6 @@ AUDIT_MAX_AGE = 3600 * 24
 
 CELERY_ROUTES = (
         {"monitor.tasks.audit_all": {"queue": "periodic"}},
-        {"monitor.tasks.discover_hosts": {"queue": "periodic"}},
         {"monitor.tasks.parse_log_entries": {"queue": "parselog"}},
         {"configure.tasks.janitor": {"queue": "periodic"}},
         {"configure.tasks.set_state": {"queue": "serialize"}},
@@ -244,13 +246,19 @@ CELERY_ACKS_LATE = True
 
 # Development defaults for log output
 if DEBUG:
+    LOG_PATH = ""
     JOB_LOG_PATH = "job.log"
     AUDIT_LOG_PATH = "audit.log"
     API_LOG_PATH = "hydraapi.log"
 else:
+    LOG_PATH = "/var/log/hydra"
     JOB_LOG_PATH = "/var/log/hydra/job.log"
     AUDIT_LOG_PATH = "/var/log/hydra/audit.log"
     API_LOG_PATH = "/var/log/hydra/hydraapi.log" 
+
+_plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'configure', 'plugins')
+sys.path.append(_plugins_path)
+INSTALLED_STORAGE_PLUGINS = ["linux"]
 
 try:
     from production_version import VERSION
@@ -264,4 +272,5 @@ except NameError:
         from local_settings import *
     except ImportError:
         pass
+
 

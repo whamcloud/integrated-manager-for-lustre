@@ -4,11 +4,13 @@
 # ==============================
 
 import json
-import pickle
+from re import escape
 
 import logging
 import settings
 import time
+
+from configure.lib.agent import Agent
 
 job_log = logging.getLogger('job')
 job_log.setLevel(logging.DEBUG)
@@ -138,27 +140,6 @@ class StepDirtyError(Exception):
 
 STEP_PAUSE_DELAY = 10
 
-class AgentException(Exception):
-    def __init__(self, host_id = None, cmdline = None, agent_exception = None, agent_backtrace = None):
-        # NB we accept construction without arguments in order to be picklable
-        self.host_id = host_id
-        self.cmdline = cmdline
-        self.agent_exception = agent_exception
-        self.agent_backtrace = agent_backtrace
-
-    def __str__(self):
-        from configure.models import ManagedHost
-        return """AgentException
-Host: %s
-Command: %s
-Exception: %s (%s)
-%s
-""" % (ManagedHost.objects.get(pk = self.host_id),
-        self.cmdline,
-        self.agent_exception,
-        self.agent_exception.__class__.__name__,
-        self.agent_backtrace)
-
 class Step(object):
     def __init__(self, job, args, result):
         self.args = args
@@ -190,87 +171,12 @@ class Step(object):
         steps = self.get_steps()
         # Which one failed?
 
-    def debug_ssh(self, host, command):
-        ssh_monitor = host.monitor.downcast()
-
-        import paramiko
-        import socket
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-        from settings import AUDIT_PERIOD
-        # How long it may take to establish a TCP connection
-        SOCKET_TIMEOUT = 3600
-        # How long it may take to get the output of our agent
-        # (including tunefs'ing N devices)
-        SSH_READ_TIMEOUT = 3600
-
-        args = {"hostname": ssh_monitor.host.address,
-                "username": ssh_monitor.get_username(),
-                "timeout": SOCKET_TIMEOUT}
-        if ssh_monitor.port:
-            args["port"] = ssh_monitor.port
-        # Note: paramiko has a hardcoded 15 second timeout on SSH handshake after
-        # successful TCP connection (Transport.banner_timeout).
-        ssh.connect(**args)
-        transport = ssh.get_transport()
-        channel = transport.open_session()
-        channel.settimeout(SSH_READ_TIMEOUT)
-
-        header = "====\nSSH %s\nCommand: '%s'\n====\n\n" % (host, command)
-        self.result.console = self.result.console + header
-
-        channel.exec_command(command)
-
-        stderr_buf = ""
-        stdout_buf = ""
-        while (not channel.exit_status_ready()) or channel.recv_ready() or channel.recv_stderr_ready():
-            while channel.recv_ready():
-                chunk = channel.recv(4096)
-                stdout_buf = stdout_buf + chunk
-            while channel.recv_stderr_ready():
-                chunk = channel.recv_stderr(4096)
-                stderr_buf = stderr_buf + chunk
-                self.result.console = self.result.console + chunk
-                self.result.save()
-
-            time.sleep(0.1)
-
-        result_code = channel.recv_exit_status()
-
-        ssh.close()
-
-        job_log.debug("debug_ssh:%s:%s:%s" % (host, result_code, command))
-        if result_code != 0:
-            job_log.error("debug_ssh: nonzero rc %d" % result_code)
-            job_log.error(stdout_buf)
-            job_log.error(stderr_buf)
-        return result_code, stdout_buf, stderr_buf
-
-    def invoke_agent(self, host, cmdline):
-        code, out, err = self.debug_ssh(host, "hydra-agent.py %s" % cmdline)
-
-        if code == 0:
-            # May raise a ValueError
-            try:
-                data = json.loads(out)
-            except ValueError:
-                raise RuntimeError()
-
-            try:
-                if data['success']:
-                    result = data['result']
-                    return result
-                else:
-                    exception = pickle.loads(data['exception'])
-                    backtrace = data['backtrace']
-                    job_log.error("Agent returned exception from host %s running '%s': %s" % (host, cmdline, backtrace))
-                    raise AgentException(host.id, cmdline, exception, backtrace)
-            except KeyError:
-                raise RuntimeError("Malformed output from agent: '%s'" % out)
-
-        else:
-            raise RuntimeError("Error running agent on %s" % (host))
+    def invoke_agent(self, host, command):
+        def console_callback(chunk):
+            self.result.console = self.result.console + chunk
+            self.result.save()
+        agent = Agent(job_log, console_callback = console_callback)
+        return agent.invoke(host, command)
 
 class StateChangeJob(object):
     """Subclasses must define a class attribute 'stateful_object'
@@ -293,66 +199,8 @@ class StateChangeJob(object):
         assert(isinstance(stateful_object, StatefulObject))
         return stateful_object
 
-class FindDeviceStep(Step):
-    """Given a TargetMount whose Target's primary TargetMount's LunNode's Lun has
-       a fs_uuid populated (i.e. post-formatting), identify the device node on 
-       this TargetMount's host which has that fs_uuid, and ensure there is a 
-       LunNode object for it linked to the correct Lun""" 
-    def is_idempotent(self):
-        return True
-
-    def describe(self, kwargs):
-        from configure.models import ManagedTargetMount
-        target_mount = ManagedTargetMount.objects.get(pk = kwargs['target_mount_id'])
-        return "Looking up device node for %s" % target_mount
-
-    def run(self, kwargs):
-        from configure.models import ManagedTargetMount
-        from monitor.models import LunNode
-        target_mount = ManagedTargetMount.objects.get(pk = kwargs['target_mount_id'])
-
-        if target_mount.primary:
-            # This is a primary target mount, so it should already have a LunNode
-            assert(target_mount.block_device)
-            job_log.debug("FindDeviceStep: target_mount %s is primary, skipping" % target_mount)
-            return
-
-        if target_mount.block_device:
-            # The LunNode was already populated, do nothing
-            job_log.debug("FindDeviceStep: LunNode for target_mount %s already set" % target_mount)
-            return
-
-        # Go up to the target, then back down to the primary mount to get the Lun
-        lun = target_mount.target.targetmount_set.get(primary = True).block_device.lun
-        # This step must only be run after the target using this lun is formatted
-        assert(lun.fs_uuid)
-
-        # NB May throw any agent error (don't care, idempotent)
-        node_info = self.invoke_agent(target_mount.host, "locate-device --uuid %s" % lun.fs_uuid)
-        if node_info == None:
-            raise RuntimeError("Cannot find LUN with FS UUID %s on %s" % (lun.fs_uuid, target_mount.host))
-        try:
-            lun_node = LunNode.objects.get(
-                    host = target_mount.host, path = node_info['path'])
-            lun_node.lun = lun
-            lun_node.save()
-        except LunNode.DoesNotExist:
-            # Corner case: we are finding a device that LustreAudit never
-            # saw before us (maybe the host just came up for the first time at just this moment)
-            lun_node = LunNode(
-                    lun = lun,
-                    host = target_mount.host,
-                    path = node_info['path'],
-                    size = node_info['size'],
-                    used_hint = node_info['used'])
-            lun_node.save()
-
-        target_mount.block_device = lun_node
-        target_mount.save()
-
 class MkfsStep(Step):
     def _mkfs_args(self, target):
-        from hydra_agent.cmds import lustre
         from monitor.models import FilesystemMember
         from configure.models import ManagedMgs, ManagedMdt, ManagedOst
         kwargs = {}
@@ -392,7 +240,6 @@ class MkfsStep(Step):
     def run(self, kwargs):
         from monitor.models import Target, Lun
         from configure.models import ManagedTarget
-        from re import escape
 
         target_id = kwargs['target_id']
         target = Target.objects.get(id = target_id).downcast()
@@ -494,7 +341,6 @@ class ConfigurePacemakerStep(Step):
         target_mount = TargetMount.objects.get(id = target_mount_id)
 
         # target.name should have been populated by RegisterTarget
-        # target_mount.block_device  should have been populated by FindDeviceStep
         assert(target_mount.block_device != None and target_mount.target.name != None)
 
         self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s %s --mountpoint %s" % (
@@ -525,60 +371,36 @@ class StartLNetStep(Step):
         return True
 
     def run(self, kwargs):
-        from hydra_agent.cmds import lustre
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
-
-        code, out, err = self.debug_ssh(host, lustre.lnet_start())
-        if code != 0:
-            from configure.lib.job import StepCleanError
-            job_log.debug("%s %s %s" % (code, out, err))
-            raise StepCleanError()
+        self.invoke_agent(host, "start-lnet")
 
 class StopLNetStep(Step):
     def is_idempotent(self):
         return True
 
     def run(self, kwargs):
-        from hydra_agent.cmds import lustre
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
-
-        code, out, err = self.debug_ssh(host, lustre.lnet_stop())
-        if code != 0:
-            from configure.lib.job import StepCleanError
-            job_log.debug("%s %s %s" % (code, out, err))
-            raise StepCleanError()
+        self.invoke_agent(host, "stop-lnet")
 
 class LoadLNetStep(Step):
     def is_idempotent(self):
         return True
 
     def run(self, kwargs):
-        from hydra_agent.cmds import lustre
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
-
-        code, out, err = self.debug_ssh(host, lustre.lnet_load())
-        if code != 0:
-            from configure.lib.job import StepCleanError
-            job_log.debug("%s %s %s" % (code, out, err))
-            raise StepCleanError()
+        self.invoke_agent(host, "load-lnet")
 
 class UnloadLNetStep(Step):
     def is_idempotent(self):
         return True
 
     def run(self, kwargs):
-        from hydra_agent.cmds import lustre
         from monitor.models import Host
         host = Host.objects.get(id = kwargs['host_id'])
-
-        code, out, err = self.debug_ssh(host, lustre.lnet_unload())
-        if code != 0:
-            from configure.lib.job import StepCleanError
-            job_log.debug("%s %s %s" % (code, out, err))
-            raise StepCleanError()
+        self.invoke_agent(host, "unload-lnet")
 
 class ConfParamStep(Step):
     def is_idempotent(self):
@@ -588,15 +410,9 @@ class ConfParamStep(Step):
         from configure.models import ConfParam
         conf_param = ConfParam.objects.get(pk = kwargs['conf_param_id']).downcast()
 
-        if conf_param.value:
-            lctl_command = "lctl conf_param %s=%s" % (conf_param.get_key(), conf_param.value)
-        else:
-            lctl_command = "lctl conf_param -d %s" % conf_param.get_key()
-        code, out, err = self.debug_ssh(conf_param.mgs.primary_server(), lctl_command)
-        if (code != 0):
-            from configure.lib.job import StepCleanError
-            job_log.error(code, out, err)
-            raise StepDirtyError()
+        self.invoke_agent(conf_param.mgs.primary_server(),
+                "set-conf-param --args %s" % escape(json.dumps({
+                    'key': conf_param.get_key(), 'value': conf_param.value})))
 
 class ConfParamVersionStep(Step):
     def is_idempotent(self):

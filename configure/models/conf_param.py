@@ -63,7 +63,7 @@ class ConfParam(models.Model):
         # Assumption: conf params don't experience high flux, so it's not 
         # obscenely inefficient to pull all historical values out of the DB before picking
         # the latest ones.
-        from collections_24 import defaultdict
+        from collections import defaultdict
         by_key = defaultdict(list)
         for conf_param in queryset:
             by_key[conf_param.get_key()].append(conf_param)

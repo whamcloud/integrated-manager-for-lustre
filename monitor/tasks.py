@@ -60,11 +60,6 @@ def audit_all():
             audit_log.info("audit_all: host %s audit (%d) still in progress" % (monitor.host, monitor.counter))
 
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
-def discover_hosts():
-    from monitor.lib.lustre_audit import LustreAudit
-    LustreAudit().discover_hosts()
-
-@periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def parse_log_entries():
     from monitor.lib.systemevents import SystemEventsAudit
     audit_log.info("parse_log_entries: running")

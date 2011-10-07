@@ -4,6 +4,12 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import sys
+import os
+bin_dir = os.path.abspath(os.path.dirname(sys.modules['__main__'].__file__))
+project_dir = "/" + os.path.join(*(bin_dir.split(os.sep)[0:-2]))
+sys.path.append(project_dir)
+
 from django.core.management import setup_environ
 import settings
 setup_environ(settings)
@@ -12,9 +18,7 @@ from monitor.models import *
 from configure.models import *
 from configure.lib.state_manager import StateManager
 
-from collections_24 import defaultdict
-import sys
-
+from collections import defaultdict
 import cmd
 
 class HydraDebug(cmd.Cmd, object):
@@ -124,13 +128,21 @@ class HydraDebug(cmd.Cmd, object):
     def do_run_storage_plugin(self, module_name):
         """Development stub for quickly loading and scanning storage
            plugins."""
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin import ResourceQuery, storage_plugin_manager
+        from configure.models import StorageResourceRecord
         import time
+
         klass = storage_plugin_manager.load_plugin(module_name)
+        scannable_ids = storage_plugin_manager.get_scannable_resource_ids(module_name)
+
+        if len(scannable_ids) > 1:
+            print "Warning, multiple root resources, picking the first one"
+        root_resource = ResourceQuery().get_resource(scannable_ids[0]['id'])
+
         instance = klass()
-        instance.do_initial_scan()
+        instance.do_initial_scan(root_resource)
         while True:
-            instance.do_periodic_update()
+            instance.do_periodic_update(root_resource)
             time.sleep(5)
             
     def do_storage_graph(self, arg_string):
@@ -139,7 +151,7 @@ class HydraDebug(cmd.Cmd, object):
         import pygraphviz as pgv
         G = pgv.AGraph(directed=True)
         for r in resources:
-            G.add_node(r._handle, label="%s:%s" % (r.human_class(), r.human_string()))
+            G.add_node(r._handle, label="%s:%s:%s" % (r._handle, r.human_class(), r.human_string()))
 
         for r in resources:
             for p in r.get_parents():

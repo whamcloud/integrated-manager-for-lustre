@@ -4,7 +4,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from collections_24 import defaultdict
+from collections import defaultdict
 
 from configure.lib.job import job_log
 

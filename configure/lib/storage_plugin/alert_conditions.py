@@ -15,6 +15,23 @@ class AttrValAlertCondition(AlertCondition):
         self.message = message
         super(AttrValAlertCondition, self).__init__(*args, **kwargs)
 
+    def alert_classes(self):
+        result = []
+        import logging
+        states_sev = [
+                (self.error_states, logging.ERROR),
+                (self.warn_states, logging.WARNING),
+                (self.info_states, logging.INFO)
+                ]
+        for states, sev in states_sev:
+            if len(states) == 0:
+                continue
+            else:
+                alert_name = "_%s_%s_%s" % (self._name, self.attribute, sev)
+                result.append(alert_name)
+
+        return result
+    
     def test(self, resource):
         result = []
         import logging

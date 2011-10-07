@@ -1,0 +1,45 @@
+
+{
+    "hosts": [
+        {"address": "mini11"},
+        {"address": "mini12"}
+    ],
+    "mgss": [
+        {
+            "mounts": [
+                {"host": "mini11",
+                "device_node": "/dev/disk/by-id/scsi-14f504e46494c4500396949326d482d344464662d6b334f76", "primary": true},
+                {"host": "mini12",
+                "device_node": "/dev/disk/by-id/scsi-14f504e46494c4500396949326d482d344464662d6b334f76", "primary": false}
+            ]
+        }
+    ],
+    "filesystems": [
+        {"name": "minifs1",
+         "mgs": "mini11",
+         "mdt": {
+             "mounts": [
+                    {
+                        "host": "mini11",
+                        "device_node": "/dev/disk/by-id/scsi-14f504e46494c45004e41396b66472d33355a302d70513033",
+                        "primary": true
+                    },
+                    {
+                        "host": "mini12",
+                        "device_node": "/dev/disk/by-id/scsi-14f504e46494c45004e41396b66472d33355a302d70513033",
+                        "primary": false
+                    }
+             ]
+        },
+        "osts": [
+            {"mounts": [
+                {"host": "mini11",
+                 "device_node": "/dev/disk/by-id/scsi-14f504e46494c45005066496a65762d714b4a302d31354457", "primary": true},
+                {"host": "mini12",
+                 "device_node": "/dev/disk/by-id/scsi-14f504e46494c45005066496a65762d714b4a302d31354457", "primary": false}
+                ]
+            }
+        ]
+        }
+    ]
+}

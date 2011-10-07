@@ -4,14 +4,17 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import sys
+import os
+bin_dir = os.path.abspath(os.path.dirname(sys.modules['__main__'].__file__))
+project_dir = "/" + os.path.join(*(bin_dir.split(os.sep)[0:-2]))
+sys.path.append(project_dir)
+
 from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
 from monitor.models import *
-
-from collections_24 import defaultdict
-import sys
 
 from logging import getLogger, FileHandler, INFO, StreamHandler
 file_log_name = __name__
@@ -27,7 +30,11 @@ def screen(string):
 
 
 import cmd
-from texttable import Texttable
+try:
+    from texttable import Texttable
+except ImportError:
+    print "[Warning, texttable not installed, some commands won't work]"
+    Texttable = None
 
 class HydraDebug(cmd.Cmd, object):
     def __init__(self):
@@ -122,10 +129,7 @@ class HydraDebug(cmd.Cmd, object):
     def do_add_host(self, line):
         """add_host [user@]<hostname>[:port]
         Add a host to be monitored"""
-        host, ssh_monitor = SshMonitor.from_string(line)
-        host.save()
-        ssh_monitor.host = host
-        ssh_monitor.save()
+        Host.create_from_string(line)
 
     def do_host_list(self, line):
         """host_list
@@ -158,7 +162,33 @@ class HydraDebug(cmd.Cmd, object):
         for m in Monitor.objects.all():
             m.update(state = 'idle', task_id = None)
 
+    def _print_stat(self, metrics, stat_name):
+        import time
+        print "Latest:"
+        latest = metrics.fetch_last()
+        print latest[1]
+        print time.ctime(latest[0]), latest[1][stat_name]
+        print "Last minute:"
+        last_minute = metrics.fetch('Average', start_time = int(time.time()) - 60)
+        ts_list = last_minute.keys()
+        ts_list.sort()
+        for ts in ts_list:
+            values = last_minute[ts]
+            print time.ctime(ts), values[stat_name]
 
+    def do_resource_stat(self, line):
+        resource_id, stat_name = line.split()
+        from configure.models import StorageResourceRecord
+        from monitor.metrics import VendorMetricStore
+        record = StorageResourceRecord.objects.get(pk = int(resource_id))
+        metrics = VendorMetricStore(record, 1)
+        self._print_stat(metrics, stat_name)
+
+    def do_host_stat(self, line):
+        hostname, stat_name = line.split()
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(address = hostname)
+        self._print_stat(host.metrics, stat_name)
 
 if __name__ == '__main__':
     cmdline = HydraDebug
@@ -170,4 +200,5 @@ if __name__ == '__main__':
             screen("Exiting...")
     else:
         cmdline().onecmd(" ".join(sys.argv[1:]))
+
 

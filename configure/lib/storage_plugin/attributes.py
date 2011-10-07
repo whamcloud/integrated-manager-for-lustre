@@ -10,8 +10,10 @@ the datatypes that StorageResource objects may store as attributes"""
 class ResourceAttribute(object):
     """Base class for declared attributes of StorageResource.  This is
        to StorageResource as models.fields.Field is to models.Model"""
-    def __init__(self, optional = False):
+    def __init__(self, subscribe = False, provide = False, optional = False):
         self.optional = optional
+        self.subscribe = subscribe
+        self.provide = provide
 
     def validate(self, value):
         """Note: this validation is NOT intended to be used for catching cases 
@@ -73,7 +75,6 @@ class Uuid(ResourceAttribute):
         stripped = value.replace("-", "")
         if not len(stripped) == 32:
             raise ValueError("'%s' is not a valid UUID" % value)
-
 
 class PosixPath(ResourceAttribute):
     pass

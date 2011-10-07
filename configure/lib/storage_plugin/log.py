@@ -9,9 +9,10 @@ provided for use by StoragePlugin subclasses"""
 
 from logging import getLogger, DEBUG, WARNING, StreamHandler, FileHandler
 import settings
+import os
 
 storage_plugin_log = getLogger('storage_plugin_log')
-storage_plugin_log.addHandler(FileHandler('storage_plugin.log'))
+storage_plugin_log.addHandler(FileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log')))
 if settings.DEBUG:
     storage_plugin_log.setLevel(DEBUG)
     storage_plugin_log.addHandler(StreamHandler())

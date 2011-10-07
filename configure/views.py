@@ -30,8 +30,9 @@ def _create_target_mounts(node, target, failover_host = None):
     primary.save()
 
     if failover_host:
+        failover_node = LunNode.objects.get(lun = node.lun, host = failover_host)
         failover = ManagedTargetMount(
-            block_device = None,
+            block_device = failover_node,
             target = target,
             host = failover_host, 
             mount_point = target.default_mount_path(failover_host),
@@ -73,8 +74,7 @@ class CreateTargetsForm(forms.Form):
 
 def create_mgs(request, host_id):
     host = get_object_or_404(Host, id = int(host_id))
-    # TODO: some UI for forcing it to accept a node which has used_hint=True
-    nodes = LunNode.objects.filter(host = host, used_hint = False) 
+    nodes = host.available_lun_nodes()
     other_hosts = [h for h in Host.objects.all() if h.id != host.id]
 
     class CreateMgsForm(CreateTargetsForm):
@@ -136,7 +136,6 @@ def create_fs(request, mgs_id):
 
 def create_oss(request, host_id):
     host = get_object_or_404(Host, id = int(host_id))
-    # TODO: some UI for forcing it to accept a node which has used_hint=True
     nodes = host.available_lun_nodes()
     other_hosts = [h for h in Host.objects.all() if h.id != host.id]
 
@@ -204,11 +203,15 @@ def create_oss(request, host_id):
 
 def create_mds(request, host_id):
     host = get_object_or_404(Host, id = int(host_id))
-    # TODO: some UI for forcing it to accept a node which has used_hint=True
     nodes = host.available_lun_nodes()
     other_hosts = [h for h in Host.objects.all() if h.id != host.id]
 
-    filesystems = ManagedFilesystem.objects.filter(metadatatarget = None)
+    filesystems = []
+    for f in ManagedFilesystem.objects.all():
+        try:
+            ManagedMdt.objects.get(filesystem = f)
+        except ManagedMdt.DoesNotExist:
+            filesystems.append(f)
 
     class CreateMdtForm(CreateTargetsForm):
         filesystem = forms.ChoiceField(choices = [(f.id, f.name) for f in filesystems])
@@ -532,8 +535,13 @@ def conf_param_help(request, conf_param_name):
 def storage_resource(request, vrr_id):
     from configure.lib.storage_plugin import ResourceQuery
     resource = ResourceQuery().get_resource_parents(vrr_id)
+    alerts = ResourceQuery().resource_get_alerts(resource)
+    propagated_alerts = ResourceQuery().resource_get_propagated_alerts(resource)
+    print "prop: %s" % propagated_alerts
     return render_to_response("storage_resource.html", RequestContext(request, {
-                "resource": resource
+                "resource": resource,
+                "propagated_alerts": propagated_alerts,
+                "alerts": alerts
                 }))
 
 def storage_resource_delete(request, vrr_id):
@@ -602,7 +610,10 @@ def _handle_resource_form(request):
     try:
         default_resource = StorageResourceRecord.objects.filter(parents = None).latest('pk').resource_class
     except StorageResourceRecord.DoesNotExist:
-        default_resource = StorageResourceRecord.objects.all()[0]
+        try:
+            default_resource = StorageResourceRecord.objects.all()[0]
+        except IndexError:
+            default_resource = StorageResourceClass.objects.all()[0]
 
     class ResourceForm(forms.Form):
         resource = forms.ModelChoiceField(queryset = StorageResourceClass.objects.all(), required = True, empty_label = None)
@@ -645,7 +656,7 @@ def storage_table(request):
     storage_plugin_manager.load_plugin(storage_resource_class.storage_plugin.module_name)
     real_resource_class = storage_resource_class.get_class()
 
-    columns = real_resource_class._storage_attributes.keys()
+    columns = ['id'] + real_resource_class._storage_attributes.keys()
 
     return render_to_response('storage_table.html', RequestContext(request, {
         'plugin_module': storage_resource_class.storage_plugin.module_name,
@@ -663,13 +674,14 @@ def storage_table_json(request, plugin_module, resource_class_name):
 
     resource_class = storage_plugin_manager.get_plugin_resource_class(plugin_module, resource_class_name)
     resource_class_id = storage_plugin_manager.get_plugin_resource_class_id(plugin_module, resource_class_name)
-    columns = resource_class.get_columns()
+    attr_columns = resource_class.get_columns()
+    columns = ['id'] + attr_columns
 
     resources = ResourceQuery().get_class_resources(resource_class_id)
     rows = []
     for r in resources: 
-        row = []
-        for c in columns:
+        row = [r._handle]
+        for c in attr_columns:
             row.append(getattr(r,c))
         rows.append(row)    
 
