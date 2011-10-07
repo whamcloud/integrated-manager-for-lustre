@@ -204,6 +204,7 @@ class ResourceManager(object):
                 node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'UnsharedDeviceNode'))
                 node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'LvmDeviceNode'))
                 node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'PartitionDeviceNode'))
+                node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'MultipathDeviceNode'))
                 node_resources = ResourceQuery().get_class_resources(node_types, storage_id_scope = scannable_id)
                 for r in node_resources:
                     # A node which has children is already in use

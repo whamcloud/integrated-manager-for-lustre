@@ -240,7 +240,7 @@ class Linux(StoragePlugin):
                     # Inactive LVs have no block device
                     pass
 
-        for mpath_alias, mpath in devices['mpath'].values():
+        for mpath_alias, mpath in devices['mpath'].items():
             mpath_bdev = bdev_to_resource[mpath['block_device']]
             mpath_parents = [bdev_to_resource[n['major_minor']] for n in mpath['nodes']]
             for p in mpath_parents:
