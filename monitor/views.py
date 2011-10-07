@@ -10,35 +10,8 @@ from django.template import RequestContext
 from django.http import HttpResponse, HttpResponseBadRequest
 
 from monitor.models import *
-from monitor.lib.graph_helper import load_graph,dyn_load_graph
 
 from settings import SYSLOG_PATH
-
-def sparkline_data(request, name, subdir, graph_type):
-    params = request.GET.copy()
-    params['size'] = 'sparkline'
-    data = dyn_load_graph(subdir, name, graph_type, params)
-    return HttpResponse(json.dumps(data), 'application/json')
-
-def dyn_graph_loader(request, name, subdir, graph_type):
-    image_data, mime_type = dyn_load_graph(subdir, name, graph_type, request.GET)
-    return HttpResponse(image_data, mime_type)
-
-def graph_loader(request, name, subdir):
-    image_data, mime_type = load_graph(name)
-    return HttpResponse(image_data, mime_type)
-
-def statistics(request):
-    # Limit to hosts which we expect there to be some LMT metrics for
-    stat_hosts = list(set([tm.host for tm in TargetMount.objects.filter(target__managementtarget = None)]))
-    stat_hosts.sort(lambda i,j: cmp(i.address, j.address))
-    return render_to_response("statistics.html",
-            RequestContext(request, {
-                "management_targets": ManagementTarget.objects.all(),
-                "filesystems": Filesystem.objects.all().order_by('name'),
-                "hosts": stat_hosts,
-                "clients": Client.objects.all(),
-                }))
 
 def dashboard(request):
     return render_to_response("dashboard.html",
