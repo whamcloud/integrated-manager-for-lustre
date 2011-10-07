@@ -19,10 +19,13 @@ export PYTHONPATH=${PROJECT_PATH}
 # needed so that ssh can find it's keys
 export HOME=/root
 
+# When adding worker, update this and then add args for your worker in run_celeryd
+export WORKER_NAMES="serial ssh jobs parselog"
+
 run_celeryd() {
     local op=$1
 
-    python ${MANAGE_PY} celeryd_multi $op serial ssh jobs parselog -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -Q:parselog parselog -B:serial -c:serial 1 --autoscale:ssh=100,10 --autoscale:jobs=100,10 --pidfile=$PIDFILE --logfile=$LOGFILE
+    python ${MANAGE_PY} celeryd_multi $op ${WORKER_NAMES} -Q:serial periodic,serialize -Q:ssh ssh -Q:jobs jobs -Q:parselog parselog -B:serial -c:serial 1 --autoscale:ssh=100,10 --autoscale:jobs=100,10 --pidfile=$PIDFILE --logfile=$LOGFILE
 
 }
 
@@ -68,7 +71,7 @@ restart() {
 
 stop() {
     echo -n "Stopping the Hydra worker daemon: "
-    python /usr/share/hydra-server/manage.py celeryd_multi stop serial ssh jobs --pidfile=$PIDFILE --logfile=$LOGFILE
+    python /usr/share/hydra-server/manage.py celeryd_multi stop ${WORKER_NAMES} --pidfile=$PIDFILE --logfile=$LOGFILE
     echo
 }
 
