@@ -6,10 +6,6 @@ import r3d.models
 from r3d.models import *
 import json
 
-# NB: In the fetch tests, we can't simply assert that expected == actual,
-# because in python NaN != NaN.  As a stupid hackaround, we dump the
-# dicts to json and compare the strings.  Before that, we do some other
-# comparisons to make gross errors a bit more apparent.
 class SingleDsTutorialTest(TestCase):
     """
     Tests based on the rrdtool basic tutorial.  Single DS, two RRAs.
@@ -56,50 +52,44 @@ class SingleDsTutorialTest(TestCase):
         self.update_database()
         self.assertEqual(self.rrd.last_update, 920808900)
 
-        expected = {
-            920804700L: {u'speed': float("NaN")},
-            920805000L: {u'speed': 0.040000000000000001},
-            920805300L: {u'speed': 0.02},
-            920805600L: {u'speed': 0.0},
-            920805900L: {u'speed': 0.0},
-            920806200L: {u'speed': 0.033333333333333298},
-            920806500L: {u'speed': 0.033333333333333298},
-            920806800L: {u'speed': 0.033333333333333298},
-            920807100L: {u'speed': 0.02},
-            920807400L: {u'speed': 0.02},
-            920807700L: {u'speed': 0.02},
-            920808000L: {u'speed': 0.013333333333333299},
-            920808300L: {u'speed': 0.016666666666666701},
-            920808600L: {u'speed': 0.0066666666666666697},
-            920808900L: {u'speed': 0.0033333333333333301},
-            920809200L: {u'speed': float("NaN")},
-            920809500L: {u'speed': float("NaN")}
-        }
+        expected = (
+            (920804700L, {u'speed': None}),
+            (920805000L, {u'speed': 0.040000000000000001}),
+            (920805300L, {u'speed': 0.02}),
+            (920805600L, {u'speed': 0.0}),
+            (920805900L, {u'speed': 0.0}),
+            (920806200L, {u'speed': 0.033333333333333298}),
+            (920806500L, {u'speed': 0.033333333333333298}),
+            (920806800L, {u'speed': 0.033333333333333298}),
+            (920807100L, {u'speed': 0.02}),
+            (920807400L, {u'speed': 0.02}),
+            (920807700L, {u'speed': 0.02}),
+            (920808000L, {u'speed': 0.013333333333333299}),
+            (920808300L, {u'speed': 0.016666666666666701}),
+            (920808600L, {u'speed': 0.0066666666666666697}),
+            (920808900L, {u'speed': 0.0033333333333333301}),
+            (920809200L, {u'speed': None}),
+            (920809500L, {u'speed': None})
+        )
 
         actual = self.rrd.fetch("Average", 920804400, 920809200)
-        self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
-        self.assertEqual(sorted([r.keys() for r in expected.values()]),
-                         sorted([r.keys() for r in actual.values()]))
-        self.assertEqual(json.dumps(expected), json.dumps(actual))
+        self.assertEqual(expected, actual)
 
-        expected = {
-            920800800L: {u'speed': float("NaN")},
-            920802600L: {u'speed': float("NaN")},
-            920804400L: {u'speed': float("NaN")},
-            920806200L: {u'speed': 0.018666666666666699},
-            920808000L: {u'speed': 0.0233333333333334},
-            920809800L: {u'speed': float("NaN")}
-        }
+        expected = (
+            (920800800L, {u'speed': None}),
+            (920802600L, {u'speed': None}),
+            (920804400L, {u'speed': None}),
+            (920806200L, {u'speed': 0.018666666666666699}),
+            (920808000L, {u'speed': 0.0233333333333334}),
+            (920809800L, {u'speed': None})
+        )
 
         actual = self.rrd.fetch("Average", 920799000, 920809200)
-        self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
-        self.assertEqual(sorted([r.keys() for r in expected.values()]),
-                         sorted([r.keys() for r in actual.values()]))
-        self.assertEqual(json.dumps(expected), json.dumps(actual))
+        self.assertEqual(expected, actual)
 
-        expected = [
+        expected = (
             920808900L, {u'speed': 12423}
-        ]
+        )
 
         actual = self.rrd.fetch_last()
         self.assertEqual(expected, actual)
@@ -156,69 +146,63 @@ class MultiDsTutorialTest(TestCase):
         self.update_database()
         self.assertEqual(self.rrd.last_update, 920808900)
 
-        expected = {
-            920804700L: {u'speed': float("NaN"), u'kbytes_free': 1979620.0},
-            920805000L: {u'speed': 0.040000000000000001, u'kbytes_free': 1979619.0},
-            920805300L: {u'speed': 0.02, u'kbytes_free': 1979618.0},
-            920805600L: {u'speed': 0.0, u'kbytes_free': 1979617.0},
-            920805900L: {u'speed': 0.0, u'kbytes_free': 1979616.0},
-            920806200L: {u'speed': 0.033333333333333298, u'kbytes_free': 1979615.0},
-            920806500L: {u'speed': 0.033333333333333298, u'kbytes_free': 1979614.0},
-            920806800L: {u'speed': 0.033333333333333298, u'kbytes_free': 1979613.0},
-            920807100L: {u'speed': 0.02, u'kbytes_free': 1979612.0},
-            920807400L: {u'speed': 0.02, u'kbytes_free': 1979612.0},
-            920807700L: {u'speed': 0.02, u'kbytes_free': 1979611.0},
-            920808000L: {u'speed': 0.013333333333333299, u'kbytes_free': 1979608.0},
-            920808300L: {u'speed': 0.016666666666666701, u'kbytes_free': 1979570.0},
-            920808600L: {u'speed': 0.0066666666666666697, u'kbytes_free': 1979800.0},
-            920808900L: {u'speed': 0.0033333333333333301, u'kbytes_free': 1979940.0},
-            920809200L: {u'speed': float("NaN"), u'kbytes_free': float("NaN")},
-            920809500L: {u'speed': float("NaN"), u'kbytes_free': float("NaN")}
-        }
+        expected = (
+            (920804700L, {u'speed': None, u'kbytes_free': 1979620.0}),
+            (920805000L, {u'speed': 0.040000000000000001, u'kbytes_free': 1979619.0}),
+            (920805300L, {u'speed': 0.02, u'kbytes_free': 1979618.0}),
+            (920805600L, {u'speed': 0.0, u'kbytes_free': 1979617.0}),
+            (920805900L, {u'speed': 0.0, u'kbytes_free': 1979616.0}),
+            (920806200L, {u'speed': 0.033333333333333298, u'kbytes_free': 1979615.0}),
+            (920806500L, {u'speed': 0.033333333333333298, u'kbytes_free': 1979614.0}),
+            (920806800L, {u'speed': 0.033333333333333298, u'kbytes_free': 1979613.0}),
+            (920807100L, {u'speed': 0.02, u'kbytes_free': 1979612.0}),
+            (920807400L, {u'speed': 0.02, u'kbytes_free': 1979612.0}),
+            (920807700L, {u'speed': 0.02, u'kbytes_free': 1979611.0}),
+            (920808000L, {u'speed': 0.013333333333333299, u'kbytes_free': 1979608.0}),
+            (920808300L, {u'speed': 0.016666666666666701, u'kbytes_free': 1979570.0}),
+            (920808600L, {u'speed': 0.0066666666666666697, u'kbytes_free': 1979800.0}),
+            (920808900L, {u'speed': 0.0033333333333333301, u'kbytes_free': 1979940.0}),
+            (920809200L, {u'speed': None, u'kbytes_free': None}),
+            (920809500L, {u'speed': None, u'kbytes_free': None})
+        )
 
         actual = self.rrd.fetch("Average", 920804400, 920809200)
-        self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
-        self.assertEqual(sorted([r.keys() for r in expected.values()]),
-                         sorted([r.keys() for r in actual.values()]))
-        self.assertEqual(json.dumps(expected), json.dumps(actual))
+        self.assertEqual(expected, actual)
 
-        expected = {
-            920800800L: {u'speed': float("NaN"), u'kbytes_free': float("NaN")},
-            920802600L: {u'speed': float("NaN"), u'kbytes_free': float("NaN")},
-            920804400L: {u'speed': float("NaN"), u'kbytes_free': float("NaN")},
-            920806200L: {u'speed': 0.018666666666666699, u'kbytes_free': 1979617.5},
-            920808000L: {u'speed': 0.0233333333333334, u'kbytes_free': 1979611.66666667},
-            920809800L: {u'speed': float("NaN"), u'kbytes_free': float("NaN")}
-        }
+        expected = (
+            (920800800L, {u'speed': None, u'kbytes_free': None}),
+            (920802600L, {u'speed': None, u'kbytes_free': None}),
+            (920804400L, {u'speed': None, u'kbytes_free': None}),
+            (920806200L, {u'speed': 0.018666666666666699, u'kbytes_free': 1979617.5}),
+            (920808000L, {u'speed': 0.0233333333333334, u'kbytes_free': 1979611.66666667}),
+            (920809800L, {u'speed': None, u'kbytes_free': None})
+        )
 
         actual = self.rrd.fetch("Average", 920799000, 920809200)
-        self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
-        self.assertEqual(sorted([r.keys() for r in expected.values()]),
-                         sorted([r.keys() for r in actual.values()]))
-        self.assertEqual(json.dumps(expected), json.dumps(actual))
+        self.assertEqual(expected, actual)
 
-        expected = [
+        expected = (
             920808900L, {u'speed': 12423, u'kbytes_free': 1979940}
-        ]
+        )
 
         actual = self.rrd.fetch_last()
         self.assertEqual(expected, actual)
 
-        expected = [
+        expected = (
             920808900L, {u'speed': 12423}
-        ]
+        )
 
         actual = self.rrd.fetch_last(['speed'])
         self.assertEqual(expected, actual)
 
-        expected = {
-            920800800L: {u'kbytes_free': float("NaN")},
-            920802600L: {u'kbytes_free': float("NaN")},
-            920804400L: {u'kbytes_free': float("NaN")},
-            920806200L: {u'kbytes_free': 1979617.5},
-            920808000L: {u'kbytes_free': 1979611.66666667},
-            920809800L: {u'kbytes_free': float("NaN")}
-        }
+        expected = (
+            (920800800L, {u'kbytes_free': None}),
+            (920802600L, {u'kbytes_free': None}),
+            (920804400L, {u'kbytes_free': None}),
+            (920806200L, {u'kbytes_free': 1979617.5}),
+            (920808000L, {u'kbytes_free': 1979611.66666667}),
+            (920809800L, {u'kbytes_free': None})
+        )
 
         actual = self.rrd.fetch("Average",
                                 start_time=920799000,
@@ -273,21 +257,17 @@ class LongerMultiDSOverlaps(TestCase):
         self.maxDiff = None
         self.assertEqual(self.rrd.last_update, 920813400)
 
-        expected = {
-            920806200L: {u'speed': 0.018666666666666699, u'kbytes_free': float("NaN")},
-            920808000L: {u'speed': 0.0233333333333334, u'kbytes_free': float("NaN")},
-            920809800L: {u'speed': 0.0088888888888888993, u'kbytes_free': 1979619.0},
-            920811600L: {u'speed': float("NaN"), u'kbytes_free': 1979614.5},
-            920813400L: {u'speed': float("NaN"), u'kbytes_free': 1979614.16666667},
-            920815200L: {u'speed': float("NaN"), u'kbytes_free': float("NaN")}
-        }
+        expected = (
+            (920806200L, {u'speed': 0.018666666666666699, u'kbytes_free': None}),
+            (920808000L, {u'speed': 0.0233333333333334, u'kbytes_free': None}),
+            (920809800L, {u'speed': 0.0088888888888888993, u'kbytes_free': 1979619.0}),
+            (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
+            (920813400L, {u'speed': None, u'kbytes_free': 1979614.16666667}),
+            (920815200L, {u'speed': None, u'kbytes_free': None})
+        )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)
-        #print json.dumps(actual, sort_keys=True, indent=2)
-        self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
-        self.assertEqual(sorted([r.keys() for r in expected.values()]),
-                         sorted([r.keys() for r in actual.values()]))
-        self.assertEqual(json.dumps(expected), json.dumps(actual))
+        self.assertEqual(expected, actual)
 
     def tearDown(self):
         self.rrd.delete()
@@ -342,22 +322,17 @@ class PostCreateNewDs(TestCase):
         self.maxDiff = None
         self.assertEqual(self.rrd.last_update, 920813400)
 
-        expected = {
-            920806200L: {u'speed': 0.018666666666666699, u'kbytes_free': float("NaN")},
-            920808000L: {u'speed': 0.0233333333333334, u'kbytes_free': float("NaN")},
-            920809800L: {u'speed': 0.0088888888888888993, u'kbytes_free': 1979619.0},
-            920811600L: {u'speed': float("NaN"), u'kbytes_free': 1979614.5},
-            920813400L: {u'speed': float("NaN"), u'kbytes_free': 1979614.16666667},
-            920815200L: {u'speed': float("NaN"), u'kbytes_free': float("NaN")}
-        }
+        expected = (
+            (920806200L, {u'speed': 0.018666666666666699, u'kbytes_free': None}),
+            (920808000L, {u'speed': 0.0233333333333334, u'kbytes_free': None}),
+            (920809800L, {u'speed': 0.0088888888888888993, u'kbytes_free': 1979619.0}),
+            (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
+            (920813400L, {u'speed': None, u'kbytes_free': 1979614.16666667}),
+            (920815200L, {u'speed': None, u'kbytes_free': None})
+        )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)
-        #print json.dumps(expected, sort_keys=True, indent=2)
-        #print json.dumps(actual, sort_keys=True, indent=2)
-        self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
-        self.assertEqual(sorted([r.keys() for r in expected.values()]),
-                         sorted([r.keys() for r in actual.values()]))
-        self.assertEqual(json.dumps(expected), json.dumps(actual))
+        self.assertEqual(expected, actual)
 
     def tearDown(self):
         self.rrd.delete()
@@ -412,46 +387,40 @@ class SingleDsUpdateDictTest(TestCase):
         self.update_database()
         self.assertEqual(self.rrd.last_update, 920808900)
 
-        expected = {
-            920804700L: {u'speed': float("NaN")},
-            920805000L: {u'speed': 0.040000000000000001},
-            920805300L: {u'speed': 0.02},
-            920805600L: {u'speed': 0.0},
-            920805900L: {u'speed': 0.0},
-            920806200L: {u'speed': 0.033333333333333298},
-            920806500L: {u'speed': 0.033333333333333298},
-            920806800L: {u'speed': 0.033333333333333298},
-            920807100L: {u'speed': 0.02},
-            920807400L: {u'speed': 0.02},
-            920807700L: {u'speed': 0.02},
-            920808000L: {u'speed': 0.013333333333333299},
-            920808300L: {u'speed': 0.016666666666666701},
-            920808600L: {u'speed': 0.0066666666666666697},
-            920808900L: {u'speed': 0.0033333333333333301},
-            920809200L: {u'speed': float("NaN")},
-            920809500L: {u'speed': float("NaN")}
-        }
+        expected = (
+            (920804700L, {u'speed': None}),
+            (920805000L, {u'speed': 0.040000000000000001}),
+            (920805300L, {u'speed': 0.02}),
+            (920805600L, {u'speed': 0.0}),
+            (920805900L, {u'speed': 0.0}),
+            (920806200L, {u'speed': 0.033333333333333298}),
+            (920806500L, {u'speed': 0.033333333333333298}),
+            (920806800L, {u'speed': 0.033333333333333298}),
+            (920807100L, {u'speed': 0.02}),
+            (920807400L, {u'speed': 0.02}),
+            (920807700L, {u'speed': 0.02}),
+            (920808000L, {u'speed': 0.013333333333333299}),
+            (920808300L, {u'speed': 0.016666666666666701}),
+            (920808600L, {u'speed': 0.0066666666666666697}),
+            (920808900L, {u'speed': 0.0033333333333333301}),
+            (920809200L, {u'speed': None}),
+            (920809500L, {u'speed': None})
+        )
 
         actual = self.rrd.fetch("Average", 920804400, 920809200)
-        self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
-        self.assertEqual(sorted([r.keys() for r in expected.values()]),
-                         sorted([r.keys() for r in actual.values()]))
-        self.assertEqual(json.dumps(expected), json.dumps(actual))
+        self.assertEqual(expected, actual)
 
-        expected = {
-            920800800L: {u'speed': float("NaN")},
-            920802600L: {u'speed': float("NaN")},
-            920804400L: {u'speed': float("NaN")},
-            920806200L: {u'speed': 0.018666666666666699},
-            920808000L: {u'speed': 0.0233333333333333},
-            920809800L: {u'speed': float("NaN")}
-        }
+        expected = (
+            (920800800L, {u'speed': None}),
+            (920802600L, {u'speed': None}),
+            (920804400L, {u'speed': None}),
+            (920806200L, {u'speed': 0.018666666666666699}),
+            (920808000L, {u'speed': 0.0233333333333333}),
+            (920809800L, {u'speed': None})
+        )
 
         actual = self.rrd.fetch("Average", 920799000, 920809200)
-        self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
-        self.assertEqual(sorted([r.keys() for r in expected.values()]),
-                         sorted([r.keys() for r in actual.values()]))
-        self.assertEqual(json.dumps(expected), json.dumps(actual))
+        self.assertEqual(expected, actual)
 
     def tearDown(self):
         self.rrd.delete()
@@ -526,22 +495,17 @@ class PostCreateNewDsUpdateDict(TestCase):
         self.maxDiff = None
         self.assertEqual(self.rrd.last_update, 920813400)
 
-        expected = {
-            920806200L: {u'speed': 0.018666666666666699, u'kbytes_free': float("NaN")},
-            920808000L: {u'speed': 0.0233333333333334, u'kbytes_free': float("NaN")},
-            920809800L: {u'speed': 0.0088888888888888993, u'kbytes_free': 1979619.0},
-            920811600L: {u'speed': float("NaN"), u'kbytes_free': 1979614.5},
-            920813400L: {u'speed': float("NaN"), u'kbytes_free': 1979614.16666667},
-            920815200L: {u'speed': float("NaN"), u'kbytes_free': float("NaN")}
-        }
+        expected = (
+            (920806200L, {u'speed': 0.018666666666666699, u'kbytes_free': None}),
+            (920808000L, {u'speed': 0.0233333333333334, u'kbytes_free': None}),
+            (920809800L, {u'speed': 0.0088888888888888993, u'kbytes_free': 1979619.0}),
+            (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
+            (920813400L, {u'speed': None, u'kbytes_free': 1979614.16666667}),
+            (920815200L, {u'speed': None, u'kbytes_free': None})
+        )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)
-        #print json.dumps(expected, sort_keys=True, indent=2)
-        #print json.dumps(actual, sort_keys=True, indent=2)
-        self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
-        self.assertEqual(sorted([r.keys() for r in expected.values()]),
-                         sorted([r.keys() for r in actual.values()]))
-        self.assertEqual(json.dumps(expected), json.dumps(actual))
+        self.assertEqual(expected, actual)
 
     def tearDown(self):
         self.rrd.delete()
@@ -605,22 +569,17 @@ class PostCreateNewDsUpdateDictWithOpts(TestCase):
         self.maxDiff = None
         self.assertEqual(self.rrd.last_update, 920813400)
 
-        expected = {
-            920806200L: {u'speed': 0.018666666666666699, u'kbytes_free': float("NaN")},
-            920808000L: {u'speed': 0.0233333333333334, u'kbytes_free': float("NaN")},
-            920809800L: {u'speed': 0.0088888888888888993, u'kbytes_free': 1979619.0},
-            920811600L: {u'speed': float("NaN"), u'kbytes_free': 1979614.5},
-            920813400L: {u'speed': float("NaN"), u'kbytes_free': 1979614.16666667},
-            920815200L: {u'speed': float("NaN"), u'kbytes_free': float("NaN")}
-        }
+        expected = (
+            (920806200L, {u'speed': 0.018666666666666699, u'kbytes_free': None}),
+            (920808000L, {u'speed': 0.0233333333333334, u'kbytes_free': None}),
+            (920809800L, {u'speed': 0.0088888888888888993, u'kbytes_free': 1979619.0}),
+            (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
+            (920813400L, {u'speed': None, u'kbytes_free': 1979614.16666667}),
+            (920815200L, {u'speed': None, u'kbytes_free': None})
+        )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)
-        #print json.dumps(expected, sort_keys=True, indent=2)
-        #print json.dumps(actual, sort_keys=True, indent=2)
-        self.assertEqual(sorted(expected.keys()), sorted(actual.keys()))
-        self.assertEqual(sorted([r.keys() for r in expected.values()]),
-                         sorted([r.keys() for r in actual.values()]))
-        self.assertEqual(json.dumps(expected), json.dumps(actual))
+        self.assertEqual(expected, actual)
 
     def tearDown(self):
         self.rrd.delete()

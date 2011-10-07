@@ -264,7 +264,7 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
         rra_pointer = rra_pointer % chosen_rra.rows
         debug_print("adjusted pointer to %d" % rra_pointer)
 
-    results = {}
+    results = []
     if fetch_metrics is None:
         ds_list = db.datasources.all()
     else:
@@ -273,19 +273,22 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
     for ds in ds_list:
         ds_cdps[ds] = chosen_rra.ds_cdps(ds)
 
+    # convert None -> NaN for debug output
+    fn = lambda v: v or float("NaN")
+
     dp_time = real_start + real_step
     for i in range(start_offset, chosen_rra.rows - end_offset):
-        results[dp_time] = {}
+        row_results = {}
         if i < 0:
             debug_print("pre fetch %d -- " % i, end=" ")
             for ds in ds_list:
-                results[dp_time][ds.name] = DNAN
-                debug_print("%10.2f" % results[dp_time][ds.name], end=" ")
+                row_results[ds.name] = None
+                debug_print("%10.2f" % fn(row_results[ds.name]), end=" ")
         elif i >= chosen_rra.rows:
             debug_print("past fetch %d -- " % i, end=" ")
             for ds in ds_list:
-                results[dp_time][ds.name] = DNAN
-                debug_print("%10.2f" % results[dp_time][ds.name], end=" ")
+                row_results[ds.name] = None
+                debug_print("%10.2f" % fn(row_results[ds.name]), end=" ")
         else:
             if rra_pointer >= chosen_rra.rows:
                 rra_pointer -= chosen_rra.rows
@@ -294,16 +297,21 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
             debug_print("post fetch %d -- " % i, end=" ")
             for ds in ds_list:
                 try:
-                    results[dp_time][ds.name] = ds_cdps[ds][rra_pointer].value
+                    value = ds_cdps[ds][rra_pointer].value
+                    if math.isnan(value):
+                        row_results[ds.name] = None
+                    else:
+                        row_results[ds.name] = value
                 except IndexError:
                     # If we didn't find the DB record, then we've hit a
-                    # dead zone in the Archive rows, and we just return NaN.
-                    results[dp_time][ds.name] = DNAN
-                debug_print("%10.2f" % results[dp_time][ds.name], end=" ")
+                    # dead zone in the Archive rows, and we just return None.
+                    row_results[ds.name] = None
+                debug_print("%10.2f" % fn(row_results[ds.name]), end=" ")
 
         debug_print("")
+        results.append((dp_time, row_results))
 
         dp_time += real_step
         rra_pointer += 1
 
-    return results
+    return tuple(results)

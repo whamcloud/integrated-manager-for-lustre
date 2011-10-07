@@ -237,7 +237,7 @@ class Database(models.Model):
             for ds in self.datasources.filter(name__in=fetch_metrics):
                 results[ds.name] = ds.last_reading
 
-        return [self.last_update, results]
+        return (self.last_update, results)
 
 # http://djangosnippets.org/snippets/2408/
 # Grumble.
