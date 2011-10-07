@@ -356,8 +356,11 @@ class Datasource(PoorMansStiModel):
 
 class Absolute(Datasource):
     """
-    Absolute counters get reset upon reading, to handle fast counters which
-    tend to overflow.
+    Absolute counters get reset upon reading. This is used for fast counters
+    which tend to overflow. So instead of reading them normally you reset
+    them after every read to make sure you have a maximum time available
+    before the next overflow. Another usage is for things you count like
+    number of messages since the last update.
 
     >>> rrd = Database.objects.create(name="test")
     >>> rrd.datasources.add(Absolute.objects.create(name="absolute_ds",
@@ -372,9 +375,13 @@ class Absolute(Datasource):
 
 class Counter(Datasource):
     """
-    Stores a continuously-incrementing counter, e.g. bytes_received
-    on a router interface.  Never decreases, except in the case of a
-    counter overflow which is handled by the tranform function.
+    Counter is for continuous incrementing counters like the ifInOctets
+    counter in a router. The COUNTER data source assumes that the counter
+    never decreases, except when a counter overflows. The update function
+    takes the overflow into account. The counter is stored as a per-second
+    rate. When the counter overflows, a check is made for if the overflow
+    happened at the 32bit or 64bit border and acts accordingly by adding
+    an appropriate value to the result.
 
     >>> rrd = Database.objects.create(name="test")
     >>> rrd.datasources.add(Counter.objects.create(name="counter_ds",
@@ -403,8 +410,12 @@ class Counter(Datasource):
 
 class Derive(Datasource):
     """
-    Stores the derivative of the line going from the last to the current
-    value of the data source.
+    Derive will store the derivative of the line going from the last to the
+    current value of the data source. This can be useful for gauges, for
+    example, to measure the rate of people entering or leaving a room.
+    Internally, derive works exactly like COUNTER but without overflow
+    checks. So if your counter does not reset at 32 or 64 bit you might
+    want to use DERIVE and combine it with a MIN value of 0.
 
     >>> rrd = Database.objects.create(name="test")
     >>> rrd.datasources.add(Derive.objects.create(name="derive_ds",
