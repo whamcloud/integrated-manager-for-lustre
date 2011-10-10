@@ -63,20 +63,36 @@ def _device_node(device_name, major_minor, path, size, parent):
         rc, out, err = shell.run(['scsi_id', '--version'])
         old_udev = (rc != 0)
 
+    # Note: we use -p 0x80 with scsi_id in order to get 
+    # a textual id along the lines of:
+    # * SQEMU    QEMU HARDDISK  WD-deadbeef0
+    # * SOPNFILERVIRTUAL-DISK   9iI2mH-4Ddf-k3Ov
+    # * SDDN     S2A 9550       058C4A531100
+    # As well as being more readable than the 0x83 ID, this 
+    # gets us the serial number for QEMU devices if the user
+    # has set one, whereas that doesn't show up in 0x83.
+
     if old_udev:
         # Old scsi_id, operates on a /sys reference
-        rc, out, err = shell.run(["scsi_id", "-g", "-s", "/block/%s" % device_name])
+        rc, out, err = shell.run(["scsi_id", "-g", "-p", "0x80", "-s", "/block/%s" % device_name])
         if rc != 0:
             serial = None
         else:
             serial = out.strip()
     else:
         # New scsi_id, always operates directly on a device
-        rc, out, err = shell.run(["scsi_id", "-g", path])
+        rc, out, err = shell.run(["scsi_id", "-g", "-p", "0x80", path])
         if rc != 0:
             serial = None
         else:
             serial = out.strip()
+
+    # The downside to using -p 0x80 is that if the user hasn't manually
+    # set serials for their scsi devices, multiple different devices on 
+    # the same host return the same string, so we need an explicit
+    # exclusion for that
+    if serial == "SQEMU    QEMU HARDDISK  0":
+        serial = None
 
     return {'major_minor': major_minor,
             'path': path,
