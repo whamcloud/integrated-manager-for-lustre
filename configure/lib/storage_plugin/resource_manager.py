@@ -168,6 +168,7 @@ class ResourceManager(object):
             #session.local_id_to_global_id[scannable_local_id] = scannable_id
             self._sessions[scannable_id] = session
             self._persist_new_resources(session, initial_resources)
+            self._cull_lost_resources(session, initial_resources)
             
             # TODO: cull any resources which are in the database with
             # ScannableIds for this scannable but not in the initial
@@ -185,7 +186,6 @@ class ResourceManager(object):
             if isinstance(scannable_resource, HydraHostProxy):
                 # TODO: restrict below searches to only this scannable ID to 
                 # avoid rescanning everything every time
-                host = Host.objects.get(pk = scannable_resource.host_id)
 
                 def lun_get_or_create(resource_id):
                     try:
@@ -211,6 +211,9 @@ class ResourceManager(object):
                 node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'PartitionDeviceNode'))
                 node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'MultipathDeviceNode'))
                 node_resources = ResourceQuery().get_class_resources(node_types, storage_id_scope = scannable_id)
+                host = Host.objects.get(pk = scannable_resource.host_id)
+                touched_luns = set()
+                touched_lun_nodes = set()
                 for r in node_resources:
                     # A node which has children is already in use
                     # (it might contain partitions, be an LVM PV, be in 
@@ -237,6 +240,9 @@ class ResourceManager(object):
                             host = host,
                             path = r.path,
                             storage_resource_id = r._handle)
+
+                    touched_luns.add(lun_node.pk)
+                    touched_lun_nodes.add(lun_node.pk)
                     # BUG: when mjmac set up on IU, it saw mpath devices fine as 
                     # LunNodes.  But when he created some CLVM LVs on multipath
                     # devices, the multipath devices stayed (see TODO below) AND
@@ -249,12 +255,21 @@ class ResourceManager(object):
                     # just means the PVs are on shared storage that the host has 
                     # access to, not necessarily that the host is in the pacemaker
                     # group that will access the LVs.
-                    # TODO: when a storage resource that previously didn't have children
-                    # now does have children (e.g. a multipath gets made into an LVM PV) then
-                    # its LunNodes should be revoked if they aren't being used by a Lustre target
-                    # TODO: when a storage resource is deleted, we should check if any LunNode or Lun
-                    # objects reference it, and delete them too if they're not gbeing used 
-                    # by a Lustre target.
+                
+                # TODO: do this checking on create/remove/link operations too
+                for lun_node in LunNode.objects.filter(host = host):
+                    if not lun_node.pk in touched_lun_nodes:
+                        lun = lun_node.lun
+                        from monitor.models import TargetMount
+                        if TargetMount.objects.filter(block_device = lun_node).count() == 0:
+                            log.info("Removing LunNode %s" % lun_node)
+                            lun_node.delete()
+                            if lun.lunnode_set.count() == 0:
+                                log.info("Removing Lun %s" % lun_node)
+                                lun.delete()
+                            else:
+                                log.info("Keeping Lun %s, reffed by another LunNode" % lun_node)
+
         log.info("<< session_open %s" % scannable_id)
 
     def session_update_resource(self, scannable_id, local_resource_id, attrs):
@@ -388,6 +403,26 @@ class ResourceManager(object):
         record = StorageResourceRecord.objects.get(pk = record_pk)
         alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute)
         return alert_state
+
+    @transaction.autocommit
+    def _cull_lost_resources(self, session, reported_resources):
+        reported_global_ids = []
+        for r in reported_resources:
+            if isinstance(r.identifier, ScannableId):
+                reported_global_ids.append(session.local_id_to_global_id[r._handle])
+
+        from configure.models import StorageResourceRecord
+        from django.db.models import Q
+        lost_resources = StorageResourceRecord.objects.filter(
+                ~Q(pk__in = reported_global_ids),
+                storage_id_scope = session.scannable_id)
+        for r in lost_resources:
+            for dependent in StorageResourceRecord.objects.filter(
+                    parents = r):
+                dependent.parents.remove(r)
+
+            r.delete()
+
 
     @transaction.autocommit
     def _persist_new_resources(self, session, resources):

@@ -222,7 +222,7 @@ class Host(models.Model, MeasuredEntity):
 
 class Lun(models.Model):
     def __str__(self):
-        return "Lun: %s" % self.fs_uuid
+        return "Lun %d" % self.pk
 
     # FIXME: foreignkey vs. import order
     storage_resource_id = models.IntegerField(blank = True, null = True)
@@ -233,6 +233,23 @@ class Lun(models.Model):
 
     # Whether this Lun will have only one LunNode, or multiple LunNodes
     shared = models.BooleanField()
+
+    def human_name(self):
+        if not self.storage_resource_id:
+            return None
+
+        from configure.lib.storage_plugin import ResourceQuery
+        from configure.models import StorageResourceRecord
+        record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
+        resource = record.to_resource()
+        from linux import ScsiDevice
+        if isinstance(resource, ScsiDevice):
+            s = resource.serial
+
+            if s[0] == 'S':
+                return s[1:]
+            else:
+                return s
 
 class LunNode(models.Model):
     lun = models.ForeignKey(Lun)
@@ -257,7 +274,10 @@ class LunNode(models.Model):
 
     def pretty_string(self):
         from monitor.lib.util import sizeof_fmt
-        if self.path.startswith('/dev/disk/by-path/'):
+        lun_name = self.lun.human_name()
+        if lun_name:
+            short_name = lun_name
+        elif self.path.startswith('/dev/disk/by-path/'):
             short_name = self.path.replace('/dev/disk/by-path/', '', 1)
 
             # e.g. ip-192.168.122.1:3260-iscsi-iqn.2011-08.com.whamcloud.lab.hydra-1.sdb-lun-0

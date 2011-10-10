@@ -100,16 +100,13 @@ class PluginSession(threading.Thread):
         self.stopping = True
 
 class StorageDaemon(object):
-    def __init__(self, plugins):
+    def __init__(self):
         self.stopping = False
 
         # Map of module name to map of root_resource_id to PluginSession
         self.plugins = {}
-        for p in plugins:
-            # Load the plugin
-            from configure.lib.storage_plugin import storage_plugin_manager 
-            storage_plugin_manager.load_plugin(p)
-
+        from configure.lib.storage_plugin import storage_plugin_manager
+        for p in storage_plugin_manager.loaded_plugins.keys():
             # Create sessions for all root resources
             sessions = {}    
             for srr_id in self.root_resource_ids(p):
@@ -168,7 +165,7 @@ class StorageDaemon(object):
         self.stopping = True
 
 if __name__ == '__main__':
-    daemon = StorageDaemon(settings.INSTALLED_STORAGE_PLUGINS)
+    daemon = StorageDaemon()
 
     # Respond to Ctrl+C
     def signal_handler(signal, frame):

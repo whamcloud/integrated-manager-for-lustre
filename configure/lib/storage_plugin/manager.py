@@ -106,7 +106,6 @@ class ResourceQuery(object):
 
         # Load the appropriate plugin
         plugin_module = record.resource_class.storage_plugin.module_name
-        plugin_klass = storage_plugin_manager.load_plugin(plugin_module)
 
         # Get the StorageResource class and have it translate the alert_class
         klass = storage_plugin_manager.get_plugin_resource_class(
@@ -118,7 +117,6 @@ class ResourceQuery(object):
     def record_class_and_instance_string(self, record):
         # Load the appropriate plugin
         plugin_module = record.resource_class.storage_plugin.module_name
-        plugin_klass = storage_plugin_manager.load_plugin(plugin_module)
 
         # Get the StorageResource class and have it translate the alert_class
         klass = storage_plugin_manager.get_plugin_resource_class(
@@ -159,15 +157,6 @@ class ResourceQuery(object):
         if plugin_module in self._errored_plugins:
             return None
             
-        # We have to make sure the plugin is loaded before we
-        # try to unpickle the StorageResource class
-        try:
-            storage_plugin_manager.load_plugin(plugin_module)
-        except Exception,e:
-            storage_plugin_log.error("Cannot load plugin %s for StorageResourceRecord %d: %s" % (plugin_module, record.id, e))
-            self._errored_plugins.add(plugin_module)
-            return None
-
         resource = record.to_resource()
         self._pk_to_resource[record.pk] = resource
         return resource
@@ -261,6 +250,10 @@ class StoragePluginManager(object):
         self.loaded_plugins = {}
         self.plugin_sessions = {}
 
+        from settings import INSTALLED_STORAGE_PLUGINS
+        for plugin in INSTALLED_STORAGE_PLUGINS:
+            self.load_plugin(plugin)
+
     def get_scannable_resource_ids(self, plugin):
         loaded_plugin = self.loaded_plugins[plugin]
         return StorageResourceRecord.objects.\
@@ -271,8 +264,6 @@ class StoragePluginManager(object):
     @transaction.commit_on_success
     def create_root_resource(self, plugin_mod, resource_class_name, **kwargs):
         storage_plugin_log.debug("create_root_resource %s %s %s" % (plugin_mod, resource_class_name, kwargs))
-        plugin_class = self.load_plugin(plugin_mod)
-
         # Try to find the resource class in the plugin module
         resource_class = self.get_plugin_resource_class(plugin_mod, resource_class_name)
 
@@ -299,7 +290,10 @@ class StoragePluginManager(object):
 
     def get_plugin_resource_class(self, plugin_module, resource_class_name):
         """Return a StorageResource subclass"""
-        loaded_plugin = self.loaded_plugins[plugin_module]
+        try:
+            loaded_plugin = self.loaded_plugins[plugin_module]
+        except KeyError:
+            raise RuntimeError("Plugin %s not found (not one of %s)" % (plugin_module, self.loaded_plugins.keys()))
         return loaded_plugin.resource_classes[resource_class_name].resource_class
 
     def get_plugin_resource_class_id(self, plugin_module, resource_class_name):
