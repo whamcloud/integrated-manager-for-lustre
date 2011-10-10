@@ -747,6 +747,7 @@ class CdpPrep(models.Model):
         self.save(force_update=True)
 
     def reset(self, ds, elapsed_steps):
+        debug_print("->reset_cdp")
         self.primary = ds.pdp_temp
         self.secondary = ds.pdp_temp
         self.save(force_update=True)

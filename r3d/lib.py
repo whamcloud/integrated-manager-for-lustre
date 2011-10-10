@@ -145,7 +145,6 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_cou
         else:
             rra.steps_since_update = 0
 
-        row_updated = False
         for ds in db.ds_cache:
             cdp_prep = [prep for prep in db.prep_cache
                         if (prep.datasource_id == ds.id
@@ -163,17 +162,21 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_cou
 
             debug_print("cdp_prep after: %s" % cdp_prep.__dict__)
 
-            if rra.steps_since_update > 0:
-                row_updated = True
+        for idx in range(0, rra.steps_since_update):
+            for ds in db.ds_cache:
+                cdp_prep = [prep for prep in db.prep_cache
+                            if (prep.datasource_id == ds.id
+                                and prep.archive_id == rra.id)][0]
+
                 rra.store_ds_cdp(ds, cdp_prep)
 
-        if row_updated:
-            # FIXME: Not at all happy with this -- there must be a more clever
-            # way to do it and avoid the additional DB hit.  Perhaps stash it
-            # in one of the other models we can't avoid updating?
+            # FIXME: At some point try to stash this somewhere we're already
+            # updating, maybe.
             rra.current_row += 1
             if rra.current_row >= rra.rows:
                 rra.current_row = 0
+
+        if rra.steps_since_update > 0:
             rra.save()
 
 # FIXME: This monster needs a serious refactoring.  At some point.
