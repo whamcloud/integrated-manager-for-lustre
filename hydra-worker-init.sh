@@ -53,10 +53,11 @@ start() {
     # Django: Build the hydra-server project's /static directory
     # Note: this would naturally be in %post, but some some build
     # environments run those in the wrong order, so it's here.
-    if [ ! -d /usr/share/hydra-server/static ]; then
-        PYTHONPATH=/usr/share/hydra-server python /usr/share/hydra-server/manage.py collectstatic --noinput
-    fi
-
+    # Note: we ideally would only run this once at install/upgrade
+    # time, but running in the worker env there's no easy way to
+    # tell if it's our first time, so we do it always (fairly 
+    # quick op anyway)
+    PYTHONPATH=/usr/share/hydra-server python /usr/share/hydra-server/manage.py collectstatic --noinput
 
     echo -n "Starting the Hydra worker daemon: "
     run_celeryd start
