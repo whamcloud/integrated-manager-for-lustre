@@ -32,9 +32,10 @@ from collections import defaultdict
 import threading
 
 class PluginSession(object):
-    def __init__(self, scannable_id):
+    def __init__(self, scannable_id, update_period):
         self.local_id_to_global_id = {}
         self.scannable_id = scannable_id
+        self.update_period = update_period
 
 class EdgeIndex(object):
     def __init__(self):
@@ -152,14 +153,18 @@ class ResourceManager(object):
         self._subscriber_index = SubscriberIndex()
         self._subscriber_index.populate()
 
-    def session_open(self, scannable_id, scannable_local_id, initial_resources):
+    def session_open(self,
+            scannable_id,
+            scannable_local_id,
+            initial_resources,
+            update_period):
         log.info(">> session_open %s" % scannable_id)
         with self._instance_lock:
             if scannable_id in self._sessions:
                 log.warning("Clearing out old session for scannable ID %s" % scannable_id)
                 del self._sessions[scannable_id]
 
-            session = PluginSession(scannable_id)
+            session = PluginSession(scannable_id, update_period)
             #session.local_id_to_global_id[scannable_local_id] = scannable_id
             self._sessions[scannable_id] = session
             self._persist_new_resources(session, initial_resources)
@@ -204,6 +209,7 @@ class ResourceManager(object):
                 node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'UnsharedDeviceNode'))
                 node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'LvmDeviceNode'))
                 node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'PartitionDeviceNode'))
+                node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'MultipathDeviceNode'))
                 node_resources = ResourceQuery().get_class_resources(node_types, storage_id_scope = scannable_id)
                 for r in node_resources:
                     # A node which has children is already in use
@@ -231,6 +237,24 @@ class ResourceManager(object):
                             host = host,
                             path = r.path,
                             storage_resource_id = r._handle)
+                    # BUG: when mjmac set up on IU, it saw mpath devices fine as 
+                    # LunNodes.  But when he created some CLVM LVs on multipath
+                    # devices, the multipath devices stayed (see TODO below) AND
+                    # the new LV devices didn't appear.  Why didn't they get promoted
+                    # to LunNodes?  they were in hydra-agent output
+                    # TODO: cope with CLVM where device nodes appear and disappear
+                    # - simplest thing would be to have the agent lie and claim
+                    # that the device node is always there (based on LV presence
+                    # in 'lvs' output.  But that's a hack.  And appearing in 'lvs'
+                    # just means the PVs are on shared storage that the host has 
+                    # access to, not necessarily that the host is in the pacemaker
+                    # group that will access the LVs.
+                    # TODO: when a storage resource that previously didn't have children
+                    # now does have children (e.g. a multipath gets made into an LVM PV) then
+                    # its LunNodes should be revoked if they aren't being used by a Lustre target
+                    # TODO: when a storage resource is deleted, we should check if any LunNode or Lun
+                    # objects reference it, and delete them too if they're not gbeing used 
+                    # by a Lustre target.
         log.info("<< session_open %s" % scannable_id)
 
     def session_update_resource(self, scannable_id, local_resource_id, attrs):
@@ -255,37 +279,27 @@ class ResourceManager(object):
             self._resource_modify_parent(record_pk, parent_pk, True)
             # TODO: potentially orphaning resources, find and cull them
 
-    def session_update_stat(self, scannable_id, local_resource_id, update_data):
-        # Note: intentionally lock-free, to be called synchronously during
-        # plugin execution (pass stats straight through rather than
-        # messing with them)
-
-        #XXX How safe is this really to be run without the _instance_lock, 
-        # as we're reading out of _sessions and local_id_to...
+    def session_update_stats(self, scannable_id, local_resource_id, update_data):
+        """Get global ID for a resource, look up the StoreageResourceStatistic for
+           each stat in the update, and invoke its .metrics.update with the data"""
         session = self._sessions[scannable_id]
         record_pk = session.local_id_to_global_id[local_resource_id]
-        from configure.models import StorageResourceRecord
+        from configure.models import StorageResourceRecord, StorageResourceStatistic
         record = StorageResourceRecord.objects.get(pk = record_pk)
-        from monitor.metrics import VendorMetricStore
-        from django.db import transaction
-        # TODO: per-plugin update period
-        metric_store = VendorMetricStore(record, 5)
-        metric_store.update(update_data)
+        for stat_name, stat_data in update_data.items():
+            stat_properties = record.get_statistic_properties(stat_name)
+            try:
+                stat_record = StorageResourceStatistic.objects.get(
+                        storage_resource = record, name = stat_name)
+                if stat_record.sample_period != stat_properties.sample_period:
+                    storage_plugin_log.warning("Plugin stat period for '%s' changed, expunging old statistics", stat_name)
+                    stat_record.delete()
+                    raise StorageResourceStatistic.DoesNotExist
 
-        #import time
-        #import datetime
-        #t = int(time.time()) - 60
-
-        #print "Last minute since %s" % datetime.datetime.now()
-        #print ">>"
-        #points = metric_store.fetch('Average', start_time = t)
-        #ts_list = points.keys()
-        #ts_list.sort()
-        #for ts in ts_list:
-        #    vals = points[ts]
-        #    print time.ctime(ts), vals['test_stat']
-        #print "<<"
-        #print ""
+            except StorageResourceStatistic.DoesNotExist:
+                stat_record = StorageResourceStatistic.objects.create(
+                        storage_resource = record, name = stat_name, sample_period = stat_properties.sample_period)
+            stat_record.metrics.update(stat_name, stat_properties, stat_data)
 
     @transaction.autocommit
     def _resource_modify_parent(self, record_pk, parent_pk, remove):

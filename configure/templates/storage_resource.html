@@ -2,11 +2,18 @@
 <h2>{{resource.human_string}}</h2>
 
 <h3>{{resource.human_class}} attributes</h3>
-<ul>
+<table>
 {% for k,v in resource.get_attributes_display.items %}
-<li>{{k}}: {{v}}</li>
+<tr><th>{{k}}</th><td>{{v}}</td></tr>
 {% endfor %}
-</ul>
+</table>
+
+<h3>{{resource.human_class}} statistics</h3>
+<table>
+{% for name,latest_val in stats.items %}
+<tr><th>{{name}}</th><td>{{latest_val}}</td></tr>
+{% endfor %}
+</table>
 
 <h3>{{resource.human_class}} alerts</h3>
 <ul>

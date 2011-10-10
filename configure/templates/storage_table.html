@@ -11,10 +11,11 @@
                 }); 
 
             /* Column 0 is the internal ID column */
-            dataTable.fnSetColumnVis(0, false);
+            /*dataTable.fnSetColumnVis(0, false);*/
 
             $('#resource_table tbody tr').live('click', function() {
                 var resource_record_id = $($('td', this)[0]).text();
+                console.log(resource_record_id);
                 $('#resource_popup').dialog({autoOpen: false})
                 $('#resource_popup_content').load("/configure/storage_resource/" + resource_record_id + "/")
                 $('#resource_popup').dialog('open');

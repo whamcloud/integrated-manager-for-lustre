@@ -223,6 +223,7 @@ SYSLOG_PATH = '/var/log/messages'
 # Periods given in seconds
 AUDIT_PERIOD = 10
 JANITOR_PERIOD = 60
+PLUGIN_DEFAULT_UPDATE_PERIOD = 5
 
 JOB_MAX_AGE = 3600 * 24 * 7
 AUDIT_MAX_AGE = 3600 * 24

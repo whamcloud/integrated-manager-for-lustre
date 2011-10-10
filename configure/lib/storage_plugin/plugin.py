@@ -76,6 +76,8 @@ class StoragePlugin(object):
         self._delta_alerts = set()
         self._alerts = {}
 
+        self.update_period = settings.PLUGIN_DEFAULT_UPDATE_PERIOD
+
     def initial_scan(self, root_resource):
         """To be implemented by subclasses.  Identify all resources
            present at this time and call register_resource on them.
@@ -91,19 +93,6 @@ class StoragePlugin(object):
            periodic refresh of data and update any resource instances"""
         pass
 
-
-    def _flush_alerts(self):
-        from configure.lib.storage_plugin.resource_manager import resource_manager 
-        with self._alerts_lock:
-            for (resource,attribute,alert_class) in self._delta_alerts:
-                # FIXME: risk of a resource still being here that's since been deleted
-                # from the local index.  Could just do this inside _resource_lock?
-                active = self._alerts[(resource,attribute,alert_class)]
-                resource_manager.session_notify_alert(
-                        self._scannable_id, resource._handle,
-                        active, alert_class, attribute)
-            self._delta_alerts.clear()
-
     # commit_on_success is important here and in update_scan, because
     # if someone is registering a resource with parents
     # and something goes wrong, we must not accidently
@@ -117,17 +106,26 @@ class StoragePlugin(object):
 
         self.initial_scan(root_resource)
 
-        resource_manager.session_open(self._scannable_id, root_resource._handle, self._index.all())
+        resource_manager.session_open(
+                self._scannable_id,
+                root_resource._handle,
+                self._index.all(),
+                self.update_period)
         self._delta_new_resources = []
 
+        # Creates, deletes, attrs, parents are all handled in session_open
+        # the rest we do manually.
+        self.commit_resource_statistics()
+        self.check_alert_conditions()
+        self.commit_alerts()
+
+    def check_alert_conditions(self):
         for resource in self._index.all():
             # Check if any AlertConditions are matched
             for name,ac in resource._alert_conditions.items():
                 alert_list = ac.test(resource)
                 for name, attribute, active in alert_list:
                     self.notify_alert(active, resource, name, attribute)
-
-        self._flush_alerts()
 
     @transaction.commit_on_success
     def do_periodic_update(self, root_resource):
@@ -136,44 +134,63 @@ class StoragePlugin(object):
 
         # Resources created since last update
         with self._resource_lock:
-            if len(self._delta_new_resources) > 0:
-                resource_manager.session_add_resources(self._scannable_id, self._delta_new_resources)
-            self._delta_new_resources = []
+            self.commit_resource_creates()
+            self.commit_resource_deletes()
+            self.commit_resource_updates()
+            self.commit_resource_statistics()
+            self.check_alert_conditions()
+            self.commit_alerts()
 
-            # Resources deleted since last update
-            if len(self._delta_delete_resources) > 0:
-                resource_manager.session_add_resources(self._scannable_id, self._delta_delete_resources)
-            self._delta_delete_resources = []
+    def commit_resource_creates(self):
+        if len(self._delta_new_resources) > 0:
+            resource_manager.session_add_resources(self._scannable_id, self._delta_new_resources)
+        self._delta_new_resources = []
 
-            # Resources with changed attributes
-            for resource in self._index.all():
-                deltas = resource.flush_deltas()
-                # If there were changes to attributes
-                if len(deltas['attributes']) > 0:
-                    resource_manager.session_update_resource(
-                            self._scannable_id, resource._handle, deltas['attributes']) 
+    def commit_resource_deletes(self):
+        # Resources deleted since last update
+        if len(self._delta_delete_resources) > 0:
+            resource_manager.session_add_resources(self._scannable_id, self._delta_delete_resources)
+        self._delta_delete_resources = []
 
-                    # Check if any AlertConditions are matched
-                    for name,ac in resource._alert_conditions.items():
-                        alert_list = ac.test(resource)
-                        for name, attribute, active in alert_list:
-                            self.notify_alert(active, resource, name, attribute)
+    def commit_resource_updates(self):
+        from configure.lib.storage_plugin.resource_manager import resource_manager 
+        # Resources with changed attributes
+        for resource in self._index.all():
+            deltas = resource.flush_deltas()
+            # If there were changes to attributes
+            if len(deltas['attributes']) > 0:
+                resource_manager.session_update_resource(
+                        self._scannable_id, resource._handle, deltas['attributes']) 
 
-                # If there were parents added or removed
-                if len(deltas['parents']) > 0:
-                    for parent_resource in deltas['parents']:
-                        if parent_resource in resource._parents:
-                            # If it's in the parents of the resource then it's an add
-                            resource_manager.session_resource_add_parent(
-                                    self._scannable_id, resource._handle,
-                                    parent_resource._handle)
-                        else:
-                            # Else if's a remove
-                            resource_manager.session_resource_remove_parent(
-                                    self._scannable_id, resource._handle,
-                                    parent_resource._handle)
+            # If there were parents added or removed
+            if len(deltas['parents']) > 0:
+                for parent_resource in deltas['parents']:
+                    if parent_resource in resource._parents:
+                        # If it's in the parents of the resource then it's an add
+                        resource_manager.session_resource_add_parent(
+                                self._scannable_id, resource._handle,
+                                parent_resource._handle)
+                    else:
+                        # Else if's a remove
+                        resource_manager.session_resource_remove_parent(
+                                self._scannable_id, resource._handle,
+                                parent_resource._handle)
 
-        self._flush_alerts()
+    def commit_alerts(self):
+        from configure.lib.storage_plugin.resource_manager import resource_manager 
+        with self._alerts_lock:
+            for (resource,attribute,alert_class) in self._delta_alerts:
+                active = self._alerts[(resource,attribute,alert_class)]
+                resource_manager.session_notify_alert(
+                        self._scannable_id, resource._handle,
+                        active, alert_class, attribute)
+            self._delta_alerts.clear()
+
+    def commit_resource_statistics(self):
+        for resource in self._index.all():
+            r_stats = resource.flush_stats()
+            from configure.lib.storage_plugin.resource_manager import resource_manager 
+            resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
 
     def update_or_create(self, klass, parents = [], **attrs):
         with self._resource_lock:
@@ -214,13 +231,6 @@ class StoragePlugin(object):
             self._alerts[key] = value
             self._delta_alerts.add(key)
 
-    def update_statistic(self, resource, stat, value):
-        from configure.lib.storage_plugin.resource_manager import resource_manager 
-        update = {}
-        stat_obj = resource._storage_statistics[stat]
-        update[stat] = {'value': value, 'type': stat_obj.r3d_type()}
-        resource_manager.session_update_stat(self._scannable_id, resource._handle, update)
-
     def _register_resource(self, resource):
         """Register a newly created resource:
         * Assign it a local ID
@@ -232,9 +242,7 @@ class StoragePlugin(object):
 
         resource.validate()
         resource._handle = self.generate_handle()
+        resource._plugin = self
         self._index.add(resource)
         self._delta_new_resources.append(resource._handle)
-
-
-
 

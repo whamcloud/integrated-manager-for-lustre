@@ -537,11 +537,16 @@ def storage_resource(request, vrr_id):
     resource = ResourceQuery().get_resource_parents(vrr_id)
     alerts = ResourceQuery().resource_get_alerts(resource)
     propagated_alerts = ResourceQuery().resource_get_propagated_alerts(resource)
+    from configure.models import StorageResourceStatistic
+    stats = {}
+    for s in StorageResourceStatistic.objects.filter(storage_resource = vrr_id):
+        stats[s.name] = s.get_latest()
     print "prop: %s" % propagated_alerts
     return render_to_response("storage_resource.html", RequestContext(request, {
                 "resource": resource,
                 "propagated_alerts": propagated_alerts,
-                "alerts": alerts
+                "alerts": alerts,
+                "stats": stats
                 }))
 
 def storage_resource_delete(request, vrr_id):

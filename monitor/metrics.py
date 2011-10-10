@@ -169,20 +169,41 @@ class R3dMetricStore(MetricStore):
         """
         return self.r3d.fetch_last(fetch_metrics)
 
+def _autocreate_ds(db, key, payload):
+    # FIXME should include the app label in this query to avoid risk of
+    # name overlap with other apps
+    ct = ContentType.objects.get(model=payload['type'])
+    ds_klass = ct.model_class()
+
+    db.datasources.add(ds_klass.objects.create(name=key,
+                                               heartbeat=db.step * 2,
+                                               database=db))
+    metrics_log.info("Added new DS to DB (%s -> %s)" % (key, db.name))
+
 class VendorMetricStore(R3dMetricStore):
+    def update(self, stat_name, stat_properties, stat_data):
+        """stat_data is an iterable in time order of dicts, where each
+           dict has a member 'timestamp' which is a timestamp int, and
+           'value' whose type depends on the statistic"""
+        from configure.lib.storage_plugin import statistics
+        r3d_format = {}
 
-    def update(self, update_data):
-        def missing_ds_fn(db, key, payload):
-            ct = ContentType.objects.get(model=payload['type'])
-            ds_klass = ct.model_class()
-
-            db.datasources.add(ds_klass.objects.create(name=key,
-                                                       heartbeat=db.step * 2,
-                                                       database=db))
-            metrics_log.info("Added new DS to DB (%s -> %s)" % (key, db.name))
+        for datapoint in stat_data:
+            ts = datapoint['timestamp']
+            val = datapoint['value']
+            if isinstance(stat_properties, statistics.Gauge):
+                r3d_format[ts] = {stat_name: {'value': val, 'type': 'Gauge'}}
+            elif isinstance(stat_properties, statistics.Counter):
+                r3d_format[ts] = {stat_name: {'value': val, 'type': 'Counter'}}
+            elif isinstance(stat_properties, statistics.BytesHistogram):
+                bins_dict = {}
+                for i in range(0, len(val)):
+                    bin_stat_name = "%s_%s" % (stat_name, i)
+                    bins_dict[bin_stat_name] = {'value': val[i], 'type': 'Gauge'}
+                r3d_format[ts] = bins_dict
 
         # Skipping sanitize
-        self.r3d.update({self._update_time(): update_data}, missing_ds_fn)
+        self.r3d.update(r3d_format, _autocreate_ds)
 
 class HostMetricStore(R3dMetricStore):
     """
@@ -265,13 +286,7 @@ class HostMetricStore(R3dMetricStore):
         except KeyError:
             pass
 
-        def missing_ds_fn(db, key, value):
-            db.datasources.add(Gauge.objects.create(name=key,
-                                                    heartbeat=db.step * 2,
-                                                    database=db))
-            metrics_log.info("Added new DS to DB (%s -> %s)" % (key, db.name))
-
-        self.r3d.update({self._update_time(): update}, missing_ds_fn)
+        self.r3d.update({self._update_time(): update}, _autocreate_ds)
 
 class TargetMetricStore(R3dMetricStore):
     """
@@ -321,16 +336,7 @@ class TargetMetricStore(R3dMetricStore):
         #            ds_name = self._sanitize_metric_name("brw_", "%s_%s_" % (key, bucket), direction)
         #            update[ds_name] = brw_stats[key]['buckets'][bucket][direction]['count']
 
-        def missing_ds_fn(db, key, payload):
-            ct = ContentType.objects.get(model=payload['type'])
-            ds_klass = ct.model_class()
-
-            db.datasources.add(ds_klass.objects.create(name=key,
-                                                       heartbeat=db.step * 2,
-                                                       database=db))
-            metrics_log.info("Added new DS to DB (%s -> %s)" % (key, db.name))
-
-        self.r3d.update({self._update_time(): update}, missing_ds_fn)
+        self.r3d.update({self._update_time(): update}, _autocreate_ds)
 
 class FilesystemMetricStore(R3dMetricStore):
     """

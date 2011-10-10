@@ -154,6 +154,50 @@ class StorageResourceRecord(models.Model):
                 self.resource_class.class_name)
         return klass
 
+    def get_statistic_properties(self, stat_name):
+        from configure.lib.storage_plugin import storage_plugin_manager
+        klass = storage_plugin_manager.get_plugin_resource_class(
+                self.resource_class.storage_plugin.module_name,
+                self.resource_class.class_name)
+        return klass._storage_statistics[stat_name]
+
+class StorageResourceStatistic(models.Model):
+    class Meta:
+        unique_together = ('storage_resource', 'name')
+        app_label = 'configure'
+
+    storage_resource = models.ForeignKey(StorageResourceRecord)
+    sample_period = models.IntegerField()
+    name = models.CharField(max_length = 64)
+
+    def delete(self, *args, **kwargs):
+        # TODO: delete VendorMetricStore
+        super(StorageResourceStatistic, self).delete(*args, **kwargs)
+
+    def __get_metrics(self):
+        from monitor.metrics import VendorMetricStore
+        if not hasattr(self, '_metrics'):
+            self._metrics = VendorMetricStore(self, self.sample_period)
+        return self._metrics
+    metrics = property(__get_metrics)
+
+    def get_latest(self):
+        latest_ts, latest_data = self.metrics.fetch_last()
+        stat_props = self.storage_resource.get_statistic_properties(self.name)
+        from configure.lib.storage_plugin import statistics
+        if isinstance(stat_props, statistics.BytesHistogram):
+            # Composite type
+            result = []
+            for i in range(0, len(stat_props.bins)):
+                bin_info = stat_props.bins[i]
+                print latest_data
+                result.append((bin_info, latest_data["%s_%s" % (self.name, i)]))
+        else:
+            # Scalar types
+            result = latest_data[self.name]
+
+        return result
+
 class StorageResourceAttribute(models.Model):
     """An attribute of a StorageResource instance.
     

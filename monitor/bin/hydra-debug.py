@@ -176,14 +176,6 @@ class HydraDebug(cmd.Cmd, object):
             values = last_minute[ts]
             print time.ctime(ts), values[stat_name]
 
-    def do_resource_stat(self, line):
-        resource_id, stat_name = line.split()
-        from configure.models import StorageResourceRecord
-        from monitor.metrics import VendorMetricStore
-        record = StorageResourceRecord.objects.get(pk = int(resource_id))
-        metrics = VendorMetricStore(record, 1)
-        self._print_stat(metrics, stat_name)
-
     def do_host_stat(self, line):
         hostname, stat_name = line.split()
         from configure.models import ManagedHost

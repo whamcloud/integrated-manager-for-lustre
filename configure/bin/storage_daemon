@@ -94,7 +94,7 @@ class PluginSession(threading.Thread):
         instance.do_initial_scan(root_resource)
         while not self.stopping:
             instance.do_periodic_update(root_resource)
-            time.sleep(5)
+            time.sleep(instance.update_period)
 
     def stop(self):
         self.stopping = True

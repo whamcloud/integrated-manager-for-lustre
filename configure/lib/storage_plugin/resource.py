@@ -7,10 +7,11 @@
 to define their system elements"""
 
 from configure.lib.storage_plugin.attributes import ResourceAttribute
-from configure.lib.storage_plugin.statistics import ResourceStatistic
+from configure.lib.storage_plugin.statistics import BaseStatistic
 from configure.lib.storage_plugin.alert_conditions import AlertCondition
 from configure.lib.storage_plugin.log import storage_plugin_log
 
+from collections import defaultdict
 import threading
 
 class Statistic(object):
@@ -45,7 +46,7 @@ class StorageResourceMetaclass(type):
                     dct['_provides'].append(field_name)
                 if field_obj.subscribe:
                     dct['_subscribes'].append(field_name)
-            elif isinstance(field_obj, ResourceStatistic):
+            elif isinstance(field_obj, BaseStatistic):
                 dct['_storage_statistics'][field_name] = field_obj
                 del dct[field_name]
             elif isinstance(field_obj, AlertCondition):
@@ -70,8 +71,15 @@ class StorageResource(object):
     def alert_message(cls, alert_class):
         return cls._alert_classes[alert_class].message
 
+    def flush_stats(self):
+        with self._delta_stats_lock:
+            tmp = self._delta_stats
+            self._delta_stats = {}
+        return tmp
+    
     def __init__(self, **kwargs):
         self._storage_dict = {}
+        self._plugin = None
         self._handle = None
         self._parents = []
 
@@ -79,6 +87,10 @@ class StorageResource(object):
         self._delta_lock = threading.Lock()
         self._delta_attrs = {}
         self._delta_parents = []
+
+        # Accumulate in between calls to flush_stats()
+        self._delta_stats_lock = threading.Lock()
+        self._delta_stats = defaultdict(list)
 
         for k,v in kwargs.items():
             if not k in self._storage_attributes:
@@ -130,9 +142,11 @@ class StorageResource(object):
         return self.__str__()
 
     def __setattr__(self, key, value):
-        if key.startswith("_") or not key in self._storage_attributes:
+        if key.startswith("_"):
+            # Do this check first to avoid extra dict lookups for access
+            # to internal vars
             object.__setattr__(self, key, value)
-        else:
+        elif key in self._storage_attributes:
             # Validate the value
             self._storage_attributes[key].validate(value)
 
@@ -148,6 +162,23 @@ class StorageResource(object):
             self._storage_dict[key] = value
             with self._delta_lock:
                 self._delta_attrs['key'] = value
+        elif key in self._storage_statistics:
+            stat_obj = self._storage_statistics[key]
+            stat_obj.validate(value)
+
+            import time
+            with self._delta_stats_lock:
+                self._delta_stats[key].append({
+                            "timestamp": int(time.time()),
+                            "value": value})
+        else:
+            object.__setattr__(self, key, value)
+
+    def flush_stats(self):
+        with self._delta_stats_lock:
+            tmp = self._delta_stats
+            self._delta_stats = defaultdict(list)
+        return tmp
 
     def __getattr__(self, key):
         if key.startswith("_") or not key in self._storage_attributes:
