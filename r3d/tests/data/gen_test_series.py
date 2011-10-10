@@ -114,7 +114,7 @@ def generate_row(row_time):
         if args.randunk and (row_time % random.random()) > 0.7:
             row.append("U")
         else:
-            row.append("%lf" % ds.value(row_time))
+            row.append("%d" % int(ds.value(row_time)))
 
     print ":".join(row)    
 
@@ -136,24 +136,26 @@ if __name__ == "__main__":
             )
         )
 
-    skip_until = 0
+    slow_until = 0
     for row_time in range(args.start,
                           (args.start + (args.step * args.rows)), args.step):
-        if row_time < skip_until:
+        if row_time < slow_until:
+            if (row_time % random.random()) > 0.7:
+                generate_row(row_time)
             continue
-        elif skip_until > 0 and row_time >= skip_until:
+        elif slow_until > 0 and row_time >= slow_until:
             print "# ending slowdown"
-            skip_until = 0
+            slow_until = 0
 
         if args.randfast and (row_time % random.random()) > 0.9:
             print "# starting fast series"
-            for extra in range((row_time - args.step), row_time, 1):
+            for extra in range((row_time - args.step) + 1, row_time, 1):
                 generate_row(extra)
             print "# ending fast series"
 
         if args.randslow and (row_time % random.random()) > 0.9:
             print "# starting slowdown"
-            skip_until = row_time + (args.step * random.randint(1, 10))
+            slow_until = row_time + (args.step * random.randint(1, 10))
 
         generate_row(row_time)
 
