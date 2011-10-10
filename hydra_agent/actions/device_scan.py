@@ -133,13 +133,21 @@ def _parse_sys_block():
         if size == 0:
             return
 
-        # Exclude ramdisks and floppy drives
+        # Exclude ramdisks, floppy drives, obvious cdroms
         if re.search("^ram\d+$", device_name) or \
            re.search("^fd\d+$", device_name) or \
            re.search("^sr\d+$", device_name):
             return
 
-        # TODO: more general check for read-only devices in addition to 'sr\d' check above
+        # Exclude read-only or removed devices
+        try:
+            open("/dev/%s" % device_name, 'w')
+        except IOError, e:
+            import errno
+            # Python errno doesn't include this code
+            NO_MEDIA_ERRNO = 123
+            if e.errno == errno.EROFS or e.errno == NO_MEDIA_ERRNO:
+                return
 
         # Resolve a major:minor to a /dev/foo
         path = get_path(major_minor, device_name)
@@ -161,11 +169,6 @@ def _parse_sys_block():
 def device_scan(args):
     # Map of block devices major:minors to /dev/ path.
     block_device_nodes, node_block_devices = _parse_sys_block()
-
-    # XXX
-    # because it's a pain, and rare, we're not handling "partitions in LVs".
-    # normal partitions are fine because they appear as subdirs of the device
-    # in /sys/block, but for some reason partitions in LVs don't do that.
 
     vgs = {}
     lvs = {}
@@ -217,6 +220,23 @@ def device_scan(args):
             vg_name = vg_name.replace("--", "-")
             lv_name = lv_name.replace("--", "-")
 
+            if not lv_name in lvs[vg_name]:
+                # This isn't something we saw as a named LV, so its
+                # a partition.  Assign its parent and don't store it
+                # as an LV.
+                result = re.search("(.*)p\d+", lv_name)
+                if not result:
+                    agent_log.error("Cannot parse LVM device name %s" % name)
+                    continue
+                parent_lv_name = result.groups()[0]
+                if not parent_lv_name in lvs[vg_name]:
+                    agent_log.error("Cannot parse LVM device name %s" % name)
+                else:
+                    # FIXME: compose path in a way that copes with hyphens
+                    parent_block_device = node_block_devices["/dev/mapper/%s-%s" % (vg_name, parent_lv_name)]
+                    block_device_nodes[block_device]['parent'] = parent_block_device
+
+                continue
             lvs[vg_name][lv_name]['block_device'] = block_device
 
             devices = [block_device_nodes[i]['major_minor'] for i in devices]
@@ -239,7 +259,6 @@ def device_scan(args):
             continue
 
     # Anything in fstab or that is mounted
-    # TODO: move these out somewhere
     from hydra_agent.legacy_audit import Fstab, Mounts
     fstab = Fstab()
     mounts = Mounts()
