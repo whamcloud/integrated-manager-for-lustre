@@ -32,11 +32,10 @@
 
 .dataTables_wrapper {
 	position: relative;
-	height:100%;
+	min-height: 302px;
 	clear: both;
 	_height: 302px;
 	zoom: 1; /* Feeling sorry for IE */
-	border-bottom:#999999 solid 1px;
 }
 
 .dataTables_processing {
@@ -56,18 +55,14 @@
 }
 
 .dataTables_length {
-	width: 50%;
+	width: 40%;
 	float: left;
-	height:28px;
-	border-bottom:#999999 solid 1px;
 }
 
 .dataTables_filter {
 	width: 50%;
 	float: right;
 	text-align: right;
-	height:28px;
-	border-bottom:#999999 solid 1px;
 }
 
 .dataTables_info {
@@ -80,7 +75,6 @@
 	* width: 50px;
 	float: right;
 	text-align: right;
-	padding-top:5px;
 }
 
 /* Pagination nested */
@@ -116,6 +110,7 @@ table.display {
 	margin: 0 auto;
 	clear: both;
 	width: 100%;
+    font-size: 10pt;
 	
 	/* Note Firefox 3.5 and before have a bug with border-collapse
 	 * ( https://bugzilla.mozilla.org/show%5Fbug.cgi?id=155955 ) 
@@ -137,12 +132,6 @@ table.display thead th {
 	font-weight: bold;
 	cursor: pointer;
 	* cursor: hand;
-	text-align:center;
-	font-size:13px;
-	/*background-image:url(../images/line1.jpg);
-	background-repeat:repeat-x;*/
-	background-color:#5ed6ff;
-	color:#FFFFFF;
 }
 
 table.display tfoot th {
@@ -230,16 +219,11 @@ table.display tr.even.gradeU {
 
 
 tr.odd {
-	/*background-color: #E2E4FF;*/
-	background-color: #f0f0f0;
-	text-align:center;
-	font-size:12px;
+	background-color: #E2E4FF;
 }
 
 tr.even {
 	background-color: white;
-	text-align:center;
-	font-size:12px;
 }
 
 
@@ -344,9 +328,7 @@ table.display tr.odd.row_selected td {
  */
 /* For the standard odd/even */
 tr.odd td.sorting_1 {
-	/*background-color: #D3D6FF;*/
-	background-color: #dcdcdc;
-	font-size:12px;
+	background-color: #D3D6FF;
 }
 
 tr.odd td.sorting_2 {
@@ -358,9 +340,7 @@ tr.odd td.sorting_3 {
 }
 
 tr.even td.sorting_1 {
-	/*background-color: #EAEBFF;*/
-	background-color: #f0f0f0;
-	font-size:12px;
+	background-color: #EAEBFF;
 }
 
 tr.even td.sorting_2 {
@@ -528,11 +508,10 @@ tr.even.gradeU td.sorting_3 {
  */
 table.KeyTable td {
 	border: 3px solid transparent;
-	font-size:12px;
 }
 
 table.KeyTable td.focus {
-	border: 3px solid #3366FF;font-size:12px;
+	border: 3px solid #3366FF;
 }
 
 table.display tr.gradeA {

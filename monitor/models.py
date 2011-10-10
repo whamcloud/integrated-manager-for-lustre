@@ -278,7 +278,7 @@ class LunNode(models.Model):
         elif self.path.startswith('/dev/mapper/'):
             # e.g. /dev/mapper/VolGroup00-blob0
             short_name = self.path.replace('/dev/mapper/', '', 1)
-            short_name = "LVM %s" % short_name
+            short_name = "DM %s" % short_name
         elif self.path.startswith('/dev/'):
             # e.g. /dev/sda
             short_name = self.path.replace('/dev/', '', 1)

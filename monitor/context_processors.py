@@ -11,7 +11,6 @@ def menu_items(request):
     items = []
     from django.core.urlresolvers import reverse
     items.append({"url": reverse('monitor.views.dashboard'), "caption": "Dashboard"})
-    items.append({"url": reverse('monitor.views.statistics'), "caption": "Statistics"})
     items.append({"url": reverse('monitor.views.log_viewer'), "caption": "Log Viewer"})
     items.append({"url": reverse('monitor.views.events'), "caption": "Events"})
     items.append({"url": reverse('monitor.views.alerts'), "caption": "Alerts"})

@@ -3,24 +3,19 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>Hydra-FS Configure</title>
-<link href="{{STATIC_URL}}css/cm-default.css" rel="stylesheet" type="text/css" />
-
-        <link rel="stylesheet" href="{{STATIC_URL}}css/Base.css" type="text/css" />
-        <link href="{{STATIC_URL}}css/BreadCrumb.css" rel="stylesheet" type="text/css" />
-        <link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
-        <link href="{{STATIC_URL}}css/jquery-ui-1.8.9.custom.css" rel="stylesheet" type="text/css" />
-        
-        <script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
-        <script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
-		<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
-        <script type="text/javascript" src="{{STATIC_URL}}js/tab_config_js.js"></script>
-        <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
-        <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>      
-        <script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
-        <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
-        
-         <link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
-         <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
+<link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
+<link href="{{STATIC_URL}}css/jquery-ui-1.8.9.custom.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
+<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/tab_config_js.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
+<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
+<link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
 <script>
 	$(document).ready(function() {
 		loadMGTConfiguration();
@@ -41,43 +36,45 @@
 <body>
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
   <tr>
-    <td width="100%" height="152" align="left" valign="top">
-    <fieldset>
-    <legend class="legendClass"> MGT Configuration </legend>
-    <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child"><button type="button" id="mgtConfig_btnNewMGT">Create new MGT</button></span></span></div>
-	<table cellpadding="0" cellspacing="0" border="0" class="display" id="mgt_configuration" width="100%">
-     <thead>
- 		<tr>
- 			<th width='16%' class="blueheader" bgcolor="#990000">Target Path</th>
-			<th width='17%'>Target Name</th>
-			<th width='16%'>Kind</th>
-			<th width='17%'>Server Name</th>
-			<th width='16%'>Failover</th>
+    <td width="100%" height="152" align="left" valign="top"><fieldset>
+      <legend class="legendClass"> MGT Configuration </legend>
+      <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
+        <button type="button" id="mgtConfig_btnNewMGT">Create new MGT</button>
+        </span></span></div>
+      <table cellpadding="0" cellspacing="0" border="0" class="display" id="mgt_configuration" width="100%">
+        <thead>
+          <tr>
+            <th width='16%' class="blueheader" bgcolor="#990000">Target Path</th>
+            <th width='17%'>Target Name</th>
+            <th width='16%'>Kind</th>
+            <th width='17%'>Server Name</th>
+            <th width='16%'>Failover</th>
             <th width='17%'>Action</th>
-		</tr>
-	</thead>
-    <tbody id="mgt_configuration_content"></tbody>
-	</table>
-	<div class="spacer"></div>
-    </fieldset></td>
+          </tr>
+        </thead>
+        <tbody id="mgt_configuration_content">
+        </tbody>
+      </table>
+      <div class="spacer"></div>
+      </fieldset></td>
   </tr>
 </table>
 <!-- exsting mgt popup -->
 <div id="mgtConfig_newMGT" title="Select Target">
-<table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
-   <thead>
- 		<tr>
- 			<th width="16%">Select</th>
-			<th width="17%">Target Path</th>
-			<th width="16%">Server Name</th>
-			<th width="17%">Failover</th>
-			<th width="16%">Status</th>
-            <th width="17%">Capacity</th>
-		</tr>
-	</thead>
-    <tbody id="popup-new-ost_content"></tbody>
-</table>
+  <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
+    <thead>
+      <tr>
+        <th width="16%">Select</th>
+        <th width="17%">Target Path</th>
+        <th width="16%">Server Name</th>
+        <th width="17%">Failover</th>
+        <th width="16%">Status</th>
+        <th width="17%">Capacity</th>
+      </tr>
+    </thead>
+    <tbody id="popup-new-ost_content">
+    </tbody>
+  </table>
 </div>
-
 </body>
 </html>
