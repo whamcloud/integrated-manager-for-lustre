@@ -6,6 +6,7 @@ $(document).ready(function() {
 		height:480,
 		show: "clip",
 		modal: true,
+		position:"top",
 		buttons: {
 			"Apply": function() { 
 				/* $(this).dialog("close"); */
@@ -29,6 +30,7 @@ $(document).ready(function() {
 		height:480,
 		show: "clip",
 		modal: true,
+		position:"top",
 		buttons: {
 			"Ok": function() { 
 				$(this).dialog("close");
@@ -42,7 +44,7 @@ $(document).ready(function() {
 	// Dialog Link
 	$('#btnExistingMGT').click(function(){
 		$('#existingMGT').dialog('open');
-		return false;
+		LoadExistingMGT_EditFS(); 
 	});
 	
 		// Dialog			
@@ -52,6 +54,7 @@ $(document).ready(function() {
 		height:480,
 		show: "clip",
 		modal: true,
+		position:"top",
 		buttons: {
 			"Ok": function() { 
 				$(this).dialog("close");
@@ -65,6 +68,7 @@ $(document).ready(function() {
 	// Dialog Link
 	$('#btnNewMGT').click(function(){
 		$('#newMGT').dialog('open');
+		CreateNewMGT_EditFS(); 
 		return false;
 	});
 	
@@ -75,6 +79,7 @@ $(document).ready(function() {
 		height:480,
 		show: "clip",
 		modal: true,
+		position:"top",
 		buttons: {
 			"Ok": function() { 
 				$(this).dialog("close");
@@ -88,6 +93,7 @@ $(document).ready(function() {
 	// Dialog Link
 	$('#btnNewMDT').click(function(){
 		$('#newMDT').dialog('open');
+		CreateNewMDT_EditFS();
 		return false;
 	});
 	
@@ -96,6 +102,7 @@ $(document).ready(function() {
 		autoOpen: false,
 		width: 800,
 		height:480,
+		position:"top",
 		show: "clip",
 		modal: true,
 		buttons: {
@@ -122,6 +129,7 @@ $(document).ready(function() {
 		height:480,
 		show: "clip",
 		modal: true,
+		position:"top",
 		buttons: {
 			"Ok": function() { 
 				$(this).dialog("close");
@@ -135,6 +143,7 @@ $(document).ready(function() {
 	// Dialog Link
 	$('#mgtConfig_btnNewMGT').click(function(){
 		$('#mgtConfig_newMGT').dialog('open');
+		CreateOST_EditFS();
 		return false;
 	});
 	
@@ -151,6 +160,7 @@ $(document).ready(function() {
 		height:480,
 		show: "clip",
 		modal: true,
+		position:"top",
 		buttons: {
 			"Close": function() { 
 				$(this).dialog("close");
@@ -172,6 +182,22 @@ $(document).ready(function() {
 		height:480,
 		show: "clip",
 		modal: true,
+		position:"top",
+		buttons: {
+			"Close": function() { 
+				$(this).dialog("close");
+			},
+		}
+	});
+	
+	// Dialog			
+	$('#zoomDialog').dialog({
+		autoOpen: false,
+		width: 800,
+		height:480,
+		show: "clip",
+		modal: true,
+		position:"top",
 		buttons: {
 			"Close": function() { 
 				$(this).dialog("close");

@@ -18,15 +18,15 @@
 <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
 <script>
 	$(document).ready(function() {
-		loadMGTConfiguration();
-		loadNewOSTData();
+		LoadMGTConfiguration_MGTConf();
 		var oNewMgt = $('#mgt_configuration').dataTable( {
 			"bProcessing": true,
 		} );
 		
 		var oNewOst = $('#popup-new-ost').dataTable( {
 			"bProcessing": true,
-			"bPaginate": false
+			"bPaginate" : false,
+			"bRetrieve" : true
 		} );
 
 	} );
@@ -44,12 +44,11 @@
       <table cellpadding="0" cellspacing="0" border="0" class="display" id="mgt_configuration" width="100%">
         <thead>
           <tr>
-            <th width='16%' class="blueheader" bgcolor="#990000">Target Path</th>
-            <th width='17%'>Target Name</th>
-            <th width='16%'>Kind</th>
-            <th width='17%'>Server Name</th>
-            <th width='16%'>Failover</th>
-            <th width='17%'>Action</th>
+            <th width='19%' class="blueheader" bgcolor="#990000">Target Path</th>
+            <th width='20%'>Target Name</th>
+            <th width='20%'>Server Name</th>
+            <th width='19%'>Failover</th>
+            <th width='21%'>Action</th>
           </tr>
         </thead>
         <tbody id="mgt_configuration_content">

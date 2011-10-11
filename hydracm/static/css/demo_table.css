@@ -156,7 +156,8 @@ table.display tr.heading2 td {
 }
 
 table.display td {
-	padding: 3px 10px;
+	/*padding: 3px 10px;*/
+	line-height:25px;
 }
 
 table.display td.center {

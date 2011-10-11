@@ -342,7 +342,7 @@ class FilesystemMetricStore(R3dMetricStore):
     """
     Wrapper class for Filesystem-level aggregate metrics.  Read-only.
     """
-    def __init__(self, managed_object, **kwargs):
+    def __init__(self, managed_object,*args, **kwargs):
         # Override the parent __init__(), as we don't need an R3D for
         # a Filesystem.
         self.filesystem = managed_object

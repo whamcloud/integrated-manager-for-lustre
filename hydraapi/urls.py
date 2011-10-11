@@ -22,7 +22,8 @@ from monitorapi import (ListFileSystems,
                         GetEventsByFilter,
                         GetLatestEvents,
                         GetAlerts,
-                        GetJobs)
+                        GetJobs,
+                        GetFSVolumeDetails)
 
 from configureapi import (FormatFileSystem,
                           StopFileSystem,
@@ -49,6 +50,7 @@ get_filesystem = CsrfExemptResource(GetFileSystem)
 list_servers = CsrfExemptResource(GetServers)
 get_clients = CsrfExemptResource(GetClients)
 get_volumes = CsrfExemptResource(GetVolumes)
+get_fs_vol_details = CsrfExemptResource(GetFSVolumeDetails)
 
 format_filesystem = CsrfExemptResource(FormatFileSystem)
 stop_filesystem = CsrfExemptResource(StopFileSystem)
@@ -82,6 +84,7 @@ urlpatterns = patterns('',
     (r'^listfilesystems/$', list_filesystems),
     (r'^getfilesystem/$',get_filesystem),
     (r'^getvolumes/$',get_volumes),
+    (r'^getvolumesdetails/$',get_fs_vol_details),
     (r'^listservers/$',list_servers),
     (r'^getclients/$',get_clients),
     
@@ -99,6 +102,7 @@ urlpatterns = patterns('',
     (r'^createost/$',create_oss),
     (r'^createmdt/$',create_mds),
     
+    # Fake API for Chart stats
     (r'^getfsdiskusage/$',get_fs_diskusage),
     (r'^getfsinodeusage/$',get_fs_inodeusage),
     (r'^getservercpuusage/$',get_server_cpuusage),

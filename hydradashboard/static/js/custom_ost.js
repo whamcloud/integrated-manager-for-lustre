@@ -8,10 +8,10 @@
 //	3) lineDataOptions_ost_disk_read - Line Chart configuration for disk read.
 //	4) lineDataOptions_ost_disk_write - Line chart configuration for disk write.
 //---------------------Data Loaders function-------------------------------
-//	1) load_OSSPagePie_disk_OST(fsName)
-//	2) load_INodePagePie_disk_OST(fsName, sDate, eDate, dataFunction)
-//	3) load_LineChart_DiskRead_OST(fsName, sDate, eDate, dataFunction)
-//	4) loadLineChart_DiskWrite_OST(fsName, sDate, eDate, dataFunction)
+//	1) OST_Pie_Space_Data(fsName)
+//	2) OST_Pie_Inode_Data(fsName, sDate, eDate, dataFunction)
+//	3) OST_Line_DiskRead_Data(fsName, sDate, eDate, dataFunction,isZoom)
+//	4) OST_Line_DiskWrite_Data(fsName, sDate, eDate, dataFunction,isZoom)
 /******************************************************************************/
 //for OST graph File system space usage
 var ChartConfig_OST_Space = 
@@ -81,7 +81,7 @@ var ChartConfig_Line_OST_DiskRead=
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
-    marginBottom: 25,
+    marginBottom: 35,
     zoomType: 'xy'
     },
     title:{ text: '', style: { fontSize: '12px' }, },
@@ -121,7 +121,7 @@ var ChartConfig_Line_OST_DiskWrite=
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
-    marginBottom: 25,
+    marginBottom: 35,
     zoomType: 'xy'
     },
     title:{ text: '', style: { fontSize: '12px' }, },
@@ -245,7 +245,7 @@ OST_Pie_Inode_Data = function(fsName, sDate, eDate, dataFunction) //250
 // Param - File System name, start date, end date, datafunction (avergae/"")
 // Return - Returns the graph plotted in container
 /*****************************************************************************/	
-OST_Line_DiskRead_Data = function(fsName, sDate, eDate, dataFunction)
+OST_Line_DiskRead_Data = function(fsName, sDate, eDate, dataFunction, isZoom)
  {
         var count = 0;
         var optionData = [],categories = [];
@@ -305,6 +305,10 @@ OST_Line_DiskRead_Data = function(fsName, sDate, eDate, dataFunction)
        .complete(function(event){
                 obj_ost_line_diskread.xAxis.categories = categories;
                 obj_ost_line_diskread.yAxis.title.text = 'KB';
+                if(isZoom == 'true')
+        		{
+                	renderZoomDialog(obj_ost_line_diskread);
+        		}
                 chart = new Highcharts.Chart(obj_ost_line_diskread);
         });
 }
@@ -314,7 +318,7 @@ OST_Line_DiskRead_Data = function(fsName, sDate, eDate, dataFunction)
 // Param - File System name, start date, end date, datafunction (avergae/"")
 // Return - Returns the graph plotted in container
 /*****************************************************************************/	
-OST_Line_DiskWrite_Data = function(fsName, sDate, eDate, dataFunction)
+OST_Line_DiskWrite_Data = function(fsName, sDate, eDate, dataFunction, isZoom)
  {
         var count = 0;
         var optionData = [],categories = [];
@@ -374,6 +378,10 @@ OST_Line_DiskWrite_Data = function(fsName, sDate, eDate, dataFunction)
        .complete(function(event){
                 obj_ost_line_diskwrite.xAxis.categories = categories;
                 obj_ost_line_diskwrite.yAxis.title.text = 'KB';
+                if(isZoom == 'true')
+        		{
+                	renderZoomDialog(obj_ost_line_diskwrite);
+        		}
                 chart = new Highcharts.Chart(obj_ost_line_diskwrite);
         });
 }   

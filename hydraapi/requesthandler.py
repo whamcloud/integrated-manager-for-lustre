@@ -95,3 +95,29 @@ class extract_request_args:
                 raise Exception(errors)
             return f(wrapped_self, request, **call_args)
         return wrapped_f
+
+def extract_exception(f):
+    """Decorator to catch boto exceptions and convert them
+    to simple exceptions with slightly nicer error messages.
+    """
+    import settings
+    import logging
+    hydraapi_log = logging.getLogger('hydraapi')
+    hydraapi_log.setLevel(logging.DEBUG)
+    handler = logging.FileHandler(settings.API_LOG_PATH)
+    handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+    hydraapi_log.addHandler(handler)
+    import functools
+    import sys
+    @functools.wraps(f)
+    def _extract_exception(*args, **kwds):
+        try:
+            from itertools import chain
+            name = f.__name__
+            hydraapi_log.info("API_CALL=%s(%s)" % (name, ", ".join(map(repr, chain(args ,kwds.values())))))
+            return f(*args, **kwds)
+        except Exception as err:
+            exc_info = sys.exc_info()
+            hydraapi_log.error(err.error_message, exc_info[1], exc_info[2])
+            raise Exception(err.error_message + exc_info[1] + exc_info[2])
+    return _extract_exception

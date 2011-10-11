@@ -33,5 +33,6 @@ def hydracmservertab(request):
             RequestContext(request, {}))
 
 def hydracmnewfstab(request):
+    fsname=request.GET.get("fsname")
     return render_to_response("luster_fs_configuration2.html",
-            RequestContext(request, {}))
+            RequestContext(request, {"fsname":fsname}))
