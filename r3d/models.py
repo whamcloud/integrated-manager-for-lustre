@@ -239,6 +239,39 @@ class Database(models.Model):
 
         return (self.last_update, results)
 
+    def dump(self):
+        """
+        dump()
+
+        Dump the database contents to JSON.
+        """
+        from django.core.serializers import serialize
+        import json
+
+        output = []
+        output.append(serialize("json", Database.objects.filter(id=self.id)))
+        output.append(serialize("json", self.datasources.all()))
+        output.append(serialize("json", self.archives.all()))
+        for rra in self.archives.all():
+            output.append(serialize("json", Archive.objects.filter(id=rra.id)))
+            for ds in self.datasources.all():
+                output.append(serialize("json", rra.preps.filter(datasource=ds.id)))
+            ds_cdps =  {}
+            for ds in self.datasources.all():
+                ds_cdps[ds] = rra.ds_cdps(ds)
+
+            for idx in range(0, rra.rows):
+                row_vals = []
+                try:
+                    for ds in self.datasources.all():
+                        row_vals.append(ds_cdps[ds][idx].value)
+                except IndexError:
+                    continue
+                output.append(json.dumps([idx, row_vals]))
+
+        return "\n".join([json.dumps(o, indent=2) for o in 
+                          [json.loads(j) for j in output]])
+
 # http://djangosnippets.org/snippets/2408/
 # Grumble.
 from abc import abstractmethod
@@ -321,10 +354,11 @@ class Datasource(PoorMansStiModel):
             cdp.delete(*args, **kwargs)
         super(Datasource, self).delete(*args, **kwargs)
 
-    def transform_reading(value, update_time, interval):
+    def transform_reading(self, value, update_time, interval):
         return value
 
     def add_new_reading(self, new_reading, update_time, interval):
+        # stash this for debugging
         saved_last = self.last_reading
 
         if self.heartbeat < interval:
@@ -336,8 +370,6 @@ class Datasource(PoorMansStiModel):
             self.pdp_new = self.transform_reading(new_reading,
                                                   update_time,
                                                   interval)
-
-            self.last_reading = new_reading
 
             # Make sure that we're inside the bounds defined by the DS.
             try:
@@ -351,6 +383,9 @@ class Datasource(PoorMansStiModel):
                 ((not math.isnan(self.min_reading) and
                   rate < self.min_reading))):
                 self.pdp_new = DNAN
+
+        # save this for the next run
+        self.last_reading = new_reading
 
         debug_print("%s @ %d: (%10.2f) %10.2f -> %10.2f" % (self.name, update_time, saved_last, new_reading, self.pdp_new))
 
@@ -506,7 +541,12 @@ class Archive(PoorMansStiModel):
         super(Archive, self).delete(*args, **kwargs)
 
     def ds_cdps(self, ds):
-        return list(self.cdps.filter(datasource=ds))
+        # Fetch the rows in reverse, newest to oldest, limited by the max
+        # number of possible rows for this RRA.  Then reverse that list
+        # for the consumer.
+        cdps = list(self.cdps.filter(datasource=ds).order_by('-id')[:self.rows])
+        cdps.reverse()
+        return cdps
 
     def ds_prep(self, ds):
         return self.preps.filter(datasource=ds)[0]
@@ -515,10 +555,30 @@ class Archive(PoorMansStiModel):
         # First, create and insert the new CDP for this row.
         cdp = CDP(archive=self, datasource=ds, value=cdp_prep.primary)
         cdp.save(force_insert=True)
-        debug_print("saved %10.2f -> datapoints[%d]" % (cdp.value, self.current_row))
-        # Next, delete the oldest row, if we've hit the max number of rows.
-        if self.current_row == self.rows:
-            self.cdps.filter(datasource=ds)[0].delete()
+        debug_print("saved %10.2f -> datapoints[%d]" % (cdp.value,
+                                                        self.current_row))
+
+        # Now, if we're about to wrap our row counter, we need to do
+        # a little housekeeping to nuke CDPs which are no longer visible
+        # to this RRA.
+        # FIXME: This sort of housekeeping might be better done in some
+        # place that doesn't interfere with inserts being as fast as
+        # possible.  Waiting until a fetch occurs probably isn't ideal,
+        # though.
+        if self.current_row == self.rows - 1:
+            debug_print("Housekeeping: Deleting old CDPs")
+            old = ["%d" % cdp.id for cdp in
+                   self.cdps.filter(datasource=ds).order_by("-id")[self.rows:]]
+
+            if len(old) > 0:
+                # We can avoid a useless select if we just nuke the
+                # old CDPs directly.
+                from django.db import connection, transaction
+                cursor = connection.cursor()
+                cursor.execute("DELETE FROM r3d_cdp WHERE id IN (%s)" %
+                               ",".join(old))
+
+            debug_print("deleted %d old CDPs" % len(old))
 
     def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
         raise RuntimeError, "Method not implemented at this level"
@@ -689,8 +749,8 @@ class CdpPrep(models.Model):
     archive         = models.ForeignKey(Archive, related_name="preps")
     datasource      = models.ForeignKey(Datasource, related_name="preps")
     value           = SciFloatField(null=True)
-    primary         = SciFloatField(null=True)
-    secondary       = SciFloatField(null=True)
+    primary         = SciFloatField(null=True, default=0.0)
+    secondary       = SciFloatField(null=True, default=0.0)
     unknown_pdps    = models.BigIntegerField(default=0)
 
     class Meta:

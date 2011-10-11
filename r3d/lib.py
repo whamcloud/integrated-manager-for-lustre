@@ -79,17 +79,18 @@ def calculate_elapsed_steps(db_last_update, db_steps, update_time, interval):
 
     return elapsed_steps, pre_int, post_int, pdp_count
 
-# FIXME: this could probably be completely refactored away if we move
-# this logic into Datasource#transform_reading().
 def simple_update(ds_list, update_time, interval):
     for ds in ds_list:
-        if math.isnan(ds.pdp_temp):
+        if math.isnan(ds.pdp_new):
             ds.unknown_seconds += math.floor(interval)
         else:
-            if math.isnan(ds.last_reading):
-                ds.last_reading = ds.pdp_temp
+            if math.isnan(ds.pdp_scratch):
+                ds.pdp_scratch = ds.pdp_new
             else:
-                ds.last_reading += ds.pdp_temp
+                ds.pdp_scratch += ds.pdp_new
+
+        debug_print("%s scratch %lf, unknown %lu" % (ds.name, ds.pdp_scratch,
+                                                     ds.unknown_seconds))
 
         ds.save()
 
@@ -174,6 +175,7 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_cou
             # updating, maybe.
             rra.current_row += 1
             if rra.current_row >= rra.rows:
+                debug_print("wrapped")
                 rra.current_row = 0
 
         if rra.steps_since_update > 0:
@@ -256,13 +258,15 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
     start_offset = (real_start + real_step - rra_start_time) / real_step
     end_offset = (rra_end_time - real_end) / real_step
 
-    debug_print("rra_start %d rra_end %d start_off %d end_off %d" % (rra_start_time, rra_end_time, start_offset, end_offset))
+    debug_print("rra_start %d rra_end %d start_off %d end_off %d cur_row %d" % (rra_start_time, rra_end_time, start_offset, end_offset, chosen_rra.current_row))
     rra_pointer = 0
     if real_start <= rra_end_time and real_end >= (rra_start_time - real_step):
         if start_offset <= 0:
             rra_pointer = chosen_rra.current_row
+            debug_print("%d = current_row" % rra_pointer)
         else:
             rra_pointer = chosen_rra.current_row + start_offset
+            debug_print("%d = current_row + start_offset" % rra_pointer)
 
         rra_pointer = rra_pointer % chosen_rra.rows
         debug_print("adjusted pointer to %d" % rra_pointer)
@@ -299,8 +303,12 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
 
             debug_print("post fetch %d -- " % i, end=" ")
             for ds in ds_list:
+                # If we've got a full set of CDPs, we don't need to play
+                # offset games.
+                selector = (i if len(ds_cdps[ds]) == chosen_rra.rows
+                              else rra_pointer)
                 try:
-                    value = ds_cdps[ds][rra_pointer].value
+                    value = ds_cdps[ds][selector].value
                     if math.isnan(value):
                         row_results[ds.name] = None
                     else:
