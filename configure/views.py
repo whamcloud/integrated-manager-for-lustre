@@ -537,17 +537,33 @@ def storage_resource(request, vrr_id):
     resource = ResourceQuery().get_resource_parents(vrr_id)
     alerts = ResourceQuery().resource_get_alerts(resource)
     propagated_alerts = ResourceQuery().resource_get_propagated_alerts(resource)
-    from configure.models import StorageResourceStatistic
+    from configure.models import StorageResourceStatistic, StorageResourceRecord
+
+    record = StorageResourceRecord.objects.get(pk = vrr_id)
     stats = {}
     for s in StorageResourceStatistic.objects.filter(storage_resource = vrr_id):
         stats[s.name] = s.get_latest()
-    print "prop: %s" % propagated_alerts
+
     return render_to_response("storage_resource.html", RequestContext(request, {
-                "resource": resource,
+                "record": record,
+                "resource": record.to_resource(),
                 "propagated_alerts": propagated_alerts,
                 "alerts": alerts,
                 "stats": stats
                 }))
+
+from django.views.decorators.csrf import csrf_exempt
+@csrf_exempt
+def storage_resource_set_alias(request, record_id):
+    record = get_object_or_404(StorageResourceRecord, id = record_id)
+    alias = request.POST['alias']
+    if alias == "":
+        record.alias = None
+    else:
+        record.alias = alias
+
+    record.save()
+    return HttpResponse(status=204)
 
 def storage_resource_delete(request, vrr_id):
     record = get_object_or_404(StorageResourceRecord, id = vrr_id)
@@ -661,7 +677,7 @@ def storage_table(request):
     storage_plugin_manager.load_plugin(storage_resource_class.storage_plugin.module_name)
     real_resource_class = storage_resource_class.get_class()
 
-    columns = ['id'] + real_resource_class._storage_attributes.keys()
+    columns = ['id', 'alias'] + real_resource_class._storage_attributes.keys()
 
     return render_to_response('storage_table.html', RequestContext(request, {
         'plugin_module': storage_resource_class.storage_plugin.module_name,
@@ -680,14 +696,18 @@ def storage_table_json(request, plugin_module, resource_class_name):
     resource_class = storage_plugin_manager.get_plugin_resource_class(plugin_module, resource_class_name)
     resource_class_id = storage_plugin_manager.get_plugin_resource_class_id(plugin_module, resource_class_name)
     attr_columns = resource_class.get_columns()
-    columns = ['id'] + attr_columns
+    columns = ['id', 'alias'] + attr_columns
 
-    resources = ResourceQuery().get_class_resources(resource_class_id)
     rows = []
-    for r in resources: 
-        row = [r._handle]
+    for record in ResourceQuery().get_class_resources(resource_class_id):
+        resource = record.to_resource()
+        if record.alias:
+            alias = record.alias
+        else:
+            alias = resource.human_string()
+        row = [record.pk, alias]
         for c in attr_columns:
-            row.append(getattr(r,c))
+            row.append(getattr(resource,c))
         rows.append(row)    
 
     return HttpResponse(json.dumps({'aaData': rows}), mimetype = 'application/json') 

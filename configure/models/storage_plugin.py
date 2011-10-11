@@ -6,7 +6,6 @@
 from django.db import models
 import json
 
-
 # Our limit on the length of python names where we put
 # them in CharFields -- python doesn't impose a limit, so this
 # is pretty arbitrary
@@ -55,6 +54,8 @@ class StorageResourceRecord(models.Model):
     # Parent-child relationships between resources
     parents = models.ManyToManyField('StorageResourceRecord',
             related_name = 'resource_parent')
+
+    alias = models.CharField(max_length = 64, blank = True, null = True)
 
     class Meta:
         app_label = 'configure'

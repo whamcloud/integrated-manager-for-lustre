@@ -208,10 +208,7 @@ class ResourceQuery(object):
             classes = [class_or_classes]
             
         records = StorageResourceRecord.objects.filter(resource_class__in = classes, **kwargs)
-        for r in records:
-            res = self._record_to_resource(r)
-            if res:
-                yield res
+        return records
 
     def get_class_record_ids(self, resource_class):
         records = StorageResourceRecord.objects.filter(

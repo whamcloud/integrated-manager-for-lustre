@@ -214,14 +214,15 @@ class ResourceManager(object):
                 host = Host.objects.get(pk = scannable_resource.host_id)
                 touched_luns = set()
                 touched_lun_nodes = set()
-                for r in node_resources:
+                for record in node_resources:
+                    r = record.to_resource()
                     # A node which has children is already in use
                     # (it might contain partitions, be an LVM PV, be in 
                     #  use by a local filesystem, or as swap)
                     if ResourceQuery().record_has_children(r._handle):
                         continue
 
-                    device = ResourceQuery().record_find_parent(r._handle, base_resources.LogicalDrive)
+                    device = ResourceQuery().record_find_parent(record.pk, base_resources.LogicalDrive)
                     if device == None:
                         raise RuntimeError("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
 
@@ -231,7 +232,7 @@ class ResourceManager(object):
                                 host = host,
                                 path = r.path)
                         if not lun_node.storage_resource_id:
-                            lun_node.storage_resource_id = r._handle
+                            lun_node.storage_resource_id = record.pk
                             lun_node.save()
 
                     except LunNode.DoesNotExist:
@@ -239,7 +240,7 @@ class ResourceManager(object):
                             lun = lun,
                             host = host,
                             path = r.path,
-                            storage_resource_id = r._handle)
+                            storage_resource_id = record.pk)
 
                     touched_luns.add(lun_node.pk)
                     touched_lun_nodes.add(lun_node.pk)
