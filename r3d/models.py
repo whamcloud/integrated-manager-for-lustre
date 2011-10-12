@@ -644,7 +644,7 @@ class Last(Archive):
         return ds.pdp_temp
 
     def initialize_cdp_value(self, cdp_prep, ds, start_pdp_offset):
-        cdp_prep.primary = ds.pdp_temp
+        return ds.pdp_temp
 
     def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
         overlap_count = ((elapsed_steps - start_pdp_offset) % self.cdp_per_row)
@@ -679,9 +679,9 @@ class Max(Archive):
         cur_val = -DINF if math.isnan(ds.pdp_temp) else ds.pdp_temp
 
         if cur_val > cum_val:
-            cdp_prep.primary = cur_val
+            return cur_val
         else:
-            cdp_prep.primary = cum_val
+            return cum_val
 
     def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
         overlap_count = ((elapsed_steps - start_pdp_offset) % self.cdp_per_row)
@@ -716,9 +716,9 @@ class Min(Archive):
         cur_val = DINF if math.isnan(ds.pdp_temp) else ds.pdp_temp
 
         if cur_val < cum_val:
-            cdp_prep.primary = cur_val
+            return cur_val
         else:
-            cdp_prep.primary = cum_val
+            return cum_val
 
     def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
         overlap_count = ((elapsed_steps - start_pdp_offset) % self.cdp_per_row)

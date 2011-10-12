@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<xport>
+  <meta>
+    <start>1318149240</start>
+    <step>60</step>
+    <end>1318149540</end>
+    <rows>6</rows>
+    <columns>4</columns>
+    <legend>
+      <entry>counter</entry>
+      <entry>gauge</entry>
+      <entry>derive</entry>
+      <entry>absolute</entry>
+    </legend>
+  </meta>
+  <data>
+    <row><t>1318149240</t><v>NaN</v><v>NaN</v><v>NaN</v><v>NaN</v></row>
+    <row><t>1318149300</t><v>NaN</v><v>NaN</v><v>NaN</v><v>NaN</v></row>
+    <row><t>1318149360</t><v>NaN</v><v>NaN</v><v>NaN</v><v>NaN</v></row>
+    <row><t>1318149420</t><v>NaN</v><v>NaN</v><v>NaN</v><v>NaN</v></row>
+    <row><t>1318149480</t><v>6.8133333333e+01</v><v>2.4930803218e+11</v><v>3.4513333333e+02</v><v>8.5925424835e+09</v></row>
+    <row><t>1318149540</t><v>NaN</v><v>NaN</v><v>NaN</v><v>NaN</v></row>
+  </data>
+</xport>
