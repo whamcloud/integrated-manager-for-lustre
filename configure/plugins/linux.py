@@ -38,12 +38,14 @@ class ScsiDevice(base_resources.LogicalDrive):
     identifier = GlobalId('serial')
 
     serial = attributes.String(subscribe = True)
-    size = attributes.Bytes()
 
     human_name = "SCSI device"
 
     def human_string(self, ancestors = []):
-        return self.serial
+        if self.serial[0] == 'S':
+            return self.serial[1:]
+        else:
+            return self.serial
 
 class UnsharedDeviceNode(base_resources.DeviceNode):
     """A device node whose underlying device has no SCSI ID
@@ -64,6 +66,9 @@ class UnsharedDevice(base_resources.LogicalDrive):
     # is the closest thing we have to a real ID.
     path = attributes.PosixPath()
 
+    def human_string(self):
+        return self.path
+
 class ScsiDeviceNode(base_resources.DeviceNode):
     """SCSI in this context is a catch-all to refer to
     block devices which look like real disks to the host OS"""
@@ -81,11 +86,14 @@ class LvmDeviceNode(base_resources.DeviceNode):
 # FIXME: partitions should really be GlobalIds (they can be seen from more than
 # one host) where the ID is their number plus the a foreign key to the parent 
 # ScsiDevice or UnsharedDevice(HYD-272)
-    # TODO: foreign key to VG instead of copied value 
+# TODO: include containng object human_string in partition human_string
 class Partition(base_resources.LogicalDrive):
     identifier = ScannableId('path')
     human_name = "Linux partition"
     path = attributes.PosixPath()
+
+    def human_string(self):
+        return self.path
 
 class PartitionDeviceNode(base_resources.DeviceNode):
     identifier = ScannableId('path')
@@ -199,7 +207,7 @@ class Linux(StoragePlugin):
 
             partition, created = self.update_or_create(Partition,
                     parents = [parent_resource],
-                    size = devices['devs'][bdev['parent']]['size'],
+                    size = bdev['size'],
                     path = bdev['path'])
 
             this_node.add_parent(partition)
@@ -284,6 +292,6 @@ class LvmVolume(base_resources.LogicalDrive):
     human_name = 'LV'
 
     def human_string(self, ancestors = []):
-        return self.name
+        return "%s-%s" % (self.vg.name, self.name)
 
 
