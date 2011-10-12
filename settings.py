@@ -251,11 +251,13 @@ if DEBUG:
     JOB_LOG_PATH = "job.log"
     AUDIT_LOG_PATH = "audit.log"
     API_LOG_PATH = "hydraapi.log"
+    SYSLOG_EVENTS_LOG_PATH = "syslog_events.log"
 else:
     LOG_PATH = "/var/log/hydra"
     JOB_LOG_PATH = "/var/log/hydra/job.log"
     AUDIT_LOG_PATH = "/var/log/hydra/audit.log"
-    API_LOG_PATH = "/var/log/hydra/hydraapi.log" 
+    API_LOG_PATH = "/var/log/hydra/hydraapi.log"
+    SYSLOG_EVENTS_LOG_PATH = "/var/log/hydra/syslog_events.log"
 
 _plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'configure', 'plugins')
 sys.path.append(_plugins_path)
