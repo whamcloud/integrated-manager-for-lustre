@@ -108,16 +108,18 @@ def extract_exception(f):
     handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
     hydraapi_log.addHandler(handler)
     import functools
-    import sys
     @functools.wraps(f)
     def _extract_exception(*args, **kwds):
+        from itertools import chain
+        from django.http import HttpRequest
+        params = chain([a for a in args if not isinstance(a, HttpRequest)], kwds.values())
         try:
-            from itertools import chain
-            name = f.__name__
-            hydraapi_log.info("API_CALL=%s(%s)" % (name, ", ".join(map(repr, chain(args ,kwds.values())))))
+            hydraapi_log.info("API call %s(%s)" % (f.__name__, ", ".join(map(repr, params))))
             return f(*args, **kwds)
         except Exception as err:
-            exc_info = sys.exc_info()
-            hydraapi_log.error(err.error_message, exc_info[1], exc_info[2])
-            raise Exception(err.error_message + exc_info[1] + exc_info[2])
+            import sys
+            import traceback
+            hydraapi_log.error("API error %s(%s)" % (f.__name__, ", ".join(map(repr, params))))
+            hydraapi_log.error("\n".join(traceback.format_exception(*(sys.exc_info()))))
+            raise
     return _extract_exception
