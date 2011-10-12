@@ -45,7 +45,7 @@
 
 <h3>{{resource.human_class}} attributes</h3>
 <table>
-{% for k,v in resource.get_attributes_display.items %}
+{% for k,v in resource.format_all %}
 <tr><th>{{k}}</th><td>{{v}}</td></tr>
 {% endfor %}
 </table>

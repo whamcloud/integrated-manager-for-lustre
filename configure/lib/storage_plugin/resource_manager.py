@@ -120,22 +120,22 @@ class SubscriberIndex(object):
     def populate(self):
         from configure.lib.storage_plugin import storage_plugin_manager
         from configure.models import StorageResourceAttribute
-        # TODO: encapsulate retrieval in StorageResourceAttribute to hide encoding
-        import json
         for resource_class_id, resource_class in storage_plugin_manager.get_all_resources():
             for p in resource_class._provides:
                 instances = StorageResourceAttribute.objects.filter(
                         resource__resource_class = resource_class_id,
                         key = p).values('resource__id', 'value')
+                attribute_object = resource_class._storage_attributes[p]
                 for i in instances:
-                    self.add_provider(i['resource__id'], p, json.loads(i['value']))
+                    self.add_provider(i['resource__id'], p, attribute_object.decode(i['value']))
 
             for s in resource_class._subscribes:
                 instances = StorageResourceAttribute.objects.filter(
                         resource__resource_class = resource_class_id,
                         key = s).values('resource__id', 'value')
+                attribute_object = resource_class._storage_attributes[s]
                 for i in instances:
-                    self.add_subscriber(i['resource__id'], s, json.loads(i['value']))
+                    self.add_subscriber(i['resource__id'], s, attribute_object.decode(i['value']))
 
 class ResourceManager(object):
     def __init__(self):
@@ -205,11 +205,11 @@ class ResourceManager(object):
                 # Update LunNode objects for DeviceNodes
                 node_types = []
                 # FIXME: mechanism to get subclasses of base_resources.DeviceNode
-                node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'ScsiDeviceNode'))
-                node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'UnsharedDeviceNode'))
-                node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'LvmDeviceNode'))
-                node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'PartitionDeviceNode'))
-                node_types.append(storage_plugin_manager.get_plugin_resource_class_id('linux', 'MultipathDeviceNode'))
+                node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'ScsiDeviceNode')[1])
+                node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'UnsharedDeviceNode')[1])
+                node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'LvmDeviceNode')[1])
+                node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'PartitionDeviceNode')[1])
+                node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'MultipathDeviceNode')[1])
                 node_resources = ResourceQuery().get_class_resources(node_types, storage_id_scope = scannable_id)
                 host = Host.objects.get(pk = scannable_resource.host_id)
                 touched_luns = set()
@@ -337,7 +337,7 @@ class ResourceManager(object):
         and if so they must be added in a blob so that we can hook up the 
         parent relationships"""
         with self._instance_lock:
-            self._persist_new_resources(self._sessions[scannable_id])
+            self._persist_new_resources(self._sessions[scannable_id], resources)
 
     def session_remove_resources(self, scannable_id, resources):
         with self._instance_lock:
@@ -426,70 +426,82 @@ class ResourceManager(object):
 
 
     @transaction.autocommit
-    def _persist_new_resources(self, session, resources):
+    def _persist_new_resource(self, session, resource):
         from configure.models import StorageResourceRecord
 
+        if resource._handle in session.local_id_to_global_id:
+            return
+
+        if isinstance(resource.identifier, ScannableId):
+            scope_id = session.scannable_id
+        elif isinstance(resource.identifier, GlobalId):
+            scope_id = None
+        else:
+            raise NotImplementedError
+
+        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(
+                resource.__class__.__module__,
+                resource.__class__.__name__)
+
+        id_tuple = resource.id_tuple()
+        cleaned_id_items = []
+        for t in id_tuple:
+            from configure.lib.storage_plugin.resource import StorageResource
+            if isinstance(t, StorageResource):
+                if t._handle == None:
+                    self._persist_new_resource(session, t)
+                    assert t._handle in session.local_id_to_global_id
+                cleaned_id_items.append(session.local_id_to_global_id[t._handle])
+        import json
+        id_str = json.dumps(tuple(cleaned_id_items))
+
+        record, created = StorageResourceRecord.objects.get_or_create(
+                resource_class_id = resource_class_id,
+                storage_id_str = id_str,
+                storage_id_scope_id = scope_id)
+        if created:
+            from configure.models import StorageResourceLearnEvent
+            import logging
+            # Record a user-visible event
+            StorageResourceLearnEvent(severity = logging.INFO, storage_resource = record).save()
+            
+            # IMPORTANT: THIS TOTALLY RELIES ON SERIALIZATION OF ALL CREATION OPERATIONS
+            # IN A SINGLE PROCESS INSTANCE OF THIS CLASS
+
+            # This is a new resource which provides a field, see if any existing
+            # resources would like to subscribe to it
+            if resource._provides:
+                subscribers = self._subscriber_index.what_subscribes(sub_field, getattr(resource, sub_field))
+                # Make myself a parent of anything that subscribes to me
+                for s in subscribers:
+                    self._edges.add_parent(s, record.pk)
+                    s_record = StorageResourceRecord.objects.get(pk = s)
+                    s_record.parents.add(record.pk)
+
+            # This is a new resource which subscribes to a field, see if any existing
+            # resource can provide it
+            for sub_field in resource._subscribes:
+                providers = self._subscriber_index.what_provides(sub_field, getattr(resource, sub_field))
+                # Make my providers my parents
+                for p in providers:
+                    self._edges.add_parent(record.pk, p)
+                    record.parents.add(p)
+
+            # Add the new record to the index so that future records and resolve their
+            # provide/subscribe relationships with respect to it
+            self._subscriber_index.add_resource(record.pk, resource)
+
+        session.local_id_to_global_id[resource._handle] = record.pk
+        self._resource_persist_attributes(session, resource, record)
+        return record
+
+    @transaction.autocommit
+    def _persist_new_resources(self, session, resources):
         record_cache = {}
         for r in resources:
-            if r._handle in session.local_id_to_global_id:
-                raise RuntimeError("Session tried to add resource twice")
-
-            if isinstance(r.identifier, ScannableId):
-                scope_id = session.scannable_id
-            elif isinstance(r.identifier, GlobalId):
-                scope_id = None
-            else:
-                raise NotImplementedError
-
-            resource_class_id = storage_plugin_manager.get_plugin_resource_class_id(
-                    r.__class__.__module__,
-                    r.__class__.__name__)
-
-            record, created = StorageResourceRecord.objects.get_or_create(
-                    resource_class_id = resource_class_id,
-                    storage_id_str = r.id_str(),
-                    storage_id_scope_id = scope_id)
-            if created:
-                #log.debug("Created SRR %s (class %s id %s scope %s)" % (record.pk,
-                #    r.__class__.__name__, r.id_str(), scope_id))
-                from configure.models import StorageResourceLearnEvent
-                import logging
-                # Record a user-visible event
-                StorageResourceLearnEvent(severity = logging.INFO, storage_resource = record).save()
-                
-                # IMPORTANT: THIS TOTALLY RELIES ON SERIALIZATION OF ALL CREATION OPERATIONS
-                # IN A SINGLE PROCESS INSTANCE OF THIS CLASS
-
-                # This is a new resource which provides a field, see if any existing
-                # resources would like to subscribe to it
-                if r._provides:
-                    subscribers = self._subscriber_index.what_subscribes(sub_field, getattr(r, sub_field))
-                    # Make myself a parent of anything that subscribes to me
-                    for s in subscribers:
-                        self._edges.add_parent(s, record.pk)
-                        s_record = StorageResourceRecord.objects.get(pk = s)
-                        s_record.parents.add(record.pk)
-
-                # This is a new resource which subscribes to a field, see if any existing
-                # resource can provide it
-                for sub_field in r._subscribes:
-                    providers = self._subscriber_index.what_provides(sub_field, getattr(r, sub_field))
-                    # Make my providers my parents
-                    for p in providers:
-                        self._edges.add_parent(record.pk, p)
-                        record.parents.add(p)
-
-                # Add the new record to the index so that future records and resolve their
-                # provide/subscribe relationships with respect to it
-                self._subscriber_index.add_resource(record.pk, r)
-
-            else:
-                #log.debug("Loaded existing SRR %s (class %s id %s scope %s)" % (record.pk,
-                #    r.__class__.__name__, r.id_str(), scope_id))
-                pass
-            session.local_id_to_global_id[r._handle] = record.pk
-            self._resource_persist_attributes(r, record)
+            record = self._persist_new_resource(session, r)
             record_cache[record.pk] = record
+            
 
         # Do a separate pass for parents so that we will have already
         # built the full local-to-global map
@@ -506,8 +518,32 @@ class ResourceManager(object):
             self._resource_persist_parents(r, session, record)
 
     @transaction.autocommit
-    def _resource_persist_attributes(self, resource, record):
-        record.update_attributes(resource._storage_dict)
+    def _resource_persist_attributes(self, session, resource, record):
+        from configure.models import StorageResourceAttribute
+        # TODO: remove existing attrs not in storage_dict
+        existing_attrs = [i['key'] for i in StorageResourceAttribute.objects.filter(resource = record).values('key')]
+
+        resource_class = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
+
+        for key, value in resource._storage_dict.items():
+            # Special case for ResourceReference attributes, because the resource
+            # object passed from the plugin won't have a global ID for the referenced
+            # resource -- we have to do the lookup inside ResourceManager
+            attribute_obj = resource_class.get_attribute_properties(key)
+            from configure.lib.storage_plugin import attributes
+            if isinstance(attribute_obj, attributes.ResourceReference):
+                value = session.local_id_to_global_id[value._handle]
+            try:
+                existing = StorageResourceAttribute.objects.get(resource = record, key = key)
+                encoded_val = resource_class.encode(key, value)
+                if existing.value != encoded_val:
+                    existing.value = encoded_val
+                    existing.save()
+            except StorageResourceAttribute.DoesNotExist:
+                attr = StorageResourceAttribute(
+                        resource = record, key = key,
+                        value = resource_class.encode(key, value))
+                attr.save()
 
     @transaction.autocommit
     def _resource_persist_parents(self, resource, session, record):

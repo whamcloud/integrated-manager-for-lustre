@@ -230,7 +230,7 @@ class Linux(StoragePlugin):
                         parents = [vg_resource],
                         uuid = lv['uuid'],
                         name = lv['name'],
-                        vg_uuid = vg_info['uuid'],
+                        vg = vg_resource,
                         size = lv['size'])
 
                 try:
@@ -274,10 +274,9 @@ class LvmVolume(base_resources.LogicalDrive):
     #    'vgchange -u' to get a new VG UUID.  However, there is no equivalent
     #    command to reset LV uuid, because LVM finds two LVs with the same UUID
     #    in VGs with different UUIDs to be unique enough.
-    identifier = GlobalId('uuid', 'vg_uuid')
+    identifier = GlobalId('uuid', 'vg')
 
-    # TODO: foreign key to VG instead of copied value (HYD-272)
-    vg_uuid = attributes.Uuid()
+    vg = attributes.ResourceReference()
     uuid = attributes.Uuid()
     name = attributes.String()
 

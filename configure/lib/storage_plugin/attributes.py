@@ -26,6 +26,18 @@ class ResourceAttribute(object):
            1024 => 1kB"""
         return value
 
+    def encode(self, value):
+        import json
+        return json.dumps(value)
+
+    def decode(self, value):
+        import json
+        return json.loads(value)
+
+    def to_markup(self, value):
+        from django.utils.html import conditional_escape
+        return conditional_escape(value)
+
 class String(ResourceAttribute):
     def __init__(self, max_length = None, *args, **kwargs):
         self.max_length = max_length
@@ -53,7 +65,7 @@ class Integer(ResourceAttribute):
 # a string and parse it to a rounded number of bytes.
 
 class Bytes(ResourceAttribute):
-    def human_readable(self, value):
+    def to_markup(self, value):
         from monitor.lib.util import sizeof_fmt
         return sizeof_fmt(int(value))
 
@@ -82,6 +94,38 @@ class PosixPath(ResourceAttribute):
 class HostName(ResourceAttribute):
     pass
 
+class ResourceReference(ResourceAttribute):
+    # NB no 'encode' impl here because it has to be a special case to 
+    # resolve a local resource to a global ID
 
+    def decode(self, value):
+        import json
+        pk = json.loads(value)
+
+        from configure.models import StorageResourceRecord
+        record = StorageResourceRecord.objects.get(pk = pk)
+        return record.to_resource()
+        
+    def to_markup(self, value):
+        from django.core.urlresolvers import reverse
+        url = reverse('configure.views.storage_resource', kwargs = {'vrr_id': value._handle})
+
+        from configure.models import StorageResourceRecord
+        record = StorageResourceRecord.objects.get(pk = value._handle)
+        if record.alias:
+            name = record.alias
+        else:
+            name = value.human_string()
+
+        from django.utils.html import conditional_escape
+        name = conditional_escape(name)
+
+        from django.utils.safestring import mark_safe
+        return mark_safe("<a href='%s'>%s</a>" % (url, name))
+
+    def validate(self, value):
+        from configure.lib.storage_plugin import StorageResource
+        if not isinstance(value, StorageResource):
+            raise RuntimeError("Cannot take ResourceReference to %s" % value)
 
 

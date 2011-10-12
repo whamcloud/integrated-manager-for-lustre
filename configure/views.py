@@ -693,21 +693,24 @@ def storage_table_json(request, plugin_module, resource_class_name):
     storage_plugin_manager.load_plugin(plugin_module)
     from configure.lib.storage_plugin import ResourceQuery
 
-    resource_class = storage_plugin_manager.get_plugin_resource_class(plugin_module, resource_class_name)
-    resource_class_id = storage_plugin_manager.get_plugin_resource_class_id(plugin_module, resource_class_name)
+    resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(plugin_module, resource_class_name)
     attr_columns = resource_class.get_columns()
     columns = ['id', 'alias'] + attr_columns
 
     rows = []
+    from django.utils.html import conditional_escape
     for record in ResourceQuery().get_class_resources(resource_class_id):
         resource = record.to_resource()
         if record.alias:
             alias = record.alias
         else:
             alias = resource.human_string()
-        row = [record.pk, alias]
-        for c in attr_columns:
-            row.append(getattr(resource,c))
+
+        # NB What we output here is logically markup, not strings, so we escape.
+        # (underlying storage_plugin.attributes do their own escaping
+        row = [record.pk, conditional_escape(alias)]
+        row = row + [resource.format(c) for c in attr_columns]
+            
         rows.append(row)    
 
     return HttpResponse(json.dumps({'aaData': rows}), mimetype = 'application/json') 

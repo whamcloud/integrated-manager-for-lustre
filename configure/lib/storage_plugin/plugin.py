@@ -20,27 +20,27 @@ class ResourceIndex(object):
         # Map (local_id) to resource
         self._local_id_to_resource = {}
 
-        # Map (id_str, klass) to resource
+        # Map (id_tuple, klass) to resource
         self._resource_id_to_resource = {}
 
     def add(self, resource):
         self._local_id_to_resource[resource._handle] = resource
-        resource.id_str()
+        resource.id_tuple()
 
         # Why don't we need a scope resource in here?
         # Because if it's a ScannableId then only items for that
         # scannable will be in this ResourceIndex (index is per
         # plugin instance), and if it's a GlobalId then it doesn't
         # have a scope.
-        resource_id = (resource.id_str(), resource.__class__)
+        resource_id = (resource.id_tuple(), resource.__class__)
         if resource_id in self._resource_id_to_resource:
             raise RuntimeError("Duplicate resource added to index")
         self._resource_id_to_resource[resource_id] = resource
 
     def get(self, klass, **attrs):
-        id_str = klass(**attrs).id_str()
+        id_tuple = klass(**attrs).id_tuple()
         try:
-            return self._resource_id_to_resource[(id_str, klass)]
+            return self._resource_id_to_resource[(id_tuple, klass)]
         except KeyError:
             raise ResourceNotFound()
 

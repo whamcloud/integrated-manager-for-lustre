@@ -71,6 +71,27 @@ class StorageResource(object):
     def alert_message(cls, alert_class):
         return cls._alert_classes[alert_class].message
 
+    @classmethod
+    def encode(cls, attr, value):
+        return cls._storage_attributes[attr].encode(value)
+
+    @classmethod
+    def decode(cls, attr, value):
+        return cls._storage_attributes[attr].decode(value)
+
+    def format(self, attr):
+        return self._storage_attributes[attr].to_markup(getattr(self, attr))
+
+    def format_all(self):
+        """Return a list of 2-tuples for names and human readable
+           values for all resource attributes (i.e. _storage_dict)"""
+        for k in self._storage_dict.keys():
+            yield k, self.format(k)
+
+    @classmethod
+    def get_attribute_properties(cls, attr):
+        return cls._storage_attributes[attr]
+
     def flush_stats(self):
         with self._delta_stats_lock:
             tmp = self._delta_stats
@@ -97,7 +118,6 @@ class StorageResource(object):
                 raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._storage_attributes.keys()))
             setattr(self, k, v)
 
-
     def flush_deltas(self):
         with self._delta_lock:
             deltas = {'attributes': self._delta_attrs,
@@ -121,7 +141,7 @@ class StorageResource(object):
         dct['human_string'] = self.human_string(stack)
         dct['human_class'] = self.human_class()
         dct['icon'] = self.icon
-        dct.update(self.get_attributes_display())
+        dct.update(dict(list(self.format_all())))
         dct['children'] = []
         
         stack = stack + [self]
@@ -182,7 +202,7 @@ class StorageResource(object):
 
     def __getattr__(self, key):
         if key.startswith("_") or not key in self._storage_attributes:
-            raise AttributeError
+            raise AttributeError("Unknown attribute %s" % key)
         else:
             try:
                 return self._storage_dict[key]
@@ -194,35 +214,17 @@ class StorageResource(object):
                     raise AttributeError("attribute %s not found")
 
     @classmethod
-    def attrs_to_id_str(cls, attrs):
+    def attrs_to_id_tuple(cls, attrs):
         """Serialized ID for use in StorageResourceRecord.storage_id_str"""
         import json
         identifier_val = []
         for f in cls.identifier.id_fields:
             identifier_val.append(attrs[f])
-        return json.dumps(identifier_val)
+        return tuple(identifier_val)
 
-    def id_str(self):
-        """Serialized ID for use in StorageResourceRecord.storage_id_str"""
-        import json
-        identifier_val = []
-        for f in self.identifier.id_fields:
-            identifier_val.append(getattr(self, f))
-        return json.dumps(identifier_val)
-    
-    def get_attributes_display(self):
-        """Return a list of 2-tuples for names and human readable
-           values for all resource attributes (i.e. _storage_dict)"""
-        attributes = {}
-        for k,v in self._storage_dict.items():
-            try:
-                attribute_obj = self._storage_attributes[k]
-            except KeyError:
-                # For non-declared fields, fall back to generic field
-                attribute_obj = ResourceAttribute()
-            
-            attributes[k] = attribute_obj.human_readable(v) 
-        return attributes
+    def id_tuple(self):
+        return self.attrs_to_id_tuple(self._storage_dict)
+
 
     def add_parent(self, parent_resource):
         # TODO: lock parents + Delta_parents

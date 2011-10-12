@@ -24,7 +24,7 @@ class LoadedResourceClass(object):
 class LoadedPlugin(object):
     """Convenience store of introspected information about loaded 
        plugin modules."""
-    def __init__(self, module, plugin_class):
+    def __init__(self, plugin_manager, module, plugin_class):
         # Map of name string to class
         self.resource_classes = {}
         self.module = module
@@ -44,6 +44,8 @@ class LoadedPlugin(object):
                 vrc, created = StorageResourceClass.objects.get_or_create(
                         storage_plugin = self.plugin_record,
                         class_name = name)
+
+                plugin_manager.resource_class_id_to_class[vrc.id] = cls
 
                 self.resource_classes[name] = LoadedResourceClass(cls, vrc.id)
 
@@ -108,9 +110,8 @@ class ResourceQuery(object):
         plugin_module = record.resource_class.storage_plugin.module_name
 
         # Get the StorageResource class and have it translate the alert_class
-        klass = storage_plugin_manager.get_plugin_resource_class(
-            record.resource_class.storage_plugin.module_name,
-            record.resource_class.class_name)
+        klass = storage_plugin_manager.get_resource_class_by_id(
+            record.resource_class_id)
         msg = klass.alert_message(alert_class)
         return msg
 
@@ -119,9 +120,8 @@ class ResourceQuery(object):
         plugin_module = record.resource_class.storage_plugin.module_name
 
         # Get the StorageResource class and have it translate the alert_class
-        klass = storage_plugin_manager.get_plugin_resource_class(
-            record.resource_class.storage_plugin.module_name,
-            record.resource_class.class_name)
+        klass = storage_plugin_manager.get_resource_class_by_id(
+            record.resource_class_id)
 
         return klass.human_class(), record.to_resource().human_string()
         
@@ -247,9 +247,14 @@ class StoragePluginManager(object):
         self.loaded_plugins = {}
         self.plugin_sessions = {}
 
+        self.resource_class_id_to_class = {}
+
         from settings import INSTALLED_STORAGE_PLUGINS
         for plugin in INSTALLED_STORAGE_PLUGINS:
             self.load_plugin(plugin)
+
+    def get_resource_class_by_id(self, id):
+        return self.resource_class_id_to_class[id]
 
     def get_scannable_resource_ids(self, plugin):
         loaded_plugin = self.loaded_plugins[plugin]
@@ -262,10 +267,10 @@ class StoragePluginManager(object):
     def create_root_resource(self, plugin_mod, resource_class_name, **kwargs):
         storage_plugin_log.debug("create_root_resource %s %s %s" % (plugin_mod, resource_class_name, kwargs))
         # Try to find the resource class in the plugin module
-        resource_class = self.get_plugin_resource_class(plugin_mod, resource_class_name)
+        resource_class, resource_class_id = self.get_plugin_resource_class(plugin_mod, resource_class_name)
 
         # Construct a record
-        record = StorageResourceRecord.create_root(resource_class, kwargs)
+        record = StorageResourceRecord.create_root(resource_class, resource_class_id, kwargs)
 
         # XXX should we let people modify root records?  e.g. change the IP
         # address of a controller rather than deleting it, creating a new 
@@ -291,12 +296,7 @@ class StoragePluginManager(object):
             loaded_plugin = self.loaded_plugins[plugin_module]
         except KeyError:
             raise RuntimeError("Plugin %s not found (not one of %s)" % (plugin_module, self.loaded_plugins.keys()))
-        return loaded_plugin.resource_classes[resource_class_name].resource_class
-
-    def get_plugin_resource_class_id(self, plugin_module, resource_class_name):
-        """Return a StorageResourceClass primary key"""
-        loaded_plugin = self.loaded_plugins[plugin_module]
-        return loaded_plugin.resource_classes[resource_class_name].resource_class_id
+        return loaded_plugin.resource_classes[resource_class_name].resource_class, loaded_plugin.resource_classes[resource_class_name].resource_class_id
 
     def get_all_resources(self):
         for plugin in self.loaded_plugins.values():
@@ -339,10 +339,10 @@ class StoragePluginManager(object):
         else:
             plugin_klass = plugin_klasses[0]
 
-        self.loaded_plugins[plugin_klass.__module__] = LoadedPlugin(plugin, plugin_klass)
+        self.loaded_plugins[plugin_klass.__module__] = LoadedPlugin(self, plugin, plugin_klass)
         return plugin_klass
 
-storage_plugin_manager = StoragePluginManager()
 
+storage_plugin_manager = StoragePluginManager()
 
 
