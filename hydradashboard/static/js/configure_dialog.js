@@ -160,14 +160,27 @@ $(document).ready(function() {
 	
 	
 	// CPU Usage
-	$('#db_cpu_usage').click(function(){
-		$('#dg_db_cpu_usage').dialog('open');
-        
+	$('#cpu_usage').click(function(){
+		$('#dg_cpu_usage').dialog('open');
 		return false;
 	});
 	
 		// Dialog			
-	$('#dg_db_cpu_usage').dialog({
+	$('#dg_cpu_usage').dialog({
+		autoOpen: false,
+		width: 800,
+		height:480,
+		show: "clip",
+		modal: true,
+		buttons: {
+			"Close": function() { 
+				$(this).dialog("close");
+			},
+		}
+	});
+	
+	// Dialog			
+	$('#zoomDialog').dialog({
 		autoOpen: false,
 		width: 800,
 		height:480,

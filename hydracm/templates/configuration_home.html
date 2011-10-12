@@ -17,6 +17,7 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js" ></script>
 <link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
 <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="{{STATIC_URL}}js/cm-custom_tabs.js"></script>
 <style>
 .ui-widget-header {
 	background:none;
@@ -38,14 +39,12 @@
 				}
 			}
 		});
+		
+		$('a[id=fsName]').click(function() {
+		alert("inside tabs");
+		//LoadMGT_EditFS($(this).val());			
 	});
-	
-	$(document).ready(function() {
-		loadData();
-		var oTable = $('#example').dataTable( {
-			"bProcessing": true,
-		} );
-	} );
+	});
 	</script>
 </head>
 <body style="margin: 0px 0px 0px 0px; padding: 0px;">

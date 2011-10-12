@@ -27,15 +27,6 @@ load_breadcrumbs = function()
         return false;
     });
 		
-		  $("#minusImg").click(
-    function()
-    {
-			     $(".panel").toggle("slow");
-     			$(this).toggleClass("active");
-    	 		$("#minusImg").hide();$("#plusImg").show();
-			     return false;
-		  });
-		
 			$("#alertAnchor").click(function()
 			{	
 					$("#alertsDiv").toggle("slideUp");

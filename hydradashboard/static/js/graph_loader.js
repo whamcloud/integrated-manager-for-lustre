@@ -101,7 +101,7 @@ var chartConfig_Line_CpuUsage =
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
-    marginBottom: 25,
+    marginBottom: 35,
     zoomType: 'xy'
     },
     title:{ text: '', style: { fontSize: '12px' }, },
@@ -135,7 +135,7 @@ var chartConfig_Line_MemoryUsage =
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
-    marginBottom: 25,
+    marginBottom: 35,
     zoomType: 'xy'
     },
     title:{ text: '', style: { fontSize: '12px' }, },
@@ -168,7 +168,7 @@ var chartConfig_Line_DiskRead =
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
-    marginBottom: 25,
+    marginBottom: 35,
     zoomType: 'xy'
     },
     title:{ text: '', style: { fontSize: '12px' }, },
@@ -201,7 +201,7 @@ var chartConfig_Line_DiskWrite =
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
-    marginBottom: 25,
+    marginBottom: 35,
     zoomType: 'xy'
     },
     title:{ text: '', style: { fontSize: '12px' }, },
@@ -234,7 +234,7 @@ var chartConfig_Mgs_Line_CpuUsage =
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
-    marginBottom: 25,
+    marginBottom: 35,
     zoomType: 'xy'
     },
     title:{ text: '', style: { fontSize: '12px' }, },
@@ -267,7 +267,7 @@ var chartConfig_Mgs_Line_MemoryUsage =
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
-    marginBottom: 25,
+    marginBottom: 35,
     zoomType: 'xy'
     },
     title:{ text: '', style: { fontSize: '12px' }, },
@@ -300,7 +300,7 @@ var chartConfig_Mgs_Line_DiskRead =
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
-    marginBottom: 25,
+    marginBottom: 35,
     zoomType: 'xy'
     },
     title:{ text: '', style: { fontSize: '12px' }, },
@@ -333,7 +333,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
     marginRight: 0,
-    marginBottom: 25,
+    marginBottom: 35,
     zoomType: 'xy'
     },
     title:{ text: '', style: { fontSize: '12px' }, },
@@ -392,21 +392,10 @@ var chartConfig_Mgs_Line_DiskWrite =
 	    })
         .complete(function(event){
 			obj_db_Bar_Space_Data = chartConfig_Bar_DB;
-			if(isZoom == 'true')
-			{
-				obj_db_Bar_Space_Data.chart.width = "780";
-				obj_db_Bar_Space_Data.chart.height = "360";
-				obj_db_Bar_Space_Data.chart.style.height = "360";
-				obj_db_Bar_Space_Data.chart.style.width = "100%";
-				obj_db_Bar_Space_Data.chart.renderTo = "dialog_container";
-			}
-			else
-			{
-				obj_db_Bar_Space_Data.chart.renderTo = "container";
-			}
-            obj_db_Bar_Space_Data.xAxis.categories = categories;
+			obj_db_Bar_Space_Data.chart.renderTo = "container";
+			obj_db_Bar_Space_Data.xAxis.categories = categories;
             obj_db_Bar_Space_Data.title.text="All File System Space Usage";
-            obj_db_Bar_Space_Data.yAxis.title.text = '%';
+            obj_db_Bar_Space_Data.yAxis.title.text = 'Percentage';
             obj_db_Bar_Space_Data.xAxis.labels = {
                     rotation: 310,
             }
@@ -505,7 +494,7 @@ var chartConfig_Mgs_Line_DiskWrite =
             obj_db_Bar_INodes_Data = chartConfig_Bar_DB;
             obj_db_Bar_INodes_Data.xAxis.categories = categories;
             obj_db_Bar_INodes_Data.title.text="Files Vs Free Nodes";
-            obj_db_Bar_INodes_Data.yAxis.title.text = '%';
+            obj_db_Bar_INodes_Data.yAxis.title.text = 'Percentage';
             obj_db_Bar_INodes_Data.chart.renderTo = "container1";
             obj_db_Bar_INodes_Data.xAxis.labels = {
                     rotation: 310,
@@ -621,11 +610,7 @@ var chartConfig_Mgs_Line_DiskWrite =
                 obj_db_Line_CpuUsage_Data.yAxis.title.text = 'Percentage';
                 if(isZoom == 'true')
         		{
-        			obj_db_Line_CpuUsage_Data.chart.width = "780";
-        			obj_db_Line_CpuUsage_Data.chart.height = "360";
-        			obj_db_Line_CpuUsage_Data.chart.style.height = "360";
-        			obj_db_Line_CpuUsage_Data.chart.style.width = "100%";
-        			obj_db_Line_CpuUsage_Data.chart.renderTo = "dg_db_cpu_usage";
+                	renderZoomDialog(obj_db_Line_CpuUsage_Data);
         		}
         		else
         		{
@@ -686,10 +671,13 @@ var chartConfig_Mgs_Line_DiskWrite =
        .complete(function(event){
                 obj_db_Line_MemoryUsage_Data.xAxis.categories = categories;
                 obj_db_Line_MemoryUsage_Data.xAxis.title.text = 'Time (hh:mm:ss)';
-                obj_db_Line_MemoryUsage_Data.yAxis.title.text = 'GB';
+                obj_db_Line_MemoryUsage_Data.yAxis.title.text = 'KB';
                 obj_db_Line_MemoryUsage_Data.title.text = "Memory Usage";
-                
-                chart = new Highcharts.Chart(obj_db_Line_MemoryUsage_Data);
+                if(isZoom == 'true')
+        		{
+                	renderZoomDialog(obj_db_Line_MemoryUsage_Data);
+        		}
+        		chart = new Highcharts.Chart(obj_db_Line_MemoryUsage_Data);
         });
 }
 
@@ -743,6 +731,10 @@ var chartConfig_Mgs_Line_DiskWrite =
        .complete(function(event){
                 obj_db_Line_DiskRead_Data.xAxis.categories = categories;
                 obj_db_Line_DiskRead_Data.yAxis.title.text = 'KB';
+                if(isZoom == 'true')
+        		{
+                	renderZoomDialog(obj_db_Line_DiskRead_Data);
+        		}
                 chart = new Highcharts.Chart(obj_db_Line_DiskRead_Data);
         });
 }
@@ -798,6 +790,10 @@ var chartConfig_Mgs_Line_DiskWrite =
        .complete(function(event){
                 obj_db_Line_DiskWrite_Data.xAxis.categories = categories;
                 obj_db_Line_DiskWrite_Data.yAxis.title.text = 'KB';
+                if(isZoom == 'true')
+        		{
+                	renderZoomDialog(obj_db_Line_DiskWrite_Data);
+        		}
                 chart = new Highcharts.Chart(obj_db_Line_DiskWrite_Data);
         });
 }   
@@ -852,6 +848,10 @@ var chartConfig_Mgs_Line_DiskWrite =
        .complete(function(event){
                 obj_db_Mgs_Line_CpuUsage_Data.xAxis.categories = categories;
                 obj_db_Mgs_Line_CpuUsage_Data.yAxis.title.text = 'Percentage';
+                if(isZoom == 'true')
+        		{
+                	renderZoomDialog(obj_db_Mgs_Line_CpuUsage_Data);
+        		}
                 chart = new Highcharts.Chart(obj_db_Mgs_Line_CpuUsage_Data);
         });
     }
@@ -905,7 +905,11 @@ var chartConfig_Mgs_Line_DiskWrite =
        })
        .complete(function(event){
                 obj_db_Mgs_Line_MemoryUsage_Data.xAxis.categories = categories;
-                obj_db_Mgs_Line_MemoryUsage_Data.yAxis.title.text = 'GB';
+                obj_db_Mgs_Line_MemoryUsage_Data.yAxis.title.text = 'KB';
+                if(isZoom == 'true')
+        		{
+                	renderZoomDialog(obj_db_Mgs_Line_MemoryUsage_Data);
+        		}
                 chart = new Highcharts.Chart(obj_db_Mgs_Line_MemoryUsage_Data);
         });
 }
@@ -960,6 +964,10 @@ var chartConfig_Mgs_Line_DiskWrite =
        .complete(function(event){
                 obj_db_Mgs_Line_DiskRead_Data.xAxis.categories = categories;
                 obj_db_Mgs_Line_DiskRead_Data.yAxis.title.text = 'KB';
+                if(isZoom == 'true')
+        		{
+                	renderZoomDialog(obj_db_Mgs_Line_DiskRead_Data);
+        		}
                 chart = new Highcharts.Chart(obj_db_Mgs_Line_DiskRead_Data);
         });
 }
@@ -1015,8 +1023,29 @@ var chartConfig_Mgs_Line_DiskWrite =
        .complete(function(event){
                 obj_db_Mgs_Line_DiskWrite_Data.xAxis.categories = categories;
                 obj_db_Mgs_Line_DiskWrite_Data.yAxis.title.text = 'KB';
+                if(isZoom == 'true')
+        		{
+                	renderZoomDialog(obj_db_Mgs_Line_DiskWrite_Data);
+        		}
                 chart = new Highcharts.Chart(obj_db_Mgs_Line_DiskWrite_Data);
         });
+        
+        renderZoomDialog = function(object)
+        {
+        	object.xAxis.labels.style = 'fontSize:12px';
+        	object.yAxis.labels={style:{fontSize:'12px', fontWeight:'bold'}};
+        	object.chart.width = "780";
+        	object.chart.height = "360";
+        	object.chart.style.height = "360";
+        	object.chart.style.width = "100%";
+        	object.chart.renderTo = "zoomDialog";
+        }
+        
+        setZoomDialogTitle = function(titleName)
+    	{
+        	$('#zoomDialog').dialog('option', 'title', titleName);
+    		$('#zoomDialog').dialog('open');
+    	}
 }
 /******************************************************************************/
 // Function to show OSS/OST dashboards

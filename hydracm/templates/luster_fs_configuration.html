@@ -16,12 +16,15 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
 <link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
 <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
+<link href="{{STATIC_URL}}css/cm-config_tabs.js" rel="stylesheet" type="text/css" />
 <script>
 	$(document).ready(function() {
 		loadData();
+		$('#name').keyup( function() { oTable.fnDraw(); } );
 		var oTable = $('#example').dataTable( {
 			"bProcessing": true,
 		} );
+		
 	} );
 	</script>
 </head>
