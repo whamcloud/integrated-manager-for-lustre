@@ -79,6 +79,15 @@ class RemoveTargetMountJob(Job, StateChangeJob):
         return [(UnconfigurePacemakerStep, {'target_mount_id': self.target_mount.id}),
                 (DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
 
+    def get_deps(self):
+        deps = []
+        if self.target_mount.primary:
+            #deps.append(DependOn(self.target_mount.target.targetmount_set.get(primary=False).downcast(), 'removed'))
+            for tm in self.target_mount.target.targetmount_set.filter(primary = False):
+                deps.append(DependOn(tm.downcast(), 'removed'))
+        return DependAll(deps)
+
+
 class RemoveUnconfiguredTargetMountJob(Job, StateChangeJob):
     state_transition = (ManagedTargetMount, 'unconfigured', 'removed')
     stateful_object = 'target_mount'
