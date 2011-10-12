@@ -488,7 +488,7 @@ def target(request, target_id):
         'target': target,
         'conf_param_list': target.get_conf_params(),
         'conf_param_form': conf_param_form,
-        'target_size': target.targetmount_set.get(primary = True).block_device.size}))
+        'target_size': target.targetmount_set.get(primary = True).block_device.lun.size}))
 
 
 def states(request):
