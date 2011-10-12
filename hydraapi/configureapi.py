@@ -172,53 +172,41 @@ class RemoveClient(AnonymousRequestHandler):
         #except:
         #    raise Exception('POST call API_Exception:remove_client(client_id) => Failed to remove the client with clientid=%s' % client_id)
 
-class GetAvailableDevices(AnonymousRequestHandler):
-
+class GetLuns(AnonymousRequestHandler):
     def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_available_devices)
+        AnonymousRequestHandler.__init__(self,self.get_luns)
 
     @classmethod
-    @extract_request_args(host_id='hostid')
+    @extract_request_args(category='category')
     @extract_exception
-    def get_available_devices(self,request,host_id):
-        #try:
-            from monitor.models import Host
-            devices_list = []
-            if host_id:
-                host = Host.objects.get(id = host_id)
-                return self.get_available_devices_per_host(host)  
-            else:
-                for host in Host.objects.all():
-                    devices_list.extend(self.get_available_devices_per_host(host))
-                return devices_list 
-        #except:
-        #    raise Exception('POST call API_Exception: =>get_available_devices => Failed to get the available devices')
-    @classmethod
-    @extract_exception
-    def get_available_devices_per_host(self,host):
-        #try:
-            devices_list = []
-            from monitor.lib.util import sizeof_fmt
-            for node in  host.available_lun_nodes():
-                    devices_list.append(
-                                        {
-                                         'host': host.address,
-                                         'failover': {'failoverid':'','failoverhost':''}, 
-                                         'deviceid': node.id,
-                                         'isprimary': node.primary, 
-                                         'devicepath': str(node.path), 
-                                         'device': node.pretty_string(),
-                                         'lun':str(node.lun),
-                                         'lunid':str(node.lun_id),
-                                         'lunname':str(node.lun.human_name()),
-                                         'devicecapacity':sizeof_fmt(node.lun.size),
-                                         'devicestatus': ''
-                                         }
-                                        )
-            return devices_list
-        #except:
-        #    raise Exception('sub call API_Exception:__get_available_devices(host) => Failed to get the available devices')
+    def get_luns(cls,request, category):
+        assert category in ['unused', 'usable']
 
+        from monitor.models import Lun, LunNode
+        from monitor.lib.util import sizeof_fmt
+        devices = []
+        if category == 'unused':
+            luns = Lun.get_unused_luns()
+        elif category == 'usable':
+            luns = Lun.get_usable_luns()
+        else:
+            raise RuntimeError("Bad category '%s' in get_unused_luns" % category)
+
+        for lun in luns:
+            available_hosts = dict([(ln.host.id, {
+                'label': ln.host.__str__(),
+                'use': ln.use,
+                'primary': ln.primary
+                }) for ln in LunNode.objects.filter(lun = lun)])
+            devices.append({
+                             'id': lun.id,
+                             'name': lun.human_name(),
+                             'kind': lun.human_kind(),
+                             'available_hosts': available_hosts,
+                             'size':sizeof_fmt(lun.size),
+                             'status': lun.ha_status()
+                           })
+        return devices
 
 class CreateFilesystem(AnonymousRequestHandler):
 

@@ -261,6 +261,9 @@ _plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 
 sys.path.append(_plugins_path)
 INSTALLED_STORAGE_PLUGINS = ["linux"]
 
+# Enable discovery-order assignment of LunNodes as 1st primary=true, 2nd use=true, subsequent use=false
+PRIMARY_LUN_HACK = True
+
 try:
     from production_version import VERSION
 except ImportError:

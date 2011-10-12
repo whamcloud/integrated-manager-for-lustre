@@ -118,6 +118,7 @@ $(document).ready(function() {
 	// Dialog Link
 	$('#btnNewOST').click(function(){
 		$('#newOST').dialog('open');
+    CreateOST_EditFS();
 		return false;
 	});
 	

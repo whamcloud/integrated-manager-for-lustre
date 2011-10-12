@@ -29,7 +29,7 @@ from configureapi import (FormatFileSystem,
                           StopFileSystem,
                           StartFileSystem,
                           RemoveHost,
-                          GetAvailableDevices,
+                          GetLuns,
                           CreateFilesystem,
                           CreateMGS,
                           CreateOSS,
@@ -77,7 +77,7 @@ get_latest_events = CsrfExemptResource(GetLatestEvents)
 get_alerts = CsrfExemptResource(GetAlerts)
 get_jobs = CsrfExemptResource(GetJobs)
 
-get_available_devices = CsrfExemptResource(GetAvailableDevices)
+get_luns = CsrfExemptResource(GetLuns)
 
 # hydra api urls definitions.
 urlpatterns = patterns('',
@@ -115,5 +115,5 @@ urlpatterns = patterns('',
     (r'^getalerts/$',get_alerts),
     (r'^getjobs/$',get_jobs),
     
-    (r'^getdevices/$',get_available_devices),
+    (r'^get_luns/$',get_luns),
 )

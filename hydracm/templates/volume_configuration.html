@@ -17,7 +17,7 @@
 <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
 <script>
 	$(document).ready(function() {
-		loadVolumeConfiguration();
+		loadUnusedVolumeList();
 		var oNewMgt = $('#volume_configuration').dataTable( {
 			"bProcessing": true,
 		} );
@@ -33,11 +33,12 @@
       <table cellpadding="0" cellspacing="0" border="0" class="display" id="volume_configuration" width="100%">
         <thead>
           <tr>
-            <th width='16%'>Target Path</th>
-            <th width='16%'>Server Name</th>
-            <th width='17%'>Failover</th>
-            <th width='16%'>Status</th>
-            <th width='17%'>Capacity</th>
+            <th width='16%'>Name</th>
+            <th width='5%'>Size</th>
+            <th width='8%'>Kind</th>
+            <th width='8%'>Status</th>
+            <th width='17%'>Primary server</th>
+            <th width='16%'>Secondary server</th>
           </tr>
         </thead>
         <tbody id="volume_configuration_content">

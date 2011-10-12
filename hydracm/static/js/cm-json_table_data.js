@@ -231,126 +231,20 @@ function LoadExistingMGT_EditFS()
 function CreateNewMGT_EditFS()
 {
 		$('#popup-new-mgt').dataTable().fnClearTable();
-		$.post("/api/getdevices/",{"hostid": ""}).success(function(data, textStatus, jqXHR)
-        {
-            if(data.success)
-            {
-                var response = data.response;
-				var failoverSelect;
-				$.each(response, function(resKey, resValue)
-                {
-					if(resKey == 0)
-					{
-						failoverSelect = "<select>";
-						$.each(resValue.failover, function(resFailoverKey, resFailoverValue)
-						{
-							failoverSelect = failoverSelect + "<option value='volvo'>" + resFailoverValue.failoverhost + "</option>";
-						});
-						failoverSelect = failoverSelect + "</select>";
-					}
-					$('#popup-new-mgt').dataTable().fnAddData ([
-						"<input type='radio' name='mgt'/>",
-						resValue.devicepath,											
-						"<select><option value='volvo'>" + resValue.host + "</option></select>",
-						resValue.host,
-						failoverSelect,
-						resValue.devicecapacity,
-						resValue.isprimary,
-						resValue.lun,
-						resValue.lunname
-					]);		 
-				});
-            }
-        })
-        .error(function(event)
-        {
-             // Display of appropriate error message
-        })
-		.complete(function(event) {
-		});
+    loadUsableVolumeList($('#popup-new-mgt'), function(vol_info) {return "<input type='radio' name='mgt'/>"});
 }
 
 
 function CreateNewMDT_EditFS()
 {
 	$('#popup-new-mdt').dataTable().fnClearTable();
-	$.post("/api/getdevices/",{"hostid": ""}).success(function(data, textStatus, jqXHR)
-        {
-            if(data.success)
-            {
-                var response = data.response;
-				var failoverSelect;
-				$.each(response, function(resKey, resValue)
-                {
-					if(resKey == 0)
-					{
-						failoverSelect = "<select>";
-						$.each(resValue.failover, function(resFailoverKey, resFailoverValue)
-						{
-							failoverSelect = failoverSelect + "<option value='volvo'>" + resFailoverValue.failoverhost + "</option>";
-						});
-						failoverSelect = failoverSelect + "</select>";
-					}
-					$('#popup-new-mdt').dataTable().fnAddData ([
-						"<input type='radio' name='mdt'/>",
-						resValue.devicepath,											
-						resValue.host,
-						failoverSelect,
-						resValue.devicecapacity,
-						resValue.isprimary,
-						resValue.lun,
-						resValue.lunname
-					]);		 
-				});
-            }
-        })
-        .error(function(event)
-        {
-             // Display of appropriate error message
-        })
-		.complete(function(event) {
-		});
+  loadUsableVolumeList($('#popup-new-mdt'), function(vol_info) {return "<input type='radio' name='mdt'/>"});
 }
 
 function CreateOST_EditFS()
 {
-		$('#popup-new-ost').dataTable().fnClearTable();
-		$.post("/api/getdevices/",{"hostid": ""}).success(function(data, textStatus, jqXHR)
-        {
-            if(data.success)
-            {
-                var response = data.response;
-				var failoverSelect;
-				$.each(response, function(resKey, resValue)
-                {
-					if(resKey == 0)
-					{
-						failoverSelect = "<select>";
-						$.each(resValue.failover, function(resFailoverKey, resFailoverValue)
-						{
-							failoverSelect = failoverSelect + "<option value='volvo'>" + resFailoverValue.failoverhost + "</option>";
-						});
-						failoverSelect = failoverSelect + "</select>";
-					}
-					$('#popup-new-ost').dataTable().fnAddData ([
-						"<input type='checkbox' name='" + resValue.devicepath + "'/>",
-						resValue.devicepath,
-						resValue.host,
-						failoverSelect,
-						resValue.devicecapacity,
-						resValue.isprimary,
-						resValue.lun,
-						resValue.lunname
-					]);		 
-				});
-            }
-        })
-        .error(function(event)
-        {
-             // Display of appropriate error message
-        })
-		.complete(function(event) {
-		});
+	$('#popup-new-ost').dataTable().fnClearTable();
+  loadUsableVolumeList($('#popup-new-ost'), function(vol_info) {return "<input type='checkbox' name='" + vol_info.id + "'/>"});
 }
 
 
@@ -397,42 +291,105 @@ function LoadMGTConfiguration_MGTConf()
 		});
 }
 
-function loadVolumeConfiguration()
+function loadUsableVolumeList(datatable_container, select_widget_fn)
 {
-		$.post("/api/getdevices/",{"hostid": ""}).success(function(data, textStatus, jqXHR)
-        {
-            if(data.success)
-            {
-                var response = data.response;
-				var failoverSelect;
-				$.each(response, function(resKey, resValue)
-                {
-					if(resKey == 0)
-					{
-						failoverSelect = "<select>";
-						$.each(resValue.failover, function(resFailoverKey, resFailoverValue)
-						{
-							failoverSelect = failoverSelect + "<option value='volvo'>" + resFailoverValue.failoverhost + "</option>";
-						});
-						failoverSelect = failoverSelect + "</select>";
-					}
-					$('#volume_configuration').dataTable().fnAddData ([
-						resValue.devicepath,											
-						"<select><option value='volvo'>" +resValue.host + "</option></select>",
-						failoverSelect,
-						resValue.devicestatus,
-						resValue.devicecapacity		  
-					]);		 
-				});
+  $.get("/api/get_luns/", {'category': 'usable'}).success(function(data, textStatus, jqXHR)
+  {
+    if(data.success)
+    {
+      $.each(data.response, function(resKey, volume_info)
+      {
+        var primaryHostname = "---"
+        var failoverHostname = "---"
+        $.each(volume_info.available_hosts, function(host_id, host_info) {
+          if (host_info.primary) {
+            primaryHostname = host_info.label
+          } else if (host_info.use) {
+            failoverHostname = host_info.label
+          }
+        });
+
+        datatable_container.dataTable().fnAddData ([
+          select_widget_fn(volume_info),
+          volume_info.name,											
+          volume_info.size,		  
+          volume_info.kind,											
+          volume_info.status,
+          primaryHostname,
+          failoverHostname,
+        ]);		 
+      });
+    }
+  })
+  .error(function(event)
+  {
+       // Display of appropriate error message
+  })
+}
+
+function loadUnusedVolumeList()
+{
+  $.get("/api/get_luns/", {'category': 'unused'}).success(function(data, textStatus, jqXHR)
+  {
+    if(data.success)
+    {
+      $.each(data.response, function(resKey, resValue)
+      {
+        var blank_option = "<option value='-1'>---</option>";
+        var blank_select = "<select disabled='disabled'>" + blank_option + "</select>"
+        var primarySelect;
+        var failoverSelect;
+
+        var host_count = 0
+        $.each(resValue.available_hosts, function(host_id, host_info) {
+          host_count += 1;
+        });
+        if (host_count == 0) {
+          primarySelect = blank_select
+          failoverSelect = blank_select
+        } else if (host_count == 1) {
+          $.each(resValue.available_hosts, function(host_id, host_info) {
+            primarySelect = "<select disabled='disabled'><option value='" + host_id + "'>" + host_info.label + "</option></select>";
+          });
+          failoverSelect = blank_select
+        } else {
+          primarySelect = "<select>";
+          failoverSelect = "<select>";
+          primarySelect += blank_option
+          failoverSelect += blank_option
+          $.each(resValue.available_hosts, function(host_id, host_info)
+          {
+            if (host_info.primary) {
+              primarySelect += "<option value='" + host_id + "' selected='selected'>" + host_info.label + "</option>";
+              failoverSelect += "<option value='" + host_id + "'>" + host_info.label + "</option>";
+            } else if (host_info.use) {
+              primarySelect += "<option value='" + host_id + "'>" + host_info.label + "</option>";
+              failoverSelect += "<option value='" + host_id + "' selected='selected'>" + host_info.label + "</option>";
+            } else {
+              primarySelect += "<option value='" + host_id + "'>" + host_info.label + "</option>";
+              failoverSelect += "<option value='" + host_id + "' selected='selected'>" + host_info.label + "</option>";
             }
-        })
-        .error(function(event)
-        {
-             // Display of appropriate error message
-        })
-		.complete(function(event) {
-		});
-	}
+          });
+          failoverSelect += "</select>";
+          primarySelect += "</select>";
+        }
+
+        $('#volume_configuration').dataTable().fnAddData ([
+          resValue.name,											
+          resValue.size,		  
+          resValue.kind,											
+          resValue.status,
+          primarySelect,
+          failoverSelect,
+        ]);		 
+      });
+    }
+  })
+  .error(function(event)
+  {
+       // Display of appropriate error message
+  })
+}
 
 function loadServerConfiguration()
 {

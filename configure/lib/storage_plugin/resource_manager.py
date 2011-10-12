@@ -191,14 +191,17 @@ class ResourceManager(object):
                     try:
                         return Lun.objects.get(storage_resource_id = resource_id)
                     except Lun.DoesNotExist:
-                        shared = True
-                        # TODO: work out whether shared by finding the furthest
-                        # LogicalDrive ancestor and seeing if its a ScsiDevice
-                        # or an UnsharedDevice
+                        # Determine whether a device is shareable by whether it has a SCSI
+                        # ancestor (e.g. an LV on a scsi device is shareable, an LV on an IDE
+                        # device is not)
+                        from linux import ScsiDevice
+                        scsi_ancestor = ResourceQuery().record_find_ancestors(resource_id, ScsiDevice)
+                        shareable = (scsi_ancestor != None)
                         r = ResourceQuery().get_resource(resource_id)
                         lun = Lun.objects.create(
                                 size = r.size,
-                                storage_resource_id = r._handle)
+                                storage_resource_id = r._handle,
+                                shareable = shareable)
 
                         return lun
 
@@ -222,7 +225,7 @@ class ResourceManager(object):
                     if ResourceQuery().record_has_children(r._handle):
                         continue
 
-                    device = ResourceQuery().record_find_parent(record.pk, base_resources.LogicalDrive)
+                    device = ResourceQuery().record_find_ancestor(record.pk, base_resources.LogicalDrive)
                     if device == None:
                         raise RuntimeError("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
 
@@ -236,11 +239,35 @@ class ResourceManager(object):
                             lun_node.save()
 
                     except LunNode.DoesNotExist:
+                        # If setting up a non-shareable device, make its first
+                        # LunNode a primary
+                        if not lun.shareable:
+                            primary = True
+                            use = True
+                        else:
+                            primary = False
+                            use = False
+
+                        # A hack to provide some arbitrary primary/secondary assignments
+                        import settings
+                        if settings.PRIMARY_LUN_HACK:
+                            if lun.lunnode_set.count() == 0:
+                                primary = True
+                                use = True
+                            else:
+                                primary = False
+                                if lun.lunnode_set.filter(use = True).count() > 1:
+                                    use = False
+                                else:
+                                    use = True
+
                         lun_node = LunNode.objects.create(
                             lun = lun,
                             host = host,
                             path = r.path,
-                            storage_resource_id = record.pk)
+                            storage_resource_id = record.pk,
+                            primary = primary,
+                            use = use)
 
                     touched_luns.add(lun_node.pk)
                     touched_lun_nodes.add(lun_node.pk)
@@ -452,6 +479,8 @@ class ResourceManager(object):
                     self._persist_new_resource(session, t)
                     assert t._handle in session.local_id_to_global_id
                 cleaned_id_items.append(session.local_id_to_global_id[t._handle])
+            else:
+                cleaned_id_items.append(t)
         import json
         id_str = json.dumps(tuple(cleaned_id_items))
 

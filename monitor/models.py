@@ -221,9 +221,6 @@ class Host(models.Model, MeasuredEntity):
             return "OK"
 
 class Lun(models.Model):
-    def __str__(self):
-        return "Lun %d" % self.pk
-
     # FIXME: foreignkey vs. import order
     storage_resource_id = models.IntegerField(blank = True, null = True)
 
@@ -231,25 +228,109 @@ class Lun(models.Model):
     # from a JSON file which just tells us a path.
     size = models.BigIntegerField(blank = True, null = True)
 
-    # Whether this Lun will have only one LunNode, or multiple LunNodes
-    shared = models.BooleanField()
+    # Whether the originating StorageResource can be shared between hosts
+    # Note: this is ultimately a hint, as it's always possible for a virtual
+    # environment to trick us by showing the same IDE device to two hosts, or
+    # for shared storage to not provide a serial number.
+    shareable = models.BooleanField()
+
+    @classmethod
+    def get_unused_luns(cls):
+        """Get all Luns which are not used by Targets"""
+        from django.db.models import Q
+        used_lun_ids = [i['block_device__lun'] for i in TargetMount.objects.all().values('block_device__lun')]
+        return Lun.objects.filter(~Q(pk__in = used_lun_ids))
+
+    @classmethod
+    def get_usable_luns(cls):
+        """Get all Luns which are not used by Targets and have enough LunNode configuration
+        to be used as a Target (i.e. have only one node or at least have a primary node set)"""
+        from django.db.models import Count
+
+        # Our result will be a subset of unused_luns
+        unused_luns = cls.get_unused_luns()
+
+        # Map of which luns have a primary to avoid doing a query per-lun
+        primary_lns = LunNode.objects.filter(primary = True).values('lun')
+        luns_with_primary = set()
+        for ln in primary_lns:
+            luns_with_primary.add(ln['lun'])
+
+        # TODO: avoid O(N) queries
+        for lun in unused_luns:
+            lunnode_count = lun.lunnode_set.count()
+            if lunnode_count == 0:
+                # A lun is unusable if it has no LunNodes
+                continue
+            elif lunnode_count > 1 and not lun in luns_with_primary:
+                # A lun is unusable if it has more than one LunNode, and none is identified as primary
+                continue
+            else:
+                yield lun
+
+    def human_kind(self):
+        if not self.storage_resource_id:
+            return "Unknown"
+
+        from configure.models import StorageResourceRecord
+        record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
+        resource_klass = record.to_resource_class()
+        return resource_klass.human_name
 
     def human_name(self):
         if not self.storage_resource_id:
-            return None
+            lunnode = self.lunnode_set.objects.all()[0]
+            return "%s:%s" % (lunnode.host, lunnode.path)
 
-        from configure.lib.storage_plugin import ResourceQuery
         from configure.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
         resource = record.to_resource()
-        from linux import ScsiDevice
-        if isinstance(resource, ScsiDevice):
-            s = resource.serial
+        if record.alias:
+            return record.alias
+        else:
+            return resource.human_string()
 
-            if s[0] == 'S':
-                return s[1:]
+
+    def ha_status(self):
+        """Tell the caller two things:
+         * is the Lun configured enough for use as a target?
+         * is the configuration (if present) HA?
+         by returning one of 'unconfigured', 'configured-ha', 'configured-noha'
+        """
+
+        HA_CAP_YES = 0
+        HA_CAP_NO = 1
+        HA_CAP_MAYBE = 2
+        CONFIGURED_NO = 3
+        CONFIGURED_YES_HA = 4
+        CONFIGURED_YES_NOHA = 5
+
+        detail_status = None
+        if not self.shareable:
+            detail_status = (HA_CAP_NO, CONFIGURED_YES_NOHA)
+            return 'configured-noha'
+        else:
+            lunnode_count = self.lunnode_set.count()
+            primary_count = self.lunnode_set.filter(primary = True).count()
+            failover_count = self.lunnode_set.filter(primary = False, use = True).count()
+            if lunnode_count == 1 and primary_count == 0:
+                detail_status = (HA_CAP_MAYBE, CONFIGURED_NO)
+                return 'configured-noha'
+            elif lunnode_count == 1 and primary_count > 0:
+                detail_status = (HA_CAP_MAYBE, CONFIGURED_YES_NOHA)
+                return 'configured-noha'
+            elif primary_count > 0 and failover_count == 0:
+                detail_status = (HA_CAP_YES, CONFIGURED_YES_NOHA)
+                return 'configured-noha'
+            elif primary_count > 0 and failover_count > 0:
+                detail_status = (HA_CAP_YES, CONFIGURED_YES_HA)
+                return 'configured-ha'
             else:
-                return s
+                # Has no LunNodes, or has >1 but no primary
+                detail_status = (HA_CAP_YES, CONFIGURED_NO)
+                return 'unconfigured'
+
+
 
 class LunNode(models.Model):
     lun = models.ForeignKey(Lun)
