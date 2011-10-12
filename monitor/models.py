@@ -710,7 +710,7 @@ class TargetMount(Mountable):
         return super(TargetMount, self).save(force_insert, force_update, using)
 
     def __str__(self):
-        return "%s" % (self.target)
+        return "%s" % (self.target.downcast())
 
     def device(self):
         return self.block_device.path
