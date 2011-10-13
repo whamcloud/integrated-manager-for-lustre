@@ -19,33 +19,47 @@
 <script>
 	$(document).ready(function() {
 		LoadMGTConfiguration_MGTConf();
+		CreateMGT_MGTConf();
 		var oNewMgt = $('#mgt_configuration').dataTable( {
 			"bProcessing": true,
+			"aoColumns": [
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtcenter' }
+			]
 		} );
 		
 		var oNewOst = $('#popup-new-ost').dataTable( {
 			"bProcessing": true,
-			"bPaginate" : false,
-			"bRetrieve" : true
+			"bRetrieve" : true,
+			"bbAutoWidth" : false,
+			"aoColumns": [
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' }
+			]
 		} );
 
 	} );
 	
 	</script>
 </head>
+<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
 <body>
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
   <tr>
-    <td width="100%" height="152" align="left" valign="top"><fieldset>
-      <legend class="legendClass"> MGT Configuration </legend>
-      <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
-        <button type="button" id="mgtConfig_btnNewMGT">Create new MGT</button>
-        </span></span></div>
+    <td width="100%" height="68" align="left" valign="top"><fieldset>
+      <legend class="legendClass">MGT Configuration</legend>
       <table cellpadding="0" cellspacing="0" border="0" class="display" id="mgt_configuration" width="100%">
         <thead>
           <tr>
-            <th width='19%' class="blueheader" bgcolor="#990000">Target Path</th>
-            <th width='20%'>Target Name</th>
+            <th width='19%' class="blueheader" bgcolor="#990000">Filesystem</th>
+            <th width='20%'>Target Path</th>
             <th width='20%'>Server Name</th>
             <th width='19%'>Failover</th>
             <th width='21%'>Action</th>
@@ -55,25 +69,32 @@
         </tbody>
       </table>
       <div class="spacer"></div>
-      </fieldset></td>
+    </fieldset></td>
   </tr>
-</table>
-<!-- exsting mgt popup -->
-<div id="mgtConfig_newMGT" title="Select Target">
+  <tr>
+    <td height="124" align="left" valign="middle"><fieldset>
+      <legend class="legendClass">Select Target</legend>
+      <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
+        <button type="button" id="mgtConfig_btnNewMGT">Create new MGT</button>
+        </span></span></div>
   <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
     <thead>
       <tr>
-        <th width="16%">Select</th>
-        <th width="17%">Target Path</th>
-        <th width="16%">Server Name</th>
-        <th width="17%">Failover</th>
-        <th width="16%">Status</th>
+        <th width="1%">Select</th>
+        <th width="19%">Target Path</th>
+        <th width="15%">Server Name</th>
+        <th width="19%">Failover</th>
         <th width="17%">Capacity</th>
+        <th width="17%">Status</th>
       </tr>
     </thead>
     <tbody id="popup-new-ost_content">
     </tbody>
   </table>
-</div>
+    </fieldset></td>
+  </tr>
+</table>
+<!-- exsting mgt popup -->
+
 </body>
 </html>

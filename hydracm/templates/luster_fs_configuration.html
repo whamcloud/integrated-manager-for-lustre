@@ -19,15 +19,25 @@
 <link href="{{STATIC_URL}}css/cm-config_tabs.js" rel="stylesheet" type="text/css" />
 <script>
 	$(document).ready(function() {
-		loadData();
+		LoadFSList_FSList();
 		$('#name').keyup( function() { oTable.fnDraw(); } );
 		var oTable = $('#example').dataTable( {
 			"bProcessing": true,
+			"aoColumns": [
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtright' },
+				{ "sClass": 'txtright' },
+				{ "sClass": 'txtright' },
+				{ "sClass": 'txtright' },
+				{ "sClass": 'txtcenter' }
+			]
 		} );
-		
 	} );
 	</script>
 </head>
+<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
 <body>
 <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
   <button type="button" id="launch_instance_btn-button" onclick="location.href='/hydracm/newfstab'">Create new Lustre File System</button>
@@ -41,14 +51,14 @@
       <table cellpadding="0" cellspacing="0" border="0" class="display" id="example" width="100%">
         <thead>
           <tr>
-            <th width="13%">Lustre FS Name</th>
-            <th width="12%">MGS Name</th>
-            <th width="13%">MDS Name</th>
+            <th width="10%">Lustre FS Name</th>
+            <th width="10%">MGS Name</th>
+            <th width="10%">MDS Name</th>
             <th width="7%">No of OSS</th>
             <th width="7%">No of OST</th>
-            <th width="7%">Used(TB)</th>
-            <th width="7%">Free (TB)</th>
-            <th width="15%">Action</th>
+            <th width="5%">Used</th>
+            <th width="5%">Free</th>
+            <th width="20%">Action</th>
           </tr>
         </thead>
         <tbody id="example_content">

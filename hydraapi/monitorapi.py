@@ -71,7 +71,7 @@ class ListFileSystems(AnonymousRequestHandler):
             dashboard_data = Dashboard()
             for fs in dashboard_data.filesystems:
                 for fstarget in fs.targets:
-                    if fstarget.item.role() == 'MGT':
+                    if fstarget.item.role() == 'MGS':
                         for fstarget_mount in fstarget.target_mounts:
                             mgs_name = fstarget_mount.item.host.pretty_name()
                             mgs_status = fstarget.status()
@@ -241,6 +241,7 @@ class GetFSVolumeDetails(AnonymousRequestHandler):
                             for fstarget_mount in fstarget.target_mounts:
                                 all_fs.append(
                                               {
+                                               'fsname':fs.item.name,  
                                                'targetid':fstarget.item.id,
                                                'targetname': fstarget.item.name,
                                                'targetdevice': str(fstarget_mount.item.block_device),

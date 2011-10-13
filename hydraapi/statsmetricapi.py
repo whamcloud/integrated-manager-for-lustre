@@ -37,38 +37,72 @@ class GetFSTargetStats(AnonymousRequestHandler):
         AnonymousRequestHandler.__init__(self,self.get_stats_for_fs_targets)
 
     @classmethod
-    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime',data_function='datafunction',fetch_metrics='fetchmetrics')
+    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime',data_function='datafunction',target_kind='targetkind',fetch_metrics='fetchmetrics')
     @extract_exception
-    def get_stats_for_fs_targets(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
-        #try:
-            if filesystem_name :
-                fs = Filesystem.objects.get(name=filesystem_name)
-                fs_ost_stats = fs.metrics.fetch_last(ObjectStoreTarget,fetch_metrics=fetch_metrics.split())    
-                fs_mdt_stats = fs.metrics.fetch_last(MetadataTarget,fetch_metrics=fetch_metrics.split())
-                fs_ost_stats.extend(fs_mdt_stats)
-                return fs_ost_stats   
-            else :
-                all_stats = []
-                for filesystem in Filesystem.objects.all():
-                    fs = Filesystem.objects.get(name=filesystem_name)
-                    fs_ost_stats = fs.metrics.fetch_last(ObjectStoreTarget,fetch_metrics=fetch_metrics.split())
-                    fs_mdt_stats = fs.metrics.fetch_last(MetadataTarget,fetch_metrics=fetch_metrics.split())
-                    fs_ost_stats.extend(fs_mdt_stats)
-                    all_stats.extend(fs_ost_stats)  
-                return fs_ost_stats 
-        #except:
-        #    raise  Exception('POST call API_Exception:get_stats_for_fs_targets(filesystem_name,start_time,end_time ,data_function) => Failed to get data for inputs filesystem=%s|starttime=%s|endtime%s |datafunction=%s' %filesystem_name %start_time %end_time %data_function)
-
-class GetTargetStats(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_fs_indoesusage)
+    def get_stats_for_fs_targets(self,request,filesystem_name,start_time,end_time ,data_function,target_kind,fetch_metrics):
+        interval=600
+        if filesystem_name:
+            fs = Filesystem.objects.get(name=filesystem_name)
+            return self.metrics_fetch(fs,target_kind,fetch_metrics,start_time,end_time,interval)
+        else:
+            all_fs_stats = []
+            for fs in Filesystem.objects.all():
+                all_fs_stats.append(self.metrics_fetch(fs,target_kind,fetch_metrics,start_time,end_time,interval))
 
     @classmethod
-    @extract_request_args(target_name='filesystem',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
     @extract_exception
-    def get_stats_for_target(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
-            return ''
+    def metrics_fetch(self,fs,target_kind,fetch_metrics,start_time,end_time,interval):
+        import time
+        if target_kind == 'OST':
+            if interval:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch('Average',ObjectStoreTarget,fetch_metrics=fetch_metrics.split(),start_time=int(time.time()-600))
+                else:
+                    fs_target_stats = fs.metrics.fetch('Average',ObjectStoreTarget,start_time=int(time.time()-600))
+            elif start_time:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch('Average',ObjectStoreTarget,fetch_metrics=fetch_metrics.split(),start_time=int(time.time()-600))
+                else:
+                    fs_target_stats = fs.metrics.fetch('Average',ObjectStoreTarget,start_time=int(time.time()-600))
+            else:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch_last(ObjectStoreTarget,fetch_metrics=fetch_metrics.split())
+                else:
+                    fs_target_stats = fs.metrics.fetch_last(ObjectStoreTarget)
+        elif target_kind == 'MDT':
+            if interval:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch('Average',MetadataTarget,fetch_metrics=fetch_metrics.split(),start_time=int(time.time()-600))
+                else:
+                    fs_target_stats = fs.metrics.fetch('Average',MetadataTarget,start_time=int(time.time()-600))
+            elif start_time:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch('Average',MetadataTarget,fetch_metrics=fetch_metrics.split(),start_time=int(time.time()-600))
+                else:
+                    fs_target_stats = fs.metrics.fetch('Average',MetadataTarget,start_time=int(time.time()-600))
+            else:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch_last(MetadataTarget,fetch_metrics=fetch_metrics.split())
+                else:
+                    fs_target_stats = fs.metrics.fetch_last(MetadataTarget)   
+        else:
+            if interval:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch('Average',fetch_metrics=fetch_metrics.split(),start_time=int(time.time()-600))
+                else:
+                    fs_target_stats = fs.metrics.fetch('Average',start_time=int(time.time()-600))
+            elif start_time:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch('Average',fetch_metrics=fetch_metrics.split(),start_time=int(time.time()-600))
+                else:
+                    fs_target_stats = fs.metrics.fetch('Average',start_time=int(time.time()-600))
+            else:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch_last(fetch_metrics=fetch_metrics.split())
+                else:
+                    fs_target_stats = fs.metrics.fetch_last()
+
+        return fs_target_stats
 
 class GetServerStats(AnonymousRequestHandler):
 
@@ -79,27 +113,25 @@ class GetServerStats(AnonymousRequestHandler):
     @extract_request_args(host_name='hostname',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
     @extract_exception
     def get_stats_for_server(self,request,host_name,start_time,end_time ,data_function,fetch_metrics):
-            return ''
+        if host_name:
+            host = Host.objects.get(id=host_name)
+            host_stats = host.metrics.fetch_last()
+            return host_stats
+        else:
+            host_stats =[]
+            for host in Host.objects.all():
+                host_stat = host.metrics.fetch_last()
+                host_stats.extend(host_stat)
+            return host_stats
 
-class GetMDTStats(AnonymousRequestHandler):
 
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_stats_for_mdt)
-
-    @classmethod
-    @extract_request_args(mdt_name='mdtname',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
-    @extract_exception
-    def get_stats_for_mdt(self,request,mdt_name,start_time,end_time ,data_function,fetch_metrics):
-            return ''
-
-class GetMDSStats(AnonymousRequestHandler):
+class GetMGSStats(AnonymousRequestHandler):
 
     def __init__(self,*args,**kwargs):
         AnonymousRequestHandler.__init__(self,self.get_stats_for_mds)
 
     @classmethod
-    @extract_request_args(mds_name='mdsname',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
+    @extract_request_args(mgs_name='mgsname',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
     @extract_exception
-    def get_stats_for_mds(self,request,mds_name,start_time,end_time ,data_function,fetch_metrics):
+    def get_stats_for_mgs(self,request,mds_name,start_time,end_time ,data_function,fetch_metrics):
             return ''
-

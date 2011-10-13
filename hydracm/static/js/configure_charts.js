@@ -5,7 +5,8 @@ var chartConfig_Pie_DB =
     chart:{
     renderTo: '',
     marginLeft: '50',
-	width: '250',
+	width: '180',
+	height: '170',
 	style:{ width:'100%',  height:'200px' },
     },
     title:{ text: '', style: { fontSize: '12px' }, },
@@ -58,7 +59,7 @@ var chartConfig_Pie_DB =
         {
            obj_db_Pie_INodes_Data = chartConfig_Pie_DB;
            obj_db_Pie_INodes_Data.title.text="Files Vs Free Nodes";
-           obj_db_Pie_INodes_Data.chart.renderTo = "container3";       
+           obj_db_Pie_INodes_Data.chart.renderTo = "editfs_container3";       
            obj_db_Pie_INodes_Data.series = [{
                type: 'pie',
                name: 'Browser share',
@@ -99,7 +100,7 @@ var chartConfig_Pie_DB =
         .complete(function(event){
             obj_db_Pie_Space_Data = chartConfig_Pie_DB;
             obj_db_Pie_Space_Data.title.text="All File System Space Usage";
-            obj_db_Pie_Space_Data.chart.renderTo = "container2";
+            obj_db_Pie_Space_Data.chart.renderTo = "editfs_container2";
             obj_db_Pie_Space_Data.series = [{
                 type: 'pie',
                 name: 'Browser share',

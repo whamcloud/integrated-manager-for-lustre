@@ -31,8 +31,7 @@
  */
 
 .dataTables_wrapper {
-	position: relative;
-	height:100%;
+	position: relative;	
 	clear: both;
 	_height: 302px;
 	zoom: 1; /* Feeling sorry for IE */
@@ -137,7 +136,6 @@ table.display thead th {
 	font-weight: bold;
 	cursor: pointer;
 	* cursor: hand;
-	text-align:center;
 	font-size:13px;
 	/*background-image:url(../images/line1.jpg);
 	background-repeat:repeat-x;*/

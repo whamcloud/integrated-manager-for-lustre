@@ -27,7 +27,7 @@ load_breadcrumbs = function()
         return false;
     });
 		
-			$("#alertAnchor").click(function()
+			/*$("#alertAnchor").click(function()
 			{	
 					$("#alertsDiv").toggle("slideUp");
 					$("#alertAnchor").css("color",'red');
@@ -55,7 +55,7 @@ load_breadcrumbs = function()
 					$("#alertAnchor").css("color",'#7A848B');
 					$("#eventsDiv").hide();
 					$("#eventsAnchor").css("color",'#7A848B');
-			});
+			});*/
 	
 /******************************************************************************/
 // Function for showing time interval units
