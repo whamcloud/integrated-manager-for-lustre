@@ -81,7 +81,7 @@ class StorageResourceRecord(models.Model):
                     resource_class = resource_class_id,
                     storage_id_str = id_str,
                     storage_id_scope = None)
-            raise RuntimeError("Cannot create root resource %s %s %s, a resource with the same global identifier already exists" % (plugin_mod, resource_class.__name__, attrs))
+            raise RuntimeError("Cannot create root resource %s %s, a resource with the same global identifier already exists" % (resource_class.__name__, attrs))
         except StorageResourceRecord.DoesNotExist:
             # Great, nothing in the way
             pass
@@ -140,9 +140,10 @@ class StorageResourceRecord(models.Model):
 
     def get_statistic_properties(self, stat_name):
         from configure.lib.storage_plugin import storage_plugin_manager
-        klass = storage_plugin_manager.get_plugin_resource_class(
+        klass, klass_id = storage_plugin_manager.get_plugin_resource_class(
                 self.resource_class.storage_plugin.module_name,
                 self.resource_class.class_name)
+
         return klass._storage_statistics[stat_name]
 
 class StorageResourceStatistic(models.Model):
