@@ -397,7 +397,7 @@ cursor:pointer;
 	float:right;
 	height:16px;
 	/*margin-right:12px;*/
-	margin-left:185px;
+	margin-left:235px;
 	margin-top:1px;
 	width:100px;
 	padding-bottom:5px;
@@ -421,7 +421,7 @@ cursor:pointer;
 	background-position:right center; 
 	background-color: #eeeeee; 
 	color:#000000; 
-	width:80px; 
+	width:16px; 
 	text-align:left; 
 	padding-bottom:-18px;
 }

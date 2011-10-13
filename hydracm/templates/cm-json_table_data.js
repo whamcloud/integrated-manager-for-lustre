@@ -389,6 +389,7 @@ function CreateMGT_MGTConf()
 {
 	var i=1;
 	var checkboxCount = 0;
+		$('#popup-new-ost').dataTable().fnClearTable();
  $.get("/api/get_luns/", {'category': 'unused'}).success(function(data, textStatus, jqXHR)
   {
     if(data.success)

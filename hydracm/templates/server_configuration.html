@@ -20,7 +20,13 @@
 		LoadServerConf_ServerConfig();
 		var oNewMgt = $('#server_configuration').dataTable( {
 			"bProcessing": true,
-			"bAutoWidth":false
+			"bAutoWidth":false,
+			"aoColumns": [
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtcenter' },
+				{ "sClass": 'txtcenter' },
+			]
 		} );
 	} );
 	
