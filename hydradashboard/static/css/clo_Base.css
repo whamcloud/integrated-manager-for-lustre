@@ -44,6 +44,7 @@
 html, body
 {
 	font-size: 12px;
+	font-weight:bold;
 	line-height: 21px;
 	font-family:Verdana, Arial, Helvetica, sans-serif;
 	/*background-image:url(../images/linebig.png);
@@ -189,6 +190,9 @@ sup
 	vertical-align: super;
 	font-size: smaller;
 	line-height:inherit;
+}
+img{
+	border:none;
 }
 
 /* Page Specific
@@ -409,6 +413,7 @@ cursor:pointer;
 	position:relative;
 	/*margin-top:-31px;*/
 	padding-left:10px;
+	border:1px solid #848484;
 }
 .magbutton{
 	background-image: url(../images/mglass.png); 
@@ -431,7 +436,8 @@ cursor:pointer;
 	float:left;
 	width:23px;
 	height:100%;
-	background-color:#cccccc
+	background-color:#cccccc;
+	
 }
 .rightpanel{
 	float:right;
@@ -566,4 +572,65 @@ td.borright{
 }
 td.bortop{
 	border-top:1px solid #c3c0c0;
+}
+td.bt{
+	border-top:1px solid #848484;
+	font-size:12px;
+}
+td.bb{
+	border-bottom:1px solid #848484;
+	font-size:12px;
+}
+td.bl{
+	border-left:1px solid #848484;
+	font-size:12px;
+}
+td.br{
+	border-right:1px solid #848484;
+	font-size:12px;
+}
+.spaceright{
+	padding-right:4px;
+}
+.spaceleft{
+	padding-left:4px;
+}
+.scroll_display{
+	margin-left:5px; 
+	height:400px; 
+	overflow:auto;
+}
+.noti_links{
+	font-family:Verdana, Arial, Helvetica, sans-serif; 
+	font-size:12px; 
+	font-weight:bold; 
+	padding-left:5px;
+}
+.bracket{
+	border:1px solid #828282;
+	font-size:12px;
+}
+.iconslinks{
+	margin-left:3px;
+	margin-right:3px;
+}
+.greybgcol{
+	background-color:#eeeeee;
+}
+.fs{
+	font-size:12px;
+}
+.fw{
+	font-weight:bold;
+}
+.txtleft{
+	text-align:left;
+	padding-left:10px;
+}
+.txtright{
+	text-align:right;
+	padding-right:17px;
+}
+.txtcenter{
+	text-align:center;
 }

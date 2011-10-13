@@ -27,7 +27,7 @@ $(document).ready(function() {
 	$('#existingMGT').dialog({
 		autoOpen: false,
 		width: 800,
-		height:480,
+		height:350,
 		show: "clip",
 		modal: true,
 		position:"top",
@@ -36,7 +36,7 @@ $(document).ready(function() {
 				$(this).dialog("close");
 			},
 			"Cancel": function() { 
-				/* $(this).dialog("close"); */
+				$(this).dialog("close");
 			}, 	
 		}
 	});
@@ -60,7 +60,7 @@ $(document).ready(function() {
 				$(this).dialog("close");
 			},
 			"Cancel": function() { 
-				/* $(this).dialog("close"); */
+				$(this).dialog("close");
 			}, 	
 		}
 	});
@@ -85,7 +85,7 @@ $(document).ready(function() {
 				$(this).dialog("close");
 			},
 			"Cancel": function() { 
-				/* $(this).dialog("close"); */
+				$(this).dialog("close");
 			}, 	
 		}
 	});
@@ -110,7 +110,7 @@ $(document).ready(function() {
 				$(this).dialog("close");
 			},
 			"Cancel": function() { 
-				/* $(this).dialog("close"); */
+				$(this).dialog("close");
 			}, 	
 		}
 	});
@@ -118,7 +118,7 @@ $(document).ready(function() {
 	// Dialog Link
 	$('#btnNewOST').click(function(){
 		$('#newOST').dialog('open');
-    CreateOST_EditFS();
+		CreateOST_EditFS();
 		return false;
 	});
 	
@@ -136,7 +136,7 @@ $(document).ready(function() {
 				$(this).dialog("close");
 			},
 			"Cancel": function() { 
-				/* $(this).dialog("close"); */
+				$(this).dialog("close");
 			}, 	
 		}
 	});
@@ -144,7 +144,6 @@ $(document).ready(function() {
 	// Dialog Link
 	$('#mgtConfig_btnNewMGT').click(function(){
 		$('#mgtConfig_newMGT').dialog('open');
-		CreateOST_EditFS();
 		return false;
 	});
 	

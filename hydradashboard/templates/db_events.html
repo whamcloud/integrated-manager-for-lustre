@@ -3,6 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <title>Hydra Dashboard</title>
+<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
 <link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
 <link href="{{STATIC_URL}}css/clo_BreadCrumb.css" rel="stylesheet" type="text/css" />
 <link href="{{STATIC_URL}}css/clo_tabs.css" rel="stylesheet" type="text/css" />
@@ -17,7 +18,12 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
-
+<script language="javascript" type="text/javascript">
+    $(function () 
+    {
+       loadEventContent('all_event_content');
+    });
+</script>
 </head>
 <body style="margin: 0px 0px 0px 0px; padding: 0px;">
 <div class="wrapper">
@@ -121,31 +127,9 @@
           <tr>
             <td colspan="3"><form>
                 <fieldset>
-               <!-- <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td  valign="top" class="text" width="25%" align="center"><div class="magni">
-                        <input type="button" value="magnify" class="magbutton" onclick="db_Line_CpuUsage_Data('true');setZoomDialogTitle('All File System CPU Usage');"/>
-                      </div>
-                      <div style="clear:right;"></div>
-                      <div id="avgCPUDiv" class="round-table">Filesystems Avg CPU</div></td>
-                    <td  valign="top" class="text" width="25%" align="center"><div class="magni">
-                        <input type="button" value="magnify" class="magbutton" onclick="db_Line_MemoryUsage_Data('true');setZoomDialogTitle('All File System Memory Usage');"/>
-                      </div>
-                      <div style="clear:right;"></div>
-                      <div id="avgMemoryDiv" class="round-table">Filesystems Avg Memory</div></td>
-                    <td  valign="top" class="text" width="25%" align="center"><div class="magni">
-                        <input type="button" value="magnify" class="magbutton" onclick="db_Line_DiskRead_Data('true');setZoomDialogTitle('Disk Read');"/>
-                      </div>
-                      <div style="clear:right;"></div>
-                      <div id="avgReadDiv" class="round-table">File System Avg Read</div></td>
-                    <td  valign="top" class="text" width="25%" align="center"><div class="magni">
-                        <input type="button" value="magnify" class="magbutton" onclick="db_Line_DiskWrite_Data('true');setZoomDialogTitle('Disk Write');"/>
-                      </div>
-                      <div style="clear:right;"></div>
-                      <div id="avgWriteDiv" class="round-table">Filesystems Avg Write</div></td>
-                  </tr>
-                </table>-->
-                <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="all_event_content">
+                </table>
+                 <!--    <table width="100%" border="0" cellpadding="0" cellspacing="0">
                   <tr class="odd">
                     <td class="bor borleft bortop" height="25">Oct. 11, 2011</td>
                     <td class="bor bortop" height="25">5:56 p.m.</td>
@@ -174,7 +158,7 @@
                     <td class="bor" height="25"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" alt="" /></td>
                     <td class="bor borright" height="25" align="left">clo-pune-lin02:primary:ddnfs01-MDT0000 started</td>
                   </tr>
-                </table>
+                </table>    -->
 
                 </fieldset>
               </form>
@@ -187,31 +171,6 @@
    
   </div>
   <div style="clear:both;"></div>
-  <div id="alerts_dialog" title="Alerts">
-    <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
-      <tr>
-        <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="alerts_dialog_content">
-          </table></td>
-      </tr>
-    </table>
-  </div>
-  <div id="events_dialog" title="Events">
-    <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
-      <tr>
-        <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="events_dialog_content">
-          </table></td>
-      </tr>
-    </table>
-  </div>
-  <div id="dg_fs_space" title="All File System Disk Usage">
-    <div id="dialog_container"></div>
-  </div>
-  <div id="dg_db_cpu_usage" title="All File System CPU Usage">
-    <div id="dialog_avgCPUDiv"></div>
-  </div>
-  <div id="zoomDialog" title="All File System CPU Usage">
-    <div id="dialog_avgCPUDiv"></div>
-  </div>
 </div>
 </div>
 </body>

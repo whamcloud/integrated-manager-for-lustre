@@ -20,11 +20,19 @@
 		loadUnusedVolumeList();
 		var oNewMgt = $('#volume_configuration').dataTable( {
 			"bProcessing": true,
+			"aoColumns": [
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtright' },
+				{ "sClass": 'txtright' }
+			]
 		} );
 	} );
 	
 	</script>
 </head>
+<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
 <body>
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
   <tr>
@@ -33,12 +41,11 @@
       <table cellpadding="0" cellspacing="0" border="0" class="display" id="volume_configuration" width="100%">
         <thead>
           <tr>
-            <th width='16%'>Name</th>
-            <th width='5%'>Size</th>
-            <th width='8%'>Kind</th>
-            <th width='8%'>Status</th>
-            <th width='17%'>Primary server</th>
-            <th width='16%'>Secondary server</th>
+        <th width="19%">Target Path</th>
+        <th width="15%">Server Name</th>
+        <th width="19%">Failover</th>
+        <th width="17%">Capacity</th>
+        <th width="17%">Status</th>
           </tr>
         </thead>
         <tbody id="volume_configuration_content">

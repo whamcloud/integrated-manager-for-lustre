@@ -17,14 +17,16 @@
 <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
 <script>
 	$(document).ready(function() {
-		loadServerConfiguration();
+		LoadServerConf_ServerConfig();
 		var oNewMgt = $('#server_configuration').dataTable( {
 			"bProcessing": true,
+			"bAutoWidth":false
 		} );
 	} );
 	
 	</script>
 </head>
+<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
 <body>
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
   <tr>
