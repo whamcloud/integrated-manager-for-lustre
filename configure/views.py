@@ -532,25 +532,31 @@ def conf_param_help(request, conf_param_name):
 
     return HttpResponse(help_text, mimetype = 'text/plain')
 
-def storage_resource(request, vrr_id):
+def _render_storage_resource(request, srr_id, template):
     from configure.lib.storage_plugin import ResourceQuery
-    resource = ResourceQuery().get_resource_parents(vrr_id)
+    resource = ResourceQuery().get_resource_parents(srr_id)
     alerts = ResourceQuery().resource_get_alerts(resource)
     propagated_alerts = ResourceQuery().resource_get_propagated_alerts(resource)
     from configure.models import StorageResourceStatistic, StorageResourceRecord
 
-    record = StorageResourceRecord.objects.get(pk = vrr_id)
+    record = StorageResourceRecord.objects.get(pk = srr_id)
     stats = {}
-    for s in StorageResourceStatistic.objects.filter(storage_resource = vrr_id):
+    for s in StorageResourceStatistic.objects.filter(storage_resource = srr_id):
         stats[s.name] = s.get_latest()
 
-    return render_to_response("storage_resource.html", RequestContext(request, {
+    return render_to_response(template, RequestContext(request, {
                 "record": record,
                 "resource": record.to_resource(),
                 "propagated_alerts": propagated_alerts,
                 "alerts": alerts,
                 "stats": stats
                 }))
+
+def storage_resource(request, srr_id):
+    return _render_storage_resource(request, srr_id, "storage_resource.html")
+
+def storage_resource_inner(request, srr_id):
+    return _render_storage_resource(request, srr_id, "storage_resource_inner.html")
 
 from django.views.decorators.csrf import csrf_exempt
 @csrf_exempt

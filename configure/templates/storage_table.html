@@ -19,7 +19,7 @@
                 var resource_record_id = data[0]
                 console.log(resource_record_id);
                 $('#resource_popup').dialog({autoOpen: false})
-                $('#resource_popup_content').load("/configure/storage_resource/" + resource_record_id + "/")
+                $('#resource_popup_content').load("/configure/storage_resource_inner/" + resource_record_id + "/")
                 $('#resource_popup').dialog('open');
 
             });

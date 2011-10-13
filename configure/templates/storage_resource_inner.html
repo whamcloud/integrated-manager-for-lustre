@@ -1,0 +1,97 @@
+
+<script type='text/javascript'>
+    $(document).ready(function() {
+        function save_alias(new_name) {
+            $("a#alias_save_button").hide();
+            $("a#alias_reset_button").hide();
+            $("img#alias_spinner").show();
+            $("input#alias_edit_entry").attr('disabled', 'disabled');
+
+            $.post(
+                "{% url configure.views.storage_resource_set_alias record.id %}",
+                {'alias': new_name}
+                )
+            .success(function(){})
+            .error(function(){console.log("Error posting new alias");})
+            .complete(function(){
+                $("a#alias_save_button").show()
+                $("a#alias_reset_button").show();
+                $("img#alias_spinner").hide();
+                $("input#alias_edit_entry").attr('disabled', '');
+            })
+        }
+        $("a#alias_reset_button").click(function() {
+            var reset_val = "{{ resource.human_string|safe }}";
+            $("input#alias_edit_entry").attr('value', reset_val);
+            save_alias("");
+
+        });
+        $("a#alias_save_button").click(function() {
+            var new_name = $("input#alias_edit_entry").attr('value');
+            save_alias(new_name);
+        })
+    });
+</script>
+
+<input style="font-size: 12pt; font-weight: bold;" id='alias_edit_entry' type='entry' value='{% if record.alias %}
+{{record.alias}}
+{% else %}
+{{resource.human_string}}
+{% endif %}'
+></input>
+<a id='alias_save_button' href='#'>save</a>
+<a id='alias_reset_button' href='#'>reset</a>
+<img id='alias_spinner' style="display: none;" src="{{STATIC_URL}}/images/ajax-loader.gif"/>
+
+<h3>{{resource.human_class}} attributes</h3>
+<table>
+{% for k,v in resource.format_all %}
+<tr><th>{{k}}</th><td>{{v}}</td></tr>
+{% endfor %}
+</table>
+
+
+{% if stats %}
+<h3>{{resource.human_class}} statistics</h3>
+<table>
+{% for name,latest_val in stats.items %}
+{% if name == 'test_hist' %}
+<tr><td colspan=2>
+        <script type='text/javascript'>
+            $(document).ready(function() {
+                    chart = new Highcharts.Chart({
+                        chart: {
+                            renderTo:'histogram',
+                            defaultSeriesType:'line'
+                        }
+                    });
+            });
+        </script>
+        <div id="histogram">
+        </div>
+</td></th>
+{% else %}
+<tr><th>{{name}}</th><td>{{latest_val}}</td></tr>
+{% endif %}
+{% endfor %}
+</table>
+{% endif %}
+
+{% if alerts %}
+<h3>{{resource.human_class}} alerts</h3>
+<ul>
+{% for a in alerts %}
+<li>{{a.message}}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if propagated_alerts %}
+<h3>{{resource.human_class}} propagated alerts</h3>
+<ul>
+{% for a in propagated_alerts %}
+<li>{{a.message}}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
