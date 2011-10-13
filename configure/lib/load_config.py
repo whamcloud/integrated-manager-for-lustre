@@ -44,7 +44,7 @@ def _create_mounts(target, mounts):
             pass
 
     if not lun:
-        lun = Lun.objects.create(shared = (len(mounts) > 1))
+        lun = Lun.objects.create(shareable = (len(mounts) > 1))
 
     for m in mounts:
         host = ManagedHost.objects.get(address = m['host'])
