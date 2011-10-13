@@ -31,7 +31,7 @@ var chartConfig_Bar_DB =
 {			
     chart:{
     renderTo: '',
-    marginLeft: '50',
+	marginLeft: '50',
 	width: '250',
 	style:{ width:'100%',  height:'200px' },
     },
@@ -382,6 +382,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 		     	 style:{ width:'100%',  height:'210', position: 'inherit' },
 		         marginRight: 0,
 		         marginBottom: 35,
+			  backgroundColor: '#f9f9ff'
 		      },
 		      colors: [
 				     	'#A6C56D', 
@@ -395,11 +396,11 @@ var chartConfig_Mgs_Line_DiskWrite =
 				     	'#B5CA92'
 				     ],
 		      title: {
-		         text: 'Free space',
+		         text: 'Free Space',
 		         style: { fontSize: '12px' },
 		      },
 		      xAxis: {
-		         categories: ['ddnfs01', 'hulkfs01', 'matrixfs', 'sobofs01', 'punefs01'],
+		         categories: ['prod', 'hulkfs', 'matrixfs', 'sobofs', 'scratch'],
 		      	labels: {rotation: 310,style:{fontSize:'8px', fontWeight:'bold'}}
 		      },
 		      yAxis: {
@@ -628,19 +629,23 @@ var chartConfig_Mgs_Line_DiskWrite =
 	        	    height: '200',
 	        		style:{ width:'100%',  height:'210', position: 'inherit' },
 	        	    marginBottom: 35,
-	        	    zoomType: 'xy'
+	        	  zoomType: 'xy',
+			  backgroundColor: '#f9f9ff',
 		      },
 		      title: {
-		         text: 'Client count',
+		         text: 'Connected Clients',
 		         style: { fontSize: '12px' },
 		      },
 		      xAxis: {
-		         categories: ['fs1', 'fs2', 'fs3', 'fs4', 'fs5'],
-		         labels: {style:{fontSize:'10px', fontWeight:'bold'}}
+		        categories: ['01:35:00', '01:35:10', '01:35:20', '01:35:30', '01:35:40', '01:35:50', 
+				     '01:36:00', '01:36:10', '01:36:20', '01:36:30', '01:36:40', '01:36:50', 
+				     '01:37:00', '01:37:10', '01:37:20', '01:37:30', '01:37:40', '01:37:50', 
+				     '01:38:00', '01:38:10', ],
+		        labels: {rotation: 310,step: 4,style:{fontSize:'8px', fontWeight:'regular'}}
 		      },
 		      yAxis: {
 		         title: {
-		            text: 'Number of Users'
+		            text: 'Clients'
 		         },
 		         plotLines: [{
 		            value: 0,
@@ -653,6 +658,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 		                   return this.x +': '+ this.y +'';
 		         }
 		      },
+
 		      legend: {
 		    	  enabled: false,
 		         layout: 'vertical',
@@ -665,8 +671,12 @@ var chartConfig_Mgs_Line_DiskWrite =
 		      credits:{ enabled:false },
 		      series: [{
 		         name: '',
-		         data: [20, 22, 25, 21, 18]
-		      }]
+		          data: [5, 8, 15, 20, 21, 31, 43, 72, 80, 81, 81, 81, 80, 81, 81, 81, 80, 79, 80, 79 ]
+		      }],
+	    	    plotOptions: {
+		series:{marker: {enabled: false}}
+	    },
+
 		   });
        /* var free=0,used=0;
         $.post("/api/getfsinodeusage/",{endtime: "", datafunction: "", starttime: "", filesystem: ""})
@@ -721,7 +731,8 @@ var chartConfig_Mgs_Line_DiskWrite =
      	    height: '200',
      		style:{ width:'100%',  height:'210', position: 'inherit' },
      	    marginBottom: 35,
-     	    zoomType: 'xy'
+     			zoomType: 'xy', 
+		 backgroundColor: '#f9f9ff',
 			},
 			
 		    title: {
@@ -729,36 +740,33 @@ var chartConfig_Mgs_Line_DiskWrite =
 		         style: { fontSize: '12px' },
 		    },
 		    xAxis: {
-		        categories: ['01:35:00', '01:35:10', '01:35:20', '01:35:30', '01:35:40', '01:35:50', '01:35:60', '01:35:70', '01:35:80', '01:35:90'],
-		        labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'bold'}}
+		        categories: ['01:35:00', '01:35:10', '01:35:20', '01:35:30', '01:35:40', '01:35:50', 
+				     '01:36:00', '01:36:10', '01:36:20', '01:36:30', '01:36:40', '01:36:50', 
+				     '01:37:00', '01:37:10', '01:37:20', '01:37:30', '01:37:40', '01:37:50', 
+				     '01:38:00', '01:38:10', ],
+		        labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'regular'}}
 		    },
-		    yAxis: [{
-		        title: {
-		            text: 'KB'
-		        },
-		        opposite: true,
-		    },{
+		    yAxis: {
 		        title: {
 		            text: 'Percentage'
 		        },
 		        
 		        max:100, min:0, startOnTick:false,  tickInterval: 20
-		    }],
+		    },
 		    legend: {
 		    	 enabled:false,
 		    },
 		    credits:{ enabled:false },
-		    plotOptions:{series:{marker: {enabled: true}} },
+		    plotOptions:{series:{marker: {enabled: false}} },
 		    series: [{
 		        type: 'column',
-		        data: [60, 80, 75, 72, 50, 30, 32, 35, 35, 35],
-		        name: 'KB',
-		        yAxis: 1
+		        data: [20, 30, 35, 34, 70, 60, 42, 50, 50, 45],
 		    },{
 		        type: 'line',
-		        data: [20, 30, 40, 30, 33, 35, 36, 25, 25, 25],
+		        data: [35, 35, 32, 35, 38, 42, 44, 48, 52, 56],
 		        name: 'Percentage',
 		    }]
+
 		});
        /* var count = 0;
         var optionData = [],categories = [];
@@ -834,11 +842,12 @@ var chartConfig_Mgs_Line_DiskWrite =
 	     	 style:{ width:'100%',  height:'210', position: 'inherit' },
 	         marginRight: 0,
 	         marginBottom: 35,
+		 backgroundColor: '#f9f9ff',
 	         zoomType: 'xy'
 	      },
 	      colors: [
-			     	'#628EC5', 
-			     	'#AE91D0', 
+			     	'#6285AE', 
+			     	'#AE3333', 
 			     	'#A6C56D', 
 			     	'#C76560', 
 			     	'#3D96AE', 
@@ -848,12 +857,16 @@ var chartConfig_Mgs_Line_DiskWrite =
 			     	'#B5CA92'
 			     ],
 	      title: {
-	         text: 'Read Vs Writes',
+	         text: 'Read vs Writes',
 	         style: { fontSize: '12px' },
 	      },
-	      xAxis: {
-	         categories: ['1', '2', '3', '4', '5']
-	      },
+	     xAxis: {
+		 categories: ['01:35:00', '01:35:10', '01:35:20', '01:35:30', '01:35:40', '01:35:50', 
+			      '01:36:00', '01:36:10', '01:36:20', '01:36:30', '01:36:40', '01:36:50', 
+			      '01:37:00', '01:37:10', '01:37:20', '01:37:30', '01:37:40', '01:37:50', 
+			      '01:38:00', '01:38:10', '01:38:20', '01:38:30' ],
+		 labels: {rotation: 310,step: 4,style:{fontSize:'8px', fontWeight:'regular'}}
+	     },
 	      yAxis: {
 	    	  title: {
 	            text: 'KB'
@@ -875,10 +888,10 @@ var chartConfig_Mgs_Line_DiskWrite =
 	      },
 	      series: [{
 	         name: 'Read',
-	         data: [200, 175, 170, 150, 180, 178 , 178]
+	          data: [20, 30, 30, 50, 50, 60 , 70, 90, 120, 380, 400, 393, 402, 200, 75, 50, 10, 50, 50, 60 ]
 	      }, {
 	         name: 'Write',
-	         data: [-150, -125, -125, -120, -135, -128, -140]
+	          data: [0, 0, 0, 0, -135, -128, -140, -100, -20, -15, -15, -50, -121, -200, -220, -230, - 250, -260, -250, -180]
 	      }]
 	   });
         /*var count = 0;
@@ -950,7 +963,8 @@ var chartConfig_Mgs_Line_DiskWrite =
 	     	 style:{ width:'100%',  height:'210', position: 'inherit' },
 	         marginRight: 0,
 	         marginBottom: 35,
-	         zoomType: 'xy'
+	          zoomType: 'xy',
+		  backgroundColor: '#f9f9ff'
 	      },
 	      colors: [
 			     	'#63B7CF', 
@@ -964,11 +978,15 @@ var chartConfig_Mgs_Line_DiskWrite =
 			     	'#B5CA92'
 			     ],
 	      title: {
-	         text: 'IOPS',
+	         text: 'IOP/s',
 	         style: { fontSize: '12px' },
 	      },
-	      xAxis: {
-	         categories: ['1', '2', '3', '4', '5', '6', '7'],
+	     xAxis: {
+		 categories: ['01:35:00', '01:35:10', '01:35:20', '01:35:30', '01:35:40', '01:35:50', 
+			      '01:36:00', '01:36:10', '01:36:20', '01:36:30', '01:36:40', '01:36:50', 
+			      '01:37:00', '01:37:10', '01:37:20', '01:37:30', '01:37:40', '01:37:50', 
+			      '01:38:00', '01:38:10', ],
+		 labels: {rotation: 310,step: 4,style:{fontSize:'8px', fontWeight:'regular'}},
 	         tickmarkPlacement: 'on',
 	         title: {
 	            enabled: false
@@ -976,7 +994,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 	      },
 	      yAxis: {
 	         title: {
-	            text: 'IOPs'
+	            text: 'IOP/s'
 	         },
 	         /*labels: {
 	            formatter: function() {
@@ -1004,24 +1022,29 @@ var chartConfig_Mgs_Line_DiskWrite =
 	            }
 	         }
 	      },
-	      series: [{
+	     series: [{
 	         name: 'Read',
-	         data: [90, 100, 120, 110, 65, 70, 70]
-	      }, {
+	         data: [90, 100, 120, 110, 65, 70, 70, 80, 100, 110,
+			130, 100, 70,  100, 200, 220, 180, 150, 50, 65]
+	     }, {
 	         name: 'Write',
-	         data: [65, 70, 80, 68, 67, 65, 65]
-	      }, {
-		     name: 'Stat',
-		     data: [50, 52, 55, 55, 52, 52, 48]
-		  }, {
-		      name: 'Close',
-		      data: [40, 42, 45, 44, 43, 42, 41]
-		  }, {
-			 name: 'Open',
-			 data: [20, 25, 30, 22, 24, 25, 26]
-		  }]
+	         data: [65, 70, 80, 68, 67, 65,   65, 40, 10, 30,
+		        20, 25, 33, 55, 60, 100, 110, 90, 80, 50]
+	     }, {
+		 name: 'Stat',
+		 data: [50, 52, 55, 55, 52, 52, 48, 35, 33, 31,
+			29, 22, 10, 10, 5,   5,  5,  5, 10, 10]
+	     }, {
+		 name: 'Clse',
+		 data: [40, 42, 45, 44, 43, 42, 41, 41, 42, 44, 
+			44, 42, 43, 40, 42, 43, 45, 43, 41, 44]
+	     }, {
+		 name: 'Open',
+		 data: [20, 25, 30, 22, 24, 25, 26, 20, 15, 10, 
+			5,   0,  0,  0,  2, 0,   1,  2,  1,  0]
+	     }]
 	 });
-       /* var count = 0;
+     /* var count = 0;
         var optionData = [],categories = [];
         obj_db_Line_DiskRead_Data = chartConfig_Line_DiskRead;
         obj_db_Line_DiskRead_Data.title.text = "Disk Read";
@@ -1139,22 +1162,27 @@ var chartConfig_Mgs_Line_DiskWrite =
  db_Mgs_Line_CpuUsage_Data = function(isZoom)
  {
 	 var chart = new Highcharts.Chart({
-		    chart: {
-		        renderTo: 'mgsavgCPUDiv',
-		    	marginLeft: '50',
-  		width: '250',
-  	    height: '200',
-  		style:{ width:'100%',  height:'210', position: 'inherit' },
-  	    marginBottom: 35,
-  	    zoomType: 'xy'
-			},
+	     chart: {
+		 renderTo: 'mgsavgCPUDiv',
+		 marginLeft: '50',
+  		 width: '250',
+  		 height: '200',
+  		 style:{ width:'100%',  height:'210', position: 'inherit' },
+  		 marginBottom: 35,
+  		 zoomType: 'xy',
+		 backgroundColor: '#f9f9ff',
+	     },
 			
 		    title: {
 		         text: 'Server CPU and Memory',
 		         style: { fontSize: '12px' },
 		    },
 		    xAxis: {
-		        categories: ['01:35:00', '01:35:10', '01:35:20', '01:35:30', '01:35:40', '01:35:50', '01:35:60', '01:35:70', '01:35:80', '01:35:90'],
+		        categories: ['01:35:00', '01:35:10', '01:35:20', '01:35:30', '01:35:40', '01:35:50', 
+				     '01:36:00', '01:36:10', '01:36:20', '01:36:30', '01:36:40', '01:36:50', 
+				     '01:37:00', '01:37:10', '01:37:20', '01:37:30', '01:37:40', '01:37:50', 
+				     '01:38:00', '01:38:10', 
+				    ],
 		        labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'bold'}}
 		    },
 		    yAxis: [{
@@ -1173,15 +1201,17 @@ var chartConfig_Mgs_Line_DiskWrite =
 		    	 enabled:false,
 		    },
 		    credits:{ enabled:false },
-		    plotOptions:{series:{marker: {enabled: true}} },
+		    plotOptions:{series:{marker: {enabled: false}} },
 		    series: [{
 		        type: 'column',
-		        data: [20, 40, 35, 52, 70, 60, 42, 50, 50, 45],
+		        data: [20, 30, 35, 34, 70, 60, 42, 50, 50, 45,
+			       45, 44, 50, 55, 60, 40, 35, 40, 45, 50],
 		        name: 'KB',
 		        yAxis: 1
 		    },{
 		        type: 'line',
-		        data: [35, 35, 32, 35, 33, 33, 33, 35, 35, 35],
+		        data: [35, 35, 32, 35, 33, 33, 33, 35, 35, 35,
+			       35, 36, 38, 40, 42, 44, 50, 55, 60, 70],
 		        name: 'Percentage',
 		    }]
 		});
@@ -1267,7 +1297,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 			     	'#B5CA92'
 			     ],
 	      title: {
-	         text: 'Read Vs Writes',
+	         text: 'Read vs Writes',
 	         style: { fontSize: '12px' },
 	      },
 	      xAxis: {
@@ -1294,7 +1324,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 	      },
 	      series: [{
 	         name: 'Read',
-	         data: [20, 30, 30, 50, 50, 60 , 70]
+	          data: [20, 30, 30, 50, 50, 60 , 70, 90, 120, 250, 400, 389, 390, 300, 200, 50, 10, 50, 50 ]
 	      }, {
 	         name: 'Write',
 	         data: [-50, -45, -65, -70, -75, -78, -50]

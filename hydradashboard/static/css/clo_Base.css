@@ -251,7 +251,7 @@ margin: 0 auto;
 padding-left:20px;
 padding-right:20px;
 padding-top:1px;
-background-color:#e9e9ef;
+background-color:#f9f9ff;
 /*background-image:url(../images/line.jpg);
 background-repeat:repeat-x;*/
 
@@ -373,16 +373,16 @@ cursor:pointer;
 .logohead{
 	width:100%;
 	height:35px;
-	background-color:#009bff;
+	background-color: black;
 	
 }
 .logo{
 	background-image:url(../images/logo.png);
 	background-repeat:no-repeat;
 	width:80px;
-	height:32px;
+	height:31px;
 	float:left;
-	margin-left:10px;
+	margin-left:5px;
 	margin-bottom:3px;
 	margin-right:50px;
 }
@@ -530,7 +530,7 @@ a.btnsigninon {
 	padding-top:5px;
 }
 .top_links a{
-	color:#fff;
+	color:#ccc;
 	text-decoration:none;padding:4px;
 	font-weight:bold;
 }

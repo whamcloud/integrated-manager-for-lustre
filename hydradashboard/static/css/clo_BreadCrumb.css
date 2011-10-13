@@ -39,7 +39,7 @@
 	/*border:solid 1px #dedede;*/
 	/*background-image:url(../images/line1.jpg);
 	background-repeat:repeat-x;*/
-	background-color:#5ed6ff;
+	background-color:#ccc;
 	/*background:#fff;*/
 }
 .breadCrumb ul
@@ -85,7 +85,7 @@
 	line-height: 21px;
 	overflow: hidden;
 	float: left;
-	color:#FFFFFF;
+	color: black;
 }
 .breadCrumb ul li.first a
 {
