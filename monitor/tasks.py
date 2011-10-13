@@ -69,7 +69,7 @@ def parse_log_entries():
 def test_host_contact(host, ssh_monitor):
     import socket
     try:
-        addresses = socket.getaddrinfo(host.address, "22")
+        addresses = socket.getaddrinfo(host.address, "22", socket.AF_INET, socket.SOCK_STREAM, socket.SOL_TCP)
         resolve = True
         resolved_address = addresses[0][4][0]
     except socket.gaierror:
