@@ -317,7 +317,14 @@ class ObdfilterAudit(TargetAudit):
 
 class LnetAudit(LustreAudit):
     def parse_lnet_stats(self):
-        stats_str = self.read_string('/proc/sys/lnet/stats')
+        try:
+            stats_str = self.read_string('/proc/sys/lnet/stats')
+        except IOError:
+            # Normally, this would be an exceptional condition, but in
+            # the case of lnet, it could happen when the module is loaded
+            # but lnet is not configured.
+            return {}
+
         (a, b, c, d, e, f, g, h, i, j, k) = [int(v) for v in
                                              re.split('\s+', stats_str)]
         # lnet/lnet/router_proc.c

@@ -30,6 +30,35 @@ class TestLocalLustreMetrics(unittest.TestCase):
 
 class TestPathologicalUseCases(unittest.TestCase):
     # AKA: The world will always build a better idiot! ;)
+    def test_loaded_module_no_stats(self):
+        """Loaded module with no stats file should be skipped."""
+        # An easily-repeatable example of when this happens is when
+        # lnet.ko is loaded but LNet is stopped.
+        self.test_root = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.test_root, "proc/sys/lnet"))
+
+        f = open(os.path.join(self.test_root, "proc/modules"), "w+")
+        f.write("""
+lnet 233888 3 ptlrpc,ksocklnd,obdclass, Live 0xffffffffa076e000
+        """)
+        f.close()
+
+        # Create dummy nodestats files
+        f = open(os.path.join(self.test_root, "proc/meminfo"), "w")
+        f.write("MemTotal:        3991680 kB\n")
+        f.close()
+        f = open(os.path.join(self.test_root, "proc/stat"), "w")
+        f.write("cpu  24601 2 33757 3471279 10892 6 676 0 0\n")
+        f.close()
+
+        audit = LocalAudit(fscontext=self.test_root)
+        assert LnetAudit in audit.audit_classes()
+
+        # this shouldn't raise a runtime error
+        audit.metrics()
+
+        shutil.rmtree(self.test_root)
+
     def test_loaded_module_no_device(self):
         """Loaded module with no device entry should be skipped."""
         # We can hit this case fairly readily simply by unmounting
@@ -95,7 +124,9 @@ dm_mod 75539 2 dm_mirror,dm_log, Live 0xffffffffa0000000
         f.close()
 
         audit = LocalAudit(fscontext=self.test_root)
-        assert audit.metrics() == {'raw': {'node': {'cpustats': {'usage': 59042, 'total': 3541213}, 'meminfo': {'MemTotal': 3991680}}}}
+        # FIXME: this gethostname() should probably be stubbed out
+        import socket
+        self.assertEqual(audit.metrics(), {'raw': {'node': {'hostname': socket.gethostname(), 'cpustats': {'usage': 59042, 'total': 3541213}, 'meminfo': {'MemTotal': 3991680}}}})
 
         shutil.rmtree(self.test_root)
 
