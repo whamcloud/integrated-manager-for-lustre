@@ -122,7 +122,7 @@ class HydraDebug(cmd.Cmd, object):
         for k in kwargs_list:
             tokens = k.split('=')
             kwargs[tokens[0]] = tokens[1]
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         storage_plugin_manager.create_root_resource(plugin, resource, **kwargs)
 
     def do_run_storage_plugin(self, module_name):
