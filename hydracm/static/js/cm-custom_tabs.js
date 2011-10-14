@@ -1,5 +1,5 @@
 $(document).ready(function() {
-	$('#lusterFS').click(function(){
+	$('#lustreFS').click(function(){
 		loadData();
 	});	
 	
