@@ -76,7 +76,7 @@ ul.tabs li a {
 	text-decoration: none;
 	color: #000;
 	display: block;
-	font-size: 1.2em;
+	/*font-size: 1.2em;*/
 	padding: 0 20px;
 	border: 1px solid #fff; /*--Gives the bevel look with a 1px white border inside the list item--*/
 	outline: none;

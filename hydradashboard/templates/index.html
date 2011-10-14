@@ -69,7 +69,7 @@
     </div>
     <div class="leftpanel">
       <div id="signbtn"> <a href="#" class="btnsignin"><img src="{{STATIC_URL}}images/notifications.png" alt="" /></a> </div>
-      <!--<div id="blinkerDiv"><img src="{{STATIC_URL}}images/blinker.gif" alt="" /></div>-->
+      <!--<div id="blinkerDiv" style="width:12px; height:12px;"><img src="{{STATIC_URL}}images/sq.jpg" /><div style="margin-left:4px;"><img src="{{STATIC_URL}}images/blinker.gif" alt="" /></div></div>-->
       <div id="frmsignin">
         <div style="border: 2px solid #848484; background-color:#cccccc; min-height:600px;">
           <!--<div><b id="plusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications.png" alt="" /></b></div>-->
@@ -121,7 +121,7 @@
       <!-- Dashboard Div - Start -->
       <div id="dashboardDiv">
         <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
-          <tr style="background-color:#5ed6ff;">
+          <tr style="background-color:#ccc">
             <td width="75%"><div class="breadCrumbHolder module">
                 <div id="breadCrumb0" class="breadCrumb module">
                   <ul style="float:left;">
@@ -151,10 +151,6 @@
           <tr>
             <td colspan="3"><form>
                 <fieldset>
-                <legend class="legendClass">All Filesystems Usage Summary
-                <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
-                </legend>
                 <table width="100%" border="0">
                   <tr>
                     <td  valign="top" class="text" width="25%" align="center"><!--  <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> -->
@@ -190,10 +186,6 @@
           <tr>
             <td colspan="3"><form>
                 <fieldset>
-                <legend class="legendClass">All Filesystems Performance Summary
-                <!-- <a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
-                </legend>
                 <table width="100%" border="0" cellpadding="0" cellspacing="0">
                   <tr>
                     <td  valign="top" class="text" width="25%" align="center">
@@ -270,7 +262,7 @@
       <!-- FileSystem Div - Start -->
       <div id="fileSystemDiv" style="display: none">
         <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
-          <tr style="background-color:#5ed6ff;">
+          <tr style="background-color:#cccccc;">
             <td width="75%"><!--<div class="breadCrumbHolder module">
 		                <div id="breadCrumb1" class="breadCrumb module">
 		                   
@@ -449,7 +441,7 @@
       <!-- OSS Div - Start -->
       <div id="ossInfoDiv" style="display: none">
       <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
-        <tr style="background-color:#5ed6ff;">
+        <tr style="background-color:#cccccc;">
           <td width="75%"><div class="breadCrumbHolder module">
               <div id="breadCrumb2" class="breadCrumb module"></div>
             </div></td>
@@ -615,8 +607,7 @@
               </tr>
             </table>
           </div>
-        </div>
-        
+       
         <!-- end of tab_container  -->
         </td>
         
@@ -626,12 +617,12 @@
           <td colspan="3"></td>
         </tr>
       </table>
-    </div>
+    
     <!-- OSS Div - End -->
     <!-- OST Div - Start -->
     <div id="ostInfoDiv" style="display: none">
       <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue" >
-        <tr style="background-color:#5ed6ff;">
+        <tr style="background-color:#cccccc;">
           <td width="75%"><div class="breadCrumbHolder module">
               <div id="breadCrumb3" class="breadCrumb module"> </div>
             </div></td>
@@ -754,6 +745,7 @@
       </table>
     </div>
     <!-- OST Div - End -->
+    </div><div style="clear:both;"></div>
   </div>
   <div style="clear:both;"></div>
   <div id="alerts_dialog" title="Alerts">

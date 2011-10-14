@@ -23,41 +23,35 @@ class HydraAudit(AnonymousRequestHandler):
     @classmethod
     @extract_exception
     def list_audit(self,request):
-        #try:
-            audit_list = []
-            for m in Monitor.objects.all():
-                from celery.result import AsyncResult
-                if m.task_id:
-                    task_state = AsyncResult(m.task_id).state
-                else:
-                    task_state = ""
-                audit_list.append(
-                                  {
-                                   'host' : m.host,
-                                   'state': m.state,
-                                   'task_id' : m.task_id,
-                                   'task_state' : task_state
-                                  }    
-                )
+        audit_list = []
+        for m in Monitor.objects.all():
+            from celery.result import AsyncResult
+            if m.task_id:
+                task_state = AsyncResult(m.task_id).state
+            else:
+                task_state = ""
+            audit_list.append(
+                              {
+                               'host' : m.host,
+                               'state': m.state,
+                               'task_id' : m.task_id,
+                               'task_state' : task_state
+                              }    
+            )
             return audit_list
-        #except:
-        #    raise Exception('GET call API_Exception:list_audit() => Failed to get the audit list')         
      
     @classmethod
     @extract_exception
     def clear_audit(self,request):
-        #try:
-            audit_list = []
-            for m in Monitor.objects.all():
-                m.update(state = 'idle',task_id = None)
-                audit_list.append(
-                                  {
-                                   'host' : m.host,
-                                   'state': m.state,
-                                   'task_id' : m.task_id,
-                                   'audit_cleared' : 'True' 
-                                  }
-                )  
-            return audit_list
-        #except:
-        #    raise Exception('GET call API_Exception:clear_audit() => Failed to clear the audit records')
+        audit_list = []
+        for m in Monitor.objects.all():
+            m.update(state = 'idle',task_id = None)
+            audit_list.append(
+                              {
+                               'host' : m.host,
+                               'state': m.state,
+                               'task_id' : m.task_id,
+                               'audit_cleared' : 'True' 
+                              }
+            )  
+        return audit_list

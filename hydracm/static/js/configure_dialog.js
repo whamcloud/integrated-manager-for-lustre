@@ -51,7 +51,7 @@ $(document).ready(function() {
 	$('#newMGT').dialog({
 		autoOpen: false,
 		width: 800,
-		height:480,
+		height:460,
 		show: "clip",
 		modal: true,
 		position:"top",
@@ -76,7 +76,7 @@ $(document).ready(function() {
 	$('#newMDT').dialog({
 		autoOpen: false,
 		width: 800,
-		height:480,
+		height:460,
 		show: "clip",
 		modal: true,
 		position:"top",
@@ -101,7 +101,7 @@ $(document).ready(function() {
 	$('#newOST').dialog({
 		autoOpen: false,
 		width: 800,
-		height:480,
+		height:460,
 		position:"top",
 		show: "clip",
 		modal: true,
@@ -127,7 +127,7 @@ $(document).ready(function() {
 	$('#mgtConfig_newMGT').dialog({
 		autoOpen: false,
 		width: 800,
-		height:480,
+		height:460,
 		show: "clip",
 		modal: true,
 		position:"top",

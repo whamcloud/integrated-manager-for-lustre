@@ -91,6 +91,33 @@ def main(args):
     print result
     print '\n\n'
 
+    # Unit Test 12 :
+    import datetime
+    api_url = base_url + '/api/getlogs/'
+    print 'api_url: %s' % api_url
+    result = make_json_call(api_url,
+                            month=int(datetime.datetime.now().month),
+                            day=int(datetime.datetime.now().day),
+                            lustre='',
+                             )
+    print '\n result:'
+    print result
+    print '\n\n'
+
+    # Unit Test 12 :
+    import datetime
+    api_url = base_url + '/api/getlogs/'
+    print 'api_url: %s' % api_url
+    result = make_json_call(api_url,
+                            month=int(datetime.datetime.now().month),
+                            day=int(datetime.datetime.now().day),
+                            lustre='true',
+                             )
+    print '\n result:'
+    print result
+    print '\n\n'
+
+
     return 0
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

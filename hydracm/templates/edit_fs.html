@@ -1,4 +1,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
+
+
+
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>Hydra Configuration</title>
@@ -30,17 +33,38 @@
 		var oTable = $('#example').dataTable( {
 			"bProcessing": true,
 			"bFilter": false,
-			"bPaginate": false
+			"bPaginate": false,
+			"aoColumns": [
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtcenter' }
+			]
 		} );
 		
 		var oMgt = $('#mdt').dataTable( {
 			"bProcessing": true,
 			"bFilter": false,
-			"bPaginate": false
+			"bPaginate": false,
+			"aoColumns": [
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtcenter' }
+			]
 		} );
 		
 		var oOst = $('#ost').dataTable( {
 			"bProcessing": true,
+			"aoColumns": [
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtcenter' }
+			]
 		} );
 		
 		var oNewOst = $('#popup-new-ost').dataTable( {
@@ -54,12 +78,16 @@
 a:link {
 	color: #003366;
 }
+body{
+	font-weight:bold;
+}
 -->
 </style>
 </head>
 <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
 <body>
 <input type="hidden" id="fs" value="{{fsname}}" />
+<div style="font-weight:bold;">
 <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px;">
   <tr>
     <td width="30%" height="138" align="left" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
@@ -253,5 +281,6 @@ a:link {
     </tbody>
   </table>
    </div>
+  </div>
 </body>
 </html>

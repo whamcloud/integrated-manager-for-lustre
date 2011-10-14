@@ -7,7 +7,6 @@ var chartConfig_Pie_DB =
     marginLeft: '50',
 	width: '180',
 	height: '170',
-	style:{ width:'100%',  height:'200px' },
     },
     title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
@@ -23,7 +22,7 @@ var chartConfig_Pie_DB =
 	 },
 	 plotOptions:
      {
-	     pie:{allowPointSelect: true,cursor: 'pointer',showInLegend: true,size: '100%',dataLabels:{enabled: false,color: '#000000',connectorColor: '#000000'}}
+	     pie:{allowPointSelect: true,cursor: 'pointer',showInLegend: true,center:['40%','60%'],size: '100%',dataLabels:{enabled: false,color: '#000000',connectorColor: '#000000'}}
 	 },
 	 series: []
 };

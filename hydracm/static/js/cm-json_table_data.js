@@ -40,6 +40,7 @@ function LoadFSList_FSList()
 function LoadMGT_EditFS()
 {
 		var fsname = $('#fs').val();
+		var action="--";
 		$.post("/api/getvolumesdetails/",{filesystem:fsname}).success(function(data, textStatus, jqXHR)
         {
             if(data.success)
@@ -51,24 +52,19 @@ function LoadMGT_EditFS()
 					{
 						if(resValue.targetstatus == "STARTED")
 						{
-							$('#example').dataTable().fnAddData ([
-							resValue.targetmount,												
-							resValue.targetname,
-							resValue.hostname,
-							resValue.failover,
-							"<a href='#'>Stop</a>"
-							]);		 
+							action = "<a href='#'>Stop</a>";
 						}
 						else
 						{
-							$('#example').dataTable().fnAddData ([
-							resValue.targetmount,												
+							action = "<a href='#'>Start</a>";
+						}
+						$('#example').dataTable().fnAddData ([
+							resValue.targetdevice,												
 							resValue.targetname,
 							resValue.hostname,
 							resValue.failover,
-							"<a href='#'>Start</a>"
-							]);	
-						}
+							action
+						]);	
 					}
                 });
             }
@@ -84,6 +80,7 @@ function LoadMGT_EditFS()
 function LoadMDT_EditFS()
 {
 	var fsname = $('#fs').val();
+	var action="--";
 	$.post("/api/getvolumesdetails/",{filesystem:fsname}).success(function(data, textStatus, jqXHR)
         {
             if(data.success)
@@ -95,24 +92,19 @@ function LoadMDT_EditFS()
 					{
 						if(resValue.targetstatus == "STARTED")
 						{
-							$('#mdt').dataTable().fnAddData ([
-								resValue.targetdevice,												
-								resValue.targetname,
-								resValue.hostname,
-								resValue.failover,
-								"<a href='#'>Stop</a>"
-							]);		 
+							action = "<a href='#'>Stop</a>";	 
 						}
 						else
 						{
-							$('#mdt').dataTable().fnAddData ([
+							action  = "<a href='#'>Start</a>";	 
+						}
+						$('#mdt').dataTable().fnAddData ([
 								resValue.targetdevice,												
 								resValue.targetname,
 								resValue.hostname,
 								resValue.failover,
 								"<a href='#'>Stop</a>"
-							]);		 
-						}
+						]);	
 					}
                 });
             }
@@ -129,6 +121,7 @@ function LoadMDT_EditFS()
 function LoadOST_EditFS()
 {
 	var fsname = $('#fs').val();
+	var action = "--";
 		$.post("/api/getvolumesdetails/",{filesystem:fsname}).success(function(data, textStatus, jqXHR)
         {
             if(data.success)
@@ -140,24 +133,19 @@ function LoadOST_EditFS()
 					{
 						if(resValue.targetstatus == "STARTED")
 						{
-							$('#ost').dataTable().fnAddData ([
-							resValue.targetmount,												
-							resValue.targetname,
-							resValue.hostname,
-							resValue.failover,
-							"<a href='#'>Stop</a>"
-							]);		 
+							action = "<a href='#'>Stop</a>";	 
 						}
 						else
 						{
-							$('#ost').dataTable().fnAddData ([
-							resValue.targetmount,												
+							action = "<a href='#'>Start</a>";
+						}
+						$('#ost').dataTable().fnAddData ([
+							resValue.targetdevice,												
 							resValue.targetname,
 							resValue.hostname,
 							resValue.failover,
-							"<a href='#'>Start</a>"
-							]);	
-						}
+							action
+						]);	
 					}
                 });
             }
@@ -175,6 +163,7 @@ function LoadOST_EditFS()
 function LoadExistingMGT_EditFS()
 {
 	$('#popup-existing-mgt').dataTable().fnClearTable();
+	var btnRadio = "<input type='radio' name=existing_mgt' />";
 		$.post("/api/getvolumesdetails/",{filesystem:""}).success(function(data, textStatus, jqXHR)
         {
             if(data.success)
@@ -187,24 +176,13 @@ function LoadExistingMGT_EditFS()
 						{
 							if(updatedTargetMnt != resValue.targetmount)
 							{
-								if(resValue.targetstatus == "STARTED")
-								{
-									$('#popup-existing-mgt').dataTable().fnAddData ([
+								$('#popup-existing-mgt').dataTable().fnAddData ([
+									btnRadio,
 									resValue.targetmount,												
 									resValue.targetname,
 									resValue.hostname,
 									resValue.failover	  
-									]);		 
-								}
-								else
-								{
-									$('#popup-existing-mgt').dataTable().fnAddData ([
-									resValue.targetmount,												
-									resValue.targetname,
-									resValue.hostname,
-									resValue.failover	  
-									]);	
-								}
+								]);	
 						}
 						updatedTargetMnt = resValue.targetmount;
 					}	
@@ -222,70 +200,26 @@ function LoadExistingMGT_EditFS()
 function CreateNewMGT_EditFS()
 {
 		$('#popup-new-mgt').dataTable().fnClearTable();
-    	loadUsableVolumeList($('#popup-new-mgt'), function(vol_info) {return "<input type='radio' name='mgt'/>"});
+    	LoadUsableVolumeList($('#popup-new-mgt'), function(vol_info) {return "<input type='radio' name='mgt'/>"});
 }
 function CreateNewMDT_EditFS()
 {
 	$('#popup-new-mdt').dataTable().fnClearTable();
-  loadUsableVolumeList($('#popup-new-mdt'), function(vol_info) {return "<input type='radio' name='mdt'/>"});
+  LoadUsableVolumeList($('#popup-new-mdt'), function(vol_info) {return "<input type='radio' name='mdt'/>"});
 }
 function CreateOST_EditFS()
 {
 	$('#popup-new-ost').dataTable().fnClearTable();
-  loadUsableVolumeList($('#popup-new-ost'), function(vol_info) {return "<input type='checkbox' name='" + vol_info.id + "'/>"});
+  LoadUsableVolumeList($('#popup-new-ost'), function(vol_info) {return "<input type='checkbox' name='" + vol_info.id + "'/>"});
 }
 function LoadMGTConfiguration_MGTConf()
 {
 	$('#popup-new-mgt').dataTable().fnClearTable();
-	loadUsableVolumeList($('#popup-new-mgt'), function(vol_info) {return "<input type='checkbox' name='" + vol_info.id + "'/>"});
-/*		$.post("/api/getdevices/",{"hostid": ""}).success(function(data, textStatus, jqXHR)
-        {
-            if(data.success)
-            {
-                var response = data.response;
-				var failoverSelect;
-				$.each(response, function(resKey, resValue)
-                {
-					if(resKey == 0)
-					{
-						failoverSelect = "<select>";
-						$.each(resValue.failover, function(resFailoverKey, resFailoverValue)
-						{
-							if(resFailoverValue.failoverhost == undefined)
-							{
-								failoverSelect = failoverSelect + "<option value='volvo'>&nbsp;&nbsp;Nonne&nbsp;&nbsp;</option>";
-							}
-							else
-							{
-								failoverSelect = failoverSelect + "<option value='volvo'>" + resFailoverValue.failoverhost + "</option>";
-							}
-						});
-						failoverSelect = failoverSelect + "</select>";
-					}
-					$('#popup-new-mgt').dataTable().fnAddData ([
-						"<input type='radio' name='mgt'/>",
-						resValue.devicepath,
-						"<select><option value='volvo'>" + resValue.host + "</option></select>",
-						failoverSelect,
-						resValue.devicecapacity,
-						resValue.isprimary,
-						resValue.lun,
-						resValue.lunname
-					]);		 
-				});
-            }
-        })
-        .error(function(event)
-        {
-             // Display of appropriate error message
-        })
-		.complete(function(event) {
-		});
-		*/
+	LoadUsableVolumeList($('#popup-new-mgt'), function(vol_info) {return "<input type='checkbox' name='" + vol_info.id + "'/>"});
 }
 
 
-function loadUsableVolumeList(datatable_container, select_widget_fn)
+function LoadUsableVolumeList(datatable_container, select_widget_fn)
 {
   $.get("/api/get_luns/", {'category': 'usable'}).success(function(data, textStatus, jqXHR)
   {
@@ -321,7 +255,7 @@ function loadUsableVolumeList(datatable_container, select_widget_fn)
   })
 }
 
-function loadUnusedVolumeList()
+function LoadUnused_VolumeConf()
 {
   $.get("/api/get_luns/", {'category': 'unused'}).success(function(data, textStatus, jqXHR)
   {
@@ -467,71 +401,6 @@ function CreateMGT_MGTConf()
   })
 	.complete(function(event) {
 	});
-		
-		
-/*		
-		$.post("/api/getdevices/",{"hostid": ""}).success(function(data, textStatus, jqXHR)
-        {
-            if(data.success)
-            {
-                var response = data.response;
-				var failoverSelect;
-				var i=1;
-				var checkboxCount = 0;
-				$.each(response, function(resKey, resValue)
-                {
-					if(resKey == 0)
-					{
-						failoverSelect = "<select>";
-						$.each(resValue.failover, function(resFailoverKey, resFailoverValue)
-						{
-							if(resFailoverValue.failoverhost==undefined)
-							{
-								failoverSelect = failoverSelect + "<option value='volvo'>&nbsp;&nbsp;None&nbsp;&nbsp;</option>";
-							}
-							else
-							{
-								failoverSelect = failoverSelect + "<option value='volvo'>" + resFailoverValue.failoverhost + "</option>";
-							}
-						});
-						failoverSelect = failoverSelect + "</select>";
-					}
-					$('#popup-new-ost').dataTable().fnAddData ([
-						"<input type='checkbox' id='" + i+ "'/>",
-						resValue.devicepath,
-						resValue.host,
-						failoverSelect,
-						resValue.devicecapacity,
-						resValue.lun,
-						resValue.lunname
-					]);
-								
-					$('#'+i).live('click', function() {
-						if($(this).attr('checked'))
-						{
-							checkboxCount++;
-							$('#mgtConfig_btnNewMGT').removeAttr('disabled');
-						}
-						else
-						{
-							checkboxCount--;
-						}
-						if(checkboxCount==0)
-						{
-							$('#mgtConfig_btnNewMGT').attr('disabled', 'disabled');
-						}
-					});
-					i++;
-				});
-            }
-        })
-        .error(function(event)
-        {
-             // Display of appropriate error message
-        })
-		.complete(function(event) {
-		});
-*/		
 }
 
 
@@ -549,6 +418,7 @@ function LoadMGTConfiguration_MGTConf()
 				var val_hostname;
 				var val_failover;
 				var updated=0;
+				var action ="--";
 				
 				if(data.response!="")
 				{
@@ -561,24 +431,19 @@ function LoadMGTConfiguration_MGTConf()
 								//fsname = resValue.fsname;	
 								if(resValue.targetstatus == "STARTED")
 								{
-									$('#mgt_configuration').dataTable().fnAddData ([
-									fsname,
-									resValue.targetmount,												
-									resValue.hostname,
-									resValue.failover,
-									"<a>Stop</a>"		  
-									]);		 
+									action = "<a>Stop</a>";		 
 								}
 								else
 								{
-									$('#mgt_configuration').dataTable().fnAddData ([
+									action = "<a>Start</a>";
+								}
+								$('#mgt_configuration').dataTable().fnAddData ([
 									fsname,								
 									resValue.targetmount,												
 									resValue.hostname,
 									resValue.failover,
-									"<a>Start</a>"		  
-									]);	
-								}
+									action  
+								]);	
 								fsname="";
 								updated=1;
 							}
@@ -606,24 +471,19 @@ function LoadMGTConfiguration_MGTConf()
 					{
 						if(val_targetstatus == "STARTED")
 						{
-							$('#mgt_configuration').dataTable().fnAddData ([
-							fsname,
-							val_targetmount,												
-							val_hostname,
-							val_failover,
-							"<a>Stop</a>"		  
-							]);		 
+							action = "<a>Stop</a>";	 
 						}
 						else
 						{
-							$('#mgt_configuration').dataTable().fnAddData ([
+							action = "<a>Start</a>";
+						}
+						$('#mgt_configuration').dataTable().fnAddData ([
 							fsname,								
 							val_targetmount,												
 							val_hostname,
 							val_failover,
-							"<a>Start</a>"		  
-							]);	
-						}
+							action
+						]);	
 					}
 				}
             }
@@ -679,7 +539,7 @@ function LoadVolumeConf_VolumeConfig()
 
 function LoadServerConf_ServerConfig()
 {
-	$.post("/api/listservers/",{"hostid": ""}).success(function(data, textStatus, jqXHR)
+	$.post("/api/listservers/",{"filesystem": ""}).success(function(data, textStatus, jqXHR)
         {
             if(data.success)
             {
