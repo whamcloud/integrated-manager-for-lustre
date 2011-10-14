@@ -490,6 +490,8 @@ class GetLogs(AnonymousRequestHandler):
     def get_logs(self,request,display_month,display_day,only_lustre):
         import datetime
         from monitor.models import Systemevents
+        display_month = int(display_month)
+        display_day = int(display_day) 
         if display_month == 0:
             start_date = datetime.datetime(1970, 1, 1)
         else:
