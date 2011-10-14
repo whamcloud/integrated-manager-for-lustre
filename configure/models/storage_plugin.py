@@ -64,9 +64,9 @@ class StorageResourceRecord(models.Model):
 
     @classmethod
     def create_root(cls, resource_class, resource_class_id, attrs):
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         # Root resource do not have parents so they must be globally identified
-        from configure.lib.storage_plugin import GlobalId
+        from configure.lib.storage_plugin.resource import GlobalId
         if not isinstance(resource_class.identifier, GlobalId):
             raise RuntimeError("Cannot create root resource of class %s, it is not globally identified" % resource_class_name)
 
@@ -255,7 +255,7 @@ class StorageResourceAlert(AlertState):
         return "<%s:%s %d>" % (self.alert_class, self.attribute, self.pk)
 
     def message(self):
-        from configure.lib.storage_plugin import ResourceQuery
+        from configure.lib.storage_plugin.query import ResourceQuery
         msg = ResourceQuery().record_alert_message(self.alert_item.pk, self.alert_class)
         print "message: %s" % msg
         return msg

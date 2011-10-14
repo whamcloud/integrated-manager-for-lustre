@@ -124,7 +124,7 @@ class ResourceReference(ResourceAttribute):
         return mark_safe("<a href='%s'>%s</a>" % (url, name))
 
     def validate(self, value):
-        from configure.lib.storage_plugin import StorageResource
+        from configure.lib.storage_plugin.resource import StorageResource
         if not isinstance(value, StorageResource):
             raise RuntimeError("Cannot take ResourceReference to %s" % value)
 

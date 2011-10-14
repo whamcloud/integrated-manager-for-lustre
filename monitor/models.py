@@ -140,7 +140,7 @@ class Host(models.Model, MeasuredEntity):
         ssh_monitor.host = host
         ssh_monitor.save()
 
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         storage_plugin_manager.create_root_resource('linux', 'HydraHostProxy', host_id = host.pk)
 
     def save(self, *args, **kwargs):
