@@ -484,10 +484,32 @@ def target(request, target_id):
     else:
         raise NotImplementedError
 
+    ancestor_records = set()
+    parent_records = set()
+    storage_alerts = set()
+    lustre_alerts = set(AlertState.filter_by_item(target))
+    for tm in target.targetmount_set.all():
+        lustre_alerts |= set(AlertState.filter_by_item(tm))
+        print lustre_alerts
+        lun_node = tm.block_device
+        if lun_node.storage_resource_id:
+            from configure.lib.storage_plugin.query import ResourceQuery
+            parent_record = StorageResourceRecord.objects.get(pk = lun_node.storage_resource_id)
+            parent_records.add(parent_record)
+            storage_alerts |= ResourceQuery().record_all_alerts(parent_record)
+
+            records = ResourceQuery().record_all_ancestors(parent_record)
+            ancestor_records |= set(records)
+
+
     return render_to_response("target.html", RequestContext(request, {
         'target': target,
         'conf_param_list': target.get_conf_params(),
         'conf_param_form': conf_param_form,
+        'parent_records': parent_records,
+        'ancestor_records': ancestor_records,
+        'storage_alerts': storage_alerts,
+        'lustre_alerts': lustre_alerts,
         'target_size': target.targetmount_set.get(primary = True).block_device.lun.size}))
 
 

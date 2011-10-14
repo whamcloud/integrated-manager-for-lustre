@@ -17,6 +17,16 @@ class ResourceQuery(object):
         n = StorageResourceRecord.objects.filter(parents = record_id).count()
         return (n > 0)
 
+    def record_all_ancestors(self, record):
+        """Find an ancestor of type parent_klass, search depth first"""
+        if not isinstance(record, StorageResourceRecord):
+            record = StorageResourceRecord.objects.get(pk=record)
+
+        result = [record]
+        for p in record.parents.all():
+            result.extend(self.record_all_ancestors(p))
+        return result
+
     def record_find_ancestor(self, record, parent_klass):
         """Find an ancestor of type parent_klass, search depth first"""
         if not isinstance(record, StorageResourceRecord):
@@ -45,6 +55,17 @@ class ResourceQuery(object):
             result.extend(self.record_find_ancestors(p, parent_klass))
 
         return result
+
+    def record_all_alerts(self, record_id):
+        if isinstance(record_id, StorageResourceRecord):
+            record_id = record_id.pk
+
+        from configure.models import StorageResourceAlert, StorageAlertPropagated
+        alerts = set(StorageResourceAlert.filter_by_item_id(StorageResourceRecord, record_id))
+        for sap in StorageAlertPropagated.objects.filter(storage_resource = record_id):
+            alerts.add(sap.alert_state)
+
+        return alerts
 
     def resource_get_alerts(self, resource):
         # NB assumes resource is a out-of-plugin instance

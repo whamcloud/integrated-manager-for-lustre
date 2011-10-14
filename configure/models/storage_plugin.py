@@ -131,6 +131,12 @@ class StorageResourceRecord(models.Model):
         resource._handle = self.id
         return resource
 
+    def alias_or_name(self):
+        if self.alias:
+            return self.alias
+        else:
+            return self.to_resource().human_string()
+
     def to_resource_class(self):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class(
@@ -294,7 +300,7 @@ class StorageResourceLearnEvent(Event):
         return "Storage resource detection"
 
     def message(self):
-        from configure.lib.storage_plugin import ResourceQuery
+        from configure.lib.storage_plugin.query import ResourceQuery
         class_name, instance_name = ResourceQuery().record_class_and_instance_string(self.storage_resource)
         return "Discovered %s '%s'" % (class_name, instance_name)
 

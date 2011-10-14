@@ -26,5 +26,26 @@
 </table>
 {% endfor %}
 
+<h3>Storage resources</h3>
+<ul>
+{% for record in ancestor_records %}
+<li><a href="{% url configure.views.storage_resource srr_id=record.id %}">{{record.alias_or_name}}</a></li>
+{% endfor %}
+</ul>
+
+<h3>Lustre alerts</h3>
+<ul>
+{% for alert_state in lustre_alerts %}
+<li>{{alert_state.message}}, {{alert_state.alert_item}}</li>
+{% endfor %}
+</ul>
+
+<h3>Storage alerts</h3>
+<ul>
+{% for alert_state in storage_alerts %}
+<li>{{alert_state.message}}, {{alert_state.alert_item}}</li>
+{% endfor %}
+</ul>
+
 {% endblock %}
 
