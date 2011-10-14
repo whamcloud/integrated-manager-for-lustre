@@ -2,7 +2,7 @@
 
 function LoadFSList_FSList()
 {
-		$.post("/api/listfilesystems/").success(function(data, textStatus, jqXHR)
+		$.get("/api/listfilesystems/").success(function(data, textStatus, jqXHR)
         {
             if(data.success)
             {
@@ -742,3 +742,4 @@ function LoadFSData_EditFS()
 			});
 	}
 }
+
