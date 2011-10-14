@@ -256,7 +256,9 @@ loadLogContent = function(targetJobDivName, maxCount)
 		                { "sClass": 'txtleft' },
 		                { "sClass": 'txtleft' },
 		                { "sClass": 'txtleft' }
-		              ]
+		              ],
+                     "iDisplayLength":50
+                    
 				});
 			}
 			else
