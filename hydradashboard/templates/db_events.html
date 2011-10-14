@@ -9,6 +9,7 @@
 <link href="{{STATIC_URL}}css/clo_tabs.css" rel="stylesheet" type="text/css" />
 <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
 <link href="{{STATIC_URL}}css/jquery-ui-1.8.9.custom.css" rel="stylesheet" type="text/css" />
+<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.jBreadCrumb.1.1.js"></script>
@@ -18,11 +19,14 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
+<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
 <script language="javascript" type="text/javascript">
     $(function () 
     {
-       loadEventContent('all_event_content');
+       loadEventContent('all_event_content', -1);
+       loadHostList('');
     });
+    
 </script>
 </head>
 <body style="margin: 0px 0px 0px 0px; padding: 0px;">
@@ -92,8 +96,8 @@
       <!-- Dashboard Div - Start -->
       <div id="dashboardDiv">
         <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
-          <tr style="background-color:#5ed6ff;">
-            <td width="60%"><div class="breadCrumbHolder module">
+          <tr style="background-color:#cccccc;">
+            <td width="40%"><div class="breadCrumbHolder module">
                 <div id="breadCrumb0" class="breadCrumb module">
                   <ul style="float:left;">
                     <li> <a href="/dashboard">All FileSystems</a> </li>
@@ -104,8 +108,15 @@
                     </li>
                   </ul>
                 </div>
-              </div></td>
-            <td width="40%"><div class="timeint"> Severity: &nbsp;
+              </div>
+            </td>
+            <td width="60%">
+             <div class="timeint">
+             	Host: &nbsp;
+                <select id="db_events_hostList">
+                </select>
+                &nbsp;
+            	Severity: &nbsp;
                 <select id="intervalSelect">
                   <option value="">Any</option>
                   <option value="">Info</option>
@@ -120,14 +131,16 @@
                   <option value=''>Syslog</option>
                   <option value=''>Storage resource detection</option>
                 </select>
-              </div></td>
+                <input value="Filter" type="button"></input>
+              </div>
+             </td>
           </tr>
           
          
           <tr>
             <td colspan="3"><form>
                 <fieldset>
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="all_event_content">
+                <table cellpadding="0" cellspacing="0" border="0" class="display" id="all_event_content">
                 </table>
                  <!--    <table width="100%" border="0" cellpadding="0" cellspacing="0">
                   <tr class="odd">

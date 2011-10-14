@@ -114,7 +114,7 @@ load_breadcrumbs = function()
 	             "<select id='ossSelect'>"+
 	             "<option value=''>Select OSS</option>";
 
-			     $.get("/api/listservers") 
+			     $.post("/api/listservers/",{filesystem:$('#fsSelect').val()}) 
 			    .success(function(data, textStatus, jqXHR) {
 			    	 if(data.success)
 	                 {

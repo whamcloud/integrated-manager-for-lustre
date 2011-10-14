@@ -15,11 +15,11 @@
 $(document).ready(function() 
 {
 		$("#alertAnchor").click(function(){
-			loadAlertContent('alert_content');
+			loadAlertContent('alert_content', 'active', 10);
 		});  
 		
 		$("#eventsAnchor").click(function(){
-			loadEventContent('event_content');	
+			loadEventContent('event_content' , 10);	
 		});  
 		
 		$("#jobsAnchor").click(function(){
@@ -69,22 +69,22 @@ $(document).ready(function()
 //******************************************************************************/
 // Function to load content for alerts
 /******************************************************************************/
-loadAlertContent = function(targetAlertDivName)
+loadAlertContent = function(targetAlertDivName, status, maxCount)
 {
 	 	$('#'+targetAlertDivName).html('<tr><td width="100%" align="center"><img src="/static/images/loading.gif" style="margin-top:10px;margin-bottom:10px" width="16" height="16" /></td></tr>');
         var alertTabContent="";
         var isEmpty = "false";
         var cssClassName = "", imgName = "";
         var pagecnt=0
-        var maxpagecnt=10;
-        $.post("/api/getalerts/",{"active": "True"})
+        var maxpagecnt=maxCount;
+        $.post("/api/getalerts/",{"active": status})
         .success(function(data, textStatus, jqXHR) {
          if(data.success)
          {
              $.each(data.response, function(resKey, resValue)
              {
             	pagecnt++;
-                if(maxpagecnt > pagecnt)
+                if(maxpagecnt > pagecnt || maxpagecnt < 0)
                 {
 	            	cssClassName="",imgName="";
 	                isEmpty = "true";
@@ -116,24 +116,40 @@ loadAlertContent = function(targetAlertDivName)
 	         {
 	        	 alertTabContent = alertTabContent + "<tr> <td colspan='5' align='center' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='#'>No Active Alerts</a></td></tr>";
 	         }
-		     else
+		     /*else
 		     {
 		    	 alertTabContent = alertTabContent + "<tr> <td colspan='5' align='right' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='/dashboard/dbalerts/'>(All Events)</a></td></tr>";
-		     }
-	         $("#"+targetAlertDivName).html(alertTabContent);
+		     }*/
+	         if(maxCount < 0)
+				{
+					$("#"+targetAlertDivName).html("<thead><tr><th>Alert Created At</th><th>Status</th><th>Host</th><th>Message</th></tr><thead><tbody>"+alertTabContent+"</tbody>");
+					$("#"+targetAlertDivName).dataTable({
+						 "aoColumns": [
+			                { "sClass": 'txtleft' },
+			                { "sClass": 'txtcenter' },
+			                { "sClass": 'txtleft' },
+			                { "sClass": 'txtleft' }
+			              ]
+					});
+				}
+				else
+				{
+					$("#"+targetAlertDivName).html(alertTabContent);
+				} 
+	         
 	    });
 }
 
 //******************************************************************************/
 //Function to load content for events 
 /******************************************************************************/
-loadEventContent = function(targetEventDivName)
+loadEventContent = function(targetEventDivName, maxCount)
 {
 	 $('#'+targetEventDivName).html('<tr><td width="100%" align="center"><img src="/static/images/loading.gif" style="margin-top:10px;margin-bottom:10px" width="16" height="16" /></td></tr>');
 	 var eventTabContent='';
 	 var cssClassName = "", imgName = "";
      var pagecnt=0
-     var maxpagecnt=10;
+     var maxpagecnt=maxCount;
      $.get("/api/getlatestevents/") 
     	.success(function(data, textStatus, jqXHR) {
     	 if(data.success)
@@ -141,7 +157,7 @@ loadEventContent = function(targetEventDivName)
              $.each(data.response, function(resKey, resValue)
              {
                 pagecnt++;
-                if(maxpagecnt>pagecnt)
+                if(maxpagecnt>pagecnt || maxpagecnt < 0)
                 {
 					if(resValue.event_severity == 'alert') //red
 					{
@@ -158,7 +174,7 @@ loadEventContent = function(targetEventDivName)
 						cssClassName='brightyellow';
 	                	imgName="/static/images/dialog-warning.png";
 					}
-					eventTabContent = eventTabContent + "<tr class='"+cssClassName+"'><td width='20%' align='left' valign='top' class='border' style='font-weight:normal'>" +  resValue.event_created_at + "</td><td width='7%' align='left' valign='top' class='border'><img src='"+imgName+"' width='16' height='16' class='spacetop'/></td><td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.event_host +  "</td><td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.event_message + "</td></tr>";
+					eventTabContent = eventTabContent + "<tr class='"+cssClassName+"'><td width='20%' align='left' valign='top' class='border' style='font-weight:normal'>" +  resValue.event_created_at + "</td><td width='7%' align='left' valign='top' class='border' class='txtcenter'><img src='"+imgName+"' width='16' height='16' class='spacetop'/></td><td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.event_host +  "</td><td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.event_message + "</td></tr>";
                 }
              });
          }
@@ -171,11 +187,26 @@ loadEventContent = function(targetEventDivName)
 			{
 				eventTabContent = eventTabContent + "<tr> <td colspan='5' align='center' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='#'>No Events</a></td></tr>";
 			}
-			else
+			/*else
 			{
 				eventTabContent = eventTabContent + "<tr><td colspan='5' align='right' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='/dashboard/dbevents/'>(All Events)</a></td></tr>";
+			}*/
+			if(maxCount < 0)
+			{
+				$("#"+targetEventDivName).html("<thead><tr><th>Event Created At</th><th>Status</th><th>Host</th><th>Message</th></tr><thead><tbody>"+eventTabContent+"</tbody>");
+				$("#"+targetEventDivName).dataTable({
+					 "aoColumns": [
+		                { "sClass": 'txtleft' },
+		                { "sClass": 'txtcenter' },
+		                { "sClass": 'txtleft' },
+		                { "sClass": 'txtleft' }
+		              ]
+				});
 			}
-			$("#"+targetEventDivName).html(eventTabContent);
+			else
+			{
+				$("#"+targetEventDivName).html(eventTabContent);
+			} 
     });
 }
 
@@ -218,5 +249,29 @@ loadJobContent = function(targetJobDivName)
 			}
 			$("#"+targetJobDivName).html(jobTabContent);
 		});
+}
+
+loadHostList = function(fileSystemName)
+{
+	var hostList = '<option>All</option>';
+	$.post("/api/listservers/",{filesystem:fileSystemName})
+    .success(function(data, textStatus, jqXHR) {
+         if(data.success)
+         {
+             $.each(data.response, function(resKey, resValue)
+             {
+                 if(resValue.kind=='OSS' || resValue.kind.indexOf('OSS')>0)
+                 {
+                	 hostList  =  hostList + "<option value="+resValue.host_address+">"+resValue.host_address+"</option>";
+                 }
+             });
+         }
+    })
+    .error(function(event) {
+        //$('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
+    })
+    .complete(function(event){
+    	$('#db_events_hostList').html(hostList);
+    });
 }
 

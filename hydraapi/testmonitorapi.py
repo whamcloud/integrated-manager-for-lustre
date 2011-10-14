@@ -57,15 +57,36 @@ def main(args):
     print '\nresult:'
     print result
     print '\n\n'
+
+    # Unit Test 3 :
+    api_url = base_url + '/api/getvolumes/'
+    print 'api_url: %s' % api_url
+    result = make_json_call(api_url,
+                             filesystem='',
+                             )
+    print '\nresult:'
+    print result
+    print '\n\n'    
     
     # Unit  Test 4 :
     api_url = base_url + '/api/listservers/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
+                             filesystem=options.fsname
                             )
     print '\nresult:'
     print result
     print '\n\n'
+ 
+    # Unit  Test 4 :
+    api_url = base_url + '/api/listservers/'
+    print 'api_url: %s' % api_url
+    result = make_json_call(api_url,
+                             filesystem=''
+                            )
+    print '\nresult:'
+    print result
+    print '\n\n'  
     
     # Unit  Test 5 :
     api_url = base_url + '/api/getclients/'
@@ -77,12 +98,31 @@ def main(args):
     print result
     print '\n\n'
 
-
-    # Unit Test 6 :
-    api_url = base_url + '/api/getdevices/'
+    # Unit  Test 5 :
+    api_url = base_url + '/api/getclients/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
-                             hostid='',
+                             filesystem='',
+                             )
+    print '\nresult:'
+    print result
+    print '\n\n'
+
+    # Unit Test 6 :
+    api_url = base_url + '/api/get_luns/'
+    print 'api_url: %s' % api_url
+    result = make_json_call(api_url,
+                                category='usable'
+                             )
+    print '\nresult:'
+    print result
+    print '\n\n'
+
+    # Unit Test 7 :
+    api_url = base_url + '/api/get_luns/'
+    print 'api_url: %s' % api_url
+    result = make_json_call(api_url,
+                                category='unused'
                              )
     print '\nresult:'
     print result

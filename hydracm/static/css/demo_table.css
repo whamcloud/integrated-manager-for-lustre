@@ -138,9 +138,10 @@ table.display thead th {
 	* cursor: hand;
 	font-size:13px;
 	/*background-image:url(../images/line1.jpg);
-	background-repeat:repeat-x;*/
-	background-color:#5ed6ff;
-	color:#FFFFFF;
+	background-repeat:repeat-x;
+	background-color:#5ed6ff;*/
+	background-color:#cccccc;
+	color:#4c4c4c;
 }
 
 table.display tfoot th {
