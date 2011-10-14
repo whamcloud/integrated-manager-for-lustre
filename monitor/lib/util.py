@@ -5,3 +5,11 @@ def sizeof_fmt(num):
         if num < 1024.0:
             return "%3.1f%s" % (num, x)
         num /= 1024.0
+
+def sizeof_fmt_detailed(num):
+    for x in ['','kB','MB','GB','TB', 'EB', 'ZB', 'YB']:
+        if num < 1024.0 * 1024.0:
+            return "%3.1f%s" % (num, x)
+        num /= 1024.0
+
+    return int(num)

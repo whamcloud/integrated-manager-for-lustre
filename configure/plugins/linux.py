@@ -9,6 +9,7 @@ from configure.lib.storage_plugin.resource import StorageResource, ScannableId, 
 from configure.lib.storage_plugin import attributes
 from configure.lib.storage_plugin import base_resources
 from configure.lib.storage_plugin import alert_conditions
+from configure.lib.storage_plugin import statistics
 
 # This plugin is special, it uses Hydra's built-in infrastructure
 # in a way that third party plugins can't/shouldn't/mustn't
@@ -38,14 +39,15 @@ class ScsiDevice(base_resources.LogicalDrive):
     identifier = GlobalId('serial')
 
     serial = attributes.String(subscribe = True)
+    size = attributes.Bytes()
 
     human_name = "SCSI device"
 
+    test_stat = statistics.Gauge()
+    test_hist = statistics.BytesHistogram(bins = [(0,256), (257,512), (513, 2048), (2049, 8192)])
+
     def human_string(self, ancestors = []):
-        if self.serial[0] == 'S':
-            return self.serial[1:]
-        else:
-            return self.serial
+        return self.serial
 
 class UnsharedDeviceNode(base_resources.DeviceNode):
     """A device node whose underlying device has no SCSI ID
@@ -66,9 +68,6 @@ class UnsharedDevice(base_resources.LogicalDrive):
     # is the closest thing we have to a real ID.
     path = attributes.PosixPath()
 
-    def human_string(self):
-        return self.path
-
 class ScsiDeviceNode(base_resources.DeviceNode):
     """SCSI in this context is a catch-all to refer to
     block devices which look like real disks to the host OS"""
@@ -86,14 +85,11 @@ class LvmDeviceNode(base_resources.DeviceNode):
 # FIXME: partitions should really be GlobalIds (they can be seen from more than
 # one host) where the ID is their number plus the a foreign key to the parent 
 # ScsiDevice or UnsharedDevice(HYD-272)
-# TODO: include containng object human_string in partition human_string
+    # TODO: foreign key to VG instead of copied value 
 class Partition(base_resources.LogicalDrive):
     identifier = ScannableId('path')
     human_name = "Linux partition"
     path = attributes.PosixPath()
-
-    def human_string(self):
-        return self.path
 
 class PartitionDeviceNode(base_resources.DeviceNode):
     identifier = ScannableId('path')
@@ -112,6 +108,8 @@ class Linux(StoragePlugin):
     def __init__(self, *args, **kwargs):
         super(Linux, self).__init__(*args, **kwargs)
         self.agent = Agent(log = self.log)
+
+        self._scsi_devices = set()
 
     # TODO: need to document that initial_scan may not kick off async operations, because
     # the caller looks at overall resource state at exit of function.  If they eg
@@ -152,6 +150,7 @@ class Linux(StoragePlugin):
         res_by_serial = {}
         for dev in devs_by_serial.values():
             res, created = self.update_or_create(ScsiDevice, serial = dev['serial'], size = dev['size'])
+            self._scsi_devices.add(res)
             res_by_serial[dev['serial']] = res
 
         bdev_to_resource = {}
@@ -207,7 +206,7 @@ class Linux(StoragePlugin):
 
             partition, created = self.update_or_create(Partition,
                     parents = [parent_resource],
-                    size = bdev['size'],
+                    size = devices['devs'][bdev['parent']]['size'],
                     path = bdev['path'])
 
             this_node.add_parent(partition)
@@ -238,7 +237,7 @@ class Linux(StoragePlugin):
                         parents = [vg_resource],
                         uuid = lv['uuid'],
                         name = lv['name'],
-                        vg = vg_resource,
+                        vg_uuid = vg_info['uuid'],
                         size = lv['size'])
 
                 try:
@@ -261,6 +260,13 @@ class Linux(StoragePlugin):
                     mount_point = mntpnt,
                     fstype = fstype)
 
+    def update_scan(self, scannable_resource):
+        for scsi_dev in list(self._scsi_devices):
+            import random
+            num = random.randint(10, 20)
+            scsi_dev.test_stat = num
+            scsi_dev.test_hist = [random.randint(50,100) for r in range(0,4)]
+
 class LvmGroup(base_resources.StoragePool):
     identifier = GlobalId('uuid')
     
@@ -282,9 +288,10 @@ class LvmVolume(base_resources.LogicalDrive):
     #    'vgchange -u' to get a new VG UUID.  However, there is no equivalent
     #    command to reset LV uuid, because LVM finds two LVs with the same UUID
     #    in VGs with different UUIDs to be unique enough.
-    identifier = GlobalId('uuid', 'vg')
+    identifier = GlobalId('uuid', 'vg_uuid')
 
-    vg = attributes.ResourceReference()
+    # TODO: foreign key to VG instead of copied value (HYD-272)
+    vg_uuid = attributes.Uuid()
     uuid = attributes.Uuid()
     name = attributes.String()
 
@@ -292,6 +299,6 @@ class LvmVolume(base_resources.LogicalDrive):
     human_name = 'LV'
 
     def human_string(self, ancestors = []):
-        return "%s-%s" % (self.vg.name, self.name)
+        return self.name
 
 

@@ -118,7 +118,7 @@ class SubscriberIndex(object):
             self.remove_subscriber(resource_id, field_name, getattr(resource, field_name))
 
     def populate(self):
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         from configure.models import StorageResourceAttribute
         for resource_class_id, resource_class in storage_plugin_manager.get_all_resources():
             for p in resource_class._provides:
@@ -178,8 +178,8 @@ class ResourceManager(object):
             # to Lun and LunNode objects to interface with the world of Lustre
             # TODO: don't just do this at creation, do updates too
             from linux import HydraHostProxy
-            from configure.lib.storage_plugin import storage_plugin_manager
-            from configure.lib.storage_plugin import ResourceQuery
+            from configure.lib.storage_plugin.manager import storage_plugin_manager
+            from configure.lib.storage_plugin.query import ResourceQuery
             from configure.lib.storage_plugin import base_resources
             from monitor.models import Lun, LunNode, Host
             scannable_resource = ResourceQuery().get_resource(scannable_id)
@@ -330,6 +330,7 @@ class ResourceManager(object):
         from configure.models import StorageResourceRecord, StorageResourceStatistic
         record = StorageResourceRecord.objects.get(pk = record_pk)
         for stat_name, stat_data in update_data.items():
+            print "%s: %s" % (stat_name, stat_data)
             stat_properties = record.get_statistic_properties(stat_name)
             try:
                 stat_record = StorageResourceStatistic.objects.get(

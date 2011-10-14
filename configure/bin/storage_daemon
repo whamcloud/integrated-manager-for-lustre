@@ -46,7 +46,8 @@ class PluginSession(threading.Thread):
         super(PluginSession, self).__init__(*args, **kwargs)
 
     def run(self):
-        from configure.lib.storage_plugin import ResourceQuery, storage_plugin_manager
+        from configure.lib.storage_plugin.query import ResourceQuery
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         from configure.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(id=self.root_resource_id)
         plugin_klass = storage_plugin_manager.get_plugin_class(
@@ -105,7 +106,7 @@ class StorageDaemon(object):
 
         # Map of module name to map of root_resource_id to PluginSession
         self.plugins = {}
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         for p in storage_plugin_manager.loaded_plugins.keys():
             # Create sessions for all root resources
             sessions = {}    
@@ -119,7 +120,7 @@ class StorageDaemon(object):
 
     def root_resource_ids(self, plugin):
         """Return the PK of all StorageResourceRecords for 'plugin' which have no parents"""
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         # We will be polling, to need to commit to see new data
         with transaction.commit_manually():
             transaction.commit()

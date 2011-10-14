@@ -533,7 +533,7 @@ def conf_param_help(request, conf_param_name):
     return HttpResponse(help_text, mimetype = 'text/plain')
 
 def _render_storage_resource(request, srr_id, template):
-    from configure.lib.storage_plugin import ResourceQuery
+    from configure.lib.storage_plugin.query import ResourceQuery
     resource = ResourceQuery().get_resource_parents(srr_id)
     alerts = ResourceQuery().resource_get_alerts(resource)
     propagated_alerts = ResourceQuery().resource_get_propagated_alerts(resource)
@@ -542,7 +542,7 @@ def _render_storage_resource(request, srr_id, template):
     record = StorageResourceRecord.objects.get(pk = srr_id)
     stats = {}
     for s in StorageResourceStatistic.objects.filter(storage_resource = srr_id):
-        stats[s.name] = s.get_latest()
+        stats[s.name] = s.get_latest_json()
 
     return render_to_response(template, RequestContext(request, {
                 "record": record,
@@ -594,7 +594,7 @@ def _resource_class_tree(plugin, klass):
     return _resource_tree(records)
 
 def _resource_tree(root_records):
-    from configure.lib.storage_plugin import ResourceQuery
+    from configure.lib.storage_plugin.query import ResourceQuery
     tree = ResourceQuery().get_resource_tree(root_records)
 
     def decorate_urls(resource_dict):
@@ -679,7 +679,7 @@ def storage_table(request):
     resource_form, storage_resource_class = _handle_resource_form(request)
 
     # The StorageResource subclass as opposed to the DB reference for it
-    from configure.lib.storage_plugin import storage_plugin_manager
+    from configure.lib.storage_plugin.manager import storage_plugin_manager
     storage_plugin_manager.load_plugin(storage_resource_class.storage_plugin.module_name)
     real_resource_class = storage_resource_class.get_class()
 
@@ -693,11 +693,11 @@ def storage_table(request):
         }))
 
 def storage_table_json(request, plugin_module, resource_class_name):
-    from configure.lib.storage_plugin import storage_plugin_manager
+    from configure.lib.storage_plugin.manager import storage_plugin_manager
     # FIXME: for now this effectively lets the caller 'import' whatever they want.
     # need an INSTALLED_PLUGINS setting and limit this to one of those.
     storage_plugin_manager.load_plugin(plugin_module)
-    from configure.lib.storage_plugin import ResourceQuery
+    from configure.lib.storage_plugin.query import ResourceQuery
 
     resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(plugin_module, resource_class_name)
     attr_columns = resource_class.get_columns()

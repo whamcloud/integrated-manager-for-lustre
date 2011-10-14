@@ -55,7 +55,7 @@ class StoragePlugin(object):
             return handle
 
     def __init__(self, scannable_id = None):
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         self._handle = storage_plugin_manager.register_plugin(self)
 
         self._handle_lock = threading.Lock()

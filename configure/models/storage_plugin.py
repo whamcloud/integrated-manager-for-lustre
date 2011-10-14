@@ -27,7 +27,7 @@ class StorageResourceClass(models.Model):
         return "%s/%s" % (self.storage_plugin.module_name, self.class_name)
 
     def get_class(self):
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         return storage_plugin_manager.get_resource_class_by_id(self.pk)
 
     class Meta:
@@ -122,7 +122,7 @@ class StorageResourceRecord(models.Model):
             yield (i.key, i.value)
 
     def to_resource(self):
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         klass = storage_plugin_manager.get_resource_class_by_id(self.resource_class_id)
         storage_dict = {}
         for attr in self.storageresourceattribute_set.all():
@@ -132,14 +132,14 @@ class StorageResourceRecord(models.Model):
         return resource
 
     def to_resource_class(self):
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class(
                 self.resource_class.storage_plugin.module_name,
                 self.resource_class.class_name)
         return klass
 
     def get_statistic_properties(self, stat_name):
-        from configure.lib.storage_plugin import storage_plugin_manager
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class(
                 self.resource_class.storage_plugin.module_name,
                 self.resource_class.class_name)
@@ -175,13 +175,35 @@ class StorageResourceStatistic(models.Model):
             result = []
             for i in range(0, len(stat_props.bins)):
                 bin_info = stat_props.bins[i]
-                print latest_data
                 result.append((bin_info, latest_data["%s_%s" % (self.name, i)]))
         else:
             # Scalar types
             result = latest_data[self.name]
 
         return result
+
+    def get_latest_json(self):
+        """For use with frontend"""
+        latest_ts, latest_data = self.metrics.fetch_last()
+        print "latest: %s %s" % (latest_ts, latest_data)
+        stat_props = self.storage_resource.get_statistic_properties(self.name)
+        from configure.lib.storage_plugin import statistics
+        if isinstance(stat_props, statistics.BytesHistogram):
+            type_name = 'histogram'
+            # Composite type
+            data = {'bin_labels': [], 'values': []}
+            for i in range(0, len(stat_props.bins)):
+                bin_info = stat_props.format_bin(stat_props.bins[i])
+                data['bin_labels'].append(bin_info)
+                bin_name = "%s_%s" % (self.name, i)
+                data['values'].append(latest_data[bin_name])
+        else:
+            type_name = 'string'
+            # Scalar types
+            data = latest_data[self.name]
+
+        import json
+        return json.dumps({'type': type_name, 'data': data})
 
 class StorageResourceAttribute(models.Model):
     """An attribute of a StorageResource instance.

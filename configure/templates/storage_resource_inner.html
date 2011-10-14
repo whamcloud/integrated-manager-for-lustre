@@ -54,25 +54,54 @@
 {% if stats %}
 <h3>{{resource.human_class}} statistics</h3>
 <table>
-{% for name,latest_val in stats.items %}
-{% if name == 'test_hist' %}
-<tr><td colspan=2>
-        <script type='text/javascript'>
-            $(document).ready(function() {
+{% for name,val_json in stats.items %}
+<tr>
+    <td id='stat_label_{{name}}'>{{name}}</td>
+    <td id='stat_content_{{name}}'></td>
+    <script type='text/javascript'>
+        $(document).ready(function() {
+                var val = {{val_json|safe}};
+                console.log(val);
+                if (val.type == 'histogram') {
+                    $('#stat_content_{{name}}').css("width", "300px");
+                    $('#stat_content_{{name}}').css("height", "200px");
                     chart = new Highcharts.Chart({
                         chart: {
-                            renderTo:'histogram',
-                            defaultSeriesType:'line'
+                            renderTo:'stat_content_{{name}}',
+                            type: 'column'
+                        },
+                        credits: {enabled: false},
+                        title: {text: "{{name}}"},
+                        legend: {enabled: false},
+                        yAxis: {
+                            'labels': {enabled: false},
+                            'title': {text: null},
+                            'gridLineWidth': 0
+                        },
+                        xAxis: {
+                            categories: val.data.bin_labels,
+                            labels: {style: "font-size: 6pt;"}
+                        },
+                        series: [{
+                            'data': val.data.values,
+                            'name': 'Samples'
+                        }],
+                        plotOptions: {
+                            'column': {
+                                'shadow': false,
+                                'pointPadding': 0.0,
+                                'groupPadding': 0.0,
+                            }
                         }
                     });
-            });
-        </script>
-        <div id="histogram">
-        </div>
+                } else if (val.type == 'string') {
+                    $('#stat_content_{{name}}').html(val.data);
+                } else {
+                    console.log("Error: unknown stat type " + val.type);
+                }
+        });
+    </script>
 </td></th>
-{% else %}
-<tr><th>{{name}}</th><td>{{latest_val}}</td></tr>
-{% endif %}
 {% endfor %}
 </table>
 {% endif %}
