@@ -12,7 +12,7 @@ setup(
     version = __version__,
     author = "Whamcloud, Inc.",
     author_email = "info@whamcloud.com",
-    packages = ['r3d'],
+    packages = ['r3d', 'r3d/migrations'],
     url = 'http://www.whamcloud.com/',
     license = 'GPL',
     description = 'Relational Round-Robin Databases (R3D) for Django', 
