@@ -178,127 +178,131 @@ class ResourceManager(object):
             # to Lun and LunNode objects to interface with the world of Lustre
             # TODO: don't just do this at creation, do updates too
             from linux import HydraHostProxy
-            from configure.lib.storage_plugin.manager import storage_plugin_manager
             from configure.lib.storage_plugin.query import ResourceQuery
-            from configure.lib.storage_plugin import base_resources
-            from monitor.models import Lun, LunNode, Host
             scannable_resource = ResourceQuery().get_resource(scannable_id)
             if isinstance(scannable_resource, HydraHostProxy):
-                # TODO: restrict below searches to only this scannable ID to 
-                # avoid rescanning everything every time
-
-                def lun_get_or_create(resource_id):
-                    try:
-                        return Lun.objects.get(storage_resource_id = resource_id)
-                    except Lun.DoesNotExist:
-                        # Determine whether a device is shareable by whether it has a SCSI
-                        # ancestor (e.g. an LV on a scsi device is shareable, an LV on an IDE
-                        # device is not)
-                        from linux import ScsiDevice
-                        scsi_ancestor = ResourceQuery().record_find_ancestors(resource_id, ScsiDevice)
-                        shareable = (scsi_ancestor != None)
-                        r = ResourceQuery().get_resource(resource_id)
-                        lun = Lun.objects.create(
-                                size = r.size,
-                                storage_resource_id = r._handle,
-                                shareable = shareable)
-
-                        return lun
-
-                # Update LunNode objects for DeviceNodes
-                node_types = []
-                # FIXME: mechanism to get subclasses of base_resources.DeviceNode
-                node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'ScsiDeviceNode')[1])
-                node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'UnsharedDeviceNode')[1])
-                node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'LvmDeviceNode')[1])
-                node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'PartitionDeviceNode')[1])
-                node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'MultipathDeviceNode')[1])
-                node_resources = ResourceQuery().get_class_resources(node_types, storage_id_scope = scannable_id)
-                host = Host.objects.get(pk = scannable_resource.host_id)
-                touched_luns = set()
-                touched_lun_nodes = set()
-                for record in node_resources:
-                    r = record.to_resource()
-                    # A node which has children is already in use
-                    # (it might contain partitions, be an LVM PV, be in 
-                    #  use by a local filesystem, or as swap)
-                    if ResourceQuery().record_has_children(r._handle):
-                        continue
-
-                    device = ResourceQuery().record_find_ancestor(record.pk, base_resources.LogicalDrive)
-                    if device == None:
-                        raise RuntimeError("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
-
-                    lun = lun_get_or_create(device)
-                    try:
-                        lun_node = LunNode.objects.get(
-                                host = host,
-                                path = r.path)
-                        if not lun_node.storage_resource_id:
-                            lun_node.storage_resource_id = record.pk
-                            lun_node.save()
-
-                    except LunNode.DoesNotExist:
-                        # If setting up a non-shareable device, make its first
-                        # LunNode a primary
-                        if not lun.shareable:
-                            primary = True
-                            use = True
-                        else:
-                            primary = False
-                            use = False
-
-                        # A hack to provide some arbitrary primary/secondary assignments
-                        import settings
-                        if settings.PRIMARY_LUN_HACK:
-                            if lun.lunnode_set.count() == 0:
-                                primary = True
-                                use = True
-                            else:
-                                primary = False
-                                if lun.lunnode_set.filter(use = True).count() > 1:
-                                    use = False
-                                else:
-                                    use = True
-
-                        lun_node = LunNode.objects.create(
-                            lun = lun,
-                            host = host,
-                            path = r.path,
-                            storage_resource_id = record.pk,
-                            primary = primary,
-                            use = use)
-
-                    touched_luns.add(lun_node.pk)
-                    touched_lun_nodes.add(lun_node.pk)
-                    # BUG: when mjmac set up on IU, it saw mpath devices fine as 
-                    # LunNodes.  But when he created some CLVM LVs on multipath
-                    # devices, the multipath devices stayed (see TODO below) AND
-                    # the new LV devices didn't appear.  Why didn't they get promoted
-                    # to LunNodes?  they were in hydra-agent output
-                    # TODO: cope with CLVM where device nodes appear and disappear
-                    # - simplest thing would be to have the agent lie and claim
-                    # that the device node is always there (based on LV presence
-                    # in 'lvs' output.  But that's a hack.  And appearing in 'lvs'
-                    # just means the PVs are on shared storage that the host has 
-                    # access to, not necessarily that the host is in the pacemaker
-                    # group that will access the LVs.
-                
-                # TODO: do this checking on create/remove/link operations too
-                for lun_node in LunNode.objects.filter(host = host):
-                    if not lun_node.pk in touched_lun_nodes:
-                        lun = lun_node.lun
-                        from monitor.models import TargetMount
-                        if TargetMount.objects.filter(block_device = lun_node).count() == 0:
-                            log.info("Removing LunNode %s" % lun_node)
-                            lun_node.delete()
-                            if lun.lunnode_set.count() == 0:
-                                log.info("Removing Lun %s" % lun_node)
-                                lun.delete()
-                            else:
-                                log.info("Keeping Lun %s, reffed by another LunNode" % lun_node)
+                self._persist_lun_updates(scannable_id, scannable_resource)
 
         log.info("<< session_open %s" % scannable_id)
+
+
+    @transaction.autocommit
+    def _persist_lun_updates(self, scannable_id, scannable_resource):
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from configure.lib.storage_plugin.query import ResourceQuery
+        from configure.lib.storage_plugin import base_resources
+        from monitor.models import Lun, LunNode, Host
+        def lun_get_or_create(resource_id):
+            try:
+                return Lun.objects.get(storage_resource_id = resource_id)
+            except Lun.DoesNotExist:
+                # Determine whether a device is shareable by whether it has a SCSI
+                # ancestor (e.g. an LV on a scsi device is shareable, an LV on an IDE
+                # device is not)
+                from linux import ScsiDevice
+                scsi_ancestor = ResourceQuery().record_find_ancestors(resource_id, ScsiDevice)
+                shareable = (scsi_ancestor != None)
+                r = ResourceQuery().get_resource(resource_id)
+                lun = Lun.objects.create(
+                        size = r.size,
+                        storage_resource_id = r._handle,
+                        shareable = shareable)
+                return lun
+
+        # TODO: restrict below searches to only this scannable ID to 
+        # avoid rescanning everything every time
+        # Update LunNode objects for DeviceNodes
+        node_types = []
+        # FIXME: mechanism to get subclasses of base_resources.DeviceNode
+        node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'ScsiDeviceNode')[1])
+        node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'UnsharedDeviceNode')[1])
+        node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'LvmDeviceNode')[1])
+        node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'PartitionDeviceNode')[1])
+        node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'MultipathDeviceNode')[1])
+        node_resources = ResourceQuery().get_class_resources(node_types, storage_id_scope = scannable_id)
+        host = Host.objects.get(pk = scannable_resource.host_id)
+        touched_luns = set()
+        touched_lun_nodes = set()
+        for record in node_resources:
+            r = record.to_resource()
+            # A node which has children is already in use
+            # (it might contain partitions, be an LVM PV, be in 
+            #  use by a local filesystem, or as swap)
+            if ResourceQuery().record_has_children(r._handle):
+                continue
+
+            device = ResourceQuery().record_find_ancestor(record.pk, base_resources.LogicalDrive)
+            if device == None:
+                raise RuntimeError("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
+
+            lun = lun_get_or_create(device)
+            try:
+                lun_node = LunNode.objects.get(
+                        host = host,
+                        path = r.path)
+                if not lun_node.storage_resource_id:
+                    lun_node.storage_resource_id = record.pk
+                    lun_node.save()
+
+            except LunNode.DoesNotExist:
+                # If setting up a non-shareable device, make its first
+                # LunNode a primary
+                if not lun.shareable:
+                    primary = True
+                    use = True
+                else:
+                    primary = False
+                    use = False
+
+                # A hack to provide some arbitrary primary/secondary assignments
+                import settings
+                if settings.PRIMARY_LUN_HACK:
+                    if lun.lunnode_set.count() == 0:
+                        primary = True
+                        use = True
+                    else:
+                        primary = False
+                        if lun.lunnode_set.filter(use = True).count() > 1:
+                            use = False
+                        else:
+                            use = True
+
+                lun_node = LunNode.objects.create(
+                    lun = lun,
+                    host = host,
+                    path = r.path,
+                    storage_resource_id = record.pk,
+                    primary = primary,
+                    use = use)
+
+            touched_luns.add(lun_node.pk)
+            touched_lun_nodes.add(lun_node.pk)
+            # BUG: when mjmac set up on IU, it saw mpath devices fine as 
+            # LunNodes.  But when he created some CLVM LVs on multipath
+            # devices, the multipath devices stayed (see TODO below) AND
+            # the new LV devices didn't appear.  Why didn't they get promoted
+            # to LunNodes?  they were in hydra-agent output
+            # TODO: cope with CLVM where device nodes appear and disappear
+            # - simplest thing would be to have the agent lie and claim
+            # that the device node is always there (based on LV presence
+            # in 'lvs' output.  But that's a hack.  And appearing in 'lvs'
+            # just means the PVs are on shared storage that the host has 
+            # access to, not necessarily that the host is in the pacemaker
+            # group that will access the LVs.
+        
+        # TODO: do this checking on create/remove/link operations too
+        for lun_node in LunNode.objects.filter(host = host):
+            if not lun_node.pk in touched_lun_nodes:
+                lun = lun_node.lun
+                from monitor.models import TargetMount
+                if TargetMount.objects.filter(block_device = lun_node).count() == 0:
+                    log.info("Removing LunNode %s" % lun_node)
+                    lun_node.delete()
+                    if lun.lunnode_set.count() == 0:
+                        log.info("Removing Lun %s" % lun_node)
+                        lun.delete()
+                    else:
+                        log.info("Keeping Lun %s, reffed by another LunNode" % lun_node)
 
     def session_update_resource(self, scannable_id, local_resource_id, attrs):
         with self._instance_lock:

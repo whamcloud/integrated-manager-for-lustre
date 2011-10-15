@@ -125,28 +125,8 @@ class HydraDebug(cmd.Cmd, object):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         storage_plugin_manager.create_root_resource(plugin, resource, **kwargs)
 
-    def do_run_storage_plugin(self, module_name):
-        """Development stub for quickly loading and scanning storage
-           plugins."""
-        from configure.lib.storage_plugin import ResourceQuery, storage_plugin_manager
-        from configure.models import StorageResourceRecord
-        import time
-
-        klass = storage_plugin_manager.load_plugin(module_name)
-        scannable_ids = storage_plugin_manager.get_scannable_resource_ids(module_name)
-
-        if len(scannable_ids) > 1:
-            print "Warning, multiple root resources, picking the first one"
-        root_resource = ResourceQuery().get_resource(scannable_ids[0]['id'])
-
-        instance = klass()
-        instance.do_initial_scan(root_resource)
-        while True:
-            instance.do_periodic_update(root_resource)
-            time.sleep(5)
-            
     def do_storage_graph(self, arg_string):
-        from configure.lib.storage_plugin import ResourceQuery
+        from configure.lib.storage_plugin.query import ResourceQuery
         resources = ResourceQuery().get_all_resources()
         import pygraphviz as pgv
         G = pgv.AGraph(directed=True)

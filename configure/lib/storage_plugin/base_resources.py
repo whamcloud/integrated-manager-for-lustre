@@ -31,10 +31,6 @@ class Fan(StorageResource):
 class Enclosure(StorageResource):
     pass
 
-class DeviceNode(StorageResource):
-    path = attributes.PosixPath()
-
-    human_name = 'Device node'
-
 class LogicalDrive(StorageResource):
     size = attributes.Bytes()
+    icon = 'virtual_disk'

@@ -211,7 +211,7 @@ class StorageResource(object):
                 if attr.optional:
                     return None
                 else:
-                    raise AttributeError("attribute %s not found")
+                    raise AttributeError("attribute %s not found" % key)
 
     @classmethod
     def attrs_to_id_tuple(cls, attrs):

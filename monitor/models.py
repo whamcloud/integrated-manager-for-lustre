@@ -234,6 +234,9 @@ class Lun(models.Model):
     # for shared storage to not provide a serial number.
     shareable = models.BooleanField()
 
+    class Meta:
+        unique_together = ('storage_resource_id',)
+
     @classmethod
     def get_unused_luns(cls):
         """Get all Luns which are not used by Targets"""

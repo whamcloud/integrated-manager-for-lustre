@@ -108,7 +108,7 @@ class ResourceReference(ResourceAttribute):
         
     def to_markup(self, value):
         from django.core.urlresolvers import reverse
-        url = reverse('configure.views.storage_resource', kwargs = {'vrr_id': value._handle})
+        url = reverse('configure.views.storage_resource', kwargs = {'srr_id': value._handle})
 
         from configure.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = value._handle)

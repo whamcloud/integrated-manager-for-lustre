@@ -9,11 +9,31 @@ from configure.lib.storage_plugin.resource import StorageResource, ScannableId, 
 from configure.lib.storage_plugin import attributes
 from configure.lib.storage_plugin import base_resources
 from configure.lib.storage_plugin import alert_conditions
+from configure.lib.storage_plugin import statistics
 
 # This plugin is special, it uses Hydra's built-in infrastructure
 # in a way that third party plugins can't/shouldn't/mustn't
 from configure.lib.agent import Agent
 from configure.models import ManagedHost
+
+class DeviceNode(StorageResource):
+    # NB ideally we would get this from exploring the graph rather than
+    # tagging it onto each one, but this is simpler for now - jcs
+    host = attributes.ResourceReference()
+    path = attributes.PosixPath()
+    human_name = 'Device node'
+
+    def human_string(self):
+        path = self.path
+        strip_strings = ["/dev/",
+                         "/dev/mapper/",
+                         "/dev/disk/by-id/",
+                         "/dev/disk/by-path/"]
+        strip_strings.sort(lambda a,b: cmp(len(b), len(a)))
+        for s in strip_strings:
+            if path.startswith(s):
+                path = path[len(s):]
+        return "%s:%s" % (self.host.human_string(), path)
 
 class HydraHostProxy(StorageResource, ScannableResource):
     identifier = GlobalId('host_id')
@@ -33,6 +53,7 @@ class HydraHostProxy(StorageResource, ScannableResource):
 # For any of the above, we must also work out their leaf device nodes, which
 # should be just the leaf resources.
 
+HACK_TEST_STATS = False
 
 class ScsiDevice(base_resources.LogicalDrive):
     identifier = GlobalId('serial')
@@ -41,13 +62,23 @@ class ScsiDevice(base_resources.LogicalDrive):
 
     human_name = "SCSI device"
 
+    if HACK_TEST_STATS:
+        test_stat = statistics.Gauge()
+        test_hist = statistics.BytesHistogram(bins = [(0,256), (257,512), (513, 2048), (2049, 8192)])
+        beef_alert = alert_conditions.AttrValAlertCondition('serial', warn_states = ['SQEMU    QEMU HARDDISK  WD-deadbeef0'], message = "Beef alert in sector 2!")
+
     def human_string(self, ancestors = []):
-        if self.serial[0] == 'S':
+        qemu_strip_hack = "SQEMU    QEMU HARDDISK  "
+
+        if self.serial.startswith(qemu_strip_hack):
+            # FIXME: this is a hack that I'm doing for demos because we're not getting SCSI serials in parts yet
+            return self.serial[len(qemu_strip_hack):]
+        elif self.serial[0] == 'S':
             return self.serial[1:]
         else:
             return self.serial
 
-class UnsharedDeviceNode(base_resources.DeviceNode):
+class UnsharedDeviceNode(DeviceNode):
     """A device node whose underlying device has no SCSI ID
     and is therefore assumed to be unshared"""
     identifier = ScannableId('path')
@@ -69,19 +100,27 @@ class UnsharedDevice(base_resources.LogicalDrive):
     def human_string(self):
         return self.path
 
-class ScsiDeviceNode(base_resources.DeviceNode):
+class ScsiDeviceNode(DeviceNode):
     """SCSI in this context is a catch-all to refer to
     block devices which look like real disks to the host OS"""
     identifier = ScannableId('path')
-    human_name = "SCSI device node"
+    #human_name = "SCSI device node"
+    host = attributes.ResourceReference()
+        
 
-class MultipathDeviceNode(base_resources.DeviceNode):
+class MultipathDeviceNode(DeviceNode):
     identifier = ScannableId('path')
     human_name = "Multipath device node"
 
-class LvmDeviceNode(base_resources.DeviceNode):
+class LvmDeviceNode(DeviceNode):
     identifier = ScannableId('path')
     human_name = "LVM device node"
+
+    def human_string(self):
+        # LVM devices are only presented once per host,
+        # so just need to say which host this device node is for
+        return "%s" % (self.host.human_string())
+
 
 # FIXME: partitions should really be GlobalIds (they can be seen from more than
 # one host) where the ID is their number plus the a foreign key to the parent 
@@ -95,7 +134,7 @@ class Partition(base_resources.LogicalDrive):
     def human_string(self):
         return self.path
 
-class PartitionDeviceNode(base_resources.DeviceNode):
+class PartitionDeviceNode(DeviceNode):
     identifier = ScannableId('path')
     human_name = "Linux partition"
 
@@ -112,6 +151,8 @@ class Linux(StoragePlugin):
     def __init__(self, *args, **kwargs):
         super(Linux, self).__init__(*args, **kwargs)
         self.agent = Agent(log = self.log)
+
+        self._scsi_devices = set()
 
     # TODO: need to document that initial_scan may not kick off async operations, because
     # the caller looks at overall resource state at exit of function.  If they eg
@@ -152,6 +193,7 @@ class Linux(StoragePlugin):
         res_by_serial = {}
         for dev in devs_by_serial.values():
             res, created = self.update_or_create(ScsiDevice, serial = dev['serial'], size = dev['size'])
+            self._scsi_devices.add(res)
             res_by_serial[dev['serial']] = res
 
         bdev_to_resource = {}
@@ -169,6 +211,7 @@ class Linux(StoragePlugin):
                 lun_resource = res_by_serial[bdev['serial']]
                 res, created = self.update_or_create(ScsiDeviceNode,
                                     parents = [lun_resource],
+                                    host = root_resource,
                                     path = bdev['path'])
             else:
                 res, created = self.update_or_create(UnsharedDevice,
@@ -176,6 +219,7 @@ class Linux(StoragePlugin):
                         size = bdev['size'])
                 res, created = self.update_or_create(UnsharedDeviceNode,
                         parents = [res],
+                        host = root_resource,
                         path = bdev['path'])
             bdev_to_resource[bdev['major_minor']] = res
 
@@ -186,12 +230,15 @@ class Linux(StoragePlugin):
         for bdev in devices['devs'].values():
             if bdev['major_minor'] in lv_block_devices:
                 res,created = self.update_or_create(LvmDeviceNode,
+                                    host = root_resource,
                                     path = bdev['path'])
             elif bdev['major_minor'] in mpath_block_devices:
                 res,created = self.update_or_create(MultipathDeviceNode,
+                                    host = root_resource,
                                     path = bdev['path'])
             elif bdev['parent']:
                 res, created = self.update_or_create(PartitionDeviceNode,
+                        host = root_resource,
                         path = bdev['path'])
             else:
                 continue
@@ -261,6 +308,14 @@ class Linux(StoragePlugin):
                     mount_point = mntpnt,
                     fstype = fstype)
 
+    def update_scan(self, scannable_resource):
+        if HACK_TEST_STATS:
+            for scsi_dev in list(self._scsi_devices):
+                import random
+                num = random.randint(10, 20)
+                scsi_dev.test_stat = num
+                scsi_dev.test_hist = [random.randint(50,100) for r in range(0,4)]
+
 class LvmGroup(base_resources.StoragePool):
     identifier = GlobalId('uuid')
     
@@ -269,7 +324,7 @@ class LvmGroup(base_resources.StoragePool):
     size = attributes.Bytes()
 
     icon = 'lvm_vg'
-    human_name = 'VG'
+    human_name = 'Volume group'
 
     def human_string(self, parent = None):
         return self.name
@@ -289,7 +344,7 @@ class LvmVolume(base_resources.LogicalDrive):
     name = attributes.String()
 
     icon = 'lvm_lv'
-    human_name = 'LV'
+    human_name = 'Logical volume'
 
     def human_string(self, ancestors = []):
         return "%s-%s" % (self.vg.name, self.name)

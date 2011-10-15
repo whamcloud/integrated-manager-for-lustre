@@ -1,6 +1,14 @@
 
 {% extends 'properties_base.html' %}
 
+{% block scripts %}
+<script type="text/javascript" src="{{STATIC_URL}}js/js-graph-it.js" ></script>
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/js-graph-it.css">
+{% endblock %}
+
 {% block title %}
 {{target}}
 {% endblock %}
@@ -27,11 +35,29 @@
 {% endfor %}
 
 <h3>Storage resources</h3>
-<ul>
-{% for record in ancestor_records %}
-<li><a href="{% url configure.views.storage_resource srr_id=record.id %}">{{record.alias_or_name}}</a></li>
+
+
+<div class="canvas" style="background: white; position: relative; height: {{graph.height}}px; width: {{graph.width}}px; border: 1px solid gray;">
+{% for node in graph.nodes %}
+<div class="block" style="padding: 2px; border-radius: 4px; border: 1px solid gray; box-shadow: 4px 4px 2px #ccc; width: {{graph.item_width}}; height: {{graph.item_height}}; position: absolute; left: {{node.left}}; top: {{node.top}};" id="{{node.id}}">
+    <div style="border-bottom: 2px solid gray;margin-bottom: 3px; padding-bottom: 2px;">
+    <img src="{{node.icon}}"><span style="margin-top: -3px; margin-left: 3px; font-size: 8pt; font-weight: bold;">{{node.type}}</span><br>
+    </div>
+    <span style="font-size: 8pt;">
+        <a href="{% url configure.views.storage_resource node.id %}">{{node.title}}</a>
+    </span>
+</div>
 {% endfor %}
-</ul>
+{% for edge in graph.edges %}
+<div class="connector {{edge.0}} {{edge.1}}"></div>
+{% endfor %}
+</div>
+
+<script type='text/javascript'>
+    $(document).ready(function() {
+            initPageObjects();
+    });
+</script>
 
 <h3>Lustre alerts</h3>
 <ul>
