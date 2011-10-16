@@ -153,16 +153,16 @@
                 <fieldset>
                 <table width="100%" border="0">
                   <tr>
-                    <td  valign="top" class="text" width="25%" align="center"><!--  <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> -->
-                      <div id="container" class="round-table"></div></td>
+                    <td  valign="top" class="text" width="30%" align="center"><!--  <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> -->
+                      <div id="container" class="round-table" style="width: 300px"></div></td>
                     <!--<td  valign="top" class="text" width="25%" align="center"> <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> 
-                      <div id="container1" class="round-table"></div></td> -->
-                    <td  valign="top" class="text" width="25%" align="center"><!-- <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> -->
-                      <div id="container2" class="round-table"></div></td>
-                    <td  valign="top" class="text" width="25%" align="center"><!-- <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> -->
-                      <div id="container3" class="round-table"></div></td>
-                    <td  valign="top" class="text" width="25%" align="center"><!-- <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> -->
-                      <div id="" class="round-table">   
+                      <div id="container1" class="round-table"></div></td> 
+                    <td  valign="top" class="text" width="25%" align="center"><!-- <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div>
+                      <div id="container2" class="round-table"></div></td>-->
+                    <td  valign="top" class="text" width="30%" align="center"><!-- <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> -->
+                      <div id="container3" class="round-table" style="width: 300px"></div></td>
+                    <td  valign="top" class="text" width="30%" align="center"><!-- <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> -->
+                      <div id="" class="round-table" style="width: 300px">   
                      <table width="100%">
                      	<tr><td align="center" colspan="4"><b>All Filesystems Summary</b></td></tr>
                      	<tr><td width='30%' align='center' valign='top' ><span class='fontStyle style2 style9'><b>File system</b></span><td width='20%' align='center' valign='top' ><span class='fontStyle style2 style9'></span><b>OSS</b></td><td width='20%' align='center' valign='top' ><span class='fontStyle style2 style9'><b>OST</b></span></td></tr>
@@ -188,28 +188,28 @@
                 <fieldset>
                 <table width="100%" border="0" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td  valign="top" class="text" width="25%" align="center">
+                    <td  valign="top" class="text" width="30%" align="center">
                       <div class="magni">
-                        <input type="button" value=" " class="magbutton" onclick="db_Line_CpuUsage_Data('true');setZoomDialogTitle('All File System CPU Usage');"/>
+                        <input type="button" value="" style="margin-left:115px" class="magbutton" onclick="db_Line_CpuUsage_Data('true');setZoomDialogTitle('All File System CPU Usage');"/>
                       </div>
                       <div style="clear:right;"></div>
-                      <div id="avgCPUDiv" class="round-table">Filesystems Avg CPU</div></td>
-                    <td  valign="top" class="text" width="25%" align="center"><div class="magni">
-                        <input type="button" value=" " class="magbutton" onclick="db_Line_MemoryUsage_Data('true');setZoomDialogTitle('All File System Memory Usage');"/>
+                      <div id="avgCPUDiv" class="round-table" style="width: 300px">Filesystems Avg CPU</div></td>
+                    <td  valign="top" class="text" width="30%" align="center"><div class="magni">
+                        <input type="button" value="" style="margin-left:115px" class="magbutton" onclick="db_Line_MemoryUsage_Data('true');setZoomDialogTitle('All File System Memory Usage');"/>
                       </div>
                       <div style="clear:right;"></div>
-                      <div id="avgMemoryDiv" class="round-table">Filesystems Avg Memory</div></td>
-                    <td  valign="top" class="text" width="25%" align="center"><div class="magni">
-                        <input type="button" value=" " class="magbutton" onclick="db_Line_DiskRead_Data('true');setZoomDialogTitle('Disk Read');"/>
+                      <div id="avgMemoryDiv" class="round-table" style="width: 300px">Filesystems Avg Memory</div></td>
+                    <td  valign="top" class="text" width="30%" align="center"><div class="magni">
+                        <input type="button" value="" style="margin-left:115px" class="magbutton" onclick="db_Line_DiskRead_Data('true');setZoomDialogTitle('Disk Read');"/>
                       </div>
                       <div style="clear:right;"></div>
-                      <div id="avgReadDiv" class="round-table">File System Avg Read</div></td>
-                    <td  valign="top" class="text" width="25%" align="center"><!-- <div class="magni">
+                      <div id="avgReadDiv" class="round-table" style="width: 300px">File System Avg Read</div></td>
+                    <!--<td  valign="top" class="text" width="25%" align="center"> <div class="magni">
                         <input type="button" value=" " class="magbutton" onclick="db_Line_DiskWrite_Data('true');setZoomDialogTitle('Disk Write');"/>
-                      </div>	 -->
+                      </div>	 
                       <div style="clear:right;"></div>
                       <div id="avgWriteDiv" class="">Summary Info
-                      </div></td>
+                      </div></td>-->
                   </tr>
                 </table>
                 </fieldset>
@@ -219,13 +219,13 @@
           <tr>
             <td colspan="3"><form>
                 <fieldset>
-                <legend class="legendClass">All MDS Performance Summary
-                <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
-                </legend>
+                <!--<legend class="legendClass">All MDS Performance Summary
+                <a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
+                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;
+                </legend>-->
                 <table width="100%" border="0" cellpadding="0" cellspacing="0">
                   <tr height="220">
-                    <td  valign="top" class="text" width="25%" align="center"><div class="magni">
+                   <!-- <td  valign="top" class="text" width="25%" align="center"><div class="magni">
                         <input type="button" value=" " class="magbutton" onclick="db_Mgs_Line_CpuUsage_Data('true');setZoomDialogTitle('All MDS/MGS CPU Usage');"/>
                       </div>
                       <div style="clear:right;"></div>
@@ -235,7 +235,7 @@
                       </div>
                       <div style="clear:right;"></div>
                       <div id="mgsavgMemoryDiv" class="round-table">Filesystems Avg Memory</div></td>
-                    <!-- <td  valign="top" class="text" width="25%" align="center"><div class="magni">
+                     <td  valign="top" class="text" width="25%" align="center"><div class="magni">
                         <input type="button" value=" " class="magbutton" onclick="db_Mgs_Line_DiskRead_Data('true');setZoomDialogTitle('Disk Read');"/>
                       </div>
                       <div style="clear:right;"></div>
@@ -245,11 +245,11 @@
                       </div>
                       <div style="clear:right;"></div>
                       <div id="mgsavgWriteDiv" class="round-table">Filesystems Avg Write</div></td>	 -->
-                      <td  valign="top" class="text" width="50%" align="center"><div class="magni">
-                        <input type="button" value=" " class="magbutton" onclick="" style="margin-left:338px"/>
+                      <td  valign="top" class="text" width="100%" align="center"><div class="magni">
+                        <input type="button" value=" " class="magbutton" onclick="" style="margin-left:970px"/>
                       </div>
                       <div style="clear:right;"></div>
-                      <div id="heatMapDiv" class="round-table" style="width: 500px">Filesystems Avg Memory</div></td>
+                      <div id="heatMapDiv" class="round-table" style="width: 1150px">Filesystems Avg Memory</div></td>
                   </tr>
                 </table>
                 </fieldset>
@@ -617,7 +617,7 @@
           <td colspan="3"></td>
         </tr>
       </table>
-    
+   </div> 
     <!-- OSS Div - End -->
     <!-- OST Div - Start -->
     <div id="ostInfoDiv" style="display: none">
@@ -726,12 +726,12 @@
               </legend>
               <table width="100%" border="0">
                 <tr>
-                  <td  valign="top" class="text" width="50%" align="center"><div class="magni" style="margin-left:465px">
+                  <td  valign="top" class="text" width="50%" align="center"><div class="magni" style="margin-left:515px">
                       <input type="button" value=" " class="magbutton" onclick="OST_Line_DiskRead_Data($('#ostSelect').val(),'29-20-2011','29-20-2011','average');setZoomDialogTitle('Disk Read');"/>
                     </div>
                     <div style="clear:right;"></div>
                     <div id="ost_avgReadDiv" style="width: 500px" class="round-table">OST Disk Read</div></td>
-                  <td  valign="top" class="text" width="50%" align="center"><div class="magni" style="margin-left:465px">
+                  <td  valign="top" class="text" width="50%" align="center"><div class="magni" style="margin-left:515px">
                       <input type="button" value=" " class="magbutton" onclick="OST_Line_DiskWrite_Data($('#ostSelect').val(),'29-20-2011','29-20-2011','average');setZoomDialogTitle('Disk Write');"/>
                     </div>
                     <div style="clear:right;"></div>

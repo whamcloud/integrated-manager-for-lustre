@@ -114,13 +114,13 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
 	    .complete(function(event){
 	         if(isEmpty == "false")
 	         {
-	        	 alertTabContent = alertTabContent + "<tr> <td colspan='5' align='center' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='#'>No Active Alerts</a></td></tr>";
+	        	 alertTabContent = alertTabContent + "<tr> <td colspan='5' align='center' class='alerts_all_ok'>No Active Alerts</td></tr>";
 	         }
 		     /*else
 		     {
 		    	 alertTabContent = alertTabContent + "<tr> <td colspan='5' align='right' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='/dashboard/dbalerts/'>(All Events)</a></td></tr>";
 		     }*/
-	         if(maxCount < 0)
+	         if(maxCount < 0 && isEmpty != "false")
 				{
 					$("#"+targetAlertDivName).html("<thead><tr><th>Alert Created At</th><th>Status</th><th>Host</th><th>Message</th></tr><thead><tbody>"+alertTabContent+"</tbody>");
 					$("#"+targetAlertDivName).dataTable({
@@ -213,6 +213,86 @@ loadEventContent = function(targetEventDivName, maxCount)
 //******************************************************************************/
 //Function to load content for jobs
 /******************************************************************************/
+loadLogContent = function(targetJobDivName, maxCount)
+{
+	    $('#'+targetJobDivName).html('<tr><td width="100%" align="center"><img src="/static/images/loading.gif" style="margin-top:10px;margin-bottom:10px" width="16" height="16" /></td></tr>');
+		var jobTabContent;
+		var isEmpty = "false";
+		var maxpagecnt=maxCount;
+		var pagecnt=0;
+		$.post("/api/getlogs/",{"lustre": "", "day": 14, "month": 10}) 
+		.success(function(data, textStatus, jqXHR) {
+			 if(data.success)
+		     {
+		        $.each(data.response, function(resKey, resValue)
+		        {
+				   pagecnt++;
+		           isEmpty = "true";
+		           if (maxpagecnt > pagecnt || maxpagecnt < 0)
+		           {
+		        	   jobTabContent = jobTabContent + "<tr> <td>" + resValue.date + "<td>"+ resValue.host+"</td><td>"+ resValue.service +"</td><td>" + resValue.message + "</td></tr>";
+		           }
+		        });
+		     }
+		})
+		.error(function(event) {
+		   //$('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
+		})
+		.complete(function(event){
+			if(isEmpty == "false")
+			{
+				jobTabContent = jobTabContent + "<tr> <td colspan='5' align='center' class='logs_all_ok'>No Logs</td></tr>";
+			}
+			/*else
+			{
+				jobTabContent = jobTabContent + "<tr><td colspan='5' align='right' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='/dashboard/dblogs/'>(All Jobs)</a></td></tr>";
+			}*/
+			if(maxCount < 0)
+			{
+				$("#"+targetJobDivName).html("<thead><tr><th>Log Created At</th><th>Host</th><th>Service</th><th>Message</th></tr><thead><tbody>"+jobTabContent+"</tbody>");
+				$("#"+targetJobDivName).dataTable({
+					 "aoColumns": [
+		                { "sClass": 'txtleft' },
+		                { "sClass": 'txtleft' },
+		                { "sClass": 'txtleft' },
+		                { "sClass": 'txtleft' }
+		              ],
+                     "iDisplayLength":50
+                    
+				});
+			}
+			else
+			{
+				$("#"+targetJobDivName).html(jobTabContent);
+			} 
+			
+		});
+}
+
+loadHostList = function(fileSystemName)
+{
+	var hostList = '<option>All</option>';
+	$.post("/api/listservers/",{filesystem:fileSystemName})
+    .success(function(data, textStatus, jqXHR) {
+         if(data.success)
+         {
+             $.each(data.response, function(resKey, resValue)
+             {
+                 if(resValue.kind=='OSS' || resValue.kind.indexOf('OSS')>0)
+                 {
+                	 hostList  =  hostList + "<option value="+resValue.host_address+">"+resValue.host_address+"</option>";
+                 }
+             });
+         }
+    })
+    .error(function(event) {
+        //$('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
+    })
+    .complete(function(event){
+    	$('#db_events_hostList').html(hostList);
+    });
+}
+
 loadJobContent = function(targetJobDivName)
 {
 	    $('#'+targetJobDivName).html('<tr><td width="100%" align="center"><img src="/static/images/loading.gif" style="margin-top:10px;margin-bottom:10px" width="16" height="16" /></td></tr>');
@@ -249,29 +329,5 @@ loadJobContent = function(targetJobDivName)
 			}
 			$("#"+targetJobDivName).html(jobTabContent);
 		});
-}
-
-loadHostList = function(fileSystemName)
-{
-	var hostList = '<option>All</option>';
-	$.post("/api/listservers/",{filesystem:fileSystemName})
-    .success(function(data, textStatus, jqXHR) {
-         if(data.success)
-         {
-             $.each(data.response, function(resKey, resValue)
-             {
-                 if(resValue.kind=='OSS' || resValue.kind.indexOf('OSS')>0)
-                 {
-                	 hostList  =  hostList + "<option value="+resValue.host_address+">"+resValue.host_address+"</option>";
-                 }
-             });
-         }
-    })
-    .error(function(event) {
-        //$('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
-    })
-    .complete(function(event){
-    	$('#db_events_hostList').html(hostList);
-    });
 }
 

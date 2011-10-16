@@ -32,7 +32,7 @@ var chartConfig_Bar_DB =
     chart:{
     renderTo: '',
 	marginLeft: '50',
-	width: '250',
+	width: '300',
 	style:{ width:'100%',  height:'200px' },
     },
     title:{text:'', style: { fontSize: '12px' } },
@@ -67,7 +67,7 @@ var chartConfig_Pie_DB =
     chart:{
     renderTo: '',
     marginLeft: '50',
-	width: '250',
+	width: '300',
 	style:{ width:'100%',  height:'200px' },
     },
     colors: [
@@ -107,7 +107,7 @@ var chartConfig_Line_CpuUsage =
 	chart:{
     renderTo: '',
     marginLeft: '50',
-	width: '250',
+	width: '300',
     height: '200',
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
@@ -141,7 +141,7 @@ var chartConfig_Line_MemoryUsage =
 	chart:{
     renderTo: '',
     marginLeft: '50',
-	width: '250',
+	width: '300',
     height: '200',
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
@@ -174,7 +174,7 @@ var chartConfig_Line_DiskRead =
 	chart:{
     renderTo: '',
     marginLeft: '50',
-	width: '250',
+	width: '300',
     height: '200',
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
@@ -207,7 +207,7 @@ var chartConfig_Line_DiskWrite =
 	chart:{
     renderTo: '',
     marginLeft: '50',
-	width: '250',
+	width: '300',
     height: '200',
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
@@ -240,7 +240,7 @@ var chartConfig_Mgs_Line_CpuUsage =
 	chart:{
     renderTo: '',
     marginLeft: '50',
-	width: '250',
+	width: '300',
     height: '200',
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
@@ -273,7 +273,7 @@ var chartConfig_Mgs_Line_MemoryUsage =
 	chart:{
     renderTo: '',
     marginLeft: '50',
-	width: '250',
+	width: '300',
     height: '200',
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
@@ -306,7 +306,7 @@ var chartConfig_Mgs_Line_DiskRead =
 	chart:{
     renderTo: '',
     marginLeft: '50',
-	width: '250',
+	width: '300',
     height: '200',
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
@@ -339,7 +339,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 	chart:{
     renderTo: '',
     marginLeft: '50',
-	width: '250',
+	width: '300',
     height: '200',
 	style:{ width:'100%',  height:'210', position: 'inherit' },
     defaultSeriesType: 'line',
@@ -377,7 +377,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 		         renderTo: 'container',
 		         defaultSeriesType: 'column',
 		         marginLeft: '50',
-		     	 width: '250',
+		     	 width: '300',
 		         height: '200',
 		     	 style:{ width:'100%',  height:'210', position: 'inherit' },
 		         marginRight: 0,
@@ -521,7 +521,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 /*****************************************************************************/
     db_Pie_Space_Data = function(isZoom)
     {
-    	var free=0,used=0;
+    	/*var free=0,used=0;
         $.post("/api/getfsdiskusage/",{endtime: "", datafunction: "", starttime: "", filesystem: ""})
         .success(function(data, textStatus, jqXHR)
         {
@@ -555,7 +555,7 @@ var chartConfig_Mgs_Line_DiskWrite =
                     ]
                 }];
             chart = new Highcharts.Chart(obj_db_Pie_Space_Data);
-        });
+        });*/
     }
 /*****************************************************************************/
 // Function for free INodes	- Bar Chart
@@ -625,7 +625,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 		      chart: {
 		    	  renderTo: 'container3',
 			    	marginLeft: '50',
-	        		width: '250',
+	        		width: '300',
 	        	    height: '200',
 	        		style:{ width:'100%',  height:'210', position: 'inherit' },
 	        	    marginBottom: 35,
@@ -727,7 +727,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 		    chart: {
 		        renderTo: 'avgCPUDiv',
 		    	marginLeft: '50',
-     		width: '250',
+     		width: '300',
      	    height: '200',
      		style:{ width:'100%',  height:'210', position: 'inherit' },
      	    marginBottom: 35,
@@ -837,7 +837,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 	         renderTo: 'avgMemoryDiv',
 	         defaultSeriesType: 'area',
 	         marginLeft: '50',
-	     	 width: '250',
+	     	 width: '300',
 	         height: '200',
 	     	 style:{ width:'100%',  height:'210', position: 'inherit' },
 	         marginRight: 0,
@@ -958,7 +958,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 	         renderTo: 'avgReadDiv',
 	         defaultSeriesType: 'area',
 	         marginLeft: '50',
-	     	 width: '250',
+	     	 width: '300',
 	         height: '200',
 	     	 style:{ width:'100%',  height:'210', position: 'inherit' },
 	         marginRight: 0,
@@ -1161,7 +1161,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 /*****************************************************************************/
  db_Mgs_Line_CpuUsage_Data = function(isZoom)
  {
-	 var chart = new Highcharts.Chart({
+	 /*var chart = new Highcharts.Chart({
 	     chart: {
 		 renderTo: 'mgsavgCPUDiv',
 		 marginLeft: '50',
@@ -1214,7 +1214,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 			       35, 36, 38, 40, 42, 44, 50, 55, 60, 70],
 		        name: 'Percentage',
 		    }]
-		});
+		});*/
         /*var count = 0;
          var optionData = [],categories = [];
         obj_db_Mgs_Line_CpuUsage_Data = chartConfig_Mgs_Line_CpuUsage;
@@ -1273,7 +1273,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 /*****************************************************************************/
  db_Mgs_Line_MemoryUsage_Data = function(isZoom)
  {
-	 chart = new Highcharts.Chart({
+	 /*chart = new Highcharts.Chart({
 	      chart: {
 	         renderTo: 'mgsavgMemoryDiv',
 	         defaultSeriesType: 'area',
@@ -1332,7 +1332,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 	      exporting:{
 	    	  enabled: true
 	      }
-	   });
+	   });*/
        /* var count = 0;
          var optionData = [],categories = [];
         obj_db_Mgs_Line_MemoryUsage_Data = chartConfig_Mgs_Line_MemoryUsage;
@@ -1396,7 +1396,7 @@ var chartConfig_Mgs_Line_DiskWrite =
 	         renderTo: 'heatMapDiv', 
 	         defaultSeriesType: 'scatter',
 	         marginLeft: '50',
-	     	 width: '500',
+	     	 width: '1150',
 	         height: '200',
 	     	 style:{ width:'100%',  height:'210', position: 'inherit' },
 	         marginRight: 0,

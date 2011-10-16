@@ -1,7 +1,4 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
-
-
-
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>Hydra Configuration</title>
@@ -22,7 +19,7 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/cm-custom_tabs.js"></script>
 
 <script language="javascript">
-	$(document).ready(function() {	
+	$(document).ready(function() {
 		LoadFSData_EditFS();
 		
 		LoadMGT_EditFS(); 
@@ -38,7 +35,6 @@
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtcenter' }
 			]
 		} );
 		
@@ -51,7 +47,6 @@
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtcenter' }
 			]
 		} );
 		
@@ -62,13 +57,31 @@
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtcenter' }
 			]
+		} );
+		
+		var oMgt = $('#popup-existing-mgt').dataTable( {
+			"bProcessing": true,
+			"bFilter": false,
+			"aoColumns": [
+				{ "sClass": 'txtcenter' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+			]
+		} );
+		
+		var oNewMgt = $('#popup-new-mgt').dataTable( {
+			"bProcessing": true,
+		} );
+		
+		var oNewMgt = $('#popup-new-mdt').dataTable( {
+			"bProcessing": true,
 		} );
 		
 		var oNewOst = $('#popup-new-ost').dataTable( {
 			"bProcessing": true,
-			"bPaginate": false
 		} );
 	} );
 	</script>
@@ -77,36 +90,31 @@
 a:link {
 	color: #003366;
 }
-body{
-	font-weight:bold;
-}
 -->
 </style>
 </head>
 <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
 <body>
-<input type="hidden" id="fs" value="{{fsname}}" />
-<div style="font-weight:bold;">
 <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px;">
   <tr>
-    <td width="30%" height="138" align="left" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+    <td width="30%" height="56" align="left" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
           <td width="26%" height="56" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
           <td width="27%" align="left" valign="top"><form id="form1" name="form1" method="post" action="">
               <label>
-              <input type="text" name="textfield" id="fsname" style="width:100px;" />
+              <input type="text" name="textfield" id="textfield" style="width:100px;" />
               </label>
             </form></td>
           <td width="37%" align="left" valign="top"><span id="launch_instance_btn"><span class="first-child">
             <button type="button" id="launch_instance_btn-button">Advanced Options</button>
             </span></span></td>
         </tr>
-    </table></td>
-    <td width="36%" align="left" valign="top"><fieldset>
+      </table></td>
+    <td width="70%" align="left" valign="top"><fieldset>
     <legend class="legendClass"><!--<a href="#"><img src="{{STATIC_URL}}images/close.png" class="closebutton"></a> | 
                 &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
       </legend>
-      <table width="100%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs">
+     <table width="51%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs">
         <tr class="greybgcol">
           <td width="25%" align="right" class="spaceright"><strong>File Used:</strong></td>
           <td class="spaceleft" width="17%" align="left"><div id="mdt_file"></div></td>
@@ -126,21 +134,24 @@ body{
           <td class="spaceleft" align="left"><div id="total_ost"></div></td>
         </tr>
       </table>
+
     </fieldset></td>
-    <td width="19%" align="center" valign="top"><div id="editfs_container2"></div></td>
-    <td width="15%" align="left" valign="top"><div id="editfs_container3"></div></td>
   </tr>
   <tr>
-    <td height="104" colspan="4" align="left" valign="top"><fieldset>
+    <td height="104" colspan="2" align="left" valign="top"><fieldset>
       <legend class="legendClass">Select MGT Configuration</legend>
+      <div class="buttonspacer"> <span id="launch_instance_btn"><span class="first-child">
+        <button type="button" id="btnExistingMGT">Select From Existing MGT</button>
+        </span></span> <span id="launch_instance_btn"><span class="first-child">
+        <button type="button" id="btnNewMGT">Create new MGT</button>
+        </span></span></div>
       <table cellpadding="0" cellspacing="0" border="0" class="display" id="example" width="100%">
         <thead>
           <tr>
             <th width="15%">Target Path</th>
             <th width="12%">Target Name</th>
             <th width="7%">Server Name</th>
-            <th width="12%">Failover Partner</th>
-            <th width='10%'>Action</th>
+            <th width="7%">Failover Partner</th>
           </tr>
         </thead>
         <tbody id="example_content">
@@ -150,16 +161,18 @@ body{
       </fieldset></td>
   </tr>
   <tr>
-    <td height="109" colspan="4" align="left" valign="top"><fieldset>
+    <td height="109" colspan="2" align="left" valign="top"><fieldset>
       <legend class="legendClass">Select MDT Configuration</legend>
+      <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
+        <button type="button" id="btnNewMDT">Create new MDT</button>
+        </span></span></div>
       <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
         <thead>
           <tr>
              <th width="15%">Target Path</th>
             <th width="12%">Target Name</th>
             <th width="7%">Server Name</th>
-            <th width="12%">Failover Partner</th>
-            <th width='10%'>Action</th>
+            <th width="7%">Failover Partner</th>
           </tr>
         </thead>
         <tbody id="mdt_content">
@@ -169,7 +182,7 @@ body{
       </fieldset></td>
   </tr>
   <tr>
-    <td height="54" colspan="4" align="left" valign="top"><fieldset>
+    <td height="54" colspan="2" align="left" valign="top"><fieldset>
       <legend class="legendClass">Select OST Configuration</legend>
       <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
         <button type="button" id="btnNewOST">Create new OST</button>
@@ -180,8 +193,7 @@ body{
             <th width="15%">Target Path</th>
             <th width="12%">Target Name</th>
             <th width="7%">Server Name</th>
-            <th width="12%">Failover Partner</th>
-            <th width='10%'>Action</th>
+            <th width="7%">Failover Partner</th>
           </tr>
         </thead>
         <tbody id="ost_content">
@@ -262,6 +274,58 @@ body{
     </table>
   </form>
 </div>
+<!-- exsting mgt popup -->
+<div id="existingMGT" title="Select Target">
+  <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-existing-mgt" width="100%">
+    <thead>
+      <tr>
+     		 <th width="1%">Select</th>
+	        <th width="15%">Target Path</th>
+            <th width="12%">Target Name</th>
+            <th width="7%">Server Name</th>
+            <th width="7%">Failover Partner</th>
+      </tr>
+    </thead>
+    <tbody id="popup-existing-mgt_content">
+    </tbody>
+  </table>
+</div>
+<!-- new mgt popup -->
+<div id="newMGT" title="Select Target">
+  <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-mgt" width="100%">
+    <thead>
+      <tr>
+       <th width="1%">Select</th>
+        <th width="19%">Target Path</th>
+        <th width="15%">Capacity</th>
+        <th width="19%">Kind</th>
+        <th width="17%">Status</th>
+        <th width="17%">Primary Server</th>
+         <th width="17%">Failover</th>
+      </tr>
+    </thead>
+    <tbody id="popup-new-mgt_content">
+    </tbody>
+  </table>
+</div>
+<!-- new mdt popup -->
+<div id="newMDT" title="Select Target">
+  <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-mdt" width="100%">
+    <thead>
+      <tr>
+       <th width="1%">Select</th>
+        <th width="19%">Target Path</th>
+        <th width="15%">Capacity</th>
+        <th width="19%">Kind</th>
+        <th width="17%">Status</th>
+        <th width="17%">Primary Server</th>
+         <th width="17%">Failover</th>
+      </tr>
+    </thead>
+    <tbody id="popup-new-mdt_content">
+    </tbody>
+  </table>
+</div>
 <!-- new ost popup -->
 <div id="newOST" title="Select Target">
    <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
@@ -273,13 +337,12 @@ body{
         <th width="19%">Kind</th>
         <th width="17%">Status</th>
         <th width="17%">Primary Server</th>
-        <th width="17%">Failover</th>
+         <th width="17%">Failover</th>
       </tr>
     </thead>
     <tbody id="popup-new-ost_content">
     </tbody>
   </table>
    </div>
-  </div>
 </body>
 </html>

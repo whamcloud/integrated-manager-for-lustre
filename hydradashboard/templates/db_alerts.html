@@ -23,11 +23,23 @@
 <script language="javascript" type="text/javascript">
     $(function () 
     {
-       loadAlertContent('active_AlertContent', 'active', -1);
+       loadAlertContent('active_AlertContent', 'True', -1);
        
        loadAlertContent('all_AlertContent', '', -1);
     });
 </script>
+<style type="">
+.alerts_all_ok {
+  background-color: #DDFFDD;
+  background-image: url("../images/icon_tick.png");
+  background-position: 4px 4px;
+  background-repeat: no-repeat;
+  border: 1px solid #00AA00;
+  border-radius: 6px 6px 6px 6px;
+  margin: 6px 0 0;
+  padding: 4px 4px 4px 24px;
+}
+</style>
 </head>
 <body style="margin: 0px 0px 0px 0px; padding: 0px;">
 <div class="wrapper">
@@ -97,7 +109,7 @@
       <div id="dashboardDiv">
         <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
           <tr style="background-color:#cccccc;">
-            <td width="60%"><div class="breadCrumbHolder module">
+            <td width="100%"><div class="breadCrumbHolder module">
                 <div id="breadCrumb0" class="breadCrumb module">
                   <ul style="float:left;">
                     <li> <a href="/dashboard">All FileSystems</a> </li>
@@ -108,23 +120,8 @@
                     </li>
                   </ul>
                 </div>
-              </div></td>
-            <td width="40%"><div class="timeint"> Severity: &nbsp;
-                <select id="intervalSelect">
-                  <option value="">Any</option>
-                  <option value="">Info</option>
-                  <option value="">Warning</option>
-                  <option value="">Error</option>
-                </select>
-                &nbsp;Event type:&nbsp;
-                <select id="unitSelect">
-                  <option value=''>Any</option>
-                  <option value=''>Autodetection</option>
-                  <option value=''>Alert</option>
-                  <option value=''>Syslog</option>
-                  <option value=''>Storage resource detection</option>
-                </select>
-              </div></td>
+              </div>
+            </td>
           </tr>
           <tr>
           	<td><h3>Active Alerts</h3></td>
