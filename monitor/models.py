@@ -282,7 +282,7 @@ class Lun(models.Model):
 
     def human_name(self):
         if not self.storage_resource_id:
-            lunnode = self.lunnode_set.objects.all()[0]
+            lunnode = self.lunnode_set.all()[0]
             return "%s:%s" % (lunnode.host, lunnode.path)
 
         from configure.models import StorageResourceRecord
@@ -565,7 +565,7 @@ class Filesystem(models.Model, MeasuredEntity):
     mgs = models.ForeignKey('ManagementTarget')
 
     class Meta:
-        unique_together = ('name', 'mgs',)
+        unique_together = ('name', 'mgs')
 
     def get_targets(self):
         return [self.mgs.downcast()] + self.get_filesystem_targets()
@@ -1037,8 +1037,6 @@ class MountableOfflineAlert(AlertState):
         elif isinstance(self.alert_item, Client):
             return "Client offline"
         else:
-            print self.id
-            print self.alert_item
             raise NotImplementedError
 
     def begin_event(self):
