@@ -294,7 +294,7 @@ class StorageResourceLearnEvent(Event):
         return "Storage resource detection"
 
     def message(self):
-        from configure.lib.storage_plugin import ResourceQuery
+        from configure.lib.storage_plugin.query import ResourceQuery
         class_name, instance_name = ResourceQuery().record_class_and_instance_string(self.storage_resource)
         return "Discovered %s '%s'" % (class_name, instance_name)
 
