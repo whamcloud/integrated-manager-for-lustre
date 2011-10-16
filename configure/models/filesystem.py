@@ -28,6 +28,7 @@ class ManagedFilesystem(monitor_models.Filesystem, StatefulObject):
         mgs = self.mgs.downcast()
         allowed_mgs_states = set(mgs.states) - set(['removed'])
         if state != 'removed':
+            print "filesystem %s depending on mgs %s in state %s" % (self.name, mgs.id, allowed_mgs_states)
             return DependOn(mgs,
                     'unmounted',
                     acceptable_states = allowed_mgs_states,
@@ -36,7 +37,10 @@ class ManagedFilesystem(monitor_models.Filesystem, StatefulObject):
             return DependAll([])
 
     reverse_deps = {
-            'ManagedMgs': lambda mmgs: ManagedFilesystem.objects.filter(mgs = mmgs)
+            # FIXME: make jobs system smarter so that I can specify ManagedMgs here (currently
+            # have to specify a direct descendent of StatefulObject, which in the case of all targets
+            # is ManagedTarget)
+            'ManagedTarget': lambda mmgs: ManagedFilesystem.objects.filter(mgs = mmgs)
             }
 
 class RemoveFilesystemJob(Job, StateChangeJob):
