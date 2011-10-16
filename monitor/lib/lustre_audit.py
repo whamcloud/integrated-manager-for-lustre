@@ -317,7 +317,7 @@ class LustreAudit:
                 lun = target.targetmount_set.all()[0].block_device.lun
             else:
                 # TODO: get the size from somewhere
-                lun = Lun.objects.create(size = 0, shared = False)
+                lun = Lun.objects.create(size = 0, shareable = False)
             return LunNode.objects.create(path = path, host = host, lun = lun)
 
     def get_or_create_target(self, mgs, name, device_node_path):
