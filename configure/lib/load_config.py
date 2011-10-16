@@ -95,7 +95,8 @@ def _load(text):
         # Look for the MGS that the user specified by hostname
         fs_mgs_host = ManagedHost.objects.get(address = filesystem_info['mgs'])
         mgs = ManagedMgs.objects.get(targetmount__host = fs_mgs_host)
-        filesystem, created = ManagedFilesystem.objects.get_or_create(name = filesystem_info['name'], mgs = mgs)
+        filesystem, created = ManagedFilesystem.objects.get_or_create(
+                name = filesystem_info['name'], mgs = mgs)
 
         fs_conf_params = {}
         if filesystem_info.has_key('conf_params'):

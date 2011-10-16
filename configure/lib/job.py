@@ -76,7 +76,11 @@ class DependOn(Dependable):
 
     def satisfied(self):
         result = self.stateful_object.state in self.acceptable_states
-        return self.stateful_object.state in self.acceptable_states
+        satisfied = self.stateful_object.state in self.acceptable_states
+        if not satisfied:
+            job_log.warning("DependOn not satisfied: %s in state %s, not one of %s" % 
+                    (self.stateful_object, self.stateful_object.state, self.acceptable_states))
+        return satisfied
 
 class MultiDependable(Dependable):
     def __init__(self, *args):

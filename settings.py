@@ -228,18 +228,23 @@ PLUGIN_DEFAULT_UPDATE_PERIOD = 5
 JOB_MAX_AGE = 3600 * 24 * 7
 AUDIT_MAX_AGE = 3600 * 24
 
+SQL_RETRY_PERIOD = 10
+
 CELERY_ROUTES = (
         {"monitor.tasks.audit_all": {"queue": "periodic"}},
         {"monitor.tasks.parse_log_entries": {"queue": "parselog"}},
         {"configure.tasks.janitor": {"queue": "periodic"}},
         {"configure.tasks.set_state": {"queue": "serialize"}},
+        {"configure.tasks.notify_state": {"queue": "serialize"}},
         {"configure.tasks.add_job": {"queue": "serialize"}},
+        {"configure.tasks.complete_job": {"queue": "serialize"}},
         {"configure.tasks.run_job": {"queue": "jobs"}},
         {"monitor.tasks.test_host_contact": {"queue": "ssh"}},
         {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
         )
 
 CELERY_TRACK_STARTED = True
+CELERY_DISABLE_RATE_LIMITS = True
 
 # CELERY_ACKS_LATE is really important, it makes celery try a task again when a worker
 # crashes (only works with proper AMQP backend like RabbitMQ, not DJKombu)

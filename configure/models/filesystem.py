@@ -28,7 +28,6 @@ class ManagedFilesystem(monitor_models.Filesystem, StatefulObject):
         mgs = self.mgs.downcast()
         allowed_mgs_states = set(mgs.states) - set(['removed'])
         if state != 'removed':
-            print "filesystem %s depending on mgs %s in state %s" % (self.name, mgs.id, allowed_mgs_states)
             return DependOn(mgs,
                     'unmounted',
                     acceptable_states = allowed_mgs_states,

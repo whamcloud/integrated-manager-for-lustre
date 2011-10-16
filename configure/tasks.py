@@ -3,22 +3,65 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from celery.decorators import task, periodic_task
-
-from configure.lib.job import StepPaused, StepAborted, StepDirtyError, StepCleanError
-from configure.lib.agent import AgentException
-
 import settings
 from datetime import datetime, timedelta
 
-def complete_orphan_jobs():
+from celery.task import task, periodic_task, Task
+from django.db import transaction
+
+from configure.lib.agent import AgentException
+from configure.lib.job import job_log
+
+def timeit(method):
+    from functools import wraps
+    logger = job_log
+    @wraps(method)
+    def timed(*args, **kw):
+        import time                                                
+        import logging
+        if logger.level <= logging.DEBUG:
+            ts = time.time()
+            result = method(*args, **kw)
+            te = time.time()
+
+            logger.debug('Ran %r (%s, %r) in %2.2fs' %
+                    (method.__name__,
+                     ", ".join(["%s" % (a,) for a in args]),
+                     kw,
+                     te-ts))
+            return result
+        else:
+            return method(*args, **kw)
+
+    return timed
+
+class RetryOnSqlErrorTask(Task):
+    """Because state required to guarantee completion (or recognition of failure) of 
+    a job is stored in the database, if there is an exception accessing the database
+    then we must retry the celery task.  Otherwise, e.g. if the DB is inaccessible 
+    when recording the completion of a job, we will fail to mark it as complete, 
+    fail to start any dependents, and stall the whole system forever (HYD-343)"""
+    abstract = True
+    max_retries = None
+
+    def __init__(self, *args, **kwargs):
+        super(RetryOnSqlErrorTask, self).__init__(*args, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        from MySQLdb import ProgrammingError, OperationalError
+        try:
+            return self.run(*args, **kwargs)
+        except (ProgrammingError, OperationalError), e:
+            job_log.error("Internal error %s" % e)
+            self.retry(args, kwargs, e, countdown=settings.SQL_RETRY_PERIOD)
+
+def _complete_orphan_jobs():
     """This task applies timeouts to cover for crashes/bugs which cause
        something to die between putting the DB in a state which expects
        to be advanced by a celery task, and creating the celery task.
        Also covers situation where we lose comms with AMQP backend and
        adding tasks fails, although ideally task-adders should catch
        that exception themselves."""
-    from configure.lib.job import job_log
 
     # The max. time we will allow between a job committing its
     # state as 'tasked' and committing its task_id to the database.
@@ -55,10 +98,9 @@ def complete_orphan_jobs():
         job_log.error("Job %d found by janitor (completing since %s), resuming" % (job.id, job.modified_at))
         job.complete(errored = job.errored, cancelled = job.cancelled)
 
-def remove_old_jobs():
+def _remove_old_jobs():
     """Avoid an unlimited buildup of Job objects over long periods of time.  Set
        JOB_MAX_AGE to None to have immortal Jobs."""
-    from configure.lib.job import job_log
 
     try:
         from settings import JOB_MAX_AGE
@@ -73,31 +115,72 @@ def remove_old_jobs():
         for j in old_jobs:
             j.delete()
 
-def job_task_health():
+def _job_task_health():
     """Check that all jobs which have a task_id set are either really running in
        celery, or have 'complete' set.
        For debug only -- this isn't watertight, it's just to generate messages
        when something might have gone whacko."""
     from configure.models import Job
-    from configure.lib.job import job_log
     from django.db.models import Q
+
+    from celery.task.control import inspect
+    from socket import gethostname
+    # XXX assuming local worker
+    i = inspect([gethostname()])
+    i.active()
+    really_running_tasks = set()
+    for worker_name, active_tasks in i.active().items():
+        for t in active_tasks:
+            really_running_tasks.add(t['id'])
+
     for job in Job.objects.filter(~Q(task_id = None)).filter(~Q(state = 'complete')):
+        task_state = job.task_state()
+        # This happens if celery managed to ack the task but couldn't update the 
+        # result, e.g. when we retry on a DB error and the result can't make
+        # it to the DB either.
+        if task_state == 'STARTED' and not job.task_id in really_running_tasks:
+            job_log.warning("Job %s has state %s task_id %s task_state %s but is not in list of active tasks" % (job.id, job.state, job.task_id, task_state))
+
         # This happens either if a crash has occurred and we're waiting for the janitor
         # to clean it up, or if we had a bug.
-        task_state = job.task_state()
         if not task_state in ['PENDING', 'STARTED', 'RETRY']:
             job_log.warning("Job %s has state %s task_id %s but task state is %s" % (job.id, job.state, job.task_id, task_state))
 
-            
 @periodic_task(run_every = timedelta(seconds = settings.JANITOR_PERIOD))
+@timeit
 def janitor():
     """Invoke periodic housekeeping tasks"""
-    complete_orphan_jobs()
-    remove_old_jobs()
+    _complete_orphan_jobs()
+    _remove_old_jobs()
     if settings.DEBUG:
-        job_task_health()
+        _job_task_health()
 
-@task()
+@task(base = RetryOnSqlErrorTask)
+@timeit
+def notify_state(content_type, object_id, new_state, from_states):
+    # Get the StatefulObject
+    from django.contrib.contenttypes.models import ContentType
+    model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
+    instance = model_klass.objects.get(pk = object_id).downcast()
+
+    # Assert its class
+    from configure.models import StatefulObject
+    assert(isinstance(instance, StatefulObject))
+
+    # If a state update is needed/possible
+    if instance.state in from_states and instance.state != new_state:
+        # Check that no incomplete jobs hold a lock on this object
+        from django.db.models import Q
+        from configure.models import StateLock
+        outstanding_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
+        if outstanding_locks == 0:
+            # No jobs lock this object, go ahead and update its state
+            job_log.info("notify_state: Updating state of item %d (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
+            instance.state = new_state
+            instance.save()
+
+@task(base = RetryOnSqlErrorTask)
+@timeit
 def set_state(content_type, object_id, new_state):
     """content_type: a ContentType natural key tuple
        object_id: the pk of a StatefulObject instance
@@ -125,15 +208,49 @@ def set_state(content_type, object_id, new_state):
     from configure.lib.state_manager import StateManager
     StateManager()._set_state(instance, new_state)
 
-@task()
+@task(base = RetryOnSqlErrorTask)
+@timeit
 def add_job(job):
     from configure.lib.state_manager import StateManager
     StateManager()._add_job(job)
 
-@task()
+#def complete_on_internal_error
+"""Actual execution of job steps is wrapped in an exception handler to log errors
+and mark jobs complete.  However, it could be possible for the actual job execution 
+code to throw exceptions -- this is considered an internal error, probably a 
+bug with hydra or a plugin.  When this happens, we must log it and then complete
+the job to avoid stalling the job queue"""
+#def retry_on_db_exception
+
+
+@task(base = RetryOnSqlErrorTask)
+@timeit
+def complete_job(job_id):
+    from configure.models import Job
+
+    job = Job.objects.get(pk = job_id)
+    if job.state == 'completing':
+        with transaction.commit_on_success():
+            for dependent in job.wait_for_job.all():
+                dependent.notify_wait_for_complete()
+            job.state = 'complete'
+            job.save()
+    else:
+        # This should 
+        assert job.state == 'complete'
+
+    job_log.debug("Job %d completed, running any dependents...", job_id)
+    Job.run_next()
+
+@task(base = RetryOnSqlErrorTask)
+@timeit
 def run_job(job_id):
-    from configure.lib.job import job_log
     job_log.info("Job %d: run_job" % job_id)
+    #from MySQLdb import ProgrammingError, OperationalError
+    #import random
+    #if random.randint(1,5) != 1:
+    #    job_log.debug("Job %d shafted" % job_id)
+    #    raise ProgrammingError("Your move, sucka!")
 
     from configure.models import Job, StepResult
     job = Job.objects.get(pk = job_id)
@@ -172,13 +289,11 @@ def run_job(job_id):
         # any incomplete StepResults as complete.
         job.stepresult_set.filter(state = 'incomplete').update(state = 'crashed')
 
-    from django.db import transaction
     @transaction.commit_on_success()
     def mark_start_step(i):
         job.started_step = i
         job.save()
 
-    from django.db import transaction
     @transaction.commit_on_success()
     def mark_finish_step(i):
         job.finish_step = i

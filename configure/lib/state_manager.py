@@ -74,20 +74,14 @@ class StateManager(object):
         """from_states: list of states it's valid to transition from.  This lets
            the audit code safely update the state of e.g. a mount it doesn't find
            to 'unmounted' without risking incorrectly transitioning from 'unconfigured'"""
-        if not instance.state in from_states:
-            return
+        if instance.state in from_states and instance.state != new_state:
+            from configure.tasks import notify_state
+            notify_state.delay(
+                instance.content_type.natural_key(),
+                instance.id,
+                new_state,
+                from_states)
 
-        from django.db.models import Q
-        from configure.models import StateLock
-        from configure.models import StatefulObject
-        assert(isinstance(instance, StatefulObject))
-        if new_state != instance.state:
-            outstanding_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
-            if outstanding_locks == 0:
-                job_log.info("notify_state: Updating state of item %d (%s) to %s" % (instance.id, instance, new_state))
-                # TODO: for concurrency, should insert this state change as a job
-                instance.state = new_state
-                instance.save()
 
     @classmethod
     def add_job(cls, job):
@@ -213,12 +207,6 @@ class StateManager(object):
         transaction.commit()
         from configure.models import Job
         Job.run_next()
-
-        # FIXME RACE! 
-        # If a job completes around the time we insert a new job which 
-        # depends on the completing job, then we might add a job with a 
-        # dependency count of 1, but the completing job may not see
-        # our new job to increment the wait_for_count on it.
 
     def emit_transition_deps(self, transition):
         if transition in self.deps:

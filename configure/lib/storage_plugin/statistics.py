@@ -13,7 +13,6 @@ class BaseStatistic(object):
         sizes in bytes, or a string for arbitrary units"""
         self.sample_period = sample_period
         self.units = units
-        print "BaseStatistic %s" % sample_period
 
     def format_units(self, value):
         if self.units == None:

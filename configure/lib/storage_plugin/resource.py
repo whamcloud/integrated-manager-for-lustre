@@ -254,7 +254,6 @@ class StorageResource(object):
            an exception if there are multiple matches or no matches."""
         parents_filtered = [p for p in self._parents if isinstance(p, parent_klass)]
         if len(parents_filtered) == 0:
-            print self._parents
             raise RuntimeError("No parents of class %s" % parent_klass)   
         elif len(parents_filtered) > 1:
             raise RuntimeError("Multiple parents of class %s" % parent_klass)

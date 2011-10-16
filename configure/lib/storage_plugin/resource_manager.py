@@ -334,7 +334,6 @@ class ResourceManager(object):
         from configure.models import StorageResourceRecord, StorageResourceStatistic
         record = StorageResourceRecord.objects.get(pk = record_pk)
         for stat_name, stat_data in update_data.items():
-            print "%s: %s" % (stat_name, stat_data)
             stat_properties = record.get_statistic_properties(stat_name)
             try:
                 stat_record = StorageResourceStatistic.objects.get(
@@ -411,8 +410,6 @@ class ResourceManager(object):
         from configure.models import StorageAlertPropagated
         record_global_pk = alert_state.alert_item_id
         descendents = self._get_descendents(record_global_pk)
-        if len(descendents) == 0:
-            print "Global resource ID %s has no descendents" % record_global_pk
         for d in descendents:
             sap, created = StorageAlertPropagated.objects.get_or_create(
                     storage_resource_id = d,

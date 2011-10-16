@@ -4,6 +4,7 @@
 # ==============================
 
 from django.db import models
+from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 
 from monitor.models import WorkaroundGenericForeignKey
@@ -197,10 +198,6 @@ class StatefulObject(models.Model):
         querysets = [fn(self) for fn in lookup_fns]
         return chain(*querysets)
 
-
-
-
-
 class StateLock(models.Model):
     """Lock is the wrong word really, these objects exist for the lifetime of the Job.
     All locks depend on the last pending job to write to a stateful object on which
@@ -384,7 +381,6 @@ class Job(models.Model):
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
-        from django.db import transaction
         @transaction.commit_on_success()
         def mark_cancelling():
             return Job.objects.filter(~Q(state = 'complete'), pk = self.id).update(state = 'cancelling')
@@ -410,7 +406,6 @@ class Job(models.Model):
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
-        from django.db import transaction
         @transaction.commit_on_success()
         def mark_paused():
             return Job.objects.filter(state = 'pending', pk = self.id).update(state = 'paused')
@@ -425,7 +420,6 @@ class Job(models.Model):
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
-        from django.db import transaction
         @transaction.commit_on_success()
         def mark_unpaused():
             return Job.objects.filter(state = 'paused', pk = self.id).update(state = 'pending')
@@ -497,7 +491,6 @@ class Job(models.Model):
 
         # Set state to 'tasked'
         # =====================
-        from django.db import transaction
         @transaction.commit_on_success()
         def mark_tasked():
             return Job.objects.filter(pk = self.id, state = 'pending').update(state = 'tasking')
@@ -541,21 +534,16 @@ class Job(models.Model):
             job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.pk, new_state, obj))
             obj.save()
 
-        self.state = 'completing'
-        self.errored = errored
-        self.cancelled = cancelled
-        self.save()
+        job_log.info("Job %d completing (errored=%s, cancelled=%s)" %
+                (self.id, self.errored, self.cancelled))
+        with transaction.commit_on_success():
+            self.state = 'completing'
+            self.errored = errored
+            self.cancelled = cancelled
+            self.save()
 
-        job_log.info("Job %d completing (errored=%s, cancelled=%s), notifying dependents" % (self.id, self.errored, self.cancelled))
-        for dependent in self.wait_for_job.all():
-            dependent.notify_wait_for_complete()
-
-        Job.run_next()
-
-        self.state = 'complete'
-        self.errored = errored
-        self.cancelled = cancelled
-        self.save()
+        from configure.tasks import complete_job
+        complete_job.delay(self.id)
 
     def description(self):
         raise NotImplementedError

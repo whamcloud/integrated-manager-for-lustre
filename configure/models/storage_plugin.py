@@ -191,7 +191,6 @@ class StorageResourceStatistic(models.Model):
     def get_latest_json(self):
         """For use with frontend"""
         latest_ts, latest_data = self.metrics.fetch_last()
-        print "latest: %s %s" % (latest_ts, latest_data)
         stat_props = self.storage_resource.get_statistic_properties(self.name)
         from configure.lib.storage_plugin import statistics
         if isinstance(stat_props, statistics.BytesHistogram):
@@ -263,7 +262,6 @@ class StorageResourceAlert(AlertState):
     def message(self):
         from configure.lib.storage_plugin.query import ResourceQuery
         msg = ResourceQuery().record_alert_message(self.alert_item.pk, self.alert_class)
-        print "message: %s" % msg
         return msg
 
     def begin_event(self):
