@@ -50,12 +50,19 @@ class HydraDebug(cmd.Cmd, object):
             if not target.state == 'unmounted':
                 StateManager.set_state(target.downcast(), 'unmounted')
 
-    def do_lnet_up(self, args):
-        for host in ManagedHost.objects.all():
-            StateManager.set_state(host, 'lnet_up')
-    def do_lnet_down(self, args):
-        for host in ManagedHost.objects.all():
-            StateManager.set_state(host, 'lnet_down')
+    def _lnet(self, hostname, state):
+        if len(hostname):
+            host = ManagedHost.objects.get(address = hostname)
+            StateManager.set_state(host, state)
+        else:
+            for host in ManagedHost.objects.all():
+                StateManager.set_state(host, state)
+
+    def do_lnet_up(self, hostname):
+        self._lnet(hostname, 'lnet_up')
+
+    def do_lnet_down(self, hostname):
+        self._lnet(hostname, 'lnet_down')
 
     def do_lnet_unload(self, args):
         for host in ManagedHost.objects.all():
@@ -141,6 +148,13 @@ class HydraDebug(cmd.Cmd, object):
         output_file = 'resources.png'
         G.draw(output_file)
         print "Wrote graph to %s" % output_file
+
+    def do_active_tasks(self, arg_string):
+        from celery.task.control import inspect, ping
+        from socket import gethostname
+        print ping()
+        i = inspect([gethostname()])
+        print i.active()
 
 if __name__ == '__main__':
     cmdline = HydraDebug
