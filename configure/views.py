@@ -493,7 +493,6 @@ def target(request, target_id):
     id_edges = []
     for tm in target.targetmount_set.all():
         lustre_alerts |= set(AlertState.filter_by_item(tm))
-        print lustre_alerts
         lun_node = tm.block_device
         if lun_node.storage_resource_id:
             from configure.lib.storage_plugin.query import ResourceQuery
