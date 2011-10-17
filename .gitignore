@@ -8,3 +8,5 @@ sql.log
 MANIFEST
 celerybeat-schedule
 celerystate.db
+hydra-server.spec
+setup.py
