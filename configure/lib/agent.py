@@ -29,7 +29,13 @@ Exception: %s (%s)
         self.agent_backtrace)
 
 class Agent(object):
-    def __init__(self, log = None, console_callback = None):
+    def __init__(self, host, monitor = None, log = None, console_callback = None):
+        if not monitor:
+            monitor = host.monitor.downcast()
+
+        self.host = host
+        self.monitor = monitor
+
         self.console_callback = console_callback
 
         if log:
@@ -42,9 +48,7 @@ class Agent(object):
         if self.console_callback:
             self.console_callback(chunk)
 
-    def _ssh(self, host, command):
-        ssh_monitor = host.monitor.downcast()
-
+    def _ssh(self, command):
         import paramiko
         import socket
         ssh = paramiko.SSHClient()
@@ -54,22 +58,22 @@ class Agent(object):
         # How long it may take to establish a TCP connection
         SOCKET_TIMEOUT = 3600
         # How long it may take to get the output of our agent
-        # (including tunefs'ing N devices)
+        # (including eg tunefs'ing N devices)
         SSH_READ_TIMEOUT = 3600
 
-        args = {"hostname": ssh_monitor.host.address,
-                "username": ssh_monitor.get_username(),
+        args = {"username": self.monitor.get_username(),
                 "timeout": SOCKET_TIMEOUT}
-        if ssh_monitor.port:
-            args["port"] = ssh_monitor.port
+        if self.monitor.port:
+            args["port"] = int(self.monitor.port)
         # Note: paramiko has a hardcoded 15 second timeout on SSH handshake after
         # successful TCP connection (Transport.banner_timeout).
-        ssh.connect(**args)
+        print args
+        ssh.connect(self.host.address, **args)
         transport = ssh.get_transport()
         channel = transport.open_session()
         channel.settimeout(SSH_READ_TIMEOUT)
 
-        header = "====\nSSH %s\nCommand: '%s'\n====\n\n" % (host, command)
+        header = "====\nSSH %s\nCommand: '%s'\n====\n\n" % (self.host, command)
         self.console_append(header)
 
         channel.exec_command(command)
@@ -91,22 +95,22 @@ class Agent(object):
 
         ssh.close()
 
-        self.log.debug("_ssh:%s:%s:%s" % (host, result_code, command))
+        self.log.debug("_ssh:%s:%s:%s" % (self.host, result_code, command))
         if result_code != 0:
             self.log.error("_ssh: nonzero rc %d" % result_code)
             self.log.error(stdout_buf)
             self.log.error(stderr_buf)
         return result_code, stdout_buf, stderr_buf
 
-    def invoke(self, host, cmdline):
-        code, out, err = self._ssh(host, "hydra-agent.py %s" % cmdline)
+    def invoke(self, cmdline):
+        code, out, err = self._ssh("hydra-agent.py %s" % cmdline)
 
         if code == 0:
             # May raise a ValueError
             try:
                 data = json.loads(out)
             except ValueError:
-                raise RuntimeError("Malformed JSON from agent on host %s" % host)
+                raise RuntimeError("Malformed JSON from agent on host %s" % self.host)
 
             try:
                 if data['success']:
@@ -115,10 +119,10 @@ class Agent(object):
                 else:
                     exception = pickle.loads(data['exception'])
                     backtrace = data['backtrace']
-                    self.log.error("Agent returned exception from host %s running '%s': %s" % (host, cmdline, backtrace))
-                    raise AgentException(host.id, cmdline, exception, backtrace)
+                    self.log.error("Agent returned exception from host %s running '%s': %s" % (self.host, cmdline, backtrace))
+                    raise AgentException(self.host.id, cmdline, exception, backtrace)
             except KeyError:
                 raise RuntimeError("Malformed output from agent: '%s'" % out)
 
         else:
-            raise RuntimeError("Error running agent on %s" % (host))
+            raise RuntimeError("Error running agent on %s" % (self.host))

@@ -179,8 +179,8 @@ class Step(object):
         def console_callback(chunk):
             self.result.console = self.result.console + chunk
             self.result.save()
-        agent = Agent(job_log, console_callback = console_callback)
-        return agent.invoke(host, command)
+        agent = Agent(host = host, log = job_log, console_callback = console_callback)
+        return agent.invoke(command)
 
 class StateChangeJob(object):
     """Subclasses must define a class attribute 'stateful_object'

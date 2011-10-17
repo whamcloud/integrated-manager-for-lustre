@@ -150,7 +150,6 @@ class LocalMount(StorageResource):
 class Linux(StoragePlugin):
     def __init__(self, *args, **kwargs):
         super(Linux, self).__init__(*args, **kwargs)
-        self.agent = Agent(log = self.log)
 
         self._scsi_devices = set()
 
@@ -160,7 +159,8 @@ class Linux(StoragePlugin):
     # call to update_scan, or maybe we could give them a separate function for that.
     def initial_scan(self, root_resource):
         host = ManagedHost.objects.get(pk=root_resource.host_id)
-        devices = self.agent.invoke(host, "device-scan")
+        self.agent = Agent(host = host, log = self.log)
+        devices = self.agent.invoke("device-scan")
 
         lv_block_devices = set()
         for vg, lv_list in devices['lvs'].items():

@@ -451,50 +451,9 @@ class SshMonitor(Monitor):
     def invoke(self):
         """Safe to call on an SshMonitor which has a host assigned, neither
         need to have been saved"""
-
-        import paramiko
-        import socket
         from monitor.lib.lustre_audit import audit_log
-        ssh = paramiko.SSHClient()
-        # TODO: manage host keys
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        try:
-            from settings import AUDIT_PERIOD
-            # How long it may take to establish a TCP connection
-            SOCKET_TIMEOUT = AUDIT_PERIOD
-            # How long it may take to get the output of our agent
-            # (including tunefs'ing N devices)
-            SSH_READ_TIMEOUT = AUDIT_PERIOD
-
-            args = {"hostname": self.host.address,
-                    "username": self.get_username(),
-                    "timeout": SOCKET_TIMEOUT}
-            if self.port:
-                args["port"] = self.port
-            # Note: paramiko has a hardcoded 15 second timeout on SSH handshake after
-            # successful TCP connection (Transport.banner_timeout).
-            ssh.connect(**args)
-            transport = ssh.get_transport()
-            channel = transport.open_session()
-            channel.settimeout(SSH_READ_TIMEOUT)
-            channel.exec_command("%s audit" % self.get_agent_path())
-            output = channel.makefile('rb').read()
-            ssh.close()
-        except socket.timeout,e:
-            return e
-        except socket.error,e:
-            return e
-        except paramiko.SSHException,e:
-            return e
-
-        # NB this may throw exceptions, to be handled by monitor_exec
-        output = json.loads(output)
-        if output['success']:
-            return output['result']
-        else:
-            audit_log.error("Exception from hydra-agent on %s" % self.host)
-            audit_log.error(output['backtrace'])
-            raise pickle.loads(output['exception'])
+        from configure.lib.agent import Agent
+        return Agent(self.host, self, log = audit_log).invoke("audit")
 
     def get_agent_path(self):
         if self.agent_path:
