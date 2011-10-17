@@ -219,7 +219,10 @@ class StorageResource(object):
         import json
         identifier_val = []
         for f in cls.identifier.id_fields:
-            identifier_val.append(attrs[f])
+            if f in attrs:
+                identifier_val.append(attrs[f])
+            else:
+                identifier_val.append(None)
         return tuple(identifier_val)
 
     def id_tuple(self):
