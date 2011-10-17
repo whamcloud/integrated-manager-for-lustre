@@ -113,17 +113,13 @@ MIDDLEWARE_CLASSES = (
 ) + [('debug_toolbar.middleware.DebugToolbarMiddleware',), ()][debug_toolbar==None]
 
 
-TEMPLATE_CONTEXT_PROCESSORS = (
-    "django.contrib.auth.context_processors.auth", #     "django.core.context_processors.auth",
-    "django.core.context_processors.debug",
-    "django.core.context_processors.i18n",
-    "django.core.context_processors.media",
-    "django.core.context_processors.static",
-    "django.core.context_processors.request",
-    "django.contrib.messages.context_processors.messages",
-    "monitor.context_processors.menu_items",
-    "monitor.context_processors.app_data",
-)
+
+from django.conf import global_settings
+TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS +\
+    ("django.core.context_processors.request",
+     "monitor.context_processors.menu_items",
+     "monitor.context_processors.app_data")
+
 
 ROOT_URLCONF = 'urls'
 
