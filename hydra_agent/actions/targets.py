@@ -77,18 +77,20 @@ def register_target(args):
     return {'label': blkid_output.strip()}
 
 def unconfigure_ha(args):
-    _unconfigure_ha(args.primary, args.label)
+    _unconfigure_ha(args.primary, args.label, args.serial)
 
-def _unconfigure_ha(primary, label):
+def _unconfigure_ha(primary, label, serial):
+    unique_label = "%s_%s" % (label, serial)
     if primary:
-        rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-primary\">'" %  label)
-        rc, stdout, stderr = cibadmin("-D -X '<primitive id=\"%s\">'" %  label)
+        rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-primary\">'" % unique_label)
+        rc, stdout, stderr = cibadmin("-D -X '<primitive id=\"%s\">'" % unique_label)
     else:
-        rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" %  label)
+        rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" % unique_label)
 
     store_remove_target_info(label)
 
 def configure_ha(args):
+    unique_label = "%s_%s" % (args.label, args.serial)
     if args.primary:
         # now configure pacemaker for this target
         from tempfile import mkstemp
@@ -105,8 +107,8 @@ def configure_ha(args):
   <instance_attributes id=\"%s-instance_attributes\">\
     <nvpair id=\"%s-instance_attributes-target\" name=\"target\" value=\"%s\"/>\
   </instance_attributes>\
-</primitive>" % (args.label, args.label, args.label, args.label, args.label,
-            args.label, args.label, args.label, args.label, args.label))
+</primitive>" % (unique_label, unique_label, unique_label, unique_label, unique_label,
+            unique_label, unique_label, unique_label, unique_label, args.label))
         os.close(tmp_f)
 
         rc, stdout, stderr = cibadmin("-o resources -C -x %s" % tmp_name)
@@ -116,10 +118,10 @@ def configure_ha(args):
         score = 10
         preference = "secondary"
 
-    rc, stdout, stderr = cibadmin("-o constraints -C -X '<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>'" % (args.label,
-                                                       preference,
-                                                       os.uname()[1],
-                                                       args.label, score))
+    rc, stdout, stderr = cibadmin("-o constraints -C -X '<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>'" % (unique_label,
+                                  preference,
+                                  os.uname()[1],
+                                  unique_label, score))
 
     create_libdir()
 
@@ -143,16 +145,17 @@ def unmount_target(args):
 
 def start_target(args):
     from time import sleep
-    shell.try_run(["crm", "resource", "start", args.label])
+    unique_label = "%s_%s" % (args.label, args.serial)
+    shell.try_run(["crm", "resource", "start", unique_label])
 
     # now wait for it to start
     # FIXME: this may break on non-english systems or new versions of pacemaker
     timeout = 100
     n = 0
     while n < timeout:
-        stdout = shell.try_run("crm resource status %s 2>&1" % args.label,
+        stdout = shell.try_run("crm resource status %s 2>&1" % unique_label,
                                shell=True)
-        if stdout.startswith("resource %s is running on:" % args.label):
+        if stdout.startswith("resource %s is running on:" % unique_label):
             break
         sleep(1)
         n += 1
@@ -162,35 +165,36 @@ def start_target(args):
 
     failed = True
     for line in stdout.split("\n"):
-        if line.startswith(" %s" % args.label):
+        if line.startswith(" %s" % unique_label):
             if line.find("FAILED") < 0:
                 failed = False
 
     if failed:
         # try to leave things in a sane state for a failed mount
-        shell.try_run(["crm", "resource", "stop", args.label])
-        raise RuntimeError("failed to start target %s" % args.label)
+        shell.try_run(["crm", "resource", "stop", unique_label])
+        raise RuntimeError("failed to start target %s" % unique_label)
 
 def stop_target(args):
-    _stop_target(args.label)
+    _stop_target(args.label, args.serial)
 
-def _stop_target(label):
+def _stop_target(label, serial):
+    unique_label = "%s_%s" % (label, serial)
     from time import sleep
-    shell.try_run(["crm", "resource", "stop", label])
+    shell.try_run(["crm", "resource", "stop", unique_label])
 
     # now wait for it
     # FIXME: this may break on non-english systems or new versions of pacemaker
     timeout = 100
     n = 0
     while n < timeout:
-        stdout = shell.try_run("crm resource status %s 2>&1" % label, shell=True)
+        stdout = shell.try_run("crm resource status %s 2>&1" % unique_label, shell=True)
         if stdout.find("is NOT running") > -1:
             break
         sleep(1)
         n += 1
 
     if n == timeout:
-        raise RuntimeError("failed to stop target %s" % args.label)
+        raise RuntimeError("failed to stop target %s" % unique_label)
 
 def migrate_target(args):
     # a migration scores at 500 to force it higher than stickiness
