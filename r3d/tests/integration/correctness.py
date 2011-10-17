@@ -13,7 +13,7 @@ class AverageRraTest(TestCase):
     """
     def setUp(self):
         audit_freq = 60
-        self.rrd = Database.objects.create(name="test",
+        self.rrd = Database.objects.create(name="average_test",
                                            start=1318119548 - audit_freq,
                                            step=audit_freq)
         self.rrd.datasources.add(Counter.objects.create(name="counter",
@@ -116,7 +116,7 @@ class MinRraTest(TestCase):
     """
     def setUp(self):
         audit_freq = 60
-        self.rrd = Database.objects.create(name="test",
+        self.rrd = Database.objects.create(name="min_test",
                                            start=1318119548 - audit_freq,
                                            step=audit_freq)
         self.rrd.datasources.add(Counter.objects.create(name="counter",
@@ -219,7 +219,7 @@ class MaxRraTest(TestCase):
     """
     def setUp(self):
         audit_freq = 60
-        self.rrd = Database.objects.create(name="test",
+        self.rrd = Database.objects.create(name="max_test",
                                            start=1318119548 - audit_freq,
                                            step=audit_freq)
         self.rrd.datasources.add(Counter.objects.create(name="counter",
@@ -322,7 +322,7 @@ class LastRraTest(TestCase):
     """
     def setUp(self):
         audit_freq = 60
-        self.rrd = Database.objects.create(name="test",
+        self.rrd = Database.objects.create(name="last_test",
                                            start=1318119548 - audit_freq,
                                            step=audit_freq)
         self.rrd.datasources.add(Counter.objects.create(name="counter",
@@ -414,6 +414,35 @@ class LastRraTest(TestCase):
         actual = self.rrd.fetch("Last", 1318119488, 1318149488)
         massaged = self.massage_results(actual)
         self.assertEqual(expected, massaged)
+
+    def tearDown(self):
+        self.rrd.delete()
+
+class DatabaseNamesShouldBeUnique(TestCase):
+    """
+    Database names should be unique.  While the primary mechanism
+    for referencing R3D databases will be via the ContentTypes system,
+    Database names should also be useful for access.
+    """
+    def test_double_create_raises_integrity_error(self):
+        from django.contrib.auth.models import User
+        from django.contrib.contenttypes.models import ContentType
+        from django.db import IntegrityError
+
+        audit_freq = 1
+
+        user = User.objects.create(username='test', email='test@test.test')
+        ct = ContentType.objects.get_for_model(user)
+
+        self.rrd = Database.objects.create(name="uniq_test",
+                                           start=1318119547,
+                                           step=audit_freq)
+
+        self.assertRaises(IntegrityError,
+                          Database.objects.create,
+                          name="uniq_test",
+                          start=1318119547,
+                          step=audit_freq)
 
     def tearDown(self):
         self.rrd.delete()

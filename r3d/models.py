@@ -69,7 +69,7 @@ class Database(models.Model):
     def default_start(cls):
         return int(time.time() - 86400)
 
-    name        = models.CharField(max_length=255)
+    name        = models.CharField(max_length=255, unique=True)
     start       = models.BigIntegerField(default=lambda: Database.default_start())
     step        = models.BigIntegerField(default=300)
     last_update = models.BigIntegerField(blank=True)
@@ -400,7 +400,7 @@ class Absolute(Datasource):
     before the next overflow. Another usage is for things you count like
     number of messages since the last update.
 
-    >>> rrd = Database.objects.create(name="test")
+    >>> rrd = Database.objects.create(name="abs_test")
     >>> rrd.datasources.add(Absolute.objects.create(name="absolute_ds",
     ...                                             heartbeat=300,
     ...                                             database=rrd))
@@ -421,7 +421,7 @@ class Counter(Datasource):
     happened at the 32bit or 64bit border and acts accordingly by adding
     an appropriate value to the result.
 
-    >>> rrd = Database.objects.create(name="test")
+    >>> rrd = Database.objects.create(name="ctr_test")
     >>> rrd.datasources.add(Counter.objects.create(name="counter_ds",
     ...                                            heartbeat=300,
     ...                                            database=rrd))
@@ -455,7 +455,7 @@ class Derive(Datasource):
     checks. So if your counter does not reset at 32 or 64 bit you might
     want to use DERIVE and combine it with a MIN value of 0.
 
-    >>> rrd = Database.objects.create(name="test")
+    >>> rrd = Database.objects.create(name="derive_test")
     >>> rrd.datasources.add(Derive.objects.create(name="derive_ds",
     ...                                           heartbeat=300,
     ...                                           database=rrd))
@@ -476,7 +476,7 @@ class Gauge(Datasource):
     """
     Stores the current reading (e.g. temperature, stock price, etc.)
 
-    >>> rrd = Database.objects.create(name="test")
+    >>> rrd = Database.objects.create(name="gauge_test")
     >>> rrd.datasources.add(Gauge.objects.create(name="gauge_ds",
     ...                                          heartbeat=300,
     ...                                          database=rrd))
@@ -596,7 +596,7 @@ class Average(Archive):
     """
     Stores the average of its data points.
 
-    >>> rrd = Database.objects.create(name="test")
+    >>> rrd = Database.objects.create(name="avg_test")
     >>> rrd.archives.add(Average.objects.create(cdp_per_row=10,
     ...                                         rows=30,
     ...                                         database=rrd))
@@ -632,7 +632,7 @@ class Last(Archive):
     """
     Stores the last (most current) data point.
 
-    >>> rrd = Database.objects.create(name="test")
+    >>> rrd = Database.objects.create(name="lst_test")
     >>> rrd.archives.add(Last.objects.create(cdp_per_row=10,
     ...                                      rows=30,
     ...                                      database=rrd))
@@ -660,7 +660,7 @@ class Max(Archive):
     """
     Stores the largest data point.
 
-    >>> rrd = Database.objects.create(name="test")
+    >>> rrd = Database.objects.create(name="test_max")
     >>> rrd.archives.add(Max.objects.create(cdp_per_row=10,
     ...                                     rows=30,
     ...                                     database=rrd))
@@ -697,7 +697,7 @@ class Min(Archive):
     """
     Stores the smallest data point.
 
-    >>> rrd = Database.objects.create(name="test")
+    >>> rrd = Database.objects.create(name="test_min")
     >>> rrd.archives.add(Min.objects.create(cdp_per_row=10,
     ...                                     rows=30,
     ...                                     database=rrd))
