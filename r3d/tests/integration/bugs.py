@@ -76,3 +76,42 @@ class BugHyd330(TestCase):
 
     def tearDown(self):
         self.rrd.delete()
+
+class BugHyd352(TestCase):
+    """
+    HYD-352 Metrics stop working if two creations clash
+
+    Metrics code tries to .get Database objects by content type + object id.
+    However, creations aren't serialized: if someone visits stats page in GUI
+    at same time as first audit is happening, you get two runs of
+    _create_r3d, and two Database objects. When that happens, all the
+    .get calls throw exceptions and stats collection and reporting breaks.
+    No need for catching the exception if you put a uniqueness constraint
+    in the model (patch below).
+    """
+    def test_double_create_raises_integrity_error(self):
+        from django.contrib.auth.models import User
+        from django.contrib.contenttypes.models import ContentType
+        from django.db import IntegrityError
+
+        audit_freq = 1
+
+        user = User.objects.create(username='test', email='test@test.test')
+        ct = ContentType.objects.get_for_model(user)
+
+        self.rrd = Database.objects.create(name="hyd352",
+                                           start=1318119547,
+                                           step=audit_freq,
+                                           content_type=ct,
+                                           object_id=user.id)
+
+        self.assertRaises(IntegrityError,
+                          Database.objects.create,
+                          name="hyd352",
+                          start=1318119547,
+                          step=audit_freq,
+                          content_type=ct,
+                          object_id=user.id)
+
+    def tearDown(self):
+        self.rrd.delete()

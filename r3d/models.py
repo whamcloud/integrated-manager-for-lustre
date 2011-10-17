@@ -80,6 +80,9 @@ class Database(models.Model):
     object_id       = models.PositiveIntegerField(null=True)
     content_object  = generic.GenericForeignKey('content_type', 'object_id')
 
+    class Meta:
+        unique_together = ('content_type', 'object_id')
+
     def save(self, *args, **kwargs):
         if not self.last_update:
             self.last_update = self.start
