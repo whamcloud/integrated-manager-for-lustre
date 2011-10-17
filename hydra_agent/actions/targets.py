@@ -163,13 +163,12 @@ def start_target(args):
     failed = True
     for line in stdout.split("\n"):
         if line.startswith(" %s" % args.label):
-            if line.find("FAILED") > -1:
-                # try to leave things in a sane state for a failed mount
-                shell.try_run(["crm", "resource", "stop", args.label])
-            else:
+            if line.find("FAILED") < 0:
                 failed = False
 
     if failed:
+        # try to leave things in a sane state for a failed mount
+        shell.try_run(["crm", "resource", "stop", args.label])
         raise RuntimeError("failed to start target %s" % args.label)
 
 def stop_target(args):
