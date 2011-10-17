@@ -175,6 +175,7 @@ def stop_target(args):
     _stop_target(args.label)
 
 def _stop_target(label):
+    from time import sleep
     shell.try_run(["crm", "resource", "stop", label])
 
     # now wait for it
