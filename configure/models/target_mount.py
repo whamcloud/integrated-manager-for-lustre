@@ -82,7 +82,6 @@ class RemoveTargetMountJob(Job, StateChangeJob):
     def get_deps(self):
         deps = []
         if self.target_mount.primary:
-            #deps.append(DependOn(self.target_mount.target.targetmount_set.get(primary=False).downcast(), 'removed'))
             for tm in self.target_mount.target.targetmount_set.filter(primary = False):
                 deps.append(DependOn(tm.downcast(), 'removed'))
         return DependAll(deps)
