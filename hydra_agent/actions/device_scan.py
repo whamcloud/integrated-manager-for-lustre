@@ -94,15 +94,27 @@ def _device_node(device_name, major_minor, path, size, parent):
     if serial == "SQEMU    QEMU HARDDISK  0":
         serial = None
 
+    # FIXME: different controllers may want to use different identifiers,
+    # should separate these out so that can pick from e.g. 0x80 vs. 0x83
+
+    # Special case for DDN 10KE which correlates volumes via 
+    # their 'OID' identifier and publishes this ID in /sys/block
+    # FIXME: find a way to shift this into the DDN plugin
+    oid_path = os.path.join("/sys/block", device_name, 'oid')
+    if os.path.exists(oid_path):
+        serial = open(oid_path, 'r').read().strip()
+
     return {'major_minor': major_minor,
             'path': path,
             'serial': serial,
             'size': size,
             'parent': parent}
 
+
 def _parse_sys_block():
     mapper_devs = _find_block_devs("/dev/mapper/")
-    by_id_devs = _find_block_devs("/dev/disk/by-id/")
+    #by_id_devs = _find_block_devs("/dev/disk/by-path/")
+    by_id_devs = []
 
     def get_path(major_minor, device_name):
         # Try to find device nodes for these:
