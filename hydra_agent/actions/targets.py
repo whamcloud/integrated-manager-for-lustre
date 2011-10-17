@@ -147,18 +147,29 @@ def start_target(args):
 
     # now wait for it to start
     # FIXME: this may break on non-english systems or new versions of pacemaker
-    while True:
+    timeout = 100
+    n = 0
+    while n < timeout:
         stdout = shell.try_run("crm resource status %s 2>&1" % args.label,
                                shell=True)
         if stdout.startswith("resource %s is running on:" % args.label):
             break
         sleep(1)
+        n += 1
+
     # and make sure it didn't start but (the RA) fail(ed)
-    stdout = shell.try_run("crm status | grep \"^ %s\"" % args.label,
-                           shell=True)
-    if stdout.find("FAILED") > -1:
-        # first try to leave things in a sane state for a failed mount
-        shell.try_run(["crm", "resource", "stop", args.label])
+    stdout = shell.try_run("crm status", shell=True)
+
+    failed = True
+    for line in stdout.split("\n"):
+        if line.startswith(" %s" % args.label):
+            if line.find("FAILED") > -1:
+                # try to leave things in a sane state for a failed mount
+                shell.try_run(["crm", "resource", "stop", args.label])
+            else:
+                failed = False
+
+    if failed:
         raise RuntimeError("failed to start target %s" % args.label)
 
 def stop_target(args):
@@ -169,8 +180,17 @@ def _stop_target(label):
 
     # now wait for it
     # FIXME: this may break on non-english systems or new versions of pacemaker
-    shell.try_run("while ! crm resource status %s 2>&1 | grep -q \"is NOT running\"; do sleep 1; done" % \
-            label, shell=True)
+    timeout = 100
+    n = 0
+    while n < timeout:
+        stdout = shell.try_run("crm resource status %s 2>&1" % label, shell=True)
+        if stdout.find("is NOT running") > -1:
+            break
+        sleep(1)
+        n += 1
+
+    if n == timeout:
+        raise RuntimeError("failed to stop target %s" % args.label)
 
 def migrate_target(args):
     # a migration scores at 500 to force it higher than stickiness
