@@ -693,7 +693,7 @@ def _resource_tree(root_records):
 
     def decorate_urls(resource_dict):
         from django.core.urlresolvers import reverse
-        resource_dict['url'] = reverse('configure.views.storage_resource', kwargs={'vrr_id': resource_dict['id']})
+        resource_dict['url'] = reverse('configure.views.storage_resource', kwargs={'srr_id': resource_dict['id']})
         for c in resource_dict['children']:
             decorate_urls(c)
 
@@ -701,8 +701,8 @@ def _resource_tree(root_records):
         from settings import STATIC_URL
         from django.core.urlresolvers import reverse
         resource_dict['attr'] = {
-                'vrr_url': "%s" %  reverse('configure.views.storage_resource', kwargs={'vrr_id': resource_dict['id']}),
-                'vrr_id': resource_dict['id']
+                'vrr_url': "%s" %  reverse('configure.views.storage_resource', kwargs={'srr_id': resource_dict['id']}),
+                'srr_id': resource_dict['id']
                 }
         resource_dict['data'] = {
                 "title": resource_dict['human_string'],
@@ -712,7 +712,7 @@ def _resource_tree(root_records):
 
     class ResourceJsonEncoder(json.JSONEncoder):
         def default(self, o):
-            from configure.lib.storage_plugin import StorageResource
+            from configure.lib.storage_plugin.resource import StorageResource
             if isinstance(o, StorageResource):
                 resource_dict = o.to_json()
                 decorate_jstree(resource_dict)
@@ -722,7 +722,6 @@ def _resource_tree(root_records):
                 return super(ResourceJsonEncoder, self).default(o)
 
     return json.dumps(tree, cls = ResourceJsonEncoder, indent=4)
-
 
 def _handle_resource_form(request):
     from configure.models import StorageResourceClass
