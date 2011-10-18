@@ -5,6 +5,7 @@ import simplejson as json
 import errno
 import os
 import shlex
+import re
 
 LIBDIR = "/var/lib/hydra"
 
@@ -136,8 +137,6 @@ def configure_ha(args):
     store_write_target_info(args.label, {"bdev": args.device, "mntpt": args.mountpoint})
 
 def list_ha_targets(args):
-    import re
-
     targets = []
     for line in shell.try_run("crm resource list", shell=True).split("\n"):
         match = re.match(r"^\s*([^\s]+).+hydra:Target", line)
