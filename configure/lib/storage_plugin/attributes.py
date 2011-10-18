@@ -10,7 +10,7 @@ the datatypes that StorageResource objects may store as attributes"""
 class ResourceAttribute(object):
     """Base class for declared attributes of StorageResource.  This is
        to StorageResource as models.fields.Field is to models.Model"""
-    def __init__(self, subscribe = False, provide = False, optional = False):
+    def __init__(self, subscribe = None, provide = None, optional = False):
         self.optional = optional
         self.subscribe = subscribe
         self.provide = provide

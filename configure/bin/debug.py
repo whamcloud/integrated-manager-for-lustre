@@ -134,7 +134,21 @@ class HydraDebug(cmd.Cmd, object):
 
     def do_storage_graph(self, arg_string):
         from configure.lib.storage_plugin.query import ResourceQuery
-        resources = ResourceQuery().get_all_resources()
+        if len(arg_string) == 0:
+            resources = ResourceQuery().get_all_resources()
+        else:
+            resources = []
+            def iterate(record):
+                res = record.to_resource()
+                resources.append(res)
+                for p in record.parents.all():
+                    p_res = iterate(p)
+                    res._parents.append(p_res)
+                return res
+            start_id = int(arg_string)
+            from configure.models import StorageResourceRecord
+            start_record = StorageResourceRecord.objects.get(pk = start_id)
+            iterate(start_record)
         import pygraphviz as pgv
         G = pgv.AGraph(directed=True)
         for r in resources:

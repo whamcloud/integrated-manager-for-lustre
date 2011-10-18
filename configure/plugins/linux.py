@@ -58,7 +58,7 @@ HACK_TEST_STATS = False
 class ScsiDevice(base_resources.LogicalDrive):
     identifier = GlobalId('serial')
 
-    serial = attributes.String(subscribe = True)
+    serial = attributes.String(subscribe = 'scsi_serial')
 
     human_name = "SCSI device"
 

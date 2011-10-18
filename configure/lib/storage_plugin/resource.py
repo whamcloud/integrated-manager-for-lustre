@@ -43,9 +43,9 @@ class StorageResourceMetaclass(type):
                 dct['_storage_attributes'][field_name] = field_obj
                 del dct[field_name]
                 if field_obj.provide:
-                    dct['_provides'].append(field_name)
+                    dct['_provides'].append((field_name, field_obj.provide))
                 if field_obj.subscribe:
-                    dct['_subscribes'].append(field_name)
+                    dct['_subscribes'].append((field_name, field_obj.subscribe))
             elif isinstance(field_obj, BaseStatistic):
                 dct['_storage_statistics'][field_name] = field_obj
                 del dct[field_name]

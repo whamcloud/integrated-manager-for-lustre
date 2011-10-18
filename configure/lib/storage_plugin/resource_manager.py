@@ -106,36 +106,37 @@ class SubscriberIndex(object):
         self._subscribe_value_to_id[(field_name, field_value)].remove(resource_id)
 
     def add_resource(self, resource_id, resource):
-        for field_name in resource._provides:
-            self.add_provider(resource_id, field_name, getattr(resource, field_name))
-        for field_name in resource._subscribes:
-            self.add_subscriber(resource_id, field_name, getattr(resource, field_name))
+        for field_name, key in resource._provides:
+            self.add_provider(resource_id, key, getattr(resource, field_name))
+        for field_name, key in resource._subscribes:
+            self.add_subscriber(resource_id, key, getattr(resource, field_name))
 
     def remove_resource(self, resource_id, resource):
-        for field_name in resource._provides:
-            self.remove_provider(resource_id, field_name, getattr(resource, field_name))
-        for field_name in resource._subscribes:
-            self.remove_subscriber(resource_id, field_name, getattr(resource, field_name))
+        for field_name, key in resource._provides:
+            self.remove_provider(resource_id, key, getattr(resource, field_name))
+        for field_name, key in resource._subscribes:
+            self.remove_subscriber(resource_id, key, getattr(resource, field_name))
 
     def populate(self):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         from configure.models import StorageResourceAttribute
         for resource_class_id, resource_class in storage_plugin_manager.get_all_resources():
-            for p in resource_class._provides:
-                instances = StorageResourceAttribute.objects.filter(
-                        resource__resource_class = resource_class_id,
-                        key = p).values('resource__id', 'value')
-                attribute_object = resource_class._storage_attributes[p]
-                for i in instances:
-                    self.add_provider(i['resource__id'], p, attribute_object.decode(i['value']))
 
-            for s in resource_class._subscribes:
+            for p_attr, p_key in resource_class._provides:
                 instances = StorageResourceAttribute.objects.filter(
                         resource__resource_class = resource_class_id,
-                        key = s).values('resource__id', 'value')
-                attribute_object = resource_class._storage_attributes[s]
+                        key = p_attr).values('resource__id', 'value')
+                attribute_object = resource_class._storage_attributes[p_attr]
                 for i in instances:
-                    self.add_subscriber(i['resource__id'], s, attribute_object.decode(i['value']))
+                    self.add_provider(i['resource__id'], p_key, attribute_object.decode(i['value']))
+
+            for s_attr, s_key in resource_class._subscribes:
+                instances = StorageResourceAttribute.objects.filter(
+                        resource__resource_class = resource_class_id,
+                        key = s_attr).values('resource__id', 'value')
+                attribute_object = resource_class._storage_attributes[s_attr]
+                for i in instances:
+                    self.add_subscriber(i['resource__id'], s_key, attribute_object.decode(i['value']))
 
 class ResourceManager(object):
     def __init__(self):
@@ -339,7 +340,7 @@ class ResourceManager(object):
                 stat_record = StorageResourceStatistic.objects.get(
                         storage_resource = record, name = stat_name)
                 if stat_record.sample_period != stat_properties.sample_period:
-                    storage_plugin_log.warning("Plugin stat period for '%s' changed, expunging old statistics", stat_name)
+                    log.warning("Plugin stat period for '%s' changed, expunging old statistics", stat_name)
                     stat_record.delete()
                     raise StorageResourceStatistic.DoesNotExist
 
@@ -507,20 +508,22 @@ class ResourceManager(object):
 
             # This is a new resource which provides a field, see if any existing
             # resources would like to subscribe to it
-            if resource._provides:
-                subscribers = self._subscriber_index.what_subscribes(sub_field, getattr(resource, sub_field))
+            for prov_field, prov_key in resource._provides:
+                subscribers = self._subscriber_index.what_subscribes(prov_key, getattr(resource, prov_field))
                 # Make myself a parent of anything that subscribes to me
                 for s in subscribers:
+                    log.info("Linked up me %s as parent of %s" % (record.pk, s))
                     self._edges.add_parent(s, record.pk)
                     s_record = StorageResourceRecord.objects.get(pk = s)
                     s_record.parents.add(record.pk)
 
             # This is a new resource which subscribes to a field, see if any existing
             # resource can provide it
-            for sub_field in resource._subscribes:
-                providers = self._subscriber_index.what_provides(sub_field, getattr(resource, sub_field))
+            for sub_field, sub_key in resource._subscribes:
+                providers = self._subscriber_index.what_provides(sub_key, getattr(resource, sub_field))
                 # Make my providers my parents
                 for p in providers:
+                    log.info("Linked up %s as parent of me, %s" % (p, record.pk))
                     self._edges.add_parent(record.pk, p)
                     record.parents.add(p)
 
