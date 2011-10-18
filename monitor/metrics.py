@@ -100,9 +100,13 @@ class R3dMetricStore(MetricStore):
         Creates a new R3D Database and associates it with the given
         measured object via ContentType.
         """
+        # We want our start time to be prior to the first insert, but
+        # not so far back that we waste lots of time with filling in
+        # null data.
+        start_time = int(time.time()) - settings.AUDIT_PERIOD * 2
         ct = ContentType.objects.get_for_model(measured_object)
         self.r3d = Database.objects.create(name=measured_object.__str__(),
-                                           start=int(time.time()) - 1,
+                                           start=start_time,
                                            object_id=measured_object.id,
                                            content_type=ct,
                                            step=sample_period,
@@ -116,6 +120,10 @@ class R3dMetricStore(MetricStore):
         Given an object to wrap with MetricStore capabilities, either
         retrieves the existing associated R3D Database or creates one.
         """
+        # FIXME: This should be handled in a different way.  Creating a
+        # new R3D Database on first access is convenient, but has the
+        # potential for undesirable behavior when the access is read-only
+        # (e.g. stats).
         try:
             if hasattr(measured_object, 'content_type'):
                 measured_object = measured_object.downcast()
