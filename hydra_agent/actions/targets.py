@@ -135,6 +135,17 @@ def configure_ha(args):
 
     store_write_target_info(args.label, {"bdev": args.device, "mntpt": args.mountpoint})
 
+def list_ha_targets(args):
+    import re
+
+    targets = []
+    for line in shell.try_run("crm resource list", shell=True).split("\n"):
+        match = re.match(r"^\s*([^\s]+).+hydra:Target", line)
+        if match:
+            targets.append(match.groups()[0])
+
+    return targets
+
 def mount_target(args):
     info = store_get_target_info(args.label)
     shell.try_run(['mount', '-t', 'lustre', info['bdev'], info['mntpt']])
@@ -206,5 +217,3 @@ def unmigrate_target(args):
     # just remove the migration constraint
     shell.try_run("crm configure delete %s-migrated && (sleep 1; crm resource stop %s && crm resource start %s)" % \
                         (args.label, args.label, args.label), shell = True)
-
-
