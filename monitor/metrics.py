@@ -346,39 +346,49 @@ class FilesystemMetricStore(R3dMetricStore):
     def fetch(self, cfname, target_class, **kwargs):
         """
         fetch(CFNAME, target_class [, fetch_metrics=['name'],
-                      start_time=int, end_time=int])
+                      start_time=datetime, end_time=datetime])
 
         Given a consolidation function (Average, Min, Max, Last),
         a target class (ObjectStoreTarget, MetadataTarget, ManagmentTarget)
         an optional list of desired metrics, an optional start time,
-        and an optinal end time, returns a dict containing rows of
+        and an optinal end time, returns a tuple containing rows of
         aggregate datapoints retrieved from the appropriate RRAs.
         """
         results = {}
 
         for target in target_class.objects.filter(filesystem=self.filesystem):
             tm = target.metrics.fetch(cfname, **kwargs)
-            for row in tm.keys():
-                if not results.has_key(row):
-                    results[row] = {}
+            for row in tm:
+                row_ts = row[0]
+                row_dict = row[1]
 
-                for metric in tm[row].keys():
+                if not results.has_key(row_ts):
+                    results[row_ts] = {}
+
+                for metric in row_dict.keys():
                     try:
-                        if math.isnan(tm[row][metric]):
-                            results[row][metric] += 0
-                        else:
-                            results[row][metric] += tm[row][metric]
+                        if row_dict[metric] is not None:
+                            if results[row_ts][metric] is None:
+                                results[row_ts][metric] = row_dict[metric]
+                            else:
+                                results[row_ts][metric] += row_dict[metric]
                     except KeyError:
-                        results[row][metric] = tm[row][metric]
+                        results[row_ts][metric] = row_dict[metric]
 
-        return results
+        return tuple(
+                sorted(
+                    [(timestamp, dict) for (timestamp, dict)
+                                        in results.items()],
+                                        key=lambda timestamp: timestamp
+                )
+        )
 
     def fetch_last(self, target_class, fetch_metrics=None):
         """
         fetch_last(target_class [, fetch_metrics=['metric']])
 
         Given a target class (ObjectStoreTarget, Metadatatarget, etc),
-        and an optional list of desired metrics, returns a list
+        and an optional list of desired metrics, returns a tuple
         containing a single row of aggregate datapoints taken
         from each metric's last reading.
         """
@@ -405,7 +415,7 @@ class FilesystemMetricStore(R3dMetricStore):
                 except KeyError:
                     results[1][metric] = tm[1][metric]
 
-        return results
+        return tuple(results)
 
 def get_instance_metrics(measured_object):
     """
