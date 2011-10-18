@@ -153,6 +153,9 @@ class Linux(StoragePlugin):
 
         self._scsi_devices = set()
 
+    def teardown(self):
+        self.log.debug("Linux.teardown")
+
     # TODO: need to document that initial_scan may not kick off async operations, because
     # the caller looks at overall resource state at exit of function.  If they eg
     # want to kick off an async update thread they should do it at the first

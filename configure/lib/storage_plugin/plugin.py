@@ -48,6 +48,29 @@ class ResourceIndex(object):
         return self._local_id_to_resource.values()
 
 class StoragePlugin(object):
+    def initial_scan(self, root_resource):
+        """To be implemented by subclasses.  Identify all resources
+           present at this time and call register_resource on them.
+           
+           Any plugin which throws an exception from here is assumed
+           to be broken - this will not be retried.  If one of your
+           controllers is not contactable, you must handle that and 
+           when it comes back up let us know during an update call."""
+        raise NotImplementedError
+
+    def update_scan(self, root_resource):
+        """Optionally implemented by subclasses.  Perform any required
+           periodic refresh of data and update any resource instances.
+           Guaranteed that initial_scan will have been called before this."""
+        pass
+
+    def teardown(self):
+        """Optionally implemented by subclasses.  Perform any teardown
+           required before terminating.  Guaranteed not to be called
+           concurrently with initial_scan or update_scan.  Guaranteed
+           that initial_scan or update_scan will not be called after this."""
+        pass
+
     def generate_handle(self):
         with self._handle_lock:
             self._handle_counter += 1
@@ -78,27 +101,6 @@ class StoragePlugin(object):
 
         self.update_period = settings.PLUGIN_DEFAULT_UPDATE_PERIOD
 
-    def initial_scan(self, root_resource):
-        """To be implemented by subclasses.  Identify all resources
-           present at this time and call register_resource on them.
-           
-           Any plugin which throws an exception from here is assumed
-           to be broken - this will not be retried.  If one of your
-           controllers is not contactable, you must handle that and 
-           when it comes back up let us know during an update call."""
-        raise NotImplementedError
-
-    def update_scan(self, root_resource):
-        """Optionally implemented by subclasses.  Perform any required
-           periodic refresh of data and update any resource instances"""
-        pass
-
-    # commit_on_success is important here and in update_scan, because
-    # if someone is registering a resource with parents
-    # and something goes wrong, we must not accidently
-    # leave it without parents, as that would cause the
-    # it to incorrectly be considered a 'root' resource
-    @transaction.commit_on_success
     def do_initial_scan(self, root_resource):
         from configure.lib.storage_plugin.resource_manager import resource_manager 
         root_resource._handle = self.generate_handle()
@@ -127,7 +129,6 @@ class StoragePlugin(object):
                 for name, attribute, active in alert_list:
                     self.notify_alert(active, resource, name, attribute)
 
-    @transaction.commit_on_success
     def do_periodic_update(self, root_resource):
         from configure.lib.storage_plugin.resource_manager import resource_manager 
         self.update_scan(root_resource)
@@ -140,6 +141,9 @@ class StoragePlugin(object):
             self.commit_resource_statistics()
             self.check_alert_conditions()
             self.commit_alerts()
+
+    def do_teardown(self):
+        self.teardown()
 
     def commit_resource_creates(self):
         if len(self._delta_new_resources) > 0:
