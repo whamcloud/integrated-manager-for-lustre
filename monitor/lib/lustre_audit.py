@@ -512,6 +512,10 @@ class LustreAudit:
                 self.learn_event(fs)
 
     def store_lustre_target_metrics(self, target_name, metrics):
+        # TODO: Re-enable MGS metrics collection if it turns out it's useful.
+        if target_name == "MGS":
+            return
+
         try:
             target = Target.objects.get(name=target_name,
                                         targetmount__host=self.host)
