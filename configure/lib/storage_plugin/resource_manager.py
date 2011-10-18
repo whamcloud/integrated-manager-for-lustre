@@ -346,7 +346,13 @@ class ResourceManager(object):
             except StorageResourceStatistic.DoesNotExist:
                 stat_record = StorageResourceStatistic.objects.create(
                         storage_resource = record, name = stat_name, sample_period = stat_properties.sample_period)
-            stat_record.metrics.update(stat_name, stat_properties, stat_data)
+            from r3d.exceptions import BadUpdateString
+            try:
+                stat_record.metrics.update(stat_name, stat_properties, stat_data)
+            except BadUpdateString:
+                # FIXME: Initial insert usually fails because r3d isn't getting
+                # its start time from the first insert time
+                pass
 
     @transaction.autocommit
     def _resource_modify_parent(self, record_pk, parent_pk, remove):
