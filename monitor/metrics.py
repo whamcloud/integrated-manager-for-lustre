@@ -171,7 +171,20 @@ def _autocreate_ds(db, key, payload):
                                                database=db))
     metrics_log.info("Added new DS to DB (%s -> %s)" % (key, db.name))
 
+def minimal_archives(db):
+    """
+    Workaround performance issues, create the least possible archives
+    """
+    # 60 rows of 1 sample = 10 minutes of 10s samples
+    db.archives.add(Average.objects.create(xff=0.5,
+                                           database=db,
+                                           cdp_per_row=1,
+                                           rows=60))
 class VendorMetricStore(R3dMetricStore):
+    def __init__(self, *args, **kwargs):
+        kwargs['rra_create_fn'] = minimal_archives
+        super(VendorMetricStore, self).__init__(*args, **kwargs)
+
     def update(self, stat_name, stat_properties, stat_data):
         """stat_data is an iterable in time order of dicts, where each
            dict has a member 'timestamp' which is a timestamp int, and
