@@ -33,6 +33,8 @@ if __name__ == '__main__':
                                      help='device for target')
     parser_configure_ha.add_argument('--label', required=True,
                                      help='label for target')
+    parser_configure_ha.add_argument('--serial', required=True,
+                                     help='serial of target to configure')
     parser_configure_ha.add_argument('--primary', action='store_true',
                                      help='target is primary on this node')
     parser_configure_ha.add_argument('--mountpoint', required=True,
@@ -43,9 +45,11 @@ if __name__ == '__main__':
     parser_unconfigure_ha = subparsers.add_parser('unconfigure-ha',
                                  help='unconfigure a target\'s HA parameters')
     parser_unconfigure_ha.add_argument('--label', required=True,
-                                     help='label for target')
+                                       help='label for target')
+    parser_unconfigure_ha.add_argument('--serial', required=True,
+                                       help='serial of target to unconfigure')
     parser_unconfigure_ha.add_argument('--primary', action='store_true',
-                                     help='target is primary on this node')
+                                       help='target is primary on this node')
     parser_unconfigure_ha.set_defaults(func=actions.unconfigure_ha)
 
 
@@ -65,12 +69,16 @@ if __name__ == '__main__':
                                                 help='start a target')
     parser_start_target.add_argument('--label', required=True,
                                        help='label of target to start')
+    parser_start_target.add_argument('--serial', required=True,
+                                     help='serial of target to start')
     parser_start_target.set_defaults(func=actions.start_target)
 
     parser_stop_target = subparsers.add_parser('stop-target',
-                                                help='stop a target')
+                                               help='stop a target')
     parser_stop_target.add_argument('--label', required=True,
                                     help='label of target to stop')
+    parser_stop_target.add_argument('--serial', required=True,
+                                    help='serial of target to stop')
     parser_stop_target.set_defaults(func=actions.stop_target)
 
     parser_format_target = subparsers.add_parser('format-target',
@@ -88,9 +96,9 @@ if __name__ == '__main__':
     parser_migrate_target = subparsers.add_parser('migrate-target',
                                             help='migrate a target to a node')
     parser_migrate_target.add_argument('--label', required=True,
-                                        help='label of target to migrate')
+                                       help='label of target to migrate')
     parser_migrate_target.add_argument('--node', required=True,
-                                        help='node to migrate target to')
+                                       help='node to migrate target to')
     parser_migrate_target.set_defaults(func=actions.migrate_target)
 
     parser_unmigrate_target = subparsers.add_parser('unmigrate-target',
@@ -104,13 +112,13 @@ if __name__ == '__main__':
     parser_fail_node.set_defaults(func=actions.fail_node)
 
     parser_configure_rsyslog = subparsers.add_parser('configure-rsyslog',
-                                       help='configure rsyslog to forward to another node')
+                          help='configure rsyslog to forward to another node')
     parser_configure_rsyslog.add_argument('--node', required=True,
-                                        help='node to direct syslog to')
+                                          help='node to direct syslog to')
     parser_configure_rsyslog.set_defaults(func=actions.configure_rsyslog)
 
     parser_unconfigure_rsyslog = subparsers.add_parser('unconfigure-rsyslog',
-                                       help='unconfigure rsyslog to forward to another node')
+                        help='unconfigure rsyslog to forward to another node')
     parser_unconfigure_rsyslog.set_defaults(func=actions.unconfigure_rsyslog)
 
     p = subparsers.add_parser('device-scan')

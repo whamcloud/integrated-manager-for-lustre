@@ -195,7 +195,6 @@ class LocalLustreAudit:
             tunefs_text = subprocess.Popen(["tunefs.lustre", "--dryrun", device], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.read()
             try:
                 name = re.search("Target:\\s+(.*)\n", tunefs_text).group(1)
-                fs_name = re.search("Lustre FS:\\s+([^\n]*)\n", tunefs_text).group(1)
                 flags = int(re.search("Flags:\\s+(0x[a-fA-F0-9]+)\n", tunefs_text).group(1), 16)
                 params_re = re.search("Parameters:\\ ([^\n]+)\n", tunefs_text)
                 if params_re:
@@ -241,7 +240,6 @@ class LocalLustreAudit:
                         "running": running,
                         "kind": self.name2kind(real_name),
                         "name": real_name,
-                        "filesystem": fs_name,
                         "params": params,
                         "device": device
                         })
@@ -305,8 +303,13 @@ class LocalLustreAudit:
         for line in ls.split("\n"):
             try:
                 name = line.split()[8]
+                size = line.split()[5]
             except IndexError:
                 pass
+
+            if size == 0:
+                continue
+
             match = re.search("(\w+)-client", name)
             if match != None:
                 filesystems.append(match.group(1).__str__())
