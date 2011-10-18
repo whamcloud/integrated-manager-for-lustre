@@ -138,7 +138,8 @@ class StorageResource(object):
     def to_json(self, stack = []):
         dct = {}
         dct['id'] = self._handle
-        dct['human_string'] = self.human_string(stack)
+        #dct['human_string'] = self.human_string(stack)
+        dct['human_string'] = self.human_string()
         dct['human_class'] = self.human_class()
         dct['icon'] = self.icon
         dct.update(dict(list(self.format_all())))

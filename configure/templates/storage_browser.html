@@ -47,11 +47,11 @@
         .bind("select_node.jstree", function (NODE, REF_NODE) {
             var a = $.jstree._focused().get_selected();
             console.log(a);
-            var vrr_url = a.attr('vrr_url');
-            console.log(vrr_url);
+            var srr_url = a.attr('srr_url');
+            console.log(srr_url);
 
             $('#resource').html('<img src="{{STATIC_URL}}images/ajax-loader.gif"/>&nbsp;Loading...');
-            $('#resource').load(vrr_url);
+            $('#resource').load(srr_url);
             window.location.hash = a.attr('vrr_id');
         });
 

@@ -701,7 +701,7 @@ def _resource_tree(root_records):
         from settings import STATIC_URL
         from django.core.urlresolvers import reverse
         resource_dict['attr'] = {
-                'vrr_url': "%s" %  reverse('configure.views.storage_resource', kwargs={'srr_id': resource_dict['id']}),
+                'srr_url': "%s" %  reverse('configure.views.storage_resource_inner', kwargs={'srr_id': resource_dict['id']}),
                 'srr_id': resource_dict['id']
                 }
         resource_dict['data'] = {
