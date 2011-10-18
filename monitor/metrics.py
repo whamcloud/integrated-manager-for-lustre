@@ -102,6 +102,7 @@ class R3dMetricStore(MetricStore):
         """
         ct = ContentType.objects.get_for_model(measured_object)
         self.r3d = Database.objects.create(name=measured_object.__str__(),
+                                           start=int(time.time()) - 1,
                                            object_id=measured_object.id,
                                            content_type=ct,
                                            step=sample_period,
