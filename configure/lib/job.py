@@ -306,7 +306,7 @@ class MountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = Target.objects.get(id = target_id)
 
-        self._run_agent_command(target, "start-target --label %s" % target.name)
+        self._run_agent_command(target, "start-target --label %s --serial %s" % (target.name, target.pk))
 
 class UnmountStep(AnyTargetMountStep):
     def is_idempotent(self):
@@ -317,7 +317,7 @@ class UnmountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = Target.objects.get(id = target_id)
 
-        self._run_agent_command(target, "stop-target --label %s" % target.name)
+        self._run_agent_command(target, "stop-target --label %s --serial %s" % (target.name, target.pk))
 
 class RegisterTargetStep(Step):
     def is_idempotent(self):
@@ -347,9 +347,10 @@ class ConfigurePacemakerStep(Step):
         # target.name should have been populated by RegisterTarget
         assert(target_mount.block_device != None and target_mount.target.name != None)
 
-        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s %s --mountpoint %s" % (
+        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --serial %s %s --mountpoint %s" % (
                                     target_mount.block_device.path,
                                     target_mount.target.name,
+                                    target_mount.target.pk,
                                     target_mount.primary and "--primary" or "",
                                     target_mount.mount_point))
 
@@ -366,8 +367,9 @@ class UnconfigurePacemakerStep(Step):
         # didn't have its name
         assert(target_mount.target.name != None)
 
-        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s %s" % (
+        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s --serial %s %s" % (
                                     target_mount.target.name,
+                                    target_mount.target.pk,
                                     target_mount.primary and "--primary" or ""))
 
 class StartLNetStep(Step):
