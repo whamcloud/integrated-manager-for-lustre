@@ -75,13 +75,28 @@ class Database(models.Model):
     last_update = models.BigIntegerField(blank=True)
 
     # Leverage the ContentTypes framework to allow R3D databases to be
-    # optinally associated with other apps' models.
+    # optionally associated with other apps' models.
     content_type    = models.ForeignKey(ContentType, null=True)
     object_id       = models.PositiveIntegerField(null=True)
     content_object  = generic.GenericForeignKey('content_type', 'object_id')
 
     class Meta:
         unique_together = ('content_type', 'object_id')
+
+    def _parse_time(self, in_time):
+        if hasattr(in_time, "now"):
+            return int(in_time.strftime("%s"))
+        elif hasattr(in_time, "numerator"):
+            # skip pointless conversions if it's already an int
+            return in_time
+        else:
+            return int(float(in_time))
+
+    def __init__(self, *args, **kwargs):
+        if kwargs.has_key("start"):
+            kwargs['start'] = self._parse_time(kwargs['start'])
+
+        super(Database, self).__init__(*args, **kwargs)
 
     def save(self, *args, **kwargs):
         if not self.last_update:
@@ -205,7 +220,7 @@ class Database(models.Model):
             for update in sorted(updates.keys()):
                 new_values = self.parse_update_dict(updates[update],
                                                      missing_ds_block)
-                self.single_update(update, new_values)
+                self.single_update(self._parse_time(update), new_values)
 
     def fetch(self, archive_type, start_time=int(time.time() - 3600),
                                   end_time=int(time.time()),
@@ -219,8 +234,8 @@ class Database(models.Model):
         """
         return lib.fetch_best_rra_rows(self,
                                        archive_type,
-                                       start_time,
-                                       end_time,
+                                       self._parse_time(start_time),
+                                       self._parse_time(end_time),
                                        step,
                                        fetch_metrics)
 

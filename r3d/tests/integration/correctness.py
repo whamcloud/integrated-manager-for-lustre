@@ -446,3 +446,62 @@ class DatabaseNamesShouldBeUnique(TestCase):
 
     def tearDown(self):
         self.rrd.delete()
+
+class SimpleFetchWithDateTimes(TestCase):
+    """
+    All of the other testcases use ints for start/end times.  Since we've
+    added support for datetimes, we need to do some basic testing to
+    make sure they work properly.
+    """
+    def setUp(self):
+        self.rrd = Database.objects.create(name="test", start=920804400)
+        self.rrd.datasources.add(Counter.objects.create(name="speed",
+                                                        heartbeat=600,
+                                                        database=self.rrd))
+        self.rrd.archives.add(Average.objects.create(xff="0.5",
+                                                     cdp_per_row=1,
+                                                     rows=24,
+                                                     database=self.rrd))
+        self.rrd.archives.add(Average.objects.create(xff="0.5",
+                                                     cdp_per_row=6,
+                                                     rows=10,
+                                                     database=self.rrd))
+
+    def update_database(self):
+        for upd_str in """
+        920804700:12345 920805000:12357 920805300:12363
+        920805600:12363 920805900:12363 920806200:12373
+        920806500:12383 920806800:12393 920807100:12399
+        920807400:12405 920807700:12411 920808000:12415
+        920808300:12420 920808600:12422 920808900:12423
+        """.split():
+            self.rrd.update(upd_str)
+
+    def test_database_fetch_with_datetimes(self):
+        """
+        Tests that what we get back from fetch() with datetimes is correct.
+        """
+        self.maxDiff = None
+        self.update_database()
+        from datetime import datetime
+
+        int_start = 920804400
+        start_time = datetime.fromtimestamp(int_start)
+        int_end = 920809200
+        end_time = datetime.fromtimestamp(int_end)
+
+        dt_fetch = self.rrd.fetch("Average", start_time, end_time)
+        int_fetch = self.rrd.fetch("Average", int_start, int_end)
+        self.assertEqual(dt_fetch, int_fetch)
+
+        int_start = 920799000
+        start_time = datetime.fromtimestamp(int_start)
+        int_end = 920809200
+        end_time = datetime.fromtimestamp(int_end)
+
+        dt_fetch = self.rrd.fetch("Average", start_time, end_time)
+        int_fetch = self.rrd.fetch("Average", int_start, int_end)
+        self.assertEqual(dt_fetch, int_fetch)
+
+    def tearDown(self):
+        self.rrd.delete()
