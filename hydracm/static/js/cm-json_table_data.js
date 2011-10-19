@@ -648,7 +648,7 @@ function LoadServerConf_ServerConfig()
 					}
 					else if(resValue.lnet_status == "lnet_unloaded")
 					{
-						lnet_status_mesg = "<a href='#'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15  onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_up&apos;)'/></a> | <a href='#'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"' onclick='RemoveHost_ServerConfig(" + resValue.id + ")' /></a> | <a href='#'>Load<img src='/static/images/load.png' title='Load Lnet' height=15 width=15  onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_load&apos;)'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
+						lnet_status_mesg = "<a href='#'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15  onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_up&apos;)'/></a> | <a href='#'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"' onclick='RemoveHost_ServerConfig(" + resValue.id + ")' /></a> | &nbsp;&nbsp;<a href='#'>Load<img src='/static/images/load.png' title='Load Lnet' height=15 width=15  onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_load&apos;)'/></a>&nbsp;&nbsp; | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
 					}
 					
 					$('#server_configuration').dataTable().fnAddData ([
@@ -690,9 +690,10 @@ function LoadFSData_EditFS()
 					var lnet_status_mesg;
 					$.each(response, function(resKey, resValue)
 					{
-						$('#total_capacity').html(resValue.kbytesused + resValue.kbytesfree);
-						$('#mdt_file').html(resValue.kbytesused + resValue.mdtfileused);
-						$('#inodes').html(resValue.kbytesused + resValue.kbytesfree);
+						$('#total_capacity').html(resValue.kbytesused);
+						$('#total_free').html(resValue.kbytesfree);
+						$('#mdt_file_used').html(resValue.mdtfileused);
+						$('#mdt_file_free').html(resValue.mdtfilesfree);
 						$('#total_oss').html(resValue.noofoss);
 						$('#total_ost').html(resValue.noofost);
 					});

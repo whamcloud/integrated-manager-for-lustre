@@ -15,15 +15,15 @@ from requesthandler import (AnonymousRequestHandler,
 from monitor.models import (Filesystem,
                             Host)
 
-class GetFSTargetStats(AnonymousRequestHandler):
+class GetFSTargetStats_fake(AnonymousRequestHandler):
 
     def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_fs_stats_for_targets)
+        AnonymousRequestHandler.__init__(self,self.get_fs_stats_for_targets_fake)
 
     @classmethod
     @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime',data_function='datafunction',target_kind='targetkind',fetch_metrics='fetchmetrics')
     @extract_exception
-    def get_fs_stats_for_targets(self,request,filesystem_name,start_time,end_time ,data_function,target_kind,fetch_metrics):
+    def get_fs_stats_for_targets_fake(self,request,filesystem_name,start_time,end_time ,data_function,target_kind,fetch_metrics):
         assert target_kind in ['OST', 'MDT']
         from random import randrange,uniform
         if fetch_metrics == "kbytestotal kbytesfree filestotal filesfree":
@@ -116,15 +116,15 @@ class GetFSTargetStats(AnonymousRequestHandler):
                 return all_fs_stats
 
 
-class GetFSServerStats(AnonymousRequestHandler):
+class GetFSServerStats_fake(AnonymousRequestHandler):
 
     def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_fs_stats_for_server)
+        AnonymousRequestHandler.__init__(self,self.get_fs_stats_for_server_fake)
 
     @classmethod
     @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
     @extract_exception
-    def get_fs_stats_for_server(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
+    def get_fs_stats_for_server_fake(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
         from  random import randrange
         data_slice = []
         current_slice = gettimeslice()
@@ -165,15 +165,15 @@ class GetFSServerStats(AnonymousRequestHandler):
                                                 )
             return host_stats_metric
 
-class GetServerStats(AnonymousRequestHandler):
+class GetServerStats_fake(AnonymousRequestHandler):
 
     def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_stats_for_server)
+        AnonymousRequestHandler.__init__(self,self.get_stats_for_server_fake)
 
     @classmethod
     @extract_request_args(host_id='hostid',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
     @extract_exception
-    def get_stats_for_server(self,request,host_id,start_time,end_time ,data_function,fetch_metrics):
+    def get_stats_for_server_fake(self,request,host_id,start_time,end_time ,data_function,fetch_metrics):
         from  random import randrange
         data_slice = []
         current_slice = gettimeslice()
@@ -194,15 +194,15 @@ class GetServerStats(AnonymousRequestHandler):
         else:
             raise Exception("Unable to find host with hostid=%s" %host_id)
 
-class GetTargetStats(AnonymousRequestHandler):
+class GetTargetStats_fake(AnonymousRequestHandler):
 
     def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_stats_for_targets)
+        AnonymousRequestHandler.__init__(self,self.get_stats_for_targets_fake)
 
     @classmethod
     @extract_request_args(target_name='target',start_time='starttime',end_time='endtime',data_function='datafunction',target_kind='targetkind',fetch_metrics='fetchmetrics')
     @extract_exception
-    def get_stats_for_targets(self,request,target_name,start_time,end_time ,data_function,target_kind,fetch_metrics):
+    def get_stats_for_targets_fake(self,request,target_name,start_time,end_time ,data_function,target_kind,fetch_metrics):
         assert target_kind in ['OST', 'MDT']
         from random import randrange,uniform
         if fetch_metrics == "kbytestotal kbytesfree filestotal filesfree":
@@ -242,15 +242,15 @@ class GetTargetStats(AnonymousRequestHandler):
             ]
 
 
-class GetFSClientsStats(AnonymousRequestHandler):
+class GetFSClientsStats_fake(AnonymousRequestHandler):
 
     def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_fs_stats_for_client)
+        AnonymousRequestHandler.__init__(self,self.get_fs_stats_for_client_fake)
 
     @classmethod
     @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
     @extract_exception
-    def get_fs_stats_for_client(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
+    def get_fs_stats_for_client_fake(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
          from random import randrange
          current_slice = gettimeslice()
          return [

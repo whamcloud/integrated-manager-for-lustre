@@ -50,7 +50,7 @@ var chartConfig_Bar_SpaceUsage = {
             stacking: 'normal',
          }
     },
-    legend: {enabled:false},
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
     title:{text:'', style: { fontSize: '12px' } },
     zoomType: 'xy',
     xAxis:{ categories: ['Usage'], text: '', labels : { rotation: 310, style:{fontSize:'8px', fontWeight:'regular'} } },
@@ -116,16 +116,7 @@ var chartConfig_Line_clientConnected = {
                  return this.x +': '+ this.y +'';
        }
     },
-
-    legend: {
-  	  enabled: false,
-       layout: 'vertical',
-       align: 'right',
-       verticalAlign: 'top',
-       x: -10,
-       y: 100,
-       borderWidth: 0
-    },
+    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
     credits:{ enabled:false },
     series: [{
        name: '',
@@ -174,22 +165,20 @@ var chartConfig_LineBar_CPUMemoryUsage = {
 	        
 	        max:100, min:0, startOnTick:false,  tickInterval: 20
 	    }],
-	    legend: {
-	    	 enabled:false,
-	    },
+	    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
 	    credits:{ enabled:false },
 	    plotOptions:{series:{marker: {enabled: false}} },
 	    series: [{
 	        type: 'column',
 	        data: [20, 30, 35, 34, 70, 60, 42, 50, 50, 45,
 		       45, 44, 50, 55, 60, 40, 35, 40, 45, 50],
-	        name: 'KB',
+	        name: 'CPU',
 	        yAxis: 1
 	    },{
 	        type: 'line',
 	        data: [35, 35, 32, 35, 33, 33, 33, 35, 35, 35,
 		       35, 36, 38, 40, 42, 44, 50, 55, 60, 70],
-	        name: 'Percentage',
+	        name: 'Memory',
 	    }]
 };
 
@@ -240,9 +229,7 @@ var chartConfig_Area_ReadWrite = {
 		                this.series.name +': '+ this.y +'';
 		         }
 		      },
-		      legend: {
-			    	 enabled:false,
-			    },
+		      legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
 			  credits:{ enabled:false },
 			  plotOptions:{series:{marker: {enabled: false}} },
 		      credits: {
@@ -312,7 +299,7 @@ var chartConfig_Area_Iops  = {
 		                this.x +': '+ Highcharts.numberFormat(this.y, 0, ',') +' ';
 		         }
 		      },
-		      legend:{enabled:false},
+		      legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
 		      credits:{ enabled:false },
 		      plotOptions: {
 				 series:{marker: {enabled: false}},
@@ -809,6 +796,7 @@ var chartConfig_HeatMap = {
 	 	object.chart.style.height = "360";
 	 	object.chart.style.width = "100%";
 	 	object.chart.renderTo = "zoomDialog";
+	 	object.legend.enabled = true;
 	}
 /*****************************************************************************/
 //Function for setting title for zoom dialog

@@ -21,10 +21,26 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
 <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
 <script language="javascript" type="text/javascript">
-    $(function () 
-    {
-    	loadLogContent('all_log_content', -1);
-    });
+$(document).ready(function() 
+{
+	var now = new Date();
+	var date = now.getDate();
+	var month = now.getMonth()+1;
+	
+	LoadLogs("all_log_content",date,month,false);
+	var oTable = $('#all_log_content').dataTable( {
+	"bProcessing": true,
+	"iDisplayLength":50,
+	"aoColumns": [
+		{ "sClass": 'txtleft' },
+		{ "sClass": 'txtcenter' },
+		{ "sClass": 'txtleft' },
+		{ "sClass": 'txtleft' }
+	]
+	} );
+	$('#log_start_month').val(month);
+	$('#log_start_day').val(date);
+});
 </script>
 <style type="">
 .logs_all_ok {
@@ -61,7 +77,7 @@
             <div style="float: right"><b id="minusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications_hor.png" alt="" /></b></div>
             <br/>
             <div style="font-family:Verdana, Arial, Helvetica, sans-serif;"><a href="#" id="alertAnchor">Alerts</a></div>
-            <div id="alertsDiv" class="transbox">
+            <div id="alertsDiv" class="transbox" style="margin-left:5px; height:400px; overflow:auto;">
               <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
                 <tr>
                   <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="alert_content">
@@ -70,7 +86,7 @@
               </table>
             </div>
             <div style="font-family:Verdana, Arial, Helvetica, sans-serif;"><a href="#" id="eventsAnchor">Events</a></div>
-            <div id="eventsDiv"  style="display:none;">
+            <div id="eventsDiv"  style="display:none;margin-left:5px; height:400px; overflow:auto;">
               <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
                 <tr>
                   <td bgcolor="#CCCCCC"><table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
@@ -83,7 +99,7 @@
               </table>
             </div>
             <div style="font-family:Verdana, Arial, Helvetica, sans-serif;"><a href="#" id="jobsAnchor">Jobs</a></div>
-            <div id="jobsDiv"  style="display:none;">
+            <div id="jobsDiv"  style="display:none;margin-left:5px; height:400px; overflow:auto;">
               <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
                 <tr>
                   <td bgcolor="#CCCCCC"><table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
@@ -137,7 +153,7 @@
 				</select>
             	 Start Day: &nbsp;
                 <select id="log_start_day">
-                 	<option value="">Select Date</option>
+                 	<option value="">Select Day</option>
 					<option value="1"> 1</option>
 					<option value="2"> 2</option>
 					<option value="3"> 3</option>
@@ -171,7 +187,7 @@
 					<option value="31">31</option>
 				</select>
                 &nbsp;Only Lustre Messages:&nbsp;
-                <input type="checkbox" id="id_only_lustre" name="only_lustre" checked="checked">
+                <input type="checkbox" id="id_only_lustre" name="only_lustre" checked="checked" value="true">
                 &nbsp;<input value="Filter" id="log_filter_btn" type="button"></input>
               </div></td>
           </tr>
@@ -181,6 +197,14 @@
             <td colspan="3"><form>
                 <fieldset>
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="display" id="all_log_content">
+                <thead>
+                <tr>
+                	<th width="12%">Log Created At</th>
+                    <th width="15%">Host</th>
+                    <th width="10%">Service</th>
+                    <th width="63%">Message</th>
+                </tr>
+                </thead><tbody></tbody>
                 </table>
                 <!--    <table width="100%" border="0" cellpadding="0" cellspacing="0"<>
                   <tr class="odd">
