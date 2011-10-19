@@ -906,6 +906,15 @@ class AlertState(models.Model):
     end = models.DateTimeField()
     active = models.BooleanField()
 
+    def to_dict(self):
+        return {
+         'alert_created_at': self.begin,
+         'alert_created_at_short': self.begin,
+         'alert_severity':'alert', # FIXME: Still need to figure out wheather to pass enum or display string.
+         'alert_item': str(self.alert_item), 
+         'alert_message': self.message(),
+        }
+
     def duration(self):
         return self.end - self.begin
 

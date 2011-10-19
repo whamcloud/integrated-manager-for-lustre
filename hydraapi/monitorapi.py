@@ -422,29 +422,7 @@ class GetAlerts(AnonymousRequestHandler):
     @extract_exception  
     def get_alerts(self,request,active_flag):
         from monitor.models import AlertState
-        if active_flag ==  'True':
-            return [
-                    {
-                     'alert_created_at': alert.begin,
-                     'alert_created_at_short': alert.begin,
-                     'alert_severity':'alert', # Still need to figure out wheather to pass enum or display string.
-                     'alert_item': str(alert.alert_item), 
-                     'alert_message': alert.message(),
-                    }
-                    for alert in  AlertState.objects.filter(active = True).order_by('end')
-            ]
-        else :
-            return [
-                    {
-                     'alert_created_at': alert.begin,
-                     'alert_created_at_short': alert.begin,
-                     'alert_severity':'alert', # Still need to figure out wheather to pass enum or display string.
-                     'alert_item': str(alert.alert_item),
-                     'alert_message': alert.message(),
-                    }
-                    for alert in  AlertState.objects.filter(active = False).order_by('end')
-            ]
-
+        return [a.to_dict() for a in AlertState.objects.filter(active = active_flag).order_by('end')]
 
 class GetJobs(AnonymousRequestHandler):
 
