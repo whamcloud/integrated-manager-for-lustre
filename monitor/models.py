@@ -265,7 +265,7 @@ class Lun(models.Model):
             if lunnode_count == 0:
                 # A lun is unusable if it has no LunNodes
                 continue
-            elif lunnode_count > 1 and not lun in luns_with_primary:
+            elif lunnode_count > 1 and not lun.pk in luns_with_primary:
                 # A lun is unusable if it has more than one LunNode, and none is identified as primary
                 continue
             else:
