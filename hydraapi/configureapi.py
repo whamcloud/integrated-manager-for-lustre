@@ -204,6 +204,115 @@ class RemoveClient(AnonymousRequestHandler):
                 'status': 'RemoveManagedTargetJob submitted Job Id:'
                }
 
+class GetResourceClasses(AnonymousRequestHandler):
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.get_resource_classes)
+
+    @classmethod
+    @extract_request_args()
+    @extract_exception
+    def get_resource_classes(self, request):
+        from configure.models import StorageResourceClass, StorageResourceRecord
+
+        # Pick the first resource with no parents, and use its class
+        try:
+            default_resource = StorageResourceRecord.objects.filter(parents = None).latest('pk').resource_class
+        except StorageResourceRecord.DoesNotExist:
+            try:
+                default_resource = StorageResourceRecord.objects.all()[0]
+            except IndexError:
+                default_resource = StorageResourceClass.objects.all()[0]
+
+        def natural_id(src):
+            """Since resource classes are uniquely identified internally by module name
+            plus class name, we don't have to use the PK."""
+            return (src.storage_plugin.module_name, src.class_name)
+        def label(src):
+            return "%s-%s" % (src.storage_plugin.module_name, src.class_name)
+        return {
+                'options': [(natural_id(src), label(src)) for src in StorageResourceClass.objects.all()],
+                'default': natural_id(default_resource)
+                }
+
+class GetResources(AnonymousRequestHandler):
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.get_resources)
+
+    @classmethod
+    @extract_request_args(module_name='module_name', class_name='class_name')
+    @extract_exception
+    def get_resources(self, request, module_name, class_name):
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(module_name, class_name)
+        attr_columns = resource_class.get_columns()
+        columns = ['id', 'alias'] + attr_columns
+
+        rows = []
+        from django.utils.html import conditional_escape
+        from configure.lib.storage_plugin.query import ResourceQuery
+        for record in ResourceQuery().get_class_resources(resource_class_id):
+            resource = record.to_resource()
+            alias = record.alias_or_name(resource)
+
+            # NB What we output here is logically markup, not strings, so we escape.
+            # (underlying storage_plugin.attributes do their own escaping
+            row = [record.pk, conditional_escape(alias)]
+            row = row + [resource.format(c) for c in attr_columns]
+                
+            rows.append(row)    
+        datatables_columns = [{'sTitle': c} for c in columns]
+        return {'aaData': rows, 'aoColumns': datatables_columns}
+
+# FIXME: this should be part of /storage_resource/
+# FIXME: should return a 204 status code
+class SetResourceAlias(AnonymousRequestHandler):
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.set_resource_alias)
+
+    @classmethod
+    @extract_request_args(resource_id='resource_id', alias='alias')
+    @extract_exception
+    def set_resource_alias(cls, request, resource_id, alias):
+        from configure.models import StorageResourceRecord
+        from django.shortcuts import get_object_or_404
+        record = get_object_or_404(StorageResourceRecord, id = resource_id)
+        if alias == "":
+            record.alias = None
+        else:
+            record.alias = alias
+        record.save()
+        return {}
+
+class GetResource(AnonymousRequestHandler):
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.get_resource)
+
+    @classmethod
+    @extract_request_args(resource_id='resource_id')
+    @extract_exception
+    def get_resource(cls, request, resource_id):
+        from configure.models import StorageResourceRecord
+        from django.shortcuts import get_object_or_404
+        record = get_object_or_404(StorageResourceRecord, id = resource_id)
+        resource = record.to_resource()
+
+        from configure.lib.storage_plugin.query import ResourceQuery
+        alerts = [a.to_dict() for a in ResourceQuery().resource_get_alerts(resource)]
+        prop_alerts = [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(resource)]
+
+        from configure.models import StorageResourceStatistic
+        stats = {}
+        for s in StorageResourceStatistic.objects.filter(storage_resource = resource_id):
+            stats[s.name] = s.to_dict()
+
+        attributes = resource.attr_dict()
+        return {'alias': record.alias,
+                'default_alias': record.to_resource().human_string(),
+                'attributes': attributes,
+                'alerts': alerts,
+                'stats': stats,
+                'propagated_alerts': prop_alerts}
+
 class GetLuns(AnonymousRequestHandler):
     def __init__(self,*args,**kwargs):
         AnonymousRequestHandler.__init__(self,self.get_luns)

@@ -10,7 +10,8 @@ from views import (hydracm,
                    hydracmvolumetab,
                    hydracmservertab,
                    hydracmnewfstab,
-                   hydracmeditfs)
+                   hydracmeditfs,
+                   storage_tab)
 
 urlpatterns = patterns('',
     (r'^$', hydracm),
@@ -20,4 +21,5 @@ urlpatterns = patterns('',
     (r'^servertab/', hydracmservertab), 
     (r'^newfstab/', hydracmnewfstab),
     (r'^editfs/', hydracmeditfs),
+    (r'^storage_tab/', storage_tab)
 )

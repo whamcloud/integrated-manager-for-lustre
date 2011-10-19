@@ -626,60 +626,6 @@ def conf_param_help(request, conf_param_name):
 
     return HttpResponse(help_text, mimetype = 'text/plain')
 
-def _render_storage_resource(request, srr_id, template):
-    from configure.lib.storage_plugin.query import ResourceQuery
-    resource = ResourceQuery().get_resource_parents(srr_id)
-    alerts = ResourceQuery().resource_get_alerts(resource)
-    propagated_alerts = ResourceQuery().resource_get_propagated_alerts(resource)
-    from configure.models import StorageResourceStatistic, StorageResourceRecord
-
-    record = StorageResourceRecord.objects.get(pk = srr_id)
-    stats = {}
-    for s in StorageResourceStatistic.objects.filter(storage_resource = srr_id):
-        stats[s.name] = s.get_latest_json()
-
-    return render_to_response(template, RequestContext(request, {
-                "record": record,
-                "resource": record.to_resource(),
-                "propagated_alerts": propagated_alerts,
-                "alerts": alerts,
-                "stats": stats
-                }))
-
-def storage_resource(request, srr_id):
-    return _render_storage_resource(request, srr_id, "storage_resource.html")
-
-def storage_resource_inner(request, srr_id):
-    return _render_storage_resource(request, srr_id, "storage_resource_inner.html")
-
-from django.views.decorators.csrf import csrf_exempt
-@csrf_exempt
-def storage_resource_set_alias(request, record_id):
-    record = get_object_or_404(StorageResourceRecord, id = record_id)
-    alias = request.POST['alias']
-    if alias == "":
-        record.alias = None
-    else:
-        record.alias = alias
-
-    record.save()
-    return HttpResponse(status=204)
-
-def storage_resource_delete(request, vrr_id):
-    record = get_object_or_404(StorageResourceRecord, id = vrr_id)
-
-    # TODO: the real implementation
-    # * should we stop all running instances of the plugin, remove it, and start 
-    #   them again?  Could be interesting trying to do that safely.
-    # * should we send a message to a running plugin asking it to delete?  (Imposes
-    #   more coding on plugin author, may have to wait for running scans to complete
-    #   anyway, so not much responsiveness advantage over just bouncing the plugin)
-    # * should we try to do this synchronously, given that it might take a few seconds
-    #   at least, or should we use configure.models.Jobs or should we have our own jobs?
-    # * should we let people remove any object, or just roots?
-
-    return redirect('configure.views.states')
-
 def _resource_class_tree(plugin, klass):
     """Resource tree using all instances of 'klass' as origins"""
     records = StorageResourceRecord.objects.filter(
@@ -723,32 +669,6 @@ def _resource_tree(root_records):
 
     return json.dumps(tree, cls = ResourceJsonEncoder, indent=4)
 
-def _handle_resource_form(request):
-    from configure.models import StorageResourceClass
-
-    # Pick the first resource with no parents, and use its class
-    try:
-        default_resource = StorageResourceRecord.objects.filter(parents = None).latest('pk').resource_class
-    except StorageResourceRecord.DoesNotExist:
-        try:
-            default_resource = StorageResourceRecord.objects.all()[0]
-        except IndexError:
-            default_resource = StorageResourceClass.objects.all()[0]
-
-    class ResourceForm(forms.Form):
-        resource = forms.ModelChoiceField(queryset = StorageResourceClass.objects.all(), required = True, empty_label = None)
-
-    if 'resource' in request.GET:
-        resource_form = ResourceForm(request.GET)
-    else:
-        resource_form = ResourceForm(initial = {'resource': default_resource.pk})
-    if resource_form.is_valid():
-        storage_resource_class = resource_form.cleaned_data['resource']
-    else:
-        storage_resource_class = default_resource
-
-    return resource_form, storage_resource_class
-
 def storage_browser(request):
     from configure.models import StorageResourceClass
     if StorageResourceClass.objects.count() == 0:
@@ -763,55 +683,5 @@ def storage_browser(request):
         'resource_form': resource_form,
         'resource_tree': resource_tree
         }))
-
-def storage_table(request):
-    from configure.models import StorageResourceClass
-    if StorageResourceClass.objects.count() == 0:
-        return render_to_response('storage_browser_disabled.html', RequestContext(request))
-
-    resource_form, storage_resource_class = _handle_resource_form(request)
-
-    # The StorageResource subclass as opposed to the DB reference for it
-    from configure.lib.storage_plugin.manager import storage_plugin_manager
-    storage_plugin_manager.load_plugin(storage_resource_class.storage_plugin.module_name)
-    real_resource_class = storage_resource_class.get_class()
-
-    columns = ['id', 'alias'] + real_resource_class._storage_attributes.keys()
-
-    return render_to_response('storage_table.html', RequestContext(request, {
-        'plugin_module': storage_resource_class.storage_plugin.module_name,
-        'resource_class': storage_resource_class.class_name,
-        'resource_form': resource_form,
-        'columns': columns
-        }))
-
-def storage_table_json(request, plugin_module, resource_class_name):
-    from configure.lib.storage_plugin.manager import storage_plugin_manager
-    # FIXME: for now this effectively lets the caller 'import' whatever they want.
-    # need an INSTALLED_PLUGINS setting and limit this to one of those.
-    storage_plugin_manager.load_plugin(plugin_module)
-    from configure.lib.storage_plugin.query import ResourceQuery
-
-    resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(plugin_module, resource_class_name)
-    attr_columns = resource_class.get_columns()
-    columns = ['id', 'alias'] + attr_columns
-
-    rows = []
-    from django.utils.html import conditional_escape
-    for record in ResourceQuery().get_class_resources(resource_class_id):
-        resource = record.to_resource()
-        if record.alias:
-            alias = record.alias
-        else:
-            alias = resource.human_string()
-
-        # NB What we output here is logically markup, not strings, so we escape.
-        # (underlying storage_plugin.attributes do their own escaping
-        row = [record.pk, conditional_escape(alias)]
-        row = row + [resource.format(c) for c in attr_columns]
-            
-        rows.append(row)    
-
-    return HttpResponse(json.dumps({'aaData': rows}), mimetype = 'application/json') 
 
 

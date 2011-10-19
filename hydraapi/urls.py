@@ -38,6 +38,10 @@ from configureapi import (FormatFileSystem,
                           CreateMDS,
                           SetLNetStatus)
 
+# FIXME: instead of doing this big list of imports, should introspect available
+# RequestHandler objects and get their url name from them.
+from configureapi import GetResource, GetResources, GetResourceClasses, SetResourceAlias
+
 #Once R3D starts getting correct data  replace fakestatsmetricapi with statmetricapi
 from fakestatsmetricapi import(GetFSTargetStats,
                            GetFSServerStats,
@@ -155,5 +159,10 @@ urlpatterns = patterns('',
     (r'^getalerts/$',get_alerts),
     (r'^getjobs/$',get_jobs),
     (r'^getlogs/$',get_logs),
+
+    (r'^get_resource_classes/$', CsrfExemptResource(GetResourceClasses)),
+    (r'^get_resources/$', CsrfExemptResource(GetResources)),
+    (r'^get_resource/$', CsrfExemptResource(GetResource)),
+    (r'^set_resource_alias/$', CsrfExemptResource(SetResourceAlias)),
     
    )

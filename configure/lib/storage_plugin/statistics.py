@@ -23,6 +23,14 @@ class BaseStatistic(object):
         else:
             return "%s%s" % (value, self.units)
 
+    def get_unit_name(self):
+        if self.units == None:
+            return ""
+        elif self.units == UNITS_BYTES:
+            return "bytes"
+        else:
+            return self.units
+
     def validate(self, value):
         pass
 

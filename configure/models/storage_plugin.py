@@ -60,7 +60,7 @@ class StorageResourceRecord(models.Model):
         unique_together = ('storage_id_str', 'storage_id_scope', 'resource_class')
 
     def __str__(self):
-        return "%s (record %s)" % (self.resource_class.class_name, self.pk)
+        return self.alias_or_name()
 
     @classmethod
     def create_root(cls, resource_class, resource_class_id, attrs):
@@ -131,11 +131,13 @@ class StorageResourceRecord(models.Model):
         resource._handle = self.id
         return resource
 
-    def alias_or_name(self):
+    def alias_or_name(self, resource = None):
         if self.alias:
             return self.alias
         else:
-            return self.to_resource().human_string()
+            if not resource:
+                resource = self.to_resource()
+            return resource.human_string()
 
     def to_resource_class(self):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
@@ -188,12 +190,14 @@ class StorageResourceStatistic(models.Model):
 
         return result
 
-    def get_latest_json(self):
-        """For use with frontend"""
-        latest_ts, latest_data = self.metrics.fetch_last()
+    def to_dict(self):
+        """For use with frontend.  Get a time series for scalars or a snapshot for histograms.
+        TODO: generalisation for explorable graphs, variable time series, that
+        should be done in common with the lustre graphs."""
         stat_props = self.storage_resource.get_statistic_properties(self.name)
         from configure.lib.storage_plugin import statistics
         if isinstance(stat_props, statistics.BytesHistogram):
+            latest_ts, latest_data = self.metrics.fetch_last()
             type_name = 'histogram'
             # Composite type
             data = {'bin_labels': [], 'values': []}
@@ -203,12 +207,29 @@ class StorageResourceStatistic(models.Model):
                 bin_name = "%s_%s" % (self.name, i)
                 data['values'].append(latest_data[bin_name])
         else:
-            type_name = 'string'
-            # Scalar types
-            data = latest_data[self.name]
+            import time
+            from django.db import transaction
+            with transaction.commit_manually():
+                transaction.commit()
+                try:
+                    latest_data = self.metrics.fetch('Average', start_time = int(time.time()) - 60)
+                except Exception, e:
+                    transaction.rollback()
+                else:
+                    transaction.commit()
 
-        import json
-        return json.dumps({'type': type_name, 'data': data})
+            print latest_data
+            type_name = 'timeseries'
+            # Scalar types
+            data_points = []
+            for ts, seriesdict in latest_data:
+                data_points.append((ts, seriesdict[self.name]))
+            data = {
+                    'unit_name': stat_props.get_unit_name(),
+                    'data_points': data_points
+                    }
+
+        return {'name': self.name, 'type': type_name, 'data': data}
 
 class StorageResourceAttribute(models.Model):
     """An attribute of a StorageResource instance.

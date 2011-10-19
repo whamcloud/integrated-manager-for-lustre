@@ -79,14 +79,27 @@ class StorageResource(object):
     def decode(cls, attr, value):
         return cls._storage_attributes[attr].decode(value)
 
-    def format(self, attr):
-        return self._storage_attributes[attr].to_markup(getattr(self, attr))
+    def format(self, attr, val = None):
+        if not val:
+            val = getattr(self, attr)
+        return self._storage_attributes[attr].to_markup(val)
 
     def format_all(self):
         """Return a list of 2-tuples for names and human readable
            values for all resource attributes (i.e. _storage_dict)"""
         for k in self._storage_dict.keys():
             yield k, self.format(k)
+
+    def attr_dict(self):
+        result = {}
+        for k in self._storage_dict.keys():
+            val = getattr(self, k)
+            if isinstance(val, StorageResource):
+                raw = val._handle
+            else:
+                raw = val
+            result[k] = {'raw': raw, 'markup': self.format(k, val)}
+        return result
 
     @classmethod
     def get_attribute_properties(cls, attr):

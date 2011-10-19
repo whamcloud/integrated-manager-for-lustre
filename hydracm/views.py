@@ -32,6 +32,10 @@ def hydracmservertab(request):
     return render_to_response("server_configuration.html",
             RequestContext(request, {}))
 
+def storage_tab(request):
+    return render_to_response("storage_configuration.html",
+            RequestContext(request, {}))
+
 def hydracmnewfstab(request):
     fsname=request.GET.get("fsname")
     return render_to_response("create_lustre_fs.html",

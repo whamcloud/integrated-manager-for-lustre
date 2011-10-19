@@ -107,9 +107,6 @@ class ResourceReference(ResourceAttribute):
         return record.to_resource()
         
     def to_markup(self, value):
-        from django.core.urlresolvers import reverse
-        url = reverse('configure.views.storage_resource', kwargs = {'srr_id': value._handle})
-
         from configure.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = value._handle)
         if record.alias:
@@ -121,7 +118,7 @@ class ResourceReference(ResourceAttribute):
         name = conditional_escape(name)
 
         from django.utils.safestring import mark_safe
-        return mark_safe("<a href='%s'>%s</a>" % (url, name))
+        return mark_safe("<a class='storage_resource' href='#%s'>%s</a>" % (value._handle, name))
 
     def validate(self, value):
         from configure.lib.storage_plugin.resource import StorageResource
