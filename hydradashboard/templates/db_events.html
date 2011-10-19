@@ -21,12 +21,21 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
 <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
 <script language="javascript" type="text/javascript">
-    $(function () 
-    {
-       loadEventContent('all_event_content', -1);
-       loadHostList('');
-    });
-    
+$(document).ready(function() 
+{
+	loadHostList('');
+	LoadAllEvents("all_event_content");
+	var oTable = $('#all_event_content').dataTable( {
+	"bProcessing": true,
+	"aoColumns": [
+		{ "sClass": 'txtleft' },
+		{ "sClass": 'txtcenter' },
+		{ "sClass": 'txtleft' },
+		{ "sClass": 'txtleft' }
+	]
+	} );
+	
+});   
 </script>
 </head>
 <body style="margin: 0px 0px 0px 0px; padding: 0px;">
@@ -52,7 +61,7 @@
             <div style="float: right"><b id="minusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications_hor.png" alt="" /></b></div>
             <br/>
             <div style="font-family:Verdana, Arial, Helvetica, sans-serif;"><a href="#" id="alertAnchor">Alerts</a></div>
-            <div id="alertsDiv" class="transbox">
+            <div id="alertsDiv" class="transbox" style="margin-left:5px; height:400px; overflow:auto;">
               <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
                 <tr>
                   <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="alert_content">
@@ -61,7 +70,7 @@
               </table>
             </div>
             <div style="font-family:Verdana, Arial, Helvetica, sans-serif;"><a href="#" id="eventsAnchor">Events</a></div>
-            <div id="eventsDiv"  style="display:none;">
+            <div id="eventsDiv"  style="display:none;margin-left:5px; height:400px; overflow:auto;">
               <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
                 <tr>
                   <td bgcolor="#CCCCCC"><table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
@@ -74,7 +83,7 @@
               </table>
             </div>
             <div style="font-family:Verdana, Arial, Helvetica, sans-serif;"><a href="#" id="jobsAnchor">Jobs</a></div>
-            <div id="jobsDiv"  style="display:none;">
+            <div id="jobsDiv"  style="display:none;margin-left:5px; height:400px; overflow:auto;">
               <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
                 <tr>
                   <td bgcolor="#CCCCCC"><table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
@@ -119,17 +128,17 @@
             	Severity: &nbsp;
                 <select id="intervalSelect">
                   <option value="">Any</option>
-                  <option value="">Info</option>
-                  <option value="">Warning</option>
-                  <option value="">Error</option>
+                  <option value="Info">Info</option>
+                  <option value="Warning">Warning</option>
+                  <option value="Error">Error</option>
                 </select>
                 &nbsp;Event type:&nbsp;
                 <select id="unitSelect">
-                  <option value=''>Any</option>
-                  <option value=''>Autodetection</option>
-                  <option value=''>Alert</option>
-                  <option value=''>Syslog</option>
-                  <option value=''>Storage resource detection</option>
+                  <option value="">Any</option>
+                  <option value="Autodetection">Autodetection</option>
+                  <option value="Alert">Alert</option>
+                  <option value="Syslog">Syslog</option>
+                  <option value="Storage resource detection">Storage resource detection</option>
                 </select>
                 <input value="Filter" id="event_filter_btn" type="button"></input>
               </div>
@@ -141,6 +150,15 @@
             <td colspan="3"><form>
                 <fieldset>
                 <table cellpadding="0" cellspacing="0" border="0" class="display" id="all_event_content">
+               <thead>
+                  <tr>
+                    <th width="12%">Event Created At</th>
+                    <th width="5%">Status</th>
+                    <th width="15%">Host</th>
+                    <th width="61%">Message</th>
+                  </tr>
+              </thead>
+              <tbody></tbody>
                 </table>
                  <!--    <table width="100%" border="0" cellpadding="0" cellspacing="0">
                   <tr class="odd">

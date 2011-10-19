@@ -8,6 +8,7 @@
 //	3) lineDataOptions_ost_disk_read - Line Chart configuration for disk read.
 //	4) lineDataOptions_ost_disk_write - Line chart configuration for disk write.
 //---------------------Data Loaders function-------------------------------
+//	ost_Area_ReadWrite_Data(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 //	1) OST_Pie_Space_Data(fsName)
 //	2) OST_Pie_Inode_Data(fsName, sDate, eDate, dataFunction)
 //	3) OST_Line_DiskRead_Data(fsName, sDate, eDate, dataFunction,isZoom)
@@ -20,8 +21,21 @@ var ChartConfig_OST_Space =
     renderTo: '',
     marginLeft: '50',
 	width: '250',
+	height: '200',
 	style:{ width:'100%',  height:'200px' },
+	backgroundColor: '#f9f9ff',
     },
+    colors: [
+             '#A6C56D', 
+             '#C76560', 
+                     '#A6C56D', 
+                     '#C76560', 
+                     '#6087B9', 
+                     '#DB843D', 
+                     '#92A8CD', 
+                     '#A47D7C', 
+                     '#B5CA92'
+             ],
 	title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
     xAxis:{ categories: [], text: '' },
@@ -48,8 +62,21 @@ var ChartConfig_OST_Inode =
     renderTo: '',
     marginLeft: '50',
 	width: '250',
+	height: '200',
 	style:{ width:'100%',  height:'200px' },
+	backgroundColor: '#f9f9ff',
     },
+    colors: [
+             '#A6C56D', 
+             '#C76560', 
+                     '#A6C56D', 
+                     '#C76560', 
+                     '#6087B9', 
+                     '#DB843D', 
+                     '#92A8CD', 
+                     '#A47D7C', 
+                     '#B5CA92'
+             ],
 	title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
     xAxis:{ categories: [], text: '' },
@@ -155,34 +182,41 @@ var ChartConfig_Line_OST_DiskWrite=
 // Param - File System Name
 // Return - Returns the graph plotted in container
 /*****************************************************************************/
-OST_Pie_Space_Data = function(fsName)
+ost_Pie_Space_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
         var free=0,used=0;
+        var freeData = [],usedData = [];
 		obj_ost_pie_space = ChartConfig_OST_Space;
         obj_ost_pie_space.title.text= fsName + " Space Usage";
-        obj_ost_pie_space.chart.renderTo = "ost_container2";		
-        $.post("/api/getfsdiskusage/",{endtime: "", datafunction: "", starttime: "", filesystem: fsName})
-        .success(function(data, textStatus, jqXHR)
-        {
-            if(data.success)
-            {
-                var response = data.response;
-                var totalDiskSpace=0,totalFreeSpace=0;
-                $.each(response, function(resKey, resValue)
-                {
-                    totalFreeSpace = totalFreeSpace + resValue.kbytesfree/1024;
-                    totalDiskSpace = totalDiskSpace + resValue.kbytestotal/1024;
-                });
-                free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-                used = Math.round(100 - free);
-            }
+        obj_ost_pie_space.chart.renderTo = "ost_container2";
+        
+        $.post("/api/get_fs_stats_for_targets/",
+        {targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
+        starttime: sDate, filesystem: fsName, endtime: endDate})
+	    .success(function(data, textStatus, jqXHR) 
+        {   
+	    	if(data.success)
+		    {
+		        var response = data.response;
+			    var totalDiskSpace=0,totalFreeSpace=0;
+			    $.each(response, function(resKey, resValue) 
+		        {
+		    	    totalFreeSpace = resValue.kbytesfree/1024;
+				    totalDiskSpace = resValue.kbytestotal/1024;
+				    free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
+				    used = Math.round(100 - free);
+				    
+				    freeData.push(free);
+			        usedData.push(used);
+			    });
+		    }
         })
-        .error(function(event)
+	    .error(function(event) 
         {
-             // Display of appropriate error message
-        })
+	         // Display of appropriate error message
+	    })
 		.complete(function(event) {
-	    obj_ost_pie_space.series = [{
+		obj_ost_pie_space.series = [{
 				type: 'pie',
 				name: 'Browser share',
 				data: [
@@ -200,32 +234,39 @@ OST_Pie_Space_Data = function(fsName)
 // Param - File System Name
 // Return - Returns the graph plotted in container
 /*****************************************************************************/
-OST_Pie_Inode_Data = function(fsName, sDate, eDate, dataFunction) //250
+ost_Pie_Inode_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom) //250
 {
         var free=0,used=0;
+        var freeFilesData = [],totalFilesData = [];
 		obj_ost_pie_inode = ChartConfig_OST_Inode;
         obj_ost_pie_inode.title.text= fsName + " - Files vs Free Inodes";
         obj_ost_pie_inode.chart.renderTo = "ost_container3";		
-        $.post("/api/getfsinodeusage/",{endtime: eDate, datafunction: dataFunction, starttime: sDate, filesystem: fsName})
-        .success(function(data, textStatus, jqXHR)
-        {
-            if(data.success)
-            {
-                var response = data.response;
-                var totalDiskSpace=0,totalFreeSpace=0;
-                $.each(response, function(resKey, resValue)
-                {
-					totalFreeSpace = totalFreeSpace + resValue.filesfree/1024;
-                    totalDiskSpace = totalDiskSpace + resValue.filestotal/1024;
-                });
-                free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-                used = Math.round(100 - free);
-            }
+        $.post("/api/get_fs_stats_for_targets/",
+        {targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
+        starttime: sDate, filesystem: fsName, endtime: endDate})
+	    .success(function(data, textStatus, jqXHR) 
+        {   
+	    	if(data.success)
+		    {
+		        var response = data.response;
+			    var totalFiles=0,totalFreeFiles=0;
+			    $.each(response, function(resKey, resValue) 
+		        {
+			    	 	totalFiles = resValue.filesfree/1024;
+					    totalFreeFiles = resValue.filestotal/1024;
+					    free = Math.round(((totalFiles/1024)/(totalFreeFiles/1024))*100);
+					    used = Math.round(100 - free);
+					    
+					    freeFilesData.push(free);
+					    totalFilesData.push(used);
+				        
+				});
+		    }
         })
-        .error(function(event)
+	    .error(function(event) 
         {
-             // Display of appropriate error message
-        })
+	         // Display of appropriate error message
+	    })
 		.complete(function(event) {
 	    obj_ost_pie_inode.series = [{
 				type: 'pie',
@@ -247,7 +288,7 @@ OST_Pie_Inode_Data = function(fsName, sDate, eDate, dataFunction) //250
 /*****************************************************************************/	
 OST_Line_DiskRead_Data = function(fsName, sDate, eDate, dataFunction, isZoom)
  {
-        var count = 0;
+		var count = 0;
         var optionData = [],categories = [];
 		var seriesUpdated = 0;
         obj_ost_line_diskread = ChartConfig_Line_OST_DiskRead;
@@ -385,3 +426,88 @@ OST_Line_DiskWrite_Data = function(fsName, sDate, eDate, dataFunction, isZoom)
                 chart = new Highcharts.Chart(obj_ost_line_diskwrite);
         });
 }   
+
+/*****************************************************************************/
+//Function for disk read and write - Area Chart
+//Param - File System name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics
+//Return - Returns the graph plotted in container
+/*****************************************************************************/
+ost_Area_ReadWrite_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+{
+	  var count = 0;
+       var readData = [],categories = [], writeData = [];
+      obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
+      $.post("/api/get_fs_stats_for_targets/",
+      	{targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
+          starttime: sDate, filesystem: fsName, endtime: endDate})
+       .success(function(data, textStatus, jqXHR) {
+          var hostName='';
+          var avgMemoryApiResponse = data;
+          if(avgMemoryApiResponse.success)
+           {
+               var response = avgMemoryApiResponse.response;
+               $.each(response, function(resKey, resValue)
+               {
+              	readData.push(resValue.stats_read_bytes/1024);
+              	writeData.push(((0-resValue.stats_write_bytes)/1024));
+               	
+			        categories.push(resValue.timestamp);
+		         });
+            }
+     })
+     .error(function(event) {
+           // Display of appropriate error message
+     })
+     .complete(function(event){
+  	   		obj_db_Area_ReadWrite_Data.chart.renderTo = "ost_avgReadDiv";
+  	   		obj_db_Area_ReadWrite_Data.chart.width='500';
+              obj_db_Area_ReadWrite_Data.xAxis.categories = categories;
+              if(isZoom == 'true')
+              {
+              	renderZoomDialog(obj_db_Area_ReadWrite_Data);
+      		  }
+              
+              obj_db_Area_ReadWrite_Data.series[0].data = readData;
+              obj_db_Area_ReadWrite_Data.series[1].data = writeData;
+              
+      		chart = new Highcharts.Chart(obj_db_Area_ReadWrite_Data);
+      });
+}
+
+
+loadOSTSummary = function (){
+	 var innerContent = "";
+	 $.post("/api/getfilesystem/",{filesystem: $('#fsSelect').val()})
+    .success(function(data, textStatus, jqXHR) {
+        if(data.success)
+        {
+            var response = data.response;
+            $.each(response, function(resKey, resValue) {
+           	 innerContent = innerContent + 
+           	 	"<tr><td class='txtright'>MGS Hostname:</td><td class='tblContent txtleft'>"+resValue.mgsname+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
+                "<tr><td class='txtright'>MDS Hostname:</td><td class='tblContent txtleft'>"+resValue.mdsname+"</td><td class='txtright'>Failover Status:</td><td class='tblContent txtleft'>--</td></tr>"+
+                "<tr><td class='txtright'>File System Name:</td><td class='tblContent txtleft'>"+resValue.fsname+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
+                "<tr><td class='txtright'>Standby OST Hostname:</td><td class='tblContent txtleft'>--</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
+                "<tr><td class='txtright'>Total OSTs:</td><td class='tblContent txtleft'>"+resValue.noofost+" </td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
+                "<tr><td class='txtright'>Filesystem Status:</td>";
+           	if(resValue.status == "OK" || resValue.status == "STARTED")
+           	{
+           	 	innerContent = innerContent +"<td class='tblContent txtleft status_ok'>"+resValue.mdtstatus+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+           	}
+           	else if(resValue.status == "WARNING" || resValue.status == "RECOVERY")
+           	{
+           	 	innerContent = innerContent +"<td class='tblContent txtleft status_warning'>"+resValue.mdtstatus+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+           	}
+           	else if(resValue.status == "STOPPED")
+           	{
+           	 	innerContent = innerContent +"<td class='tblContent txtleft status_stopped'>"+resValue.mdtstatus+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+           	}
+            });
+        }
+   })
+	.error(function(event) {
+	})
+	.complete(function(event){
+		$('#ostSummaryTbl').html(innerContent);
+   });
+}

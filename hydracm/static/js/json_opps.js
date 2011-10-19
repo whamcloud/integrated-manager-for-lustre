@@ -18,7 +18,7 @@ function AddHost_ServerConfig(hName, dialog_id)
 	        }
 	        if(response.resolve == true)
 	        { 
-	        	imgResolve="/static/images/dialog_correct.gif";
+	        	imgResolve="/static/images/dialog_correct.png";
 	        }
 	        
 			if(response.agent == false) 
@@ -27,7 +27,7 @@ function AddHost_ServerConfig(hName, dialog_id)
 	        }
 	        if(response.resolve == true)
 	        { 
-	        	imgAgent="/static/images/dialog_correct.gif";
+	        	imgAgent="/static/images/dialog_correct.png";
 	        }
 			
 			if(response.ping == false) 
@@ -36,7 +36,7 @@ function AddHost_ServerConfig(hName, dialog_id)
 	        }
 	        if(response.ping == true)
 	        { 
-	        	imgPing="/static/images/dialog_correct.gif";
+	        	imgPing="/static/images/dialog_correct.png";
 	        }
 			
 			$('#loading_tab').remove();

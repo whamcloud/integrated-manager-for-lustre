@@ -149,7 +149,7 @@ load_breadcrumbs = function()
 
         fs_Area_Iops_Data($('#fsSelect').val(),"2011-10-17 19:56:58.720036", "2011-10-17 19:46:58.720062", "Average", "MDT", iopsFetchmatric, false);
 
-        fs_HeatMap_Data('false');
+        //fs_HeatMap_Data('false');
 
         clearInterval(dashboardPollingInterval);
 
@@ -200,23 +200,12 @@ load_breadcrumbs = function()
 					 $("#breadCrumb2").jBreadCrumb();
 				    });
 	        }
-			//call for OSS graphs
-			OSS_Pie_space_data($('#ossSelect').val());
-			
-			//call for inode select
-			OSS_Pie_inode_data($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
-			
-			//call for OSS CPU Usage
-			OSS_Line_Cpu_data($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
-			
-			//call for memory usage
-			OSS_Line_Memory_Data($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
-	
-			//call for disk read
-			OSS_Line_DiskRead_Data($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
-			
-			//call for disk write
-			OSS_Line_DiskWrite_Data($('#ossSelect').val(),'29-20-2011','29-20-2011','average');
+
+        oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),"2011-10-17 19:56:58.720036", "2011-10-17 19:46:58.720062", "Average", cpuMemoryFetchMatric, 'false');
+
+        oss_Area_ReadWrite_Data($('#fsSelect').val(),"2011-10-17 19:56:58.720036", "2011-10-17 19:46:58.720062", "Average", "OST", readWriteFetchMatric, 'false');
+
+        loadOSSUsageSummary();
 	    });
 		
 /******************************************************************************/
@@ -238,18 +227,16 @@ load_breadcrumbs = function()
      $("#breadCrumb3").html(breadCrumbHtml);
 			 	$("#breadCrumb3").jBreadCrumb();
 				}
-	//call for file system usage
-	OST_Pie_Space_Data($("#ostSelect").val());
+    
+    ost_Pie_Space_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', spaceUsageFetchMatric, 'false');
+    
+    ost_Pie_Inode_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', spaceUsageFetchMatric, 'false');
+    
+    ost_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', readWriteFetchMatric, false);
+
+    loadOSTSummary();
 	
-	//call for inode usage
-	OST_Pie_Inode_Data($("#ostSelect").val(),'29-20-2011','29-20-2011','average');
-	
-	//call for disk read
-	OST_Line_DiskRead_Data($("#ostSelect").val(),'29-20-2011','29-20-2011','average');
-	
-	//call for disk write
-	OST_Line_DiskWrite_Data($("#ostSelect").val(),'29-20-2011','29-20-2011','average');
-	 });
+     });
 /******************************************************************************/
 // Function for controlling tabs on oss dashboard
 /******************************************************************************/				
@@ -326,7 +313,7 @@ load_breadcrumbs = function()
         db_LineBar_CpuMemoryUsage_Data('false');
         db_Area_ReadWrite_Data('false');
         db_Area_Iops_Data('false');
-        db_HeatMap_Data('false');
+//        db_HeatMap_Data('false');
 
 		$('#fs_space').click(function(){
 			load_landingPageBar_disk('true');						

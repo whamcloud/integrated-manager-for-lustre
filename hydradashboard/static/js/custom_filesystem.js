@@ -382,12 +382,23 @@
          {
              var response = data.response;
              $.each(response, function(resKey, resValue) {
-            	 innerContent = innerContent + "<tr><td>MGS Hostname: "+resValue.mgsname+"</td><td></td></tr>"+
-                 "<tr><td width='50%'>MDS Hostname: "+resValue.mdsname+"</td><td width='50%'>Failover Status: --</td></tr>"+
-                 "<tr><td>Standby MDS Hostname: --</td><td></td></tr>"+
-                 "<tr><td width='50%'>Total OSSs: "+resValue.noofoss+" </td><td width='50%'>Total OSTs: "+resValue.noofost+" </td></tr>"+
-                 "<tr><td>Filesystem Status: "+resValue.status+"</td><td></td></tr>"+
-                 "<tr><td colspan='4' align='center'>Note: Please check Alerts/Events to detect if status is not healthy</td><td></td></tr>";
+            	 innerContent = innerContent + "<tr><td class='txtright'>MGS Hostname:</td><td class='tblContent txtleft'>"+resValue.mgsname+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
+                 "<tr><td class='txtright'>MDS Hostname:</td><td class='tblContent txtleft'>"+resValue.mdsname+"</td><td class='txtright'>Failover Status:</td><td class='tblContent txtleft'>--</td></tr>"+
+                 "<tr><td class='txtright'>Standby MDS Hostname:</td><td class='tblContent txtleft'>--</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
+                 "<tr><td class='txtright'>Total OSSs: </td><td class='tblContent txtleft'>"+resValue.noofoss+" </td><td class='txtright'>Total OSTs:</td><td class='tblContent txtleft'>"+resValue.noofost+"</td></tr>"+
+                 "<tr><td class='txtright'>Filesystem Status:</td>";
+            	 if(resValue.status == "OK" || resValue.status == "STARTED")
+            	 {
+            		 innerContent = innerContent + "<td class='tblContent txtleft status_ok'>"+resValue.status+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+            	 }
+            	 else if(resValue.status == "WARNING" || resValue.status == "RECOVERY")
+            	 {
+            		 innerContent = innerContent + "<td class='tblContent txtleft status_warning'>"+resValue.status+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+            	 }
+            	 else if(resValue.status == "STOPPED")
+            	 {
+            		 innerContent = innerContent + "<td class='tblContent txtleft status_stopped'>"+resValue.status+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+            	 }
              });
          }
     })
@@ -395,5 +406,5 @@
 	})
 	.complete(function(event){
 		$('#fileSystemSummaryTbl').html(innerContent);
-    });
+	});
  }

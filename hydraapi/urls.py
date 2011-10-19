@@ -12,12 +12,6 @@ from monitorapi import (ListFileSystems,
                         GetVolumes,
                         GetClients,
                         GetServers,
-                        GetFSDiskUsage,
-                        GetFSInodesUsage,
-                        GetServerCPUUsage,
-                        GetServerMemoryUsage,
-                        GetTargetReads,
-                        GetTargetWrites,
                         GetEventsByFilter,
                         GetLatestEvents,
                         GetAlerts,
@@ -39,13 +33,19 @@ from configureapi import (FormatFileSystem,
                           SetLNetStatus)
 
 #Once R3D starts getting correct data  replace fakestatsmetricapi with statmetricapi
-from fakestatsmetricapi import(GetFSTargetStats,
+from fakestatsmetricapi import(GetFSTargetStats_fake,
+                           GetFSServerStats_fake,
+                           GetServerStats_fake,
+                           GetTargetStats_fake,
+                           GetFSClientsStats_fake,
+                           GetFSOSTHeatMap)  
+
+from statsmetricapi import(GetFSTargetStats,
                            GetFSServerStats,
                            GetFSMGSStats,
                            GetServerStats,
                            GetTargetStats,
-                           GetFSClientsStats,
-                           GetFSOSTHeatMap)  
+                           GetFSClientsStats)
 
 from audit import HydraAudit
 
@@ -84,22 +84,21 @@ set_lnet_status = CsrfExemptResource(SetLNetStatus)
 list_audit = CsrfExemptResource(HydraAudit)
 clear_audit = CsrfExemptResource(HydraAudit)
 
-#Stats Metrics related APIs
-get_fs_diskusage = CsrfExemptResource(GetFSDiskUsage)
-get_fs_inodeusage = CsrfExemptResource(GetFSInodesUsage)
-get_server_cpuusage = CsrfExemptResource(GetServerCPUUsage)
-get_server_memoryusage = CsrfExemptResource(GetServerMemoryUsage)
-get_target_reads = CsrfExemptResource(GetTargetReads)
-get_target_writes = CsrfExemptResource(GetTargetWrites)
-
 # Real stats metrics APIs
+get_fs_stats_for_targets_fake = CsrfExemptResource(GetFSTargetStats_fake)
+get_fs_stats_for_server_fake = CsrfExemptResource(GetFSServerStats_fake)
+get_stats_for_server_fake = CsrfExemptResource(GetServerStats_fake)
+get_stats_for_targets_fake = CsrfExemptResource(GetTargetStats_fake)
+get_fs_stats_for_client_fake = CsrfExemptResource(GetFSClientsStats_fake)
+get_fs_ost_heatmap = CsrfExemptResource(GetFSOSTHeatMap)
+
+
 get_fs_stats_for_targets = CsrfExemptResource(GetFSTargetStats)
 get_fs_stats_for_server = CsrfExemptResource(GetFSServerStats)
 get_fs_stats_for_mgs = CsrfExemptResource(GetFSMGSStats)
 get_stats_for_server = CsrfExemptResource(GetServerStats)
-get_stats_for_targets = CsrfExemptResource(GetTargetStats)
 get_fs_stats_for_client = CsrfExemptResource(GetFSClientsStats)
-get_fs_ost_heatmap = CsrfExemptResource(GetFSOSTHeatMap)
+get_stats_for_targets = CsrfExemptResource(GetTargetStats)
 
 #Liveinfo related APIs
 get_events_by_filter = CsrfExemptResource(GetEventsByFilter)
@@ -107,7 +106,6 @@ get_latest_events = CsrfExemptResource(GetLatestEvents)
 get_alerts = CsrfExemptResource(GetAlerts)
 get_jobs = CsrfExemptResource(GetJobs)
 get_logs = CsrfExemptResource(GetLogs)
-
 
 # hydra api urls definitions.
 urlpatterns = patterns('',
@@ -134,26 +132,23 @@ urlpatterns = patterns('',
     (r'^removehost/$',remove_host),
     (r'^setlnetstate/$',set_lnet_status),
 
-    # Fake API for Chart stats
-    (r'^getfsdiskusage/$',get_fs_diskusage),
-    (r'^getfsinodeusage/$',get_fs_inodeusage),
-    (r'^getservercpuusage/$',get_server_cpuusage),
-    (r'^getservermemoryusage/$',get_server_memoryusage),
-    (r'^gettargetreads/$',get_target_reads),
-    (r'^gettargetwrites/$',get_target_writes),
-
-    (r'^get_fs_stats_for_targets/$',get_fs_stats_for_targets),
-    (r'^get_fs_stats_for_server/$',get_fs_stats_for_server),
-    (r'^get_fs_stats_for_mgs/$',get_fs_stats_for_mgs ),
-    (r'^get_stats_for_server/$',get_stats_for_server ),
-    (r'^get_stats_for_targets/$',get_stats_for_targets),
-    (r'^get_fs_stats_for_client/$',get_fs_stats_for_client),
+    (r'^get_fs_stats_for_targets/$',get_fs_stats_for_targets_fake),
+    (r'^get_fs_stats_for_server/$',get_fs_stats_for_server_fake),
+    (r'^get_stats_for_server/$',get_stats_for_server_fake),
+    (r'^get_stats_for_targets/$',get_stats_for_targets_fake),
+    (r'^get_fs_stats_for_client/$',get_fs_stats_for_client_fake),
     (r'^get_fs_ost_heatmap/$',get_fs_ost_heatmap),
 
+    (r'^getfsstatsfortargets/$',get_fs_stats_for_targets),
+    (r'^getfsstatsforserver/$',get_fs_stats_for_server),
+    (r'^getfsstatsformgs/$',get_fs_stats_for_mgs ),
+    (r'^getstatsforserver/$',get_stats_for_server ),
+    (r'^getstatsfortargets/$',get_stats_for_targets),
+    (r'^getfsstatsforclient/$',get_fs_stats_for_client),
+ 
     (r'^geteventsbyfilter/$',get_events_by_filter),
     (r'^getlatestevents/$',get_latest_events),
     (r'^getalerts/$',get_alerts),
     (r'^getjobs/$',get_jobs),
     (r'^getlogs/$',get_logs),
-    
    )

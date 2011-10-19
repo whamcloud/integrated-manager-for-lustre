@@ -65,6 +65,27 @@ $(document).ready(function()
 	         $("#minusImg").hide();$("#plusImg").show();*/
 	         return false;
 	    });
+		
+		$('#event_filter_btn').click(function()
+		{
+			FilterEvents("all_event_content", $('#db_events_hostList').val(),$('#intervalSelect').val(),$('#unitSelect').val(),"","",-1);
+		});
+		
+		$('#log_filter_btn').click(function()
+		{
+			var lustre;
+			if($('#id_only_lustre').is(":checked"))
+			{
+				lustre = true;
+			}
+			else
+			{
+				lustre = false;
+			}
+			$('#all_log_content').dataTable().fnClearTable();
+			LoadLogs("all_log_content",$('#log_start_day').val(),$('#log_start_month').val(),lustre);
+		});
+
 });
 //******************************************************************************/
 // Function to load content for alerts
@@ -96,12 +117,12 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
 	                else if(resValue.alert_severity == 'info') //normal
 	                {
 	                	cssClassName='';
-	            		imgName="/static/images/dialog-information.png";
+	            		imgName="/static/images/dialog_correct.gif";
 	                }
 	                else if(resValue.alert_severity == 'warning') //yellow
 	                {
 	                	cssClassName='brightyellow';
-	                	imgName="/static/images/dialog-warning.png";
+	                	imgName="/static/images/dialog_correct.gif";
 	                }
 	                alertTabContent = alertTabContent + "<tr class='"+cssClassName+"'><td width='20%' align='left' valign='top' class='border' style='font-weight:normal'>" +  resValue.alert_created_at + "<td width='7%' align='left' valign='top' class='border'><img src='"+imgName+"' width='16' height='16' class='spacetop' /></td><td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.alert_item +  "</td><td width='38%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.alert_message + "</td></tr>";
                 }
@@ -151,6 +172,23 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
 //******************************************************************************/
 //Function to load content for events 
 /******************************************************************************/
+function LoadAllEvents(targetEventDivName)
+{
+	$.get("/api/getlatestevents/") 
+   	.success(function(data, textStatus, jqXHR) {
+   	 if(data.success)
+    {
+		LoadEventTable(targetEventDivName, data.response);
+	}
+    })
+    .error(function(event) {
+        //$('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
+    })
+    .complete(function(event){
+    });
+}
+
+
 loadEventContent = function(targetEventDivName, maxCount)
 {
 	 $('#'+targetEventDivName).html('<tr><td width="100%" align="center"><img src="/static/images/loading.gif" style="margin-top:10px;margin-bottom:10px" width="16" height="16" /></td></tr>');
@@ -218,6 +256,35 @@ loadEventContent = function(targetEventDivName, maxCount)
     });
 }
 
+function LoadEventTable(targetEventDivName, response)
+{
+	var imgName;
+	$.each(response, function(resKey, resValue)
+    {
+		if(resValue.event_severity == "alert") //red
+		{
+	        imgName="/static/images/dialog-error.png";
+		}
+		else  if(resValue.event_severity == "info") //normal
+		{
+	   		imgName="/static/images/dialog-information.png";
+		}
+		else if(resValue.event_severity == "warning") //yellow
+		{
+	       	imgName="/static/images/dialog-warning.png";
+		}
+		$("#"+targetEventDivName).dataTable().fnAddData ([
+			resValue.event_created_at,
+			"<img src='" + imgName + "' />",
+			resValue.event_host,
+			resValue.event_message
+		]);	
+	});
+}
+
+
+
+
 //******************************************************************************/
 //Function to load content for jobs
 /******************************************************************************/
@@ -277,6 +344,31 @@ loadLogContent = function(targetJobDivName, maxCount)
 		});
 }
 
+function LoadLogs(targetJobDivName,day, month, lustre)
+{
+	$.post("/api/getlogs/",{"lustre": lustre, "day": day, "month": month}) 
+		.success(function(data, textStatus, jqXHR) {
+			if(data.success)
+			{
+				$.each(data.response, function(resKey, resValue)
+				{
+					$("#"+targetLogDivName).dataTable().fnAddData ([
+						resValue.date,
+						resValue.host,
+						resValue.service,
+						resValue.message
+					]);	
+				});
+			}
+		}) 
+		.error(function(event) {
+	   //$('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
+		})
+		.complete(function(event){
+
+		});
+}
+
 loadHostList = function(fileSystemName)
 {
 	var hostList = '<option>All</option>';
@@ -330,7 +422,7 @@ loadJobContent = function(targetJobDivName)
 			if(isEmpty == "false")
 			{
 				jobTabContent = jobTabContent + "<tr> <td colspan='5' align='center' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='#'>No Jobs</a></td></tr>";
-			}
+			}	
 			else
 			{
 				jobTabContent = jobTabContent + "<tr><td colspan='5' align='right' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='/dashboard/dblogs/'>(All Jobs)</a></td></tr>";
@@ -339,3 +431,19 @@ loadJobContent = function(targetJobDivName)
 		});
 }
 
+function FilterEvents(targetEventDivName,hostname,severity,eventtype,scrollsize,scrollid, maxCount)
+{
+	$("#" + targetEventDivName).dataTable().fnClearTable();
+     $.post("/api/geteventsbyfilter/",{"hostname":hostname, "severity":severity, "eventtype":eventtype,"scrollsize":"","scrollid":""}) 
+    	.success(function(data, textStatus, jqXHR) {
+    	 	if(data.success)
+        	 {
+				 LoadEventTable(targetEventDivName,data.response);
+			 }
+		})
+    	.error(function(event) {
+        //$('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
+    	})
+    	.complete(function(event){
+		});
+}
