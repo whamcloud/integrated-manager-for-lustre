@@ -595,6 +595,7 @@ class Archive(PoorMansStiModel):
                 cursor = connection.cursor()
                 cursor.execute("DELETE FROM r3d_cdp WHERE id IN (%s)" %
                                ",".join(old))
+                transaction.commit_unless_managed()
 
             debug_print("deleted %d old CDPs" % len(old))
 
