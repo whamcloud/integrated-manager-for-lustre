@@ -44,13 +44,7 @@ class ListFileSystems(AnonymousRequestHandler):
         mdt_status=''  
         mdt_block_device=''
         mdt_mount_point=''
-        #mdt_kbytesfree=0
-        #mdt_kbytesused=0
-        mdt_filesfree=0
-        mdt_filesused=0
 
-        ost_kbytesfree=0
-        ost_kbytesused=0                     
         all_fs = []
         dashboard_data = Dashboard()
         for fs in dashboard_data.filesystems:
@@ -70,16 +64,15 @@ class ListFileSystems(AnonymousRequestHandler):
                         mdt_status = fstarget.status()
                         mdt_block_device = str(fstarget_mount.item.block_device)
                         mdt_mount_point = str(fstarget_mount.item.mount_point)
-                        #mdt_kbytesfree = 0
-                        #mdt_kbytesused = 0
-                        mdt_filesfree = 0
-                        mdt_filesused = 0
                 if fstarget.item.role() == 'OST':
                     for fstarget_mount in fstarget.target_mounts:
                         if oss_name != fstarget_mount.item.host.pretty_name():
                             no_of_oss = no_of_oss + 1
                         no_of_ost = no_of_ost + 1
                         oss_name = fstarget_mount.item.host.pretty_name()
+            filesystem = Filesystem.objects.get(name=fs.item.name) 
+            inodedata = filesystem.metrics.fetch_last(MetadataTarget,fetch_metrics="filesfree filestotal".split())
+            diskdata = filesystem.metrics.fetch_last(ObjectStoreTarget,fetch_metrics="kbytesfree kbytestotal".split())
             all_fs.append(
                           {   
                            'fsname': fs.item.name,
@@ -97,10 +90,10 @@ class ListFileSystems(AnonymousRequestHandler):
                            'mdt_mount_point':mdt_mount_point, 
                            'noofoss':no_of_oss,
                            'noofost':no_of_ost,
-                           'kbytesused':ost_kbytesused,
-                           'kbytesfree':ost_kbytesfree,
-                           'mdtfilesfree':mdt_filesfree,
-                           'mdtfileused':mdt_filesused,    
+                           'kbytesused':diskdata[1]['kbytestotal'] if diskdata[1]['kbytestotal'] else 0,
+                           'kbytesfree':diskdata[1]['kbytesfree'] if diskdata[1]['kbytesfree'] else 0,
+                           'mdtfilesfree':inodedata[1]['filesfree'] if inodedata[1]['filesfree'] else 0,
+                           'mdtfileused':inodedata[1]['filestotal'] if inodedata[1]['filestotal'] else 0,    
                            'status' : fs.status()
                           } 
                          )
@@ -353,7 +346,8 @@ class GetServers (AnonymousRequestHandler):
                      'host_address' : host.address,
                      'failnode':'',
                      'kind' : host.role() ,
-                     'lnet_status' : host.status_string()
+                     'lnet_status' : str(host.managedhost.state),
+                     'status':host.status_string()
                     }
                     for host in fs.get_servers()
             ]
@@ -364,7 +358,8 @@ class GetServers (AnonymousRequestHandler):
                      'host_address' : host.address,
                      'failnode':'',
                      'kind' : host.role() ,
-                     'lnet_status' : host.status_string()
+                     'lnet_status': str(host.managedhost.state),
+                     'status':host.status_string()  
                     }
                     for host in Host.objects.all()
             ]

@@ -17,6 +17,8 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/cm-custom_tabs.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/configure_window.js"></script>
+
 <style>
 .ui-widget-header {
 	background:none;
@@ -113,16 +115,16 @@
               <li><a href="#server">Server Configuration</a></li>
             </ul>
             <div id="lusterFS">
-              <iframe src="/hydracm/fstab" height="700px" width="100%" frameborder="no" ></iframe>
+              <iframe src="/hydracm/fstab" height="700px" width="100%" frameborder="no" id="fs_list" ></iframe>
             </div>
             <div id="mgt">
-              <iframe src="/hydracm/mgttab" height="700px" width="100%" frameborder="no" ></iframe>
+              <iframe src="/hydracm/mgttab" height="700px" width="100%" frameborder="no" id="mgt_config"></iframe>
             </div>
             <div id="volume">
-              <iframe src="/hydracm/volumetab" height="700px" width="100%" frameborder="no" ></iframe>
+              <iframe src="/hydracm/volumetab" height="700px" width="100%" frameborder="no" id="volume_config"></iframe>
             </div>
             <div id="server">
-              <iframe src="/hydracm/servertab" height="700px" width="100%" frameborder="no" ></iframe>
+              <iframe src="/hydracm/servertab" height="700px" width="100%" frameborder="no" id="server_config"></iframe>
             </div>
           </div></td>
       </tr>

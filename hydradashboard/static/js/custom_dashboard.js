@@ -138,19 +138,23 @@ load_breadcrumbs = function()
 		             $("#breadCrumb1").html(breadCrumbHtml);
 		             $("#breadCrumb1").jBreadCrumb();
 			    });
-                 fs_Pie_Space_Data($('#fsSelect').val(),"","","","false");
-                 fs_Pie_INodes_Data($('#fsSelect').val(),"","","","false");
 
-                 fs_Line_CpuUsage_Data("average",$('#fsSelect').val(),"29-20-2011","29-20-2011","false");
-                 fs_Line_MemoryUsage_Data("average",$('#fsSelect').val(),"29-20-2011","29-20-2011","false");
-                 fs_Line_DiskRead_Data("average","29-20-2011",$('#fsSelect').val(),"29-20-2011","false");
-                 fs_Line_DiskWrite_Data("average","29-20-2011",$('#fsSelect').val(),"29-20-2011","false");
+        fs_Bar_SpaceUsage_Data($('#fsSelect').val(),"2011-10-17 19:56:58.720036", "2011-10-17 19:46:58.720062", "Average", "OST", spaceUsageFetchMatric, false);
 
-                 fs_Mgs_Line_CpuUsage_Data("average",$('#fsSelect').val(),"29-20-2011","29-20-2011","false");
-                 fs_Mgs_Line_MemoryUsage_Data("average",$('#fsSelect').val(),"29-20-2011","29-20-2011","false");
-                 fs_Mgs_Line_DiskRead_Data("average","29-20-2011",$('#fsSelect').val(),"29-20-2011","false");
-                 fs_Mgs_Line_DiskWrite_Data("average","29-20-2011",$('#fsSelect').val(),"29-20-2011","false");
-			}
+        fs_Line_connectedClients_Data($('#fsSelect').val(),"2011-10-17 19:56:58.720036", "2011-10-17 19:46:58.720062", "Average", clientsConnectedFetchMatric, false);
+    
+        fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),"2011-10-17 19:56:58.720036", "2011-10-17 19:46:58.720062", "Average", "OST", cpuMemoryFetchMatric, false);
+
+        fs_Area_ReadWrite_Data($('#fsSelect').val(),"2011-10-17 19:56:58.720036", "2011-10-17 19:46:58.720062", "Average", "MDT", readWriteFetchMatric, false);
+
+        fs_Area_Iops_Data($('#fsSelect').val(),"2011-10-17 19:56:58.720036", "2011-10-17 19:46:58.720062", "Average", "MDT", iopsFetchmatric, false);
+
+        fs_HeatMap_Data('false');
+
+        clearInterval(dashboardPollingInterval);
+
+        loadFileSystemSummary();
+ 	}
 });         
 
 /******************************************************************************/
@@ -317,19 +321,13 @@ load_breadcrumbs = function()
 				$(this).css('cursor','auto');
 		});
 
-	db_Bar_Space_Data('false');
-    db_Pie_Space_Data('false');
-    db_Bar_INodes_Data('false');
-    db_Pie_INodes_Data('false');
-    db_Line_CpuUsage_Data('false');
-    db_Line_MemoryUsage_Data('false');
-    db_Line_DiskRead_Data('false');
-    db_Line_DiskWrite_Data('false');
-    db_Mgs_Line_CpuUsage_Data('false');
-    db_Mgs_Line_MemoryUsage_Data('false');
-    db_Mgs_Line_DiskRead_Data('false');
-    db_Mgs_Line_DiskWrite_Data('false');
-	
+        db_Bar_SpaceUsage_Data('false');
+        db_Line_connectedClients_Data('false');
+        db_LineBar_CpuMemoryUsage_Data('false');
+        db_Area_ReadWrite_Data('false');
+        db_Area_Iops_Data('false');
+        db_HeatMap_Data('false');
+
 		$('#fs_space').click(function(){
 			load_landingPageBar_disk('true');						
 		});

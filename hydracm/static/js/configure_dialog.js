@@ -1,5 +1,5 @@
 $(document).ready(function() {
-// Dialog			
+// Dialog		
 	$('#configParam').dialog({
 		autoOpen: false,
 		width: 400,
@@ -201,6 +201,25 @@ $(document).ready(function() {
 		buttons: {
 			"Close": function() { 
 				$(this).dialog("close");
+			},
+		}
+	});
+	
+	$('#btnAddNewHost').click(function(){
+		$('#addNewHost').dialog('open');
+	});
+		
+	//add host dialog - volume config
+	$('#addNewHost').dialog({
+		autoOpen: false,
+		width: 300,
+		height:175,
+		show: "clip",
+		modal: true,
+		position:"top",
+		buttons: {
+			"Continue": function() { 
+				AddHost_ServerConfig($('#txtHostName').val(), "addNewHost"); 
 			},
 		}
 	});

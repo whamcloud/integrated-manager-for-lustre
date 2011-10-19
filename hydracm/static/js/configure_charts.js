@@ -8,6 +8,17 @@ var chartConfig_Pie_DB =
 	width: '180',
 	height: '170',
     },
+	colors: [
+        '#A6C56D', 
+        '#C76560', 
+        '#A6C56D', 
+        '#C76560', 
+        '#6087B9', 
+        '#DB843D', 
+        '#92A8CD', 
+        '#A47D7C', 
+        '#B5CA92'
+       ],
     title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
     xAxis:{ categories: [], text: '' },

@@ -11,7 +11,9 @@
 <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
 <link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
 <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
 <script>
@@ -25,10 +27,10 @@
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtcenter' },
 				{ "sClass": 'txtcenter' },
+				{ "sClass": 'txtcenter' },
 			]
 		} );
-	} );
-	
+	} );	
 	</script>
 </head>
 <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
@@ -38,14 +40,15 @@
     <td width="100%" height="152" align="left" valign="top"><fieldset>
       <legend class="legendClass"> MGT Configuration </legend>
       <div class="buttonspacer"><span class="first-child">
-        <button type="button" id="mgtConfig_btnNewMGT">Add/Host Server</button>
+        <button type="button" id="btnAddNewHost">Add/Host Server</button>
         </span></span></div>
       <table cellpadding="0" cellspacing="0" border="0" class="display" id="server_configuration" width="100%">
         <thead>
           <tr>
-            <th width="30%">Server Name</th>
-            <th width="20%">Fail Node</th>
-            <th width="15%">Status</th>
+            <th width="20%">Server Name</th>
+            <th width="15%">Fail Node</th>
+            <th width="12%">Status</th>
+            <th width="18%">Lnet Status</th>
             <th width="35%"></th>
           </tr>
         </thead>
@@ -59,7 +62,7 @@
     <td height="21" align="right" valign="top"><table width="13%" border="0" cellspacing="0" cellpadding="0">
         <tr>
           <td align="right"><span id="launch_instance_btn"><span class="first-child">
-            <button type="button" id="mgtConfig_btnNewMGT">Apply</button>
+            <button type="button" id="apply">Apply</button>
             </span></span></td>
           <td align="left"><span id="launch_instance_btn"><span class="first-child">
             <button type="button" id="mgtConfig_btnNewMGT">Cancel</button>
@@ -70,5 +73,14 @@
   </tr>
 </table>
 <!-- exsting mgt popup -->
+<div id="addNewHost" title="Add Host"><div id="hostdetails_container">
+<table width="100%" border="0" cellspacing="0" cellpadding="0" id="hostdetails">
+  <tr>
+    <td width="41%" align="right" valign="middle">Host name:</td>
+    <td width="60%" align="left" valign="middle"><input type="text" name="txtHostName" id="txtHostName" /></td>
+  </tr>
+</table></div>
+<div id="loading_container" align="center"></div><div id="status_container" align="center"></div><div id="host_status" align="center"></div>
+</div>
 </body>
 </html>

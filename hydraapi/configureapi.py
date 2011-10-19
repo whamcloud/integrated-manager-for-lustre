@@ -101,6 +101,21 @@ class StartFileSystem(AnonymousRequestHandler):
                                  )
         return format_fs_list
 
+
+class TestHost(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.test_host)
+
+    @classmethod
+    @extract_request_args(host_name='hostname')
+    @extract_exception
+    def test_host(self,request,host_name):
+        from monitor.tasks import test_host_contact
+        host, ssh_monitor = SshMonitor.from_string(host_name)
+        return test_host_contact(host,ssh_monitor)
+
+
 class AddHost(AnonymousRequestHandler):
 
     def __init__(self,*args,**kwargs):
@@ -134,6 +149,24 @@ class RemoveHost(AnonymousRequestHandler):
                 'hostid': host_id,
                 'status': 'RemoveHostJob submitted Job Id:'
                }
+
+class SetLNetStatus(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.set_lnet_status)
+
+    @classmethod
+    @extract_request_args(host_id='hostid',state_string='state')
+    @extract_exception
+    def set_lnet_status(self,request,host_id,state_string):
+        host =  ManagedHost.objects.get(id = host_id)
+        StateManager.set_state(host,state_string)
+        return {
+                'hostid': host_id,
+                'status': 'RemoveHostJob submitted Job Id:'
+               }
+
+
 
 class RemoveFileSystem(AnonymousRequestHandler):
 

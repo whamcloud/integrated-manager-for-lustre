@@ -15,7 +15,7 @@
 $(document).ready(function() 
 {
 		$("#alertAnchor").click(function(){
-			loadAlertContent('alert_content', 'active', 10);
+			loadAlertContent('alert_content', 'True', 10);
 		});  
 		
 		$("#eventsAnchor").click(function(){
@@ -125,12 +125,20 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
 					$("#"+targetAlertDivName).html("<thead><tr><th>Alert Created At</th><th>Status</th><th>Host</th><th>Message</th></tr><thead><tbody>"+alertTabContent+"</tbody>");
 					$("#"+targetAlertDivName).dataTable({
 						 "aoColumns": [
-			                { "sClass": 'txtleft' },
-			                { "sClass": 'txtcenter' },
-			                { "sClass": 'txtleft' },
-			                { "sClass": 'txtleft' }
+			                { "sClass": 'txtleft'},
+			                { "sClass": 'txtcenter'},
+			                { "sClass": 'txtleft'},
+			                { "sClass": 'txtleft'}
 			              ]
 					});
+					
+					$("#"+targetAlertDivName).dataTable().fnAddData ([
+						resValue.alert_created_at,
+						"<img src='"+ imgName +"' width='16' height='16' class='spacetop' />",
+						resValue.alert_item,
+						resValue.alert_message
+					]);
+					alert("data loaded");
 				}
 				else
 				{

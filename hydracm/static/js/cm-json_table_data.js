@@ -267,19 +267,6 @@ function CreateOST_EditFS()
 }
 
 /******************************************************************/
-//Function name - LoadMGTConfiguration_MGTConf()
-//Param - none
-//Return - none
-//Used in - MGT Configuration (new_mgt.html)
-/******************************************************************/
-
-function LoadMGTConfiguration_MGTConf()
-{
-	$('#popup-new-mgt').dataTable().fnClearTable();
-	LoadUsableVolumeList($('#popup-new-mgt'), function(vol_info) {return "<input type='checkbox' name='" + vol_info.id + "'/>"});
-}
-
-/******************************************************************/
 //Function name - LoadUsableVolumeList()
 //Param - container for data table, select widget
 //Return - none
@@ -527,7 +514,7 @@ function LoadMGTConfiguration_MGTConf()
 								}
 								$('#mgt_configuration').dataTable().fnAddData ([
 									fsname,								
-									resValue.targetmount,												
+									resValue.targetdevice,												
 									resValue.hostname,
 									resValue.failover,
 									action  
@@ -546,7 +533,7 @@ function LoadMGTConfiguration_MGTConf()
 									fsname = resValue.fsname;
 								}
 								val_targetstatus=resValue.targetstatus;
-								val_targetmount=resValue.targetmount;
+								val_targetmount=resValue.targetdevice;
 								val_hostname=resValue.hostname;
 								val_failover=resValue.failover;
 								updated=0;
@@ -647,22 +634,30 @@ function LoadServerConf_ServerConfig()
             {
                 var response = data.response;
 				var lnet_status_mesg;
+				var lnet_status;
 				$.each(response, function(resKey, resValue)
                 {
-					if(resValue.lnet_status == "OK")
+					lnet_status = resValue.lnet_status;
+					if(lnet_status == "lnet_up")
 					{
-						lnet_status_mesg = "<a href='#'><img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'><img src='/static/images/remove.png' title='Remove' height=15 width=15/></a> | <a href='#'><img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15/></a> | <a href='#'><img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
+						lnet_status_mesg = "<a href='#'>Stop<img src='/static/images/stop.png' title='Stop Lnet' height=15 width=15 onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_down&apos;)'/></a> | <a href='#'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"' onclick='RemoveHost_ServerConfig(" + resValue.id + ")' /></a> | <a href='#'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15  onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_unload&apos;)'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
 					}
-					else
+					else if(resValue.lnet_status == "lnet_down")
 					{
-						lnet_status_mesg = "<a href='#'><img src='/static/images/start.png' title='Start' height=15 width=15/></a> | <a href='#'><img src='/static/images/remove.png' title='Remove' height=15 width=15/></a> | <a href='#'><img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15/></a> | <a href='#'><img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
+						lnet_status_mesg = "<a href='#'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_up&apos;)'/></a> | <a href='#'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"' onclick='RemoveHost_ServerConfig(" + resValue.id + ")' /></a> | <a href='#'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15  onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_unload&apos;)'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
 					}
+					else if(resValue.lnet_status == "lnet_unloaded")
+					{
+						lnet_status_mesg = "<a href='#'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15  onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_up&apos;)'/></a> | <a href='#'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"' onclick='RemoveHost_ServerConfig(" + resValue.id + ")' /></a> | <a href='#'>Load<img src='/static/images/load.png' title='Load Lnet' height=15 width=15  onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_load&apos;)'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
+					}
+					
 					$('#server_configuration').dataTable().fnAddData ([
 						resValue.host_address,											
 						resValue.failnode,
-						resValue.lnet_status,
+						resValue.status,
+						lnet_status,
 						lnet_status_mesg
-					]);		 
+					]);				
 				});
             }
         })

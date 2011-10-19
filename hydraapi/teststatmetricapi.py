@@ -58,7 +58,7 @@ def main(args):
                              endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
                              datafunction='Average',
                              targetkind='OST',
-                             fetchmetrics="kbytesfree kbytestotal filesfree filestotal",   
+                             fetchmetrics="kbytestotal kbytesfree filestotal filesfree",   
                              )
     print '\n result:'
     print result
@@ -72,7 +72,7 @@ def main(args):
                              endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
                              datafunction='Average',
                              targetkind='MDT',
-                             fetchmetrics="kbytesfree kbytestotal filesfree filestotal",
+                             fetchmetrics="kbytestotal kbytesfree filestotal filesfree",
                              )
     print '\n result:'
     print result
@@ -88,7 +88,7 @@ def main(args):
                              endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
                              datafunction='Average',
                              targetkind='OST',
-                             fetchmetrics="stats_read_bytes stats_write_bytes ",
+                             fetchmetrics="stats_read_bytes stats_write_bytes",
                              )
     print '\n result:'
     print result
@@ -102,7 +102,7 @@ def main(args):
                              endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
                              datafunction='Average',
                              targetkind='MDT',
-                             fetchmetrics="stats_read_bytes stats_write_bytes ",
+                             fetchmetrics="stats_read_bytes stats_write_bytes",
                              )
     print '\n result:'
     print result
@@ -176,12 +176,12 @@ def main(args):
     api_url = base_url + '/api/get_stats_for_targets/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
-                             targetname='hulkfs01-MDT0000',
+                             target='hulkfs01-MDT0000',
                              starttime=str(datetime.datetime.now()),
                              endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
                              datafunction='Average',
                              targetkind='MDT',
-                             fetchmetrics="stats_read_bytes stats_write_bytes ",   
+                             fetchmetrics="stats_read_bytes stats_write_bytes",   
                              )
     print '\n result:'
     print result
@@ -201,6 +201,19 @@ def main(args):
     print result
     print '\n\n'
 
+    # Unit Test 5 :
+    api_url = base_url + '/api/get_fs_ost_heatmap/'
+    print 'api_url: %s' % api_url
+    result = make_json_call(api_url,
+                             filesystem=options.filesystem_name,
+                             starttime=str(datetime.datetime.now()),
+                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
+                             datafunction='Average',
+                             fetchmetrics="cpu",
+                             )
+    print '\n result:'
+    print result
+    print '\n\n'
 
     return 0
 if __name__ == '__main__':

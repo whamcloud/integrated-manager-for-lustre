@@ -5,7 +5,7 @@
 	font-size: 14px;
 	font-weight:bold;
 	/*background-color:#5E8BC0;*/
-	background-color:#5ed6ff;
+	background-color:#4C4C4C    /*#5ed6ff*/;
 	border-top-left-radius:1em;
 	border-top-right-radius:1em;
 	border-bottom-right-radius:1em;
@@ -99,4 +99,7 @@ html ul.tabs li.active, html ul.tabs li.active a:hover  { /*--Makes sure that th
 .tab_content {
 	/*padding: 20px;
 	font-size: 1.2em;*/
+}
+.lnet_status {  
+   color: #006699;
 }

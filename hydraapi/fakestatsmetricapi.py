@@ -45,8 +45,8 @@ class GetFSTargetStats(AnonymousRequestHandler):
                          'filesystem' : filesystem.name,
                          'kbytesfree' : uniform(0,4940388537.9860001),
                          'kbytestotal': '4940834834.4740801',
-                         'filesfree' : randrange(0,4940388537,3),
-                         'filestotal': '4940834834',
+                         'filesfree' : randrange(0,4940388537,10),
+                         'filestotal': randrange(0,4940388537,10),
                         }
                         for filesystem in Filesystem.objects.all()
                 ]
@@ -58,22 +58,23 @@ class GetFSTargetStats(AnonymousRequestHandler):
                         {
                          'timestamp' : slice,
                          'filesystem' : filesystem_name,
-                         'stats_read_bytes' : randrange(0,4940388537,3),
-                         'stats_write_bytes': '4940834834',
+                         'stats_read_bytes' : randrange(0,4940388537,10),
+                         'stats_write_bytes': randrange(0,4940388537,10),
                         }
                         for slice in current_slice
                 ]
             else:
                 all_fs_stats=[]
                 fs_stats=[]
+                current_slice = gettimeslice()
                 for filesystem in Filesystem.objects.all():
                     for slice in current_slice:
                         fs_stats.append(    
                                         {
                                          'timestamp' : slice,
                                          'filesystem' : filesystem.name,
-                                         'stats_read_bytes' : randrange(0,4940388537,3),
-                                         'stats_write_bytes': '4940834834',
+                                         'stats_read_bytes' : randrange(0,4940388537,10),
+                                         'stats_write_bytes': randrange(0,4940388537,10),
                                         }
                                        ) 
                     all_fs_stats.extend(fs_stats)
@@ -97,10 +98,13 @@ class GetFSTargetStats(AnonymousRequestHandler):
             else:
                 all_fs_stats=[]
                 fs_stats=[]
+                current_slice = gettimeslice()
                 for filesystem in Filesystem.objects.all():
                     for slice in current_slice:
                         fs_stats.append(
                                         {
+                                         'timestamp' : slice,
+                                         'filesystem' : filesystem.name,
                                          'iops1' : randrange(0,4940388537,3),
                                          'iops2' : randrange(0,5940388537,3),
                                          'iops3' : randrange(0,6940388537,3),
@@ -135,30 +139,31 @@ class GetFSServerStats(AnonymousRequestHandler):
                                        'timestamp': slice,
                                        'hostname' : host.address,
                                        'mem_MemFree' : randrange(1024,16384,3),
-                                       'mem_MemTotal"':'16384',
+                                       'mem_MemTotal':'16384',
                                        'cpu_usage' : randrange(0,100,3),
                                        'cpu_total' : '100',
                                       }
                                      )
                 return data_slice
         else:
-            all_host_stats_metrics = []
             for fs in Filesystem.objects.all():
                 hosts = fs.get_servers()
                 host_stats_metric = []  
                 for host in Host.objects.all():
-                    host_stats_metric.append(
-                                             {
-                                              'timestamp': slice,
-                                              'hostname' : host.address,
-                                              'mem_MemFree' : randrange(1024,16384,3),
-                                              'mem_MemTotal"':'16384',
-                                              'cpu_usage' : randrange(0,100,3),
-                                              'cpu_total' : '100',
-                                             }
-                                             for slice in current_slice
-                                            )
-            return all_host_stats_metrics
+                    current_slice = gettimeslice() 
+                    host_stats_metric = []            
+                    for slice in current_slice:
+                        host_stats_metric.append(
+                                                 {
+                                                  'timestamp': slice,
+                                                  'hostname' : host.address,
+                                                  'mem_MemFree' : randrange(1024,16384,3),
+                                                  'mem_MemTotal':'16384',
+                                                  'cpu_usage' : randrange(0,100,3),
+                                                  'cpu_total' : '100',
+                                                 }
+                                                )
+            return host_stats_metric
 
 class GetServerStats(AnonymousRequestHandler):
 
@@ -180,7 +185,7 @@ class GetServerStats(AnonymousRequestHandler):
                                        'timestamp': slice,
                                        'hostname' : host.address,
                                        'mem_MemFree' : randrange(1024,16384,3),
-                                       'mem_MemTotal"':'16384',
+                                       'mem_MemTotal':'16384',
                                        'cpu_usage' : randrange(0,100,3),
                                        'cpu_total' : '100',        
                                       }
@@ -217,8 +222,8 @@ class GetTargetStats(AnonymousRequestHandler):
                     {
                      'timestamp' : slice,
                      'filesystem' : target_name,
-                     'stats_read_bytes' : randrange(0,4940388537,3),
-                     'stats_write_bytes': '4940834834',
+                     'stats_read_bytes' : randrange(0,4940388537,10),
+                     'stats_write_bytes': randrange(0,4940388537,10),
                     }
                     for slice in current_slice
             ]
@@ -257,6 +262,7 @@ class GetFSClientsStats(AnonymousRequestHandler):
                 for slice in current_slice
          ]
 
+
 class GetFSMGSStats(AnonymousRequestHandler):
 
     def __init__(self,*args,**kwargs):
@@ -267,6 +273,46 @@ class GetFSMGSStats(AnonymousRequestHandler):
     @extract_exception
     def get_fs_stats_for_mgs(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
         return ''
+
+
+class GetFSOSTHeatMap(AnonymousRequestHandler):
+
+    def __init__(self,*args,**kwargs):
+        AnonymousRequestHandler.__init__(self,self.get_fs_ost_heatmap)
+
+    @classmethod
+    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
+    @extract_exception
+    def get_fs_ost_heatmap(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
+         from random import randrange
+         ost_data = []
+         ost_size=100
+         current_slice = gettimeslice(100,5)
+         for i in xrange(ost_size):
+             for slice in current_slice:
+                ost_name='ost' + str(i)  
+                cpu = randrange(0,100,1)
+                ost_data.append(
+                         {
+                          'timestamp' : slice,
+                          'filesystem' : filesystem_name,
+                          'ost': ost_name,
+                          'color':self.getcolor(cpu),
+                          fetch_metrics : cpu,
+                         }
+                        )
+         return ost_data   
+    
+    @classmethod 
+    def getcolor(self,cpu):
+       if cpu <= 25:
+            return '#00ff00'
+       elif cpu <=50:
+            return '#001f00'
+       elif cpu <=75:
+            return '#ffff00'
+       elif cpu <=100:
+            return '#ff0000' 
 
 def gettimeslice(sample_size=10,interval=5):
     from datetime import timedelta,datetime

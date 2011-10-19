@@ -29,12 +29,14 @@ from configureapi import (FormatFileSystem,
                           StopFileSystem,
                           StartFileSystem,
                           AddHost,  
+                          TestHost,
                           RemoveHost,
                           GetLuns,
                           CreateFilesystem,
                           CreateMGS,
                           CreateOSS,
-                          CreateMDS)
+                          CreateMDS,
+                          SetLNetStatus)
 
 #Once R3D starts getting correct data  replace fakestatsmetricapi with statmetricapi
 from fakestatsmetricapi import(GetFSTargetStats,
@@ -42,7 +44,8 @@ from fakestatsmetricapi import(GetFSTargetStats,
                            GetFSMGSStats,
                            GetServerStats,
                            GetTargetStats,
-                           GetFSClientsStats)  
+                           GetFSClientsStats,
+                           GetFSOSTHeatMap)  
 
 from audit import HydraAudit
 
@@ -74,6 +77,8 @@ create_oss = CsrfExemptResource(CreateOSS)
 create_mds = CsrfExemptResource(CreateMDS)
 add_host = CsrfExemptResource(AddHost)
 remove_host = CsrfExemptResource(RemoveHost)
+test_host = CsrfExemptResource(TestHost)
+set_lnet_status = CsrfExemptResource(SetLNetStatus)
 
 #Audit namespace APIs
 list_audit = CsrfExemptResource(HydraAudit)
@@ -94,6 +99,7 @@ get_fs_stats_for_mgs = CsrfExemptResource(GetFSMGSStats)
 get_stats_for_server = CsrfExemptResource(GetServerStats)
 get_stats_for_targets = CsrfExemptResource(GetTargetStats)
 get_fs_stats_for_client = CsrfExemptResource(GetFSClientsStats)
+get_fs_ost_heatmap = CsrfExemptResource(GetFSOSTHeatMap)
 
 #Liveinfo related APIs
 get_events_by_filter = CsrfExemptResource(GetEventsByFilter)
@@ -123,8 +129,10 @@ urlpatterns = patterns('',
     (r'^createmgt/$',create_mgs),
     (r'^createost/$',create_oss),
     (r'^createmdt/$',create_mds),
+    (r'^testhost/$',test_host),
     (r'^addhost/$',add_host),
     (r'^removehost/$',remove_host),
+    (r'^setlnetstate/$',set_lnet_status),
 
     # Fake API for Chart stats
     (r'^getfsdiskusage/$',get_fs_diskusage),
@@ -140,6 +148,7 @@ urlpatterns = patterns('',
     (r'^get_stats_for_server/$',get_stats_for_server ),
     (r'^get_stats_for_targets/$',get_stats_for_targets),
     (r'^get_fs_stats_for_client/$',get_fs_stats_for_client),
+    (r'^get_fs_ost_heatmap/$',get_fs_ost_heatmap),
 
     (r'^geteventsbyfilter/$',get_events_by_filter),
     (r'^getlatestevents/$',get_latest_events),
