@@ -23,6 +23,13 @@ var readWriteFetchMatric = "stats_read_bytes stats_write_bytes";
 var iopsFetchmatric = "iops1 iops2 iops3 iops4 iops5";
 var dashboardPollingInterval;
 
+var db_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var db_Line_connectedClients_Data_Api_Url = "/api/get_fs_stats_for_client/";
+var db_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_server/";
+var db_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var db_Area_Iops_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var db_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
+
 var chartConfig_Bar_SpaceUsage = {			
     chart:{
     renderTo: '',
@@ -94,10 +101,7 @@ var chartConfig_Line_clientConnected = {
        style: { fontSize: '12px' },
     },
     xAxis: {
-      categories: ['01:35:00', '01:35:10', '01:35:20', '01:35:30', '01:35:40', '01:35:50', 
-		     '01:36:00', '01:36:10', '01:36:20', '01:36:30', '01:36:40', '01:36:50', 
-		     '01:37:00', '01:37:10', '01:37:20', '01:37:30', '01:37:40', '01:37:50', 
-		     '01:38:00', '01:38:10', ],
+      categories: [],
       labels: {rotation: 310,step: 4,style:{fontSize:'8px', fontWeight:'regular'}}
     },
     yAxis: {
@@ -113,14 +117,14 @@ var chartConfig_Line_clientConnected = {
     },
     tooltip: {
        formatter: function() {
-                 return this.x +': '+ this.y +'';
+                 return 'Time: '+this.x +'No. Of Exports: '+ this.y;
        }
     },
     legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
     credits:{ enabled:false },
     series: [{
        name: '',
-        data: [5, 8, 15, 20, 21, 31, 43, 72, 80, 81, 81, 81, 80, 81, 81, 81, 80, 79, 80, 79 ]
+        data: []
     }],
 	    plotOptions: {
 series:{marker: {enabled: false}}
@@ -146,11 +150,7 @@ var chartConfig_LineBar_CPUMemoryUsage = {
 	    },
 	    xAxis: {
 	    	title: 'Time (hh:mm:ss)',
-	        categories: ['01:35:00', '01:35:10', '01:35:20', '01:35:30', '01:35:40', '01:35:50', 
-			     '01:36:00', '01:36:10', '01:36:20', '01:36:30', '01:36:40', '01:36:50', 
-			     '01:37:00', '01:37:10', '01:37:20', '01:37:30', '01:37:40', '01:37:50', 
-			     '01:38:00', '01:38:10', 
-			    ],
+	        categories: [],
 	        labels: {rotation: 310,step: 2,style:{fontSize:'8px', fontWeight:'bold'}}
 	    },
 	    yAxis: [{
@@ -170,14 +170,12 @@ var chartConfig_LineBar_CPUMemoryUsage = {
 	    plotOptions:{series:{marker: {enabled: false}} },
 	    series: [{
 	        type: 'column',
-	        data: [20, 30, 35, 34, 70, 60, 42, 50, 50, 45,
-		       45, 44, 50, 55, 60, 40, 35, 40, 45, 50],
-	        name: 'CPU',
+	        data: [],
+	        name: 'CPU Usage',
 	        yAxis: 1
 	    },{
 	        type: 'line',
-	        data: [35, 35, 32, 35, 33, 33, 33, 35, 35, 35,
-		       35, 36, 38, 40, 42, 44, 50, 55, 60, 70],
+	        data: [],
 	        name: 'Memory',
 	    }]
 };
@@ -212,10 +210,7 @@ var chartConfig_Area_ReadWrite = {
 		      },
 		     xAxis: {
 		     title: 'Time (hh:mm:ss)',
-			 categories: ['01:35:00', '01:35:10', '01:35:20', '01:35:30', '01:35:40', '01:35:50', 
-				      '01:36:00', '01:36:10', '01:36:20', '01:36:30', '01:36:40', '01:36:50', 
-				      '01:37:00', '01:37:10', '01:37:20', '01:37:30', '01:37:40', '01:37:50', 
-				      '01:38:00', '01:38:10', '01:38:20', '01:38:30' ],
+			 categories: [],
 			 labels: {rotation: 310,step: 4,style:{fontSize:'8px', fontWeight:'regular'}}
 		     },
 		      yAxis: {
@@ -236,12 +231,12 @@ var chartConfig_Area_ReadWrite = {
 		         enabled: false
 		      },
 		      series: [{
-		         name: 'Read',
-		          data: [20, 30, 30, 50, 50, 60 , 70, 90, 120, 380, 400, 393, 402, 200, 75, 50, 10, 50, 50, 60 ]
-		      }, {
-		         name: 'Write',
-		          data: [0, 0, 0, 0, -135, -128, -140, -100, -20, -15, -15, -50, -121, -200, -220, -230, - 250, -260, -250, -180]
-		      }]
+			         name: 'Read',
+			          data: []
+			      }, {
+			         name: 'Write',
+			          data: []
+			      }]
 }
 
 var chartConfig_Area_Iops  = {
@@ -417,9 +412,9 @@ var chartConfig_HeatMap = {
     {
 		var free=0,used=0;
         var freeData = [],usedData = [],categories = [],freeFilesData = [],totalFilesData = [];
-        $.post("/api/get_fs_stats_for_targets/",
+        $.post(db_Bar_SpaceUsage_Data_Api_Url,
         {targetkind: "OST", datafunction: "Average", fetchmetrics: spaceUsageFetchMatric, 
-        "starttime": "2011-10-17 19:56:58.720036", "filesystem": "", "endtime": "2011-10-17 19:46:58.720062"})
+        "starttime": "", "filesystem": "", "endtime": ""})
 	    .success(function(data, textStatus, jqXHR) 
         {   
 	    	if(data.success)
@@ -428,23 +423,27 @@ var chartConfig_HeatMap = {
 			    var totalDiskSpace=0,totalFreeSpace=0,totalFiles=0,totalFreeFiles=0;
 			    $.each(response, function(resKey, resValue) 
 		        {
-		    	    totalFreeSpace = resValue.kbytesfree/1024;
-				    totalDiskSpace = resValue.kbytestotal/1024;
-				    free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-				    used = Math.round(100 - free);
-				    
-				    freeData.push(free);
-			        usedData.push(used);
-			        
-			        totalFiles = resValue.filesfree/1024;
-				    totalFreeFiles = resValue.filestotal/1024;
-				    free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-				    used = Math.round(100 - free);
-				    
-				    freeFilesData.push(free);
-				    totalFilesData.push(used);
-			        
-			        categories.push(resValue.filesystem);
+			    	//alert(resKey+"=="+resValue.filesystem);
+			    	if(resValue.filesystem != undefined)
+			    	{
+			    	    totalFreeSpace = resValue.kbytesfree/1024;
+					    totalDiskSpace = resValue.kbytestotal/1024;
+					    free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
+					    used = Math.round(100 - free);
+					    
+					    freeData.push(free);
+				        usedData.push(used);
+				        
+				        totalFiles = resValue.filesfree/1024;
+					    totalFreeFiles = resValue.filestotal/1024;
+					    free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
+					    used = Math.round(100 - free);
+					    
+					    freeFilesData.push(free);
+					    totalFilesData.push(used);
+				        
+					    categories.push(resValue.filesystem);
+			    	}
 			    });
 			    
 			    
@@ -483,9 +482,9 @@ var chartConfig_HeatMap = {
     	var clientMountData = [], categories = [];
     	var count=0;
     	var fileSystemName = "";
-          $.post("/api/get_fs_stats_for_client/",
-          {"fetchmetrics": clientsConnectedFetchMatric, "endtime": "2011-10-17 19:46:58.912171", "datafunction": "Average", 
-           "starttime": "2011-10-17 19:56:58.912150", "filesystem": ""})
+          $.post(db_Line_connectedClients_Data_Api_Url,
+          {"fetchmetrics": clientsConnectedFetchMatric, "endtime": "", "datafunction": "Average", 
+           "starttime": "", "filesystem": ""})
           .success(function(data, textStatus, jqXHR) 
           {   
               if(data.success)
@@ -493,30 +492,33 @@ var chartConfig_HeatMap = {
                   var response = data.response;
                   $.each(response, function(resKey, resValue) 
                   {
-        	          if (fileSystemName != resValue.filesystem && fileSystemName !='')
-      		          {
-        	        	  obj_db_Line_connectedClients_Data.series[count] = {
-      		                name: '',
-      		                data: clientMountData
-      		          };
-      		          clientMountData = [];
-      		          categories = [];
-      		          count++;
-      		          fileSystemName = resValue.filesystem;
-      		          clientMountData.push(resValue.clients_mounts);
-      		          categories.push(resValue.timestamp);
-      			       }
-      			       else
-      			       {
-      			    	fileSystemName = resValue.filesystem;
-      			        clientMountData.push(resValue.clients_mounts);
-      			        categories.push(resValue.timestamp);
-      			       }
-        	          
-        	          obj_db_Line_connectedClients_Data.series[count] = { name: '', data: clientMountData };
-              		   
-              		  clientMountData.push(resValue.clients_mounts);
-                	  categories.push(resValue.timestamp);
+                	  if(resValue.filesystem != undefined)
+                	  {
+	        	          if (fileSystemName != resValue.filesystem && fileSystemName !='')
+	      		          {
+	        	        	  obj_db_Line_connectedClients_Data.series[count] = {
+	      		                name: resValue.filesystem,
+	      		                data: clientMountData
+	      		          };
+	      		          clientMountData = [];
+	      		          categories = [];
+	      		          count++;
+	      		          fileSystemName = resValue.filesystem;
+	      		          clientMountData.push(resValue.num_exports);
+	      		          categories.push(resValue.timestamp);
+	      			       }
+	      			       else
+	      			       {
+	      			    	fileSystemName = resValue.filesystem;
+	      			        clientMountData.push(resValue.num_exports);
+	      			        categories.push(resValue.timestamp);
+	      			       }
+	        	          
+	        	          obj_db_Line_connectedClients_Data.series[count] = { name: resValue.filesystem, data: clientMountData };
+	              		   
+	              		  clientMountData.push(resValue.clients_mounts);
+	                	  categories.push(resValue.timestamp);
+                	  }
                   });
               }
           })
@@ -548,9 +550,9 @@ var chartConfig_HeatMap = {
 	    var count = 0;
         var cpuData = [],categories = [], memoryData = [];
 		obj_db_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
-		$.post("/api/get_fs_stats_for_server/",
-		 {"fetchmetrics": cpuMemoryFetchMatric, "endtime": "2011-10-17 19:46:58.784510", "datafunction": "Average", 
-		  "starttime": "2011-10-17 19:56:58.784490", "filesystem": ""})
+		$.post(db_LineBar_CpuMemoryUsage_Data_Api_Url,
+		 {"fetchmetrics": cpuMemoryFetchMatric, "endtime": "", "datafunction": "Average", 
+		  "starttime": "600", "filesystem": ""})
          .success(function(data, textStatus, jqXHR) 
           {
             var hostName='';
@@ -560,10 +562,13 @@ var chartConfig_HeatMap = {
                  var response = avgCPUApiResponse.response;
                  $.each(response, function(resKey, resValue) 
                  {
-                	cpuData.push(resValue.cpu_usage);
-                	memoryData.push(resValue.mem_MemTotal - resValue.mem_MemFree);
-                	
-			        categories.push(resValue.timestamp);
+                	if(resValue.host != undefined)
+               	    {
+	                	cpuData.push(resValue.cpu_usage);
+	                	memoryData.push(resValue.mem_MemTotal - resValue.mem_MemFree);
+	                	
+				        categories.push(resValue.timestamp);
+               	    }
 			     });
             }
        })
@@ -599,8 +604,8 @@ var chartConfig_HeatMap = {
 	  var count = 0;
          var readData = [],categories = [], writeData = [];
         obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
-        $.post("/api/get_fs_stats_for_targets/",{"targetkind": "MDT", "datafunction": "Average", "fetchmetrics": readWriteFetchMatric,
-         "starttime": "2011-10-17 19:56:58.756556", "filesystem": "", "endtime": "2011-10-17 19:46:58.756576"})
+        $.post(db_Area_ReadWrite_Data_Api_Url,{"targetkind": "MDT", "datafunction": "Average", "fetchmetrics": readWriteFetchMatric,
+         "starttime": "", "filesystem": "", "endtime": ""})
          .success(function(data, textStatus, jqXHR) {
             var hostName='';
             var avgMemoryApiResponse = data;
@@ -609,10 +614,13 @@ var chartConfig_HeatMap = {
                  var response = avgMemoryApiResponse.response;
                  $.each(response, function(resKey, resValue)
                  {
-                	readData.push(resValue.stats_read_bytes/1024);
-                	writeData.push(((0-resValue.stats_write_bytes)/1024));
-                 	
- 			        categories.push(resValue.timestamp);
+                	if(resValue.filesystem != undefined)
+                	{
+	                	readData.push(resValue.stats_read_bytes/1024);
+	                	writeData.push(((0-resValue.stats_write_bytes)/1024));
+	                 	
+	 			        categories.push(resValue.timestamp);
+                	}
 		         });
               }
        })
@@ -649,8 +657,8 @@ var chartConfig_HeatMap = {
 	    var count = 0;
         var readData = [], writeData = [], statData = [], closeData = [], openData = [], categories = [];
         obj_db_Area_Iops_Data = JSON.parse(JSON.stringify(chartConfig_Area_Iops));
-        $.post("/api/get_fs_stats_for_targets/",{"targetkind": "MDT", "datafunction": "Average", "fetchmetrics": iopsFetchmatric,
-        	   "starttime": "2011-10-17 19:56:58.773943", "filesystem": "", "endtime": "2011-10-17 19:46:58.773964"})
+        $.post(db_Area_Iops_Data_Api_Url,{"targetkind": "MDT", "datafunction": "Average", "fetchmetrics": iopsFetchmatric,
+        	   "starttime": "", "filesystem": "", "endtime": ""})
          .success(function(data, textStatus, jqXHR) {
             var targetName='';
             var avgDiskReadApiResponse = data;
@@ -659,6 +667,8 @@ var chartConfig_HeatMap = {
                  var response = avgDiskReadApiResponse.response;
                  $.each(response, function(resKey, resValue)
                  {
+                	if(resValue.filesystem != undefined)
+                 	{
 		         	  readData.push(resValue.iops1/1024);
 	                  writeData.push(resValue.iops2/1024);
 	                  statData.push(resValue.iops3/1024);
@@ -666,7 +676,7 @@ var chartConfig_HeatMap = {
 	                  openData.push(resValue.iops5/1024);
 	                 	
 	 			      categories.push(resValue.timestamp);
-		         
+                 	}
 		         });
                }
        })
@@ -705,7 +715,7 @@ var chartConfig_HeatMap = {
 	 obj_db_HeatMap_Data = JSON.parse(JSON.stringify(chartConfig_HeatMap));
 	 obj_db_HeatMap_Data.chart.renderTo = "db_heatMapDiv";
 	 var ostName, count =0;
-	 $.post("/api/get_fs_ost_heatmap/",
+	 $.post(db_HeatMap_Data_Api_Url,
 	          {"fetchmetrics": "cpu", "endtime": "2011-10-17 19:46:58.912171", "datafunction": "Average", 
 	           "starttime": "2011-10-17 19:56:58.912150", "filesystem": ""})
 	          .success(function(data, textStatus, jqXHR) 

@@ -14,20 +14,13 @@ from configure.models import (ManagedFilesystem,
 from monitor.models import SshMonitor
 from configure.lib.state_manager import (StateManager)
 from requesthandler import (AnonymousRequestHandler,
-                            extract_request_args,
-                            extract_exception)
+                            extract_request_args)
 #
 class FormatFileSystem(AnonymousRequestHandler):
-    
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.format_filesystem)
-    
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem')
-    @extract_exception
-    def format_filesystem(self,request,filesystem_name):
+    @extract_request_args('filesystem')
+    def run(self,request,filesystem):
         format_fs_list = []
-        fs = ManagedFilesystem.objects.get(name =  filesystem_name) 
+        fs = ManagedFilesystem.objects.get(name =  filesystem) 
         for target in fs.get_targets():
             if target.state == 'unformatted':
                 StateManager.set_stage(target,'formatted')
@@ -35,7 +28,7 @@ class FormatFileSystem(AnonymousRequestHandler):
                                       { 
                                        'filesystem': fs.name,
                                        'target':target.name,
-                                       'format_status': 'formatting...'   
+                                       'Job_id': ''   
                                        }
                                       )
             else:
@@ -43,22 +36,16 @@ class FormatFileSystem(AnonymousRequestHandler):
                                       {
                                        'filesystem': fs.name,
                                        'target':target.name,
-                                       'format_status':'formatted' 
+                                       'Job_id':'' 
                                       } 
                                      )
         return format_fs_list
     
 class StopFileSystem(AnonymousRequestHandler):
-    
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.stop_filesystem)
-    
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem')
-    @extract_exception
-    def stop_filesystem(self,request,filesystem_name):
+    @extract_request_args('filesystem')
+    def run(self,request,filesystem):
         format_fs_list = []
-        fs = ManagedFilesystem.objects.get(name =  filesystem_name)
+        fs = ManagedFilesystem.objects.get(name =  filesystem)
         for target in fs.get_targets():
             if not target.state == 'unmounted':
                 StateManager.set_stage(target.downcast(),'unmounted')
@@ -80,16 +67,10 @@ class StopFileSystem(AnonymousRequestHandler):
         return format_fs_list
 
 class StartFileSystem(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.start_filesystem)
-
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem')
-    @extract_exception
-    def start_filesystem(self,request,filesystem_name):
+    @extract_request_args('filesystem')
+    def run(self,request,filesystem):
         format_fs_list = []
-        fs = ManagedFilesystem.objects.get(name =  filesystem_name)
+        fs = ManagedFilesystem.objects.get(name = filesystem)
         for target in fs.get_targets():
             StateManager.set_stage(target.downcast(),'mounted')
             format_fs_list.append(
@@ -103,115 +84,71 @@ class StartFileSystem(AnonymousRequestHandler):
 
 
 class TestHost(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.test_host)
-
-    @classmethod
-    @extract_request_args(host_name='hostname')
-    @extract_exception
-    def test_host(self,request,host_name):
+    @extract_request_args('hostname')
+    def run(self,request,hostname):
         from monitor.tasks import test_host_contact
-        host, ssh_monitor = SshMonitor.from_string(host_name)
+        host, ssh_monitor = SshMonitor.from_string(hostname)
         return test_host_contact(host,ssh_monitor)
 
 
 class AddHost(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.add_host)
-
-    @classmethod
-    @extract_request_args(host_name='hostname')
-    @extract_exception
-    def add_host(self,request,host_name):
-        host, ssh_monitor =SshMonitor.from_string(host_name)
+    @extract_request_args('hostname')
+    def run(self,request,hostname):
+        host, ssh_monitor =SshMonitor.from_string(hostname)
         host.save()
         ssh_monitor.host = host
         ssh_monitor.save
         return {
-                'host':host_name,
+                'host':hostname,
                 'status': 'added'
                }
 
 class RemoveHost(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.remove_host)
-
-    @classmethod
-    @extract_request_args(host_id='hostid')
-    @extract_exception
-    def remove_host(self,request,host_id):
-        host =  ManagedHost.objects.get(id = host_id)
+    @extract_request_args('hostid')
+    def run(self,request,hostid):
+        host =  ManagedHost.objects.get(id = hostid)
         StateManager.set_state(host,'removed')
         return {    
-                'hostid': host_id,
+                'hostid': hostid,
                 'status': 'RemoveHostJob submitted Job Id:'
                }
 
 class SetLNetStatus(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.set_lnet_status)
-
-    @classmethod
-    @extract_request_args(host_id='hostid',state_string='state')
-    @extract_exception
-    def set_lnet_status(self,request,host_id,state_string):
-        host =  ManagedHost.objects.get(id = host_id)
-        StateManager.set_state(host,state_string)
+    @extract_request_args('hostid','state')
+    def run(self,request,hostid,state):
+        host =  ManagedHost.objects.get(id = hostid)
+        StateManager.set_state(host,state)
         return {
-                'hostid': host_id,
+                'hostid': hostid,
                 'status': 'RemoveHostJob submitted Job Id:'
                }
 
-
-
 class RemoveFileSystem(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.remove_filesystem)
-
-    @classmethod
-    @extract_request_args(filesystem_id='filesystemid')
-    @extract_exception
-    def remove_filesystem(self,request,filesystem_id):
+    @extract_request_args('filesystemid')
+    def run(self,request,filesystemid):
         from configure.models import ManagedFilesystem
         from configure.models.state_manager import StateManager
-        fs = ManagedFilesystem.objects.get(id = filesystem_id)    
+        fs = ManagedFilesystem.objects.get(id = filesystemid)    
         StateManager.set_state(fs,'removed')
         return {
-                'filesystemid': filesystem_id,
+                'filesystemid': filesystemid,
                 'status': 'RemoveFilesystemJob submitted Job Id:'
                }
 
 class RemoveClient(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.remove_client)
-
-    @classmethod
-    @extract_request_args(client_id='clientid')
-    @extract_exception
-    def remove_client(self,request,client_id):
+    @extract_request_args('clientid')
+    def run(self,request,clientid):
         from configure.models import ManagedTargetMount
         from configure.models.state_manager import StateManager
-        mtm = ManagedTargetMount.objects.get(id = client_id)
+        mtm = ManagedTargetMount.objects.get(id = clientid)
         StateManager.set_state(mtm,'removed')
         return {
-                'clientid': client_id,
+                'clientid': clientid,
                 'status': 'RemoveManagedTargetJob submitted Job Id:'
                }
 
 class GetResourceClasses(AnonymousRequestHandler):
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_resource_classes)
-
-    @classmethod
-    @extract_request_args()
-    @extract_exception
-    def get_resource_classes(self, request):
+    def run(self, request):
         from configure.models import StorageResourceClass, StorageResourceRecord
 
         # Pick the first resource with no parents, and use its class
@@ -235,13 +172,8 @@ class GetResourceClasses(AnonymousRequestHandler):
                 }
 
 class GetResources(AnonymousRequestHandler):
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_resources)
-
-    @classmethod
-    @extract_request_args(module_name='module_name', class_name='class_name')
-    @extract_exception
-    def get_resources(self, request, module_name, class_name):
+    @extract_request_args('module_name','class_name')
+    def run(self, request, module_name, class_name):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(module_name, class_name)
         attr_columns = resource_class.get_columns()
@@ -270,13 +202,8 @@ class GetResources(AnonymousRequestHandler):
 # FIXME: this should be part of /storage_resource/
 # FIXME: should return a 204 status code
 class SetResourceAlias(AnonymousRequestHandler):
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.set_resource_alias)
-
-    @classmethod
-    @extract_request_args(resource_id='resource_id', alias='alias')
-    @extract_exception
-    def set_resource_alias(cls, request, resource_id, alias):
+    @extract_request_args('resource_id','alias')
+    def run(cls, request, resource_id, alias):
         from configure.models import StorageResourceRecord
         from django.shortcuts import get_object_or_404
         record = get_object_or_404(StorageResourceRecord, id = resource_id)
@@ -288,13 +215,8 @@ class SetResourceAlias(AnonymousRequestHandler):
         return {}
 
 class GetResource(AnonymousRequestHandler):
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_resource)
-
-    @classmethod
-    @extract_request_args(resource_id='resource_id')
-    @extract_exception
-    def get_resource(cls, request, resource_id):
+    @extract_request_args('resource_id')
+    def run(cls, request, resource_id):
         from configure.models import StorageResourceRecord
         from django.shortcuts import get_object_or_404
         record = get_object_or_404(StorageResourceRecord, id = resource_id)
@@ -318,13 +240,8 @@ class GetResource(AnonymousRequestHandler):
                 'propagated_alerts': prop_alerts}
 
 class GetLuns(AnonymousRequestHandler):
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_luns)
-
-    @classmethod
-    @extract_request_args(category='category')
-    @extract_exception
-    def get_luns(cls,request, category):
+    @extract_request_args('category')
+    def run(cls,request, category):
         assert category in ['unused', 'usable']
 
         from monitor.models import Lun, LunNode
@@ -354,34 +271,22 @@ class GetLuns(AnonymousRequestHandler):
         return devices
 
 class CreateFilesystem(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.create_filesystem)
-
-    @classmethod
-    @extract_request_args(mgs_name='mgs',filesystem_name='fsname')
-    @extract_exception
-    def create_filesystem(self,request,mgs_name,filesystem_name):
+    @extract_request_args('mgs','fsname')
+    def run(self,request,mgs,fsname):
         from configure.models import ManagedFilesystem
-        fs = ManagedFilesystem(mgs=mgs_name,name = filesystem_name)
+        fs = ManagedFilesystem(mgs=mgs,name = fsname)
         fs.save()
 
 class CreateMGS(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.create_mgs)
-
-    @classmethod
-    @extract_request_args(host_id='hostid',node_id='nodeid',failover_id='failoverid')
-    @extract_exception
-    def create_mgs(self,request,host_id,node_id,failover_id):
+    @extract_request_args('hostid','nodeid','failoverid')
+    def run(self,request,hostid,nodeid,failoverid):
         from monitor.models import Host
         from monitor.models import LunNode
         from configure.models import ManagedMgs 
         from django.db import transaction
-        #host = Host.objects.get(id=host_id) 
-        node = LunNode.objects.get(id=node_id)
-        failover_host = Host.objects.get(id=failover_id)
+        #host = Host.objects.get(id=hostid) 
+        node = LunNode.objects.get(id=nodeid)
+        failover_host = Host.objects.get(id=failoverid)
         target = ManagedMgs(name='MGS')
         target.save()
         mounts = self._create_target_mounts(node,target,failover_host)
@@ -389,8 +294,6 @@ class CreateMGS(AnonymousRequestHandler):
         transaction.commit()
         self._set_target_states([target], mounts)
 
-    @classmethod
-    @extract_exception
     def _create_target_mounts(self,node, target, failover_host = None):
         from configure.models import ManagedTargetMount
         primary = ManagedTargetMount(
@@ -412,8 +315,6 @@ class CreateMGS(AnonymousRequestHandler):
         else:
             return [primary]
 
-    @classmethod
-    @extract_exception
     def _set_target_states(self,targets, mounts):
         from configure.lib.state_manager import StateManager
         for target in targets:
@@ -424,22 +325,16 @@ class CreateMGS(AnonymousRequestHandler):
             StateManager.set_state(target, 'formatted')
 
 class CreateOSS(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.create_oss)
-
-    @classmethod
-    @extract_request_args(host_id='hostid',node_id='nodeid',failover_id='failoverid',filesystem_id='filesystemid')
-    @extract_exception
-    def create_oss(self,request,host_id,node_id,failover_id,filesystem_id):
+    @extract_request_args('hostid','nodeid','failoverid','filesystemid')
+    def run(self,request,hostid,nodeid,failoverid,filesystemid):
         from monitor.models import Host
         from monitor.models import LunNode
         from configure.models import ManagedOst
         from django.db import transaction
-        #host = Host.objects.get(id=host_id)
-        filesystem = ManagedFilesystem.objects.get(id=filesystem_id)
-        node = LunNode.objects.get(id=node_id)
-        failover_host = Host.objects.get(id=failover_id)
+        #host = Host.objects.get(id=hostid)
+        filesystem = ManagedFilesystem.objects.get(id=filesystemid)
+        node = LunNode.objects.get(id=nodeid)
+        failover_host = Host.objects.get(id=failoverid)
         target = ManagedOst(filesystem = filesystem)
         target.save()
         mounts = self._create_target_mounts(node,target,failover_host)
@@ -447,8 +342,6 @@ class CreateOSS(AnonymousRequestHandler):
         transaction.commit()
         self._set_target_states([target], mounts)
 
-    @classmethod
-    @extract_exception
     def _create_target_mounts(self,node, target, failover_host = None):
         from configure.models import ManagedTargetMount
         primary = ManagedTargetMount(
@@ -470,8 +363,6 @@ class CreateOSS(AnonymousRequestHandler):
         else:
             return [primary]
 
-    @classmethod
-    @extract_exception
     def _set_target_states(self,targets, mounts):
         from configure.lib.state_manager import StateManager
         for target in targets:
@@ -483,22 +374,16 @@ class CreateOSS(AnonymousRequestHandler):
 
 
 class CreateMDS(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.create_mds)
-
-    @classmethod
-    @extract_request_args(host_id='hostid',node_id='nodeid',failover_id='failoverid',filesystem_id='filesystemid')
-    @extract_exception
-    def create_mds(self,request,host_id,node_id,failover_id,filesystem_id):
+    @extract_request_args('hostid','nodeid','failoverid','filesystemid')
+    def run(self,request,hostid,nodeid,failoverid,filesystemid):
         from monitor.models import Host
         from monitor.models import LunNode
         from configure.models import ManagedMdt
         from django.db import transaction
-        #host = Host.objects.get(id=host_id)
-        filesystem = ManagedFilesystem.objects.get(id=filesystem_id)
-        node = LunNode.objects.get(id=node_id)
-        failover_host = Host.objects.get(id=failover_id)
+        #host = Host.objects.get(id=hostid)
+        filesystem = ManagedFilesystem.objects.get(id=filesystemid)
+        node = LunNode.objects.get(id=nodeid)
+        failover_host = Host.objects.get(id=failoverid)
         target = ManagedMdt(filesystem = filesystem)
         target.save()
         mounts = self._create_target_mounts(node,target,failover_host)
@@ -506,8 +391,6 @@ class CreateMDS(AnonymousRequestHandler):
         transaction.commit()
         self._set_target_states([target], mounts)
 
-    @classmethod
-    @extract_exception
     def _create_target_mounts(self,node, target, failover_host = None):
         from configure.models import ManagedTargetMount
         primary = ManagedTargetMount(
@@ -529,8 +412,6 @@ class CreateMDS(AnonymousRequestHandler):
         else:
             return [primary]
 
-    @classmethod
-    @extract_exception
     def _set_target_states(self,targets, mounts):
         from configure.lib.state_manager import StateManager
         for target in targets:
@@ -539,4 +420,3 @@ class CreateMDS(AnonymousRequestHandler):
             StateManager.set_state(target, 'unmounted')
         for target in targets:
             StateManager.set_state(target, 'formatted')
-

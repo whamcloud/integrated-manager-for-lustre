@@ -1,34 +1,7 @@
-<html xmlns="http://www.w3.org/1999/xhtml">
-
-
-
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>Hydra Configuration</title>
-<link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
-<link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/jquery-ui-1.8.9.custom.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
-<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js" ></script>
-<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" src="{{STATIC_URL}}js/cm-custom_tabs.js"></script>
-
 <script language="javascript">
 	$(document).ready(function() {	
 		LoadFSData_EditFS();
-		
-		LoadMGT_EditFS(); 
-		LoadMDT_EditFS(); 
-		LoadOST_EditFS(); 
-				
+			
 		var oTable = $('#example').dataTable( {
 			"bProcessing": true,
 			"bFilter": false,
@@ -65,11 +38,26 @@
 				{ "sClass": 'txtcenter' }
 			]
 		} );
-		
-		var oNewOst = $('#popup-new-ost').dataTable( {
-			"bProcessing": true,
-			"bPaginate": false
-		} );
+			
+			// Dialog Link
+		  $('#btnNewOST').click(function()
+		  {
+			$('#newOST').dialog('open');
+			CreateOST_EditFS();
+			return false;
+		  });
+		  
+		  // Dialog Link
+		  $('#launch_instance_btn-button').click(function()
+		  {
+			$('#configParam').dialog('open');
+			return false;
+		  });
+		  
+		  $('#cancel_editfs').click(function() {
+	 		$('#lusterFS_content').empty();
+			$('#lusterFS_content').load('/hydracm/fstab');
+		});
 	} );
 	</script>
 <style type="text/css">
@@ -77,215 +65,133 @@
 a:link {
 	color: #003366;
 }
-body{
+body {
 	font-weight:bold;
 }
 -->
 </style>
-</head>
-<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
-<body>
 <input type="hidden" id="fs" value="{{fsname}}" />
 <div style="font-weight:bold;">
-<table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px;">
-  <tr>
-    <td width="30%" height="138" align="left" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
-        <tr>
-          <td width="26%" height="56" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
-          <td width="27%" align="left" valign="top"><form id="form1" name="form1" method="post" action="">
-              <label>
-              <input type="text" name="textfield" id="fsname" style="width:100px;" />
-              </label>
-            </form></td>
-          <td width="37%" align="left" valign="top"><span id="launch_instance_btn"><span class="first-child">
-            <button type="button" id="launch_instance_btn-button">Advanced Options</button>
-            </span></span></td>
-        </tr>
-    </table></td>
-    <td width="36%" align="left" valign="top"><fieldset>
-    <legend class="legendClass"><!--<a href="#"><img src="{{STATIC_URL}}images/close.png" class="closebutton"></a> | 
+  <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px; padding-top:15px;">
+    <tr>
+      <td width="30%" height="138" align="left" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+          <tr>
+            <td width="26%" height="56" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
+            <td width="27%" align="left" valign="top"><form id="form1" name="form1" method="post" action="">
+                <label>
+                <input type="text" name="textfield" id="fsname" style="width:100px;" />
+                </label>
+              </form></td>
+            <td width="37%" align="left" valign="top"><span id="launch_instance_btn"><span class="first-child">
+              <button type="button" id="launch_instance_btn-button">Advanced Options</button>
+              </span></span></td>
+          </tr>
+        </table></td>
+      <td width="36%" align="left" valign="top"><fieldset>
+        <legend class="legendClass">
+        <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" class="closebutton"></a> | 
                 &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
-      </legend>
-      <table width="100%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs">
-        <tr class="greybgcol">
-          <td width="25%" align="right" class="spaceright"><strong>Files Total:</strong></td>
-          <td class="spaceleft" width="17%" align="left"><div id="mdt_file_used"></div></td>
-          <td width="32%" align="right" class="spaceright"><strong>Total Capacity:</strong></td>
-          <td class="spaceleft" width="26%" align="left"><div id="total_capacity"></div></td>
-        </tr>
-        <tr class="greybgcol">
-          <td class="spaceright" align="right"><strong>Files Free:</strong></td>
-          <td class="spaceleft" align="left"><div id="mdt_file_free"></div></td>
-          <td class="spaceright" align="right"><strong>Total Free:</strong></td>
-          <td class="spaceleft" align="left"><div id="total_free"></div></td>
-        </tr>
-        <tr class="greybgcol">
-          <td class="spaceright" align="right"></td>
-          <td class="spaceleft" align="left"></td>
-          <td class="spaceright" align="right"><div id="total_capacity"><strong>Total no OSS:</strong></div></td>
-          <td class="spaceleft" align="left"><div id="total_oss"></div></td>
-        </tr>
-        <tr class="greybgcol">
-          <td class="spaceright" align="right">&nbsp;</td>
-          <td class="spaceleft" align="left">&nbsp;</td>
-          <td align="right" class="spaceright"><strong>Total no OST:</strong></td>
-          <td class="spaceleft" align="left"><div id="total_ost"></div></td>
-        </tr>
-      </table>
-    </fieldset></td>
-    <td width="19%" align="center" valign="top"><div id="editfs_container2"></div></td>
-    <td width="15%" align="left" valign="top"><div id="editfs_container3"></div></td>
-  </tr>
-  <tr>
-    <td height="104" colspan="4" align="left" valign="top"><fieldset>
-      <legend class="legendClass">Select MGT Configuration</legend>
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="example" width="100%">
-        <thead>
-          <tr>
-            <th width="15%">Target Path</th>
-            <th width="12%">Target Name</th>
-            <th width="7%">Server Name</th>
-            <th width="12%">Failover Partner</th>
-            <th width='10%'>Action</th>
+        </legend>
+        <table width="100%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs">
+          <tr class="greybgcol">
+            <td width="25%" align="right" class="spaceright"><strong>Files Total:</strong></td>
+            <td class="spaceleft" width="17%" align="left"><div id="mdt_file_used"></div></td>
+            <td width="32%" align="right" class="spaceright"><strong>Total Capacity:</strong></td>
+            <td class="spaceleft" width="26%" align="left"><div id="total_capacity"></div></td>
           </tr>
-        </thead>
-        <tbody id="example_content">
-        </tbody>
-      </table>
-      <div class="spacer"></div>
-      </fieldset></td>
-  </tr>
-  <tr>
-    <td height="109" colspan="4" align="left" valign="top"><fieldset>
-      <legend class="legendClass">Select MDT Configuration</legend>
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
-        <thead>
-          <tr>
-             <th width="15%">Target Path</th>
-            <th width="12%">Target Name</th>
-            <th width="7%">Server Name</th>
-            <th width="12%">Failover Partner</th>
-            <th width='10%'>Action</th>
+          <tr class="greybgcol">
+            <td class="spaceright" align="right"><strong>Files Free:</strong></td>
+            <td class="spaceleft" align="left"><div id="mdt_file_free"></div></td>
+            <td class="spaceright" align="right"><strong>Total Free:</strong></td>
+            <td class="spaceleft" align="left"><div id="total_free"></div></td>
           </tr>
-        </thead>
-        <tbody id="mdt_content">
-        </tbody>
-      </table>
-      <div class="spacer"></div>
-      </fieldset></td>
-  </tr>
-  <tr>
-    <td height="54" colspan="4" align="left" valign="top"><fieldset>
-      <legend class="legendClass">Select OST Configuration</legend>
-      <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
-        <button type="button" id="btnNewOST">Create new OST</button>
-        </span></span></div>
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
-        <thead>
-          <tr>
-            <th width="15%">Target Path</th>
-            <th width="12%">Target Name</th>
-            <th width="7%">Server Name</th>
-            <th width="12%">Failover Partner</th>
-            <th width='10%'>Action</th>
+          <tr class="greybgcol">
+            <td class="spaceright" align="right"></td>
+            <td class="spaceleft" align="left"></td>
+            <td class="spaceright" align="right"><div id="total_capacity"><strong>Total no OSS:</strong></div></td>
+            <td class="spaceleft" align="left"><div id="total_oss"></div></td>
           </tr>
-        </thead>
-        <tbody id="ost_content">
-        </tbody>
-      </table>
-      <table width="100%" border="0" cellspacing="0" cellpadding="0">
-        <tr>
-          <td width="82%">&nbsp;</td>
-          <td width="9%" align="right"><span id="launch_instance_btn2"><span class="first-child">
-            <input type="submit" name="button2" id="button2" value="Create">
-          </span></span></td>
-          <td width="9%" align="left"><label> <span id="launch_instance_btn2"><span class="first-child">
-            <input type="submit" name="button" id="button" value="Cancel" onClick="location.href='/hydracm/fstab'">
-          </span></span> </label></td>
-        </tr>
-      </table>
-      <div class="spacer"></div>
-      </fieldset></td>
-  </tr>
-</table>
-<div id="configParam" title="Configuration Parameters">
-  <form id="form1" name="form1" method="post" action="">
-    <table width="75%" border="0" cellspacing="0" cellpadding="0">
-      <tr>
-        <td align="center" valign="middle" class="fontStyle">Property</td>
-        <td align="center" class="fontStyle">Value</td>
-      </tr>
-      <tr>
-        <td width="59%" height="27" align="right" valign="middle" class="fntsize">lite.max_cachd_mb: </td>
-        <td width="41%"><label>
-          <input type="text" name="textfield" id="textfield" />
-          </label></td>
-      </tr>
-      <tr>
-        <td height="26" align="right" valign="middle" class="fntsize">lite.max_cached_mb:</td>
-        <td><input type="text" name="textfield2" id="textfield2" /></td>
-      </tr>
-      <tr>
-        <td height="25" align="right" valign="middle" class="fntsize">lite.max_read_ahead_mb:</td>
-        <td><input type="text" name="textfield3" id="textfield3" /></td>
-      </tr>
-      <tr>
-        <td height="27" align="right" valign="middle" class="fntsize">lite.max_cached_whole_mb:</td>
-        <td><input type="text" name="textfield4" id="textfield4" /></td>
-      </tr>
-      <tr>
-        <td height="28" align="right" valign="middle" class="fntsize">lite.max_statahead_max:</td>
-        <td><input type="text" name="textfield5" id="textfield5" /></td>
-      </tr>
-      <tr>
-        <td height="28" align="right" valign="middle" class="fntsize">sys.at_early_margin:</td>
-        <td><input type="text" name="textfield6" id="textfield6" /></td>
-      </tr>
-      <tr>
-        <td height="28" align="right" valign="middle" class="fntsize">sys.at_extra:</td>
-        <td><input type="text" name="textfield7" id="textfield7" /></td>
-      </tr>
-      <tr>
-        <td height="26" align="right" valign="middle" class="fntsize">sys.at_history:</td>
-        <td><input type="text" name="textfield8" id="textfield8" /></td>
-      </tr>
-      <tr>
-        <td height="27" align="right" valign="middle" class="fntsize">sys.at_max:</td>
-        <td><input type="text" name="textfield9" id="textfield9" /></td>
-      </tr>
-      <tr>
-        <td height="26" align="right" valign="middle" class="fntsize">sys.at_min:</td>
-        <td><input type="text" name="textfield10" id="textfield10" /></td>
-      </tr>
-      <tr>
-        <td height="28" align="right" valign="middle" class="fntsize">sys.ldlm_timeout:</td>
-        <td><input type="text" name="textfield11" id="textfield11" /></td>
-      </tr>
-      <tr>
-        <td align="right" valign="middle" class="fntsize">sys.timeout:</td>
-        <td><input type="text" name="textfield12" id="textfield12" /></td>
-      </tr>
-    </table>
-  </form>
-</div>
-<!-- new ost popup -->
-<div id="newOST" title="Select Target">
-   <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
-    <thead>
-      <tr>
-        <th width="1%">Select</th>
-        <th width="19%">Target Path</th>
-        <th width="15%">Capacity</th>
-        <th width="19%">Kind</th>
-        <th width="17%">Status</th>
-        <th width="17%">Primary Server</th>
-        <th width="17%">Failover</th>
-      </tr>
-    </thead>
-    <tbody id="popup-new-ost_content">
-    </tbody>
+          <tr class="greybgcol">
+            <td class="spaceright" align="right">&nbsp;</td>
+            <td class="spaceleft" align="left">&nbsp;</td>
+            <td align="right" class="spaceright"><strong>Total no OST:</strong></td>
+            <td class="spaceleft" align="left"><div id="total_ost"></div></td>
+          </tr>
+        </table>
+        </fieldset></td>
+      <td width="19%" align="center" valign="top"><div id="editfs_container2"></div></td>
+      <td width="15%" align="left" valign="top"><div id="editfs_container3"></div></td>
+    </tr>
+    <tr>
+      <td height="104" colspan="4" align="left" valign="top"><fieldset>
+        <legend class="legendClass">Select MGT Configuration</legend>
+        <table cellpadding="0" cellspacing="0" border="0" class="display" id="example" width="100%">
+          <thead>
+            <tr>
+              <th width="15%">Target Path</th>
+              <th width="12%">Target Name</th>
+              <th width="7%">Server Name</th>
+              <th width="12%">Failover Partner</th>
+              <th width='10%'>Action</th>
+            </tr>
+          </thead>
+          <tbody id="example_content">
+          </tbody>
+        </table>
+        <div class="spacer"></div>
+        </fieldset></td>
+    </tr>
+    <tr>
+      <td height="109" colspan="4" align="left" valign="top"><fieldset>
+        <legend class="legendClass">Select MDT Configuration</legend>
+        <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
+          <thead>
+            <tr>
+              <th width="15%">Target Path</th>
+              <th width="12%">Target Name</th>
+              <th width="7%">Server Name</th>
+              <th width="12%">Failover Partner</th>
+              <th width='10%'>Action</th>
+            </tr>
+          </thead>
+          <tbody id="mdt_content">
+          </tbody>
+        </table>
+        <div class="spacer"></div>
+        </fieldset></td>
+    </tr>
+    <tr>
+      <td height="54" colspan="4" align="left" valign="top"><fieldset>
+        <legend class="legendClass">Select OST Configuration</legend>
+        <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
+          <button type="button" id="btnNewOST">Create new OST</button>
+          </span></span></div>
+        <table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
+          <thead>
+            <tr>
+              <th width="15%">Target Path</th>
+              <th width="12%">Target Name</th>
+              <th width="7%">Server Name</th>
+              <th width="12%">Failover Partner</th>
+              <th width='10%'>Action</th>
+            </tr>
+          </thead>
+          <tbody id="ost_content">
+          </tbody>
+        </table>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+          <tr>
+            <td width="82%">&nbsp;</td>
+            <td width="9%" align="right"><span id="launch_instance_btn2"><span class="first-child">
+              <input type="submit" name="button2" id="button2" value="Create">
+              </span></span></td>
+            <td width="9%" align="left"><label> <span id="launch_instance_btn2"><span class="first-child">
+              <input type="submit" name="button" id="cancel_editfs" value="Cancel">
+              </span></span> </label></td>
+          </tr>
+        </table>
+        <div class="spacer"></div>
+        </fieldset></td>
+    </tr>
   </table>
-   </div>
-  </div>
-</body>
-</html>
+</div>

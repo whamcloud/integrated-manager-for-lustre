@@ -11,18 +11,12 @@ from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
-from requesthandler import (AnonymousRequestHandler,
-                            extract_exception)
+from requesthandler import (AnonymousRequestHandler)
 from monitor.models import Monitor
 
 #REST API Controler for Hydra audit related operations/actions
 class HydraAudit(AnonymousRequestHandler):
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.list_audit)
-
-    @classmethod
-    @extract_exception
-    def list_audit(self,request):
+    def run(self,request):
         audit_list = []
         for m in Monitor.objects.all():
             from celery.result import AsyncResult
@@ -39,10 +33,9 @@ class HydraAudit(AnonymousRequestHandler):
                               }    
             )
             return audit_list
-     
-    @classmethod
-    @extract_exception
-    def clear_audit(self,request):
+
+class ClearAudit(AnonymousRequestHandler):     
+    def run(self,request):
         audit_list = []
         for m in Monitor.objects.all():
             m.update(state = 'idle',task_id = None)

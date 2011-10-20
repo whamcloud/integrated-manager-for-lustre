@@ -7,48 +7,68 @@ from piston.handler import BaseHandler
 from jsonutils import render_to_json
 from  django.views.decorators.csrf  import csrf_exempt
 #
+def extract_exception(f):
+    """Decorator to catch boto exceptions and convert them
+    to simple exceptions with slightly nicer error messages.
+    """
+    import settings
+    import logging
+    hydraapi_log = logging.getLogger('hydraapi')
+    hydraapi_log.setLevel(logging.DEBUG)
+    handler = logging.FileHandler(settings.API_LOG_PATH)
+    handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+    hydraapi_log.addHandler(handler)
+    import functools
+    @functools.wraps(f)
+    def _extract_exception(*args, **kwds):
+        from itertools import chain
+        from django.http import HttpRequest
+        params = chain([a for a in args if not isinstance(a, HttpRequest)], kwds.values())
+        try:
+            hydraapi_log.info("API call %s(%s)" % (f.__name__, ", ".join(map(repr, params))))
+            return f(*args, **kwds)
+        except Exception:
+            import sys
+            import traceback
+            hydraapi_log.error("API error %s(%s)" % (f.__name__, ", ".join(map(repr, params))))
+            hydraapi_log.error("\n".join(traceback.format_exception(*(sys.exc_info()))))
+            raise
+    return _extract_exception
+
 class RequestHandler(BaseHandler):
     #allowed_methods = ('GET', 'POST')
     allowed_methods = ('GET')
     
-    def __init__(self, registered_function, *args, **kwargs):
+    def __init__(self):
         BaseHandler.__init__(self)
-        self.registered_function = registered_function    
-    
     
     def read(self, request):
         """Serve GET requests from the client. It calls the registered function with the GET parameters
         :param request: A HTTP GET request 
         """
         
-        if self.registered_function is None:
+        if self.run is None:
             raise Exception("No function registered! Unable to process request.")
-        #Set the data of the get request to request.data because
-        #the base classes will all look in request.data for the data
-        #In POST requests this is handled by piston
         request.data = request.GET
-        return self.registered_function(request)
+        return self.run(request)
     
     def create(self, request):
-#        """Serve POST requests from the client. It calls the registered function with the POST parameters
-#        :param request: A HTTP POST request           
-#        """
-#        if self.registered_function is None:
-#            raise Exception("No function registered! Unable to process request.")
-        return self.registered_function(request)
+        return self.run(request)
 
 class AnonymousRequestHandler(RequestHandler):
     
     allowed_methods = ('GET', 'POST')
     
-    def __init__(self, registered_function, *args, **kwargs):
-        RequestHandler.__init__(self, registered_function)
+    def __init__(self, *args, **kwargs):
+        RequestHandler.__init__(self)
     
     @render_to_json()
+    @extract_exception
     def read(self, request):
         return RequestHandler.read(self, request)
     
     @render_to_json()
+    @extract_exception
     def create(self, request):
         return RequestHandler.create(self, request)
 
@@ -73,6 +93,33 @@ class extract_request_args:
     """Extracts specified keys from the request dictionary and calls the wrapped
     function
     """
+    def __init__(self, *args):
+        self.args = args
+    def __call__(self, f):
+        def wrapped_f(wrapped_self, request):
+            # This will be rquired for session management
+            #if request.session:
+            #    request.session.set_expiry(request.user.get_inactivity_timeout())
+            call_args = { }
+            data = request.data
+            errors = { }
+            #Fill in the callArgs with values from the request data
+            for value in self.args:
+                try:
+                    call_args[value] = data[value]
+                except:
+                    errors[value] = [ "This field is required." ] 
+                    pass
+                
+            if len(errors) > 0:
+                raise Exception(errors)
+            return f(wrapped_self, request, **call_args)
+        return wrapped_f
+
+class extract_request_args_old:
+    """Extracts specified keys from the request dictionary and calls the wrapped
+    function
+    """
     def __init__(self, **kwargs):
         self.args = kwargs
     def __call__(self, f):
@@ -88,38 +135,10 @@ class extract_request_args:
                 try:
                     call_args[key] = data[value]
                 except:
-                    errors[value] = [ "This field is required." ] 
+                    errors[value] = [ "This field is required." ]
                     pass
-                
+
             if len(errors) > 0:
                 raise Exception(errors)
             return f(wrapped_self, request, **call_args)
         return wrapped_f
-
-def extract_exception(f):
-    """Decorator to catch boto exceptions and convert them
-    to simple exceptions with slightly nicer error messages.
-    """
-    import settings
-    import logging
-    hydraapi_log = logging.getLogger('hydraapi')
-    hydraapi_log.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(settings.API_LOG_PATH)
-    handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-    hydraapi_log.addHandler(handler)
-    import functools
-    @functools.wraps(f)
-    def _extract_exception(*args, **kwds):
-        from itertools import chain
-        from django.http import HttpRequest
-        params = chain([a for a in args if not isinstance(a, HttpRequest)], kwds.values())
-        try:
-            hydraapi_log.info("API call %s(%s)" % (f.__name__, ", ".join(map(repr, params))))
-            return f(*args, **kwds)
-        except Exception as err:
-            import sys
-            import traceback
-            hydraapi_log.error("API error %s(%s)" % (f.__name__, ", ".join(map(repr, params))))
-            hydraapi_log.error("\n".join(traceback.format_exception(*(sys.exc_info()))))
-            raise
-    return _extract_exception

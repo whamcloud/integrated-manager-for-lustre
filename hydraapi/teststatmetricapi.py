@@ -7,12 +7,12 @@
 from django.core.management import setup_environ
 import optparse
 import sys
-import datetime
+#import datetime
 import settings
 setup_environ(settings)
 
 from jsonutils import make_json_call
-
+from monitor.models import(Filesystem,ObjectStoreTarget,MetadataTarget)
 def main(args):
     option_parser = optparse.OptionParser(
         '%prog [OPTIONS]\nRetrieves chart data of Lustre volumes for a filesystem  from Hydra server .\nExample: testgraphapi.py --filesystem punefs --hostname clo-pune-lon01 --targetname=hulkfs01-MDT0000 --starttime 29-20-2011 09:30:45  --endtime  29-20-2011 09:31:45  --interval NA  --datafunction average')
@@ -30,8 +30,8 @@ def main(args):
 #                             help="Name of the target (MDT/MGT/OST) whose chart data is to be retrieved")
 #    option_parser.add_option('--targetkind', dest='target_kind',
 #                             help="one of the (MDT/MGT/OST) whose chart data is to be retrieved")
-#    option_parser.add_option('--starttime', dest='start_time',
-#                             help="start time slice for which chart data is to be retrieved")
+    option_parser.add_option('--starttime', dest='start_time',
+                             help="Past number of minutes for which data to be fetched")
 #    option_parser.add_option('--endtime', dest='end_time',
 #                             help="end time slice for chart data is to be retrieved")
 #    option_parser.add_option('--datafunction', dest='data_function',
@@ -41,180 +41,177 @@ def main(args):
 
     options, args = option_parser.parse_args()
 
-    if options.filesystem_name == None:
+    if options.filesystem_name == None or options.start_time == None:
         option_parser.print_help()
         exit(-1)
     base_url = options.url.rstrip('/')
     
-    # Fetch data for last 10 minutes
-    interval=600
-    # Unit Test 1 File system Free Space Chart data:
-
+    print  'Unit Test 1: All File system Usage Bar/Column graph:'
     api_url = base_url + '/api/get_fs_stats_for_targets/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
-                             filesystem=options.filesystem_name,
-                             starttime=str(datetime.datetime.now()),
-                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
+                             filesystem='',
+                             starttime=options.start_time,
+                             endtime='',
                              datafunction='Average',
                              targetkind='OST',
                              fetchmetrics="kbytestotal kbytesfree filestotal filesfree",   
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
+    print 'Unit Test 2: File system Usage Bar/Column graph:' 
     api_url = base_url + '/api/get_fs_stats_for_targets/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.filesystem_name,
-                             starttime=str(datetime.datetime.now()),
-                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
+                             starttime=options.start_time,
+                             endtime='',
                              datafunction='Average',
                              targetkind='MDT',
                              fetchmetrics="kbytestotal kbytesfree filestotal filesfree",
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 2  File system Read vs Write Chart data:
-
+    print 'Unit Test 3: File system Read vs Write Chart data for all ObjectStoreTarget:'
     api_url = base_url + '/api/get_fs_stats_for_targets/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.filesystem_name,
-                             starttime=str(datetime.datetime.now()),
-                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
+                             starttime=options.start_time,
+                             endtime='',
                              datafunction='Average',
                              targetkind='OST',
                              fetchmetrics="stats_read_bytes stats_write_bytes",
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
+    print 'Unit Test 4: File system Read vs Write Chart data for MetadataTarget:'
     api_url = base_url + '/api/get_fs_stats_for_targets/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.filesystem_name,
-                             starttime=str(datetime.datetime.now()),
-                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
+                             starttime=options.start_time,
+                             endtime='',
                              datafunction='Average',
                              targetkind='MDT',
                              fetchmetrics="stats_read_bytes stats_write_bytes",
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 3  File system IOPs Chart data:
-
+    print'Unit Test 5:  File system MIOPs Chart data:'
     api_url = base_url + '/api/get_fs_stats_for_targets/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.filesystem_name,
-                             starttime=str(datetime.datetime.now()),
-                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
-                             datafunction='Average',
-                             targetkind='OST',
-                             fetchmetrics="iops1 iops2 iops3 iops4 iops5",
-                             )
-    print '\n result:'
-    print result
-    print '\n\n'
-
-    api_url = base_url + '/api/get_fs_stats_for_targets/'
-    print 'api_url: %s' % api_url
-    result = make_json_call(api_url,
-                             filesystem=options.filesystem_name,
-                             starttime=str(datetime.datetime.now()),
-                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
+                             starttime=options.start_time,
+                             endtime='',
                              datafunction='Average',
                              targetkind='MDT',
-                             fetchmetrics="iops1 iops2 iops3 iops4 iops5",
+                             fetchmetrics="stats_open stats_connect stats_create stats_destroy stats_disconnect stats_commitrw stats_statfs stats_preprw",
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
+    print'Unit Test 6:  All File system MIOPs Chart data:'
+    api_url = base_url + '/api/get_fs_stats_for_targets/'
+    print 'api_url: %s' % api_url
+    result = make_json_call(api_url,
+                             filesystem='',
+                             starttime=options.start_time,
+                             endtime='',
+                             datafunction='Average',
+                             targetkind='MDT',
+                             fetchmetrics="stats_open stats_connect stats_create stats_destroy stats_disconnect stats_commitrw stats_statfs stats_preprw",
+                             )
+    print 'result:'
+    print result
+    print '\n\n'
 
-
-
-
-
-   # Unit Test 4 File system CPU and Memory Charts:
+    print 'Unit Test 7: File system CPU and Memory Charts:'
     api_url = base_url + '/api/get_fs_stats_for_server/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.filesystem_name,
-                             starttime=str(datetime.datetime.now()),
-                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
+                             starttime=options.start_time,
+                             endtime='',
                              datafunction='Average',
                              fetchmetrics="cpu_usage cpu_total mem_MemFree mem_MemTotal",
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 5 Server CPU and Memory Charts  :
+    print 'Unit Test 8: Server CPU and Memory Charts:'
     api_url = base_url + '/api/get_stats_for_server/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              hostid=1,
-                             starttime=str(datetime.datetime.now()),
-                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
+                             starttime=options.start_time,
+                             endtime='',
                              datafunction='Average',
                              fetchmetrics="cpu_usage cpu_total mem_MemFree mem_MemTotal",
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
-
-    # Unit Test 6 Target Read Vs Writes:
-    api_url = base_url + '/api/get_stats_for_targets/'
-    print 'api_url: %s' % api_url
-    result = make_json_call(api_url,
-                             target='hulkfs01-MDT0000',
-                             starttime=str(datetime.datetime.now()),
-                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
-                             datafunction='Average',
-                             targetkind='MDT',
-                             fetchmetrics="stats_read_bytes stats_write_bytes",   
-                             )
-    print '\n result:'
-    print result
+    print 'Unit Test 9: ObjectStoreTarget Read Vs Writes:'
+    filesystem = Filesystem.objects.get(name=options.filesystem_name)
+    fs_osts = ObjectStoreTarget.objects.filter(filesystem=filesystem)
+    for ost in fs_osts:
+        api_url = base_url + '/api/get_stats_for_targets/'
+        print '\napi_url: %s' % api_url
+        result = make_json_call(api_url,
+                                 target=ost.name,
+                                 starttime=options.start_time,
+                                 endtime='',
+                                 datafunction='Average',
+                                 targetkind='OST',
+                                 fetchmetrics="stats_read_bytes stats_write_bytes",   
+                                 )
+        print 'result:'
+        print result
     print '\n\n'
 
-    # Unit Test 5 :
+    print 'Unit Test 10: File system connected clients chart:'
     api_url = base_url + '/api/get_fs_stats_for_client/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.filesystem_name,
-                             starttime=str(datetime.datetime.now()),
-                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
+                             starttime=options.start_time,
+                             endtime='',
                              datafunction='Average',
-                             fetchmetrics="kbytesfree kbytestotal filesfree filestotal",
+                             fetchmetrics="num_exports",   
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 5 :
-    api_url = base_url + '/api/get_fs_ost_heatmap/'
+    print 'Unit Test 11: All File systems Connected clients chart:'
+    api_url = base_url + '/api/get_fs_stats_for_client/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
-                             filesystem=options.filesystem_name,
-                             starttime=str(datetime.datetime.now()),
-                             endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
+                             filesystem='',
+                             starttime=options.start_time,
+                             endtime='',
                              datafunction='Average',
-                             fetchmetrics="cpu",
+                             fetchmetrics="num_exports",
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
+    
 
     return 0
+
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

@@ -29,102 +29,102 @@ def main(args):
         option_parser.print_help()
         exit(-1)
     base_url = options.url.rstrip('/')
-    # Unit Test 1 : 
+    print 'Unit Test 1: Get list of All File systems:' 
     api_url = base_url + '/api/listfilesystems/'
     print 'api_url: %s' % api_url
     result  = make_json_call(api_url,
                              )
-    print '\nresult:'
+    print 'result:'
     print result
     print '\n\n'
     
-    # Unit Test 2 :
+    print 'Unit Test 2: Get File system:'
     api_url = base_url + '/api/getfilesystem/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.fsname,
                              )
-    print '\nresult:'
+    print 'result:'
     print result
     print '\n\n'
     
-    # Unit Test 3 :
+    print 'Unit Test 3: Get volumes for a File system:'
     api_url = base_url + '/api/getvolumes/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.fsname,
                              )
-    print '\nresult:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 3 :
+    print 'Unit Test 4: Get volumes for All File systems:'
     api_url = base_url + '/api/getvolumes/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem='',
                              )
-    print '\nresult:'
+    print 'result:'
     print result
     print '\n\n'    
     
-    # Unit  Test 4 :
+    print'Unit  Test 5: Get servers/hosts for a File system:'
     api_url = base_url + '/api/listservers/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.fsname
                             )
-    print '\nresult:'
+    print 'result:'
     print result
     print '\n\n'
  
-    # Unit  Test 4 :
+    print 'Unit  Test 6: Get servers/hosts for All File systems'
     api_url = base_url + '/api/listservers/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=''
                             )
-    print '\nresult:'
+    print 'result:'
     print result
     print '\n\n'  
     
-    # Unit  Test 5 :
+    print 'Unit  Test 7: Get Clients for a File systems'
     api_url = base_url + '/api/getclients/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem=options.fsname,
                              )
-    print '\nresult:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit  Test 5 :
+    print 'nit  Test 8: Get Clients for All File systems'
     api_url = base_url + '/api/getclients/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem='',
                              )
-    print '\nresult:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 6 :
+    print 'Unit Test 9: Get usable devices/luns:'
     api_url = base_url + '/api/get_luns/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                                 category='usable'
                              )
-    print '\nresult:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 7 :
+    print 'Unit Test 10: Get unused devices/luns:'
     api_url = base_url + '/api/get_luns/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                                 category='unused'
                              )
-    print '\nresult:'
+    print 'result:'
     print result
     print '\n\n'
 

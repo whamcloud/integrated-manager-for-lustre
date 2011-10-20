@@ -363,7 +363,7 @@ cursor:pointer;
 	background-color:#eeeeee;
 	/*position:absolute;*/
 	margin:auto;
-	min-height:800px;
+	min-height:600px;
 	
 	
 }
@@ -637,4 +637,22 @@ td.br{
 .txtcenter{
 	text-align:center;
 	font-weight:bold;
+}
+.tblContent{
+    font-weight: normal;
+}
+.status_stopped{
+    border: 1px solid red; background-color: #4F0F0F; font-weight: bold; color: red;
+    padding-right:10px;width:50%;text-align:center;
+    border-radius:3px 3px 3px 3px;
+}
+.status_warning{
+    border: 1px solid #DFC137; background-color: #6F4B0D; font-weight: bold; color: #DFC137;
+    padding-right:10px;width:50%;text-align:center;
+    border-radius:3px 3px 3px 3px;
+}
+.status_ok{
+    border: 1px solid #00FE00; background-color: #00AA00; font-weight: bold; color: #00FE00;
+    padding-right:10px;width:50%;text-align:center;
+    border-radius:3px 3px 3px 3px;
 }
