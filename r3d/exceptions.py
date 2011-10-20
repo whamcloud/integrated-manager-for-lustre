@@ -9,3 +9,6 @@ class BadTimeString(R3dError):
 
 class BadUpdateString(R3dError):
     pass
+
+class BadUpdateTime(R3dError):
+    pass

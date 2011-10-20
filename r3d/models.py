@@ -121,8 +121,8 @@ class Database(models.Model):
         if len(new_values) != len(self.ds_cache):
             raise BadUpdateString, "Update string DS count doesn't match database DS count"
 
-        if update_time < self.last_update:
-            raise BadUpdateString, "Update time %d is before last update (%d)" % (update_time, self.last_update)
+        if interval <= 0:
+            raise BadUpdateTime, "Illegal update time %d (minimum one second step from %d)" % (update_time, self.last_update)
 
         (elapsed_steps,
          pre_int,
