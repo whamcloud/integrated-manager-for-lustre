@@ -164,7 +164,15 @@ class SimpleHistoStoreBin(models.Model):
 
 class SimpleHistoStoreTime(models.Model):
     storage_resource_statistic = models.ForeignKey('StorageResourceStatistic')
+    time = models.BigIntegerField()
+
+    class Meta:
+        app_label = 'configure'
+
+class SimpleScalarStoreDatapoint(models.Model):
+    storage_resource_statistic = models.ForeignKey('StorageResourceStatistic')
     time = models.PositiveIntegerField()
+    value = models.BigIntegerField()
 
     class Meta:
         app_label = 'configure'
@@ -201,17 +209,32 @@ class StorageResourceStatistic(models.Model):
                     for i in range(0, len(stat_properties.bins)):
                         SimpleHistoStoreBin.objects.create(bin_idx = i, value = bin_vals[i], histo_store_time = time)
         else:
-            self.metrics.update(stat_name, stat_properties, stat_data)
+            for dp in stat_data:
+                ts = dp['timestamp']
+                val = dp['value']
+                SimpleScalarStoreDatapoint.objects.create(
+                        time = ts,
+                        value = val,
+                        storage_resource_statistic = self)
+
+
+        #self.metrics.update(stat_name, stat_properties, stat_data)
 
     def to_dict(self):
         """For use with frontend.  Get a time series for scalars or a snapshot for histograms.
         TODO: generalisation for explorable graphs, variable time series, that
         should be done in common with the lustre graphs."""
+        from django.db import transaction
         stat_props = self.storage_resource.get_statistic_properties(self.name)
         from configure.lib.storage_plugin import statistics
         if isinstance(stat_props, statistics.BytesHistogram):
-            time = SimpleHistoStoreTime.objects.all().latest('time')
-            bins = SimpleHistoStoreBin.objects.filter(histo_store_time = time).order_by('bin_idx')
+            with transaction.commit_manually():
+                transaction.commit()
+                try:
+                    time = SimpleHistoStoreTime.objects.filter(storage_resource_statistic = self).latest('time')
+                    bins = SimpleHistoStoreBin.objects.filter(histo_store_time = time).order_by('bin_idx')
+                finally:
+                    transaction.commit()
             type_name = 'histogram'
             # Composite type
             data = {'bin_labels': [], 'values': []}
@@ -220,14 +243,28 @@ class StorageResourceStatistic(models.Model):
                 data['bin_labels'].append(bin_info)
                 data['values'].append(bins[i].value)
         else:
-            import time
-            latest_data = self.metrics.fetch('Average', start_time = int(time.time()) - 60)
-
+            with transaction.commit_manually():
+                transaction.commit()
+                try:
+                    dps = SimpleScalarStoreDatapoint.objects\
+                        .filter(storage_resource_statistic = self)\
+                        .order_by('-time')[:100]
+                    dps = list(dps)
+                    dps.reverse()
+                    #import time
+                    #begin = int(time.time()) - 60
+                    #end = int(time.time())
+                    #dps = SimpleScalarStoreDatapoint.objects.filter(storage_resource_statistic = self).\
+                    #filter(time__gt = begin).filter(time__lt = end).order_by('time')
+                    #if dps.count() == 0:
+                    #    print "No DPs between %s and %s for stat %s" % (begin, end, self.pk)
+                finally:
+                    transaction.commit()
             type_name = 'timeseries'
-            # Scalar types
             data_points = []
-            for ts, seriesdict in latest_data:
-                data_points.append((ts, seriesdict[self.name]))
+            for dp in dps:
+                data_points.append((dp.time, dp.value))
+
             data = {
                     'unit_name': stat_props.get_unit_name(),
                     'data_points': data_points
