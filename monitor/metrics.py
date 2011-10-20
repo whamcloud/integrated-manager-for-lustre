@@ -103,7 +103,8 @@ class R3dMetricStore(MetricStore):
         # We want our start time to be prior to the first insert, but
         # not so far back that we waste lots of time with filling in
         # null data.
-        start_time = int(time.time()) - settings.AUDIT_PERIOD * 2
+        # FIXME HYD-366: this should be set at first insert.
+        start_time = int(time.time()) - 1
         ct = ContentType.objects.get_for_model(measured_object)
         self.r3d = Database.objects.create(name=measured_object.__str__(),
                                            start=start_time,
