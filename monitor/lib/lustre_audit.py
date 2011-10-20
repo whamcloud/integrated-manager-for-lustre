@@ -431,9 +431,12 @@ class LustreAudit:
             # There are hydra-configured mounts on this host, and we got some corosync resource information
             for target_name, node_name in self.host_data['resource_locations'].items():
                 try:
-                    # TODO: cope with multiple targets having the same name, put something unique in
-                    # the resource names.
-                    target = Target.objects.get(name = target_name).downcast()
+                    try:
+                        target_name, target_pk = target_name.rsplit("_", 1)
+                    except ValueError:
+                        audit_log.warning("Malformed resource name '%s'" % target_name)
+                        continue
+                    target = Target.objects.get(name = target_name, pk = target_pk).downcast()
                 except Target.DoesNotExist:
                     audit_log.warning("Resource %s on host %s is not a known target" % (target_name, self.host))
                     continue
