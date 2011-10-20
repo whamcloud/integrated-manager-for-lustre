@@ -111,12 +111,14 @@
              var response = data.response;
              $.each(response, function(resKey, resValue) {
             	 innerContent = innerContent + 
-            	 "<tr><td class='txtright'>MGS Hostname:</td><td class='tblContent txtleft'>"+resValue.mgsname+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
-                 "<tr><td class='txtright'>MDS Hostname:</td><td class='tblContent txtleft'>"+resValue.mdsname+"</td><td class='txtright'>Failover Status:</td><td class='tblContent txtleft'>--</td></tr>"+
-                 "<tr><td class='txtright'>File System Name:</td><td class='tblContent txtleft'>"+resValue.fsname+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
-                 "<tr><td class='txtright'>Standby OSS Hostname:</td><td class='tblContent txtleft'>--</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
-                 "<tr><td class='txtright'>Total OSTs:</td><td class='tblContent txtleft'>"+resValue.noofost+" </td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
-                 "<tr><td class='txtright'>OSS Status:</td>";
+            	 "<tr><td class='greybgcol'>MGS :</td><td class='tblContent greybgcol'>"+resValue.mgsname+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
+                 "<tr><td class='greybgcol'>MDS :</td><td class='tblContent greybgcol'>"+resValue.mdsname+"</td><td class='greybgcol'>Failover:</td><td class='tblContent greybgcol'>NA</td></tr>"+
+                 "<tr><td class='greybgcol'>File System :</td><td class='tblContent greybgcol'>"+resValue.fsname+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
+                 "<tr><td class='greybgcol'>Total Capacity: </td><td class='tblContent greybgcol'>"+resValue.kbytesused+" </td><td class='greybgcol'>Total Free:</td><td class='tblContent greybgcol'>"+resValue.kbytesfree+"</td></tr>"+
+                 "<tr><td class='greybgcol'>Files Total: </td><td class='tblContent greybgcol'>"+resValue.mdtfileused+" </td><td class='greybgcol'>Files Free:</td><td class='tblContent greybgcol'>"+resValue.mdtfilesfree+"</td></tr>"+
+                 "<tr><td class='greybgcol'>Standby OSS :</td><td class='tblContent greybgcol'>--</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
+                 "<tr><td class='greybgcol'>Total OSTs:</td><td class='tblContent greybgcol'>"+resValue.noofost+" </td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
+                 "<tr><td class='greybgcol'>Status:</td>";
             	 if(resValue.status == "OK" || resValue.status == "STARTED")
             	 {
             		 innerContent = innerContent + "<td class='tblContent txtleft status_ok'>"+resValue.mdsstatus+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";

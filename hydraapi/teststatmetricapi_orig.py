@@ -117,8 +117,8 @@ def main(args):
                              starttime='',
                              endtime='',
                              datafunction='Average',
-                             targetkind='OST',
-                             fetchmetrics="iops1 iops2 iops3 iops4 iops5",
+                             targetkind='MDT',
+                             fetchmetrics="stats_open stats_connect stats_create stats_destroy stats_disconnect stats_commitrw stats_statfs stats_preprw",
                              )
     print '\n result:'
     print result
@@ -127,12 +127,12 @@ def main(args):
     api_url = base_url + '/api/getfsstatsfortargets/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
-                             filesystem=options.filesystem_name,
+                             filesystem='',
                              starttime='',
                              endtime='',
                              datafunction='Average',
                              targetkind='MDT',
-                             fetchmetrics="iops1 iops2 iops3 iops4 iops5",
+                             fetchmetrics="stats_open stats_connect stats_create stats_destroy stats_disconnect stats_commitrw stats_statfs stats_preprw",
                              )
     print '\n result:'
     print result
