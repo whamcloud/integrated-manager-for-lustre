@@ -154,6 +154,21 @@ class StorageResourceRecord(models.Model):
 
         return klass._storage_statistics[stat_name]
 
+class SimpleHistoStoreBin(models.Model):
+    histo_store_time = models.ForeignKey('SimpleHistoStoreTime')
+    bin_idx = models.IntegerField()
+    value = models.PositiveIntegerField()
+
+    class Meta:
+        app_label = 'configure'
+
+class SimpleHistoStoreTime(models.Model):
+    storage_resource_statistic = models.ForeignKey('StorageResourceStatistic')
+    time = models.PositiveIntegerField()
+
+    class Meta:
+        app_label = 'configure'
+
 class StorageResourceStatistic(models.Model):
     class Meta:
         unique_together = ('storage_resource', 'name')
@@ -174,21 +189,19 @@ class StorageResourceStatistic(models.Model):
         return self._metrics
     metrics = property(__get_metrics)
 
-    def get_latest(self):
-        latest_ts, latest_data = self.metrics.fetch_last()
-        stat_props = self.storage_resource.get_statistic_properties(self.name)
+    def update(self, stat_name, stat_properties, stat_data):
         from configure.lib.storage_plugin import statistics
-        if isinstance(stat_props, statistics.BytesHistogram):
-            # Composite type
-            result = []
-            for i in range(0, len(stat_props.bins)):
-                bin_info = stat_props.bins[i]
-                result.append((bin_info, latest_data["%s_%s" % (self.name, i)]))
+        if isinstance(stat_properties, statistics.BytesHistogram):
+            for dp in stat_data:
+                ts = dp['timestamp']
+                bin_vals = dp['value']
+                from django.db import transaction
+                with transaction.commit_on_success():
+                    time = SimpleHistoStoreTime.objects.create(time = ts, storage_resource_statistic = self)
+                    for i in range(0, len(stat_properties.bins)):
+                        SimpleHistoStoreBin.objects.create(bin_idx = i, value = bin_vals[i], histo_store_time = time)
         else:
-            # Scalar types
-            result = latest_data[self.name]
-
-        return result
+            self.metrics.update(stat_name, stat_properties, stat_data)
 
     def to_dict(self):
         """For use with frontend.  Get a time series for scalars or a snapshot for histograms.
@@ -197,28 +210,19 @@ class StorageResourceStatistic(models.Model):
         stat_props = self.storage_resource.get_statistic_properties(self.name)
         from configure.lib.storage_plugin import statistics
         if isinstance(stat_props, statistics.BytesHistogram):
-            latest_ts, latest_data = self.metrics.fetch_last()
+            time = SimpleHistoStoreTime.objects.all().latest('time')
+            bins = SimpleHistoStoreBin.objects.filter(histo_store_time = time).order_by('bin_idx')
             type_name = 'histogram'
             # Composite type
             data = {'bin_labels': [], 'values': []}
             for i in range(0, len(stat_props.bins)):
-                bin_info = stat_props.format_bin(stat_props.bins[i])
+                bin_info = stat_props.bins[i]
                 data['bin_labels'].append(bin_info)
-                bin_name = "%s_%s" % (self.name, i)
-                data['values'].append(latest_data[bin_name])
+                data['values'].append(bins[i].value)
         else:
             import time
-            from django.db import transaction
-            with transaction.commit_manually():
-                transaction.commit()
-                try:
-                    latest_data = self.metrics.fetch('Average', start_time = int(time.time()) - 60)
-                except Exception, e:
-                    transaction.rollback()
-                else:
-                    transaction.commit()
+            latest_data = self.metrics.fetch('Average', start_time = int(time.time()) - 60)
 
-            print latest_data
             type_name = 'timeseries'
             # Scalar types
             data_points = []
