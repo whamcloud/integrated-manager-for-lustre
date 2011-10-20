@@ -353,7 +353,7 @@ class ResourceManager(object):
                             storage_resource = record, name = stat_name, sample_period = stat_properties.sample_period)
                 from r3d.exceptions import BadUpdateString
                 try:
-                    stat_record.metrics.update(stat_name, stat_properties, stat_data)
+                    stat_record.update(stat_name, stat_properties, stat_data)
                 except BadUpdateString:
                     # FIXME: Initial insert usually fails because r3d isn't getting
                     # its start time from the first insert time

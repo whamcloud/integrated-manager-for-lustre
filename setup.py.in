@@ -28,7 +28,11 @@ setup(name = 'hydra-server',
                                 'static/css/ui-lightness/images/*',
                                 'static/images/*', 'static/js/*'],
                     'configure': ['templates/*', 'static/css/*.css',
-                                  'static/images/\*.png', 'static/js/*']
+                                  'static/images/*.png', 'static/images/storage_plugin/*', 'static/js/*'],
+                    'hydraapi': ['templates/*', 'static/css/*.css',
+                                  'static/images/*', 'static/js/*'],
+                    'hydradashboard': ['templates/*', 'static/css/*.css',
+                                  'static/images/*', 'static/js/*']
                    }
       )
 

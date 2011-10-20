@@ -192,7 +192,11 @@ class GetResources(AnonymousRequestHandler):
             row = row + [resource.format(c) for c in attr_columns]
                 
             rows.append(row)    
-        datatables_columns = [{'sTitle': c} for c in columns]
+
+        # FIXME: this is a workaround, forcing column widths because this is rendered in
+        # an iframe inside jquery-ui tabs, so datatables can't calculate its width properly
+        colpct = int(100.0 / len(columns))
+        datatables_columns = [{'sTitle': c, 'sWidth': "%dpx" % colpct} for c in columns]
         return {'aaData': rows, 'aoColumns': datatables_columns}
 
 # FIXME: this should be part of /storage_resource/
