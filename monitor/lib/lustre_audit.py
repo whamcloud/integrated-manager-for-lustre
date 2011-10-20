@@ -516,7 +516,7 @@ class LustreAudit:
                 self.learn_event(fs)
 
     def store_lustre_target_metrics(self, target_name, metrics):
-        # TODO: Re-enable MGS metrics collection if it turns out it's useful.
+        # TODO: Re-enable MGS metrics storage if it turns out it's useful.
         if target_name == "MGS":
             return
 
@@ -530,9 +530,6 @@ class LustreAudit:
 
         target.downcast().metrics.update(metrics)
 
-    def store_lustre_lnet_metrics(self, key, metrics):
-        self.host.downcast().metrics.update({'lnet': metrics})
-
     def store_node_metrics(self, metrics):
         self.host.downcast().metrics.update(metrics)
 
@@ -542,15 +539,20 @@ class LustreAudit:
         """
         raw_metrics = self.host_data['metrics']['raw']
 
-        if 'lustre' in raw_metrics:
-            for group in raw_metrics['lustre']:
-                store_method = getattr(self,
-                                       "store_lustre_%s_metrics" % group)
-                if group == "lnet":
-                    store_method("lnet", raw_metrics['lustre'][group])
-                else:
-                    for key in raw_metrics['lustre'][group]:
-                        store_method(key, raw_metrics['lustre'][group][key])
+        try:
+            node_metrics = raw_metrics['node']
+            try:
+                node_metrics['lnet'] = raw_metrics['lustre']['lnet']
+            except KeyError:
+                pass
 
-        if 'node' in raw_metrics:
-            self.store_node_metrics(raw_metrics['node'])
+            self.store_node_metrics(node_metrics)
+        except KeyError:
+            pass
+
+        try:
+            for target in raw_metrics['lustre']['target']:
+                target_metrics = raw_metrics['lustre']['target'][target]
+                self.store_lustre_target_metrics(target, target_metrics)
+        except KeyError:
+            pass
