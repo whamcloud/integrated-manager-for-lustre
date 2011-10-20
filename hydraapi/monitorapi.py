@@ -10,8 +10,7 @@ import settings
 setup_environ(settings)
 
 from requesthandler import (AnonymousRequestHandler,
-                            extract_request_args,
-                            extract_exception)
+                            extract_request_args)
 from monitor.models import (Filesystem,
                             MetadataTarget,
                             ManagementTarget,
@@ -22,13 +21,7 @@ from monitor.models import (Filesystem,
 from monitor.lib.util import sizeof_fmt
 
 class ListFileSystems(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.list_filesystems)
-
-    @classmethod
-    @extract_exception
-    def list_filesystems(self,request):
+    def run(self,request):
         no_of_ost=0
         no_of_oss=0
         oss_name=''
@@ -117,14 +110,8 @@ class ListFileSystems(AnonymousRequestHandler):
         return all_fs
 
 class GetFileSystem(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_filesystem)
-
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem')
-    @extract_exception
-    def get_filesystem(self,request,filesystem_name):
+    @extract_request_args('filesystem')
+    def run(self,request,filesystem):
         no_of_ost=0
         no_of_oss=0
         oss_name=''
@@ -141,8 +128,7 @@ class GetFileSystem(AnonymousRequestHandler):
         mdt_status=''  
         mdt_block_device=''
         mdt_mount_point=''
-        #mdt_kbytesfree=0
-        #mdt_kbytesused=0
+        filesystem_name = filesystem
         all_fs = []
         dashboard_data = Dashboard()
         for fs in dashboard_data.filesystems:
@@ -215,14 +201,9 @@ class GetFileSystem(AnonymousRequestHandler):
         return all_fs            
 
 class GetFSVolumeDetails(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_fs_vol_details)
-
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem')
-    @extract_exception
-    def get_fs_vol_details(self,request,filesystem_name):
+    @extract_request_args('filesystem')
+    def run(self,request,filesystem):
+        filesystem_name = filesystem
         all_fs = []
         dashboard_data = Dashboard()
         for fs in dashboard_data.filesystems:
@@ -246,13 +227,9 @@ class GetFSVolumeDetails(AnonymousRequestHandler):
         return all_fs            
 
 class GetVolumes(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-       AnonymousRequestHandler.__init__(self,self.get_volumes)
-
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem')
-    def get_volumes(self,request,filesystem_name):
+    @extract_request_args('filesystem')
+    def run(self,request,filesystem):
+        filesystem_name = filesystem
         if filesystem_name:
             return self.get_volumes_per_fs(Filesystem.objects.get(name = filesystem_name))
         else:
@@ -261,7 +238,6 @@ class GetVolumes(AnonymousRequestHandler):
                 volumes_list.extend(self.get_volumes_per_fs(fs.name))
         return volumes_list
     
-    @classmethod
     def get_volumes_per_fs (self,filesystem_name):
         volume_list = []
         filesystem = Filesystem.objects.get(name = filesystem_name)
@@ -321,14 +297,9 @@ class GetVolumes(AnonymousRequestHandler):
         return volume_list
 
 class GetClients (AnonymousRequestHandler):
-         
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_clients)
-
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem')
-    @extract_exception
-    def get_clients(self,request,filesystem_name):
+    @extract_request_args('filesystem')
+    def run(self,request,filesystem):
+        filesystem_name = filesystem
         if filesystem_name :
             return self.__get_clients(filesystem_name)
         else:
@@ -337,8 +308,6 @@ class GetClients (AnonymousRequestHandler):
                 client_list.extend(self.__get_clients(filesystem.name))
         return client_list
     
-    @classmethod 
-    @extract_exception
     def __get_clients(self,filesystem_name):
         fsname = Filesystem.objects.get(name = filesystem_name)
         return [
@@ -352,14 +321,9 @@ class GetClients (AnonymousRequestHandler):
         ]
 
 class GetServers (AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.list_servers)
-
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem')
-    @extract_exception
-    def list_servers(self,request,filesystem_name):
+    @extract_request_args('filesystem')
+    def run(self,request,filesystem):
+        filesystem_name = filesystem
         if filesystem_name:
             fs = Filesystem.objects.get(name=filesystem_name)
             return [
@@ -388,14 +352,13 @@ class GetServers (AnonymousRequestHandler):
 
 
 class GetEventsByFilter(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_events_by_filter)
-
-    @classmethod
-    @extract_request_args(host_name='hostname',severity_type='severity',event_type='eventtype',scroll_size='scrollsize',scroll_id='scrollid')
-    @extract_exception
-    def get_events_by_filter(self,request,host_name,severity_type,event_type,scroll_size,scroll_id):
+    @extract_request_args('hostname','severity','eventtype','scrollsize','scrollid')
+    def run(self,request,hostname,severity,eventtype,scrollsize,scrollid):
+        #host_name=hostname
+        #severity_type=severity
+        event_type=eventtype
+        #scroll_size=scrollsize
+        #scroll_id=scrollid
         from monitor.models import Event
         filter_args = []
         filter_kwargs = {}
@@ -415,13 +378,7 @@ class GetEventsByFilter(AnonymousRequestHandler):
         ]
 
 class GetLatestEvents(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_latest_events)
-    
-    @classmethod
-    @extract_exception
-    def get_latest_events(self,request):
+    def run(self,request):
         from monitor.models import Event
         return [
                 {
@@ -435,25 +392,13 @@ class GetLatestEvents(AnonymousRequestHandler):
 
 
 class GetAlerts(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_alerts)
-
-    @classmethod
-    @extract_request_args(active_flag='active')
-    @extract_exception  
-    def get_alerts(self,request,active_flag):
+    @extract_request_args('active')
+    def run(self,request,active):
         from monitor.models import AlertState
-        return [a.to_dict() for a in AlertState.objects.filter(active = active_flag).order_by('end')]
+        return [a.to_dict() for a in AlertState.objects.filter(active = active).order_by('end')]
 
 class GetJobs(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_jobs)
-
-    @classmethod
-    @extract_exception
-    def get_jobs(self,request):
+    def run(self,request):
         from configure.models import Job
         from datetime import timedelta, datetime
         from django.db.models import Q
@@ -475,18 +420,12 @@ class GetJobs(AnonymousRequestHandler):
 
 
 class GetLogs(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_logs)
-
-    @classmethod
-    @extract_request_args(display_month='month',display_day='day',only_lustre='lustre')
-    @extract_exception
-    def get_logs(self,request,display_month,display_day,only_lustre):
+    @extract_request_args('month','day','lustre')
+    def run(self,request,month,day,lustre):
         import datetime
         from monitor.models import Systemevents
-        display_month = int(display_month)
-        display_day = int(display_day) 
+        display_month = int(month)
+        display_day = int(day) 
         if display_month == 0:
             start_date = datetime.datetime(1970, 1, 1)
         else:
@@ -495,7 +434,7 @@ class GetLogs(AnonymousRequestHandler):
         log_data = []
         log_data = Systemevents.objects.filter(devicereportedtime__gt =
                                                start_date).order_by('-devicereportedtime')
-        if only_lustre:
+        if lustre:
             log_data = log_data.filter(message__startswith=" Lustre")
     
         return[

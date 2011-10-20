@@ -10,28 +10,21 @@ import settings
 setup_environ(settings)
 
 from requesthandler import (AnonymousRequestHandler,
-                            extract_request_args,
-                            extract_exception)
+                            extract_request_args)
 from monitor.models import (Filesystem,
                             Host)
 
 class GetFSTargetStats_fake(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_fs_stats_for_targets_fake)
-
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime',data_function='datafunction',target_kind='targetkind',fetch_metrics='fetchmetrics')
-    @extract_exception
-    def get_fs_stats_for_targets_fake(self,request,filesystem_name,start_time,end_time ,data_function,target_kind,fetch_metrics):
-        assert target_kind in ['OST', 'MDT']
+    @extract_request_args('filesystem','starttime','endtime','datafunction','targetkind','fetchmetrics')
+    def run(self,request,filesystem,starttime,endtime ,datafunction,targetkind,fetchmetrics):
+        assert targetkind in ['OST', 'MDT']
         from random import randrange,uniform
-        if fetch_metrics == "kbytestotal kbytesfree filestotal filesfree":
-            if filesystem_name:
+        if fetchmetrics == "kbytestotal kbytesfree filestotal filesfree":
+            if filesystem:
                 return [
                         {
                          'timestamp' : '1316847600',
-                         'filesystem' : filesystem_name,
+                         'filesystem' : filesystem,
                          'kbytesfree' : uniform(0,4940388537.9860001),
                          'kbytestotal': '4940834834.4740801',
                          'filesfree' : randrange(0,4940388537,3),
@@ -50,14 +43,14 @@ class GetFSTargetStats_fake(AnonymousRequestHandler):
                         }
                         for filesystem in Filesystem.objects.all()
                 ]
-        elif fetch_metrics == "stats_read_bytes stats_write_bytes":
-            if filesystem_name:
+        elif fetchmetrics == "stats_read_bytes stats_write_bytes":
+            if filesystem:
                 current_slice = gettimeslice()
                 
                 return [
                         {
                          'timestamp' : slice,
-                         'filesystem' : filesystem_name,
+                         'filesystem' : filesystem,
                          'stats_read_bytes' : randrange(0,4940388537,10),
                          'stats_write_bytes': randrange(0,4940388537,10),
                         }
@@ -79,14 +72,14 @@ class GetFSTargetStats_fake(AnonymousRequestHandler):
                                        ) 
                     all_fs_stats.extend(fs_stats)
                 return all_fs_stats
-        elif fetch_metrics == "iops1 iops2 iops3 iops4 iops5":
-            if filesystem_name:
+        elif fetchmetrics == "iops1 iops2 iops3 iops4 iops5":
+            if filesystem:
                 current_slice = gettimeslice()
 
                 return [
                         {
                          'timestamp' : slice,
-                         'filesystem' : filesystem_name,
+                         'filesystem' : filesystem,
                          'iops1' : randrange(0,4940388537,3),
                          'iops2' : randrange(0,5940388537,3),
                          'iops3' : randrange(0,6940388537,3),
@@ -117,20 +110,14 @@ class GetFSTargetStats_fake(AnonymousRequestHandler):
 
 
 class GetFSServerStats_fake(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_fs_stats_for_server_fake)
-
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
-    @extract_exception
-    def get_fs_stats_for_server_fake(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
+    @extract_request_args('filesystem','starttime','endtime' ,'datafunction','fetchmetrics')
+    def run(self,request,filesystem,starttime,endtime ,datafunction,fetchmetrics):
         from  random import randrange
         data_slice = []
         current_slice = gettimeslice()
-        if filesystem_name:
+        if filesystem:
             host_stats_metric = []
-            fs = Filesystem.objects.get(name=filesystem_name)
+            fs = Filesystem.objects.get(name=filesystem)
             hosts = fs.get_servers()
             for host in hosts:
                 for slice in current_slice:
@@ -166,19 +153,13 @@ class GetFSServerStats_fake(AnonymousRequestHandler):
             return host_stats_metric
 
 class GetServerStats_fake(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_stats_for_server_fake)
-
-    @classmethod
-    @extract_request_args(host_id='hostid',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
-    @extract_exception
-    def get_stats_for_server_fake(self,request,host_id,start_time,end_time ,data_function,fetch_metrics):
+    @extract_request_args('hostid','starttime','endtime' ,'datafunction','fetchmetrics')
+    def run(self,request,hostid,starttime,endtime ,datafunction,fetchmetrics):
         from  random import randrange
         data_slice = []
         current_slice = gettimeslice()
-        if host_id:
-            host = Host.objects.get(id=host_id)
+        if hostid:
+            host = Host.objects.get(id=hostid)
             for slice in current_slice:
                     data_slice.append(
                                       {
@@ -192,46 +173,40 @@ class GetServerStats_fake(AnonymousRequestHandler):
                                      )
             return data_slice
         else:
-            raise Exception("Unable to find host with hostid=%s" %host_id)
+            raise Exception("Unable to find host with hostid=%s" %hostid)
 
 class GetTargetStats_fake(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_stats_for_targets_fake)
-
-    @classmethod
-    @extract_request_args(target_name='target',start_time='starttime',end_time='endtime',data_function='datafunction',target_kind='targetkind',fetch_metrics='fetchmetrics')
-    @extract_exception
-    def get_stats_for_targets_fake(self,request,target_name,start_time,end_time ,data_function,target_kind,fetch_metrics):
-        assert target_kind in ['OST', 'MDT']
+    @extract_request_args('target','starttime','endtime','datafunction','targetkind','fetchmetrics')
+    def run(self,request,target,starttime,endtime ,datafunction,targetkind,fetchmetrics):
+        assert targetkind in ['OST', 'MDT']
         from random import randrange,uniform
-        if fetch_metrics == "kbytestotal kbytesfree filestotal filesfree":
+        if fetchmetrics == "kbytestotal kbytesfree filestotal filesfree":
             return [
                     {
                      'timestamp' : '1316847600',
-                     'filesystem' : target_name,
+                     'filesystem' : target,
                      'kbytesfree' : uniform(0,4940388537.9860001),
                      'kbytestotal': '4940834834.4740801',
                      'filesfree' : randrange(0,4940388537,3),
                      'filestotal': '4940834834',
                     }
             ]
-        elif fetch_metrics == "stats_read_bytes stats_write_bytes":
+        elif fetchmetrics == "stats_read_bytes stats_write_bytes":
             current_slice = gettimeslice()
             return [
                     {
                      'timestamp' : slice,
-                     'filesystem' : target_name,
+                     'filesystem' : target,
                      'stats_read_bytes' : randrange(0,4940388537,10),
                      'stats_write_bytes': randrange(0,4940388537,10),
                     }
                     for slice in current_slice
             ]
-        elif fetch_metrics == "iops1 iops2 iops3 iops4 iops5":
+        elif fetchmetrics == "iops1 iops2 iops3 iops4 iops5":
             return [
                     {
                      'timestamp' : slice,
-                     'filesystem' : target_name,
+                     'filesystem' : target,
                      'iops1' : randrange(0,4940388537,3),
                      'iops2' : randrange(0,5940388537,3),
                      'iops3' : randrange(0,6940388537,3),
@@ -243,20 +218,14 @@ class GetTargetStats_fake(AnonymousRequestHandler):
 
 
 class GetFSClientsStats_fake(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_fs_stats_for_client_fake)
-
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
-    @extract_exception
-    def get_fs_stats_for_client_fake(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
+    @extract_request_args('filesystem','starttime','endtime' ,'datafunction','fetchmetrics')
+    def run(self,request,filesystem,starttime,endtime ,datafunction,fetchmetrics):
          from random import randrange
          current_slice = gettimeslice()
          return [
                 {
                  'timestamp' : slice,
-                 'filesystem' : filesystem_name,
+                 'filesystem' : filesystem,
                  'clients_mounts' : randrange(0,137,3),
                 }
                 for slice in current_slice
@@ -264,26 +233,14 @@ class GetFSClientsStats_fake(AnonymousRequestHandler):
 
 
 class GetFSMGSStats(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_fs_stats_for_mgs)
-
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
-    @extract_exception
-    def get_fs_stats_for_mgs(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
+    @extract_request_args('filesystem','starttime','endtime','datafunction','fetchmetrics')
+    def run(self,request,filesystem,starttime,endtime ,datafunction,fetchmetrics):
         return ''
 
 
 class GetFSOSTHeatMap(AnonymousRequestHandler):
-
-    def __init__(self,*args,**kwargs):
-        AnonymousRequestHandler.__init__(self,self.get_fs_ost_heatmap)
-
-    @classmethod
-    @extract_request_args(filesystem_name='filesystem',start_time='starttime',end_time='endtime' ,data_function='datafunction',fetch_metrics='fetchmetrics')
-    @extract_exception
-    def get_fs_ost_heatmap(self,request,filesystem_name,start_time,end_time ,data_function,fetch_metrics):
+    @extract_request_args('filesystem','starttime','endtime' ,'datafunction','fetchmetrics')
+    def run(self,request,filesystem,starttime,endtime ,datafunction,fetchmetrics):
          from random import randrange
          ost_data = []
          ost_size=100
@@ -295,15 +252,14 @@ class GetFSOSTHeatMap(AnonymousRequestHandler):
                 ost_data.append(
                          {
                           'timestamp' : slice,
-                          'filesystem' : filesystem_name,
+                          'filesystem' : filesystem,
                           'ost': ost_name,
                           'color':self.getcolor(cpu),
-                          fetch_metrics : cpu,
+                          fetchmetrics : cpu,
                          }
                         )
          return ost_data   
     
-    @classmethod 
     def getcolor(self,cpu):
        if cpu <= 25:
             return '#00ff00'

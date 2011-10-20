@@ -1,20 +1,3 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>Hydra-FS Configure</title>
-<link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
-<link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/jquery-ui-1.8.9.custom.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
-<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
-<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
 <script>
 	$(document).ready(function() {
 		LoadMGTConfiguration_MGTConf();
@@ -41,13 +24,17 @@
 				{ "sClass": 'txtleft' }
 			]
 		} );
+		
+		// Dialog Link
+ 		('#mgtConfig_btnNewMGT').click(function()
+		{
+			$('#mgtConfig_newMGT').dialog('open');
+		    return false;
+		});
 	} );
 	
 	</script>
-</head>
-<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
-<body>
-<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="padding-top:15px;">
   <tr>
     <td width="100%" height="68" align="left" valign="top"><fieldset>
       <legend class="legendClass">MGT Configuration</legend>
@@ -65,32 +52,32 @@
         </tbody>
       </table>
       <div class="spacer"></div>
-    </fieldset></td>
-  </tr><tr><td height="20"></td></tr>
+      </fieldset></td>
+  </tr>
+  <tr>
+    <td height="20"></td>
+  </tr>
   <tr>
     <td height="124" align="left" valign="middle"><fieldset>
       <legend class="legendClass">Select Target</legend>
       <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
         <button type="button" id="mgtConfig_btnNewMGT">Create new MGT</button>
         </span></span></div>
-  <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
-    <thead>
-      <tr>
-        <th width="1%">Select</th>
-        <th width="19%">Target Path</th>
-        <th width="15%">Server Name</th>
-        <th width="19%">Failover</th>
-        <th width="17%">Capacity</th>
-        <th width="17%">Status</th>
-      </tr>
-    </thead>
-    <tbody id="popup-new-ost_content">
-    </tbody>
-  </table>
-    </fieldset></td>
+      <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
+        <thead>
+          <tr>
+            <th width="1%">Select</th>
+            <th width="19%">Target Path</th>
+            <th width="15%">Server Name</th>
+            <th width="19%">Failover</th>
+            <th width="17%">Capacity</th>
+            <th width="17%">Status</th>
+          </tr>
+        </thead>
+        <tbody id="popup-new-ost_content">
+        </tbody>
+      </table>
+      </fieldset></td>
   </tr>
 </table>
 <!-- exsting mgt popup -->
-
-</body>
-</html>

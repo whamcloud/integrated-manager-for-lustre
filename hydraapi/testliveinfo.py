@@ -39,7 +39,7 @@ def main(args):
         exit(-1)
     base_url = options.url.rstrip('/')
     
-    # Unit Test 7 :
+    print 'Unit Test 1: Get Events by Filter:'
     api_url = base_url + '/api/geteventsbyfilter/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
@@ -49,49 +49,49 @@ def main(args):
                              scrollsize=options.scroll_size,
                              scrollid=options.scroll_id,
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 10 :
+    print 'Unit Test 2: Get Latest Events'
     api_url = base_url + '/api/getlatestevents/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'    
 
-    # Unit Test 9 :
+    print 'Unit Test 3: Get All Alerts:'
     api_url = base_url + '/api/getalerts/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              active='',
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 9 :
+    print 'Unit Test 4: Get active Alerts:'
     api_url = base_url + '/api/getalerts/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              active='True',
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 11 :
+    print 'Unit Test 5: Get Jobs:'
     api_url = base_url + '/api/getjobs/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 12 :
+    print 'Unit Test 6: Get Logs by filter criteria:'
     import datetime
     api_url = base_url + '/api/getlogs/'
     print 'api_url: %s' % api_url
@@ -100,11 +100,11 @@ def main(args):
                             day=int(datetime.datetime.now().day),
                             lustre='',
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 
-    # Unit Test 12 :
+    print 'Unit Test 7: Get Logs by filter criteria:'
     import datetime
     api_url = base_url + '/api/getlogs/'
     print 'api_url: %s' % api_url
@@ -113,7 +113,7 @@ def main(args):
                             day=int(datetime.datetime.now().day),
                             lustre='true',
                              )
-    print '\n result:'
+    print 'result:'
     print result
     print '\n\n'
 

@@ -6,7 +6,8 @@
 //	1) oss_LineBar_CpuMemoryUsage_Data(fsName, sDate, endDate, dataFunction, fetchMetrics, isZoom)
 //	2) oss_Area_ReadWrite_Data(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 /******************************************************************************/
-
+var oss_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_server/";
+var oss_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 /******************************************************************************/
 // Function for cpu and memory usage - Line + Column Chart
 // Param - File System name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics
@@ -17,7 +18,7 @@
 	    var count = 0;
         var cpuData = [],categories = [], memoryData = [];
 		obj_db_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
-		$.post("/api/get_fs_stats_for_server/",
+		$.post(oss_LineBar_CpuMemoryUsage_Data_Api_Url,
 		  {datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem: fsName, endtime: endDate})
          .success(function(data, textStatus, jqXHR) 
           {
@@ -28,10 +29,13 @@
                  var response = avgCPUApiResponse.response;
                  $.each(response, function(resKey, resValue) 
                  {
-                	cpuData.push(resValue.cpu_usage);
-                	memoryData.push(resValue.mem_MemTotal - resValue.mem_MemFree);
-                	
-			        categories.push(resValue.timestamp);
+                	if(resValue.host != undefined)
+                	{
+	                	cpuData.push(resValue.cpu_usage);
+	                	memoryData.push(resValue.mem_MemTotal - resValue.mem_MemFree);
+	                	
+				        categories.push(resValue.timestamp);
+                	}
 			     });
             }
        })
@@ -64,7 +68,7 @@
 	  var count = 0;
          var readData = [],categories = [], writeData = [];
         obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
-        $.post("/api/get_fs_stats_for_targets/",
+        $.post(oss_Area_ReadWrite_Data_Api_Url,
         	{targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
             starttime: sDate, filesystem: fsName, endtime: endDate})
          .success(function(data, textStatus, jqXHR) {
@@ -75,10 +79,13 @@
                  var response = avgMemoryApiResponse.response;
                  $.each(response, function(resKey, resValue)
                  {
-                	readData.push(resValue.stats_read_bytes/1024);
-                	writeData.push(((0-resValue.stats_write_bytes)/1024));
-                 	
- 			        categories.push(resValue.timestamp);
+                	if(resValue.filesystem != undefined)
+                 	{
+	                	readData.push(resValue.stats_read_bytes/1024);
+	                	writeData.push(((0-resValue.stats_write_bytes)/1024));
+	                 	
+	 			        categories.push(resValue.timestamp);
+                 	}
 		         });
               }
        })
@@ -121,15 +128,15 @@
                  "<tr><td class='greybgcol'>Status:</td>";
             	 if(resValue.status == "OK" || resValue.status == "STARTED")
             	 {
-            		 innerContent = innerContent + "<td class='tblContent txtleft status_ok'>"+resValue.mdsstatus+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+            		 innerContent = innerContent + "<td><div class='tblContent txtleft status_ok'>"+resValue.mdsstatus+"<div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
             	 }
             	 else if(resValue.status == "WARNING" || resValue.status == "RECOVERY")
             	 {
-            		 innerContent = innerContent + "<td class='tblContent txtleft status_warning'>"+resValue.mdsstatus+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+            		 innerContent = innerContent + "<td><div class='tblContent txtleft status_warning'>"+resValue.mdsstatus+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
             	 }
             	 else if(resValue.status == "STOPPED")
             	 {
-            		 innerContent = innerContent + "<td class='tblContent txtleft status_stopped'>"+resValue.mdsstatus+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+            		 innerContent = innerContent + "<td><div class='tblContent txtleft status_stopped'>"+resValue.mdsstatus+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
             	 }
              });
          }

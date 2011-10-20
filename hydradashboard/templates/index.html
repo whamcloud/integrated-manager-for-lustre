@@ -96,29 +96,6 @@
 			});
 		    
 		</script>
-		<style type="">
-		.tblContent{
-			font-weight: normal;
-		}
-		.status_ok {
-		  background-color: #DDFFDD;
-		  background-position: 4px 4px;
-		  background-repeat: no-repeat;
-		  border: 1px solid #00AA00;
-		  border-radius: 6px 6px 6px 6px;
-		  margin: 6px 0 0;
-		  padding: 4px 4px 4px 24px;
-		}
-		.status_stopped{
-			border: 1px solid red; background-color: #4F0F0F; font-weight: bold; color: red;
-		}
-		.status_warning{
-			border: 1px solid #DFC137; background-color: #6F4B0D; font-weight: bold; color: #DFC137;
-		}
-		.status_ok{
-			border: 1px solid #A6C56D; background-color: green; font-weight: bold; color: #A6C56D;
-		}
-		</style>
 </head>
 <body style="margin: 0px 0px 0px 0px; padding: 0px;"
 	onunload="clearAllIntervals()">
@@ -254,11 +231,11 @@
 					onclick="db_Bar_SpaceUsage_Data('true');setZoomDialogTitle('All File System Space Usage');" />
 				</div>	 
 				<div style="clear: right;"></div>	-->
-				<div id="container" class="round-table" style="width: 300px"></div>
+				<div id="container" class="round-table" style="width: 300px">All File System Space Usage</div>
 				</td>
 				<!--<td  valign="top" class="text" width="25%" align="center"> <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> 
                       <div id="container1" class="round-table"></div></td> 
-                    <td  valign="top" class="text" width="25%" align="center"><!-- <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div>
+                    <td  valign="top" class="text" width="25%" align="center"><div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div>
                       <div id="container2" class="round-table"></div></td>-->
 				<td valign="top" class="text" width="30%" align="center">
 				<!-- <div class="magni"><input type="button" value=""
@@ -266,7 +243,7 @@
 					onclick="db_Line_connectedClients_Data('true');setZoomDialogTitle('Connected Clients');" />
 				</div>
 				<div style="clear: right;"></div>	 -->
-				<div id="container3" class="round-table" style="width: 300px">
+				<div id="container3" class="round-table" style="width: 300px">Connected Clients</div>
 				</td>
 				<td valign="top" class="text" width="30%" align="left"><!-- <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> -->
 				<div id="" style="width: 300px">
@@ -304,8 +281,7 @@
 					onclick="db_LineBar_CpuMemoryUsage_Data('true');setZoomDialogTitle('All File System CPU Usage');" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="avgCPUDiv" class="round-table" style="width: 300px">Filesystems
-				Avg CPU</div>
+				<div id="avgCPUDiv" class="round-table" style="width: 300px">Filesystems Average CPU and Memory Usage</div>
 				</td>
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
@@ -313,8 +289,7 @@
 					onclick="db_Area_ReadWrite_Data('true');setZoomDialogTitle('All File System Memory Usage');" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="avgMemoryDiv" class="round-table" style="width: 300px">Filesystems
-				Avg Memory</div>
+				<div id="avgMemoryDiv" class="round-table" style="width: 300px">Filesystems Disk Read and Write</div>
 				</td>
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
@@ -322,8 +297,7 @@
 					onclick="db_Area_Iops_Data('true');setZoomDialogTitle('Disk Read');" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="avgReadDiv" class="round-table" style="width: 300px">File
-				System Avg Read</div>
+				<div id="avgReadDiv" class="round-table" style="width: 300px">IOP/s</div>
 				</td>
 				<!--<td  valign="top" class="text" width="25%" align="center"> <div class="magni">
                         <input type="button" value=" " class="magbutton" onclick="db_Line_DiskWrite_Data('true');setZoomDialogTitle('Disk Write');"/>
@@ -373,8 +347,7 @@
 					onclick="db_HeatMap_Data('true');setZoomDialogTitle('Heat Map);" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="db_heatMapDiv" class="round-table" style="width: 1150px">Filesystems
-				Avg Memory</div>
+				<div id="db_heatMapDiv" class="round-table" style="width: 1150px">Heat Map</div>
 				</td>
 			</tr>
 		</table>
@@ -465,8 +438,7 @@
 				onclick="fs_Bar_SpaceUsage_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', spaceUsageFetchMatric, 'true');setZoomDialogTitle('All File System Space Usage');" />
 			</div>
 			<div style="clear: right;"></div>	 -->
-			<div id="fs_container2" class="round-table" style="width: 300px">Usage
-			Used Vs Free</div>
+			<div id="fs_container2" class="round-table" style="width: 300px">File system space usage</div>
 			</td>
 			<td width="30%" valign="top" class="text" align="center">
 			<!-- <div class="magni"><input type="button" value=""
@@ -474,8 +446,7 @@
 				onclick="fs_Line_connectedClients_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', clientsConnectedFetchMatric, 'true');setZoomDialogTitle('All File System Space Usage');" />
 			</div>
 			<div style="clear: right;"></div>	 -->
-			<div id="fs_container3" class="round-table" style="width: 300px">No.
-			Of Files Vs i-Nodes</div>
+			<div id="fs_container3" class="round-table" style="width: 300px">Connected clients</div>
 			</td>
 		</table>
 		</fieldset>
@@ -497,8 +468,7 @@
 					onclick="fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System CPU Usage');" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="fs_avgCPUDiv" class="round-table" style="width: 300px">Filesystems
-				Avg CPU</div>
+				<div id="fs_avgCPUDiv" class="round-table" style="width: 300px">Server CPU and Memory Usage</div>
 				</td>
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
@@ -506,8 +476,7 @@
 					onclick="fs_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('File System Memory Usage');" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="fs_avgMemoryDiv" class="round-table" style="width: 300px">Filesystems
-				Avg Memory</div>
+				<div id="fs_avgMemoryDiv" class="round-table" style="width: 300px">Disk Read and Write</div>
 				</td>
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
@@ -515,8 +484,7 @@
 					onclick="fs_Area_Iops_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', iopsFetchmatric, 'true');setZoomDialogTitle('Disk Read');" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="fs_avgReadDiv" class="round-table" style="width: 300px">File
-				System Avg Read</div>
+				<div id="fs_avgReadDiv" class="round-table" style="width: 300px">IOP/s</div>
 				</td>
 			</tr>
 		</table>
@@ -540,8 +508,7 @@
 					onclick="fs_HeatMap_Data('true');setZoomDialogTitle('Heat Map);" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="fs_heatMapDiv" class="round-table" style="width: 1150px">Filesystems
-				Avg Memory</div>
+				<div id="fs_heatMapDiv" class="round-table" style="width: 1150px">Heat Map</div>
 				</td>
 			</tr>
 		</table>
@@ -663,14 +630,14 @@
                       <input type="button" value="" class="magbutton" onclick="oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System CPU Memory Usage');" />	 
                 </div>
 				<div style="clear: right;"></div>
-				<div id="oss_avgReadDiv" class="round-table" style="width: 500px">File System Avg Read</div>
+				<div id="oss_avgReadDiv" class="round-table" style="width: 500px">Server CPU and Memory</div>
 			</td>
 			<td valign="top" class="text" width="50%" align="center">
 					<div class="magni" style="margin-left: 515px">
                          <input type="button" value="" class="magbutton" onclick="oss_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('File System Disk Read Write');" />	
                     </div>
 				<div style="clear: right;"></div>
-				<div id="oss_avgWriteDiv" class="round-table" style="width: 500px">Filesystems Avg Write</div>
+				<div id="oss_avgWriteDiv" class="round-table" style="width: 500px">Disk Read and Write</div>
 			</td>
 		</table>
 		</fieldset>
@@ -789,15 +756,13 @@
                           <input type="button" value=" " class="magbutton"/>
                         </div>	 -->
 				<div style="clear: right;"></div>
-				<div id="ost_container2" class="round-table">Usage Used Vs
-				Free</div>
+				<div id="ost_container2" class="round-table">Space Usage</div>
 				</td>
 				<td width="25%" valign="top" class="text" align="center"><!-- <div class="magni">
                           <input type="button" value=" " class="magbutton"/>	
                         </div>  -->
 				<div style="clear: right;"></div>
-				<div id="ost_container3" class="round-table">No. Of Files Vs
-				i-Nodes</div>
+				<div id="ost_container3" class="round-table">Files Vs Free Inodes</div>
 				</td>
 			</tr>
 		</table>
@@ -820,8 +785,7 @@
 					onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Disk Read');" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="ost_avgReadDiv" style="width: 500px" class="round-table">OST
-				Disk Read</div>
+				<div id="ost_avgReadDiv" style="width: 500px" class="round-table">Disk Read and Write</div>
 				</td>
 				<td valign="top" class="text" width="50%" align="center">
 				<div class="magni" style="margin-left: 515px"><input

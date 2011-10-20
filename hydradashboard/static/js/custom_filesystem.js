@@ -9,6 +9,13 @@
 // 4) fs_Area_ReadWrite_Data(isZoom)
 // 5) fs_Area_Iops_Data(isZoom)
 // 6) fs_HeatMap_Data
+/********************************************************************************/
+var fs_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var fs_Line_connectedClients_Data_Api_Url = "/api/get_fs_stats_for_client/";
+var fs_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_server/";
+var fs_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var fs_Area_Iops_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var fs_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
 
 /*****************************************************************************/
 //Function for space usage for selected file systems - Pie Chart
@@ -19,9 +26,9 @@
     {
 		var free=0,used=0;
         var freeData = [],usedData = [],categories = [],freeFilesData = [],totalFilesData = [];
-        $.post("/api/get_fs_stats_for_targets/",
+        $.post(fs_Bar_SpaceUsage_Data_Api_Url,
         {targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-        starttime: sDate, filesystem: fsName, endtime: endDate})
+        starttime: "", filesystem: fsName, endtime: ""})
 	    .success(function(data, textStatus, jqXHR) 
         {   
 	    	if(data.success)
@@ -30,23 +37,26 @@
 			    var totalDiskSpace=0,totalFreeSpace=0,totalFiles=0,totalFreeFiles=0;
 			    $.each(response, function(resKey, resValue) 
 		        {
-		    	    totalFreeSpace = resValue.kbytesfree/1024;
-				    totalDiskSpace = resValue.kbytestotal/1024;
-				    free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-				    used = Math.round(100 - free);
-				    
-				    freeData.push(free);
-			        usedData.push(used);
-			        
-			        totalFiles = resValue.filesfree/1024;
-				    totalFreeFiles = resValue.filestotal/1024;
-				    free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-				    used = Math.round(100 - free);
-				    
-				    freeFilesData.push(free);
-				    totalFilesData.push(used);
-			        
-			        categories.push(resValue.filesystem);
+			    	if(resValue.filesystem != undefined)
+			    	{
+			    	    totalFreeSpace = resValue.kbytesfree/1024;
+					    totalDiskSpace = resValue.kbytestotal/1024;
+					    free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
+					    used = Math.round(100 - free);
+					    
+					    freeData.push(free);
+				        usedData.push(used);
+				        
+				        totalFiles = resValue.filesfree/1024;
+					    totalFreeFiles = resValue.filestotal/1024;
+					    free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
+					    used = Math.round(100 - free);
+					    
+					    freeFilesData.push(free);
+					    totalFilesData.push(used);
+				        
+				        categories.push(resValue.filesystem);
+			    	}
 			    });
 			    
 			    
@@ -86,7 +96,7 @@
     	var clientMountData = [], categories = [];
     	var count=0;
     	var fileSystemName = "";
-          $.post("/api/get_fs_stats_for_client/",
+          $.post(fs_Line_connectedClients_Data_Api_Url,
            {datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem: fsName, endtime: endDate})
           .success(function(data, textStatus, jqXHR) 
           {   
@@ -95,30 +105,33 @@
                   var response = data.response;
                   $.each(response, function(resKey, resValue) 
                   {
-        	          if (fileSystemName != resValue.filesystem && fileSystemName !='')
-      		          {
-        	        	  obj_db_Line_connectedClients_Data.series[count] = {
-      		                name: '',
-      		                data: clientMountData
-      		          };
-      		          clientMountData = [];
-      		          categories = [];
-      		          count++;
-      		          fileSystemName = resValue.filesystem;
-      		          clientMountData.push(resValue.clients_mounts);
-      		          categories.push(resValue.timestamp);
-      			       }
-      			       else
-      			       {
-      			    	fileSystemName = resValue.filesystem;
-      			        clientMountData.push(resValue.clients_mounts);
-      			        categories.push(resValue.timestamp);
-      			       }
-        	          
-        	          obj_db_Line_connectedClients_Data.series[count] = { name: '', data: clientMountData };
-              		   
-              		  clientMountData.push(resValue.clients_mounts);
-                	  categories.push(resValue.timestamp);
+                	  if(resValue.filesystem != undefined)
+                	  {
+	        	          if (fileSystemName != resValue.filesystem && fileSystemName !='')
+	      		          {
+	        	        	  obj_db_Line_connectedClients_Data.series[count] = {
+	      		                name: '',
+	      		                data: clientMountData
+	      		          };
+	      		          clientMountData = [];
+	      		          categories = [];
+	      		          count++;
+	      		          fileSystemName = resValue.filesystem;
+	      		          clientMountData.push(resValue.clients_mounts);
+	      		          categories.push(resValue.timestamp);
+	      			       }
+	      			       else
+	      			       {
+	      			    	fileSystemName = resValue.filesystem;
+	      			        clientMountData.push(resValue.clients_mounts);
+	      			        categories.push(resValue.timestamp);
+	      			       }
+	        	          
+	        	          obj_db_Line_connectedClients_Data.series[count] = { name: '', data: clientMountData };
+	              		   
+	              		  clientMountData.push(resValue.clients_mounts);
+	                	  categories.push(resValue.timestamp);
+                	  }
                   });
               }
           })
@@ -150,7 +163,7 @@
 	    var count = 0;
         var cpuData = [],categories = [], memoryData = [];
 		obj_db_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
-		$.post("/api/get_fs_stats_for_server/",
+		$.post(fs_LineBar_CpuMemoryUsage_Data_Api_Url,
 		  {datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem: fsName, endtime: endDate})
          .success(function(data, textStatus, jqXHR) 
           {
@@ -161,10 +174,13 @@
                  var response = avgCPUApiResponse.response;
                  $.each(response, function(resKey, resValue) 
                  {
-                	cpuData.push(resValue.cpu_usage);
-                	memoryData.push(resValue.mem_MemTotal - resValue.mem_MemFree);
-                	
-			        categories.push(resValue.timestamp);
+                	if(resValue.host != undefined)
+                	{
+	                	cpuData.push(resValue.cpu_usage);
+	                	memoryData.push(resValue.mem_MemTotal - resValue.mem_MemFree);
+	                	
+				        categories.push(resValue.timestamp);
+                	}
 			     });
             }
        })
@@ -197,7 +213,7 @@
 	  var count = 0;
          var readData = [],categories = [], writeData = [];
         obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
-        $.post("/api/get_fs_stats_for_targets/",
+        $.post(fs_Area_ReadWrite_Data_Api_Url,
         	{targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
             starttime: sDate, filesystem: fsName, endtime: endDate})
          .success(function(data, textStatus, jqXHR) {
@@ -208,10 +224,13 @@
                  var response = avgMemoryApiResponse.response;
                  $.each(response, function(resKey, resValue)
                  {
-                	readData.push(resValue.stats_read_bytes/1024);
-                	writeData.push(((0-resValue.stats_write_bytes)/1024));
-                 	
- 			        categories.push(resValue.timestamp);
+                	if(resValue.filesystem != undefined)
+                 	{
+	                	readData.push(resValue.stats_read_bytes/1024);
+	                	writeData.push(((0-resValue.stats_write_bytes)/1024));
+	                 	
+	 			        categories.push(resValue.timestamp);
+                 	}
 		         });
               }
        })
@@ -246,7 +265,7 @@
 	    var count = 0;
         var readData = [], writeData = [], statData = [], closeData = [], openData = [], categories = [];
         obj_db_Area_Iops_Data = JSON.parse(JSON.stringify(chartConfig_Area_Iops));
-        $.post("/api/get_fs_stats_for_targets/",
+        $.post(fs_Area_Iops_Data_Api_Url,
         	{targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
             starttime: sDate, filesystem: fsName, endtime: endDate})
          .success(function(data, textStatus, jqXHR) {
@@ -257,6 +276,8 @@
                  var response = avgDiskReadApiResponse.response;
                  $.each(response, function(resKey, resValue)
                  {
+                	if(resValue.filesystem != undefined)
+                  	{
 		         	  readData.push(resValue.iops1/1024);
 	                  writeData.push(resValue.iops2/1024);
 	                  statData.push(resValue.iops3/1024);
@@ -264,7 +285,7 @@
 	                  openData.push(resValue.iops5/1024);
 	                 	
 	 			      categories.push(resValue.timestamp);
-		         
+                  	}
 		         });
                }
        })
@@ -301,7 +322,7 @@
 	 var obj_db_HeatMap_Data = JSON.parse(JSON.stringify(chartConfig_HeatMap));
 	 obj_db_HeatMap_Data.chart.renderTo = "fs_heatMapDiv";
 	 var ostName, count =0;
-	 $.post("/api/get_fs_ost_heatmap/",
+	 $.post(fs_HeatMap_Data_Api_Url,
 	          {"fetchmetrics": "cpu", "endtime": "2011-10-17 19:46:58.912171", "datafunction": "Average", 
 	           "starttime": "2011-10-17 19:56:58.912150", "filesystem": ""})
 	          .success(function(data, textStatus, jqXHR) 
@@ -376,6 +397,7 @@
  
  loadFileSystemSummary = function (){
 	 var innerContent = "";
+	 $('#fileSystemSummaryTbl').html("<tr><td width='100%' align='center' height='180px'><img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
 	 $.post("/api/getfilesystem/",{filesystem: $('#fsSelect').val()})
      .success(function(data, textStatus, jqXHR) {
          if(data.success)
@@ -392,15 +414,15 @@
                  "<tr><td class='greybgcol'>Status:</td>";
             	 if(resValue.status == "OK" || resValue.status == "STARTED")
             	 {
-            		 innerContent = innerContent + "<td class='tblContent txtleft status_ok'>"+resValue.status+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+            		 innerContent = innerContent + "<td><div class='tblContent txtleft status_ok'>"+resValue.status+"<div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
             	 }
             	 else if(resValue.status == "WARNING" || resValue.status == "RECOVERY")
             	 {
-            		 innerContent = innerContent + "<td class='tblContent txtleft status_warning'>"+resValue.status+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+            		 innerContent = innerContent + "<td><div class='tblContent txtleft status_warning'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
             	 }
             	 else if(resValue.status == "STOPPED")
             	 {
-            		 innerContent = innerContent + "<td class='tblContent txtleft status_stopped'>"+resValue.status+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+            		 innerContent = innerContent + "<td><div class='tblContent txtleft status_stopped'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
             	 }
              });
          }
