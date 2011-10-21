@@ -158,14 +158,19 @@ class GetResourceClasses(AnonymousRequestHandler):
             try:
                 default_resource = StorageResourceRecord.objects.all()[0]
             except IndexError:
-                default_resource = StorageResourceClass.objects.all()[0]
+                try:
+                    default_resource = StorageResourceClass.objects.all()[0]
+                except IndexError:
+                    raise RuntimeError('No storage resource classes')
 
         def natural_id(src):
             """Since resource classes are uniquely identified internally by module name
             plus class name, we don't have to use the PK."""
             return (src.storage_plugin.module_name, src.class_name)
+
         def label(src):
             return "%s-%s" % (src.storage_plugin.module_name, src.class_name)
+
         return {
                 'options': [(natural_id(src), label(src)) for src in StorageResourceClass.objects.all()],
                 'default': natural_id(default_resource)
@@ -177,18 +182,19 @@ class GetResources(AnonymousRequestHandler):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(module_name, class_name)
         attr_columns = resource_class.get_columns()
-        columns = ['id', 'alias'] + attr_columns
+        columns = ['id', 'Name'] + attr_columns
 
         rows = []
         from django.utils.html import conditional_escape
         from configure.lib.storage_plugin.query import ResourceQuery
         for record in ResourceQuery().get_class_resources(resource_class_id):
             resource = record.to_resource()
-            alias = record.alias_or_name(resource)
+            alias = conditional_escape(record.alias_or_name(resource))
+            alias_markup = "<a class='storage_resource' href='#%s'>%s</a>" % (record.pk, alias)
 
             # NB What we output here is logically markup, not strings, so we escape.
             # (underlying storage_plugin.attributes do their own escaping
-            row = [record.pk, conditional_escape(alias)]
+            row = [record.pk, alias_markup]
             row = row + [resource.format(c) for c in attr_columns]
                 
             rows.append(row)    
@@ -232,7 +238,9 @@ class GetResource(AnonymousRequestHandler):
             stats[s.name] = s.to_dict()
 
         attributes = resource.attr_dict()
-        return {'alias': record.alias,
+        return {'id': record.pk,
+                'class_name': resource.human_class(),
+                'alias': record.alias,
                 'default_alias': record.to_resource().human_string(),
                 'attributes': attributes,
                 'alerts': alerts,
