@@ -278,7 +278,7 @@ class Lun(models.Model):
         from configure.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
         resource_klass = record.to_resource_class()
-        return resource_klass.human_name
+        return resource_klass.human_class()
 
     def human_name(self):
         if not self.storage_resource_id:
