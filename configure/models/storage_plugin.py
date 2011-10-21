@@ -239,7 +239,7 @@ class StorageResourceStatistic(models.Model):
             # Composite type
             data = {'bin_labels': [], 'values': []}
             for i in range(0, len(stat_props.bins)):
-                bin_info = stat_props.bins[i]
+                bin_info = u"\u2264%s" % stat_props.bins[i][1]
                 data['bin_labels'].append(bin_info)
                 data['values'].append(bins[i].value)
         else:
@@ -263,7 +263,9 @@ class StorageResourceStatistic(models.Model):
             type_name = 'timeseries'
             data_points = []
             for dp in dps:
-                data_points.append((dp.time, dp.value))
+                # Convert to ms for convenience with highcharts
+                time_ms = dp.time * 1000
+                data_points.append((time_ms, dp.value))
 
             data = {
                     'unit_name': stat_props.get_unit_name(),
