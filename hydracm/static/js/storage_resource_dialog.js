@@ -3,6 +3,8 @@ var resource_id = null;
 
 $(document).ready(function() {
   $('#storage_resource_dialog').dialog({autoOpen: false, modal: true, minWidth: 500, maxHeight: 700});
+  $('#alias_save_button').button();
+  $('#alias_reset_button').button();
 
   /* Event for a.storage_resource elements to pop up details dialog */
   $('a.storage_resource').live('click', function() {
@@ -15,13 +17,8 @@ $(document).ready(function() {
   /* If there is an ID of ours in location.hash, pop up */
   var hash_prefix = "#storage_resource_";
   if (window.location.hash.search(hash_prefix) == 0) {
-    console.log('dice');
     var resource_id = window.location.hash.substring(hash_prefix.length)
     popup_resource(resource_id);
-  } else {
-    console.log(window.location.hash);
-    console.log(window.location.hash.search(hash_prefix));
-    console.log('no dice');
   }
 });
 
@@ -131,6 +128,7 @@ function populate_graph(element_id, stat_info) {
 function load_resource(resource) {
     resource_id = resource.id
     window.location.hash = "storage_resource_" + resource_id
+    $('#storage_resource_dialog').dialog("option", "title", resource.class_name)
 
     if (resource.alias) {
         $("input#alias_edit_entry").attr('value', resource.alias);
@@ -140,8 +138,14 @@ function load_resource(resource) {
         $("input#alias_default_entry").attr('value', resource.default_alias);
 
         var attr_markup = "";
+        var rowclass = "odd";
         $.each(resource.attributes, function(k,v) {
-            attr_markup += "<tr><th>" + k + "</th><td>" + v.markup + "</td></tr>";
+          if (rowclass == "odd") {
+            rowclass = "even";
+          } else {
+              rowclass = "odd";
+          }
+            attr_markup += "<tr class='" + rowclass + "'><th>" + k + ": </th><td>" + v.markup + "</td></tr>";
         }); 
         $('table#attributes').html(attr_markup);
 

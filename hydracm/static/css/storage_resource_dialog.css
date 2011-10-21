@@ -1,17 +1,23 @@
 
 table.storage_attributes {
-    border: 1px solid gray;
+    border-top: 1px solid gray;
+    border-bottom: 1px solid gray;
     border-collapse: collapse;
     margin-top: 12px;
 }
 
-table.storage_attributes td, table.storage_attributes th {
-    border: 1px solid gray;
+table.storage_attributes tr.odd {
+    background: #ccc;
+}
+
+table.storage_attributes tr.even {
+    background: #ddd;
 }
 
 table.storage_attributes th {
     font-weight: bold;
     text-align: left;
+    padding-left: 3px;
 }
 
 table.storage_attributes td {
@@ -27,4 +33,9 @@ ul.stats {
 ul.stats li {
     margin-top: 6px;
     padding-left: 0px;
+}
+
+span.resource_name {
+    font-size: 10;
+    font-weight: bold;
 }
