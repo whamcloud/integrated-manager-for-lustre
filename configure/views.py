@@ -497,7 +497,14 @@ def target(request, target_id):
         if lun_node.storage_resource_id:
             from configure.lib.storage_plugin.query import ResourceQuery
 
-            parent_record = StorageResourceRecord.objects.get(pk = lun_node.storage_resource_id)
+            try:
+                parent_record = StorageResourceRecord.objects.get(
+                        pk = lun_node.storage_resource_id)
+            except StorageResourceRecord.DoesNotExist:
+                print "Warning: LunNode %s references non-existent storage resource %s" % (lun_node.pk, lun_node.storage_resource_id)
+
+                continue
+
             parent_records.add(parent_record)
 
             storage_alerts |= ResourceQuery().record_all_alerts(parent_record)
