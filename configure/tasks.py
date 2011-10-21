@@ -127,11 +127,14 @@ def _job_task_health():
     from socket import gethostname
     # XXX assuming local worker
     i = inspect([gethostname()])
-    i.active()
+    active_workers = i.active()
     really_running_tasks = set()
-    for worker_name, active_tasks in i.active().items():
-        for t in active_tasks:
-            really_running_tasks.add(t['id'])
+    if active_workers:
+        for worker_name, active_tasks in active_workers.items():
+            for t in active_tasks:
+                really_running_tasks.add(t['id'])
+    else:
+        job_log.warning("No active workers found!")
 
     for job in Job.objects.filter(~Q(task_id = None)).filter(~Q(state = 'complete')):
         task_state = job.task_state()
