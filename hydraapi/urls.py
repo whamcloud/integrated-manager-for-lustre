@@ -34,7 +34,9 @@ from configureapi import (FormatFileSystem,
 
 # FIXME: instead of doing this big list of imports, should introspect available
 # RequestHandler objects and get their url name from them.
-from configureapi import GetResource, GetResources, GetResourceClasses, SetResourceAlias
+
+# Stuff related to storage plugins
+from configureapi import GetResource, GetResources, GetResourceClasses, SetResourceAlias, GetTargetResourceGraph
 
 #Once R3D starts getting correct data  replace fakestatsmetricapi with statmetricapi
 from fakestatsmetricapi import(GetFSTargetStats_fake,
@@ -109,4 +111,5 @@ urlpatterns = patterns('',
     (r'^get_resources/$', CsrfExemptResource(GetResources)),
     (r'^get_resource/$', CsrfExemptResource(GetResource)),
     (r'^set_resource_alias/$', CsrfExemptResource(SetResourceAlias)),
+    (r'^get_target_resource_graph/$', CsrfExemptResource(GetTargetResourceGraph)),
 )

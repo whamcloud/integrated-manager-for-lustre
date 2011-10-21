@@ -428,3 +428,122 @@ class CreateMDS(AnonymousRequestHandler):
             StateManager.set_state(target, 'unmounted')
         for target in targets:
             StateManager.set_state(target, 'formatted')
+
+class GetTargetResourceGraph(AnonymousRequestHandler):
+    @extract_request_args('target_id')
+    def run(self, request, target_id):
+        from monitor.models import Target, AlertState
+        from configure.models import StorageResourceRecord
+        from django.shortcuts import get_object_or_404
+        if True:
+            # FIXME HYD-375 HACK - the breadcrumb UI passes around names instead of ids, so have to do
+            # this unreliable lookup instead
+            target = get_object_or_404(Target, name = target_id).downcast()
+        else:
+            target = get_object_or_404(Target, pk = target_id).downcast()
+
+        ancestor_records = set()
+        parent_records = set()
+        storage_alerts = set()
+        lustre_alerts = set(AlertState.filter_by_item(target))
+        from collections import defaultdict
+        rows = defaultdict(list)
+        id_edges = []
+        for tm in target.targetmount_set.all():
+            lustre_alerts |= set(AlertState.filter_by_item(tm))
+            lun_node = tm.block_device
+            if lun_node.storage_resource_id:
+                from configure.lib.storage_plugin.query import ResourceQuery
+
+                try:
+                    parent_record = StorageResourceRecord.objects.get(
+                            pk = lun_node.storage_resource_id)
+                except StorageResourceRecord.DoesNotExist:
+                    print "Warning: LunNode %s references non-existent storage resource %s" % (lun_node.pk, lun_node.storage_resource_id)
+
+                    continue
+
+                parent_records.add(parent_record)
+
+                storage_alerts |= ResourceQuery().record_all_alerts(parent_record)
+                ancestor_records |= set(ResourceQuery().record_all_ancestors(parent_record))
+
+                def row_iterate(parent_record, i):
+                    if not parent_record in rows[i]:
+                        rows[i].append(parent_record)
+                    for p in parent_record.parents.all():
+                        #if 25 in [parent_record.id, p.id]:
+                        #    id_edges.append((parent_record.id, p.id))
+                        id_edges.append((parent_record.id, p.id))
+                        row_iterate(p, i + 1)
+                row_iterate(parent_record, 0)
+
+        for i in range(0, len(rows) - 1):
+            this_row = rows[i]
+            next_row = rows[i + 1]
+            def nextrow_affinity(obj):
+                # if this has a link to anything in the next row, what
+                # index in the next row?
+                for j in range(0, len(next_row)):
+                    notional_edge = (obj.id, next_row[j].id)
+                    if notional_edge in id_edges:
+                        return j
+                return None
+
+            this_row.sort(lambda a,b: cmp(nextrow_affinity(a), nextrow_affinity(b)))
+
+        box_width = 120
+        box_height = 80
+        xborder = 40
+        yborder = 40
+        xpad = 20
+        ypad = 20
+
+        height = 0
+        width = len(rows) * box_width + (len(rows) - 1) * xpad
+        for i, items in rows.items():
+            total_height = len(items) * box_height + (len(items) - 1) * ypad
+            height = max(total_height, height)
+
+        height = height + yborder * 2
+        width = width + xborder * 2
+
+        edges = [e for e in id_edges]
+        nodes = []
+        x = 0
+        from settings import STATIC_URL
+        for i, items in rows.items():
+            total_height = len(items) * box_height + (len(items) - 1) * ypad
+            y = (height - total_height) / 2 
+            for record in items:
+                resource = record.to_resource()
+                alert_count = len(ResourceQuery().resource_get_alerts(resource))
+                if alert_count != 0:
+                    highlight = "#ff0000"
+                else:
+                    highlight = "#000000"
+                nodes.append({
+                    'left': x,
+                    'top': y,
+                    'title': record.alias_or_name(),
+                    'icon': "%simages/storage_plugin/%s.png" % (STATIC_URL, resource.icon),
+                    'type': resource.human_class(),
+                    'id': record.id,
+                    'highlight': highlight
+                    })
+                y += box_height + ypad
+            x += box_width + xpad
+
+        graph = {
+                'edges': edges,
+                'nodes': nodes,
+                'item_width': box_width,
+                'item_height': box_height,
+                'width': width,
+                'height': height
+                }
+
+        return {
+            'storage_alerts': [a.to_dict() for a in storage_alerts],
+            'lustre_alerts': [a.to_dict() for a in lustre_alerts],
+            'graph': graph}
