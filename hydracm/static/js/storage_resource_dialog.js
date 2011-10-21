@@ -123,7 +123,7 @@ function load_resource(resource) {
         $.each(resource.alerts, function(i, alrt) {
             console.log(i);
             console.log(alrt);
-            alert_markup += "<tr><td><img src='{{STATIC_URL}}images/dialog-error.png'></td><td>" + alrt.alert_message + "</td><td>" + alrt.alert_item + "</td></tr>";
+            alert_markup += "<tr><td><img src='/static/images/dialog-error.png'></td><td>" + alrt.alert_message + "</td><td>" + alrt.alert_item + "</td></tr>";
         }); 
         $('table#alerts').html(alert_markup);
 
