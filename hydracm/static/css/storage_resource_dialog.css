@@ -1,0 +1,30 @@
+
+table.storage_attributes {
+    border: 1px solid gray;
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+table.storage_attributes td, table.storage_attributes th {
+    border: 1px solid gray;
+}
+
+table.storage_attributes th {
+    font-weight: bold;
+    text-align: left;
+}
+
+table.storage_attributes td {
+    font-weight: normal;
+    text-align: left;
+}
+
+ul.stats {
+    margin-top: 12px;
+    list-style-type: none;
+}
+
+ul.stats li {
+    margin-top: 6px;
+    padding-left: 0px;
+}

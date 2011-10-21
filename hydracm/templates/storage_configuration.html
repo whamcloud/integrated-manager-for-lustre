@@ -1,58 +1,9 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<!--
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
-<script type='text/javascript' src='{{STATIC_URL}}js/highcharts.js'></script>
-<script type='text/javascript' src='{{STATIC_URL}}js/jquery.dataTables.js'></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>
-
-<link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
-<link href="{{STATIC_URL}}css/jquery-ui-1.8.9.custom.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
--->
-
-<link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
-<link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/jquery-ui-1.8.9.custom.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
-<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
-<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
-<script type='text/javascript' src='{{STATIC_URL}}js/highcharts.js'></script>
-
-</head>
-<body>
-
-<div style="overflow-y: auto;" id="resource_popup">
-    {% include 'storage_resource.html' %}
-</div>
 
 <form method='get' style='margin-bottom: 3px;'>
 
     <select id='resource_class_select'>
     </select>
     <script type='text/javascript'>
-
-        function popup_resource(id) {
-            $('#resource_popup_content').load("/configure/storage_resource_inner/" + id + "/")
-            $.get("/api/get_resource/", {'resource_id': id})
-             .success(function(data, textStatus, jqXHR) {
-                console.log(data);
-                 if (data.success) {
-                    load_resource(data.response);
-                    console.log('popping up');
-                    $('#resource_popup').dialog('open');
-                 }
-             });
-        }
-
         /* Populate table of storage resources */
         var resourceTable = null;
         function load_resource_table() {
@@ -82,30 +33,19 @@
                     /* Column 0 is the internal ID column */
                     resourceTable.fnSetColumnVis(0, false);
 
+                    /*
                     $('#resource_table tbody tr').live('click', function() {
                         var aPos = resourceTable.fnGetPosition(this);
                         var data = resourceTable.fnGetData(aPos);
                         var resource_record_id = data[0]
                         console.log(resource_record_id);
-                        popup_resource(resource_record_id);
                     });
+                    */
                 }
             });
         }
 
         $(document).ready(function() {
-            $('#resource_popup').dialog({autoOpen: false, modal: true, width: 1024, height: 500});
-
-            /* Event for a.storage_resource elements to pop up details dialog */
-            $('a.storage_resource').live('click', function() {
-                /* Remove leading '#' character */
-                id = $(this).attr('href').substring(1)
-
-                popup_resource(id);
-            });
-
-
-
             $('#resource_class_select').change(function() {
                 load_resource_table();
             });
@@ -134,5 +74,3 @@
 <table id='resource_table' class='display' width="100%">
 </table>
 
-</body>
-</html>

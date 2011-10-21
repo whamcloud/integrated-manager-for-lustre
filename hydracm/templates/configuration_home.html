@@ -18,6 +18,12 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_window.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
+
+<script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
+<link href="{{STATIC_URL}}css/storage_resource_dialog.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_dialog.js"></script>
+
+
 <script>
 	$(function() {
 		$( "#tabs" ).tabs({
@@ -26,11 +32,20 @@
 					$( anchor.hash ).html(
 						"Resource not found, Please contact administrator." );
 				}
-			}
+            },
+            select: function(event, ui) {
+                console.log(event);
+                console.log(ui);
+                window.location.hash = ui.panel.id
+            }
 		});
 		
 		$(document).ready(function() {	
-			$('#lusterFS_content').load('/hydracm/fstab');
+            if (window.location.hash) {
+                $("#tabs").select(window.location.hash);
+            } else {
+                $("#tabs").select("lusterFS_content");
+            }
 		});
 		
 		var oNewMgt = $('#popup-new-mgt').dataTable( {
@@ -153,26 +168,17 @@
       <div id="dashboardDiv">
         <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="3" align="top" style="border: 1px;border-color: blue" >
           <tr>
-            <td width="100%" height="100%"><div id="tabs">
-                <ul>
-                  <li><a href="#lusterFS_content" id="lusterFS">Filesystems</a></li>
-                  <li><a href="#mgt_content" id="mgt">MGTs</a></li>
-                  <li><a href="#volume_content" id="volume">Volumes</a></li>
-                  <li><a href="#server_content" id="server">Servers</a></li>
-                  <li><a href="#storage_content" id="storage">Storage</a></li>
-                </ul>
-                <div id="lusterFS_content">
+              <td width="100%" height="100%">
+                <div id="tabs">
+                  <ul>
+                    <li><a href="/hydracm/fstab/" title='lusterFS_content'>Filesystems</a></li>
+                    <li><a href="/hydracm/mgttab/" title='mgts'>MGTs</a></li>
+                    <li><a href="/hydracm/volumetab/" title='volumes'>Volumes</a></li>
+                    <li><a href="/hydracm/servertab/" title='servers'>Servers</a></li>
+                    <li><a href="/hydracm/storage_tab/" title='storage'>Storage</a></li>
+                  </ul>
                 </div>
-                
-                <div id="mgt_content"> 
-                </div>
-                <div id="volume_content">
-                </div>
-                <div id="server_content">
-                </div>
-                <div id="storage_content">
-                </div>
-              </div></td>
+            </td>
           </tr>
         </table>
       </div>
@@ -324,5 +330,27 @@
     </tbody>
   </table>
 </div>
+
+
+<!-- Begin markup for storage_resource_dialog.js -->
+<div style="overflow-y: auto; max-height: 700px;" id="storage_resource_dialog">
+    <input style='display: none' id='alias_default_entry' value=''></input>
+    <input style='font-size: 12pt; font-weight: bold;' id='alias_edit_entry' type='entry' value=''
+    ></input>
+    <a id='alias_save_button' href='#'>save</a>
+    <a id='alias_reset_button' href='#'>reset</a>
+    <img id='alias_spinner' style='display: none;' src='{{STATIC_URL}}/images/ajax-loader.gif'/>
+
+    <table class="storage_attributes" id='attributes'>
+    </table>
+
+    <table id='alerts'>
+    </table>
+
+    <ul id='stats'>
+    </ul>
+</div>
+<!-- End markup for storage_resource_dialog.js -->
+
 </body>
 </html>
