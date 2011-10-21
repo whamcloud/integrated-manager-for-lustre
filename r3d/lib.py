@@ -199,6 +199,9 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
     chosen_rra = None
     dp_rows = []
 
+    if not start_time < end_time:
+        raise BadSearchTime, "start (%d) must be less than end (%d)!" % (start_time, end_time)
+
     debug_print("Looking for start %d end %d step %d" % (start_time, end_time, step))
     
     for rra in db.archives.filter(cls=archive_type):

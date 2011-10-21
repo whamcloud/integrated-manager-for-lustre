@@ -12,3 +12,6 @@ class BadUpdateString(R3dError):
 
 class BadUpdateTime(R3dError):
     pass
+
+class BadSearchTime(R3dError):
+    pass

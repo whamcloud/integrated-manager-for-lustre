@@ -222,8 +222,8 @@ class Database(models.Model):
                                                      missing_ds_block)
                 self.single_update(self._parse_time(update), new_values)
 
-    def fetch(self, archive_type, start_time=int(time.time() - 3600),
-                                  end_time=int(time.time()),
+    def fetch(self, archive_type, start_time=None,
+                                  end_time=None,
                                   step=1,
                                   fetch_metrics=None):
         """
@@ -232,6 +232,11 @@ class Database(models.Model):
 
         Returns a dict of CDP rows (time: {ds_name: cdp_val, ...}).
         """
+        if not start_time:
+            start_time = int(time.time() - 3600)
+        if not end_time:
+            end_time = int(time.time())
+
         return lib.fetch_best_rra_rows(self,
                                        archive_type,
                                        self._parse_time(start_time),
