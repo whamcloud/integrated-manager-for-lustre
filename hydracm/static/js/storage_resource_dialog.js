@@ -34,95 +34,65 @@ function popup_resource(id) {
 }
 
 function populate_graph(element_id, stat_info) {
-    $('#' + element_id).css("width", "400px");
-    $('#' + element_id).css("height", "300px");
-    if (stat_info.type == 'histogram') {
-        chart = new Highcharts.Chart({
-            chart: {
-                renderTo:element_id,
-                type: 'column'
-            },
-            credits: {enabled: false},
-            title: {text: stat_info.name},
-            legend: {enabled: false},
-            yAxis: {
-                'labels': {enabled: false},
-                'title': {text: null},
-                'gridLineWidth': 0
-            },
-            xAxis: {
-                categories: stat_info.data.bin_labels,
-                labels: {style: "font-size: 6pt;"}
-            },
-            series: [{
-                'data': stat_info.data.values,
-                'name': 'Samples'
-            }],
-            plotOptions: {
-                'column': {
-                    'shadow': false,
-                    'pointPadding': 0.0,
-                    'groupPadding': 0.0,
-                }
-            }
-        });
-    } else if (stat_info.type == 'timeseries') {
-        var opts = {
-            chart: {
-                renderTo:element_id,
-                type: 'line'
-            },
-            credits: {enabled: false},
-            title: {text: stat_info.name},
-            legend: {enabled: false},
-            yAxis: {
-                'labels': {enabled: true},
-                'title': {text: stat_info.data.unit_name}
-            },
-            xAxis: {
-                labels: {style: "font-size: 6pt;"}
-            },
-            series: [{
-                'data': stat_info.data.data_points,
-                'name': stat_info.name
-            }],
-            plotOptions: {
-                'column': {
-                    'shadow': false,
-                    'pointPadding': 0.0,
-                    'groupPadding': 0.0,
-                }
-            }
-        }
-        chart = new Highcharts.Chart({
-            chart: {
-                renderTo:element_id,
-                type: 'line'
-            },
-            credits: {enabled: false},
-            title: {text: stat_info.name},
-            legend: {enabled: false},
-            yAxis: {
-                'labels': {enabled: false},
-                'title': {text: stat_info.data.unit_name}
-            },
-            xAxis: {
-                labels: {style: "font-size: 6pt;"}
-            },
-            series: [{
-                'data': stat_info.data.data_points,
-                'name': stat_info.name
-            }],
-            plotOptions: {
-                'column': {
-                    'shadow': false,
-                    'pointPadding': 0.0,
-                    'groupPadding': 0.0,
-                }
-            }
-        });
-
-    }
+  $('#' + element_id).css("width", "400px");
+  $('#' + element_id).css("height", "300px");
+  var opts = null;
+  if (stat_info.type == 'histogram') {
+      opts = {
+          chart: {
+              renderTo:element_id,
+              type: 'column'
+          },
+          credits: {enabled: false},
+          title: {text: stat_info.name},
+          legend: {enabled: false},
+          yAxis: {
+              'labels': {enabled: true},
+              'title': {text: null},
+              'gridLineWidth': 0
+          },
+          xAxis: {
+              categories: stat_info.data.bin_labels,
+              labels: {style: "font-size: 6pt;", rotation: 60, align: "left"}
+          },
+          series: [{
+              'data': stat_info.data.values,
+              'name': 'Samples'
+          }],
+          plotOptions: {
+              'column': {
+                  'shadow': false,
+                  'pointPadding': 0.0,
+                  'groupPadding': 0.0,
+              }
+          }
+      }
+  } else if (stat_info.type == 'timeseries') {
+      opts = {
+          chart: {
+              renderTo:element_id,
+              type: 'line'
+          },
+          credits: {enabled: false},
+          title: {text: stat_info.name},
+          legend: {enabled: false},
+          yAxis: {
+              labels: {enabled: true},
+              title: {text: stat_info.data.unit_name},
+              min: 0
+          },
+          xAxis: {
+              type: 'datetime'
+          },
+          series: [{
+              data: stat_info.data.data_points,
+              name: stat_info.name
+          }],
+          plotOptions: {
+          }
+      }
+  }
+  chart = new Highcharts.Chart(opts);
 }
 
 function load_resource(resource) {

@@ -25,14 +25,19 @@ table.storage_attributes td {
     text-align: left;
 }
 
-ul.stats {
+ul.storage_statistics {
     margin-top: 12px;
     list-style-type: none;
+    padding-left: 0px;
 }
 
-ul.stats li {
-    margin-top: 6px;
-    padding-left: 0px;
+ul.storage_statistics li {
+    margin-top: 12px;
+}
+
+ul.storage_statistics li div {
+    -moz-box-shadow: 5px 5px 10px 5px #999;
+    -webkit-box-shadow: 2px 2px 5px 2px #999;
 }
 
 span.resource_name {
