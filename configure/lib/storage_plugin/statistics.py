@@ -11,6 +11,11 @@ class BaseStatistic(object):
     def __init__(self, sample_period = DEFAULT_SAMPLE_PERIOD, units = None):
         """'units' can be None for dimensionless scalars, UNITS_BYTES for
         sizes in bytes, or a string for arbitrary units"""
+        try:
+            test = int(sample_period)
+        except ValueError:
+            raise RuntimeError("sample period '%s' is not an integer!" % sample_period)
+
         self.sample_period = sample_period
         self.units = units
 
