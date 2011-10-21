@@ -4,6 +4,9 @@
 <head>
 <title>Hydra Dashboard</title>
 <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
+
+
+
 <link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css"
 	type="text/css" />
 <link href="{{STATIC_URL}}css/clo_BreadCrumb.css" rel="stylesheet"
@@ -37,6 +40,13 @@
 <script type="text/javascript"
 	src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
 <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
+
+<!-- js-graph-it is a dependency of resource_graph -->
+<script type="text/javascript" src="{{STATIC_URL}}js/js-graph-it.js" ></script>
+<link href="{{STATIC_URL}}css/js-graph-it.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/resource_graph.js"></script>
+<link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
+
 <script id="source" language="javascript" type="text/javascript">
 			$(function () 
 			{
@@ -219,11 +229,14 @@
 		</select></div>
 		</td>
 	</tr>
+
+
 	<tr>
 		<td colspan="3">
 		<form>
 		<fieldset>
 		<table width="100%" border="0">
+
 			<tr>
 				<td valign="top" class="text" width="30%" align="center">
 				<!-- <div class="magni"><input type="button" value=""
@@ -266,7 +279,6 @@
 		</table>
 		</fieldset>
 		</form>
-		</h3>
 		</td>
 	</tr>
 	<tr>
@@ -309,7 +321,6 @@
 		</table>
 		</fieldset>
 		</form>
-		</h3>
 		</td>
 	</tr>
 	<tr>
@@ -353,7 +364,6 @@
 		</table>
 		</fieldset>
 		</form>
-		</h3>
 		</td>
 	</tr>
 </table>
@@ -490,7 +500,6 @@
 		</table>
 		</fieldset>
 		</form>
-		</h3>
 		</td>
 	</tr>
 	<tr>
@@ -514,7 +523,6 @@
 		</table>
 		</fieldset>
 		</form>
-		</h3>
 		</td>
 	</tr>
 </table>
@@ -796,13 +804,16 @@
 				<div id="ost_avgWriteDiv" style="width: 500px" class="round-table">Any other parameter graph</div>
 				</td>
 			</tr>
+      <tr>
+      </tr>
 		</table>
 		</fieldset>
 		</form>
-		</h3>
 		</td>
 	</tr>
 </table>
+<div id="ost_resource_graph_canvas" class="canvas resource_graph_canvas">
+</div>
 </div>
 <!-- OST Div - End --></div>
 <div style="clear: both;"></div>
