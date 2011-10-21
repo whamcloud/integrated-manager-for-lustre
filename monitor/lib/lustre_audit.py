@@ -326,11 +326,11 @@ class LustreAudit:
         elif name.find("-OST") != -1:
             klass = ObjectStoreTarget
 
-        fsname = name.split("-")[0]
+        fsname = re.search("([\w\-]+)-\w+", name).group(1)
         try:
             filesystem = Filesystem.objects.get(name = fsname, mgs = mgs)
         except Filesystem.DoesNotExist:
-            audit_log.warning("Encountered target for unknown filesystem %s on mgs %s" % (fsname, mgs.primary_server()))
+            audit_log.warning("Encountered target (%s) for unknown filesystem %s on mgs %s" % (name, fsname, mgs.primary_server()))
             return None
 
         try:
