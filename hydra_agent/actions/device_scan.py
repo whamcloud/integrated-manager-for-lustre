@@ -232,7 +232,16 @@ def device_scan(args):
             vg_name = vg_name.replace("--", "-")
             lv_name = lv_name.replace("--", "-")
 
-            if not lv_name in lvs[vg_name]:
+            # Try to get information about LVs from this VG which we queried
+            # earlier with _get_vg/_get_lv.  This can fail if the system is in an in-between
+            # state where it still has device nodes for some LVs which are 
+            # no longer really there
+            try:
+                vg_lv_info = lvs[vg_name]
+            except KeyError:
+                continue
+
+            if not lv_name in vg_lv_info:
                 # This isn't something we saw as a named LV, so its
                 # a partition.  Assign its parent and don't store it
                 # as an LV.
