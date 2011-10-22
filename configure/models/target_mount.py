@@ -159,6 +159,7 @@ class RemoveTargetMountJob(Job, StateChangeJob):
 
     def get_deps(self):
         deps = []
+        deps.append(DependOn(self.target_mount.target.downcast(), 'unmounted'))
         if self.target_mount.primary:
             for tm in self.target_mount.target.managedtargetmount_set.filter(primary = False):
                 deps.append(DependOn(tm.downcast(), 'removed'))

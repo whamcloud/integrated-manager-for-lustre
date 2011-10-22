@@ -185,7 +185,7 @@ class StateManager(object):
         # XXX
         # VERY IMPORTANT: this sort is what gives us the following rule:
         #  The order of the rows in the Job table corresponds to the order in which
-        #  the jobs would run (including accounting for dependecies) in the absence 
+        #  the jobs would run (including accounting for dependencies) in the absence 
         #  of parallelism.
         # XXX
         self.deps = sort_graph(self.deps, self.edges)
