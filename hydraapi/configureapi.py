@@ -430,15 +430,15 @@ class CreateMDS(AnonymousRequestHandler):
 class GetTargetResourceGraph(AnonymousRequestHandler):
     @extract_request_args('target_id')
     def run(self, request, target_id):
-        from monitor.models import Target, AlertState
-        from configure.models import StorageResourceRecord
+        from monitor.models import AlertState
+        from configure.models import StorageResourceRecord, ManagedTarget
         from django.shortcuts import get_object_or_404
         if True:
             # FIXME HYD-375 HACK - the breadcrumb UI passes around names instead of ids, so have to do
             # this unreliable lookup instead
-            target = get_object_or_404(Target, name = target_id).downcast()
+            target = get_object_or_404(ManagedTarget, name = target_id).downcast()
         else:
-            target = get_object_or_404(Target, pk = target_id).downcast()
+            target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
 
         ancestor_records = set()
         parent_records = set()
@@ -450,16 +450,9 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
         for tm in target.managedtargetmount_set.all():
             lustre_alerts |= set(AlertState.filter_by_item(tm))
             lun_node = tm.block_device
-            if lun_node.storage_resource_id:
+            if lun_node.storage_resource:
+                parent_record = lun_node.storage_resource
                 from configure.lib.storage_plugin.query import ResourceQuery
-
-                try:
-                    parent_record = StorageResourceRecord.objects.get(
-                            pk = lun_node.storage_resource_id)
-                except StorageResourceRecord.DoesNotExist:
-                    print "Warning: LunNode %s references non-existent storage resource %s" % (lun_node.pk, lun_node.storage_resource_id)
-
-                    continue
 
                 parent_records.add(parent_record)
 

@@ -28,8 +28,17 @@ Exception: %s (%s)
         self.agent_exception.__class__.__name__,
         self.agent_backtrace)
 
+
 class Agent(object):
-    def __init__(self, host, monitor = None, log = None, console_callback = None):
+    def __init__(self, host, monitor = None, log = None, console_callback = None, timeout = None):
+
+        # Long default timeout for long-running jobs like formatting a lun
+        DEFAULT_TIMEOUT = 3600
+        if timeout:
+            self.timeout = timeout
+        else:
+            self.timeout = DEFAULT_TIMEOUT
+
         if not monitor:
             monitor = host.monitor.downcast()
 
@@ -56,10 +65,10 @@ class Agent(object):
 
         from settings import AUDIT_PERIOD
         # How long it may take to establish a TCP connection
-        SOCKET_TIMEOUT = 3600
+        SOCKET_TIMEOUT = self.timeout
         # How long it may take to get the output of our agent
         # (including eg tunefs'ing N devices)
-        SSH_READ_TIMEOUT = 3600
+        SSH_READ_TIMEOUT = self.timeout
 
         args = {"username": self.monitor.get_username(),
                 "timeout": SOCKET_TIMEOUT}

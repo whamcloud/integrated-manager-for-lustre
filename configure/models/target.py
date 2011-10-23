@@ -82,6 +82,18 @@ class ManagedTarget(StatefulObject):
     initial_state = 'unformatted'
     active_mount = models.ForeignKey('ManagedTargetMount', blank = True, null = True)
 
+    def set_active_mount(self, active_mount):
+        if self.active_mount == active_mount:
+            return
+
+        self.active_mount = active_mount
+        self.save()
+
+        from monitor.models import TargetFailoverAlert, TargetOfflineAlert
+        TargetOfflineAlert.notify(self, active_mount == None)    
+        for tm in self.managedtargetmount_set.filter(primary = False):
+            TargetFailoverAlert.notify(tm, active_mount == tm)    
+
     class Meta:
         app_label = 'configure'
 

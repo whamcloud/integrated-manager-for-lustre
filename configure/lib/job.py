@@ -261,19 +261,6 @@ class MkfsStep(Step):
         target.uuid = fs_uuid
         target.save()
 
-        if lun_node.lun:
-            job_log.debug("Updating target_mount %s Lun after formatting with uuid %s" % (target_mount, fs_uuid))
-            lun = lun_node.lun
-            # FIXME: any reason to have fs_uuid on Lun any more?
-            lun.fs_uuid = fs_uuid
-            lun.save()
-        else:
-            job_log.debug("Creating target_mount %s Lun after formatting with uuid %s" % (target_mount, fs_uuid))
-            lun = Lun(fs_uuid = fs_uuid)
-            lun.save()
-            lun_node.lun = lun
-            lun_node.save()
-
 class NullStep(Step):
     def run(self, kwargs):
         pass

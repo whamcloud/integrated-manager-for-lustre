@@ -29,7 +29,8 @@ def monitor_exec(monitor_id, counter):
     audit_log.debug("Monitor %s started" % monitor.host)
     try:
         from monitor.lib.lustre_audit import UpdateScan
-        raw_data = monitor.downcast().invoke('update-scan')
+        raw_data = monitor.downcast().invoke('update-scan',
+                settings.AUDIT_PERIOD * 2)
         success = UpdateScan().run(monitor.host.pk, raw_data)
         if success:
             import datetime
@@ -85,7 +86,7 @@ def test_host_contact(host, ssh_monitor):
     agent = False
     if resolve:
         try:
-            result = ssh_monitor.invoke('update-scan')
+            result = ssh_monitor.invoke('update-scan', timeout = settings.AUDIT_PERIOD)
             if not isinstance(result, Exception):
                 agent = True
             else:

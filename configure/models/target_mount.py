@@ -56,23 +56,21 @@ class ManagedTargetMount(StatefulObject, models.Model):
         return self.block_device.path
 
     def status_string(self):
-        # Look for alerts that can affect this item:
-        # statuses are STARTED STOPPED RECOVERY
-        from monitor.models import AlertState, TargetRecoveryAlert, MountableOfflineAlert, FailoverActiveAlert
-        alerts = AlertState.filter_by_item(self)
-        alert_klasses = [a.__class__ for a in alerts]
-        if len(alerts) == 0:
-            if self.primary:
+        from monitor.models import TargetRecoveryAlert
+        print "target %s active_mount %s" % (self.target, self.target.active_mount)
+        in_recovery = (TargetRecoveryAlert.filter_by_item(self.target).count() > 0)
+        if self.target.active_mount == self:
+            if in_recovery:
+                return "RECOVERY"
+            elif self.primary:
                 return "STARTED"
             else:
+                return "FAILOVER"
+        else:
+            if self.primary:
+                return "OFFLINE"
+            else:
                 return "SPARE"
-        if TargetRecoveryAlert in alert_klasses:
-            return "RECOVERY"
-        if MountableOfflineAlert in alert_klasses:
-            return "STOPPED"
-        if FailoverActiveAlert in alert_klasses:
-            return "FAILOVER"
-        raise NotImplementedError("Unhandled target alert %s" % alert_klasses)
 
     def pretty_block_device(self):
         # Truncate to iSCSI iqn if possible

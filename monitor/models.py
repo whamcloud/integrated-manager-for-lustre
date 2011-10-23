@@ -324,45 +324,60 @@ class AlertState(models.Model):
 
         return alert_state
 
-class MountableOfflineAlert(AlertState):
+class TargetOfflineAlert(AlertState):
     def message(self):
-        from configure.models import ManagedTargetMount
-        if isinstance(self.alert_item, ManagedTargetMount):
-            return "Target offline"
-        #elif isinstance(self.alert_item, Client):
-        #    return "Client offline"
-        else:
-            raise NotImplementedError
+        return "Target offline"
 
     def begin_event(self):
         return AlertEvent(
                 message_str = "%s stopped" % self.alert_item,
-                host = self.alert_item.host,
+                host = self.alert_item.primary_server(),
                 alert = self,
                 severity = WARNING)
         
     def end_event(self):
         return AlertEvent(
                 message_str = "%s started" % self.alert_item,
-                host = self.alert_item.host,
+                host = self.alert_item.primary_server(),
                 alert = self,
                 severity = INFO)
 
-class FailoverActiveAlert(AlertState):
+class TargetFailoverAlert(AlertState):
     def message(self):
-        return "Failover active"
+        return "Target failed over"
 
     def begin_event(self):
+        # FIXME: reporting this event against the primary server
+        # of a target because we don't have enough information 
+        # to 
         return AlertEvent(
-                message_str = "%s failover mounted" % self.alert_item,
+                message_str = "%s failover mounted" % self.alert_item.target,
                 host = self.alert_item.host,
                 alert = self,
                 severity = WARNING)
         
     def end_event(self):
         return AlertEvent(
-                message_str = "%s failover unmounted" % self.alert_item,
+                message_str = "%s failover unmounted" % self.alert_item.target,
                 host = self.alert_item.host,
+                alert = self,
+                severity = INFO)
+
+class TargetRecoveryAlert(AlertState):
+    def message(self):
+        return "Target in recovery"
+
+    def begin_event(self):
+        return AlertEvent(
+                message_str = "Target '%s' went into recovery" % self.alert_item,
+                host = self.alert_item.primary_server(),
+                alert = self,
+                severity = WARNING)
+
+    def end_event(self):
+        return AlertEvent(
+                message_str = "Target '%s' completed recovery" % self.alert_item,
+                host = self.alert_item.primary_server(),
                 alert = self,
                 severity = INFO)
 
@@ -381,24 +396,6 @@ class HostContactAlert(AlertState):
         return AlertEvent(
                 message_str = "Re-established contact with host %s" % self.alert_item,
                 host = self.alert_item,
-                alert = self,
-                severity = INFO)
-
-class TargetRecoveryAlert(AlertState):
-    def message(self):
-        return "Target in recovery"
-
-    def begin_event(self):
-        return AlertEvent(
-                message_str = "Target '%s' went into recovery" % self.alert_item,
-                host = self.alert_item.host,
-                alert = self,
-                severity = WARNING)
-
-    def end_event(self):
-        return AlertEvent(
-                message_str = "Target '%s' completed recovery" % self.alert_item,
-                host = self.alert_item.host,
                 alert = self,
                 severity = INFO)
 
@@ -443,21 +440,21 @@ class TargetParam(models.Model):
             target.targetparam_set.create(key = add_param[0], value = add_param[1])
             audit_log.info("add_param: %s" % (add_param,))
 
-class TargetMountRecoveryInfo(models.Model):
+class TargetRecoveryInfo(models.Model):
     # When a volume is present, we will have been able to interrogate 
     # its recovery status
     # JSON-encoded dict parsed from /proc/fs/lustre/*/*/recovery_status
     recovery_status = models.TextField()
 
-    target_mount = models.ForeignKey('configure.ManagedTargetMount')
+    target = models.ForeignKey('configure.ManagedTarget')
 
     from django.db import transaction
     @staticmethod
     @transaction.commit_on_success
-    def update(target_mount, recovery_status):
-        TargetMountRecoveryInfo.objects.filter(target_mount = target_mount).delete()
-        instance = TargetMountRecoveryInfo.objects.create(
-                target_mount = target_mount,
+    def update(target, recovery_status):
+        TargetRecoveryInfo.objects.filter(target = target).delete()
+        instance = TargetRecoveryInfo.objects.create(
+                target = target,
                 recovery_status = json.dumps(recovery_status))
         return instance.is_recovering(recovery_status) 
 

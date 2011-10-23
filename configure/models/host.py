@@ -351,7 +351,7 @@ class Monitor(models.Model):
         else:
             return False
 
-    def invoke(self, command):
+    def invoke(self, command, timeout = None):
         """Subclasses implement this, return a dict"""
         raise NotImplementedError
 
@@ -369,12 +369,15 @@ class SshMonitor(Monitor):
     class Meta:
         app_label = 'configure'
 
-    def invoke(self, command):
+    def invoke(self, command, timeout = None):
         """Safe to call on an SshMonitor which has a host assigned, neither
         need to have been saved"""
         from monitor.lib.lustre_audit import audit_log
         from configure.lib.agent import Agent
-        return Agent(self.host, self, log = audit_log).invoke(command)
+        try:
+            return Agent(self.host, self, log = audit_log, timeout = timeout).invoke(command)
+        except Exception, e:
+            return e
 
     def get_agent_path(self):
         if self.agent_path:

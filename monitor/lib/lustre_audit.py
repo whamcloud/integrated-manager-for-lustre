@@ -142,10 +142,6 @@ class UpdateScan(object):
             # Mounted-ness
             # ============
             mounted_locally = target_mount.target.uuid in mounted_uuids
-            if not target_mount.primary:
-                FailoverActiveAlert.notify(target_mount, mounted_locally)
-            else:
-                MountableOfflineAlert.notify(target_mount, not mounted_locally)
 
             # Recovery status
             # ===============
@@ -155,8 +151,21 @@ class UpdateScan(object):
             else:
                 recovery_status = {}
 
-            recovering = TargetMountRecoveryInfo.update(target_mount, recovery_status)
-            TargetRecoveryAlert.notify(target_mount, recovering)
+            # Update to active_mount and alerts for autodetected 
+            # targets done here instead of resource_locations
+            if target_mount.target.state == 'autodetected':
+                target = target_mount.target
+                if mounted_locally:
+                    target.set_active_mount(target_mount)
+                elif not mounted_locally and target.active_mount == target_mount:
+                    target.set_active_mount(None)
+
+            if target_mount.target.active_mount == None:
+                TargetRecoveryInfo.update(target_mount.target, {})
+                TargetRecoveryAlert.notify(target_mount.target, False)
+            elif mounted_locally:
+                recovering = TargetRecoveryInfo.update(target_mount.target, recovery_status)
+                TargetRecoveryAlert.notify(target_mount.target, recovering)
 
     def update_resource_locations(self):
         for resource_name, node_name in self.host_data['resource_locations'].items():
@@ -165,32 +174,30 @@ class UpdateScan(object):
                     # Parse a resource name like "MGS_2"
                     target_name, target_pk = resource_name.rsplit("_", 1)
                 except ValueError:
-                    #audit_log.warning("Malformed resource name '%s'" % resource_name)
+                    audit_log.warning("Malformed resource name '%s'" % resource_name)
                     continue
                 target = ManagedTarget.objects.get(name = target_name, pk = target_pk).downcast()
             except ManagedTarget.DoesNotExist:
-                #audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
+                audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
                 continue
-
-            if node_name == None:
-                active_mount = None
-            else:
-                try: 
-                    host = ManagedHost.objects.get(address = node_name)
-                    try:
-                        active_mount = ManagedTargetMount.objects.get(target = target, host = host)
-                    except ManagedTargetMount.DoesNotExist:
-                        audit_log.warning("Resource for target '%s' is running on host '%s', but there is no such TargetMount" % (target, host))
-                        active_mount = None
-                except ManagedHost.DoesNotExist:
-                    audit_log.warning("Resource location node '%s' does not match any Host" % (node_name))
-                    active_mount = None
 
             # If we're operating on a Managed* rather than a purely monitored target
             if target.state != 'autodetected':
-                if active_mount != target.active_mount:
-                    target.active_mount = active_mount
-                    target.save()
+                if node_name == None:
+                    active_mount = None
+                else:
+                    try: 
+                        host = ManagedHost.objects.get(address = node_name)
+                        try:
+                            active_mount = ManagedTargetMount.objects.get(target = target, host = host)
+                        except ManagedTargetMount.DoesNotExist:
+                            audit_log.warning("Resource for target '%s' is running on host '%s', but there is no such TargetMount" % (target, host))
+                            active_mount = None
+                    except ManagedHost.DoesNotExist:
+                        audit_log.warning("Resource location node '%s' does not match any Host" % (node_name))
+                        active_mount = None
+
+                target.set_active_mount(active_mount)
 
                 state = ['unmounted', 'mounted'][active_mount != None]
                 from configure.lib.state_manager import StateManager
@@ -275,8 +282,6 @@ class DetectScan(object):
                 # ====================
  #               if mounted_locally:
  #                   TargetParam.update_params(target_mount.target, mount_info['params'])
-
-
 
         return contact
     

@@ -66,7 +66,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         nid_specs = []
         for target_mount in mgs.managedtargetmount_set.all():
             host = target_mount.host
-            nids = ",".join([n.nid_string for n in host.nid_set.all()])
+            nids = ",".join(host.lnetconfiguration.get_nids())
             if nids == "":
                 raise ValueError("NIDs for MGS host %s not known" % host)
 
