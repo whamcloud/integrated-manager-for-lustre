@@ -139,8 +139,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return "OK"
 
 class Lun(models.Model):
-    # FIXME: foreignkey vs. import order
-    storage_resource_id = models.IntegerField(blank = True, null = True)
+    storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
 
     # Size may be null for LunNodes created when setting up 
     # from a JSON file which just tells us a path.
@@ -153,7 +152,7 @@ class Lun(models.Model):
     shareable = models.BooleanField()
 
     class Meta:
-        unique_together = ('storage_resource_id',)
+        unique_together = ('storage_resource',)
         app_label = 'configure'
 
     @classmethod
@@ -257,8 +256,7 @@ class LunNode(models.Model):
     host = models.ForeignKey(ManagedHost)
     path = models.CharField(max_length = 512)
 
-    # FIXME: foreignkey vs. import order
-    storage_resource_id = models.IntegerField(blank = True, null = True)
+    storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
 
     # Whether this LunNode should be used as the primary mount point
     # for targets created on this Lun

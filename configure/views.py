@@ -483,101 +483,6 @@ def target(request, target_id):
     else:
         raise NotImplementedError
 
-    ancestor_records = set()
-    parent_records = set()
-    storage_alerts = set()
-    lustre_alerts = set(AlertState.filter_by_item(target))
-    from collections import defaultdict
-    rows = defaultdict(list)
-    id_edges = []
-    for tm in target.managedtargetmount_set.all():
-        lustre_alerts |= set(AlertState.filter_by_item(tm))
-        lun_node = tm.block_device
-        if lun_node.storage_resource_id:
-            from configure.lib.storage_plugin.query import ResourceQuery
-
-            try:
-                parent_record = StorageResourceRecord.objects.get(
-                        pk = lun_node.storage_resource_id)
-            except StorageResourceRecord.DoesNotExist:
-                print "Warning: LunNode %s references non-existent storage resource %s" % (lun_node.pk, lun_node.storage_resource_id)
-
-                continue
-
-            parent_records.add(parent_record)
-
-            storage_alerts |= ResourceQuery().record_all_alerts(parent_record)
-            ancestor_records |= set(ResourceQuery().record_all_ancestors(parent_record))
-
-            def row_iterate(parent_record, i):
-                if not parent_record in rows[i]:
-                    rows[i].append(parent_record)
-                for p in parent_record.parents.all():
-                    #if 25 in [parent_record.id, p.id]:
-                    #    id_edges.append((parent_record.id, p.id))
-                    id_edges.append((parent_record.id, p.id))
-                    row_iterate(p, i + 1)
-            row_iterate(parent_record, 0)
-
-    for i in range(0, len(rows) - 1):
-        this_row = rows[i]
-        next_row = rows[i + 1]
-        def nextrow_affinity(obj):
-            # if this has a link to anything in the next row, what
-            # index in the next row?
-            for j in range(0, len(next_row)):
-                notional_edge = (obj.id, next_row[j].id)
-                if notional_edge in id_edges:
-                    return j
-            return None
-
-        this_row.sort(lambda a,b: cmp(nextrow_affinity(a), nextrow_affinity(b)))
-
-    box_width = 120
-    box_height = 40
-    xborder = 40
-    yborder = 40
-    xpad = 20
-    ypad = 20
-
-    height = 0
-    width = len(rows) * box_width + (len(rows) - 1) * xpad
-    for i, items in rows.items():
-        total_height = len(items) * box_height + (len(items) - 1) * ypad
-        height = max(total_height, height)
-
-    height = height + yborder * 2
-    width = width + xborder * 2
-
-    edges = [e for e in id_edges]
-    nodes = []
-    x = 0
-    from settings import STATIC_URL
-    for i, items in rows.items():
-        total_height = len(items) * box_height + (len(items) - 1) * ypad
-        y = (height - total_height) / 2 
-        for record in items:
-            resource = record.to_resource()
-            nodes.append({
-                'left': x,
-                'top': y,
-                'title': record.alias_or_name(),
-                'icon': "%simages/storage_plugin/%s.png" % (STATIC_URL, resource.icon),
-                'type': resource.human_class(),
-                'id': record.id
-                })
-            y += box_height + ypad
-        x += box_width + xpad
-
-    graph = {
-            'edges': edges,
-            'nodes': nodes,
-            'item_width': box_width,
-            'item_height': box_height,
-            'width': width,
-            'height': height
-            }
-
     return render_to_response("target.html", RequestContext(request, {
         'target': target,
         'conf_param_list': target.get_conf_params(),
@@ -586,8 +491,6 @@ def target(request, target_id):
         'ancestor_records': ancestor_records,
         'storage_alerts': storage_alerts,
         'lustre_alerts': lustre_alerts,
-        'rows': dict(rows),
-        'graph': graph,
         'target_size': target.managedtargetmount_set.get(primary = True).block_device.lun.size}))
 
 

@@ -195,7 +195,7 @@ class ResourceManager(object):
         from configure.models import Lun, LunNode, ManagedHost
         def lun_get_or_create(resource_id):
             try:
-                return Lun.objects.get(storage_resource_id = resource_id)
+                return Lun.objects.get(storage_resource = resource_id)
             except Lun.DoesNotExist:
                 # Determine whether a device is shareable by whether it has a SCSI
                 # ancestor (e.g. an LV on a scsi device is shareable, an LV on an IDE
@@ -241,7 +241,7 @@ class ResourceManager(object):
                 lun_node = LunNode.objects.get(
                         host = host,
                         path = r.path)
-                if not lun_node.storage_resource_id:
+                if not lun_node.storage_resource:
                     lun_node.storage_resource_id = record.pk
                     lun_node.save()
 
