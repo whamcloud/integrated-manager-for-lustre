@@ -490,7 +490,7 @@ def target(request, target_id):
     from collections import defaultdict
     rows = defaultdict(list)
     id_edges = []
-    for tm in target.targetmount_set.all():
+    for tm in target.managedtargetmount_set.all():
         lustre_alerts |= set(AlertState.filter_by_item(tm))
         lun_node = tm.block_device
         if lun_node.storage_resource_id:
@@ -588,7 +588,7 @@ def target(request, target_id):
         'lustre_alerts': lustre_alerts,
         'rows': dict(rows),
         'graph': graph,
-        'target_size': target.targetmount_set.get(primary = True).block_device.lun.size}))
+        'target_size': target.managedtargetmount_set.get(primary = True).block_device.lun.size}))
 
 
 def states(request):
