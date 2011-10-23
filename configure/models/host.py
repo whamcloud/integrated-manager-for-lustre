@@ -80,11 +80,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         roles = set()
         for mountable in self.managedtargetmount_set.all():
             target = mountable.target.downcast()
-            if mountable.primary:
-                roles.add(target.role())
-            else:
-                roles.add("Failover")
-
+            roles.add(target.role())
 
             #if isinstance(mountable, Client):
             #    roles.add("Client")
@@ -123,7 +119,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def status_string(self, targetmount_statuses = None):
         if targetmount_statuses == None:
-            targetmount_statuses = dict([(tm, tm.status_string()) for tm in self.managedtargetmount_set.all() if isinstance(tm, TargetMount)])
+            targetmount_statuses = dict([(tm, tm.status_string()) for tm in self.managedtargetmount_set.all()])
 
         tm_states = set(targetmount_statuses.values())
 
