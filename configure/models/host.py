@@ -67,7 +67,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
         # Attempt some initial setup jobs
         from configure.lib.state_manager import StateManager
-        #StateManager().set_state(lnet_configuration, 'nids_known')
+        StateManager().set_state(lnet_configuration, 'nids_known')
         StateManager().add_job(AddHostJob(host = host))
 
     def pretty_name(self):
@@ -78,20 +78,19 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     
     def _role_strings(self):
         roles = set()
-        for mountable in self.mountable_set.all():
-            if isinstance(mountable, ManagedTargetMount):
-                target = mountable.target.downcast()
-                if mountable.primary:
-                    roles.add(target.role())
-                else:
-                    roles.add("Failover")
+        for mountable in self.managedtargetmount_set.all():
+            target = mountable.target.downcast()
+            if mountable.primary:
+                roles.add(target.role())
+            else:
+                roles.add("Failover")
 
 
-            if isinstance(mountable, Client):
-                roles.add("Client")
+            #if isinstance(mountable, Client):
+            #    roles.add("Client")
 
-        if self.router_set.count() > 0:
-            roles.add("Router")
+        #if self.router_set.count() > 0:
+        #    roles.add("Router")
 
         return roles
 
@@ -352,7 +351,7 @@ class Monitor(models.Model):
         else:
             return False
 
-    def invoke(self):
+    def invoke(self, command):
         """Subclasses implement this, return a dict"""
         raise NotImplementedError
 
@@ -370,12 +369,12 @@ class SshMonitor(Monitor):
     class Meta:
         app_label = 'configure'
 
-    def invoke(self):
+    def invoke(self, command):
         """Safe to call on an SshMonitor which has a host assigned, neither
         need to have been saved"""
         from monitor.lib.lustre_audit import audit_log
         from configure.lib.agent import Agent
-        return Agent(self.host, self, log = audit_log).invoke("audit")
+        return Agent(self.host, self, log = audit_log).invoke(command)
 
     def get_agent_path(self):
         if self.agent_path:
@@ -471,6 +470,49 @@ class ConfigureLNetJob(Job, StateChangeJob):
     class Meta:
         app_label = 'configure'
 
+from configure.lib.job import Step
+class DetectTargetsStep(Step):
+    def is_dempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost
+        from monitor.lib.lustre_audit import DetectScan
+
+        host_data = {}
+        for host in ManagedHost.objects.all():
+            data = host.monitor.downcast().invoke('detect-scan')
+            host_data[host] = data
+
+        # Stage one: detect MGSs
+        for host in ManagedHost.objects.all():
+            success = DetectScan().run(host.pk, host_data[host], host_data)
+            if not success:
+                raise RuntimeError("Audit host %s failed during MGS detection, aborting" % host)
+
+        # Stage two: detect filesystem targets
+        for host in ManagedHost.objects.all():
+            success = DetectScan().run(host.pk, host_data[host], host_data)
+            if not success:
+                raise RuntimeError("Audit host %s failed during FS target detection, aborting" % host)
+
+class DetectTargetsJob(Job):
+    class Meta:
+        app_label = 'configure'
+
+    def description(self):
+        return "Scanning for Lustre targets"
+
+    def get_steps(self):
+        return [(DetectTargetsStep, {})]
+
+    def get_deps(self):
+        from configure.models import ManagedHost
+        deps = []
+        for host in ManagedHost.objects.all():
+            deps.append(DependOn(host.lnetconfiguration, 'nids_known'))
+
+        return DependAll(deps)
 
 
 class LoadLNetJob(Job, StateChangeJob):

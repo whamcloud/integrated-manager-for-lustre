@@ -258,9 +258,13 @@ class MkfsStep(Step):
         result = self.invoke_agent(target_mount.host, "format-target --args %s" % escape(json.dumps(args)))
         fs_uuid = result['uuid']
         lun_node = target_mount.block_device
+        target.uuid = fs_uuid
+        target.save()
+
         if lun_node.lun:
             job_log.debug("Updating target_mount %s Lun after formatting with uuid %s" % (target_mount, fs_uuid))
             lun = lun_node.lun
+            # FIXME: any reason to have fs_uuid on Lun any more?
             lun.fs_uuid = fs_uuid
             lun.save()
         else:
@@ -310,12 +314,13 @@ class LearnNidsStep(Step):
 
     def run(self, kwargs):
         from configure.models import ManagedHost, Nid
+        from monitor.lib.lustre_audit import normalize_nid
         host = ManagedHost.objects.get(pk = kwargs['host_id'])
         result = self.invoke_agent(host, "lnet-scan")
         for nid_string in result:
             Nid.objects.get_or_create(
                     lnet_configuration = host.lnetconfiguration,
-                    nid_string = nid_string)
+                    nid_string = normalize_nid(nid_string))
 
 class MountStep(AnyTargetMountStep):
     def is_idempotent(self):

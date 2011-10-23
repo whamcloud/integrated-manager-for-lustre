@@ -26,10 +26,33 @@ handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H
 audit_log.addHandler(handler)
 if settings.DEBUG:
     audit_log.setLevel(logging.DEBUG)
-    audit_log.addHandler(logging.StreamHandler())
 else:
     audit_log.setLevel(logging.INFO)
 
+def nids_to_mgs(host, nid_strings):
+    """nid_strings: nids of a target.  host: host on which the target was seen.
+    Return a ManagedMgs or raise ManagedMgs.DoesNotExist"""
+    if set(nid_strings) == set(["0@lo"]) or len(nid_strings) == 0:
+        return ManagedMgs.objects.get(targetmount__host = self.host)
+
+    from django.db.models import Count
+    nids = Nid.objects.values('nid_string').filter(nid_string__in = nid_strings).annotate(Count('id'))
+    unique_nids = [n['nid_string'] for n in nids if n['id__count'] == 1]
+
+    if len(unique_nids) == 0:
+        audit_log.warning("nids_to_mgs: No unique NIDs among %s!" % nids)
+    hosts = list(ManagedHost.objects.filter(lnetconfiguration__nid__nid_string__in = unique_nids).distinct())
+    try:
+        mgs = ManagedMgs.objects.distinct().get(managedtargetmount__host__in = hosts)
+    except ManagedMgs.MultipleObjectsReturned:
+        audit_log.error("Unhandled case: two MGSs have mounts on host(s) %s for nids %s" % (hosts, unique_nids))
+        # TODO: detect and report the pathological case where someone has given
+        # us two NIDs that refer to different hosts which both have a 
+        # targetmount for a ManagedMgs, but they're not the
+        # same ManagedMgs.
+        raise ManagedMgs.DoesNotExist
+
+    return mgs
 
 def normalize_nid(string):
     """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow 
@@ -47,81 +70,37 @@ def normalize_nids(nid_list):
 class NoLNetInfo(Exception):
     pass
 
-class LustreAudit:
+
+class UpdateScan(object):
     def __init__(self):
-        self.raw_data = None
-        self.target_locations = None
         self.audited_mountables = {}
-    
-    def is_primary(self, local_target_info):
-        local_nids = set([n.nid_string for n in self.host.nid_set.all()])
-
-        if not local_target_info['params'].has_key('failover.node'):
-             # If the target has no failover nodes, then it is accessed by only 
-             # one (primary) host, i.e. this one
-             primary = True
-        elif len(local_nids) > 0:
-             # We know this hosts's nids, and which nids are secondaries for this target,
-             # so we can work out whether we're primary by a process of elimination
-             failover_nids = []
-             for failover_str in local_target_info['params']['failover.node']:
-                 failover_nids.extend(failover_str.split(","))
-             failover_nids = set(normalize_nids(failover_nids))
-
-             primary = not (local_nids & failover_nids)
-        else:
-             # If we got no local NID info, and the target has some failnode info, then
-             # error out because we can't figure out whether we're primary.
-             raise NoLNetInfo("Cannot setup target %s without LNet info" % local_target_info['name'])
-  
-        return primary
-
-    def nids_to_mgs(self, nid_strings):
-        """Return a ManagedMgs or raise ManagedMgs.DoesNotExist"""
-        if set(nid_strings) == set(["0@lo"]) or len(nid_strings) == 0:
-            return ManagedMgs.objects.get(targetmount__host = self.host)
-
-        from django.db.models import Count
-        nids = Nid.objects.values('nid_string').filter(nid_string__in = nid_strings).annotate(Count('id'))
-        unique_nids = [n['nid_string'] for n in nids if n['id__count'] == 1]
-
-        if len(unique_nids) == 0:
-            audit_log.warning("nids_to_mgs: No unique NIDs among %s!" % nids)
-        hosts = list(ManagedHost.objects.filter(nid__nid_string__in = unique_nids).distinct())
-        try:
-            mgs = ManagedMgs.objects.distinct().get(targetmount__host__in = hosts)
-        except ManagedMgs.MultipleObjectsReturned:
-            audit_log.error("Unhandled case: two MGSs have mounts on host(s) %s for nids %s" % (hosts, unique_nids))
-            # TODO: detect and report the pathological case where someone has given
-            # us two NIDs that refer to different hosts which both have a 
-            # targetmount for a ManagedMgs, but they're not the
-            # same ManagedMgs.
-            raise ManagedMgs.DoesNotExist
-
-        return mgs
+        self.host = None
+        self.host_data = None
 
     def is_valid(self):
         try:
             assert(isinstance(self.host_data, dict))
             assert(self.host_data.has_key('lnet_up'))
             assert(self.host_data.has_key('lnet_loaded'))
-            assert(self.host_data.has_key('mgs_targets'))
-            assert(self.host_data.has_key('local_targets'))
+            assert(self.host_data.has_key('mounts'))
             assert(self.host_data.has_key('metrics'))
+            assert(self.host_data.has_key('resource_locations'))
             # TODO: more thorough validation
             return True
         except AssertionError:
             return False
 
     @transaction.commit_on_success
-    def audit_complete(self, host_id, host_data):
-        host = ManagedHost.objects.get(pk = host_id)
-        # Inside our audit update transaction, check that the host isn't
-        # deleted to avoid raising alerts for a deleted host
+    def run(self, host_id, host_data):
+        host = ManagedHost.objects.get(pk=host_id)
+        self.host = host
+
+        # Possible that we were started just before a host was deleted: 
+        # avoid raising alerts for deleted hosts by doing this check inside 
+        # our transaction
         if not host.not_deleted:
             return
 
-        self.host = host
         self.host_data = host_data
 
         if isinstance(host_data, Exception):
@@ -131,370 +110,91 @@ class LustreAudit:
             audit_log.error("invalid output from %s: %s" % (self.host, host_data))
             contact = False
         else:
-            try:
-                from configure.lib.state_manager import StateManager
-                from configure.models import StatefulObject
-            except ImportError:
-                StateManager = None
-            if StateManager:
-                host = self.host.downcast()
-                if isinstance(host, StatefulObject):
-                    state = {(False, False): 'lnet_unloaded',
-                            (True, False): 'lnet_down',
-                            (True, True): 'lnet_up'}[(host_data['lnet_loaded'], host_data['lnet_up'])]
-                    StateManager.notify_state(self.host.downcast(), state, ['lnet_unloaded', 'lnet_down', 'lnet_up'])
-            LNetOfflineAlert.notify(self.host, not host_data['lnet_up'])
             contact = True
 
-            # Create Filesystem and Target objects
-            self.learn_mgs_info()
+            # Get state of Client objects
+            #self.learn_clients()
 
-            # Create TargetMount objects
-            self.learn_target_mounts()
-
-            # Set 'mounted' status on Target objects
-            self.learn_target_states()
-
-            # Create and get state of Client objects
-            self.learn_clients()
-
-            # Store received metrics
             self.store_metrics()
-
-            # We will update StateManager if it is present
-            try:
-                from configure.lib.state_manager import StateManager
-            except ImportError:
-                StateManager = None
-
-            # Loop over all mountables we expected on this host, whether they
-            # were actually seen in the results or not.
-            for target_mount in ManagedTargetMount.objects.filter(host = self.host):
-                if not target_mount in self.audited_mountables:
-                    # We didn't find this mountable, it must be unmounted
-                    mounted = False
-                else:
-                    # We found this mountable and know its state
-                    mounted = self.audited_mountables[target_mount]
-
-                # Update AlertStates
-                if isinstance(target_mount, ManagedTargetMount) and not target_mount.primary:
-                    FailoverActiveAlert.notify(target_mount, mounted)
-                else:
-                    MountableOfflineAlert.notify(target_mount, not mounted)
-
-                # Update StatefulObjects
-                if StateManager and isinstance(target_mount, StatefulObject):
-                    state = {False: 'unmounted', True: 'mounted'}[mounted]
-                    # TODO: notify StateManager of which targetmount is active
-                    # for a given Target
-                    #StateManager.notify_state(mountable, state, ['mounted', 'unmounted'])
+            self.update_resource_locations()
+            self.update_target_mounts()
 
         HostContactAlert.notify(self.host, not contact)
 
-        return contact
-
-    def learn_mgs(self, mgs_local_info):
-        try:
-            mgs = ManagedMgs.objects.get(managedtargetmount__host = self.host)
-        except ManagedMgs.DoesNotExist:
-            lunnode = self.get_lun_node_for_target(None, self.host, mgs_local_info['device'])
-
-            try:
-                primary = self.is_primary(mgs_local_info)
-            except NoLnetInfo:
-                audit_log.warning("Cannot set up MGS on %s until LNet is running")
-                return None
-
-            try:
-                mgs = ManagedMgs.objects.distinct().get(targetmount__block_device__lun = lunnode.lun)
-            except ManagedMgs.DoesNotExist:
-                mgs = None
-
-            if mgs == None:
-                # We didn't find an existing ManagedMgs referring to
-                # this LUN, create one
-                mgs = ManagedMgs(name = "MGS")
-                mgs.save()
-                audit_log.info("Learned MGS on %s" % self.host)
-                self.learn_event(mgs)
-
-            tm = ManagedTargetMount.objects.create(
-                    target = mgs,
-                    host = self.host,
-                    primary = primary,
-                    mount_point = mgs_local_info['mount_point'],
-                    block_device = lunnode)
-            audit_log.info("Learned MGS mount at %s on %s" % (tm.mount_point, tm.host))
-            self.learn_event(tm)
-            
-        return mgs
-
-    def learn_target_mounts(self):
-        # We will compare any found target mounts to all known MGSs
-        for local_info in self.host_data['local_targets']:
-            # We learned all targetmounts for MGSs in learn_mgs
-            if local_info['kind'] == 'MGS':
-                continue
-
-            # Build a list of MGS nids for this local target
-            tgt_mgs_nids = []
-            try:
-                # NB I'm not sure whether tunefs.lustre will give me 
-                # one comma-separated mgsnode, or a series of mgsnode
-                # settings, so handle both
-                for n in local_info['params']['mgsnode']:
-                    tgt_mgs_nids.extend(n.split(","))
-            except KeyError:
-                # 'mgsnode' doesn't have to be present
-                pass
-            tgt_mgs_nids = set(normalize_nids(tgt_mgs_nids))
-
-            try:
-                mgs = self.nids_to_mgs(tgt_mgs_nids)
-            except ManagedMgs.DoesNotExist:
-                audit_log.warning("Can't find MGS for target with nids %s" % tgt_mgs_nids)
-                continue
-
-            # TODO: detect case where we find a targetmount that matches one 
-            # which already exists for a different target, where the other target
-            # has no name -- in this case we are overlapping with a blank target
-            # that was created during configuration.
-            target = self.get_or_create_target(mgs, local_info['name'], local_info['device'])
-            if not target:
-                continue
-
-
-            # Match a Target which has the same name as this local target,
-            # and uses a filesystem on the same MGS
-            # TODO: expand this to cover targets other than FilesystemMember,
-            # currently MGS TargetMount is a special case elsewhere
-            matched_target = None
-            try:
-                targets = ManagedTargetMount.objects.filter(name = local_info['name'])
-
-                for target in targets:
-                    if isinstance(target, FilesystemMember) and target.filesystem.mgs == mgs:
-                        matched_target = target
-            except ManagedTarget.DoesNotExist:
-                audit_log.warning("Target %s has mount point on %s but has not been detected on any MGS" % (name_val, self.host))
-
-            if not matched_target:
-                continue
-
-            try:
-                primary = self.is_primary(local_info)
-                lunnode = self.get_lun_node_for_target(target, self.host, local_info['device'])
-                (tm, created) = ManagedTargetMount.objects.get_or_create(target = matched_target,
-                        host = self.host, primary = primary,
-                        mount_point = local_info['mount_point'],
-                        block_device = lunnode)
-                if created:
-                    audit_log.info("Learned association %d between %s and host %s" % (tm.id, local_info['name'], self.host))
-                    self.learn_event(tm)
-            except NoLNetInfo:
-                audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], self.host))
-
-    def get_lun_node_for_target(self, target, host, path):
-        try:
-            return LunNode.objects.get(path = path, host = host)
-        except LunNode.DoesNotExist:
-            if target and target.managedtargetmount_set.count() > 0:
-                lun = target.managedtargetmount_set.all()[0].block_device.lun
-            else:
-                # TODO: get the size from somewhere
-                lun = Lun.objects.create(size = 0, shareable = False)
-            return LunNode.objects.create(path = path, host = host, lun = lun)
-
-    def get_or_create_target(self, mgs, name, device_node_path):
-        if name.find("-MDT") != -1:
-            klass = ManagedMdt
-        elif name.find("-OST") != -1:
-            klass = ManagedOst
-
-        fsname = re.search("([\w\-]+)-\w+", name).group(1)
-        try:
-            filesystem = ManagedFilesystem.objects.get(name = fsname, mgs = mgs)
-        except ManagedFilesystem.DoesNotExist:
-            audit_log.warning("Encountered target (%s) for unknown filesystem %s on mgs %s" % (name, fsname, mgs.primary_server()))
-            return None
-
-        try:
-            # Is it an already detected or configured target?
-            target_mount = ManagedTargetMount.objects.get(block_device__path = device_node_path, host = self.host)
-            target = target_mount.target
-            if target.name == None:
-                target.name = name
-                target.save()
-                audit_log.info("Learned name for configured target %s" % (target))
-
-            return target
-        except ManagedTargetMount.DoesNotExist:
-            # We are detecting a target anew, or detecting a new mount for an already-named target
-            candidates = ManagedTarget.objects.filter(name = name)
-            for target in candidates:
-                if isinstance(target, FilesystemMember) and target.filesystem.mgs.downcast() == mgs:
-                    return target
-
-            # Fall through, no targets with that name exist on this MGS
-            target = klass(name = name, filesystem = filesystem)
-            target.save()
-            audit_log.info("%s %s %s" % (mgs.id, name, device_node_path))
-            audit_log.info("Learned %s %s" % (klass.__name__, name))
-            self.learn_event(target)
-            return target
-
-    def learn_event(self, learned_item):
-        from logging import INFO
-        LearnEvent(severity = INFO, host = self.host, learned_item = learned_item).save()
-
-    def learn_target_states(self):
-        for mount_info in self.host_data['local_targets']:
-            if mount_info['kind'] == 'MGS':
-                try:
-                    target = ManagedMgs.get_by_host(self.host)
-                except ManagedMgs.DoesNotExist:
-                    audit_log.error("No Managementtarget for host %s, but it reports an MGS target" % self.host)
-                    continue
-                mountable = target.managedtargetmount_set.get(
-                        host = self.host,
-                        mount_point = mount_info['mount_point']).downcast()
-
-            else:
-                if mount_info['params'].has_key('mgsnode') and mount_info['params']['mgsnode'] != ("0@lo",):
-                    # Find the MGS based on mount_info['params']['mgsnode']
-                    mgsnode_nids = normalize_nids(mount_info['params']['mgsnode'][0].split(","))
-                    try:
-                        mgs = self.nids_to_mgs(mgsnode_nids)
-                    except ManagedMgs.DoesNotExist:
-                        audit_log.warning("Cannot find MGS for target %s (nids %s) on host %s" % (mount_info['name'], mgsnode_nids, self.host.address))
-                        continue
-                else:
-                    # The MGS is local
-                    try:
-                        mgs = ManagedMgs.objects.get(targetmount__host = self.host)
-                    except ManagedMgs.DoesNotExist:
-                        audit_log.error("Cannot find local MGS for target %s on %s which has no mgsnode param" % (mount_info['name'], self.host))
-                        continue
-
-                mountable = None
-                for target_val in ManagedTarget.objects.filter(name = mount_info['name']):
-                    if not isinstance(target_val, FilesystemMember):
-                        continue
-
-                    if target_val.filesystem.mgs.downcast() == mgs.downcast():
-                        try:
-                            mountable = target_val.managedtargetmount_set.get(host = self.host,
-                                            mount_point = mount_info['mount_point'])
-                        except:
-                            mountable = None
-                        break
-
-                if mountable == None:
-                    audit_log.warning("Cannot find target %s for mgs %d" % (mount_info['name'], mgs.id))
-                    continue
-
-                recovering = TargetMountRecoveryInfo.update(mountable, mount_info["recovery_status"])
-                TargetRecoveryAlert.notify(mountable, recovering)
-
-            self.audited_mountables[mountable.downcast()] = mount_info['running']
-
-            # Sync the learned parameters to TargetParam
-            TargetParam.update_params(mountable.target, mount_info['params'])
-
-        # If we got some corosync resource information, use it to update ManagedTarget
+    def update_lnet(self):
+        # Update LNet status
         from configure.lib.state_manager import StateManager
+        from configure.models import StatefulObject
+        host = self.host.downcast()
+        state = {(False, False): 'lnet_unloaded',
+                (True, False): 'lnet_down',
+                (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'], self.host_data['lnet_up'])]
+        StateManager.notify_state(self.host.downcast(), state, ['lnet_unloaded', 'lnet_down', 'lnet_up'])
+        # Update LNet alerts
+        LNetOfflineAlert.notify(self.host, not host_data['lnet_up'])
 
-        # TODO: get rid of confusing situation of having ManagedTarget.active_mount for configured systems, but relying on 
-        # TargetMount Alerts for unconfigured systems (because they may well not have the corosync stuff we check here, and
-        # even if they do, we can't expect that their resources are named the way we name them (HYD-231)
-        if self.host_data['resource_locations'] and ManagedTargetMount.objects.filter(host = self.host).count() > 0:
-            # There are hydra-configured mounts on this host, and we got some corosync resource information
-            for resource_name, node_name in self.host_data['resource_locations'].items():
+    def update_target_mounts(self):
+        # Loop over all mountables we expected on this host, whether they
+        # were actually seen in the results or not.
+        mounted_uuids = dict([(m['fs_uuid'], m) for m in self.host_data['mounts']])
+        for target_mount in ManagedTargetMount.objects.filter(host = self.host):
+
+            # Mounted-ness
+            # ============
+            mounted_locally = target_mount.target.uuid in mounted_uuids
+            if not target_mount.primary:
+                FailoverActiveAlert.notify(target_mount, mounted_locally)
+            else:
+                MountableOfflineAlert.notify(target_mount, not mounted_locally)
+
+            # Recovery status
+            # ===============
+            if mounted_locally:
+                mount_info = mounted_uuids[target_mount.target.uuid]
+                recovery_status = mount_info["recovery_status"]
+            else:
+                recovery_status = {}
+
+            recovering = TargetMountRecoveryInfo.update(target_mount, recovery_status)
+            TargetRecoveryAlert.notify(target_mount, recovering)
+
+    def update_resource_locations(self):
+        for resource_name, node_name in self.host_data['resource_locations'].items():
+            try:
                 try:
-                    try:
-                        # Parse a resource name like "MGS_2"
-                        target_name, target_pk = resource_name.rsplit("_", 1)
-                    except ValueError:
-                        audit_log.warning("Malformed resource name '%s'" % resource_name)
-                        continue
-                    target = ManagedTarget.objects.get(name = target_name, pk = target_pk).downcast()
-                except ManagedTarget.DoesNotExist:
-                    audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
+                    # Parse a resource name like "MGS_2"
+                    target_name, target_pk = resource_name.rsplit("_", 1)
+                except ValueError:
+                    #audit_log.warning("Malformed resource name '%s'" % resource_name)
                     continue
+                target = ManagedTarget.objects.get(name = target_name, pk = target_pk).downcast()
+            except ManagedTarget.DoesNotExist:
+                #audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
+                continue
 
-                if node_name == None:
-                    active_mount = None
-                else:
-                    try: 
-                        host = ManagedHost.objects.get(address = node_name)
-                        try:
-                            active_mount = ManagedTargetMount.objects.get(target = target, host = host)
-                        except ManagedTargetMount.DoesNotExist:
-                            audit_log.warning("Resource for target '%s' is running on host '%s', but there is no such TargetMount" % (target, host))
-                            active_mount = None
-                    except ManagedHost.DoesNotExist:
-                        audit_log.warning("Resource location node '%s' does not match any Host" % (node_name))
+            if node_name == None:
+                active_mount = None
+            else:
+                try: 
+                    host = ManagedHost.objects.get(address = node_name)
+                    try:
+                        active_mount = ManagedTargetMount.objects.get(target = target, host = host)
+                    except ManagedTargetMount.DoesNotExist:
+                        audit_log.warning("Resource for target '%s' is running on host '%s', but there is no such TargetMount" % (target, host))
                         active_mount = None
+                except ManagedHost.DoesNotExist:
+                    audit_log.warning("Resource location node '%s' does not match any Host" % (node_name))
+                    active_mount = None
 
-                # If we're operating on a Managed* rather than a purely monitored target
-                if hasattr(target, 'active_mount'):
-                    if active_mount != target.active_mount:
-                        target.active_mount = active_mount
-                        target.save()
+            # If we're operating on a Managed* rather than a purely monitored target
+            if target.state != 'autodetected':
+                if active_mount != target.active_mount:
+                    target.active_mount = active_mount
+                    target.save()
 
-                    state = ['unmounted', 'mounted'][active_mount != None]
-                    StateManager.notify_state(target, state, ['mounted', 'unmounted'])
-
-    def learn_clients(self):
-        for mount_point, client_info in self.host_data['client_mounts'].items():
-            # Find the MGS
-            try:
-                # Lustre lets you use either
-                # a comma or a colon as a delimiter
-                nids = re.split("[:,]", client_info['nid'])
-                client_mgs_nids = set(normalize_nids(nids))
-                mgs = self.nids_to_mgs(client_mgs_nids)
-            except ManagedMgs.DoesNotExist:
-                audit_log.warning("Ignoring client mount for unknown mgs %s" % client_info['nid'])
-                continue
-
-            # Find the filesystem
-            try:
-                fs = ManagedFilesystem.objects.get(name = client_info['filesystem'], mgs = mgs)
-            except ManagedFilesystem.DoesNotExist:
-                audit_log.warning("Ignoring client mount for unknown filesystem '%s' on %s" % (client_info['filesystem'], self.host))
-                continue
-
-            # Instantiate Client
-            (client, created) = Client.objects.get_or_create(
-                    host = self.host, mount_point = mount_point, filesystem = fs)
-            if created:
-                audit_log.info("Learned client %s" % client)
-                self.learn_event(client)
-
-            self.audited_mountables[client.downcast()] = client_info['mounted']
-
-    def learn_mgs_info(self):
-        found_mgs = False
-        for volume in self.host_data['local_targets']:
-            if volume['kind'] == "MGS":
-                found_mgs = True
-                mgs_local_info = volume
-        if not found_mgs:
-            return
-
-        # Learn an MGS target and a TargetMount for this host
-        mgs = self.learn_mgs(mgs_local_info)
-        if not mgs:
-            return
-
-        # Create Filesystem objects for all those in this MGS
-        for fs_name, targets in self.host_data['mgs_targets'].items():
-            (fs, created) = ManagedFilesystem.objects.get_or_create(name = fs_name, mgs = mgs)
-            if created:
-                audit_log.info("Learned filesystem '%s'" % fs_name)
-                self.learn_event(fs)
+                state = ['unmounted', 'mounted'][active_mount != None]
+                from configure.lib.state_manager import StateManager
+                StateManager.notify_state(target, state, ['mounted', 'unmounted'])
 
     def store_lustre_target_metrics(self, target_name, metrics):
         # TODO: Re-enable MGS metrics storage if it turns out it's useful.
@@ -503,7 +203,7 @@ class LustreAudit:
 
         try:
             target = ManagedTarget.objects.get(name=target_name,
-                                        targetmount__host=self.host)
+                                        managedtargetmount__host=self.host)
         except ManagedTarget.DoesNotExist:
             # Unknown target -- ignore metrics
             audit_log.warning("Discarding metrics for unknown target: %s" % target_name)
@@ -537,3 +237,332 @@ class LustreAudit:
                 self.store_lustre_target_metrics(target, target_metrics)
         except KeyError:
             pass
+
+
+class DetectScan(object):
+    def __init__(self):
+        self.raw_data = None
+        self.target_locations = None
+
+    @transaction.commit_on_success
+    def run(self, host_id, host_data, all_hosts_data):
+        host = ManagedHost.objects.get(pk = host_id)
+        # Inside our audit update transaction, check that the host isn't
+        # deleted to avoid raising alerts for a deleted host
+        if not host.not_deleted:
+            return
+
+        self.host = host
+        self.host_data = host_data
+        self.all_hosts_data = all_hosts_data
+
+        if isinstance(host_data, Exception):
+            audit_log.error("exception contacting %s: %s" % (self.host, host_data))
+            contact = False
+        elif not self.is_valid():
+            audit_log.error("invalid output from %s: %s" % (self.host, host_data))
+            contact = False
+        else:
+            contact = True
+
+            # Create Filesystem and Target objects
+            self.learn_mgs_info()
+
+            # Create TargetMount objects
+            self.learn_target_mounts()
+
+                # Configuration params
+                # ====================
+ #               if mounted_locally:
+ #                   TargetParam.update_params(target_mount.target, mount_info['params'])
+
+
+
+        return contact
+    
+    def is_primary(self, local_target_info):
+        if self.host.lnetconfiguration.state != 'nids_known':
+             raise NoLNetInfo("Cannot setup target %s without LNet info" % local_target_info['name'])
+
+        local_nids = set(self.host.lnetconfiguration.get_nids())
+
+        if not local_target_info['params'].has_key('failover.node'):
+             # If the target has no failover nodes, then it is accessed by only 
+             # one (primary) host, i.e. this one
+             primary = True
+        elif len(local_nids) > 0:
+             # We know this hosts's nids, and which nids are secondaries for this target,
+             # so we can work out whether we're primary by a process of elimination
+             failover_nids = []
+             for failover_str in local_target_info['params']['failover.node']:
+                 failover_nids.extend(failover_str.split(","))
+             failover_nids = set(normalize_nids(failover_nids))
+
+             primary = not (local_nids & failover_nids)
+  
+        return primary
+
+    def is_valid(self):
+        try:
+            assert(isinstance(self.host_data, dict))
+            assert(self.host_data.has_key('mgs_targets'))
+            assert(self.host_data.has_key('local_targets'))
+            # TODO: more thorough validation
+            return True
+        except AssertionError:
+            return False
+
+    def learn_mgs(self, mgs_local_info):
+        try:
+            mgs = ManagedMgs.objects.get(uuid = mgs_local_info['uuid'])
+            try:
+                tm = ManagedTargetMount.objects.get(target = mgs, host = self.host)
+            except ManagedTargetMount.DoesNotExist:
+                lunnode = self.get_lun_node_for_target(None, self.host, mgs_local_info['device'])
+                primary = self.is_primary(mgs_local_info)
+                tm = ManagedTargetMount.objects.create(
+                        state = 'autodetected',
+                        target = mgs,
+                        host = self.host,
+                        primary = primary,
+                        block_device = lunnode)
+        except ManagedMgs.DoesNotExist:
+            # Only do this for possibly-primary mounted MGSs
+            # Otherwise would risk seeing an MGS somewhere it's not actually
+            # used and assuming that that was the primary location.
+            if not self.is_primary(mgs_local_info) or not mgs_local_info['mounted']:
+                return None
+
+            try:
+                mgs = ManagedMgs.objects.get(managedtargetmount__host = self.host)
+                raise RuntimeError("Multiple MGSs on host %s" % host)
+            except ManagedMgs.DoesNotExist:
+                pass
+
+            lunnode = self.get_lun_node_for_target(None, self.host, mgs_local_info['device'])
+
+            primary = self.is_primary(mgs_local_info)
+
+            # We didn't find an existing ManagedMgs referring to
+            # this LUN, create one
+            mgs = ManagedMgs(uuid = mgs_local_info['uuid'], name = "MGS", state = 'autodetected')
+            mgs.save()
+            audit_log.info("Learned MGS on %s" % self.host)
+            self.learn_event(mgs)
+
+            tm = ManagedTargetMount.objects.create(
+                    state = 'autodetected',
+                    target = mgs,
+                    host = self.host,
+                    primary = primary,
+                    block_device = lunnode)
+            audit_log.info("Learned MGS mount %s" % (tm.host))
+            self.learn_event(tm)
+            
+        return mgs
+
+    def target_available_here(self, mgs, local_info):
+        target_nids = []
+        if local_info['params'].has_key('failover.node'):
+            for failover_str in local_info['params']['failover.node']:
+                target_nids.extend(failover_str.split(","))
+        mgs_host = mgs.primary_server()
+        fs_name, target_name = local_info['name'].rsplit("-", 1)
+        try:
+            mgs_target_info = None
+            for t in self.all_hosts_data[mgs_host]['mgs_targets'][fs_name]:
+                if t['name'] == local_info['name']:
+                    mgs_target_info = t
+            if not mgs_target_info:
+                raise KeyError
+        except KeyError:
+            audit_log.warning("Saw target %s on %s:%s which is not known to mgs %s" % (local_info['name'], self.host, local_info['device'], mgs_host))
+            return False
+        primary_nid = mgs_target_info['nid']
+        target_nids.append(primary_nid)
+
+        target_nids = set(normalize_nids(target_nids))
+        if set(self.host.lnetconfiguration.get_nids()) & target_nids:
+            return True
+        else:
+            return False
+
+    def learn_target_mounts(self):
+        # We will compare any found target mounts to all known MGSs
+        for local_info in self.host_data['local_targets']:
+            # We learned all targetmounts for MGSs in learn_mgs
+            if local_info['name'] == 'MGS':
+                continue
+
+            # Build a list of MGS nids for this local target
+            tgt_mgs_nids = []
+            try:
+                # NB I'm not sure whether tunefs.lustre will give me 
+                # one comma-separated mgsnode, or a series of mgsnode
+                # settings, so handle both
+                for n in local_info['params']['mgsnode']:
+                    tgt_mgs_nids.extend(n.split(","))
+            except KeyError:
+                # 'mgsnode' doesn't have to be present
+                pass
+            tgt_mgs_nids = set(normalize_nids(tgt_mgs_nids))
+
+            try:
+                mgs = nids_to_mgs(self.host, tgt_mgs_nids)
+            except ManagedMgs.DoesNotExist:
+                audit_log.warning("Can't find MGS for target with nids %s" % tgt_mgs_nids)
+                continue
+
+            if not self.target_available_here(mgs, local_info):
+                audit_log.warning("Ignoring %s on %s, as it is not mountable on this host" % (local_info['name'], self.host))
+                continue
+
+            # TODO: detect case where we find a targetmount that matches one 
+            # which already exists for a different target, where the other target
+            # has no name -- in this case we are overlapping with a blank target
+            # that was created during configuration.
+            target = self.get_or_create_target(mgs, local_info)
+            if not target:
+                continue
+
+
+            # Match a Target which has the same name as this local target,
+            # and uses a filesystem on the same MGS
+            # TODO: expand this to cover targets other than FilesystemMember,
+            # currently MGS TargetMount is a special case elsewhere
+            matched_target = None
+            try:
+                targets = ManagedTarget.objects.filter(name = local_info['name'])
+
+                for target in targets:
+                    if isinstance(target, FilesystemMember) and target.filesystem.mgs == mgs:
+                        matched_target = target
+            except ManagedTarget.DoesNotExist:
+                audit_log.warning("Target %s has mount point on %s but has not been detected on any MGS" % (name_val, self.host))
+
+            if not matched_target:
+                continue
+
+            try:
+                primary = self.is_primary(local_info)
+                lunnode = self.get_lun_node_for_target(target, self.host, local_info['device'])
+                (tm, created) = ManagedTargetMount.objects.get_or_create(target = matched_target,
+                        host = self.host, primary = primary,
+                        block_device = lunnode)
+                if created:
+                    tm.state = 'autodetected'
+                    tm.save()
+                    audit_log.info("Learned association %d between %s and host %s" % (tm.id, local_info['name'], self.host))
+                    self.learn_event(tm)
+            except NoLNetInfo:
+                audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], self.host))
+
+    def get_lun_node_for_target(self, target, host, path):
+        try:
+            return LunNode.objects.get(path = path, host = host)
+        except LunNode.DoesNotExist:
+            if target and target.managedtargetmount_set.count() > 0:
+                lun = target.managedtargetmount_set.all()[0].block_device.lun
+            else:
+                # TODO: get the size from somewhere
+                lun = Lun.objects.create(size = 0, shareable = False)
+            return LunNode.objects.create(path = path, host = host, lun = lun)
+
+    def get_or_create_target(self, mgs, local_info):
+        name = local_info['name']
+        device_node_path = local_info['device']
+        uuid = local_info['uuid']
+
+        if name.find("-MDT") != -1:
+            klass = ManagedMdt
+        elif name.find("-OST") != -1:
+            klass = ManagedOst
+
+        fsname = re.search("([\w\-]+)-\w+", name).group(1)
+        try:
+            filesystem = ManagedFilesystem.objects.get(name = fsname, mgs = mgs)
+        except ManagedFilesystem.DoesNotExist:
+            audit_log.warning("Encountered target (%s) for unknown filesystem %s on mgs %s" % (name, fsname, mgs.primary_server()))
+            return None
+
+        try:
+            # Is it an already detected or configured target?
+            target_mount = ManagedTargetMount.objects.get(block_device__path = device_node_path, host = self.host)
+            target = target_mount.target
+            if target.name == None:
+                target.name = name
+                target.save()
+                audit_log.info("Learned name for configured target %s" % (target))
+
+            return target
+        except ManagedTargetMount.DoesNotExist:
+            # We are detecting a target anew, or detecting a new mount for an already-named target
+            candidates = ManagedTarget.objects.filter(name = name)
+            for target in candidates:
+                if isinstance(target, FilesystemMember) and target.filesystem.mgs.downcast() == mgs:
+                    return target
+
+            # Fall through, no targets with that name exist on this MGS
+            target = klass(uuid = uuid, name = name, filesystem = filesystem, state = 'autodetected')
+            target.save()
+            audit_log.info("%s %s %s" % (mgs.id, name, device_node_path))
+            audit_log.info("Learned %s %s" % (klass.__name__, name))
+            self.learn_event(target)
+            return target
+
+    def learn_event(self, learned_item):
+        from logging import INFO
+        LearnEvent(severity = INFO, host = self.host, learned_item = learned_item).save()
+
+    def learn_clients(self):
+        for mount_point, client_info in self.host_data['client_mounts'].items():
+            # Find the MGS
+            try:
+                # Lustre lets you use either
+                # a comma or a colon as a delimiter
+                nids = re.split("[:,]", client_info['nid'])
+                client_mgs_nids = set(normalize_nids(nids))
+                mgs = nids_to_mgs(self.host, client_mgs_nids)
+            except ManagedMgs.DoesNotExist:
+                audit_log.warning("Ignoring client mount for unknown mgs %s" % client_info['nid'])
+                continue
+
+            # Find the filesystem
+            try:
+                fs = ManagedFilesystem.objects.get(name = client_info['filesystem'], mgs = mgs)
+            except ManagedFilesystem.DoesNotExist:
+                audit_log.warning("Ignoring client mount for unknown filesystem '%s' on %s" % (client_info['filesystem'], self.host))
+                continue
+
+            # Instantiate Client
+            (client, created) = Client.objects.get_or_create(
+                    host = self.host, mount_point = mount_point, filesystem = fs)
+            if created:
+                audit_log.info("Learned client %s" % client)
+                self.learn_event(client)
+
+            # TODO: sort out client monitoring
+            #self.audited_mountables[client.downcast()] = client_info['mounted']
+
+    def learn_mgs_info(self):
+        found_mgs = False
+        for volume in self.host_data['local_targets']:
+            if volume['name'] == "MGS":
+                found_mgs = True
+                mgs_local_info = volume
+        if not found_mgs:
+            return
+
+        # Learn an MGS target and a TargetMount for this host
+        mgs = self.learn_mgs(mgs_local_info)
+        if not mgs:
+            return
+
+        # Create Filesystem objects for all those in this MGS
+        for fs_name, targets in self.host_data['mgs_targets'].items():
+            (fs, created) = ManagedFilesystem.objects.get_or_create(name = fs_name, mgs = mgs)
+            if created:
+                audit_log.info("Learned filesystem '%s'" % fs_name)
+                self.learn_event(fs)
+
+

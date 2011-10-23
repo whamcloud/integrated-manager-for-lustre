@@ -17,7 +17,7 @@ def monitor_exec(monitor_id, counter):
 
     # Conditions indicating that we've restarted or that 
     if not (monitor.state in ['tasked', 'tasking']):
-        audit_log.warn("Host %s monitor found unfinished (crash recovery).  Ending task." % (monitor.host))
+        audit_log.warn("Host %s monitor %s (audit %s) found unfinished (crash recovery).  Ending task." % (monitor.host, monitor.id, monitor.counter))
         monitor.update(state = 'idle', task_id = None)
         return 
     elif monitor.counter != counter:
@@ -28,9 +28,9 @@ def monitor_exec(monitor_id, counter):
     monitor.update(state = 'started')
     audit_log.debug("Monitor %s started" % monitor.host)
     try:
-        from monitor.lib.lustre_audit import LustreAudit
-        raw_data = monitor.downcast().invoke()
-        success = LustreAudit().audit_complete(monitor.host.pk, raw_data)
+        from monitor.lib.lustre_audit import UpdateScan
+        raw_data = monitor.downcast().invoke('update-scan')
+        success = UpdateScan().run(monitor.host.pk, raw_data)
         if success:
             import datetime
             monitor.update(last_success = datetime.datetime.now())
@@ -85,7 +85,7 @@ def test_host_contact(host, ssh_monitor):
     agent = False
     if resolve:
         try:
-            result = ssh_monitor.invoke()
+            result = ssh_monitor.invoke('update-scan')
             if not isinstance(result, Exception):
                 agent = True
             else:

@@ -23,6 +23,8 @@ class ManagedTarget(StatefulObject):
     # Nullable because when manager creates a Target it doesn't know the name
     # until it's formatted+started+audited
     name = models.CharField(max_length = 64, null = True, blank = True)
+    # Nullable because it is not known until the target is formatted
+    uuid = models.CharField(max_length = 64, null = True, blank = True)
 
     def name_no_fs(self):
         """Something like OST0001 rather than testfs1-OST0001"""
@@ -76,7 +78,7 @@ class ManagedTarget(StatefulObject):
     # mounted: I've registered with the MGS, I'm mounted
     # removed: this target no longer exists in real life
     # Additional states needed for 'deactivated'?
-    states = ['unformatted', 'formatted', 'unmounted', 'mounted', 'removed']
+    states = ['unformatted', 'formatted', 'unmounted', 'mounted', 'removed', 'autodetected']
     initial_state = 'unformatted'
     active_mount = models.ForeignKey('ManagedTargetMount', blank = True, null = True)
 

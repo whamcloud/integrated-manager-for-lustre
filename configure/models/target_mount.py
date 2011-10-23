@@ -22,7 +22,7 @@ class ManagedTargetMount(StatefulObject, models.Model):
     # unconfigured: I only exist in theory in the database
     # mounted: I am in fstab on the host and mounted
     # unmounted: I am in fstab on the host and unmounted
-    states = ['unconfigured', 'configured', 'removed']
+    states = ['unconfigured', 'configured', 'removed', 'autodetected']
     initial_state = 'unconfigured'
 
     def save(self, force_insert = False, force_update = False, using = None):

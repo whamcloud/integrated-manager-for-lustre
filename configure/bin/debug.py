@@ -74,7 +74,7 @@ class HydraDebug(cmd.Cmd, object):
     def do_apply_conf_params(self, mgs_host_name):
         # Create an ApplyConfParams job for this MGS
         from configure.models import ManagedMgs, ApplyConfParams
-        mgs = ManagedMgs.objects.get(targetmount__host__address = mgs_host_name)
+        mgs = ManagedMgs.objects.get(managedtargetmount__host__address = mgs_host_name)
         job = ApplyConfParams(mgs = mgs)
 
         # Submit the job
@@ -168,6 +168,12 @@ class HydraDebug(cmd.Cmd, object):
         print ping()
         i = inspect([gethostname()])
         print i.active()
+
+    def do_detect_targets(self, arg_string):
+        from configure.models import DetectTargetsJob
+        job = DetectTargetsJob()
+        from configure.lib.state_manager import StateManager
+        StateManager().add_job(job)
 
 if __name__ == '__main__':
     cmdline = HydraDebug

@@ -146,15 +146,6 @@ class MeasuredEntity(object):
 #    def __str__(self):
 #        return "%s-client %d" % (self.filesystem.name, self.id)
 
-class DetectedNid(models.Model):
-    # This is a store of detected NIDs, outside of our LNet configuration.
-    # For hosts where we do not configure LNet, this store exists to 
-    # allow mapping of target mount locations by NID when auto-detecting
-    # existing filesystems.
-    host = models.ForeignKey('configure.ManagedHost')
-    nid_string = models.CharField(255)
-
-
 class Event(models.Model):
     __metaclass__ = DowncastMetaclass
 
@@ -188,6 +179,7 @@ class LearnEvent(Event):
         return "Autodetection"
 
     def message(self):
+        from configure.models import ManagedTargetMount, ManagedTarget, ManagedFilesystem
         if isinstance(self.learned_item, ManagedTargetMount):
             return "Discovered mount point of %s on %s" % (self.learned_item, self.learned_item.host)
         elif isinstance(self.learned_item, ManagedTarget):
