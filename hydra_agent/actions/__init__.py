@@ -14,6 +14,7 @@ import os
 import re
 import simplejson as json
 
+from lnet_scan import lnet_scan
 from device_scan import device_scan
 from targets import *
 from clear_targets import clear_targets

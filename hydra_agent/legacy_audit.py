@@ -451,48 +451,8 @@ class LocalLustreAudit:
                     lnet_nids.append(tokens[0])
 
         return lnet_loaded, lnet_up, lnet_nids
-    def get_resource_location(self, resource_name):
-        try:
-            p = subprocess.Popen(['crm_resource', '--locate', '--resource', resource_name], stdout=subprocess.PIPE, stderr = subprocess.PIPE) 
-        except OSError:
-            # Probably we're on a server without corosync
-            return None
 
-        stdout, stderr = p.communicate()
-        rc = p.wait()
-        if rc != 0:
-            # We can't get the state of the resource, assume that means it's not running (maybe
-            # it was unconfigured while we were running)
-            return None
-        elif len(stdout.strip()) == 0:
-            return None
-        else:
-            node_name = re.search("^resource [^ ]+ is running on: (.*)$", stdout.strip()).group(1)
-            return node_name
 
-    def get_resource_locations(self):
-        """Parse `corosync status` to identify where (if anywhere) 
-           resources (i.e. targets) are running."""
-        try:
-            p = subprocess.Popen(['crm_resource', '-l'], stdout=subprocess.PIPE, stderr = subprocess.PIPE) 
-        except OSError:
-            # Probably we're on a server without corosync
-            return None
-
-        locations = {}
-
-        stdout, stderr = p.communicate()
-        rc = p.wait()
-        if rc != 0:
-            # Probably corosync isn't running?
-            return None
-        else:
-            lines = stdout.strip().split("\n")
-            for line in lines:
-                resource_name = line.strip()
-                locations[resource_name] = self.get_resource_location(resource_name)
-
-        return locations
 
     def audit_info(self):
         local_targets = self.get_local_targets()
@@ -506,6 +466,8 @@ class LocalLustreAudit:
 
         audit = LocalAudit()
 
+        from hydra_agent.actions.targets import get_resource_locations
+
         return {"local_targets": local_targets,
             "mgs_targets": mgs_targets,
             "mgs_conf_params": mgs_conf_params,
@@ -514,7 +476,7 @@ class LocalLustreAudit:
             "lnet_up": lnet_up,
             "lnet_nids": lnet_nids,
             "client_mounts": client_mounts,
-            "resource_locations": self.get_resource_locations(),
+            "resource_locations": get_resource_locations(),
             "metrics": audit.metrics()}
 
 if __name__ == '__main__':

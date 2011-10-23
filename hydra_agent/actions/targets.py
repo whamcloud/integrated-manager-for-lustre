@@ -18,6 +18,45 @@ def create_libdir():
         else:
             raise e
 
+def get_resource_location(resource_name):
+    try:
+        rc, stdout, stderr = shell.run(['crm_resource', '--locate', '--resource', resource_name])
+    except OSError:
+        # Probably we're on a server without corosync
+        return None
+
+    if rc != 0:
+        # We can't get the state of the resource, assume that means it's not running (maybe
+        # it was unconfigured while we were running)
+        return None
+    elif len(stdout.strip()) == 0:
+        return None
+    else:
+        node_name = re.search("^resource [^ ]+ is running on: (.*)$", stdout.strip()).group(1)
+        return node_name
+
+def get_resource_locations():
+    """Parse `corosync status` to identify where (if anywhere) 
+       resources (i.e. targets) are running."""
+    try:
+        rc, stdout, stderr = shell.run(['crm_resource', '-l'])
+    except OSError:
+        # Probably we're on a server without corosync
+        return None
+
+    locations = {}
+
+    if rc != 0:
+        # Probably corosync isn't running?
+        return None
+    else:
+        lines = stdout.strip().split("\n")
+        for line in lines:
+            resource_name = line.strip()
+            locations[resource_name] = get_resource_location(resource_name)
+
+    return locations
+
 def cibadmin(command_args):
     from time import sleep
 
@@ -183,6 +222,11 @@ def start_target(args):
         # try to leave things in a sane state for a failed mount
         shell.try_run(["crm", "resource", "stop", unique_label])
         raise RuntimeError("failed to start target %s" % unique_label)
+    else:
+        location = get_resource_location(unique_label)
+        if not location:
+            raise RuntimeError("Started %s but now can't locate it!" % unique_label)
+        return {'location': location}
 
 def stop_target(args):
     _stop_target(args.label, args.serial)
