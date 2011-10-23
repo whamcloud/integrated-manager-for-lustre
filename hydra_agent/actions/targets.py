@@ -86,7 +86,6 @@ def format_target(args):
     shell.try_run(shlex.split(cmdline))
 
     blkid_output = shell.try_run(["blkid", "-o", "value", "-s", "UUID", kwargs['device']])
-
     uuid = blkid_output.strip()
 
     return {'uuid': uuid}

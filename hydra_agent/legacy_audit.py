@@ -11,6 +11,45 @@ import glob
 import subprocess
 from hydra_agent.audit.local import LocalAudit
 
+def normalize_device(device):
+    """Try to convert device paths to their /dev/disk/by-id equivalent where possible,
+       so that the server can use this is the canonical identifier for devices (it has 
+       the best chance of being the same between hosts using shared storage"""
+
+    # Exceptions where we prefer a symlink to the real node, 
+    # to get more human-readable device nodes where possible
+    allowed_paths = ["/dev/disk/by-id", "/dev/mapper"]
+    if not hasattr(normalize_device, 'device_lookup'):
+        normalize_device.device_lookup = {}
+        for allowed_path in allowed_paths:
+            # Lookup devices to their by-id equivalent if possible
+            try:
+                for f in os.listdir(allowed_path):
+                    normalize_device.device_lookup[os.path.realpath(os.path.join(allowed_path, f))] = os.path.join(allowed_path, f)
+            except OSError:
+                # Doesn't exist, don't add anything to device_lookup
+                pass
+
+        # Resolve the /dev/root node to its real device
+        # NB /dev/root may be a symlink on your system, but it's not on all!
+        try:
+            root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read()).group(1)
+            # TODO: resolve UUID= type arguments a la ubuntu
+            try:
+                normalize_device.device_lookup['/dev/root'] = normalize_device.device_lookup[os.path.realpath(root)]
+            except KeyError:
+                normalize_device.device_lookup['/dev/root'] = root
+        except:
+            pass
+
+    device = device.strip()
+    try:
+        return normalize_device.device_lookup[os.path.realpath(device)]
+    except KeyError:
+        pass
+
+    return os.path.realpath(device)
+
 class Mounts(object):
     def __init__(self):
         # NB we must use /proc/mounts instead of `mount` because `mount` sometimes
@@ -52,45 +91,6 @@ class LocalLustreAudit:
     def __init__(self):
         self.mounts = Mounts()
         self.fstab = Fstab()
-
-    def normalize_device(self, device):
-        """Try to convert device paths to their /dev/disk/by-id equivalent where possible,
-           so that the server can use this is the canonical identifier for devices (it has 
-           the best chance of being the same between hosts using shared storage"""
-
-        # Exceptions where we prefer a symlink to the real node, 
-        # to get more human-readable device nodes where possible
-        allowed_paths = ["/dev/disk/by-id", "/dev/mapper"]
-        if not hasattr(self, 'device_lookup'):
-            self.device_lookup = {}
-            for allowed_path in allowed_paths:
-                # Lookup devices to their by-id equivalent if possible
-                try:
-                    for f in os.listdir(allowed_path):
-                        self.device_lookup[os.path.realpath(os.path.join(allowed_path, f))] = os.path.join(allowed_path, f)
-                except OSError:
-                    # Doesn't exist, don't add anything to device_lookup
-                    pass
-
-            # Resolve the /dev/root node to its real device
-            # NB /dev/root may be a symlink on your system, but it's not on all!
-            try:
-                root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read()).group(1)
-                # TODO: resolve UUID= type arguments a la ubuntu
-                try:
-                    self.device_lookup['/dev/root'] = self.device_lookup[os.path.realpath(root)]
-                except KeyError:
-                    self.device_lookup['/dev/root'] = root
-            except:
-                pass
-
-        device = device.strip()
-        try:
-            return self.device_lookup[os.path.realpath(device)]
-        except KeyError:
-            pass
-
-        return os.path.realpath(device)
 
     def name2kind(self, name):
         if name == "MGS":
@@ -148,7 +148,7 @@ class LocalLustreAudit:
 
                 try:
                     device_file = glob.glob("/proc/fs/lustre/*/%s/mntdev" % name)[0]
-                    device = self.normalize_device(open(device_file).read())
+                    device = normalize_device(open(device_file).read())
                 except IndexError:
                     # Oops, the device file went away, probably we're 
                     # scanning something while it's being unmounted
@@ -163,7 +163,7 @@ class LocalLustreAudit:
                 for mount_device, mntpnt, fstype in self.mounts.all():
                     if mount_device == device:
                         mount_point = mntpnt
-                    elif self.normalize_device(mount_device) == device:
+                    elif normalize_device(mount_device) == device:
                         mount_point = mntpnt
 
                 if not mount_point:
@@ -184,7 +184,7 @@ class LocalLustreAudit:
             if not fstype == "lustre":
                 continue
 
-            device = self.normalize_device(device)
+            device = normalize_device(device)
             if os.path.exists(device):
                 device_info[device] = {"mount_point": mntpnt}
                 lustre_devices.add(device)
@@ -451,8 +451,6 @@ class LocalLustreAudit:
                     lnet_nids.append(tokens[0])
 
         return lnet_loaded, lnet_up, lnet_nids
-
-
 
     def audit_info(self):
         local_targets = self.get_local_targets()

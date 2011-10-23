@@ -16,6 +16,8 @@ import simplejson as json
 
 from lnet_scan import lnet_scan
 from device_scan import device_scan
+from update_scan import update_scan
+from detect_scan import detect_scan
 from targets import *
 from clear_targets import clear_targets
 

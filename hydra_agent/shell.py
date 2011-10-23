@@ -58,6 +58,8 @@ def run(arg_list, shell = False):
             if fd == master and mask & (select.POLLIN | select.POLLPRI):
                 import os
                 stdout = stdout_file.read(pipe_buf)
+                # FIXME: wtf?  I'm getting DOS newlines sometimes
+                stdout = stdout.replace("\r\n", "\n")
                 stdout_buf = stdout_buf + stdout
                 sys.stderr.write(stdout)
             elif fd == p.stderr.fileno() and mask & (select.POLLIN | select.POLLPRI):
@@ -74,6 +76,8 @@ def run(arg_list, shell = False):
             else:
                 raise RuntimeError("Unexpected select() result %s" % ((fd, mask),))
     rc = p.wait()
+
+
 
     return rc, stdout_buf, stderr_buf
 
