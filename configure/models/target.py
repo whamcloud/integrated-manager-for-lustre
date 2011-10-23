@@ -88,8 +88,6 @@ class ManagedTarget(StatefulObject):
             state = self.state
         
         deps = []
-        # TODO: ensure that active_mount is always set if 'mounted' by
-        # having the agent return the active mount from the 'start' command.
         if state == 'mounted' and self.active_mount:
             # Depend on the TargetMount which is currently active being 
             # in state 'configured' and its host being in state 'lnet_up'

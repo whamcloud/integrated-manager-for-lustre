@@ -291,9 +291,8 @@ class AnyTargetMountStep(Step):
             job_log.debug("command '%s' on target %s trying targetmount %s" % (command, target, tm))
             
             try:
-                self.invoke_agent(tm.host, command)
+                return self.invoke_agent(tm.host, command)
                 # Success!
-                return
             except Exception, e:
                 job_log.warning("Cannot run '%s' on %s." % (command, tm.host))
                 if tm == available_tms[-1]:
@@ -323,11 +322,15 @@ class MountStep(AnyTargetMountStep):
         return True
 
     def run(self, kwargs):
-        from configure.models import ManagedTarget
+        from configure.models import ManagedTarget, ManagedHost
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id)
 
-        self._run_agent_command(target, "start-target --label %s --serial %s" % (target.name, target.pk))
+        result = self._run_agent_command(target, "start-target --label %s --serial %s" % (target.name, target.pk))
+        started_on = ManagedHost.objects.get(address = result['location'])
+        target.active_mount = target.managedtargetmount_set.get(host = started_on)
+        target.save()
+
 
 class UnmountStep(AnyTargetMountStep):
     def is_idempotent(self):

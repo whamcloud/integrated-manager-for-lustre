@@ -21,7 +21,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # FIXME: either need to make address non-unique, or need to
     # associate objects with a child object, because there
     # can be multiple servers on one hostname, eg ddn10ke
-    address = models.CharField(max_length = 255, unique = True)
+    address = models.CharField(max_length = 255)
 
     # TODO: separate the LNET state [unloaded, down, up] from the host state [created, removed]
     states = ['lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
@@ -29,6 +29,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     class Meta:
         app_label = 'configure'
+        unique_together = ('address',)
 
     def __str__(self):
         return self.pretty_name()
