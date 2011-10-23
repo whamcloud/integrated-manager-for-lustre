@@ -146,6 +146,15 @@ class MeasuredEntity(object):
 #    def __str__(self):
 #        return "%s-client %d" % (self.filesystem.name, self.id)
 
+class DetectedNid(models.Model):
+    # This is a store of detected NIDs, outside of our LNet configuration.
+    # For hosts where we do not configure LNet, this store exists to 
+    # allow mapping of target mount locations by NID when auto-detecting
+    # existing filesystems.
+    host = models.ForeignKey('configure.ManagedHost')
+    nid_string = models.CharField(255)
+
+
 class Event(models.Model):
     __metaclass__ = DowncastMetaclass
 
@@ -184,7 +193,7 @@ class LearnEvent(Event):
         elif isinstance(self.learned_item, ManagedTarget):
             return "Discovered formatted target %s" % (self.learned_item)
         elif isinstance(self.learned_item, ManagedFilesystem):
-            return "Discovered filesystem %s on MGS %s" % (self.learned_item, self.learned_item.mgs.targetmount_set.get(primary = True).host)
+            return "Discovered filesystem %s on MGS %s" % (self.learned_item, self.learned_item.mgs.primary_server())
         else:
             return "Discovered %s" % self.learned_item
 
@@ -325,10 +334,11 @@ class AlertState(models.Model):
 
 class MountableOfflineAlert(AlertState):
     def message(self):
-        if isinstance(self.alert_item, TargetMount):
+        from configure.models import ManagedTargetMount
+        if isinstance(self.alert_item, ManagedTargetMount):
             return "Target offline"
-        elif isinstance(self.alert_item, Client):
-            return "Client offline"
+        #elif isinstance(self.alert_item, Client):
+        #    return "Client offline"
         else:
             raise NotImplementedError
 

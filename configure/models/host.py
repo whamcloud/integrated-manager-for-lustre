@@ -128,6 +128,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
         tm_states = set(targetmount_statuses.values())
 
+        from monitor.models import AlertState, HostContactAlert, LNetOfflineAlert
         alerts = AlertState.filter_by_item(self)
         alert_klasses = [a.__class__ for a in alerts]
         if HostContactAlert in alert_klasses:

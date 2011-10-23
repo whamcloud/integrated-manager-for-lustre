@@ -58,6 +58,7 @@ class ManagedTargetMount(StatefulObject, models.Model):
     def status_string(self):
         # Look for alerts that can affect this item:
         # statuses are STARTED STOPPED RECOVERY
+        from monitor.models import AlertState, TargetRecoveryAlert, MountableOfflineAlert, FailoverActiveAlert
         alerts = AlertState.filter_by_item(self)
         alert_klasses = [a.__class__ for a in alerts]
         if len(alerts) == 0:

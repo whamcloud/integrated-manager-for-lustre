@@ -89,10 +89,10 @@ class HydraDebug(cmd.Cmd, object):
         """volume_list [filesystem name]
         Show all volumes in filesystem, or all filesystem if no filesystem is given."""
         if filesystem_name:
-            filesystem = Filesystem.objects.get(name = filesystem_name)
+            filesystem = ManagedFilesystem.objects.get(name = filesystem_name)
             self.__list_volumes_filesystem(filesystem)
         else:
-            for filesystem in Filesystem.objects.all():
+            for filesystem in ManagedFilesystem.objects.all():
                 self.__list_volumes_filesystem(filesystem)
 
     def __list_clients_filesystem(self, filesystem):
@@ -110,10 +110,10 @@ class HydraDebug(cmd.Cmd, object):
         """client_list [filesystem]
         Display clients of filesystem, or all clients if no filesystem is given."""
         if filesystem_name:
-            filesystem = Filesystem.objects.get(name = filesystem_name)
+            filesystem = ManagedFilesystem.objects.get(name = filesystem_name)
             self.__list_clients_filesystem(filesystem)
         else:
-            for filesystem in Filesystem.objects.all():
+            for filesystem in ManagedFilesystem.objects.all():
                 self.__list_clients_filesystem(filesystem)
 
     def do_server_list(self, line):

@@ -10,6 +10,7 @@ setup_environ(settings)
 
 # Access to 'monitor' database
 from monitor.models import *
+from configure.models import *
 from django.db import transaction
 
 import re
@@ -75,11 +76,10 @@ class LustreAudit:
   
         return primary
 
-
     def nids_to_mgs(self, nid_strings):
-        """Return a ManagementTarget or raise ManagementTarget.DoesNotExist"""
+        """Return a ManagedMgs or raise ManagedMgs.DoesNotExist"""
         if set(nid_strings) == set(["0@lo"]) or len(nid_strings) == 0:
-            return ManagementTarget.objects.get(targetmount__host = self.host)
+            return ManagedMgs.objects.get(targetmount__host = self.host)
 
         from django.db.models import Count
         nids = Nid.objects.values('nid_string').filter(nid_string__in = nid_strings).annotate(Count('id'))
@@ -87,16 +87,16 @@ class LustreAudit:
 
         if len(unique_nids) == 0:
             audit_log.warning("nids_to_mgs: No unique NIDs among %s!" % nids)
-        hosts = list(Host.objects.filter(nid__nid_string__in = unique_nids).distinct())
+        hosts = list(ManagedHost.objects.filter(nid__nid_string__in = unique_nids).distinct())
         try:
-            mgs = ManagementTarget.objects.distinct().get(targetmount__host__in = hosts)
-        except ManagementTarget.MultipleObjectsReturned:
+            mgs = ManagedMgs.objects.distinct().get(targetmount__host__in = hosts)
+        except ManagedMgs.MultipleObjectsReturned:
             audit_log.error("Unhandled case: two MGSs have mounts on host(s) %s for nids %s" % (hosts, unique_nids))
             # TODO: detect and report the pathological case where someone has given
             # us two NIDs that refer to different hosts which both have a 
-            # targetmount for a ManagementTarget, but they're not the
-            # same ManagementTarget.
-            raise ManagementTarget.DoesNotExist
+            # targetmount for a ManagedMgs, but they're not the
+            # same ManagedMgs.
+            raise ManagedMgs.DoesNotExist
 
         return mgs
 
@@ -115,7 +115,7 @@ class LustreAudit:
 
     @transaction.commit_on_success
     def audit_complete(self, host_id, host_data):
-        host = Host.objects.get(pk = host_id)
+        host = ManagedHost.objects.get(pk = host_id)
         # Inside our audit update transaction, check that the host isn't
         # deleted to avoid raising alerts for a deleted host
         if not host.not_deleted:
@@ -169,22 +169,22 @@ class LustreAudit:
 
             # Loop over all mountables we expected on this host, whether they
             # were actually seen in the results or not.
-            for mountable in Mountable.objects.filter(host = self.host):
-                if not mountable in self.audited_mountables:
+            for target_mount in ManagedTargetMount.objects.filter(host = self.host):
+                if not target_mount in self.audited_mountables:
                     # We didn't find this mountable, it must be unmounted
                     mounted = False
                 else:
                     # We found this mountable and know its state
-                    mounted = self.audited_mountables[mountable]
+                    mounted = self.audited_mountables[target_mount]
 
                 # Update AlertStates
-                if isinstance(mountable, TargetMount) and not mountable.primary:
-                    FailoverActiveAlert.notify(mountable, mounted)
+                if isinstance(target_mount, ManagedTargetMount) and not target_mount.primary:
+                    FailoverActiveAlert.notify(target_mount, mounted)
                 else:
-                    MountableOfflineAlert.notify(mountable, not mounted)
+                    MountableOfflineAlert.notify(target_mount, not mounted)
 
                 # Update StatefulObjects
-                if StateManager and isinstance(mountable, StatefulObject):
+                if StateManager and isinstance(target_mount, StatefulObject):
                     state = {False: 'unmounted', True: 'mounted'}[mounted]
                     # TODO: notify StateManager of which targetmount is active
                     # for a given Target
@@ -196,8 +196,8 @@ class LustreAudit:
 
     def learn_mgs(self, mgs_local_info):
         try:
-            mgs = ManagementTarget.objects.get(targetmount__host = self.host)
-        except ManagementTarget.DoesNotExist:
+            mgs = ManagedMgs.objects.get(managedtargetmount__host = self.host)
+        except ManagedMgs.DoesNotExist:
             lunnode = self.get_lun_node_for_target(None, self.host, mgs_local_info['device'])
 
             try:
@@ -207,19 +207,19 @@ class LustreAudit:
                 return None
 
             try:
-                mgs = ManagementTarget.objects.distinct().get(targetmount__block_device__lun = lunnode.lun)
-            except ManagementTarget.DoesNotExist:
+                mgs = ManagedMgs.objects.distinct().get(targetmount__block_device__lun = lunnode.lun)
+            except ManagedMgs.DoesNotExist:
                 mgs = None
 
             if mgs == None:
-                # We didn't find an existing ManagementTarget referring to
+                # We didn't find an existing ManagedMgs referring to
                 # this LUN, create one
-                mgs = ManagementTarget(name = "MGS")
+                mgs = ManagedMgs(name = "MGS")
                 mgs.save()
                 audit_log.info("Learned MGS on %s" % self.host)
                 self.learn_event(mgs)
 
-            tm = TargetMount.objects.create(
+            tm = ManagedTargetMount.objects.create(
                     target = mgs,
                     host = self.host,
                     primary = primary,
@@ -252,7 +252,7 @@ class LustreAudit:
 
             try:
                 mgs = self.nids_to_mgs(tgt_mgs_nids)
-            except ManagementTarget.DoesNotExist:
+            except ManagedMgs.DoesNotExist:
                 audit_log.warning("Can't find MGS for target with nids %s" % tgt_mgs_nids)
                 continue
 
@@ -271,12 +271,12 @@ class LustreAudit:
             # currently MGS TargetMount is a special case elsewhere
             matched_target = None
             try:
-                targets = Target.objects.filter(name = local_info['name'])
+                targets = ManagedTargetMount.objects.filter(name = local_info['name'])
 
                 for target in targets:
                     if isinstance(target, FilesystemMember) and target.filesystem.mgs == mgs:
                         matched_target = target
-            except Target.DoesNotExist:
+            except ManagedTarget.DoesNotExist:
                 audit_log.warning("Target %s has mount point on %s but has not been detected on any MGS" % (name_val, self.host))
 
             if not matched_target:
@@ -285,7 +285,7 @@ class LustreAudit:
             try:
                 primary = self.is_primary(local_info)
                 lunnode = self.get_lun_node_for_target(target, self.host, local_info['device'])
-                (tm, created) = TargetMount.objects.get_or_create(target = matched_target,
+                (tm, created) = ManagedTargetMount.objects.get_or_create(target = matched_target,
                         host = self.host, primary = primary,
                         mount_point = local_info['mount_point'],
                         block_device = lunnode)
@@ -299,8 +299,8 @@ class LustreAudit:
         try:
             return LunNode.objects.get(path = path, host = host)
         except LunNode.DoesNotExist:
-            if target and target.targetmount_set.count() > 0:
-                lun = target.targetmount_set.all()[0].block_device.lun
+            if target and target.managedtargetmount_set.count() > 0:
+                lun = target.managedtargetmount_set.all()[0].block_device.lun
             else:
                 # TODO: get the size from somewhere
                 lun = Lun.objects.create(size = 0, shareable = False)
@@ -308,20 +308,20 @@ class LustreAudit:
 
     def get_or_create_target(self, mgs, name, device_node_path):
         if name.find("-MDT") != -1:
-            klass = MetadataTarget
+            klass = ManagedMdt
         elif name.find("-OST") != -1:
-            klass = ObjectStoreTarget
+            klass = ManagedOst
 
         fsname = re.search("([\w\-]+)-\w+", name).group(1)
         try:
-            filesystem = Filesystem.objects.get(name = fsname, mgs = mgs)
-        except Filesystem.DoesNotExist:
+            filesystem = ManagedFilesystem.objects.get(name = fsname, mgs = mgs)
+        except ManagedFilesystem.DoesNotExist:
             audit_log.warning("Encountered target (%s) for unknown filesystem %s on mgs %s" % (name, fsname, mgs.primary_server()))
             return None
 
         try:
             # Is it an already detected or configured target?
-            target_mount = TargetMount.objects.get(block_device__path = device_node_path, host = self.host)
+            target_mount = ManagedTargetMount.objects.get(block_device__path = device_node_path, host = self.host)
             target = target_mount.target
             if target.name == None:
                 target.name = name
@@ -329,9 +329,9 @@ class LustreAudit:
                 audit_log.info("Learned name for configured target %s" % (target))
 
             return target
-        except TargetMount.DoesNotExist:
+        except ManagedTargetMount.DoesNotExist:
             # We are detecting a target anew, or detecting a new mount for an already-named target
-            candidates = Target.objects.filter(name = name)
+            candidates = ManagedTarget.objects.filter(name = name)
             for target in candidates:
                 if isinstance(target, FilesystemMember) and target.filesystem.mgs.downcast() == mgs:
                     return target
@@ -352,11 +352,11 @@ class LustreAudit:
         for mount_info in self.host_data['local_targets']:
             if mount_info['kind'] == 'MGS':
                 try:
-                    target = ManagementTarget.get_by_host(self.host)
-                except ManagementTarget.DoesNotExist:
+                    target = ManagedMgs.get_by_host(self.host)
+                except ManagedMgs.DoesNotExist:
                     audit_log.error("No Managementtarget for host %s, but it reports an MGS target" % self.host)
                     continue
-                mountable = target.targetmount_set.get(
+                mountable = target.managedtargetmount_set.get(
                         host = self.host,
                         mount_point = mount_info['mount_point']).downcast()
 
@@ -366,25 +366,25 @@ class LustreAudit:
                     mgsnode_nids = normalize_nids(mount_info['params']['mgsnode'][0].split(","))
                     try:
                         mgs = self.nids_to_mgs(mgsnode_nids)
-                    except ManagementTarget.DoesNotExist:
+                    except ManagedMgs.DoesNotExist:
                         audit_log.warning("Cannot find MGS for target %s (nids %s) on host %s" % (mount_info['name'], mgsnode_nids, self.host.address))
                         continue
                 else:
                     # The MGS is local
                     try:
-                        mgs = ManagementTarget.objects.get(targetmount__host = self.host)
-                    except ManagementTarget.DoesNotExist:
+                        mgs = ManagedMgs.objects.get(targetmount__host = self.host)
+                    except ManagedMgs.DoesNotExist:
                         audit_log.error("Cannot find local MGS for target %s on %s which has no mgsnode param" % (mount_info['name'], self.host))
                         continue
 
                 mountable = None
-                for target_val in Target.objects.filter(name = mount_info['name']):
+                for target_val in ManagedTarget.objects.filter(name = mount_info['name']):
                     if not isinstance(target_val, FilesystemMember):
                         continue
 
                     if target_val.filesystem.mgs.downcast() == mgs.downcast():
                         try:
-                            mountable = target_val.targetmount_set.get(host = self.host,
+                            mountable = target_val.managedtargetmount_set.get(host = self.host,
                                             mount_point = mount_info['mount_point'])
                         except:
                             mountable = None
@@ -403,17 +403,12 @@ class LustreAudit:
             TargetParam.update_params(mountable.target, mount_info['params'])
 
         # If we got some corosync resource information, use it to update ManagedTarget
-        try:
-            from configure.models import ManagedTarget, ManagedHost, ManagedTargetMount
-            from configure.lib.state_manager import StateManager
-            configure_enable = True
-        except ImportError:
-            configure_enable = False
+        from configure.lib.state_manager import StateManager
 
         # TODO: get rid of confusing situation of having ManagedTarget.active_mount for configured systems, but relying on 
         # TargetMount Alerts for unconfigured systems (because they may well not have the corosync stuff we check here, and
         # even if they do, we can't expect that their resources are named the way we name them (HYD-231)
-        if configure_enable and self.host_data['resource_locations'] and ManagedTargetMount.objects.filter(host = self.host).count() > 0:
+        if self.host_data['resource_locations'] and ManagedTargetMount.objects.filter(host = self.host).count() > 0:
             # There are hydra-configured mounts on this host, and we got some corosync resource information
             for resource_name, node_name in self.host_data['resource_locations'].items():
                 try:
@@ -423,8 +418,8 @@ class LustreAudit:
                     except ValueError:
                         audit_log.warning("Malformed resource name '%s'" % resource_name)
                         continue
-                    target = Target.objects.get(name = target_name, pk = target_pk).downcast()
-                except Target.DoesNotExist:
+                    target = ManagedTarget.objects.get(name = target_name, pk = target_pk).downcast()
+                except ManagedTarget.DoesNotExist:
                     audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
                     continue
 
@@ -460,14 +455,14 @@ class LustreAudit:
                 nids = re.split("[:,]", client_info['nid'])
                 client_mgs_nids = set(normalize_nids(nids))
                 mgs = self.nids_to_mgs(client_mgs_nids)
-            except ManagementTarget.DoesNotExist:
+            except ManagedMgs.DoesNotExist:
                 audit_log.warning("Ignoring client mount for unknown mgs %s" % client_info['nid'])
                 continue
 
             # Find the filesystem
             try:
-                fs = Filesystem.objects.get(name = client_info['filesystem'], mgs = mgs)
-            except Filesystem.DoesNotExist:
+                fs = ManagedFilesystem.objects.get(name = client_info['filesystem'], mgs = mgs)
+            except ManagedFilesystem.DoesNotExist:
                 audit_log.warning("Ignoring client mount for unknown filesystem '%s' on %s" % (client_info['filesystem'], self.host))
                 continue
 
@@ -496,7 +491,7 @@ class LustreAudit:
 
         # Create Filesystem objects for all those in this MGS
         for fs_name, targets in self.host_data['mgs_targets'].items():
-            (fs, created) = Filesystem.objects.get_or_create(name = fs_name, mgs = mgs)
+            (fs, created) = ManagedFilesystem.objects.get_or_create(name = fs_name, mgs = mgs)
             if created:
                 audit_log.info("Learned filesystem '%s'" % fs_name)
                 self.learn_event(fs)
@@ -507,9 +502,9 @@ class LustreAudit:
             return
 
         try:
-            target = Target.objects.get(name=target_name,
+            target = ManagedTarget.objects.get(name=target_name,
                                         targetmount__host=self.host)
-        except Target.DoesNotExist:
+        except ManagedTarget.DoesNotExist:
             # Unknown target -- ignore metrics
             audit_log.warning("Discarding metrics for unknown target: %s" % target_name)
             return

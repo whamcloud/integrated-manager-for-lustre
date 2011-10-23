@@ -29,10 +29,11 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         return list(ManagedMdt.objects.filter(filesystem = self).all()) + osts
 
     def get_servers(self):
+        from collections import defaultdict
         targets = self.get_targets()
         servers = defaultdict(list)
         for t in targets:
-            for tm in t.targetmount_set.all():
+            for tm in t.managedtargetmount_set.all():
                 servers[tm.host].append(tm)
 
         # NB converting to dict because django templates don't place nice with defaultdict
@@ -43,7 +44,8 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         if target_statuses == None:
             target_statuses = dict([(t, t.status_string()) for t in self.get_targets()])
 
-        filesystem_targets_statuses = [v for k,v in target_statuses.items() if not k.__class__ == ManagementTarget]
+        from configure.models.target import ManagedMgs
+        filesystem_targets_statuses = [v for k,v in target_statuses.items() if not k.__class__ == ManagedMgs]
         all_statuses = target_statuses.values()
 
         good_status = set(["STARTED", "FAILOVER"])
@@ -62,7 +64,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         """Return a string which is foo in <foo>:/lustre for client mounts"""
         mgs = self.mgs
         nid_specs = []
-        for target_mount in mgs.targetmount_set.all():
+        for target_mount in mgs.managedtargetmount_set.all():
             host = target_mount.host
             nids = ",".join([n.nid_string for n in host.nid_set.all()])
             if nids == "":

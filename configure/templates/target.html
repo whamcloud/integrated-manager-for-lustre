@@ -24,7 +24,7 @@
 </table>
 
 <h3>Mount locations</h3>
-{% for target_mount in target.targetmount_set.all %}
+{% for target_mount in target.managedtargetmount_set.all %}
 <table class='properties'>
     <tr><th>Host: </th><td>{{target_mount.host}}</td></th>
     <tr><th>Primary: </th><td>{{target_mount.primary}}</td></th>

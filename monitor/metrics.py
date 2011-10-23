@@ -74,7 +74,7 @@ class R3dMetricStore(MetricStore):
         # FIXME HYD-366: this should be set at first insert.
         start_time = int(time.time()) - 1
         ct = ContentType.objects.get_for_model(measured_object)
-        self.r3d = Database.objects.create(name=measured_object.__str__(),
+        self.r3d = Database.objects.create(name="%s-%d" % (ct, measured_object.id),
                                            start=start_time,
                                            object_id=measured_object.id,
                                            content_type=ct,
@@ -399,14 +399,15 @@ def get_instance_metrics(measured_object):
     Convenience method which allows retrieval of the associated
     MetricStore wrapper for a given object.
 
-    Returns the wrapper for known object types, or None.
+    Returns the wrapper for known object types, or raises NotImplementedError.
     """
 
-    if hasattr(measured_object.downcast(), "host_ptr"):
+    from configure.models import ManagedHost, ManagedTarget, ManagedFilesystem
+    if isinstance(measured_object, ManagedHost):
         return HostMetricStore(measured_object, settings.AUDIT_PERIOD)
-    elif hasattr(measured_object.downcast(), "target_ptr"):
+    elif isinstance(measured_object, ManagedTarget):
         return TargetMetricStore(measured_object, settings.AUDIT_PERIOD)
-    elif hasattr(measured_object.downcast(), "filesystem_ptr"):
+    elif isinstance(measured_object, ManagedFilesystem):
         return FilesystemMetricStore(measured_object, settings.AUDIT_PERIOD)
     else:
-        return None
+        raise NotImplementedError
