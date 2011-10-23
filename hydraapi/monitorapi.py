@@ -481,7 +481,7 @@ class Dashboard:
             # 1 query to get all targets of a type
             for target in target_klass.objects.all():
                 # 1 query per target to get the targetmounts
-                target_mounts = target.targetmount_set.all()
+                target_mounts = target.managedtargetmount_set.all()
                 try:
                     target_mountable_statuses = dict(
                             [(m, self.all_statuses[m]) for m in target_mounts])
