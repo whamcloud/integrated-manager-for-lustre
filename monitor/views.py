@@ -9,6 +9,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponse, HttpResponseBadRequest
 
+from configure.models import *
 from monitor.models import *
 
 from settings import SYSLOG_PATH
@@ -29,7 +30,7 @@ class Dashboard:
     def __init__(self):
         self.all_statuses = {}
         # 1 query for getting all targetmoun
-        for mount in TargetMount.objects.all():
+        for mount in ManagedTargetMount.objects.all():
             # 1 query per targetmount to get any alerts
             self.all_statuses[mount] = mount.status_string()
 
@@ -37,11 +38,11 @@ class Dashboard:
         target_mounts_by_target = defaultdict(list)
         target_mounts_by_host = defaultdict(list)
         target_params_by_target = defaultdict(list)
-        for target_klass in ManagementTarget, MetadataTarget, ObjectStoreTarget:
+        for target_klass in ManagedMgs, ManagedMdt, ManagedOst:
             # 1 query to get all targets of a type
             for target in target_klass.objects.all():
                 # 1 query per target to get the targetmounts
-                target_mounts = target.targetmount_set.all()
+                target_mounts = target.managedtargetmount_set.all()
                 try:
                     target_mountable_statuses = dict(
                             [(m, self.all_statuses[m]) for m in target_mounts])
@@ -56,7 +57,7 @@ class Dashboard:
 
         self.filesystems = []
         # 1 query to get all filesystems
-        for filesystem in Filesystem.objects.all().order_by('name'):
+        for filesystem in ManagedFilesystem.objects.all().order_by('name'):
             # 3 queries to get targets (of each type)
             targets = filesystem.get_targets()
             try:
@@ -81,7 +82,7 @@ class Dashboard:
 
         self.hosts = []
         # 1 query to get all hosts
-        for host in Host.objects.all().order_by('address'):
+        for host in ManagedHost.objects.all().order_by('address'):
             host_tms = target_mounts_by_host[host.id]
             # 1 query to get alerts
             host_tm_statuses = dict([(tm, self.all_statuses[tm]) for tm in host_tms])
@@ -166,7 +167,7 @@ def events(request):
     from django import forms
     class EventFilterForm(forms.Form):
         from logging import INFO, WARNING, ERROR
-        host = forms.ModelChoiceField(queryset = Host.objects.all(), empty_label = "Any", required = False)
+        host = forms.ModelChoiceField(queryset = ManagedHost.objects.all(), empty_label = "Any", required = False)
         severity = forms.ChoiceField((("", "Any"), (INFO, 'info'), (WARNING, 'warning'), (ERROR, 'error')), required = False)
         event_type = forms.ChoiceField(type_choices(), required = False)
 
@@ -226,7 +227,7 @@ def host(request):
     if commit:
         from django.db.utils import IntegrityError
         try:
-            Host.create_from_string(address)
+            ManagedHost.create_from_string(address)
         except IntegrityError,e:
             raise RuntimeError("Cannot add '%s', possible duplicate address. (%s)" % (address, e))
 
