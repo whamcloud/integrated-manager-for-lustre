@@ -286,7 +286,7 @@ class LocalLustreAudit:
     def get_mgs_targets(self, local_targets):
         """If there is an MGS in local_targets, use debugfs to 
            get a list of targets.  Return a dict of filesystem->(list of targets)"""
-        TARGET_NAME_REGEX = "(\w+)-(MDT|OST)\w+"
+        TARGET_NAME_REGEX = "([\w-]+)-(MDT|OST)\w+"
         mgs_target = None
         for t in local_targets:
             if t["kind"] == "MGS":
@@ -310,14 +310,13 @@ class LocalLustreAudit:
             if size == 0:
                 continue
 
-            match = re.search("(\w+)-client", name)
+            match = re.search("([\w-]+)-client", name)
             if match != None:
                 filesystems.append(match.group(1).__str__())
 
             match = re.search(TARGET_NAME_REGEX, name)
             if match != None:
                 targets.append(match.group(0).__str__())
-
 
         def read_log(conf_param_type, conf_param_name, log_name):
             # NB: would use NamedTemporaryFile if we didn't support python 2.4
@@ -345,8 +344,8 @@ class LocalLustreAudit:
                     (code,action) = re.search("^\\((\d+)\\)([\w=]+)$", tokens[1]).groups()
                     if conf_param_type == 'filesystem' and action == 'setup':
                         # e.g. entry="#09 (144)setup     0:flintfs-MDT0000-mdc  1:flintfs-MDT0000_UUID  2:192.168.122.105@tcp"
-                        volume = re.search("0:(\w+-\w+)-\w+", tokens[2]).group(1)
-                        fs_name = volume.split("-")[0]
+                        volume = re.search("0:([\w-]+)-\w+", tokens[2]).group(1)
+                        fs_name = re.search("([\w\-]+)-\w+", volume).group(1)
                         uuid = re.search("1:(.*)", tokens[3]).group(1)
                         nid = re.search("2:(.*)", tokens[4]).group(1)
 
@@ -401,6 +400,9 @@ class LocalLustreAudit:
             mgs_targets[fs] = []
             read_log("filesystem", fs, "%s-client" % fs)
             read_log("filesystem", fs, "%s-param" % fs)
+            # Don't bother reporting on a FS entry with no targets
+            if len(mgs_targets[fs]) == 0:
+                del mgs_targets[fs]
 
         # Read config logs "testfs-MDT0000" etc
         for target in targets:

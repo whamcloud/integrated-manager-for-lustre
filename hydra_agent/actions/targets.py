@@ -119,7 +119,11 @@ def unconfigure_ha(args):
     _unconfigure_ha(args.primary, args.label, args.serial)
 
 def _unconfigure_ha(primary, label, serial):
-    unique_label = "%s_%s" % (label, serial)
+    if serial:
+        unique_label = "%s_%s" % (label, serial)
+    else:
+        unique_label = label
+
     if primary:
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-primary\">'" % unique_label)
         rc, stdout, stderr = cibadmin("-D -X '<primitive id=\"%s\">'" % unique_label)
