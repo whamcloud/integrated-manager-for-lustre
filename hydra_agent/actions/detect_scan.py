@@ -184,6 +184,9 @@ def get_mgs_targets(local_targets):
         mgs_targets[fs] = []
         read_log("filesystem", fs, "%s-client" % fs)
         read_log("filesystem", fs, "%s-param" % fs)
+        # Don't bother reporting on a FS entry with no targets
+        if len(mgs_targets[fs]) == 0:
+            del mgs_targets[fs]
 
     # Read config logs "testfs-MDT0000" etc
     for target in targets:
