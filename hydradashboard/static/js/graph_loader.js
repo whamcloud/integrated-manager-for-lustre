@@ -167,7 +167,15 @@ var chartConfig_LineBar_CPUMemoryUsage = {
 	    }],
 	    legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
 	    credits:{ enabled:false },
-	    plotOptions:{series:{marker: {enabled: false}} },
+      plotOptions:{
+        series:{marker: {enabled: false}},
+        column:{
+          pointPadding: 0.0,
+          shadow: false,
+          groupPadding: 0.0,
+          borderWidth: 0.0
+        }
+      },
 	    series: [{
 	        type: 'column',
 	        data: [],
