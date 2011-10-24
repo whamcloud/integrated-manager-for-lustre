@@ -21,56 +21,20 @@ from monitor.lib.util import sizeof_fmt
 
 class ListFileSystems(AnonymousRequestHandler):
     def run(self,request):
-        no_of_ost=0
-        no_of_oss=0
-        oss_name=''
-        mgs_name=''
-        mgs_status=''
-        mgt_name=''
-        mgt_status=''
-        mgt_block_device=''
-        mgt_mount_point=''
-              
-        mds_name=''   
-        mds_status=''
-        mdt_name=''
-        mdt_status=''  
-        mdt_block_device=''
-        mdt_mount_point=''
+        filesystems = []
+        for filesystem in ManagedFilesystem.objects.all():
+            osts = ManagedOst.objects.filter(filesystem = filesystem)
+            no_of_ost = osts.count()
+            no_of_oss = len(set([tm.host for tm in ManagedTargetMount.objects.filter(target__in = osts)]))
+            no_of_oss = ManagedHost.objects.filter(managedtargetmount__target__in = osts).distinct().count()
 
-        all_fs = []
-        dashboard_data = Dashboard()
-        for fs in dashboard_data.filesystems:
-            for fstarget in fs.targets:
-                if fstarget.item.role() == 'MGS':
-                    for fstarget_mount in fstarget.target_mounts:
-                        mgs_name = fstarget_mount.item.host.pretty_name()
-                        mgs_status = fstarget.status()
-                        mgt_name = fstarget.item.name
-                        mgt_block_device = str(fstarget_mount.item.block_device)
-                        mgt_mount_point = str(fstarget_mount.item.mount_point)
-                if fstarget.item.role() == 'MDT':
-                    for fstarget_mount in fstarget.target_mounts:
-                        mds_name = fstarget_mount.item.host.pretty_name()
-                        mds_status= fstarget_mount.status()
-                        mdt_name = fstarget.item.name
-                        mdt_status = fstarget.status()
-                        mdt_block_device = str(fstarget_mount.item.block_device)
-                        mdt_mount_point = str(fstarget_mount.item.mount_point)
-                if fstarget.item.role() == 'OST':
-                    for fstarget_mount in fstarget.target_mounts:
-                        if oss_name != fstarget_mount.item.host.pretty_name():
-                            no_of_oss = no_of_oss + 1
-                        no_of_ost = no_of_ost + 1
-                        oss_name = fstarget_mount.item.host.pretty_name()
+            fskbytesfree  = 0
+            fskbytestotal = 0
+            fsfilesfree  = 0
+            fsfilestotal = 0
             try:
-                fskbytesfree  = 0
-                fskbytestotal = 0
-                fsfilesfree  = 0
-                fsfilestotal = 0
-                filesystem = ManagedFilesystem.objects.get(name=fs.item.name) 
-                inodedata = filesystem.metrics.fetch_last(ManagedMdt,fetch_metrics="filesfree filestotal".split())
-                diskdata = filesystem.metrics.fetch_last(ManagedOst,fetch_metrics="kbytesfree kbytestotal".split())
+                inodedata = filesystem.metrics.fetch_last(ManagedMdt,fetch_metrics=["filesfree", "filestotal"])
+                diskdata = filesystem.metrics.fetch_last(ManagedOst,fetch_metrics=["kbytesfree", "kbytestotal"])
                 if diskdata:
                     fskbytesfree  = diskdata[1]['kbytesfree']
                     fskbytestotal = diskdata[1]['kbytestotal']  
@@ -79,34 +43,15 @@ class ListFileSystems(AnonymousRequestHandler):
                     fsfilestotal = inodedata[1]['filestotal']
             except:
                 pass 
-            all_fs.append(
-                          {   
-                           'fsname': fs.item.name,
-                           'mgsname': mgs_name,
-                           'mgsstatus':mgs_status,
-                           'mgtname': mgt_name,
-                           'mgtstatus' :mgt_status,
-                           'mgtblockdevice': mgt_block_device,
-                           'mgtmountpoint': mgt_mount_point ,          
-                           'mdsname':mds_name ,
-                           'mdsstatus':mds_status, 
-                           'mdtname':mdt_name,
-                           'mdtstatus':mdt_status,    
-                           'mdtblockdevice':mdt_block_device,
-                           'mdt_mount_point':mdt_mount_point, 
+
+            filesystems.append({'fsname': filesystem.name,
                            'noofoss':no_of_oss,
                            'noofost':no_of_ost,
+                           # FIXME: the API should not be formatting these, leave it to the presentation layer
                            'kbytesused': sizeof_fmt((fskbytestotal * 1024)),
-                           'kbytesfree': sizeof_fmt((fskbytesfree *1024)) ,
-                           'mdtfilesfree': fsfilesfree,
-                           'mdtfileused': fsfilestotal,    
-                           'status' : fs.status()
-                          } 
-                         )
-            no_of_ost=0
-            no_of_oss=0
-            oss_name=''
-        return all_fs
+                           'kbytesfree': sizeof_fmt((fskbytesfree *1024))})
+
+        return filesystems
 
 class GetFileSystem(AnonymousRequestHandler):
     @extract_request_args('filesystem')
@@ -331,7 +276,7 @@ class GetServers (AnonymousRequestHandler):
                      'host_address' : host.address,
                      'failnode':'',
                      'kind' : host.role() ,
-                     'lnet_status' : str(host.managedhost.state),
+                     'lnet_status' : str(host.state),
                      'status':host.status_string()
                     }
                     for host in fs.get_servers()
@@ -343,7 +288,7 @@ class GetServers (AnonymousRequestHandler):
                      'host_address' : host.address,
                      'failnode':'',
                      'kind' : host.role() ,
-                     'lnet_status': str(host.managedhost.state),
+                     'lnet_status': str(host.state),
                      'status':host.status_string()  
                     }
                     for host in ManagedHost.objects.all()

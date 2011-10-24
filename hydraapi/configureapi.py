@@ -250,7 +250,7 @@ class GetLuns(AnonymousRequestHandler):
     def run(cls,request, category):
         assert category in ['unused', 'usable']
 
-        from monitor.models import Lun, LunNode
+        from configure.models import Lun, LunNode
         from monitor.lib.util import sizeof_fmt
         devices = []
         if category == 'unused':
@@ -286,13 +286,11 @@ class CreateFilesystem(AnonymousRequestHandler):
 class CreateMGS(AnonymousRequestHandler):
     @extract_request_args('hostid','nodeid','failoverid')
     def run(self,request,hostid,nodeid,failoverid):
-        from monitor.models import Host
-        from monitor.models import LunNode
-        from configure.models import ManagedMgs 
+        from configure.models import ManagedMgs, Host, LunNode
         from django.db import transaction
         #host = Host.objects.get(id=hostid) 
         node = LunNode.objects.get(id=nodeid)
-        failover_host = Host.objects.get(id=failoverid)
+        failover_host = ManagedHost.objects.get(id=failoverid)
         target = ManagedMgs(name='MGS')
         target.save()
         mounts = self._create_target_mounts(node,target,failover_host)
@@ -333,14 +331,12 @@ class CreateMGS(AnonymousRequestHandler):
 class CreateOSS(AnonymousRequestHandler):
     @extract_request_args('hostid','nodeid','failoverid','filesystemid')
     def run(self,request,hostid,nodeid,failoverid,filesystemid):
-        from monitor.models import Host
-        from monitor.models import LunNode
-        from configure.models import ManagedOst
+        from configure.models import ManagedOst, ManagedHost, LunNode
         from django.db import transaction
         #host = Host.objects.get(id=hostid)
         filesystem = ManagedFilesystem.objects.get(id=filesystemid)
         node = LunNode.objects.get(id=nodeid)
-        failover_host = Host.objects.get(id=failoverid)
+        failover_host = ManagedHost.objects.get(id=failoverid)
         target = ManagedOst(filesystem = filesystem)
         target.save()
         mounts = self._create_target_mounts(node,target,failover_host)
@@ -382,14 +378,12 @@ class CreateOSS(AnonymousRequestHandler):
 class CreateMDS(AnonymousRequestHandler):
     @extract_request_args('hostid','nodeid','failoverid','filesystemid')
     def run(self,request,hostid,nodeid,failoverid,filesystemid):
-        from monitor.models import Host
-        from monitor.models import LunNode
-        from configure.models import ManagedMdt
+        from configure.models import ManagedMdt, ManagedHost, LunNode
         from django.db import transaction
         #host = Host.objects.get(id=hostid)
         filesystem = ManagedFilesystem.objects.get(id=filesystemid)
         node = LunNode.objects.get(id=nodeid)
-        failover_host = Host.objects.get(id=failoverid)
+        failover_host = ManagedHost.objects.get(id=failoverid)
         target = ManagedMdt(filesystem = filesystem)
         target.save()
         mounts = self._create_target_mounts(node,target,failover_host)
@@ -420,6 +414,9 @@ class CreateMDS(AnonymousRequestHandler):
 
     def _set_target_states(self,targets, mounts):
         from configure.lib.state_manager import StateManager
+        # FIXME: this is broken, you have miscopied the original from configure.views.
+        # You don't have to tell the backend how to get between states, just tell it
+        # what the eventual state should be.
         for target in targets:
             StateManager.set_state(target, 'mounted')
         for target in targets:

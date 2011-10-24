@@ -12,7 +12,7 @@ import settings
 setup_environ(settings)
 
 from jsonutils import make_json_call
-from monitor.models import(Filesystem,ObjectStoreTarget)
+from configure.models import ManagedFilesystem,ManagedOst,ManagedMdt
 def main(args):
     option_parser = optparse.OptionParser(
         '%prog [OPTIONS]\nRetrieves chart data of Lustre volumes for a filesystem  from Hydra server .\nExample: testgraphapi.py --filesystem punefs --hostname clo-pune-lon01 --targetname=hulkfs01-MDT0000 --starttime 29-20-2011 09:30:45  --endtime  29-20-2011 09:31:45  --interval NA  --datafunction average')
@@ -76,7 +76,7 @@ def main(args):
     print result
     print '\n\n'
 
-    print 'Unit Test 3: File system Read vs Write Chart data for all ObjectStoreTarget:'
+    print 'Unit Test 3: File system Read vs Write Chart data for all ManagedOst:'
     api_url = base_url + '/api/get_fs_stats_for_targets/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
@@ -166,10 +166,10 @@ def main(args):
 
     print 'Unit Test 9: ObjectStoreTarget Read Vs Writes:'
     if options.filesystem_name:
-        filesystem = Filesystem.objects.get(name=options.filesystem_name)
+        filesystem = ManagedFilesystem.objects.get(name=options.filesystem_name)
     else:
-        filesystem = Filesystem.objects.get(id=1)
-    fs_osts = ObjectStoreTarget.objects.filter(filesystem=filesystem)
+        filesystem = ManagedFilesystem.objects.get(id=1)
+    fs_osts = ManagedOst.objects.filter(filesystem=filesystem)
     for ost in fs_osts:
         api_url = base_url + '/api/get_stats_for_targets/'
         print '\napi_url: %s' % api_url

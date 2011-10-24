@@ -154,7 +154,8 @@ class Lun(models.Model):
     def get_unused_luns(cls):
         """Get all Luns which are not used by Targets"""
         from django.db.models import Q
-        used_lun_ids = [i['block_device__lun'] for i in TargetMount.objects.all().values('block_device__lun')]
+        from configure.models import ManagedTargetMount
+        used_lun_ids = [i['block_device__lun'] for i in ManagedTargetMount.objects.all().values('block_device__lun')]
         return Lun.objects.filter(~Q(pk__in = used_lun_ids))
 
     @classmethod
