@@ -4,16 +4,94 @@
 # ==============================
 
 from django.db import models
-from monitor import models as monitor_models
 from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll
 from configure.models.jobs import StatefulObject, Job
+from monitor.models import DeletableDowncastableMetaclass
 
-class ManagedTargetMount(monitor_models.TargetMount, StatefulObject):
+class ManagedTargetMount(StatefulObject, models.Model):
+    """Associate a particular Lustre target with a device node on a host"""
+    __metaclass__ = DeletableDowncastableMetaclass
+
+    # FIXME: both LunNode and TargetMount refer to the host
+    host = models.ForeignKey('ManagedHost')
+    mount_point = models.CharField(max_length = 512, null = True, blank = True)
+    block_device = models.ForeignKey('LunNode')
+    primary = models.BooleanField()
+    target = models.ForeignKey('ManagedTarget')
+
     # unconfigured: I only exist in theory in the database
     # mounted: I am in fstab on the host and mounted
     # unmounted: I am in fstab on the host and unmounted
     states = ['unconfigured', 'configured', 'removed']
     initial_state = 'unconfigured'
+
+    def save(self, force_insert = False, force_update = False, using = None):
+        # If primary is true, then target must be unique
+        if self.primary:
+            from django.db.models import Q
+            other_primaries = TargetMount.objects.filter(~Q(id = self.id), target = self.target, primary = True)
+            if other_primaries.count() > 0:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("Cannot have multiple primary mounts for target %s" % self.target)
+
+        # If this is an MGS, there may not be another MGS on 
+        # this host
+        try:
+            from django.db.models import Q
+            mgs = self.target.managedmgs
+            other_mgs_mountables_local = TargetMount.objects.filter(~Q(target__managementtarget = None), ~Q(id = self.id), host = self.host).count()
+            if other_mgs_mountables_local > 0:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("Cannot have multiple MGS mounts on host %s" % self.host.address)
+
+        except ManagedMgs.DoesNotExist:
+            pass
+
+        return super(TargetMount, self).save(force_insert, force_update, using)
+
+    def __str__(self):
+        return "%s" % (self.target.downcast())
+
+    def device(self):
+        return self.block_device.path
+
+    def status_string(self):
+        # Look for alerts that can affect this item:
+        # statuses are STARTED STOPPED RECOVERY
+        alerts = AlertState.filter_by_item(self)
+        alert_klasses = [a.__class__ for a in alerts]
+        if len(alerts) == 0:
+            if self.primary:
+                return "STARTED"
+            else:
+                return "SPARE"
+        if TargetRecoveryAlert in alert_klasses:
+            return "RECOVERY"
+        if MountableOfflineAlert in alert_klasses:
+            return "STOPPED"
+        if FailoverActiveAlert in alert_klasses:
+            return "FAILOVER"
+        raise NotImplementedError("Unhandled target alert %s" % alert_klasses)
+
+    def pretty_block_device(self):
+        # Truncate to iSCSI iqn if possible
+        parts = self.block_device.path.split("-iscsi-")
+        if len(parts) == 2:
+            return parts[1]
+        
+        # Strip /dev/mapper if possible
+        parts = self.block_device.path.split("/dev/mapper/")
+        if len(parts) == 2:
+            return parts[1]
+
+        # Strip /dev if possible
+        parts = self.block_device.path.split("/dev/")
+        if len(parts) == 2:
+            return parts[1]
+
+        # Fall through, do nothing
+        return self.block_device
+
 
     class Meta:
         app_label = 'configure'
@@ -82,7 +160,7 @@ class RemoveTargetMountJob(Job, StateChangeJob):
     def get_deps(self):
         deps = []
         if self.target_mount.primary:
-            for tm in self.target_mount.target.targetmount_set.filter(primary = False):
+            for tm in self.target_mount.target.managedtargetmount_set.filter(primary = False):
                 deps.append(DependOn(tm.downcast(), 'removed'))
         return DependAll(deps)
 
@@ -125,7 +203,7 @@ class ConfigureTargetMountJob(Job, StateChangeJob):
         deps = []
         deps.append(DependOn(self.target_mount.target.downcast(), preferred_state = 'unmounted', acceptable_states = ['unmounted', 'mounted']))
         if not self.target_mount.primary:
-            deps.append(DependOn(self.target_mount.target.targetmount_set.get(primary=True).downcast(), 'configured'))
+            deps.append(DependOn(self.target_mount.target.managedtargetmount_set.get(primary=True).downcast(), 'configured'))
         return DependAll(deps)
 
 

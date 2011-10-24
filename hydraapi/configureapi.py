@@ -11,7 +11,6 @@ setup_environ(settings)
 
 from configure.models import (ManagedFilesystem,
                               ManagedHost)
-from monitor.models import SshMonitor
 from configure.lib.state_manager import (StateManager)
 from requesthandler import (AnonymousRequestHandler,
                             extract_request_args)
@@ -87,19 +86,18 @@ class TestHost(AnonymousRequestHandler):
     @extract_request_args('hostname')
     def run(self,request,hostname):
         from monitor.tasks import test_host_contact
+        from configure.models import SshMonitor
         host, ssh_monitor = SshMonitor.from_string(hostname)
-        return test_host_contact(host,ssh_monitor)
+        job = test_host_contact.delay(host, ssh_monitor)
+        return {'task_id': job.task_id}
 
 
 class AddHost(AnonymousRequestHandler):
     @extract_request_args('hostname')
     def run(self,request,hostname):
-        host, ssh_monitor =SshMonitor.from_string(hostname)
-        host.save()
-        ssh_monitor.host = host
-        ssh_monitor.save
+        host = ManagedHost.create_from_string(hostname)
         return {
-                'host':hostname,
+                'host': hostname,
                 'status': 'added'
                }
 

@@ -11,10 +11,10 @@ setup_environ(settings)
 
 from requesthandler import (AnonymousRequestHandler,
                             extract_request_args)
-from monitor.models import (Filesystem,
-                            MetadataTarget,
-                            ObjectStoreTarget,
-                            Host)
+from configure.models import (ManagedFilesystem,
+                            ManagedMdt,
+                            ManagedOst,
+                            ManagedHost)
 #Fix Me:
 #Note that these integer-based queries will go away soon. 
 #Planning to land changes to the metrics API which allow datetime objects to be used instead of requiring integers
@@ -26,11 +26,11 @@ class GetFSTargetStats(AnonymousRequestHandler):
         assert targetkind in ['OST', 'MDT']
         interval='' 
         if filesystem:
-            fs = Filesystem.objects.get(name=filesystem)
+            fs = ManagedFilesystem.objects.get(name=filesystem)
             return self.metrics_fetch(fs,targetkind,fetchmetrics,starttime,endtime,interval)
         else:
             all_fs_stats = []
-            for fs in Filesystem.objects.all():
+            for fs in ManagedFilesystem.objects.all():
                 all_fs_stats.extend(self.metrics_fetch(fs,targetkind,fetchmetrics,starttime,endtime,interval))
             return all_fs_stats
 
@@ -40,27 +40,27 @@ class GetFSTargetStats(AnonymousRequestHandler):
                 start_time = int(start_time)
                 start_time = getstartdate(start_time)
                 if fetch_metrics:
-                    fs_target_stats = fs.metrics.fetch(datafunction,ObjectStoreTarget,fetch_metrics=fetch_metrics.split(),start_time=start_time)
+                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedOst,fetch_metrics=fetch_metrics.split(),start_time=start_time)
                 else:
-                    fs_target_stats = fs.metrics.fetch(datafunction,ObjectStoreTarget,start_time=start_time)
+                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedOst,start_time=start_time)
             else:
                 if fetch_metrics:
-                    fs_target_stats = fs.metrics.fetch_last(ObjectStoreTarget,fetch_metrics=fetch_metrics.split())
+                    fs_target_stats = fs.metrics.fetch_last(ManagedOst,fetch_metrics=fetch_metrics.split())
                 else:
-                    fs_target_stats = fs.metrics.fetch_last(ObjectStoreTarget)
+                    fs_target_stats = fs.metrics.fetch_last(ManagedOst)
         elif target_kind == 'MDT':
             if start_time:
                 start_time = int(start_time)
                 start_time = getstartdate(start_time)
                 if fetch_metrics:
-                    fs_target_stats = fs.metrics.fetch(datafunction,MetadataTarget,fetch_metrics=fetch_metrics.split(),start_time=start_time)
+                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedMdt,fetch_metrics=fetch_metrics.split(),start_time=start_time)
                 else:
-                    fs_target_stats = fs.metrics.fetch(datafunction,MetadataTarget,start_time=start_time)
+                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedMdt,start_time=start_time)
             else:
                 if fetch_metrics:
-                    fs_target_stats = fs.metrics.fetch_last(MetadataTarget,fetch_metrics=fetch_metrics.split())
+                    fs_target_stats = fs.metrics.fetch_last(ManagedMdt,fetch_metrics=fetch_metrics.split())
                 else:
-                    fs_target_stats = fs.metrics.fetch_last(MetadataTarget)   
+                    fs_target_stats = fs.metrics.fetch_last(ManagedMdt)   
         chart_stats = []
         if fs_target_stats:
             if start_time:  
@@ -80,13 +80,13 @@ class GetFSServerStats(AnonymousRequestHandler):
         interval =''
         if filesystem:
             host_stats_metric = []
-            fs = Filesystem.objects.get(name=filesystem)
+            fs = ManagedFilesystem.objects.get(name=filesystem)
             hosts = fs.get_servers()
             for host in hosts:
                 host_stats_metric.extend(self.metrics_fetch(host,fetchmetrics,starttime,endtime,interval))
             return host_stats_metric
         else:
-            for fs in Filesystem.objects.all():
+            for fs in ManagedFilesystem.objects.all():
                 hosts = fs.get_servers()
                 host_stats_metric = []  
                 for host in hosts:
@@ -125,13 +125,13 @@ class GetFSMGSStats(AnonymousRequestHandler):
         interval =''
         if filesystem:
             mgs_stats_metric = []
-            fs = Filesystem.objects.get(name=filesystem)
+            fs = ManagedFilesystem.objects.get(name=filesystem)
             mgs = fs.mgs
             mgs_stats_metric.append(self.metrics_fetch(mgs,fetchmetrics,starttime,endtime,interval))
             return mgs_stats_metric
         else:
             all_mgs_stats_metric = []
-            for fs in Filesystem.objects.all():
+            for fs in ManagedFilesystem.objects.all():
                 mgs = fs.mgs
                 all_mgs_stats_metric.extend(self.metrics_fetch(mgs,fetchmetrics,starttime,endtime,interval))
             return all_mgs_stats_metric
@@ -167,7 +167,7 @@ class GetServerStats(AnonymousRequestHandler):
     def run(self,request,hostid,starttime,endtime ,datafunction,fetchmetrics):
         interval =''
         if hostid:
-            host = Host.objects.get(id=hostid)
+            host = ManagedHost.objects.get(id=hostid)
             return self.metrics_fetch(host,fetchmetrics,starttime,endtime,interval)
         else:
             raise Exception("Unable to find host with hostid=%s" %hostid)
@@ -204,10 +204,10 @@ class GetTargetStats(AnonymousRequestHandler):
         assert targetkind in ['OST', 'MDT']
         interval=''
         if targetkind == 'OST':
-            target = ObjectStoreTarget.objects.get(name=target)
+            target = ManagedOst.objects.get(name=target)
             return self.metrics_fetch(target,fetchmetrics,starttime,endtime,interval)
         elif targetkind == 'MDT':
-            target = MetadataTarget.objects.get(name=target)
+            target = ManagedMdt.objects.get(name=target)
             return self.metrics_fetch(target,fetchmetrics,starttime,endtime,interval)
 
     def metrics_fetch(self,target,fetch_metrics,start_time,end_time,interval,datafunction='Average'):
@@ -243,10 +243,10 @@ class GetFSClientsStats(AnonymousRequestHandler):
         interval=''
         client_stats = []
         if filesystem:
-            fs = Filesystem.objects.get(name=filesystem)    
+            fs = ManagedFilesystem.objects.get(name=filesystem)    
             return self.metrics_fetch(fs,starttime,endtime,interval) 
         else:
-            for fs in Filesystem.objects.all():
+            for fs in ManagedFilesystem.objects.all():
                 client_stats.extend(self.metrics_fetch(fs,starttime,endtime,interval)) 
             return client_stats
 
@@ -256,10 +256,10 @@ class GetFSClientsStats(AnonymousRequestHandler):
         if start_time:
             start_time = int(start_time)
             start_time = getstartdate(start_time)  
-            client_stats = filesystem.metrics.fetch(datafunction,ObjectStoreTarget,fetch_metrics=fetch_metrics.split(),start_time=start_time)
+            client_stats = filesystem.metrics.fetch(datafunction,ManagedOst,fetch_metrics=fetch_metrics.split(),start_time=start_time)
         else:
             try:
-                client_stats = filesystem.metrics.fetch_last(ObjectStoreTarget,fetch_metrics=fetch_metrics.split())
+                client_stats = filesystem.metrics.fetch_last(ManagedOst,fetch_metrics=fetch_metrics.split())
             except:
                 pass
         chart_stats = [] 

@@ -192,7 +192,7 @@ class ResourceManager(object):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         from configure.lib.storage_plugin.query import ResourceQuery
         from configure.lib.storage_plugin import base_resources
-        from monitor.models import Lun, LunNode, Host
+        from configure.models import Lun, LunNode, ManagedHost
         def lun_get_or_create(resource_id):
             try:
                 return Lun.objects.get(storage_resource_id = resource_id)
@@ -221,7 +221,7 @@ class ResourceManager(object):
         node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'PartitionDeviceNode')[1])
         node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'MultipathDeviceNode')[1])
         node_resources = ResourceQuery().get_class_resources(node_types, storage_id_scope = scannable_id)
-        host = Host.objects.get(pk = scannable_resource.host_id)
+        host = ManagedHost.objects.get(pk = scannable_resource.host_id)
         touched_luns = set()
         touched_lun_nodes = set()
         for record in node_resources:
@@ -295,8 +295,8 @@ class ResourceManager(object):
         for lun_node in LunNode.objects.filter(host = host):
             if not lun_node.pk in touched_lun_nodes:
                 lun = lun_node.lun
-                from monitor.models import TargetMount
-                if TargetMount.objects.filter(block_device = lun_node).count() == 0:
+                from configure.models import ManagedTargetMount
+                if ManagedTargetMount.objects.filter(block_device = lun_node).count() == 0:
                     log.info("Removing LunNode %s" % lun_node)
                     lun_node.delete()
                     if lun.lunnode_set.count() == 0:

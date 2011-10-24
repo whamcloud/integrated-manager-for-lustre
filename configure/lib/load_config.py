@@ -4,7 +4,6 @@
 # ==============================
 
 from configure.models import *
-from monitor.models import Lun, LunNode
 
 def _validate_conf_params(conf_params):
     from configure.lib.conf_param import all_params
@@ -94,7 +93,7 @@ def _load(text):
 
         # Look for the MGS that the user specified by hostname
         fs_mgs_host = ManagedHost.objects.get(address = filesystem_info['mgs'])
-        mgs = ManagedMgs.objects.get(targetmount__host = fs_mgs_host)
+        mgs = ManagedMgs.objects.get(managedtargetmount__host = fs_mgs_host)
         filesystem, created = ManagedFilesystem.objects.get_or_create(
                 name = filesystem_info['name'], mgs = mgs)
 

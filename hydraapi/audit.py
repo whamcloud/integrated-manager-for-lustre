@@ -12,7 +12,7 @@ import settings
 setup_environ(settings)
 
 from requesthandler import (AnonymousRequestHandler)
-from monitor.models import Monitor
+from configure.models import Monitor
 
 #REST API Controler for Hydra audit related operations/actions
 class HydraAudit(AnonymousRequestHandler):

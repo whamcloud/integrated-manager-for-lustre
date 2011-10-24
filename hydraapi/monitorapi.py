@@ -11,13 +11,12 @@ setup_environ(settings)
 
 from requesthandler import (AnonymousRequestHandler,
                             extract_request_args)
-from monitor.models import (Filesystem,
-                            MetadataTarget,
-                            ManagementTarget,
-                            ObjectStoreTarget,
-                            Client,
-                            Host,
-                            TargetMount)
+from configure.models import (ManagedFilesystem,
+                            ManagedMdt,
+                            ManagedMgs,
+                            ManagedOst,
+                            ManagedHost,
+                            ManagedTargetMount)
 from monitor.lib.util import sizeof_fmt
 
 class ListFileSystems(AnonymousRequestHandler):
@@ -69,9 +68,9 @@ class ListFileSystems(AnonymousRequestHandler):
                 fskbytestotal = 0
                 fsfilesfree  = 0
                 fsfilestotal = 0
-                filesystem = Filesystem.objects.get(name=fs.item.name) 
-                inodedata = filesystem.metrics.fetch_last(MetadataTarget,fetch_metrics="filesfree filestotal".split())
-                diskdata = filesystem.metrics.fetch_last(ObjectStoreTarget,fetch_metrics="kbytesfree kbytestotal".split())
+                filesystem = ManagedFilesystem.objects.get(name=fs.item.name) 
+                inodedata = filesystem.metrics.fetch_last(ManagedMdt,fetch_metrics="filesfree filestotal".split())
+                diskdata = filesystem.metrics.fetch_last(ManagedOst,fetch_metrics="kbytesfree kbytestotal".split())
                 if diskdata:
                     fskbytesfree  = diskdata[1]['kbytesfree']
                     fskbytestotal = diskdata[1]['kbytestotal']  
@@ -160,9 +159,9 @@ class GetFileSystem(AnonymousRequestHandler):
                     fskbytestotal = 0
                     fsfilesfree  = 0
                     fsfilestotal = 0
-                    filesystem = Filesystem.objects.get(name=fs.item.name)
-                    inodedata = filesystem.metrics.fetch_last(MetadataTarget,fetch_metrics="filesfree filestotal".split())
-                    diskdata = filesystem.metrics.fetch_last(ObjectStoreTarget,fetch_metrics="kbytesfree kbytestotal".split())
+                    filesystem = ManagedFilesystem.objects.get(name=fs.item.name)
+                    inodedata = filesystem.metrics.fetch_last(ManagedMdt,fetch_metrics="filesfree filestotal".split())
+                    diskdata = filesystem.metrics.fetch_last(ManagedOst,fetch_metrics="kbytesfree kbytestotal".split())
                     if diskdata:
                         fskbytesfree  = diskdata[1]['kbytesfree']
                         fskbytestotal = diskdata[1]['kbytestotal']
@@ -231,16 +230,16 @@ class GetVolumes(AnonymousRequestHandler):
     def run(self,request,filesystem):
         filesystem_name = filesystem
         if filesystem_name:
-            return self.get_volumes_per_fs(Filesystem.objects.get(name = filesystem_name))
+            return self.get_volumes_per_fs(ManagedFilesystem.objects.get(name = filesystem_name))
         else:
             volumes_list = []
-            for fs in Filesystem.objects.all():
+            for fs in ManagedFilesystem.objects.all():
                 volumes_list.extend(self.get_volumes_per_fs(fs.name))
         return volumes_list
     
     def get_volumes_per_fs (self,filesystem_name):
         volume_list = []
-        filesystem = Filesystem.objects.get(name = filesystem_name)
+        filesystem = ManagedFilesystem.objects.get(name = filesystem_name)
         volume_list.append(
                            {
                             'id' : filesystem.id,
@@ -264,10 +263,10 @@ class GetVolumes(AnonymousRequestHandler):
                                  'status' : filesystem.mgs.status_string()
                                 }
                 )
-        except ManagementTarget.DoesNotExist:
+        except ManagedMgs.DoesNotExist:
             pass
         try:
-            mdt = MetadataTarget.objects.get (filesystem = filesystem)
+            mdt = ManagedMdt.objects.get (filesystem = filesystem)
             volume_list.append(
                                    {
                                     'id' : mdt.id,
@@ -279,9 +278,9 @@ class GetVolumes(AnonymousRequestHandler):
                                     'status' : mdt.status_string()
                                    }
                 )            
-        except MetadataTarget.DoesNotExist:
+        except ManagedMdt.DoesNotExist:
             pass
-        osts = ObjectStoreTarget.objects.filter(filesystem = filesystem)
+        osts = ManagedOst.objects.filter(filesystem = filesystem)
         volume_list.extend([
                             {
                              'id' : ost.id,
@@ -296,36 +295,36 @@ class GetVolumes(AnonymousRequestHandler):
                            ])
         return volume_list
 
-class GetClients (AnonymousRequestHandler):
-    @extract_request_args('filesystem')
-    def run(self,request,filesystem):
-        filesystem_name = filesystem
-        if filesystem_name :
-            return self.__get_clients(filesystem_name)
-        else:
-            client_list = []
-            for filesystem in Filesystem.objects.all():
-                client_list.extend(self.__get_clients(filesystem.name))
-        return client_list
-    
-    def __get_clients(self,filesystem_name):
-        fsname = Filesystem.objects.get(name = filesystem_name)
-        return [
-                { 
-                 'id' : client.id,
-                 'host' : client.host.address,
-                 'mount_point' : client.mount_point,
-                  #'status' : self.__mountable_audit_status(client)
-                }         
-                for client in Client.objects.filter(filesystem = fsname)
-        ]
+#class GetClients (AnonymousRequestHandler):
+#    @extract_request_args('filesystem')
+#    def run(self,request,filesystem):
+#        filesystem_name = filesystem
+#        if filesystem_name :
+#            return self.__get_clients(filesystem_name)
+#        else:
+#            client_list = []
+#            for filesystem in ManagedFilesystem.objects.all():
+#                client_list.extend(self.__get_clients(filesystem.name))
+##        return client_list
+#    
+#    def __get_clients(self,filesystem_name):
+#        fsname = ManagedFilesystem.objects.get(name = filesystem_name)
+#        return [
+#                { 
+#                 'id' : client.id,
+#                 'host' : client.host.address,
+#                 'mount_point' : client.mount_point,
+#                  #'status' : self.__mountable_audit_status(client)
+#                }         
+#                for client in Client.objects.filter(filesystem = fsname)
+#        ]
 
 class GetServers (AnonymousRequestHandler):
     @extract_request_args('filesystem')
     def run(self,request,filesystem):
         filesystem_name = filesystem
         if filesystem_name:
-            fs = Filesystem.objects.get(name=filesystem_name)
+            fs = ManagedFilesystem.objects.get(name=filesystem_name)
             return [
                     { 
                      'id' : host.id,
@@ -347,7 +346,7 @@ class GetServers (AnonymousRequestHandler):
                      'lnet_status': str(host.managedhost.state),
                      'status':host.status_string()  
                     }
-                    for host in Host.objects.all()
+                    for host in ManagedHost.objects.all()
             ]
 
 
@@ -471,14 +470,14 @@ class Dashboard:
     def __init__(self):
         self.all_statuses = {}
         # 1 query for getting all targetmoun
-        for mount in TargetMount.objects.all():
+        for mount in ManagedTargetMount.objects.all():
             # 1 query per targetmount to get any alerts
             self.all_statuses[mount] = mount.status_string()
         from collections import defaultdict
         target_mounts_by_target = defaultdict(list)
         target_mounts_by_host = defaultdict(list)
         target_params_by_target = defaultdict(list)
-        for target_klass in ManagementTarget, MetadataTarget, ObjectStoreTarget:
+        for target_klass in ManagedMgs, ManagedMdt, ManagedOst:
             # 1 query to get all targets of a type
             for target in target_klass.objects.all():
                 # 1 query per target to get the targetmounts
@@ -496,7 +495,7 @@ class Dashboard:
                 target_params_by_target[target] = target.get_params()
         self.filesystems = []
         # 1 query to get all filesystems
-        for filesystem in Filesystem.objects.all().order_by('name'):
+        for filesystem in ManagedFilesystem.objects.all().order_by('name'):
             # 3 queries to get targets (of each type)
             targets = filesystem.get_targets()
             try:
@@ -520,7 +519,7 @@ class Dashboard:
 
         self.hosts = []
         # 1 query to get all hosts
-        for host in Host.objects.all().order_by('address'):
+        for host in ManagedHost.objects.all().order_by('address'):
             host_tms = target_mounts_by_host[host.id]
             # 1 query to get alerts
             host_tm_statuses = dict([(tm, self.all_statuses[tm]) for tm in host_tms])

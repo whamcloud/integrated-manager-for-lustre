@@ -12,7 +12,7 @@ import settings
 
 @task()
 def monitor_exec(monitor_id, counter):
-    from monitor.models import Monitor
+    from configure.models import Monitor
     monitor = Monitor.objects.get(pk = monitor_id)
 
     # Conditions indicating that we've restarted or that 
@@ -48,8 +48,8 @@ def monitor_exec(monitor_id, counter):
 from settings import AUDIT_PERIOD
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def audit_all():
-    from monitor.models import Host
-    for host in Host.objects.all():
+    from configure.models import ManagedHost
+    for host in ManagedHost.objects.all():
         if host.monitor:
             monitor = host.monitor
         else:

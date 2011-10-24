@@ -146,9 +146,6 @@ class LustreAudit:
             LNetOfflineAlert.notify(self.host, not host_data['lnet_up'])
             contact = True
 
-            # Update the Nids associated with each Host
-            self.learn_nids()
-
             # Create Filesystem and Target objects
             self.learn_mgs_info()
 
@@ -196,17 +193,6 @@ class LustreAudit:
         HostContactAlert.notify(self.host, not contact)
 
         return contact
-
-    def learn_nids(self):
-        new_host_nids = set(normalize_nids(self.host_data['lnet_nids']))
-        old_host_nids = set([n.nid_string for n in self.host.nid_set.all()])
-        create_nids = new_host_nids - old_host_nids
-        for n in create_nids:
-            self.host.nid_set.create(nid_string = n)
-
-        if len(new_host_nids) > 0:
-            delete_nids = old_host_nids - new_host_nids
-            self.host.nid_set.filter(nid_string = delete_nids).delete()
 
     def learn_mgs(self, mgs_local_info):
         try:

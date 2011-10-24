@@ -15,6 +15,7 @@ import settings
 setup_environ(settings)
 
 from monitor.models import *
+from configure.models import *
 
 from logging import getLogger, FileHandler, INFO, StreamHandler
 file_log_name = __name__
@@ -66,16 +67,16 @@ class HydraDebug(cmd.Cmd, object):
 
         try:
             self.__volume_row(filesystem.mgs, table)
-        except ManagementTarget.DoesNotExist:
+        except ManagedMgs.DoesNotExist:
             pass
 
         try:
-            mdt = MetadataTarget.objects.get(filesystem = filesystem)
+            mdt = ManagedMdt.objects.get(filesystem = filesystem)
             self.__volume_row(mdt, table)
-        except MetadataTarget.DoesNotExist:
+        except ManagedMdt.DoesNotExist:
             pass
 
-        osts = ObjectStoreTarget.objects.filter(filesystem = filesystem)
+        osts = ManagedOst.objects.filter(filesystem = filesystem)
         for ost in osts:
             self.__volume_row(ost, table)
         
@@ -120,7 +121,7 @@ class HydraDebug(cmd.Cmd, object):
         Display all lustre server hosts"""
         table = Texttable()
         table.header(['id', 'address', 'kind', 'lnet status'])
-        for host in Host.objects.all():
+        for host in ManagedHost.objects.all():
             if host.mountable_set.count() > 0:
                 table.add_row([host.id, host.address, host.role(), host.status_string()])
 
@@ -129,21 +130,21 @@ class HydraDebug(cmd.Cmd, object):
     def do_add_host(self, line):
         """add_host [user@]<hostname>[:port]
         Add a host to be monitored"""
-        Host.create_from_string(line)
+        ManagedHost.create_from_string(line)
 
     def do_host_list(self, line):
         """host_list
         Display all known hosts"""
         table = Texttable()
         table.header(['id', 'name', 'status'])
-        for host in Host.objects.all():
+        for host in ManagedHost.objects.all():
             table.add_row([host.id, host.address, host.status_string()])
         screen(table.draw())
 
     def do_test_fake_events(self, line):
         from random import randint
         count = int(line)
-        hosts = list(Host.objects.all())
+        hosts = list(ManagedHost.objects.all())
         for i in range(0, count):
             import logging
             idx = randint(0, len(hosts) - 1)

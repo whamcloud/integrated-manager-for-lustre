@@ -199,16 +199,15 @@ class StateChangeJob(object):
 
         # Get a fresh instance every time, we don't want one hanging around in the job
         # run procedure because steps might be modifying it
-        stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk).downcast()
+        stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
         assert(isinstance(stateful_object, StatefulObject))
         return stateful_object
 
 class MkfsStep(Step):
     def _mkfs_args(self, target):
-        from monitor.models import FilesystemMember
-        from configure.models import ManagedMgs, ManagedMdt, ManagedOst
+        from configure.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember
         kwargs = {}
-        primary_mount = target.targetmount_set.get(primary = True)
+        primary_mount = target.managedtargetmount_set.get(primary = True)
 
         kwargs['target_types'] = {
             ManagedMgs: "mgs",
@@ -218,16 +217,20 @@ class MkfsStep(Step):
 
         if isinstance(target, FilesystemMember):
             kwargs['fsname'] = target.filesystem.name
-            assert(len(target.filesystem.mgs_nids()) > 0)
-            kwargs['mgsnode'] = target.filesystem.mgs_nids()
+            mgs = target.filesystem.mgs.downcast()
+            nids = mgs.nids()
+            kwargs['mgsnode'] = target.filesystem.mgs.nids()
 
         kwargs['reformat'] = True
 
-        for secondary_mount in target.targetmount_set.filter(primary = False):
+        fail_nids = []
+        for secondary_mount in target.managedtargetmount_set.filter(primary = False):
             host = secondary_mount.host
-            nids = [n.nid_string for n in host.nid_set.all()]
-            if len(nids) > 0:
-                kwargs['failnode'] = nids
+            failhost_nids = host.lnetconfiguration.get_nids()
+            assert(len(failhost_nids) != 0)
+            fail_nids.extend(failhost_nids)
+        if len(fail_nids) > 0:
+            kwargs['failnode'] = fail_nids
 
         kwargs['device'] = primary_mount.block_device.path
 
@@ -235,21 +238,19 @@ class MkfsStep(Step):
 
     @classmethod
     def describe(cls, kwargs):
-        from monitor.models import Target
+        from configure.models import ManagedTarget
         target_id = kwargs['target_id']
-        target = Target.objects.get(id = target_id).downcast()
-        target_mount = target.targetmount_set.get(primary = True)
+        target = ManagedTarget.objects.get(id = target_id).downcast()
+        target_mount = target.managedtargetmount_set.get(primary = True)
         return "Format %s on %s" % (target, target_mount.host)
     
     def run(self, kwargs):
-        from monitor.models import Target, Lun
-        from configure.models import ManagedTarget
+        from configure.models import ManagedTarget, Lun
 
         target_id = kwargs['target_id']
-        target = Target.objects.get(id = target_id).downcast()
+        target = ManagedTarget.objects.get(id = target_id).downcast()
 
-        assert(isinstance(target, ManagedTarget))
-        target_mount = target.targetmount_set.get(primary = True)
+        target_mount = target.managedtargetmount_set.get(primary = True)
         # This is a primary target mount so must have a LunNode
         assert(target_mount.block_device != None)
 
@@ -282,7 +283,11 @@ class AnyTargetMountStep(Step):
         # Try and use each targetmount, the one with the most recent successful audit first
         from configure.models import ManagedTargetMount
         from configure.lib.job import StepCleanError
-        for tm in ManagedTargetMount.objects.filter(target = target, host__managedhost__state = 'lnet_up', state = 'configured').order_by('-host__monitor__last_success'):
+        available_tms = ManagedTargetMount.objects.filter(target = target, host__state = 'lnet_up').order_by('-host__monitor__last_success')
+        if available_tms.count() == 0:
+            raise RuntimeError("No hosts are available for target %s" % target)
+
+        for tm in available_tms:
             job_log.debug("command '%s' on target %s trying targetmount %s" % (command, target, tm))
             
             try:
@@ -291,20 +296,36 @@ class AnyTargetMountStep(Step):
                 return
             except Exception, e:
                 job_log.warning("Cannot run '%s' on %s." % (command, tm.host))
-                # Failure, keep trying TargetMounts
+                if tm == available_tms[-1]:
+                    job_log.error("No targetmounts of target %s could run '%s'." % (target, command))
+                    # Re-raise the exception if there are no further TMs to try on
+                    raise
 
-        job_log.error("No targetmounts of target %s could run '%s'." % (target, command))
-        # Fall through, none succeeded
-        raise StepCleanError()
+        # Should never fall through, if succeeded then returned, if failed all then
+        # re-raise exception on last failure
+        assert False
+
+class LearnNidsStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost, Nid
+        host = ManagedHost.objects.get(pk = kwargs['host_id'])
+        result = self.invoke_agent(host, "lnet-scan")
+        for nid_string in result:
+            Nid.objects.get_or_create(
+                    lnet_configuration = host.lnetconfiguration,
+                    nid_string = nid_string)
 
 class MountStep(AnyTargetMountStep):
     def is_idempotent(self):
         return True
 
     def run(self, kwargs):
-        from monitor.models import Target
+        from configure.models import ManagedTarget
         target_id = kwargs['target_id']
-        target = Target.objects.get(id = target_id)
+        target = ManagedTarget.objects.get(id = target_id)
 
         self._run_agent_command(target, "start-target --label %s --serial %s" % (target.name, target.pk))
 
@@ -313,9 +334,9 @@ class UnmountStep(AnyTargetMountStep):
         return True
 
     def run(self, kwargs):
-        from monitor.models import Target
+        from configure.models import ManagedTarget
         target_id = kwargs['target_id']
-        target = Target.objects.get(id = target_id)
+        target = ManagedTarget.objects.get(id = target_id)
 
         self._run_agent_command(target, "stop-target --label %s --serial %s" % (target.name, target.pk))
 
@@ -324,9 +345,9 @@ class RegisterTargetStep(Step):
         return True
 
     def run(self, kwargs):
-        from monitor.models import TargetMount
+        from configure.models import ManagedTargetMount
         target_mount_id = kwargs['target_mount_id']
-        target_mount = TargetMount.objects.get(id = target_mount_id)
+        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
 
         result = self.invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.block_device.path, target_mount.mount_point))
         label = result['label']
@@ -340,9 +361,9 @@ class ConfigurePacemakerStep(Step):
         return True
 
     def run(self, kwargs):
-        from monitor.models import TargetMount
+        from configure.models import ManagedTargetMount
         target_mount_id = kwargs['target_mount_id']
-        target_mount = TargetMount.objects.get(id = target_mount_id)
+        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
 
         # target.name should have been populated by RegisterTarget
         assert(target_mount.block_device != None and target_mount.target.name != None)
@@ -359,9 +380,9 @@ class UnconfigurePacemakerStep(Step):
         return True
 
     def run(self, kwargs):
-        from monitor.models import TargetMount
+        from configure.models import ManagedTargetMount
         target_mount_id = kwargs['target_mount_id']
-        target_mount = TargetMount.objects.get(id = target_mount_id)
+        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
 
         # we would never have succeeded configuring in the first place if target
         # didn't have its name
@@ -377,8 +398,8 @@ class StartLNetStep(Step):
         return True
 
     def run(self, kwargs):
-        from monitor.models import Host
-        host = Host.objects.get(id = kwargs['host_id'])
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "start-lnet")
 
 class StopLNetStep(Step):
@@ -386,8 +407,8 @@ class StopLNetStep(Step):
         return True
 
     def run(self, kwargs):
-        from monitor.models import Host
-        host = Host.objects.get(id = kwargs['host_id'])
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "stop-lnet")
 
 class LoadLNetStep(Step):
@@ -395,8 +416,8 @@ class LoadLNetStep(Step):
         return True
 
     def run(self, kwargs):
-        from monitor.models import Host
-        host = Host.objects.get(id = kwargs['host_id'])
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "load-lnet")
 
 class UnloadLNetStep(Step):
@@ -404,8 +425,8 @@ class UnloadLNetStep(Step):
         return True
 
     def run(self, kwargs):
-        from monitor.models import Host
-        host = Host.objects.get(id = kwargs['host_id'])
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "unload-lnet")
 
 class ConfParamStep(Step):
@@ -435,8 +456,8 @@ class DeleteTargetStep(Step):
         return True
 
     def run(self, kwargs):
-        from monitor.models import Target
-        Target.delete(kwargs['target_id'])
+        from configure.models import ManagedTarget
+        ManagedTarget.delete(kwargs['target_id'])
 
 class DeleteTargetMountStep(Step):
     def is_idempotent(self):

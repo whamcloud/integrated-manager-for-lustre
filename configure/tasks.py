@@ -206,7 +206,7 @@ def set_state(content_type, object_id, new_state):
 
     from django.contrib.contenttypes.models import ContentType
     model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
-    instance = model_klass.objects.get(pk = object_id).downcast()
+    instance = model_klass.objects.get(pk = object_id)
 
     from configure.lib.state_manager import StateManager
     StateManager()._set_state(instance, new_state)

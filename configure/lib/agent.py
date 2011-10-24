@@ -67,7 +67,6 @@ class Agent(object):
             args["port"] = int(self.monitor.port)
         # Note: paramiko has a hardcoded 15 second timeout on SSH handshake after
         # successful TCP connection (Transport.banner_timeout).
-        print args
         ssh.connect(self.host.address, **args)
         transport = ssh.get_transport()
         channel = transport.open_session()

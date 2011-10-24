@@ -11,8 +11,8 @@ setup_environ(settings)
 
 from requesthandler import (AnonymousRequestHandler,
                             extract_request_args)
-from monitor.models import (Filesystem,
-                            Host)
+from configure.models import (ManagedFilesystem,
+                            ManagedHost)
 
 class GetFSTargetStats_fake(AnonymousRequestHandler):
     @extract_request_args('filesystem','starttime','endtime','datafunction','targetkind','fetchmetrics')
@@ -41,7 +41,7 @@ class GetFSTargetStats_fake(AnonymousRequestHandler):
                          'filesfree' : randrange(0,4940388537,10),
                          'filestotal': randrange(0,4940388537,10),
                         }
-                        for filesystem in Filesystem.objects.all()
+                        for filesystem in ManagedFilesystem.objects.all()
                 ]
         elif fetchmetrics == "stats_read_bytes stats_write_bytes":
             if filesystem:
@@ -60,7 +60,7 @@ class GetFSTargetStats_fake(AnonymousRequestHandler):
                 all_fs_stats=[]
                 fs_stats=[]
                 current_slice = gettimeslice()
-                for filesystem in Filesystem.objects.all():
+                for filesystem in ManagedFilesystem.objects.all():
                     for slice in current_slice:
                         fs_stats.append(    
                                         {
@@ -92,7 +92,7 @@ class GetFSTargetStats_fake(AnonymousRequestHandler):
                 all_fs_stats=[]
                 fs_stats=[]
                 current_slice = gettimeslice()
-                for filesystem in Filesystem.objects.all():
+                for filesystem in ManagedFilesystem.objects.all():
                     for slice in current_slice:
                         fs_stats.append(
                                         {
@@ -117,7 +117,7 @@ class GetFSServerStats_fake(AnonymousRequestHandler):
         current_slice = gettimeslice()
         if filesystem:
             host_stats_metric = []
-            fs = Filesystem.objects.get(name=filesystem)
+            fs = ManagedFilesystem.objects.get(name=filesystem)
             hosts = fs.get_servers()
             for host in hosts:
                 for slice in current_slice:
@@ -133,10 +133,10 @@ class GetFSServerStats_fake(AnonymousRequestHandler):
                                      )
                 return data_slice
         else:
-            for fs in Filesystem.objects.all():
+            for fs in ManagedFilesystem.objects.all():
                 hosts = fs.get_servers()
                 host_stats_metric = []  
-                for host in Host.objects.all():
+                for host in ManagedHost.objects.all():
                     current_slice = gettimeslice() 
                     host_stats_metric = []            
                     for slice in current_slice:
@@ -159,7 +159,7 @@ class GetServerStats_fake(AnonymousRequestHandler):
         data_slice = []
         current_slice = gettimeslice()
         if hostid:
-            host = Host.objects.get(id=hostid)
+            host = ManagedHost.objects.get(id=hostid)
             for slice in current_slice:
                     data_slice.append(
                                       {

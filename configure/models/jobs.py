@@ -62,8 +62,12 @@ class StatefulObject(models.Model):
             return klass
         else:
             for b in klass.__bases__:
+                if hasattr(b, '_meta') and b._meta.abstract:
+                    continue
                 if issubclass(b, StatefulObject):
                     return StatefulObject.so_child(b)
+            # Fallthrough: got as close as we're going
+            return klass
 
     @classmethod
     def _build_maps(cls):

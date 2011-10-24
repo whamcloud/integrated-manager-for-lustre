@@ -10,7 +10,6 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from django.db import transaction
 from django import forms
 
-from monitor.models import *
 from configure.models import *
 
 # IMPORTANT
@@ -73,9 +72,9 @@ class CreateTargetsForm(forms.Form):
         return cleaned_data
 
 def create_mgs(request, host_id):
-    host = get_object_or_404(Host, id = int(host_id))
+    host = get_object_or_404(ManagedHost, id = int(host_id))
     nodes = host.available_lun_nodes()
-    other_hosts = [h for h in Host.objects.all() if h.id != host.id]
+    other_hosts = [h for h in ManagedHost.objects.all() if h.id != host.id]
 
     class CreateMgsForm(CreateTargetsForm):
         device = forms.ChoiceField(choices = [(n.id, n.pretty_string()) for n in nodes])
@@ -88,7 +87,7 @@ def create_mgs(request, host_id):
         if form.is_valid():
             node = LunNode.objects.get(id = form.cleaned_data['device'])
             if form.cleaned_data['failover_partner'] and form.cleaned_data['failover_partner'] != 'None':
-                failover_host = Host.objects.get(id = form.cleaned_data['failover_partner'])
+                failover_host = ManagedHost.objects.get(id = form.cleaned_data['failover_partner'])
             else:
                 failover_host = None
 
@@ -113,7 +112,7 @@ def create_mgs(request, host_id):
         }))
 
 def create_fs(request, mgs_id):
-    mgs = get_object_or_404(ManagementTarget, id = int(mgs_id))
+    mgs = get_object_or_404(ManagedMgs, id = int(mgs_id))
 
     class CreateFsForm(forms.Form):
         name = forms.CharField(min_length = 1, max_length = 8)
@@ -135,9 +134,9 @@ def create_fs(request, mgs_id):
         }))
 
 def create_oss(request, host_id):
-    host = get_object_or_404(Host, id = int(host_id))
+    host = get_object_or_404(ManagedHost, id = int(host_id))
     nodes = host.available_lun_nodes()
-    other_hosts = [h for h in Host.objects.all() if h.id != host.id]
+    other_hosts = [h for h in ManagedHost.objects.all() if h.id != host.id]
 
     class CreateOssForm(CreateTargetsForm):
         filesystem = forms.ChoiceField(choices = [(f.id, f.name) for f in ManagedFilesystem.objects.all()])
@@ -172,7 +171,7 @@ def create_oss(request, host_id):
         form = CreateOssForm(request.POST, prefix = 'create')
         if form.is_valid():
             if form.cleaned_data['failover_partner'] and form.cleaned_data['failover_partner'] != 'None':
-                failover_host = Host.objects.get(id = form.cleaned_data['failover_partner'])
+                failover_host = ManagedHost.objects.get(id = form.cleaned_data['failover_partner'])
             else:
                 failover_host = None
             filesystem = ManagedFilesystem.objects.get(id=form.cleaned_data['filesystem'])
@@ -202,9 +201,9 @@ def create_oss(request, host_id):
         }))
 
 def create_mds(request, host_id):
-    host = get_object_or_404(Host, id = int(host_id))
+    host = get_object_or_404(ManagedHost, id = int(host_id))
     nodes = host.available_lun_nodes()
-    other_hosts = [h for h in Host.objects.all() if h.id != host.id]
+    other_hosts = [h for h in ManagedHost.objects.all() if h.id != host.id]
 
     filesystems = []
     for f in ManagedFilesystem.objects.all():
@@ -226,7 +225,7 @@ def create_mds(request, host_id):
         if form.is_valid():
             node = LunNode.objects.get(id = form.cleaned_data['device'])
             if form.cleaned_data['failover_partner'] and form.cleaned_data['failover_partner'] != 'None':
-                failover_host = Host.objects.get(id = form.cleaned_data['failover_partner'])
+                failover_host = ManagedHost.objects.get(id = form.cleaned_data['failover_partner'])
             else:
                 failover_host = None
             filesystem = ManagedFilesystem.objects.get(id=form.cleaned_data['filesystem'])
@@ -292,10 +291,12 @@ def _jobs_json():
 
     from itertools import chain
     stateful_objects = []
-    klasses = [ManagedOst, ManagedMdt, ManagedMgs, ManagedHost, ManagedTargetMount, ManagedFilesystem]
-    can_create_mds = (MetadataTarget.objects.count() != ManagedFilesystem.objects.count())
-    can_create_oss = MetadataTarget.objects.count() > 0
+    klasses = [ManagedOst, ManagedMdt, ManagedMgs, ManagedHost, ManagedTargetMount, ManagedFilesystem, LNetConfiguration]
+    can_create_mds = (ManagedMdt.objects.count() != ManagedFilesystem.objects.count())
+    can_create_oss = ManagedMdt.objects.count() > 0
     for i in chain(*[k.objects.all() for k in klasses]):
+        from django.contrib.contenttypes.models import ContentType
+        
         actions = []
         if isinstance(i, StatefulObject):
             state = i.state
@@ -309,7 +310,7 @@ def _jobs_json():
                         "name": transition['state'],
                         "caption": transition['verb'],
                         "url": reverse('configure.views.set_state', kwargs={
-                            "content_type_id": "%s" % i.content_type_id,
+                            "content_type_id": "%s" % ContentType.objects.get_for_model(i).id,
                             "stateful_object_id": "%s" % i.id,
                             "new_state": transition['state']
                             }),
@@ -452,9 +453,7 @@ def filesystem(request, filesystem_id):
         }))
 
 def target(request, target_id):
-    from monitor.models import Target
-    target = get_object_or_404(Target, pk = target_id).downcast()
-    assert(isinstance(target, ManagedTarget))
+    target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
 
     from configure.lib.conf_param import get_conf_params
     if isinstance(target, ManagedMgs):

@@ -4,11 +4,82 @@
 # ==============================
 
 from django.db import models
-from monitor import models as monitor_models
 from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll
 from configure.models.jobs import StatefulObject, Job
+from monitor.models import DeletableDowncastableMetaclass, MeasuredEntity
 
-class ManagedFilesystem(monitor_models.Filesystem, StatefulObject):
+class ManagedFilesystem(StatefulObject, MeasuredEntity):
+    __metaclass__ = DeletableDowncastableMetaclass
+    name = models.CharField(max_length=8)
+    mgs = models.ForeignKey('ManagedMgs')
+
+    class Meta:
+        unique_together = ('name', 'mgs')
+
+    def get_targets(self):
+        return [self.mgs.downcast()] + self.get_filesystem_targets()
+
+    def get_filesystem_targets(self):
+        from configure.models import ManagedOst, ManagedMdt
+        osts = list(ManagedOst.objects.filter(filesystem = self).all())
+        # NB using __str__ instead of name because name may not 
+        # be set in all cases
+        osts.sort(lambda i,j: cmp(i.__str__()[-4:], j.__str__()[-4:]))
+
+        return list(ManagedMdt.objects.filter(filesystem = self).all()) + osts
+
+    def get_servers(self):
+        targets = self.get_targets()
+        servers = defaultdict(list)
+        for t in targets:
+            for tm in t.targetmount_set.all():
+                servers[tm.host].append(tm)
+
+        # NB converting to dict because django templates don't place nice with defaultdict
+        # (http://stackoverflow.com/questions/4764110/django-template-cant-loop-defaultdict)
+        return dict(servers)
+
+    def status_string(self, target_statuses = None):
+        if target_statuses == None:
+            target_statuses = dict([(t, t.status_string()) for t in self.get_targets()])
+
+        filesystem_targets_statuses = [v for k,v in target_statuses.items() if not k.__class__ == ManagementTarget]
+        all_statuses = target_statuses.values()
+
+        good_status = set(["STARTED", "FAILOVER"])
+        # If all my targets are down, I'm red, even if my MGS is up
+        if not good_status & set(filesystem_targets_statuses):
+            return "OFFLINE"
+
+        # If all my targets are up including the MGS, then I'm green
+        if set(all_statuses) <= set(["STARTED"]):
+            return "OK"
+
+        # Else I'm orange
+        return "WARNING"
+
+    def mgs_spec(self):
+        """Return a string which is foo in <foo>:/lustre for client mounts"""
+        mgs = self.mgs
+        nid_specs = []
+        for target_mount in mgs.targetmount_set.all():
+            host = target_mount.host
+            nids = ",".join([n.nid_string for n in host.nid_set.all()])
+            if nids == "":
+                raise ValueError("NIDs for MGS host %s not known" % host)
+
+            nid_specs.append(nids)
+            
+        return ":".join(nid_specs)
+
+    def mount_example(self):
+        try:
+            return "mount -t lustre %s:/%s /mnt/client" % (self.mgs_spec(), self.name)
+        except ValueError,e:
+            return "Not ready to mount: %s" % e
+
+    def __str__(self):
+        return self.name
     states = ['created', 'removed']
     initial_state = 'created'
 

@@ -14,7 +14,6 @@ from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
-from monitor.models import *
 from configure.models import *
 from configure.lib.state_manager import StateManager
 

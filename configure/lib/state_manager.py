@@ -114,8 +114,9 @@ class StateManager(object):
     def set_state(cls, instance, new_state):
         """Add a 0 or more Jobs to have 'instance' reach 'new_state'"""
         import configure.tasks
+        from django.contrib.contenttypes.models import ContentType
         return configure.tasks.set_state.delay(
-                instance.content_type.natural_key(),
+                ContentType.objects.get_for_model(instance).natural_key(),
                 instance.id,
                 new_state)
 
@@ -145,10 +146,11 @@ class StateManager(object):
             self.get_expected_state(instance),
             new_state))
 
+        job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
         for d in self.deps:
-            job_log.debug("dep %s" % (d,))
+            job_log.debug("  dep %s" % (d,))
         for e in self.edges:
-            job_log.debug("edge [%s]->[%s]" % (e))
+            job_log.debug("  edge [%s]->[%s]" % (e))
 
         def sort_graph(objects, edges):
             """Sort items in a graph by their longest path from a leaf.  Items
@@ -273,7 +275,7 @@ class StateManager(object):
                 if dependency.stateful_object == root_transition.stateful_object \
                         and not root_transition.new_state in dependency.acceptable_states:
                     assert dependency.fix_state != None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
-                    job_log.debug("Reverse dependency: %s required us to be in state %s, fixing by setting it to state %s" % (dependent, dependency.acceptable_states, dependency.fix_state))
+                    job_log.debug("Reverse dependency: %s required %s to be in state %s, fixing by setting it to state %s" % (dependent, root_transition.stateful_object, dependency.acceptable_states, dependency.fix_state))
                     dep_transition = self.emit_transition_deps(Transition(
                             dependent,
                             dependent_state, dependency.fix_state))

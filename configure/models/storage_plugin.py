@@ -4,6 +4,7 @@
 # ==============================
 
 from django.db import models
+from monitor.models import Event, AlertState, AlertEvent
 
 # Our limit on the length of python names where we put
 # them in CharFields -- python doesn't impose a limit, so this
@@ -311,7 +312,6 @@ class StorageResourceStatistic(models.Model):
     class Meta:
         app_label = 'configure'
 
-from monitor.models import AlertState, AlertEvent
 class StorageResourceAlert(AlertState):
     """Used by configure.lib.storage_plugin"""
 
@@ -353,7 +353,6 @@ class StorageAlertPropagated(models.Model):
         unique_together = ('storage_resource', 'alert_state')
         app_label = 'configure'
 
-from monitor.models import Event
 class StorageResourceLearnEvent(Event):
     storage_resource = models.ForeignKey(StorageResourceRecord)
 
