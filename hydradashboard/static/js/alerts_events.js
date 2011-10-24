@@ -174,7 +174,8 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
 			                { "sClass": 'txtcenter'},
 			                { "sClass": 'txtleft'},
 			                { "sClass": 'txtleft'}
-			              ]
+			              ],
+			              "bJQueryUI": true,
 					});
 					
 					/*$("#"+targetAlertDivName).dataTable().fnAddData ([
@@ -269,7 +270,8 @@ loadEventContent = function(targetEventDivName, maxCount)
 		                { "sClass": 'txtcenter' },
 		                { "sClass": 'txtleft' },
 		                { "sClass": 'txtleft' }
-		              ]
+		              ],
+					"bJQueryUI": true,
 				});
 			}
 			else
@@ -355,7 +357,8 @@ loadLogContent = function(targetJobDivName, maxCount)
 		                { "sClass": 'txtleft' },
 		                { "sClass": 'txtleft' }
 		              ],
-                     "iDisplayLength":50
+                     "iDisplayLength":50,
+                     "bJQueryUI": true,
                     
 				});
 			}

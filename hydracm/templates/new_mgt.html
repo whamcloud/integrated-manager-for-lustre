@@ -4,6 +4,7 @@
 		CreateMGT_MGTConf();
 		var oNewMgt = $('#mgt_configuration').dataTable( {
 			"bProcessing": true,
+			"bJQueryUI": true,
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
@@ -15,6 +16,7 @@
 		
 		var oNewOst = $('#popup-new-ost').dataTable( {
 			"bProcessing": true,
+			"bJQueryUI": true,
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
@@ -67,11 +69,11 @@
       <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
         <thead>
           <tr>
-            <th width="1%">Select</th>
-            <th width="19%">Target Path</th>
+            <th width="9%">Select</th>
+            <th width="15%">Target Path</th>
             <th width="15%">Server Name</th>
             <th width="19%">Failover</th>
-            <th width="17%">Capacity</th>
+            <th width="13%">Capacity</th>
             <th width="17%">Status</th>
           </tr>
         </thead>

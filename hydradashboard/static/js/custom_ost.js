@@ -6,13 +6,13 @@
 //	1) ChartConfig_OST_Space - Pie chart configuration for space usage.
 
 //---------------------Data Loaders function-------------------------------
-// 1) ost_Pie_Space_Data(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
-// 2) ost_Pie_Inode_Data(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
-// 3) ost_Area_ReadWrite_Data(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+// 1) ost_Pie_Space_Data(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+// 2) ost_Pie_Inode_Data(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+// 3) ost_Area_ReadWrite_Data(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 /******************************************************************************/
-var ost_Pie_Space_Data_Api_Url = "/api/get_fs_stats_for_targets/";
-var ost_Pie_Inode_Data_Api_Url = "/api/get_fs_stats_for_targets/";
-var ost_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var ost_Pie_Space_Data_Api_Url = "/api/get_stats_for_targets/";
+var ost_Pie_Inode_Data_Api_Url = "/api/get_stats_for_targets/";
+var ost_Area_ReadWrite_Data_Api_Url = "/api/get_stats_for_targets/";
 /******************************************************************************/
 //for OST graph File system space usage
 var ChartConfig_OST_Space = 
@@ -59,7 +59,7 @@ var ChartConfig_OST_Space =
 // Param - File System Name
 // Return - Returns the graph plotted in container
 /*****************************************************************************/
-ost_Pie_Space_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+ost_Pie_Space_Data = function(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
         var free=0,used=0;
         var freeData = [],usedData = [];
@@ -69,7 +69,7 @@ ost_Pie_Space_Data = function(fsName, sDate, endDate, dataFunction, targetKind, 
         
         $.post(ost_Pie_Space_Data_Api_Url,
         {targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-        starttime: "", filesystem: fsName, endtime: ""})
+        starttime: "", target: targetName, endtime: ""})
 	    .success(function(data, textStatus, jqXHR) 
         {   
 	    	if(data.success)
@@ -78,7 +78,7 @@ ost_Pie_Space_Data = function(fsName, sDate, endDate, dataFunction, targetKind, 
 			    var totalDiskSpace=0,totalFreeSpace=0;
 			    	$.each(response, function(resKey, resValue) 
 			        {
-			    		if(resValue.filesystem != undefined)
+			    		if(resValue.target != undefined)
 					    {
 				    	    totalFreeSpace = resValue.kbytesfree/1024;
 						    totalDiskSpace = resValue.kbytestotal/1024;
@@ -115,7 +115,7 @@ ost_Pie_Space_Data = function(fsName, sDate, endDate, dataFunction, targetKind, 
 // Param - File System Name
 // Return - Returns the graph plotted in container
 /*****************************************************************************/
-ost_Pie_Inode_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom) //250
+ost_Pie_Inode_Data = function(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom) //250
 {
         var free=0,used=0;
         var freeFilesData = [],totalFilesData = [];
@@ -124,7 +124,7 @@ ost_Pie_Inode_Data = function(fsName, sDate, endDate, dataFunction, targetKind, 
         obj_ost_pie_inode.chart.renderTo = "ost_container3";		
         $.post(ost_Pie_Inode_Data_Api_Url,
         {targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-        starttime: "", filesystem: fsName, endtime: ""})
+        starttime: "", target: targetName, endtime: ""})
 	    .success(function(data, textStatus, jqXHR) 
         {   
 	    	if(data.success)
@@ -133,7 +133,7 @@ ost_Pie_Inode_Data = function(fsName, sDate, endDate, dataFunction, targetKind, 
 			    var totalFiles=0,totalFreeFiles=0;
 			    $.each(response, function(resKey, resValue) 
 		        {
-			    	if(resValue.filesystem != undefined)
+			    	if(resValue.target != undefined)
 				    {
 			    	 	totalFiles = resValue.filesfree/1024;
 					    totalFreeFiles = resValue.filestotal/1024;
@@ -168,14 +168,14 @@ ost_Pie_Inode_Data = function(fsName, sDate, endDate, dataFunction, targetKind, 
 //Param - File System name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics
 //Return - Returns the graph plotted in container
 /*****************************************************************************/
-ost_Area_ReadWrite_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+ost_Area_ReadWrite_Data = function(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
 	  var count = 0;
        var readData = [],categories = [], writeData = [];
       obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
       $.post(ost_Area_ReadWrite_Data_Api_Url,
       	{targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-          starttime: sDate, filesystem: fsName, endtime: endDate})
+          starttime: sDate, target: targetName, endtime: endDate})
        .success(function(data, textStatus, jqXHR) {
           var hostName='';
           var avgMemoryApiResponse = data;
@@ -184,7 +184,7 @@ ost_Area_ReadWrite_Data = function(fsName, sDate, endDate, dataFunction, targetK
                var response = avgMemoryApiResponse.response;
                $.each(response, function(resKey, resValue)
                {
-            	   if(resValue.filesystem != undefined)
+            	   if(resValue.target != undefined)
                 	{
             		   readData.push(resValue.stats_read_bytes/1024);
             		   writeData.push(((0-resValue.stats_write_bytes)/1024));

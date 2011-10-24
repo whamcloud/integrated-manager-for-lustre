@@ -17,10 +17,10 @@
 // 6) db_HeatMap_Data
 /*******************************************************************************/
 var spaceUsageFetchMatric = "kbytestotal kbytesfree filestotal filesfree";
-var clientsConnectedFetchMatric = "kbytestotal kbytesfree filestotal filesfree";
+var clientsConnectedFetchMatric = "num_exports";
 var cpuMemoryFetchMatric = "cpu_usage cpu_total mem_MemFree mem_MemTotal";
 var readWriteFetchMatric = "stats_read_bytes stats_write_bytes";
-var iopsFetchmatric = "iops1 iops2 iops3 iops4 iops5";
+var iopsFetchmatric = "stats_open stats_connect stats_create stats_destroy stats_disconnect stats_commitrw stats_statfs stats_preprw";
 var dashboardPollingInterval;
 
 var db_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
@@ -264,14 +264,11 @@ var chartConfig_Area_Iops  = {
 				     	'#B5CA92'
 				     ],
 		      title: {
-		         text: 'IOP/s',
+		         text: 'MIOP/s',
 		         style: { fontSize: '12px' },
 		      },
 		     xAxis: {
-			 categories: ['01:35:00', '01:35:10', '01:35:20', '01:35:30', '01:35:40', '01:35:50', 
-				      '01:36:00', '01:36:10', '01:36:20', '01:36:30', '01:36:40', '01:36:50', 
-				      '01:37:00', '01:37:10', '01:37:20', '01:37:30', '01:37:40', '01:37:50', 
-				      '01:38:00', '01:38:10', ],
+			 categories: [ ],
 			 labels: {rotation: 310,step: 4,style:{fontSize:'8px', fontWeight:'regular'}},
 		         tickmarkPlacement: 'on',
 		         title: {
@@ -280,7 +277,7 @@ var chartConfig_Area_Iops  = {
 		      },
 		      yAxis: {
 		         title: {
-		            text: 'IOP/s'
+		            text: 'MIOP/s'
 		         },
 		         /*labels: {
 		            formatter: function() {
@@ -308,27 +305,33 @@ var chartConfig_Area_Iops  = {
 		            }
 		         }
 		      },
+
 		     series: [{
-		         name: 'Read',
-		         data: [90, 100, 120, 110, 65, 70, 70, 80, 100, 110,
-				130, 100, 70,  100, 200, 220, 180, 150, 50, 65]
+		     name: 'stats_open',
+		     data: []
 		     }, {
-		         name: 'Write',
-		         data: [65, 70, 80, 68, 67, 65,   65, 40, 10, 30,
-			        20, 25, 33, 55, 60, 100, 110, 90, 80, 50]
+		     name: 'stats_connect',
+		     data: []
 		     }, {
-			 name: 'Stat',
-			 data: [50, 52, 55, 55, 52, 52, 48, 35, 33, 31,
-				29, 22, 10, 10, 5,   5,  5,  5, 10, 10]
+			 name: 'stats_create',
+			 data: []
 		     }, {
-			 name: 'Close',
-			 data: [40, 42, 45, 44, 43, 42, 41, 41, 42, 44, 
-				44, 42, 43, 40, 42, 43, 45, 43, 41, 44]
+			 name: 'stats_destroy',
+			 data: []
 		     }, {
-			 name: 'Open',
-			 data: [20, 25, 30, 22, 24, 25, 26, 20, 15, 10, 
-				5,   0,  0,  0,  2, 0,   1,  2,  1,  0]
-		     }]
+			 name: 'stats_disconnect',
+			 data: [],
+		     }, {
+		     name: 'stats_commitrw',
+		     data: []
+		     }, {
+			 name: 'stats_statfs',
+			 data: []
+		     }, {
+			 name: 'stats_preprw',
+			 data: []
+		     } 
+		     ]
 	 
 }
 
@@ -459,9 +462,9 @@ var chartConfig_HeatMap = {
 			obj_db_Bar_SpaceUsage_Data.xAxis.categories = categories;
             obj_db_Bar_SpaceUsage_Data.title.text="All File System Space Usage";
             obj_db_Bar_SpaceUsage_Data.series = [
-               {data: freeData, stack: 0, name: 'Bytes'}, {data: usedData, stack: 0, name: 'Bytes'},					// first stack
+               {data: freeData, stack: 0, name: 'Free Space'}, {data: usedData, stack: 0, name: 'Used Space'},					// first stack
 
-		       {data: freeFilesData, stack: 1, name: 'INodes'}, {data: totalFilesData, stack: 1, name: 'INodes'}		// second stack
+		       {data: freeFilesData, stack: 1, name: 'Free Files'}, {data: totalFilesData, stack: 1, name: 'Used Files'}		// second stack
 		    ]		
             
             if(isZoom == 'true')
@@ -484,7 +487,7 @@ var chartConfig_HeatMap = {
     	var fileSystemName = "";
           $.post(db_Line_connectedClients_Data_Api_Url,
           {"fetchmetrics": clientsConnectedFetchMatric, "endtime": "", "datafunction": "Average", 
-           "starttime": "", "filesystem": ""})
+           "starttime": "10", "filesystem": ""})
           .success(function(data, textStatus, jqXHR) 
           {   
               if(data.success)
@@ -552,7 +555,7 @@ var chartConfig_HeatMap = {
 		obj_db_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
 		$.post(db_LineBar_CpuMemoryUsage_Data_Api_Url,
 		 {"fetchmetrics": cpuMemoryFetchMatric, "endtime": "", "datafunction": "Average", 
-		  "starttime": "600", "filesystem": ""})
+		  "starttime": "10", "filesystem": ""})
          .success(function(data, textStatus, jqXHR) 
           {
             var hostName='';
@@ -564,7 +567,7 @@ var chartConfig_HeatMap = {
                  {
                 	if(resValue.host != undefined)
                	    {
-	                	cpuData.push(resValue.cpu_usage);
+	                	cpuData.push(((resValue.cpu_usage*100)/resValue.cpu_total));
 	                	memoryData.push(resValue.mem_MemTotal - resValue.mem_MemFree);
 	                	
 				        categories.push(resValue.timestamp);
@@ -605,7 +608,7 @@ var chartConfig_HeatMap = {
          var readData = [],categories = [], writeData = [];
         obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
         $.post(db_Area_ReadWrite_Data_Api_Url,{"targetkind": "MDT", "datafunction": "Average", "fetchmetrics": readWriteFetchMatric,
-         "starttime": "", "filesystem": "", "endtime": ""})
+         "starttime": "10", "filesystem": "", "endtime": ""})
          .success(function(data, textStatus, jqXHR) {
             var hostName='';
             var avgMemoryApiResponse = data;
@@ -655,10 +658,11 @@ var chartConfig_HeatMap = {
  db_Area_Iops_Data = function(isZoom)
  {
 	    var count = 0;
-        var readData = [], writeData = [], statData = [], closeData = [], openData = [], categories = [];
+        //var readData = [], writeData = [], statData = [], closeData = [], openData = [], categories = [];
+        var stats_open = [],  stats_connect = [], stats_create = [], stats_destroy = [], stats_disconnect = [], stats_commitrw = [], stats_statfs = [], stats_preprw = [];
         obj_db_Area_Iops_Data = JSON.parse(JSON.stringify(chartConfig_Area_Iops));
         $.post(db_Area_Iops_Data_Api_Url,{"targetkind": "MDT", "datafunction": "Average", "fetchmetrics": iopsFetchmatric,
-        	   "starttime": "", "filesystem": "", "endtime": ""})
+        	   "starttime": "10", "filesystem": "", "endtime": ""})
          .success(function(data, textStatus, jqXHR) {
             var targetName='';
             var avgDiskReadApiResponse = data;
@@ -669,12 +673,15 @@ var chartConfig_HeatMap = {
                  {
                 	if(resValue.filesystem != undefined)
                  	{
-		         	  readData.push(resValue.iops1/1024);
-	                  writeData.push(resValue.iops2/1024);
-	                  statData.push(resValue.iops3/1024);
-	                  closeData.push(resValue.iops4/1024);
-	                  openData.push(resValue.iops5/1024);
-	                 	
+		         	  
+                      stats_open.push(resValue.stats_open);  
+                      stats_connect.push(resValue.stats_connect);
+                      stats_create.push(resValue.stats_create);
+                      stats_destroy.push(resValue.stats_destroy);
+                      stats_disconnect.push(resValue.stats_disconnect);
+                      stats_commitrw.push(resValue.stats_commitrw);
+                      stats_statfs.push(resValue.stats_statfs);
+                      stats_preprw.push(resValue.stats_preprw);
 	 			      categories.push(resValue.timestamp);
                  	}
 		         });
@@ -691,11 +698,14 @@ var chartConfig_HeatMap = {
                 	renderZoomDialog(obj_db_Area_Iops_Data);
         		}
                 
-                obj_db_Area_Iops_Data.series[0].data = readData;
-                obj_db_Area_Iops_Data.series[1].data = writeData;
-                obj_db_Area_Iops_Data.series[2].data = statData;
-                obj_db_Area_Iops_Data.series[3].data = closeData;
-                obj_db_Area_Iops_Data.series[4].data = openData;
+                obj_db_Area_Iops_Data.series[0].data = stats_open;
+                obj_db_Area_Iops_Data.series[1].data = stats_connect;
+                obj_db_Area_Iops_Data.series[2].data = stats_create;
+                obj_db_Area_Iops_Data.series[3].data = stats_destroy;
+                obj_db_Area_Iops_Data.series[4].data = stats_disconnect;
+                obj_db_Area_Iops_Data.series[5].data = stats_commitrw; 
+                obj_db_Area_Iops_Data.series[6].data = stats_statfs;
+                obj_db_Area_Iops_Data.series[7].data = stats_preprw;
                 
                 if(isZoom == 'true')
   	      	    {

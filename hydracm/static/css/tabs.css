@@ -103,3 +103,21 @@ html ul.tabs li.active, html ul.tabs li.active a:hover  { /*--Makes sure that th
 .lnet_status {  
    color: #006699;
 }
+.round-table-editfs {
+   text-align:left;
+height:100%;
+border-top-left-radius:2em;
+border-top-right-radius:2em;
+border-bottom-right-radius:2em;
+border-bottom-left-radius:2em; 
+border:1px solid #848484;
+width: 180px;
+height: 170px;
+margin: 0 auto;
+padding-left:20px;
+padding-right:20px;
+padding-top:1px;
+background-color:#f9f9ff;
+/*background-image:url(../images/line.jpg);
+ * background-repeat:repeat-x;*/
+}

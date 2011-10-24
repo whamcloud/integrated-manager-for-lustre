@@ -4,8 +4,8 @@ $(document).ready(function()
   $('#configParam').dialog
   ({
     autoOpen: false,
-    width: 400,
-    height:490,
+    width: 450,
+    height:470,
     show: "clip",
     modal: true,
     position:"center",
@@ -24,7 +24,7 @@ $(document).ready(function()
   $('#existingMGT').dialog
   ({
     autoOpen: false,
-    width: 800,
+    width: 850,
     height:360,
     show: "clip",
     modal: true,
@@ -45,8 +45,8 @@ $(document).ready(function()
   $('#newMGT').dialog
   ({
     autoOpen: false,
-    width: 800,
-    height:470,
+    width: 1100,
+    height:460,
     show: "clip",
     modal: true,
     position:"center",
@@ -67,8 +67,8 @@ $(document).ready(function()
   $('#newMDT').dialog
   ({
     autoOpen: false,
-    width: 800,
-    height:470,
+    width: 1100,
+    height:460,
     show: "clip",
     modal: true,
     position:"center",
@@ -87,8 +87,8 @@ $(document).ready(function()
   $('#newOST').dialog
   ({
     autoOpen: false,
-    width: 800,
-    height:470,
+    width: 1100,
+    height:460,
     position:"center",
     show: "clip",
     modal: true,

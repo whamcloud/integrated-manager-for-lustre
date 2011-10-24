@@ -218,7 +218,7 @@ function LoadExistingMGT_EditFS()
           {
             $('#popup-existing-mgt').dataTable().fnAddData ([
               btnRadio,
-              resValue.targetmount,
+              resValue.targetdevice,
               resValue.targetname,
               resValue.hostname,
               resValue.failover

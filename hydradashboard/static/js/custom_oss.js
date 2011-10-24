@@ -31,7 +31,7 @@ var oss_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
                  {
                 	if(resValue.host != undefined)
                 	{
-	                	cpuData.push(resValue.cpu_usage);
+	                	cpuData.push(((resValue.cpu_usage*100)/resValue.cpu_total));
 	                	memoryData.push(resValue.mem_MemTotal - resValue.mem_MemFree);
 	                	
 				        categories.push(resValue.timestamp);

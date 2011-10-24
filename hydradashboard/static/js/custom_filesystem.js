@@ -72,9 +72,9 @@ var fs_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
 			obj_db_Bar_SpaceUsage_Data.xAxis.categories = categories;
             obj_db_Bar_SpaceUsage_Data.title.text="All File System Space Usage";
             obj_db_Bar_SpaceUsage_Data.series = [
-               {data: freeData, stack: 0, name: 'Bytes'}, {data: usedData, stack: 0, name: 'Bytes'},					// first stack
+               {data: freeData, stack: 0, name: 'Free Space'}, {data: usedData, stack: 0, name: 'Used Space'},					// first stack
 
-		       {data: freeFilesData, stack: 1, name: 'INodes'}, {data: totalFilesData, stack: 1, name: 'INodes'}		// second stack
+		       {data: freeFilesData, stack: 1, name: 'Free Files'}, {data: totalFilesData, stack: 1, name: 'Used Files'}		// second stack
 		    ];		
             
             if(isZoom == 'true')
@@ -176,7 +176,7 @@ var fs_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
                  {
                 	if(resValue.host != undefined)
                 	{
-	                	cpuData.push(resValue.cpu_usage);
+	                	cpuData.push(((resValue.cpu_usage*100)/resValue.cpu_total));
 	                	memoryData.push(resValue.mem_MemTotal - resValue.mem_MemFree);
 	                	
 				        categories.push(resValue.timestamp);

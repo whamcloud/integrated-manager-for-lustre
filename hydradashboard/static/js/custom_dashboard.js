@@ -142,13 +142,13 @@ load_breadcrumbs = function()
 			    // 2011-10-17 19:56:58.720036  2011-10-17 19:46:58.720062
         fs_Bar_SpaceUsage_Data($('#fsSelect').val(),"", "", "Average", "OST", spaceUsageFetchMatric, false);
 
-        fs_Line_connectedClients_Data($('#fsSelect').val(),"", "", "Average", clientsConnectedFetchMatric, false);
+        fs_Line_connectedClients_Data($('#fsSelect').val(),"10", "", "Average", clientsConnectedFetchMatric, false);
     
-        fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),"", "", "Average", "OST", cpuMemoryFetchMatric, false);
+        fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),"10", "", "Average", "OST", cpuMemoryFetchMatric, false);
 
-        fs_Area_ReadWrite_Data($('#fsSelect').val(),"", "", "Average", "MDT", readWriteFetchMatric, false);
+        fs_Area_ReadWrite_Data($('#fsSelect').val(),"10", "", "Average", "MDT", readWriteFetchMatric, false);
 
-        fs_Area_Iops_Data($('#fsSelect').val(),"", "", "Average", "MDT", iopsFetchmatric, false);
+        fs_Area_Iops_Data($('#fsSelect').val(),"10", "", "Average", "MDT", iopsFetchmatric, false);
 
         //fs_HeatMap_Data('false');
 
@@ -202,9 +202,9 @@ load_breadcrumbs = function()
 				    });
 	        }
 
-        oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),"", "", "Average", cpuMemoryFetchMatric, 'false');
+        oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),"10", "", "Average", cpuMemoryFetchMatric, 'false');
 
-        oss_Area_ReadWrite_Data($('#fsSelect').val(),"", "", "Average", "OST", readWriteFetchMatric, 'false');
+        oss_Area_ReadWrite_Data($('#fsSelect').val(),"10", "", "Average", "OST", readWriteFetchMatric, 'false');
 
         loadOSSUsageSummary();
 	    });
@@ -232,9 +232,9 @@ load_breadcrumbs = function()
     /* HYD-375: ostSelect value is a name instead of an ID */
     load_resource_graph("ost_resource_graph_canvas", $("#ostSelect").val());
 
-    ost_Pie_Space_Data($('#fsSelect').val(),'', '', 'Average', 'OST', spaceUsageFetchMatric, 'false');
-    ost_Pie_Inode_Data($('#fsSelect').val(),'', '', 'Average', 'OST', spaceUsageFetchMatric, 'false');
-    ost_Area_ReadWrite_Data($('#fsSelect').val(),'', '', 'Average', 'OST', readWriteFetchMatric, false);
+    ost_Pie_Space_Data($('#ostSelect').val(),'', '', 'Average', 'OST', spaceUsageFetchMatric, 'false');
+    ost_Pie_Inode_Data($('#ostSelect').val(),'', '', 'Average', 'OST', spaceUsageFetchMatric, 'false');
+    ost_Area_ReadWrite_Data($('#ostSelect').val(),'10', '', 'Average', 'OST', readWriteFetchMatric, false);
 
     loadOSTSummary();
 	

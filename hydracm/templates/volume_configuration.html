@@ -3,6 +3,7 @@
 		LoadUnused_VolumeConf();
 		var oNewMgt = $('#volume_configuration').dataTable( {
 			"bProcessing": true,
+			"bJQueryUI": true,
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
@@ -37,17 +38,7 @@
       </fieldset></td>
   </tr>
   <tr>
-    <td height="21" align="right" valign="top"><table width="13%" border="0" cellspacing="0" cellpadding="0">
-        <tr>
-          <td align="right"><span id="launch_instance_btn"><span class="first-child">
-            <button type="button" id="mgtConfig_btnNewMGT">Apply</button>
-            </span></span></td>
-          <td align="left"><span id="launch_instance_btn"><span class="first-child">
-            <button type="button" id="mgtConfig_btnNewMGT">Cancel</button>
-            </span></span></td>
-        </tr>
-      </table>
-      <label></label></td>
+    <td height="21" align="right" valign="top"><label></label></td>
   </tr>
 </table>
 <!-- exsting mgt popup -->

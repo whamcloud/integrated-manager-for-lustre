@@ -21,6 +21,7 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.alerts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
 <link href="{{STATIC_URL}}css/storage_resource_dialog.css" rel="stylesheet" type="text/css" />
 <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js" ></script>
@@ -50,6 +51,7 @@
 		
 		var oNewMgt = $('#popup-new-mgt').dataTable( {
 			"bProcessing": true,
+			"bJQueryUI": true,
 			"bAutoWidth": false,
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
@@ -64,6 +66,7 @@
 		
 		var oNewMgt = $('#popup-new-mdt').dataTable( {
 			"bProcessing": true,
+			"bJQueryUI": true,
 			"bAutoWidth": false,
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
@@ -78,6 +81,7 @@
 		
 		var oNewOst = $('#popup-new-ost').dataTable( {
 			"bProcessing": true,
+			"bJQueryUI": true,
 			"bAutoWidth": false,
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
@@ -92,6 +96,7 @@
 		
 		var oMgt = $('#popup-existing-mgt').dataTable( {
 			"bProcessing": true,
+			"bJQueryUI": true,
 			"bAutoWidth": false,
 			"bFilter": false,
 			"aoColumns": [
@@ -264,11 +269,11 @@
   <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
     <thead>
       <tr>
-        <th width="1%">Select</th>
-        <th width="19%">Target Path</th>
+        <th width="9%">Select</th>
+        <th width="15%">Target Path</th>
         <th width="10%">Capacity</th>
         <th width="20%">Kind</th>
-        <th width="20%">Status</th>
+        <th width="17%">Status</th>
         <th width="15%">Primary Server</th>
         <th width="15%">Failover</th>
       </tr>
@@ -282,11 +287,11 @@
   <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-existing-mgt" width="100%">
     <thead>
       <tr>
-        <th width="1%">Select</th>
-        <th width="15%">Target Path</th>
-        <th width="12%">Target Name</th>
+        <th width="9%">Select</th>
+        <th width="12%">Target Path</th>
+        <th width="9%">Target Name</th>
         <th width="7%">Server Name</th>
-        <th width="7%">Failover Partner</th>
+        <th width="10%">Failover Partner</th>
       </tr>
     </thead>
     <tbody id="popup-existing-mgt_content">
@@ -298,13 +303,13 @@
   <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-mgt" width="100%">
     <thead>
       <tr>
-        <th width="1%">Select</th>
-        <th width="19%">Target Path</th>
+        <th width="9%">Select</th>
+        <th width="16%">Target Path</th>
         <th width="10%">Capacity</th>
         <th width="20%">Kind</th>
         <th width="20%">Status</th>
         <th width="15%">Primary Server</th>
-        <th width="15%">Failover</th>
+        <th width="12%">Failover</th>
       </tr>
     </thead>
     <tbody id="popup-new-mgt_content">
@@ -316,13 +321,13 @@
   <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-mdt" width="100%">
     <thead>
       <tr>
-        <th width="1%">Select</th>
-        <th width="19%">Target Path</th>
+        <th width="9%">Select</th>
+        <th width="16%">Target Path</th>
         <th width="10%">Capacity</th>
         <th width="20%">Kind</th>
         <th width="20%">Status</th>
         <th width="15%">Primary Server</th>
-        <th width="15%">Failover</th>
+        <th width="12%">Failover</th>
       </tr>
     </thead>
     <tbody id="popup-new-mdt_content">
