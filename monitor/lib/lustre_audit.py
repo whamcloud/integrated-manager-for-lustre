@@ -463,6 +463,21 @@ class DetectScan(object):
                 audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], self.host))
 
     def get_lun_node_for_target(self, target, host, path):
+        # TODO: tighter integration with storage resource discovery, so that we never have
+        # to create our own LunNodes: we would need to ensure that this wasn't executed
+        # until resources were discovered (or run a discovery step synchronously in here
+        # by messaging the resource manager), and then make sure the agent refered to
+        # devices by the same name as the storage resources.
+
+        # Get-or-create like logic: try getting it, then try inserting it, and
+        # if insertion failed then we collided, so try getting again.
+        from django.db import IntegrityError
+        try:
+            return self._get_lun_node_for_target(target, host, path)
+        except IntegrityError:
+            return self._get_lun_node_for_target(target, host, path)
+
+    def _get_lun_node_for_target(self, target, host, path):
         try:
             return LunNode.objects.get(path = path, host = host)
         except LunNode.DoesNotExist:
