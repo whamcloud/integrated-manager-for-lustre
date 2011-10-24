@@ -20,7 +20,9 @@ var spaceUsageFetchMatric = "kbytestotal kbytesfree filestotal filesfree";
 var clientsConnectedFetchMatric = "num_exports";
 var cpuMemoryFetchMatric = "cpu_usage cpu_total mem_MemFree mem_MemTotal";
 var readWriteFetchMatric = "stats_read_bytes stats_write_bytes";
-var iopsFetchmatric = "stats_open stats_connect stats_create stats_destroy stats_disconnect stats_commitrw stats_statfs stats_preprw";
+/*var iopsFetchmatric = "stats_open stats_connect stats_create stats_destroy stats_disconnect stats_commitrw stats_statfs stats_preprw";*/
+/* FIXME: I have populated this with what seems to work on my setup, more? -jcs */
+var iopsFetchmatric = ["stats_open", "stats_close", "stats_unlink", "stats_setattr"]
 var dashboardPollingInterval;
 
 var db_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
@@ -248,100 +250,73 @@ var chartConfig_Area_ReadWrite = {
 }
 
 var chartConfig_Area_Iops  = {
-		      chart: {
-		         renderTo: 'avgReadDiv',
-		         defaultSeriesType: 'area',
-		         marginLeft: '50',
-		     	 width: '300',
-		         height: '200',
-		     	 style:{ width:'100%',  height:'210', position: 'inherit' },
-		         marginRight: 0,
-		         marginBottom: 35,
-		          zoomType: 'xy',
-			  backgroundColor: '#f9f9ff'
-		      },
-		      colors: [
-				     	'#63B7CF', 
-				     	'#9277AF', 
-				     	'#A6C56D', 
-				     	'#C76560', 
-				     	'#6087B9', 
-				     	'#DB843D', 
-				     	'#92A8CD', 
-				     	'#A47D7C', 
-				     	'#B5CA92'
-				     ],
-		      title: {
-		         text: 'MIOP/s',
-		         style: { fontSize: '12px' },
-		      },
-		     xAxis: {
-			 categories: [ ],
-			 labels: {rotation: 310,step: 4,style:{fontSize:'8px', fontWeight:'regular'}},
-		         tickmarkPlacement: 'on',
-		         title: {
-		            enabled: false
-		         }
-		      },
-		      yAxis: {
-		         title: {
-		            text: 'MIOP/s'
-		         },
-		         /*labels: {
-		            formatter: function() {
-		               return this.value / 1000;
-		            }
-		         }*/
-		      },
-		      tooltip: {
-		         formatter: function() {
-		            return ''+
-		                this.x +': '+ Highcharts.numberFormat(this.y, 0, ',') +' ';
-		         }
-		      },
-		      legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
-		      credits:{ enabled:false },
-		      plotOptions: {
-				 series:{marker: {enabled: false}},
-		         area: {
-		            stacking: 'normal',
-		            lineColor: '#666666',
-		            lineWidth: 1,
-		            marker: {
-		               lineWidth: 1,
-		               lineColor: '#666666'
-		            }
-		         }
-		      },
-
-		     series: [{
-		     name: 'stats_open',
-		     data: []
-		     }, {
-		     name: 'stats_connect',
-		     data: []
-		     }, {
-			 name: 'stats_create',
-			 data: []
-		     }, {
-			 name: 'stats_destroy',
-			 data: []
-		     }, {
-			 name: 'stats_disconnect',
-			 data: [],
-		     }, {
-		     name: 'stats_commitrw',
-		     data: []
-		     }, {
-			 name: 'stats_statfs',
-			 data: []
-		     }, {
-			 name: 'stats_preprw',
-			 data: []
-		     } 
-		     ]
-	 
+          chart: {
+            defaultSeriesType: 'area',
+            marginLeft: '50',
+            height: '200',
+            style:{ width:'100%',  height:'210', position: 'inherit' },
+            marginRight: 0,
+            marginBottom: 35,
+            zoomType: 'xy',
+            backgroundColor: '#f9f9ff'
+          },
+          colors: [
+               '#63B7CF', 
+               '#9277AF', 
+               '#A6C56D', 
+               '#C76560', 
+               '#6087B9', 
+               '#DB843D', 
+               '#92A8CD', 
+               '#A47D7C', 
+               '#B5CA92'
+             ],
+          title: {
+             text: 'Metadata ops',
+             style: { fontSize: '12px' },
+          },
+         xAxis: {
+              type: 'datetime'
+          },
+          yAxis: {
+             title: {
+                text: 'MD op/s'
+             },
+          },
+          tooltip: {
+             formatter: function() {
+                return ''+
+                    this.x +': '+ Highcharts.numberFormat(this.y, 0, ',') +' ';
+             }
+          },
+          legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+          credits:{ enabled:false },
+          plotOptions: {
+         series:{marker: {enabled: false}},
+             area: {
+                stacking: 'normal',
+                lineColor: '#666666',
+                lineWidth: 1,
+                marker: {
+                   lineWidth: 1,
+                   lineColor: '#666666'
+                }
+             }
+          },
+         series: [{
+             name: 'Open'
+         }, {
+             name: 'Close'
+         }, {
+             name: 'Unlink'
+         }, {
+             name: 'Setattr'
+         }]
+   
 }
+
+
+
 
 var chartConfig_HeatMap = {
 		 chart: {
@@ -665,12 +640,16 @@ var chartConfig_HeatMap = {
 /*****************************************************************************/
  db_Area_Iops_Data = function(isZoom)
  {
-	    var count = 0;
-        //var readData = [], writeData = [], statData = [], closeData = [], openData = [], categories = [];
-        var stats_open = [],  stats_connect = [], stats_create = [], stats_destroy = [], stats_disconnect = [], stats_commitrw = [], stats_statfs = [], stats_preprw = [];
+        var readData = [], writeData = [], statData = [], closeData = [], openData = [];
         obj_db_Area_Iops_Data = JSON.parse(JSON.stringify(chartConfig_Area_Iops));
-        $.post(db_Area_Iops_Data_Api_Url,{"targetkind": "MDT", "datafunction": "Average", "fetchmetrics": iopsFetchmatric,
-        	   "starttime": "10", "filesystem": "", "endtime": ""})
+
+        var values = new Object();
+        var stats = iopsFetchmatric;
+        $.each(stats, function(i, stat_name) {
+          values[stat_name] = [];
+        });
+        $.post(db_Area_Iops_Data_Api_Url,{"targetkind": "MDT", "datafunction": "Average", "fetchmetrics": stats.join(" "),
+             "starttime": "10", "filesystem": "", "endtime": ""})
          .success(function(data, textStatus, jqXHR) {
             var targetName='';
             var avgDiskReadApiResponse = data;
@@ -679,50 +658,38 @@ var chartConfig_HeatMap = {
                  var response = avgDiskReadApiResponse.response;
                  $.each(response, function(resKey, resValue)
                  {
-                	if(resValue.filesystem != undefined)
-                 	{
-		         	  
-                      stats_open.push(resValue.stats_open);  
-                      stats_connect.push(resValue.stats_connect);
-                      stats_create.push(resValue.stats_create);
-                      stats_destroy.push(resValue.stats_destroy);
-                      stats_disconnect.push(resValue.stats_disconnect);
-                      stats_commitrw.push(resValue.stats_commitrw);
-                      stats_statfs.push(resValue.stats_statfs);
-                      stats_preprw.push(resValue.stats_preprw);
-	 			      categories.push(resValue.timestamp);
-                 	}
-		         });
+                  if(resValue.filesystem != undefined)
+                   {
+                     ts = resValue.timestamp * 1000;
+                     $.each(stats, function(i, stat_name) {
+                       if (resValue[stat_name] != null) {
+                         values[stat_name].push([ts, resValue[stat_name]])
+                       }
+                     });
+                   }
+             });
                }
        })
        .error(function(event) {
              // Display of appropriate error message
        })
        .complete(function(event){
-    	   		obj_db_Area_Iops_Data.chart.renderTo = "avgReadDiv";
-                obj_db_Area_Iops_Data.xAxis.categories = categories;
-                if(isZoom == 'true')
-        		{
-                	renderZoomDialog(obj_db_Area_Iops_Data);
-        		}
-                
-                obj_db_Area_Iops_Data.series[0].data = stats_open;
-                obj_db_Area_Iops_Data.series[1].data = stats_connect;
-                obj_db_Area_Iops_Data.series[2].data = stats_create;
-                obj_db_Area_Iops_Data.series[3].data = stats_destroy;
-                obj_db_Area_Iops_Data.series[4].data = stats_disconnect;
-                obj_db_Area_Iops_Data.series[5].data = stats_commitrw; 
-                obj_db_Area_Iops_Data.series[6].data = stats_statfs;
-                obj_db_Area_Iops_Data.series[7].data = stats_preprw;
+             obj_db_Area_Iops_Data.chart.renderTo = "avgReadDiv";
+                if(isZoom == 'true') {
+                  renderZoomDialog(obj_db_Area_Iops_Data);
+                }
+
+                $.each(stats, function(i, stat_name) {
+                  obj_db_Area_Iops_Data.series[i].data = values[stat_name];
+                });
                 
                 if(isZoom == 'true')
-  	      	    {
-  	           		renderZoomDialog(obj_db_Area_Iops_Data);
-  	      	    }
+                {
+                   renderZoomDialog(obj_db_Area_Iops_Data);
+                }
                 
                 chart = new Highcharts.Chart(obj_db_Area_Iops_Data);
         });
-        
 }
 /*****************************************************************************/
 //Function to plot heat map
