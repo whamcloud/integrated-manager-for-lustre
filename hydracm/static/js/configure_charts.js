@@ -44,81 +44,82 @@ var chartConfig_Pie_DB =
 // Return - Returns the graph plotted in container
 /*****************************************************************************/
 
-        var free=0,used=0;
-        $.post("/api/getfsinodeusage/",{endtime: "", datafunction: "", starttime: "", filesystem: ""})
-        .success(function(data, textStatus, jqXHR)
-        {
-            if(data.success)
-            {
-                var response = data.response;
-                var totalDiskSpace=0,totalFreeSpace=0;
-                $.each(response, function(resKey, resValue)
-                {
-                    totalFreeSpace = totalFreeSpace + resValue.filesfree/1024;
-                    totalDiskSpace = totalDiskSpace + resValue.filestotal/1024;
-                });
-                free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-                used = Math.round(100 - free);
-            }
-        })
-        .error(function(event)
-        {
-             // Display of appropriate error message
-        })
-        .complete(function(event)
-        {
-           obj_db_Pie_INodes_Data = chartConfig_Pie_DB;
-           obj_db_Pie_INodes_Data.title.text="Files Vs Free Nodes";
-           obj_db_Pie_INodes_Data.chart.renderTo = "editfs_container3";       
-           obj_db_Pie_INodes_Data.series = [{
-               type: 'pie',
-               name: 'Browser share',
-               data: [
-                  ['Free',    free],
-                  ['Used',    used]
-               ]
-            }];
-            chart = new Highcharts.Chart(obj_db_Pie_INodes_Data);
-        });
+var free=0,used=0;
+  $.post("/api/getfsinodeusage/",{endtime: "", datafunction: "", starttime: "", filesystem: ""})
+  .success(function(data, textStatus, jqXHR)
+  {
+    if(data.success)
+    {
+      var response = data.response;
+      var totalDiskSpace=0,totalFreeSpace=0;
+      $.each(response, function(resKey, resValue)
+      {
+        totalFreeSpace = totalFreeSpace + resValue.filesfree/1024;
+        totalDiskSpace = totalDiskSpace + resValue.filestotal/1024;
+      });
+      free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
+      used = Math.round(100 - free);
+    }
+  })
+  .error(function(event)
+  {
+  // Display of appropriate error message
+  })
+  .complete(function(event)
+  {
+    obj_db_Pie_INodes_Data = chartConfig_Pie_DB;
+    obj_db_Pie_INodes_Data.title.text="Files Vs Free Nodes";
+    obj_db_Pie_INodes_Data.chart.renderTo = "editfs_container3";       
+    obj_db_Pie_INodes_Data.series = [{
+     type: 'pie',
+     name: 'Browser share',
+     data: [
+        ['Free',    free],
+        ['Used',    used]
+     ]
+    }];
+    chart = new Highcharts.Chart(obj_db_Pie_INodes_Data);
+  });
 	 
 /*****************************************************************************/
 // Function for space usage for all file systems	- Pie Chart
 // Param - File System name, start date, end date, datafunction (average/min/max)
 // Return - Returns the graph plotted in container
 /*****************************************************************************/
-        var free=0,used=0;
-        $.post("/api/getfsdiskusage/",{endtime: "", datafunction: "", starttime: "", filesystem: ""})
-        .success(function(data, textStatus, jqXHR)
-        {
-            if(data.success)
-            {
-                var response = data.response;
-                var totalDiskSpace=0,totalFreeSpace=0;
-                $.each(response, function(resKey, resValue)
-                {
-                    totalFreeSpace = totalFreeSpace + resValue.kbytesfree/1024;
-                    totalDiskSpace = totalDiskSpace + resValue.kbytestotal/1024;
-                });
-                free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-                used = Math.round(100 - free);
-            }
-        })
-        .error(function(event)
-        {
-             // Display of appropriate error message
-        })
-        .complete(function(event){
-            obj_db_Pie_Space_Data = chartConfig_Pie_DB;
-            obj_db_Pie_Space_Data.title.text="All File System Space Usage";
-            obj_db_Pie_Space_Data.chart.renderTo = "editfs_container2";
-            obj_db_Pie_Space_Data.series = [{
-                type: 'pie',
-                name: 'Browser share',
-                data: [
-                    ['Free',    free],
-                    ['Used',    used]
-                    ]
-                }];
-            chart = new Highcharts.Chart(obj_db_Pie_Space_Data);
-        });
-} );
+var free=0,used=0;
+  $.post("/api/getfsdiskusage/",{endtime: "", datafunction: "", starttime: "", filesystem: ""})
+  .success(function(data, textStatus, jqXHR)
+  {
+    if(data.success)
+    {
+      var response = data.response;
+      var totalDiskSpace=0,totalFreeSpace=0;
+      $.each(response, function(resKey, resValue)
+      {
+        totalFreeSpace = totalFreeSpace + resValue.kbytesfree/1024;
+        totalDiskSpace = totalDiskSpace + resValue.kbytestotal/1024;
+      });
+      free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
+      used = Math.round(100 - free);
+    } 
+  })
+  .error(function(event)
+  {
+    // Display of appropriate error message
+  })
+  .complete(function(event)
+  {
+    obj_db_Pie_Space_Data = chartConfig_Pie_DB;
+    obj_db_Pie_Space_Data.title.text="All File System Space Usage";
+    obj_db_Pie_Space_Data.chart.renderTo = "editfs_container2";
+    obj_db_Pie_Space_Data.series = [{
+      type: 'pie',
+      name: 'Browser share',
+      data: [
+        ['Free',    free],
+        ['Used',    used]
+      ]
+      }];
+    chart = new Highcharts.Chart(obj_db_Pie_Space_Data);
+  });
+});

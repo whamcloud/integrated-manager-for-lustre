@@ -8,7 +8,7 @@ $(document).ready(function()
     height:490,
     show: "clip",
     modal: true,
-    position:"top",
+    position:"center",
     buttons: 
     {
       "Apply": function() { 
@@ -28,7 +28,7 @@ $(document).ready(function()
     height:360,
     show: "clip",
     modal: true,
-    position:"top",
+    position:"center",
     buttons: 
     {
       "Ok": function() { 
@@ -49,7 +49,7 @@ $(document).ready(function()
     height:470,
     show: "clip",
     modal: true,
-    position:"top",
+    position:"center",
     buttons: 
     {
       "Ok": function() { 
@@ -71,7 +71,7 @@ $(document).ready(function()
     height:470,
     show: "clip",
     modal: true,
-    position:"top",
+    position:"center",
     buttons: 
     {
       "Ok": function() { 
@@ -89,7 +89,7 @@ $(document).ready(function()
     autoOpen: false,
     width: 800,
     height:470,
-    position:"top",
+    position:"center",
     show: "clip",
     modal: true,
     buttons: 
@@ -111,7 +111,7 @@ $(document).ready(function()
     height:470,
     show: "clip",
     modal: true,
-    position:"top",
+    position:"center",
     buttons: {
     "Ok": function() { 
       $(this).dialog("close");
@@ -137,7 +137,7 @@ $(document).ready(function()
     height:490,
     show: "clip",
     modal: true,
-    position:"top",
+    position:"center",
     buttons: 
     {
       "Close": function() { 
@@ -162,7 +162,7 @@ $(document).ready(function()
     height:490,
     show: "clip",
     modal: true,
-    position:"top",
+    position:"center",
     buttons: 
     {
       "Close": function() { 
@@ -179,7 +179,7 @@ $(document).ready(function()
     height:490,
     show: "clip",
     modal: true,
-    position:"top",
+    position:"center",
     buttons: 
     {
       "Close": function() { 
@@ -196,12 +196,26 @@ $(document).ready(function()
     height:185,
     show: "clip",
     modal: true,
-    position:"top",
+    position:"center",
     buttons: 
     {
+	  "Close": function() { 
+     	 $(this).dialog("close");
+      },
       "Continue": function() { 
-      AddHost_ServerConfig($('#txtHostName').val(), "addNewHost"); 
+     	 AddHost_ServerConfig($('#txtHostName').val(), "addNewHost"); 
       },
     }
   });
+  
+  $('#confirm_dialog').dialog
+	({
+		autoOpen: false,
+		width: 300,
+		height:150,
+		show: "clip",
+		modal: true,
+		position:"center",
+  });
+	
 });

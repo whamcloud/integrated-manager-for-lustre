@@ -8,22 +8,22 @@
 <link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
 <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
 <link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css" rel="stylesheet" type="text/css" />
+<link href="{{STATIC_URL}}css/jquery.alerts.css" rel="stylesheet" type="text/css" />
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.9.custom.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js" ></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_window.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
-
+<script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.alerts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
 <link href="{{STATIC_URL}}css/storage_resource_dialog.css" rel="stylesheet" type="text/css" />
 <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_dialog.js"></script>
-
-
+<script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js" ></script>
 <script>
 	$(function() {
 		$( "#tabs" ).tabs({
@@ -37,7 +37,7 @@
                 console.log(event);
                 console.log(ui);
                 window.location.hash = ui.panel.id
-            }
+			}
 		});
 		
 		$(document).ready(function() {	
@@ -168,16 +168,16 @@
       <div id="dashboardDiv">
         <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="3" align="top" style="border: 1px;border-color: blue" >
           <tr>
-              <td width="100%" height="100%">
-                <div id="tabs">
-                  <ul>
-                    <li><a href="/hydracm/fstab/" title='lusterFS_content'>Filesystems</a></li>
-                    <li><a href="/hydracm/mgttab/" title='mgts'>MGTs</a></li>
-                    <li><a href="/hydracm/volumetab/" title='volumes'>Volumes</a></li>
-                    <li><a href="/hydracm/servertab/" title='servers'>Servers</a></li>
-                    <li><a href="/hydracm/storage_tab/" title='storage'>Storage</a></li>
-                  </ul>
-                </div>
+            <td width="100%" height="100%">
+              <div id="tabs">
+                <ul>
+                  <li><a href="/hydracm/fstab/" title='lusterFS_content'>Filesystems</a></li>
+                  <li><a href="/hydracm/mgttab/" title='mgts'>MGTs</a></li>
+                  <li><a href="/hydracm/volumetab/" title='volumes'>Volumes</a></li>
+                  <li><a href="/hydracm/servertab/" title='servers'>Servers</a></li>
+                  <li><a href="/hydracm/storage_tab/" title='storage'>Storage</a></li>
+                </ul>
+              </div>
             </td>
           </tr>
         </table>
@@ -190,7 +190,7 @@
   <div id="hostdetails_container">
     <table width="100%" border="0" cellspacing="0" cellpadding="0" id="hostdetails">
       <tr>
-        <td width="41%" align="right" valign="middle">Host name:</td>
+        <td width="41%" align="right" valign="middle">Host name: &nbsp;&nbsp;</td>
         <td width="60%" align="left" valign="middle"><input type="text" name="txtHostName" id="txtHostName" /></td>
       </tr>
     </table>
@@ -201,83 +201,82 @@
 </div>
 <!-- create new fs dialogs -->
 <div id="configParam" title="Configuration Parameters">
-    <form id="form1" name="form1" method="post" action="">
-      <table width="75%" border="0" cellspacing="0" cellpadding="0">
-        <tr>
-          <td align="center" valign="middle" class="fontStyle">Property</td>
-          <td align="center" class="fontStyle">Value</td>
-        </tr>
-        <tr>
-          <td width="59%" height="27" align="right" valign="middle" class="fntsize">lite.max_cachd_mb: </td>
-          <td width="41%"><label>
-            <input type="text" name="textfield" id="textfield" />
-            </label></td>
-        </tr>
-        <tr>
-          <td height="26" align="right" valign="middle" class="fntsize">lite.max_cached_mb:</td>
-          <td><input type="text" name="textfield2" id="textfield2" /></td>
-        </tr>
-        <tr>
-          <td height="25" align="right" valign="middle" class="fntsize">lite.max_read_ahead_mb:</td>
-          <td><input type="text" name="textfield3" id="textfield3" /></td>
-        </tr>
-        <tr>
-          <td height="27" align="right" valign="middle" class="fntsize">lite.max_cached_whole_mb:</td>
-          <td><input type="text" name="textfield4" id="textfield4" /></td>
-        </tr>
-        <tr>
-          <td height="28" align="right" valign="middle" class="fntsize">lite.max_statahead_max:</td>
-          <td><input type="text" name="textfield5" id="textfield5" /></td>
-        </tr>
-        <tr>
-          <td height="28" align="right" valign="middle" class="fntsize">sys.at_early_margin:</td>
-          <td><input type="text" name="textfield6" id="textfield6" /></td>
-        </tr>
-        <tr>
-          <td height="28" align="right" valign="middle" class="fntsize">sys.at_extra:</td>
-          <td><input type="text" name="textfield7" id="textfield7" /></td>
-        </tr>
-        <tr>
-          <td height="26" align="right" valign="middle" class="fntsize">sys.at_history:</td>
-          <td><input type="text" name="textfield8" id="textfield8" /></td>
-        </tr>
-        <tr>
-          <td height="27" align="right" valign="middle" class="fntsize">sys.at_max:</td>
-          <td><input type="text" name="textfield9" id="textfield9" /></td>
-        </tr>
-        <tr>
-          <td height="26" align="right" valign="middle" class="fntsize">sys.at_min:</td>
-          <td><input type="text" name="textfield10" id="textfield10" /></td>
-        </tr>
-        <tr>
-          <td height="28" align="right" valign="middle" class="fntsize">sys.ldlm_timeout:</td>
-          <td><input type="text" name="textfield11" id="textfield11" /></td>
-        </tr>
-        <tr>
-          <td align="right" valign="middle" class="fntsize">sys.timeout:</td>
-          <td><input type="text" name="textfield12" id="textfield12" /></td>
-        </tr>
-      </table>
-    </form>
-  </div>
-
+  <form id="form1" name="form1" method="post" action="">
+    <table width="75%" border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <td align="center" valign="middle" class="fontStyle">Property</td>
+        <td align="center" class="fontStyle">Value</td>
+      </tr>
+      <tr>
+        <td width="59%" height="27" align="right" valign="middle" class="fntsize">lite.max_cachd_mb: </td>
+        <td width="41%"><label>
+          <input type="text" name="textfield" id="textfield" />
+          </label></td>
+      </tr>
+      <tr>
+        <td height="26" align="right" valign="middle" class="fntsize">lite.max_cached_mb:</td>
+        <td><input type="text" name="textfield2" id="textfield2" /></td>
+      </tr>
+      <tr>
+        <td height="25" align="right" valign="middle" class="fntsize">lite.max_read_ahead_mb:</td>
+        <td><input type="text" name="textfield3" id="textfield3" /></td>
+      </tr>
+      <tr>
+        <td height="27" align="right" valign="middle" class="fntsize">lite.max_cached_whole_mb:</td>
+        <td><input type="text" name="textfield4" id="textfield4" /></td>
+      </tr>
+      <tr>
+        <td height="28" align="right" valign="middle" class="fntsize">lite.max_statahead_max:</td>
+        <td><input type="text" name="textfield5" id="textfield5" /></td>
+      </tr>
+      <tr>
+        <td height="28" align="right" valign="middle" class="fntsize">sys.at_early_margin:</td>
+        <td><input type="text" name="textfield6" id="textfield6" /></td>
+      </tr>
+      <tr>
+        <td height="28" align="right" valign="middle" class="fntsize">sys.at_extra:</td>
+        <td><input type="text" name="textfield7" id="textfield7" /></td>
+      </tr>
+      <tr>
+        <td height="26" align="right" valign="middle" class="fntsize">sys.at_history:</td>
+        <td><input type="text" name="textfield8" id="textfield8" /></td>
+      </tr>
+      <tr>
+        <td height="27" align="right" valign="middle" class="fntsize">sys.at_max:</td>
+        <td><input type="text" name="textfield9" id="textfield9" /></td>
+      </tr>
+      <tr>
+        <td height="26" align="right" valign="middle" class="fntsize">sys.at_min:</td>
+        <td><input type="text" name="textfield10" id="textfield10" /></td>
+      </tr>
+      <tr>
+        <td height="28" align="right" valign="middle" class="fntsize">sys.ldlm_timeout:</td>
+        <td><input type="text" name="textfield11" id="textfield11" /></td>
+      </tr>
+      <tr>
+        <td align="right" valign="middle" class="fntsize">sys.timeout:</td>
+        <td><input type="text" name="textfield12" id="textfield12" /></td>
+      </tr>
+    </table>
+  </form>
+</div>
 <div id="newOST" title="Select Target">
-    <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
-      <thead>
-        <tr>
-          <th width="1%">Select</th>
+  <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
+    <thead>
+      <tr>
+        <th width="1%">Select</th>
         <th width="19%">Target Path</th>
         <th width="10%">Capacity</th>
         <th width="20%">Kind</th>
         <th width="20%">Status</th>
         <th width="15%">Primary Server</th>
         <th width="15%">Failover</th>
-        </tr>
-      </thead>
-      <tbody id="popup-new-ost_content">
-      </tbody>
-    </table>
-  </div>
+      </tr>
+    </thead>
+    <tbody id="popup-new-ost_content">
+    </tbody>
+  </table>
+</div>
 <!-- exsting mgt popup -->
 <div id="existingMGT" title="Select Target">
   <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-existing-mgt" width="100%">
@@ -299,7 +298,7 @@
   <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-mgt" width="100%">
     <thead>
       <tr>
-         <th width="1%">Select</th>
+        <th width="1%">Select</th>
         <th width="19%">Target Path</th>
         <th width="10%">Capacity</th>
         <th width="20%">Kind</th>
@@ -330,27 +329,23 @@
     </tbody>
   </table>
 </div>
-
-
-<!-- Begin markup for storage_resource_dialog.js -->
+<!-- Confirmation dialog box -->
+<div id="confirm_dialog" title="Configuration Manager">
+<div id="dialog_mesg"></div>
 <div style="overflow-y: auto; max-height: 700px;" id="storage_resource_dialog">
-    <input style='display: none' id='alias_default_entry' value=''></input>
-    <span class='resource_name'>Name: <input type='entry' id='alias_edit_entry' value=''></input></span>
-
-    <a id='alias_save_button' href='#'>save</a>
-    <a id='alias_reset_button' href='#'>reset</a>
-    <img id='alias_spinner' style='display: none;' src='{{STATIC_URL}}/images/ajax-loader.gif'/>
-
-    <table class="storage_attributes" id='attributes'>
-    </table>
-
-    <table id='alerts'>
-    </table>
-
-    <ul class="storage_statistics" id='stats'>
-    </ul>
+  <input style='display: none' id='alias_default_entry' value=''>
+  </input>
+  <span class='resource_name'>Name:
+  <input type='entry' id='alias_edit_entry' value=''>
+  </input>
+  </span> <a id='alias_save_button' href='#'>save</a> <a id='alias_reset_button' href='#'>reset</a> <img id='alias_spinner' style='display: none;' src='{{STATIC_URL}}/images/ajax-loader.gif'/>
+  <table class="storage_attributes" id='attributes'>
+  </table>
+  <table id='alerts'>
+  </table>
+  <ul class="storage_statistics" id='stats'>
+  </ul>
 </div>
 <!-- End markup for storage_resource_dialog.js -->
-
 </body>
 </html>

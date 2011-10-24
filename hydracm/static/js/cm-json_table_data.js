@@ -1,3 +1,17 @@
+var MSG_STOP_HOST = "Are you sure you want to stop this host?";
+var MSG_START_HOST = "Are you sure you want to start host?";
+var MSG_REMOVE_HOST = "Are you sure you want to remove host?";
+var MSG_UNLOAD_LNET = "Lnet will be unloaded, Are you sure?";
+var MSG_LOAD_LNET = "Are you sure you want to load lnet?";
+var MSG_START_FSLIST = "This is will start Filesystem, Are you sure?";
+var MSG_STOP_FSLIST = "Are you sure you want to stop filesystem?";
+var MSG_REMOVE_FSLIST = "Are you sure you want to remove filesystem?";
+var MSG_MGT_START = "Are you sure you want to start MGT?";
+var MSG_MGT_STOP = "Are you sure you want to stop MGT?";
+var MSG_MGT_REMOVE = "Are you sure you want to Remove MGT?";
+var MSG_
+
+
 /******************************************************************/
 //Function name - LoadFSList_FSList()
 //Param - none
@@ -567,7 +581,7 @@ function LoadMGTConfiguration_MGTConf()
         {
           if(val_targetstatus == "STARTED")
           {
-            action ="<a href='#'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
+            action ="<a href='#' >Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
           }
           else
           {
@@ -602,6 +616,7 @@ function LoadMGTConfiguration_MGTConf()
 
 function LoadVolumeConf_VolumeConfig()
 {
+  $('#volume_configuration').dataTable().fnClearTable();
   $.post("/api/get_luns/",{"category": "usable"}).success(function(data, textStatus, jqXHR)
   {
     if(data.success)
@@ -663,15 +678,15 @@ function LoadServerConf_ServerConfig()
         lnet_status = resValue.lnet_status;
         if(lnet_status == "lnet_up")
         {
-          lnet_status_mesg = "<a href='#'>Stop<img src='/static/images/stop.png' title='Stop Lnet' height=15 width=15 onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_down&apos;)'/></a> | <a href='#'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"' onclick='RemoveHost_ServerConfig(" + resValue.id + ")' /></a> | <a href='#'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_unload&apos;)'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
+          lnet_status_mesg = "<a href='#' onclick='jConfirm(\"" + MSG_STOP_HOST + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_up&apos;);}});'>Stop<img src='/static/images/stop.png' title='Stop Lnet' height=15 width=15 onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_down&apos;)'/></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | <a href='#' onclick='jConfirm(\"" + MSG_UNLOAD_LNET + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_unload&apos;);}});'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15 /></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
         }
         else if(resValue.lnet_status == "lnet_down")
         {
-          lnet_status_mesg = "<a href='#'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_up&apos;)'/></a> | <a href='#'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"' onclick='RemoveHost_ServerConfig(" + resValue.id + ")' /></a> | <a href='#'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_unload&apos;)'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>"; 
+          lnet_status_mesg = "<a href='#' onclick='jConfirm(\"" + MSG_START_HOST + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_up&apos;);}});'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | <a href='#' onclick='jConfirm(\"" + MSG_UNLOAD_LNET + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_unload&apos;);}});'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15 /></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>"; 
         }
         else if(resValue.lnet_status == "lnet_unloaded")
         {
-          lnet_status_mesg = "<a href='#'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_up&apos;)'/></a> | <a href='#'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"' onclick='RemoveHost_ServerConfig(" + resValue.id + ")' /></a> | &nbsp;&nbsp;<a href='#'>Load<img src='/static/images/load.png' title='Load Lnet' height=15 width=15onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_load&apos;)'/></a>&nbsp;&nbsp; | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";  
+          lnet_status_mesg = "<a href='#' onclick='jConfirm(\"" + MSG_START_HOST + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_up&apos;);}});'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | &nbsp;&nbsp;<a href='#' onclick='jConfirm(\"" + MSG_LOAD_LNET + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_unload&apos;);}});'>Load<img src='/static/images/load.png' title='Load Lnet' height=15 width=15 /></a>&nbsp;&nbsp; | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";  
         }
         $('#server_configuration').dataTable().fnAddData ([
           resValue.host_address,

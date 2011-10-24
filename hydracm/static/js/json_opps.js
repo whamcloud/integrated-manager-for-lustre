@@ -1,7 +1,7 @@
 function AddHost_ServerConfig(hName, dialog_id)
 {
 	var oLoadingTable = "<table width='100%' border='0' cellspacing='0' cellpadding='0' align='center' id='loading_tab'><tr><td width='30%'  align='right'><img src='/static/images/loading.gif' width='16' height='16' /></td><td width='90%'  align='left' style='padding-left:5px;'>Checking connectivity</td></tr></table>";
-	$('#hostdetails').remove();
+	$('#hostdetails').empty();
 	$('#loading_container').html(oLoadingTable);
 	var oStatusTable;
 	var imgResolve;
@@ -39,7 +39,7 @@ function AddHost_ServerConfig(hName, dialog_id)
 	        	imgPing="/static/images/dialog_correct.png";
 	        }
 			
-			$('#loading_tab').remove();
+			$('#loading_tab').empty();
 			oStatusTable = "<table width='100%' border='0' cellspacing='0' cellpadding='0' align='center' id='status_tab'><tr><td>Resolve</td><td><img src='" + imgResolve + "' /></td></tr><tr><td>Ping</td><td><img src='" + imgPing + "'/></td></tr><tr><td>Invoke Agent</td><td><img src='" + imgAgent + "'/></td></tr></table>";
 			$('#status_container').html(oStatusTable);
 			
@@ -51,8 +51,8 @@ function AddHost_ServerConfig(hName, dialog_id)
 						$(this).dialog("close");
 						Add_Host_Table(dialog_id);
 					},
-					"Create": function() { 
-						 Add_Host(response.address);
+					"Add": function() { 
+						 Add_Host(response.address, dialog_id);
 					}
 				} 
 			});
@@ -65,7 +65,7 @@ function AddHost_ServerConfig(hName, dialog_id)
 	});
 }
 
-function Add_Host(host_name)
+function Add_Host(host_name, dialog_id)
 {
 	$.post("/api/addhost/",{"hostname":host_name}).success(function(data, textStatus, jqXHR) {
 		if(data.success)
@@ -74,11 +74,36 @@ function Add_Host(host_name)
 			var status = "<p>";
 			if(response.status=="added")
 			{
+				$('#status_tab').empty();
 				status = status + "Host Added Successfully";
+				$("#" + dialog_id).dialog("option", "buttons", null);
+				$("#" + dialog_id).dialog({ 
+				buttons: { 
+					"Close": function() { 
+						$(this).dialog("close");
+					},
+					"Add Another": function() { 
+						 Add_Host_Table(dialog_id);
+					}
+				} 
+			});
+				$('#server_configuration').dataTable().fnClearTable();
+				LoadServerConf_ServerConfig();
 			}
 			else
 			{
 				status = status + "Problem occurred while adding host, please try again";
+				$("#" + dialog_id).dialog("option", "buttons", null);
+				$("#" + dialog_id).dialog({ 
+					buttons: { 
+						"Close": function() { 
+							$(this).dialog("close");
+						},
+						"Add Another": function() { 
+							 Add_Host_Table(dialog_id);
+						}
+					} 
+				});
 			}
 			status = status + "</p>";
 			$('#host_status').html(status);
@@ -91,29 +116,34 @@ function Add_Host(host_name)
 	});
 }
 
-function RemoveHost_ServerConfig(host_id)
+function RemoveConfirmation(host_id)
+{
+	Confirm("Are you sure you want to remove host?",RemoveHost_ServerConfig(host_id));
+}
+
+RemoveHost_ServerConfig = function (host_id)
 {
 	$.post("/api/removehost/",{"hostid":host_id}).success(function(data, textStatus, jqXHR) {
-		if(data.success)
-		{
-			var response = data.response;		
-			if(response.status != "")
+			if(data.success)
 			{
-				alert("Host " + response.hostid + " Deleted");
-				$('#server_configuration').dataTable().fnClearTable();
-				LoadServerConf_ServerConfig();
+				var response = data.response;		
+				if(response.status != "")
+				{
+					alert("Host " + response.hostid + " Deleted");
+					$('#server_configuration').dataTable().fnClearTable();
+					LoadServerConf_ServerConfig();
+				}
+				else
+				{
+					alert("problem in deleting host");
+				}
 			}
-			else
-			{
-				alert("problem in deleting host");
-			}
-		}
-	})
-	.error(function(event) {
-      // Display of appropriate error message
-    })
-	.complete(function(event) {
-	});
+		})
+		.error(function(event) {
+		  // Display of appropriate error message
+		})
+		.complete(function(event) {
+		});
 }
 
 function Lnet_Operations(host_id, opps)
@@ -144,15 +174,18 @@ function Lnet_Operations(host_id, opps)
 function Add_Host_Table(dialog_id)
 {
 	//$('#host_status').remove();
-	$('#status_tab').remove();
+	$('#status_tab').empty();
+	$('#host_status').empty();
 	var oTable = "<table width='100%' border='0' cellspacing='0' cellpadding='0' id='hostdetails'><tr><td width='41%' align='right' valign='middle'>Host name:</td><td width='60%' align='left' valign='middle'><input type='text' name='txtHostName' id='txtHostName' /></td></tr></table>";
-	
 	$("#" + dialog_id).dialog("option", "buttons", null);
 			
 			$("#" + dialog_id).dialog({ 
 				buttons: { 
+					"Close": function() { 
+				     	 $(this).dialog("close");
+      				},
 					"Continue": function() { 
-						AddHost_ServerConfig($('#txtHostName').val(), "addNewHost"); 
+						AddHost_ServerConfig($('#txtHostName').val(),dialog_id); 
 					} 
 				}
 			});

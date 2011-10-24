@@ -26,6 +26,8 @@
        loadAlertContent('active_AlertContent', 'True', -1);
        
        loadAlertContent('all_AlertContent', '', -1);
+       
+       $("#alertAnchor").click();
     });
 </script>
 <style type="">
@@ -64,7 +66,7 @@
             <div style="float: right"><b id="minusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications_hor.png" alt="" /></b></div>
             <br/>
             <div style="font-family:Verdana, Arial, Helvetica, sans-serif;"><a href="#" id="alertAnchor">Alerts</a></div>
-            <div id="alertsDiv" class="transbox" style="margin-left:5px; height:400px; overflow:auto;">
+            <div id="alertsDiv" style="display:none;margin-left:5px; height:400px; overflow:auto;">
               <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
                 <tr>
                   <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="alert_content">
@@ -124,20 +126,19 @@
             </td>
           </tr>
           <tr>
-          	<td><h3>Active Alerts</h3></td>
-          </tr>
-          <tr>
-            <td colspan="3">
+          	<td colspan="3">
+                <fieldset>
+                <h3>Active Alerts</h3>
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="display" id="active_AlertContent">
                 
                 </table>
+                </fieldset>
             </td>
           </tr>
           <tr>
-          	<td><h3>Alert History</h3></td>
-          </tr>
-          <tr>
             <td colspan="3">
+                <fieldset>
+                <h3>Alert History</h3>
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="display" id="all_AlertContent">
                 <thead>
                       <tr>
@@ -147,7 +148,10 @@
                         <th width="55%">Message</th>
                       </tr>
                  </thead>
+                 <tbody>
+                 </tbody>
                 </table>
+                </fieldset>
             </td>
           </tr>
         </table>

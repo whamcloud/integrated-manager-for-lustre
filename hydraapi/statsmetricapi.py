@@ -61,18 +61,18 @@ class GetFSTargetStats(AnonymousRequestHandler):
                     fs_target_stats = fs.metrics.fetch_last(MetadataTarget,fetch_metrics=fetch_metrics.split())
                 else:
                     fs_target_stats = fs.metrics.fetch_last(MetadataTarget)   
-        anystats = []
+        chart_stats = []
         if fs_target_stats:
             if start_time:  
                 for stats_data in fs_target_stats:
                     stats_data[1]['filesystem'] = fs.name
                     stats_data[1]['timestamp'] = stats_data[0]
-                    anystats.append(stats_data[1])
+                    chart_stats.append(stats_data[1])
             else:
                 fs_target_stats[1]['filesystem'] = fs.name
                 fs_target_stats[1]['timestamp'] = fs_target_stats[0]
-                anystats.append(fs_target_stats[1])
-        return anystats
+                chart_stats.append(fs_target_stats[1])
+        return chart_stats
 
 class GetFSServerStats(AnonymousRequestHandler):
     @extract_request_args('filesystem','starttime','endtime','datafunction','fetchmetrics')
@@ -106,18 +106,18 @@ class GetFSServerStats(AnonymousRequestHandler):
                 host_stats = host.metrics.fetch_last(fetch_metrics=fetch_metrics.split())
             else:
                 host_stats = host.metrics.fetch_last()
-        onlystats = []   
+        chart_stats = []   
         if host_stats:
             if start_time:
                 for stats_data in host_stats:
                     stats_data[1]['host'] = host.address
                     stats_data[1]['timestamp'] = stats_data[0]
-                    onlystats.append(stats_data[1])      
+                    chart_stats.append(stats_data[1])      
             else:
                 host_stats[1]['host'] = host.address
                 host_stats[1]['timestamp'] = host_stats[0]
-                onlystats.append(host_stats[1]) 
-        return onlystats
+                chart_stats.append(host_stats[1]) 
+        return chart_stats
 
 class GetFSMGSStats(AnonymousRequestHandler):
     @extract_request_args('filesystem','starttime','endtime' ,'datafunction','fetchmetrics')
@@ -149,15 +149,18 @@ class GetFSMGSStats(AnonymousRequestHandler):
                 mgs_stats = mgs.metrics.fetch_last(fetch_metrics=fetch_metrics.split())
             else:
                 mgs_stats = mgs.metrics.fetch_last()
+        chart_stats = []
         if mgs_stats:
             if start_time:
                 for stats_data in mgs_stats:
                     stats_data[1]['host'] = mgs.name
                     stats_data[1]['timestamp'] = stats_data[0]
+                    chart_stats.append(stats_data[1]) 
             else:
                 mgs_stats[1]['host'] = mgs.name
                 mgs_stats[1]['timestamp'] = mgs_stats[0]
-        return mgs_stats
+                chart_stats.append(mgs_stats[1]) 
+        return chart_stats
 
 class GetServerStats(AnonymousRequestHandler):
     @extract_request_args('hostid','starttime','endtime' ,'datafunction','fetchmetrics')
@@ -182,15 +185,18 @@ class GetServerStats(AnonymousRequestHandler):
                 host_stats = host.metrics.fetch_last(fetch_metrics=fetch_metrics.split())
             else:
                 host_stats = host.metrics.fetch_last()
+        chart_stats = []
         if host_stats:
             if start_time:
                 for stats_data in host_stats:
                     stats_data[1]['host'] = host.address
                     stats_data[1]['timestamp'] = stats_data[0]
+                    chart_stats.append(stats_data[1])
             else:
                 host_stats[1]['host'] = host.address
                 host_stats[1]['timestamp'] = host_stats[0]
-        return host_stats
+                chart_stats.append(host_stats[1]) 
+        return chart_stats
 
 class GetTargetStats(AnonymousRequestHandler):
     @extract_request_args('target','starttime','endtime','datafunction','targetkind','fetchmetrics')
@@ -217,16 +223,19 @@ class GetTargetStats(AnonymousRequestHandler):
                 target_stats = target.metrics.fetch_last(fetch_metrics=fetch_metrics.split())
             else:
                 target_stats = target.metrics.fetch_last()
+        chart_stats = [] 
         if target_stats:
             if start_time:
                 start_time=int(start_time)
                 start_time = getstartdate(start_time)             
                 for stats_data in target_stats:
                     stats_data[1]['target'] = target.name
+                    chart_stats.append(stats_data[1]) 
             else:
                 target_stats[1]['target'] = target.name
                 target_stats[1]['timestamp'] = target_stats[0]
-        return target_stats
+                chart_stats.append(target_stats[1]) 
+        return chart_stats
 
 class GetFSClientsStats(AnonymousRequestHandler):
     @extract_request_args('filesystem','starttime','endtime' ,'datafunction','fetchmetrics')
@@ -253,18 +262,18 @@ class GetFSClientsStats(AnonymousRequestHandler):
                 client_stats = filesystem.metrics.fetch_last(ObjectStoreTarget,fetch_metrics=fetch_metrics.split())
             except:
                 pass
-        onlystats = [] 
+        chart_stats = [] 
         if client_stats:
             if start_time:
                 for stats_data in client_stats:
                     stats_data[1]['filesystem'] = filesystem.name
                     stats_data[1]['timestamp'] = stats_data[0]
-                    onlystats.append(stats_data[1])       
+                    chart_stats.append(stats_data[1])       
             else:
                 client_stats[1]['filesystem'] = filesystem.name
                 client_stats[1]['timestamp'] = client_stats[0]
-                onlystats.append(client_stats[1])
-        return onlystats
+                chart_stats.append(client_stats[1])
+        return chart_stats
 
 def getstartdate(start_time):
     import datetime

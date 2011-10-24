@@ -290,15 +290,15 @@
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
 					style="margin-left: 115px" class="magbutton"
-					onclick="db_LineBar_CpuMemoryUsage_Data('true');setZoomDialogTitle('All File System CPU Usage');" />
+					onclick="db_LineBar_CpuMemoryUsage_Data('true');setZoomDialogTitle('All File Systems: CPU and Memory Usage');" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="avgCPUDiv" class="round-table" style="width: 300px">Filesystems Average CPU and Memory Usage</div>
+				<div id="avgCPUDiv" class="round-table" style="width: 300px">Filesystems CPU and Memory Usage</div>
 				</td>
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
 					style="margin-left: 115px" class="magbutton"
-					onclick="db_Area_ReadWrite_Data('true');setZoomDialogTitle('All File System Memory Usage');" />
+					onclick="db_Area_ReadWrite_Data('true');setZoomDialogTitle('All File Systems: Disk Read and Write');" />
 				</div>
 				<div style="clear: right;"></div>
 				<div id="avgMemoryDiv" class="round-table" style="width: 300px">Filesystems Disk Read and Write</div>
@@ -306,7 +306,7 @@
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
 					style="margin-left: 115px" class="magbutton"
-					onclick="db_Area_Iops_Data('true');setZoomDialogTitle('Disk Read');" />
+					onclick="db_Area_Iops_Data('true');setZoomDialogTitle('All File Systems: IOP/s');" />
 				</div>
 				<div style="clear: right;"></div>
 				<div id="avgReadDiv" class="round-table" style="width: 300px">IOP/s</div>
@@ -323,35 +323,12 @@
 		</form>
 		</td>
 	</tr>
-	<tr>
+	<!-- <tr>
 		<td colspan="3">
 		<form>
-		<fieldset><!--<legend class="legendClass">All MDS Performance Summary
-                <a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;
-                </legend>-->
+		<fieldset>
 		<table width="100%" border="0" cellpadding="0" cellspacing="0">
 			<tr height="220">
-				<!-- <td  valign="top" class="text" width="25%" align="center"><div class="magni">
-                        <input type="button" value=" " class="magbutton" onclick="db_Mgs_Line_CpuUsage_Data('true');setZoomDialogTitle('All MDS/MGS CPU Usage');"/>
-                      </div>
-                      <div style="clear:right;"></div>
-                      <div id="mgsavgCPUDiv" class="round-table">Filesystems Avg CPU</div></td>
-                    <td  valign="top" class="text" width="25%" align="center"><div class="magni">
-                        <input type="button" value=" " class="magbutton" onclick="db_Mgs_Line_MemoryUsage_Data('true');setZoomDialogTitle('All MDS/MGS Memory Usage');"/>
-                      </div>
-                      <div style="clear:right;"></div>
-                      <div id="mgsavgMemoryDiv" class="round-table">Filesystems Avg Memory</div></td>
-                     <td  valign="top" class="text" width="25%" align="center"><div class="magni">
-                        <input type="button" value=" " class="magbutton" onclick="db_Mgs_Line_DiskRead_Data('true');setZoomDialogTitle('Disk Read');"/>
-                      </div>
-                      <div style="clear:right;"></div>
-                      <div id="mgsavgReadDiv" class="round-table">File System Avg Read</div></td>
-                    <td  valign="top" class="text" width="25%" align="center"><div class="magni">
-                        <input type="button" value=" " class="magbutton" onclick="db_Mgs_Line_DiskWrite_Data('true');setZoomDialogTitle('Disk Write');"/>
-                      </div>
-                      <div style="clear:right;"></div>
-                      <div id="mgsavgWriteDiv" class="round-table">Filesystems Avg Write</div></td>	 -->
 				<td valign="top" class="text" width="100%" align="center">
 				<div class="magni"><input type="button" value=" "
 					class="magbutton" onclick="" style="margin-left: 970px"
@@ -365,7 +342,7 @@
 		</fieldset>
 		</form>
 		</td>
-	</tr>
+	</tr>   -->
 </table>
 </div>
 <!-- Dashboard Div - End --> <!-- FileSystem Div - Start -->
@@ -475,7 +452,7 @@
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
 					style="margin-left: 115px" class="magbutton"
-					onclick="fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System CPU Usage');" />
+					onclick="fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System: CPU and Memory Usage');" />
 				</div>
 				<div style="clear: right;"></div>
 				<div id="fs_avgCPUDiv" class="round-table" style="width: 300px">Server CPU and Memory Usage</div>
@@ -483,7 +460,7 @@
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
 					style="margin-left: 115px" class="magbutton"
-					onclick="fs_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('File System Memory Usage');" />
+					onclick="fs_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('File System: Disk Read and Write');" />
 				</div>
 				<div style="clear: right;"></div>
 				<div id="fs_avgMemoryDiv" class="round-table" style="width: 300px">Disk Read and Write</div>
@@ -491,7 +468,7 @@
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
 					style="margin-left: 115px" class="magbutton"
-					onclick="fs_Area_Iops_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', iopsFetchmatric, 'true');setZoomDialogTitle('Disk Read');" />
+					onclick="fs_Area_Iops_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', iopsFetchmatric, 'true');setZoomDialogTitle('File System: IOP/s');" />
 				</div>
 				<div style="clear: right;"></div>
 				<div id="fs_avgReadDiv" class="round-table" style="width: 300px">IOP/s</div>
@@ -502,12 +479,11 @@
 		</form>
 		</td>
 	</tr>
-	<tr>
+	<!-- <tr>
 		<td colspan="3">
 		<form>
 		<fieldset><legend class="legendClass">File System
-		MDS/MGS Performance Summary <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
+		MDS/MGS Performance Summary
 		</legend>
 		<table width="100%" border="0">
 			<tr>
@@ -524,7 +500,7 @@
 		</fieldset>
 		</form>
 		</td>
-	</tr>
+	</tr>   -->
 </table>
 </div>
 <!-- FileSystem Div - End --> <!-- OSS Div - Start -->
@@ -635,15 +611,15 @@
 			</td>	 -->
 			<td valign="top" class="text" width="50%" align="center">
 				<div class="magni" style="margin-left: 515px">
-                      <input type="button" value="" class="magbutton" onclick="oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System CPU Memory Usage');" />	 
+                    <input type="button" value="" class="magbutton" onclick="oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('Server: CPU and Memory Usage');" />	 
                 </div>
 				<div style="clear: right;"></div>
 				<div id="oss_avgReadDiv" class="round-table" style="width: 500px">Server CPU and Memory</div>
 			</td>
 			<td valign="top" class="text" width="50%" align="center">
 					<div class="magni" style="margin-left: 515px">
-                         <input type="button" value="" class="magbutton" onclick="oss_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('File System Disk Read Write');" />	
-                    </div>
+                     <input type="button" value="" class="magbutton" onclick="oss_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('Server: Disk Read and Write');" />	
+                </div>
 				<div style="clear: right;"></div>
 				<div id="oss_avgWriteDiv" class="round-table" style="width: 500px">Disk Read and Write</div>
 			</td>
@@ -790,7 +766,7 @@
 				<td valign="top" class="text" width="50%" align="center">
 				<div class="magni" style="margin-left: 515px"><input
 					type="button" value=" " class="magbutton"
-					onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Disk Read');" />
+					onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
 				</div>
 				<div style="clear: right;"></div>
 				<div id="ost_avgReadDiv" style="width: 500px" class="round-table">Disk Read and Write</div>
@@ -811,9 +787,13 @@
 		</form>
 		</td>
 	</tr>
+	<tr>
+	 <td align="center" colspan="4" width="100%"> 
+	   <div id="ost_resource_graph_canvas" class="canvas resource_graph_canvas round-table">
+     </div>
+	 </td>
+	</tr>
 </table>
-<div id="ost_resource_graph_canvas" class="canvas resource_graph_canvas">
-</div>
 </div>
 <!-- OST Div - End --></div>
 <div style="clear: both;"></div>

@@ -516,7 +516,7 @@ var chartConfig_HeatMap = {
 	        	          
 	        	          obj_db_Line_connectedClients_Data.series[count] = { name: resValue.filesystem, data: clientMountData };
 	              		   
-	              		  clientMountData.push(resValue.clients_mounts);
+	              		  clientMountData.push(resValue.num_exports);
 	                	  categories.push(resValue.timestamp);
                 	  }
                   });

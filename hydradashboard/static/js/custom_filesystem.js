@@ -117,19 +117,19 @@ var fs_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
 	      		          categories = [];
 	      		          count++;
 	      		          fileSystemName = resValue.filesystem;
-	      		          clientMountData.push(resValue.clients_mounts);
+	      		          clientMountData.push(resValue.num_exports);
 	      		          categories.push(resValue.timestamp);
 	      			       }
 	      			       else
 	      			       {
 	      			    	fileSystemName = resValue.filesystem;
-	      			        clientMountData.push(resValue.clients_mounts);
+	      			        clientMountData.push(resValue.num_exports);
 	      			        categories.push(resValue.timestamp);
 	      			       }
 	        	          
 	        	          obj_db_Line_connectedClients_Data.series[count] = { name: '', data: clientMountData };
 	              		   
-	              		  clientMountData.push(resValue.clients_mounts);
+	              		  clientMountData.push(resValue.num_exports);
 	                	  categories.push(resValue.timestamp);
                 	  }
                   });

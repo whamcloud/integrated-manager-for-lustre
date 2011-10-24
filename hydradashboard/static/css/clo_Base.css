@@ -342,6 +342,9 @@ cursor:pointer;
 .border1{
 	border:1px solid #5e8bc0;
 }
+.border_red{
+     border-bottom:1px solid red;
+}
 .spacetop{
 	margin-top:3px;
 }

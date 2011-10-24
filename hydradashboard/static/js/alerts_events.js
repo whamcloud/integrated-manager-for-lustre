@@ -14,21 +14,18 @@
 
 $(document).ready(function() 
 {
-		$("#alertAnchor").click(function(){
-			loadAlertContent('alert_content', 'True', 10);
-		});  
-		
-		$("#eventsAnchor").click(function(){
-			loadEventContent('event_content' , 10);	
-		});  
-		
-		$("#jobsAnchor").click(function(){
-			loadJobContent('job_content');
-		});	
-		
 		$("#alertAnchor").click(function()
         {
-            $("#alertsDiv").toggle("slideUp");
+            if($("#alertsDiv").css("display") == "none")
+            {
+                $("#alertsDiv").css("display","block");
+                loadAlertContent('alert_content', 'True', 10);
+            }
+            else
+            {
+                $("#alertsDiv").css("display","none");
+            }
+
             $("#alertAnchor").css("color",'red');
             $("#eventsDiv").hide();
             $("#eventsAnchor").css("color",'#7A848B');
@@ -38,7 +35,16 @@ $(document).ready(function()
 
         $("#eventsAnchor").click(function()
         {
-            $("#eventsDiv").toggle("slideUp");
+            if($("#eventsDiv").css("display") == "none")
+            {
+                $("#eventsDiv").css("display","block");
+                loadEventContent('event_content' , 10);
+            }
+            else
+            {
+                $("#eventsDiv").css("display","none");
+            }
+
             $("#eventsAnchor").css("color",'#0040FF');
             $("#alertsDiv").hide();
             $("#alertAnchor").css("color",'#7A848B');
@@ -48,7 +54,16 @@ $(document).ready(function()
 
         $("#jobsAnchor").click(function()
         {
-            $("#jobsDiv").toggle("slideUp");
+            if($("#jobsDiv").css("display") == "none")
+            {
+                $("#jobsDiv").css("display","block");
+                loadJobContent('job_content');
+            }
+            else
+            {
+                $("#jobsDiv").css("display","none");
+            }
+            
             $("#jobsAnchor").css("color",'green');
             $("#alertsDiv").hide();
             $("#alertAnchor").css("color",'#7A848B');
@@ -124,7 +139,16 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
 	                	cssClassName='brightyellow';
 	                	imgName="/static/images/dialog_correct.gif";
 	                }
-	                alertTabContent = alertTabContent + "<tr class='"+cssClassName+"'><td width='20%' align='left' valign='top' class='border' style='font-weight:normal'>" +  resValue.alert_created_at + "<td width='7%' align='left' valign='top' class='border'><img src='"+imgName+"' width='16' height='16' class='spacetop' /></td><td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.alert_item +  "</td><td width='38%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.alert_message + "</td></tr>";
+	                
+	                var tdClass='border_red',tdStyle='font-weight:normal';
+                    if(maxCount == -1)
+                    {
+                        tdClass = "";
+                        tdStyle = 'font-weight:bold';
+                    }
+
+	                alertTabContent = alertTabContent + "<tr class='"+cssClassName+"'><td width='20%' align='left' valign='top' class='"+tdClass+"' style='"+tdStyle+"'>" +  resValue.alert_created_at + "<td width='7%' align='left' valign='top' class='"+tdClass+"'><img src='"+imgName+"' width='16' height='16' class='spacetop' /></td><td width='30%' align='left' valign='top' class='"+tdClass+"' style='"+tdStyle+"'>" + resValue.alert_item +  "</td><td width='38%' align='left' valign='top' class='"+tdClass+"' style='"+tdStyle+"'>" + resValue.alert_message + "</td></tr>";
+	                
                 }
              });
          }
@@ -153,13 +177,12 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
 			              ]
 					});
 					
-					$("#"+targetAlertDivName).dataTable().fnAddData ([
+					/*$("#"+targetAlertDivName).dataTable().fnAddData ([
 						resValue.alert_created_at,
 						"<img src='"+ imgName +"' width='16' height='16' class='spacetop' />",
 						resValue.alert_item,
 						resValue.alert_message
-					]);
-					alert("data loaded");
+					]);*/
 				}
 				else
 				{

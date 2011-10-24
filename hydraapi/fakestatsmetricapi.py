@@ -124,7 +124,7 @@ class GetFSServerStats_fake(AnonymousRequestHandler):
                     data_slice.append(
                                       {
                                        'timestamp': slice,
-                                       'hostname' : host.address,
+                                       'host' : host.address,
                                        'mem_MemFree' : randrange(1024,16384,3),
                                        'mem_MemTotal':'16384',
                                        'cpu_usage' : randrange(0,100,3),
@@ -143,7 +143,7 @@ class GetFSServerStats_fake(AnonymousRequestHandler):
                         host_stats_metric.append(
                                                  {
                                                   'timestamp': slice,
-                                                  'hostname' : host.address,
+                                                  'host' : host.address,
                                                   'mem_MemFree' : randrange(1024,16384,3),
                                                   'mem_MemTotal':'16384',
                                                   'cpu_usage' : randrange(0,100,3),
@@ -164,7 +164,7 @@ class GetServerStats_fake(AnonymousRequestHandler):
                     data_slice.append(
                                       {
                                        'timestamp': slice,
-                                       'hostname' : host.address,
+                                       'host' : host.address,
                                        'mem_MemFree' : randrange(1024,16384,3),
                                        'mem_MemTotal':'16384',
                                        'cpu_usage' : randrange(0,100,3),
@@ -226,7 +226,7 @@ class GetFSClientsStats_fake(AnonymousRequestHandler):
                 {
                  'timestamp' : slice,
                  'filesystem' : filesystem,
-                 'clients_mounts' : randrange(0,137,3),
+                 'num_exports' : randrange(0,137,3),
                 }
                 for slice in current_slice
          ]

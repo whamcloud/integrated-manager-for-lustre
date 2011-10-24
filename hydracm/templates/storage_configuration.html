@@ -1,5 +1,5 @@
 
-<form method='get' style='margin-bottom: 3px;'>
+<form method='get' style='margin-bottom: 3px; padding-top:15px;'>
 
     <select id='resource_class_select'>
     </select>
@@ -26,21 +26,20 @@
                         /* FIXME: I actually quite like jquery-ui, but the rest of hydracm isn't using it
                            so lets be consistent for now -jcs */
                         "bJQueryUI": true,
-                        "bPaginate": false,
+                        "bPaginate": true,
                         "aaData": data.response['aaData'],
+						"iDisplayLength":25,
                         "aoColumns": data.response['aoColumns']
                     }); 
                     /* Column 0 is the internal ID column */
                     resourceTable.fnSetColumnVis(0, false);
 
-                    /*
                     $('#resource_table tbody tr').live('click', function() {
                         var aPos = resourceTable.fnGetPosition(this);
                         var data = resourceTable.fnGetData(aPos);
                         var resource_record_id = data[0]
                         console.log(resource_record_id);
                     });
-                    */
                 }
             });
         }
@@ -70,7 +69,8 @@
         });
     </script>
 </form>
-
-<table id='resource_table' class='display' width="100%">
+<fieldset>
+      <legend class="legendClass"> Storage Configuration </legend>
+<table id='resource_table' class='display' width="100%" style="padding-top:15px;">
 </table>
-
+</fieldset>
