@@ -70,7 +70,7 @@ def get_local_targets():
 def get_mgs_targets(local_targets):
     """If there is an MGS in local_targets, use debugfs to 
        get a list of targets.  Return a dict of filesystem->(list of targets)"""
-    TARGET_NAME_REGEX = "(\w+)-(MDT|OST)\w+"
+    TARGET_NAME_REGEX = "([\w-]+)-(MDT|OST)\w+"
     mgs_target = None
     for t in local_targets:
         if t["name"] == "MGS":
@@ -94,7 +94,7 @@ def get_mgs_targets(local_targets):
         if size == 0:
             continue
 
-        match = re.search("(\w+)-client", name)
+        match = re.search("([\w-]+)-client", name)
         if match != None:
             filesystems.append(match.group(1).__str__())
 
@@ -128,8 +128,8 @@ def get_mgs_targets(local_targets):
                 (code,action) = re.search("^\\((\d+)\\)([\w=]+)$", tokens[1]).groups()
                 if conf_param_type == 'filesystem' and action == 'setup':
                     # e.g. entry="#09 (144)setup     0:flintfs-MDT0000-mdc  1:flintfs-MDT0000_UUID  2:192.168.122.105@tcp"
-                    volume = re.search("0:(\w+-\w+)-\w+", tokens[2]).group(1)
-                    fs_name = volume.split("-")[0]
+                    volume = re.search("0:([\w-]+)-\w+", tokens[2]).group(1)
+                    fs_name = volume.rsplit("-", 1)[0]
                     uuid = re.search("1:(.*)", tokens[3]).group(1)
                     nid = re.search("2:(.*)", tokens[4]).group(1)
 
