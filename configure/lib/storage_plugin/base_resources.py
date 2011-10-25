@@ -34,3 +34,8 @@ class Enclosure(StorageResource):
 class LogicalDrive(StorageResource):
     size = attributes.Bytes()
     icon = 'virtual_disk'
+
+class VirtualMachine(StorageResource):
+    address = attributes.String()
+    home_controller = attributes.ResourceReference()
+    host_id = attributes.Integer(optional = True)

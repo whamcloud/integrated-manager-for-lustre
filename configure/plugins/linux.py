@@ -36,9 +36,26 @@ class DeviceNode(StorageResource):
         return "%s:%s" % (self.host.human_string(), path)
 
 class HydraHostProxy(StorageResource, ScannableResource):
-    identifier = GlobalId('host_id')
+    # FIXME using address here is troublesome for hosts whose 
+    # addresses might change.  However it is useful for doing
+    # an update_or_create on VMs discovered on controllers.  Hmm.
+    # I wonder if what I really want is a HostResource base and then
+    # subclasses for on-controller hosts (identified by controller+index)
+    # and separately for general hosts (identified by ManagedHost.pk)
+    identifier = GlobalId('address')
 
-    host_id = attributes.Integer()
+    host_id = attributes.Integer(optional = True)
+
+    # Create a host with no host_id but an address, and resource_manager
+    # will know to create a configure.models.ManagedHost for it (or 
+    # map its host_id to an existing ManagedHost with the same address)
+    address = attributes.String()
+
+    # For hosts which are affine to a particular storage controller,
+    # set this so that resource_manager knows that this host is
+    # the primary server for Luns whose home is that controller.
+    home_controller = attributes.ResourceReference(optional = True)
+
     def human_string(self, parent = None):
         host = ManagedHost._base_manager.get(pk=self.host_id)
         return "%s" % host

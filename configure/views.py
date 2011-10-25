@@ -487,10 +487,6 @@ def target(request, target_id):
         'target': target,
         'conf_param_list': target.get_conf_params(),
         'conf_param_form': conf_param_form,
-        'parent_records': parent_records,
-        'ancestor_records': ancestor_records,
-        'storage_alerts': storage_alerts,
-        'lustre_alerts': lustre_alerts,
         'target_size': target.managedtargetmount_set.get(primary = True).block_device.lun.size}))
 
 

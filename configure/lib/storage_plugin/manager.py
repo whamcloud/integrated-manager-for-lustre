@@ -82,7 +82,7 @@ class StoragePluginManager(object):
         resource_class, resource_class_id = self.get_plugin_resource_class(plugin_mod, resource_class_name)
 
         # Construct a record
-        record = StorageResourceRecord.create_root(resource_class, resource_class_id, kwargs)
+        record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, kwargs)
 
         # XXX should we let people modify root records?  e.g. change the IP
         # address of a controller rather than deleting it, creating a new 

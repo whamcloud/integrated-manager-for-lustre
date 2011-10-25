@@ -191,10 +191,13 @@ class StoragePlugin(object):
             self._delta_alerts.clear()
 
     def commit_resource_statistics(self):
+        return
+        self.log.debug(">> Plugin.commit_resource_statistics %s", self._scannable_id)
         for resource in self._index.all():
             r_stats = resource.flush_stats()
             from configure.lib.storage_plugin.resource_manager import resource_manager 
             resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
+        self.log.debug("<< Plugin.commit_resource_statistics %s", self._scannable_id)
 
     def update_or_create(self, klass, parents = [], **attrs):
         with self._resource_lock:

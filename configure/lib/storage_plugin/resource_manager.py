@@ -184,8 +184,42 @@ class ResourceManager(object):
             if isinstance(scannable_resource, HydraHostProxy):
                 self._persist_lun_updates(scannable_id, scannable_resource)
 
+            # Plugins are allowed to create HydraHostProxy objects, indicating that
+            # we should created a ManagedHost to go with it (e.g. discovering VMs)
+            self._persist_created_hosts(session, scannable_id)
+
         log.info("<< session_open %s" % scannable_id)
 
+    @transaction.autocommit
+    def _persist_created_hosts(self, session, scannable_id):
+        log.debug("_persist_created_hosts")
+        # FIXME: look up more efficiently (don't currently keep an in-memory record of the
+        # class of each resource)
+        def get_session_resources_of_type(session, klass):
+            for record_pk in session.local_id_to_global_id.values():
+                from configure.models import StorageResourceRecord
+                record = StorageResourceRecord.objects.get(pk = record_pk)
+                resource = record.to_resource()
+                log.info("%s %s %s" % (record_pk, resource.__class__, klass))
+                if isinstance(resource, klass):
+                    yield (record, resource)
+
+        from configure.lib.storage_plugin import base_resources
+        for record, resource in get_session_resources_of_type(session, base_resources.VirtualMachine):
+            log.info("Resource %s" % resource)
+            log.debug("Got host_id of %s=%s" % (record.pk, resource.host_id))
+            if not resource.host_id:
+                from configure.models import ManagedHost
+                log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
+                # TODO: deal with an existing host having the same address (doing that would
+                # also accomodate a crash between creating the host and saving the ID, as we
+                # would pick up the created host next time around when scanning)
+                host = ManagedHost.create_from_string(resource.address)
+                record.update_attribute('host_id', host.pk)
+                log.debug("Set host_id of %s=%s" % (record.pk, host.pk))
+                # NB any instances of this resource within the plugin session
+                # that reported it won't see the change to host_id attribute, but that's
+                # fine, they have no right to know.
 
     @transaction.autocommit
     def _persist_lun_updates(self, scannable_id, scannable_resource):
@@ -210,8 +244,6 @@ class ResourceManager(object):
                         shareable = shareable)
                 return lun
 
-        # TODO: restrict below searches to only this scannable ID to 
-        # avoid rescanning everything every time
         # Update LunNode objects for DeviceNodes
         node_types = []
         # FIXME: mechanism to get subclasses of base_resources.DeviceNode
@@ -267,6 +299,11 @@ class ResourceManager(object):
                             use = False
                         else:
                             use = True
+
+                #if settings.DDN10K_PRIMARY_LUN_HACK:
+                    # Let's do some magic for the 10KE: we need to know
+                    #  * The home_cont of the VDs underlying this Lun
+                    #  * Which controller the host lives on
 
                 lun_node = LunNode.objects.create(
                     lun = lun,

@@ -47,6 +47,15 @@ class String(ResourceAttribute):
         if self.max_length != None and len(value) > self.max_length:
             raise RuntimeError("Value '%s' too long (max %s)" % (value, self.max_length))
 
+class Boolean(ResourceAttribute):
+    def encode(self, value):
+        # Use an explicit 'encode' so that if someone sets the attribute to something
+        # truthy but big (like a string) we don't end up storing that
+        return bool(value)
+
+    def decode(self, value):
+        return value
+
 class Integer(ResourceAttribute):
     def __init__(self, min_val = None, max_val = None, *args, **kwargs):
         self.min_val = min_val
@@ -103,6 +112,7 @@ class ResourceReference(ResourceAttribute):
         pk = json.loads(value)
 
         from configure.models import StorageResourceRecord
+        print "record = %s (%s)" % (pk, value)
         record = StorageResourceRecord.objects.get(pk = pk)
         return record.to_resource()
         

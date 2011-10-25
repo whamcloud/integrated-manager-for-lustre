@@ -94,9 +94,13 @@ class PluginSession(threading.Thread):
         instance = plugin_klass(self.root_resource_id)
         # TODO: impose timeouts on plugin calls (especially teardown)
         try:
+            daemon_log.debug("Session %s: >>initial_scan" % root_resource._handle)
             instance.do_initial_scan(root_resource)
+            daemon_log.debug("Session %s: <<initial_scan" % root_resource._handle)
             while not self.stopping:
+                daemon_log.debug("Session %s: >>periodic_update" % root_resource._handle)
                 instance.do_periodic_update(root_resource)
+                daemon_log.debug("Session %s: <<periodic_update" % root_resource._handle)
                 time.sleep(instance.update_period)
         except Exception:
             raise

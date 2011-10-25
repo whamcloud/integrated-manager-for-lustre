@@ -58,17 +58,26 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             ssh_monitor.save()
 
             # Ensure all Host objects have an LNetConfiguration
-            lnet_configuration = LNetConfiguration.objects.create(host = host)
+            lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
 
             # Hook all ManagedHost instances into HydraHostProxy storage resources
             # so that they get scanned for devices.
             from configure.lib.storage_plugin.manager import storage_plugin_manager
-            storage_plugin_manager.create_root_resource('linux', 'HydraHostProxy', host_id = host.pk)
+            from django.db import IntegrityError
+            if ssh_monitor.port:
+                address = "%s:%s" % (host.address, ssh_monitor.port)
+            else:
+                address = host.address
+
+            storage_plugin_manager.create_root_resource('linux',
+                    'HydraHostProxy', host_id = host.pk, address = address)
 
         # Attempt some initial setup jobs
         from configure.lib.state_manager import StateManager
         StateManager().set_state(lnet_configuration, 'nids_known')
         StateManager().add_job(AddHostJob(host = host))
+
+        return host
 
     def pretty_name(self):
         if self.address[-12:] == ".localdomain":

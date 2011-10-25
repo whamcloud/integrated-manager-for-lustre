@@ -64,8 +64,7 @@ class StorageResourceRecord(models.Model):
         return self.alias_or_name()
 
     @classmethod
-    def create_root(cls, resource_class, resource_class_id, attrs):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+    def get_or_create_root(cls, resource_class, resource_class_id, attrs):
         # Root resource do not have parents so they must be globally identified
         from configure.lib.storage_plugin.resource import GlobalId
         if not isinstance(resource_class.identifier, GlobalId):
@@ -82,10 +81,11 @@ class StorageResourceRecord(models.Model):
                     resource_class = resource_class_id,
                     storage_id_str = id_str,
                     storage_id_scope = None)
-            raise RuntimeError("Cannot create root resource %s %s, a resource with the same global identifier already exists" % (resource_class.__name__, attrs))
+            return existing_record, False
         except StorageResourceRecord.DoesNotExist:
             # Great, nothing in the way
             pass
+
         record = StorageResourceRecord(
                 resource_class_id = resource_class_id,
                 storage_id_str = id_str)
@@ -94,9 +94,10 @@ class StorageResourceRecord(models.Model):
             StorageResourceAttribute.objects.create(resource = record,
                     key = name, value = resource_class.encode(name, value))
 
-        return record
+        return record, True
 
     def update_attribute(self, key, val):
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         resource_class = storage_plugin_manager.get_resource_class_by_id(self.resource_class_id)
 
         # Try to update an existing record
@@ -105,10 +106,15 @@ class StorageResourceRecord(models.Model):
                     key = key).update(value = resource_class.encode(key, val))
         # If there was no existing record, create one
         if updated == 0:
-            StorageResourceAttribute.objects.create(
-                    resource = self,
-                    key = key,
-                    value = resource_class.encode(key, value))
+            from django.db import IntegrityError
+            try:
+                StorageResourceAttribute.objects.create(
+                        resource = self,
+                        key = key,
+                        value = resource_class.encode(key, val))
+            except IntegrityError:
+                # Collided with another update, order undefined so let him win
+                pass
 
     def delete_attribute(self, attr_name):
         try:
@@ -165,7 +171,7 @@ class SimpleHistoStoreBin(models.Model):
 
 class SimpleHistoStoreTime(models.Model):
     storage_resource_statistic = models.ForeignKey('StorageResourceStatistic')
-    time = models.BigIntegerField()
+    time = models.PositiveIntegerField()
 
     class Meta:
         app_label = 'configure'
