@@ -17,25 +17,27 @@ var oss_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
  {
 	    var count = 0;
         var cpuData = [],categories = [], memoryData = [];
-		obj_db_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
+		obj_oss_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
 		$.post(oss_LineBar_CpuMemoryUsage_Data_Api_Url,
 		  {datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem: fsName, endtime: endDate})
          .success(function(data, textStatus, jqXHR) 
           {
             var hostName='';
-            var avgCPUApiResponse = data;
-            if(avgCPUApiResponse.success)
+            var ossCPUMemoryApiResponse = data;
+            if(ossCPUMemoryApiResponse.success)
             {
-                 var response = avgCPUApiResponse.response;
+                 var response = ossCPUMemoryApiResponse.response;
                  $.each(response, function(resKey, resValue) 
                  {
-                	if(resValue.host != undefined)
-                	{
-	                	cpuData.push(((resValue.cpu_usage*100)/resValue.cpu_total));
-	                	memoryData.push(resValue.mem_MemTotal - resValue.mem_MemFree);
-	                	
-				        categories.push(resValue.timestamp);
-                	}
+	            	 if(resValue.host != undefined)
+	                 {
+	                	if(resValue.cpu_usage != undefined || resValue.cpu_total != undefined)
+	                	{
+	                		ts = resValue.timestamp * 1000
+	                        cpuData.push([ts,((resValue.cpu_usage*100)/resValue.cpu_total)]);
+	                        memoryData.push([ts,(resValue.mem_MemTotal - resValue.mem_MemFree)]);
+	                	}
+	                 }
 			     });
             }
        })
@@ -43,18 +45,18 @@ var oss_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
              // Display of appropriate error message
        })
        .complete(function(event){
-                obj_db_LineBar_CpuMemoryUsage_Data.xAxis.categories = categories;
-                obj_db_LineBar_CpuMemoryUsage_Data.chart.renderTo = "oss_avgReadDiv";
-                obj_db_LineBar_CpuMemoryUsage_Data.chart.width='500';
+                //obj_oss_LineBar_CpuMemoryUsage_Data.xAxis.categories = categories;
+                obj_oss_LineBar_CpuMemoryUsage_Data.chart.renderTo = "oss_avgReadDiv";
+                obj_oss_LineBar_CpuMemoryUsage_Data.chart.width='500';
                 if(isZoom == 'true')
         		{
-                	renderZoomDialog(obj_db_LineBar_CpuMemoryUsage_Data);
+                	renderZoomDialog(obj_oss_LineBar_CpuMemoryUsage_Data);
         		}
         		
-                obj_db_LineBar_CpuMemoryUsage_Data.series[0].data = cpuData;
-                obj_db_LineBar_CpuMemoryUsage_Data.series[1].data = memoryData;
+                obj_oss_LineBar_CpuMemoryUsage_Data.series[0].data = cpuData;
+                obj_oss_LineBar_CpuMemoryUsage_Data.series[1].data = memoryData;
                 
-                chart = new Highcharts.Chart(obj_db_LineBar_CpuMemoryUsage_Data);
+                chart = new Highcharts.Chart(obj_oss_LineBar_CpuMemoryUsage_Data);
         });
     }
 
@@ -65,47 +67,62 @@ var oss_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 /*****************************************************************************/
  oss_Area_ReadWrite_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
  {
-	  var count = 0;
-         var readData = [],categories = [], writeData = [];
-        obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
-        $.post(oss_Area_ReadWrite_Data_Api_Url,
-        	{targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-            starttime: sDate, filesystem: fsName, endtime: endDate})
-         .success(function(data, textStatus, jqXHR) {
-            var hostName='';
-            var avgMemoryApiResponse = data;
-            if(avgMemoryApiResponse.success)
-             {
-                 var response = avgMemoryApiResponse.response;
-                 $.each(response, function(resKey, resValue)
-                 {
-                	if(resValue.filesystem != undefined)
-                 	{
-	                	readData.push(resValue.stats_read_bytes/1024);
-	                	writeData.push(((0-resValue.stats_write_bytes)/1024));
-	                 	
-	 			        categories.push(resValue.timestamp);
-                 	}
-		         });
-              }
-       })
-       .error(function(event) {
-             // Display of appropriate error message
-       })
-       .complete(function(event){
-    	   		obj_db_Area_ReadWrite_Data.chart.renderTo = "oss_avgWriteDiv";
-    	   		obj_db_Area_ReadWrite_Data.chart.width='500';
-                obj_db_Area_ReadWrite_Data.xAxis.categories = categories;
-                if(isZoom == 'true')
-        		{
-                	renderZoomDialog(obj_db_Area_ReadWrite_Data);
-        		}
-                
-                obj_db_Area_ReadWrite_Data.series[0].data = readData;
-                obj_db_Area_ReadWrite_Data.series[1].data = writeData;
-                
-        		chart = new Highcharts.Chart(obj_db_Area_ReadWrite_Data);
-        });
+	 obj_oss_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
+	  var values = new Object();
+	  var stats = readWriteFetchMatric;
+	  $.each(stats, function(i, stat_name){
+	    values[stat_name] = [];
+	  });
+	  $.post(oss_Area_ReadWrite_Data_Api_Url,{targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
+	    starttime: startTime, filesystem: fsName, endtime: endTime})
+	      .success(function(data, textStatus, jqXHR) {
+	      var hostName='';
+	      var avgMemoryApiResponse = data;
+	      if(avgMemoryApiResponse.success)
+	      {
+	        var response = avgMemoryApiResponse.response;
+	        $.each(response, function(resKey, resValue)
+	        {
+	          if(resValue.filesystem != undefined)
+	          {
+	            if (resValue.stats_read_bytes != undefined || resValue.stats_write_bytes != undefined)
+	            { 
+	              ts = resValue.timestamp * 1000;
+	              $.each(stats, function(i, stat_name) {
+	                  if(resValue[stat_name] != null || resValue[stat_name] != undefined) 
+	                  {
+	                    if (i <= 0)
+	                    { 
+	                      values[stat_name].push([ts, resValue[stat_name]]);
+	                    } 
+	                    else
+	                    {
+	                      values[stat_name].push([ts, (0 - resValue[stat_name])]);    
+	                    }
+	                  }
+	              });
+	            }
+	          }
+	        });
+	      }
+	    })
+	    .error(function(event) 
+	    {
+	       // Display of appropriate error message
+	    })
+	    .complete(function(event)
+	    {
+	      obj_oss_Area_ReadWrite_Data.chart.renderTo = "oss_avgWriteDiv";
+	      obj_oss_Area_ReadWrite_Data.chart.width='500';
+	      $.each(stats, function(i, stat_name) {
+	        obj_oss_Area_ReadWrite_Data.series[i].data = values[stat_name];
+	      });
+	      if(isZoom == 'true')
+	      {
+	        renderZoomDialog(obj_oss_Area_ReadWrite_Data);
+	      }
+	      chart = new Highcharts.Chart(obj_oss_Area_ReadWrite_Data);
+	    });
 }
 /***********************************************************************/
  loadOSSUsageSummary = function (){
@@ -147,3 +164,14 @@ var oss_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 		$('#ossSummaryTbl').html(innerContent);
     });
  }
+ 
+/*********************************************************************************************/
+ 
+	initOSSPolling = function()
+	{
+		 oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, "Average", cpuMemoryFetchMatric, "false");
+
+	     oss_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, "false");
+	}
+
+/*********************************************************************************************/

@@ -88,7 +88,7 @@ $(document).ready(function()
   ({
     autoOpen: false,
     width: 1100,
-    height:460,
+    height:470,
     position:"center",
     show: "clip",
     modal: true,

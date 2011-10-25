@@ -2,9 +2,12 @@
 	$(document).ready(function() {
 		LoadFSList_FSList();
 		$('#name').keyup( function() { oTable.fnDraw(); } );
-		var oTable = $('#example').dataTable( {
+		var oTable = $('#fs_list').dataTable( {
 			"bProcessing": true,
 			"bJQueryUI": true,
+			"oLanguage": {
+					"sEmptyTable": "No File System to display"
+			},
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
@@ -28,29 +31,28 @@
 	
 	} );
 	</script>
-
-<table width="100%" height="100%" border="0" cellpadding="0" cellspacing="0" class="cpanel-border" align="center" style="padding-top:15px;">
+    <div style="padding-top:15px;">
+<fieldset>
+        <legend class="legendClass">Filesystem Configuration</legend>
+<table width="100%" height="100%" border="0" cellpadding="0" cellspacing="0" class="cpanel-border" align="center">
   <tr>
     <td><div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
-        <button type="button" id="launch_instance_btn-button">Create new Lustre File System</button>
+        <button type="button" id="launch_instance_btn-button">Create new File System</button>
         </span></span></div></td>
   </tr>
   <tr>
-    <td height="22" class="cpanel-header" style="line-height:0px">&nbsp;Luster Filesystem Configuration</td>
-  </tr>
-  <tr>
     <td align="left" valign="top"><!-- Data table starts here --->
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="example" width="100%">
+      <table cellpadding="0" cellspacing="0" border="0" class="display" id="fs_list" width="100%">
         <thead>
           <tr>
-            <th width="10%">Lustre FS Name</th>
+            <th width="9%">FS Name</th>
             <th width="10%">MGS Name</th>
             <th width="10%">MDS Name</th>
-            <th width="7%">No of OSS</th>
-            <th width="7%">No of OST</th>
+            <th width="9%">No of OSS</th>
+            <th width="9%">No of OST</th>
             <th width="5%">Total</th>
             <th width="5%">Free</th>
-            <th width="20%">Action</th>
+            <th width="17%">Action</th>
           </tr>
         </thead>
         <tbody id="example_content">
@@ -60,4 +62,4 @@
       <!--- data table ends here -->
     </td>
   </tr>
-</table>
+</table></fieldset></div>

@@ -30,17 +30,17 @@ class ListFileSystems(AnonymousRequestHandler):
 
             fskbytesfree  = 0
             fskbytestotal = 0
-            fsfilesfree  = 0
-            fsfilestotal = 0
+            #fsfilesfree  = 0
+            #fsfilestotal = 0
             try:
-                inodedata = filesystem.metrics.fetch_last(ManagedMdt,fetch_metrics=["filesfree", "filestotal"])
+                #inodedata = filesystem.metrics.fetch_last(ManagedMdt,fetch_metrics=["filesfree", "filestotal"])
                 diskdata = filesystem.metrics.fetch_last(ManagedOst,fetch_metrics=["kbytesfree", "kbytestotal"])
                 if diskdata:
                     fskbytesfree  = diskdata[1]['kbytesfree']
                     fskbytestotal = diskdata[1]['kbytestotal']  
-                if inodedata:
-                    fsfilesfree  = inodedata[1]['filesfree']
-                    fsfilestotal = inodedata[1]['filestotal']
+                #if inodedata:
+                #    fsfilesfree  = inodedata[1]['filesfree']
+                #    fsfilestotal = inodedata[1]['filestotal']
             except:
                 pass 
 
@@ -58,27 +58,28 @@ class ListFileSystems(AnonymousRequestHandler):
 class GetFileSystem(AnonymousRequestHandler):
     @extract_request_args('filesystem')
     def run(self,request,filesystem):
-        no_of_ost=0
-        no_of_oss=0
-        oss_name=''
+        filesystem =  ManagedFilesystem.objects.get(name=filesystem)
+        osts = ManagedOst.objects.filter(filesystem = filesystem)
+        no_of_ost = osts.count()
+        no_of_oss = len(set([tm.host for tm in ManagedTargetMount.objects.filter(target__in = osts)]))
+        no_of_oss = ManagedHost.objects.filter(managedtargetmount__target__in = osts).distinct().count()
+        
         mgs_name=''
         mgs_status=''
         mgt_name=''
         mgt_status=''
         mgt_block_device=''
         mgt_mount_point=''
-           
         mds_name=''   
         mds_status=''
         mdt_name=''
         mdt_status=''  
         mdt_block_device=''
         mdt_mount_point=''
-        filesystem_name = filesystem
-        all_fs = []
+        fs_info = []
         dashboard_data = Dashboard()
         for fs in dashboard_data.filesystems:
-            if str(fs.item.name) == str(filesystem_name): 
+            if str(fs.item.name) == str(filesystem): 
                 for fstarget in fs.targets:
                     if fstarget.item.role() == 'MGS':
                         for fstarget_mount in fstarget.target_mounts:
@@ -95,12 +96,6 @@ class GetFileSystem(AnonymousRequestHandler):
                             mdt_status = fstarget.status()
                             mdt_block_device = str(fstarget_mount.item.block_device)
                             mdt_mount_point = str(fstarget_mount.item.mount_point)
-                    if fstarget.item.role() == 'OST':
-                        for fstarget_mount in fstarget.target_mounts:
-                            if oss_name != fstarget_mount.item.host.pretty_name():
-                                no_of_oss = no_of_oss + 1
-                        no_of_ost = no_of_ost + 1
-                        oss_name = fstarget_mount.item.host.pretty_name()
                 try:
                     fskbytesfree  = 0
                     fskbytestotal = 0
@@ -117,7 +112,7 @@ class GetFileSystem(AnonymousRequestHandler):
                         fsfilestotal = inodedata[1]['filestotal']
                 except:
                     pass
-                all_fs.append(
+                fs_info.append(
                               {   
                                'fsname': fs.item.name,
                                'mgsname': mgs_name,
@@ -141,10 +136,7 @@ class GetFileSystem(AnonymousRequestHandler):
                                'status' : fs.status()
                               } 
                              )
-            no_of_ost=0
-            no_of_oss=0
-            oss_name=''
-        return all_fs            
+        return fs_info            
 
 class GetFSVolumeDetails(AnonymousRequestHandler):
     @extract_request_args('filesystem')

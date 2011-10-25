@@ -1,13 +1,13 @@
 <script language="javascript">
-	$(document).ready(function() {
-		LoadFSData_EditFS();
-		
-		
+	$(document).ready(function() {		
 		var oTable = $('#createfs_mgt').dataTable( {
 			"bProcessing": true,
 			"bJQueryUI": true,
 			"bFilter": false,
 			"bPaginate": false,
+			"oLanguage": {
+					"sEmptyTable": "No MGT to display"
+			},
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
@@ -21,6 +21,9 @@
 			"bJQueryUI": true,
 			"bFilter": false,
 			"bPaginate": false,
+			"oLanguage": {
+					"sEmptyTable": "No MDT to display"
+			},
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
@@ -32,11 +35,15 @@
 		var oOst = $('#ost').dataTable( {
 			"bProcessing": true,
 			"bJQueryUI": true,
+			"oLanguage": {
+					"sEmptyTable": "No OST to display"
+			},
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtcenter' }
 			]
 		} );
 			// Dialog Link
@@ -185,10 +192,11 @@ a:link {
       <table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
         <thead>
           <tr>
-            <th width="15%">Target Path</th>
-            <th width="12%">Target Name</th>
-            <th width="7%">Server Name</th>
-            <th width="7%">Failover Partner</th>
+              <th width="15%">Target Path</th>
+              <th width="12%">Target Name</th>
+              <th width="7%">Server Name</th>
+              <th width="12%">Failover Partner</th>
+              <th width='10%'>Action</th>
           </tr>
         </thead>
         <tbody id="ost_content">
