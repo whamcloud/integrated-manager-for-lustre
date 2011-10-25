@@ -230,7 +230,10 @@ class AlertState(models.Model):
 
     begin = models.DateTimeField()
     end = models.DateTimeField()
-    active = models.BooleanField()
+
+    # Note: use True and None instead of True and False so that
+    # unique-together constraint only applied to active alerts
+    active = models.NullBooleanField()
 
     def to_dict(self):
         return {
@@ -248,6 +251,9 @@ class AlertState(models.Model):
         return None
     def end_event(self):
         return None
+
+    class Meta:
+        unique_together = ('alert_item_type', 'alert_item_id', 'content_type', 'active')
 
     @classmethod
     def filter_by_item(cls, item):
@@ -289,21 +295,33 @@ class AlertState(models.Model):
     @classmethod
     def high(alert_klass, alert_item, **kwargs):
         import datetime
+        from django.db import IntegrityError
         now = datetime.datetime.now()
         try:
             alert_state = alert_klass.filter_by_item(alert_item).get(**kwargs)
-            alert_state.end = now
-            alert_state.save()
+            created = False
         except alert_klass.DoesNotExist:
             alert_state = alert_klass(
                     active = True,
                     begin = now,
                     end = now,
                     alert_item = alert_item, **kwargs)
-            alert_state.save()
+            try:
+                alert_state.save()
+                created = True
+            except IntegrityError:
+                # Handle colliding inserts
+                # NB not using get_or_create because of GenericForeignKey (https://code.djangoproject.com/ticket/2316)
+                alert_state = alert_klass.filter_by_item(alert_item).get(**kwargs)
+                created = False
+
+        if created:
             be = alert_state.begin_event()
             if be:
                 be.save()
+        else:
+            alert_state.end = now
+            alert_state.save()
 
         return alert_state
 
@@ -314,7 +332,7 @@ class AlertState(models.Model):
         try:
             alert_state = alert_klass.filter_by_item(alert_item).get(**kwargs)
             alert_state.end = now
-            alert_state.active = False
+            alert_state.active = None
             alert_state.save()
             ee = alert_state.end_event()
             if ee:
