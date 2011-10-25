@@ -1,3 +1,8 @@
+var ERR_COMMON_DELETE_HOST = "Error in deleting host: ";
+var ERR_COMMON_ADD_HOST = "Error in Adding host: ";
+var ERR_COMMON_LNET_STATUS = "Error in setting lnet status: ";
+var ERR_COMMON_FS_START = "Error in starting File System: ";
+
 function AddHost_ServerConfig(hName, dialog_id)
 {
 	var oLoadingTable = "<table width='100%' border='0' cellspacing='0' cellpadding='0' align='center' id='loading_tab'><tr><td width='30%'  align='right'><img src='/static/images/loading.gif' width='16' height='16' /></td><td width='90%'  align='left' style='padding-left:5px;'>Checking connectivity</td></tr></table>";
@@ -59,7 +64,7 @@ function AddHost_ServerConfig(hName, dialog_id)
         }
 	})
 	.error(function(event) {
-      // Display of appropriate error message
+		jAlert(ERR_COMMON_ADD_HOST + data.error);
     })
 	.complete(function(event) {
 	});
@@ -72,9 +77,9 @@ function Add_Host(host_name, dialog_id)
 		{
 			var response = data.response;		
 			var status = "<p>";
+			$('#status_tab').empty();
 			if(response.status=="added")
 			{
-				$('#status_tab').empty();
 				status = status + "Host Added Successfully";
 				$("#" + dialog_id).dialog("option", "buttons", null);
 				$("#" + dialog_id).dialog({ 
@@ -110,15 +115,10 @@ function Add_Host(host_name, dialog_id)
 		}
 	})
 	.error(function(event) {
-      // Display of appropriate error message
+     	jAlert(ERR_COMMON_DELETE_HOST + data.error);
     })
 	.complete(function(event) {
 	});
-}
-
-function RemoveConfirmation(host_id)
-{
-	Confirm("Are you sure you want to remove host?",RemoveHost_ServerConfig(host_id));
 }
 
 RemoveHost_ServerConfig = function (host_id)
@@ -129,18 +129,18 @@ RemoveHost_ServerConfig = function (host_id)
 				var response = data.response;		
 				if(response.status != "")
 				{
-					alert("Host " + response.hostid + " Deleted");
+					jAlert("Host " + response.hostid + " Deleted");
 					$('#server_configuration').dataTable().fnClearTable();
 					LoadServerConf_ServerConfig();
 				}
 				else
 				{
-					alert("problem in deleting host");
+					jAlert("problem in deleting host");
 				}
 			}
 		})
 		.error(function(event) {
-		  // Display of appropriate error message
+		  	jAlert(ERR_COMMON_DELETE_HOST + data.error);
 		})
 		.complete(function(event) {
 		});
@@ -154,7 +154,7 @@ function Lnet_Operations(host_id, opps)
 			var response = data.response;		
 			if(response.status != "")
 			{
-				alert("State " + response.hostid + opps + " Changed");
+				jAlert("State " + response.hostid + opps + " Changed");
 				$('#server_configuration').dataTable().fnClearTable();
 				LoadServerConf_ServerConfig();
 			}
@@ -165,7 +165,7 @@ function Lnet_Operations(host_id, opps)
 		}
 	})
 	.error(function(event) {
-      // Display of appropriate error message
+     	jAlert(ERR_COMMON_LNET_STATUS + data.error);
     })
 	.complete(function(event) {
 	});
@@ -191,4 +191,42 @@ function Add_Host_Table(dialog_id)
 			});
 			
 	$('#hostdetails_container').html(oTable);
+}
+
+function StartFileSystem(filesystem)
+{
+	alert(filesystem);
+	/*
+	$.post("/api/start_filesystem/",{"filesystem":filesysme}).success(function(data, textStatus, jqXHR) {
+		if(data.success)
+		{
+			//FIXEME: implementation pending, pending in api
+			var response = data.response;		
+		}
+	})
+	.error(function(event) {
+     	jAlert(ERR_COMMON_FS_START + data.error);
+    })
+	.complete(function(event) {
+	});
+	*/
+}
+
+function StopFileSystem(filesystem)
+{
+	alert(filesystem);
+	/*
+	$.post("/api/stop_filesystem/",{"filesystem":filesysme}).success(function(data, textStatus, jqXHR) {
+		if(data.success)
+		{
+			//FIXEME: implementation pending, pending in api
+			var response = data.response;		
+		}
+	})
+	.error(function(event) {
+     	jAlert(ERR_COMMON_FS_START + data.error);
+    })
+	.complete(function(event) {
+	});
+	*/
 }

@@ -170,46 +170,62 @@ ost_Pie_Inode_Data = function(targetName, sDate, endDate, dataFunction, targetKi
 /*****************************************************************************/
 ost_Area_ReadWrite_Data = function(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
-	  var count = 0;
-       var readData = [],categories = [], writeData = [];
-      obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
-      $.post(ost_Area_ReadWrite_Data_Api_Url,
-      	{targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-          starttime: sDate, target: targetName, endtime: endDate})
-       .success(function(data, textStatus, jqXHR) {
-          var hostName='';
-          var avgMemoryApiResponse = data;
-          if(avgMemoryApiResponse.success)
-           {
-               var response = avgMemoryApiResponse.response;
-               $.each(response, function(resKey, resValue)
-               {
-            	   if(resValue.target != undefined)
-                	{
-            		   readData.push(resValue.stats_read_bytes/1024);
-            		   writeData.push(((0-resValue.stats_write_bytes)/1024));
-            		   categories.push(resValue.timestamp);
-                	}
-		         });
-            }
-     })
-     .error(function(event) {
-           // Display of appropriate error message
-     })
-     .complete(function(event){
-  	   		obj_db_Area_ReadWrite_Data.chart.renderTo = "ost_avgReadDiv";
-  	   		obj_db_Area_ReadWrite_Data.chart.width='500';
-              obj_db_Area_ReadWrite_Data.xAxis.categories = categories;
-              if(isZoom == 'true')
-              {
-              	renderZoomDialog(obj_db_Area_ReadWrite_Data);
-      		  }
-              
-              obj_db_Area_ReadWrite_Data.series[0].data = readData;
-              obj_db_Area_ReadWrite_Data.series[1].data = writeData;
-              
-      		chart = new Highcharts.Chart(obj_db_Area_ReadWrite_Data);
-      });
+	 obj_oss_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
+	  var values = new Object();
+	  var stats = readWriteFetchMatric;
+	  $.each(stats, function(i, stat_name){
+	    values[stat_name] = [];
+	  });
+	  $.post(ost_Area_ReadWrite_Data_Api_Url,{targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
+	    starttime: startTime, target: targetName, endtime: endTime})
+	      .success(function(data, textStatus, jqXHR) {
+	      var hostName='';
+	      var avgMemoryApiResponse = data;
+	      if(avgMemoryApiResponse.success)
+	      {
+	        var response = avgMemoryApiResponse.response;
+	        $.each(response, function(resKey, resValue)
+	        {
+	          if(resValue.filesystem != undefined)
+	          {
+	            if (resValue.stats_read_bytes != undefined || resValue.stats_write_bytes != undefined)
+	            { 
+	              ts = resValue.timestamp * 1000;
+	              $.each(stats, function(i, stat_name) {
+	                  if(resValue[stat_name] != null || resValue[stat_name] != undefined) 
+	                  {
+	                    if (i <= 0)
+	                    { 
+	                      values[stat_name].push([ts, resValue[stat_name]]);
+	                    } 
+	                    else
+	                    {
+	                      values[stat_name].push([ts, (0 - resValue[stat_name])]);    
+	                    }
+	                  }
+	              });
+	            }
+	          }
+	        });
+	      }
+	    })
+	    .error(function(event) 
+	    {
+	       // Display of appropriate error message
+	    })
+	    .complete(function(event)
+	    {
+	      obj_oss_Area_ReadWrite_Data.chart.renderTo = "ost_avgReadDiv";
+	      obj_oss_Area_ReadWrite_Data.chart.width='500';
+	      $.each(stats, function(i, stat_name) {
+	        obj_oss_Area_ReadWrite_Data.series[i].data = values[stat_name];
+	      });
+	      if(isZoom == 'true')
+	      {
+	        renderZoomDialog(obj_oss_Area_ReadWrite_Data);
+	      }
+	      chart = new Highcharts.Chart(obj_oss_Area_ReadWrite_Data);
+	    });
 }
 /*********************************************************************************************/
 // Function to load ost summary on ost dashboard
@@ -255,3 +271,12 @@ loadOSTSummary = function (){
    });
 }
 /*******************************************************************************************/
+
+initOSTPolling = function()
+{
+	ost_Pie_Space_Data($('#ostSelect').val(), "", "", "Average", "OST", spaceUsageFetchMatric, "false");
+    ost_Pie_Inode_Data($('#ostSelect').val(), "", "", "Average", "OST", spaceUsageFetchMatric, "false");
+    ost_Area_ReadWrite_Data($('#ostSelect').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, "false");
+}
+
+/*********************************************************************************************/

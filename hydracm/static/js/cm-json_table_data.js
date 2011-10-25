@@ -1,3 +1,4 @@
+//confirmation dialog messages
 var MSG_STOP_HOST = "Are you sure you want to stop this host?";
 var MSG_START_HOST = "Are you sure you want to start host?";
 var MSG_REMOVE_HOST = "Are you sure you want to remove host?";
@@ -9,7 +10,15 @@ var MSG_REMOVE_FSLIST = "Are you sure you want to remove filesystem?";
 var MSG_MGT_START = "Are you sure you want to start MGT?";
 var MSG_MGT_STOP = "Are you sure you want to stop MGT?";
 var MSG_MGT_REMOVE = "Are you sure you want to Remove MGT?";
-var MSG_
+//Error dialog messages
+var ERR_FSLIST_LOAD = "Error occured in loading Filesystem: ";
+var ERR_EDITFS_MGT_LOAD = "Error occured in loading MGT: ";
+var ERR_EDITFS_MDT_LOAD = "Error occured in loading MDT: ";
+var ERR_EDITFS_OST_LOAD = "Error occured in loading OST: ";
+var ERR_COMMON_VOLUME_LOAD = "Error occured in loading volume details: ";
+var ERR_SERVER_CONF_LOAD = "Error occured in loading Servers: ";
+var ERR_EDITFS_FSDATA_LOAD = "Error occured in loading File system data: ";
+
 
 
 /******************************************************************/
@@ -28,13 +37,14 @@ function LoadFSList_FSList()
       var response = data.response;
       var fsName;
       var i=1;
-      var action = "<a href='#'>Start<img src='/static/images/start.png' height=12 width=12 title='Start'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' height=15 width=15 title='Configuration Param'/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
+      var action; 
       $.each(response, function(resKey, resValue)
       {
 		  fsName = "<a href='#' onclick=LoadEditFSScreen('" + resValue.fsname + "')>" + resValue.fsname + "</a>";
+		  action = "<a href='#' onclick='jConfirm(\"" + MSG_START_FSLIST + "\",\"Configuration Manager\", function(r){if(r == true){StartFileSystem(\""+  resValue.fsname +"\");}});'>Start<img src='/static/images/start.png' height=12 width=12 title='Start'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' height=15 width=15 title='Configuration Param'/></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_FSLIST + "\",\"Configuration Manager\", function(r){if(r == true){StartFileSystem(\""+  resValue.fsname +"\");}});'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
 //        fsName = "<a href='/hydracm/editfs?fsname=" + resValue.fsname + "'>" +resValue.fsname + "</a>";
         i++;
-        $('#example').dataTable().fnAddData ([
+        $('#fs_list').dataTable().fnAddData ([
           fsName,
           resValue.mgsname,
           resValue.mdsname,
@@ -49,6 +59,7 @@ function LoadFSList_FSList()
   })
   .error(function(event)
   {
+	  jAlert(ERR_FSLIST_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -94,6 +105,7 @@ function LoadMGT_EditFS(fsname)
   })
   .error(function(event)
   { 
+ 	 jAlert(ERR_EDITFS_MGT_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -140,6 +152,7 @@ function LoadMDT_EditFS(fsname)
   })
   .error(function(event)
   {
+	  jAlert(ERR_EDITFS_MDT_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -186,7 +199,7 @@ function LoadOST_EditFS(fsname)
   })
   .error(function(event)
   {
- // Display of appropriate error message
+ 		jAlert(ERR_EDITFS_OST_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -231,7 +244,7 @@ function LoadExistingMGT_EditFS()
   })
   .error(function(event)
   {
-  // Display of appropriate error message
+	  jAlert(ERR_EDITFS_MGT_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -319,7 +332,7 @@ function LoadUsableVolumeList(datatable_container, select_widget_fn)
   })
   .error(function(event)
   {
-  // Display of appropriate error message
+	  jAlert(ERR_COMMON_VOLUME_LOAD + data.error);
   })
 }
 
@@ -399,7 +412,7 @@ function LoadUnused_VolumeConf()
   })
   .error(function(event) 
   {
- // Display of appropriate error message
+	   jAlert(ERR_COMMON_VOLUME_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -502,7 +515,7 @@ function CreateMGT_MGTConf()
   })
   .error(function(event) 
   {
-  // Display of appropriate error message
+	  jAlert(ERR_EDITFS_MGT_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -600,7 +613,7 @@ function LoadMGTConfiguration_MGTConf()
   })
   .error(function(event)
   {
-  // Display of appropriate error message
+	  jAlert(ERR_EDITFS_MGT_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -650,7 +663,7 @@ function LoadVolumeConf_VolumeConfig()
   })
   .error(function(event)
   {
-  // Display of appropriate error message
+	  jAlert(ERR_COMMON_VOLUME_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -700,7 +713,7 @@ function LoadServerConf_ServerConfig()
   })
   .error(function(event)
   {
-  // Display of appropriate error message
+	  jAlert(ERR_SERVER_CONF_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -739,7 +752,7 @@ function LoadFSData_EditFS()
     })
     .error(function(event)
     {
-    // Display of appropriate error message
+		jAlert(ERR_EDITFS_FSDATA_LOAD+ data.error);
     })
     .complete(function(event) 
     {

@@ -15,6 +15,8 @@ from configure.models import (ManagedFilesystem,
                             ManagedMdt,
                             ManagedOst,
                             ManagedHost)
+
+#import datetime
 #Fix Me:
 #Note that these integer-based queries will go away soon. 
 #Planning to land changes to the metrics API which allow datetime objects to be used instead of requiring integers
@@ -66,11 +68,11 @@ class GetFSTargetStats(AnonymousRequestHandler):
             if start_time:  
                 for stats_data in fs_target_stats:
                     stats_data[1]['filesystem'] = fs.name
-                    stats_data[1]['timestamp'] = stats_data[0]
+                    stats_data[1]['timestamp'] = long(stats_data[0])
                     chart_stats.append(stats_data[1])
             else:
                 fs_target_stats[1]['filesystem'] = fs.name
-                fs_target_stats[1]['timestamp'] = fs_target_stats[0]
+                fs_target_stats[1]['timestamp'] = long(fs_target_stats[0])
                 chart_stats.append(fs_target_stats[1])
         return chart_stats
 
@@ -111,11 +113,11 @@ class GetFSServerStats(AnonymousRequestHandler):
             if start_time:
                 for stats_data in host_stats:
                     stats_data[1]['host'] = host.address
-                    stats_data[1]['timestamp'] = stats_data[0]
+                    stats_data[1]['timestamp'] = long(stats_data[0])
                     chart_stats.append(stats_data[1])      
             else:
                 host_stats[1]['host'] = host.address
-                host_stats[1]['timestamp'] = host_stats[0]
+                host_stats[1]['timestamp'] = long(host_stats[0])
                 chart_stats.append(host_stats[1]) 
         return chart_stats
 
@@ -154,11 +156,11 @@ class GetFSMGSStats(AnonymousRequestHandler):
             if start_time:
                 for stats_data in mgs_stats:
                     stats_data[1]['host'] = mgs.name
-                    stats_data[1]['timestamp'] = stats_data[0]
+                    stats_data[1]['timestamp'] = long(stats_data[0])
                     chart_stats.append(stats_data[1]) 
             else:
                 mgs_stats[1]['host'] = mgs.name
-                mgs_stats[1]['timestamp'] = mgs_stats[0]
+                mgs_stats[1]['timestamp'] = long(mgs_stats[0])
                 chart_stats.append(mgs_stats[1]) 
         return chart_stats
 
@@ -190,11 +192,11 @@ class GetServerStats(AnonymousRequestHandler):
             if start_time:
                 for stats_data in host_stats:
                     stats_data[1]['host'] = host.address
-                    stats_data[1]['timestamp'] = stats_data[0]
+                    stats_data[1]['timestamp'] = long(stats_data[0])
                     chart_stats.append(stats_data[1])
             else:
                 host_stats[1]['host'] = host.address
-                host_stats[1]['timestamp'] = host_stats[0]
+                host_stats[1]['timestamp'] = long(host_stats[0])
                 chart_stats.append(host_stats[1]) 
         return chart_stats
 
@@ -230,10 +232,11 @@ class GetTargetStats(AnonymousRequestHandler):
                 start_time = getstartdate(start_time)             
                 for stats_data in target_stats:
                     stats_data[1]['target'] = target.name
+                    stats_data[1]['timestamp'] = long(stats_data[0])
                     chart_stats.append(stats_data[1]) 
             else:
                 target_stats[1]['target'] = target.name
-                target_stats[1]['timestamp'] = target_stats[0]
+                target_stats[1]['timestamp'] = long(target_stats[0])
                 chart_stats.append(target_stats[1]) 
         return chart_stats
 
@@ -267,11 +270,11 @@ class GetFSClientsStats(AnonymousRequestHandler):
             if start_time:
                 for stats_data in client_stats:
                     stats_data[1]['filesystem'] = filesystem.name
-                    stats_data[1]['timestamp'] = stats_data[0]
+                    stats_data[1]['timestamp'] = long(stats_data[0])
                     chart_stats.append(stats_data[1])       
             else:
                 client_stats[1]['filesystem'] = filesystem.name
-                client_stats[1]['timestamp'] = client_stats[0]
+                client_stats[1]['timestamp'] = long(client_stats[0])
                 chart_stats.append(client_stats[1])
         return chart_stats
 

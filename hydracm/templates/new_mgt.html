@@ -5,6 +5,9 @@
 		var oNewMgt = $('#mgt_configuration').dataTable( {
 			"bProcessing": true,
 			"bJQueryUI": true,
+			"oLanguage": {
+					"sEmptyTable": "No MGT to display"
+			},
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
@@ -17,6 +20,9 @@
 		var oNewOst = $('#popup-new-ost').dataTable( {
 			"bProcessing": true,
 			"bJQueryUI": true,
+			"oLanguage": {
+					"sEmptyTable": "No OST to display"
+			},
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },

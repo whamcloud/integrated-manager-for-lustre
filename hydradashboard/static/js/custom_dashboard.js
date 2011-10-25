@@ -18,45 +18,13 @@ load_breadcrumbs = function()
 /******************************************************************************/
 // Events for controlling left panel
 /******************************************************************************/
-    $("#plusImg").click(
-    function()
-    {
+  $("#plusImg").click(function(){
         $(".panel").toggle("slow");
         $("#plusImg").hide();$("#minusImg").show();
         $(this).toggleClass("active");
         return false;
-    });
+  });
 		
-			/*$("#alertAnchor").click(function()
-			{	
-					$("#alertsDiv").toggle("slideUp");
-					$("#alertAnchor").css("color",'red');
-					$("#eventsDiv").hide();
-					$("#eventsAnchor").css("color",'#7A848B');
-					$("#jobsAnchor").css("color",'#7A848B');
-					$("#jobsDiv").hide();
-			});
-	
-			$("#eventsAnchor").click(function()
-			{
-					$("#eventsDiv").toggle("slideUp");
-					$("#eventsAnchor").css("color",'#0040FF');
-					$("#alertsDiv").hide();
-					$("#alertAnchor").css("color",'#7A848B');
-					$("#jobsDiv").hide();
-					$("#jobsAnchor").css("color",'#7A848B');
-			});
-	
-			$("#jobsAnchor").click(function()
-			{
-					$("#jobsDiv").toggle("slideUp");
-					$("#jobsAnchor").css("color",'green');
-					$("#alertsDiv").hide();
-					$("#alertAnchor").css("color",'#7A848B');
-					$("#eventsDiv").hide();
-					$("#eventsAnchor").css("color",'#7A848B');
-			});*/
-	
 /******************************************************************************/
 // Function for showing time interval units
 /******************************************************************************/
@@ -67,6 +35,10 @@ load_breadcrumbs = function()
 			if(intervalValue == "")
 			{
 				unitSelectOptions = "<option value=''>Select</option>";
+			}
+			else if(intervalValue == "minutes")
+			{
+				unitSelectOptions = getUnitSelectOptions(61);
 			}
 			else if(intervalValue == "hour")
 			{
@@ -84,7 +56,7 @@ load_breadcrumbs = function()
 			{
 				unitSelectOptions = getUnitSelectOptions(13);
 			}
-			$("#unitSelect").html(unitSelectOptions);
+			$("select[id=unitSelect]").html(unitSelectOptions);
 		});
 		
 		function getUnitSelectOptions(countNumber)
@@ -96,12 +68,42 @@ load_breadcrumbs = function()
 			}
 			return unitSelectOptions;
 		}
+		
+		function resetTimeInterval()
+		{
+			$("select[id=intervalSelect]").attr("value","");
+			$("select[id=unitSelect]").html("<option value=''>Select</option>");
+			$("select[id=unitSelect]").attr("value","");
+		}
+		
+		$("select[id=unitSelect]").change(function(){
+			setStartEndTime($(this).prev('select').find('option:selected').val(), $(this).find('option:selected').val(), "");
+		});
+		
+		setStartEndTime = function(timeFactor, startTimeValue, endTimeValue)
+		{
+			endTime = endTimeValue;
+			
+			if(timeFactor == "minutes")
+				startTime = startTimeValue;
+			else if(timeFactor == "hour")
+				startTime = startTimeValue * 60;
+				
+			if(! $('#dashboardDiv').is(':hidden'))
+				initDashboardPolling();
+			else if(! $('#fileSystemDiv').is(':hidden'))
+				initFileSystemPolling();
+			else if(! $('#ossInfoDiv').is(':hidden'))
+				initOSSPolling();
+			else if(! $('#ostInfoDiv').is(':hidden'))
+				initOSTPolling();
+		}
 
 /******************************************************************************/
 // Function to populate oss/mds/mgs list on selecting particular file system
 /******************************************************************************/
 		
-		$("#fsSelect").change(function(){
+$("#fsSelect").change(function(){
 			if($(this).val()!="")
 			{
 				 $('#dashboardDiv').hide();$('#ossInfoDiv').hide();$('#ostInfoDiv').hide();
@@ -139,23 +141,23 @@ load_breadcrumbs = function()
 		             $("#breadCrumb1").jBreadCrumb();
 			    });
 
-			    // 2011-10-17 19:56:58.720036  2011-10-17 19:46:58.720062
-        fs_Bar_SpaceUsage_Data($('#fsSelect').val(),"", "", "Average", "OST", spaceUsageFetchMatric, false);
-
-        fs_Line_connectedClients_Data($('#fsSelect').val(),"10", "", "Average", clientsConnectedFetchMatric, false);
-    
-        fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),"10", "", "Average", "OST", cpuMemoryFetchMatric, false);
-
-        fs_Area_ReadWrite_Data($('#fsSelect').val(),"10", "", "Average", "MDT", readWriteFetchMatric, false);
-
-        fs_Area_Iops_Data($('#fsSelect').val(),"10", "", "Average", "MDT", iopsFetchmatric, false);
-
-        //fs_HeatMap_Data('false');
-
-        clearInterval(dashboardPollingInterval);
-
-        loadFileSystemSummary();
- 	}
+					    // 2011-10-17 19:56:58.720036  2011-10-17 19:46:58.720062
+		        fs_Bar_SpaceUsage_Data($('#fsSelect').val(),"", "", "Average", "OST", spaceUsageFetchMatric, false);
+		
+		        fs_Line_connectedClients_Data($('#fsSelect').val(),"10", "", "Average", clientsConnectedFetchMatric, false);
+		    
+		        fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),"10", "", "Average", "OST", cpuMemoryFetchMatric, false);
+		
+		        fs_Area_ReadWrite_Data($('#fsSelect').val(),"10", "", "Average", "MDT", readWriteFetchMatric, false);
+		
+		        fs_Area_Iops_Data($('#fsSelect').val(),"10", "", "Average", "MDT", iopsFetchmatric, false);
+		
+		        //fs_HeatMap_Data('false');
+		
+		        clearInterval(dashboardPollingInterval);
+		
+		        loadFileSystemSummary();
+			 }
 });         
 
 /******************************************************************************/
@@ -201,12 +203,12 @@ load_breadcrumbs = function()
 					 $("#breadCrumb2").jBreadCrumb();
 				    });
 	        }
-
-        oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),"10", "", "Average", cpuMemoryFetchMatric, 'false');
-
-        oss_Area_ReadWrite_Data($('#fsSelect').val(),"10", "", "Average", "OST", readWriteFetchMatric, 'false');
-
-        loadOSSUsageSummary();
+	
+	        oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),"10", "", "Average", cpuMemoryFetchMatric, 'false');
+	
+	        oss_Area_ReadWrite_Data($('#fsSelect').val(),"10", "", "Average", "OST", readWriteFetchMatric, 'false');
+	
+	        loadOSSUsageSummary();
 	    });
 		
 /******************************************************************************/
@@ -223,20 +225,20 @@ load_breadcrumbs = function()
 				 "<li><a href='#' onclick='showFSDashboard()'>"+$('#fsSelect :selected').text()+"</a></li>"+
 				 "<li><a href='#' onclick='showOSSDashboard()'>"+$('#ossSelect :selected').text()+"</a></li>"+
 				 "<li>"+$('#ostSelect :selected').text()+"</li>"+
-	    "</ul>";
+				 "</ul>";
 	    
-     $("#breadCrumb3").html(breadCrumbHtml);
-			 	$("#breadCrumb3").jBreadCrumb();
-				}
+				 $("#breadCrumb3").html(breadCrumbHtml);
+			 	 $("#breadCrumb3").jBreadCrumb();
+			}
     
-    /* HYD-375: ostSelect value is a name instead of an ID */
-    load_resource_graph("ost_resource_graph_canvas", $("#ostSelect").val());
-
-    ost_Pie_Space_Data($('#ostSelect').val(),'', '', 'Average', 'OST', spaceUsageFetchMatric, 'false');
-    ost_Pie_Inode_Data($('#ostSelect').val(),'', '', 'Average', 'OST', spaceUsageFetchMatric, 'false');
-    ost_Area_ReadWrite_Data($('#ostSelect').val(),'10', '', 'Average', 'OST', readWriteFetchMatric, false);
-
-    loadOSTSummary();
+		    /* HYD-375: ostSelect value is a name instead of an ID */
+		    load_resource_graph("ost_resource_graph_canvas", $("#ostSelect").val());
+		
+		    ost_Pie_Space_Data($('#ostSelect').val(),'', '', 'Average', 'OST', spaceUsageFetchMatric, 'false');
+		    ost_Pie_Inode_Data($('#ostSelect').val(),'', '', 'Average', 'OST', spaceUsageFetchMatric, 'false');
+		    ost_Area_ReadWrite_Data($('#ostSelect').val(),'10', '', 'Average', 'OST', readWriteFetchMatric, false);
+		
+		    loadOSTSummary();
 	
      });
 /******************************************************************************/
@@ -262,66 +264,11 @@ load_breadcrumbs = function()
 // Function to show popup dialog on alert and event button click
 /******************************************************************************/				
 
-		$('#alerts_dialog').dialog({
-			autoOpen: false,
-			width: 800,
-			height:400,
-			show: "clip",
-			modal: true,
-			buttons: {
-				"Ok": function() { 
-					$(this).dialog("close"); 
-				}
-			}
-		});
-
-		$('#events_dialog').dialog({
-			autoOpen: false,
-			width: 800,
-			height:400,
-			show: "clip",
-			modal: true,
-			buttons: {
-				"Ok": function() { 
-					$(this).dialog("close"); 
-				}
-			}
-		});
-		
-		$('input[name=alertsPopUpBtn]').click(function(){
-			$('#alerts_dialog').dialog('open');
-			return false;
-		});
-		
-		$('input[name=eventsPopUpBtn]').click(function(){
-			$('#events_dialog').dialog('open');
-			return false;
-		});
-		
-		$('input[name=alertsPopUpBtn]').hover(function() {
-				$(this).css('cursor','pointer');
-			}, function() {
-				$(this).css('cursor','auto');
-		});
-
-		$('input[name=eventsPopUpBtn]').hover(function() {
-				$(this).css('cursor','pointer');
-			}, function() {
-				$(this).css('cursor','auto');
-		});
-
-        db_Bar_SpaceUsage_Data('false');
+		db_Bar_SpaceUsage_Data('false');
         db_Line_connectedClients_Data('false');
         db_LineBar_CpuMemoryUsage_Data('false');
         db_Area_ReadWrite_Data('false');
         db_Area_Iops_Data('false');
-//        db_HeatMap_Data('false');
+        //db_HeatMap_Data('false');
 
-		$('#fs_space').click(function(){
-			load_landingPageBar_disk('true');						
-		});
-		
-		$('#db_cpu_usage').click(function(){
-            db_Line_CpuUsage_Data('true');
-		});
 });			// End Of document.ready funtion
