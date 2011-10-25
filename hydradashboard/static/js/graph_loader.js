@@ -790,7 +790,7 @@ db_Area_ReadWrite_Data = function(isZoom)
     $('#zoomDialog').empty();
     $('#zoomDialog').dialog('option', 'title', titleName);
     $('#zoomDialog').dialog('open');
-    $('#zoomDialog').html("<img src='../images/wait_progress.gif'/>");
+    $('#zoomDialog').html("<img src='/static/images/wait_progress.gif' style='align:center;'/>");
   }
  
 /*****************************************************************************/

@@ -27,12 +27,13 @@ $(document).ready(function()
 	LoadAllEvents("all_event_content");
 	var oTable = $('#all_event_content').dataTable( {
 	"bProcessing": true,
+	"iDisplayLength":50,
 	"aoColumns": [
 		{ "sClass": 'txtleft' },
 		{ "sClass": 'txtcenter' },
 		{ "sClass": 'txtleft' },
 		{ "sClass": 'txtleft' }
-		  ],
+	],
 	  "oLanguage": {
 	      "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
 	  },
