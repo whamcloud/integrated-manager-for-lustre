@@ -89,6 +89,10 @@ class ManagedTarget(StatefulObject):
         self.active_mount = active_mount
         self.save()
 
+        # FIXME: these alert updates should be in the same trans as 
+        # saving active_mount, otherwise next call we'll think active_mount is
+        # already set, return out, and fail to update alerts
+
         from monitor.models import TargetFailoverAlert, TargetOfflineAlert
         TargetOfflineAlert.notify(self, active_mount == None)    
         for tm in self.managedtargetmount_set.filter(primary = False):

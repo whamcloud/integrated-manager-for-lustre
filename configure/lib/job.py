@@ -320,9 +320,7 @@ class MountStep(AnyTargetMountStep):
 
         result = self._run_agent_command(target, "start-target --label %s --serial %s" % (target.name, target.pk))
         started_on = ManagedHost.objects.get(address = result['location'])
-        target.active_mount = target.managedtargetmount_set.get(host = started_on)
-        target.save()
-
+        target.set_active_mount(target.managedtargetmount_set.get(host = started_on))
 
 class UnmountStep(AnyTargetMountStep):
     def is_idempotent(self):
@@ -334,6 +332,7 @@ class UnmountStep(AnyTargetMountStep):
         target = ManagedTarget.objects.get(id = target_id)
 
         self._run_agent_command(target, "stop-target --label %s --serial %s" % (target.name, target.pk))
+        target.set_active_mount(None)
 
 class RegisterTargetStep(Step):
     def is_idempotent(self):
