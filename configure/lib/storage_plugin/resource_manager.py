@@ -159,7 +159,7 @@ class ResourceManager(object):
             scannable_local_id,
             initial_resources,
             update_period):
-        log.info(">> session_open %s" % scannable_id)
+        log.info(">> session_open %s (%s resources)" % (scannable_id, len(initial_resources)))
         with self._instance_lock:
             if scannable_id in self._sessions:
                 log.warning("Clearing out old session for scannable ID %s" % scannable_id)
@@ -200,23 +200,20 @@ class ResourceManager(object):
                 from configure.models import StorageResourceRecord
                 record = StorageResourceRecord.objects.get(pk = record_pk)
                 resource = record.to_resource()
-                log.info("%s %s %s" % (record_pk, resource.__class__, klass))
                 if isinstance(resource, klass):
                     yield (record, resource)
 
         from configure.lib.storage_plugin import base_resources
         for record, resource in get_session_resources_of_type(session, base_resources.VirtualMachine):
             log.info("Resource %s" % resource)
-            log.debug("Got host_id of %s=%s" % (record.pk, resource.host_id))
             if not resource.host_id:
                 from configure.models import ManagedHost
                 log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
-                # TODO: deal with an existing host having the same address (doing that would
-                # also accomodate a crash between creating the host and saving the ID, as we
-                # would pick up the created host next time around when scanning)
-                host = ManagedHost.create_from_string(resource.address)
+                host = ManagedHost.create_from_string(
+                        resource.address,
+                        virtual_machine = record.pk)
                 record.update_attribute('host_id', host.pk)
-                log.debug("Set host_id of %s=%s" % (record.pk, host.pk))
+                
                 # NB any instances of this resource within the plugin session
                 # that reported it won't see the change to host_id attribute, but that's
                 # fine, they have no right to know.
@@ -287,23 +284,65 @@ class ResourceManager(object):
                     primary = False
                     use = False
 
-                # A hack to provide some arbitrary primary/secondary assignments
-                import settings
-                if settings.PRIMARY_LUN_HACK:
-                    if lun.lunnode_set.count() == 0:
+                # FIXME: assumes that we discover the device nodes AFTER the underlying storage,
+                # in order that the underlying VDs will be here when we look for home 
+                # controller information.  This is true for controller-hosted virtual machines,
+                # as we set up the VMs after scanning the controller for the first time, but 
+                # it is not true in the general case.
+
+                ancestor_virtual_disks = ResourceQuery().record_find_ancestors(
+                        record.pk, base_resources.VirtualDisk) 
+                # collect home controller information
+                vd_home_controllers = set()
+                for vd_id in ancestor_virtual_disks:
+                    from configure.models import StorageResourceRecord
+                    vd_res = StorageResourceRecord.objects.get(pk = vd_id).to_resource()
+                    if vd_res.home_controller:
+                        vd_home_controller_pk = vd_res.home_controller._handle
+                        vd_home_controllers.add(vd_home_controller_pk)
+
+                host_proxy = StorageResourceRecord.objects.get(pk = scannable_id).to_resource()
+                if len(vd_home_controllers) == 1 and host_proxy.virtual_machine:
+                    # We can identify a primary host if there is one home controller
+                    # for all underlying VDs
+                    vd_home_controller_id = vd_home_controllers.pop()
+                    host_home_controller_id = host_proxy.virtual_machine.home_controller._handle
+                    if host_home_controller_id == vd_home_controller_id:
                         primary = True
                         use = True
+                        log.info("Device %s on same host controller as host %s, marking primary" % (device, host))
                     else:
-                        primary = False
-                        if lun.lunnode_set.filter(use = True).count() > 1:
-                            use = False
-                        else:
-                            use = True
+                        # In this case, there is enough information that we will have found
+                        # the primary mount elsewhere, and this is a potential secondary mount.
 
-                #if settings.DDN10K_PRIMARY_LUN_HACK:
-                    # Let's do some magic for the 10KE: we need to know
-                    #  * The home_cont of the VDs underlying this Lun
-                    #  * Which controller the host lives on
+                        # FIXME: first-come-first-served assignment of secondary works
+                        # when the LUN is only presented to two hosts, but not in the general
+                        # case: need more advanced ALUA detection to do this right (but this
+                        # works well enough for a controlled 10KE environment)
+                        use = True
+                        primary = False
+                        log.info("Device %s (hc %s) has different home controller than host %s (hc %s)" % (device, vd_home_controller_id, host, host_home_controller_id))
+                else:
+                    log.info("Device %s on %s home controllers, host %s virtual machine='%s', cannot infer primary mount " % (device, len(vd_home_controllers), host, host.virtual_machine))
+                    # The host does not have a home controller, or the underlying VDs don't
+                    # all point to the same host controller, or don't have a host controller
+                    # set: we can't guess at the primary
+
+                    # A hack to provide some arbitrary primary/secondary assignments
+                    import settings
+                    if settings.PRIMARY_LUN_HACK:
+                        if lun.lunnode_set.count() == 0:
+                            primary = True
+                            use = True
+                        else:
+                            primary = False
+                            if lun.lunnode_set.filter(use = True).count() > 1:
+                                use = False
+                            else:
+                                use = True
+                    else:
+                        use = False
+                        primary = False
 
                 lun_node = LunNode.objects.create(
                     lun = lun,
@@ -520,14 +559,25 @@ class ResourceManager(object):
                 resource.__class__.__module__,
                 resource.__class__.__name__)
 
+        # Find any ResourceReference attributes and persist them first so that
+        # we know their global IDs for serializing this one
+        for key, value in resource._storage_dict.items():
+            # Special case for ResourceReference attributes, because the resource
+            # object passed from the plugin won't have a global ID for the referenced
+            # resource -- we have to do the lookup inside ResourceManager
+            attribute_obj = resource_class.get_attribute_properties(key)
+            from configure.lib.storage_plugin import attributes
+            if isinstance(attribute_obj, attributes.ResourceReference):
+                referenced_resource = value
+                if not referenced_resource._handle in session.local_id_to_global_id:
+                    self._persist_new_resource(session, referenced_resource)
+                    assert referenced_resource._handle in session.local_id_to_global_id
+
         id_tuple = resource.id_tuple()
         cleaned_id_items = []
         for t in id_tuple:
             from configure.lib.storage_plugin.resource import StorageResource
             if isinstance(t, StorageResource):
-                if t._handle == None:
-                    self._persist_new_resource(session, t)
-                    assert t._handle in session.local_id_to_global_id
                 cleaned_id_items.append(session.local_id_to_global_id[t._handle])
             else:
                 cleaned_id_items.append(t)
@@ -578,11 +628,8 @@ class ResourceManager(object):
 
     @transaction.autocommit
     def _persist_new_resources(self, session, resources):
-        record_cache = {}
         for r in resources:
-            record = self._persist_new_resource(session, r)
-            record_cache[record.pk] = record
-            
+            self._persist_new_resource(session, r)
 
         # Do a separate pass for parents so that we will have already
         # built the full local-to-global map
@@ -595,7 +642,9 @@ class ResourceManager(object):
                 self._edges.add_parent(resource_global_id, parent_global_id)
 
             # Update the database
-            record = record_cache[resource_global_id]
+            # FIXME: shouldn't need to SELECT the record to set up its relationships
+            from configure.models import StorageResourceRecord
+            record = StorageResourceRecord.objects.get(pk = resource_global_id)
             self._resource_persist_parents(r, session, record)
 
     @transaction.autocommit

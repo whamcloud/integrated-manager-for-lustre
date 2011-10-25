@@ -43,7 +43,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         super(ManagedHost, self).save(*args, **kwargs)
 
     @classmethod
-    def create_from_string(cls, address_string):
+    def create_from_string(cls, address_string, virtual_machine = None):
         from django.db import transaction
 
         # Single transaction for creating Host and related database objects
@@ -70,7 +70,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                 address = host.address
 
             storage_plugin_manager.create_root_resource('linux',
-                    'HydraHostProxy', host_id = host.pk, address = address)
+                    'HydraHostProxy', host_id = host.pk,
+                    virtual_machine = virtual_machine)
 
         # Attempt some initial setup jobs
         from configure.lib.state_manager import StateManager
@@ -415,9 +416,7 @@ class SshMonitor(Monitor):
         agent_path = SshMonitor.DEFAULT_AGENT_PATH
         try:
             host = ManagedHost.objects.get(address = host)
-            print "got host"
         except ManagedHost.DoesNotExist:
-            print "created host"
             host = ManagedHost(address = host)
 
         try:

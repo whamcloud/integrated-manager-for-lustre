@@ -42,19 +42,10 @@ class HydraHostProxy(StorageResource, ScannableResource):
     # I wonder if what I really want is a HostResource base and then
     # subclasses for on-controller hosts (identified by controller+index)
     # and separately for general hosts (identified by ManagedHost.pk)
-    identifier = GlobalId('address')
+    identifier = GlobalId('host_id')
 
-    host_id = attributes.Integer(optional = True)
-
-    # Create a host with no host_id but an address, and resource_manager
-    # will know to create a configure.models.ManagedHost for it (or 
-    # map its host_id to an existing ManagedHost with the same address)
-    address = attributes.String()
-
-    # For hosts which are affine to a particular storage controller,
-    # set this so that resource_manager knows that this host is
-    # the primary server for Luns whose home is that controller.
-    home_controller = attributes.ResourceReference(optional = True)
+    host_id = attributes.Integer()
+    virtual_machine = attributes.ResourceReference(optional = True)
 
     def human_string(self, parent = None):
         host = ManagedHost._base_manager.get(pk=self.host_id)
