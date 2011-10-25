@@ -344,6 +344,16 @@ def run_job(job_id):
             job_log.error(backtrace)
             job.complete(errored = True)
 
+            # FIXME: questionable value to pickling the exception here, do we do
+            # much with it?
+            # Exceptions raised locally are not guaranteed to be picklable
+            import pickle
+            try:
+                pickle.dumps(e)
+            except pickle.PicklingError:
+                # Unpickleable exception, fall back to a generic exception with a message
+                e = RuntimeError(e.message)
+
             result.exception = e
             result.backtrace = backtrace
             result.state = 'failed'
