@@ -29,7 +29,9 @@ handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H
 daemon_log.addHandler(handler)
 if settings.DEBUG:
     daemon_log.setLevel(logging.DEBUG)
-    daemon_log.addHandler(logging.StreamHandler())
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+    daemon_log.addHandler(handler)
 else:
     daemon_log.setLevel(logging.WARNING)
 
