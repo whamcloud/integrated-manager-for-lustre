@@ -36,8 +36,8 @@ function LoadFSList_FSList()
         i++;
         $('#example').dataTable().fnAddData ([
           fsName,
-          resValue.mgsname,
-          resValue.mdsname,
+          resValue.mgs_hostname,
+          resValue.mds_hostname,
           resValue.noofoss,
           resValue.noofost,
           resValue.kbytesused,

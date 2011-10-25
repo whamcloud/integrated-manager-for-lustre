@@ -47,6 +47,8 @@ class ListFileSystems(AnonymousRequestHandler):
             filesystems.append({'fsname': filesystem.name,
                            'noofoss':no_of_oss,
                            'noofost':no_of_ost,
+                           'mgs_hostname': filesystem.mgs.primary_server().pretty_name(),
+                           'mds_hostname': ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name(),
                            # FIXME: the API should not be formatting these, leave it to the presentation layer
                            'kbytesused': sizeof_fmt((fskbytestotal * 1024)),
                            'kbytesfree': sizeof_fmt((fskbytesfree *1024))})
