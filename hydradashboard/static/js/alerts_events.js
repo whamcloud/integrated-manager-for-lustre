@@ -404,7 +404,7 @@ loadHostList = function(fileSystemName)
          {
              $.each(data.response, function(resKey, resValue)
              {
-                 if(resValue.kind=='OSS' || resValue.kind.indexOf('OSS')>0)
+                 if(resValue.kind.indexOf('OST') != -1)
                  {
                 	 hostList  =  hostList + "<option value="+resValue.host_address+">"+resValue.host_address+"</option>";
                  }
