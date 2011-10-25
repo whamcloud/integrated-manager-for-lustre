@@ -95,41 +95,43 @@ fs_Line_connectedClients_Data = function(fsName, sDate, endDate, dataFunction, f
     {datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem: fsName, endtime: endDate})
      .success(function(data, textStatus, jqXHR) 
      {   
-       if(data.success)
-       {
-         var response = data.response;
-         $.each(response, function(resKey, resValue) 
+         if(data.success)
          {
+           var response = data.response;
+           $.each(response, function(resKey, resValue) 
+           {
            if(resValue.filesystem != undefined)
            {
-	         if (fileSystemName != resValue.filesystem && fileSystemName !='')
-	         {
-	           obj_fs_Line_connectedClients_Data.series[count] = {
-	      	     name: fileSystemName,
-	      	     data: clientMountData
-	      	   };
-	           clientMountData = [];
-	           count++;
+             if (fileSystemName != resValue.filesystem && fileSystemName !='')
+             {
+            	 obj_fs_Line_connectedClients_Data.series[count] =
+               {
+                 name: fileSystemName,
+                 data: clientMountData
+               };
+               clientMountData = [];
+               count++;
                if (resValue.num_exports != null || resValue.num_exports != undefined)
                {
                  ts = resValue.timestamp * 1000
-	      	     fileSystemName = resValue.filesystem;
-	      	     clientMountData.push([ts,resValue.num_exports]);
-               }
-	         }
-	         else
-	         {
-	           if (resValue.num_exports != null || resValue.num_exports != undefined)
-               {
                  fileSystemName = resValue.filesystem;
-	      	     clientMountData.push([ts,resValue.num_exports]);
+                 clientMountData.push([ts,resValue.num_exports]);
                }
-	         }
-	         obj_fs_Line_connectedClients_Data.series[count] = { name: fileSystemName, data: clientMountData };
+             }
+             else
+             {
+               if (resValue.num_exports != null || resValue.num_exports != undefined)
+               { 
+                 ts = resValue.timestamp * 1000
+                 fileSystemName = resValue.filesystem;
+                 clientMountData.push([ts,resValue.num_exports]);
+               }
+             }
            }
-         });
-       }
-     })
+           });
+           obj_fs_Line_connectedClients_Data.series[count] = { name: fileSystemName, data: clientMountData}; 
+         }
+       })
      .error(function(event) 
      {
        // Display of appropriate error message
@@ -399,10 +401,10 @@ fs_Area_Iops_Data = function(fsName, sDate, endDate, dataFunction, targetKind, f
 }
 /********************************************************************************/
  
- loadFileSystemSummary = function (){
+ loadFileSystemSummary = function (fsName){
 	 var innerContent = "";
 	 $('#fileSystemSummaryTbl').html("<tr><td width='100%' align='center' height='180px'><img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
-	 $.post("/api/getfilesystem/",{filesystem: $('#fsSelect').val()})
+	 $.post("/api/getfilesystem/",{filesystem: fsName})
      .success(function(data, textStatus, jqXHR) {
          if(data.success)
          {

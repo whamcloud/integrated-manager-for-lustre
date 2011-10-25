@@ -325,7 +325,7 @@ function LoadUsableVolumeList(datatable_container, select_widget_fn)
           volume_info.kind,
           volume_info.status,
           primaryHostname,
-          failoverHostname,
+          failoverHostname
         ]); 
       });
     }

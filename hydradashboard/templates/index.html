@@ -48,59 +48,18 @@
 <link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
 
 <script id="source" language="javascript" type="text/javascript">
+      
 			$(function () 
 			{
+				loadView(window.location.hash);
 				$('#fsSelect').attr("value","");
 				$('#intervalSelect').attr("value","");
 				//$('#allFileSystemSummaryTbl').html("<tr><td width='100%' align='center' height='180px'><img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
-				var allfileSystemsSummaryContent = "<tr><td align='center' colspan='4'><b>All Filesystems Summary</b></td></tr>"+
-             	"<tr><td width='25%' align='left' valign='top' ><span class='fontStyle style2 style9'><b>File system</b></span><td width='5%' align='right' valign='top' ><span class='fontStyle style2 style9'><b>OSS</b></span></td><td width='5%' align='right' valign='top' ><span class='fontStyle style2 style9'><b>OST</b></span></td><td width='33%' align='right' valign='top' ><span class='fontStyle style2 style9'><b>Total Space</b></span></td><td width='33%' align='right' valign='top' ><span class='fontStyle style2 style9'><b>Free Space</b></span></td></tr>";
-		        $.get("/api/listfilesystems")
-		        .success(function(data, textStatus, jqXHR) {		//<option value='sobofs01'>sobofs01</option>
-		            var innerContent = "<option value=''>Select File System</option>";
-		            $.each(data, function(key, val) {
-		                if(key=='success' && val == true)
-		                {
-		                    $.each(data, function(key1, val1) {
-		                    if(key1=='response')
-		                    {
-		                        $.each(val1, function(resKey, resValue) {
-		                            innerContent = innerContent + "<option value="+resValue.fsname+">"+resValue.fsname+"</option>";
-		                            allfileSystemsSummaryContent = allfileSystemsSummaryContent +
-		                            "<tr><td width='25%' align='left' valign='top' ><span class='fontStyle style2 style9'>"+resValue.fsname+"</span><td width='5%' align='right' valign='top' ><span class='fontStyle style2 style9'></span>"+resValue.noofoss+"</td><td width='5%' align='right' valign='top' ><span class='fontStyle style2 style9'>"+resValue.noofost+"</span></td><td width='33%' align='right' valign='top' ><span class='fontStyle style2 style9'>"+resValue.kbytesused+"</span></td><td width='33%' align='right' valign='top' ><span class='fontStyle style2 style9'>"+resValue.kbytesfree+"</span></td></tr>";
-		                            
-		                            $('#allFileSystemSummaryTbl').dataTable({
-		                                "aoColumns": [
-			   		                                   { "sClass": 'txtleft', "sWidth": "25%" },
-			   		                                   { "sClass": 'txtright',"sWidth": "5%" },
-			   		                                   { "sClass": 'txtright',"sWidth": "5%" },
-			   		                                   { "sClass": 'txtright',"sWidth": "33%" },
-			   		                                   { "sClass": 'txtright',"sWidth": "33%" }
-			   		                                 ],
-			   		                                "iDisplayLength":5,
-			   		                                "bRetrieve":true,
-			   		                             	"bFilter":false,
-			   		                             	"bLengthChange": false,
-			   		                             
-			   		                    }).fnAddData ([
-                                           resValue.fsname,
-                                           resValue.noofoss,
-                                           resValue.noofost,
-                                           resValue.kbytesused,
-                                           resValue.kbytesfree,
-                                        ]);
-		                        });
-		                    }
-		                    });
-		                }
-		            });
-		            $('#fsSelect').html(innerContent);
-		           // $('#allFileSystemSummaryTbl').html(allfileSystemsSummaryContent);
-		            
-		        })
-				.error(function(event) {
-				});
-		        
+				
+
+        
+             	
+        
 		        //initDashboardPolling();
 				
 				$("#alertAnchor").click();
@@ -110,6 +69,9 @@
 </head>
 <body style="margin: 0px 0px 0px 0px; padding: 0px;"
 	onunload="clearAllIntervals()">
+<input type="hidden" value="" id="ls_filesystem" />
+<input type="hidden" value="" id="ls_oss" />
+<input type="hidden" value="" id="ls_ost" />
 <div class="wrapper">
 <div class="bg">
 <div class="logohead">
@@ -457,7 +419,7 @@
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
 					style="margin-left: 115px" class="magbutton"
-					onclick="fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System: CPU and Memory Usage');" />
+					onclick="fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System: CPU and Memory Usage');" />
 				</div>
 				<div style="clear: right;"></div>
 				<div id="fs_avgCPUDiv" class="round-table" style="width: 300px">Server CPU and Memory Usage</div>
@@ -465,7 +427,7 @@
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
 					style="margin-left: 115px" class="magbutton"
-					onclick="fs_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('File System: Disk Read and Write');" />
+					onclick="fs_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('File System: Disk Read and Write');" />
 				</div>
 				<div style="clear: right;"></div>
 				<div id="fs_avgMemoryDiv" class="round-table" style="width: 300px">Disk Read and Write</div>
@@ -473,7 +435,7 @@
 				<td valign="top" class="text" width="30%" align="center">
 				<div class="magni"><input type="button" value=""
 					style="margin-left: 115px" class="magbutton"
-					onclick="fs_Area_Iops_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', iopsFetchmatric, 'true');setZoomDialogTitle('File System: IOP/s');" />
+					onclick="fs_Area_Iops_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', iopsFetchmatric, 'true');setZoomDialogTitle('File System: IOP/s');" />
 				</div>
 				<div style="clear: right;"></div>
 				<div id="fs_avgReadDiv" class="round-table" style="width: 300px">IOP/s</div>
@@ -618,14 +580,14 @@
 			</td>	 -->
 			<td valign="top" class="text" width="50%" align="center">
 				<div class="magni" style="margin-left: 515px">
-                    <input type="button" value="" class="magbutton" onclick="oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('Server: CPU and Memory Usage');" />	 
+                    <input type="button" value="" class="magbutton" onclick="oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('Server: CPU and Memory Usage');" />	 
                 </div>
 				<div style="clear: right;"></div>
 				<div id="oss_avgReadDiv" class="round-table" style="width: 500px">Server CPU and Memory</div>
 			</td>
 			<td valign="top" class="text" width="50%" align="center">
 					<div class="magni" style="margin-left: 515px">
-                     <input type="button" value="" class="magbutton" onclick="oss_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('Server: Disk Read and Write');" />	
+                     <input type="button" value="" class="magbutton" onclick="oss_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('Server: Disk Read and Write');" />	
                 </div>
 				<div style="clear: right;"></div>
 				<div id="oss_avgWriteDiv" class="round-table" style="width: 500px">Disk Read and Write</div>
@@ -775,7 +737,7 @@
 				<td valign="top" class="text" width="50%" align="center">
 				<div class="magni" style="margin-left: 515px"><input
 					type="button" value=" " class="magbutton"
-					onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
+					onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
 				</div>
 				<div style="clear: right;"></div>
 				<div id="ost_avgReadDiv" style="width: 500px" class="round-table">Disk Read and Write</div>

@@ -125,10 +125,10 @@ var oss_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 	    });
 }
 /***********************************************************************/
- loadOSSUsageSummary = function (){
+ loadOSSUsageSummary = function (fsName){
 	 $('#ossSummaryTbl').html("<tr><td width='100%' align='center' height='180px'><img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
 	 var innerContent = "";
-	 $.post("/api/getfilesystem/",{filesystem: $('#fsSelect').val()})
+	 $.post("/api/getfilesystem/",{filesystem: fsName})
      .success(function(data, textStatus, jqXHR) {
          if(data.success)
          {

@@ -787,8 +787,10 @@ db_Area_ReadWrite_Data = function(isZoom)
 /*****************************************************************************/
   setZoomDialogTitle = function(titleName)
   {
-   $('#zoomDialog').dialog('option', 'title', titleName);
-  $('#zoomDialog').dialog('open');
+    $('#zoomDialog').empty();
+    $('#zoomDialog').dialog('option', 'title', titleName);
+    $('#zoomDialog').dialog('open');
+    $('#zoomDialog').html("<img src='../images/wait_progress.gif'/>");
   }
  
 /*****************************************************************************/
@@ -801,7 +803,7 @@ db_Area_ReadWrite_Data = function(isZoom)
     db_LineBar_CpuMemoryUsage_Data('false');
     db_Area_ReadWrite_Data('false');
     db_Area_Iops_Data('false');
-    db_HeatMap_Data('false');
+    //db_HeatMap_Data('false');
   }
   
   clearAllIntervals = function(){
@@ -811,10 +813,10 @@ db_Area_ReadWrite_Data = function(isZoom)
 // Function to show OSS/OST dashboards
 /******************************************************************************/
   function showFSDashboard(){
-    $("#fsSelect").change();
+	  loadFSContent($('#ls_filesystem').val());
   }
 
   function showOSSDashboard(){
-     $("#ossSelect").change();
+	  loadOSSContent($('#ls_filesystem').val(), $('#ls_oss').val());
   }
 /******************************************************************************/
