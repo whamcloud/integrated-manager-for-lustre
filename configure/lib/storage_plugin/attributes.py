@@ -112,7 +112,6 @@ class ResourceReference(ResourceAttribute):
         pk = json.loads(value)
 
         from configure.models import StorageResourceRecord
-        print "record = %s (%s)" % (pk, value)
         record = StorageResourceRecord.objects.get(pk = pk)
         return record.to_resource()
         
