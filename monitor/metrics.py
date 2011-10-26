@@ -146,7 +146,8 @@ def _autocreate_ds(db, key, payload):
     db.datasources.add(ds_klass.objects.create(name=key,
                                                heartbeat=db.step * 2,
                                                database=db))
-    metrics_log.info("Added new DS to DB (%s -> %s)" % (key, db.name))
+    metrics_log.info("Added new %s to DB (%s -> %s)" % (payload['type'],
+                                                        key, db.name))
 
 def minimal_archives(db):
     """
@@ -221,7 +222,7 @@ class HostMetricStore(R3dMetricStore):
             for key in metrics['cpustats']:
                 ds_name = "cpu_%s" % key
                 update[ds_name] = {'value': metrics['cpustats'][key],
-                                   'type': 'Gauge'}
+                                   'type': 'Absolute'}
         except KeyError:
             pass
 
@@ -267,6 +268,11 @@ class TargetMetricStore(R3dMetricStore):
             if "sum" in stats[key]:
                 if stats[key]['units'] == "reqs":
                     update[ds_name] = {'value': stats[key]['count'],
+                                       'type': 'Counter'}
+                elif stats[key]['units'] == "bytes":
+                    # Weird one, e.g. OST read_bytes/write_bytes.
+                    # We don't the current value, we want the rate.
+                    update[ds_name] = {'value': stats[key]['sum'],
                                        'type': 'Counter'}
                 else:
                     update[ds_name] = {'value': stats[key]['sum'],
