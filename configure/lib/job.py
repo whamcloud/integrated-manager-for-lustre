@@ -273,10 +273,10 @@ class AnyTargetMountStep(Step):
 
         # Try and use each targetmount, the one with the most recent successful audit first
         from configure.models import ManagedTargetMount
-        from configure.lib.job import StepCleanError
         available_tms = ManagedTargetMount.objects.filter(target = target, host__state = 'lnet_up').order_by('-host__monitor__last_success')
         if available_tms.count() == 0:
             raise RuntimeError("No hosts are available for target %s" % target)
+        available_tms = list(available_tms)
 
         for tm in available_tms:
             job_log.debug("command '%s' on target %s trying targetmount %s" % (command, target, tm))
@@ -284,7 +284,7 @@ class AnyTargetMountStep(Step):
             try:
                 return self.invoke_agent(tm.host, command)
                 # Success!
-            except Exception, e:
+            except Exception:
                 job_log.warning("Cannot run '%s' on %s." % (command, tm.host))
                 if tm == available_tms[-1]:
                     job_log.error("No targetmounts of target %s could run '%s'." % (target, command))
@@ -314,13 +314,23 @@ class MountStep(AnyTargetMountStep):
         return True
 
     def run(self, kwargs):
-        from configure.models import ManagedTarget, ManagedHost
+        from configure.models import ManagedTarget, ManagedHost, ManagedTargetMount
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id)
 
         result = self._run_agent_command(target, "start-target --label %s --serial %s" % (target.name, target.pk))
-        started_on = ManagedHost.objects.get(address = result['location'])
-        target.set_active_mount(target.managedtargetmount_set.get(host = started_on))
+        try:
+            started_on = ManagedHost.objects.get(address = result['location'])
+        except ManagedHost.DoesNotExist:
+            job_log.error("Target %s (%s) found on host %s, which is not a ManagedHost" % (target, target_id, result['location']))
+            raise
+        try:
+            target.set_active_mount(target.managedtargetmount_set.get(host = started_on))
+        except ManagedTargetMount.DoesNotExist:
+            job_log.error("Target %s (%s) found on host %s (%s), which has no ManagedTargetMount for this target" % (target, target_id, started_on, started_on.pk))
+            raise
+
+            raise
 
 class UnmountStep(AnyTargetMountStep):
     def is_idempotent(self):
