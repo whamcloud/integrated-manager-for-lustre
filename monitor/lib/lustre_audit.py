@@ -14,9 +14,6 @@ from configure.models import *
 from django.db import transaction
 
 import re
-import sys
-import traceback
-import simplejson as json
 
 import logging
 audit_log = logging.getLogger('audit')
@@ -116,6 +113,7 @@ class UpdateScan(object):
             #self.learn_clients()
 
             self.store_metrics()
+            self.update_lnet()
             self.update_resource_locations()
             self.update_target_mounts()
 
@@ -124,14 +122,14 @@ class UpdateScan(object):
     def update_lnet(self):
         # Update LNet status
         from configure.lib.state_manager import StateManager
-        from configure.models import StatefulObject
-        host = self.host.downcast()
         state = {(False, False): 'lnet_unloaded',
                 (True, False): 'lnet_down',
                 (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'], self.host_data['lnet_up'])]
         StateManager.notify_state(self.host.downcast(), state, ['lnet_unloaded', 'lnet_down', 'lnet_up'])
         # Update LNet alerts
-        LNetOfflineAlert.notify(self.host, not host_data['lnet_up'])
+        # TODO: also set the alert status in Job completions when the state is changed,
+        # rather than waiting for this scan to notice.
+        LNetOfflineAlert.notify(self.host, not self.host_data['lnet_up'])
 
     def update_target_mounts(self):
         # Loop over all mountables we expected on this host, whether they
