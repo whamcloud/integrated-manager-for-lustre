@@ -4,14 +4,12 @@
 # ==============================
 
 from django.db import models
-from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll
-from configure.models.jobs import StatefulObject, Job
-from monitor.models import DeletableDowncastableMetaclass
+from configure.lib.job import StateChangeJob, DependOn, DependAll
+from configure.models.jobs import Job
+from configure.models.host import DeletableStatefulObject
 
-class ManagedTargetMount(StatefulObject, models.Model):
+class ManagedTargetMount(DeletableStatefulObject):
     """Associate a particular Lustre target with a device node on a host"""
-    __metaclass__ = DeletableDowncastableMetaclass
-
     # FIXME: both LunNode and TargetMount refer to the host
     host = models.ForeignKey('ManagedHost')
     mount_point = models.CharField(max_length = 512, null = True, blank = True)
@@ -29,25 +27,22 @@ class ManagedTargetMount(StatefulObject, models.Model):
         # If primary is true, then target must be unique
         if self.primary:
             from django.db.models import Q
-            other_primaries = TargetMount.objects.filter(~Q(id = self.id), target = self.target, primary = True)
+            other_primaries = ManagedTargetMount.objects.filter(~Q(id = self.id), target = self.target, primary = True)
             if other_primaries.count() > 0:
                 from django.core.exceptions import ValidationError
                 raise ValidationError("Cannot have multiple primary mounts for target %s" % self.target)
 
         # If this is an MGS, there may not be another MGS on 
         # this host
-        try:
+        from configure.models.target import ManagedMgs
+        if isinstance(self.target.downcast(), ManagedMgs):
             from django.db.models import Q
-            mgs = self.target.managedmgs
-            other_mgs_mountables_local = TargetMount.objects.filter(~Q(target__managementtarget = None), ~Q(id = self.id), host = self.host).count()
+            other_mgs_mountables_local = ManagedTargetMount.objects.filter(~Q(id = self.id), target__in = ManagedMgs.objects.all(), host = self.host).count()
             if other_mgs_mountables_local > 0:
                 from django.core.exceptions import ValidationError
                 raise ValidationError("Cannot have multiple MGS mounts on host %s" % self.host.address)
 
-        except ManagedMgs.DoesNotExist:
-            pass
-
-        return super(TargetMount, self).save(force_insert, force_update, using)
+        return super(ManagedTargetMount, self).save(force_insert, force_update, using)
 
     def __str__(self):
         return "%s" % (self.target.downcast())
@@ -57,7 +52,6 @@ class ManagedTargetMount(StatefulObject, models.Model):
 
     def status_string(self):
         from monitor.models import TargetRecoveryAlert
-        print "target %s active_mount %s" % (self.target, self.target.active_mount)
         in_recovery = (TargetRecoveryAlert.filter_by_item(self.target).count() > 0)
         if self.target.active_mount == self:
             if in_recovery:
