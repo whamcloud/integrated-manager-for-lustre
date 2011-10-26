@@ -339,7 +339,15 @@ class FilesystemMetricStore(R3dMetricStore):
         """
         results = {}
 
-        for target in target_class.objects.filter(filesystem=self.filesystem):
+        def client_count(num_exports, target_count):
+            # ((total - # MDS OSCs) / # OSTS) - MGS
+            return ((num_exports - target_count) / target_count) - 1
+
+        computed_metrics = {'num_exports': client_count}
+
+        targets = target_class.objects.filter(filesystem=self.filesystem)
+
+        for target in targets:
             tm = target.metrics.fetch(cfname, **kwargs)
             for row in tm:
                 row_ts = row[0]
@@ -357,6 +365,11 @@ class FilesystemMetricStore(R3dMetricStore):
                                 results[row_ts][metric] += row_dict[metric]
                     except KeyError:
                         results[row_ts][metric] = row_dict[metric]
+
+        for row_ts in results:
+            for metric in results[row_ts]:
+                if metric in computed_metrics:
+                    results[row_ts][metric] = computed_metrics[metric](results[row_ts][metric], len(targets))
 
         return tuple(
                 sorted(
