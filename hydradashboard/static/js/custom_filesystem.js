@@ -7,14 +7,14 @@
 // 2) fs_Line_connectedClients_Data(isZoom)
 // 3) fs_LineBar_CpuMemoryUsage_Data(isZoom)
 // 4) fs_Area_ReadWrite_Data(isZoom)
-// 5) fs_Area_Iops_Data(isZoom)
+// 5) fs_Area_mdOps_Data(isZoom)
 // 6) fs_HeatMap_Data
 /********************************************************************************/
 var fs_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_Line_connectedClients_Data_Api_Url = "/api/get_fs_stats_for_client/";
 var fs_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_server/";
 var fs_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
-var fs_Area_Iops_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var fs_Area_mdOps_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
 
 /*****************************************************************************/
@@ -262,21 +262,21 @@ fs_Area_ReadWrite_Data = function(fsName, sDate, endDate, dataFunction, targetKi
 }
 
 /*****************************************************************************/
-//Function for Iops - Area Chart
+//Function for mdOps - Area Chart
 //Param - File System name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics
 //Return - Returns the graph plotted in container
 /*****************************************************************************/
-fs_Area_Iops_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+fs_Area_mdOps_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
 	var readData = [], writeData = [], statData = [], closeData = [], openData = [];
-    obj_db_Area_Iops_Data = JSON.parse(JSON.stringify(chartConfig_Area_Iops));
+    obj_db_Area_mdOps_Data = JSON.parse(JSON.stringify(chartConfig_Area_mdOps));
 
     var values = new Object();
-    var stats = iopsFetchmatric;
+    var stats = mdOpsFetchmatric;
     $.each(stats, function(i, stat_name) {
       values[stat_name] = [];
     });
-    $.post(db_Area_Iops_Data_Api_Url,{"targetkind": targetKind, "datafunction": dataFunction, "fetchmetrics": stats.join(" "),
+    $.post(db_Area_mdOps_Data_Api_Url,{"targetkind": targetKind, "datafunction": dataFunction, "fetchmetrics": stats.join(" "),
        "starttime": startTime, "filesystem": fsName, "endtime": endTime})
      .success(function(data, textStatus, jqXHR) {
       var targetName='';
@@ -302,21 +302,21 @@ fs_Area_Iops_Data = function(fsName, sDate, endDate, dataFunction, targetKind, f
        // Display of appropriate error message
      })
      .complete(function(event){
-       obj_db_Area_Iops_Data.chart.renderTo = "fs_avgReadDiv";
+       obj_db_Area_mdOps_Data.chart.renderTo = "fs_avgReadDiv";
         if(isZoom == 'true') {
-          renderZoomDialog(obj_db_Area_Iops_Data);
+          renderZoomDialog(obj_db_Area_mdOps_Data);
         }
 
         $.each(stats, function(i, stat_name) {
-          obj_db_Area_Iops_Data.series[i].data = values[stat_name];
+          obj_db_Area_mdOps_Data.series[i].data = values[stat_name];
         });
         
         if(isZoom == 'true')
         {
-           renderZoomDialog(obj_db_Area_Iops_Data);
+           renderZoomDialog(obj_db_Area_mdOps_Data);
         }
         
-        chart = new Highcharts.Chart(obj_db_Area_Iops_Data);
+        chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
     });
 }
 /*****************************************************************************/
@@ -452,7 +452,7 @@ fs_Area_Iops_Data = function(fsName, sDate, endDate, dataFunction, targetKind, f
 	
 	     fs_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, "Average", "MDT", readWriteFetchMatric, false);
 	
-	     fs_Area_Iops_Data($('#fsSelect').val(), startTime, endTime, "Average", "MDT", iopsFetchmatric, false);
+	     fs_Area_mdOps_Data($('#fsSelect').val(), startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
 	}
  
 /*********************************************************************************************/

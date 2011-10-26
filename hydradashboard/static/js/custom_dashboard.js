@@ -234,7 +234,7 @@ loadFSContent = function(fsName)
 
    fs_Area_ReadWrite_Data(fsName, startTime, endTime, "Average", "MDT", readWriteFetchMatric, false);
 
-   fs_Area_Iops_Data(fsName, startTime, endTime, "Average", "MDT", iopsFetchmatric, false);
+   fs_Area_mdOps_Data(fsName, startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
 
    //fs_HeatMap_Data('false');
 
@@ -373,7 +373,7 @@ loadFSContent = function(fsName)
         db_Line_connectedClients_Data('false');
         db_LineBar_CpuMemoryUsage_Data('false');
         db_Area_ReadWrite_Data('false');
-        db_Area_Iops_Data('false');
+        db_Area_mdOps_Data('false');
         //db_HeatMap_Data('false');
 
 });			// End Of document.ready funtion
