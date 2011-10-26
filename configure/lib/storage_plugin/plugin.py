@@ -3,6 +3,8 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+from configure.tasks import timeit
+
 import settings
 from collections import defaultdict
 from django.db import transaction
@@ -190,14 +192,16 @@ class StoragePlugin(object):
                         active, alert_class, attribute)
             self._delta_alerts.clear()
 
+    @timeit
     def commit_resource_statistics(self):
-        return
         self.log.debug(">> Plugin.commit_resource_statistics %s", self._scannable_id)
+        sent_stats = 0
         for resource in self._index.all():
             r_stats = resource.flush_stats()
             from configure.lib.storage_plugin.resource_manager import resource_manager 
             resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
-        self.log.debug("<< Plugin.commit_resource_statistics %s", self._scannable_id)
+            sent_stats += len(r_stats)
+        self.log.debug("<< Plugin.commit_resource_statistics %s (%s sent)", self._scannable_id, sent_stats)
 
     def update_or_create(self, klass, parents = [], **attrs):
         with self._resource_lock:

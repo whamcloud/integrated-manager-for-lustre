@@ -290,12 +290,12 @@ class ResourceManager(object):
                 # as we set up the VMs after scanning the controller for the first time, but 
                 # it is not true in the general case.
 
+                from configure.models import StorageResourceRecord
                 ancestor_virtual_disks = ResourceQuery().record_find_ancestors(
                         record.pk, base_resources.VirtualDisk) 
                 # collect home controller information
                 vd_home_controllers = set()
                 for vd_id in ancestor_virtual_disks:
-                    from configure.models import StorageResourceRecord
                     vd_res = StorageResourceRecord.objects.get(pk = vd_id).to_resource()
                     if vd_res.home_controller:
                         vd_home_controller_pk = vd_res.home_controller._handle
@@ -323,7 +323,7 @@ class ResourceManager(object):
                         primary = False
                         log.info("Device %s (hc %s) has different home controller than host %s (hc %s)" % (device, vd_home_controller_id, host, host_home_controller_id))
                 else:
-                    log.info("Device %s on %s home controllers, host %s virtual machine='%s', cannot infer primary mount " % (device, len(vd_home_controllers), host, host.virtual_machine))
+                    log.info("Device %s on %s home controllers, host %s virtual machine='%s', cannot infer primary mount " % (device, len(vd_home_controllers), host, host_proxy.virtual_machine))
                     # The host does not have a home controller, or the underlying VDs don't
                     # all point to the same host controller, or don't have a host controller
                     # set: we can't guess at the primary
@@ -568,10 +568,11 @@ class ResourceManager(object):
             attribute_obj = resource_class.get_attribute_properties(key)
             from configure.lib.storage_plugin import attributes
             if isinstance(attribute_obj, attributes.ResourceReference):
-                referenced_resource = value
-                if not referenced_resource._handle in session.local_id_to_global_id:
-                    self._persist_new_resource(session, referenced_resource)
-                    assert referenced_resource._handle in session.local_id_to_global_id
+                if value:
+                    referenced_resource = value
+                    if not referenced_resource._handle in session.local_id_to_global_id:
+                        self._persist_new_resource(session, referenced_resource)
+                        assert referenced_resource._handle in session.local_id_to_global_id
 
         id_tuple = resource.id_tuple()
         cleaned_id_items = []
@@ -662,7 +663,8 @@ class ResourceManager(object):
             attribute_obj = resource_class.get_attribute_properties(key)
             from configure.lib.storage_plugin import attributes
             if isinstance(attribute_obj, attributes.ResourceReference):
-                value = session.local_id_to_global_id[value._handle]
+                if value:
+                    value = session.local_id_to_global_id[value._handle]
             try:
                 existing = StorageResourceAttribute.objects.get(resource = record, key = key)
                 encoded_val = resource_class.encode(key, value)

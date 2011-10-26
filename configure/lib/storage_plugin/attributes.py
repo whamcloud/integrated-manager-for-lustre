@@ -110,10 +110,12 @@ class ResourceReference(ResourceAttribute):
     def decode(self, value):
         import json
         pk = json.loads(value)
-
-        from configure.models import StorageResourceRecord
-        record = StorageResourceRecord.objects.get(pk = pk)
-        return record.to_resource()
+        if pk:
+            from configure.models import StorageResourceRecord
+            record = StorageResourceRecord.objects.get(pk = pk)
+            return record.to_resource()
+        else:
+            return None
         
     def to_markup(self, value):
         from configure.models import StorageResourceRecord
@@ -131,7 +133,11 @@ class ResourceReference(ResourceAttribute):
 
     def validate(self, value):
         from configure.lib.storage_plugin.resource import StorageResource
-        if not isinstance(value, StorageResource):
+        if value == None and self.optional:
+            return
+        elif value == None and not self.optional:
+            raise RuntimeError("ResourceReference set to None but not optional" % value)
+        elif not isinstance(value, StorageResource):
             raise RuntimeError("Cannot take ResourceReference to %s" % value)
 
 
