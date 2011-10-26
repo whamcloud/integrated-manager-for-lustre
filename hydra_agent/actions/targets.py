@@ -119,12 +119,7 @@ def unconfigure_ha(args):
     _unconfigure_ha(args.primary, args.label, args.serial)
 
 def _unconfigure_ha(primary, label, serial):
-    # FIXME: serial is actually mandatory, this was added for a developer's convenience for
-    # backward-compatibility with an internal release
-    if serial:
-        unique_label = "%s_%s" % (label, serial)
-    else:
-        unique_label = label
+    unique_label = "%s_%s" % (label, serial)
 
     if primary:
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-primary\">'" % unique_label)
