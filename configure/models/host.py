@@ -5,7 +5,7 @@
 
 from django.db import models
 from configure.models.jobs import StatefulObject, Job
-from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll
+from configure.lib.job import StateChangeJob, DependOn, DependAll
 from monitor.models import MeasuredEntity, DeletableDowncastableMetaclass, DowncastMetaclass
 
 class DeletableStatefulObject(StatefulObject):
