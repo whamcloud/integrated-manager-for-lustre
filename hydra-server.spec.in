@@ -83,8 +83,11 @@ EOF
 done 
 
 ed /etc/rsyslog.conf <<EOF >/dev/null
-/\$InputTCPServerRun 514$/a
+/#\$InputTCPServerRun 514$/a
 # Added by hydra-server
+# enable receiving on TCP
+$ModLoad imtcp.so
+$InputTCPServerRun 514
 # MySQL logging
 \$ModLoad ommysql
 # Added by hydra-server
