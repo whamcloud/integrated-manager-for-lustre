@@ -550,7 +550,7 @@ class StorageResourceClassFields(AnonymousRequestHandler):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         resource_klass, resource_klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, resource_class)
         result = []
-        for name, attr in resource_klass.get_attribute_properties():
+        for name, attr in resource_klass.get_all_attribute_properties():
             result.append({
                 'label': attr.get_label(name),
                 'name': name,

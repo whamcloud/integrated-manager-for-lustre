@@ -91,7 +91,7 @@ class StorageResource(object):
             yield k, self.format(k)
 
     def get_attribute_items(self):
-        attr_props = self.get_attribute_properties()
+        attr_props = self.get_all_attribute_properties()
         result = []
         for name, props in attr_props:
             val = getattr(self, name)
@@ -104,10 +104,14 @@ class StorageResource(object):
         return result
 
     @classmethod
-    def get_attribute_properties(cls):
+    def get_all_attribute_properties(cls):
         attr_name_pairs = cls._storage_attributes.items()
         attr_name_pairs.sort(lambda a,b: cmp(a[1].creation_counter, b[1].creation_counter))
         return attr_name_pairs
+
+    @classmethod
+    def get_attribute_properties(cls, name):
+        return cls._storage_attributes[name]
 
     def flush_stats(self):
         with self._delta_stats_lock:

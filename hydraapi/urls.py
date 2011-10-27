@@ -3,7 +3,7 @@
 # ==============================
 
 # django-piston handlers imports.
-from django.conf.urls.defaults import *
+from django.conf.urls.defaults import patterns
 from piston.resource import Resource
 
 # Hydra server imports
