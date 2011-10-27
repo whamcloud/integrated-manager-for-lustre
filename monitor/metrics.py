@@ -146,7 +146,8 @@ def _autocreate_ds(db, key, payload):
     db.datasources.add(ds_klass.objects.create(name=key,
                                                heartbeat=db.step * 2,
                                                database=db))
-    metrics_log.info("Added new DS to DB (%s -> %s)" % (key, db.name))
+    metrics_log.info("Added new %s to DB (%s -> %s)" % (payload['type'],
+                                                        key, db.name))
 
 def minimal_archives(db):
     """
@@ -221,7 +222,7 @@ class HostMetricStore(R3dMetricStore):
             for key in metrics['cpustats']:
                 ds_name = "cpu_%s" % key
                 update[ds_name] = {'value': metrics['cpustats'][key],
-                                   'type': 'Gauge'}
+                                   'type': 'Absolute'}
         except KeyError:
             pass
 
@@ -267,6 +268,11 @@ class TargetMetricStore(R3dMetricStore):
             if "sum" in stats[key]:
                 if stats[key]['units'] == "reqs":
                     update[ds_name] = {'value': stats[key]['count'],
+                                       'type': 'Counter'}
+                elif stats[key]['units'] == "bytes":
+                    # Weird one, e.g. OST read_bytes/write_bytes.
+                    # We don't the current value, we want the rate.
+                    update[ds_name] = {'value': stats[key]['sum'],
                                        'type': 'Counter'}
                 else:
                     update[ds_name] = {'value': stats[key]['sum'],
@@ -333,7 +339,15 @@ class FilesystemMetricStore(R3dMetricStore):
         """
         results = {}
 
-        for target in target_class.objects.filter(filesystem=self.filesystem):
+        def client_count(num_exports, target_count):
+            # ((total - # MDS OSCs) / # OSTS) - MGS
+            return ((num_exports - target_count) / target_count) - 1
+
+        computed_metrics = {'num_exports': client_count}
+
+        targets = target_class.objects.filter(filesystem=self.filesystem)
+
+        for target in targets:
             tm = target.metrics.fetch(cfname, **kwargs)
             for row in tm:
                 row_ts = row[0]
@@ -351,6 +365,11 @@ class FilesystemMetricStore(R3dMetricStore):
                                 results[row_ts][metric] += row_dict[metric]
                     except KeyError:
                         results[row_ts][metric] = row_dict[metric]
+
+        for row_ts in results:
+            for metric in results[row_ts]:
+                if metric in computed_metrics:
+                    results[row_ts][metric] = computed_metrics[metric](results[row_ts][metric], len(targets))
 
         return tuple(
                 sorted(

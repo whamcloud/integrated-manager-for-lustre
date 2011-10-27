@@ -64,7 +64,7 @@ ost_Pie_Space_Data = function(targetName, sDate, endDate, dataFunction, targetKi
         var free=0,used=0;
         var freeData = [],usedData = [];
 		obj_ost_pie_space = JSON.parse(JSON.stringify(ChartConfig_OST_Space));
-        obj_ost_pie_space.title.text= $("#ostSelect").val() + " Space Usage";
+        obj_ost_pie_space.title.text= targetName + " Space Usage";
         obj_ost_pie_space.chart.renderTo = "ost_container2";
         
         $.post(ost_Pie_Space_Data_Api_Url,
@@ -120,7 +120,7 @@ ost_Pie_Inode_Data = function(targetName, sDate, endDate, dataFunction, targetKi
         var free=0,used=0;
         var freeFilesData = [],totalFilesData = [];
 		obj_ost_pie_inode = JSON.parse(JSON.stringify(ChartConfig_OST_Space));
-        obj_ost_pie_inode.title.text= $("#ostSelect").val() + " - Files vs Free Inodes";
+        obj_ost_pie_inode.title.text= targetName + " - Files vs Free Inodes";
         obj_ost_pie_inode.chart.renderTo = "ost_container3";		
         $.post(ost_Pie_Inode_Data_Api_Url,
         {targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
@@ -231,10 +231,10 @@ ost_Area_ReadWrite_Data = function(targetName, sDate, endDate, dataFunction, tar
 // Function to load ost summary on ost dashboard
 /**********************************************************************************************/
 
-loadOSTSummary = function (){
+loadOSTSummary = function (fsName){
 	 var innerContent = "";
 	 $('#ostSummaryTbl').html("<tr><td width='100%' align='center' height='180px'><img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
-	 $.post("/api/getfilesystem/",{filesystem: $('#fsSelect').val()})
+	 $.post("/api/getfilesystem/",{filesystem: fsName})
     .success(function(data, textStatus, jqXHR) {
         if(data.success)
         {

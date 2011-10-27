@@ -6,30 +6,28 @@
 // 2) chartConfig_Line_clientConnected  -  Line chart configuration for number of clients connected
 // 3) chartConfig_LineBar_CPUMemoryUsage  -  Column chart for cpu usage and line chart for memory usage
 // 4) chartConfig_Area_ReadWrite    -  Area graph for disk reads and writes
-// 5) chartConfig_Area_Iops      -  Area graph for IOP/s
+// 5) chartConfig_Area_mdOps      -  Area graph for mdOP/s
 // 6) chartConfig_HeatMap      -  HeatMap graph
 //------------------ Data Loader functions--------------------------------------
 // 1) db_Bar_SpaceUsage_Data(isZoom)
 // 2) db_Line_connectedClients_Data(isZoom)
 // 3) db_LineBar_CpuMemoryUsage_Data(isZoom)
 // 4) db_Area_ReadWrite_Data(isZoom)
-// 5) db_Area_Iops_Data(isZoom)
+// 5) db_Area_mdOps_Data(isZoom)
 // 6) db_HeatMap_Data
 /*******************************************************************************/
 var spaceUsageFetchMatric = "kbytestotal kbytesfree filestotal filesfree";
 var clientsConnectedFetchMatric = "num_exports";
 var cpuMemoryFetchMatric = "cpu_usage cpu_total mem_MemFree mem_MemTotal";
 var readWriteFetchMatric = ["stats_read_bytes", "stats_write_bytes"];
-/*var iopsFetchmatric = "stats_open stats_connect stats_create stats_destroy stats_disconnect stats_commitrw stats_statfs stats_preprw";*/
-/* FIXME: I have populated this with what seems to work on my setup, more? -jcs */
-var iopsFetchmatric = ["stats_open", "stats_close", "stats_unlink", "stats_setattr"]
+var mdOpsFetchmatric = ["stats_close", "stats_getattr", "stats_getxattr", "stats_link", "stats_mkdir", "stats_mknod", "stats_open", "stats_rename", "stats_rmdir", "stats_setattr", "stats_statfs", "stats_unlink"]
 var dashboardPollingInterval;
 
 var db_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var db_Line_connectedClients_Data_Api_Url = "/api/get_fs_stats_for_client/";
 var db_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_server/";
 var db_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
-var db_Area_Iops_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var db_Area_mdOps_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var db_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
 
 var startTime = "5";
@@ -242,7 +240,7 @@ var chartConfig_Area_ReadWrite = {
        series: [{ name: 'Read', data: []}, { name: 'Write',data: []}]
      }
 
-var chartConfig_Area_Iops  = {
+var chartConfig_Area_mdOps  = {
       chart: {
       defaultSeriesType: 'area',
       marginLeft: '50',
@@ -297,13 +295,29 @@ var chartConfig_Area_Iops  = {
        }
       },
      series: [{
-       name: 'Open'
+       name: 'close'
      }, {
-       name: 'Close'
+       name: 'getattr'
      }, {
-       name: 'Unlink'
+       name: 'getxattr'
      }, {
-       name: 'Setattr'
+       name: 'link'
+     }, {
+       name: 'mkdir'
+     }, {
+       name: 'mknod'
+     }, {
+       name: 'open'
+     }, {
+       name: 'rename'
+     }, {
+       name: 'rmdir'
+     }, {
+       name: 'setattr'
+     }, {
+       name: 'statfs'
+     }, {
+       name: 'unlink'
      }]
    
 }
@@ -637,21 +651,22 @@ db_Area_ReadWrite_Data = function(isZoom)
 }
 
 /*****************************************************************************/
-//Function for Iops - Area Chart
+//Function for mdOps - Area Chart
 //Param - File System name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics
 //Return - Returns the graph plotted in container
 /*****************************************************************************/
- db_Area_Iops_Data = function(isZoom)
+ db_Area_mdOps_Data = function(isZoom)
  {
-    var readData = [], writeData = [], statData = [], closeData = [], openData = [];
-    obj_db_Area_Iops_Data = JSON.parse(JSON.stringify(chartConfig_Area_Iops));
+     // var mdOpsFetchmatric = ["stats_close", "stats_getattr", "stats_getxattr", "stats_link", "stats_mkdir", "stats_mknod", "stats_open", "stats_rename", "stats_rmdir", "stats_setattr", "stats_statfs", "stats_unlink"]
+    var closeData = [], getattrData = [], getxattrData = [], linkData = [], mkdirData = [], mknodData = [], openData = [], renameData = [], rmdirData = [], setattrData = [], statfsData = [], unlinkData = [];
+    obj_db_Area_mdOps_Data = JSON.parse(JSON.stringify(chartConfig_Area_mdOps));
 
     var values = new Object();
-    var stats = iopsFetchmatric;
+    var stats = mdOpsFetchmatric;
     $.each(stats, function(i, stat_name) {
       values[stat_name] = [];
     });
-    $.post(db_Area_Iops_Data_Api_Url,{"targetkind": "MDT", "datafunction": "Average", "fetchmetrics": stats.join(" "),
+    $.post(db_Area_mdOps_Data_Api_Url,{"targetkind": "MDT", "datafunction": "Average", "fetchmetrics": stats.join(" "),
        "starttime": startTime, "filesystem": "", "endtime": endTime})
      .success(function(data, textStatus, jqXHR) {
       var targetName='';
@@ -677,21 +692,21 @@ db_Area_ReadWrite_Data = function(isZoom)
        // Display of appropriate error message
      })
      .complete(function(event){
-       obj_db_Area_Iops_Data.chart.renderTo = "avgReadDiv";
+       obj_db_Area_mdOps_Data.chart.renderTo = "avgReadDiv";
         if(isZoom == 'true') {
-          renderZoomDialog(obj_db_Area_Iops_Data);
+          renderZoomDialog(obj_db_Area_mdOps_Data);
         }
 
         $.each(stats, function(i, stat_name) {
-          obj_db_Area_Iops_Data.series[i].data = values[stat_name];
+          obj_db_Area_mdOps_Data.series[i].data = values[stat_name];
         });
         
         if(isZoom == 'true')
         {
-           renderZoomDialog(obj_db_Area_Iops_Data);
+           renderZoomDialog(obj_db_Area_mdOps_Data);
         }
         
-        chart = new Highcharts.Chart(obj_db_Area_Iops_Data);
+        chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
     });
 }
 /*****************************************************************************/
@@ -787,8 +802,10 @@ db_Area_ReadWrite_Data = function(isZoom)
 /*****************************************************************************/
   setZoomDialogTitle = function(titleName)
   {
-   $('#zoomDialog').dialog('option', 'title', titleName);
-  $('#zoomDialog').dialog('open');
+    $('#zoomDialog').empty();
+    $('#zoomDialog').dialog('option', 'title', titleName);
+    $('#zoomDialog').dialog('open');
+    $('#zoomDialog').html("<img src='/static/images/wait_progress.gif' style='align:center;'/>");
   }
  
 /*****************************************************************************/
@@ -800,8 +817,8 @@ db_Area_ReadWrite_Data = function(isZoom)
     db_Line_connectedClients_Data('false');
     db_LineBar_CpuMemoryUsage_Data('false');
     db_Area_ReadWrite_Data('false');
-    db_Area_Iops_Data('false');
-    db_HeatMap_Data('false');
+    db_Area_mdOps_Data('false');
+    //db_HeatMap_Data('false');
   }
   
   clearAllIntervals = function(){
@@ -811,10 +828,10 @@ db_Area_ReadWrite_Data = function(isZoom)
 // Function to show OSS/OST dashboards
 /******************************************************************************/
   function showFSDashboard(){
-    $("#fsSelect").change();
+	  loadFSContent($('#ls_filesystem').val());
   }
 
   function showOSSDashboard(){
-     $("#ossSelect").change();
+	  loadOSSContent($('#ls_filesystem').val(), $('#ls_oss').val());
   }
 /******************************************************************************/
