@@ -88,9 +88,9 @@ class GetFSServerStats(AnonymousRequestHandler):
                 host_stats_metric.extend(self.metrics_fetch(host,fetchmetrics,starttime,endtime,interval))
             return host_stats_metric
         else:
+            host_stats_metric = []  
             for fs in ManagedFilesystem.objects.all():
                 hosts = fs.get_servers()
-                host_stats_metric = []  
                 for host in hosts:
                     host_stats_metric.extend(self.metrics_fetch(host,fetchmetrics,starttime,endtime,interval))
             return host_stats_metric
