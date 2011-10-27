@@ -188,26 +188,6 @@ $(document).ready(function()
     }
   });
 
- //add host dialog - volume config
-  $('#addNewHost').dialog
-  ({
-    autoOpen: false,
-    width: 300,
-    height:185,
-    show: "clip",
-    modal: true,
-    position:"center",
-    buttons: 
-    {
-	  "Close": function() { 
-     	 $(this).dialog("close");
-      },
-      "Continue": function() { 
-     	 AddHost_ServerConfig($('#txtHostName').val(), "addNewHost"); 
-      },
-    }
-  });
-  
   $('#confirm_dialog').dialog
 	({
 		autoOpen: false,
