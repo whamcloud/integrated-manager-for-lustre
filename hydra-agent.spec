@@ -17,7 +17,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: python-simplejson python-argparse rsyslog
+Requires: python-simplejson python-argparse rsyslog pacemaker fence-agents
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
@@ -37,6 +37,11 @@ rm -rf %{buildroot}
 
 %post
 chkconfig rsyslog on
+chkconfig corosync on
+# disable SELinux -- it prevents both lustre and pacemaker from working
+sed -ie 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config
+# the above only disables on the next boot.  disable it currently, also
+echo 0 > /selinux/enforce
 
 %files
 %defattr(-,root,root)
