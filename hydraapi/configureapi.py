@@ -197,10 +197,7 @@ class GetResources(AnonymousRequestHandler):
                 
             rows.append(row)    
 
-        # FIXME: this is a workaround, forcing column widths because this is rendered in
-        # an iframe inside jquery-ui tabs, so datatables can't calculate its width properly
-        colpct = int(100.0 / len(columns))
-        datatables_columns = [{'sTitle': c, 'sWidth': "%dpx" % colpct} for c in columns]
+        datatables_columns = [{'sTitle': c} for c in columns]
         return {'aaData': rows, 'aoColumns': datatables_columns}
 
 # FIXME: this should be part of /storage_resource/
@@ -286,7 +283,7 @@ class CreateFilesystem(AnonymousRequestHandler):
 class CreateMGS(AnonymousRequestHandler):
     @extract_request_args('hostid','nodeid','failoverid')
     def run(self,request,hostid,nodeid,failoverid):
-        from configure.models import ManagedMgs, Host, LunNode
+        from configure.models import ManagedMgs, ManagedHost, LunNode
         from django.db import transaction
         #host = Host.objects.get(id=hostid) 
         node = LunNode.objects.get(id=nodeid)
@@ -428,7 +425,7 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
     @extract_request_args('target_id')
     def run(self, request, target_id):
         from monitor.models import AlertState
-        from configure.models import StorageResourceRecord, ManagedTarget
+        from configure.models import ManagedTarget
         from django.shortcuts import get_object_or_404
         if True:
             # FIXME HYD-375 HACK - the breadcrumb UI passes around names instead of ids, so have to do
