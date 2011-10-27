@@ -102,6 +102,12 @@ class StorageResource(object):
         return result
 
     @classmethod
+    def get_sorted_attribute_items(cls):
+        attr_name_pairs = cls._storage_attributes.items()
+        attr_name_pairs.sort(lambda a,b: cmp(a[1].creation_counter, b[1].creation_counter))
+        return attr_name_pairs
+
+    @classmethod
     def get_attribute_properties(cls, attr):
         return cls._storage_attributes[attr]
 

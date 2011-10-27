@@ -36,7 +36,14 @@ from configureapi import (FormatFileSystem,
 # RequestHandler objects and get their url name from them.
 
 # Stuff related to storage plugins
-from configureapi import GetResource, GetResources, GetResourceClasses, SetResourceAlias, GetTargetResourceGraph
+from configureapi import (GetResource,
+                         GetResources,
+                         GetResourceClasses,
+                         SetResourceAlias,
+                         GetTargetResourceGraph,
+                         CreateStorageResource,
+                         CreatableStorageResourceClasses,
+                         StorageResourceClassFields)
 
 #Once R3D starts getting correct data  replace fakestatsmetricapi with statmetricapi
 from fakestatsmetricapi import(GetFSTargetStats_fake,
@@ -112,4 +119,9 @@ urlpatterns = patterns('',
     (r'^get_resource/$', CsrfExemptResource(GetResource)),
     (r'^set_resource_alias/$', CsrfExemptResource(SetResourceAlias)),
     (r'^get_target_resource_graph/$', CsrfExemptResource(GetTargetResourceGraph)),
+
+    (r'^storage_resource/$', CsrfExemptResource(CreateStorageResource)),
+    (r'^storage_resource_class_fields/$', CsrfExemptResource(StorageResourceClassFields)),
+    (r'^creatable_storage_resource_classes/$', CsrfExemptResource(CreatableStorageResourceClasses)),
+
 )

@@ -10,10 +10,20 @@ the datatypes that StorageResource objects may store as attributes"""
 class ResourceAttribute(object):
     """Base class for declared attributes of StorageResource.  This is
        to StorageResource as models.fields.Field is to models.Model"""
-    def __init__(self, subscribe = None, provide = None, optional = False):
+
+    # This is a hack to store the order in which attributes are declared so
+    # that I can sort the StorageResource attribute dict for presentation in the same order
+    # as the plugin author declared the attributes.
+    creation_counter = 0
+
+    def __init__(self, subscribe = None, provide = None, optional = False, label = None):
         self.optional = optional
         self.subscribe = subscribe
         self.provide = provide
+        self.label = label
+
+        self.creation_counter = ResourceAttribute.creation_counter
+        ResourceAttribute.creation_counter += 1
 
     def validate(self, value):
         """Note: this validation is NOT intended to be used for catching cases 
@@ -119,6 +129,9 @@ class ResourceReference(ResourceAttribute):
         
     def to_markup(self, value):
         from configure.models import StorageResourceRecord
+        if value == None:
+            return ""
+
         record = StorageResourceRecord.objects.get(pk = value._handle)
         if record.alias:
             name = record.alias

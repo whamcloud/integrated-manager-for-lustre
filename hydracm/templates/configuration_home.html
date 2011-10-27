@@ -22,8 +22,13 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.alerts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
+
 <link href="{{STATIC_URL}}css/storage_resource_dialog.css" rel="stylesheet" type="text/css" />
 <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_dialog.js"></script>
+
+<link href="{{STATIC_URL}}css/storage_resource_create.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_create.js"></script>
+
 <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js" ></script>
 <script>
 	$(function() {
@@ -345,7 +350,10 @@
 </div>
 <!-- Confirmation dialog box -->
 <div id="confirm_dialog" title="Configuration Manager">
+
 <div id="dialog_mesg"></div>
+
+<!-- Markup for storage_resource_dialog.js -->
 <div style="overflow-y: auto; max-height: 700px;" id="storage_resource_dialog">
   <input style='display: none' id='alias_default_entry' value=''>
   </input>
@@ -361,5 +369,14 @@
   </ul>
 </div>
 <!-- End markup for storage_resource_dialog.js -->
+
+<!-- Markup for storage_resource_create.js -->
+<div style="overflow-y: auto; max-height: 700px;" id="storage_resource_create_dialog">
+  <table id='storage_resource_create_fields'>
+    <tr><th>Resource class:</th><td colspan=2><select style="width: 200px;" id='storage_resource_create_classes'></select></td></td></tr>
+  </table>
+</div>
+<!-- End markup for storage_resource_create.js -->
+
 </body>
 </html>

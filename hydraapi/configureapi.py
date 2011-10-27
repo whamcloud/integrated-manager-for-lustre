@@ -535,3 +535,36 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
             'storage_alerts': [a.to_dict() for a in storage_alerts],
             'lustre_alerts': [a.to_dict() for a in lustre_alerts],
             'graph': graph}
+
+class CreateStorageResource(AnonymousRequestHandler):
+    @extract_request_args('plugin', 'resource_class', 'attributes')
+    def run(self, request, plugin, resource_class, attributes):
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        storage_plugin_manager.create_root_resource(plugin, resource_class, **attributes)
+
+class CreatableStorageResourceClasses(AnonymousRequestHandler):
+    @extract_request_args()
+    def run(self, request):
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        return storage_plugin_manager.get_scannable_resource_classes()
+
+class StorageResourceClassFields(AnonymousRequestHandler):
+    @extract_request_args('plugin', 'resource_class')
+    def run(self, request, plugin, resource_class):
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        resource_klass, resource_klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, resource_class)
+        result = []
+        for name, attr in resource_klass.get_sorted_attribute_items():
+            if attr.label:
+                label = attr.label
+            else:
+                words = name.split("_")
+                label = " ".join([words[0].title()] + words[1:])
+
+            result.append({
+                'label': label,
+                'name': name,
+                'optional': attr.optional,
+                'class': attr.__class__.__name__})
+        return result
+

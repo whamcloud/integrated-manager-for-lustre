@@ -75,6 +75,19 @@ class StoragePluginManager(object):
                filter(resource_class__class_name__in = loaded_plugin.scannable_resource_classes).\
                filter(parents = None).values('id')
 
+    def get_scannable_resource_classes(self):
+        class_records = []
+        for k, v in self.loaded_plugins.items():
+            class_records.extend(list(StorageResourceClass.objects.filter(
+                storage_plugin = v.plugin_record,
+                class_name__in = v.scannable_resource_classes)))
+
+        result = []
+        for cr in class_records:
+            result.append({'plugin': cr.storage_plugin.module_name, 'resource_class': cr.class_name})
+
+        return result
+
     @transaction.commit_on_success
     def create_root_resource(self, plugin_mod, resource_class_name, **kwargs):
         storage_plugin_log.debug("create_root_resource %s %s %s" % (plugin_mod, resource_class_name, kwargs))
