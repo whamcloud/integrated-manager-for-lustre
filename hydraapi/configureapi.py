@@ -232,12 +232,11 @@ class GetResource(AnonymousRequestHandler):
         for s in StorageResourceStatistic.objects.filter(storage_resource = resource_id):
             stats[s.name] = s.to_dict()
 
-        attributes = resource.attr_dict()
         return {'id': record.pk,
                 'class_name': resource.human_class(),
                 'alias': record.alias,
                 'default_alias': record.to_resource().human_string(),
-                'attributes': attributes,
+                'attributes': resource.get_attribute_items(),
                 'alerts': alerts,
                 'stats': stats,
                 'propagated_alerts': prop_alerts}
@@ -551,15 +550,9 @@ class StorageResourceClassFields(AnonymousRequestHandler):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         resource_klass, resource_klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, resource_class)
         result = []
-        for name, attr in resource_klass.get_sorted_attribute_items():
-            if attr.label:
-                label = attr.label
-            else:
-                words = name.split("_")
-                label = " ".join([words[0].title()] + words[1:])
-
+        for name, attr in resource_klass.get_attribute_properties():
             result.append({
-                'label': label,
+                'label': attr.get_label(name),
                 'name': name,
                 'optional': attr.optional,
                 'class': attr.__class__.__name__})

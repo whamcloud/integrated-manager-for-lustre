@@ -90,26 +90,24 @@ class StorageResource(object):
         for k in self._storage_dict.keys():
             yield k, self.format(k)
 
-    def attr_dict(self):
-        result = {}
-        for k in self._storage_dict.keys():
-            val = getattr(self, k)
+    def get_attribute_items(self):
+        attr_props = self.get_attribute_properties()
+        result = []
+        for name, props in attr_props:
+            val = getattr(self, name)
             if isinstance(val, StorageResource):
                 raw = val._handle
             else:
                 raw = val
-            result[k] = {'raw': raw, 'markup': self.format(k, val)}
+            result.append((name, {'raw': raw, 'markup': props.to_markup(val), 'label': props.get_label(name)}))
+        print "get_attribute_items: %s" % result
         return result
 
     @classmethod
-    def get_sorted_attribute_items(cls):
+    def get_attribute_properties(cls):
         attr_name_pairs = cls._storage_attributes.items()
         attr_name_pairs.sort(lambda a,b: cmp(a[1].creation_counter, b[1].creation_counter))
         return attr_name_pairs
-
-    @classmethod
-    def get_attribute_properties(cls, attr):
-        return cls._storage_attributes[attr]
 
     def flush_stats(self):
         with self._delta_stats_lock:

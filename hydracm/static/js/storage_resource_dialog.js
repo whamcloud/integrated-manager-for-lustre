@@ -26,6 +26,7 @@ function popup_resource(id) {
   $.get("/api/get_resource/", {'resource_id': id})
    .success(function(data, textStatus, jqXHR) {
       if (data.success) {
+        console.log(data.response);
         load_resource(data.response);
         console.log('popping up');
         $('#storage_resource_dialog').dialog('open');
@@ -105,41 +106,46 @@ function load_resource(resource) {
     } else {
         $("input#alias_edit_entry").attr('value', resource.default_alias);
     }
-        $("input#alias_default_entry").attr('value', resource.default_alias);
+    $("input#alias_default_entry").attr('value', resource.default_alias);
 
-        var attr_markup = "";
-        var rowclass = "odd";
-        $.each(resource.attributes, function(k,v) {
-          if (rowclass == "odd") {
-            rowclass = "even";
-          } else {
-              rowclass = "odd";
-          }
-            attr_markup += "<tr class='" + rowclass + "'><th>" + k + ": </th><td>" + v.markup + "</td></tr>";
-        }); 
-        $('table#attributes').html(attr_markup);
+    var attr_markup = "";
+    var rowclass = "odd";
+    console.log(resource);
+    $.each(resource.attributes, function(i,j) {
+      console.log(i);
+      console.log(j);
+      name = j[0]
+      attr_info = j[1]
+      if (rowclass == "odd") {
+        rowclass = "even";
+      } else {
+          rowclass = "odd";
+      }
+        attr_markup += "<tr class='" + rowclass + "'><th>" + attr_info.label + ": </th><td>" + attr_info.markup + "</td></tr>";
+    }); 
+    $('table#attributes').html(attr_markup);
 
-        var alert_markup = "";
-        $.each(resource.alerts, function(i, alrt) {
-            console.log(i);
-            console.log(alrt);
-            alert_markup += "<tr><td><img src='/static/images/dialog-error.png'></td><td>" + alrt.alert_message + "</td><td>" + alrt.alert_item + "</td></tr>";
-        }); 
-        $('table#alerts').html(alert_markup);
+    var alert_markup = "";
+    $.each(resource.alerts, function(i, alrt) {
+        console.log(i);
+        console.log(alrt);
+        alert_markup += "<tr><td><img src='/static/images/dialog-error.png'></td><td>" + alrt.alert_message + "</td><td>" + alrt.alert_item + "</td></tr>";
+    }); 
+    $('table#alerts').html(alert_markup);
 
-        var stats_markup = "";
-        stat_graph_element_id = new Array();
-        $.each(resource.stats, function(stat_name, stat_info) {
-                var element_id = "stat_graph_" + stat_name;
-                stat_graph_element_id[stat_name] = element_id;
-                stats_markup += "<li><div id='" + element_id + "'></div></li>";
-        });
-        $('ul#stats').html(stats_markup);
+    var stats_markup = "";
+    stat_graph_element_id = new Array();
+    $.each(resource.stats, function(stat_name, stat_info) {
+            var element_id = "stat_graph_" + stat_name;
+            stat_graph_element_id[stat_name] = element_id;
+            stats_markup += "<li><div id='" + element_id + "'></div></li>";
+    });
+    $('ul#stats').html(stats_markup);
 
-        $.each(resource.stats, function(stat_name, stat_info) {
-            populate_graph(stat_graph_element_id[stat_name], stat_info);
-        });
-    }
+    $.each(resource.stats, function(stat_name, stat_info) {
+        populate_graph(stat_graph_element_id[stat_name], stat_info);
+    });
+}
 
     function save_alias(new_name) {
         $("a#alias_save_button").hide();

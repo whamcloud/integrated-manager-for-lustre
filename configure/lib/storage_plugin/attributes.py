@@ -25,6 +25,13 @@ class ResourceAttribute(object):
         self.creation_counter = ResourceAttribute.creation_counter
         ResourceAttribute.creation_counter += 1
 
+    def get_label(self, name):
+        if self.label:
+            return self.label
+        else:
+            words = name.split("_")
+            return " ".join([words[0].title()] + words[1:])
+
     def validate(self, value):
         """Note: this validation is NOT intended to be used for catching cases 
         in production, it does not provide hooks for user-friendly error messages 
