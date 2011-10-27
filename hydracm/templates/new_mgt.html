@@ -3,6 +3,9 @@
 		LoadMGTConfiguration_MGTConf();
 		CreateMGT_MGTConf();
 		var oNewMgt = $('#mgt_configuration').dataTable( {
+      bPaginate: false,
+      bFilter: false,
+      bInfo: false,
 			"bProcessing": true,
 			"bJQueryUI": true,
 			"oLanguage": {

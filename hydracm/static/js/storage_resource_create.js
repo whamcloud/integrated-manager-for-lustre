@@ -2,12 +2,21 @@
 $(document).ready(function() {
   $('#storage_resource_create_dialog').dialog({
     autoOpen: false, modal: true, width: 'auto', maxHeight: 700, title: "Add storage device", resizable: false,
-    buttons: {"Cancel": function() {$(this).dialog('close');}, "Add": function() {storage_resource_create_save();}}
+    buttons: {"Cancel": function() {$(this).dialog('close');}, "Add": function() {storage_resource_create_save();}},
+    open: function() {
+      $('.ui-dialog-buttonpane').
+        find('button:first-child').button({
+          icons: {
+            primary: 'ui-icon-close'
+          }
+      }).next().button({
+          icons: {
+            primary: 'ui-icon-plus'
+          }
+      });
+    }
   });
 
-  $(document).ajaxComplete(function() {
-    $('.storage_resource_create_link').button();
-  });
   $('.storage_resource_create_link').live('click', function(ev) {
     storage_resource_create();
     ev.stopPropagation();

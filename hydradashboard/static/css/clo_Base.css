@@ -25,30 +25,9 @@
 }
 
 
-/* General Typography
- ---------------------------------------------------------------------*/
-/*html, body
-{
-	font-size: 12px;
-	line-height: 21px;
-	color: #444;
-	font-family: Arial, Helvetica, sans-serif;
-	font-style: normal;
-	font-variant: normal;
-	font-weight: normal;
-	background:#f3f3f3;
-	background-image:url(../images/linebig.png);
-	background-repeat:repeat-x;
-}*/
-
 html, body
 {
-	font-size: 12px;
-	font-weight:bold;
-	line-height: 21px;
 	font-family:Verdana, Arial, Helvetica, sans-serif;
-	/*background-image:url(../images/linebig.png);
-	background-repeat:repeat-x;*/
 	background-color:#eeeeee;
 	
 }
@@ -116,13 +95,10 @@ strong
 em
 {
 	font-style: italic;
-	line-height: 1.75em;
 }
 
 p
 {
-	font-size: 1em;
-	line-height: 1.75em;
 	margin: .25em 0 1.5em;
 }
 
@@ -161,7 +137,6 @@ ol
 }
 ul li, ol li
 {
-	line-height: 1.5em;
 }
 
 dt
@@ -530,9 +505,10 @@ a.btnsigninon {
 	margin-bottom:0px;
 }
 .top_links{
+    font-size: 12pt;
 	color:#fff;
 	padding-left:20px;
-	padding-top:5px;
+	padding-top:7px;
 }
 .top_links a{
 	color:#ccc;
@@ -551,6 +527,7 @@ a.btnsigninon {
 	text-decoration:none;
 	background-color:#054358;
 	padding:4px;
+    border-radius: 4px;
 }
 tr.odd {
 	/*background-color: #E2E4FF;*/

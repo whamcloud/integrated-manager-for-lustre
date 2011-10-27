@@ -6,8 +6,11 @@
 			"bProcessing": true,
 			"bJQueryUI": true,
 			"oLanguage": {
-					"sEmptyTable": "No File System to display"
+					"sEmptyTable": "No filesystems"
 			},
+      bPaginate: false,
+      bFilter: false,
+      bInfo: false,
 			"aoColumns": [
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
@@ -18,7 +21,7 @@
 				{ "sClass": 'txtright' },
 				{ "sClass": 'txtcenter' }
 			]
-		} );
+		});
 					
 	$('#launch_instance_btn-button').click(function() {
 		$('#lusterFS_content').empty();
@@ -37,7 +40,7 @@
 <table width="100%" height="100%" border="0" cellpadding="0" cellspacing="0" class="cpanel-border" align="center">
   <tr>
     <td><div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
-        <button type="button" id="launch_instance_btn-button">Create new File System</button>
+        <button class='add' type="button" id="launch_instance_btn-button">New filesystem...</button>
         </span></span></div></td>
   </tr>
   <tr>

@@ -566,3 +566,7 @@ button.ui-button::-moz-focus-inner { border: 0; padding: 0; } /* reset extra pad
  */
 .ui-progressbar { height:2em; text-align: left; }
 .ui-progressbar .ui-progressbar-value {margin: -1px; height:100%; }
+
+
+/* Chroma customizations */
+.ui-widget { font-family: Verdana,Arial,sans-serif; font-size: 10pt; }

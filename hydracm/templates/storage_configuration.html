@@ -1,77 +1,70 @@
 
-<form method='get' style='margin-bottom: 3px; padding-top:15px;'>
-    <select id='resource_class_select'>
-    </select>
-    <input type='submit' class='storage_resource_create_link' value='Add storage device...'/>
-    <script type='text/javascript'>
-        /* Populate table of storage resources */
-        var resourceTable = null;
-        function load_resource_table() {
-            var selected = $('#resource_class_select option:selected').val()
-            var tokens = selected.split(",")
-            var module_name = tokens[0]
-            var class_name = tokens[1]
+<p>View: <select id='resource_class_select'></select>&nbsp;<button class='add storage_resource_create_link'>Add storage device...</button></p>
+<script type='text/javascript'>
+    /* Populate table of storage resources */
+    var resourceTable = null;
+    function load_resource_table() {
+        var selected = $('#resource_class_select option:selected').val()
+        var tokens = selected.split(",")
+        var module_name = tokens[0]
+        var class_name = tokens[1]
 
-            console.log("Loading resources...");
-            $.get("/api/get_resources/", {'module_name': module_name, 'class_name': class_name})
-             .success(function(data, textStatus, jqXHR) {
-                if (data.success) {
-                    console.log("... done loading resources...");
-                    if (resourceTable) {
-                        resourceTable.fnDestroy();
-                        resourceTable = null;
-                        $('#resource_table').html("")
-                    } 
-                    resourceTable = $('#resource_table').dataTable({
-                        /* FIXME: I actually quite like jquery-ui, but the rest of hydracm isn't using it
-                           so lets be consistent for now -jcs */
-                        "bJQueryUI": true,
-                        "bPaginate": true,
-						"bAutoWidth": false,
-                        "aaData": data.response['aaData'],
-						"iDisplayLength":25,
-                        "aoColumns": data.response['aoColumns']
-                    }); 
-                    /* Column 0 is the internal ID column */
-                    resourceTable.fnSetColumnVis(0, false);
+        console.log("Loading resources...");
+        $.get("/api/get_resources/", {'module_name': module_name, 'class_name': class_name})
+         .success(function(data, textStatus, jqXHR) {
+            if (data.success) {
+                console.log("... done loading resources...");
+                if (resourceTable) {
+                    resourceTable.fnDestroy();
+                    resourceTable = null;
+                    $('#resource_table').html("")
+                } 
+                resourceTable = $('#resource_table').dataTable({
+                    "bJQueryUI": true,
+                    "bPaginate": true,
+                    "bAutoWidth": false,
+                    "aaData": data.response['aaData'],
+                    "iDisplayLength":25,
+                    "aoColumns": data.response['aoColumns']
+                }); 
+                /* Column 0 is the internal ID column */
+                resourceTable.fnSetColumnVis(0, false);
 
-                    $('#resource_table tbody tr').live('click', function() {
-                        var aPos = resourceTable.fnGetPosition(this);
-                        var data = resourceTable.fnGetData(aPos);
-                        var resource_record_id = data[0]
-                        console.log(resource_record_id);
-                    });
-                }
-            });
-        }
-
-        $(document).ready(function() {
-            $('#resource_class_select').change(function() {
-                load_resource_table();
-            });
-            /* Initial population of dropdown of resource classes */
-            $.get('/api/get_resource_classes/').success(function(data, textStatus, jqXHR) {
-                if (data.success) {
-                    var response = data.response;
-                    options = ""
-                    $.each(response.options, function(i, res_class_pair) {
-                        options += "<option value='" + res_class_pair[0] + "'>" + res_class_pair[1] + "</option>"
-                    });
-                    $('#resource_class_select').html(options);
-
-                    /* Select the default resource class */
-                    $('#resource_class_select option[value="' + response.default + '"]').attr('selected', 'selected');
-
-                    /* Initial population of table once we know our default-selected class */
-                    load_resource_table();
-                }
-            });
-
+                $('#resource_table tbody tr').live('click', function() {
+                    var aPos = resourceTable.fnGetPosition(this);
+                    var data = resourceTable.fnGetData(aPos);
+                    var resource_record_id = data[0]
+                    console.log(resource_record_id);
+                });
+            }
         });
-    </script>
-</form>
-<fieldset>
-      <legend class="legendClass"> Storage Configuration </legend>
+    }
+
+    $(document).ready(function() {
+        $('#resource_class_select').change(function() {
+            load_resource_table();
+        });
+        /* Initial population of dropdown of resource classes */
+        $.get('/api/get_resource_classes/').success(function(data, textStatus, jqXHR) {
+            if (data.success) {
+                var response = data.response;
+                options = ""
+                $.each(response.options, function(i, res_class_pair) {
+                    options += "<option value='" + res_class_pair[0] + "'>" + res_class_pair[1] + "</option>"
+                });
+                $('#resource_class_select').html(options);
+                /*$('#resource_class_select').selectmenu();*/
+                $('#resource_class_select').css('width', '300px');
+
+                /* Select the default resource class */
+                $('#resource_class_select option[value="' + response.default + '"]').attr('selected', 'selected');
+
+                /* Initial population of table once we know our default-selected class */
+                load_resource_table();
+            }
+        });
+
+    });
+</script>
 <table id='resource_table' width="100%">
 </table>
-</fieldset>
