@@ -32,7 +32,7 @@ python setup.py build
 
 %install
 make install DESTDIR=$RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/etc/{init,httpd/conf}.d 
+mkdir -p $RPM_BUILD_ROOT/etc/{init,httpd/conf}.d
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d/hydra-server.conf
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/hydra-worker
 cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/hydra-storage
@@ -76,22 +76,22 @@ chkconfig mysqld on
 chkconfig rabbitmq-server on
 
 # configure rsyslog.conf
-while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do 
+while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do
     ed /etc/rsyslog.conf <<EOF
 /^# Added by hydra-server/;/^# Added by hydra-server/d
 w
 q
 EOF
-done 
+done
 
-ed /etc/rsyslog.conf <<EOF >/dev/null 2>&1
+ed /etc/rsyslog.conf <<"EOF" >/dev/null 2>&1
 /#\$InputTCPServerRun 514$/a
 # Added by hydra-server
 # enable receiving on TCP
 $ModLoad imtcp.so
 $InputTCPServerRun 514
 # MySQL logging
-\$ModLoad ommysql
+$ModLoad ommysql
 # Added by hydra-server
 .
 $
@@ -112,13 +112,13 @@ rm -rf /usr/share/hydra-server/static
 # remove rsyslog entries if this the last version being removed.
 if [[ $1 -eq 0 ]]; then
     # configure rsyslog.conf
-    while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do 
-        ed /etc/rsyslog.conf <<EOF
+    while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do
+        ed /etc/rsyslog.conf <<"EOF"
 /^# Added by hydra-server/;/^# Added by hydra-server/d
 w
 q
 EOF
-    done 
+    done
 fi
 
 %files
