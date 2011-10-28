@@ -26,7 +26,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     address = models.CharField(max_length = 255, unique = True)
 
     # A fully qualified domain name like flint02.testnet
-    fqdn = models.CharField(max_length = 255, blank = True, null = True)
+    fqdn = models.CharField(max_length = 255, blank = True, null = True, unique = True)
 
     # TODO: separate the LNET state [unloaded, down, up] from the host state [created, removed]
     states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
