@@ -18,7 +18,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: Django >= 1.3, mod_wsgi, httpd, python-dateutil, python-uuid, python-multiprocessing, python-paramiko, django-pagination, django-kombu, django-celery, rsyslog-mysql, mysql, MySQL-python >= 1.2.1p2, rabbitmq-server, hydra-agent, django-picklefield, python-amqplib, django-piston, django-r3d
+Requires: Django >= 1.3, mod_wsgi, httpd, python-dateutil, python-uuid, python-multiprocessing, python-paramiko, django-pagination, django-kombu, django-celery, rsyslog-mysql, mysql-server, MySQL-python >= 1.2.1p2, rabbitmq-server, hydra-agent, django-picklefield, python-amqplib, django-piston, django-r3d
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
@@ -32,7 +32,7 @@ python setup.py build
 
 %install
 make install DESTDIR=$RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/etc/{init,httpd/conf}.d 
+mkdir -p $RPM_BUILD_ROOT/etc/{init,httpd/conf}.d
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d/hydra-server.conf
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/hydra-worker
 cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/hydra-storage
@@ -46,6 +46,8 @@ ed /etc/httpd/conf.d/wsgi.conf <<EOF 2>/dev/null
 w
 q
 EOF
+# make sure apache sees our changes
+service httpd reload
 
 # Pre-create log files to set permissions
 mkdir -p /var/log/hydra
@@ -74,19 +76,22 @@ chkconfig mysqld on
 chkconfig rabbitmq-server on
 
 # configure rsyslog.conf
-while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do 
+while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do
     ed /etc/rsyslog.conf <<EOF
 /^# Added by hydra-server/;/^# Added by hydra-server/d
 w
 q
 EOF
-done 
+done
 
-ed /etc/rsyslog.conf <<EOF >/dev/null
-/\$InputTCPServerRun 514$/a
+ed /etc/rsyslog.conf <<"EOF" >/dev/null 2>&1
+/#\$InputTCPServerRun 514$/a
 # Added by hydra-server
+# enable receiving on TCP
+$ModLoad imtcp.so
+$InputTCPServerRun 514
 # MySQL logging
-\$ModLoad ommysql
+$ModLoad ommysql
 # Added by hydra-server
 .
 $
@@ -99,17 +104,21 @@ w
 q
 EOF
 
+%preun
+# remove the /static/ dir of files that was created by Django's collectstatic
+rm -rf /usr/share/hydra-server/static
+
 %postun
 # remove rsyslog entries if this the last version being removed.
 if [[ $1 -eq 0 ]]; then
     # configure rsyslog.conf
-    while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do 
-        ed /etc/rsyslog.conf <<EOF
+    while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do
+        ed /etc/rsyslog.conf <<"EOF"
 /^# Added by hydra-server/;/^# Added by hydra-server/d
 w
 q
 EOF
-    done 
+    done
 fi
 
 %files

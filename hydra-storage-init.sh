@@ -2,7 +2,7 @@
 #
 # hydra-storage Starts the hydra monitoring daemon
 #
-# chkconfig: 345 87 13
+# chkconfig: 345 86 14
 # description: starts the Hydra storage daemon
 # processname: python
 
