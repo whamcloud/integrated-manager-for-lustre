@@ -194,19 +194,15 @@ class StateManager(object):
         # Important: the Job must not land in the database until all
         # its dependencies and locks are in.
         from django.db import transaction
-        @transaction.commit_on_success
-        def instantiate_jobs():
+        with transaction.commit_on_success():
             for d in self.deps:
                 job = d.to_job()
+                print "job.__class__ = %s" % job.__class__
                 job.save()
                 job.create_locks()
                 job.create_dependencies()
                 jobs[d] = job
 
-        instantiate_jobs()
-
-        from django.db import transaction
-        transaction.commit()
         from configure.models import Job
         Job.run_next()
 

@@ -129,6 +129,7 @@ class ResourceReference(ResourceAttribute):
         pk = json.loads(value)
         if pk:
             from configure.models import StorageResourceRecord
+            
             record = StorageResourceRecord.objects.get(pk = pk)
             return record.to_resource()
         else:

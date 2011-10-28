@@ -5,7 +5,7 @@
 
 from django.db import models
 from configure.models.jobs import StatefulObject, Job
-from configure.lib.job import StateChangeJob, DependOn, DependAll
+from configure.lib.job import StateChangeJob, DependOn, DependAll, Step
 from monitor.models import MeasuredEntity, DeletableDowncastableMetaclass, DowncastMetaclass
 
 class DeletableStatefulObject(StatefulObject):
@@ -21,11 +21,18 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # FIXME: either need to make address non-unique, or need to
     # associate objects with a child object, because there
     # can be multiple servers on one hostname, eg ddn10ke
-    address = models.CharField(max_length = 255)
+
+    # A URI like ssh://user@flint02:22/
+    address = models.CharField(max_length = 255, unique = True)
+
+    # A fully qualified domain name like flint02.testnet
+    fqdn = models.CharField(max_length = 255, blank = True, null = True)
 
     # TODO: separate the LNET state [unloaded, down, up] from the host state [created, removed]
-    states = ['lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
-    initial_state = 'lnet_unloaded'
+    states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
+    initial_state = 'unconfigured'
+
+    DEFAULT_USERNAME = 'root'
 
     class Meta:
         app_label = 'configure'
@@ -51,40 +58,36 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         # * Secondly because we want them committed before creating any Jobs which
         #   will try to use them.
         with transaction.commit_on_success():
-            host, ssh_monitor = SshMonitor.from_string(address_string)
-            host.save()
+            host, created = ManagedHost.objects.get_or_create(address = address_string)
+            monitor, created = Monitor.objects.get_or_create(host = host)
+            lnet_configuration,created = LNetConfiguration.objects.get_or_create(host = host)
 
-            ssh_monitor.host = host
-            ssh_monitor.save()
-
-            # Ensure all Host objects have an LNetConfiguration
-            lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
-
-            # Hook all ManagedHost instances into HydraHostProxy storage resources
-            # so that they get scanned for devices.
             from configure.lib.storage_plugin.manager import storage_plugin_manager
-            from django.db import IntegrityError
-            if ssh_monitor.port:
-                address = "%s:%s" % (host.address, ssh_monitor.port)
-            else:
-                address = host.address
-
             storage_plugin_manager.create_root_resource('linux',
                     'HydraHostProxy', host_id = host.pk,
                     virtual_machine = virtual_machine)
 
+        print "%s %s %s" % (host.pk, monitor.pk, lnet_configuration.pk)
+
         # Attempt some initial setup jobs
         from configure.lib.state_manager import StateManager
+        StateManager().set_state(host, 'lnet_unloaded')
         StateManager().set_state(lnet_configuration, 'nids_known')
-        StateManager().add_job(AddHostJob(host = host))
 
         return host
 
     def pretty_name(self):
-        if self.address[-12:] == ".localdomain":
-            return self.address[:-12]
+        # Take FQDN if we have it, or fall back to address
+        if self.fqdn:
+            name = self.fqdn
         else:
-            return self.address
+            user, host, port = self.ssh_params()
+            name = host
+
+        if name[-12:] == ".localdomain":
+            return name[:-12]
+        else:
+            return name
     
     def _role_strings(self):
         roles = set()
@@ -142,6 +145,20 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return "WARNING"
         else:
             return "OK"
+
+    def ssh_params(self):
+        if self.address.find("@") != -1:
+            user,host = self.address.split("@")
+        else:
+            user = self.DEFAULT_USERNAME
+            host = self.address
+
+        if host.find(":") != -1:
+            host, port = host.split(":")
+        else:
+            port = None
+
+        return user, host, port
 
 class Lun(models.Model):
     storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
@@ -359,81 +376,14 @@ class Monitor(models.Model):
             return False
 
     def invoke(self, command, timeout = None):
-        """Subclasses implement this, return a dict"""
-        raise NotImplementedError
-
-class SshMonitor(Monitor):
-    DEFAULT_AGENT_PATH = '/usr/bin/hydra-agent.py'
-    DEFAULT_USERNAME = 'root'
-
-    # Substituted with DEFAULT_USERNAME in get_username if None
-    username = models.CharField(max_length = 64, blank = True, null = True)
-    # Substituted with DEFAULT_AGENT_PATH in get_agent_path if None
-    agent_path = models.CharField(max_length = 512, blank = True, null = True)
-    # Not passed on if None (let SSH library decide which port to use)
-    port = models.IntegerField(blank = True, null = True)
-
-    class Meta:
-        app_label = 'configure'
-
-    def invoke(self, command, timeout = None):
         """Safe to call on an SshMonitor which has a host assigned, neither
         need to have been saved"""
         from monitor.lib.lustre_audit import audit_log
         from configure.lib.agent import Agent
         try:
-            return Agent(self.host, self, log = audit_log, timeout = timeout).invoke(command)
+            return Agent(self.host, log = audit_log, timeout = timeout).invoke(command)
         except Exception, e:
             return e
-
-    def get_agent_path(self):
-        if self.agent_path:
-            return self.agent_path
-        else:
-            return SshMonitor.DEFAULT_AGENT_PATH
-
-    def get_username(self):
-        if self.username:
-            return self.username
-        else:
-            return SshMonitor.DEFAULT_USERNAME
-
-    @staticmethod
-    def from_string(address, agent_path = None):
-        """Return an unsaved SshMonitor instance, with the Host either set to 
-           an existing Host with the right address, or a new unsaved Host."""
-        if address.find("@") != -1:
-            user,host = address.split("@")
-        else:
-            user = None
-            host = address
-
-        if host.find(":") != -1:
-            host, port = host.split(":")
-        else:
-            port = None
-
-        agent_path = SshMonitor.DEFAULT_AGENT_PATH
-        try:
-            host = ManagedHost.objects.get(address = host)
-        except ManagedHost.DoesNotExist:
-            host = ManagedHost(address = host)
-
-        try:
-            return host, SshMonitor.objects.get(
-                    host = host,
-                    username = user,
-                    port = port,
-                    agent_path = agent_path)
-        except SshMonitor.DoesNotExist:
-            return host, SshMonitor(
-                    host = host,
-                    username = user,
-                    port = port,
-                    agent_path = agent_path)
-
-    def ssh_address_str(self):
-        return "%s@%s" % (self.get_username(), self.host.address.__str__())
 
 class LNetConfiguration(StatefulObject):
     states = ['nids_unknown', 'nids_known']
@@ -459,6 +409,20 @@ class Nid(models.Model):
     class Meta:
         app_label = 'configure'
 
+class LearnNidsStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost, Nid
+        from monitor.lib.lustre_audit import normalize_nid
+        host = ManagedHost.objects.get(pk = kwargs['host_id'])
+        result = self.invoke_agent(host, "lnet-scan")
+        for nid_string in result:
+            Nid.objects.get_or_create(
+                    lnet_configuration = host.lnetconfiguration,
+                    nid_string = normalize_nid(nid_string))
+
 class ConfigureLNetJob(Job, StateChangeJob):
     state_transition = (LNetConfiguration, 'nids_unknown', 'nids_known')
     stateful_object = 'lnet_configuration'
@@ -469,7 +433,6 @@ class ConfigureLNetJob(Job, StateChangeJob):
         return "Configuring LNet on %s" % self.lnet_configuration.host
 
     def get_steps(self):
-        from configure.lib.job import LearnNidsStep
         return [(LearnNidsStep, {'host_id': self.lnet_configuration.host.id})]
 
     def get_deps(self):
@@ -478,7 +441,54 @@ class ConfigureLNetJob(Job, StateChangeJob):
     class Meta:
         app_label = 'configure'
 
-from configure.lib.job import Step
+class ConfigureRsyslogStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost
+        from os import uname
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        self.invoke_agent(host, "configure-rsyslog --node %s" % uname()[1])
+
+class LearnHostnameStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        fqdn = self.invoke_agent(host, "get-fqdn")
+
+        from django.db import IntegrityError
+        try:
+            host.fqdn = fqdn
+            host.save()
+        except IntegrityError:
+            from configure.lib.job import job_log
+            # TODO: make this an Event or Alert?
+            host.fqdn = None
+            job_log.error("Cannot complete setup of host %s, it is reporting an already-used FQDN %s" % (host, fqdn))
+
+
+
+class SetupHostJob(Job, StateChangeJob):
+    state_transition = (ManagedHost, 'unconfigured', 'lnet_unloaded')
+    stateful_object = 'managed_host'
+    managed_host = models.ForeignKey(ManagedHost)
+    state_verb = 'Set up server'
+
+    def description(self):
+        return "Setting up server %s" % self.managed_host
+
+    def get_steps(self):
+        return [(LearnHostnameStep, {'host_id': self.managed_host.pk}),
+                (ConfigureRsyslogStep, {'host_id': self.managed_host.pk})]
+
+    class Meta:
+        app_label = 'configure'
+
+
 class DetectTargetsStep(Step):
     def is_dempotent(self):
         return True
@@ -602,16 +612,4 @@ class RemoveHostJob(Job, StateChangeJob):
     def get_steps(self):
         from configure.lib.job import DeleteHostStep
         return [(DeleteHostStep, {'host_id': self.host.id})]
-
-class AddHostJob(Job):
-    host = models.ForeignKey(ManagedHost)
-    class Meta:
-        app_label = 'configure'
-
-    def description(self):
-        return "Adding new host %s" % self.host
-
-    def get_steps(self):
-        from configure.lib.job import AddHostStep
-        return [(AddHostStep, {'host_id': self.host.id})]
 

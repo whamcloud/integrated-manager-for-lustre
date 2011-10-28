@@ -68,9 +68,6 @@
         </ul>
     <div id="add_host_prompt">
         <form style="margin-bottom:0px;">
-            <!-- nb not submitting csrf_token with the form, but having it here ensures
-                 csrf_token cookie gets set -->
-            {% csrf_token %}
             <label style="margin-right: 6px;" for='add_host_address'>Hostname:</label><input style="width:100%;" type='entry' id='add_host_address'/>
             <div style="text-align: right;">
                 <a style="margin-top: 6px;" class="add_host_submit_button" type='submit'>Continue</a>

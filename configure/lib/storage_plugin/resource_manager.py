@@ -25,6 +25,7 @@ WARNING:
 from configure.lib.storage_plugin.log import storage_plugin_log as log
 from configure.lib.storage_plugin.resource import ScannableId, GlobalId
 from configure.lib.storage_plugin.manager import storage_plugin_manager
+from monitor.lib.util import timeit
 
 from django.db import transaction
 
@@ -118,7 +119,6 @@ class SubscriberIndex(object):
             self.remove_subscriber(resource_id, key, getattr(resource, field_name))
 
     def populate(self):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
         from configure.models import StorageResourceAttribute
         for resource_class_id, resource_class in storage_plugin_manager.get_all_resources():
 
@@ -154,6 +154,7 @@ class ResourceManager(object):
         self._subscriber_index = SubscriberIndex()
         self._subscriber_index.populate()
 
+    @timeit(logger = log)
     def session_open(self,
             scannable_id,
             scannable_local_id,
@@ -190,7 +191,7 @@ class ResourceManager(object):
 
         log.info("<< session_open %s" % scannable_id)
 
-    @transaction.autocommit
+    @transaction.commit_on_success
     def _persist_created_hosts(self, session, scannable_id):
         log.debug("_persist_created_hosts")
         # FIXME: look up more efficiently (don't currently keep an in-memory record of the
@@ -205,7 +206,6 @@ class ResourceManager(object):
 
         from configure.lib.storage_plugin import base_resources
         for record, resource in get_session_resources_of_type(session, base_resources.VirtualMachine):
-            log.info("Resource %s" % resource)
             if not resource.host_id:
                 from configure.models import ManagedHost
                 log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
@@ -218,9 +218,8 @@ class ResourceManager(object):
                 # that reported it won't see the change to host_id attribute, but that's
                 # fine, they have no right to know.
 
-    @transaction.autocommit
+    @transaction.commit_on_success
     def _persist_lun_updates(self, scannable_id, scannable_resource):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
         from configure.lib.storage_plugin.query import ResourceQuery
         from configure.lib.storage_plugin import base_resources
         from configure.models import Lun, LunNode, ManagedHost
@@ -263,7 +262,9 @@ class ResourceManager(object):
 
             device = ResourceQuery().record_find_ancestor(record.pk, base_resources.LogicalDrive)
             if device == None:
-                raise RuntimeError("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
+                log.error("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
+                continue
+                #raise RuntimeError("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
 
             lun = lun_get_or_create(device)
             try:
@@ -538,12 +539,21 @@ class ResourceManager(object):
                     parents = r):
                 dependent.parents.remove(r)
 
-            r.delete()
+            log.info("Culling resource '%s' of scannable %s" % (r.pk, session.scannable_id))
+            log.info("%s" % r.to_resource())
+
+            log.info("Culling resource '%s' of scannable %s" % (r.pk, session.scannable_id))
+            #r.delete()
 
 
-    @transaction.autocommit
     def _persist_new_resource(self, session, resource):
         from configure.models import StorageResourceRecord
+
+        if resource._handle_global:
+            # Bit of a weird one: this covers the case where a plugin sessoin
+            # was given a root resource that had some ResourceReference attributes
+            # that pointed to resources from a different plugin
+            return
 
         if resource._handle in session.local_id_to_global_id:
             return
@@ -570,9 +580,10 @@ class ResourceManager(object):
             if isinstance(attribute_obj, attributes.ResourceReference):
                 if value:
                     referenced_resource = value
-                    if not referenced_resource._handle in session.local_id_to_global_id:
-                        self._persist_new_resource(session, referenced_resource)
-                        assert referenced_resource._handle in session.local_id_to_global_id
+                    if not referenced_resource._handle_global:
+                        if not referenced_resource._handle in session.local_id_to_global_id:
+                            self._persist_new_resource(session, referenced_resource)
+                            assert referenced_resource._handle in session.local_id_to_global_id
 
         id_tuple = resource.id_tuple()
         cleaned_id_items = []
@@ -625,9 +636,16 @@ class ResourceManager(object):
 
         session.local_id_to_global_id[resource._handle] = record.pk
         self._resource_persist_attributes(session, resource, record)
+        
+        if created:
+            log.debug("persist_new_resource[%s] %s %s %s" % (session.scannable_id, created, record.pk, resource._handle))
         return record
 
-    @transaction.autocommit
+    # Use commit on success to avoid situations where a resource record
+    # lands in the DB without its attribute records.
+    # FIXME: there are cases where _persist_new_resource gets called outside
+    # of _persist_new_resources, make sure it's wrapped in a transaction too
+    @transaction.commit_on_success
     def _persist_new_resources(self, session, resources):
         for r in resources:
             self._persist_new_resource(session, r)
@@ -652,8 +670,6 @@ class ResourceManager(object):
     def _resource_persist_attributes(self, session, resource, record):
         from configure.models import StorageResourceAttribute
         # TODO: remove existing attrs not in storage_dict
-        existing_attrs = [i['key'] for i in StorageResourceAttribute.objects.filter(resource = record).values('key')]
-
         resource_class = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
 
         for key, value in resource._storage_dict.items():
@@ -663,8 +679,10 @@ class ResourceManager(object):
             attribute_obj = resource_class.get_attribute_properties(key)
             from configure.lib.storage_plugin import attributes
             if isinstance(attribute_obj, attributes.ResourceReference):
-                if value:
+                if value and not value._handle_global:
                     value = session.local_id_to_global_id[value._handle]
+                elif value._handle_global:
+                    value = value._handle
             try:
                 existing = StorageResourceAttribute.objects.get(resource = record, key = key)
                 encoded_val = resource_class.encode(key, value)
@@ -679,8 +697,6 @@ class ResourceManager(object):
 
     @transaction.autocommit
     def _resource_persist_parents(self, resource, session, record):
-        from configure.models import StorageResourceRecord
-
         new_parent_pks = [session.local_id_to_global_id[p._handle] for p in resource._parents]
         existing_parents = record.parents.all()
 

@@ -123,6 +123,7 @@ class StorageResource(object):
         self._storage_dict = {}
         self._plugin = None
         self._handle = None
+        self._handle_global = None
         self._parents = []
 
         # Accumulate changes since last call to flush_deltas()

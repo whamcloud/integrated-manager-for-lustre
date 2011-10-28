@@ -30,7 +30,7 @@ Exception: %s (%s)
 
 
 class Agent(object):
-    def __init__(self, host, monitor = None, log = None, console_callback = None, timeout = None):
+    def __init__(self, host, log = None, console_callback = None, timeout = None):
 
         # Long default timeout for long-running jobs like formatting a lun
         DEFAULT_TIMEOUT = 3600
@@ -39,11 +39,7 @@ class Agent(object):
         else:
             self.timeout = DEFAULT_TIMEOUT
 
-        if not monitor:
-            monitor = host.monitor.downcast()
-
         self.host = host
-        self.monitor = monitor
 
         self.console_callback = console_callback
 
@@ -59,24 +55,24 @@ class Agent(object):
 
     def _ssh(self, command):
         import paramiko
-        import socket
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        from settings import AUDIT_PERIOD
         # How long it may take to establish a TCP connection
         SOCKET_TIMEOUT = self.timeout
         # How long it may take to get the output of our agent
         # (including eg tunefs'ing N devices)
         SSH_READ_TIMEOUT = self.timeout
 
-        args = {"username": self.monitor.get_username(),
+        user, hostname, port = self.host.ssh_params()
+
+        args = {"username": user,
                 "timeout": SOCKET_TIMEOUT}
-        if self.monitor.port:
-            args["port"] = int(self.monitor.port)
+        if port:
+            args["port"] = int(port)
         # Note: paramiko has a hardcoded 15 second timeout on SSH handshake after
         # successful TCP connection (Transport.banner_timeout).
-        ssh.connect(self.host.address, **args)
+        ssh.connect(hostname, **args)
         transport = ssh.get_transport()
         channel = transport.open_session()
         channel.settimeout(SSH_READ_TIMEOUT)

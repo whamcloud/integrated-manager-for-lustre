@@ -86,16 +86,17 @@ class TestHost(AnonymousRequestHandler):
     @extract_request_args('hostname')
     def run(self,request,hostname):
         from monitor.tasks import test_host_contact
-        from configure.models import SshMonitor
-        host, ssh_monitor = SshMonitor.from_string(hostname)
-        job = test_host_contact.delay(host, ssh_monitor)
+        from configure.models import Monitor
+        host = ManagedHost(address = hostname)
+        host.monitor = Monitor(host = host)
+        job = test_host_contact.delay(host)
         return {'task_id': job.task_id}
 
 
 class AddHost(AnonymousRequestHandler):
     @extract_request_args('hostname')
     def run(self,request,hostname):
-        host = ManagedHost.create_from_string(hostname)
+        ManagedHost.create_from_string(hostname)
         return {
                 'host': hostname,
                 'status': 'added'

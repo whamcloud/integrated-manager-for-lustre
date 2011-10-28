@@ -295,20 +295,6 @@ class AnyTargetMountStep(Step):
         # re-raise exception on last failure
         assert False
 
-class LearnNidsStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedHost, Nid
-        from monitor.lib.lustre_audit import normalize_nid
-        host = ManagedHost.objects.get(pk = kwargs['host_id'])
-        result = self.invoke_agent(host, "lnet-scan")
-        for nid_string in result:
-            Nid.objects.get_or_create(
-                    lnet_configuration = host.lnetconfiguration,
-                    nid_string = normalize_nid(nid_string))
-
 class MountStep(AnyTargetMountStep):
     def is_idempotent(self):
         return True
@@ -487,13 +473,5 @@ class DeleteHostStep(Step):
         from configure.models import ManagedHost
         ManagedHost.delete(kwargs['host_id'])
 
-class AddHostStep(Step):
-    def is_idempotent(self):
-        return False
 
-    def run(self, kwargs):
-        from configure.models import ManagedHost
-        from os import uname
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "configure-rsyslog --node %s" % uname()[1])
 

@@ -11,29 +11,7 @@ from django.db import transaction
 
 from configure.lib.agent import AgentException
 from configure.lib.job import job_log
-
-def timeit(method):
-    from functools import wraps
-    logger = job_log
-    @wraps(method)
-    def timed(*args, **kw):
-        import time                                                
-        import logging
-        if logger.level <= logging.DEBUG:
-            ts = time.time()
-            result = method(*args, **kw)
-            te = time.time()
-
-            logger.debug('Ran %r (%s, %r) in %2.2fs' %
-                    (method.__name__,
-                     ", ".join(["%s" % (a,) for a in args]),
-                     kw,
-                     te-ts))
-            return result
-        else:
-            return method(*args, **kw)
-
-    return timed
+from monitor.lib.util import timeit
 
 class RetryOnSqlErrorTask(Task):
     """Because state required to guarantee completion (or recognition of failure) of 
@@ -150,7 +128,7 @@ def _job_task_health():
             job_log.warning("Job %s has state %s task_id %s but task state is %s" % (job.id, job.state, job.task_id, task_state))
 
 @periodic_task(run_every = timedelta(seconds = settings.JANITOR_PERIOD))
-@timeit
+@timeit(logger=job_log)
 def janitor():
     """Invoke periodic housekeeping tasks"""
     _complete_orphan_jobs()
@@ -159,7 +137,7 @@ def janitor():
         _job_task_health()
 
 @task(base = RetryOnSqlErrorTask)
-@timeit
+@timeit(logger=job_log)
 def notify_state(content_type, object_id, new_state, from_states):
     # Get the StatefulObject
     from django.contrib.contenttypes.models import ContentType
@@ -183,7 +161,7 @@ def notify_state(content_type, object_id, new_state, from_states):
             instance.save()
 
 @task(base = RetryOnSqlErrorTask)
-@timeit
+@timeit(logger=job_log)
 def set_state(content_type, object_id, new_state):
     """content_type: a ContentType natural key tuple
        object_id: the pk of a StatefulObject instance
@@ -212,7 +190,7 @@ def set_state(content_type, object_id, new_state):
     StateManager()._set_state(instance, new_state)
 
 @task(base = RetryOnSqlErrorTask)
-@timeit
+@timeit(logger=job_log)
 def add_job(job):
     from configure.lib.state_manager import StateManager
     StateManager()._add_job(job)
@@ -227,7 +205,7 @@ the job to avoid stalling the job queue"""
 
 
 @task(base = RetryOnSqlErrorTask)
-@timeit
+@timeit(logger=job_log)
 def complete_job(job_id):
     from configure.models import Job
 
@@ -246,7 +224,7 @@ def complete_job(job_id):
     Job.run_next()
 
 @task(base = RetryOnSqlErrorTask)
-@timeit
+@timeit(logger=job_log)
 def run_job(job_id):
     job_log.info("Job %d: run_job" % job_id)
     #from MySQLdb import ProgrammingError, OperationalError
@@ -276,7 +254,6 @@ def run_job(job_id):
         job.complete(errored = True)
         return None
 
-    restart_from = 0
     if job.started_step:
         job_log.warning("Job %d restarting, started,finished=%s,%s" % (job.id, job.started_step, job.finished_step))
         if job.started_step != job.finished_step:

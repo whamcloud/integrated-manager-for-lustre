@@ -29,13 +29,12 @@ def monitor_exec(monitor_id, counter):
     audit_log.debug("Monitor %s started" % monitor.host)
     try:
         from monitor.lib.lustre_audit import UpdateScan
-        raw_data = monitor.downcast().invoke('update-scan',
+        raw_data = monitor.invoke('update-scan',
                 settings.AUDIT_PERIOD * 2)
         success = UpdateScan().run(monitor.host.pk, raw_data)
         if success:
-            import datetime
             monitor.update(last_success = datetime.datetime.now())
-    except Exception, e:
+    except Exception:
         audit_log.error("Exception auditing host %s" % monitor.host)
         import sys
         import traceback
@@ -67,10 +66,12 @@ def parse_log_entries():
     SystemEventsAudit().parse_log_entries()
 
 @task()
-def test_host_contact(host, ssh_monitor):
+def test_host_contact(host):
     import socket
+    user, hostname, port = host.ssh_params()
+
     try:
-        addresses = socket.getaddrinfo(host.address, "22", socket.AF_INET, socket.SOCK_STREAM, socket.SOL_TCP)
+        addresses = socket.getaddrinfo(hostname, "22", socket.AF_INET, socket.SOCK_STREAM, socket.SOL_TCP)
         resolve = True
         resolved_address = addresses[0][4][0]
     except socket.gaierror:
@@ -85,16 +86,13 @@ def test_host_contact(host, ssh_monitor):
     # SSH but no ping
     agent = False
     if resolve:
-        try:
-            result = ssh_monitor.invoke('update-scan', timeout = settings.AUDIT_PERIOD)
-            if not isinstance(result, Exception):
-                agent = True
-            else:
-                agent = False
-        except Exception,e:
-            audit_log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
+        result = host.monitor.invoke('update-scan', timeout = settings.AUDIT_PERIOD * 2)
+        if isinstance(result, Exception):
+            audit_log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, result))
             agent = False
-        
+        else:
+            agent = True
+
     return {
             'address': host.address,
             'resolve': resolve,

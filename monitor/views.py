@@ -233,11 +233,11 @@ def host(request):
 
         result = {'success': True}
     else:
-        # TODO: let user specify agent path
-        host, ssh_monitor = SshMonitor.from_string(address)
+        host = ManagedHost(address = address)
+        host.monitor = Monitor(host = host)
 
         from tasks import test_host_contact
-        job = test_host_contact.delay(host, ssh_monitor)
+        job = test_host_contact.delay(host)
         result = {'task_id': job.task_id, 'success': True}
 
     return HttpResponse(json.dumps(result), mimetype = 'application/json')

@@ -3,14 +3,11 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.tasks import timeit
-
 import settings
-from collections import defaultdict
-from django.db import transaction
 
-from configure.lib.storage_plugin.resource import StorageResource, ScannableId, GlobalId
+from configure.lib.storage_plugin.resource import StorageResource
 from configure.lib.storage_plugin.log import storage_plugin_log
+from monitor.lib.util import timeit
 
 import threading
 
@@ -105,7 +102,10 @@ class StoragePlugin(object):
 
     def do_initial_scan(self, root_resource):
         from configure.lib.storage_plugin.resource_manager import resource_manager 
+
         root_resource._handle = self.generate_handle()
+        root_resource._handle_global = False
+
         self._index.add(root_resource)
 
         self.initial_scan(root_resource)
@@ -192,7 +192,7 @@ class StoragePlugin(object):
                         active, alert_class, attribute)
             self._delta_alerts.clear()
 
-    @timeit
+    @timeit(logger = storage_plugin_log)
     def commit_resource_statistics(self):
         self.log.debug(">> Plugin.commit_resource_statistics %s", self._scannable_id)
         sent_stats = 0
@@ -252,7 +252,10 @@ class StoragePlugin(object):
         assert(not resource._handle)
 
         resource.validate()
+
         resource._handle = self.generate_handle()
+        resource._handle_global = False
+
         resource._plugin = self
         self._index.add(resource)
         self._delta_new_resources.append(resource._handle)

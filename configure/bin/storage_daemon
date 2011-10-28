@@ -63,7 +63,7 @@ class PluginSession(threading.Thread):
             last_retry = datetime.datetime.now()
             try:
                 self._scan_loop(plugin_klass, root_resource)
-            except Exception, e:
+            except Exception:
                 run_duration = datetime.datetime.now()- last_retry
                 if last_retry and run_duration > datetime.timedelta(seconds = RETRY_DELAY_MAX):
                     # If the last run was long running (i.e. probably ran okay until something went

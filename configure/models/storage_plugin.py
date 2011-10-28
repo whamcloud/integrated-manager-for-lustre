@@ -136,6 +136,7 @@ class StorageResourceRecord(models.Model):
             storage_dict[attr.key] = klass.decode(attr.key, attr.value)
         resource = klass(**storage_dict)
         resource._handle = self.id
+        resource._handle_global = True
         return resource
 
     def alias_or_name(self, resource = None):
