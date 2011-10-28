@@ -7,7 +7,11 @@ include monitor/fixtures/*
 include configure/templates/*
 include configure/bin/*.py
 include configure/bin/storage-daemon
+include hydradashboard/templates/*
+include hydracm/templates/*
 graft polymorphic
 graft monitor/static
 graft configure/static
+graft hydradashboard/static
+graft hydracm/static
 global-exclude .*.swp
