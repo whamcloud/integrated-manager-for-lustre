@@ -84,7 +84,7 @@ q
 EOF
 done 
 
-ed /etc/rsyslog.conf <<EOF >/dev/null
+ed /etc/rsyslog.conf <<EOF >/dev/null 2>&1
 /#\$InputTCPServerRun 514$/a
 # Added by hydra-server
 # enable receiving on TCP
@@ -103,6 +103,10 @@ a
 w
 q
 EOF
+
+%preun
+# remove the /static/ dir of files that was created by Django's collectstatic
+rm -rf /usr/share/hydra-server/static
 
 %postun
 # remove rsyslog entries if this the last version being removed.
