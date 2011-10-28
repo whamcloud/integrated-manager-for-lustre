@@ -41,6 +41,9 @@ start() {
         # and populate it
         python $PYTHONPATH/manage.py syncdb --noinput
         python $PYTHONPATH/manage.py migrate
+        # reload rsyslog since it will have complained about the missing
+        # table when it started
+        service rsyslog reload
     fi
 
     # RabbitMQ: Configure default hydra user if it's not already set up
