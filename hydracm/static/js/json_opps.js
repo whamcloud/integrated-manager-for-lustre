@@ -2,10 +2,14 @@ var ERR_COMMON_DELETE_HOST = "Error in deleting host: ";
 var ERR_COMMON_ADD_HOST = "Error in Adding host: ";
 var ERR_COMMON_LNET_STATUS = "Error in setting lnet status: ";
 var ERR_COMMON_FS_START = "Error in starting File System: ";
+var ERR_COMMON_CREATE_OST = "Error in Creating OST: ";
+var ERR_COMMON_CREATE_MGT = "Error in Creating MGT: ";
+var ERR_COMMON_CREATE_MDT = "Error in Creating MDT: ";
+
 
 RemoveHost_ServerConfig = function (host_id)
 {
-	$.post("/api/removehost/",{"hostid":host_id}).success(function(data, textStatus, jqXHR) {
+	$.post("/api/remove_host/",{"hostid":host_id}).success(function(data, textStatus, jqXHR) {
 			if(data.success)
 			{
 				var response = data.response;		
@@ -20,6 +24,10 @@ RemoveHost_ServerConfig = function (host_id)
 					jAlert("problem in deleting host");
 				}
 			}
+			else
+			{
+				jAlert(ERR_COMMON_DELETE_HOST + data.error);
+			}
 		})
 		.error(function(event) {
 		  	jAlert(ERR_COMMON_DELETE_HOST + data.error);
@@ -30,7 +38,7 @@ RemoveHost_ServerConfig = function (host_id)
 
 function Lnet_Operations(host_id, opps)
 {
-	$.post("/api/setlnetstate/",{"hostid":host_id, "state":opps}).success(function(data, textStatus, jqXHR) {
+	$.post("/api/set_lnet_state/",{"hostid":host_id, "state":opps}).success(function(data, textStatus, jqXHR) {
 		if(data.success)
 		{
 			var response = data.response;		
@@ -44,6 +52,10 @@ function Lnet_Operations(host_id, opps)
 			{
 				alert("problem in deleting host");
 			}
+		}
+		else
+		{
+			jAlert(ERR_COMMON_LNET_STATUS + data.error);
 		}
 	})
 	.error(function(event) {
@@ -111,4 +123,51 @@ function StopFileSystem(filesystem)
 	.complete(function(event) {
 	});
 	*/
+}
+
+function setOSTArray(filesystemId, objOstid)
+{
+	for(var i=0;i<objOstid.length;i++)
+	{
+		$.post("/api/create_ost/",{"filesystemid":filesystemId, "nodeid":objOstid[i], "failoverid":"", "hostid":""}).success(function(data, textStatus, jqXHR) {
+			if(data.success)
+			{
+				//FIXEME: hide loader here
+				var response = data.response;		
+			}
+			else
+			{
+				jAlert(ERR_COMMON_CREATE_OST + data.errors);
+			}
+		})
+		.error(function(event) {
+			jAlert(ERR_COMMON_CREATE_OST + data.errors);
+		})
+		.complete(function(event) {
+		});
+	}
+	//LoadOST_EditFS();
+}
+
+function CreateFS(fsname,mgs_id,mgt_node_id,mdt_node_id,ost_id)
+{
+	alert("/api/create_new_fs/{'fsname':" + fsname + "'mgs_id':" + mgs_id + "'mgt_node_id':" + mgt_node_id + "'mdt_node_id':" + mdt_node_id + "'ost_node_ids':" + GetOSTId(ost_id));
+	//FixME: Add api call here
+}
+
+function GetOSTId(arrOST)
+{
+	var ost_id="";
+	for(var i=0;i<arrOST.length;i++)
+	{
+		if (ost_id == "")
+		{
+		 ost_id = arrOST[i];
+		}
+		else
+		{
+			ost_id = ost_id + "," + arrOST[i];
+		}
+	}
+	return ost_id;
 }

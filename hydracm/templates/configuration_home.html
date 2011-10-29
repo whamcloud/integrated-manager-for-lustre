@@ -31,6 +31,18 @@
 
 <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js" ></script>
 <script>
+	//array to store new mgt selected row for create fs
+	var oNewMGT_RowData=[];
+	var mgt_node_id = "";
+	
+	//array to store existing mgt selected row for create fs
+	var oExistingMGT_RowData = [];
+	var mgs_id = "";
+	
+	//array to store new mdt for create fs
+	var oNewMDT_RowData=[];
+	var mdt_node_id = "";
+
 	$(function() {
 		$( "#tabs" ).tabs({
 			ajaxOptions: {
@@ -46,17 +58,30 @@
 			}
 		});
 		
-		$(document).ready(function() {	
-      if (window.location.hash) {
+	$(document).ready(function() {	
+	    if (window.location.hash) {
           $("#tabs").select(window.location.hash);
       } else {
           $("#tabs").select("lusterFS_content");
       }
 		});
+		
     $(document).ajaxComplete(function() {
       $('button.add').button({icons: {primary: 'ui-icon-plusthick'}});
     });
-		
+	
+	
+	$("#popup-new-mgt tbody").delegate("tr", "click", function() {
+	  var radio = $("td:eq(0) input", this);
+	  radio.attr('checked', true);
+	  oNewMGT_RowData=[];
+	  for(var i=1;i<7;i++)
+	  {
+	  	oNewMGT_RowData[i]=$("td:eq("+i+")", this).text();
+	  }
+	  mgt_node_id =  radio.attr('id');
+	});
+	
 		var oNewMgt = $('#popup-new-mgt').dataTable( {
 			"bProcessing": true,
 			"bJQueryUI": true,
@@ -74,8 +99,19 @@
 				{ "sClass": 'txtleft' }
 			]
 		} );
-		
-		var oNewMgt = $('#popup-new-mdt').dataTable( {
+       	
+		$("#popup-new-mdt").delegate("tr", "click", function() {
+	  	  var radio = $("td:eq(0) input", this);
+		  radio.attr('checked', true);
+		  oNewMDT_RowData=[];
+		  for(var i=1;i<7;i++)
+		  {
+				oNewMDT_RowData[i]=$("td:eq("+i+")", this).text();
+		  }
+			mdt_node_id = radio.attr('id');
+	  	});
+					
+		var oNewMdt = $('#popup-new-mdt').dataTable( {
 			"bProcessing": true,
 			"bJQueryUI": true,
 			"bAutoWidth": false,
@@ -92,25 +128,18 @@
 				{ "sClass": 'txtleft' }
 			]
 		} );
-		
-		var oNewOst = $('#popup-new-ost').dataTable( {
-			"bProcessing": true,
-			"bJQueryUI": true,
-			"bAutoWidth": false,
-			"oLanguage": {
-					"sEmptyTable": "No OST to display"
-			},
-			"aoColumns": [
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtright'},
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' }
-			]
-		} );
-		
+	
+	  $("#popup-existing-mgt").delegate("tr", "click", function() {
+	  	var radio = $("td:eq(0) input", this);
+		  radio.attr('checked', true);
+		  oExistingMGT_RowData=[];
+			for(var i=1;i<5;i++)
+			{
+				oExistingMGT_RowData[i]=$("td:eq("+i+")", this).text();
+			}
+			mgs_id = radio.attr('id');
+	  });
+	  
 		var oMgt = $('#popup-existing-mgt').dataTable( {
 			"bProcessing": true,
 			"bJQueryUI": true,
@@ -121,10 +150,24 @@
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
 				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' }
+			]
+		} );	
+		
+		var oNewOst = $('#popup-new-ost').dataTable( {
+			"bProcessing": true,
+			"bAutoWidth": false,
+			"bJQueryUI": true,
+			"aoColumns": [
 				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtright'},
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' },
+				{ "sClass": 'txtleft' }
 			]
 		} );
-		
 	});
 	</script>
 </head>
@@ -193,11 +236,11 @@
             <td width="100%" height="100%">
               <div id="tabs">
                 <ul>
-                  <li><a href="/hydracm/fstab/" title='lusterFS_content'>Filesystems</a></li>
-                  <li><a href="/hydracm/mgttab/" title='mgts'>MGTs</a></li>
-                  <li><a href="/hydracm/volumetab/" title='volumes'>Volumes</a></li>
-                  <li><a href="/hydracm/servertab/" title='servers'>Servers</a></li>
-                  <li><a href="/hydracm/storage_tab/" title='storage'>Storage</a></li>
+                  <li><a href=/hydracm/fstab/ title='lusterFS_content'>Filesystems</a></li>
+                  <li><a href=/hydracm/mgttab/ title='mgts'>MGTs</a></li>
+                  <li><a href=/hydracm/volumetab/ title='volumes'>Volumes</a></li>
+                  <li><a href=/hydracm/servertab/ title='servers'>Servers</a></li>
+                  <li><a href=/hydracm/storage_tab/ title='storage'>Storage</a></li>
                 </ul>
               </div>
             </td>
@@ -271,22 +314,22 @@
   </form>
 </div>
 <div id="newOST" title="Select Target">
-  <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
-    <thead>
-      <tr>
-        <th width="8%">Select</th>
-        <th width="15%">Target Path</th>
+    <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
+      <thead>
+        <tr>
+         <th width="1%">Select</th>
+        <th width="19%">Target Path</th>
         <th width="10%">Capacity</th>
         <th width="20%">Kind</th>
-        <th width="17%">Status</th>
+        <th width="20%">Status</th>
         <th width="15%">Primary Server</th>
         <th width="15%">Failover</th>
-      </tr>
-    </thead>
-    <tbody id="popup-new-ost_content">
-    </tbody>
-  </table>
-</div>
+        </tr>
+      </thead>
+      <tbody id="popup-new-ost_content">
+      </tbody>
+    </table>
+  </div>
 <!-- exsting mgt popup -->
 <div id="existingMGT" title="Select Target">
   <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-existing-mgt" width="100%">

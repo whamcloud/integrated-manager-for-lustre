@@ -32,9 +32,12 @@ $(document).ready(function()
     buttons: 
     {
       "Ok": function() { 
+		Initialise_MGT(0);
+		SetVisible_TD("mdt_container");
         $(this).dialog("close");
       },
       "Cancel": function() { 
+		targetid="";
         $(this).dialog("close");
       }, 
     }
@@ -53,15 +56,16 @@ $(document).ready(function()
     buttons: 
     {
       "Ok": function() { 
+	  	Initialise_MGT(1);
+		SetVisible_TD("mdt_container");
         $(this).dialog("close");
       },
       "Cancel": function() { 
+	  	nodeid="";
         $(this).dialog("close");
       }, 
     }
   });
-
-
 
 // Dialog
   $('#newMDT').dialog
@@ -75,6 +79,8 @@ $(document).ready(function()
     buttons: 
     {
       "Ok": function() { 
+	  	SetNewMDTTableContent('mdt',oNewMDT_RowData);
+		SetVisible_TD("ost_container");
         $(this).dialog("close");
       },
       "Cancel": function() { 
@@ -82,8 +88,8 @@ $(document).ready(function()
       }, 
     }
   });
-
-// Dialog
+	
+	// Dialog
   $('#newOST').dialog
   ({
     autoOpen: false,
@@ -101,25 +107,6 @@ $(document).ready(function()
         $(this).dialog("close");
       }, 
     }
-  });
-
-// Dialog
-  $('#mgtConfig_newMGT').dialog
-  ({
-    autoOpen: false,
-    width: 800,
-    height:470,
-    show: "clip",
-    modal: true,
-    position:"center",
-    buttons: {
-    "Ok": function() { 
-      $(this).dialog("close");
-    },
-    "Cancel": function() { 
-      $(this).dialog("close");
-    }, 
-  }
   });
 
 // File System Graph

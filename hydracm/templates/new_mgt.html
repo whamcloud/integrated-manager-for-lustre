@@ -2,7 +2,7 @@
 	$(document).ready(function() {
 		LoadMGTConfiguration_MGTConf();
 		CreateMGT_MGTConf();
-		var oNewMgt = $('#mgt_configuration').dataTable( {
+		var oMgtConfiguration = $('#mgt_configuration').dataTable( {
       bPaginate: false,
       bFilter: false,
       bInfo: false,
@@ -20,7 +20,7 @@
 			]
 		} );
 		
-		var oNewOst = $('#popup-new-ost').dataTable( {
+		var oNewOst = $('#mgt_ost').dataTable( {
 			"bProcessing": true,
 			"bJQueryUI": true,
 			"oLanguage": {
@@ -35,15 +35,7 @@
 				{ "sClass": 'txtleft' }
 			]
 		} );
-		
-		// Dialog Link
- 		('#mgtConfig_btnNewMGT').click(function()
-		{
-			$('#mgtConfig_newMGT').dialog('open');
-		    return false;
-		});
 	} );
-	
 	</script>
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="padding-top:15px;">
@@ -75,7 +67,7 @@
       <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
         <button type="button" id="mgtConfig_btnNewMGT">Create new MGT</button>
         </span></span></div>
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="popup-new-ost" width="100%">
+      <table cellpadding="0" cellspacing="0" border="0" class="display" id="mgt_ost" width="100%">
         <thead>
           <tr>
             <th width="9%">Select</th>

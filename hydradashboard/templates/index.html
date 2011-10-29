@@ -73,7 +73,7 @@
 <div class="bg">
 <div class="logohead">
 <div class="logo"></div>
-<div class="top_links"><a href="#" class="active">Dashboard</a> |
+<div class="top_links"><a href="/dashboard" class="active">Dashboard</a> |
 <a href="/hydracm">Configure</a> | <a href="/dashboard/dbalerts">Alerts</a>
 | <a href="/dashboard/dbevents">Events</a> | <a href="/dashboard/dblogs">Log</a>
 </div>
@@ -201,41 +201,27 @@
 
 			<tr>
 				<td valign="top" class="text" width="30%" align="center">
-				<!-- <div class="magni"><input type="button" value=""
-					style="margin-left: 115px" class="magbutton"
-					onclick="db_Bar_SpaceUsage_Data('true');setZoomDialogTitle('All File System Space Usage');" />
-				</div>	 
-				<div style="clear: right;"></div>	-->
 				<div id="container" class="round-table" style="width: 300px">All File System Space Usage</div>
 				</td>
-				<!--<td  valign="top" class="text" width="25%" align="center"> <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> 
-                      <div id="container1" class="round-table"></div></td> 
-                    <td  valign="top" class="text" width="25%" align="center"><div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div>
-                      <div id="container2" class="round-table"></div></td>-->
 				<td valign="top" class="text" width="30%" align="center">
-				<!-- <div class="magni"><input type="button" value=""
-					style="margin-left: 115px" class="magbutton"
-					onclick="db_Line_connectedClients_Data('true');setZoomDialogTitle('Connected Clients');" />
-				</div>
-				<div style="clear: right;"></div>	 -->
-				<div id="container3" class="round-table" style="width: 300px">Connected Clients</div>
+				  <div id="container3" class="round-table" style="width: 300px">Connected Clients</div>
 				</td>
-				<td valign="top" class="text" width="30%" align="left"><!-- <div class="magni"><input type="button" value=" " class="magbutton"/></div> <div style="clear:right;"></div> -->
-				<div id="" style="width: 300px">
-				<table width="100%" id="allFileSystemSummaryTbl" class="display">
-					<thead>
-					<tr>
-						<th>Filesystem</th>
-						<th>OSS</th>
-						<th>OST</th>
-						<th>Total&nbsp;space</th>
-						<th>Free&nbsp;space</th>
-					</tr>
-					</thead>
-					<tbody>
-					</tbody>
-				</table>
-				</div>
+				<td valign="top" class="text" width="30%" align="left">
+				<div id="container_fs_list" style="width: 365px" >
+					<table id="allFileSystemSummaryTbl" class="display">
+						<thead>
+						<tr>
+							<th>Filesystem</th>
+							<th>OSS</th>
+							<th>OST</th>
+							<th>Total</th>
+							<th>Free</th>
+						</tr>
+						</thead>
+						<tbody>
+						</tbody>
+					</table>
+			    </div>
 				</td>
 			</tr>
 		</table>
@@ -285,26 +271,32 @@
 		</form>
 		</td>
 	</tr>
-	<!-- <tr>
+	<tr>
 		<td colspan="3">
-		<form>
 		<fieldset>
-		<table width="100%" border="0" cellpadding="0" cellspacing="0">
-			<tr height="220">
-				<td valign="top" class="text" width="100%" align="center">
-				<div class="magni"><input type="button" value=" "
-					class="magbutton" onclick="" style="margin-left: 970px"
-					onclick="db_HeatMap_Data('true');setZoomDialogTitle('Heat Map);" />
+		<table border="0" cellpadding="0" cellspacing="0" align="center">
+		  <tr>
+		    <td align="right" style="padding-right: 70px" class="greybgcol">Parameter: 
+			    <select id="heatmap_parameter_select">
+			      <option value="">Select</option>
+			      <option value="cpu">CPU</option>
+			      <option value="disk_usage">Disk Usage</option>
+			      <option value="disk_space_usage">Disk Space Usage</option>
+			    </select><br/><br/>
+		    </td>
+		  </tr> 
+ 	      <tr>
+			<td valign="top" class="text" align="center">
+				<div class="magni"><input type="button" value="" class="magbutton" style="margin-left: 680px" onclick="db_HeatMap_Data('true');setZoomDialogTitle('Heat Map');" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="db_heatMapDiv" class="round-table" style="width: 1150px">Heat Map</div>
+				<div id="db_heatMapDiv" class="round-table" style="width: 900px">Heat Map</div>
 				</td>
 			</tr>
 		</table>
 		</fieldset>
-		</form>
 		</td>
-	</tr>   -->
+	</tr>
 </table>
 </div>
 <!-- Dashboard Div - End --> <!-- FileSystem Div - Start -->
@@ -443,28 +435,33 @@
 		</form>
 		</td>
 	</tr>
-	<!-- <tr>
+    <tr>
 		<td colspan="3">
-		<form>
-		<fieldset><legend class="legendClass">File System
-		MDS/MGS Performance Summary
-		</legend>
-		<table width="100%" border="0">
+		<fieldset>
+		<table border="0" align="center">
+		    <tr>
+              <td align="right" style="padding-right: 70px" class="greybgcol">Parameter:
+                <select id="heatmap_parameter_select">
+                  <option value="">Select</option>
+		          <option value="cpu">CPU</option>
+		          <option value="disk_usage">Disk Usage</option>
+		          <option value="disk_space_usage">Disk Space Usage</option>
+		          </select><br/><br/>
+		      </td>
+		    </tr> 
 			<tr>
-				<td valign="top" class="text" width="100%" align="center">
-				<div class="magni"><input type="button" value=""
-					class="magbutton" onclick="" style="margin-left: 970px"
+				<td valign="top" class="text" align="center">
+				<div class="magni"><input type="button" value="" class="magbutton" onclick="" style="margin-left: 680px"
 					onclick="fs_HeatMap_Data('true');setZoomDialogTitle('Heat Map);" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="fs_heatMapDiv" class="round-table" style="width: 1150px">Heat Map</div>
+				<div id="fs_heatMapDiv" class="round-table" style="width: 900px">Heat Map</div>
 				</td>
 			</tr>
 		</table>
 		</fieldset>
-		</form>
 		</td>
-	</tr>   -->
+	 </tr>   
 </table>
 </div>
 <!-- FileSystem Div - End --> <!-- OSS Div - Start -->
@@ -511,7 +508,7 @@
 		<td colspan="4">
 		<ul class="tabs">
 			<li><a href="#tab1">Usage Summary</a></li>
-			<li><a href="#tab2">Overview</a></li>
+			<!--<li><a href="#tab2">Overview</a></li> -->
 		</ul>
 		<div class="tab_container">
 		<div id="tab1" class="tab_content">

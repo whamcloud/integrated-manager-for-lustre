@@ -27,10 +27,15 @@ from configureapi import (FormatFileSystem,
                           RemoveHost,
                           GetLuns,
                           CreateFilesystem,
+                          CreateNewFilesystem,
                           CreateMGS,
                           CreateOSS,
+                          CreateOSSs,
                           CreateMDS,
-                          SetLNetStatus)
+                          SetLNetStatus,
+                          SetTargetMountStage,
+                          GetJobStatus,
+                          SetJobStatus)
 
 # FIXME: instead of doing this big list of imports, should introspect available
 # RequestHandler objects and get their url name from them.
@@ -58,7 +63,9 @@ from statsmetricapi import(GetFSTargetStats,
                            GetFSMGSStats,
                            GetServerStats,
                            GetTargetStats,
-                           GetFSClientsStats)
+                           GetFSClientsStats,
+                           GetHeatMapFSStats,
+                           GetHeatMapServerStats)
 
 from audit import HydraAudit,ClearAudit
 
@@ -85,14 +92,19 @@ urlpatterns = patterns('',
     (r'^format_filesystem/$',CsrfExemptResource(FormatFileSystem)), 
     (r'^stop_filesystem/$',CsrfExemptResource(StopFileSystem)), 
     (r'^start_filesystem/$',CsrfExemptResource(StartFileSystem)),
+    (r'^create_new_fs/$',CsrfExemptResource(CreateNewFilesystem)),
     (r'^create_fs/$',CsrfExemptResource(CreateFilesystem)),
     (r'^create_mgt/$',CsrfExemptResource(CreateMGS)),
     (r'^create_ost/$',CsrfExemptResource(CreateOSS)),
+    (r'^create_osts/$',CsrfExemptResource(CreateOSSs)),  
     (r'^create_mdt/$',CsrfExemptResource(CreateMDS)),
-    (r'^testhost/$',CsrfExemptResource(TestHost)),
-    (r'^addhost/$',CsrfExemptResource(AddHost)),
-    (r'^removehost/$',CsrfExemptResource(RemoveHost)),
-    (r'^setlnetstate/$',CsrfExemptResource(SetLNetStatus)),
+    (r'^test_host/$',CsrfExemptResource(TestHost)),
+    (r'^add_host/$',CsrfExemptResource(AddHost)),
+    (r'^remove_host/$',CsrfExemptResource(RemoveHost)),
+    (r'^set_lnet_state/$',CsrfExemptResource(SetLNetStatus)),
+    (r'^set_target_stage/$',CsrfExemptResource(SetTargetMountStage)),
+    (r'^get_job_status/$',CsrfExemptResource(GetJobStatus)),
+    (r'^set_job_status/$',CsrfExemptResource(SetJobStatus)), 
 
     (r'^get_fs_stats_for_targets_fake/$',CsrfExemptResource(GetFSTargetStats_fake)),
     (r'^get_fs_stats_for_server_fake/$',CsrfExemptResource(GetFSServerStats_fake)),
@@ -107,7 +119,9 @@ urlpatterns = patterns('',
     (r'^get_stats_for_server/$',CsrfExemptResource(GetServerStats)),
     (r'^get_stats_for_targets/$',CsrfExemptResource(GetTargetStats)),
     (r'^get_fs_stats_for_client/$',CsrfExemptResource(GetFSClientsStats)),
- 
+    (r'^get_fs_stats_heatmap/$',CsrfExemptResource(GetHeatMapFSStats)),
+    (r'^get_server_stats_heatmap/$',CsrfExemptResource(GetHeatMapServerStats)),
+
     (r'^geteventsbyfilter/$',CsrfExemptResource(GetEventsByFilter)),
     (r'^getlatestevents/$',CsrfExemptResource(GetLatestEvents)),
     (r'^getalerts/$',CsrfExemptResource(GetAlerts)),
@@ -123,5 +137,4 @@ urlpatterns = patterns('',
     (r'^storage_resource/$', CsrfExemptResource(CreateStorageResource)),
     (r'^storage_resource_class_fields/$', CsrfExemptResource(StorageResourceClassFields)),
     (r'^creatable_storage_resource_classes/$', CsrfExemptResource(CreatableStorageResourceClasses)),
-
 )

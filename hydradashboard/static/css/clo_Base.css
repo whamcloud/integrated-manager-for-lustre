@@ -394,6 +394,7 @@ cursor:pointer;
 	/*margin-top:-31px;*/
 	padding-left:10px;
 	border:1px solid #848484;
+    font-size: 12px;
 }
 .magbutton{
 	background-image: url(../images/mglass.png); 
@@ -509,6 +510,7 @@ a.btnsigninon {
 	color:#fff;
 	padding-left:20px;
 	padding-top:7px;
+    font-size: 12px;
 }
 .top_links a{
 	color:#ccc;
@@ -598,6 +600,8 @@ td.br{
 }
 .greybgcol{
 	background-color:#eeeeee;
+    font-size: 12px;
+    font-weight: bold;
 }
 .fs{
 	font-size:12px;
@@ -608,12 +612,14 @@ td.br{
 .txtleft{
 	text-align:left;
 	padding-left:10px;
-	font-weight:bold;
+	font-weight:normal;
+    font-size: 12px;
 }
 .txtright{
 	text-align:right;
 	padding-right:17px;
-	font-weight:bold;
+	font-weight:normal;
+    font-size: 12px;
 }
 .txtcenter{
 	text-align:center;
@@ -621,6 +627,7 @@ td.br{
 }
 .tblContent{
     font-weight: normal;
+    font-size: 12px;
 }
 .status_stopped{
     border: 1px solid red; background-color: #4F0F0F; font-weight: bold; color: red;
@@ -636,4 +643,8 @@ td.br{
     border: 1px solid #00FE00; background-color: #00AA00; font-weight: bold; color: #00FE00;
     padding-right:10px;width:50%;text-align:center;
     border-radius:3px 3px 3px 3px;
+}
+.alert_labels{
+    color:#1C76AD;
+    font-weight:bold;
 }

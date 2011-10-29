@@ -243,7 +243,7 @@ class GetFSOSTHeatMap(AnonymousRequestHandler):
     def run(self,request,filesystem,starttime,endtime ,datafunction,fetchmetrics):
          from random import randrange
          ost_data = []
-         ost_size=100
+         ost_size=50
          current_slice = gettimeslice(100,5)
          for i in xrange(ost_size):
              for slice in current_slice:

@@ -22,21 +22,11 @@ class FormatFileSystem(AnonymousRequestHandler):
         fs = ManagedFilesystem.objects.get(name =  filesystem) 
         for target in fs.get_targets():
             if target.state == 'unformatted':
-                StateManager.set_stage(target,'formatted')
-                format_fs_list.append(
-                                      { 
-                                       'filesystem': fs.name,
-                                       'target':target.name,
-                                       'Job_id': ''   
-                                       }
-                                      )
+                transition_job = StateManager.set_stage(target,'formatted')
+                format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status':transition_job.status}
+                                     )
             else:
-                format_fs_list.append(
-                                      {
-                                       'filesystem': fs.name,
-                                       'target':target.name,
-                                       'Job_id':'' 
-                                      } 
+                format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status': transition_job.status}
                                      )
         return format_fs_list
     
@@ -47,21 +37,11 @@ class StopFileSystem(AnonymousRequestHandler):
         fs = ManagedFilesystem.objects.get(name =  filesystem)
         for target in fs.get_targets():
             if not target.state == 'unmounted':
-                StateManager.set_stage(target.downcast(),'unmounted')
-                format_fs_list.append(
-                                      {
-                                       'filesystem': fs.name,
-                                       'target':target.name,
-                                       'format_status': 'unmountting'
-                                      }
+                transition_job = StateManager.set_stage(target.downcast(),'unmounted')
+                format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status': transition_job.status}
                                      )
             else:
-                format_fs_list.append(
-                                      {
-                                       'filesystem': fs.name,
-                                       'target':target.name,
-                                       'format_status':'unmounted'
-                                      }
+                format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status': transition_job.status}
                                      )
         return format_fs_list
 
@@ -71,16 +51,10 @@ class StartFileSystem(AnonymousRequestHandler):
         format_fs_list = []
         fs = ManagedFilesystem.objects.get(name = filesystem)
         for target in fs.get_targets():
-            StateManager.set_stage(target.downcast(),'mounted')
-            format_fs_list.append(
-                                  {
-                                   'filesystem': fs.name,
-                                   'target':target.name,
-                                   'format_status': 'mountting'
-                                  }
+            transition_job = StateManager.set_stage(target.downcast(),'mounted')
+            format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status': transition_job.status}
                                  )
         return format_fs_list
-
 
 class TestHost(AnonymousRequestHandler):
     @extract_request_args('hostname')
@@ -88,50 +62,47 @@ class TestHost(AnonymousRequestHandler):
         from monitor.tasks import test_host_contact
         from configure.models import SshMonitor
         host, ssh_monitor = SshMonitor.from_string(hostname)
-        job = test_host_contact.delay(host, ssh_monitor)
-        return {'task_id': job.task_id}
-
+        transition_job = test_host_contact.delay(host, ssh_monitor)
+        return {'task_id': transition_job.task_id, 'status': transition_job.status}
 
 class AddHost(AnonymousRequestHandler):
     @extract_request_args('hostname')
     def run(self,request,hostname):
         host = ManagedHost.create_from_string(hostname)
-        return {
-                'host': hostname,
-                'status': 'added'
-               }
+        return {'host_id':host.id,'host': host.address,'status': 'true'}
 
 class RemoveHost(AnonymousRequestHandler):
     @extract_request_args('hostid')
     def run(self,request,hostid):
         host =  ManagedHost.objects.get(id = hostid)
-        StateManager.set_state(host,'removed')
-        return {    
-                'hostid': hostid,
-                'status': 'RemoveHostJob submitted Job Id:'
-               }
+        transition_job = StateManager.set_state(host,'removed')
+        return {'hostid': hostid,'job_id': transition_job.task_id,'status': transition_job.status}
 
 class SetLNetStatus(AnonymousRequestHandler):
     @extract_request_args('hostid','state')
     def run(self,request,hostid,state):
+        assert state in ['lnet_up', 'lnet_down', 'lnet_unload', 'lnet_load']
         host =  ManagedHost.objects.get(id = hostid)
-        StateManager.set_state(host,state)
-        return {
-                'hostid': hostid,
-                'status': 'RemoveHostJob submitted Job Id:'
-               }
+        transition_job = StateManager.set_state(host,state)
+        return {'hostid': hostid,'job_id': transition_job.task_id,'status': transition_job.status}
 
+class SetTargetMountStage(AnonymousRequestHandler):
+    @extract_request_args('target_id','state')
+    def run(self,request,target_id,state):
+        assert state in ['removed', 'mounted','unmounted','configured','unconfigured','register','unregister','started','stopped']
+        from configure.models import ManagedTargetMount
+        target = ManagedTargetMount.objects.get(id=target_id)                       
+        transition_job = StateManager.set_stage(target.downcast(),state)
+        return {'target_id': target_id,'job_id': transition_job.task_id,'status': transition_job.status}
+                   
 class RemoveFileSystem(AnonymousRequestHandler):
     @extract_request_args('filesystemid')
     def run(self,request,filesystemid):
         from configure.models import ManagedFilesystem
         from configure.models.state_manager import StateManager
         fs = ManagedFilesystem.objects.get(id = filesystemid)    
-        StateManager.set_state(fs,'removed')
-        return {
-                'filesystemid': filesystemid,
-                'status': 'RemoveFilesystemJob submitted Job Id:'
-               }
+        transition_job = StateManager.set_state(fs,'removed')
+        return {'filesystemid': filesystemid,'job_id': transition_job.task_id,'status': transition_job.status}
 
 class RemoveClient(AnonymousRequestHandler):
     @extract_request_args('clientid')
@@ -139,11 +110,32 @@ class RemoveClient(AnonymousRequestHandler):
         from configure.models import ManagedTargetMount
         from configure.models.state_manager import StateManager
         mtm = ManagedTargetMount.objects.get(id = clientid)
-        StateManager.set_state(mtm,'removed')
-        return {
-                'clientid': clientid,
-                'status': 'RemoveManagedTargetJob submitted Job Id:'
-               }
+        transition_job = StateManager.set_state(mtm,'removed')
+        return {'clientid': clientid,'job_id': transition_job.task_id,'status': transition_job.status}
+
+class GetJobStatus(AnonymousRequestHandler):
+    @extract_request_args('job_id')
+    def run(self,request,job_id):
+        from django.shortcuts import get_object_or_404
+        from configure.models import Job
+        job = get_object_or_404(Job, id = job_id)
+        job = job.downcast()
+        return {'job_status': job.status,'job_info': job.info,'job_result': job.result}
+
+class SetJobStatus(AnonymousRequestHandler):
+    @extract_request_args('job_id','state')
+    def run(self,request,job_id,state):
+        assert state in ['pause','cancel','resume']
+        from django.shortcuts import get_object_or_404
+        from configure.models import Job
+        job = get_object_or_404(Job, id = job_id)
+        if state == 'pause':
+            job.pause()
+        elif state == 'cancel':
+            job.cancel()   
+        else: 
+            job.resume() 
+        return {'transition_job_status': job.status,'job_info': job.info,'job_result': job.result}
 
 class GetResourceClasses(AnonymousRequestHandler):
     def run(self, request):
@@ -272,153 +264,119 @@ class GetLuns(AnonymousRequestHandler):
                            })
         return devices
 
+class CreateNewFilesystem(AnonymousRequestHandler):
+    @extract_request_args('fsname','mgs_id','mgt_node_id','mdt_node_id','ost_node_ids')
+    def run(self,request,fsname,mgs_id,mgt_node_id,mdt_node_id,ost_node_ids):
+        if mgs_id:
+            fs  = create_fs(mgs_id,fsname)
+        else:
+            mgs = create_mgs(mgt_node_id,'')
+            fs  = create_fs(mgs.id,fsname)
+        create_mds(mdt_node_id,'',fs.id)
+        ost_lun_nodes = ost_node_ids.split(',')
+        for ost_node_id in ost_lun_nodes:
+            create_oss(ost_node_id,'',fs.id)       
+
 class CreateFilesystem(AnonymousRequestHandler):
-    @extract_request_args('mgs','fsname')
-    def run(self,request,mgs,fsname):
-        from configure.models import ManagedFilesystem
+    @extract_request_args('mgs_id','fsname')
+    def run(self,request,mgs_id,fsname):
+        create_fs(mgs_id,fsname)
+
+def create_fs(mgs_id,fsname):
+        from configure.models import ManagedFilesystem, ManagedMgs
+        mgs = ManagedMgs.objects.get(id=mgs_id)
         fs = ManagedFilesystem(mgs=mgs,name = fsname)
         fs.save()
+        return fs
 
 class CreateMGS(AnonymousRequestHandler):
-    @extract_request_args('hostid','nodeid','failoverid')
-    def run(self,request,hostid,nodeid,failoverid):
-        from configure.models import ManagedMgs, ManagedHost, LunNode
-        from django.db import transaction
-        #host = Host.objects.get(id=hostid) 
-        node = LunNode.objects.get(id=nodeid)
-        failover_host = ManagedHost.objects.get(id=failoverid)
-        target = ManagedMgs(name='MGS')
-        target.save()
-        mounts = self._create_target_mounts(node,target,failover_host)
-        # Commit before spawning celery tasks
-        transaction.commit()
-        self._set_target_states([target], mounts)
+    @extract_request_args('nodeid','failoverid')
+    def run(self,request,nodeid,failoverid):
+         create_mgs(nodeid,failoverid)
 
-    def _create_target_mounts(self,node, target, failover_host = None):
-        from configure.models import ManagedTargetMount
-        primary = ManagedTargetMount(
-            block_device = node,
-            target = target,
-            host = node.host,
-            mount_point = target.default_mount_path(node.host),
-            primary = True)
-        primary.save()
-        if failover_host:
-            failover = ManagedTargetMount(
-                block_device = None,
-                target = target,
-                host = failover_host,
-                mount_point = target.default_mount_path(failover_host),
-                primary = False)
-            failover.save()
-            return [primary, failover]
-        else:
-            return [primary]
+def create_mgs(nodeid,failoverid):
+    from configure.models import ManagedMgs, ManagedHost, LunNode
+    from django.db import transaction
+    node = LunNode.objects.get(id=nodeid)
+    failover_host = ManagedHost.objects.get(id=failoverid)
+    target = ManagedMgs(name='MGS')
+    target.save()
+    mounts = create_target_mounts(node,target,failover_host)
+    # Commit before spawning celery tasks
+    transaction.commit()
+    set_target_states([target], mounts)
+    return target
 
-    def _set_target_states(self,targets, mounts):
-        from configure.lib.state_manager import StateManager
-        for target in targets:
-            StateManager.set_state(target, 'mounted')
-        for target in targets:
-            StateManager.set_state(target, 'unmounted')
-        for target in targets:
-            StateManager.set_state(target, 'formatted')
+class CreateOSSs(AnonymousRequestHandler):
+    @extract_request_args('ost_node_ids','failover_ids','filesystem_id')
+    def run(self,request,ost_node_ids,failover_ids,filesystem_id):
+        ost_lun_nodes = ost_node_ids.split(',')
+        for ost_lun_node in ost_lun_nodes: 
+            create_oss(ost_lun_node,'',filesystem_id)
 
 class CreateOSS(AnonymousRequestHandler):
-    @extract_request_args('hostid','nodeid','failoverid','filesystemid')
-    def run(self,request,hostid,nodeid,failoverid,filesystemid):
-        from configure.models import ManagedOst, ManagedHost, LunNode
-        from django.db import transaction
-        #host = Host.objects.get(id=hostid)
-        filesystem = ManagedFilesystem.objects.get(id=filesystemid)
-        node = LunNode.objects.get(id=nodeid)
-        failover_host = ManagedHost.objects.get(id=failoverid)
-        target = ManagedOst(filesystem = filesystem)
-        target.save()
-        mounts = self._create_target_mounts(node,target,failover_host)
-        # Commit before spawning celery tasks
-        transaction.commit()
-        self._set_target_states([target], mounts)
+    @extract_request_args('ost_node_id','failover_id','filesystem_id')
+    def run(self,request,ost_node_id,failover_id,filesystem_id):
+        create_oss(ost_node_id,failover_id,filesystem_id)
 
-    def _create_target_mounts(self,node, target, failover_host = None):
-        from configure.models import ManagedTargetMount
-        primary = ManagedTargetMount(
-            block_device = node,
-            target = target,
-            host = node.host,
-            mount_point = target.default_mount_path(node.host),
-            primary = True)
-        primary.save()
-        if failover_host:
-            failover = ManagedTargetMount(
-                block_device = None,
-                target = target,
-                host = failover_host,
-                mount_point = target.default_mount_path(failover_host),
-                primary = False)
-            failover.save()
-            return [primary, failover]
-        else:
-            return [primary]
-
-    def _set_target_states(self,targets, mounts):
-        from configure.lib.state_manager import StateManager
-        for target in targets:
-            StateManager.set_state(target, 'mounted')
-        for target in targets:
-            StateManager.set_state(target, 'unmounted')
-        for target in targets:
-            StateManager.set_state(target, 'formatted')
-
+def create_oss(nodeid,failoverid,filesystemid):
+    from configure.models import ManagedOst, ManagedHost, LunNode
+    from django.db import transaction
+    #host = Host.objects.get(id=hostid)
+    filesystem = ManagedFilesystem.objects.get(id=filesystemid)
+    node = LunNode.objects.get(id=nodeid)
+    failover_host = ManagedHost.objects.get(id=failoverid)
+    target = ManagedOst(filesystem = filesystem)
+    target.save()
+    mounts = create_target_mounts(node,target,failover_host)
+    # Commit before spawning celery tasks
+    transaction.commit()
+    set_target_states([target], mounts)
 
 class CreateMDS(AnonymousRequestHandler):
-    @extract_request_args('hostid','nodeid','failoverid','filesystemid')
-    def run(self,request,hostid,nodeid,failoverid,filesystemid):
-        from configure.models import ManagedMdt, ManagedHost, LunNode
-        from django.db import transaction
-        #host = Host.objects.get(id=hostid)
-        filesystem = ManagedFilesystem.objects.get(id=filesystemid)
-        node = LunNode.objects.get(id=nodeid)
-        failover_host = ManagedHost.objects.get(id=failoverid)
-        target = ManagedMdt(filesystem = filesystem)
-        target.save()
-        mounts = self._create_target_mounts(node,target,failover_host)
-        # Commit before spawning celery tasks
-        transaction.commit()
-        self._set_target_states([target], mounts)
+    @extract_request_args('nodeid','failoverid','filesystemid')
+    def run(self,request,nodeid,failoverid,filesystemid):
+        create_mds(nodeid,failoverid,filesystemid)
 
-    def _create_target_mounts(self,node, target, failover_host = None):
-        from configure.models import ManagedTargetMount
-        primary = ManagedTargetMount(
-            block_device = node,
-            target = target,
-            host = node.host,
-            mount_point = target.default_mount_path(node.host),
-            primary = True)
-        primary.save()
-        if failover_host:
-            failover = ManagedTargetMount(
+def create_mds(nodeid,failoverid,filesystemid):
+    from configure.models import ManagedMdt, ManagedHost, LunNode
+    from django.db import transaction
+    #host = Host.objects.get(id=hostid)
+    filesystem = ManagedFilesystem.objects.get(id=filesystemid)
+    node = LunNode.objects.get(id=nodeid)
+    failover_host = ManagedHost.objects.get(id=failoverid)
+    target = ManagedMdt(filesystem = filesystem)
+    target.save()
+    mounts = create_target_mounts(node,target,failover_host)
+    # Commit before spawning celery tasks
+    transaction.commit()
+    set_target_states([target], mounts)
+
+def create_target_mounts(self,node, target, failover_host = None):
+    from configure.models import ManagedTargetMount
+    primary = ManagedTargetMount(
+        block_device = node,
+        target = target,
+        host = node.host,
+        mount_point = target.default_mount_path(node.host),
+        primary = True)
+    primary.save()
+    if failover_host:
+        failover = ManagedTargetMount(
                 block_device = None,
                 target = target,
                 host = failover_host,
                 mount_point = target.default_mount_path(failover_host),
                 primary = False)
-            failover.save()
-            return [primary, failover]
-        else:
-            return [primary]
+        failover.save()
+        return [primary, failover]
+    else:
+        return [primary]
 
-    def _set_target_states(self,targets, mounts):
-        from configure.lib.state_manager import StateManager
-        # FIXME: this is broken, you have miscopied the original from configure.views.
-        # You don't have to tell the backend how to get between states, just tell it
-        # what the eventual state should be.
-        for target in targets:
-            StateManager.set_state(target, 'mounted')
-        for target in targets:
-            StateManager.set_state(target, 'unmounted')
-        for target in targets:
-            StateManager.set_state(target, 'formatted')
+def set_target_states(self,targets, mounts):
+    from configure.lib.state_manager import StateManager
+    for target in targets:
+        StateManager.set_state(target, 'mounted')
 
 class GetTargetResourceGraph(AnonymousRequestHandler):
     @extract_request_args('target_id')
@@ -557,4 +515,3 @@ class StorageResourceClassFields(AnonymousRequestHandler):
                 'optional': attr.optional,
                 'class': attr.__class__.__name__})
         return result
-
