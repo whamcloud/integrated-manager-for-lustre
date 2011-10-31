@@ -82,7 +82,6 @@ class RemoveHost(AnonymousRequestHandler):
 class SetLNetStatus(AnonymousRequestHandler):
     @extract_request_args('hostid','state')
     def run(self,request,hostid,state):
-        assert state in ['lnet_up', 'lnet_down', 'lnet_unloaded']
         host =  ManagedHost.objects.get(id = hostid)
         transition_job = StateManager.set_state(host,state)
         return {'hostid': hostid,'job_id': transition_job.task_id,'status': transition_job.status}
@@ -90,7 +89,6 @@ class SetLNetStatus(AnonymousRequestHandler):
 class SetTargetMountStage(AnonymousRequestHandler):
     @extract_request_args('target_id','state')
     def run(self,request,target_id,state):
-        assert state in ['removed', 'mounted','unmounted','configured','unconfigured','register','unregister','started','stopped']
         from configure.models import ManagedTargetMount
         target = ManagedTargetMount.objects.get(id=target_id)                       
         transition_job = StateManager.set_stage(target.downcast(),state)
