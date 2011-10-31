@@ -115,9 +115,8 @@ function StopFileSystem(filesystem)
   });
 }
 
-function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids)
+function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, callback)
 {
-
   $.ajax({type: 'POST', url: "/api/create_new_fs/", dataType: 'json', data: JSON.stringify({
       "fsname":fsname,
       "mgt_id":mgt_id,
@@ -142,6 +141,9 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids)
     })
     .complete(function(event) 
     {
+      if (callback) {
+        callback();
+      }
     });
 } 
 

@@ -134,13 +134,50 @@ class GetFSVolumeDetails(AnonymousRequestHandler):
                                          )
         return all_fs            
 
+class GetTargets(AnonymousRequestHandler):
+    @extract_request_args('filesystem', 'kinds')
+    def run(self, request, filesystem, kinds):
+        kind_map = {"MGT": ManagedMgs,
+                    "OST": ManagedOst,
+                    "MDT": ManagedMdt}
+
+        if kinds:
+            klasses = []
+            for kind in kinds:
+                try:
+                    klasses.append(kind_map[kind])
+                except KeyError:
+                    raise RuntimeError("Unknown target kind '%s' (kinds are %s)" % (kind, kind_map.keys()))
+        else:
+            # kinds = None, means all
+            klasses = kind_map.values()
+
+        klass_to_kind = dict([(v,k) for k,v in kind_map.items()])
+        result = []
+        for klass in klasses:
+            kind = klass_to_kind[klass]
+            targets = klass.objects.all()
+            for t in targets:
+                result.append({
+                    'id': t.id,
+                    'primary_server_name': t.primary_server().pretty_name(),
+                    'kind': kind,
+                    # FIXME: ManagedTarget should get an explicit 'human' string function
+                    # (currently __str__ services this purpose)
+                    'label': "%s" % t
+                    })
+        return result
+
+# FIXME: this is actually returning information about all filesystems, and all targets
+# neither of which is a 'volume'.
 class GetVolumes(AnonymousRequestHandler):
     @extract_request_args('filesystem')
-    def run(self,request,filesystem):
+    def run(self, request, filesystem):
         filesystem_name = filesystem
         if filesystem_name:
             return self.get_volumes_per_fs(ManagedFilesystem.objects.get(name = filesystem_name))
         else:
+
             volumes_list = []
             for fs in ManagedFilesystem.objects.all():
                 volumes_list.extend(self.get_volumes_per_fs(fs.name))

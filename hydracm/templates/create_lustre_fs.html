@@ -4,12 +4,41 @@
   var ERR_FSNAME_EMPTY = "Please enter valid File system name";
   var ERR_OST_EMPTY = "Please select at least one device for OST creation";
   $(document).ready(function() {
+    /* Populate existing MGT list */
+    $.ajax({type: 'POST', url: "/api/get_targets/", dataType: 'json', data: JSON.stringify({
+        "filesystem": null,
+        "kinds": ["MGT"]
+    }), contentType:"application/json; charset=utf-8"})
+    .success(function(data, textStatus, jqXHR) {
+      var options_markup = "<option value=''></option>";
+      var count = 0;
+      $.each(data.response, function(i, target_info) {
+        options_markup += "<option value='" + target_info.id + "'>" + target_info.primary_server_name + "</option>"
+        count += 1;
+      });
+      if (count == 0) {
+        $('#existing_or_new_mgt_options').hide();
+      } else {
+        $('#mgt_existing_dropdown').html(options_markup);
+      }
+      
+    });
+
+    fvc_button($('#mgt_chooser'), {change: function() {
+        $('#mgt_existing_dropdown').val('');
+    }})
+    $('#mgt_existing_dropdown').change(function() {
+      if ($('#mgt_existing_dropdown option:selected').val()) {
+        fvc_clear($('#mgt_chooser'));
+      }
+    });
+
     //  Create FS Handler for create new FS 
     $('#btnCreateFS').click(function()
     {
       var fs_name = $('#txtfsnameid').val();
       var mgt_lun_id = fvc_get_value($('#mgt_chooser'))
-      var mgt_id = null
+      var mgt_id = $('#mgt_existing_dropdown').val()
       var mdt_lun_id = fvc_get_value($('#mdt_chooser'))
       var ost_lun_ids = fvc_get_value($('#ost_chooser'))
       if(fs_name=="")
@@ -30,7 +59,10 @@
       }
       else
       {
-        CreateFS(fs_name, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids);  
+        CreateFS(fs_name, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, function() {
+          $('#lusterFS_content').empty();
+          $('#lusterFS_content').load('/hydracm/fstab');
+        });  
       }
     });
     //Advance Options button click handler.
@@ -57,24 +89,11 @@
         <span class="step_number">1.</span> <span class="step_caption">Filesystem options</span><br>
       </div>
       <div class='step_body'>
-        <table width="100%" border="0" cellspacing="0" cellpadding="0">
-        <tr>
-          <td width="26%" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
-          <td width="27%" align="left" valign="top"><form id="form1" name="form1" method="post" action="">
-              <label>
-              <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" />
-              </label>
-            </form>
-          </td>
-          <td width="37%" align="left" valign="top">
-            <span class="first-child">
+        <label>Filesystem name:</label> <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" maxlength="8"/>
               <button class='advanced' type="button" id="advance_opts">Advanced...</button>
-            </span>
-          </td>
-        </tr>
-      </table>
       </div>
     </td>
+    <!--
     <td width="70%" align="left" valign="top">
       <table width="51%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs">
         <tr class="greybgcol">
@@ -96,7 +115,7 @@
           <td class="spaceleft" align="left"><div id="total_ost"></div></td>
         </tr>
       </table>
-      </td>
+    </td>-->
   </tr>
   <tr>
     <td colspan="2" align="left" valign="top">
@@ -104,8 +123,16 @@
         <span class="step_number">2.</span> <span class="step_caption">Choose MGT</span><br>
       </div>
       <div class='step_body'>
+
+        <ul id='existing_or_new_mgt_options'>
+          <li id="existing_mgt_field">
+            Use existing: <select id="mgt_existing_dropdown"></select>
+          </li>
+          <li>
+          Create new:
+          </li>
+        </ul>
         <button id='mgt_chooser'></button>
-        <script type='text/javascript'>$(document).ready(function(){fvc_button($('#mgt_chooser'))});</script>
       </div>
     </td>
   </tr>
