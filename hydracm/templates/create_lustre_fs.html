@@ -1,3 +1,4 @@
+
 <script language="javascript">
   // Globals for Create new fs Page.
   var ERR_FSNAME_EMPTY = "Please enter valid File system name";
@@ -154,7 +155,12 @@ function Initialise_MGT(type)
 <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px; padding-top:15px;">
   <tr>
     <td width="30%" height="56" align="left" valign="top">
-      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+
+      <div class='step_header'>
+        <span class="step_number">1.</span> <span class="step_caption">Filesystem options</span><br>
+      </div>
+      <div class='step_body'>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
           <td width="26%" height="56" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
           <td width="27%" align="left" valign="top"><form id="form1" name="form1" method="post" action="">
@@ -165,16 +171,14 @@ function Initialise_MGT(type)
           </td>
           <td width="37%" align="left" valign="top">
             <span class="first-child">
-              <button class='add' type="button" id="advance_opts">Options</button>
+              <button class='advanced' type="button" id="advance_opts">Advanced...</button>
             </span>
           </td>
         </tr>
       </table>
+      </div>
     </td>
     <td width="70%" align="left" valign="top">
-      <fieldset>
-      <legend class="legendClass">
-      </legend>
       <table width="51%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs">
         <tr class="greybgcol">
           <td width="25%" align="right" class="spaceright"><strong>File Used:</strong></td>
@@ -195,94 +199,56 @@ function Initialise_MGT(type)
           <td class="spaceleft" align="left"><div id="total_ost"></div></td>
         </tr>
       </table>
-      </fieldset></td>
+      </td>
   </tr>
   <tr>
     <td height="104" colspan="2" align="left" valign="top">
-      <fieldset>
-      <legend class="legendClass">Select MGT Configuration</legend>
-      <div class="buttonspacer">
-        <span id="launch_instance_btn">
-	        <span class="first-child">
-	          <button class='add' type="button" id="btnExistingMGT">Select From Existing MGT</button>
-	        </span>
-        </span> 
-        <span id="launch_instance_btn">
-          <span class="first-child">
-          <button class='add' type="button" id="btnNewMGT">Create new MGT</button>
-          </span>
-        </span>
+      <div class='step_header'>
+        <span class="step_number">2.</span> <span class="step_caption">Choose MGT</span><br>
       </div>
-      <div id="mgt_container"></div>
-      <div class="spacer"></div>
-     </fieldset>
+      <div class='step_body'>
+        MGT device: <button id='mgt_chooser'></button>
+        <script type='text/javascript'>$(document).ready(function(){fvc_button($('#mgt_chooser'))});</script>
+      </div>
     </td>
   </tr>
   <tr>
-    <td height="109" colspan="2" align="left" valign="top" style="display:none" id="mdt_container"><br /><br />
-      <fieldset>
-	      <legend class="legendClass">Select MDT Configuration</legend>
-	      <div class="buttonspacer">
-	        <span id="launch_instance_btn">
-	          <span class="first-child">
-	            <button class='add' type="button" id="btnNewMDT">Create new MDT</button>
-	          </span>
-	        </span>
-	      </div>
-	      <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
-	        <thead>
-	          <tr>
-	            <th width="15%">Target Path</th>
-	            <th width="10%">Capacity</th>
-	            <th width="20%">Kind</th>
-	            <th width="19%">Status</th>
-	            <th width="20%">Primary Server</th>
-	            <th width="16%">Failover</th>
-	          </tr>
-	        </thead>
-	        <tbody id="mdt_content">
-	        </tbody>
-	      </table>
-	      <div class="spacer"></div>
-     </fieldset>
+    <td height="104" colspan="2" align="left" valign="top">
+      <div class='step_header'>
+        <span class="step_number">3.</span> <span class="step_caption">Choose MDT</span><br>
+      </div>
+      <div class='step_body'>
+        MDT device: <button id='mdt_chooser'></button>
+        <script type='text/javascript'>$(document).ready(function(){fvc_button($('#mdt_chooser'))});</script>
+      </div>
     </td>
   </tr>
   <tr>
-    <td height="54" colspan="2" align="left" valign="top" id="ost_container" style="display:none"><br /><br />
-    <fieldset>
-     <legend class="legendClass">OST Configuration</legend>
-     <table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
-	    <thead>
-	      <tr>
-	        <th width="8%">Select</th>
-	        <th width="15%">Target Path</th>
-	        <th width="10%">Capacity</th>
-	        <th width="20%">Kind</th>
-	        <th width="17%">Status</th>
-	        <th width="15%">Primary Server</th>
-	        <th width="15%">Failover</th>
-	      </tr>
-	    </thead>
-	    <tbody id="popup-new-ost_content">
-	    </tbody>
-    </table>
-    <div class="spacer"></div>
-      <table width="100%" border="0" cellspacing="0" cellpadding="0">
-        <tr>
-          <td width="82%">&nbsp;</td>
-          <td width="11%" align="right">
-            <span class="first-child">
-              <button class='add' type="button" id="btnCreateFS">Create</button>
-            </span>
-          </td>
-          <td width="10%" align="right">
-             <span class="first-child">
-               <button class='add' type="button" id="cancel_editfs">Cancel</button>
-             </span>
-          </td>
-        </tr>
-      </table>
-   </fieldset>
-  </td>
- </tr>
+    <td height="104" colspan="2" align="left" valign="top">
+      <div class='step_header'>
+        <span class="step_number">4.</span> <span class="step_caption">Choose OSTs</span><br>
+      </div>
+      <div class='step_body'>
+        OST devices: <button id='ost_chooser'></button>
+        <script type='text/javascript'>$(document).ready(function(){fvc_button($('#ost_chooser'), {multi_select: true})});</script>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td height="104" colspan="2" align="left" valign="top">
+      <div class='step_header'>
+        <span class="step_number">5.</span> <span class="step_caption">Finish</span><br>
+      </div>
+      <div class='step_body'>
+        <button class='new' id='fs_submit'>Create filesystem now</button>
+        <script type='text/javascript'>$(document).ready(function(){
+          $('#fs_submit').click(function() {
+            console.log(fvc_get_value($('#ost_chooser')));
+            console.log(fvc_get_value($('#mgt_chooser')));
+            console.log(fvc_get_value($('#mdt_chooser')));
+          })
+        });</script>
+      </div>
+    </td>
+  </tr>
 </table>

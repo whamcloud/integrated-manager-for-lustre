@@ -1,0 +1,41 @@
+div.step_header {
+  margin-bottom: 12px;
+}
+
+div.step_body {
+  padding-left: 12px;
+  overflow: auto;
+}
+
+span.step_number {
+    font-size: 14pt;
+    font-weight: bold;
+    text-shadow: #aaa 2px 2px 3px;
+}
+
+span.step_caption {
+    font-size: 12pt;
+}
+
+span.fvc_selected {
+  margin-left: 6px;
+}
+
+span.fvc_selected {
+  margin-left: 6px;
+}
+
+.fvc_background {
+  border-radius: 3px;
+  background: #eee;
+  padding: 3px;
+}
+
+.fvc_background table {
+  height: 100%;
+}
+
+.fvc_background table .rowhighlight {
+  background-color: #09f;
+}
+

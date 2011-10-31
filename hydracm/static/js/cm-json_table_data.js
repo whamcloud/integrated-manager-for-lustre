@@ -358,6 +358,7 @@ function LoadUsableVolumeList(datatable_container, select_widget_fn)
           }
         });
         datatable_container.dataTable().fnAddData ([
+          volume_info.id,
           select_widget_fn(volume_info),
           volume_info.name,
           volume_info.size,

@@ -28,6 +28,9 @@
 <link href="{{STATIC_URL}}css/storage_resource_create.css" rel="stylesheet" type="text/css" />
 <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_create.js"></script>
 
+<script type='text/javascript' src="{{STATIC_URL}}js/filesystem_configuration.js"></script>
+<link rel="stylesheet" href="{{STATIC_URL}}css/filesystem_configuration.css" type="text/css"/>
+
 <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js" ></script>
 <script>
   //Global vars for hydracm UI
@@ -167,6 +170,7 @@
     //Fix Me:Need to find another weay to do thisto load the button + sign css.
     $(document).ajaxComplete(function() {
       $('button.add').button({icons: {primary: 'ui-icon-plusthick'}});
+      $('button.advanced').button({icons: {primary: 'ui-icon-gear'}});
     });
 </script>
 </head>
