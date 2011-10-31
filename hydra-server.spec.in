@@ -11,6 +11,7 @@ Source0: %{name}-%{unmangled_version}.tar.gz
 Source1: hydra-server.conf
 Source2: hydra-worker-init.sh
 Source3: hydra-storage-init.sh
+Source4: hydra-welcome.conf
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -32,10 +33,11 @@ python setup.py build
 
 %install
 make install DESTDIR=$RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/etc/{init,httpd/conf}.d
+mkdir -p $RPM_BUILD_ROOT/etc/{{init,httpd/conf}.d,init}
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d/hydra-server.conf
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/hydra-worker
 cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/hydra-storage
+cp %{SOURCE4} $RPM_BUILD_ROOT/etc/init/hydra-welcome.conf
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -104,6 +106,13 @@ w
 q
 EOF
 
+# disable getty on tty1 so that hydra-welcome.conf can emit it's message
+ed <<"EOF" /etc/sysconfig/init
+/^ACTIVE_CONSOLES=/s/\[1/[2/
+w
+q
+EOF
+
 %preun
 # remove the /static/ dir of files that was created by Django's collectstatic
 rm -rf /usr/share/hydra-server/static
@@ -128,3 +137,4 @@ fi
 /etc/httpd/conf.d/hydra-server.conf
 %attr(0755,root,root)/etc/init.d/hydra-worker
 %attr(0755,root,root)/etc/init.d/hydra-storage
+%attr(0755,root,root)/etc/init/hydra-welcome.conf
