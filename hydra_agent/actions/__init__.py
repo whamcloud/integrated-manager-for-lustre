@@ -14,6 +14,7 @@ import os
 import re
 import simplejson as json
 
+from fqdn import get_fqdn
 from lnet_scan import lnet_scan
 from device_scan import device_scan
 from update_scan import update_scan

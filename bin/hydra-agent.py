@@ -121,6 +121,8 @@ if __name__ == '__main__':
                         help='unconfigure rsyslog to forward to another node')
     parser_unconfigure_rsyslog.set_defaults(func=actions.unconfigure_rsyslog)
 
+    p = subparsers.add_parser('get-fqdn')
+    p.set_defaults(func=actions.get_fqdn)
     p = subparsers.add_parser('update-scan')
     p.set_defaults(func=actions.update_scan)
     p = subparsers.add_parser('detect-scan')
