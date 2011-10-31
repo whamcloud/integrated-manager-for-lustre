@@ -1,43 +1,51 @@
 <script>
-	$(document).ready(function() {
-		LoadMGTConfiguration_MGTConf();
-		CreateMGT_MGTConf();
-		var oMgtConfiguration = $('#mgt_configuration').dataTable( {
+  $(document).ready(function() {
+    //cm-json_table_data => load existing MGT list. 
+    LoadMGTConfiguration_MGTConf();
+    //json_table_data => show usable luns from create new MGT
+    CreateMGT_MGTConf();
+    // List Existing MGT JQuery Table init()
+    var oMgtConfiguration = $('#mgt_configuration').dataTable( {
       bPaginate: false,
       bFilter: false,
       bInfo: false,
-			"bProcessing": true,
-			"bJQueryUI": true,
-			"oLanguage": {
-					"sEmptyTable": "No MGT to display"
-			},
-			"aoColumns": [
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtcenter' }
-			]
-		} );
-		
-		var oNewOst = $('#mgt_ost').dataTable( {
-			"bProcessing": true,
-			"bJQueryUI": true,
-			"oLanguage": {
-					"sEmptyTable": "No OST to display"
-			},
-			"aoColumns": [
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' }
-			]
-		} );
-	} );
-	</script>
-
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bDestory": true,
+      "oLanguage": {
+          "sEmptyTable": "No MGT to display"
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtcenter' }
+      ]
+    } );
+    // List Existing MGT JQuery Table init()
+    var oNewMgt = $('#new_mgt_targets').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bDestory": true,
+      "oLanguage": {
+          "sEmptyTable": "No OST to display"
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' }
+      ]
+    });
+    $('#btnNewMGT').click(function(){
+      CreateMGTs()
+    });
+    
+  });
+</script>
 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="padding-top:15px;">
   <tr>
     <td width="100%" height="68" align="left" valign="top"><fieldset>
@@ -65,9 +73,9 @@
     <td height="124" align="left" valign="middle"><fieldset>
       <legend class="legendClass">Select Target</legend>
       <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
-        <button type="button" id="mgtConfig_btnNewMGT">Create new MGT</button>
+        <button type="button" id="btnNewMGT">Create new MGT</button>
         </span></span></div>
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="mgt_ost" width="100%">
+      <table cellpadding="0" cellspacing="0" border="0" class="display" id="new_mgt_targets" width="100%">
         <thead>
           <tr>
             <th width="9%">Select</th>
@@ -78,10 +86,9 @@
             <th width="17%">Status</th>
           </tr>
         </thead>
-        <tbody id="popup-new-ost_content">
+        <tbody>
         </tbody>
       </table>
       </fieldset></td>
   </tr>
 </table>
-<!-- exsting mgt popup -->
