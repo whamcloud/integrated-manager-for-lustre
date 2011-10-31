@@ -106,7 +106,7 @@ $(document).ready(function()
        var fsname = $('#txtfsnameid').val();       
         // arrOSS_Id is a Global array used in both Create new fs and Edit FS
         // defined in cm-json_table_data
-        CreateFSOSSs(fsname,arrOSS_Id)
+        CreateFSOSSs(fsname,arrOSS_Id);
         $(this).dialog("close");
       },
       "Cancel": function() { 

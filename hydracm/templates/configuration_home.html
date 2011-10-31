@@ -15,11 +15,11 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.alerts.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
 
 <link href="{{STATIC_URL}}css/storage_resource_dialog.css" rel="stylesheet" type="text/css" />
@@ -81,7 +81,6 @@
     var oNewMgt = $('#popup-new-mgt').dataTable( {
       "bProcessing": true,
       "bJQueryUI": true,
-      "bAutoWidth": false,
       "oLanguage": {
           "sEmptyTable": "No MGT to display"
       },
@@ -110,7 +109,6 @@
     var oMgt = $('#popup-existing-mgt').dataTable( {
       "bProcessing": true,
       "bJQueryUI": true,
-      "bAutoWidth": false,
       "bFilter": false,
       "aoColumns": [
         { "sClass": 'txtcenter' },
@@ -135,7 +133,6 @@
     var oNewMdt = $('#popup-new-mdt').dataTable( {
       "bProcessing": true,
       "bJQueryUI": true,
-      "bAutoWidth": false,
       "oLanguage": {
           "sEmptyTable": "No MDT to display"
       },
@@ -153,7 +150,6 @@
     // Edit FS view -> JQuery Data Table initi for new MDT popup showing (usable luns)            
     var oNewOst = $('#popup-new-ost').dataTable( {
       "bProcessing": true,
-      "bAutoWidth": false,
       "bJQueryUI": true,
       "aoColumns": [
         { "sClass": 'txtleft' },

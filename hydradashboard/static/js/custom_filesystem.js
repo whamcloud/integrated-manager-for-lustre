@@ -7,8 +7,10 @@
  * 3) fs_LineBar_CpuMemoryUsage_Data(fsName, sDate, endDate, dataFunction, targetkind, fetchMetrics, isZoom)
  * 4) fs_Area_ReadWrite_Data(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
  * 5) fs_Area_mdOps_Data(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
- * 6) loadFileSystemSummary(fsName)
- * 7) initFileSystemPolling
+ * 6) fs_HeatMap_CPUData(fetchMetrics,isZoom)
+ * 7) fs_HeatMap_ReadWriteData(fetchMetrics,isZoom)
+ * 8) loadFileSystemSummary(fsName)
+ * 9) initFileSystemPolling
 /*******************************************************************************
  * API URL's for all the graphs on file system dashboard page
 ******************************************************************************/
@@ -333,6 +335,115 @@ fs_Area_mdOps_Data = function(fsName, sDate, endDate, dataFunction, targetKind, 
       obj_db_Area_mdOps_Data.series[i].data = values[stat_name];
     });
     chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
+  });
+}
+/*****************************************************************************
+ * Function to plot heat map for CPU Usage
+ * Params - fetchmatrics, isZoom
+ * Return - Returns the graph plotted in container
+*****************************************************************************/
+fs_HeatMap_CPUData = function(fetchmetrics, isZoom)
+{
+  plot_bands_ost = [];
+  ost_count = 1;
+  obj_db_HeatMap_CPUData = JSON.parse(JSON.stringify(chartConfig_HeatMap));
+  var hostName='' , count =0, color;
+  $.post("/api/get_server_stats_heatmap/",
+  {
+    fetchmetrics: cpuMemoryFetchMatric, endtime: endTime, datafunction: "Average", 
+     starttime: startTime, filesystem: ""
+  })
+  .success(function(data, textStatus, jqXHR) 
+  {
+    if(data.success)
+    {
+      var response = data.response;
+      var values = [];
+      $.each(response, function(resKey, resValue) 
+      {
+        if (hostName != resValue.host && hostName !='')
+        {
+          plot_bands_ost.push ({from: ost_count,to: ost_count,color: 'rgba(68, 170, 213, 0.1)', 
+                                label: { text: hostName + ost_count }});
+          ost_count++;
+        }
+        hostName = resValue.host
+        ts = resValue.timestamp * 1000;
+        values.push([ts,ost_count]); 
+      });
+      plot_bands_ost.push ({from: ost_count,to: ost_count,color: 'rgba(68, 170, 213, 0.1)',
+                            label: { text: hostName + ost_count }});
+    }
+    obj_db_HeatMap_CPUData.yAxis.plotBands = plot_bands_ost;
+    obj_db_HeatMap_CPUData.series[count] = { name:'', data: values, marker: { symbol: 'square',radius: 8 }};
+  })
+  .error(function(event) 
+  {
+    // Display of appropriate error message
+  })
+  .complete(function(event)
+  {
+    obj_db_HeatMap_CPUData.chart.renderTo = "fs_heatMapDiv";
+    if(isZoom == 'true')
+    {
+      renderZoomDialog(obj_db_HeatMap_CPUData);
+    } 
+    chart = new Highcharts.Chart(obj_db_HeatMap_CPUData);
+  });
+}
+
+/*****************************************************************************
+ * Function to plot heat map for CPU Usage
+ * Params - fetchmatrics, isZoom
+ * Return - Returns the graph plotted in container
+*****************************************************************************/
+fs_HeatMap_ReadWriteData = function(fetchmetrics, isZoom)
+{
+  plot_bands_ost = [];
+  ost_count = 1;
+  obj_db_HeatMap_CPUData = JSON.parse(JSON.stringify(chartConfig_HeatMap));
+  var targetName='' , count =0, color;
+  $.post("/api/get_fs_stats_heatmap/",
+  {
+    fetchmetrics: readWriteFetchMatric.join(" "), endtime: endTime, datafunction: "Average", 
+     starttime: startTime, filesystem: "",targetkind:"OST"
+  })
+  .success(function(data, textStatus, jqXHR) 
+  {
+    if(data.success)
+    {
+      var response = data.response;
+      var values = [];
+      $.each(response, function(resKey, resValue) 
+      {
+        if (targetName != resValue.host && targetName !='')
+        {
+          plot_bands_ost.push ({from: ost_count,to: ost_count,color: 'rgba(68, 170, 213, 0.1)', 
+                                label: { text: targetName + ost_count }});
+          ost_count++;
+        }
+        targetName = resValue.target
+        ts = resValue.timestamp * 1000;
+        values.push([ts,ost_count]); 
+      });
+       plot_bands_ost.push ({from: ost_count,to: ost_count,color: 'rgba(68, 170, 213, 0.1)',
+                                label: { text: targetName + ost_count }});
+    }
+    obj_db_HeatMap_CPUData.yAxis.plotBands = plot_bands_ost;
+    obj_db_HeatMap_CPUData.series[count] = { name:'', data: values, marker: { symbol: 'square',radius: 8 }};
+  })
+  .error(function(event) 
+  {
+    // Display of appropriate error message
+  })
+  .complete(function(event)
+  {
+    obj_db_HeatMap_CPUData.chart.renderTo = "fs_heatMapDiv";
+    if(isZoom == 'true')
+    {
+      renderZoomDialog(obj_db_HeatMap_CPUData);
+    } 
+    chart = new Highcharts.Chart(obj_db_HeatMap_CPUData);
   });
 }
 /*****************************************************************************

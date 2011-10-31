@@ -297,7 +297,9 @@ def create_mgs(nodeid,failoverid):
     from configure.models import ManagedMgs, ManagedHost, LunNode
     from django.db import transaction
     node = LunNode.objects.get(id=nodeid)
-    failover_host = ManagedHost.objects.get(id=failoverid)
+    failover_host = None
+    if failoverid: 
+        failover_host = ManagedHost.objects.get(id=failoverid)
     target = ManagedMgs(name='MGS')
     target.save()
     mounts = create_target_mounts(node,target,failover_host)
@@ -309,9 +311,10 @@ def create_mgs(nodeid,failoverid):
 class CreateOSSs(AnonymousRequestHandler):
     @extract_request_args('ost_node_ids','failover_ids','filesystem_id')
     def run(self,request,ost_node_ids,failover_ids,filesystem_id):
+        fs = ManagedFilesystem.objects.get(name=filesystem_id)
         ost_lun_nodes = ost_node_ids.split(',')
         for ost_lun_node in ost_lun_nodes: 
-            create_oss(ost_lun_node,'',filesystem_id)
+            create_oss(ost_lun_node,'',fs.id)
 
 class CreateOSS(AnonymousRequestHandler):
     @extract_request_args('ost_node_id','failover_id','filesystem_id')
@@ -324,7 +327,9 @@ def create_oss(nodeid,failoverid,filesystemid):
     #host = Host.objects.get(id=hostid)
     filesystem = ManagedFilesystem.objects.get(id=filesystemid)
     node = LunNode.objects.get(id=nodeid)
-    failover_host = ManagedHost.objects.get(id=failoverid)
+    failover_host = None
+    if failoverid:
+        failover_host = ManagedHost.objects.get(id=failoverid)
     target = ManagedOst(filesystem = filesystem)
     target.save()
     mounts = create_target_mounts(node,target,failover_host)
@@ -340,18 +345,19 @@ class CreateMDS(AnonymousRequestHandler):
 def create_mds(nodeid,failoverid,filesystemid):
     from configure.models import ManagedMdt, ManagedHost, LunNode
     from django.db import transaction
-    #host = Host.objects.get(id=hostid)
-    filesystem = ManagedFilesystem.objects.get(id=filesystemid)
+    fs = ManagedFilesystem.objects.get(id=filesystemid)
     node = LunNode.objects.get(id=nodeid)
-    failover_host = ManagedHost.objects.get(id=failoverid)
-    target = ManagedMdt(filesystem = filesystem)
+    failover_host = None    
+    if failoverid:
+        failover_host = ManagedHost.objects.get(id=failoverid)
+    target = ManagedMdt(filesystem = fs)
     target.save()
     mounts = create_target_mounts(node,target,failover_host)
     # Commit before spawning celery tasks
     transaction.commit()
     set_target_states([target], mounts)
 
-def create_target_mounts(self,node, target, failover_host = None):
+def create_target_mounts(node, target, failover_host = None):
     from configure.models import ManagedTargetMount
     primary = ManagedTargetMount(
         block_device = node,
@@ -372,7 +378,7 @@ def create_target_mounts(self,node, target, failover_host = None):
     else:
         return [primary]
 
-def set_target_states(self,targets, mounts):
+def set_target_states(targets, mounts):
     from configure.lib.state_manager import StateManager
     for target in targets:
         StateManager.set_state(target, 'mounted')

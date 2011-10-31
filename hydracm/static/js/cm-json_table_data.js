@@ -33,9 +33,6 @@ var filesystemId="";
 function LoadEditFSScreen(fs_name)
 {
   $('#lusterFS_content').empty();
-    LoadMGT_EditFS(fs_name); 
-    LoadMDT_EditFS(fs_name); 
-    LoadOST_EditFS(fs_name); 
   $('#lusterFS_content').load('/hydracm/editfs?fsname=' + fs_name);
 }
 
@@ -770,7 +767,7 @@ function LoadServerConf_ServerConfig()
 function LoadFSData_EditFS()
 {
   var fsname = $('#fs').val();
-  $('#txtfsnameid').attr('value',fsname);
+  $('#txtfsnameid').val(fsname);
   if(fsname!="none")
   {
     $.post("/api/getfilesystem/",{"filesystem":fsname}).success(function(data, textStatus, jqXHR)

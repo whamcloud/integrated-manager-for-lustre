@@ -366,12 +366,12 @@ class GetHeatMapServerStats(AnonymousRequestHandler):
                 for stats_data in host_stats:
                     stats_data[1]['host'] = host.address
                     stats_data[1]['timestamp'] = long(stats_data[0])
-                    stats_data[1]['color'] = getheatmapcolor(fetch_metrics,stats_data[1])
+                    stats_data[1]['color_gred'] = getheatmapcolor(fetch_metrics,stats_data[1])
                     chart_stats.append(stats_data[1])      
             else:
                 host_stats[1]['host'] = host.address
                 host_stats[1]['timestamp'] = long(host_stats[0])
-                host_stats[1]['color'] = getheatmapcolor(fetch_metrics,host_stats[1])
+                host_stats[1]['color_gred'] = getheatmapcolor(fetch_metrics,host_stats[1])
                 chart_stats.append(host_stats[1]) 
         return chart_stats
 

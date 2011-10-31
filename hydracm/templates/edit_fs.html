@@ -4,54 +4,81 @@
     // data is loaded in divs defined in table.    
     LoadFSData_EditFS();
     //Edit fs view show MGT JQuery data table init()
-    var oTable = $('#mgt_configuration_view').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "bFilter": false,
-      "bPaginate": false,
-      "oLanguage": {
-          "sEmptyTable": "No MGT to display"
-      },
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtcenter' }
-      ]
-    } );
+    if (typeof oTable == 'undefined')
+    {
+      var oTable = $('#mgt_configuration_view').dataTable( {
+        "bProcessing": true,
+        "bJQueryUI": true,
+        "bFilter": false,
+        "bPaginate": false,
+        "oLanguage": {
+            "sEmptyTable": "No MGT to display"
+        },
+        "aoColumns": [
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtcenter' }
+        ]
+      });
+    }
+    else
+    {
+      oTable.fnClearTable();
+      oTable.fnDraw();
+    }
     //Edit fs view show MDT JQuery data table init()
-    var oMgt = $('#mdt').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "bFilter": false,
-      "bPaginate": false,
-      "oLanguage": {
-          "sEmptyTable": "No MDT to display"
-      },
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtcenter' }
-      ]
-    } );
+    if (typeof oMgt == 'undefined')
+    {
+      var oMgt = $('#mdt').dataTable( {
+        "bProcessing": true,
+        "bJQueryUI": true,
+        "bFilter": false,
+        "bPaginate": false,
+        "oLanguage": {
+            "sEmptyTable": "No MDT to display"
+        },
+        "aoColumns": [
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtcenter' }
+        ]
+      } );
+    }
+    else
+    {
+      oMgt.fnClearTable();
+      oMgt.fnDraw();
+    }
     //Edit fs view show OST JQuery data table init()
-    var oOst = $('#ost').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "oLanguage": {
-          "sEmptyTable": "No OST to display"
-      },
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtcenter' }
-      ]
-    });
+    if (typeof oOst == 'undefined')
+    {
+      var oOst = $('#ost').dataTable( {
+        "bProcessing": true,
+        "bJQueryUI": true,
+        "oLanguage": {
+            "sEmptyTable": "No OST to display"
+        },
+        "aoColumns": [
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtcenter' }
+        ]
+      });
+    }
+    else
+    {
+      oOst.fnClearTable();
+      oOst.fnDraw();
+    }
+    LoadMGT_EditFS($("#fs").val()); 
+    LoadMDT_EditFS($("#fs").val()); 
+    LoadOST_EditFS($("#fs").val()); 
     // Create new OST button click handler. 
     $('#btnNewOST').click(function()
       {
@@ -73,6 +100,9 @@
     //Load Pie Charts for a selected File system
     LoadFSGraph_EditFS( $("#fs").val());
   });
+   $(document).ajaxComplete(function() {
+      $('button.close').button({icons: {primary: 'ui-icon-closethick'}});
+    });
 </script>
 <input type="hidden" id="fs" value="{{fsname}}"/>
 <div style="font-weight:bold;">
@@ -185,9 +215,9 @@
         </table>
         <table width="100%" border="0" cellspacing="0" cellpadding="0">
           <tr>
-            <td align="right">
+            <td align="right" style="padding-top:5px;">
              <span class="first-child">
-               <button class='add' type="button" id="cancel_editfs">Cancel</button>
+               <button class='close' type="button" id="cancel_editfs">Cancel</button>
              </span>
             </td>
           </tr>

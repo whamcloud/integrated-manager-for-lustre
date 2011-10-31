@@ -410,19 +410,19 @@ var chartConfig_HeatMap =
     title: 
     {
       enabled: true,
-      text: ''
+      text: 'Time'
      },
-     startOnTick: true,
-     endOnTick: true,
-     showLastLabel: true,
-     type: 'datetime'
+    type: 'datetime'
    },
    yAxis: 
    {
      title: {
-       text: ''
+       text: 'Items'
      },
-     max:100, min:0, startOnTick:false, 
+     labels:{enabled:false},
+     alternateGridColor: '#FDFFD5',
+     tickInterval:1,
+     plotBands:[]
    },
    tooltip: 
    {
@@ -829,6 +829,8 @@ db_HeatMap_Data = function(fetchmetrics, isZoom)
         			data: clientMountData,
         			marker: {
         		       symbol: 'square',
+                       lineWidth: 0.5,
+                       lineColor: 'black',
         		       radius: 8
         		  }
            };
@@ -888,10 +890,11 @@ db_HeatMap_Data = function(fetchmetrics, isZoom)
 *****************************************************************************/
 db_HeatMap_CPUData = function(fetchmetrics, isZoom)
 {
-  var cpuData = [];
+  plot_bands_ost = [];
+  ost_count = 1;
   obj_db_HeatMap_CPUData = JSON.parse(JSON.stringify(chartConfig_HeatMap));
   obj_db_HeatMap_CPUData.chart.renderTo = "db_heatMapDiv";
-  var hostName, count =0, color;
+  var hostName='' , count =0, color;
   $.post("/api/get_server_stats_heatmap/",
   {
     fetchmetrics: cpuMemoryFetchMatric, endtime: endTime, datafunction: "Average", 
@@ -907,25 +910,75 @@ db_HeatMap_CPUData = function(fetchmetrics, isZoom)
       {
         if (hostName != resValue.host && hostName !='')
         {
-          obj_db_HeatMap_CPUData.series[count] = 
-          {
-              name: hostName,
-              data: values,
-           };
-          count++;
-          hostName = resValue.host;
-          ts = resValue.timestamp * 1000;
-          values.push([ts,resValue.host]);
+          plot_bands_ost.push ({from: ost_count,to: ost_count,color: 'rgba(68, 170, 213, 0.1)', 
+                                label: { text: hostName + ost_count }});
+          ost_count++;
         }
-        else
-        {
-          hostName = resValue.host;
-          ts = resValue.timestamp * 1000;
-          values.push([ts,resValue.host]);
-        }
+        hostName = resValue.host
+        ts = resValue.timestamp * 1000;
+        values.push([ts,ost_count]); 
       });
+      plot_bands_ost.push ({from: ost_count,to: ost_count,color: 'rgba(68, 170, 213, 0.1)',
+                            label: { text: hostName + ost_count }});
     }
-    obj_db_HeatMap_CPUData.series[count] = { name: hostName, data: values, marker: { symbol: 'square',radius: 8 } };
+    obj_db_HeatMap_CPUData.yAxis.plotBands = plot_bands_ost;
+    obj_db_HeatMap_CPUData.series[count] = { name:'', data: values, marker: { symbol: 'square',radius: 8 }};
+  })
+  .error(function(event) 
+  {
+    // Display of appropriate error message
+  })
+  .complete(function(event)
+  {
+    obj_db_HeatMap_CPUData.chart.renderTo = "db_heatMapDiv";
+    if(isZoom == 'true')
+    {
+      renderZoomDialog(obj_db_HeatMap_CPUData);
+    } 
+    chart = new Highcharts.Chart(obj_db_HeatMap_CPUData);
+  });
+}
+
+/*****************************************************************************
+ * Function to plot heat map for CPU Usage
+ * Params - fetchmatrics, isZoom
+ * Return - Returns the graph plotted in container
+*****************************************************************************/
+db_HeatMap_ReadWriteData = function(fetchmetrics, isZoom)
+{
+  plot_bands_ost = [];
+  ost_count = 1;
+  obj_db_HeatMap_CPUData = JSON.parse(JSON.stringify(chartConfig_HeatMap));
+  obj_db_HeatMap_CPUData.chart.renderTo = "db_heatMapDiv";
+  var targetName='' , count =0, color;
+  $.post("/api/get_fs_stats_heatmap/",
+  {
+    fetchmetrics: readWriteFetchMatric.join(" "), endtime: endTime, datafunction: "Average", 
+     starttime: startTime, filesystem: "",targetkind:"OST"
+  })
+  .success(function(data, textStatus, jqXHR) 
+  {
+    if(data.success)
+    {
+      var response = data.response;
+      var values = [];
+      $.each(response, function(resKey, resValue) 
+      {
+        if (targetName != resValue.host && targetName !='')
+        {
+          plot_bands_ost.push ({from: ost_count,to: ost_count,color: 'rgba(68, 170, 213, 0.1)', 
+                                label: { text: targetName + ost_count }});
+          ost_count++;
+        }
+        targetName = resValue.target
+        ts = resValue.timestamp * 1000;
+        values.push([ts,ost_count]); 
+      });
+       plot_bands_ost.push ({from: ost_count,to: ost_count,color: 'rgba(68, 170, 213, 0.1)',
+                                label: { text: targetName + ost_count }});
+    }
+    obj_db_HeatMap_CPUData.yAxis.plotBands = plot_bands_ost;
+    obj_db_HeatMap_CPUData.series[count] = { name:'', data: values, marker: { symbol: 'square',radius: 8 }};
   })
   .error(function(event) 
   {
@@ -960,7 +1013,6 @@ renderZoomDialog = function(object)
 *****************************************************************************/
 setZoomDialogTitle = function(titleName)
 {
-  $('#zoomDialog').empty();
   $('#zoomDialog').dialog('option', 'title', titleName);
   $('#zoomDialog').dialog('open');
   $('#zoomDialog').html("<img src='/static/images/wait_progress.gif' style='align:center;'/>");
@@ -975,6 +1027,7 @@ initDashboardPolling = function()
   db_LineBar_CpuMemoryUsage_Data('false');
   db_Area_ReadWrite_Data('false');
   db_Area_mdOps_Data('false');
+  db_HeatMap_Data('cpu','false');
 }
 /*****************************************************************************
  * Function to clear dashboard pooling intervals

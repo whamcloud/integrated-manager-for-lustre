@@ -27,7 +27,6 @@
     var oNewOst = $('#ost').dataTable( {
       "bProcessing": true,
       "bJQueryUI": true,
-      "bAutoWidth": false,
       "bDestory": true,
       "oLanguage": {
           "sEmptyTable": "No OST to display"
@@ -99,7 +98,9 @@
       $('#lusterFS_content').load('/hydracm/fstab');
     });
   });
-
+  $(document).ajaxComplete(function() {
+      $('button.close').button({icons: {primary: 'ui-icon-closethick'}});
+  });
 // Function to toggel JQuery Data Tables views between Existing MGT and New MGT.
 function Initialise_MGT(type)
 {
@@ -113,7 +114,6 @@ function Initialise_MGT(type)
       "bFilter": false,
       "bPaginate": false,
       "bDestroy":true,
-      "bDestory": true,
       "oLanguage": {
           "sEmptyTable": "No MGT to display"
       },
@@ -133,7 +133,6 @@ function Initialise_MGT(type)
     var oNewMgt = $('#createfs_mgt').dataTable( {
       "bProcessing": true,
       "bJQueryUI": true,
-      "bAutoWidth": false,
       "bDestroy":true,
       "oLanguage": {
           "sEmptyTable": "No MGT to display"
@@ -224,6 +223,7 @@ function Initialise_MGT(type)
     </td>
   </tr>
   <tr>
+<<<<<<< HEAD
     <td height="104" colspan="2" align="left" valign="top">
       <div class='step_header'>
         <span class="step_number">4.</span> <span class="step_caption">Choose OSTs</span><br>
@@ -252,3 +252,4 @@ function Initialise_MGT(type)
     </td>
   </tr>
 </table>
+
