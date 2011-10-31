@@ -226,6 +226,9 @@ class Lun(models.Model):
             lunnode = self.lunnode_set.all()[0]
             return "%s:%s" % (lunnode.host, lunnode.path)
 
+        # TODO: this is a link to the local e.g. ScsiDevice resource: to get the
+        # best possible name, we should follow back to VirtualDisk ancestors, and
+        # if there is only one VirtualDisk in the ancestry then use its name
         from configure.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
         resource = record.to_resource()
