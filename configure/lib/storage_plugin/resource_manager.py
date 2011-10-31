@@ -681,7 +681,7 @@ class ResourceManager(object):
             if isinstance(attribute_obj, attributes.ResourceReference):
                 if value and not value._handle_global:
                     value = session.local_id_to_global_id[value._handle]
-                elif value._handle_global:
+                elif value and value._handle_global:
                     value = value._handle
             try:
                 existing = StorageResourceAttribute.objects.get(resource = record, key = key)
