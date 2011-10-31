@@ -22,7 +22,7 @@ class FormatFileSystem(AnonymousRequestHandler):
         fs = ManagedFilesystem.objects.get(name =  filesystem) 
         for target in fs.get_targets():
             if target.state == 'unformatted':
-                transition_job = StateManager.set_stage(target,'formatted')
+                transition_job = StateManager.set_state(target,'formatted')
                 format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status':transition_job.status}
                                      )
             else:
@@ -37,7 +37,7 @@ class StopFileSystem(AnonymousRequestHandler):
         fs = ManagedFilesystem.objects.get(name =  filesystem)
         for target in fs.get_targets():
             if not target.state == 'unmounted':
-                transition_job = StateManager.set_stage(target.downcast(),'unmounted')
+                transition_job = StateManager.set_state(target.downcast(),'unmounted')
                 format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status': transition_job.status}
                                      )
             else:
@@ -51,7 +51,7 @@ class StartFileSystem(AnonymousRequestHandler):
         format_fs_list = []
         fs = ManagedFilesystem.objects.get(name = filesystem)
         for target in fs.get_targets():
-            transition_job = StateManager.set_stage(target.downcast(),'mounted')
+            transition_job = StateManager.set_state(target.downcast(),'mounted')
             format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status': transition_job.status}
                                  )
         return format_fs_list
@@ -91,7 +91,7 @@ class SetTargetMountStage(AnonymousRequestHandler):
     def run(self,request,target_id,state):
         from configure.models import ManagedTargetMount
         target = ManagedTargetMount.objects.get(id=target_id)                       
-        transition_job = StateManager.set_stage(target.downcast(),state)
+        transition_job = StateManager.set_state(target.downcast(),state)
         return {'target_id': target_id,'job_id': transition_job.task_id,'status': transition_job.status}
                    
 class RemoveFileSystem(AnonymousRequestHandler):
