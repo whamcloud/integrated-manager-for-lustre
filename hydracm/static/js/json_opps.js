@@ -115,10 +115,17 @@ function StopFileSystem(filesystem)
   });
 }
 
-function CreateFS(fsname,mgs_id,mgt_node_id,mdt_node_id,ost_id)
+function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids)
 {
-  alert("/api/create_new_fs/{'fsname':" + fsname + "'mgs_id':" + mgs_id + "'mgt_node_id':" + mgt_node_id + "'mdt_node_id':" + mdt_node_id + "'ost_node_ids':" + GetOSTId(ost_id));
-  $.post("/api/create_new_fs/",({"fsname":fsname,"mgs_id":mgs_id,"mgt_node_id":mgt_node_id,"mdt_node_id":mdt_node_id,"ost_node_ids":GetOSTId(ost_id)})).success(function(data, textStatus, jqXHR) 
+
+  $.ajax({type: 'POST', url: "/api/create_new_fs/", dataType: 'json', data: JSON.stringify({
+      "fsname":fsname,
+      "mgt_id":mgt_id,
+      "mgt_lun_id":mgt_lun_id,
+      "mdt_lun_id":mdt_lun_id,
+      "ost_lun_ids": ost_lun_ids
+    }), contentType:"application/json; charset=utf-8"})
+  .success(function(data, textStatus, jqXHR) 
     {
       if(data.success)
       {
@@ -136,8 +143,6 @@ function CreateFS(fsname,mgs_id,mgt_node_id,mdt_node_id,ost_id)
     .complete(function(event) 
     {
     });
-    //Reset ost array
-    arrOSS_Id=[];
 } 
 
 function CreateFSOSSs(fsname,ost_id)

@@ -4,86 +4,33 @@
   var ERR_FSNAME_EMPTY = "Please enter valid File system name";
   var ERR_OST_EMPTY = "Please select at least one device for OST creation";
   $(document).ready(function() {
-  //Create Fs new MDT JQuery data table iniit   
-  var oMgt = $('#mdt').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "bFilter": false,
-      "bPaginate": false,
-      "bDestroy":true,
-      "oLanguage": {
-          "sEmptyTable": "No MDT to display"
-      },
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtright' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' }
-      ]
-    } );
-    //Create Fs new OST JQuery data table iniit       
-    var oNewOst = $('#ost').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "bDestory": true,
-      "oLanguage": {
-          "sEmptyTable": "No OST to display"
-      },
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtright'},
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' }
-      ]
-    } );
-    // create new MDT button click handler
-    $('#btnNewMDT').click(function()
-    {
-      $('#newMDT').dialog('open');
-      CreateNewMDT_EditFS();
-      return false;
-    });
-    // create new MGT button click handler
-    $('#btnNewMGT').click(function()
-    {
-      $('#newMGT').dialog('open');
-      $('#createfs_existing_mgt').css('display','none');
-      //cm-json_table_data.js => call for loading usable luns.
-      CreateNewMGT_EditFS(); 
-      return false;
-    });
-    // select from existing MGT button click handler
-    $('#btnExistingMGT').click(function()
-    {
-      $('#existingMGT').dialog('open');
-      //cm-json_table_data.js => call for loading existing MGT targets.
-      LoadExistingMGT_EditFS(); 
-    });
-      
     //  Create FS Handler for create new FS 
     $('#btnCreateFS').click(function()
     {
-      var fsname = $('#txtfsnameid').val();
-      if(fsname=="")
+      var fs_name = $('#txtfsnameid').val();
+      var mgt_lun_id = fvc_get_value($('#mgt_chooser'))
+      var mgt_id = null
+      var mdt_lun_id = fvc_get_value($('#mdt_chooser'))
+      var ost_lun_ids = fvc_get_value($('#ost_chooser'))
+      if(fs_name=="")
       {
         jAlert(ERR_FSNAME_EMPTY);
       }
-      else if(arrOSS_Id.length==0)
+      else if(ost_lun_ids.length==0)
       {
         jAlert(ERR_OST_EMPTY);
       }
-      else if (mgs_id =="")
+      else if (!mdt_lun_id)
       {
-        CreateFS(fsname,"", mgt_node_id, mdt_node_id, arrOSS_Id);  
+        jAlert("You must choose an MDT");
       }
-      else if(mgt_node_id =="")
+      else if (!(mgt_id || mgt_lun_id))
       {
-        CreateFS(fsname,mgs_id, "", mdt_node_id, arrOSS_Id);  
+        jAlert("You must choose an MGT");
+      }
+      else
+      {
+        CreateFS(fs_name, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids);  
       }
     });
     //Advance Options button click handler.
@@ -101,67 +48,18 @@
   $(document).ajaxComplete(function() {
       $('button.close').button({icons: {primary: 'ui-icon-closethick'}});
   });
-// Function to toggel JQuery Data Tables views between Existing MGT and New MGT.
-function Initialise_MGT(type)
-{
-  $('#mgt_container').empty();
-  if(type == 0) //If type == 0 means select from existing MGT option is selected.
-  {
-    $('#mgt_container').html(GetExistingMGTTable());
-    var oTable = $('#createfs_existing_mgt').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "bFilter": false,
-      "bPaginate": false,
-      "bDestroy":true,
-      "oLanguage": {
-          "sEmptyTable": "No MGT to display"
-      },
-      "aoColumns": [
-        { "sClass": 'txtleft'},
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' }
-      ]
-    });
-    //cm-json_table_data.js => call for loading selected Popup content
-    SetExtMGTTableContent('createfs_existing_mgt',oExistingMGT_RowData);
-  }
-  else //If type != 0 means create new MGT from usable luns option is selected.
-  {
-    $('#mgt_container').html(GetNewMGTTable());
-    var oNewMgt = $('#createfs_mgt').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "bDestroy":true,
-      "oLanguage": {
-          "sEmptyTable": "No MGT to display"
-      },
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtright' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft'},
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' }
-      ]
-    });
-    //cm-json_table_data.js => call for loading selected Popup content
-    SetNewMGTTableContent('createfs_mgt',oNewMGT_RowData);
-  }
-}
+
 </script>
 <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px; padding-top:15px;">
   <tr>
-    <td width="30%" height="56" align="left" valign="top">
-
+    <td width="30%" align="left" valign="top">
       <div class='step_header'>
         <span class="step_number">1.</span> <span class="step_caption">Filesystem options</span><br>
       </div>
       <div class='step_body'>
         <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
-          <td width="26%" height="56" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
+          <td width="26%" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
           <td width="27%" align="left" valign="top"><form id="form1" name="form1" method="post" action="">
               <label>
               <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" />
@@ -201,53 +99,45 @@ function Initialise_MGT(type)
       </td>
   </tr>
   <tr>
-    <td height="104" colspan="2" align="left" valign="top">
+    <td colspan="2" align="left" valign="top">
       <div class='step_header'>
         <span class="step_number">2.</span> <span class="step_caption">Choose MGT</span><br>
       </div>
       <div class='step_body'>
-        MGT device: <button id='mgt_chooser'></button>
+        <button id='mgt_chooser'></button>
         <script type='text/javascript'>$(document).ready(function(){fvc_button($('#mgt_chooser'))});</script>
       </div>
     </td>
   </tr>
   <tr>
-    <td height="104" colspan="2" align="left" valign="top">
+    <td colspan="2" align="left" valign="top">
       <div class='step_header'>
         <span class="step_number">3.</span> <span class="step_caption">Choose MDT</span><br>
       </div>
       <div class='step_body'>
-        MDT device: <button id='mdt_chooser'></button>
+        <button id='mdt_chooser'></button>
         <script type='text/javascript'>$(document).ready(function(){fvc_button($('#mdt_chooser'))});</script>
       </div>
     </td>
   </tr>
   <tr>
-<<<<<<< HEAD
-    <td height="104" colspan="2" align="left" valign="top">
+    <td colspan="2" align="left" valign="top">
       <div class='step_header'>
         <span class="step_number">4.</span> <span class="step_caption">Choose OSTs</span><br>
       </div>
       <div class='step_body'>
-        OST devices: <button id='ost_chooser'></button>
+        <button id='ost_chooser'></button>
         <script type='text/javascript'>$(document).ready(function(){fvc_button($('#ost_chooser'), {multi_select: true})});</script>
       </div>
     </td>
   </tr>
   <tr>
-    <td height="104" colspan="2" align="left" valign="top">
+    <td colspan="2" align="left" valign="top">
       <div class='step_header'>
         <span class="step_number">5.</span> <span class="step_caption">Finish</span><br>
       </div>
       <div class='step_body'>
-        <button class='new' id='fs_submit'>Create filesystem now</button>
-        <script type='text/javascript'>$(document).ready(function(){
-          $('#fs_submit').click(function() {
-            console.log(fvc_get_value($('#ost_chooser')));
-            console.log(fvc_get_value($('#mgt_chooser')));
-            console.log(fvc_get_value($('#mdt_chooser')));
-          })
-        });</script>
+        <button class='submit' id='btnCreateFS'>Create filesystem now</button>
       </div>
     </td>
   </tr>

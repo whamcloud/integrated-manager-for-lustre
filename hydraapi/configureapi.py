@@ -264,17 +264,32 @@ class GetLuns(AnonymousRequestHandler):
         return devices
 
 class CreateNewFilesystem(AnonymousRequestHandler):
-    @extract_request_args('fsname','mgs_id','mgt_node_id','mdt_node_id','ost_node_ids')
-    def run(self,request,fsname,mgs_id,mgt_node_id,mdt_node_id,ost_node_ids):
-        if mgs_id:
-            fs  = create_fs(mgs_id,fsname)
-        else:
-            mgs = create_mgs(mgt_node_id,'')
-            fs  = create_fs(mgs.id,fsname)
-        create_mds(mdt_node_id,'',fs.id)
-        ost_lun_nodes = ost_node_ids.split(',')
-        for ost_node_id in ost_lun_nodes:
-            create_oss(ost_node_id,'',fs.id)       
+    @extract_request_args('fsname','mgt_id','mgt_lun_id','mdt_lun_id','ost_lun_ids')
+    def run(self, request, fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids):
+        # mgt_id and mgt_lun_id are mutually exclusive:
+        # * mgt_id is a PK of an existing ManagedMgt to use
+        # * mgt_lun_id is a PK of a Lun to use for a new ManagedMgt
+        assert bool(mgt_id) != bool(mgt_lun_id)
+        from configure.models import ManagedMgs, ManagedMdt, ManagedOst
+
+        if not mgt_id:
+            mgt = create_target(mgt_lun_id, ManagedMgs, name="MGS")
+            mgt_id = mgt.pk
+
+        fs = create_fs(mgt_id, fsname)
+        mdt = create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
+        osts = []
+        for lun_id in ost_lun_ids:
+            osts.append(create_target(lun_id, ManagedOst, filesystem = fs))
+
+        from django.db import transaction
+        transaction.commit()
+
+        from configure.lib.state_manager import StateManager
+
+        StateManager.set_state(mdt, 'mounted')
+        for target in osts:
+            StateManager.set_state(target, 'mounted')
 
 class CreateFilesystem(AnonymousRequestHandler):
     @extract_request_args('mgs_id','fsname')
@@ -289,25 +304,32 @@ def create_fs(mgs_id,fsname):
         return fs
 
 class CreateMGS(AnonymousRequestHandler):
-    @extract_request_args('nodeid','failoverid')
-    def run(self,request,nodeid,failoverid):
-         create_mgs(nodeid,failoverid)
+    @extract_request_args('lun_id')
+    def run(self, request, lun_id):
+        from configure.models import ManagedMgs
+        create_target(lun_id, ManagedMgs, name = "MGS")
 
-def create_mgs(nodeid,failoverid):
-    from configure.models import ManagedMgs, ManagedHost, LunNode
-    from django.db import transaction
-    node = LunNode.objects.get(id=nodeid)
-    failover_host = None
-    if failoverid: 
-        failover_host = ManagedHost.objects.get(id=failoverid)
-    target = ManagedMgs(name='MGS')
+def create_target(lun_id, target_klass, **kwargs):
+    from configure.models import Lun, ManagedTargetMount
+
+    target = target_klass(**kwargs)
     target.save()
-    mounts = create_target_mounts(node,target,failover_host)
-    # Commit before spawning celery tasks
-    transaction.commit()
-    set_target_states([target], mounts)
+
+    lun = Lun.objects.get(pk = lun_id)
+    for node in lun.lunnode_set.all():
+        if node.use:
+            mount = ManagedTargetMount(
+                block_device = node,
+                target = target,
+                host = node.host,
+                mount_point = target.default_mount_path(node.host),
+                primary = node.primary)
+            mount.save()
+
     return target
 
+# FIXME: createOSS etc are broken, using nodes instead of luns, not yet fixed (should
+# work like CreateNewFilesystem )
 class CreateOSSs(AnonymousRequestHandler):
     @extract_request_args('ost_node_ids','failover_ids','filesystem_id')
     def run(self,request,ost_node_ids,failover_ids,filesystem_id):
@@ -321,67 +343,11 @@ class CreateOSS(AnonymousRequestHandler):
     def run(self,request,ost_node_id,failover_id,filesystem_id):
         create_oss(ost_node_id,failover_id,filesystem_id)
 
-def create_oss(nodeid,failoverid,filesystemid):
-    from configure.models import ManagedOst, ManagedHost, LunNode
-    from django.db import transaction
-    #host = Host.objects.get(id=hostid)
-    filesystem = ManagedFilesystem.objects.get(id=filesystemid)
-    node = LunNode.objects.get(id=nodeid)
-    failover_host = None
-    if failoverid:
-        failover_host = ManagedHost.objects.get(id=failoverid)
-    target = ManagedOst(filesystem = filesystem)
-    target.save()
-    mounts = create_target_mounts(node,target,failover_host)
-    # Commit before spawning celery tasks
-    transaction.commit()
-    set_target_states([target], mounts)
-
 class CreateMDS(AnonymousRequestHandler):
     @extract_request_args('nodeid','failoverid','filesystemid')
     def run(self,request,nodeid,failoverid,filesystemid):
         create_mds(nodeid,failoverid,filesystemid)
 
-def create_mds(nodeid,failoverid,filesystemid):
-    from configure.models import ManagedMdt, ManagedHost, LunNode
-    from django.db import transaction
-    fs = ManagedFilesystem.objects.get(id=filesystemid)
-    node = LunNode.objects.get(id=nodeid)
-    failover_host = None    
-    if failoverid:
-        failover_host = ManagedHost.objects.get(id=failoverid)
-    target = ManagedMdt(filesystem = fs)
-    target.save()
-    mounts = create_target_mounts(node,target,failover_host)
-    # Commit before spawning celery tasks
-    transaction.commit()
-    set_target_states([target], mounts)
-
-def create_target_mounts(node, target, failover_host = None):
-    from configure.models import ManagedTargetMount
-    primary = ManagedTargetMount(
-        block_device = node,
-        target = target,
-        host = node.host,
-        mount_point = target.default_mount_path(node.host),
-        primary = True)
-    primary.save()
-    if failover_host:
-        failover = ManagedTargetMount(
-                block_device = None,
-                target = target,
-                host = failover_host,
-                mount_point = target.default_mount_path(failover_host),
-                primary = False)
-        failover.save()
-        return [primary, failover]
-    else:
-        return [primary]
-
-def set_target_states(targets, mounts):
-    from configure.lib.state_manager import StateManager
-    for target in targets:
-        StateManager.set_state(target, 'mounted')
 
 class GetTargetResourceGraph(AnonymousRequestHandler):
     @extract_request_args('target_id')
