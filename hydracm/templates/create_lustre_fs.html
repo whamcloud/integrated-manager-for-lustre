@@ -41,9 +41,6 @@
         { "sClass": 'txtleft' }
       ]
     } );
-    //cm-json_table_data.js => call for loading usable luns.
-    CreateOST_EditFS();
-    
     // create new MDT button click handler
     $('#btnNewMDT').click(function()
     {
@@ -154,24 +151,28 @@ function Initialise_MGT(type)
   }
 }
 </script>
-<style type="text/css">
-</style>
 <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px; padding-top:15px;">
   <tr>
-    <td width="30%" height="56" align="left" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+    <td width="30%" height="56" align="left" valign="top">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
           <td width="26%" height="56" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
           <td width="27%" align="left" valign="top"><form id="form1" name="form1" method="post" action="">
               <label>
               <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" />
               </label>
-            </form></td>
-          <td width="37%" align="left" valign="top"><span id="launch_instance_btn"><span class="first-child">
-            <button class='add' type="button" id="advance_opts">Options</button>
-            </span></span></td>
+            </form>
+          </td>
+          <td width="37%" align="left" valign="top">
+            <span class="first-child">
+              <button class='add' type="button" id="advance_opts">Options</button>
+            </span>
+          </td>
         </tr>
-      </table></td>
-    <td width="70%" align="left" valign="top"><fieldset>
+      </table>
+    </td>
+    <td width="70%" align="left" valign="top">
+      <fieldset>
       <legend class="legendClass">
       </legend>
       <table width="51%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs">
@@ -197,58 +198,75 @@ function Initialise_MGT(type)
       </fieldset></td>
   </tr>
   <tr>
-    <td height="104" colspan="2" align="left" valign="top"><fieldset>
+    <td height="104" colspan="2" align="left" valign="top">
+      <fieldset>
       <legend class="legendClass">Select MGT Configuration</legend>
-      <div class="buttonspacer"> <span id="launch_instance_btn"><span class="first-child">
-        <button class='add' type="button" id="btnExistingMGT">Select From Existing MGT</button>
-        </span></span> <span id="launch_instance_btn"><span class="first-child">
-        <button class='add' type="button" id="btnNewMGT">Create new MGT</button>
-        </span></span></div>
-        <div id="mgt_container"></div>
+      <div class="buttonspacer">
+        <span id="launch_instance_btn">
+	        <span class="first-child">
+	          <button class='add' type="button" id="btnExistingMGT">Select From Existing MGT</button>
+	        </span>
+        </span> 
+        <span id="launch_instance_btn">
+          <span class="first-child">
+          <button class='add' type="button" id="btnNewMGT">Create new MGT</button>
+          </span>
+        </span>
+      </div>
+      <div id="mgt_container"></div>
       <div class="spacer"></div>
-      </fieldset></td>
+     </fieldset>
+    </td>
   </tr>
   <tr>
-    <td height="109" colspan="2" align="left" valign="top" style="display:none" id="mdt_container"><br /><br /><fieldset>
-      <legend class="legendClass">Select MDT Configuration</legend>
-      <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
-        <button class='add' type="button" id="btnNewMDT">Create new MDT</button>
-        </span></span></div>
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
-        <thead>
-          <tr>
-            <th width="15%">Target Path</th>
-            <th width="10%">Capacity</th>
-            <th width="20%">Kind</th>
-            <th width="19%">Status</th>
-            <th width="20%">Primary Server</th>
-            <th width="16%">Failover</th>
-          </tr>
-        </thead>
-        <tbody id="mdt_content">
-        </tbody>
-      </table>
-      <div class="spacer"></div>
-      </fieldset></td>
+    <td height="109" colspan="2" align="left" valign="top" style="display:none" id="mdt_container"><br /><br />
+      <fieldset>
+	      <legend class="legendClass">Select MDT Configuration</legend>
+	      <div class="buttonspacer">
+	        <span id="launch_instance_btn">
+	          <span class="first-child">
+	            <button class='add' type="button" id="btnNewMDT">Create new MDT</button>
+	          </span>
+	        </span>
+	      </div>
+	      <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
+	        <thead>
+	          <tr>
+	            <th width="15%">Target Path</th>
+	            <th width="10%">Capacity</th>
+	            <th width="20%">Kind</th>
+	            <th width="19%">Status</th>
+	            <th width="20%">Primary Server</th>
+	            <th width="16%">Failover</th>
+	          </tr>
+	        </thead>
+	        <tbody id="mdt_content">
+	        </tbody>
+	      </table>
+	      <div class="spacer"></div>
+     </fieldset>
+    </td>
   </tr>
   <tr>
-    <td height="54" colspan="2" align="left" valign="top" id="ost_container" style="display:none"><br /><br /><fieldset>
-      <legend class="legendClass">OST Configuration</legend>
+    <td height="54" colspan="2" align="left" valign="top" id="ost_container" style="display:none"><br /><br />
+    <fieldset>
+     <legend class="legendClass">OST Configuration</legend>
      <table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
-    <thead>
-      <tr>
-        <th width="8%">Select</th>
-        <th width="15%">Target Path</th>
-        <th width="10%">Capacity</th>
-        <th width="20%">Kind</th>
-        <th width="17%">Status</th>
-        <th width="15%">Primary Server</th>
-        <th width="15%">Failover</th>
-      </tr>
-    </thead>
-    <tbody id="popup-new-ost_content">
-    </tbody>
-  </table><div class="spacer"></div>
+	    <thead>
+	      <tr>
+	        <th width="8%">Select</th>
+	        <th width="15%">Target Path</th>
+	        <th width="10%">Capacity</th>
+	        <th width="20%">Kind</th>
+	        <th width="17%">Status</th>
+	        <th width="15%">Primary Server</th>
+	        <th width="15%">Failover</th>
+	      </tr>
+	    </thead>
+	    <tbody id="popup-new-ost_content">
+	    </tbody>
+    </table>
+    <div class="spacer"></div>
       <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
           <td width="82%">&nbsp;</td>
@@ -263,7 +281,8 @@ function Initialise_MGT(type)
              </span>
           </td>
         </tr>
-      </table></fieldset>
-      </td>
-  </tr>
+      </table>
+   </fieldset>
+  </td>
+ </tr>
 </table>

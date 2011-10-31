@@ -127,9 +127,9 @@ function CreateFSOSSs(fsname,ost_id)
 
 function CreateMGTs(ost_id)
 {
-  for(var i=0;i<arrOST.length;i++)
+  for(var i=0;i<arrOSS_Id.length;i++)
   {
-    alert("/api/create_mgt/{'nodeid:" + arrOST[i] + "failoverid" +);
+    alert("/api/create_mgt/{'nodeid:" + arrOSS_Id[i] + "'failoverid':''");
   }
 }
 

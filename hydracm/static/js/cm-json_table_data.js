@@ -526,7 +526,7 @@ function CreateMGT_MGTConf()
           primarySelect += "</select>";
         }
         $('#new_mgt_targets').dataTable().fnAddData ([
-          "<input type='checkbox' id='" + i + "'/>",
+          "<input type='checkbox' id='" + i + "' onclick=CreateOST('"+  resValue.id + "'); />",
           resValue.name,
           primarySelect,
           failoverSelect,

@@ -80,7 +80,9 @@ $(document).ready(function()
     {
       "Ok": function() { 
       SetNewMDTTableContent('mdt',oNewMDT_RowData);
-    SetVisible_TD("ost_container");
+      //cm-json_table_data.js => call for loading usable luns.
+      CreateOST_EditFS();
+      SetVisible_TD("ost_container");
         $(this).dialog("close");
       },
       "Cancel": function() { 
