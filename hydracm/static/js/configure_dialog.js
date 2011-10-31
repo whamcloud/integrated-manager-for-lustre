@@ -1,6 +1,6 @@
 $(document).ready(function() 
 {
-// Dialog
+  // Dialog for FS advance options
   $('#configParam').dialog
   ({
     autoOpen: false,
@@ -20,7 +20,7 @@ $(document).ready(function()
     }
   });
 
-// Dialog
+  // Dialog for selecting existing MGTs
   $('#existingMGT').dialog
   ({
     autoOpen: false,
@@ -32,16 +32,19 @@ $(document).ready(function()
     buttons: 
     {
       "Ok": function() { 
+    Initialise_MGT(0);
+    SetVisible_TD("mdt_container");
         $(this).dialog("close");
       },
       "Cancel": function() { 
+    targetid="";
         $(this).dialog("close");
       }, 
     }
   });
 
 
-// Dialog
+ // Dialog for selecting usable luns for creat new MGT
   $('#newMGT').dialog
   ({
     autoOpen: false,
@@ -53,17 +56,18 @@ $(document).ready(function()
     buttons: 
     {
       "Ok": function() { 
+      Initialise_MGT(1);
+      SetVisible_TD("mdt_container");
         $(this).dialog("close");
       },
       "Cancel": function() { 
+      nodeid="";
         $(this).dialog("close");
       }, 
     }
   });
 
-
-
-// Dialog
+  // Dialog for selecting usable luns for creat new MDT
   $('#newMDT').dialog
   ({
     autoOpen: false,
@@ -75,6 +79,10 @@ $(document).ready(function()
     buttons: 
     {
       "Ok": function() { 
+      SetNewMDTTableContent('mdt',oNewMDT_RowData);
+      //cm-json_table_data.js => call for loading usable luns.
+      CreateOST_EditFS();
+      SetVisible_TD("ost_container");
         $(this).dialog("close");
       },
       "Cancel": function() { 
@@ -82,8 +90,8 @@ $(document).ready(function()
       }, 
     }
   });
-
-// Dialog
+  
+  // Dialog for selecting usable luns for creat new OST
   $('#newOST').dialog
   ({
     autoOpen: false,
@@ -94,7 +102,11 @@ $(document).ready(function()
     modal: true,
     buttons: 
     {
-      "Ok": function() { 
+      "Ok": function() {
+       var fsname = $('#txtfsnameid').val();       
+        // arrOSS_Id is a Global array used in both Create new fs and Edit FS
+        // defined in cm-json_table_data
+        CreateFSOSSs(fsname,arrOSS_Id)
         $(this).dialog("close");
       },
       "Cancel": function() { 
@@ -102,100 +114,4 @@ $(document).ready(function()
       }, 
     }
   });
-
-// Dialog
-  $('#mgtConfig_newMGT').dialog
-  ({
-    autoOpen: false,
-    width: 800,
-    height:470,
-    show: "clip",
-    modal: true,
-    position:"center",
-    buttons: {
-    "Ok": function() { 
-      $(this).dialog("close");
-    },
-    "Cancel": function() { 
-      $(this).dialog("close");
-    }, 
-  }
-  });
-
-// File System Graph
-  $('#fs_space').click(function()
-  {
-    $('#dg_fs_space').dialog('open');
-    return false;
-  });
-
-// Dialog
-  $('#dg_fs_space').dialog
-  ({
-    autoOpen: false,
-    width: 800,
-    height:490,
-    show: "clip",
-    modal: true,
-    position:"center",
-    buttons: 
-    {
-      "Close": function() { 
-        $(this).dialog("close");
-      },
-  }
-  });
-
-
-// CPU Usage
-  $('#cpu_usage').click(function()
-  {
-    $('#dg_cpu_usage').dialog('open');
-      return false;
-    });
-
-// Dialog
-  $('#dg_cpu_usage').dialog
-  ({
-    autoOpen: false,
-    width: 800,
-    height:490,
-    show: "clip",
-    modal: true,
-    position:"center",
-    buttons: 
-    {
-      "Close": function() { 
-        $(this).dialog("close");
-      },
-    }
-  });
-
-// Dialog
-  $('#zoomDialog').dialog
-  ({
-    autoOpen: false,
-    width: 800,
-    height:490,
-    show: "clip",
-    modal: true,
-    position:"center",
-    buttons: 
-    {
-      "Close": function() { 
-        $(this).dialog("close");
-      },
-    }
-  });
-
-  $('#confirm_dialog').dialog
-	({
-		autoOpen: false,
-		width: 300,
-		height:150,
-		show: "clip",
-		modal: true,
-		position:"center",
-  });
-	
 });

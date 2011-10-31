@@ -16,12 +16,6 @@ from configure.models import (ManagedFilesystem,
                             ManagedOst,
                             ManagedHost)
 
-#import datetime
-#Fix Me:
-#Note that these integer-based queries will go away soon. 
-#Planning to land changes to the metrics API which allow datetime objects to be used instead of requiring integers
-#That's why all APIs have start and end time for now only start_time is used for passing the last number of minutes for data fetch
-
 class GetFSTargetStats(AnonymousRequestHandler):
     @extract_request_args('filesystem','starttime','endtime','datafunction','targetkind','fetchmetrics')
     def run(self,request,filesystem,starttime,endtime ,datafunction,targetkind,fetchmetrics):
@@ -215,7 +209,7 @@ class GetTargetStats(AnonymousRequestHandler):
     def metrics_fetch(self,target,fetch_metrics,start_time,end_time,interval,datafunction='Average'):
         if start_time:
             start_time = int(start_time)
-            start_time = getstartdate(start_time)
+            #start_time = getstartdate(start_time)
             if fetch_metrics:
                 target_stats = target.metrics.fetch(datafunction,fetch_metrics=fetch_metrics.split(),start_time=start_time)
             else:
@@ -277,6 +271,142 @@ class GetFSClientsStats(AnonymousRequestHandler):
                 client_stats[1]['timestamp'] = long(client_stats[0])
                 chart_stats.append(client_stats[1])
         return chart_stats
+
+class GetHeatMapFSStats(AnonymousRequestHandler):
+    @extract_request_args('filesystem','starttime','endtime','datafunction','targetkind','fetchmetrics')
+    def run(self,request,filesystem,starttime,endtime ,datafunction,targetkind,fetchmetrics):
+        assert targetkind in ['OST', 'MDT']
+        interval='' 
+        if filesystem:
+            fs = ManagedFilesystem.objects.get(name=filesystem)
+            return self.metrics_fetch(fs,targetkind,fetchmetrics,starttime,endtime,interval)
+        else:
+            all_fs_stats = []
+            for fs in ManagedFilesystem.objects.all():
+                all_fs_stats.extend(self.metrics_fetch(fs,targetkind,fetchmetrics,starttime,endtime,interval))
+            return all_fs_stats
+
+    def metrics_fetch(self,fs,target_kind,fetch_metrics,start_time,end_time,interval,datafunction='Average'):
+        if target_kind == 'OST':
+            if start_time:
+                start_time = int(start_time)
+                start_time = getstartdate(start_time)
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedOst,fetch_metrics=fetch_metrics.split(),start_time=start_time)
+                else:
+                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedOst,start_time=start_time)
+            else:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch_last(ManagedOst,fetch_metrics=fetch_metrics.split())
+                else:
+                    fs_target_stats = fs.metrics.fetch_last(ManagedOst)
+        elif target_kind == 'MDT':
+            if start_time:
+                start_time = int(start_time)
+                start_time = getstartdate(start_time)
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedMdt,fetch_metrics=fetch_metrics.split(),start_time=start_time)
+                else:
+                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedMdt,start_time=start_time)
+            else:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch_last(ManagedMdt,fetch_metrics=fetch_metrics.split())
+                else:
+                    fs_target_stats = fs.metrics.fetch_last(ManagedMdt)   
+        chart_stats = []
+        if fs_target_stats:
+            if start_time:  
+                for stats_data in fs_target_stats:
+                    stats_data[1]['filesystem'] = fs.name
+                    stats_data[1]['timestamp'] = long(stats_data[0])
+                    stats_data[1]['color'] = getheatmapcolor(fetch_metrics,stats_data[1])   
+                    chart_stats.append(stats_data[1])
+            else:
+                fs_target_stats[1]['filesystem'] = fs.name
+                fs_target_stats[1]['timestamp'] = long(fs_target_stats[0])
+                fs_target_stats[1]['color'] = getheatmapcolor(fetch_metrics,fs_target_stats[1])  
+                chart_stats.append(fs_target_stats[1])
+        return chart_stats
+
+class GetHeatMapServerStats(AnonymousRequestHandler):
+    @extract_request_args('filesystem','starttime','endtime','datafunction','fetchmetrics')
+    def run(self,request,filesystem,starttime,endtime ,datafunction,fetchmetrics):
+        interval =''
+        if filesystem:
+            host_stats_metric = []
+            fs = ManagedFilesystem.objects.get(name=filesystem)
+            hosts = fs.get_servers()
+            for host in hosts:
+                host_stats_metric.extend(self.metrics_fetch(host,fetchmetrics,starttime,endtime,interval))
+            return host_stats_metric
+        else:
+            host_stats_metric = []  
+            for fs in ManagedFilesystem.objects.all():
+                hosts = fs.get_servers()
+                for host in hosts:
+                    host_stats_metric.extend(self.metrics_fetch(host,fetchmetrics,starttime,endtime,interval))
+            return host_stats_metric
+
+    def metrics_fetch(self,host,fetch_metrics,start_time,end_time,interval,datafunction='Average'):
+        if start_time:
+            start_time = int(start_time)
+            start_time = getstartdate(start_time)
+            if fetch_metrics:
+                host_stats = host.metrics.fetch(datafunction,fetch_metrics=fetch_metrics.split(),start_time=start_time)
+            else:
+                host_stats = host.metrics.fetch(datafunction,start_time=start_time)
+        else:
+            if fetch_metrics:
+                host_stats = host.metrics.fetch_last(fetch_metrics=fetch_metrics.split())
+            else:
+                host_stats = host.metrics.fetch_last()
+        chart_stats = []   
+        if host_stats:
+            if start_time:
+                for stats_data in host_stats:
+                    stats_data[1]['host'] = host.address
+                    stats_data[1]['timestamp'] = long(stats_data[0])
+                    stats_data[1]['color'] = getheatmapcolor(fetch_metrics,stats_data[1])
+                    chart_stats.append(stats_data[1])      
+            else:
+                host_stats[1]['host'] = host.address
+                host_stats[1]['timestamp'] = long(host_stats[0])
+                host_stats[1]['color'] = getheatmapcolor(fetch_metrics,host_stats[1])
+                chart_stats.append(host_stats[1]) 
+        return chart_stats
+
+def getheatmapcolor(fetch_metrics,stats):
+    percentUsed = 0
+    if fetch_metrics == "kbytestotal kbytesfree filestotal filesfree" :
+        try:
+            percentUsed = (stats['kbytesfree'] * 100 )/stats['kbytestotal']
+        except:
+            pass
+        return getcolorheat(percentUsed)
+    elif fetch_metrics == "stats_read_bytes stats_write_bytes":
+        try:
+            percentUsed = ((stats['stats_read_bytes'] % 100) + (stats['stats_write_bytes'] % 100))/2  
+        except:
+            pass
+        return getcolorheat(percentUsed)
+    elif fetch_metrics == "cpu_usage cpu_total mem_MemFree mem_MemTotal":
+        try:
+            percentUsed = (stats['cpu_usage'] * 100)/stats['cpu_total']
+        except:
+           pass
+        return getcolorheat(percentUsed)
+    else:
+        return ''
+
+def getcolorheat(value):
+    if value <= 25:
+        return '#00ff00'
+    elif value <= 50:
+        return '#001f00'
+    elif value <= 75:
+        return '#ffff00'
+    elif value <= 100:
+        return '#ff0000'
 
 def getstartdate(start_time):
     import datetime

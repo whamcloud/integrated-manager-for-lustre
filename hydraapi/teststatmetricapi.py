@@ -17,7 +17,7 @@ def main(args):
     option_parser = optparse.OptionParser(
         '%prog [OPTIONS]\nRetrieves chart data of Lustre volumes for a filesystem  from Hydra server .\nExample: testgraphapi.py --filesystem punefs --hostname clo-pune-lon01 --targetname=hulkfs01-MDT0000 --starttime 29-20-2011 09:30:45  --endtime  29-20-2011 09:31:45  --interval NA  --datafunction average')
     option_parser.add_option('-s', '--server-url',
-                             default='http://clo-centos6-x64-vm2:8000',
+                             default='http://clo-centos6-x64-vm2',
                              help='Specify the web service base URL (defaults to http://clo-centos6-x64-vm2.clogeny.com:8000/',
                              dest='url',
                              action='store',

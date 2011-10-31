@@ -1,89 +1,80 @@
 <script language="javascript">
-	$(document).ready(function() {	
-		LoadFSData_EditFS();
-			
-		var oTable = $('#example').dataTable( {
-			"bProcessing": true,
-			"bJQueryUI": true,
-			"bFilter": false,
-			"bPaginate": false,
-			"oLanguage": {
-					"sEmptyTable": "No MGT to display"
-			},
-			"aoColumns": [
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtcenter' }
-			]
-		} );
-		
-		var oMgt = $('#mdt').dataTable( {
-			"bProcessing": true,
-			"bJQueryUI": true,
-			"bFilter": false,
-			"bPaginate": false,
-			"oLanguage": {
-					"sEmptyTable": "No MDT to display"
-			},
-			"aoColumns": [
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtcenter' }
-			]
-		} );
-		
-		var oOst = $('#ost').dataTable( {
-			"bProcessing": true,
-			"bJQueryUI": true,
-			"oLanguage": {
-					"sEmptyTable": "No OST to display"
-			},
-			"aoColumns": [
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtcenter' }
-			]
-		} );
-			
-			// Dialog Link
-		  $('#btnNewOST').click(function()
-		  {
-			$('#newOST').dialog('open');
-			CreateOST_EditFS();
-			return false;
-		  });
-		  
-		  // Dialog Link
-		  $('#launch_instance_btn-button').click(function()
-		  {
-			$('#configParam').dialog('open');
-			return false;
-		  });
-		  
-		  $('#cancel_editfs').click(function() {
-	 		$('#lusterFS_content').empty();
-			$('#lusterFS_content').load('/hydracm/fstab');
-		});
-		LoadFSGraph_EditFS( $("#fs").val());
-	} );
-	</script>
-<style type="text/css">
-<!--
-a:link {
-/*color: #003366; */
-}
-body {
-	font-weight:bold;
-}
--->
-</style>
-<input type="hidden" id="fs" value="{{fsname}}" />
+  $(document).ready(function() {
+    // Loading the File system summary data in Table fs_summary_tbl
+    // data is loaded in divs defined in table.    
+    LoadFSData_EditFS();
+    //Edit fs view show MGT JQuery data table init()
+    var oTable = $('#mgt_configuration_view').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bFilter": false,
+      "bPaginate": false,
+      "oLanguage": {
+          "sEmptyTable": "No MGT to display"
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtcenter' }
+      ]
+    } );
+    //Edit fs view show MDT JQuery data table init()
+    var oMgt = $('#mdt').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bFilter": false,
+      "bPaginate": false,
+      "oLanguage": {
+          "sEmptyTable": "No MDT to display"
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtcenter' }
+      ]
+    } );
+    //Edit fs view show OST JQuery data table init()
+    var oOst = $('#ost').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "oLanguage": {
+          "sEmptyTable": "No OST to display"
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtcenter' }
+      ]
+    });
+    // Create new OST button click handler. 
+    $('#btnNewOST').click(function()
+      {
+      $('#newOST').dialog('open');
+      SelectOST_EditFS();
+      return false;
+      });
+    // Advance Options button click handler.
+    $('#advance_opts').click(function()
+    {
+      $('#configParam').dialog('open');
+       return false;
+    });
+    // Cancel button click handler for Edit FS view
+    $('#cancel_editfs').click(function() {
+       $('#lusterFS_content').empty();
+      $('#lusterFS_content').load('/hydracm/fstab');
+    });
+    //Load Pie Charts for a selected File system
+    LoadFSGraph_EditFS( $("#fs").val());
+  });
+</script>
+<input type="hidden" id="fs" value="{{fsname}}"/>
 <div style="font-weight:bold;">
   <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px; padding-top:15px;">
     <tr>
@@ -92,20 +83,18 @@ body {
             <td width="26%" height="56" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
             <td width="27%" align="left" valign="top"><form id="form1" name="form1" method="post" action="">
                 <label>
-                <input type="text" name="textfield" id="fsname" style="width:100px;" />
+                <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" />
                 </label>
               </form></td>
             <td width="37%" align="left" valign="top"><span id="launch_instance_btn"><span class="first-child">
-              <button type="button" id="launch_instance_btn-button">Advanced Options</button>
+              <button class='add' type="button" id="advance_opts">Options</button>
               </span></span></td>
           </tr>
         </table></td>
       <td width="36%" align="left" valign="top"><fieldset>
         <legend class="legendClass">
-        <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" class="closebutton"></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
         </legend>
-        <table width="100%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs">
+        <table width="100%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs" id="fs_summary_tbl">
           <tr class="greybgcol">
             <td width="25%" align="right" class="spaceright"><strong>Files Total:</strong></td>
             <td class="spaceleft" width="17%" align="left"><div id="mdt_file_used"></div></td>
@@ -137,8 +126,8 @@ body {
     </tr>
     <tr>
       <td height="104" colspan="4" align="left" valign="top"><fieldset>
-        <legend class="legendClass">Select MGT Configuration</legend>
-        <table cellpadding="0" cellspacing="0" border="0" class="display" id="example" width="100%">
+        <legend class="legendClass">MGT Configuration</legend>
+        <table cellpadding="0" cellspacing="0" border="0" class="display" id="mgt_configuration_view" width="100%">
           <thead>
             <tr>
               <th width="15%">Target Path</th>
@@ -156,7 +145,7 @@ body {
     </tr>
     <tr>
       <td height="109" colspan="4" align="left" valign="top"><fieldset>
-        <legend class="legendClass">Select MDT Configuration</legend>
+        <legend class="legendClass">MDT Configuration</legend>
         <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
           <thead>
             <tr>
@@ -175,10 +164,12 @@ body {
     </tr>
     <tr>
       <td height="54" colspan="4" align="left" valign="top"><fieldset>
-        <legend class="legendClass">Select OST Configuration</legend>
-        <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
-          <button type="button" id="btnNewOST">Create new OST</button>
-          </span></span></div>
+        <legend class="legendClass">OST Configuration</legend>
+        <div class="buttonspacer">
+          <span class="first-child">
+            <button class='add' type="button" id="btnNewOST">Create new OST</button>
+          </span>
+        </div>
         <table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
           <thead>
             <tr>
@@ -194,13 +185,11 @@ body {
         </table>
         <table width="100%" border="0" cellspacing="0" cellpadding="0">
           <tr>
-            <td width="82%">&nbsp;</td>
-            <td width="9%" align="right"><span id="launch_instance_btn2"><span class="first-child">
-              <input type="submit" name="button2" id="button2" value="Create">
-              </span></span></td>
-            <td width="9%" align="left"><label> <span id="launch_instance_btn2"><span class="first-child">
-              <input type="submit" name="button" id="cancel_editfs" value="Cancel">
-              </span></span> </label></td>
+            <td align="right">
+             <span class="first-child">
+               <button class='add' type="button" id="cancel_editfs">Cancel</button>
+             </span>
+            </td>
           </tr>
         </table>
         <div class="spacer"></div>

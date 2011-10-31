@@ -1,34 +1,32 @@
-
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/server_configuration.css"/>
 <script type="text/javascript" src="{{STATIC_URL}}js/server_configuration.js"/>
-
 <script>
-	$(document).ready(function() {
-		LoadServerConf_ServerConfig();
-		var oNewMgt = $('#server_configuration').dataTable( {
-			"bProcessing": true,
-			"bJQueryUI": true,
-			"bAutoWidth":false,
-			"oLanguage": {
-					"sEmptyTable": "No Servers to display"
-			},
-			"aoColumns": [
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtcenter' },
-				{ "sClass": 'txtcenter' },
-				{ "sClass": 'txtcenter' },
-			]
-		} );
-		
-		 $('#btnAddNewHost').click(function()
- 		 {
-    		$('#add_host_dialog').dialog('open');
-  		 });
-	} );	
-	</script>
+  $(document).ready(function() {
+    //cm-json_table_data => load server list
+    LoadServerConf_ServerConfig();
+    // Server JQuery Data table init()
+    var oServer_Configuration = $('#server_configuration').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bAutoWidth":false,
+      "oLanguage": {
+          "sEmptyTable": "No Servers to display"
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtcenter' },
+        { "sClass": 'txtcenter' },
+        { "sClass": 'txtcenter' },
+      ]
+    } );
+    $('#btnAddNewHost').click(function()
+    {
+      $('#add_host_dialog').dialog('open');
+    });
+  } );  
+  </script>
 </head>
-
 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="padding-top:15px;">
   <tr>
     <td width="100%" height="152" align="left" valign="top"><fieldset>

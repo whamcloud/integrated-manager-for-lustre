@@ -17,6 +17,7 @@
   font-size:90%;
   text-align:left;
   font-family:Verdana, Arial, Helvetica, sans-serif;
+  font-size: 12px;
 }
          
 #leftnav li a {
@@ -58,6 +59,7 @@ ul.tabs {
 	border-bottom: 1px solid #999;
 	border-left: 1px solid #999;
 	width: 100%;
+    font-size: 12px;
 }
 ul.tabs li {
 	float: left;

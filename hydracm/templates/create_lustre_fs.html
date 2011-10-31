@@ -1,121 +1,179 @@
 <script language="javascript">
-	$(document).ready(function() {		
-		var oTable = $('#createfs_mgt').dataTable( {
-			"bProcessing": true,
-			"bJQueryUI": true,
-			"bFilter": false,
-			"bPaginate": false,
-			"oLanguage": {
-					"sEmptyTable": "No MGT to display"
-			},
-			"aoColumns": [
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-			]
-		} );
-		
-		var oMgt = $('#mdt').dataTable( {
-			"bProcessing": true,
-			"bJQueryUI": true,
-			"bFilter": false,
-			"bPaginate": false,
-			"oLanguage": {
-					"sEmptyTable": "No MDT to display"
-			},
-			"aoColumns": [
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-			]
-		} );
-		
-		var oOst = $('#ost').dataTable( {
-			"bProcessing": true,
-			"bJQueryUI": true,
-			"oLanguage": {
-					"sEmptyTable": "No OST to display"
-			},
-			"aoColumns": [
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtleft' },
-				{ "sClass": 'txtcenter' }
-			]
-		} );
-			// Dialog Link
-		  $('#btnNewOST').click(function()
-		  {
-			$('#newOST').dialog('open');
-			CreateOST_EditFS();
-			return false;
-		  });
-		  
-		  // Dialog Link
-		  $('#btnNewMDT').click(function()
-		  {
-			$('#newMDT').dialog('open');
-			CreateNewMDT_EditFS();
-			return false;
-		  });
-		  
-		  // Dialog Link
-		  $('#btnNewMGT').click(function()
-		  {
-			$('#newMGT').dialog('open');
-			CreateNewMGT_EditFS(); 
-			return false;
-		  });
-		  
-		  // Dialog Link
-		  $('#btnExistingMGT').click(function()
-		  {
-			$('#existingMGT').dialog('open');
-			LoadExistingMGT_EditFS(); 
-		  });
-		  
-		  // Dialog Link
-		  $('#launch_instance_btn-button').click(function()
-		  {
-			$('#configParam').dialog('open');
-			return false;
-		  });
-		  
-		  $('#cancel_editfs').click(function() {
-	 			$('#lusterFS_content').empty();
-				$('#lusterFS_content').load('/hydracm/fstab');
-		});
-	} );
-	</script>
-<style type="text/css">
-<!--
-a:link {
-/*color: #003366; */
+  // Globals for Create new fs Page.
+  var ERR_FSNAME_EMPTY = "Please enter valid File system name";
+  var ERR_OST_EMPTY = "Please select at least one device for OST creation";
+  $(document).ready(function() {
+  //Create Fs new MDT JQuery data table iniit   
+  var oMgt = $('#mdt').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bFilter": false,
+      "bPaginate": false,
+      "bDestroy":true,
+      "oLanguage": {
+          "sEmptyTable": "No MDT to display"
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtright' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' }
+      ]
+    } );
+    //Create Fs new OST JQuery data table iniit       
+    var oNewOst = $('#ost').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bAutoWidth": false,
+      "bDestory": true,
+      "oLanguage": {
+          "sEmptyTable": "No OST to display"
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtright'},
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' }
+      ]
+    } );
+    // create new MDT button click handler
+    $('#btnNewMDT').click(function()
+    {
+      $('#newMDT').dialog('open');
+      CreateNewMDT_EditFS();
+      return false;
+    });
+    // create new MGT button click handler
+    $('#btnNewMGT').click(function()
+    {
+      $('#newMGT').dialog('open');
+      $('#createfs_existing_mgt').css('display','none');
+      //cm-json_table_data.js => call for loading usable luns.
+      CreateNewMGT_EditFS(); 
+      return false;
+    });
+    // select from existing MGT button click handler
+    $('#btnExistingMGT').click(function()
+    {
+      $('#existingMGT').dialog('open');
+      //cm-json_table_data.js => call for loading existing MGT targets.
+      LoadExistingMGT_EditFS(); 
+    });
+      
+    //  Create FS Handler for create new FS 
+    $('#btnCreateFS').click(function()
+    {
+      var fsname = $('#txtfsnameid').val();
+      if(fsname=="")
+      {
+        jAlert(ERR_FSNAME_EMPTY);
+      }
+      else if(arrOSS_Id.length==0)
+      {
+        jAlert(ERR_OST_EMPTY);
+      }
+      else if (mgs_id =="")
+      {
+        CreateFS(fsname,"", mgt_node_id, mdt_node_id, arrOSS_Id);  
+      }
+      else if(mgt_node_id =="")
+      {
+        CreateFS(fsname,mgs_id, "", mdt_node_id, arrOSS_Id);  
+      }
+    });
+    //Advance Options button click handler.
+    $('#advance_opts').click(function()
+    {
+      $('#configParam').dialog('open');
+        return false;
+    });
+    // Create New FS view Cancel button click handler.  
+    $('#cancel_editfs').click(function() {
+      $('#lusterFS_content').empty();
+      $('#lusterFS_content').load('/hydracm/fstab');
+    });
+  });
+
+// Function to toggel JQuery Data Tables views between Existing MGT and New MGT.
+function Initialise_MGT(type)
+{
+  $('#mgt_container').empty();
+  if(type == 0) //If type == 0 means select from existing MGT option is selected.
+  {
+    $('#mgt_container').html(GetExistingMGTTable());
+    var oTable = $('#createfs_existing_mgt').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bFilter": false,
+      "bPaginate": false,
+      "bDestroy":true,
+      "bDestory": true,
+      "oLanguage": {
+          "sEmptyTable": "No MGT to display"
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft'},
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' }
+      ]
+    });
+    //cm-json_table_data.js => call for loading selected Popup content
+    SetExtMGTTableContent('createfs_existing_mgt',oExistingMGT_RowData);
+  }
+  else //If type != 0 means create new MGT from usable luns option is selected.
+  {
+    $('#mgt_container').html(GetNewMGTTable());
+    var oNewMgt = $('#createfs_mgt').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bAutoWidth": false,
+      "bDestroy":true,
+      "oLanguage": {
+          "sEmptyTable": "No MGT to display"
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtright' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft'},
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' }
+      ]
+    });
+    //cm-json_table_data.js => call for loading selected Popup content
+    SetNewMGTTableContent('createfs_mgt',oNewMGT_RowData);
+  }
 }
--->
-</style>
+</script>
 <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px; padding-top:15px;">
   <tr>
-    <td width="30%" height="56" align="left" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+    <td width="30%" height="56" align="left" valign="top">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
           <td width="26%" height="56" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
           <td width="27%" align="left" valign="top"><form id="form1" name="form1" method="post" action="">
               <label>
-              <input type="text" name="textfield" id="textfield" style="width:100px;" />
+              <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" />
               </label>
-            </form></td>
-          <td width="37%" align="left" valign="top"><span id="launch_instance_btn"><span class="first-child">
-            <button type="button" id="launch_instance_btn-button">Advanced Options</button>
-            </span></span></td>
+            </form>
+          </td>
+          <td width="37%" align="left" valign="top">
+            <span class="first-child">
+              <button class='add' type="button" id="advance_opts">Options</button>
+            </span>
+          </td>
         </tr>
-      </table></td>
-    <td width="70%" align="left" valign="top"><fieldset>
+      </table>
+    </td>
+    <td width="70%" align="left" valign="top">
+      <fieldset>
       <legend class="legendClass">
-      <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" class="closebutton"></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
       </legend>
       <table width="51%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs">
         <tr class="greybgcol">
@@ -140,80 +198,91 @@ a:link {
       </fieldset></td>
   </tr>
   <tr>
-    <td height="104" colspan="2" align="left" valign="top"><fieldset>
+    <td height="104" colspan="2" align="left" valign="top">
+      <fieldset>
       <legend class="legendClass">Select MGT Configuration</legend>
-      <div class="buttonspacer"> <span id="launch_instance_btn"><span class="first-child">
-        <button type="button" id="btnExistingMGT">Select From Existing MGT</button>
-        </span></span> <span id="launch_instance_btn"><span class="first-child">
-        <button type="button" id="btnNewMGT">Create new MGT</button>
-        </span></span></div>
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="createfs_mgt" width="100%">
-        <thead>
-          <tr>
-            <th width="15%">Target Path</th>
-            <th width="12%">Target Name</th>
-            <th width="7%">Server Name</th>
-            <th width="7%">Failover Partner</th>
-          </tr>
-        </thead>
-        <tbody id="example_content">
-        </tbody>
-      </table>
+      <div class="buttonspacer">
+        <span id="launch_instance_btn">
+	        <span class="first-child">
+	          <button class='add' type="button" id="btnExistingMGT">Select From Existing MGT</button>
+	        </span>
+        </span> 
+        <span id="launch_instance_btn">
+          <span class="first-child">
+          <button class='add' type="button" id="btnNewMGT">Create new MGT</button>
+          </span>
+        </span>
+      </div>
+      <div id="mgt_container"></div>
       <div class="spacer"></div>
-      </fieldset></td>
+     </fieldset>
+    </td>
   </tr>
   <tr>
-    <td height="109" colspan="2" align="left" valign="top"><fieldset>
-      <legend class="legendClass">Select MDT Configuration</legend>
-      <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
-        <button type="button" id="btnNewMDT">Create new MDT</button>
-        </span></span></div>
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
-        <thead>
-          <tr>
-            <th width="15%">Target Path</th>
-            <th width="12%">Target Name</th>
-            <th width="7%">Server Name</th>
-            <th width="7%">Failover Partner</th>
-          </tr>
-        </thead>
-        <tbody id="mdt_content">
-        </tbody>
-      </table>
-      <div class="spacer"></div>
-      </fieldset></td>
+    <td height="109" colspan="2" align="left" valign="top" style="display:none" id="mdt_container"><br /><br />
+      <fieldset>
+	      <legend class="legendClass">Select MDT Configuration</legend>
+	      <div class="buttonspacer">
+	        <span id="launch_instance_btn">
+	          <span class="first-child">
+	            <button class='add' type="button" id="btnNewMDT">Create new MDT</button>
+	          </span>
+	        </span>
+	      </div>
+	      <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
+	        <thead>
+	          <tr>
+	            <th width="15%">Target Path</th>
+	            <th width="10%">Capacity</th>
+	            <th width="20%">Kind</th>
+	            <th width="19%">Status</th>
+	            <th width="20%">Primary Server</th>
+	            <th width="16%">Failover</th>
+	          </tr>
+	        </thead>
+	        <tbody id="mdt_content">
+	        </tbody>
+	      </table>
+	      <div class="spacer"></div>
+     </fieldset>
+    </td>
   </tr>
   <tr>
-    <td height="54" colspan="2" align="left" valign="top"><fieldset>
-      <legend class="legendClass">Select OST Configuration</legend>
-      <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
-        <button type="button" id="btnNewOST">Create new OST</button>
-        </span></span></div>
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
-        <thead>
-          <tr>
-              <th width="15%">Target Path</th>
-              <th width="12%">Target Name</th>
-              <th width="7%">Server Name</th>
-              <th width="12%">Failover Partner</th>
-              <th width='10%'>Action</th>
-          </tr>
-        </thead>
-        <tbody id="ost_content">
-        </tbody>
-      </table>
+    <td height="54" colspan="2" align="left" valign="top" id="ost_container" style="display:none"><br /><br />
+    <fieldset>
+     <legend class="legendClass">OST Configuration</legend>
+     <table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
+	    <thead>
+	      <tr>
+	        <th width="8%">Select</th>
+	        <th width="15%">Target Path</th>
+	        <th width="10%">Capacity</th>
+	        <th width="20%">Kind</th>
+	        <th width="17%">Status</th>
+	        <th width="15%">Primary Server</th>
+	        <th width="15%">Failover</th>
+	      </tr>
+	    </thead>
+	    <tbody id="popup-new-ost_content">
+	    </tbody>
+    </table>
+    <div class="spacer"></div>
       <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
           <td width="82%">&nbsp;</td>
-          <td width="9%" align="right"><span id="launch_instance_btn2"><span class="first-child">
-            <input type="submit" name="button2" id="button2" value="Create">
-            </span></span></td>
-          <td width="9%" align="left"><label> <span id="launch_instance_btn2"><span class="first-child">
-            <input type="submit" name="button" id="cancel_editfs" value="Cancel">
-            </span></span> </label></td>
+          <td width="11%" align="right">
+            <span class="first-child">
+              <button class='add' type="button" id="btnCreateFS">Create</button>
+            </span>
+          </td>
+          <td width="10%" align="right">
+             <span class="first-child">
+               <button class='add' type="button" id="cancel_editfs">Cancel</button>
+             </span>
+          </td>
         </tr>
       </table>
-      <div class="spacer"></div>
-      </fieldset></td>
-  </tr>
+   </fieldset>
+  </td>
+ </tr>
 </table>

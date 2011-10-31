@@ -19,14 +19,25 @@ var ERR_COMMON_VOLUME_LOAD = "Error occured in loading volume details: ";
 var ERR_SERVER_CONF_LOAD = "Error occured in loading Servers: ";
 var ERR_EDITFS_FSDATA_LOAD = "Error occured in loading File system data: ";
 
+// Create New Fs view Array for holding the usable luns selected in pop up
+var arrOSS_Id = new Array();
+var ost_index = 0;
+var filesystemId="";
 
-
-/******************************************************************/
-//Function name - LoadFSList_FSList()
-//Param - none
-//Return - none
-//Used in - File System list (lustre_fs_configuration.html)
-/******************************************************************/
+/******************************************************************
+* Function name - LoadFSList_FSList()
+* Param - none
+* Return - none
+* Used in - File System list (lustre_fs_configuration.html)
+*******************************************************************/
+function LoadEditFSScreen(fs_name)
+{
+  $('#lusterFS_content').empty();
+    LoadMGT_EditFS(fs_name); 
+    LoadMDT_EditFS(fs_name); 
+    LoadOST_EditFS(fs_name); 
+  $('#lusterFS_content').load('/hydracm/editfs?fsname=' + fs_name);
+}
 
 function LoadFSList_FSList()
 {
@@ -36,42 +47,38 @@ function LoadFSList_FSList()
     {
       var response = data.response;
       var fsName;
-      var i=1;
       var action; 
       $.each(response, function(resKey, resValue)
       {
-		  fsName = "<a href='#' onclick=LoadEditFSScreen('" + resValue.fsname + "')>" + resValue.fsname + "</a>";
-		  action = "<a href='#' onclick='jConfirm(\"" + MSG_START_FSLIST + "\",\"Configuration Manager\", function(r){if(r == true){StartFileSystem(\""+  resValue.fsname +"\");}});'>Start<img src='/static/images/start.png' height=12 width=12 title='Start'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' height=15 width=15 title='Configuration Param'/></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_FSLIST + "\",\"Configuration Manager\", function(r){if(r == true){StartFileSystem(\""+  resValue.fsname +"\");}});'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
-//        fsName = "<a href='/hydracm/editfs?fsname=" + resValue.fsname + "'>" +resValue.fsname + "</a>";
-        i++;
-        $('#fs_list').dataTable().fnAddData ([
-          fsName,
-          resValue.mgs_hostname,
-          resValue.mds_hostname,
-          resValue.noofoss,
-          resValue.noofost,
-          resValue.kbytesused,
-          resValue.kbytesfree,
-          action
+      fsName = "<a href='#' onclick=LoadEditFSScreen('" + resValue.fsname + "')>" + resValue.fsname + "</a>";
+      action = "<a href='#' onclick='jConfirm(\"" + MSG_START_FSLIST + "\",\"Configuration Manager\", function(r){if(r == true){StartFileSystem(\""+  resValue.fsname +"\");}});'>Start<img src='/static/images/start.png' height=12 width=12 title='Start'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' height=15 width=15 title='Configuration Param'/></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_FSLIST + "\",\"Configuration Manager\", function(r){if(r == true){StartFileSystem(\""+  resValue.fsname +"\");}});'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
+      $('#fs_list').dataTable().fnAddData ([
+        fsName,
+        resValue.mgs_hostname,
+        resValue.mds_hostname,
+        resValue.noofoss,
+        resValue.noofost,
+        resValue.kbytesused,
+        resValue.kbytesfree,
+        action
         ]); 
       });
     }
   })
   .error(function(event)
   {
-	  jAlert(ERR_FSLIST_LOAD + data.error);
+    jAlert(ERR_FSLIST_LOAD + data.errors);
   })
   .complete(function(event) 
   {
   });
 }
-/******************************************************************/
-//Function name - LoadMGT_EditFS()
-//Param - none
-//Return - none
-//Used in - Edit FS (edit_fs.html)
-/******************************************************************/
-
+/******************************************************************
+* Function name - LoadMGT_EditFS()
+* Param - none
+* Return - none
+*( Used in - Edit FS (edit_fs.html)
+*******************************************************************/
 function LoadMGT_EditFS(fsname)
 {
   var action="--";
@@ -84,6 +91,7 @@ function LoadMGT_EditFS(fsname)
       {
         if(resValue.targetkind == "MGS")
         {
+      filesystemId = resValue.fsid;
           if(resValue.targetstatus == "STARTED")
           {
             action = "<a href='#'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
@@ -92,7 +100,7 @@ function LoadMGT_EditFS(fsname)
           {
             action = "<a href='#'>Start<img src='/static/images/start.png' title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
           }
-          $('#example').dataTable().fnAddData ([
+          $('#mgt_configuration_view').dataTable().fnAddData ([
             resValue.targetdevice,
             resValue.targetname,
             resValue.hostname,
@@ -105,7 +113,7 @@ function LoadMGT_EditFS(fsname)
   })
   .error(function(event)
   { 
- 	 jAlert(ERR_EDITFS_MGT_LOAD + data.error);
+    jAlert(ERR_EDITFS_MGT_LOAD + data.errors);
   })
   .complete(function(event) 
   {
@@ -152,7 +160,7 @@ function LoadMDT_EditFS(fsname)
   })
   .error(function(event)
   {
-	  jAlert(ERR_EDITFS_MDT_LOAD + data.error);
+    jAlert(ERR_EDITFS_MDT_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -199,7 +207,7 @@ function LoadOST_EditFS(fsname)
   })
   .error(function(event)
   {
- 		jAlert(ERR_EDITFS_OST_LOAD + data.error);
+     jAlert(ERR_EDITFS_OST_LOAD + data.errors);
   })
   .complete(function(event) 
   {
@@ -216,7 +224,7 @@ function LoadOST_EditFS(fsname)
 function LoadExistingMGT_EditFS()
 {
   $('#popup-existing-mgt').dataTable().fnClearTable();
-  var btnRadio = "<input type='radio' name='existing_mgt' />";
+  var btnRadio;
   $.post("/api/getvolumesdetails/",{filesystem:""}).success(function(data, textStatus, jqXHR)
   {
     if(data.success)
@@ -229,12 +237,14 @@ function LoadExistingMGT_EditFS()
         {
           if(updatedTargetMnt != resValue.targetmount)
           {
+      btnRadio = "<input type='radio' name='existing_mgt' id='"+ resValue.targetid +"'/>";
             $('#popup-existing-mgt').dataTable().fnAddData ([
               btnRadio,
               resValue.targetdevice,
               resValue.targetname,
               resValue.hostname,
-              resValue.failover
+              resValue.failover,
+        resValue.targetid
             ]);
           }
           updatedTargetMnt = resValue.targetmount;
@@ -244,7 +254,7 @@ function LoadExistingMGT_EditFS()
   })
   .error(function(event)
   {
-	  jAlert(ERR_EDITFS_MGT_LOAD + data.error);
+    jAlert(ERR_EDITFS_MGT_LOAD + data.errors);
   })
   .complete(function(event) 
   {
@@ -261,7 +271,7 @@ function LoadExistingMGT_EditFS()
 function CreateNewMGT_EditFS()
 {
   $('#popup-new-mgt').dataTable().fnClearTable();
-  LoadUsableVolumeList($('#popup-new-mgt'), function(vol_info) {return "<input type='radio' name='mgt'/>"});
+  LoadUsableVolumeList($('#popup-new-mgt'),function(vol_info){return "<input type='radio' name='mgt' id='" + vol_info.id + "' />";});
 }
 
 /******************************************************************/
@@ -274,7 +284,7 @@ function CreateNewMGT_EditFS()
 function CreateNewMDT_EditFS()
 {
   $('#popup-new-mdt').dataTable().fnClearTable();
-  LoadUsableVolumeList($('#popup-new-mdt'), function(vol_info) {return "<input type='radio' name='mdt'/>"});
+  LoadUsableVolumeList($('#popup-new-mdt'), function(vol_info) {return "<input type='radio' name='mdt' id='" + vol_info.id + "' />"});
 }
 
 /******************************************************************/
@@ -286,8 +296,37 @@ function CreateNewMDT_EditFS()
 
 function CreateOST_EditFS()
 {
+  $('#ost').dataTable().fnClearTable();
+  LoadUsableVolumeList($('#ost'), function(vol_info){return "<input type='checkbox' name='" + vol_info.id + "' id='" + vol_info.id +"' onclick=CreateOST('"+  vol_info.id + "'); />";});
+}
+
+function SelectOST_EditFS()
+{
   $('#popup-new-ost').dataTable().fnClearTable();
-  LoadUsableVolumeList($('#popup-new-ost'), function(vol_info) {return "<input type='checkbox' name='" + vol_info.id + "'/>"});
+  LoadUsableVolumeList($('#popup-new-ost'), function(vol_info){return "<input type='checkbox' name='" + vol_info.id + "' id='" + vol_info.id +"' onclick=CreateOST('"+  vol_info.id + "'); />";});
+}
+
+function CreateOST(vol_id)
+{
+  if($('#' + vol_id).is(":checked"))
+  {
+    arrOSS_Id.push(vol_id);
+  }
+  else
+  {
+    removeElement(arrOSS_Id,vol_id);
+  }
+}
+
+function removeElement(arrOSS,element)
+{
+  for(i=0;i<arrOSS.length;i++)
+  {
+    if(arrOSS[i]==element)
+    {
+        arrOSS.splice(i,1);
+    }
+  }
 }
 
 /******************************************************************/
@@ -332,7 +371,7 @@ function LoadUsableVolumeList(datatable_container, select_widget_fn)
   })
   .error(function(event)
   {
-	  jAlert(ERR_COMMON_VOLUME_LOAD + data.error);
+    jAlert(ERR_COMMON_VOLUME_LOAD + data.errors);
   })
 }
 
@@ -412,7 +451,7 @@ function LoadUnused_VolumeConf()
   })
   .error(function(event) 
   {
-	   jAlert(ERR_COMMON_VOLUME_LOAD + data.error);
+     jAlert(ERR_COMMON_VOLUME_LOAD + data.errors);
   })
   .complete(function(event) 
   {
@@ -486,8 +525,8 @@ function CreateMGT_MGTConf()
           failoverSelect += "</select>";
           primarySelect += "</select>";
         }
-        $('#popup-new-ost').dataTable().fnAddData ([
-          "<input type='checkbox' id='" + i+ "'/>",
+        $('#new_mgt_targets').dataTable().fnAddData ([
+          "<input type='checkbox' id='" + i + "' onclick=CreateOST('"+  resValue.id + "'); />",
           resValue.name,
           primarySelect,
           failoverSelect,
@@ -515,7 +554,7 @@ function CreateMGT_MGTConf()
   })
   .error(function(event) 
   {
-	  jAlert(ERR_EDITFS_MGT_LOAD + data.error);
+    jAlert(ERR_EDITFS_MGT_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -613,7 +652,7 @@ function LoadMGTConfiguration_MGTConf()
   })
   .error(function(event)
   {
-	  jAlert(ERR_EDITFS_MGT_LOAD + data.error);
+    jAlert(ERR_EDITFS_MGT_LOAD + data.error);
   })
   .complete(function(event) 
   {
@@ -663,7 +702,7 @@ function LoadVolumeConf_VolumeConfig()
   })
   .error(function(event)
   {
-	  jAlert(ERR_COMMON_VOLUME_LOAD + data.error);
+    jAlert(ERR_COMMON_VOLUME_LOAD + data.errors);
   })
   .complete(function(event) 
   {
@@ -713,7 +752,7 @@ function LoadServerConf_ServerConfig()
   })
   .error(function(event)
   {
-	  jAlert(ERR_SERVER_CONF_LOAD + data.error);
+    jAlert(ERR_SERVER_CONF_LOAD + data.errors);
   })
   .complete(function(event) 
   {
@@ -730,7 +769,7 @@ function LoadServerConf_ServerConfig()
 function LoadFSData_EditFS()
 {
   var fsname = $('#fs').val();
-  $('#fsname').attr('value',fsname);
+  $('#txtfsnameid').attr('value',fsname);
   if(fsname!="none")
   {
     $.post("/api/getfilesystem/",{"filesystem":fsname}).success(function(data, textStatus, jqXHR)
@@ -752,10 +791,73 @@ function LoadFSData_EditFS()
     })
     .error(function(event)
     {
-		jAlert(ERR_EDITFS_FSDATA_LOAD+ data.error);
+    jAlert(ERR_EDITFS_FSDATA_LOAD+ data.errors);
     })
     .complete(function(event) 
     {
     });
   }
 }
+
+function LoadSelectedMGT_EditFS(vol_info)
+{
+  $('#mgt_configuration_view').dataTable().fnAddData ([
+    vol_info.name,
+    vol_info.targetname,
+    vol_info.hostname,
+    vol_info.failover,
+    action
+    ]);
+}
+function GetExistingMGTTable()
+{
+   var oTable = "<table cellpadding='0' cellspacing='0' border='0' class='display' id='createfs_existing_mgt' width='100%'><thead><tr><th width='15%'>Target Path</th><th width='11%'>Target Name</th><th width='6%'>Server Name</th><th width='7%'>Failover Partner</th></tr></thead><tbody></tbody></table>";
+    return oTable;
+}
+
+function GetNewMGTTable()
+{
+  var oTable = "<table cellpadding='0' cellspacing='0' border='0' class='display' id='createfs_mgt' width='100%'><thead><tr><th width='15%'>Target Path</th><th width='10%'>Capacity</th><th width='20%'>Kind</th><th width='19%'>Status</th><th width='20%'>Primary Server</th><th width='16%'>Failover</th></tr></thead><tbody></tbody></table>";
+  return oTable;
+}
+
+function SetNewMGTTableContent(table_id, row_data)
+{
+  $('#'+table_id).dataTable().fnAddData ([                  
+    row_data[1],
+    row_data[2],
+    row_data[3],
+    row_data[4],
+    row_data[5],
+    row_data[6]
+  ]);
+}
+
+function SetExtMGTTableContent(table_id, row_data)
+{
+  $('#'+table_id).dataTable().fnAddData ([                  
+    row_data[1],
+    row_data[2],
+    row_data[3],
+    row_data[4]
+  ]);
+}
+
+function SetNewMDTTableContent(table_id, row_data)
+{
+  $('#'+table_id).dataTable().fnClearTable();
+  $('#'+table_id).dataTable().fnAddData ([                  
+    row_data[1],
+    row_data[2],
+    row_data[3],
+    row_data[4],
+    row_data[5],
+    row_data[6]
+  ]);
+}
+
+function SetVisible_TD(visible_td_id)
+{
+  $('#'+visible_td_id).css('display','');
+}
+

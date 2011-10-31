@@ -22,12 +22,17 @@ from monitor.lib.util import sizeof_fmt
 class ListFileSystems(AnonymousRequestHandler):
     def run(self,request):
         filesystems = []
+        mds_hostname = ''
         for filesystem in ManagedFilesystem.objects.all():
             osts = ManagedOst.objects.filter(filesystem = filesystem)
             no_of_ost = osts.count()
             no_of_oss = len(set([tm.host for tm in ManagedTargetMount.objects.filter(target__in = osts)]))
             no_of_oss = ManagedHost.objects.filter(managedtargetmount__target__in = osts).distinct().count()
-
+            # if FS is created but MDT is no created we still want to display fs in list
+            try:
+               mds_hostname = ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name()     
+            except:
+                pass
             fskbytesfree  = 0
             fskbytestotal = 0
             #fsfilesfree  = 0
@@ -48,7 +53,7 @@ class ListFileSystems(AnonymousRequestHandler):
                            'noofoss':no_of_oss,
                            'noofost':no_of_ost,
                            'mgs_hostname': filesystem.mgs.primary_server().pretty_name(),
-                           'mds_hostname': ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name(),
+                           'mds_hostname': mds_hostname,
                            # FIXME: the API should not be formatting these, leave it to the presentation layer
                            'kbytesused': sizeof_fmt((fskbytestotal * 1024)),
                            'kbytesfree': sizeof_fmt((fskbytesfree *1024))})
@@ -58,85 +63,49 @@ class ListFileSystems(AnonymousRequestHandler):
 class GetFileSystem(AnonymousRequestHandler):
     @extract_request_args('filesystem')
     def run(self,request,filesystem):
+        fs_info = []  
         filesystem =  ManagedFilesystem.objects.get(name=filesystem)
         osts = ManagedOst.objects.filter(filesystem = filesystem)
         no_of_ost = osts.count()
         no_of_oss = len(set([tm.host for tm in ManagedTargetMount.objects.filter(target__in = osts)]))
         no_of_oss = ManagedHost.objects.filter(managedtargetmount__target__in = osts).distinct().count()
-        
-        mgs_name=''
-        mgs_status=''
-        mgt_name=''
-        mgt_status=''
-        mgt_block_device=''
-        mgt_mount_point=''
-        mds_name=''   
-        mds_status=''
-        mdt_name=''
-        mdt_status=''  
-        mdt_block_device=''
-        mdt_mount_point=''
-        fs_info = []
-        dashboard_data = Dashboard()
-        for fs in dashboard_data.filesystems:
-            if str(fs.item.name) == str(filesystem): 
-                for fstarget in fs.targets:
-                    if fstarget.item.role() == 'MGS':
-                        for fstarget_mount in fstarget.target_mounts:
-                            mgs_name = fstarget_mount.item.host.pretty_name()
-                            mgs_status = fstarget.status()
-                            mgt_name = fstarget.item.name
-                            mgt_block_device = str(fstarget_mount.item.block_device)
-                            mgt_mount_point = str(fstarget_mount.item.mount_point)
-                    if fstarget.item.role() == 'MDT':
-                        for fstarget_mount in fstarget.target_mounts:
-                            mds_name = fstarget_mount.item.host.pretty_name()
-                            mds_status= fstarget_mount.status()
-                            mdt_name = fstarget.item.name
-                            mdt_status = fstarget.status()
-                            mdt_block_device = str(fstarget_mount.item.block_device)
-                            mdt_mount_point = str(fstarget_mount.item.mount_point)
-                try:
-                    fskbytesfree  = 0
-                    fskbytestotal = 0
-                    fsfilesfree  = 0
-                    fsfilestotal = 0
-                    filesystem = ManagedFilesystem.objects.get(name=fs.item.name)
-                    inodedata = filesystem.metrics.fetch_last(ManagedMdt,fetch_metrics="filesfree filestotal".split())
-                    diskdata = filesystem.metrics.fetch_last(ManagedOst,fetch_metrics="kbytesfree kbytestotal".split())
-                    if diskdata:
-                        fskbytesfree  = diskdata[1]['kbytesfree']
-                        fskbytestotal = diskdata[1]['kbytestotal']
-                    if inodedata:
-                        fsfilesfree  = inodedata[1]['filesfree']
-                        fsfilestotal = inodedata[1]['filestotal']
-                except:
-                    pass
-                fs_info.append(
-                              {   
-                               'fsname': fs.item.name,
-                               'mgsname': mgs_name,
-                               'mgsstatus':mgs_status,
-                               'mgtname': mgt_name,
-                               'mgtstatus' :mgt_status,
-                               'mgtblockdevice': mgt_block_device,
-                               'mgtmountpoint': mgt_mount_point ,          
-                               'mdsname':mds_name ,
-                               'mdsstatus':mds_status, 
-                               'mdtname':mdt_name,
-                               'mdtstatus':mdt_status,    
-                               'mdtblockdevice':mdt_block_device,
-                               'mdt_mount_point':mdt_mount_point, 
-                               'noofoss':no_of_oss,
-                               'noofost':no_of_ost,
-                               'kbytesused':sizeof_fmt((fskbytestotal * 1024)),
-                               'kbytesfree':sizeof_fmt((fskbytesfree * 1024)),
-                               'mdtfilesfree':fsfilesfree,
-                               'mdtfileused':fsfilestotal,    
-                               'status' : fs.status()
-                              } 
-                             )
-        return fs_info            
+        mds_hostname = ''
+        mds_status ='' 
+        # if FS is created but MDT is no created we still want to display fs in list
+        try:
+            mds_hostname = ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name()
+            mds_status =  ManagedMdt.objects.get(filesystem = filesystem).status()
+        except:
+            pass
+        try:
+            fskbytesfree = 0
+            fskbytestotal = 0
+            fsfilesfree = 0
+            fsfilestotal = 0
+            inodedata = filesystem.metrics.fetch_last(ManagedMdt,fetch_metrics=["filesfree", "filestotal"])
+            diskdata = filesystem.metrics.fetch_last(ManagedOst,fetch_metrics=["kbytesfree", "kbytestotal"])
+            if diskdata:
+                fskbytesfree  = diskdata[1]['kbytesfree']
+                fskbytestotal = diskdata[1]['kbytestotal']
+            if inodedata:
+                fsfilesfree  = inodedata[1]['filesfree']
+                fsfilestotal = inodedata[1]['filestotal']
+        except:
+                pass
+
+        fs_info.append( {'fsname':filesystem.name,
+                'noofoss':no_of_oss,
+                'noofost':no_of_ost,
+                'mgs_hostname':filesystem.mgs.primary_server().pretty_name(),
+                'mds_hostname':mds_hostname,
+                'mdsstatus':mds_status,
+                # FIXME: the API should not be formatting these, leave it to the presentation layer
+                'kbytesused':sizeof_fmt((fskbytestotal * 1024)),
+                'kbytesfree':sizeof_fmt((fskbytesfree *1024)),
+                'filesfree':fsfilesfree,
+                'filestotal':fsfilestotal
+        })
+        return fs_info  
 
 class GetFSVolumeDetails(AnonymousRequestHandler):
     @extract_request_args('filesystem')
@@ -151,6 +120,7 @@ class GetFSVolumeDetails(AnonymousRequestHandler):
                         for fstarget_mount in fstarget.target_mounts:
                             all_fs.append(
                                           {
+                                           'fsid':fs.item.id,
                                            'fsname':fs.item.name,  
                                            'targetid':fstarget.item.id,
                                            'targetname': fstarget.item.name,
@@ -396,7 +366,6 @@ def gettimeslice(sample_size=10,interval=5):
         data_slice.append(strtime.split('.')[0])
     return data_slice
 
-
 class Dashboard:
     class StatusItem:
         def __init__(self, dashboard, item):
@@ -465,4 +434,3 @@ class Dashboard:
             self.all_statuses[host] = host.status_string(host_tm_statuses)
             host_status_item = Dashboard.StatusItem(self, host)
             host_status_item.target_mounts = [Dashboard.StatusItem(self, tm) for tm in host_tms]
-

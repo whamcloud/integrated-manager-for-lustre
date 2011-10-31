@@ -144,7 +144,7 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
                     if(maxCount == -1)
                     {
                         tdClass = "";
-                        tdStyle = 'font-weight:bold';
+                        tdStyle = 'font-weight:normal';
                     }
 
 	                alertTabContent = alertTabContent + "<tr class='"+cssClassName+"'><td width='20%' align='left' valign='top' class='"+tdClass+"' style='"+tdStyle+"'>" +  resValue.alert_created_at + "<td width='7%' align='left' valign='top' class='"+tdClass+"'><img src='"+imgName+"' width='16' height='16' class='spacetop' /></td><td width='30%' align='left' valign='top' class='"+tdClass+"' style='"+tdStyle+"'>" + resValue.alert_item +  "</td><td width='38%' align='left' valign='top' class='"+tdClass+"' style='"+tdStyle+"'>" + resValue.alert_message + "</td></tr>";
