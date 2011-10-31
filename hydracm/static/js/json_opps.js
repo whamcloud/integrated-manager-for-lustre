@@ -118,11 +118,51 @@ function StopFileSystem(filesystem)
 function CreateFS(fsname,mgs_id,mgt_node_id,mdt_node_id,ost_id)
 {
   alert("/api/create_new_fs/{'fsname':" + fsname + "'mgs_id':" + mgs_id + "'mgt_node_id':" + mgt_node_id + "'mdt_node_id':" + mdt_node_id + "'ost_node_ids':" + GetOSTId(ost_id));
-}
+  $.post("/api/create_new_fs/",({"fsname":fsname,"mgs_id":mgs_id,"mgt_node_id":mgt_node_id,"mdt_node_id":mdt_node_id,"ost_node_ids":GetOSTId(ost_id)})).success(function(data, textStatus, jqXHR) 
+    {
+      if(data.success)
+      {
+        var response = data.response;    
+        jAlert("Success");
+      }
+      else
+      {
+         jAlert("Error");
+      }
+    })
+    .error(function(event) 
+    {
+    })
+    .complete(function(event) 
+    {
+    });
+    //Reset ost array
+    arrOSS_Id=[];
+} 
 
 function CreateFSOSSs(fsname,ost_id)
 {
   alert("/api/create_osts/{'filesystem_id':" + fsname + "'ost_node_ids':" + GetOSTId(ost_id) + "'failover_ids':''");
+  $.post("/api/create_osts/",({"filesystem_id": fsname, "ost_node_ids": GetOSTId(ost_id),"failover_ids": ''})).success(function(data, textStatus, jqXHR) 
+    {
+      if(data.success)
+      {
+        var response = data.response;    
+        jAlert("Success");
+      }
+      else
+      {
+         jAlert("Error");
+      }
+    })
+    .error(function(event) 
+    {
+    })
+    .complete(function(event) 
+    {
+    });
+    //Reset ost array
+    arrOSS_Id=[];
 }
 
 function CreateMGTs(ost_id)
@@ -130,7 +170,25 @@ function CreateMGTs(ost_id)
   for(var i=0;i<arrOSS_Id.length;i++)
   {
     alert("/api/create_mgt/{'nodeid:" + arrOSS_Id[i] + "'failoverid':''");
+    $.post("/api/create_osts/",({"nodeid": arrOSS_Id[i], "failoverid" :''})).success(function(data, textStatus, jqXHR) 
+    {
+      if(data.success)
+      {
+        var response = data.response;    
+        jAlert("Success");
+      }
+      else
+      {
+         jAlert("Error");
+      }
+    })
+    .error(function(event) {
+    })
+    .complete(function(event) {
+    });
   }
+  //Reset ost array
+  arrOSS_Id=[];
 }
 
 function GetOSTId(arrOST)

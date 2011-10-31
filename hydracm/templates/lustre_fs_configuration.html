@@ -5,26 +5,27 @@
     
     $('#name').keyup( function() { oTable.fnDraw(); } );
     // List File system JQuery Data Table init()
-    var oTable = $('#fs_list').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "oLanguage": {
-          "sEmptyTable": "No filesystems"
-      },
-      bPaginate: false,
-      bFilter: false,
-      bInfo: false,
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtright' },
-        { "sClass": 'txtright' },
-        { "sClass": 'txtright' },
-        { "sClass": 'txtright' },
-        { "sClass": 'txtcenter' }
-      ]
-    });
+      var oTable = $('#fs_list').dataTable( {
+        "bProcessing": true,
+        "bJQueryUI": true,
+        "bAutoWidth":false,
+        "oLanguage": {
+            "sEmptyTable": "No filesystems"
+        },
+        bPaginate: false,
+        bFilter: false,
+        bInfo: false,
+        "aoColumns": [
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtleft' },
+          { "sClass": 'txtright' },
+          { "sClass": 'txtright' },
+          { "sClass": 'txtright' },
+          { "sClass": 'txtright' },
+          { "sClass": 'txtcenter' }
+        ]
+      });
     //Create New FS button click handler      
     $('#create_new_fs').click(function() {
       $('#lusterFS_content').empty();

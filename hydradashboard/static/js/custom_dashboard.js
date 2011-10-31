@@ -217,6 +217,13 @@ $(document).ready(function()
     .error(function(event) {
 
     });
+     
+    db_Bar_SpaceUsage_Data('false');
+    db_Line_connectedClients_Data('false');
+    db_LineBar_CpuMemoryUsage_Data('false');
+    db_Area_ReadWrite_Data('false');
+    db_Area_mdOps_Data('false');
+    db_HeatMap_CPUData('cpu', 'false');
   }   
 /*****************************************************************************
  *  Function to populate info on file system dashboard page
@@ -281,6 +288,8 @@ $(document).ready(function()
     fs_Area_ReadWrite_Data(fsName, startTime, endTime, "Average", "OST", readWriteFetchMatric, false);
 
     fs_Area_mdOps_Data(fsName, startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
+
+    fs_HeatMap_CPUData('cpu', 'false');
 
     clearInterval(dashboardPollingInterval);
 
@@ -416,36 +425,98 @@ $(document).ready(function()
 /*****************************************************************************
  * Function to reload heap map on dashboard landing page
 *****************************************************************************/
-  $("#heatmap_parameter_select").change(function()
+  $("#db_heatmap_parameter_select").change(function()
   {
-    reloadHeatMap($(this).val());
+    reloadHeatMap("dashboard", $(this).val(), 'false');
+  });
+  $("#fs_heatmap_parameter_select").change(function()
+  {
+    reloadHeatMap("filesystem", $(this).val(), 'false');
   });
 		  
-  reloadHeatMap = function(value)
+  reloadHeatMap = function(type, value, isZoom)
   {
     if(value == "cpu")
     {
-      $('#db_heatMapDiv').html("");
-      db_HeatMap_CPUData(value,'false');
+      if(type=="dashboard")
+      {
+        if(isZoom=='true')
+          $('#zoomDialog').html("");
+        else
+          $('#db_heatMapDiv').html("");
+        
+        db_HeatMap_CPUData(value, isZoom);
+      }
+      else
+      {
+        if(isZoom=='true')
+          $('#zoomDialog').html("");
+        else
+          $('#fs_heatMapDiv').html("");
+        
+        fs_HeatMap_CPUData(value, isZoom);
+      }
     }
     else if(value == "disk_usage")
     {
-      /*$('#db_heatMapDiv').html("");
-      db_HeatMap_ReadWriteData(value,'false');*/
+      if(type=="dashboard")
+      {
+        if(isZoom=='true')
+          $('#zoomDialog').html("");
+        else
+          $('#db_heatMapDiv').html("");
+        
+        db_HeatMap_ReadWriteData(value, isZoom);
+      }
+      else
+      {
+        if(isZoom=='true')
+          $('#zoomDialog').html("");
+        else
+          $('#fs_heatMapDiv').html("");
+        
+        fs_HeatMap_ReadWriteData(value, isZoom);
+      }
     }
     else if(value == "disk_space_usage")
     {
-      /*$('#db_heatMapDiv').html("");
-      db_HeatMap_SpaceUsageData(value,'false');*/
+      if(type=="dashboard")
+      {
+        if(isZoom=='true')
+          $('#zoomDialog').html("");
+        else
+          $('#db_heatMapDiv').html("");
+        
+        db_HeatMap_ReadWriteData(value, isZoom);
+      }
+      else
+      {
+        if(isZoom=='true')
+          $('#zoomDialog').html("");
+        else
+          $('#fs_heatMapDiv').html("");
+        
+        fs_HeatMap_ReadWriteData(value, isZoom);
+      }
      }
    }
 /******************************************************************************
- * Function to show popup dialog on alert and event button click
-******************************************************************************/				
-  db_Bar_SpaceUsage_Data('false');
-  db_Line_connectedClients_Data('false');
-  db_LineBar_CpuMemoryUsage_Data('false');
-  db_Area_ReadWrite_Data('false');
-  db_Area_mdOps_Data('false');
-  db_HeatMap_CPUData('cpu', 'false');
+ * Function to show zoom popup dialog
+******************************************************************************/  
+  $('#zoomDialog').dialog
+  ({
+    autoOpen: false,
+    width: 800,
+    height:490,
+    show: "clip",
+    modal: true,
+    position:"center",
+    buttons: 
+    {
+      "Close": function() { 
+        $(this).dialog("close");
+      },
+    }
+  });
+/******************************************************************************/
 });			// End Of document.ready funtion

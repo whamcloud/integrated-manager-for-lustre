@@ -62,7 +62,7 @@ $(document).ready(function() {
   $('.add_host_submit_button').click(function(ev) {
       $('#add_host_tabs').tabs('select', '#add_host_loading');
 
-      $.post('/api/testhost/', {hostname: $('#add_host_address').attr('value'), commit: false})
+      $.post('/api/test_host/', {hostname: $('#add_host_address').attr('value'), commit: false})
       .success(function(data, textStatus, jqXHR) {
           task_id = data.response.task_id
           submit_poll(task_id) 
@@ -76,7 +76,7 @@ $(document).ready(function() {
   });
 
   $('.add_host_confirm_button').click(function(ev) {
-          $.post('/api/addhost/', {hostname: $('#add_host_address_label').html(), commit: true})
+          $.post('/api/add_host/', {hostname: $('#add_host_address_label').html(), commit: true})
       .success(function(data, textStatus, jqXHR) {
           $('#add_host_tabs').tabs('select', '#add_host_complete');
           $('#server_configuration').dataTable().fnClearTable();

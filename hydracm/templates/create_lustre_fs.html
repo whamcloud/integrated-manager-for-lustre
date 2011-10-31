@@ -26,7 +26,6 @@
     var oNewOst = $('#ost').dataTable( {
       "bProcessing": true,
       "bJQueryUI": true,
-      "bAutoWidth": false,
       "bDestory": true,
       "oLanguage": {
           "sEmptyTable": "No OST to display"
@@ -98,7 +97,9 @@
       $('#lusterFS_content').load('/hydracm/fstab');
     });
   });
-
+  $(document).ajaxComplete(function() {
+      $('button.close').button({icons: {primary: 'ui-icon-closethick'}});
+  });
 // Function to toggel JQuery Data Tables views between Existing MGT and New MGT.
 function Initialise_MGT(type)
 {
@@ -112,7 +113,6 @@ function Initialise_MGT(type)
       "bFilter": false,
       "bPaginate": false,
       "bDestroy":true,
-      "bDestory": true,
       "oLanguage": {
           "sEmptyTable": "No MGT to display"
       },
@@ -132,7 +132,6 @@ function Initialise_MGT(type)
     var oNewMgt = $('#createfs_mgt').dataTable( {
       "bProcessing": true,
       "bJQueryUI": true,
-      "bAutoWidth": false,
       "bDestroy":true,
       "oLanguage": {
           "sEmptyTable": "No MGT to display"
@@ -267,7 +266,7 @@ function Initialise_MGT(type)
 	    </tbody>
     </table>
     <div class="spacer"></div>
-      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="padding-top:5px;">
         <tr>
           <td width="82%">&nbsp;</td>
           <td width="11%" align="right">
@@ -277,7 +276,7 @@ function Initialise_MGT(type)
           </td>
           <td width="10%" align="right">
              <span class="first-child">
-               <button class='add' type="button" id="cancel_editfs">Cancel</button>
+               <button class='close' type="button" id="cancel_editfs">Cancel</button>
              </span>
           </td>
         </tr>
