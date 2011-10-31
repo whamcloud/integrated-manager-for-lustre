@@ -82,7 +82,7 @@ class RemoveHost(AnonymousRequestHandler):
 class SetLNetStatus(AnonymousRequestHandler):
     @extract_request_args('hostid','state')
     def run(self,request,hostid,state):
-        assert state in ['lnet_up', 'lnet_down', 'lnet_unload', 'lnet_load']
+        assert state in ['lnet_up', 'lnet_down', 'lnet_unloaded']
         host =  ManagedHost.objects.get(id = hostid)
         transition_job = StateManager.set_state(host,state)
         return {'hostid': hostid,'job_id': transition_job.task_id,'status': transition_job.status}
