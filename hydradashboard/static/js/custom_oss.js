@@ -166,15 +166,15 @@ loadOSSUsageSummary = function (fsName)
 
         if(resValue.status == "OK" || resValue.status == "STARTED")
         {
-          innerContent = innerContent + "<td><div class='tblContent txtleft status_ok'>"+resValue.mdsstatus+"<div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+          innerContent = innerContent + "<td><div class='tblContent txtleft status_ok'>"+resValue.status+"<div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
         }
         else if(resValue.status == "WARNING" || resValue.status == "RECOVERY")
         {
-          innerContent = innerContent + "<td><div class='tblContent txtleft status_warning'>"+resValue.mdsstatus+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+          innerContent = innerContent + "<td><div class='tblContent txtleft status_warning'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
         }
         else if(resValue.status == "STOPPED")
         {
-          innerContent = innerContent + "<td><div class='tblContent txtleft status_stopped'>"+resValue.mdsstatus+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+          innerContent = innerContent + "<td><div class='tblContent txtleft status_stopped'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
         }
       });
     }

@@ -50,13 +50,14 @@ class ListFileSystems(AnonymousRequestHandler):
                 pass 
 
             filesystems.append({'fsname': filesystem.name,
-                           'noofoss':no_of_oss,
-                           'noofost':no_of_ost,
-                           'mgs_hostname': filesystem.mgs.primary_server().pretty_name(),
-                           'mds_hostname': mds_hostname,
-                           # FIXME: the API should not be formatting these, leave it to the presentation layer
-                           'kbytesused': sizeof_fmt((fskbytestotal * 1024)),
-                           'kbytesfree': sizeof_fmt((fskbytesfree *1024))})
+                                'status':filesystem.status_string(),
+                                'noofoss':no_of_oss,
+                                'noofost':no_of_ost,
+                                'mgs_hostname': filesystem.mgs.primary_server().pretty_name(),
+                                'mds_hostname': mds_hostname,
+                                # FIXME: the API should not be formatting these, leave it to the presentation layer
+                                'kbytesused': sizeof_fmt((fskbytestotal * 1024)),
+                                'kbytesfree': sizeof_fmt((fskbytesfree *1024))})
 
         return filesystems
 
@@ -74,7 +75,7 @@ class GetFileSystem(AnonymousRequestHandler):
         # if FS is created but MDT is no created we still want to display fs in list
         try:
             mds_hostname = ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name()
-            mds_status =  ManagedMdt.objects.get(filesystem = filesystem).status()
+            mds_status   = ManagedMdt.objects.get(filesystem = filesystem).primary_server().status_string()
         except:
             pass
         try:
@@ -94,16 +95,17 @@ class GetFileSystem(AnonymousRequestHandler):
                 pass
 
         fs_info.append( {'fsname':filesystem.name,
-                'noofoss':no_of_oss,
-                'noofost':no_of_ost,
-                'mgs_hostname':filesystem.mgs.primary_server().pretty_name(),
-                'mds_hostname':mds_hostname,
-                'mdsstatus':mds_status,
-                # FIXME: the API should not be formatting these, leave it to the presentation layer
-                'kbytesused':sizeof_fmt((fskbytestotal * 1024)),
-                'kbytesfree':sizeof_fmt((fskbytesfree *1024)),
-                'filesfree':fsfilesfree,
-                'filestotal':fsfilestotal
+                         'status':filesystem.status_string(),
+                         'noofoss':no_of_oss,
+                         'noofost':no_of_ost,
+                         'mgs_hostname':filesystem.mgs.primary_server().pretty_name(),
+                         'mds_hostname':mds_hostname,
+                         'mdsstatus':mds_status,
+                         # FIXME: the API should not be formatting these, leave it to the presentation layer
+                         'kbytesused':sizeof_fmt((fskbytestotal * 1024)),
+                         'kbytesfree':sizeof_fmt((fskbytesfree *1024)),
+                         'filesfree':fsfilesfree,
+                         'filestotal':fsfilestotal
         })
         return fs_info  
 
