@@ -187,7 +187,7 @@ def configure_ha(args):
 
 def list_ha_targets(args):
     targets = []
-    for line in shell.try_run("crm resource list", shell=True).split("\n"):
+    for line in shell.try_run("crm_resource --list", shell=True).split("\n"):
         match = re.match(r"^\s*([^\s]+).+hydra:Target", line)
         if match:
             targets.append(match.groups()[0])
@@ -205,7 +205,7 @@ def unmount_target(args):
 def start_target(args):
     from time import sleep
     unique_label = "%s_%s" % (args.label, args.serial)
-    shell.try_run(["crm", "resource", "start", unique_label])
+    shell.try_run("crm_resource -r %s -p target-role -m -v Started)" % unique_label)
 
     # now wait for it to start
     # FIXME: this may break on non-english systems or new versions of pacemaker
@@ -230,7 +230,7 @@ def start_target(args):
 
     if failed:
         # try to leave things in a sane state for a failed mount
-        shell.try_run(["crm", "resource", "stop", unique_label])
+        shell.try_run("crm_resource -r %s -p target-role -m -v Stopped)" % unique_label)
         raise RuntimeError("failed to start target %s" % unique_label)
     else:
         location = get_resource_location(unique_label)
@@ -244,7 +244,7 @@ def stop_target(args):
 def _stop_target(label, serial):
     unique_label = "%s_%s" % (label, serial)
     from time import sleep
-    shell.try_run(["crm", "resource", "stop", unique_label])
+    shell.try_run("crm_resource -r %s -p target-role -m -v Stopped)" % unique_label)
 
     # now wait for it
     # FIXME: this may break on non-english systems or new versions of pacemaker
@@ -267,6 +267,11 @@ def migrate_target(args):
                         (args.label, args.label, score, args.node)))
 
 def unmigrate_target(args):
+    from time import sleep
+
     # just remove the migration constraint
-    shell.try_run("crm configure delete %s-migrated && (sleep 1; crm resource stop %s && crm resource start %s)" % \
-                        (args.label, args.label, args.label), shell = True)
+    shell.try_run("crm configure delete %s-migrated)" % args.label, shell = True)
+    sleep(1)
+    
+    shell.try_run("crm_resource -r %s -p target-role -m -v Stopped)" % args.label, shell = True)
+    shell.try_run("crm_resource -r %s -p target-role -m -v Started)" % args.label, shell = True)
