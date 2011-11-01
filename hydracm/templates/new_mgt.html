@@ -2,8 +2,7 @@
   $(document).ready(function() {
     //cm-json_table_data => load existing MGT list. 
     LoadMGTConfiguration_MGTConf();
-    //json_table_data => show usable luns from create new MGT
-    CreateMGT_MGTConf();
+
     // List Existing MGT JQuery Table init()
     var oMgtConfiguration = $('#mgt_configuration').dataTable( {
       bPaginate: false,
@@ -23,25 +22,21 @@
         { "sClass": 'txtcenter' }
       ]
     } );
-    // List Existing MGT JQuery Table init()
-    var oNewMgt = $('#new_mgt_targets').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "bDestory": true,
-      "oLanguage": {
-          "sEmptyTable": "No OST to display"
-      },
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' }
-      ]
+
+    $('#btnNewMGT').attr('disabled', true);
+    fvc_button($('#new_mgt_chooser'), {
+      change: function() {
+        var val = fvc_get_value($('#new_mgt_chooser'));
+        $('#btnNewMGT').attr('disabled', val == null);
+      }
     });
+
     $('#btnNewMGT').click(function(){
-      CreateMGTs()
+      CreateMGT(fvc_get_value($('#new_mgt_chooser')), function() {
+        console.log('callback');
+        fvc_clear($('#new_mgt_chooser'));
+        LoadMGTConfiguration_MGTConf();
+      })
     });
     
   });
@@ -70,25 +65,10 @@
     <td height="20"></td>
   </tr>
   <tr>
-    <td height="124" align="left" valign="middle"><fieldset>
-      <legend class="legendClass">Select Target</legend>
-      <div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
-        <button type="button" id="btnNewMGT">Create new MGT</button>
-        </span></span></div>
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="new_mgt_targets" width="100%">
-        <thead>
-          <tr>
-            <th width="9%">Select</th>
-            <th width="15%">Target Path</th>
-            <th width="15%">Server Name</th>
-            <th width="19%">Failover</th>
-            <th width="13%">Capacity</th>
-            <th width="17%">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
-      </fieldset></td>
+    <td align="left" valign="middle"><fieldset>
+      <legend class="legendClass">New MGT</legend>
+      <button id='new_mgt_chooser'></button>
+      <button type="button" id="btnNewMGT">Create new MGT</button>
+      </td>
   </tr>
 </table>

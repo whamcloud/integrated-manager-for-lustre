@@ -304,11 +304,18 @@ def create_fs(mgs_id,fsname):
         fs.save()
         return fs
 
-class CreateMGS(AnonymousRequestHandler):
+class CreateMGT(AnonymousRequestHandler):
     @extract_request_args('lun_id')
     def run(self, request, lun_id):
         from configure.models import ManagedMgs
-        create_target(lun_id, ManagedMgs, name = "MGS")
+        mgt = create_target(lun_id, ManagedMgs, name = "MGS")
+
+        from django.db import transaction
+        transaction.commit()
+
+        from configure.lib.state_manager import StateManager
+        StateManager.set_state(mgt, 'mounted')
+
 
 def create_target(lun_id, target_klass, **kwargs):
     from configure.models import Lun, ManagedTargetMount

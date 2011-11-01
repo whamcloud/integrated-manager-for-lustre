@@ -7,12 +7,22 @@ fvc_clear = function(element) {
   opts = fvc_instances[element.attr('id')]
   element = $('#' + element.attr('id'));
 
+  var changed;
   if (opts.multi_select) {
+    if(opts['selected_lun_ids'].length > 0) {
+      changed = true;
+    }
     opts['selected_lun_ids'] = []
     element.parents('.fvc_background').find('input').attr('checked', false);
   } else {
-    element.parents('.fvc_background').find('.fvc_selected').html("Select storage...")
+    if(opts['selected_lun_id'] != null) {
+      changed = true;
+    }
     opts['selected_lun_id'] = null
+    element.parents('.fvc_background').find('.fvc_selected').html("Select storage...")
+  }
+  if (changed && opts.change) {
+    opts.change();
   }
 }
 

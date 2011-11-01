@@ -177,34 +177,26 @@ function CreateOSTs(fsname, ost_lun_ids)
     .complete(function(event) 
     {
     });
-    //Reset ost array
-    arrOSS_Id=[];
 }
 
-function CreateMGTs(ost_id)
+function CreateMGT(lun_id, callback)
 {
-  for(var i=0;i<arrOSS_Id.length;i++)
-  {
-    alert("/api/create_mgt/{'nodeid:" + arrOSS_Id[i] + "'failoverid':''");
-    $.post("/api/create_osts/",({"nodeid": arrOSS_Id[i], "failoverid" :''})).success(function(data, textStatus, jqXHR) 
+  $.post("/api/create_mgt/", {'lun_id': lun_id})
+  .success(function(data, textStatus, jqXHR) {
+    console.log(data);
+    if(data.success)
     {
-      if(data.success)
-      {
-        var response = data.response;    
-        jAlert("Success", ALERT_TITLE);
-      }
-      else
-      {
-         jAlert(ERR_COMMON_CREATE_MGT, ALERT_TITLE);
-      }
-    })
-    .error(function(event) {
-    })
-    .complete(function(event) {
-    });
-  }
-  //Reset ost array
-  arrOSS_Id=[];
+      callback();
+    }
+    else
+    {
+       jAlert(ERR_COMMON_CREATE_MGT, ALERT_TITLE);
+    }
+  })
+  .error(function(event) {
+  })
+  .complete(function(event) {
+  });
 }
 
 function GetOSTId(arrOST)
