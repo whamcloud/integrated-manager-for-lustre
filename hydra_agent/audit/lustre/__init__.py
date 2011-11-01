@@ -186,6 +186,17 @@ class TargetAudit(LustreAudit):
 
         return metrics
 
+class MdsAudit(TargetAudit):
+    """In Lustre < 2.x, the MDT stats were mis-named as MDS stats."""
+    def __init__(self,**kwargs):
+        super(MdsAudit, self).__init__(**kwargs)
+        self.target_root = '/proc/fs/lustre/mds'
+
+    def _gather_raw_metrics(self):
+        for mdt in [dev for dev in self.devices() if dev['type'] == 'mds']:
+            self.raw_metrics['lustre']['target'][mdt['name']] = self.read_int_metrics(mdt['name'])
+            self.raw_metrics['lustre']['target'][mdt['name']]['stats'] = self.read_stats(mdt['name'])
+
 class MdtAudit(TargetAudit):
     def __init__(self,**kwargs):
         super(MdtAudit, self).__init__(**kwargs)
