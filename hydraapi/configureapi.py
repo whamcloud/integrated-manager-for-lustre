@@ -230,6 +230,7 @@ class GetResource(AnonymousRequestHandler):
                 'attributes': resource.get_attribute_items(),
                 'alerts': alerts,
                 'stats': stats,
+                'charts': resource.get_charts(),
                 'propagated_alerts': prop_alerts}
 
 class GetLuns(AnonymousRequestHandler):

@@ -8,7 +8,7 @@ DEFAULT_SAMPLE_PERIOD = 10
 UNITS_BYTES = 1
 
 class BaseStatistic(object):
-    def __init__(self, sample_period = DEFAULT_SAMPLE_PERIOD, units = None):
+    def __init__(self, sample_period = DEFAULT_SAMPLE_PERIOD, units = None, label = None):
         """'units' can be None for dimensionless scalars, UNITS_BYTES for
         sizes in bytes, or a string for arbitrary units"""
         try:
@@ -18,6 +18,7 @@ class BaseStatistic(object):
 
         self.sample_period = sample_period
         self.units = units
+        self.label = label
 
     def format_units(self, value):
         if self.units == None:

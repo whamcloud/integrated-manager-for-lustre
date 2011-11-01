@@ -110,6 +110,25 @@ class StorageResource(object):
         return attr_name_pairs
 
     @classmethod
+    def get_charts(cls):
+        if hasattr(cls, 'charts'):
+            return cls.charts
+        else:
+            charts = []
+            for name, stat_props in cls._storage_statistics.items():
+                if stat_props.label:
+                    label = stat_props.label
+                else:
+                    label = name
+
+                charts.append({
+                    'title': label,
+                    'series': [name]
+                    })
+
+            return charts
+
+    @classmethod
     def get_attribute_properties(cls, name):
         return cls._storage_attributes[name]
 

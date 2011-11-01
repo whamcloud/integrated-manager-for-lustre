@@ -280,7 +280,14 @@ class StorageResourceStatistic(models.Model):
                     'data_points': data_points
                     }
 
-        return {'name': self.name, 'type': type_name, 'data': data}
+        label = stat_props.label
+        if not label:
+            label = self.name
+
+        return {'name': self.name,
+                'label': label,
+                'type': type_name,
+                'data': data}
 
 class StorageResourceAttribute(models.Model):
     """An attribute of a StorageResource instance.

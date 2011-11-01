@@ -1,8 +1,112 @@
+
+
+
+/**
+ * Grid theme for Highcharts JS
+ * @author Torstein Hønsi
+ */
+
+/* FIXME: settle on a theme in common with dashboard and get rid of the
+ * copy-paste of this in here*/
+Highcharts.theme = {
+   colors: ['#4572A7', '#AA4643', '#ED561B', '#DDDF00', '#24CBE5', '#64E572', '#FF9655', '#FFF263', '#6AF9C4'],
+   chart: {
+      backgroundColor: {
+         linearGradient: [0, 0, 500, 500],
+         stops: [
+            [0, 'rgb(255, 255, 255)'],
+            [1, 'rgb(240, 240, 255)']
+         ]
+      }
+,
+      borderWidth: 1,
+      plotBackgroundColor: 'rgba(255, 255, 255, .9)',
+      plotShadow: true,
+      plotBorderWidth: 0
+   },
+   title: {
+      style: { 
+         color: '#000',
+         font: 'bold 12px "Trebuchet MS", Verdana, sans-serif'
+      }
+   },
+   subtitle: {
+      style: { 
+         color: '#666666',
+         font: 'bold 12px "Trebuchet MS", Verdana, sans-serif'
+      }
+   },
+   xAxis: {
+      gridLineWidth: 1,
+      lineColor: '#000',
+      tickColor: '#000',
+      labels: {
+         style: {
+            color: '#000',
+            font: '11px Trebuchet MS, Verdana, sans-serif'
+         }
+      },
+      title: {
+         style: {
+            color: '#333',
+            fontWeight: 'bold',
+            fontSize: '12px',
+            fontFamily: 'Trebuchet MS, Verdana, sans-serif'
+
+         }            
+      }
+   },
+   yAxis: {
+      minorTickInterval: 'auto',
+      lineColor: '#000',
+      lineWidth: 1,
+      tickWidth: 1,
+      tickColor: '#000',
+      labels: {
+         style: {
+            color: '#000',
+            font: '11px Trebuchet MS, Verdana, sans-serif'
+         }
+      },
+      title: {
+         style: {
+            color: '#333',
+            fontWeight: 'bold',
+            fontSize: '12px',
+            fontFamily: 'Trebuchet MS, Verdana, sans-serif'
+         }            
+      }
+   },
+   legend: {
+      itemStyle: {         
+         font: '8pt Trebuchet MS, Verdana, sans-serif',
+         color: 'black'
+
+      },
+      itemHoverStyle: {
+         color: '#039'
+      },
+      itemHiddenStyle: {
+         color: 'gray'
+      }
+   },
+   labels: {
+      style: {
+         color: '#99b'
+      }
+   }
+};
+
+// Apply the theme
+var highchartsOptions = Highcharts.setOptions(Highcharts.theme);
+
+
+
 var resource_id = null;
 
 
 $(document).ready(function() {
-  $('#storage_resource_dialog').dialog({autoOpen: false, modal: true, minWidth: 500, maxHeight: 700});
+  $('#storage_resource_dialog').dialog({autoOpen: false, modal: true, minWidth: 1024, maxHeight: 1024});
   $('#alias_save_button').button();
   $('#alias_reset_button').button();
 
@@ -28,70 +132,120 @@ function popup_resource(id) {
       if (data.success) {
         console.log(data.response);
         load_resource(data.response);
-        console.log('popping up');
         $('#storage_resource_dialog').dialog('open');
       }
    });
 }
 
-function populate_graph(element_id, stat_info) {
-  $('#' + element_id).css("width", "400px");
-  $('#' + element_id).css("height", "300px");
+function populate_graph(element_id, chart_info, stat_infos) {
+  $('#' + element_id).css("width", "300px");
+  $('#' + element_id).css("height", "200px");
   var opts = null;
-  if (stat_info.type == 'histogram') {
+
+  colors = Highcharts.getOptions().colors
+
+  var type = stat_infos[0].type;
+  var unit_name = stat_infos[0].data.unit_name;
+  var bin_labels = stat_infos[0].data.bin_labels;
+  console.log(stat_infos);
+  var enable_legend = stat_infos.length > 1;
+  if (type == 'histogram') {
+      var series = [];
+      $.each(stat_infos, function(i, stat_info) {
+        series.push({
+          data: stat_info.data.values,
+          name: stat_info.label,
+          type: 'scatter',
+          color: colors[i]
+        });
+        series.push({
+          data: stat_info.data.values,
+          name: stat_info.label,
+          type: 'areaspline',
+          color: colors[i],
+          showInLegend: false
+        });
+      });
       opts = {
           chart: {
               renderTo:element_id,
               type: 'column'
           },
           credits: {enabled: false},
-          title: {text: stat_info.name},
-          legend: {enabled: false},
+          title: {text: chart_info.title},
+          legend: {enabled: enable_legend},
           yAxis: {
               'labels': {enabled: true},
               'title': {text: null},
               'gridLineWidth': 0
           },
           xAxis: {
-              categories: stat_info.data.bin_labels,
-              labels: {style: "font-size: 6pt;", rotation: 60, align: "left"}
+              categories: bin_labels,
+              labels: {style: "font-size: 6pt;", rotation: 90, align: "left", enabled: false},
+
           },
-          series: [{
-              'data': stat_info.data.values,
-              'name': 'Samples'
-          }],
+          series: series,
           plotOptions: {
               'column': {
                   'shadow': false,
                   'pointPadding': 0.0,
                   'groupPadding': 0.0,
+              },
+              areaspline: {
+                marker: {enabled: false},
+                lineWidth: 1,
+                fillOpacity: 0.25,
+                shadow: false
               }
           }
       }
-  } else if (stat_info.type == 'timeseries') {
-      opts = {
-          chart: {
-              renderTo:element_id,
-              type: 'line'
-          },
-          credits: {enabled: false},
-          title: {text: stat_info.name},
-          legend: {enabled: false},
-          yAxis: {
-              labels: {enabled: true},
-              title: {text: stat_info.data.unit_name},
-              min: 0
-          },
-          xAxis: {
-              type: 'datetime'
-          },
-          series: [{
-              data: stat_info.data.data_points,
-              name: stat_info.name
-          }],
-          plotOptions: {
-          }
+  } else if (type == 'timeseries') {
+    var yAxes = [];
+    var unit_to_axis = [];
+    $.each(stat_infos, function(i, stat_info) {
+      if (unit_to_axis[stat_info.data.unit_name] == null) {
+        var axis = {
+          labels: {enabled: true},
+          title: {text: stat_info.data.unit_name},
+          min: 0,
+          opposite: (yAxes.length % 2)
+        }
+        yAxes.push(axis);
+        unit_to_axis[stat_info.data.unit_name] = yAxes.length - 1;
       }
+    });
+
+
+    var series = [];
+    $.each(stat_infos, function(i, stat_info) {
+      series.push({
+        data: stat_info.data.data_points,
+        name: stat_info.label,
+        yAxis: unit_to_axis[stat_info.data.unit_name]
+      });
+    });
+
+    opts = {
+        chart: {
+            renderTo:element_id,
+            type: 'line'
+        },
+        credits: {enabled: false},
+        title: {text: chart_info.title},
+        legend: {enabled: enable_legend},
+        yAxis: yAxes,
+        xAxis: {
+            type: 'datetime'
+        },
+        series: series,
+        plotOptions: {
+          line: {lineWidth: 1,
+                 marker: {enabled: false},
+                 shadow: false
+                }
+        }
+    }
+
   }
   chart = new Highcharts.Chart(opts);
 }
@@ -110,10 +264,7 @@ function load_resource(resource) {
 
     var attr_markup = "";
     var rowclass = "odd";
-    console.log(resource);
     $.each(resource.attributes, function(i,j) {
-      console.log(i);
-      console.log(j);
       name = j[0]
       attr_info = j[1]
       if (rowclass == "odd") {
@@ -127,23 +278,40 @@ function load_resource(resource) {
 
     var alert_markup = "";
     $.each(resource.alerts, function(i, alrt) {
-        console.log(i);
-        console.log(alrt);
         alert_markup += "<tr><td><img src='/static/images/dialog-error.png'></td><td>" + alrt.alert_message + "</td><td>" + alrt.alert_item + "</td></tr>";
     }); 
     $('table#alerts').html(alert_markup);
 
-    var stats_markup = "";
-    stat_graph_element_id = new Array();
-    $.each(resource.stats, function(stat_name, stat_info) {
-            var element_id = "stat_graph_" + stat_name;
-            stat_graph_element_id[stat_name] = element_id;
-            stats_markup += "<li><div id='" + element_id + "'></div></li>";
-    });
-    $('ul#stats').html(stats_markup);
+    var row = 0;
+    var col = 0;
+    var row_width = 3;
+    var chart_markup = "";
+    chart_element_id = new Array();
+    $.each(resource.charts, function(i, chart_info) {
+      if (col == 0) {
+        chart_markup += "<tr>"
+      }
 
-    $.each(resource.stats, function(stat_name, stat_info) {
-        populate_graph(stat_graph_element_id[stat_name], stat_info);
+      var element_id = "stat_chart_" + i;
+      chart_element_id[i] = element_id;
+      chart_markup += "<td><div id='" + element_id + "'></div></td>";
+      col += 1;
+      if (col == row_width) {
+        chart_markup += "</tr>"
+        col = 0;
+      }
+    });
+    if (col != 0) {
+      chart_markup += "</tr>";
+    }
+    $('table#stats').html(chart_markup);
+
+    $.each(resource.charts, function(i, chart_info) {
+      var stat_infos = [];
+      $.each(chart_info.series, function(j, stat_name) {
+        stat_infos.push(resource.stats[stat_name]);
+      });
+      populate_graph(chart_element_id[i], chart_info, stat_infos);
     });
 }
 
@@ -154,10 +322,9 @@ function load_resource(resource) {
         $("input#alias_edit_entry").attr('disabled', 'disabled');
 
         $.post("/api/set_resource_alias/", {'resource_id': resource_id,'alias': new_name})
-            .success(function(){console.log('success');})
+            .success(function(){})
             .error(function(){console.log("Error posting new alias");})
             .complete(function(){
-              console.log('complete');
               $("a#alias_save_button").show()
               $("a#alias_reset_button").show();
               $("img#alias_spinner").hide();
