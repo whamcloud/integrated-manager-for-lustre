@@ -326,30 +326,37 @@ class FilesystemMetricStore(R3dMetricStore):
         map(set.__setitem__, metric_names, [])
         return set.keys()
 
-    def fetch(self, cfname, target_class, **kwargs):
+    def fetch(self, cfname, query_class, **kwargs):
         """
-        fetch(CFNAME, target_class [, fetch_metrics=['name'],
+        fetch(CFNAME, query_class [, fetch_metrics=['name'],
                       start_time=datetime, end_time=datetime])
 
         Given a consolidation function (Average, Min, Max, Last),
-        a target class (ObjectStoreTarget, MetadataTarget, ManagmentTarget)
+        a query class (ManagedOst, ManagedMdt, ManagedHost, etc.)
         an optional list of desired metrics, an optional start time,
         and an optinal end time, returns a tuple containing rows of
         aggregate datapoints retrieved from the appropriate RRAs.
         """
         results = {}
 
-        def client_count(num_exports, target_count):
+        def client_count(num_exports, targets):
+            target_count = len(targets)
             # ((total - # MDS OSCs) / # OSTS) - MGS
             return ((num_exports - target_count) / target_count) - 1
 
         computed_metrics = {'num_exports': client_count}
 
-        targets = target_class.objects.filter(filesystem=self.filesystem)
+        from django.core.exceptions import FieldError
+        try:
+            fs_components = query_class.objects.filter(filesystem=self.filesystem)
+        except FieldError:
+            if query_class.__name__ == "ManagedHost":
+                fs_components = self.filesystem.get_servers()
+            else:
+                raise NotImplementedError, "Unknown query class: %s" % query_class.__name__
 
-        for target in targets:
-            tm = target.metrics.fetch(cfname, **kwargs)
-            for row in tm:
+        for fs_component in fs_components:
+            for row in fs_component.metrics.fetch(cfname, **kwargs):
                 row_ts = row[0]
                 row_dict = row[1]
 
@@ -369,7 +376,7 @@ class FilesystemMetricStore(R3dMetricStore):
         for row_ts in results:
             for metric in results[row_ts]:
                 if metric in computed_metrics:
-                    results[row_ts][metric] = computed_metrics[metric](results[row_ts][metric], len(targets))
+                    results[row_ts][metric] = computed_metrics[metric](results[row_ts][metric], fs_components)
 
         return tuple(
                 sorted(
