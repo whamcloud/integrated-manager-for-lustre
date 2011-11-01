@@ -199,32 +199,17 @@ function CreateMGT(lun_id, callback)
   });
 }
 
-function GetOSTId(arrOST)
-{
-  var ost_id="";
-  for(var i=0;i<arrOST.length;i++)
-  {
-    if (ost_id == "")
-    {
-     ost_id = arrOST[i];
-    }
-    else
-    {
-      ost_id = ost_id + "," + arrOST[i];
-    }
-  }
-  return ost_id;
-}
-
 function SetTargetMountStage(target_id, state)
 {
    $.post("/api/set_target_stage/",({"target_id": target_id, "state": state})).success(function(data, textStatus, jqXHR) 
     {
       if(data.success)
       {
-        var response = data.response;    
-        jAlert("Taget " + response.target_id + " Started Successfully");
-        //Reload table with latest ost's.
+        // Note: success here simply means that the operation
+        // was submitted, not that it necessarily completed (that
+        // happens asynchronously)
+        // Reload table in case any available actions changed
+        // FIXME: do a clean reload rather than a clear-then-load
         $('#ost').dataTable().fnClearTable();
         LoadOST_EditFS($("#fs").val());
       }
