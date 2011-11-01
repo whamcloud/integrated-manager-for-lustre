@@ -135,6 +135,12 @@ def _unconfigure_ha(primary, label, serial):
 
 def configure_ha(args):
     unique_label = "%s_%s" % (args.label, args.serial)
+
+    # remove any pre-existing instance of the resource being added
+    rc, stdout, stderr = shell.run(shlex.split("crm_resource -r %s -q" % unique_label))
+    if rc == 0:
+        _unconfigure_ha(args.primary, args.label, args.serial)
+
     if args.primary:
         # now configure pacemaker for this target
         from tempfile import mkstemp
