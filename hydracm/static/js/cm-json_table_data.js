@@ -274,36 +274,11 @@ function CreateNewMGT_EditFS()
 }
 
 /******************************************************************/
-//Function name - CreateNewMDT_EditFS()
-//Param - none
-//Return - none
-//Used in - Edit FS (edit_fs.html)
-/******************************************************************/
-
-function CreateNewMDT_EditFS()
-{
-  $('#popup-new-mdt').dataTable().fnClearTable();
-  LoadUsableVolumeList($('#popup-new-mdt'), function(vol_info) {return "<input type='radio' name='mdt' id='" + vol_info.id + "' />"});
-}
-
-/******************************************************************/
 //Function name - CreateOST_EditFS()
 //Param - none
 //Return - none
 //Used in - Edit FS (edit_fs.html)
 /******************************************************************/
-
-function CreateOST_EditFS()
-{
-  $('#ost').dataTable().fnClearTable();
-  LoadUsableVolumeList($('#ost'), function(vol_info){return "<input type='checkbox' name='" + vol_info.id + "' id='" + vol_info.id +"' onclick=CreateOST('"+  vol_info.id + "'); />";});
-}
-
-function SelectOST_EditFS()
-{
-  $('#popup-new-ost').dataTable().fnClearTable();
-  LoadUsableVolumeList($('#popup-new-ost'), function(vol_info){return "<input type='checkbox' name='" + vol_info.id + "' id='" + vol_info.id +"' onclick=CreateOST('"+  vol_info.id + "'); />";});
-}
 
 function CreateOST(vol_id)
 {

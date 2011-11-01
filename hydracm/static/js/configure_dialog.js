@@ -92,11 +92,11 @@ $(document).ready(function()
   });
   
   // Dialog for selecting usable luns for creat new OST
-  $('#newOST').dialog
+  $('#new_ost_dialog').dialog
   ({
     autoOpen: false,
     width: 1100,
-    height:470,
+    maxHeight:470,
     position:"center",
     show: "clip",
     modal: true,
@@ -104,9 +104,12 @@ $(document).ready(function()
     {
       "Ok": function() {
        var fsname = $('#txtfsnameid').val();       
-        // arrOSS_Id is a Global array used in both Create new fs and Edit FS
-        // defined in cm-json_table_data
-        CreateFSOSSs(fsname,arrOSS_Id);
+       var ost_lun_ids = fvc_get_value($('#new_ost_chooser'));
+
+        /* FIXME: hack: using fsname instead of an ID because the edit_fs page loading
+         * code doesn't keep the ID anywhere */
+        CreateOSTs(fsname, ost_lun_ids);
+
         $(this).dialog("close");
       },
       "Cancel": function() { 

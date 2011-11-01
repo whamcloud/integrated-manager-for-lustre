@@ -329,26 +329,23 @@ def create_target(lun_id, target_klass, **kwargs):
 
     return target
 
-# FIXME: createOSS etc are broken, using nodes instead of luns, not yet fixed (should
-# work like CreateNewFilesystem )
-class CreateOSSs(AnonymousRequestHandler):
-    @extract_request_args('ost_node_ids','failover_ids','filesystem_id')
-    def run(self,request,ost_node_ids,failover_ids,filesystem_id):
+class CreateOSTs(AnonymousRequestHandler):
+    @extract_request_args('filesystem_id', 'ost_lun_ids')
+    def run(self, request, filesystem_id, ost_lun_ids):
+        from configure.models import ManagedFilesystem, ManagedOst
+        # FIXME: hack: using filesystem name instead of ID because
+        # of a frontend bug.
         fs = ManagedFilesystem.objects.get(name=filesystem_id)
-        ost_lun_nodes = ost_node_ids.split(',')
-        for ost_lun_node in ost_lun_nodes: 
-            create_oss(ost_lun_node,'',fs.id)
+        osts = []
+        for lun_id in ost_lun_ids:
+            osts.append(create_target(lun_id, ManagedOst, filesystem = fs))
 
-class CreateOSS(AnonymousRequestHandler):
-    @extract_request_args('ost_node_id','failover_id','filesystem_id')
-    def run(self,request,ost_node_id,failover_id,filesystem_id):
-        create_oss(ost_node_id,failover_id,filesystem_id)
+        from django.db import transaction
+        transaction.commit()
 
-class CreateMDS(AnonymousRequestHandler):
-    @extract_request_args('nodeid','failoverid','filesystemid')
-    def run(self,request,nodeid,failoverid,filesystemid):
-        create_mds(nodeid,failoverid,filesystemid)
-
+        from configure.lib.state_manager import StateManager
+        for target in osts:
+            StateManager.set_state(target, 'mounted')
 
 class GetTargetResourceGraph(AnonymousRequestHandler):
     @extract_request_args('target_id')

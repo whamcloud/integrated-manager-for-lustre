@@ -134,7 +134,6 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, callback)
       if(data.success)
       {
         var response = data.response;    
-        jAlert("Success", ALERT_TITLE);
       }
       else
       {
@@ -152,15 +151,17 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, callback)
     });
 } 
 
-function CreateFSOSSs(fsname,ost_id)
+function CreateOSTs(fsname, ost_lun_ids)
 {
-  alert("/api/create_osts/{'filesystem_id':" + fsname + "'ost_node_ids':" + GetOSTId(ost_id) + "'failover_ids':''");
-  $.post("/api/create_osts/",({"filesystem_id": fsname, "ost_node_ids": GetOSTId(ost_id),"failover_ids": ''})).success(function(data, textStatus, jqXHR) 
+  $.ajax({type: 'POST', url: "/api/create_osts/", dataType: 'json', data: JSON.stringify({
+      "filesystem_id": fsname,
+      "ost_lun_ids": ost_lun_ids
+    }), contentType:"application/json; charset=utf-8"})
+    .success(function(data, textStatus, jqXHR) 
     {
       if(data.success)
       {
         var response = data.response;    
-        jAlert("Success");
         //Reload table with latest ost's.
         $('#ost').dataTable().fnClearTable();
         LoadOST_EditFS($("#fs").val());

@@ -157,9 +157,7 @@ fvc_button = function(element, opts) {
 
   header_div.click(function() {
     header_div.hide();
-    /*expander_div.show();*/
     table_element.width("100%");
-    expander_div.hide();
     
     expander_div.slideDown(null, function() {
     });
