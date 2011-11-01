@@ -17,6 +17,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
+Conflicts: sysklogd
 Requires: python-simplejson python-argparse rsyslog pacemaker fence-agents
 
 %description
