@@ -27,3 +27,23 @@ div.jGrowl div.job_errored div.jGrowl-message {
   min-height: 24px;
 }
 
+span.notification_object_icon {
+}
+
+.busy_icon {
+  display: inline-block;
+  background-image: url(../images/ajax-loader.gif);
+  background-repeat: no-repeat;
+  background-position: 4px 4px;
+  width: 24px;
+  height: 24px;
+}
+
+.locked_icon {
+  display: inline-block;
+  background-image: url(../images/lock.png);
+  background-repeat: no-repeat;
+  background-position: 4px 4px;
+  width: 24px;
+  height: 24px;
+}

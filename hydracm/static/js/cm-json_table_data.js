@@ -391,9 +391,12 @@ function LoadServerConf_ServerConfig()
           resValue.failnode,
           resValue.status,
           lnet_status,
-          lnet_status_mesg
+          lnet_status_mesg,
+          "<span class='notification_object_icon notification_object_id_" + resValue.id + "_" + resValue.content_type_id + "'/>"
         ]);
       });
+      // After updating all table rows, update their .notification_object_icon elements
+      notification_update_icons();
     }
   })
   .error(function(event)
