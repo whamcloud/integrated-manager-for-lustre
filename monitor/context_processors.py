@@ -22,3 +22,4 @@ def menu_items(request):
         pass
 
     return {'menu_items': items}
+

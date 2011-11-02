@@ -491,3 +491,43 @@ class StorageResourceClassFields(AnonymousRequestHandler):
                 'optional': attr.optional,
                 'class': attr.__class__.__name__})
         return result
+
+class Jobs(AnonymousRequestHandler):
+    @extract_request_args('filter_opts')
+    def run(self, request, filter_opts):
+        since_time = filter_opts['since_time']
+        incomplete = filter_opts['incomplete']
+        # last_check should be a string in the datetime.isoformat() format
+        # TODO: use dateutils.parser to accept general ISO8601 (see
+        # note in hydracm.context_processors.page_load_time)
+        assert (since_time or incomplete)
+
+        filter_args = []
+        filter_kwargs = {}
+        if since_time:
+            from datetime import datetime
+            since_time = datetime.strptime(since_time, "%Y-%m-%dT%H:%M:%S")
+            filter_kwargs['modified_at__gte'] = since_time
+
+        if incomplete:
+            from django.db.models import Q
+            filter_args.append(~Q(state = 'complete'))
+            print "incomplete = '%s'" % incomplete
+
+        from configure.models import Job
+        jobs = Job.objects.filter(*filter_args, **filter_kwargs).order_by('modified_at')
+        jobs = [job.to_dict() for job in jobs]
+        if len(jobs):
+            last_modified = jobs[-1]['modified_at']
+        else:
+            last_modified = None
+
+        print {
+                'last_modified': last_modified, 
+                'jobs': jobs
+                }
+        return {
+                'last_modified': last_modified, 
+                'jobs': jobs
+                }
+

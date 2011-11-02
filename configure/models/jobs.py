@@ -271,6 +271,21 @@ class Job(models.Model):
     # Set to a step index when that step has finished and its result is committed
     finished_step = models.PositiveIntegerField(default = None, blank = True, null = True)
 
+    def to_dict(self):
+        def time_str(dt):
+            import time
+            return time.strftime("%Y-%m-%dT%H:%M:%S", dt.timetuple())
+
+        return {
+         'id': self.id,
+         'state': self.state,
+         'errored': self.errored,
+         'cancelled': self.cancelled,
+         'created_at': time_str(self.created_at),
+         'modified_at': time_str(self.modified_at),
+         'description': self.description()
+        }
+
     class Meta:
         app_label = 'configure'
 

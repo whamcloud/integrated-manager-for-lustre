@@ -34,7 +34,8 @@ from configureapi import (FormatFileSystem,
                           SetLNetStatus,
                           SetTargetMountStage,
                           GetJobStatus,
-                          SetJobStatus)
+                          SetJobStatus,
+                          Jobs)
 
 # FIXME: instead of doing this big list of imports, should introspect available
 # RequestHandler objects and get their url name from them.
@@ -125,6 +126,7 @@ urlpatterns = patterns('',
     (r'^getalerts/$',CsrfExemptResource(GetAlerts)),
     (r'^getjobs/$',CsrfExemptResource(GetJobs)),
     (r'^getlogs/$',CsrfExemptResource(GetLogs)),
+    (r'^jobs/$',CsrfExemptResource(Jobs)),
 
     (r'^get_resource_classes/$', CsrfExemptResource(GetResourceClasses)),
     (r'^get_resources/$', CsrfExemptResource(GetResources)),

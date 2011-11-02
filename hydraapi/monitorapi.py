@@ -276,6 +276,7 @@ class GetServers (AnonymousRequestHandler):
             return [
                     { 
                      'id' : host.id,
+                     'pretty_name': host.pretty_name(),
                      'host_address' : host.address,
                      'failnode':'',
                      'kind' : host.role() ,
@@ -288,7 +289,9 @@ class GetServers (AnonymousRequestHandler):
             return [
                     {
                      'id' : host.id,
+                     # FIXME: this field should just be called 'address'
                      'host_address' : host.address,
+                     'pretty_name': host.pretty_name(),
                      'failnode':'',
                      'kind' : host.role() ,
                      'lnet_status': str(host.state),
@@ -353,18 +356,8 @@ class GetJobs(AnonymousRequestHandler):
         # This need to fixed to get jobs for any time delta
         # Need input from PM    
         jobs = Job.objects.filter(~Q(state = 'complete') | Q(created_at__gte=datetime.now() - timedelta(minutes=60)))
-        return [
-                {
-                 'id': job.id,
-                 'state': job.state,
-                 'errored': job.errored,
-                 'cancelled': job.cancelled,
-                 'created_at': "%s" % job.created_at,
-                 'description': job.description(),
-                }
-                for job in jobs
-        ]
 
+        return [j.to_dict() for j in jobs]
 
 class GetLogs(AnonymousRequestHandler):
     @extract_request_args('month','day','lustre')
