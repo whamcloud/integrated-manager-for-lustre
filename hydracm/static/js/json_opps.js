@@ -172,7 +172,7 @@ function CreateOSTs(fsname, ost_lun_ids)
         var response = data.response;    
         //Reload table with latest ost's.
         $('#ost').dataTable().fnClearTable();
-        LoadOST_EditFS($("#fs").val());
+        LoadTargets_EditFS($("#fs").val());
       }
       else
       {
@@ -216,10 +216,6 @@ function SetTargetMountStage(target_id, state)
         // Note: success here simply means that the operation
         // was submitted, not that it necessarily completed (that
         // happens asynchronously)
-        // Reload table in case any available actions changed
-        // FIXME: do a clean reload rather than a clear-then-load
-        $('#ost').dataTable().fnClearTable();
-        LoadOST_EditFS($("#fs").val());
       }
       else
       {

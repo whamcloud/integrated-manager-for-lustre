@@ -71,134 +71,49 @@ function LoadFSList_FSList()
   {
   });
 }
-/******************************************************************
-* Function name - LoadMGT_EditFS()
-* Param - none
-* Return - none
-*( Used in - Edit FS (edit_fs.html)
-*******************************************************************/
-function LoadMGT_EditFS(fsname)
-{
-  var action="--";
-  $.post("/api/getvolumesdetails/",{filesystem:fsname}).success(function(data, textStatus, jqXHR)
-  {
-    if(data.success)
-    {
-      var response = data.response;
-      $.each(response, function(resKey, resValue)
-      {
-        if(resValue.targetkind == "MGS")
-        {
-      filesystemId = resValue.fsid;
-          if(resValue.targetstatus == "STARTED")
-          {
-            action = "<a href='#'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
-          }
-          else
-          {
-            action = "<a href='#'>Start<img src='/static/images/start.png' title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
-          }
-          $('#mgt_configuration_view').dataTable().fnAddData ([
-            resValue.targetdevice,
-            resValue.targetname,
-            resValue.hostname,
-            resValue.failover,
-            action
-          ]);
-        }
-      });
-    }
-  })
-  .error(function(event)
-  { 
-    jAlert(ERR_EDITFS_MGT_LOAD + data.errors);
-  })
-  .complete(function(event) 
-  {
-  });
-}
 
-/******************************************************************/
-//Function name - LoadMDT_EditFS()
-//Param - none
-//Return - none
-//Used in - Edit FS (edit_fs.html)
-/******************************************************************/
 
-function LoadMDT_EditFS(fsname)
-{
-  var action="--";
-  $.post("/api/getvolumesdetails/",{filesystem:fsname}).success(function(data, textStatus, jqXHR)
-  {
-    if(data.success)
-    {
-      var response = data.response;
-      $.each(response, function(resKey, resValue)
-      {
-        if(resValue.targetkind == "MDT")
-        {
-          if(resValue.targetstatus == "STARTED")
-          {
-            action = "<a href='#'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
-          }
-          else
-          {
-            action= "<a href='#'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
-          }
-          $('#mdt').dataTable().fnAddData ([
-            resValue.targetdevice,
-            resValue.targetname,
-            resValue.hostname,
-            resValue.failover,
-            action
-          ]);
-        }
-      });
-    }
-  })
-  .error(function(event)
-  {
-    jAlert(ERR_EDITFS_MDT_LOAD + data.error);
-  })
-  .complete(function(event) 
-  {
-  });
-}
-
-/******************************************************************/
-//Function name - LoadOST_EditFS()
-//Param - none
-//Return - none
-//Used in - Edit FS (edit_fs.html)
-/******************************************************************/
-
-function LoadOST_EditFS(fsname)
+function LoadTargets_EditFS(fsname)
 {
   var action = "--";
   $.post("/api/getvolumesdetails/",{filesystem:fsname}).success(function(data, textStatus, jqXHR)
   {
+    $('#ost').dataTable().fnClearTable();
+    $('#mdt').dataTable().fnClearTable();
+    $('#mgt_configuration_view').dataTable().fnClearTable();
+    console.log(data);
+
     if(data.success)
     {
       var response = data.response;
       $.each(response, function(resKey, resValue)
       {
-        if(resValue.targetkind == "OST")
+        if(resValue.state == "mounted")
         {
-          if(resValue.targetstatus == "STARTED")
-          {
-            action = "<a href='#' onclick='jConfirm(\"" + MSG_OST_STOP + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.targetid +"\",\"unmounted\");}});'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>"; 
-          }
-          else
-          {
-            action = "<a href='#' onclick='jConfirm(\"" + MSG_OST_START + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.targetid +"\",\"mounted\");}});'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
-          }
-          $('#ost').dataTable().fnAddData ([
-            resValue.targetdevice,
-            resValue.targetname,
-            resValue.hostname,
-            resValue.failover,
-            action
-          ]);
+          action = "<a href='#' onclick='jConfirm(\"" + MSG_OST_STOP + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"unmounted\");}});'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>"; 
+        }
+        else if (resValue.state == 'unmounted')
+        {
+          action = "<a href='#' onclick='jConfirm(\"" + MSG_OST_START + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"mounted\");}});'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
+        }
+        else
+        {
+          action = ""
+        }
+        row = [
+                resValue.lun_name,
+                resValue.human_name,
+                resValue.primary_server_name,
+                resValue.failover_server_name,
+                resValue.active_host_name,
+                action
+              ]
+        if (resValue.kind == "OST") {
+          $('#ost').dataTable().fnAddData (row);
+        } else if (resValue.kind == "MGT") {
+          $('#mgt_configuration_view').dataTable().fnAddData (row);
+        } else if (resValue.kind == "MDT") {
+          $('#mdt').dataTable().fnAddData (row);
         }
       });
     }
@@ -531,67 +446,5 @@ function LoadFSData_EditFS()
     {
     });
   }
-}
-
-function LoadSelectedMGT_EditFS(vol_info)
-{
-  $('#mgt_configuration_view').dataTable().fnAddData ([
-    vol_info.name,
-    vol_info.targetname,
-    vol_info.hostname,
-    vol_info.failover,
-    action
-    ]);
-}
-function GetExistingMGTTable()
-{
-   var oTable = "<table cellpadding='0' cellspacing='0' border='0' class='display' id='createfs_existing_mgt' width='100%'><thead><tr><th width='15%'>Target Path</th><th width='11%'>Target Name</th><th width='6%'>Server Name</th><th width='7%'>Failover Partner</th></tr></thead><tbody></tbody></table>";
-    return oTable;
-}
-
-function GetNewMGTTable()
-{
-  var oTable = "<table cellpadding='0' cellspacing='0' border='0' class='display' id='createfs_mgt' width='100%'><thead><tr><th width='15%'>Target Path</th><th width='10%'>Capacity</th><th width='20%'>Kind</th><th width='19%'>Status</th><th width='20%'>Primary Server</th><th width='16%'>Failover</th></tr></thead><tbody></tbody></table>";
-  return oTable;
-}
-
-function SetNewMGTTableContent(table_id, row_data)
-{
-  $('#'+table_id).dataTable().fnAddData ([                  
-    row_data[1],
-    row_data[2],
-    row_data[3],
-    row_data[4],
-    row_data[5],
-    row_data[6]
-  ]);
-}
-
-function SetExtMGTTableContent(table_id, row_data)
-{
-  $('#'+table_id).dataTable().fnAddData ([                  
-    row_data[1],
-    row_data[2],
-    row_data[3],
-    row_data[4]
-  ]);
-}
-
-function SetNewMDTTableContent(table_id, row_data)
-{
-  $('#'+table_id).dataTable().fnClearTable();
-  $('#'+table_id).dataTable().fnAddData ([                  
-    row_data[1],
-    row_data[2],
-    row_data[3],
-    row_data[4],
-    row_data[5],
-    row_data[6]
-  ]);
-}
-
-function SetVisible_TD(visible_td_id)
-{
-  $('#'+visible_td_id).css('display','');
 }
 

@@ -6,7 +6,6 @@
 from django.db import models
 from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll
 from configure.models.jobs import StatefulObject, Job
-from configure.models.target_mount import ManagedTargetMount
 from monitor.models import DeletableDowncastableMetaclass, MeasuredEntity
 
 class FilesystemMember(models.Model):
@@ -142,6 +141,38 @@ class ManagedTarget(StatefulObject):
             'ManagedFilesystem': lambda mfs: [t.downcast() for t in mfs.get_filesystem_targets()]
             }
 
+    def to_dict(self):
+        lun = self.managedtargetmount_set.get(primary = True).block_device.lun
+        active_host_name = "---"
+        if self.active_mount:
+            active_host_name = self.active_mount.host.pretty_name()
+
+        from configure.models import ManagedTargetMount
+        try:
+            failover_server_name = self.managedtargetmount_set.get(primary = False).host.pretty_name()
+        except ManagedTargetMount.DoesNotExist:
+            failover_server_name = "---"
+
+        if isinstance(self, FilesystemMember):
+            filesystem_id = self.filesystem.pk
+            filesystem_name = self.filesystem.name
+        else:
+            filesystem_id = None
+            filesystem_name = None
+
+        return {'id':self.pk,
+                'kind': self.role(),
+                'human_name': self.human_name(),
+                'lun_name': lun.human_name(),
+                'active_host_name': active_host_name,
+                'status': self.status_string(),
+                'state': self.state,
+                'primary_server_name': self.primary_server().pretty_name(),
+                'failover_server_name': failover_server_name,
+                'filesystem_id': filesystem_id,
+                'filesystem_name': filesystem_name
+                }
+
 class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
     class Meta:
         app_label = 'configure'
@@ -198,7 +229,7 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
     conf_param_version_applied = models.IntegerField(default = 0)
 
     def role(self):
-        return "MGS"
+        return "MGT"
 
     @classmethod
     def get_by_host(cls, host):

@@ -114,54 +114,23 @@ class GetMgtDetails(AnonymousRequestHandler):
     def run(self,request):
         all_mgt = []
         for mgt in ManagedMgs.objects.all():
-            lun = mgt.managedtargetmount_set.get(primary = True).block_device.lun
-
-            active_host_name = "---"
-            if mgt.active_mount:
-                active_host_name = mgt.active_mount.host.pretty_name()
-
-            all_mgt.append({
-                     'fs_names':[fs.name for fs in ManagedFilesystem.objects.filter(mgs=mgt)],
-                     'id':mgt.pk,
-                     'human_name': mgt.human_name(),
-                     'lun_name': lun.human_name(),
-                     'active_host_name': active_host_name,
-                     'status':mgt.status_string(),
-                     'state':mgt.state,
-                     'primary_server_name':mgt.primary_server().pretty_name(),
-                     'failover_server_name':mgt.managedtargetmount_set.get(primary = False).host.pretty_name()
-                    })
+            target_info = mgt.to_dict()
+            target_info['fs_names'] = [fs.name for fs in ManagedFilesystem.objects.filter(mgs=mgt)]
+            all_mgt.append(target_info)
         return all_mgt
 
 class GetFSVolumeDetails(AnonymousRequestHandler):
     @extract_request_args('filesystem')
     def run(self,request,filesystem):
-        filesystem_name = filesystem
-        all_fs = []
-        if filesystem_name:
-            dashboard_data = Dashboard(filesystem_name)
+        from configure.models import ManagedTarget, ManagedFilesystem
+        # FIXME: this should be taking a filesystem ID instead of a name
+        if filesystem:
+            filesystem = ManagedFilesystem.objects.get(name = filesystem)
+            targets = filesystem.get_targets()
         else:
-            dashboard_data = Dashboard(None)  
-        for fs in dashboard_data.filesystems:
-            for fstarget in fs.targets:
-                for fstarget_mount in fstarget.target_mounts:
-                    all_fs.append(
-                                  {
-                                   'fsid':fs.item.id,
-                                   'fsname':fs.item.name,  
-                                   'targetid':fstarget.item.id,
-                                   'targetname': fstarget.item.name,
-                                   'targetdevice': str(fstarget_mount.item.block_device),
-                                   'targetmount':str(fstarget_mount.item.mount_point),
-                                   'targetstatus':fstarget.status(),
-                                   'targetstate':str(fstarget_mount.item.state),
-                                   'targetstates':fstarget_mount.item.states,
-                                   'targetkind': fstarget.item.role(),
-                                   'hostname':fstarget_mount.item.host.pretty_name(),
-                                   'failover':''
-                                  }
-                                 )
-        return all_fs            
+            targets = ManagedTarget.objects.all()
+
+        return [t.downcast().to_dict() for t in targets]
 
 class GetTargets(AnonymousRequestHandler):
     @extract_request_args('filesystem', 'kinds')
@@ -425,79 +394,3 @@ def gettimeslice(sample_size=10,interval=5):
         data_slice.append(strtime.split('.')[0])
     return data_slice
 
-class Dashboard:
-    class StatusItem:
-        def __init__(self, dashboard, item):
-            self.dashboard = dashboard
-            self.item = item
-
-        def status(self):
-            return self.dashboard.all_statuses[self.item]
-    
-    def __init__(self,filesystem_name):
-        self.all_statuses = {}
-        # 1 query for getting all targetmoun
-        for mount in ManagedTargetMount.objects.filter(primary=True):
-            # 1 query per targetmount to get any alerts
-            self.all_statuses[mount] = mount.status_string()
-        from collections import defaultdict
-        target_mounts_by_target = defaultdict(list)
-        target_mounts_by_host = defaultdict(list)
-        target_params_by_target = defaultdict(list)
-
-        for target_klass in ManagedMgs, ManagedMdt, ManagedOst:
-            # 1 query to get all targets of a type
-            for target in target_klass.objects.all():
-                # 1 query per target to get the targetmounts
-                #target_mounts = target.managedtargetmount_set.all()
-                target_mounts = target.managedtargetmount_set.filter(primary=True)
-                try:
-                    target_mountable_statuses = dict(
-                            [(m, self.all_statuses[m]) for m in target_mounts])
-                except KeyError:
-                    continue
-                target_mounts_by_target[target].extend(target_mounts)
-                for tm in target_mounts:
-                    target_mounts_by_host[tm.host_id].append(tm)
-                self.all_statuses[target] = target.status_string(target_mountable_statuses)
-
-                target_params_by_target[target] = target.get_params()
-        self.filesystems = []
-        # 1 query to get all filesystems
-        managedfilesystems = []
-        if filesystem_name:
-            managedfilesystems.append(ManagedFilesystem.objects.get(name=filesystem_name))
-        else:
-            managedfilesystems =  ManagedFilesystem.objects.all().order_by('name')
-
-        for filesystem in managedfilesystems:
-            # 3 queries to get targets (of each type)
-            targets = filesystem.get_targets()
-            try:
-                fs_target_statuses = dict(
-                        [(t, self.all_statuses[t]) for t in targets])
-            except KeyError:
-                continue
-            self.all_statuses[filesystem] = filesystem.status_string(fs_target_statuses)
-            fs_status_item = Dashboard.StatusItem(self, filesystem)
-            fs_status_item.targets = []
-            for target in targets:
-                target_status_item = Dashboard.StatusItem(self, target)
-                target_status_item.target_mounts = []
-                for tm in target_mounts_by_target[target]:
-                    target_mount_status_item = Dashboard.StatusItem(self, tm)
-                    target_mount_status_item.target_params = target_params_by_target[target]
-                    target_status_item.target_mounts.append(target_mount_status_item)
-                fs_status_item.targets.append(target_status_item)
-
-            self.filesystems.append(fs_status_item)
-
-        self.hosts = []
-        # 1 query to get all hosts
-        for host in ManagedHost.objects.all().order_by('address'):
-            host_tms = target_mounts_by_host[host.id]
-            # 1 query to get alerts
-            host_tm_statuses = dict([(tm, self.all_statuses[tm]) for tm in host_tms])
-            self.all_statuses[host] = host.status_string(host_tm_statuses)
-            host_status_item = Dashboard.StatusItem(self, host)
-            host_status_item.target_mounts = [Dashboard.StatusItem(self, tm) for tm in host_tms]
