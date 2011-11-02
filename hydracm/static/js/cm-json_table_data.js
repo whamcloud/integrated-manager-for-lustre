@@ -361,8 +361,8 @@ function LoadMGTConfiguration_MGTConf()
       {
         $.each(response, function(resKey, resValue)
         {
-              fsnames = resValue.fsnames;
-              if(resValue.targetstatus == "STARTED")
+              fsnames = resValue.fs_names;
+              if(resValue.state == "mounted")
               {
                 action = "<a href='#'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
               }
@@ -373,9 +373,10 @@ function LoadMGTConfiguration_MGTConf()
               
               $('#mgt_configuration').dataTable().fnAddData ([
                 fsnames.toString(),
-                resValue.targetdevice,
-                resValue.hostname,
-                resValue.failover,
+                resValue.lun_name,
+                resValue.primary_server_name,
+                resValue.failover_server_name,
+                resValue.active_host_name,
                 action
               ]);
         });
@@ -384,7 +385,7 @@ function LoadMGTConfiguration_MGTConf()
   })
   .error(function(event)
   {
-    jAlert(ERR_EDITFS_MGT_LOAD + data.error);
+    jAlert(ERR_EDITFS_MGT_LOAD);
   })
   .complete(function(event) 
   {

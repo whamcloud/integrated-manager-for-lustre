@@ -112,25 +112,25 @@ class GetFileSystem(AnonymousRequestHandler):
 
 class GetMgtDetails(AnonymousRequestHandler):
     def run(self,request):
-        dashboard_data = Dashboard(None)
         all_mgt = []
-        for k,v in dashboard_data.all_statuses.items():
-            if type(k) == ManagedMgs:
-                all_mgt.append(
-                        {
-                         'fsnames':[fs.name for fs in ManagedFilesystem.objects.filter(mgs=k)],
-                         'targetid':k.id,
-                         'targetname': k.name,
-                         'targetdevice':str(k.active_mount.block_device),
-                         'targetmount':k.active_mount.mount_point,
-                         'targetstatus':k.active_mount.status_string(),
-                         'targetstate':k.active_mount.state,
-                         'targetstates':k.active_mount.states,
-                         'targetkind': k.role(),
-                         'hostname':k.active_mount.host.pretty_name(),
-                         'failover':''
-                        }
-                       )
+        for mgt in ManagedMgs.objects.all():
+            lun = mgt.managedtargetmount_set.get(primary = True).block_device.lun
+
+            active_host_name = "---"
+            if mgt.active_mount:
+                active_host_name = mgt.active_mount.host.pretty_name()
+
+            all_mgt.append({
+                     'fs_names':[fs.name for fs in ManagedFilesystem.objects.filter(mgs=mgt)],
+                     'id':mgt.pk,
+                     'human_name': mgt.human_name(),
+                     'lun_name': lun.human_name(),
+                     'active_host_name': active_host_name,
+                     'status':mgt.status_string(),
+                     'state':mgt.state,
+                     'primary_server_name':mgt.primary_server().pretty_name(),
+                     'failover_server_name':mgt.managedtargetmount_set.get(primary = False).host.pretty_name()
+                    })
         return all_mgt
 
 class GetFSVolumeDetails(AnonymousRequestHandler):

@@ -67,11 +67,15 @@ class ManagedTarget(StatefulObject):
     def primary_host(self):
         return TargetMount.objects.get(target = self, primary = True).host
 
-    def __str__(self):
+    def human_name(self):
         if self.name:
             return self.name
         else:
             return "Unregistered %s %s" % (self.downcast().role(), self.id)
+
+    def __str__(self):
+        return self.human_name()
+
     # unformatted: I exist in theory in the database 
     # formatted: I've been mkfs'd
     # unmounted: I've registered with the MGS, I'm not mounted
