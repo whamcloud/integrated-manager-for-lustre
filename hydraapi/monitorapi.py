@@ -234,35 +234,11 @@ class GetServers (AnonymousRequestHandler):
     def run(self,request,filesystem_id):
         if filesystem_id:
             fs = ManagedFilesystem.objects.get(id=filesystem_id)
-            return [
-                    { 
-                     'id' : host.id,
-                     'pretty_name': host.pretty_name(),
-                     'host_address' : host.address,
-                     'failnode':'',
-                     'kind' : host.role() ,
-                     'lnet_status' : str(host.state),
-                     'lnet_states': host.states, 
-                     'status':host.status_string()
-                    }
-                    for host in fs.get_servers()
-            ]
+            hosts = fs.get_servers()
         else:
-            return [
-                    {
-                     'id' : host.id,
-                     # FIXME: this field should just be called 'address'
-                     'host_address' : host.address,
-                     'pretty_name': host.pretty_name(),
-                     'failnode':'',
-                     'kind' : host.role() ,
-                     'lnet_status': host.state,
-                     'lnet_states': host.states,
-                     'status':host.status_string()  
-                    }
-                    for host in ManagedHost.objects.all()
-            ]
+            hosts = ManagedHost.objects.all()
 
+        return [h.to_dict() for h in hosts]
 
 class GetEventsByFilter(AnonymousRequestHandler):
     @extract_request_args('hostname','severity','eventtype','scrollsize','scrollid')
