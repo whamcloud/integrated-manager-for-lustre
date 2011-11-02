@@ -120,9 +120,9 @@ def register_target(args):
     return {'label': blkid_output.strip()}
 
 def unconfigure_ha(args):
-    _unconfigure_ha(args.primary, args.label, args.serial)
+    _unconfigure_ha(args.primary, args.label, args.uuid, args.serial)
 
-def _unconfigure_ha(primary, label, serial):
+def _unconfigure_ha(primary, label, uuid, serial):
     unique_label = "%s_%s" % (label, serial)
 
     if primary:
@@ -131,7 +131,7 @@ def _unconfigure_ha(primary, label, serial):
     else:
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" % unique_label)
 
-    store_remove_target_info(label)
+    store_remove_target_info(uuid)
 
 def configure_ha(args):
     unique_label = "%s_%s" % (args.label, args.serial)
@@ -139,7 +139,9 @@ def configure_ha(args):
     # remove any pre-existing instance of the resource being added
     rc, stdout, stderr = shell.run(shlex.split("crm_resource -r %s -q" % unique_label))
     if rc == 0:
-        _unconfigure_ha(args.primary, args.label, args.serial)
+        # HYD-406
+        if stdout.find("ORPHANED") == -1:
+            _unconfigure_ha(args.primary, args.label, args.uuid, args.serial)
 
     if args.primary:
         # now configure pacemaker for this target
@@ -158,7 +160,7 @@ def configure_ha(args):
     <nvpair id=\"%s-instance_attributes-target\" name=\"target\" value=\"%s\"/>\
   </instance_attributes>\
 </primitive>" % (unique_label, unique_label, unique_label, unique_label, unique_label,
-            unique_label, unique_label, unique_label, unique_label, args.label))
+            unique_label, unique_label, unique_label, unique_label, args.uuid))
         os.close(tmp_f)
 
         rc, stdout, stderr = cibadmin("-o resources -C -x %s" % tmp_name)
@@ -183,7 +185,7 @@ def configure_ha(args):
         else:
             raise e
 
-    store_write_target_info(args.label, {"bdev": args.device, "mntpt": args.mountpoint})
+    store_write_target_info(args.uuid, {"bdev": args.device, "mntpt": args.mountpoint})
 
 def list_ha_targets(args):
     targets = []
@@ -194,6 +196,7 @@ def list_ha_targets(args):
 
     return targets
 
+# these are called by the Target RA from corosync
 def mount_target(args):
     info = store_get_target_info(args.label)
     shell.try_run(['mount', '-t', 'lustre', info['bdev'], info['mntpt']])

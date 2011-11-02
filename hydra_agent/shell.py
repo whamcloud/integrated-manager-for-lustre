@@ -77,8 +77,6 @@ def run(arg_list, shell = False):
                 raise RuntimeError("Unexpected select() result %s" % ((fd, mask),))
     rc = p.wait()
 
-
-
     return rc, stdout_buf, stderr_buf
 
 def try_run(arg_list, shell = False):

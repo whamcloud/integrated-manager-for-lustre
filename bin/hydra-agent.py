@@ -27,6 +27,7 @@ if __name__ == '__main__':
                               help='configure a target\'s HA parameters')
     p.add_argument('--device', required=True, help='device of the target')
     p.add_argument('--label', required=True, help='label of the target')
+    p.add_argument('--uuid', required=True, help='uuid of the target')
     p.add_argument('--serial', required=True, help='serial of the target')
     p.add_argument('--primary', action='store_true',
                    help='target is primary on this node')
@@ -36,6 +37,7 @@ if __name__ == '__main__':
     p = subparsers.add_parser('unconfigure-ha',
                               help='unconfigure a target\'s HA parameters')
     p.add_argument('--label', required=True, help='label of the target')
+    p.add_argument('--uuid', required=True, help='uuid of the target')
     p.add_argument('--serial', required=True, help='serial of target')
     p.add_argument('--primary', action='store_true',
                    help='target is primary on this node')
