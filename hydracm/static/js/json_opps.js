@@ -47,7 +47,6 @@ function Lnet_Operations(host_id, opps)
       var response = data.response;    
       if(response.status != "")
       {
-        jAlert("Host Lnet State changed to " + opps, ALERT_TITLE);
         $('#server_configuration').dataTable().fnClearTable();
         LoadServerConf_ServerConfig();
       }
