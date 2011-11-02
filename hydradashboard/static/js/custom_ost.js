@@ -4,9 +4,9 @@
  * ---------------------Chart Configurations function-----------------------
  * 1) ChartConfig_OST_Space - Pie chart configuration for space usage.
  * ---------------------Data Loaders function-------------------------------
- * 1) ost_Pie_Space_Data(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
- * 2) ost_Pie_Inode_Data(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
- * 3) ost_Area_ReadWrite_Data(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+ * 1) ost_Pie_Space_Data(targetId, targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+ * 2) ost_Pie_Inode_Data(targetId, targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+ * 3) ost_Area_ReadWrite_Data(targetId, targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 ******************************************************************************
  * API URL's for all the graphs on OST dashboard page
 ******************************************************************************/
@@ -65,10 +65,10 @@ var ChartConfig_OST_Space =
 };  
 /*****************************************************************************
  * Function for space usage data - Pie Chart
- * Param - Target name, start date, end date, datafunction (average/min/max), targetKind, fetchematrics, isZoom
+ * Param - Target Id, Target name, start date, end date, datafunction (average/min/max), targetKind, fetchematrics, isZoom
  * Return - Returns the graph plotted in container
 /*****************************************************************************/
-ost_Pie_Space_Data = function(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+ost_Pie_Space_Data = function(targetId, targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
   var free=0,used=0;
   var freeData = [],usedData = [];
@@ -79,7 +79,7 @@ ost_Pie_Space_Data = function(targetName, sDate, endDate, dataFunction, targetKi
   $.post(ost_Pie_Space_Data_Api_Url,
   { 
     targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-    starttime: "", target: targetName, endtime: ""
+    starttime: "", target_id: targetId, endtime: ""
   })
   .success(function(data, textStatus, jqXHR) 
   {   
@@ -123,10 +123,10 @@ ost_Pie_Space_Data = function(targetName, sDate, endDate, dataFunction, targetKi
 } 
 /*****************************************************************************
  * Function for free inodes - Pie Chart
- * Param - Target name, start date, end date, datafunction (average/min/max), targetKind, fetchematrics, isZoom
+ * Param - Target Id, Target name, start date, end date, datafunction (average/min/max), targetKind, fetchematrics, isZoom
  * Return - Returns the graph plotted in container
 /*****************************************************************************/
-ost_Pie_Inode_Data = function(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom) //250
+ost_Pie_Inode_Data = function(targetId, targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom) //250
 {
   var free=0,used=0;
   var freeFilesData = [],totalFilesData = [];
@@ -136,7 +136,7 @@ ost_Pie_Inode_Data = function(targetName, sDate, endDate, dataFunction, targetKi
   $.post(ost_Pie_Inode_Data_Api_Url,
   {
     targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-    starttime: "", target: targetName, endtime: ""
+    starttime: "", target_id: targetId, endtime: ""
   })
   .success(function(data, textStatus, jqXHR) 
   {   
@@ -181,10 +181,10 @@ ost_Pie_Inode_Data = function(targetName, sDate, endDate, dataFunction, targetKi
 
 /*****************************************************************************
  * Function for disk read and write - Area Chart
- * Param - Target name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics, isZoom
+ * Param - Target Id, Target name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics, isZoom
  * Return - Returns the graph plotted in container
 *****************************************************************************/
-ost_Area_ReadWrite_Data = function(targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+ost_Area_ReadWrite_Data = function(targetId, targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
   obj_oss_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
   var values = new Object();
@@ -195,7 +195,7 @@ ost_Area_ReadWrite_Data = function(targetName, sDate, endDate, dataFunction, tar
   $.post(ost_Area_ReadWrite_Data_Api_Url,
   {
     targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
-    starttime: startTime, target: targetName, endtime: endTime
+    starttime: startTime, target_id: targetId, endtime: endTime
   })
   .success(function(data, textStatus, jqXHR) 
   {
@@ -254,12 +254,12 @@ ost_Area_ReadWrite_Data = function(targetName, sDate, endDate, dataFunction, tar
  * Param - File System name
  * Return - Returns the summary information of the selected file system
 *****************************************************************************/
-loadOSTSummary = function (fsName)
+loadOSTSummary = function (fsId)
 {
   var innerContent = "";
   $('#ostSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
       "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
-  $.post("/api/getfilesystem/",{filesystem: fsName})
+  $.post("/api/getfilesystem/",{filesystem_id: fsId})
   .success(function(data, textStatus, jqXHR) 
   {
     if(data.success)

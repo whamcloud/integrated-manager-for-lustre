@@ -17,12 +17,12 @@ from configure.models import (ManagedFilesystem,
                             ManagedHost)
 
 class GetFSTargetStats(AnonymousRequestHandler):
-    @extract_request_args('filesystem','starttime','endtime','datafunction','targetkind','fetchmetrics')
-    def run(self,request,filesystem,starttime,endtime ,datafunction,targetkind,fetchmetrics):
-        assert targetkind in ['OST', 'MDT']
+    @extract_request_args('filesystem_id','starttime','endtime','datafunction','targetkind','fetchmetrics')
+    def run(self,request,filesystem_id,starttime,endtime ,datafunction,targetkind,fetchmetrics):
+        assert targetkind in ['OST', 'MDT','HOST']
         interval='' 
-        if filesystem:
-            fs = ManagedFilesystem.objects.get(name=filesystem)
+        if filesystem_id:
+            fs = ManagedFilesystem.objects.get(id=filesystem_id)
             return self.metrics_fetch(fs,targetkind,fetchmetrics,starttime,endtime,interval)
         else:
             all_fs_stats = []
@@ -57,6 +57,19 @@ class GetFSTargetStats(AnonymousRequestHandler):
                     fs_target_stats = fs.metrics.fetch_last(ManagedMdt,fetch_metrics=fetch_metrics.split())
                 else:
                     fs_target_stats = fs.metrics.fetch_last(ManagedMdt)   
+        elif target_kind == 'HOST':
+            if start_time:
+                start_time = int(start_time)
+                start_time = getstartdate(start_time)
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedHost,fetch_metrics=fetch_metrics.split(),start_time=start_time)
+                else:
+                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedHost,start_time=start_time)
+            else:
+                if fetch_metrics:
+                    fs_target_stats = fs.metrics.fetch_last(ManagedHost,fetch_metrics=fetch_metrics.split())
+                else:
+                    fs_target_stats = fs.metrics.fetch_last(ManagedHost)
         chart_stats = []
         if fs_target_stats:
             if start_time:  
@@ -71,12 +84,12 @@ class GetFSTargetStats(AnonymousRequestHandler):
         return chart_stats
 
 class GetFSServerStats(AnonymousRequestHandler):
-    @extract_request_args('filesystem','starttime','endtime','datafunction','fetchmetrics')
-    def run(self,request,filesystem,starttime,endtime ,datafunction,fetchmetrics):
+    @extract_request_args('filesystem_id','starttime','endtime','datafunction','fetchmetrics')
+    def run(self,request,filesystem_id,starttime,endtime ,datafunction,fetchmetrics):
         interval =''
-        if filesystem:
+        if filesystem_id:
             host_stats_metric = []
-            fs = ManagedFilesystem.objects.get(name=filesystem)
+            fs = ManagedFilesystem.objects.get(id=filesystem_id)
             hosts = fs.get_servers()
             for host in hosts:
                 host_stats_metric.extend(self.metrics_fetch(host,fetchmetrics,starttime,endtime,interval))
@@ -116,12 +129,12 @@ class GetFSServerStats(AnonymousRequestHandler):
         return chart_stats
 
 class GetFSMGSStats(AnonymousRequestHandler):
-    @extract_request_args('filesystem','starttime','endtime' ,'datafunction','fetchmetrics')
-    def run(self,request,filesystem,starttime,endtime ,datafunction,fetchmetrics):
+    @extract_request_args('filesystem_id','starttime','endtime' ,'datafunction','fetchmetrics')
+    def run(self,request,filesystem_id,starttime,endtime ,datafunction,fetchmetrics):
         interval =''
-        if filesystem:
+        if filesystem_id:
             mgs_stats_metric = []
-            fs = ManagedFilesystem.objects.get(name=filesystem)
+            fs = ManagedFilesystem.objects.get(id=filesystem_id)
             mgs = fs.mgs
             mgs_stats_metric.append(self.metrics_fetch(mgs,fetchmetrics,starttime,endtime,interval))
             return mgs_stats_metric
@@ -159,14 +172,14 @@ class GetFSMGSStats(AnonymousRequestHandler):
         return chart_stats
 
 class GetServerStats(AnonymousRequestHandler):
-    @extract_request_args('hostid','starttime','endtime' ,'datafunction','fetchmetrics')
-    def run(self,request,hostid,starttime,endtime ,datafunction,fetchmetrics):
+    @extract_request_args('host_id','starttime','endtime' ,'datafunction','fetchmetrics')
+    def run(self,request,host_id,starttime,endtime ,datafunction,fetchmetrics):
         interval =''
-        if hostid:
-            host = ManagedHost.objects.get(id=hostid)
+        if host_id:
+            host = ManagedHost.objects.get(id=host_id)
             return self.metrics_fetch(host,fetchmetrics,starttime,endtime,interval)
         else:
-            raise Exception("Unable to find host with hostid=%s" %hostid)
+            raise Exception("Unable to find host with host_id=%s" %host_id)
 
     def metrics_fetch(self,host,fetch_metrics,start_time,end_time,interval,datafunction='Average'):
         if start_time:
@@ -195,15 +208,15 @@ class GetServerStats(AnonymousRequestHandler):
         return chart_stats
 
 class GetTargetStats(AnonymousRequestHandler):
-    @extract_request_args('target','starttime','endtime','datafunction','targetkind','fetchmetrics')
-    def run(self,request,target,starttime,endtime ,datafunction,targetkind,fetchmetrics):
+    @extract_request_args('target_id','starttime','endtime','datafunction','targetkind','fetchmetrics')
+    def run(self,request,target_id,starttime,endtime ,datafunction,targetkind,fetchmetrics):
         assert targetkind in ['OST', 'MDT']
         interval=''
         if targetkind == 'OST':
-            target = ManagedOst.objects.get(name=target)
+            target = ManagedOst.objects.get(id=target_id)
             return self.metrics_fetch(target,fetchmetrics,starttime,endtime,interval)
         elif targetkind == 'MDT':
-            target = ManagedMdt.objects.get(name=target)
+            target = ManagedMdt.objects.get(id=target_id)
             return self.metrics_fetch(target,fetchmetrics,starttime,endtime,interval)
 
     def metrics_fetch(self,target,fetch_metrics,start_time,end_time,interval,datafunction='Average'):
@@ -235,12 +248,12 @@ class GetTargetStats(AnonymousRequestHandler):
         return chart_stats
 
 class GetFSClientsStats(AnonymousRequestHandler):
-    @extract_request_args('filesystem','starttime','endtime' ,'datafunction','fetchmetrics')
-    def run(self,request,filesystem,starttime,endtime ,datafunction,fetchmetrics):
+    @extract_request_args('filesystem_id','starttime','endtime' ,'datafunction','fetchmetrics')
+    def run(self,request,filesystem_id,starttime,endtime ,datafunction,fetchmetrics):
         interval=''
         client_stats = []
-        if filesystem:
-            fs = ManagedFilesystem.objects.get(name=filesystem)    
+        if filesystem_id:
+            fs = ManagedFilesystem.objects.get(id=filesystem_id)    
             return self.metrics_fetch(fs,starttime,endtime,interval) 
         else:
             for fs in ManagedFilesystem.objects.all():

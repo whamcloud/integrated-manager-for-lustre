@@ -12,11 +12,11 @@
  * 8) setStartEndTime(timeFactor, startTimeValue, endTimeValue)
  * 9) loadLandingPage
  * 10) $("#fsSelect").change();
- * 11) loadFSContent(fsName)
+ * 11) loadFSContent(fsId)
  * 12) $("#ossSelect").live('change');
- * 13) loadOSSContent(fsName, ossName);
+ * 13) loadOSSContent(fsId, fsName, ossId, ossName);
  * 14) $("#ostSelect").live('change');
- * 15) loadOSTContnent(fsName, ossName, ostName);
+ * 15) loadOSTContent(fsId, fsName, ossName, ostId, ostName);
  * 16) $("ul.tabs li").click();
  * 17) $("#heatmap_parameter_select").change();
  * 18) reloadHeatMap(fetchmetric);
@@ -32,15 +32,15 @@ $(document).ready(function()
    {
      case "#fs":
        window.location.hash =  "fs";
-       loadFSContent($('#ls_filesystem').val());
+       loadFSContent($('#ls_fsId').val(), $('#ls_fsName').val());
        break;
      case "#oss":
        window.location.hash =  "oss";
-       loadOSSContent($('#ls_filesystem').val(), $('#ls_oss').val());
+       loadOSSContent($('#ls_fsId').val(), $('#ls_fsName').val(), $('#ls_ossId').val(), $('#ls_ossName').val());
        break;
      case "#ost":
        window.location.hash =  "ost";
-       loadOSTContnent($('#ls_filesystem').val(), $('#ls_oss').val(), $('#ls_ost').val());
+       loadOSTContent($('#ls_fsId').val(), $('#ls_fsName').val(), $('#ls_ossName').val(), $('#ls_ostId').val(), $('#ls_ostName').val());
        break;
 
      default:
@@ -180,7 +180,7 @@ $(document).ready(function()
               $.each(val1, function(resKey, resValue) 
               {
                 innerContent = innerContent + 
-                "<option value="+resValue.fsname+">"+resValue.fsname+"</option>";
+                "<option value="+resValue.fsid+">"+resValue.fsname+"</option>";
 
                 $('#allFileSystemSummaryTbl')
                 .dataTable(
@@ -232,11 +232,11 @@ $(document).ready(function()
   {
     if($(this).val()!="")
     {
-      loadFSContent($(this).val());
+      loadFSContent($(this).val(), $(this).find('option:selected').text());
     }
   });         
 
-  loadFSContent = function(fsName)
+  loadFSContent = function(fsId, fsName)
   {
     $('#dashboardDiv').hide();$('#ossInfoDiv').hide();$('#ostInfoDiv').hide();
     $('#fileSystemDiv').slideDown("slow");
@@ -248,7 +248,7 @@ $(document).ready(function()
     "<select id='ossSelect'>"+
     "<option value=''>Select OSS</option>";
 
-    $.post("/api/listservers/",{filesystem:fsName}) 
+    $.post("/api/listservers/",{filesystem_id:fsId}) 
     .success(function(data, textStatus, jqXHR)
     {
       if(data.success)
@@ -258,7 +258,7 @@ $(document).ready(function()
           if(resValue.kind.indexOf('OST')!=-1)
           {
             breadCrumbHtml  =  breadCrumbHtml + 
-            "<option value="+resValue.host_address+">"+resValue.host_address+"</option>";
+            "<option value="+resValue.id+">"+resValue.host_address+"</option>";
           }
         });
        }
@@ -279,23 +279,23 @@ $(document).ready(function()
     resetTimeInterval();
 
 		    // 2011-10-17 19:56:58.720036  2011-10-17 19:46:58.720062
-    fs_Bar_SpaceUsage_Data(fsName, startTime, endTime, "Average", "OST", spaceUsageFetchMatric, false);
+    fs_Bar_SpaceUsage_Data(fsId, startTime, endTime, "Average", "OST", spaceUsageFetchMatric, false);
 
-    fs_Line_connectedClients_Data(fsName, startTime, endTime, "Average", clientsConnectedFetchMatric, false);
+    fs_Line_connectedClients_Data(fsId, startTime, endTime, "Average", clientsConnectedFetchMatric, false);
 
-    fs_LineBar_CpuMemoryUsage_Data(fsName, startTime, endTime, "Average", "OST", cpuMemoryFetchMatric, false);
+    fs_LineBar_CpuMemoryUsage_Data(fsId, startTime, endTime, "Average", "OST", cpuMemoryFetchMatric, false);
 
-    fs_Area_ReadWrite_Data(fsName, startTime, endTime, "Average", "OST", readWriteFetchMatric, false);
+    fs_Area_ReadWrite_Data(fsId, startTime, endTime, "Average", "OST", readWriteFetchMatric, false);
 
-    fs_Area_mdOps_Data(fsName, startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
+    fs_Area_mdOps_Data(fsId, startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
 
     fs_HeatMap_CPUData('cpu', 'false');
 
     clearInterval(dashboardPollingInterval);
 
-    loadFileSystemSummary(fsName);
+    loadFileSystemSummary(fsId);
    
-    $('#ls_filesystem').attr("value",fsName);
+    $('#ls_fsId').attr("value",fsId);$('#ls_fsName').attr("value",fsName);
     window.location.hash =  "fs";
    
   }
@@ -306,24 +306,24 @@ $(document).ready(function()
   {
     if($(this).val()!="")
     {
-      loadOSSContent($('#ls_filesystem').val(), $(this).val());
+      loadOSSContent($('#ls_fsId').val(), $('#ls_fsName').val(), $(this).val(), $(this).find('option:selected').text());
     }	
   });
 		
-  loadOSSContent = function(fsName, ossName)
+  loadOSSContent = function(fsId, fsName, ossId, ossName)
   {
     $('#dashboardDiv').hide();$('#fileSystemDiv').hide();$('#ostInfoDiv').hide();
     $('#ossInfoDiv').slideDown("slow");
     var breadCrumbHtml = "<ul>"+
     "<li><a href='/dashboard'>Home</a></li>"+
     "<li><a href='/dashboard'>All FileSystems</a></li>"+
-    "<li><a href='#' onclick='showFSDashboard()'>"+fsName+"</a></li>"+
+    "<li><a href='#fs' onclick='showFSDashboard()'>"+fsName+"</a></li>"+
     "<li>"+ossName+"</li>"+
     "<li>"+
     "<select id='ostSelect'>"+
     "<option value=''>Select OST</option>";
              
-    $.post("/api/getvolumes/",{filesystem:fsName}) 
+    $.post("/api/getvolumes/",{filesystem_id:fsId}) 
     .success(function(data, textStatus, jqXHR) 
     {
       if(data.success)
@@ -333,7 +333,7 @@ $(document).ready(function()
           if(resValue.kind=='OST')
           {
             breadCrumbHtml  =  breadCrumbHtml + 
-            "<option value="+resValue.name+">"+resValue.name+"</option>";
+            "<option value="+resValue.id+">"+resValue.name+"</option>";
           }
         });
       }
@@ -354,15 +354,14 @@ $(document).ready(function()
 
     resetTimeInterval();
 
-    oss_LineBar_CpuMemoryUsage_Data(fsName, startTime, endTime, "Average", cpuMemoryFetchMatric, 'false');
+    oss_LineBar_CpuMemoryUsage_Data(ossId, startTime, endTime, "Average", cpuMemoryFetchMatric, 'false');
 
-    oss_Area_ReadWrite_Data(fsName, startTime, endTime, "Average", "OST", readWriteFetchMatric, 'false');
+    oss_Area_ReadWrite_Data(fsId, startTime, endTime, "Average", "OST", readWriteFetchMatric, 'false');
 
-    loadOSSUsageSummary(fsName);
+    loadOSSUsageSummary(fsId);
 	        
-    $('#ls_oss').attr("value",ossName);
+    $('#ls_ossId').attr("value",ossId);$('#ls_ossName').attr("value",ossName);
     window.location.hash =  "oss";
-
   }
 /*******************************************************************************
  * Function to populate info on ost dashboard page
@@ -371,19 +370,19 @@ $(document).ready(function()
   {
     if($(this).val()!="")
     {
-      loadOSTContnent($('#ls_filesystem').val(), $('#ls_oss').val(), $(this).val());
+      loadOSTContent($('#ls_fsId').val(), $('#ls_fsName').val(), $('#ls_ossName').val(), $(this).val(), $(this).find('option:selected').text());
     }	
   });
 
-  loadOSTContnent = function(fsName, ossName, ostName)
+  loadOSTContent = function(fsId, fsName, ossName, ostId, ostName)
   {
     $('#dashboardDiv').hide();$('#fileSystemDiv').hide();$('#ossInfoDiv').hide();
     $('#ostInfoDiv').slideDown("slow");
     var breadCrumbHtml = "<ul>"+
     "<li><a href='/dashboard'>Home</a></li>"+
     "<li><a href='/dashboard'>All FileSystems</a></li>"+
-    "<li><a href='#' onclick='showFSDashboard()'>"+fsName+"</a></li>"+
-    "<li><a href='#' onclick='showOSSDashboard()'>"+ossName+"</a></li>"+
+    "<li><a href='#fs' onclick='showFSDashboard()'>"+fsName+"</a></li>"+
+    "<li><a href='#oss' onclick='showOSSDashboard()'>"+ossName+"</a></li>"+
     "<li>"+ostName+"</li>"+
     "</ul>";
 
@@ -395,13 +394,13 @@ $(document).ready(function()
 		/* HYD-375: ostSelect value is a name instead of an ID */
     load_resource_graph("ost_resource_graph_canvas", ostName);
 
-    ost_Pie_Space_Data(ostName, "", "", 'Average', 'OST', spaceUsageFetchMatric, 'false');
-    ost_Pie_Inode_Data(ostName, "", "", 'Average', 'OST', spaceUsageFetchMatric, 'false');
-    ost_Area_ReadWrite_Data(ostName, startTime, endTime, 'Average', 'OST', readWriteFetchMatric, false);
+    ost_Pie_Space_Data(ostId, ostName, "", "", 'Average', 'OST', spaceUsageFetchMatric, 'false');
+    ost_Pie_Inode_Data(ostId, ostName, "", "", 'Average', 'OST', spaceUsageFetchMatric, 'false');
+    ost_Area_ReadWrite_Data(ostId, ostName, startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'false');
 
-    loadOSTSummary(fsName);
+    loadOSTSummary(fsId);
 
-    $('#ls_ost').attr("value",ostName);
+    $('#ls_ostId').attr("value",ostId);$('#ls_ostName').attr("value",ostName);
     window.location.hash =  "ost";
   }
 /******************************************************************************

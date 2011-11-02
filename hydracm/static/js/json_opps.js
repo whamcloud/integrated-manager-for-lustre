@@ -39,31 +39,40 @@ RemoveHost_ServerConfig = function (host_id)
     });
 }
 
-function Lnet_Operations(host_id, opps)
+function Lnet_Operations(host_id, opps, confirm_mesg)
 {
-  $.post("/api/set_lnet_state/",{"hostid":host_id, "state":opps}).success(function(data, textStatus, jqXHR) {
-    if(data.success)
+  jConfirm(confirm_mesg,"Configuration Manager", 
+  function(r)
+  {
+    if(r == true)
     {
-      var response = data.response;    
-      if(response.status != "")
+      //Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;);
+      $.post("/api/set_lnet_state/",{"hostid":host_id, "state":opps}).success(function(data, textStatus, jqXHR) {
+      if(data.success)
       {
-        $('#server_configuration').dataTable().fnClearTable();
-        LoadServerConf_ServerConfig();
+        var response = data.response;    
+        if(response.status != "")
+        {
+          jAlert("Host Lnet State changed to " + opps, ALERT_TITLE);
+          $('#server_configuration').dataTable().fnClearTable();
+          LoadServerConf_ServerConfig();
+        }
+        else
+        {
+          alert(ERR_COMMON_LNET_STATUS, ALERT_TITLE);
+        }
       }
       else
       {
-        alert(ERR_COMMON_LNET_STATUS, ALERT_TITLE);
+        jAlert(ERR_COMMON_LNET_STATUS + data.errors, ALERT_TITLE);
       }
-    }
-    else
-    {
-      jAlert(ERR_COMMON_LNET_STATUS + data.errors, ALERT_TITLE);
-    }
-  })
-  .error(function(event) {
-       jAlert(ERR_COMMON_LNET_STATUS + data.errors, ALERT_TITLE);
     })
-  .complete(function(event) {
+    .error(function(event) {
+         jAlert(ERR_COMMON_LNET_STATUS + data.errors, ALERT_TITLE);
+      })
+    .complete(function(event) {
+    });
+    }
   });
 }
 

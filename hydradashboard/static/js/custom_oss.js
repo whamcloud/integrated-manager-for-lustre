@@ -2,28 +2,28 @@
  * File Name - custome_oss.js
  * Description - Contains function to plot pie, line and bar charts on OSS Screen
  * ---------------------Data Loaders function-------------------------------
- * 1) oss_LineBar_CpuMemoryUsage_Data(fsName, sDate, endDate, dataFunction, fetchMetrics, isZoom)
- * 2) oss_Area_ReadWrite_Data(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
- * 3) loadOSSUsageSummary(fsName)
+ * 1) oss_LineBar_CpuMemoryUsage_Data(fsId, sDate, endDate, dataFunction, fetchMetrics, isZoom)
+ * 2) oss_Area_ReadWrite_Data(fsId, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+ * 3) loadOSSUsageSummary(fsId)
  * 4) initOSSPolling
 ******************************************************************************
  * API URL's for all the graphs on OSS dashboard page
 ******************************************************************************/
-var oss_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_server/";
+var oss_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_stats_for_server/";
 var oss_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 /******************************************************************************
  * Function for cpu and memory usage - Line + Column Chart
  * Param - File System name, start date, end date, datafunction (average/min/max),fetchematrics, isZoom
  * Return - Returns the graph plotted in container
 *****************************************************************************/
-oss_LineBar_CpuMemoryUsage_Data = function(fsName, sDate, endDate, dataFunction, fetchMetrics, isZoom)
+oss_LineBar_CpuMemoryUsage_Data = function(hostId, sDate, endDate, dataFunction, fetchMetrics, isZoom)
 {
   var count = 0;
   var cpuData = [],categories = [], memoryData = [];
   obj_oss_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
   $.post(oss_LineBar_CpuMemoryUsage_Data_Api_Url,
   {
-    datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem: fsName, endtime: endDate
+    datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, host_id: hostId, endtime: endDate
   })
   .success(function(data, textStatus, jqXHR) 
   {
@@ -71,7 +71,7 @@ oss_LineBar_CpuMemoryUsage_Data = function(fsName, sDate, endDate, dataFunction,
  * Param - File System name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics, isZoom
  * Return - Returns the graph plotted in container
 *****************************************************************************/
-oss_Area_ReadWrite_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+oss_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
   obj_oss_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
   var values = new Object();
@@ -83,7 +83,7 @@ oss_Area_ReadWrite_Data = function(fsName, sDate, endDate, dataFunction, targetK
   $.post(oss_Area_ReadWrite_Data_Api_Url,
   {
     targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
-	  starttime: startTime, filesystem: fsName, endtime: endTime
+	  starttime: startTime, filesystem_id: fsId, endtime: endTime
 	})
   .success(function(data, textStatus, jqXHR) 
   {
@@ -139,14 +139,14 @@ oss_Area_ReadWrite_Data = function(fsName, sDate, endDate, dataFunction, targetK
 }
 /*****************************************************************************
  * Function to load OSS usage summary information
- * Param - File System name
+ * Param - File System Id
  * Return - Returns the summary information of the selected file system
 *****************************************************************************/
-loadOSSUsageSummary = function (fsName)
+loadOSSUsageSummary = function (fsId)
 {
   $('#ossSummaryTbl').html("<tr><td width='100%' align='center' height='180px'><img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
   var innerContent = "";
-  $.post("/api/getfilesystem/",{filesystem: fsName})
+  $.post("/api/getfilesystem/",{filesystem_id: fsId})
   .success(function(data, textStatus, jqXHR) 
   {
     if(data.success)
@@ -193,7 +193,14 @@ loadOSSUsageSummary = function (fsName)
 *****************************************************************************/
 initOSSPolling = function()
 {
-  oss_LineBar_CpuMemoryUsage_Data($('#ls_filesystem').val(), startTime, endTime, "Average", cpuMemoryFetchMatric, "false");
-  oss_Area_ReadWrite_Data($('#ls_filesystem').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, "false");
+  oss_LineBar_CpuMemoryUsage_Data($('#ls_ossId').val(), startTime, endTime, "Average", cpuMemoryFetchMatric, "false");
+  oss_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, "false");
+}
+/******************************************************************************
+ * Function to show OST dashboard content
+******************************************************************************/
+function showOSSDashboard()
+{
+  loadOSSContent($('#ls_fsId').val(), $('#ls_fsName').val(), $('#ls_ossId').val(), $('#ls_ossName').val());
 }
 /*********************************************************************************************/

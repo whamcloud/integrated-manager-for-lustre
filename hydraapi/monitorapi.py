@@ -49,7 +49,8 @@ class ListFileSystems(AnonymousRequestHandler):
             except:
                 pass 
 
-            filesystems.append({'fsname': filesystem.name,
+            filesystems.append({'fsid':filesystem.id,
+                                'fsname': filesystem.name,
                                 'status':filesystem.status_string(),
                                 'noofoss':no_of_oss,
                                 'noofost':no_of_ost,
@@ -62,10 +63,10 @@ class ListFileSystems(AnonymousRequestHandler):
         return filesystems
 
 class GetFileSystem(AnonymousRequestHandler):
-    @extract_request_args('filesystem')
-    def run(self,request,filesystem):
+    @extract_request_args('filesystem_id')
+    def run(self,request,filesystem_id):
         fs_info = []  
-        filesystem =  ManagedFilesystem.objects.get(name=filesystem)
+        filesystem =  ManagedFilesystem.objects.get(id=filesystem_id)
         osts = ManagedOst.objects.filter(filesystem = filesystem)
         no_of_ost = osts.count()
         no_of_oss = len(set([tm.host for tm in ManagedTargetMount.objects.filter(target__in = osts)]))
@@ -109,31 +110,57 @@ class GetFileSystem(AnonymousRequestHandler):
         })
         return fs_info  
 
+class GetMgtDetails(AnonymousRequestHandler):
+    def run(self,request):
+        dashboard_data = Dashboard(None)
+        all_mgt = []
+        for k,v in dashboard_data.all_statuses.items():
+            if type(k) == ManagedMgs:
+                all_mgt.append(
+                        {
+                         'fsnames':[fs.name for fs in ManagedFilesystem.objects.filter(mgs=k)],
+                         'targetid':k.id,
+                         'targetname': k.name,
+                         'targetdevice':str(k.active_mount.block_device),
+                         'targetmount':k.active_mount.mount_point,
+                         'targetstatus':k.active_mount.status_string(),
+                         'targetstate':k.active_mount.state,
+                         'targetstates':k.active_mount.states,
+                         'targetkind': k.role(),
+                         'hostname':k.active_mount.host.pretty_name(),
+                         'failover':''
+                        }
+                       )
+        return all_mgt
+
 class GetFSVolumeDetails(AnonymousRequestHandler):
     @extract_request_args('filesystem')
     def run(self,request,filesystem):
         filesystem_name = filesystem
         all_fs = []
-        dashboard_data = Dashboard()
+        if filesystem_name:
+            dashboard_data = Dashboard(filesystem_name)
+        else:
+            dashboard_data = Dashboard(None)  
         for fs in dashboard_data.filesystems:
-            if (str(fs.item.name) == str(filesystem_name)) | (not filesystem_name): 
-                for fstarget in fs.targets:
-                    for fstarget_mount in fstarget.target_mounts:
-                        for fstarget_mount in fstarget.target_mounts:
-                            all_fs.append(
-                                          {
-                                           'fsid':fs.item.id,
-                                           'fsname':fs.item.name,  
-                                           'targetid':fstarget.item.id,
-                                           'targetname': fstarget.item.name,
-                                           'targetdevice': str(fstarget_mount.item.block_device),
-                                           'targetmount':str(fstarget_mount.item.mount_point),
-                                           'targetstatus':fstarget.status(),
-                                           'targetkind': fstarget.item.role(),
-                                           'hostname':fstarget_mount.item.host.pretty_name(),
-                                           'failover':''
-                                          }
-                                         )
+            for fstarget in fs.targets:
+                for fstarget_mount in fstarget.target_mounts:
+                    all_fs.append(
+                                  {
+                                   'fsid':fs.item.id,
+                                   'fsname':fs.item.name,  
+                                   'targetid':fstarget.item.id,
+                                   'targetname': fstarget.item.name,
+                                   'targetdevice': str(fstarget_mount.item.block_device),
+                                   'targetmount':str(fstarget_mount.item.mount_point),
+                                   'targetstatus':fstarget.status(),
+                                   'targetstate':str(fstarget_mount.item.state),
+                                   'targetstates':fstarget_mount.item.states,
+                                   'targetkind': fstarget.item.role(),
+                                   'hostname':fstarget_mount.item.host.pretty_name(),
+                                   'failover':''
+                                  }
+                                 )
         return all_fs            
 
 class GetTargets(AnonymousRequestHandler):
@@ -173,11 +200,10 @@ class GetTargets(AnonymousRequestHandler):
 # FIXME: this is actually returning information about all filesystems, and all targets
 # neither of which is a 'volume'.
 class GetVolumes(AnonymousRequestHandler):
-    @extract_request_args('filesystem')
-    def run(self, request, filesystem):
-        filesystem_name = filesystem
-        if filesystem_name:
-            return self.get_volumes_per_fs(ManagedFilesystem.objects.get(name = filesystem_name))
+    @extract_request_args('filesystem_id')
+    def run(self, request, filesystem_id):
+        if filesystem_id:
+            return self.get_volumes_per_fs(ManagedFilesystem.objects.get(id = filesystem_id))
         else:
 
             volumes_list = []
@@ -268,11 +294,10 @@ class GetVolumes(AnonymousRequestHandler):
 #        ]
 
 class GetServers (AnonymousRequestHandler):
-    @extract_request_args('filesystem')
-    def run(self,request,filesystem):
-        filesystem_name = filesystem
-        if filesystem_name:
-            fs = ManagedFilesystem.objects.get(name=filesystem_name)
+    @extract_request_args('filesystem_id')
+    def run(self,request,filesystem_id):
+        if filesystem_id:
+            fs = ManagedFilesystem.objects.get(id=filesystem_id)
             return [
                     { 
                      'id' : host.id,
@@ -281,6 +306,7 @@ class GetServers (AnonymousRequestHandler):
                      'failnode':'',
                      'kind' : host.role() ,
                      'lnet_status' : str(host.state),
+                     'lnet_states': host.states, 
                      'status':host.status_string()
                     }
                     for host in fs.get_servers()
@@ -294,7 +320,8 @@ class GetServers (AnonymousRequestHandler):
                      'pretty_name': host.pretty_name(),
                      'failnode':'',
                      'kind' : host.role() ,
-                     'lnet_status': str(host.state),
+                     'lnet_status': host.state,
+                     'lnet_states': host.states,
                      'status':host.status_string()  
                     }
                     for host in ManagedHost.objects.all()
@@ -407,21 +434,23 @@ class Dashboard:
         def status(self):
             return self.dashboard.all_statuses[self.item]
     
-    def __init__(self):
+    def __init__(self,filesystem_name):
         self.all_statuses = {}
         # 1 query for getting all targetmoun
-        for mount in ManagedTargetMount.objects.all():
+        for mount in ManagedTargetMount.objects.filter(primary=True):
             # 1 query per targetmount to get any alerts
             self.all_statuses[mount] = mount.status_string()
         from collections import defaultdict
         target_mounts_by_target = defaultdict(list)
         target_mounts_by_host = defaultdict(list)
         target_params_by_target = defaultdict(list)
+
         for target_klass in ManagedMgs, ManagedMdt, ManagedOst:
             # 1 query to get all targets of a type
             for target in target_klass.objects.all():
                 # 1 query per target to get the targetmounts
-                target_mounts = target.managedtargetmount_set.all()
+                #target_mounts = target.managedtargetmount_set.all()
+                target_mounts = target.managedtargetmount_set.filter(primary=True)
                 try:
                     target_mountable_statuses = dict(
                             [(m, self.all_statuses[m]) for m in target_mounts])
@@ -435,7 +464,13 @@ class Dashboard:
                 target_params_by_target[target] = target.get_params()
         self.filesystems = []
         # 1 query to get all filesystems
-        for filesystem in ManagedFilesystem.objects.all().order_by('name'):
+        managedfilesystems = []
+        if filesystem_name:
+            managedfilesystems.append(ManagedFilesystem.objects.get(name=filesystem_name))
+        else:
+            managedfilesystems =  ManagedFilesystem.objects.all().order_by('name')
+
+        for filesystem in managedfilesystems:
             # 3 queries to get targets (of each type)
             targets = filesystem.get_targets()
             try:

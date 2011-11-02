@@ -2,21 +2,21 @@
  * File name: custom_filesystem.js
  * Description: Plots all the graphs for file system dashboard
  * ------------------ Data Loader functions--------------------------------------
- * 1) fs_Bar_SpaceUsage_Data(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
- * 2) fs_Line_connectedClients_Data(fsName, sDate, endDate, dataFunction, fetchMetrics, isZoom)
- * 3) fs_LineBar_CpuMemoryUsage_Data(fsName, sDate, endDate, dataFunction, targetkind, fetchMetrics, isZoom)
- * 4) fs_Area_ReadWrite_Data(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
- * 5) fs_Area_mdOps_Data(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+ * 1) fs_Bar_SpaceUsage_Data(fsId, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+ * 2) fs_Line_connectedClients_Data(fsId, sDate, endDate, dataFunction, fetchMetrics, isZoom)
+ * 3) fs_LineBar_CpuMemoryUsage_Data(fsId, sDate, endDate, dataFunction, targetkind, fetchMetrics, isZoom)
+ * 4) fs_Area_ReadWrite_Data(fsId, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+ * 5) fs_Area_mdOps_Data(fsId, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
  * 6) fs_HeatMap_CPUData(fetchMetrics,isZoom)
  * 7) fs_HeatMap_ReadWriteData(fetchMetrics,isZoom)
- * 8) loadFileSystemSummary(fsName)
+ * 8) loadFileSystemSummary(fsId)
  * 9) initFileSystemPolling
 /*******************************************************************************
  * API URL's for all the graphs on file system dashboard page
 ******************************************************************************/
 var fs_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_Line_connectedClients_Data_Api_Url = "/api/get_fs_stats_for_client/";
-var fs_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_server/";
+var fs_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_Area_mdOps_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
@@ -25,14 +25,14 @@ var fs_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
  * Param - File System name, start date, end date, datafunction (average/min/max), fetchematrics, isZoom
  * Return - Returns the graph plotted in container
 /*****************************************************************************/
-fs_Bar_SpaceUsage_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+fs_Bar_SpaceUsage_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
   var free=0,used=0;
   var freeData = [],usedData = [],categories = [],freeFilesData = [],totalFilesData = [];
   $.post(fs_Bar_SpaceUsage_Data_Api_Url,
   {
     targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-    starttime: "", filesystem: fsName, endtime: ""
+    starttime: "", filesystem_id: fsId, endtime: ""
   })
 	.success(function(data, textStatus, jqXHR) 
   {   
@@ -91,7 +91,7 @@ fs_Bar_SpaceUsage_Data = function(fsName, sDate, endDate, dataFunction, targetKi
  * Param - File System name, start date, end date, datafunction (average/min/max), fetchematrics, isZoom
  * Return - Returns the graph plotted in container
 /*****************************************************************************/
-fs_Line_connectedClients_Data = function(fsName, sDate, endDate, dataFunction, fetchMetrics, isZoom)
+fs_Line_connectedClients_Data = function(fsId, sDate, endDate, dataFunction, fetchMetrics, isZoom)
 {
   obj_fs_Line_connectedClients_Data = JSON.parse(JSON.stringify(chartConfig_Line_clientConnected));
   var clientMountData = [];
@@ -99,7 +99,7 @@ fs_Line_connectedClients_Data = function(fsName, sDate, endDate, dataFunction, f
   var fileSystemName = "";
   $.post(fs_Line_connectedClients_Data_Api_Url,
   {
-    datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem: fsName, endtime: endDate
+    datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem_id: fsId, endtime: endDate
   })
   .success(function(data, textStatus, jqXHR) 
   {   
@@ -159,14 +159,14 @@ fs_Line_connectedClients_Data = function(fsName, sDate, endDate, dataFunction, f
  * Param - File System name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics, isZoom
  * Return - Returns the graph plotted in container 
 *****************************************************************************/
-fs_LineBar_CpuMemoryUsage_Data = function(fsName, sDate, endDate, dataFunction, targetkind, fetchMetrics, isZoom)
+fs_LineBar_CpuMemoryUsage_Data = function(fsId, sDate, endDate, dataFunction, targetkind, fetchMetrics, isZoom)
 {
   var count = 0;
   var cpuData = [], memoryData = [];
   obj_fs_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
   $.post(fs_LineBar_CpuMemoryUsage_Data_Api_Url,
   {
-    datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem: fsName, endtime: endDate
+    targetkind: 'HOST', datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem_id: fsId, endtime: endDate
   })
   .success(function(data, textStatus, jqXHR) 
   {
@@ -177,15 +177,12 @@ fs_LineBar_CpuMemoryUsage_Data = function(fsName, sDate, endDate, dataFunction, 
       var response = fsCPUMemoryApiResponse.response;
       $.each(response, function(resKey, resValue) 
       {
-        if(resValue.host != undefined)
-        {
           if (resValue.cpu_usage != null || resValue.cpu_usage != undefined || resValue.mem_MemTotal != null || resValue.mem_MemTotal != undefined)
           {
             ts = resValue.timestamp * 1000
             cpuData.push([ts,((resValue.cpu_usage*100)/resValue.cpu_total)]);
             memoryData.push([ts,(resValue.mem_MemTotal - resValue.mem_MemFree)]);
           }
-        }
       });
     }
   })
@@ -210,7 +207,7 @@ fs_LineBar_CpuMemoryUsage_Data = function(fsName, sDate, endDate, dataFunction, 
  * Param - File System name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics, isZoom
  * Return - Returns the graph plotted in container 
 *****************************************************************************/
-fs_Area_ReadWrite_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+fs_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
   obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
   var values = new Object();
@@ -222,7 +219,7 @@ fs_Area_ReadWrite_Data = function(fsName, sDate, endDate, dataFunction, targetKi
   $.post(fs_Area_ReadWrite_Data_Api_Url,
   {
     targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
-    starttime: startTime, filesystem: fsName, endtime: endTime
+    starttime: startTime, filesystem_id: fsId, endtime: endTime
   })
   .success(function(data, textStatus, jqXHR) 
   {
@@ -280,7 +277,7 @@ fs_Area_ReadWrite_Data = function(fsName, sDate, endDate, dataFunction, targetKi
  * Param - File System name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics, isZoom
  * Return - Returns the graph plotted in container
 *****************************************************************************/
-fs_Area_mdOps_Data = function(fsName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
+fs_Area_mdOps_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
 	var readData = [], writeData = [], statData = [], closeData = [], openData = [];
   obj_db_Area_mdOps_Data = JSON.parse(JSON.stringify(chartConfig_Area_mdOps));
@@ -294,7 +291,7 @@ fs_Area_mdOps_Data = function(fsName, sDate, endDate, dataFunction, targetKind, 
   $.post(db_Area_mdOps_Data_Api_Url,
   {
     targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
-    starttime: startTime, filesystem: fsName, endtime: endTime
+    starttime: startTime, filesystem_id: fsId, endtime: endTime
   })
   .success(function(data, textStatus, jqXHR) 
   {
@@ -448,14 +445,16 @@ fs_HeatMap_ReadWriteData = function(fetchmetrics, isZoom)
 }
 /*****************************************************************************
  * Function to load file system summary information
- * Param - File System name
+ * Param - File System Id
  * Return - Returns the summary information of the selected file system
 *****************************************************************************/
-loadFileSystemSummary = function (fsName)
+loadFileSystemSummary = function (fsId)
 {
   var innerContent = "";
-	$('#fileSystemSummaryTbl').html("<tr><td width='100%' align='center' height='180px'><img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
-	$.post("/api/getfilesystem/",{filesystem: fsName})
+	$('#fileSystemSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
+	"<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />" +
+	"</td></tr>");
+	$.post("/api/getfilesystem/",{filesystem_id: fsId})
   .success(function(data, textStatus, jqXHR) 
   {
     if(data.success)
@@ -541,10 +540,17 @@ loadFileSystemSummary = function (fsName)
 *****************************************************************************/
 initFileSystemPolling = function()
 {
-  fs_Bar_SpaceUsage_Data($('#ls_filesystem').val(), "", "", "Average", "OST", spaceUsageFetchMatric, false);
- 	fs_Line_connectedClients_Data($('#ls_filesystem').val(), startTime, endTime, "Average", clientsConnectedFetchMatric, false);
- 	fs_LineBar_CpuMemoryUsage_Data($('#ls_filesystem').val(), startTime, endTime, "Average", "OST", cpuMemoryFetchMatric, false);
- 	fs_Area_ReadWrite_Data($('#ls_filesystem').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, false);
- 	fs_Area_mdOps_Data($('#ls_filesystem').val(), startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
+  fs_Bar_SpaceUsage_Data($('#ls_fsId').val(), "", "", "Average", "OST", spaceUsageFetchMatric, false);
+ 	fs_Line_connectedClients_Data($('#ls_fsId').val(), startTime, endTime, "Average", clientsConnectedFetchMatric, false);
+ 	fs_LineBar_CpuMemoryUsage_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", cpuMemoryFetchMatric, false);
+ 	fs_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, false);
+ 	fs_Area_mdOps_Data($('#ls_fsId').val(), startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
+}
+/******************************************************************************
+ * Function to show FS dashboard content
+******************************************************************************/
+function showFSDashboard()
+{
+  loadFSContent($('#ls_fsId').val(), $('#ls_fsName').val());
 }
 /*********************************************************************************************/

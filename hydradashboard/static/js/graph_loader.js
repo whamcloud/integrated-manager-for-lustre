@@ -43,7 +43,7 @@ var endTime = "";
 ******************************************************************************/
 var db_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var db_Line_connectedClients_Data_Api_Url = "/api/get_fs_stats_for_client/";
-var db_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_server/";
+var db_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var db_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var db_Area_mdOps_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var db_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap_fake/";
@@ -58,7 +58,7 @@ var chartConfig_Bar_SpaceUsage =
     marginLeft: '50',
     width: '300',
     height: '200',
-    style:{ width:'100%',  height:'200', position: 'inherit' },
+    style:{ width:'100%',  height:'200'},
     marginBottom: 35,
     defaultSeriesType: 'column',
     backgroundColor: '#f9f9ff',
@@ -118,7 +118,7 @@ var chartConfig_Line_clientConnected =
     marginLeft: '50',
     width: '300',
     height: '200',
-    style:{ width:'100%',  height:'210', position: 'inherit' },
+    style:{ width:'100%',  height:'210'},
     marginBottom: 35,
     zoomType: 'xy',
     backgroundColor: '#f9f9ff',
@@ -172,7 +172,7 @@ var chartConfig_LineBar_CPUMemoryUsage =
     marginLeft: '50',
     width: '300',
     height: '200',
-    style:{ width:'100%',  height:'210', position: 'inherit' },
+    style:{ width:'100%',  height:'210'},
     marginBottom: 35,
     zoomType: 'xy',
     backgroundColor: '#f9f9ff',
@@ -240,7 +240,7 @@ var chartConfig_Area_ReadWrite =
     marginLeft: '50',
     width: '300',
     height: '200',
-    style:{ width:'100%',  height:'210', position: 'inherit' },
+    style:{ width:'100%',  height:'210'},
     marginRight: 0,
     marginBottom: 35,
     backgroundColor: '#f9f9ff',
@@ -298,7 +298,7 @@ var chartConfig_Area_mdOps  =
     marginLeft: '50',
     height: '200',
     width: '300',
-    style:{ width:'100%',  height:'210', position: 'inherit' },
+    style:{ width:'100%',  height:'210'},
     marginRight: 0,
     marginBottom: 35,
     zoomType: 'xy',
@@ -396,7 +396,7 @@ var chartConfig_HeatMap =
     marginLeft: '50',
     width: '900',
     height: '200',
-    style:{ width:'100%',  height:'210', position: 'inherit' },
+    style:{ width:'100%',  height:'210'},
     marginRight: 0,
     marginBottom: 35,
     zoomType: 'xy'
@@ -449,6 +449,8 @@ var chartConfig_HeatMap =
        marker: 
        {
          radius: 5,
+         lineColor: 'black',
+         lineWidth: 0.5,
          states: 
          {
            hover: {
@@ -482,7 +484,7 @@ db_Bar_SpaceUsage_Data = function(isZoom)
   $.post(db_Bar_SpaceUsage_Data_Api_Url,
   {
     targetkind: "OST", datafunction: "Average", fetchmetrics: spaceUsageFetchMatric, 
-    starttime: "", filesystem: "", endtime: ""
+    starttime: "", filesystem_id: "", endtime: ""
   })
   .success(function(data, textStatus, jqXHR) 
   {   
@@ -551,7 +553,7 @@ db_Line_connectedClients_Data = function(isZoom)
   $.post(db_Line_connectedClients_Data_Api_Url,
   {
     fetchmetrics: clientsConnectedFetchMatric, endtime: endTime, datafunction: "Average", 
-    starttime: startTime, filesystem: ""
+    starttime: startTime, filesystem_id: ""
   })
   .success(function(data, textStatus, jqXHR) 
   {   
@@ -619,8 +621,8 @@ db_LineBar_CpuMemoryUsage_Data = function(isZoom)
   obj_db_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
   $.post(db_LineBar_CpuMemoryUsage_Data_Api_Url,
   {
-    fetchmetrics: cpuMemoryFetchMatric, endtime: endTime, datafunction: "Average", 
-    starttime: startTime, filesystem: ""
+    targetkind: 'HOST',fetchmetrics: cpuMemoryFetchMatric, endtime: endTime, datafunction: "Average", 
+    starttime: startTime, filesystem_id: ""
   })
   .success(function(data, textStatus, jqXHR) 
   {
@@ -631,15 +633,12 @@ db_LineBar_CpuMemoryUsage_Data = function(isZoom)
       var response = avgCPUApiResponse.response;
       $.each(response, function(resKey, resValue) 
       {
-        if(resValue.host != undefined)
-        {
           if (resValue.cpu_usage != undefined || resValue.cpu_total != undefined)          
           {
             ts = resValue.timestamp * 1000
             cpuData.push([ts,((resValue.cpu_usage*100)/resValue.cpu_total)]);
             memoryData.push([ts,(resValue.mem_MemTotal - resValue.mem_MemFree)]);
            }
-         }
       });
     }
   })
@@ -680,7 +679,7 @@ db_Area_ReadWrite_Data = function(isZoom)
   $.post(db_Area_ReadWrite_Data_Api_Url,
   {
     targetkind: "OST", datafunction: "Average", fetchmetrics: stats.join(" "),
-    starttime: startTime, filesystem: "", endtime: endTime
+    starttime: startTime, filesystem_id: "", endtime: endTime
   })
   .success(function(data, textStatus, jqXHR) 
   {
@@ -753,7 +752,7 @@ db_Area_mdOps_Data = function(isZoom)
   $.post(db_Area_mdOps_Data_Api_Url,
   {
     targetkind: "MDT", datafunction: "Average", fetchmetrics: stats.join(" "),
-    starttime: startTime, filesystem: "", endtime: endTime
+    starttime: startTime, filesystem_id: "", endtime: endTime
   })
   .success(function(data, textStatus, jqXHR) 
   {
@@ -809,8 +808,8 @@ db_HeatMap_Data = function(fetchmetrics, isZoom)
   var ostName, count =0, color;
   $.post(db_HeatMap_Data_Api_Url,
   {
-    "fetchmetrics": "cpu", "endtime": endTime, "datafunction": "Average", 
-    "starttime": startTime, "filesystem": ""
+    fetchmetrics: "cpu", endtime: endTime, datafunction: "Average", 
+    starttime: startTime, filesystem: ""
   })
   .success(function(data, textStatus, jqXHR) 
   {   
@@ -911,15 +910,16 @@ db_HeatMap_CPUData = function(fetchmetrics, isZoom)
       {
         if (hostName != resValue.host && hostName !='')
         {
-          plot_bands_ost.push ({from: ost_count,to: ost_count,color: 'rgba(68, 170, 213, 0.1)', 
+          plot_bands_ost.push ({from: ost_count,to: ost_count,color: resValue.color_gred, 
                                 label: { text: hostName + ost_count }});
           ost_count++;
         }
         hostName = resValue.host
         ts = resValue.timestamp * 1000;
+        colorCode = resValue.color_gred;
         values.push([ts,ost_count]); 
       });
-      plot_bands_ost.push ({from: ost_count,to: ost_count,color: 'rgba(68, 170, 213, 0.1)',
+      plot_bands_ost.push ({from: ost_count,to: ost_count,color: colorCode,
                             label: { text: hostName + ost_count }});
     }
     obj_db_HeatMap_CPUData.yAxis.plotBands = plot_bands_ost;
@@ -955,7 +955,7 @@ db_HeatMap_ReadWriteData = function(fetchmetrics, isZoom)
   $.post("/api/get_fs_stats_heatmap/",
   {
     fetchmetrics: readWriteFetchMatric.join(" "), endtime: endTime, datafunction: "Average", 
-     starttime: startTime, filesystem: "",targetkind:"OST"
+     starttime: startTime, filesystem: "", targetkind:"OST"
   })
   .success(function(data, textStatus, jqXHR) 
   {
@@ -1028,7 +1028,6 @@ initDashboardPolling = function()
   db_LineBar_CpuMemoryUsage_Data('false');
   db_Area_ReadWrite_Data('false');
   db_Area_mdOps_Data('false');
-  db_HeatMap_Data('cpu','false');
 }
 /*****************************************************************************
  * Function to clear dashboard pooling intervals
@@ -1036,19 +1035,5 @@ initDashboardPolling = function()
 clearAllIntervals = function()
 {
   clearInterval(dashboardPollingInterval);
-}
-/******************************************************************************
- * Function to show FS dashboard content
-******************************************************************************/
-function showFSDashboard()
-{
-  loadFSContent($('#ls_filesystem').val());
-}
-/******************************************************************************
- * Function to show OST dashboard content
-******************************************************************************/
-function showOSSDashboard()
-{
-  loadOSSContent($('#ls_filesystem').val(), $('#ls_oss').val());
 }
 /******************************************************************************/

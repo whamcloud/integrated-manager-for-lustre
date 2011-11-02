@@ -351,28 +351,17 @@ function LoadUnused_VolumeConf()
 
 function LoadMGTConfiguration_MGTConf()
 {
-  $.post("/api/getvolumesdetails/",{filesystem:""}).success(function(data, textStatus, jqXHR)
+  $.get("/api/get_mgts/").success(function(data, textStatus, jqXHR)
   {
     if(data.success)
     {
       var response = data.response;
-      var targetpath="";
-      var fsname="";
-      var val_targetstatus;
-      var val_targetmount;
-      var val_hostname;
-      var val_failover;
-      var updated=0;
-      var action ="--";
+      var fsnames;
       if(data.response!="")
       {
         $.each(response, function(resKey, resValue)
         {
-          if(resValue.targetkind == "MGS")
-          {
-            if(targetpath!=resValue.targetmount && targetpath!="")
-            {
-              //fsname = resValue.fsname;
+              fsnames = resValue.fsnames;
               if(resValue.targetstatus == "STARTED")
               {
                 action = "<a href='#'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
@@ -381,53 +370,15 @@ function LoadMGTConfiguration_MGTConf()
               {
                 action = "<a href='#'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
               }
+              
               $('#mgt_configuration').dataTable().fnAddData ([
-                fsname,
+                fsnames.toString(),
                 resValue.targetdevice,
                 resValue.hostname,
                 resValue.failover,
                 action
               ]);
-              fsname="";
-              updated=1;
-            }
-            else
-            {
-              if (fsname!="")
-              {
-                fsname = fsname +"," + resValue.fsname;
-              }
-              else
-              {
-                fsname = resValue.fsname;
-              }
-              val_targetstatus=resValue.targetstatus;
-              val_targetmount=resValue.targetdevice;
-              val_hostname=resValue.hostname;
-              val_failover=resValue.failover;
-              updated=0;
-            }
-            targetpath = resValue.targetmount;
-          }
         });
-        if(updated==0)
-        {
-          if(val_targetstatus == "STARTED")
-          {
-            action ="<a href='#' >Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
-          }
-          else
-          {
-            action = "<a href='#'>Start<img src='/static/images/start.png' title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
-          }
-          $('#mgt_configuration').dataTable().fnAddData ([
-            fsname,
-            val_targetmount,
-            val_hostname,
-            val_failover,
-            action
-          ]);
-        }
       }
     }
   })
@@ -499,7 +450,7 @@ function LoadVolumeConf_VolumeConfig()
 
 function LoadServerConf_ServerConfig()
 {
-  $.post("/api/listservers/",{"filesystem": ""}).success(function(data, textStatus, jqXHR)
+  $.post("/api/listservers/",{"filesystem_id": ""}).success(function(data, textStatus, jqXHR)
   {
     if(data.success)
     {
@@ -509,17 +460,18 @@ function LoadServerConf_ServerConfig()
       $.each(response, function(resKey, resValue)
       {
         lnet_status = resValue.lnet_status;
+        lnet_status_mesg="";
         if(lnet_status == "lnet_up")
         {
-          lnet_status_mesg = "<a href='#' onclick='jConfirm(\"" + MSG_STOP_HOST + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;);}});'>Stop<img src='/static/images/stop.png' title='Stop Lnet' height=15 width=15 onclick='Lnet_Operations(" + resValue.id +",&apos;lnet_down&apos;)'/></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | <a href='#' onclick='jConfirm(\"" + MSG_UNLOAD_LNET + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_unload&apos;);}});'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15 /></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
+          lnet_status_mesg = "<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;,&apos;"+ MSG_STOP_HOST+ "&apos;)'>Stop<img src='/static/images/stop.png' title='Stop Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | <a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_unload&apos;,&apos;"+ MSG_UNLOAD_LNET+ "&apos;)'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15 /></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
         }
         else if(resValue.lnet_status == "lnet_down")
         {
-          lnet_status_mesg = "<a href='#' onclick='jConfirm(\"" + MSG_START_HOST + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_up&apos;);}});'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | <a href='#' onclick='jConfirm(\"" + MSG_UNLOAD_LNET + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_unload&apos;);}});'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15 /></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>"; 
+          lnet_status_mesg = "<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;,&apos;"+ MSG_START_HOST + "&apos;)'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | <a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;,&apos;"+ MSG_UNLOAD_LNET + "&apos;)'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15 /></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>"; 
         }
         else if(resValue.lnet_status == "lnet_unloaded")
         {
-          lnet_status_mesg = "<a href='#' onclick='jConfirm(\"" + MSG_START_HOST + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_up&apos;);}});'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | &nbsp;&nbsp;<a href='#' onclick='jConfirm(\"" + MSG_LOAD_LNET + "\",\"Configuration Manager\", function(r){if(r == true){Lnet_Operations("+  resValue.id +",&apos;lnet_unload&apos;);}});'>Load<img src='/static/images/load.png' title='Load Lnet' height=15 width=15 /></a>&nbsp;&nbsp; | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";  
+          lnet_status_mesg = "<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;,&apos;"+ MSG_START_HOST + "&apos;)'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | &nbsp;&nbsp;<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_load&apos;,&apos;"+ MSG_LOAD_LNET + "&apos;)'>Load<img src='/static/images/load.png' title='Load Lnet' height=15 width=15 /></a>&nbsp;&nbsp; | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";  
         }
         $('#server_configuration').dataTable().fnAddData ([
           resValue.host_address,
