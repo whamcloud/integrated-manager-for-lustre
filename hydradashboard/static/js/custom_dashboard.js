@@ -223,7 +223,7 @@ $(document).ready(function()
     db_LineBar_CpuMemoryUsage_Data('false');
     db_Area_ReadWrite_Data('false');
     db_Area_mdOps_Data('false');
-    db_HeatMap_CPUData('cpu', 'false');
+    //db_HeatMap_CPUData('cpu', 'false');
   }   
 /*****************************************************************************
  *  Function to populate info on file system dashboard page
@@ -255,11 +255,8 @@ $(document).ready(function()
       {
         $.each(data.response, function(resKey, resValue)
         {
-          if(resValue.kind.indexOf('OST')!=-1)
-          {
-            breadCrumbHtml  =  breadCrumbHtml + 
-            "<option value="+resValue.id+">"+resValue.host_address+"</option>";
-          }
+          breadCrumbHtml  =  breadCrumbHtml + 
+          "<option value="+resValue.id+">"+resValue.host_address+"</option>";
         });
        }
     })
@@ -289,7 +286,7 @@ $(document).ready(function()
 
     fs_Area_mdOps_Data(fsId, startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
 
-    fs_HeatMap_CPUData('cpu', 'false');
+    //fs_HeatMap_CPUData('cpu', 'false');
 
     clearInterval(dashboardPollingInterval);
 
@@ -322,25 +319,21 @@ $(document).ready(function()
     "<li>"+
     "<select id='ostSelect'>"+
     "<option value=''>Select OST</option>";
-             
-    $.post("/api/getvolumes/",{filesystem_id:fsId}) 
+    
+    $.ajax({type: 'POST', url: "/api/get_fs_targets/", dataType: 'json', data: JSON.stringify({
+      "filesystem_id": fsId,
+      "kinds": ["OST"]
+    }), contentType:"application/json; charset=utf-8"})
     .success(function(data, textStatus, jqXHR) 
     {
-      if(data.success)
-      {
-        $.each(data.response, function(resKey, resValue)
-        {
-          if(resValue.kind=='OST')
-          {
-            breadCrumbHtml  =  breadCrumbHtml + 
-            "<option value="+resValue.id+">"+resValue.name+"</option>";
-          }
-        });
-      }
+      var count = 0;
+      $.each(data.response, function(i, target_info) {
+        breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>"
+        count += 1; 
+      });
     })
     .error(function(event) 
     {
-      //$('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
     })
     .complete(function(event)
     {

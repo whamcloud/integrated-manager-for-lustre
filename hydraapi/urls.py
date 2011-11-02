@@ -9,7 +9,7 @@ from piston.resource import Resource
 # Hydra server imports
 from monitorapi import (ListFileSystems,
                         GetFileSystem,
-                        GetVolumes,
+                        GetFSTargets,
                         GetTargets,
                         GetMgtDetails,
                         #GetClients,
@@ -81,7 +81,7 @@ class CsrfExemptResource(Resource):
 urlpatterns = patterns('',
     (r'^listfilesystems/$',CsrfExemptResource(ListFileSystems)),
     (r'^getfilesystem/$',CsrfExemptResource(GetFileSystem)),
-    (r'^getvolumes/$',CsrfExemptResource(GetVolumes)),
+    (r'^get_fs_targets/$',CsrfExemptResource(GetFSTargets)),
     (r'^get_targets/$',CsrfExemptResource(GetTargets)),
     (r'^get_mgts/$',CsrfExemptResource(GetMgtDetails)),
     (r'^getvolumesdetails/$',CsrfExemptResource(GetFSVolumeDetails)),
