@@ -37,11 +37,11 @@ def storage_tab(request):
             RequestContext(request, {}))
 
 def hydracmnewfstab(request):
-    fsname=request.GET.get("fsname")
     return render_to_response("create_lustre_fs.html",
-            RequestContext(request, {"fsname":fsname}))
+            RequestContext(request, {}))
 
 def hydracmeditfs(request):
-    fsname=request.GET.get("fsname")
+    fs_name=request.GET.get("fs_name")
+    fs_id=request.GET.get("fs_id")
     return render_to_response("edit_fs.html",
-            RequestContext(request, {"fsname":fsname}))
+            RequestContext(request, {"fs_name":fs_name,"fs_id":fs_id}))

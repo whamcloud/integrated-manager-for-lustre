@@ -79,29 +79,36 @@
       oOst.fnClearTable();
       oOst.fnDraw();
     }
-    LoadTargets_EditFS($("#fs").val()); 
 
+    LoadTargets_EditFS($("#fs_id").val()); 
     // Create new OST button click handler. 
-    fvc_button($('#new_ost_chooser'), {multi_select: true});
-    $('#btnNewOST').click(function() {
-      $('#new_ost_dialog').dialog('open');
-      $('#new_ost_dialog').find('table').width("100%");
-    });
-
+    $('#btnNewOST').click(function()
+      {
+      $('#newOST').dialog('open');
+      SelectOST_EditFS();
+      return false;
+      });
     // Advance Options button click handler.
     $('#advance_opts').click(function()
     {
       $('#configParam').dialog('open');
        return false;
     });
+    // Cancel button click handler for Edit FS view
+    $('#cancel_editfs').click(function() {
+       $('#lusterFS_content').empty();
+      $('#lusterFS_content').load('/hydracm/fstab');
+    });
     //Load Pie Charts for a selected File system
-    LoadFSGraph_EditFS( $("#fs").val());
+    LoadFSGraph_EditFS( $("#fs_id").val());
   });
    $(document).ajaxComplete(function() {
       $('button.close').button({icons: {primary: 'ui-icon-closethick'}});
     });
 </script>
-<input type="hidden" id="fs" value="{{fsname}}"/>
+<input type="hidden" id="fs" value="{{fs_name}}"/>
+<input type="hidden" id="fs_id" value="{{fs_id}}"/>
+
 <div style="font-weight:bold;">
   <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px; padding-top:15px;">
     <tr>
@@ -114,7 +121,7 @@
                 </label>
               </form></td>
             <td width="37%" align="left" valign="top"><span id="launch_instance_btn"><span class="first-child">
-              <button class='advanced' type="button" id="advance_opts">Advanced...</button>
+              <button class='add' type="button" id="advance_opts">Options</button>
               </span></span></td>
           </tr>
         </table></td>
@@ -212,6 +219,15 @@
           </thead>
           <tbody id="ost_content">
           </tbody>
+        </table>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+          <tr>
+            <td align="right" style="padding-top:5px;">
+             <span class="first-child">
+               <button class='close' type="button" id="cancel_editfs">Cancel</button>
+             </span>
+            </td>
+          </tr>
         </table>
         <div class="spacer"></div>
         </fieldset></td>

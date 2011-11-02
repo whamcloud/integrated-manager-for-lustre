@@ -10,8 +10,6 @@ var MSG_REMOVE_FSLIST = "Are you sure you want to remove filesystem?";
 var MSG_MGT_START = "Are you sure you want to start MGT?";
 var MSG_MGT_STOP = "Are you sure you want to stop MGT?";
 var MSG_MGT_REMOVE = "Are you sure you want to Remove MGT?";
-var MSG_OST_START = "Are you sure you want to Start OST?";
-var MSG_OST_STOP = "Are you sure you want to Stop OST?";
 //Error dialog messages
 var ERR_FSLIST_LOAD = "Error occured in loading Filesystem: ";
 var ERR_EDITFS_MGT_LOAD = "Error occured in loading MGT: ";
@@ -31,10 +29,10 @@ var filesystemId="";
 * Return - none
 * Used in - File System list (lustre_fs_configuration.html)
 *******************************************************************/
-function LoadEditFSScreen(fs_name)
+function LoadEditFSScreen(fs_name, fs_id)
 {
   $('#lusterFS_content').empty();
-  $('#lusterFS_content').load('/hydracm/editfs?fsname=' + fs_name);
+  $('#lusterFS_content').load('/hydracm/editfs?fs_name=' + fs_name + '&fs_id=' + fs_id);
 }
 
 function LoadFSList_FSList()
@@ -48,7 +46,7 @@ function LoadFSList_FSList()
       var action; 
       $.each(response, function(resKey, resValue)
       {
-      fsName = "<a href='#' onclick=LoadEditFSScreen('" + resValue.fsname + "')>" + resValue.fsname + "</a>";
+      fsName = "<a href='#' onclick=LoadEditFSScreen('" + resValue.fsname + "','" + resValue.fsid +"')>" + resValue.fsname + "</a>";
       action = "<a href='#' onclick='jConfirm(\"" + MSG_START_FSLIST + "\",\"Configuration Manager\", function(r){if(r == true){StartFileSystem(\""+  resValue.fsname +"\");}});'>Start<img src='/static/images/start.png' height=12 width=12 title='Start'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' height=15 width=15 title='Configuration Param'/></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_FSLIST + "\",\"Configuration Manager\", function(r){if(r == true){StartFileSystem(\""+  resValue.fsname +"\");}});'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
       $('#fs_list').dataTable().fnAddData ([
         fsName,
@@ -72,16 +70,13 @@ function LoadFSList_FSList()
   });
 }
 
-
-function LoadTargets_EditFS(fsname)
+function LoadTargets_EditFS(fs_id)
 {
-  var action = "--";
-  $.post("/api/getvolumesdetails/",{filesystem:fsname}).success(function(data, textStatus, jqXHR)
-  {
+  $.get("/api/getvolumesdetails/",{filesystem_id:fs_id})
+  .success(function(data, textStatus, jqXHR) {
     $('#ost').dataTable().fnClearTable();
     $('#mdt').dataTable().fnClearTable();
     $('#mgt_configuration_view').dataTable().fnClearTable();
-    console.log(data);
 
     if(data.success)
     {
@@ -90,11 +85,13 @@ function LoadTargets_EditFS(fsname)
       {
         if(resValue.state == "mounted")
         {
-          action = "<a href='#' onclick='jConfirm(\"" + MSG_OST_STOP + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"unmounted\");}});'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>"; 
+          message = "Are you sure you want to stop " + resValue.human_name + "?";
+          action = "<a href='#' onclick='jConfirm(\"" + message + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"unmounted\");}});'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>"; 
         }
         else if (resValue.state == 'unmounted')
         {
-          action = "<a href='#' onclick='jConfirm(\"" + MSG_OST_START + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"mounted\");}});'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
+          message = "Are you sure you want to start " + resValue.human_name + "?";
+          action = "<a href='#' onclick='jConfirm(\"" + message + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"mounted\");}});'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
         }
         else
         {
@@ -383,11 +380,11 @@ function LoadServerConf_ServerConfig()
         }
         else if(resValue.lnet_status == "lnet_down")
         {
-          lnet_status_mesg = "<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;,&apos;"+ MSG_START_HOST + "&apos;)'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | <a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;,&apos;"+ MSG_UNLOAD_LNET + "&apos;)'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15 /></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>"; 
+          lnet_status_mesg = "<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_up&apos;,&apos;"+ MSG_START_HOST + "&apos;)'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | <a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;,&apos;"+ MSG_UNLOAD_LNET + "&apos;)'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15 /></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>"; 
         }
         else if(resValue.lnet_status == "lnet_unloaded")
         {
-          lnet_status_mesg = "<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;,&apos;"+ MSG_START_HOST + "&apos;)'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | &nbsp;&nbsp;<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_load&apos;,&apos;"+ MSG_LOAD_LNET + "&apos;)'>Load<img src='/static/images/load.png' title='Load Lnet' height=15 width=15 /></a>&nbsp;&nbsp; | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";  
+          lnet_status_mesg = "<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_up&apos;,&apos;"+ MSG_START_HOST + "&apos;)'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | &nbsp;&nbsp;<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_load&apos;,&apos;"+ MSG_LOAD_LNET + "&apos;)'>Load<img src='/static/images/load.png' title='Load Lnet' height=15 width=15 /></a>&nbsp;&nbsp; | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";  
         }
         $('#server_configuration').dataTable().fnAddData ([
           resValue.host_address,
@@ -419,9 +416,10 @@ function LoadFSData_EditFS()
 {
   var fsname = $('#fs').val();
   $('#txtfsnameid').val(fsname);
+  var fs_id = $('#fs_id').val();
   if(fsname!="none")
   {
-    $.post("/api/getfilesystem/",{"filesystem":fsname}).success(function(data, textStatus, jqXHR)
+    $.post("/api/getfilesystem/",{"filesystem_id":fs_id}).success(function(data, textStatus, jqXHR)
     {
       if(data.success)
       {
@@ -431,8 +429,8 @@ function LoadFSData_EditFS()
         {
           $('#total_capacity').html(resValue.kbytesused);
           $('#total_free').html(resValue.kbytesfree);
-          $('#mdt_file_used').html(resValue.mdtfileused);
-          $('#mdt_file_free').html(resValue.mdtfilesfree);
+          $('#mdt_file_used').html(resValue.filestotal);
+          $('#mdt_file_free').html(resValue.filesfree);
           $('#total_oss').html(resValue.noofoss);
           $('#total_ost').html(resValue.noofost);
         });

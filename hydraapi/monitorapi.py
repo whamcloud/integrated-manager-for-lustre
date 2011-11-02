@@ -120,12 +120,11 @@ class GetMgtDetails(AnonymousRequestHandler):
         return all_mgt
 
 class GetFSVolumeDetails(AnonymousRequestHandler):
-    @extract_request_args('filesystem')
-    def run(self,request,filesystem):
+    @extract_request_args('filesystem_id')
+    def run(self,request,filesystem_id):
         from configure.models import ManagedTarget, ManagedFilesystem
-        # FIXME: this should be taking a filesystem ID instead of a name
-        if filesystem:
-            filesystem = ManagedFilesystem.objects.get(name = filesystem)
+        if filesystem_id != None:
+            filesystem = ManagedFilesystem.objects.get(pk = filesystem_id)
             targets = filesystem.get_targets()
         else:
             targets = ManagedTarget.objects.all()
@@ -168,75 +167,43 @@ class GetTargets(AnonymousRequestHandler):
 
 # FIXME: this is actually returning information about all filesystems, and all targets
 # neither of which is a 'volume'.
-class GetVolumes(AnonymousRequestHandler):
-    @extract_request_args('filesystem_id')
-    def run(self, request, filesystem_id):
-        if filesystem_id:
-            return self.get_volumes_per_fs(ManagedFilesystem.objects.get(id = filesystem_id))
+class GetFSTargets(AnonymousRequestHandler):
+    @extract_request_args('filesystem_id','kinds')
+    def run(self, request, filesystem_id,kinds):
+        kind_map = {"MGT": ManagedMgs,
+                    "OST": ManagedOst,
+                    "MDT": ManagedMdt}        
+        if kinds:
+            klasses = []
+            for kind in kinds:
+                try:
+                    klasses.append(kind_map[kind])
+                except KeyError:
+                    raise RuntimeError("Unknown target kind '%s' (kinds are %s)" % (kind, kind_map.keys()))
         else:
-
-            volumes_list = []
-            for fs in ManagedFilesystem.objects.all():
-                volumes_list.extend(self.get_volumes_per_fs(fs.name))
-        return volumes_list
-    
-    def get_volumes_per_fs (self,filesystem_name):
-        volume_list = []
-        filesystem = ManagedFilesystem.objects.get(name = filesystem_name)
-        volume_list.append(
-                           {
-                            'id' : filesystem.id,
-                            'name': filesystem.name,
-                            'targetpath': '',
-                            'targetname':'', 
-                            'failover':'',
-                            'kind': 'FS', #filesystem.role(),
-                            'status' : filesystem.status_string()
-                            }
-                           )
-        try:
-            volume_list.append(
-                                {
-                                 'id' : filesystem.mgs.id,
-                                 'name': filesystem.mgs.name,
-                                 'targetpath' : '',
-                                 'targetname':'',
-                                 'failover':'',     
-                                 'kind': filesystem.mgs.role(),
-                                 'status' : filesystem.mgs.status_string()
-                                }
-                )
-        except ManagedMgs.DoesNotExist:
-            pass
-        try:
-            mdt = ManagedMdt.objects.get (filesystem = filesystem)
-            volume_list.append(
-                                   {
-                                    'id' : mdt.id,
-                                    'name': mdt.name,
-                                    'targetpath': '',
-                                    'targetname':'',
-                                    'failover':'',  
-                                    'kind': mdt.role(),
-                                    'status' : mdt.status_string()
-                                   }
-                )            
-        except ManagedMdt.DoesNotExist:
-            pass
-        osts = ManagedOst.objects.filter(filesystem = filesystem)
-        volume_list.extend([
-                            {
-                             'id' : ost.id,
-                             'name': ost.name,
-                             'targetpath': '',
-                             'targetname':'',
-                             'failover':'',
-                             'kind': ost.role(),
-                             'status' : ost.status_string()
-                            }  
-                            for ost in osts
-                           ])
-        return volume_list
+            # kinds = None, means all
+            klasses = kind_map.values()
+        klass_to_kind = dict([(v,k) for k,v in kind_map.items()])
+        result = []
+        for klass in klasses:
+            kind = klass_to_kind[klass]
+            if klass == ManagedMgs:
+                targets = klass.objects.all()
+            else:
+                if filesystem_id:
+                    fs = ManagedFilesystem.objects.get(id=filesystem_id)
+                    targets=klass.objects.filter(filesystem=fs) 
+            for t in targets:
+                result.append({
+                    'id': t.id,
+                    'primary_server_name': t.primary_server().pretty_name(),
+                    'kind': kind,
+                    # FIXME: ManagedTarget should get an explicit 'human' string function
+                    # (currently __str__ services this purpose)
+                    'status':t.status_string(),
+                    'label': "%s" % t
+                    })
+        return result    
 
 #class GetClients (AnonymousRequestHandler):
 #    @extract_request_args('filesystem')
