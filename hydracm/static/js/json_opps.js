@@ -171,8 +171,7 @@ function CreateOSTs(fsname, ost_lun_ids)
       {
         var response = data.response;    
         //Reload table with latest ost's.
-        $('#ost').dataTable().fnClearTable();
-        LoadTargets_EditFS($("#fs").val());
+        LoadTargets_EditFS($("#fs_id").val());
       }
       else
       {

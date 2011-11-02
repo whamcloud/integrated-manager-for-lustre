@@ -80,14 +80,13 @@
       oOst.fnDraw();
     }
 
-    LoadTargets_EditFS($("#fs_id").val()); 
+    LoadTargets_EditFS($('#fs_id').val());
     // Create new OST button click handler. 
-    $('#btnNewOST').click(function()
-      {
-      $('#newOST').dialog('open');
-      SelectOST_EditFS();
-      return false;
-      });
+    fvc_button($("#new_ost_chooser"), {multi_select: true});
+    $('#btnNewOST').click(function() {
+      $('#new_ost_dialog').dialog('open');
+      $('#new_ost_dialog').find('table').width("100%");
+    });
     // Advance Options button click handler.
     $('#advance_opts').click(function()
     {
