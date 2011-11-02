@@ -222,7 +222,7 @@ class HostMetricStore(R3dMetricStore):
             for key in metrics['cpustats']:
                 ds_name = "cpu_%s" % key
                 update[ds_name] = {'value': metrics['cpustats'][key],
-                                   'type': 'Absolute'}
+                                   'type': 'Derive'}
         except KeyError:
             pass
 
