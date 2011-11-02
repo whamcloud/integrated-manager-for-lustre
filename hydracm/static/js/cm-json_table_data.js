@@ -31,8 +31,8 @@ var filesystemId="";
 *******************************************************************/
 function LoadEditFSScreen(fs_name, fs_id)
 {
-  $('#lusterFS_content').empty();
-  $('#lusterFS_content').load('/hydracm/editfs?fs_name=' + fs_name + '&fs_id=' + fs_id);
+  $('#lustreFS_content').empty();
+  $('#lustreFS_content').load('/hydracm/editfs?fs_name=' + fs_name + '&fs_id=' + fs_id);
 }
 
 function LoadFSList_FSList()

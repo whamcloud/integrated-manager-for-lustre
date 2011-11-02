@@ -60,8 +60,8 @@
       else
       {
         CreateFS(fs_name, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, function() {
-          $('#lusterFS_content').empty();
-          $('#lusterFS_content').load('/hydracm/fstab');
+          $('#lustreFS_content').empty();
+          $('#lustreFS_content').load('/hydracm/fstab');
         });  
       }
     });
@@ -73,8 +73,8 @@
     });
     // Create New FS view Cancel button click handler.  
     $('#cancel_editfs').click(function() {
-      $('#lusterFS_content').empty();
-      $('#lusterFS_content').load('/hydracm/fstab');
+      $('#lustreFS_content').empty();
+      $('#lustreFS_content').load('/hydracm/fstab');
     });
   });
   $(document).ajaxComplete(function() {
