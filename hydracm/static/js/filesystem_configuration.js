@@ -9,7 +9,7 @@ fvc_clear = function(element) {
 
   var changed;
   if (opts.multi_select) {
-    if(opts['selected_lun_ids'].length > 0) {
+    if(opts['selected_lun_ids'] && opts['selected_lun_ids'].length > 0) {
       changed = true;
     }
     opts['selected_lun_ids'] = []
