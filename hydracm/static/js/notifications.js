@@ -7,6 +7,11 @@ var poll_period = 1000;
 var error_retry_period = 10000;
 
 var known_jobs = [];
+var running_job_count = 0;
+
+update_icon = function() {
+  $('#notification_icon_jobs').toggle(running_job_count > 0);
+}
 
 poll_jobs = function() {
   /* FIXME: using POST instead of GET because otherwise jQuery forces the JSON payload to
@@ -42,6 +47,7 @@ poll_jobs = function() {
         notify = true;
         if (job_info.state != 'complete') {
           args = {header: "Job started"};
+          running_job_count += 1;
         } else {
           args = completion_jgrowl_args(job_info);
         }
@@ -49,12 +55,15 @@ poll_jobs = function() {
         if (existing.state != 'complete' && job_info.state == 'complete') {
           notify = true;
           args = completion_jgrowl_args(job_info);
+          running_job_count -= 1;
         }
       }
 
       if (notify) {
         $.jGrowl(job_info.description, args);
       }
+      update_icon();
+
       known_jobs[job_info.id] = job_info
     });
 
@@ -72,7 +81,9 @@ $(document).ready(function() {
       }
       $.each(data.response.jobs, function(i, job_info) {
         known_jobs[job_info.id] = job_info;
+        running_job_count += 1;
       });
+      update_icon();
       setTimeout(poll_jobs, poll_period);
     }
   });

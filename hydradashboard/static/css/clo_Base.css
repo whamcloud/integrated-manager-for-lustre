@@ -420,6 +420,13 @@ cursor:pointer;
 	background-color:#cccccc;
 	
 }
+
+.notification_icon {
+    margin-left: 4px;
+    margin-top: 4px;
+    display: none;
+}
+
 .rightpanel{
 	float:right;
 	width:98%;
