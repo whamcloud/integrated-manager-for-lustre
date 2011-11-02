@@ -512,7 +512,6 @@ class Jobs(AnonymousRequestHandler):
         if incomplete:
             from django.db.models import Q
             filter_args.append(~Q(state = 'complete'))
-            print "incomplete = '%s'" % incomplete
 
         from configure.models import Job
         jobs = Job.objects.filter(*filter_args, **filter_kwargs).order_by('modified_at')
@@ -522,10 +521,6 @@ class Jobs(AnonymousRequestHandler):
         else:
             last_modified = None
 
-        print {
-                'last_modified': last_modified, 
-                'jobs': jobs
-                }
         return {
                 'last_modified': last_modified, 
                 'jobs': jobs
