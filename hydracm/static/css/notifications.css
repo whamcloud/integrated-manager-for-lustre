@@ -1,0 +1,29 @@
+
+div.jGrowl div.job_cancelled div.jGrowl-message {
+  background-image: 			url(../images/gtk-cancel.png);
+  background-repeat: no-repeat;
+  background-position: 			4px 4px;
+  padding-left: 24px;
+  padding-top: 4px;
+  min-height: 24px;
+}
+
+
+div.jGrowl div.job_success div.jGrowl-message {
+  background-image: 			url(../images/icon_tick.png);
+  background-repeat: no-repeat;
+  background-position: 			4px 4px;
+  padding-left: 24px;
+  padding-top: 4px;
+  min-height: 24px;
+}
+
+div.jGrowl div.job_errored div.jGrowl-message {
+  background-image: 			url(../images/dialog-error.png);
+  background-repeat: no-repeat;
+  background-position: 			4px 4px;
+  padding-left: 24px;
+  padding-top: 4px;
+  min-height: 24px;
+}
+

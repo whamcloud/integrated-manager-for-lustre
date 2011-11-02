@@ -21,40 +21,39 @@ poll_jobs = function() {
 
     if (data.response.last_modified) {
       last_check = data.response.last_modified;
-      console.log("last_check: " + last_check);
     }
 
 
     $.each(data.response.jobs, function(i, job_info) {
       existing = known_jobs[job_info.id]
 
-      function completion_message(info) {
+      function completion_jgrowl_args(info) {
         if (job_info.cancelled) {
-          return "Job cancelled";
+          return {header: "Job cancelled", theme: 'job_cancelled'}
         } else if (job_info.errored) {
-          return "Job failed";
+          return {header: "Job failed", theme: 'job_errored'}
         } else {
-          return "Job complete";
+          return {header: "Job complete", theme: 'job_success'}
         }
       }
       var notify = false;
-      var header;
+      var args;
       if (existing == null) {
         notify = true;
         if (job_info.state != 'complete') {
-          header = "Job started";
+          args = {header: "Job started"};
         } else {
-          header = completion_message(job_info);
+          args = completion_jgrowl_args(job_info);
         }
       } else {
         if (existing.state != 'complete' && job_info.state == 'complete') {
           notify = true;
-          header = completion_message(job_info);
+          args = completion_jgrowl_args(job_info);
         }
       }
 
       if (notify) {
-        $.jGrowl(job_info.description, {header: header});
+        $.jGrowl(job_info.description, args);
       }
       known_jobs[job_info.id] = job_info
     });
