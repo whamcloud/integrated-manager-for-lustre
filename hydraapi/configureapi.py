@@ -89,8 +89,8 @@ class SetLNetStatus(AnonymousRequestHandler):
 class SetTargetMountStage(AnonymousRequestHandler):
     @extract_request_args('target_id','state')
     def run(self,request,target_id,state):
-        from configure.models import ManagedTargetMount
-        target = ManagedTargetMount.objects.get(id=target_id)                       
+        from configure.models import ManagedTarget
+        target = ManagedTarget.objects.get(id=target_id)                       
         transition_job = StateManager.set_state(target.downcast(),state)
         return {'target_id': target_id,'job_id': transition_job.task_id,'status': transition_job.status}
                    
