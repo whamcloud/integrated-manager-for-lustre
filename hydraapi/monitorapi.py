@@ -121,13 +121,13 @@ class GetMgtDetails(AnonymousRequestHandler):
                          'fsnames':[fs.name for fs in ManagedFilesystem.objects.filter(mgs=k)],
                          'targetid':k.id,
                          'targetname': k.name,
-                         'targetdevice':str(k.active_mount.block_device),
-                         'targetmount':k.active_mount.mount_point,
-                         'targetstatus':k.active_mount.status_string(),
-                         'targetstate':k.active_mount.state,
-                         'targetstates':k.active_mount.states,
+                         'targetdevice':str(k.active_mount.block_device) if k.state != 'unmounted' else '',
+                         'targetmount':k.active_mount.mount_point if k.state !='unmounted' else '',
+                         'targetstatus':k.status_string(),
+                         'targetstate':k.state,
+                         'targetstates':k.states,
                          'targetkind': k.role(),
-                         'hostname':k.active_mount.host.pretty_name(),
+                         'hostname':k.primary_server().pretty_name(),
                          'failover':''
                         }
                        )
