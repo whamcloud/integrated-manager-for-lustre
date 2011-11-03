@@ -236,12 +236,18 @@ class AlertState(models.Model):
     active = models.NullBooleanField()
 
     def to_dict(self):
+        from monitor.lib.util import time_str
         return {
          'alert_created_at': self.begin,
          'alert_created_at_short': self.begin,
          'alert_severity':'alert', # FIXME: Still need to figure out wheather to pass enum or display string.
          'alert_item': str(self.alert_item), 
          'alert_message': self.message(),
+         'message': self.message(),
+         'active': bool(self.active),
+         'begin': time_str(self.begin),
+         'end': time_str(self.end),
+         'id': self.id
         }
 
     def duration(self):

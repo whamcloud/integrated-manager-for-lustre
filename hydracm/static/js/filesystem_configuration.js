@@ -126,7 +126,24 @@ fvc_button = function(element, opts) {
     });
   });
 
-  table_element.delegate("tr", "click", function() {
+  update_multi_select_value = function() {
+    var selected = [];
+    var checkboxes = table_element.find('input').each(function() {
+      if ($(this).attr('checked')) {
+        selected.push ($(this).attr('name'));
+      }
+    });
+
+    fvc_instances[element.attr('id')].selected_lun_ids = selected
+  }
+
+  table_element.delegate("input", "click", function(event) {
+    update_multi_select_value();
+
+    event.stopPropagation();
+  });
+
+  table_element.delegate("tr", "click", function(event) {
     var aPos = volumeTable.fnGetPosition(this);
     var data = volumeTable.fnGetData(aPos);
     if (!opts.multi_select) {
@@ -149,15 +166,7 @@ fvc_button = function(element, opts) {
       var checked = $(this).find('input').attr('checked')
       $(this).find('input').attr('checked', !checked);
 
-      // TODO also do this on actually clicking the checkbox
-      var selected = [];
-      var checkboxes = table_element.find('input').each(function() {
-        if ($(this).attr('checked')) {
-          selected.push ($(this).attr('name'));
-        }
-      });
-
-      fvc_instances[element.attr('id')].selected_lun_ids = selected
+      update_multi_select_value();
     }
 
     if (opts.change) {

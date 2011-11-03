@@ -115,7 +115,8 @@ class StateManager(object):
         """Add a 0 or more Jobs to have 'instance' reach 'new_state'"""
         import configure.tasks
         from django.contrib.contenttypes.models import ContentType
-        assert new_state in instance.states
+        if not new_state in instance.states:
+            raise RuntimeError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
         return configure.tasks.set_state.delay(
                 ContentType.objects.get_for_model(instance).natural_key(),
                 instance.id,

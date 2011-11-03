@@ -49,6 +49,18 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
         super(ManagedHost, self).save(*args, **kwargs)
 
+    def to_dict(self):
+        from django.contrib.contenttypes.models import ContentType
+        return {'id' : self.id,
+                'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
+                'pretty_name': self.pretty_name(),
+                'host_address' : self.address,
+                'failnode':'',
+                'kind' : self.role() ,
+                'lnet_status' : str(self.state),
+                'lnet_states': self.states, 
+                'status':self.status_string()}
+
     @classmethod
     def create_from_string(cls, address_string, virtual_machine = None):
         from django.db import transaction

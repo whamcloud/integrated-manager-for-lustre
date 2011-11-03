@@ -51,13 +51,7 @@ function Lnet_Operations(host_id, opps, confirm_mesg)
       if(data.success)
       {
         var response = data.response;    
-        if(response.status != "")
-        {
-          jAlert("Host Lnet State changed to " + opps, ALERT_TITLE);
-          $('#server_configuration').dataTable().fnClearTable();
-          LoadServerConf_ServerConfig();
-        }
-        else
+        if(response.status == "")
         {
           alert(ERR_COMMON_LNET_STATUS, ALERT_TITLE);
         }

@@ -141,18 +141,18 @@ class SystemEventsAudit:
 
     def parse_log_entries(self):
         from logging import INFO, ERROR
-        from monitor.models import Host
+        from configure.models import ManagedHost
 
         trans_size = 100
         with transaction.commit_on_success():
             def get_host_from_entry(entry):
                 try:
-                    h = Host.objects.get(address = hosts[entry.fromhost])
+                    h = hosts[entry.fromhost]
                 except KeyError:
                     try:
-                        h = Host.objects.get(address = entry.fromhost)
+                        h = ManagedHost.objects.get(address = entry.fromhost)
                         hosts[entry.fromhost] = h
-                    except Host.DoesNotExist:
+                    except ManagedHost.DoesNotExist:
                         h = None
 
                 return h
@@ -185,7 +185,7 @@ class SystemEventsAudit:
                     #
                     #    if h != None:
                     #        SyslogEvent(severity = sev,
-                    #                    host = Host.objects.get(address = h),
+                    #                    host = ManagedHost.objects.get(address = h),
                     #                    message_str = msg).save()
                     #elif entry.message.find("Lustre:") > 0:
                     #    sev = INFO
@@ -194,7 +194,7 @@ class SystemEventsAudit:
                     #
                     #    if h != None:
                     #        SyslogEvent(severity = sev,
-                    #                    host = Host.objects.get(address = h),
+                    #                    host = ManagedHost.objects.get(address = h),
                     #                    message_str = msg).save()
 
                 if new_entries.count() > 0:

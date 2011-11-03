@@ -122,7 +122,21 @@ $(document).ready(function()
  * Function to show unit options on selection of time interval
 ********************************************************************************/
   $("select[id=unitSelect]").change(function(){
-    setStartEndTime($(this).prev('select').find('option:selected').val(), $(this).find('option:selected').val(), "");
+    setStartEndTime($(this).prev('font').prev('select').find('option:selected').val(), $(this).find('option:selected').val(), "");
+  });
+  
+  $("input[id *= polling_element]").click(function()
+  {
+    if($(this).is(":checked"))
+    {
+      isPollingFlag = true;
+      initiatePolling();
+    }
+    else
+    {
+      isPollingFlag = false;
+      clearAllIntervals();
+    }
   });
 		
   setStartEndTime = function(timeFactor, startTimeValue, endTimeValue)
@@ -132,8 +146,16 @@ $(document).ready(function()
     if(timeFactor == "minutes")
       startTime = startTimeValue;
     else if(timeFactor == "hour")
-      startTime = startTimeValue * 60;
+      startTime = startTimeValue * (60);
+    else if(timeFactor == "day")
+      startTime = startTimeValue * (24 * 60);
+    else if(timeFactor == "week")
+      startTime = startTimeValue * (7 * 24 * 60);
 			
+    initiatePolling();
+  }
+  
+  initiatePolling = function(){
     if(! $('#dashboardDiv').is(':hidden'))
       initDashboardPolling();
     else if(! $('#fileSystemDiv').is(':hidden'))
@@ -223,7 +245,7 @@ $(document).ready(function()
     db_LineBar_CpuMemoryUsage_Data('false');
     db_Area_ReadWrite_Data('false');
     db_Area_mdOps_Data('false');
-    //db_HeatMap_CPUData('cpu', 'false');
+    db_AreaSpline_ioOps_Data('false');
   }   
 /*****************************************************************************
  *  Function to populate info on file system dashboard page
@@ -286,9 +308,9 @@ $(document).ready(function()
 
     fs_Area_mdOps_Data(fsId, startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
 
-    //fs_HeatMap_CPUData('cpu', 'false');
+    fs_AreaSpline_ioOps_Data('false');
 
-    clearInterval(dashboardPollingInterval);
+    clearAllIntervals();
 
     loadFileSystemSummary(fsId);
    
@@ -352,6 +374,8 @@ $(document).ready(function()
     oss_Area_ReadWrite_Data(fsId, startTime, endTime, "Average", "OST", readWriteFetchMatric, 'false');
 
     loadOSSUsageSummary(fsId);
+    
+    clearAllIntervals();
 	        
     $('#ls_ossId').attr("value",ossId);$('#ls_ossName').attr("value",ossName);
     window.location.hash =  "oss";
@@ -392,6 +416,8 @@ $(document).ready(function()
     ost_Area_ReadWrite_Data(ostId, ostName, startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'false');
 
     loadOSTSummary(fsId);
+    
+    clearAllIntervals();
 
     $('#ls_ostId').attr("value",ostId);$('#ls_ostName').attr("value",ostName);
     window.location.hash =  "ost";

@@ -19,14 +19,14 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: Django >= 1.3, mod_wsgi, httpd, python-dateutil, python-uuid, python-multiprocessing, python-paramiko, django-pagination, django-kombu, django-celery, rsyslog-mysql, mysql-server, MySQL-python >= 1.2.1p2, rabbitmq-server, hydra-agent, django-picklefield, python-amqplib, django-piston, django-r3d
+Requires: Django >= 1.3, mod_wsgi, httpd, python-dateutil, python-uuid, python-multiprocessing, python-paramiko, django-pagination, django-kombu, django-celery, rsyslog-mysql, mysql-server, MySQL-python >= 1.2.1p2, rabbitmq-server, django-picklefield, python-amqplib, django-piston, django-r3d
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
 
 %prep
 %setup -n %{name}-%{unmangled_version}
-echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py
+echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 
 %build
 python setup.py build
@@ -79,7 +79,7 @@ chkconfig rabbitmq-server on
 
 # configure rsyslog.conf
 while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do
-    ed /etc/rsyslog.conf <<EOF
+    ed /etc/rsyslog.conf <<EOF 2>/dev/null
 /^# Added by hydra-server/;/^# Added by hydra-server/d
 w
 q
@@ -106,12 +106,14 @@ w
 q
 EOF
 
-# disable getty on tty1 so that hydra-welcome.conf can emit it's message
-ed <<"EOF" /etc/sysconfig/init
+if [ "$1" = "1" ]; then
+    # disable getty on tty1 so that hydra-welcome.conf can emit it's message
+    ed <<"EOF" /etc/sysconfig/init 2>/dev/null
 /^ACTIVE_CONSOLES=/s/\[1/[2/
 w
 q
 EOF
+fi
 
 %preun
 # remove the /static/ dir of files that was created by Django's collectstatic
@@ -122,7 +124,7 @@ rm -rf /usr/share/hydra-server/static
 if [[ $1 -eq 0 ]]; then
     # configure rsyslog.conf
     while egrep -q  "^# Added by hydra-server" /etc/rsyslog.conf; do
-        ed /etc/rsyslog.conf <<"EOF"
+        ed /etc/rsyslog.conf <<"EOF" 2>/dev/null
 /^# Added by hydra-server/;/^# Added by hydra-server/d
 w
 q

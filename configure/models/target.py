@@ -141,8 +141,15 @@ class ManagedTarget(StatefulObject):
             'ManagedFilesystem': lambda mfs: [t.downcast() for t in mfs.get_filesystem_targets()]
             }
 
+    def get_lun(self):
+        # FIXME: next time I'm breaking the schema, should make
+        # lun an attribute of the ManagedTarget so that it
+        # can be a OneToOne relation and thereby have a 
+        # contraint to ensure that two targets can't possibly use
+        # the same Lun (and make this function redundant)
+        return self.managedtargetmount_set.get(primary = True).block_device.lun
+
     def to_dict(self):
-        lun = self.managedtargetmount_set.get(primary = True).block_device.lun
         active_host_name = "---"
         if self.active_mount:
             active_host_name = self.active_mount.host.pretty_name()
@@ -160,10 +167,13 @@ class ManagedTarget(StatefulObject):
             filesystem_id = None
             filesystem_name = None
 
+        from django.contrib.contenttypes.models import ContentType
+
         return {'id':self.pk,
+                'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
                 'kind': self.role(),
                 'human_name': self.human_name(),
-                'lun_name': lun.human_name(),
+                'lun_name': self.get_lun().human_name(),
                 'active_host_name': active_host_name,
                 'status': self.status_string(),
                 'state': self.state,

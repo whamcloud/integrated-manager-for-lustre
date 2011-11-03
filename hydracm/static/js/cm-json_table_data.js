@@ -23,6 +23,10 @@ var ERR_EDITFS_FSDATA_LOAD = "Error occured in loading File system data: ";
 var ost_index = 0;
 var filesystemId="";
 
+function notification_icon_markup(id, ct) {
+  return "<span class='notification_object_icon notification_object_id_" + id + "_" + ct + "'/>"
+}
+
 /******************************************************************
 * Function name - LoadFSList_FSList()
 * Param - none
@@ -103,7 +107,8 @@ function LoadTargets_EditFS(fs_id)
                 resValue.primary_server_name,
                 resValue.failover_server_name,
                 resValue.active_host_name,
-                action
+                action,
+                notification_icon_markup(resValue.id, resValue.content_type_id)
               ]
         if (resValue.kind == "OST") {
           $('#ost').dataTable().fnAddData (row);
@@ -113,6 +118,9 @@ function LoadTargets_EditFS(fs_id)
           $('#mdt').dataTable().fnAddData (row);
         }
       });
+
+      // After updating all table rows, update their .notification_object_icon elements
+      notification_update_icons();
     }
   })
   .error(function(event)
@@ -269,18 +277,20 @@ function LoadMGTConfiguration_MGTConf()
     {
       var response = data.response;
       var fsnames;
+      var message;
       if(data.response!="")
       {
         $.each(response, function(resKey, resValue)
         {
               fsnames = resValue.fs_names;
+              message = "Are you sure you want to stop " + resValue.human_name + "?";
               if(resValue.state == "mounted")
               {
-                action = "<a href='#'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
+                action = "<a href='#' onclick='jConfirm(\"" + message + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"unmounted\");}});'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
               }
               else
               {
-                action = "<a href='#'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
+                action = "<a href='#' onclick='jConfirm(\"" + message + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"mounted\");}});'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
               }
               
               $('#mgt_configuration').dataTable().fnAddData ([
@@ -365,6 +375,7 @@ function LoadServerConf_ServerConfig()
 {
   $.post("/api/listservers/",{"filesystem_id": ""}).success(function(data, textStatus, jqXHR)
   {
+    $('#server_configuration').dataTable().fnClearTable();
     if(data.success)
     {
       var response = data.response;
@@ -391,9 +402,12 @@ function LoadServerConf_ServerConfig()
           resValue.failnode,
           resValue.status,
           lnet_status,
-          lnet_status_mesg
+          lnet_status_mesg,
+          notification_icon_markup(resValue.id, resValue.content_type_id)
         ]);
       });
+      // After updating all table rows, update their .notification_object_icon elements
+      notification_update_icons();
     }
   })
   .error(function(event)

@@ -32,12 +32,16 @@ var readWriteFetchMatric = ["stats_read_bytes", "stats_write_bytes"];
 var mdOpsFetchmatric = ["stats_close", "stats_getattr", "stats_getxattr", "stats_link", 
                         "stats_mkdir", "stats_mknod", "stats_open", "stats_rename", 
                         "stats_rmdir", "stats_setattr", "stats_statfs", "stats_unlink"]
+var ioOpsFetchmatric = ["stats_connect","stats_create","stats_destroy","stats_disconnect",
+                        "stats_get_info","stats_get_page","stats_llog_init","stats_ping",
+                        "stats_punch","stats_preprw","stats_set_info_async","stats_statfs","stats_sync"];
 /*******************************************************************************
  * Global variable declaratiom
 ******************************************************************************/
-var dashboardPollingInterval;
+var dashboardPollingInterval,fsPollingInterval,ossPollingInterval,ostPollingInterval;
 var startTime = "5";
 var endTime = "";
+var isPollingFlag=false;
 /*******************************************************************************
  * API URL's for all the graphs on landing page
 ******************************************************************************/
@@ -473,6 +477,100 @@ var chartConfig_HeatMap =
    series : []
 };
 /*****************************************************************************
+ * Configuration object for Iops
+******************************************************************************/
+var chartConfig_AreaSpline =
+{
+  chart: 
+  {
+    renderTo: 'container',
+    defaultSeriesType: 'areaspline',
+    marginLeft: '50',
+    width: '900',
+    height: '200',
+    style:{ width:'100%',  height:'210'},
+    marginRight: 0,
+    marginBottom: 35,
+    zoomType: 'xy'
+  },
+  title: 
+  {
+    text: 'IOPs',
+    style: { fontSize: '12px' }
+  },
+  legend: 
+  {
+    enabled : false,
+    layout: 'vertical',
+    align: 'right',
+    verticalAlign: 'top',
+    x: 0,
+    y: 10,
+    floating: true,
+    borderWidth: 0
+  },
+  xAxis: 
+  {
+    type:"datetime"
+  },
+  yAxis: 
+  {
+    title: 
+    {
+      text: 'IO Iops'
+    }
+  },
+  tooltip: 
+  {
+    formatter: function() {
+      return ''+ this.x +': '+ this.y +' units';
+    }
+  },
+  credits: 
+  {
+    enabled: false
+  },
+  plotOptions:
+  {
+    areaspline: 
+    {
+      fillOpacity: 0.5
+    }
+  },
+  series: [{
+    name: 'stats_connect',
+    data: []
+  }]
+  
+    /*{
+      name: 'stats_connect'
+    }, {
+      name: 'stats_create'
+    }, {
+      name: 'stats_destroy'
+    }, {
+      name: 'stats_disconnect'
+    }, {
+      name: 'stats_get_info'
+    }, {
+      name: 'stats_get_page'
+    }, {
+      name: 'stats_llog_init'
+    }, {
+      name: 'stats_ping'
+    }, {
+      name: 'stats_punch'
+    }, {
+      name: 'stats_preprw'
+    }, {
+      name: 'stats_set_info_async'
+    }, {
+      name: 'stats_statfs'
+    }, {
+      name: 'stats_sync'
+    }*/
+};
+/*****************************************************************************
  * Function for space usage for all file systems  - Stacked Bar Chart
  * Param - isZoom
  * Return - Returns the graph plotted in container
@@ -796,6 +894,112 @@ db_Area_mdOps_Data = function(isZoom)
   });
 }
 /*****************************************************************************
+ * Function for mdOps - Area Spline Chart
+ * Params - fetchmatrics, isZoom
+ * Return - Returns the graph plotted in container
+*****************************************************************************/
+db_AreaSpline_ioOps_Data = function(isZoom)
+{
+  obj_db_AreaSpline_ioOps_Data = JSON.parse(JSON.stringify(chartConfig_AreaSpline));
+
+  var values = new Object();
+  var stats = ioOpsFetchmatric;
+  $.each(stats, function(i, stat_name)
+  {
+    values[stat_name] = [];
+  });
+  $.post("/api/get_fs_stats_heatmap/",
+  {
+    fetchmetrics: stats.join(" "), endtime: endTime, datafunction: "Average", 
+    starttime: startTime, filesystem: "", targetkind:"OST"
+  })
+  .success(function(data, textStatus, jqXHR) 
+  {
+    var targetName='';
+    var count=0;
+    var iopsDataResponse = data;
+    if(iopsDataResponse.success)
+    {
+      var response = data.response;
+      $.each(response, function(resKey, resValue)
+      {
+          if (targetName != resValue.targetname && targetName !='')
+          {
+            $.each(stats, function(i, stat_name)
+            {
+              obj_db_AreaSpline_ioOps_Data.series[count] = 
+              {
+                  name: targetName + ' : '  + stat_name,
+                  data: values[stat_name],
+              };
+              count++;
+            });
+            $.each(stats, function(i, stat_name)
+            {
+              values[stat_name] = [];
+            });
+            
+
+            targetName = resValue.targetname;
+            
+            if(targetName != undefined)
+            {
+              ts = resValue.timestamp * 1000;
+              $.each(stats, function(i, stat_name) 
+              {
+                if (resValue[stat_name] != null || resValue[stat_name] != undefined) 
+                {
+                  values[stat_name].push([ts, resValue[stat_name]]);
+                }
+              });
+            }
+          }
+          else
+          {
+            targetName = resValue.targetname;
+            
+            if(targetName != undefined)
+            {
+              ts = resValue.timestamp * 1000;
+              $.each(stats, function(i, stat_name) 
+              {
+                if (resValue[stat_name] != null || resValue[stat_name] != undefined) 
+                {
+                  values[stat_name].push([ts, resValue[stat_name]]);
+                }
+              });
+            }
+          }
+      });
+      $.each(stats, function(i, stat_name)
+      {
+        obj_db_AreaSpline_ioOps_Data.series[count] = 
+        {
+          name: targetName + ' : '+stat_name,
+          data: values[stat_name],
+        };
+      });
+    }
+  })
+  .error(function(event) 
+  {
+    // Display of appropriate error message
+  })
+  .complete(function(event)
+  {
+    obj_db_AreaSpline_ioOps_Data.chart.renderTo = "db_iopsSpline";
+    if(isZoom == 'true') 
+    {
+      renderZoomDialog(obj_db_AreaSpline_ioOps_Data);
+    }
+    /*$.each(stats, function(i, stat_name) 
+    {
+      obj_db_AreaSpline_ioOps_Data.series[i].data = values[stat_name];
+    });*/
+    chart = new Highcharts.Chart(obj_db_AreaSpline_ioOps_Data);
+  });
+}
+/*****************************************************************************
  * Function to plot heat map
  * Params - fetchmatrics, isZoom
  * Return - Returns the graph plotted in container
@@ -995,6 +1199,7 @@ db_HeatMap_ReadWriteData = function(fetchmetrics, isZoom)
     chart = new Highcharts.Chart(obj_db_HeatMap_CPUData);
   });
 }
+
 /****************************************************************************
  * Function for zooming functionality for all graphs
 *****************************************************************************/
@@ -1023,11 +1228,25 @@ setZoomDialogTitle = function(titleName)
 *****************************************************************************/
 initDashboardPolling = function()
 {
-  db_Bar_SpaceUsage_Data('false');
-  db_Line_connectedClients_Data('false');
-  db_LineBar_CpuMemoryUsage_Data('false');
-  db_Area_ReadWrite_Data('false');
-  db_Area_mdOps_Data('false');
+  if(isPollingFlag)
+  {
+    dashboardPollingInterval = self.setInterval(function()
+    {
+      db_Bar_SpaceUsage_Data('false');
+      db_Line_connectedClients_Data('false');
+      db_LineBar_CpuMemoryUsage_Data('false');
+      db_Area_ReadWrite_Data('false');
+      db_Area_mdOps_Data('false');
+    }, 10000);
+  }
+  else
+  {
+    db_Bar_SpaceUsage_Data('false');
+    db_Line_connectedClients_Data('false');
+    db_LineBar_CpuMemoryUsage_Data('false');
+    db_Area_ReadWrite_Data('false');
+    db_Area_mdOps_Data('false');
+  }
 }
 /*****************************************************************************
  * Function to clear dashboard pooling intervals
@@ -1035,5 +1254,10 @@ initDashboardPolling = function()
 clearAllIntervals = function()
 {
   clearInterval(dashboardPollingInterval);
+  clearInterval(fsPollingInterval);
+  clearInterval(ossPollingInterval);
+  clearInterval(ostPollingInterval);
+  
+  $("input[id *= polling_element]").attr("checked",false);
 }
 /******************************************************************************/

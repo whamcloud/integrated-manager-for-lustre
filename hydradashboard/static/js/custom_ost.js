@@ -337,8 +337,20 @@ loadOSTSummary = function (fsId)
 *****************************************************************************/
 initOSTPolling = function()
 {
-  ost_Pie_Space_Data($('#ls_ost').val(), "", "", "Average", "OST", spaceUsageFetchMatric, "false");
-  ost_Pie_Inode_Data($('#ls_ost').val(), "", "", "Average", "OST", spaceUsageFetchMatric, "false");
-  ost_Area_ReadWrite_Data($('#ls_ost').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, "false");
+  if(isPollingFlag)
+  {
+    ossPollingInterval = self.setInterval(function()
+    {
+      ost_Pie_Space_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", "OST", spaceUsageFetchMatric, "false");
+      ost_Pie_Inode_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", "OST", spaceUsageFetchMatric, "false");
+      ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, "false");
+    }, 10000);
+  }
+  else
+  {
+    ost_Pie_Space_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", "OST", spaceUsageFetchMatric, "false");
+    ost_Pie_Inode_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", "OST", spaceUsageFetchMatric, "false");
+    ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, "false");
+  }
 }
 /*********************************************************************************************/
