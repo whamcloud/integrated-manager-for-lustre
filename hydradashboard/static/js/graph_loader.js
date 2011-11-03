@@ -929,7 +929,7 @@ db_AreaSpline_ioOps_Data = function(isZoom)
             {
               obj_db_AreaSpline_ioOps_Data.series[count] = 
               {
-                  name: targetName,
+                  name: targetName + ' : '  + stat_name,
                   data: values[stat_name],
               };
               count++;
@@ -975,7 +975,7 @@ db_AreaSpline_ioOps_Data = function(isZoom)
       {
         obj_db_AreaSpline_ioOps_Data.series[count] = 
         {
-          name: targetName,
+          name: targetName + ' : '+stat_name,
           data: values[stat_name],
         };
       });
