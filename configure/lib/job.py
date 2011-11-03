@@ -358,9 +358,10 @@ class ConfigurePacemakerStep(Step):
         # target.name should have been populated by RegisterTarget
         assert(target_mount.block_device != None and target_mount.target.name != None)
 
-        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --serial %s %s --mountpoint %s" % (
+        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --uuid %s --serial %s %s --mountpoint %s" % (
                                     target_mount.block_device.path,
                                     target_mount.target.name,
+                                    target_mount.target.uuid,
                                     target_mount.target.pk,
                                     target_mount.primary and "--primary" or "",
                                     target_mount.mount_point))
@@ -378,8 +379,9 @@ class UnconfigurePacemakerStep(Step):
         # didn't have its name
         assert(target_mount.target.name != None)
 
-        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s --serial %s %s" % (
+        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s --uuid %s --serial %s %s" % (
                                     target_mount.target.name,
+                                    target_mount.target.uuid,
                                     target_mount.target.pk,
                                     target_mount.primary and "--primary" or ""))
 
