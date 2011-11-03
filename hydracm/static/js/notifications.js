@@ -10,6 +10,7 @@ var known_jobs = {};
 var running_job_count = 0;
 var running_jobs = {}
 
+// Map of [id,ct] to map of job IDs holding a lock
 var read_locks = {}
 var write_locks = {}
 
@@ -17,9 +18,46 @@ var known_alerts = {};
 var active_alert_count = 0;
 var active_alerts = {}
 
+// Map of [id,ct] to map of alert IDs affecting this object
+var alert_effects = {}
+
+function for_class_starting(element, prefix, callback) {
+  $.each(element.attr('class').split(" "), function(i, class_name) {
+    if (class_name.indexOf(prefix) == 0) {
+      callback(class_name)
+    }
+  });
+}
+
 function debug(msg) {
   //console.log(msg);
 }
+
+update_alert_indicator = function(element)
+{
+  for_class_starting(element, 'alert_indicator_object_id_', function(class_name) {
+    var parts = class_name.split("_")
+    var key = [parts[4], parts[5]];
+
+    var effects = alert_effects[key]
+    if (effects && attr_count(effects)) {
+      element.html('Alert!')
+      element.addClass('alert_indicator_active');
+    } else {
+      element.html('No alerts')
+      element.addClass('alert_indicator_inactive');
+    }
+  });
+}
+
+update_alert_indicators = function()
+{
+  $('.alert_indicator').each(function() {
+    update_alert_indicator($(this));
+  });
+}
+
+$(document).ajaxComplete(update_alert_indicators)
 
 update_sidebar_icons = function() {
   if (running_job_count > 0) {
@@ -40,21 +78,35 @@ update_sidebar_icons = function() {
 }
 
 activate_alert = function(alert_info) {
+  console.log("Alert " + alert_info.id + " activated");
   if (active_alerts[alert_info.id]) {
     throw "Alert " + alert_info.id + " activated twice"
   }
 
   active_alerts[alert_info.id] = alert_info
   active_alert_count += 1;
+
+  /* TODO: get a list of effectees */
+  effectee = [alert_info.alert_item_id, alert_info.alert_item_content_type_id]
+  if (!alert_effects[effectee]) {
+    alert_effects[effectee] = {}
+  }
+
+  alert_effects[effectee][alert_info.id] = 1
 }
 
 deactivate_alert = function(alert_info) {
+  console.log("Alert " + alert_info.id + " finished");
   if (active_alerts[alert_info.id] == null) {
     throw "Alert " + alert_info.id + " finished but not in active_alerts"
   }
 
   delete active_alerts[alert_info.id]
   active_alert_count -= 1;
+
+  /* TODO: get a list of effectees */
+  effectee = [alert_info.alert_item_id, alert_info.alert_item_content_type_id]
+  delete alert_effects[effectee][alert_info.id]
 }
 
 
@@ -203,12 +255,10 @@ notification_update_icon = function(key, element) {
 notification_update_icons = function() {
   $('.notification_object_icon').each( function() {
     var icon_element = $(this);
-    $.each($(this).attr('class').split(" "), function(i, class_name) {
-      if (class_name.indexOf('notification_object_id_') == 0) {
-        var parts = class_name.split("_")
-        var key = [parts[3], parts[4]];
-        notification_update_icon(key, icon_element);
-      }
+    for_class_starting($(this), 'notification_object_id_', function(class_name) {
+      var parts = class_name.split("_")
+      var key = [parts[3], parts[4]];
+      notification_update_icon(key, icon_element);
     });
   });
 }
@@ -283,7 +333,6 @@ update_objects = function(data, silent) {
     }
   });
 
-  console.log(data.response.alerts);
   $.each(data.response.alerts, function(i, alert_info) {
     existing = known_alerts[alert_info.id]
     known_alerts[alert_info.id] = alert_info
@@ -316,7 +365,7 @@ update_objects = function(data, silent) {
 poll_jobs = function() {
   /* FIXME: using POST instead of GET because otherwise jQuery forces the JSON payload to
    * be urlencoded and django-piston doesn't get our args out properly */
-  $.ajax({type: 'POST', url: "/api/jobs/", dataType: 'json', data: JSON.stringify({filter_opts: {since_time: last_check, initial: false}}), contentType:"application/json; charset=utf-8"})
+  $.ajax({type: 'POST', url: "/api/notifications/", dataType: 'json', data: JSON.stringify({filter_opts: {since_time: last_check, initial: false}}), contentType:"application/json; charset=utf-8"})
   .success(function(data, textStatus, jqXHR) {
     if (!data.success) {
       debug("Error calling jobs_since")
@@ -333,7 +382,7 @@ poll_jobs = function() {
 
 $(document).ready(function() {
 
-  $.ajax({type: 'POST', url: "/api/jobs/", dataType: 'json', data: JSON.stringify({filter_opts: {since_time: "", initial: true}}), contentType:"application/json; charset=utf-8"})
+  $.ajax({type: 'POST', url: "/api/notifications/", dataType: 'json', data: JSON.stringify({filter_opts: {since_time: "", initial: true}}), contentType:"application/json; charset=utf-8"})
   .success(function(data, textStatus, jqXHR) {
     if (data.success) {
       update_objects(data, silent = true);

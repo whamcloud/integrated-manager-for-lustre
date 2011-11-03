@@ -23,6 +23,10 @@ var ERR_EDITFS_FSDATA_LOAD = "Error occured in loading File system data: ";
 var ost_index = 0;
 var filesystemId="";
 
+target_dialog_link = function(target_id, target_name) {
+  return "<a href='#' class='target target_id_" + target_id + "'>" + target_name + "</a>"
+}
+
 function notification_icon_markup(id, ct) {
   return "<span class='notification_object_icon notification_object_id_" + id + "_" + ct + "'/>"
 }
@@ -103,7 +107,7 @@ function LoadTargets_EditFS(fs_id)
         }
         row = [
                 resValue.lun_name,
-                resValue.human_name,
+                target_dialog_link(resValue.id, resValue.human_name),
                 resValue.primary_server_name,
                 resValue.failover_server_name,
                 resValue.active_host_name,
@@ -296,7 +300,7 @@ function LoadMGTConfiguration_MGTConf()
               $('#mgt_configuration').dataTable().fnAddData ([
                 fsnames.toString(),
                 resValue.lun_name,
-                resValue.primary_server_name,
+                target_dialog_link(resValue.id, resValue.primary_server_name),
                 resValue.failover_server_name,
                 resValue.active_host_name,
                 action

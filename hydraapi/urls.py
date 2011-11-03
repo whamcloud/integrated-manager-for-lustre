@@ -21,6 +21,7 @@ from monitorapi import (ListFileSystems,
                         GetLogs,
                         GetFSVolumeDetails)
 
+import configureapi
 from configureapi import (FormatFileSystem,
                           StopFileSystem,
                           StartFileSystem,
@@ -36,7 +37,7 @@ from configureapi import (FormatFileSystem,
                           SetTargetMountStage,
                           GetJobStatus,
                           SetJobStatus,
-                          Jobs)
+                          Notifications)
 
 # FIXME: instead of doing this big list of imports, should introspect available
 # RequestHandler objects and get their url name from them.
@@ -123,12 +124,14 @@ urlpatterns = patterns('',
     (r'^get_fs_stats_heatmap/$',CsrfExemptResource(GetHeatMapFSStats)),
     (r'^get_server_stats_heatmap/$',CsrfExemptResource(GetHeatMapServerStats)),
 
+    (r'^target/$',CsrfExemptResource(configureapi.Target)),
+
     (r'^geteventsbyfilter/$',CsrfExemptResource(GetEventsByFilter)),
     (r'^getlatestevents/$',CsrfExemptResource(GetLatestEvents)),
     (r'^getalerts/$',CsrfExemptResource(GetAlerts)),
     (r'^getjobs/$',CsrfExemptResource(GetJobs)),
     (r'^getlogs/$',CsrfExemptResource(GetLogs)),
-    (r'^jobs/$',CsrfExemptResource(Jobs)),
+    (r'^notifications/$',CsrfExemptResource(Notifications)),
 
     (r'^get_resource_classes/$', CsrfExemptResource(GetResourceClasses)),
     (r'^get_resources/$', CsrfExemptResource(GetResources)),

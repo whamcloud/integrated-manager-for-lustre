@@ -365,18 +365,21 @@ class CreateOSTs(AnonymousRequestHandler):
         for target in osts:
             StateManager.set_state(target, 'mounted')
 
+class Target(AnonymousRequestHandler):
+    @extract_request_args('id')
+    def run(self, request, id):
+        from configure.models import ManagedTarget
+        from django.shortcuts import get_object_or_404
+        target = get_object_or_404(ManagedTarget, pk = id).downcast()
+        return target.to_dict()
+
 class GetTargetResourceGraph(AnonymousRequestHandler):
     @extract_request_args('target_id')
     def run(self, request, target_id):
         from monitor.models import AlertState
         from configure.models import ManagedTarget
         from django.shortcuts import get_object_or_404
-        if True:
-            # FIXME HYD-375 HACK - the breadcrumb UI passes around names instead of ids, so have to do
-            # this unreliable lookup instead
-            target = get_object_or_404(ManagedTarget, name = target_id).downcast()
-        else:
-            target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
+        target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
 
         ancestor_records = set()
         parent_records = set()
@@ -503,9 +506,7 @@ class StorageResourceClassFields(AnonymousRequestHandler):
                 'class': attr.__class__.__name__})
         return result
 
-# FIXME: not just Jobs here, also ALerts, this
-# function is used for all the live-updating stuff
-class Jobs(AnonymousRequestHandler):
+class Notifications(AnonymousRequestHandler):
     @extract_request_args('filter_opts')
     def run(self, request, filter_opts):
         since_time = filter_opts['since_time']

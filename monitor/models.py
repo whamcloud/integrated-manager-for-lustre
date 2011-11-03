@@ -247,7 +247,9 @@ class AlertState(models.Model):
          'active': bool(self.active),
          'begin': time_str(self.begin),
          'end': time_str(self.end),
-         'id': self.id
+         'id': self.id,
+         'alert_item_id': self.alert_item_id,
+         'alert_item_content_type_id': self.alert_item_type_id
         }
 
     def duration(self):

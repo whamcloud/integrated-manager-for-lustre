@@ -187,7 +187,7 @@ class UpdateScan(object):
                     continue
                 target = ManagedTarget.objects.get(name = target_name, pk = target_pk).downcast()
             except ManagedTarget.DoesNotExist:
-                audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
+                #audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
                 continue
 
             # If we're operating on a Managed* rather than a purely monitored target

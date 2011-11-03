@@ -36,6 +36,38 @@ div.jGrowl div.alert_raised div.jGrowl-message {
   min-height: 24px;
 }
 
+span.alert_indicator {
+  display: inline-block;
+  width: 64px;
+  height: 16px;
+  padding-left: 24px;
+  padding-top: 2px;
+  font-size: 12px;
+  text-align: left;
+  border-radius: 3px;
+
+  background-repeat: no-repeat;
+  background-position: 2px;
+}
+
+
+span.alert_indicator_active {
+  color: #664f00;
+  border: 1px solid #664f00;
+  background-color: #FFBF00;
+  font-weight: bold;
+
+  background-image: url(../images/dialog-warning.png);
+}
+
+span.alert_indicator_inactive {
+  color: #444;
+  background-color: #efe;
+  border: 1px solid #ded;
+
+  background-image: url(../images/icon_tick.png);
+}
+
 span.notification_object_icon {
 }
 

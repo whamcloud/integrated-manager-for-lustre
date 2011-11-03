@@ -405,7 +405,7 @@ $(document).ready(function()
     resetTimeInterval();
 
 		/* HYD-375: ostSelect value is a name instead of an ID */
-    load_resource_graph("ost_resource_graph_canvas", ostName);
+    load_resource_graph("ost_resource_graph_canvas", ostId);
 
     ost_Pie_Space_Data(ostId, ostName, "", "", 'Average', 'OST', spaceUsageFetchMatric, 'false');
     ost_Pie_Inode_Data(ostId, ostName, "", "", 'Average', 'OST', spaceUsageFetchMatric, 'false');

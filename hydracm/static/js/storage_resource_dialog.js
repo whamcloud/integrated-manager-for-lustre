@@ -99,11 +99,7 @@ Highcharts.theme = {
 
 // Apply the theme
 var highchartsOptions = Highcharts.setOptions(Highcharts.theme);
-
-
-
 var resource_id = null;
-
 
 $(document).ready(function() {
   $('#storage_resource_dialog').dialog({autoOpen: false, modal: true, minWidth: 950, maxHeight: 1024});

@@ -31,8 +31,13 @@
 <script type='text/javascript' src="{{STATIC_URL}}js/filesystem_configuration.js"></script>
 <link rel="stylesheet" href="{{STATIC_URL}}css/filesystem_configuration.css" type='text/css' />
 
-<script type='text/javascript' src="{{STATIC_URL}}js/jquery.jgrowl_minimized.js"></script>
-<link rel="stylesheet" href="{{STATIC_URL}}css/jquery.jgrowl.css" type='text/css' />
+<!-- js-graph-it is a dependency of resource_graph -->
+<script type="text/javascript" src="{{STATIC_URL}}js/js-graph-it.js" ></script>
+<link href="{{STATIC_URL}}css/js-graph-it.css" rel="stylesheet" type="text/css" />
+<link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
+<script type='text/javascript' src="{{STATIC_URL}}js/resource_graph.js"></script>
+<script type='text/javascript' src="{{STATIC_URL}}js/target_dialog.js"></script>
+<link rel="stylesheet" href="{{STATIC_URL}}css/target_dialog.css" type='text/css' />
 
 
 <script type="text/javascript">
@@ -40,6 +45,8 @@
    * the backend since the page was loaded */
   page_load_time = '{{page_load_time}}';
 </script>
+<script type='text/javascript' src="{{STATIC_URL}}js/jquery.jgrowl_minimized.js"></script>
+<link rel="stylesheet" href="{{STATIC_URL}}css/jquery.jgrowl.css" type='text/css' />
 <link rel="stylesheet" href="{{STATIC_URL}}css/notifications.css" type='text/css' />
 <script type="text/javascript" src="{{STATIC_URL}}js/notifications.js" ></script>
 
@@ -331,6 +338,19 @@
   </table>
 </div>
 <!-- End markup for storage_resource_create.js -->
+
+<!-- Markup for target_dialog.js -->
+<div style="overflow-y: auto; max-height: 700px;" id="target_dialog">
+  <div id='target_dialog_tabs'>
+    <ul>
+      <li><a href='#target_dialog_properties'>Properties</a></li>
+      <li><a href='#target_dialog_devices'>Devices</a></li>
+    </ul>
+    <div id='target_dialog_properties'></div>
+    <div id='target_dialog_devices'></div>
+  </div>
+</div>
+<!-- End markup for target_dialog.js -->
 
 </body>
 </html>
