@@ -335,6 +335,112 @@ fs_Area_mdOps_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fe
   });
 }
 /*****************************************************************************
+ * Function for mdOps - Area Spline Chart
+ * Params - fetchmatrics, isZoom
+ * Return - Returns the graph plotted in container
+*****************************************************************************/
+fs_AreaSpline_ioOps_Data = function(isZoom)
+{
+  obj_db_AreaSpline_ioOps_Data = JSON.parse(JSON.stringify(chartConfig_AreaSpline));
+
+  var values = new Object();
+  var stats = ioOpsFetchmatric;
+  $.each(stats, function(i, stat_name)
+  {
+    values[stat_name] = [];
+  });
+  $.post("/api/get_fs_stats_heatmap/",
+  {
+    fetchmetrics: stats.join(" "), endtime: endTime, datafunction: "Average", 
+    starttime: startTime, filesystem: $("#ls_fsName").val(), targetkind:"OST"
+  })
+  .success(function(data, textStatus, jqXHR) 
+  {
+    var targetName='';
+    var count=0;
+    var iopsDataResponse = data;
+    if(iopsDataResponse.success)
+    {
+      var response = data.response;
+      $.each(response, function(resKey, resValue)
+      {
+          if (targetName != resValue.targetname && targetName !='')
+          {
+            $.each(stats, function(i, stat_name)
+            {
+              obj_db_AreaSpline_ioOps_Data.series[count] = 
+              {
+                  name: targetName,
+                  data: values[stat_name],
+              };
+              count++;
+            });
+            $.each(stats, function(i, stat_name)
+            {
+              values[stat_name] = [];
+            });
+            
+
+            targetName = resValue.targetname;
+            
+            if(targetName != undefined)
+            {
+              ts = resValue.timestamp * 1000;
+              $.each(stats, function(i, stat_name) 
+              {
+                if (resValue[stat_name] != null || resValue[stat_name] != undefined) 
+                {
+                  values[stat_name].push([ts, resValue[stat_name]]);
+                }
+              });
+            }
+          }
+          else
+          {
+            targetName = resValue.targetname;
+            
+            if(targetName != undefined)
+            {
+              ts = resValue.timestamp * 1000;
+              $.each(stats, function(i, stat_name) 
+              {
+                if (resValue[stat_name] != null || resValue[stat_name] != undefined) 
+                {
+                  values[stat_name].push([ts, resValue[stat_name]]);
+                }
+              });
+            }
+          }
+      });
+      $.each(stats, function(i, stat_name)
+      {
+        obj_db_AreaSpline_ioOps_Data.series[count] = 
+        {
+          name: targetName,
+          data: values[stat_name],
+        };
+      });
+    }
+  })
+  .error(function(event) 
+  {
+    // Display of appropriate error message
+  })
+  .complete(function(event)
+  {
+    obj_db_AreaSpline_ioOps_Data.chart.renderTo = "fs_iopsSpline";
+    if(isZoom == 'true') 
+    {
+      renderZoomDialog(obj_db_AreaSpline_ioOps_Data);
+    }
+    /*$.each(stats, function(i, stat_name) 
+    {
+      obj_db_AreaSpline_ioOps_Data.series[i].data = values[stat_name];
+    });*/
+    chart = new Highcharts.Chart(obj_db_AreaSpline_ioOps_Data);
+  });
+}
+/*****************************************************************************
  * Function to plot heat map for CPU Usage
  * Params - fetchmatrics, isZoom
  * Return - Returns the graph plotted in container
@@ -540,11 +646,25 @@ loadFileSystemSummary = function (fsId)
 *****************************************************************************/
 initFileSystemPolling = function()
 {
-  fs_Bar_SpaceUsage_Data($('#ls_fsId').val(), "", "", "Average", "OST", spaceUsageFetchMatric, false);
- 	fs_Line_connectedClients_Data($('#ls_fsId').val(), startTime, endTime, "Average", clientsConnectedFetchMatric, false);
- 	fs_LineBar_CpuMemoryUsage_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", cpuMemoryFetchMatric, false);
- 	fs_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, false);
- 	fs_Area_mdOps_Data($('#ls_fsId').val(), startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
+  if(isPollingFlag)
+  {
+    fsPollingInterval = self.setInterval(function()
+    {
+      fs_Bar_SpaceUsage_Data($('#ls_fsId').val(), "", "", "Average", "OST", spaceUsageFetchMatric, false);
+     	fs_Line_connectedClients_Data($('#ls_fsId').val(), startTime, endTime, "Average", clientsConnectedFetchMatric, false);
+     	fs_LineBar_CpuMemoryUsage_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", cpuMemoryFetchMatric, false);
+     	fs_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, false);
+     	fs_Area_mdOps_Data($('#ls_fsId').val(), startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
+    });
+  }
+  else
+  {
+    fs_Bar_SpaceUsage_Data($('#ls_fsId').val(), "", "", "Average", "OST", spaceUsageFetchMatric, false);
+    fs_Line_connectedClients_Data($('#ls_fsId').val(), startTime, endTime, "Average", clientsConnectedFetchMatric, false);
+    fs_LineBar_CpuMemoryUsage_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", cpuMemoryFetchMatric, false);
+    fs_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, false);
+    fs_Area_mdOps_Data($('#ls_fsId').val(), startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
+  }
 }
 /******************************************************************************
  * Function to show FS dashboard content

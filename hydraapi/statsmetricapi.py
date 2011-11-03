@@ -300,46 +300,49 @@ class GetHeatMapFSStats(AnonymousRequestHandler):
             return all_fs_stats
 
     def metrics_fetch(self,fs,target_kind,fetch_metrics,start_time,end_time,interval,datafunction='Average'):
+        fs_target_stats = []
         if target_kind == 'OST':
             if start_time:
                 start_time = int(start_time)
                 start_time = getstartdate(start_time)
                 if fetch_metrics:
-                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedOst,fetch_metrics=fetch_metrics.split(),start_time=start_time)
+                    for ost in ManagedOst.objects.filter(filesystem=fs): 
+                        ost_stats = ost.metrics.fetch(datafunction,fetch_metrics=fetch_metrics.split(),start_time=start_time)
+                        updated_stats_data = []
+                        for stats_data in ost_stats:
+                            stats_data[1]['targetname'] = ost.name
+                            stats_data[1]['timestamp']  = long(stats_data[0])
+                            updated_stats_data.append(stats_data[1])
+                        fs_target_stats.extend(updated_stats_data) 
                 else:
-                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedOst,start_time=start_time)
+                    for ost in ManagedOst.objects.filter(filesystem=fs):
+                        ost_stats = ost.metrics.fetch(datafunction,start_time=start_time)
+                        updated_stats_data = []
+                        for stats_data in ost_stats:
+                            stats_data[1]['targetname'] = ost.name
+                            stats_data[1]['timestamp']  = long(stats_data[0])
+                            updated_stats_data.append(stats_data[1])
+                        fs_target_stats.extend(updated_stats_data)  
             else:
                 if fetch_metrics:
-                    fs_target_stats = fs.metrics.fetch_last(ManagedOst,fetch_metrics=fetch_metrics.split())
+                    for ost in ManagedOst.objects.filter(filesystem=fs):
+                        ost_stats=ost.metrics.fetch_last(fetch_metrics=fetch_metrics.split())
+                        updated_stats_data = []
+                        for stats_data in ost_stats:
+                            stats_data[1]['targetname'] = ost.name
+                            stats_data[1]['timestamp']  = long(stats_data[0])
+                            updated_stats_data.append(stats_data[1])
+                        fs_target_stats.extend(updated_stats_data)
                 else:
-                    fs_target_stats = fs.metrics.fetch_last(ManagedOst)
-        elif target_kind == 'MDT':
-            if start_time:
-                start_time = int(start_time)
-                start_time = getstartdate(start_time)
-                if fetch_metrics:
-                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedMdt,fetch_metrics=fetch_metrics.split(),start_time=start_time)
-                else:
-                    fs_target_stats = fs.metrics.fetch(datafunction,ManagedMdt,start_time=start_time)
-            else:
-                if fetch_metrics:
-                    fs_target_stats = fs.metrics.fetch_last(ManagedMdt,fetch_metrics=fetch_metrics.split())
-                else:
-                    fs_target_stats = fs.metrics.fetch_last(ManagedMdt)   
-        chart_stats = []
-        if fs_target_stats:
-            if start_time:  
-                for stats_data in fs_target_stats:
-                    stats_data[1]['filesystem'] = fs.name
-                    stats_data[1]['timestamp'] = long(stats_data[0])
-                    stats_data[1]['color'] = getheatmapcolor(fetch_metrics,stats_data[1])   
-                    chart_stats.append(stats_data[1])
-            else:
-                fs_target_stats[1]['filesystem'] = fs.name
-                fs_target_stats[1]['timestamp'] = long(fs_target_stats[0])
-                fs_target_stats[1]['color'] = getheatmapcolor(fetch_metrics,fs_target_stats[1])  
-                chart_stats.append(fs_target_stats[1])
-        return chart_stats
+                    for ost in ManagedOst.objects.filter(filesystem=fs):
+                        ost_stats=ost.metrics.fetch_last()
+                        updated_stats_data = []
+                        for stats_data in ost_stats:
+                            stats_data[1]['targetname'] = ost.name
+                            stats_data[1]['timestamp']  = long(stats_data[0])
+                            updated_stats_data.append(stats_data[1])
+                        fs_target_stats.extend(updated_stats_data)
+        return fs_target_stats
 
 class GetHeatMapServerStats(AnonymousRequestHandler):
     @extract_request_args('filesystem','starttime','endtime','datafunction','fetchmetrics')
