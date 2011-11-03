@@ -126,7 +126,7 @@ dm_mod 75539 2 dm_mirror,dm_log, Live 0xffffffffa0000000
         audit = LocalAudit(fscontext=self.test_root)
         # FIXME: this gethostname() should probably be stubbed out
         import socket
-        self.assertEqual(audit.metrics(), {'raw': {'node': {'hostname': socket.gethostname(), 'cpustats': {'usage': 59042, 'total': 3541213}, 'meminfo': {'MemTotal': 3991680}}}})
+        self.assertEqual(audit.metrics(), {'raw': {'node': {'hostname': socket.gethostname(), 'cpustats': {'iowait': 10892, 'idle': 3471279, 'total': 3540537, 'user': 24601, 'system': 33763}, 'meminfo': {'MemTotal': 3991680}}}})
 
         shutil.rmtree(self.test_root)
 
