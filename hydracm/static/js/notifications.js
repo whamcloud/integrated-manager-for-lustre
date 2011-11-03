@@ -209,7 +209,7 @@ poll_jobs = function() {
       function simple_state(backend_state) {
         if (backend_state == 'pending') {
           return 'pending';
-        } else if (backend_state == 'tasked' || backend_state == 'completing' || backend_state == 'cancelling' || backend_state == 'paused') {
+        } else if (backend_state == 'tasked' || backend_state == 'completing' || backend_state == 'cancelling' || backend_state == 'paused' || backend_state == 'tasking') {
           return 'running';
         } else if (backend_state == 'complete') {
           return 'complete';
