@@ -90,40 +90,35 @@ class GetFSServerStats(AnonymousRequestHandler):
         if filesystem_id:
             host_stats_metric = []
             fs = ManagedFilesystem.objects.get(id=filesystem_id)
-            hosts = fs.get_servers()
-            for host in hosts:
-                host_stats_metric.extend(self.metrics_fetch(host,fetchmetrics,starttime,endtime,interval))
-            return host_stats_metric
+            return self.metrics_fetch(fs,fetchmetrics,starttime,endtime,interval)
         else:
-            host_stats_metric = []  
+            all_fs_stats = []
             for fs in ManagedFilesystem.objects.all():
-                hosts = fs.get_servers()
-                for host in hosts:
-                    host_stats_metric.extend(self.metrics_fetch(host,fetchmetrics,starttime,endtime,interval))
-            return host_stats_metric
+                all_fs_stats.extend(self.metrics_fetch(fs,fetchmetrics,starttime,endtime,interval))
+            return all_fs_stats
 
-    def metrics_fetch(self,host,fetch_metrics,start_time,end_time,interval,datafunction='Average'):
+    def metrics_fetch(self,fs,fetch_metrics,start_time,end_time,interval,datafunction='Average'):
         if start_time:
             start_time = int(start_time)
             start_time = getstartdate(start_time)
             if fetch_metrics:
-                host_stats = host.metrics.fetch(datafunction,fetch_metrics=fetch_metrics.split(),start_time=start_time)
+                host_stats = fs.metrics.fetch(datafunction,ManagedHost,fetch_metrics=fetch_metrics.split(),start_time=start_time)
             else:
-                host_stats = host.metrics.fetch(datafunction,start_time=start_time)
+                host_stats = fs.metrics.fetch(datafunction,ManagedHost,start_time=start_time)
         else:
             if fetch_metrics:
-                host_stats = host.metrics.fetch_last(fetch_metrics=fetch_metrics.split())
+                host_stats = fs.metrics.fetch_last(ManagedHost,fetch_metrics=fetch_metrics.split())
             else:
-                host_stats = host.metrics.fetch_last()
+                host_stats = fs.metrics.fetch_last(ManagedHost)
         chart_stats = []   
         if host_stats:
             if start_time:
                 for stats_data in host_stats:
-                    stats_data[1]['host'] = host.address
+                    stats_data[1]['filesystem'] = fs.name
                     stats_data[1]['timestamp'] = long(stats_data[0])
                     chart_stats.append(stats_data[1])      
             else:
-                host_stats[1]['host'] = host.address
+                host_stats[1]['filesystem'] = fs.name
                 host_stats[1]['timestamp'] = long(host_stats[0])
                 chart_stats.append(host_stats[1]) 
         return chart_stats

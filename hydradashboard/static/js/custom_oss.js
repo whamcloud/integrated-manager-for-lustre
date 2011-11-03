@@ -19,8 +19,31 @@ var oss_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 oss_LineBar_CpuMemoryUsage_Data = function(hostId, sDate, endDate, dataFunction, fetchMetrics, isZoom)
 {
   var count = 0;
-  var cpuData = [],categories = [], memoryData = [];
-  obj_oss_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
+  var cpuUserData = [], cpuSystemData = [], cpuIowaitData = [], categories = [], memoryData = [];
+  var custom_chart = chartConfig_LineBar_CPUMemoryUsage;
+  custom_chart.series = [
+    {
+      type: 'line',
+      data: [],
+      name: 'user'
+    },
+    {
+      type: 'line',
+      data: [],
+      name: 'system'
+    },
+    {
+      type: 'line',
+      data: [],
+      name: 'iowait'
+    },
+    {
+      type: 'line',
+      data: [],
+      name: 'mem'
+    }
+  ];
+  obj_oss_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(custom_chart));
   $.post(oss_LineBar_CpuMemoryUsage_Data_Api_Url,
   {
     datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, host_id: hostId, endtime: endDate
@@ -36,12 +59,20 @@ oss_LineBar_CpuMemoryUsage_Data = function(hostId, sDate, endDate, dataFunction,
       {
         if(resValue.host != undefined)
         {
-          if(resValue.cpu_usage != undefined || resValue.cpu_total != undefined)
+          if (resValue.cpu_total != undefined && resValue.mem_MemTotal != undefined)
           {
             ts = resValue.timestamp * 1000
-            cpuData.push([ts,((resValue.cpu_usage*100)/resValue.cpu_total)]);
-            memoryData.push([ts,(resValue.mem_MemTotal - resValue.mem_MemFree)]);
-          }
+            var pct_user = ((100 * resValue.cpu_user + (resValue.cpu_total / 2)) / resValue.cpu_total);
+            cpuUserData.push([ts,(pct_user)]);
+            var pct_system = ((100 * resValue.cpu_system + (resValue.cpu_total / 2)) / resValue.cpu_total);
+            cpuSystemData.push([ts,(pct_system)]);
+            var pct_iowait = ((100 * resValue.cpu_iowait + (resValue.cpu_total / 2)) / resValue.cpu_total);
+            cpuIowaitData.push([ts,(pct_iowait)]);
+
+            var used_mem = resValue.mem_MemTotal - resValue.mem_MemFree
+            var pct_mem = 100 * (used_mem / resValue.mem_MemTotal)
+            memoryData.push([ts,(pct_mem)]);
+           }
         }
       });
     }
@@ -60,8 +91,10 @@ oss_LineBar_CpuMemoryUsage_Data = function(hostId, sDate, endDate, dataFunction,
       renderZoomDialog(obj_oss_LineBar_CpuMemoryUsage_Data);
     }
 
-    obj_oss_LineBar_CpuMemoryUsage_Data.series[0].data = cpuData;
-    obj_oss_LineBar_CpuMemoryUsage_Data.series[1].data = memoryData;
+    obj_oss_LineBar_CpuMemoryUsage_Data.series[0].data = cpuUserData;
+    obj_oss_LineBar_CpuMemoryUsage_Data.series[1].data = cpuSystemData;
+    obj_oss_LineBar_CpuMemoryUsage_Data.series[2].data = cpuIowaitData;
+    obj_oss_LineBar_CpuMemoryUsage_Data.series[3].data = memoryData;
 
     chart = new Highcharts.Chart(obj_oss_LineBar_CpuMemoryUsage_Data);
   });

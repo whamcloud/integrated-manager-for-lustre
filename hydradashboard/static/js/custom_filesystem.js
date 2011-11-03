@@ -16,7 +16,7 @@
 ******************************************************************************/
 var fs_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_Line_connectedClients_Data_Api_Url = "/api/get_fs_stats_for_client/";
-var fs_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var fs_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_server/";
 var fs_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_Area_mdOps_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
@@ -177,12 +177,16 @@ fs_LineBar_CpuMemoryUsage_Data = function(fsId, sDate, endDate, dataFunction, ta
       var response = fsCPUMemoryApiResponse.response;
       $.each(response, function(resKey, resValue) 
       {
-          if (resValue.cpu_usage != null || resValue.cpu_usage != undefined || resValue.mem_MemTotal != null || resValue.mem_MemTotal != undefined)
+          if (resValue.cpu_total != undefined && resValue.mem_MemTotal != undefined)
           {
             ts = resValue.timestamp * 1000
-            cpuData.push([ts,((resValue.cpu_usage*100)/resValue.cpu_total)]);
-            memoryData.push([ts,(resValue.mem_MemTotal - resValue.mem_MemFree)]);
-          }
+            var sum_cpu = resValue.cpu_user + resValue.cpu_system + resValue.cpu_iowait;
+            var pct_cpu = ((100 * sum_cpu + (resValue.cpu_total / 2)) / resValue.cpu_total);
+            cpuData.push([ts,(pct_cpu)]);
+            var used_mem = resValue.mem_MemTotal - resValue.mem_MemFree
+            var pct_mem = 100 * (used_mem / resValue.mem_MemTotal)
+            memoryData.push([ts,(pct_mem)]);
+           }
       });
     }
   })

@@ -27,7 +27,7 @@
 ******************************************************************************/
 var spaceUsageFetchMatric = "kbytestotal kbytesfree filestotal filesfree";
 var clientsConnectedFetchMatric = "num_exports";
-var cpuMemoryFetchMatric = "cpu_usage cpu_total mem_MemFree mem_MemTotal";
+var cpuMemoryFetchMatric = "cpu_total cpu_user cpu_system cpu_iowait mem_MemFree mem_MemTotal";
 var readWriteFetchMatric = ["stats_read_bytes", "stats_write_bytes"];
 var mdOpsFetchmatric = ["stats_close", "stats_getattr", "stats_getxattr", "stats_link", 
                         "stats_mkdir", "stats_mknod", "stats_open", "stats_rename", 
@@ -47,7 +47,7 @@ var isPollingFlag=false;
 ******************************************************************************/
 var db_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var db_Line_connectedClients_Data_Api_Url = "/api/get_fs_stats_for_client/";
-var db_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var db_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_server/";
 var db_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var db_Area_mdOps_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var db_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap_fake/";
@@ -193,19 +193,13 @@ var chartConfig_LineBar_CPUMemoryUsage =
   yAxis: 
   [
     {
-     title: {
-       text: 'KB'
-     },
-     opposite: true,
-    },
-    {
       title: {
-        text: 'Percentage'
+        text: 'Percent Used'
       },
       max:100, min:0, startOnTick:false,  tickInterval: 20
     }
   ],
-  legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
+  legend:{enabled:true, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
   credits:{ enabled:false },
   plotOptions:
   {
@@ -220,15 +214,14 @@ var chartConfig_LineBar_CPUMemoryUsage =
   series: 
     [
       {
-        type: 'column',
+        type: 'line',
         data: [],
-        name: 'CPU Usage',
-        yAxis: 1
+        name: 'cpu'
       },
       {
         type: 'line',
         data: [],
-        name: 'Memory',
+        name: 'mem'
       }
     ]
 };
@@ -731,11 +724,15 @@ db_LineBar_CpuMemoryUsage_Data = function(isZoom)
       var response = avgCPUApiResponse.response;
       $.each(response, function(resKey, resValue) 
       {
-          if (resValue.cpu_usage != undefined || resValue.cpu_total != undefined)          
+          if (resValue.cpu_total != undefined && resValue.mem_MemTotal != undefined)
           {
             ts = resValue.timestamp * 1000
-            cpuData.push([ts,((resValue.cpu_usage*100)/resValue.cpu_total)]);
-            memoryData.push([ts,(resValue.mem_MemTotal - resValue.mem_MemFree)]);
+            var sum_cpu = resValue.cpu_user + resValue.cpu_system + resValue.cpu_iowait;
+            var pct_cpu = ((100 * sum_cpu + (resValue.cpu_total / 2)) / resValue.cpu_total);
+            cpuData.push([ts,(pct_cpu)]);
+            var used_mem = resValue.mem_MemTotal - resValue.mem_MemFree
+            var pct_mem = 100 * (used_mem / resValue.mem_MemTotal)
+            memoryData.push([ts,(pct_mem)]);
            }
       });
     }
