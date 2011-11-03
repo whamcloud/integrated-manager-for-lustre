@@ -277,10 +277,7 @@ class Job(models.Model):
     finished_step = models.PositiveIntegerField(default = None, blank = True, null = True)
 
     def to_dict(self):
-        def time_str(dt):
-            import time
-            return time.strftime("%Y-%m-%dT%H:%M:%S", dt.timetuple())
-
+        from monitor.lib.util import time_str
         read_locks = []
         write_locks = []
         for lock in self.statelock_set.all():

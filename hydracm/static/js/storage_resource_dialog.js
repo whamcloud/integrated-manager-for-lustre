@@ -130,7 +130,6 @@ function popup_resource(id) {
   $.get("/api/get_resource/", {'resource_id': id})
    .success(function(data, textStatus, jqXHR) {
       if (data.success) {
-        console.log(data.response);
         load_resource(data.response);
         $('#storage_resource_dialog').dialog('open');
       }
@@ -147,7 +146,6 @@ function populate_graph(element_id, chart_info, stat_infos) {
   var type = stat_infos[0].type;
   var unit_name = stat_infos[0].data.unit_name;
   var bin_labels = stat_infos[0].data.bin_labels;
-  console.log(stat_infos);
   var enable_legend = stat_infos.length > 1;
   if (type == 'histogram') {
       var series = [];

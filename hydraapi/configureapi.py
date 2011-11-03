@@ -503,37 +503,57 @@ class StorageResourceClassFields(AnonymousRequestHandler):
                 'class': attr.__class__.__name__})
         return result
 
+# FIXME: not just Jobs here, also ALerts, this
+# function is used for all the live-updating stuff
 class Jobs(AnonymousRequestHandler):
     @extract_request_args('filter_opts')
     def run(self, request, filter_opts):
         since_time = filter_opts['since_time']
-        incomplete = filter_opts['incomplete']
+        initial = filter_opts['initial']
         # last_check should be a string in the datetime.isoformat() format
         # TODO: use dateutils.parser to accept general ISO8601 (see
         # note in hydracm.context_processors.page_load_time)
-        assert (since_time or incomplete)
+        assert (since_time or initial)
 
-        filter_args = []
-        filter_kwargs = {}
+        alert_filter_args = []
+        alert_filter_kwargs = {}
+        job_filter_args = []
+        job_filter_kwargs = {}
         if since_time:
             from datetime import datetime
             since_time = datetime.strptime(since_time, "%Y-%m-%dT%H:%M:%S")
-            filter_kwargs['modified_at__gte'] = since_time
+            job_filter_kwargs['modified_at__gte'] = since_time
+            alert_filter_kwargs['end__gte'] = since_time
 
-        if incomplete:
+        if initial:
             from django.db.models import Q
-            filter_args.append(~Q(state = 'complete'))
+            job_filter_args.append(~Q(state = 'complete'))
+            alert_filter_kwargs['active'] = True
 
         from configure.models import Job
-        jobs = Job.objects.filter(*filter_args, **filter_kwargs).order_by('modified_at')
-        jobs = [job.to_dict() for job in jobs]
-        if len(jobs):
-            last_modified = jobs[-1]['modified_at']
+        jobs = Job.objects.filter(*job_filter_args, **job_filter_kwargs).order_by('-modified_at')
+        from monitor.models import AlertState
+        alerts = AlertState.objects.filter(*alert_filter_args, **alert_filter_kwargs).order_by('-end')
+        if jobs.count() > 0 and alerts.count() > 0:
+            latest_job = jobs[0]
+            latest_alert = alerts[0]
+            last_modified = max(latest_job.modified_at, latest_alert.end)
+        elif jobs.count() > 0:
+            latest_job = jobs[0]
+            last_modified = latest_job.modified_at
+        elif alerts.count() > 0:
+            latest_alert = alerts[0]
+            last_modified = latest_alert.end
         else:
             last_modified = None
 
+        if last_modified:
+            from monitor.lib.util import time_str
+            last_modified = time_str(last_modified)
+
         return {
-                'last_modified': last_modified, 
-                'jobs': jobs
+                'last_modified': last_modified,
+                'jobs': [job.to_dict() for job in jobs],
+                'alerts': [alert.to_dict() for alert in alerts]
                 }
 
