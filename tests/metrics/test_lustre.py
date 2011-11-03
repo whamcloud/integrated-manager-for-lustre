@@ -15,9 +15,9 @@ class TestLocalLustreMetrics(unittest.TestCase):
         audit.fscontext = os.path.join(self.tests,
                                      "data/lustre_versions/2.0.66/mds_mgs")
         metrics = audit.metrics()['raw']['lustre']
-        assert metrics['target']['lustre-MDT0000']['filesfree'] == 511954
-        assert metrics['target']['MGS']['num_exports'] == 4
-        assert metrics['lnet']['send_count'] == 218887
+        self.assertEqual(metrics['target']['lustre-MDT0000']['filesfree'], 511954)
+        self.assertEqual(metrics['target']['MGS']['num_exports'], 4)
+        self.assertEqual(metrics['lnet']['send_count'], 218887)
 
     def test_oss_metrics(self):
         """Test that the various OSS metrics are collected and aggregated."""
@@ -25,8 +25,8 @@ class TestLocalLustreMetrics(unittest.TestCase):
         audit.fscontext = os.path.join(self.tests,
                                      "data/lustre_versions/2.0.66/oss")
         metrics = audit.metrics()['raw']['lustre']
-        assert metrics['target']['lustre-OST0000']['filesfree'] == 127575
-        assert metrics['lnet']['recv_count'] == 547181
+        self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 127575)
+        self.assertEqual(metrics['lnet']['recv_count'], 547181)
 
 class TestPathologicalUseCases(unittest.TestCase):
     # AKA: The world will always build a better idiot! ;)
@@ -153,10 +153,10 @@ class TestMdtMetrics(unittest.TestCase):
     def test_mdt_stats_vals(self):
         """Test that the mdt stats contain the correct values."""
         stats = self.metrics['lustre-MDT0000']['stats']
-        assert stats['mds_getattr']['units'] == "usec"
-        assert stats['mds_sync']['sum'] == 4480017
-        assert stats['mkdir']['units'] == "reqs"
-        assert stats['unlink']['count'] == 50254
+        self.assertEqual(stats['mds_getattr']['units'], "usec")
+        self.assertEqual(stats['mds_sync']['sum'], 4480017)
+        self.assertEqual(stats['mkdir']['units'], "reqs")
+        self.assertEqual(stats['unlink']['count'], 50254)
 
     def test_mdt_int_metrics(self):
         """Test that the mdt simple integer metrics are collected."""
@@ -166,7 +166,7 @@ class TestMdtMetrics(unittest.TestCase):
 
     def test_mdt_filesfree(self):
         """Test that mdt int metrics are sane."""
-        assert self.metrics['lustre-MDT0000']['filesfree'] == 511954
+        self.assertEqual(self.metrics['lustre-MDT0000']['filesfree'], 511954)
 
 class TestLnetMetrics(unittest.TestCase):
     def setUp(self):
@@ -177,7 +177,7 @@ class TestLnetMetrics(unittest.TestCase):
 
     def test_lnet_send_count(self):
         """Test that LNet metrics look sane."""
-        assert self.metrics['raw']['lustre']['lnet']['send_count'] == 218887
+        self.assertEqual(self.metrics['raw']['lustre']['lnet']['send_count'], 218887)
 
 class TestMgsMetrics(unittest.TestCase):
     def setUp(self):
@@ -194,8 +194,8 @@ class TestMgsMetrics(unittest.TestCase):
 
     def test_mgs_stats_vals(self):
         """Test that the mgs stats contain the correct values."""
-        assert self.metrics['stats']['reqbuf_avail']['units'] == "bufs"
-        assert self.metrics['stats']['mgs_connect']['sumsquare'] == 74038
+        self.assertEqual(self.metrics['stats']['reqbuf_avail']['units'], "bufs")
+        self.assertEqual(self.metrics['stats']['mgs_connect']['sumsquare'], 74038)
 
     def test_mgs_int_metrics(self):
         """Test that the mgs simple integer metrics are collected."""
@@ -205,7 +205,7 @@ class TestMgsMetrics(unittest.TestCase):
 
     def test_mgs_threads_max(self):
         """Test that mgs int metrics are sane."""
-        assert self.metrics['threads_max'] == 32
+        self.assertEqual(self.metrics['threads_max'], 32)
 
 class TestObdfilterMetrics(unittest.TestCase):
     def setUp(self):
@@ -222,10 +222,10 @@ class TestObdfilterMetrics(unittest.TestCase):
 
     def test_obdfilter_stats_vals(self):
         """Test that the obdfilter stats contain the correct values."""
-        assert self.metrics['lustre-OST0000']['stats']['cache_hit']['units'] == "pages"
-        assert self.metrics['lustre-OST0001']['stats']['write_bytes']['sum'] == 15260975104
-        assert self.metrics['lustre-OST0002']['stats']['read_bytes']['count'] == 1842
-        assert self.metrics['lustre-OST0003']['stats']['statfs']['count'] == 14503
+        self.assertEqual(self.metrics['lustre-OST0000']['stats']['cache_hit']['units'], "pages")
+        self.assertEqual(self.metrics['lustre-OST0001']['stats']['write_bytes']['sum'], 15260975104)
+        self.assertEqual(self.metrics['lustre-OST0002']['stats']['read_bytes']['count'], 1842)
+        self.assertEqual(self.metrics['lustre-OST0003']['stats']['statfs']['count'], 14503)
 
     def test_obdfilter_int_metrics(self):
         """Test that the obdfilter simple integer metrics are collected."""
@@ -235,7 +235,7 @@ class TestObdfilterMetrics(unittest.TestCase):
 
     def test_obdfilter_filestotal(self):
         """Test that obdfilter int metrics are sane."""
-        assert self.metrics['lustre-OST0003']['filestotal'] == 128000
+        self.assertEqual(self.metrics['lustre-OST0003']['filestotal'], 128000)
 
     def test_obdfilter_brw_stats(self):
         """Test that obdfilter brw_stats are collected at all."""
@@ -250,18 +250,18 @@ class TestObdfilterMetrics(unittest.TestCase):
     def test_obdfilter_brw_stats_hist_vals(self):
         """Test that obdfilter brw_stats contain sane values."""
         hist = self.metrics['lustre-OST0000']['brw_stats']['disk_iosize']
-        assert hist['units'] == "ios"
-        assert hist['buckets']['128K']['read']['count'] == 784
-        assert hist['buckets']['8K']['read']['pct'] == 0
-        assert hist['buckets']['64K']['read']['cum_pct'] == 23
+        self.assertEqual(hist['units'], "ios")
+        self.assertEqual(hist['buckets']['128K']['read']['count'], 784)
+        self.assertEqual(hist['buckets']['8K']['read']['pct'], 0)
+        self.assertEqual(hist['buckets']['64K']['read']['cum_pct'], 23)
 
         hist = self.metrics['lustre-OST0000']['brw_stats']['discont_blocks']
-        assert hist['units'] == "rpcs"
-        assert hist['buckets']['1']['write']['count'] == 288
-        assert hist['buckets']['17']['write']['pct'] == 0
-        assert hist['buckets']['31']['write']['cum_pct'] == 100
+        self.assertEqual(hist['units'], "rpcs")
+        self.assertEqual(hist['buckets']['1']['write']['count'], 288)
+        self.assertEqual(hist['buckets']['17']['write']['pct'], 0)
+        self.assertEqual(hist['buckets']['31']['write']['cum_pct'], 100)
 
     def test_obdfilter_brw_stats_empty_buckets(self):
         """Test that brw_stats hists on a fresh OST (no traffic) have empty buckets."""
         hist = self.metrics['lustre-OST0003']['brw_stats']['pages']
-        assert hist['buckets'] == {}
+        self.assertEqual(hist['buckets'], {})

@@ -73,7 +73,18 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         """, re.VERBOSE)
 
         stats = {}
-        for line in self.read_lines(file):
+
+        # There is a potential race between the time that an OBD module
+        # is loaded and the stats entry is created (HYD-389).  If we read 
+        # during that window, the audit will crash.  I'm not crazy about
+        # excepting IOErrors as a general rule, but I suppose this is
+        # the least-worst solution.
+        try:
+            lines = self.read_lines(file)
+        except IOError:
+            return stats
+
+        for line in lines:
             match = re.match(stats_re, line)
             if not match:
                 continue
@@ -158,7 +169,7 @@ class TargetAudit(LustreAudit):
 
     def read_int_metric(self, target, metric):
         """Given a target name and simple int metric name, returns the
-        metric value as an it.  Tries a simple interpolation of the target
+        metric value as an int.  Tries a simple interpolation of the target
         name into the mapped metric path (e.g. osd-ldiskfs/%s/filesfree)
         to allow for complex mappings.
 
@@ -185,6 +196,17 @@ class TargetAudit(LustreAudit):
                 pass
 
         return metrics
+
+class MdsAudit(TargetAudit):
+    """In Lustre < 2.x, the MDT stats were mis-named as MDS stats."""
+    def __init__(self,**kwargs):
+        super(MdsAudit, self).__init__(**kwargs)
+        self.target_root = '/proc/fs/lustre/mds'
+
+    def _gather_raw_metrics(self):
+        for mdt in [dev for dev in self.devices() if dev['type'] == 'mds']:
+            self.raw_metrics['lustre']['target'][mdt['name']] = self.read_int_metrics(mdt['name'])
+            self.raw_metrics['lustre']['target'][mdt['name']]['stats'] = self.read_stats(mdt['name'])
 
 class MdtAudit(TargetAudit):
     def __init__(self,**kwargs):

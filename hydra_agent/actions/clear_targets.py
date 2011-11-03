@@ -6,11 +6,7 @@ from targets import _stop_target, _unconfigure_ha, list_ha_targets
 
 def clear_targets(args):
     for resource in list_ha_targets(args):
-        try:
-            (label, serial) = resource.split("_")
-        except ValueError:
-            label = resource
-            serial = None
+        (label, serial) = resource.split("_")
         print "%s\n%s" % (label, len(label) * "=")
         try:
             print "Stopping"
