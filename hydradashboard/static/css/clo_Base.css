@@ -658,3 +658,11 @@ td.br{
 .polling_checkbox_margin{
     margin-top: 6px;
 }
+
+h2.section_header {
+    font-size: 12pt;
+    font-weight: bold;
+    text-shadow: #aaa 2px 2px 3px;
+    color: #333;
+    margin-top: 12px;
+}

@@ -1,4 +1,4 @@
-<script>
+<script type='text/javascript'>
   $(document).ready(function() {
     //cm-json_table_data => load existing file system list
     LoadFSList_FSList();
@@ -32,37 +32,25 @@
       $('#lustreFS_content').load('/hydracm/newfstab/');
     });
   });
-  </script>
-    <div style="padding-top:15px;">
-<fieldset>
-        <legend class="legendClass">Filesystem Configuration</legend>
-<table width="100%" height="100%" border="0" cellpadding="0" cellspacing="0" class="cpanel-border" align="center">
-  <tr>
-    <td><div class="buttonspacer"><span id="launch_instance_btn"><span class="first-child">
-        <button class='add' type="button" id="create_new_fs">New filesystem...</button>
-        </span></span></div></td>
-  </tr>
-  <tr>
-    <td align="left" valign="top">
-      <!-- Data table starts here --->
-      <table cellpadding="0" cellspacing="0" border="0" class="display" id="fs_list" width="100%">
-        <thead>
-          <tr>
-            <th width="9%">FS Name</th>
-            <th width="10%">MGS Name</th>
-            <th width="10%">MDS Name</th>
-            <th width="9%">No of OSS</th>
-            <th width="9%">No of OST</th>
-            <th width="5%">Total</th>
-            <th width="5%">Free</th>
-            <th width="17%">Action</th>
-          </tr>
-        </thead>
-        <tbody id="example_content">
-        </tbody>
-      </table>
-      <div class="spacer"></div>
-      <!--- data table ends here -->
-    </td>
-  </tr>
-</table></fieldset></div>
+</script>
+
+<h2 class='section_header'>Filesystem Configuration</h2>
+<p>
+  <button class='add' type="button" id="create_new_fs">New filesystem...</button>
+</p>
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="fs_list" width="100%">
+  <thead>
+    <tr>
+      <th width="9%">FS Name</th>
+      <th width="10%">MGS Name</th>
+      <th width="10%">MDS Name</th>
+      <th width="9%">No of OSS</th>
+      <th width="9%">No of OST</th>
+      <th width="5%">Total</th>
+      <th width="5%">Free</th>
+      <th width="17%">Action</th>
+    </tr>
+  </thead>
+  <tbody id="example_content">
+  </tbody>
+</table>
