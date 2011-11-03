@@ -271,11 +271,22 @@ class CreateNewFilesystem(AnonymousRequestHandler):
         # * mgt_id is a PK of an existing ManagedMgt to use
         # * mgt_lun_id is a PK of a Lun to use for a new ManagedMgt
         assert bool(mgt_id) != bool(mgt_lun_id)
+
         from configure.models import ManagedMgs, ManagedMdt, ManagedOst
 
         if not mgt_id:
             mgt = create_target(mgt_lun_id, ManagedMgs, name="MGS")
             mgt_id = mgt.pk
+        else:
+            mgt_lun_id = ManagedMgs.objects.get(pk = mgt_id).get_lun()
+
+        # This is a brute safety measure, to be superceded by 
+        # some appropriate validation that gives a helpful
+        # error to the user.
+        all_lun_ids = [mgt_lun_id] + [mdt_lun_id] + ost_lun_ids
+        # Test that all values in all_lun_ids are unique
+        assert len(set(all_lun_ids)) == len(all_lun_ids)
+        
 
         fs = create_fs(mgt_id, fsname)
         mdt = create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
