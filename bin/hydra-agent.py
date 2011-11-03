@@ -4,7 +4,6 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydra_agent.legacy_audit import LocalLustreAudit
 import hydra_agent.actions as actions
 from hydra_agent.store import store_init
 
@@ -87,12 +86,6 @@ if __name__ == '__main__':
                                       help='format arguments')
     parser_format_target.set_defaults(func=actions.format_target)
 
-    parser_locate_device = subparsers.add_parser('locate-device',
-                        help='find a device node path from a filesystem UUID')
-    parser_locate_device.add_argument('--uuid', required=True,
-                                      help='label of target to find')
-    parser_locate_device.set_defaults(func=actions.locate_device)
-
     parser_migrate_target = subparsers.add_parser('migrate-target',
                                             help='migrate a target to a node')
     parser_migrate_target.add_argument('--label', required=True,
@@ -144,9 +137,6 @@ if __name__ == '__main__':
     p.set_defaults(func=actions.unload_lnet)
     p = subparsers.add_parser('clear-targets')
     p.set_defaults(func=actions.clear_targets)
-
-    parser_audit = subparsers.add_parser('audit', help='report lustre status')
-    parser_audit.set_defaults(func=actions.audit)
 
     try:
         args = parser.parse_args()

@@ -5,8 +5,6 @@
 
 """ Library of actions that the hydra-agent can be asked to carry out."""
 
-from hydra_agent.legacy_audit import LocalLustreAudit
-
 from hydra_agent import shell
 
 import errno
@@ -21,17 +19,6 @@ from update_scan import update_scan
 from detect_scan import detect_scan
 from targets import *
 from clear_targets import clear_targets
-
-def locate_device(args):
-    lla = LocalLustreAudit()
-    lla.read_mounts()
-    lla.read_fstab()
-    device_nodes = lla.get_device_nodes()
-    node_result = None
-    for d in device_nodes:
-        if d['fs_uuid'] == args.uuid:
-            node_result = d
-    return node_result
 
 def fail_node(args):
     # force a manual failover by failing a node
@@ -67,9 +54,6 @@ def configure_rsyslog(args):
     # signal the process
     shell.try_run(['service', 'rsyslog', 'reload'])
     f.close()
-
-def audit(args):
-    return LocalLustreAudit().audit_info()
 
 def set_conf_param(args):
     kwargs = json.loads(args.args)
