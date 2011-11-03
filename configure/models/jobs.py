@@ -13,7 +13,7 @@ from monitor.models import WorkaroundGenericForeignKey
 from django.db.models import Q
 from collections import defaultdict
 from polymorphic.models import DowncastMetaclass
-from configure.lib.job import StateChangeJob, DependOn, DependAll, DependAny
+from configure.lib.job import StateChangeJob, DependOn, DependAll
 
 MAX_STATE_STRING = 32
 
@@ -281,13 +281,15 @@ class Job(models.Model):
             import time
             return time.strftime("%Y-%m-%dT%H:%M:%S", dt.timetuple())
 
+        read_locks = []
+        write_locks = []
         for lock in self.statelock_set.all():
-            read_locks = []
-            write_locks = []
             if lock.content_type == ContentType.objects.get_for_model(StateReadLock):
                 read_locks.append(lock.to_dict())
             elif lock.content_type == ContentType.objects.get_for_model(StateWriteLock):
                 write_locks.append(lock.to_dict())
+            else:
+                raise NotImplementedError
 
         return {
          'id': self.id,

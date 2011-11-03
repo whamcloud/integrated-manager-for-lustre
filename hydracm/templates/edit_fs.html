@@ -3,10 +3,10 @@
     // Loading the File system summary data in Table fs_summary_tbl
     // data is loaded in divs defined in table.    
     LoadFSData_EditFS();
-    //Edit fs view show MGT JQuery data table init()
-    if (typeof oTable == 'undefined')
-    {
-      var oTable = $('#mgt_configuration_view').dataTable( {
+
+    var target_table_elements = ['#mgt_configuration_view', '#ost', '#mdt'];
+    $.each(target_table_elements, function(i, selector) {
+      $(selector).dataTable( {
         "bProcessing": true,
         "bJQueryUI": true,
         "bFilter": false,
@@ -20,65 +20,11 @@
           { "sClass": 'txtleft' },
           { "sClass": 'txtleft' },
           { "sClass": 'txtleft' },
-          { "sClass": 'txtcenter' }
+          { "sClass": 'txtcenter' },
+          { "sClass": 'txtcenter', bSortable: false}
         ]
       });
-    }
-    else
-    {
-      oTable.fnClearTable();
-      oTable.fnDraw();
-    }
-    //Edit fs view show MDT JQuery data table init()
-    if (typeof oMgt == 'undefined')
-    {
-      var oMgt = $('#mdt').dataTable( {
-        "bProcessing": true,
-        "bJQueryUI": true,
-        "bFilter": false,
-        "bPaginate": false,
-        "oLanguage": {
-            "sEmptyTable": "No MDT to display"
-        },
-        "aoColumns": [
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtcenter' }
-        ]
-      } );
-    }
-    else
-    {
-      oMgt.fnClearTable();
-      oMgt.fnDraw();
-    }
-    //Edit fs view show OST JQuery data table init()
-    if (typeof oOst == 'undefined')
-    {
-      var oOst = $('#ost').dataTable( {
-        "bProcessing": true,
-        "bJQueryUI": true,
-        "oLanguage": {
-            "sEmptyTable": "No OST to display"
-        },
-        "aoColumns": [
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtcenter' }
-        ]
-      });
-    }
-    else
-    {
-      oOst.fnClearTable();
-      oOst.fnDraw();
-    }
+    });
 
     LoadTargets_EditFS($('#fs_id').val());
     // Create new OST button click handler. 
@@ -169,6 +115,13 @@
               <th width="7%">Failover server</th>
               <th width="12%">Started on</th>
               <th width='10%'>Action</th>
+              <th width='1%'></th>
+            </tr>
+          </thead>
+          <tbody id="example_content">
+          </tbody>
+        </table>
+        <div class="spacer"></div>
             </tr>
           </thead>
           <tbody id="example_content">
@@ -189,6 +142,7 @@
               <th width="7%">Failover server</th>
               <th width="12%">Started on</th>
               <th width='10%'>Action</th>
+              <th width='1%'></th>
             </tr>
           </thead>
           <tbody id="mdt_content">
@@ -214,6 +168,7 @@
               <th width="7%">Failover server</th>
               <th width="12%">Started on</th>
               <th width='10%'>Action</th>
+              <th width='1%'></th>
             </tr>
           </thead>
           <tbody id="ost_content">

@@ -23,6 +23,10 @@ var ERR_EDITFS_FSDATA_LOAD = "Error occured in loading File system data: ";
 var ost_index = 0;
 var filesystemId="";
 
+function notification_icon_markup(id, ct) {
+  return "<span class='notification_object_icon notification_object_id_" + id + "_" + ct + "'/>"
+}
+
 /******************************************************************
 * Function name - LoadFSList_FSList()
 * Param - none
@@ -103,7 +107,8 @@ function LoadTargets_EditFS(fs_id)
                 resValue.primary_server_name,
                 resValue.failover_server_name,
                 resValue.active_host_name,
-                action
+                action,
+                notification_icon_markup(resValue.id, resValue.content_type_id)
               ]
         if (resValue.kind == "OST") {
           $('#ost').dataTable().fnAddData (row);
@@ -365,6 +370,7 @@ function LoadServerConf_ServerConfig()
 {
   $.post("/api/listservers/",{"filesystem_id": ""}).success(function(data, textStatus, jqXHR)
   {
+    $('#server_configuration').dataTable().fnClearTable();
     if(data.success)
     {
       var response = data.response;
@@ -392,7 +398,7 @@ function LoadServerConf_ServerConfig()
           resValue.status,
           lnet_status,
           lnet_status_mesg,
-          "<span class='notification_object_icon notification_object_id_" + resValue.id + "_" + resValue.content_type_id + "'/>"
+          notification_icon_markup(resValue.id, resValue.content_type_id)
         ]);
       });
       // After updating all table rows, update their .notification_object_icon elements

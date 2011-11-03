@@ -160,7 +160,10 @@ class ManagedTarget(StatefulObject):
             filesystem_id = None
             filesystem_name = None
 
+        from django.contrib.contenttypes.models import ContentType
+
         return {'id':self.pk,
+                'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
                 'kind': self.role(),
                 'human_name': self.human_name(),
                 'lun_name': lun.human_name(),
