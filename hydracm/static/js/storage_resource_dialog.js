@@ -106,7 +106,7 @@ var resource_id = null;
 
 
 $(document).ready(function() {
-  $('#storage_resource_dialog').dialog({autoOpen: false, modal: true, minWidth: 1024, maxHeight: 1024});
+  $('#storage_resource_dialog').dialog({autoOpen: false, modal: true, minWidth: 950, maxHeight: 1024});
   $('#alias_save_button').button();
   $('#alias_reset_button').button();
 

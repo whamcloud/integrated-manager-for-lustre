@@ -305,14 +305,17 @@
 <div style="overflow-y: auto; max-height: 700px;" id="storage_resource_dialog">
   <input style='display: none' id='alias_default_entry' value=''>
   </input>
-  <span class='resource_name'>Name:
-  <input type='entry' id='alias_edit_entry' value=''>
-  </input>
-  </span> <a id='alias_save_button' href='#'>save</a> <a id='alias_reset_button' href='#'>reset</a> <img id='alias_spinner' style='display: none;' src='{{STATIC_URL}}/images/ajax-loader.gif'/>
-  <table class="storage_attributes" id='attributes'>
-  </table>
-  <table id='alerts'>
-  </table>
+  <div id='storage_attributes'>
+    <span class='resource_name'>Name:
+    <input type='entry' id='alias_edit_entry' value=''>
+    </input>
+    </span> <a id='alias_save_button' href='#'>save</a> <a id='alias_reset_button' href='#'>reset</a> <img id='alias_spinner' style='display: none;' src='{{STATIC_URL}}/images/ajax-loader.gif'/>
+    <table class="storage_attributes" id='attributes'>
+    </table>
+  </div>
+  <div id='storage_alerts'>
+    <table id='alerts'></table>
+  </div>
   <table class="storage_statistics" id='stats'>
   </table>
 </div>
