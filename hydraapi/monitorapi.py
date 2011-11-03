@@ -305,6 +305,7 @@ class GetLogs(AnonymousRequestHandler):
         from monitor.models import Systemevents
         display_month = int(month)
         display_day = int(day) 
+        lustre_only = lustre == "true"
         if display_month == 0:
             start_date = datetime.datetime(1970, 1, 1)
         else:
@@ -313,7 +314,7 @@ class GetLogs(AnonymousRequestHandler):
         log_data = []
         log_data = Systemevents.objects.filter(devicereportedtime__gt =
                                                start_date).order_by('-devicereportedtime')
-        if lustre:
+        if lustre_only:
             log_data = log_data.filter(message__startswith=" Lustre")
     
         return[

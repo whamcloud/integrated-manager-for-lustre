@@ -370,7 +370,7 @@ loadLogContent = function(targetJobDivName, maxCount)
 		});
 }
 
-function LoadLogs(targetJobDivName,day, month, lustre)
+function LoadLogs(targetLogDivName,day, month, lustre)
 {
 	$.post("/api/getlogs/",{"lustre": lustre, "day": day, "month": month}) 
 		.success(function(data, textStatus, jqXHR) {

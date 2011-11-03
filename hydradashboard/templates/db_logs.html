@@ -27,7 +27,7 @@ $(document).ready(function()
 	var date = now.getDate();
 	var month = now.getMonth()+1;
 	
-	LoadLogs("all_log_content",date,month,false);
+	LoadLogs("all_log_content",date,month,"true");
 	var oTable = $('#all_log_content').dataTable( {
 	"bProcessing": true,
 	"iDisplayLength":50,
