@@ -125,7 +125,7 @@ $(document).ready(function()
     setStartEndTime($(this).prev('select').find('option:selected').val(), $(this).find('option:selected').val(), "");
   });
   
-  $("input[id=polling_element]").click(function()
+  $("input[id *= polling_element]").click(function()
   {
     if($(this).is(":checked"))
     {
@@ -306,7 +306,7 @@ $(document).ready(function()
 
     fs_AreaSpline_ioOps_Data('false');
 
-    clearInterval(dashboardPollingInterval);
+    clearAllIntervals();
 
     loadFileSystemSummary(fsId);
    
@@ -370,6 +370,8 @@ $(document).ready(function()
     oss_Area_ReadWrite_Data(fsId, startTime, endTime, "Average", "OST", readWriteFetchMatric, 'false');
 
     loadOSSUsageSummary(fsId);
+    
+    clearAllIntervals();
 	        
     $('#ls_ossId').attr("value",ossId);$('#ls_ossName').attr("value",ossName);
     window.location.hash =  "oss";
@@ -410,6 +412,8 @@ $(document).ready(function()
     ost_Area_ReadWrite_Data(ostId, ostName, startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'false');
 
     loadOSTSummary(fsId);
+    
+    clearAllIntervals();
 
     $('#ls_ostId').attr("value",ostId);$('#ls_ostName').attr("value",ostName);
     window.location.hash =  "ost";

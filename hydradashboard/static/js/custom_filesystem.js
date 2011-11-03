@@ -370,7 +370,7 @@ fs_AreaSpline_ioOps_Data = function(isZoom)
             {
               obj_db_AreaSpline_ioOps_Data.series[count] = 
               {
-                  name: targetName + ' : ' + stat_name,
+                  name: targetName + ' : '+stat_name,
                   data: values[stat_name],
               };
               count++;
@@ -416,7 +416,7 @@ fs_AreaSpline_ioOps_Data = function(isZoom)
       {
         obj_db_AreaSpline_ioOps_Data.series[count] = 
         {
-          name: targetName + ' : ' + stat_name,
+          name: targetName + ' : '+stat_name,
           data: values[stat_name],
         };
       });
@@ -655,7 +655,7 @@ initFileSystemPolling = function()
      	fs_LineBar_CpuMemoryUsage_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", cpuMemoryFetchMatric, false);
      	fs_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, false);
      	fs_Area_mdOps_Data($('#ls_fsId').val(), startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
-    });
+    }, 10000);
   }
   else
   {

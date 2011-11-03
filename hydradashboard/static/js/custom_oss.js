@@ -193,8 +193,19 @@ loadOSSUsageSummary = function (fsId)
 *****************************************************************************/
 initOSSPolling = function()
 {
-  oss_LineBar_CpuMemoryUsage_Data($('#ls_ossId').val(), startTime, endTime, "Average", cpuMemoryFetchMatric, "false");
-  oss_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, "false");
+  if(isPollingFlag)
+  {
+    ossPollingInterval = self.setInterval(function()
+    {
+      oss_LineBar_CpuMemoryUsage_Data($('#ls_ossId').val(), startTime, endTime, "Average", cpuMemoryFetchMatric, "false");
+      oss_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, "false");
+    }, 10000);
+  }
+  else
+  {
+    oss_LineBar_CpuMemoryUsage_Data($('#ls_ossId').val(), startTime, endTime, "Average", cpuMemoryFetchMatric, "false");
+    oss_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, "false");
+  }
 }
 /******************************************************************************
  * Function to show OST dashboard content

@@ -38,7 +38,7 @@ var ioOpsFetchmatric = ["stats_connect","stats_create","stats_destroy","stats_di
 /*******************************************************************************
  * Global variable declaratiom
 ******************************************************************************/
-var dashboardPollingInterval,fsPollingInterval;
+var dashboardPollingInterval,fsPollingInterval,ossPollingInterval,ostPollingInterval;
 var startTime = "5";
 var endTime = "";
 var isPollingFlag=false;
@@ -1255,5 +1255,9 @@ clearAllIntervals = function()
 {
   clearInterval(dashboardPollingInterval);
   clearInterval(fsPollingInterval);
+  clearInterval(ossPollingInterval);
+  clearInterval(ostPollingInterval);
+  
+  $("input[id *= polling_element]").attr("checked",false);
 }
 /******************************************************************************/
