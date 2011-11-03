@@ -124,6 +124,20 @@ $(document).ready(function()
   $("select[id=unitSelect]").change(function(){
     setStartEndTime($(this).prev('select').find('option:selected').val(), $(this).find('option:selected').val(), "");
   });
+  
+  $("input[id=polling_element]").click(function()
+  {
+    if($(this).is(":checked"))
+    {
+      isPollingFlag = true;
+      initiatePolling();
+    }
+    else
+    {
+      isPollingFlag = false;
+      clearAllIntervals();
+    }
+  });
 		
   setStartEndTime = function(timeFactor, startTimeValue, endTimeValue)
   {
@@ -134,6 +148,10 @@ $(document).ready(function()
     else if(timeFactor == "hour")
       startTime = startTimeValue * 60;
 			
+    initiatePolling();
+  }
+  
+  initiatePolling = function(){
     if(! $('#dashboardDiv').is(':hidden'))
       initDashboardPolling();
     else if(! $('#fileSystemDiv').is(':hidden'))
@@ -223,7 +241,7 @@ $(document).ready(function()
     db_LineBar_CpuMemoryUsage_Data('false');
     db_Area_ReadWrite_Data('false');
     db_Area_mdOps_Data('false');
-    //db_HeatMap_CPUData('cpu', 'false');
+    db_AreaSpline_ioOps_Data('false');
   }   
 /*****************************************************************************
  *  Function to populate info on file system dashboard page
@@ -286,7 +304,7 @@ $(document).ready(function()
 
     fs_Area_mdOps_Data(fsId, startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
 
-    //fs_HeatMap_CPUData('cpu', 'false');
+    fs_AreaSpline_ioOps_Data('false');
 
     clearInterval(dashboardPollingInterval);
 

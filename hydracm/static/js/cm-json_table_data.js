@@ -277,18 +277,20 @@ function LoadMGTConfiguration_MGTConf()
     {
       var response = data.response;
       var fsnames;
+      var message;
       if(data.response!="")
       {
         $.each(response, function(resKey, resValue)
         {
               fsnames = resValue.fs_names;
+              message = "Are you sure you want to stop " + resValue.human_name + "?";
               if(resValue.state == "mounted")
               {
-                action = "<a href='#'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
+                action = "<a href='#' onclick='jConfirm(\"" + message + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"unmounted\");}});'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
               }
               else
               {
-                action = "<a href='#'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
+                action = "<a href='#' onclick='jConfirm(\"" + message + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"mounted\");}});'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
               }
               
               $('#mgt_configuration').dataTable().fnAddData ([

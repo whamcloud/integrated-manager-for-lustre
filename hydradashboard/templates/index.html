@@ -161,7 +161,7 @@
 <table width="100%" border="0" cellspacing="0" cellpadding="3"
 	align="center" style="border: 1px; border-color: blue;">
 	<tr style="background-color: #ccc">
-		<td width="70%">
+		<td width="50%">
 		<div class="breadCrumbHolder module">
 		<div id="breadCrumb0" class="breadCrumb module">
 		<ul style="float: left;">
@@ -173,16 +173,18 @@
 		</div>
 		</div>
 		</td>
-		<td width="30%">
-		<div class="timeint">Time Interval: &nbsp; <select
-			id="intervalSelect">
+		<td width="50%">
+		<div class="timeint">
+		<input id="db_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font> 
+		Time Interval: &nbsp;
+		 <select id="intervalSelect">
 			<option value="">Select</option>
 			<option value="minutes">Minutes</option>
 			<option value="hour">Hour</option>
 			<option value="day">Day</option>
 			<option value="week">Week</option>
 			<option value="month">Month</option>
-		</select> &nbsp;Unit:&nbsp; 
+		</select> &nbsp; <font color="black">|</font> Unit:&nbsp; 
 		<select id="unitSelect">
 			<option value=''>Select</option>
 		</select></div>
@@ -285,10 +287,10 @@
  	      <tr>
 			<td valign="top" class="text" align="center">
 				<div class="magni">
-				  <input type="button" class="magbutton" style="margin-left: 680px" onclick="reloadHeatMap('dashboard',$('#db_heatmap_parameter_select :selected').val(),'true');setZoomDialogTitle('Heat Map');" />
+				  <input type="button" class="magbutton" style="margin-left: 680px" onclick="db_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
 				</div>
 				<div style="clear: right;"></div>
-				<div id="db_heatMapDiv" class="round-table" style="width: 900px">Heat Map</div>
+				<div id="db_iopsSpline" class="round-table" style="width: 900px"></div>
 				</td>
 			</tr>
 		</table>
@@ -302,7 +304,7 @@
 <table width="100%" border="0" cellspacing="0" cellpadding="3"
 	align="center" style="border: 1px; border-color: blue">
 	<tr style="background-color: #cccccc;">
-		<td width="70%"><!--<div class="breadCrumbHolder module">
+		<td width="50%"><!--<div class="breadCrumbHolder module">
 		                <div id="breadCrumb1" class="breadCrumb module">
 		                   
 		                </div>
@@ -319,8 +321,10 @@
 		</div>
 		</div>
 		</td>
-		<td width="30%">
-		<div class="timeint">Time Interval:&nbsp; <select
+		<td width="50%">
+		<div class="timeint">
+		<input id="fs_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font>
+		Time Interval:&nbsp; <select
 			id="intervalSelect">
 			<option value="">Select</option>
 			<option value="minutes">Minutes</option>
@@ -328,7 +332,7 @@
 			<option value="day">Day</option>
 			<option value="week">Week</option>
 			<option value="month">Month</option>
-		</select> &nbsp;Unit:&nbsp;
+		</select> <font color="black">|</font> nbsp;Unit:&nbsp;
 		<select id="unitSelect">
 			<option value=''>Select</option>
 		</select></div>
@@ -450,10 +454,10 @@
 			<tr>
 				<td valign="top" class="text" align="center">
 				<div class="magni">
-          <input type="button" class="magbutton" style="margin-left: 680px" onclick="reloadHeatMap('filesystem',$('#fs_heatmap_parameter_select :selected').val(),'true');setZoomDialogTitle('Heat Map');" />
+          <input type="button" class="magbutton" style="margin-left: 680px" onclick="fs_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
         </div>
 				<div style="clear: right;"></div>
-				<div id="fs_heatMapDiv" class="round-table" style="width: 900px">Heat Map</div>
+				<div id="fs_iopsSpline" class="round-table" style="width: 900px"></div>
 				</td>
 			</tr>
 		</table>
@@ -467,21 +471,23 @@
 <table width="100%" border="0" cellspacing="0" cellpadding="3"
 	align="center" style="border: 1px; border-color: blue">
 	<tr style="background-color: #cccccc;">
-		<td width="70%">
+		<td width="50%">
 		<div class="breadCrumbHolder module">
 		<div id="breadCrumb2" class="breadCrumb module"></div>
 		</div>
 		</td>
-		<td width="30%">
-		<div class="timeint">Time Interval: &nbsp; <select
-			id="intervalSelect">
+		<td width="50%">
+		<div class="timeint">
+		<input id="oss_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font>
+		Time Interval: &nbsp;
+		 <select id="intervalSelect">
 			<option value="">Select</option>
 			<option value="minutes">Minutes</option>
 			<option value="hour">Hour</option>
 			<option value="day">Day</option>
 			<option value="week">Week</option>
 			<option value="month">Month</option>
-		</select> &nbsp;Unit:&nbsp; 
+		</select> &nbsp; <font color="black">|</font> Unit:&nbsp; 
 		<select id="unitSelect">
 			<option value=''>Select</option>
 		</select></div>
@@ -639,21 +645,23 @@
 <table width="100%" border="0" cellspacing="0" cellpadding="3"
 	align="center" style="border: 1px; border-color: blue">
 	<tr style="background-color: #cccccc;">
-		<td width="70%">
+		<td width="50%">
 		<div class="breadCrumbHolder module">
 		<div id="breadCrumb3" class="breadCrumb module"></div>
 		</div>
 		</td>
-		<td width="30%">
-		<div class="timeint">Time Interval: &nbsp; <select
-			id="intervalSelect">
+		<td width="50%">
+		<div class="timeint">
+		<input id="ost_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font> 
+		Time Interval: &nbsp; 
+		<select id="intervalSelect">
 			<option value="">Select</option>
 			<option value="minutes">Minutes</option>
 			<option value="hour">Hour</option>
 			<option value="day">Day</option>
 			<option value="week">Week</option>
 			<option value="month">Month</option>
-		</select> &nbsp;Unit:&nbsp; 
+		</select> &nbsp; <font color="black">|</font> Unit:&nbsp; 
 		<select id="unitSelect">
 			<option value=''>Select</option>
 		</select></div>
