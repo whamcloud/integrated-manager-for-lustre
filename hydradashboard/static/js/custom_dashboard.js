@@ -122,7 +122,7 @@ $(document).ready(function()
  * Function to show unit options on selection of time interval
 ********************************************************************************/
   $("select[id=unitSelect]").change(function(){
-    setStartEndTime($(this).prev('select').find('option:selected').val(), $(this).find('option:selected').val(), "");
+    setStartEndTime($(this).prev('font').prev('select').find('option:selected').val(), $(this).find('option:selected').val(), "");
   });
   
   $("input[id *= polling_element]").click(function()
@@ -146,7 +146,11 @@ $(document).ready(function()
     if(timeFactor == "minutes")
       startTime = startTimeValue;
     else if(timeFactor == "hour")
-      startTime = startTimeValue * 60;
+      startTime = startTimeValue * (60);
+    else if(timeFactor == "day")
+      startTime = startTimeValue * (24 * 60);
+    else if(timeFactor == "week")
+      startTime = startTimeValue * (7 * 24 * 60);
 			
     initiatePolling();
   }
