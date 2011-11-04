@@ -466,6 +466,16 @@ class ConfigureRsyslogStep(Step):
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "configure-rsyslog --node %s" % uname()[1])
 
+class UnconfigureRsyslogStep(Step):
+    def is_idempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost
+        from os import uname
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        self.invoke_agent(host, "unconfigure-rsyslog")
+
 class LearnHostnameStep(Step):
     def is_idempotent(self):
         return True
