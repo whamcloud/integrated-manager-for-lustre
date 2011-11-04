@@ -222,7 +222,7 @@ class HostMetricStore(R3dMetricStore):
             for key in metrics['cpustats']:
                 ds_name = "cpu_%s" % key
                 update[ds_name] = {'value': metrics['cpustats'][key],
-                                   'type': 'Absolute'}
+                                   'type': 'Derive'}
         except KeyError:
             pass
 
@@ -271,7 +271,7 @@ class TargetMetricStore(R3dMetricStore):
                                        'type': 'Counter'}
                 elif stats[key]['units'] == "bytes":
                     # Weird one, e.g. OST read_bytes/write_bytes.
-                    # We don't the current value, we want the rate.
+                    # We don't want the current value, we want the rate.
                     update[ds_name] = {'value': stats[key]['sum'],
                                        'type': 'Counter'}
                 else:
