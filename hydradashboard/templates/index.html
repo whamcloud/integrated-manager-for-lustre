@@ -1,53 +1,38 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<title>Hydra Dashboard</title>
-<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
-
-<link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css"
-	type="text/css" />
-<link href="{{STATIC_URL}}css/clo_BreadCrumb.css" rel="stylesheet"
-	type="text/css" />
-<link href="{{STATIC_URL}}css/clo_tabs.css" rel="stylesheet"
-	type="text/css" />
-<link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css"
-	rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-1.6.4.min.js"></script>
-<script type="text/javascript"
-	src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
-<script type="text/javascript"
-	src="{{STATIC_URL}}js/jquery.jBreadCrumb.1.1.js"></script>
-<script type="text/javascript"
-	src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.16.custom.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js"></script>
-<script type="text/javascript"
-	src="{{STATIC_URL}}js/custom_dashboard.js"></script>
-<script type="text/javascript"
-	src="{{STATIC_URL}}js/custom_filesystem.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/custom_oss.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/custom_ost.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/graph_loader.js"></script>
-<script type="text/javascript"
-	src="{{STATIC_URL}}js/configure_dialog.js"></script>
-<script type="text/javascript"
-	src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
-<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
-<!-- exporting.js added for exporting graphs -->
-<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/exporting.js"></script>
-
-<!-- js-graph-it is a dependency of resource_graph -->
-<script type="text/javascript" src="{{STATIC_URL}}js/js-graph-it.js" ></script>
-<link href="{{STATIC_URL}}css/js-graph-it.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/resource_graph.js"></script>
-<link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
-
-<script id="source" language="javascript" type="text/javascript">
-      
+  <head>
+    <title>Hydra Dashboard</title>
+      <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
+      <link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
+      <link href="{{STATIC_URL}}css/clo_BreadCrumb.css" rel="stylesheet" type="text/css" />
+      <link href="{{STATIC_URL}}css/clo_tabs.css" rel="stylesheet" type="text/css" />
+      <link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css"	rel="stylesheet" type="text/css" />
+      <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
+      <link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
+      <script type="text/javascript" src="{{STATIC_URL}}js/jquery-1.6.4.min.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/jquery.jBreadCrumb.1.1.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.16.custom.min.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/custom_dashboard.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/custom_filesystem.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/custom_oss.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/custom_ost.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/graph_loader.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
+      <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
+      <!-- exporting.js added for exporting graphs -->
+      <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/exporting.js"></script>
+      <!-- js-graph-it is a dependency of resource_graph -->
+      <script type="text/javascript" src="{{STATIC_URL}}js/js-graph-it.js" ></script>
+      <link href="{{STATIC_URL}}css/js-graph-it.css" rel="stylesheet" type="text/css" />
+      <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/resource_graph.js"></script>
+      <link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
+      <script id="source" language="javascript" type="text/javascript">
 			$(function () 
 			{
 				loadView(window.location.hash);
@@ -55,751 +40,472 @@
 				$('#intervalSelect').attr("value","");
 				$("#alertAnchor").click();
 			});
-		    
-		</script>
-</head>
-<body style="margin: 0px 0px 0px 0px; padding: 0px;"
-	onunload="clearAllIntervals()">
-<input type="hidden" id="ls_fsName" />
-<input type="hidden" id="ls_fsId" />
-<input type="hidden" id="ls_ossName" />
-<input type="hidden" id="ls_ossId" />
-<input type="hidden" id="ls_ostName" />
-<input type="hidden" id="ls_ostId" />
-<div class="wrapper">
-<div class="bg">
-<div class="logohead">
-<div class="logo"></div>
-<div class="top_links"><a href="/dashboard" class="active">Dashboard</a> |
-<a href="/hydracm">Configure</a> | <a href="/dashboard/dbalerts">Alerts</a>
-| <a href="/dashboard/dbevents">Events</a> | <a href="/dashboard/dblogs">Log</a>
-</div>
-<div style="clear: left;"></div>
-</div>
-<div class="leftpanel">
-<div id="signbtn"><a href="#" class="btnsignin"><img
-	src="{{STATIC_URL}}images/notifications.png" alt="" /></a></div>
-<!--<div id="blinkerDiv" style="width:12px; height:12px;"><img src="{{STATIC_URL}}images/sq.jpg" /><div style="margin-left:4px;"><img src="{{STATIC_URL}}images/blinker.gif" alt="" /></div></div>-->
-<div id="frmsignin">
-<div
-	style="border: 2px solid #848484; background-color: #cccccc; min-height: 600px;">
-<!--<div><b id="plusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications.png" alt="" /></b></div>-->
-<div class="panel" style="display: block; width: 350px;">
-<div style="float: right"><b id="minusImg" class="open-close"><img
-	src="{{STATIC_URL}}images/notifications_hor.png" alt="" /></b></div>
-<br />
-<div
-	style="font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px; font-weight: bold; padding-left: 5px;"><a
-	href="#" id="alertAnchor">Alerts</a></div>
-<div id="alertsDiv"
-	style="display: none; margin-left: 5px; height: 400px; overflow: auto;">
-<table width="100%" border="0" cellpadding="0" cellspacing="0"
-	bordercolor="#0040FF">
-	<tr>
-		<td>
-		<table width="100%" border="0" cellspacing="0" cellpadding="0"
-			bgcolor="#c3e1f1" class="border1" id="alert_content">
-		</table>
-		</td>
-	</tr>
-</table>
-</div>
-<div
-	style="font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px; font-weight: bold; padding-left: 5px;"><a
-	href="#" id="eventsAnchor">Events</a></div>
-<div id="eventsDiv"
-	style="display: none; margin-left: 5px; height: 400px; overflow: auto;">
-<table width="100%" border="0" cellpadding="0" cellspacing="0"
-	bordercolor="red">
-	<tr>
-		<td bgcolor="#CCCCCC">
-		<table width="100%" border="0" cellpadding="0" cellspacing="0"
-			bordercolor="#0040FF" class="border1">
-			<tr>
-				<td>
-				<table width="100%" border="0" cellspacing="0" cellpadding="0"
-					bgcolor="#c3e1f1" id="event_content">
-				</table>
-				</td>
-			</tr>
-		</table>
-		</td>
-	</tr>
-</table>
-</div>
-<div
-	style="font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px; font-weight: bold; padding-left: 5px;"><a
-	href="#" id="jobsAnchor">Jobs</a></div>
-<div id="jobsDiv"
-	style="display: none; margin-left: 5px; height: 400px; overflow: auto;">
-<table width="100%" border="0" cellpadding="0" cellspacing="0"
-	bordercolor="red">
-	<tr>
-		<td bgcolor="#CCCCCC">
-		<table width="100%" border="0" cellpadding="0" cellspacing="0"
-			bordercolor="#0040FF" class="border1">
-			<tr>
-				<td>
-				<table width="100%" border="0" cellspacing="0" cellpadding="0"
-					bgcolor="#c3e1f1" id="job_content">
-				</table>
-				</td>
-			</tr>
-		</table>
-		</td>
-	</tr>
-</table>
-</div>
-</ul>
-<div id="outputDiv"></div>
-</div>
-</div>
-</div>
-</div>
-<div class="rightpanel"><!-- Dashboard Div - Start -->
-<div id="dashboardDiv">
-<table width="100%" border="0" cellspacing="0" cellpadding="3"
-	align="center" style="border: 1px; border-color: blue;">
-	<tr style="background-color: #ccc">
-		<td width="50%">
-		<div class="breadCrumbHolder module">
-		<div id="breadCrumb0" class="breadCrumb module">
-		<ul style="float: left;">
-			<li><a href="/dashboard">All FileSystems</a></li>
-			<li><select id="fsSelect">
-				<option value="">Select File System</option>
-			</select></li>
-		</ul>
-		</div>
-		</div>
-		</td>
-		<td width="50%">
-		<div class="timeint">
-		<input id="db_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font> 
-		Time Interval: &nbsp;
-		 <select id="intervalSelect">
-			<option value="">Select</option>
-			<option value="minutes">Minutes</option>
-			<option value="hour">Hour</option>
-			<option value="day">Day</option>
-			<option value="week">Week</option>
-		</select> &nbsp; <font color="black">|</font> Unit:&nbsp; 
-		<select id="unitSelect">
-			<option value=''>Select</option>
-		</select></div>
-		</td>
-	</tr>
-
-
-	<tr>
-		<td colspan="3">
-		<form>
-		<fieldset>
-		<table width="100%" border="0">
-
-			<tr>
-				<td valign="top" class="text" width="30%" align="center">
-				<div id="container" class="round-table" style="width: 300px">All File System Space Usage</div>
-				</td>
-				<td valign="top" class="text" width="30%" align="center">
-				  <div id="container3" class="round-table" style="width: 300px">Connected Clients</div>
-				</td>
-				<td valign="top" class="text" width="30%" align="left">
-				<div id="container_fs_list" style="width: 365px" >
-					<table id="allFileSystemSummaryTbl" class="display">
-						<thead>
-						<tr>
-							<th>Filesystem</th>
-							<th>OSS</th>
-							<th>OST</th>
-							<th>Total</th>
-							<th>Free</th>
-						</tr>
-						</thead>
-						<tbody>
-						</tbody>
-					</table>
-			    </div>
-				</td>
-			</tr>
-		</table>
-		</fieldset>
-		</form>
-		</td>
-	</tr>
-	<tr>
-		<td colspan="3">
-		<form>
-		<fieldset>
-		<table width="100%" border="0" cellpadding="0" cellspacing="0">
-			<tr>
-				<td valign="top" class="text" width="30%" align="center">
-				<div class="magni"><input type="button" value=""
-					style="margin-left: 115px" class="magbutton"
-					onclick="db_LineBar_CpuMemoryUsage_Data('true');setZoomDialogTitle('All File Systems: CPU and Memory Usage');" />
-				</div>
-				<div style="clear: right;"></div>
-				<div id="avgCPUDiv" class="round-table" style="width: 300px">Filesystems CPU and Memory Usage</div>
-				</td>
-				<td valign="top" class="text" width="30%" align="center">
-				<div class="magni"><input type="button" value=""
-					style="margin-left: 115px" class="magbutton"
-					onclick="db_Area_ReadWrite_Data('true');setZoomDialogTitle('All File Systems: Disk Read and Write');" />
-				</div>
-				<div style="clear: right;"></div>
-				<div id="avgMemoryDiv" class="round-table" style="width: 300px">Filesystems Disk Read and Write</div>
-				</td>
-				<td valign="top" class="text" width="30%" align="center">
-				<div class="magni"><input type="button" value=""
-					style="margin-left: 115px" class="magbutton"
-					onclick="db_Area_mdOps_Data('true');setZoomDialogTitle('All File Systems: MDOP/s');" />
-				</div>
-				<div style="clear: right;"></div>
-				<div id="avgReadDiv" class="round-table" style="width: 300px">MDOP/s</div>
-				</td>
-				<!--<td  valign="top" class="text" width="25%" align="center"> <div class="magni">
-                        <input type="button" value=" " class="magbutton" onclick="db_Line_DiskWrite_Data('true');setZoomDialogTitle('Disk Write');"/>
-                      </div>	 
-                      <div style="clear:right;"></div>
-                      <div id="avgWriteDiv" class="">Summary Info
-                      </div></td>-->
-			</tr>
-		</table>
-		</fieldset>
-		</form>
-		</td>
-	</tr>
-	<tr>
-		<td colspan="3">
-		<fieldset>
-		<table border="0" cellpadding="0" cellspacing="0" align="center">
-		  <!-- <tr>
-		     <td align="right" style="padding-right: 70px" class="greybgcol">Parameter: 
-			    <select id="db_heatmap_parameter_select">
-			      <option value="">Select</option>
-			      <option value="cpu" selected="selected">CPU</option>
-			      <option value="disk_usage">Disk Usage</option>
-			      <option value="disk_space_usage">Disk Space Usage</option>
-			    </select><br/><br/>
-		    </td>
-		  </tr>  -->
- 	      <tr>
-			<td valign="top" class="text" align="center">
-				<div class="magni">
-				  <input type="button" class="magbutton" style="margin-left: 680px" onclick="db_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
-				</div>
-				<div style="clear: right;"></div>
-				<div id="db_iopsSpline" class="round-table" style="width: 900px"></div>
-				</td>
-			</tr>
-		</table>
-		</fieldset>
-		</td>
-	</tr>
-</table>
-</div>
-<!-- Dashboard Div - End --> <!-- FileSystem Div - Start -->
-<div id="fileSystemDiv" style="display: none">
-<table width="100%" border="0" cellspacing="0" cellpadding="3"
-	align="center" style="border: 1px; border-color: blue">
-	<tr style="background-color: #cccccc;">
-		<td width="50%"><!--<div class="breadCrumbHolder module">
-		                <div id="breadCrumb1" class="breadCrumb module">
-		                   
-		                </div>
-		            </div>-->
-		<div class="breadCrumbHolder module">
-		<div id="breadCrumb1" class="breadCrumb module">
-		<ul>
-			<li><a href="/dashboard">Home</a></li>
-			<li><a href="/dashboard">All FileSystems</a></li>
-			<li><select id="fsSelect">
-				<option value="">Select File System</option>
-			</select></li>
-		</ul>
-		</div>
-		</div>
-		</td>
-		<td width="50%">
-		<div class="timeint">
-		<input id="fs_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font>
-		Time Interval:&nbsp; <select
-			id="intervalSelect">
-			<option value="">Select</option>
-			<option value="minutes">Minutes</option>
-			<option value="hour">Hour</option>
-			<option value="day">Day</option>
-			<option value="week">Week</option>
-		</select> <font color="black">|</font> &nbsp;Unit:&nbsp;
-		<select id="unitSelect">
-			<option value=''>Select</option>
-		</select></div>
-		</td>
-	</tr>
-	<!-- <tr>
-		  	<td style="font-family:Verdana, Arial, Helvetica, sans-serif;">Time Interval: &nbsp;
-		  		<select id="">
-		  			<option value="">Select</option>	
-		  			<option value="hour">Hour</option>
-		  			<option value="day">Day</option>
-		  			<option value="week">Week</option>
-		  			<option value="month">Month</option>
-		  		</select>	&nbsp;
-		  		Unit:  &nbsp;
-		  		<select id="unitSelect">
-		  			<option value=''>Select</option>
-		  		</select>
-		  	</td>
-		  </tr>-->
-	<tr>
-		<td colspan="4">
-		<form>
-		<fieldset><legend class="legendClass">Filesystems
-		Usage Summary <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
-		</legend>
-		<table width="100%" border="0">
-			<td colspan="2" valign="top" class="text" width="30%" align="center"
-				style="font-family: Verdana, Arial, Helvetica, sans-serif;"><br />
-			<table id="fileSystemSummaryTbl" width="100%">
-				
-			</table>
-			<!-- <table>
-				<tr>
-					<td align="center"><input id="dialog_link"
-						name="alertsPopUpBtn" type="button" value="Alerts" align="left"
-						style="border: 1px solid red; background-color: #4F0F0F; font-weight: bold; color: red" />
-					&nbsp;&nbsp; <input name="eventsPopUpBtn" type="button"
-						value="Events"
-						style="border: 1px solid #DFC137; background-color: #6F4B0D; font-weight: bold; color: #DFC137"></td>
-				</tr>
-			</table>	 -->
-			</td>
-			<td width="30%" valign="top" class="text" align="center">
-			<!-- <div class="magni"><input type="button" value=""
-				style="margin-left: 90px" class="magbutton"
-				onclick="fs_Bar_SpaceUsage_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', 'OST', spaceUsageFetchMatric, 'true');setZoomDialogTitle('All File System Space Usage');" />
-			</div>
-			<div style="clear: right;"></div>	 -->
-			<div id="fs_container2" class="round-table" style="width: 300px">File system space usage</div>
-			</td>
-			<td width="30%" valign="top" class="text" align="center">
-			<!-- <div class="magni"><input type="button" value=""
-				style="margin-left: 90px" class="magbutton"
-				onclick="fs_Line_connectedClients_Data($('#fsSelect').val(),'2011-10-17 19:56:58.720036', '2011-10-17 19:46:58.720062', 'Average', clientsConnectedFetchMatric, 'true');setZoomDialogTitle('All File System Space Usage');" />
-			</div>
-			<div style="clear: right;"></div>	 -->
-			<div id="fs_container3" class="round-table" style="width: 300px">Connected clients</div>
-			</td>
-		</table>
-		</fieldset>
-		</form>
-		</td>
-	</tr>
-	<tr>
-		<td colspan="3">
-		<form>
-		<fieldset><legend class="legendClass">File System
-		Performance Summary <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
-		</legend>
-		<table width="100%" border="0">
-			<tr>
-				<td valign="top" class="text" width="30%" align="center">
-				<div class="magni"><input type="button" value=""
-					style="margin-left: 115px" class="magbutton"
-					onclick="fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System: CPU and Memory Usage');" />
-				</div>
-				<div style="clear: right;"></div>
-				<div id="fs_avgCPUDiv" class="round-table" style="width: 300px">Server CPU and Memory Usage</div>
-				</td>
-				<td valign="top" class="text" width="30%" align="center">
-				<div class="magni"><input type="button" value=""
-					style="margin-left: 115px" class="magbutton"
-					onclick="fs_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('File System: Disk Read and Write');" />
-				</div>
-				<div style="clear: right;"></div>
-				<div id="fs_avgMemoryDiv" class="round-table" style="width: 300px">Disk Read and Write</div>
-				</td>
-				<td valign="top" class="text" width="30%" align="center">
-				<div class="magni"><input type="button" value=""
-					style="margin-left: 115px" class="magbutton"
-					onclick="fs_Area_mdOps_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', mdOpsFetchmatric, 'true');setZoomDialogTitle('File System: MDOP/s');" />
-				</div>
-				<div style="clear: right;"></div>
-				<div id="fs_avgReadDiv" class="round-table" style="width: 300px">MDOP/s</div>
-				</td>
-			</tr>
-		</table>
-		</fieldset>
-		</form>
-		</td>
-	</tr>
-    <tr>
-		<td colspan="3">
-		<fieldset>
-		<table border="0" align="center">
-		    <!-- <tr>
-          <td align="right" style="padding-right: 70px" class="greybgcol">Parameter:
-            <select id="fs_heatmap_parameter_select">
-              <option value="">Select</option>
-            <option value="cpu" selected="selected">CPU</option>
-            <option value="disk_usage">Disk Usage</option>
-            <option value="disk_space_usage">Disk Space Usage</option>
-          </select><br/><br/>
-		      </td>
-		    </tr>  --> 
-			<tr>
-				<td valign="top" class="text" align="center">
-				<div class="magni">
-          <input type="button" class="magbutton" style="margin-left: 680px" onclick="fs_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
-        </div>
-				<div style="clear: right;"></div>
-				<div id="fs_iopsSpline" class="round-table" style="width: 900px"></div>
-				</td>
-			</tr>
-		</table>
-		</fieldset>
-		</td>
-	 </tr>   
-</table>
-</div>
-<!-- FileSystem Div - End --> <!-- OSS Div - Start -->
-<div id="ossInfoDiv" style="display: none">
-<table width="100%" border="0" cellspacing="0" cellpadding="3"
-	align="center" style="border: 1px; border-color: blue">
-	<tr style="background-color: #cccccc;">
-		<td width="50%">
-		<div class="breadCrumbHolder module">
-		<div id="breadCrumb2" class="breadCrumb module"></div>
-		</div>
-		</td>
-		<td width="50%">
-		<div class="timeint">
-		<input id="oss_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font>
-		Time Interval: &nbsp;
-		 <select id="intervalSelect">
-			<option value="">Select</option>
-			<option value="minutes">Minutes</option>
-			<option value="hour">Hour</option>
-			<option value="day">Day</option>
-			<option value="week">Week</option>
-		</select> &nbsp; <font color="black">|</font> Unit:&nbsp; 
-		<select id="unitSelect">
-			<option value=''>Select</option>
-		</select></div>
-		</td>
-	</tr>
-	<!--<tr>
-		  	<td>Time Interval: &nbsp;
-		  		<select id="">
-		  			<option value="">Select</option>	
-		  			<option value="hour">Hour</option>
-		  			<option value="day">Day</option>
-		  			<option value="week">Week</option>
-		  			<option value="month">Month</option>
-		  		</select>	&nbsp;
-		  		Unit:  &nbsp;
-		  		<select id="unitSelect">
-		  			<option value=''>Select</option>
-		  		</select>
-		  	</td>
-		  </tr>-->
-	<tr>
-		<td colspan="4">
-		<ul class="tabs">
-			<li><a href="#tab1">Usage Summary</a></li>
-			<!--<li><a href="#tab2">Overview</a></li> -->
-		</ul>
-		<div class="tab_container">
-		<div id="tab1" class="tab_content">
-		<form>
-		<fieldset><legend class="legendClass">OSS Usage
-		Summary <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
-		</legend>
-		<table width="100%" border="0" align="left">
-			<tr>
-				<td colspan="2" valign="top" class="text" width="50%" align="left"><br />
-				<table id="ossSummaryTbl" width="40%" align="left">
-				
-				</table>
-				<!-- <table width="100%" align="left">
-					<tr>
-						<td align="center"><input id="dialog_link"
-							name="alertsPopUpBtn" type="button" value="Alerts" align="left"
-							style="border: 1px solid red; background-color: #4F0F0F; font-weight: bold; color: red" />
-						&nbsp;&nbsp; <input name="eventsPopUpBtn" type="button"
-							value="Events"
-							style="border: 1px solid #DFC137; background-color: #6F4B0D; font-weight: bold; color: #DFC137"></td>
-					</tr>
-				</table>	 -->
-				</td>
-				<!-- <td width="25%" valign="top" class="text" align="center"> <div class="magni">
-                              <input type="button" value=" " class="magbutton"/>	 
-                            </div> 
-				<div style="clear: right;"></div>
-				<div id="oss_container2" class="round-table">Usage Used Vs
-				Free</div>
-				</td>
-				<td width="25%" valign="top" class="text" align="center"> <div class="magni">
-                              <input type="button" value=" " class="magbutton"/>	 
-                            </div> 
-				<div style="clear: right;"></div>
-				<div id="oss_container3" class="round-table">No. Of Files Vs
-				i-Nodes</div>
-				</td>	 -->
-			</tr>
-		</table>
-		</fieldset>
-		</form>
-		<form>
-		<fieldset><legend class="legendClass">OSS
-		Performance Summary <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
-		</legend>
-		<table width="100%" border="0">
-			<!--  <td valign="top" class="text" width="25%" align="center">
-					 <div class="magni">
-                          <input type="button" value=" " class="magbutton"/>	 
-					</div>	
-					<div style="clear: right;"></div>
-					<div id="oss_avgCPUDiv" class="round-table">Filesystems Avg CPU</div>
-			</td>
-			<td valign="top" class="text" width="25%" align="center">
-					 <div class="magni">
-                           <input type="button" value=" " class="magbutton"/>
-                     </div>	
-					<div style="clear: right;"></div>
-					<div id="oss_avgMemoryDiv" class="round-table">Filesystems Avg Memory</div>
-			</td>	 -->
-			<td valign="top" class="text" width="50%" align="center">
-				<div class="magni" style="margin-left: 515px">
-                    <input type="button" value="" class="magbutton" onclick="oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('Server: CPU and Memory Usage');" />	 
-                </div>
-				<div style="clear: right;"></div>
-				<div id="oss_avgReadDiv" class="round-table" style="width: 500px">Server CPU and Memory</div>
-			</td>
-			<td valign="top" class="text" width="50%" align="center">
-					<div class="magni" style="margin-left: 515px">
-                     <input type="button" value="" class="magbutton" onclick="oss_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('Server: Disk Read and Write');" />	
-                </div>
-				<div style="clear: right;"></div>
-				<div id="oss_avgWriteDiv" class="round-table" style="width: 500px">Disk Read and Write</div>
-			</td>
-		</table>
-		</fieldset>
-		</form>
-		</div>
-		<div id="tab2" class="tab_content">
-		<table width="100%" border="2">
-			<tr>
-				<td style="font-family: Verdana, Arial, Helvetica, sans-serif;">File
-				System Usage Parameter <select>
-					<option>Select</option>
-					<option>CPU Usage</option>
-					<option>Memory Usage</option>
-					<option>Disk Read</option>
-					<option>Disk Write</option>
-				</select> &nbsp;&nbsp; Note: For Read and Write OST information is displayed
-				</td>
-			</tr>
-			<tr>
-				<td valign="top" class="text" width="%100" align="center">
-				<div id="heatMap1" align="center"
-					style="font-family: Verdana, Arial, Helvetica, sans-serif;">
-				Heat Map <br />
-				<br />
-				<br />
-				<br />
-				<br />
-				<br />
-				<br />
-				<br />
-				<br />
-				<br />
-				<br />
-				<br />
-				<br />
-				</div>
-				</td>
-			</tr>
-		</table>
-		</div>
-
-		<!-- end of tab_container  -->
-		</td>
-
-	</tr>
-
-	<tr>
-		<td colspan="3"></td>
-	</tr>
-</table>
-</div>
-<!-- OSS Div - End --> <!-- OST Div - Start -->
-<div id="ostInfoDiv" style="display: none">
-<table width="100%" border="0" cellspacing="0" cellpadding="3"
-	align="center" style="border: 1px; border-color: blue">
-	<tr style="background-color: #cccccc;">
-		<td width="50%">
-		<div class="breadCrumbHolder module">
-		<div id="breadCrumb3" class="breadCrumb module"></div>
-		</div>
-		</td>
-		<td width="50%">
-		<div class="timeint">
-		<input id="ost_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font> 
-		Time Interval: &nbsp; 
-		<select id="intervalSelect">
-			<option value="">Select</option>
-			<option value="minutes">Minutes</option>
-			<option value="hour">Hour</option>
-			<option value="day">Day</option>
-			<option value="week">Week</option>
-		</select> &nbsp; <font color="black">|</font> Unit:&nbsp; 
-		<select id="unitSelect">
-			<option value=''>Select</option>
-		</select></div>
-		</td>
-	</tr>
-	<!--<tr>
-		  	<td>Time Interval: &nbsp;
-		  		<select id="">
-		  			<option value="">Select</option>	
-		  			<option value="hour">Hour</option>
-		  			<option value="day">Day</option>
-		  			<option value="week">Week</option>
-		  			<option value="month">Month</option>
-		  		</select>	&nbsp;
-		  		Unit:  &nbsp;
-		  		<select id="unitSelect">
-		  			<option value=''>Select</option>
-		  		</select>
-		  	</td>
-		  </tr>-->
-	<tr>
-		<td colspan="4">
-		<form>
-		<fieldset><legend class="legendClass">OST Usage
-		Summary <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
-		</legend>
-		<table width="100%" border="0">
-			<tr>
-				<td colspan="2" valign="top" class="text" width="30%" align="center"
-					style="font-family: Verdana, Arial, Helvetica, sans-serif;"><br />
-				<table id="ostSummaryTbl" width="100%">
-					
-				</table>
-				<!-- <table>
-					<tr>
-						<td align="center"><input id="dialog_link"
-							name="alertsPopUpBtn" type="button" value="Alerts" align="left"
-							style="border: 1px solid red; background-color: #4F0F0F; font-weight: bold; color: red" />
-						&nbsp;&nbsp; <input name="eventsPopUpBtn" type="button"
-							value="Events"
-							style="border: 1px solid #DFC137; background-color: #6F4B0D; font-weight: bold; color: #DFC137"></td>
-					</tr>
-				</table>	 -->
-				</td>
-				<td width="25%" valign="top" class="text" align="center"><!-- <div class="magni">
-                          <input type="button" value=" " class="magbutton"/>
-                        </div>	 -->
-				<div style="clear: right;"></div>
-				<div id="ost_container2" class="round-table">Space Usage</div>
-				</td>
-				<td width="25%" valign="top" class="text" align="center"><!-- <div class="magni">
-                          <input type="button" value=" " class="magbutton"/>	
-                        </div>  -->
-				<div style="clear: right;"></div>
-				<div id="ost_container3" class="round-table">Files Vs Free Inodes</div>
-				</td>
-			</tr>
-		</table>
-		</fieldset>
-		</form>
-		</td>
-	</tr>
-	<tr>
-		<td colspan="3">
-		<form>
-		<fieldset><legend class="legendClass">OST
-		Performance Summary <!--<a href="#"><img src="{{STATIC_URL}}images/close.png" alt="" class="closebutton" /></a> | 
-                &nbsp;avg <input name="" type="checkbox" value="" style="margin-top:5px;" />&nbsp;&nbsp;-->
-		</legend>
-		<table width="100%" border="0">
-			<tr>
-				<td valign="top" class="text" width="50%" align="center">
-				<div class="magni" style="margin-left: 515px"><input
-					type="button" value=" " class="magbutton"
-					onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
-				</div>
-				<div style="clear: right;"></div>
-				<div id="ost_avgReadDiv" style="width: 500px" class="round-table">Disk Read and Write</div>
-				</td>
-				<td valign="top" class="text" width="50%" align="center">
-				<div class="magni" style="margin-left: 515px"><input
-					type="button" value=" " class="magbutton"
-					onclick="" />
-				</div>
-				<div style="clear: right;"></div>
-				<div id="ost_avgWriteDiv" style="width: 500px" class="round-table">Any other parameter graph</div>
-				</td>
-			</tr>
-      <tr>
+      </script>
+  </head>
+<body style="margin: 0px 0px 0px 0px; padding: 0px;" onunload="clearAllIntervals()">
+  <input type="hidden" id="ls_fsName" />
+  <input type="hidden" id="ls_fsId" />
+  <input type="hidden" id="ls_ossName" />
+  <input type="hidden" id="ls_ossId" />
+  <input type="hidden" id="ls_ostName" />
+  <input type="hidden" id="ls_ostId" />
+  <div class="wrapper">
+    <div class="bg">
+    {% include 'header.html' %}
+    {% include 'notification_slider.html' %}
+     <div class="rightpanel"><!-- Dashboard Div - Start -->
+       <div id="dashboardDiv">
+        <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue;">
+          <tr style="background-color: #ccc">
+            <td width="50%">
+              <div class="breadCrumbHolder module">
+                <div id="breadCrumb0" class="breadCrumb module">
+                  <ul style="float: left;">
+                    <li><a href="/dashboard">All FileSystems</a></li>
+                    <li>
+                      <select id="fsSelect">
+                        <option value="">Select File System</option>
+                      </select>
+                    </li>
+                  </ul>
+               </div>
+             </div>
+           </td>
+           <td width="50%">
+            <div class="timeint">
+              <input id="db_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font> 
+              Time Interval: &nbsp;
+              <select id="intervalSelect">
+                <option value="">Select</option>
+                <option value="minutes">Minutes</option>
+                <option value="hour">Hour</option>
+                <option value="day">Day</option>
+                <option value="week">Week</option>
+              </select> &nbsp; <font color="black">|</font>
+              Unit:&nbsp; 
+              <select id="unitSelect">
+                <option value=''>Select</option>
+             </select>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="3">
+            <fieldset>
+               <table width="100%" border="0">
+               <tr>
+                 <td valign="top" class="text" width="30%" align="center">
+                   <div id="container" class="round-table" style="width: 300px">All File System Space Usage</div>
+                 </td>
+                 <td valign="top" class="text" width="30%" align="center">
+                    <div id="container3" class="round-table" style="width: 300px">Connected Clients</div>
+				 </td>
+                 <td valign="top" class="text" width="30%" align="left">
+                   <div id="container_fs_list" style="width: 365px" >
+                     <table id="allFileSystemSummaryTbl" class="display">
+                       <thead>
+                         <tr>
+                           <th>Filesystem</th>
+                           <th>OSS</th>
+                           <th>OST</th>
+                           <th>Total</th>
+                           <th>Free</th>
+                        </tr>
+                       </thead>
+                       <tbody>
+                       </tbody>
+                     </table>
+                   </div>
+                 </td>
+               </tr>
+             </table>
+            </fieldset>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="3">
+            <fieldset>
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td valign="top" class="text" width="30%" align="center">
+                    <div class="magni"><input type="button" value="" style="margin-left: 115px" class="magbutton" 
+                    onclick="db_LineBar_CpuMemoryUsage_Data('true');setZoomDialogTitle('All File Systems: CPU and Memory Usage');" />
+                    </div>
+                    <div style="clear: right;"></div>
+                    <div id="avgCPUDiv" class="round-table" style="width: 300px">Filesystems CPU and Memory Usage</div>
+                  </td>
+                  <td valign="top" class="text" width="30%" align="center">
+                    <div class="magni">
+                    <input type="button" value="" style="margin-left: 115px" class="magbutton" 
+                    onclick="db_Area_ReadWrite_Data('true');setZoomDialogTitle('All File Systems: Disk Read and Write');" />
+                    </div>
+                    <div style="clear: right;"></div>
+                    <div id="avgMemoryDiv" class="round-table" style="width: 300px">Filesystems Disk Read and Write</div>
+                  </td>
+                  <td valign="top" class="text" width="30%" align="center">
+                    <div class="magni">
+                      <input type="button" value="" style="margin-left: 115px" class="magbutton"
+                      onclick="db_Area_mdOps_Data('true');setZoomDialogTitle('All File Systems: MDOP/s');" />
+                    </div>
+                   <div style="clear: right;"></div>
+                   <div id="avgReadDiv" class="round-table" style="width: 300px">MDOP/s</div>
+                 </td>
+               </tr>
+             </table>
+           </fieldset>
+         </td>
+       </tr>
+       <tr>
+         <td colspan="3">
+          <fieldset>
+            <table border="0" cellpadding="0" cellspacing="0" align="center">
+              <tr>
+                <td valign="top" class="text" align="center">
+                  <div class="magni">
+                    <input type="button" class="magbutton" style="margin-left: 680px"
+                    onclick="db_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
+                  </div>
+                  <div style="clear: right;"></div>
+                  <div id="db_iopsSpline" class="round-table" style="width: 900px"></div>
+                </td>
+              </tr>
+            </table>
+          </fieldset>
+        </td>
       </tr>
-		</table>
-		</fieldset>
-		</form>
-		</td>
-	</tr>
-	<tr>
-	 <td align="center" colspan="4" width="100%"> 
-	   <div id="ost_resource_graph_canvas" class="canvas resource_graph_canvas round-table">
-     </div>
-	 </td>
-	</tr>
-</table>
+    </table>
+  </div>
+  <!-- Dashboard Div - End --> <!-- FileSystem Div - Start -->
+  <div id="fileSystemDiv" style="display: none">
+    <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue">
+      <tr style="background-color: #cccccc;">
+        <td width="50%">
+          <div class="breadCrumbHolder module">
+          <div id="breadCrumb1" class="breadCrumb module">
+           <ul>
+             <li><a href="/dashboard">Home</a></li>
+             <li><a href="/dashboard">All FileSystems</a></li>
+             <li>
+               <select id="fsSelect">
+                 <option value="">Select File System</option>
+               </select></li>
+           </ul>
+          </div>
+          </div>
+        </td>
+        <td width="50%">
+          <div class="timeint">
+            <input id="fs_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font>
+             Time Interval:&nbsp;
+             <select id="intervalSelect">
+               <option value="">Select</option>
+               <option value="minutes">Minutes</option>
+               <option value="hour">Hour</option>
+               <option value="day">Day</option>
+               <option value="week">Week</option>
+             </select><font color="black">|</font> &nbsp;Unit:&nbsp;
+             <select id="unitSelect">
+               <option value=''>Select</option>
+             </select>
+           </div>
+         </td>
+       </tr>
+       <tr>
+          <td colspan="4">
+              <fieldset>
+                <legend class="legendClass">
+                  Filesystems Usage Summary 
+                </legend>
+                <table width="100%" border="0">
+                  <td colspan="2" valign="top" class="text" width="30%" align="center" style="font-family: Verdana, Arial, Helvetica, sans-serif;"><br />
+                    <table id="fileSystemSummaryTbl" width="100%">
+                    </table>
+                  </td>
+                  <td width="30%" valign="top" class="text" align="center">
+                   <div id="fs_container2" class="round-table" style="width: 300px">File system space usage</div>
+                 </td>
+                 <td width="30%" valign="top" class="text" align="center">
+                   <div id="fs_container3" class="round-table" style="width: 300px">Connected clients</div>
+                 </td>
+               </table>
+             </fieldset>
+          </td>
+        </tr>
+        <tr>
+           <td colspan="3">
+            <fieldset>
+              <legend class="legendClass">
+                File System	Performance Summary
+              </legend>
+              <table width="100%" border="0">
+              <tr>
+                <td valign="top" class="text" width="30%" align="center">
+                  <div class="magni">
+                    <input type="button" value="" style="margin-left: 115px" class="magbutton" 
+                    onclick="fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System: CPU and Memory Usage');" />
+                  </div>
+                  <div style="clear: right;"></div>
+                  <div id="fs_avgCPUDiv" class="round-table" style="width: 300px">Server CPU and Memory Usage</div>
+                </td>
+                <td valign="top" class="text" width="30%" align="center">
+                  <div class="magni">
+                    <input type="button" value="" style="margin-left: 115px" class="magbutton" 
+                    onclick="fs_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('File System: Disk Read and Write');" />
+                  </div>
+                  <div style="clear: right;"></div>
+                  <div id="fs_avgMemoryDiv" class="round-table" style="width: 300px">Disk Read and Write</div>
+				</td>
+                <td valign="top" class="text" width="30%" align="center">
+                  <div class="magni">
+                    <input type="button" value="" style="margin-left: 115px" class="magbutton" 
+                    onclick="fs_Area_mdOps_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', mdOpsFetchmatric, 'true');setZoomDialogTitle('File System: MDOP/s');" />
+                  </div>
+                  <div style="clear: right;"></div>
+                  <div id="fs_avgReadDiv" class="round-table" style="width: 300px">MDOP/s</div>
+                </td>
+              </tr>
+            </table>
+          </fieldset>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="3">
+          <fieldset>
+            <table border="0" align="center">
+              <tr>
+                <td valign="top" class="text" align="center">
+                  <div class="magni">
+                    <input type="button" class="magbutton" style="margin-left: 680px" 
+                    onclick="fs_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
+                  </div>
+                  <div style="clear: right;"></div>
+                  <div id="fs_iopsSpline" class="round-table" style="width: 900px"></div>
+                </td>
+              </tr>
+            </table>
+          </fieldset>
+        </td>
+      </tr>   
+    </table>
+  </div>
+  <!-- FileSystem Div - End --> <!-- OSS Div - Start -->
+  <div id="ossInfoDiv" style="display: none">
+  <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue">
+    <tr style="background-color: #cccccc;">
+      <td width="50%">
+        <div class="breadCrumbHolder module">
+          <div id="breadCrumb2" class="breadCrumb module"></div>
+        </div>
+      </td>
+      <td width="50%">
+        <div class="timeint">
+          <input id="oss_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font>
+          Time Interval: &nbsp;
+          <select id="intervalSelect">
+            <option value="">Select</option>
+            <option value="minutes">Minutes</option>
+            <option value="hour">Hour</option>
+            <option value="day">Day</option>
+            <option value="week">Week</option>
+          </select> &nbsp; <font color="black">|</font> 
+          Unit:&nbsp; 
+          <select id="unitSelect">
+            <option value=''>Select</option>
+          </select>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="4">
+        <ul class="tabs">
+          <li><a href="#tab1">Usage Summary</a></li>
+        </ul>
+        <div class="tab_container">
+          <div id="tab1" class="tab_content">
+            <fieldset>
+              <legend class="legendClass">
+                OSS Usage Summary
+              </legend>
+              <table width="100%" border="0" align="left">
+                <tr>
+                  <td colspan="2" valign="top" class="text" width="50%" align="left"><br />
+                    <table id="ossSummaryTbl" width="40%" align="left">
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </fieldset>
+            <fieldset>
+              <legend class="legendClass">
+                OSS Performance Summary 
+             </legend>
+             <table width="100%" border="0">
+               <td valign="top" class="text" width="50%" align="center">
+                 <div class="magni" style="margin-left: 515px">
+                   <input type="button" value="" class="magbutton"
+                    onclick="oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('Server: CPU and Memory Usage');" />	 
+                 </div>
+                 <div style="clear: right;"></div>
+                 <div id="oss_avgReadDiv" class="round-table" style="width: 500px">Server CPU and Memory</div>
+               </td>
+               <td valign="top" class="text" width="50%" align="center">
+                 <div class="magni" style="margin-left: 515px">
+                   <input type="button" value="" class="magbutton"
+                    onclick="oss_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('Server: Disk Read and Write');" />	
+                 </div>
+                 <div style="clear: right;"></div>
+                 <div id="oss_avgWriteDiv" class="round-table" style="width: 500px">Disk Read and Write</div>
+               </td>
+             </table>
+           </fieldset>
+         </div>
+         <div id="tab2" class="tab_content">
+           <table width="100%" border="2">
+             <tr>
+               <td style="font-family: Verdana, Arial, Helvetica, sans-serif;">
+                 File System Usage Parameter
+                 <select>
+                   <option>Select</option>
+                   <option>CPU Usage</option>
+                   <option>Memory Usage</option>
+                   <option>Disk Read</option>
+                   <option>Disk Write</option>
+                 </select> &nbsp;&nbsp; Note: For Read and Write OST information is displayed
+               </td>
+             </tr>
+             <tr>
+               <td valign="top" class="text" width="%100" align="center">
+                 <div id="heatMap1" align="center" style="font-family: Verdana, Arial, Helvetica, sans-serif;">
+                   Heat Map
+                   <br />
+                   <br />
+                   <br />
+                   <br />
+                   <br />
+                   <br />
+                   <br />
+                   <br />
+                   <br />
+                   <br />
+                   <br />
+                   <br />
+                   <br />
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <!-- end of tab_container  -->
+      </td>
+    </tr>
+    <tr>
+      <td colspan="3"></td>
+    </tr>
+  </table>
+  </div>
+  <!-- OSS Div - End --> <!-- OST Div - Start -->
+  <div id="ostInfoDiv" style="display: none">
+    <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue">
+      <tr style="background-color: #cccccc;">
+        <td width="50%">
+          <div class="breadCrumbHolder module">
+            <div id="breadCrumb3" class="breadCrumb module"></div>
+          </div>
+        </td>
+        <td width="50%">
+          <div class="timeint">
+            <input id="ost_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font> 
+            Time Interval: &nbsp; 
+            <select id="intervalSelect">
+              <option value="">Select</option>
+              <option value="minutes">Minutes</option>
+              <option value="hour">Hour</option>
+              <option value="day">Day</option>
+              <option value="week">Week</option>
+            </select> &nbsp; <font color="black">|</font>
+            Unit:&nbsp; 
+            <select id="unitSelect">
+              <option value=''>Select</option>
+            </select>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="4">
+          <fieldset>
+            <legend class="legendClass">
+              OST Usage	Summary 
+            </legend>
+            <table width="100%" border="0">
+              <tr>
+                <td colspan="2" valign="top" class="text" width="30%" align="center" style="font-family: Verdana, Arial, Helvetica, sans-serif;"><br />
+                  <table id="ostSummaryTbl" width="100%">
+                  </table>
+                </td>
+                <td width="25%" valign="top" class="text" align="center">
+                  <div style="clear: right;"></div>
+                  <div id="ost_container2" class="round-table">Space Usage</div>
+                </td>
+                <td width="25%" valign="top" class="text" align="center">
+                  <div style="clear: right;"></div>
+                  <div id="ost_container3" class="round-table">Files Vs Free Inodes</div>
+                </td>
+              </tr>
+            </table>
+          </fieldset>
+        </td>
+	  </tr>
+      <tr>
+        <td colspan="3">
+          <fieldset>
+            <legend class="legendClass">
+              OST Performance Summary
+            </legend>
+            <table width="100%" border="0">
+            <tr>
+              <td valign="top" class="text" width="50%" align="center">
+               <div class="magni" style="margin-left: 515px">
+                 <input type="button" value=" " class="magbutton" 
+                 onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
+               </div>
+               <div style="clear: right;"></div>
+               <div id="ost_avgReadDiv" style="width: 500px" class="round-table">Disk Read and Write</div>
+             </td>
+             <td valign="top" class="text" width="50%" align="center">
+               <div class="magni" style="margin-left: 515px">
+                 <input type="button" value=" " class="magbutton" onclick="" />
+               </div>
+               <div style="clear: right;"></div>
+               <div id="ost_avgWriteDiv" style="width: 500px" class="round-table">Any other parameter graph</div>
+             </td>
+           </tr>
+           <tr>
+           </tr>
+           </table>
+		 </fieldset>
+       </td>
+     </tr>
+     <tr>
+       <td align="center" colspan="4" width="100%"> 
+         <div id="ost_resource_graph_canvas" class="canvas resource_graph_canvas round-table"></div>
+       </td>
+     </tr>
+   </table>
+   </div>
+   <!-- OST Div - End -->
+ </div>
+ <div style="clear: both;"></div>
 </div>
-<!-- OST Div - End --></div>
-<div style="clear: both;"></div>
-</div>
-<div style="clear: both;"></div>
-<div id="alerts_dialog" title="Alerts">
-<table width="100%" border="0" cellpadding="0" cellspacing="0"
-	bordercolor="#0040FF">
-	<tr>
-		<td>
-		<table width="100%" border="0" cellspacing="0" cellpadding="0"
-			bgcolor="#c3e1f1" class="border1" id="alerts_dialog_content">
-		</table>
-		</td>
-	</tr>
-</table>
-</div>
-<div id="events_dialog" title="Events">
-<table width="100%" border="0" cellpadding="0" cellspacing="0"
-	bordercolor="#0040FF">
-	<tr>
-		<td>
-		<table width="100%" border="0" cellspacing="0" cellpadding="0"
-			bgcolor="#c3e1f1" class="border1" id="events_dialog_content">
-		</table>
-		</td>
-	</tr>
-</table>
-</div>
-<div id="dg_fs_space" title="All File System Disk Usage">
-<div id="dialog_container"></div>
-</div>
-<div id="dg_db_cpu_usage" title="All File System CPU Usage">
-<div id="dialog_avgCPUDiv"></div>
-</div>
-<div id="zoomDialog" title="All File System CPU Usage">
-<div id="dialog_avgCPUDiv"></div>
-</div>
-</div>
+  <div id="dg_fs_space" title="All File System Disk Usage">
+    <div id="dialog_container"></div>
+  </div>
+  <div id="dg_db_cpu_usage" title="All File System CPU Usage">
+    <div id="dialog_avgCPUDiv"></div>
+  </div>
+  <div id="zoomDialog" title="All File System CPU Usage">
+    <div id="dialog_avgCPUDiv"></div>
+  </div>
+ </div>
 </div>
 </body>
 </html>

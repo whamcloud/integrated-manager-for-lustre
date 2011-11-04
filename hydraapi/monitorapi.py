@@ -170,8 +170,8 @@ class GetTargets(AnonymousRequestHandler):
 # FIXME: this is actually returning information about all filesystems, and all targets
 # neither of which is a 'volume'.
 class GetFSTargets(AnonymousRequestHandler):
-    @extract_request_args('filesystem_id','kinds')
-    def run(self, request, filesystem_id,kinds):
+    @extract_request_args('filesystem_id','host_id','kinds')
+    def run(self, request, filesystem_id,host_id,kinds):
         kind_map = {"MGT": ManagedMgs,
                     "OST": ManagedOst,
                     "MDT": ManagedMdt}        
@@ -301,22 +301,28 @@ class GetJobs(AnonymousRequestHandler):
         return [j.to_dict() for j in jobs]
 
 class GetLogs(AnonymousRequestHandler):
-    @extract_request_args('month','day','lustre')
-    def run(self,request,month,day,lustre):
+    @extract_request_args('start_time','end_time','lustre')
+    def run(self,request,start_time,end_time,lustre):
         import datetime
         from monitor.models import Systemevents
-        display_month = int(month)
-        display_day = int(day) 
-        lustre_only = lustre == "true"
-        if display_month == 0:
-            start_date = datetime.datetime(1970, 1, 1)
+        ui_time_format = "%m/%d/%Y %H:%M "
+        host=None 
+        if start_time: 
+            start_date = datetime.datetime.strptime(str(start_time),ui_time_format)
         else:
-            start_date = datetime.datetime(datetime.datetime.now().year,
-                                           display_month, display_day)
+            start_date  = datetime.datetime(1970, 1, 1)
+        if end_time:
+            end_date  = datetime.datetime.strptime(str(end_time),ui_time_format)
+        else:
+            end_date = datetime.datetime.now()  
+        
         log_data = []
-        log_data = Systemevents.objects.filter(devicereportedtime__gt =
-                                               start_date).order_by('-devicereportedtime')
-        if lustre_only:
+        if host:
+            log_data = Systemevents.objects.filter(devicereportedtime__gt = start_date,devicereportedtime__lte = end_date,fromhost__startswith =host).order_by('-devicereportedtime')
+        else:
+            log_data = Systemevents.objects.filter(devicereportedtime__gt = start_date,devicereportedtime__lte = end_date).order_by('-devicereportedtime')
+        
+        if lustre:
             log_data = log_data.filter(message__startswith=" Lustre")
     
         return[

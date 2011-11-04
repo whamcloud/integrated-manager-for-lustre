@@ -11,7 +11,7 @@ import re
 nid_regex = re.compile("(\d{1,3}\.){3}\d{1,3}@tcp(_\d+)?")
 target_regex = re.compile("\\b(\\w+-(MDT|OST)\\d\\d\\d\\d)\\b")
 
-from monitor.models import Nid, Host
+from configure.models import Nid, ManagedHost
 
 # XXX tsk tsk tsk.  this is a copy of the same function from 
 #     monitor/lib/lustre_audit.py
@@ -39,9 +39,9 @@ def pretty_log_line(log_entry):
     date = conditional_escape(date)
     host = conditional_escape(host)
     try:
-        host_obj = Host.objects.get(address__startswith = host)
+        host_obj = ManagedHost.objects.get(address__startswith = host)
         host = "<a href='#'>%s</a>" % host
-    except Host.DoesNotExist:
+    except ManagedHost.DoesNotExist:
         pass
     service = conditional_escape(service)
     message = conditional_escape(message)

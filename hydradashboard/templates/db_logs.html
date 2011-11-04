@@ -20,29 +20,94 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
 <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
+<!-- Added for datetime picker -->
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-timepicker-addon.js"></script>
+<!-------------------------------->
 <script language="javascript" type="text/javascript">
 $(document).ready(function() 
 {
-	var now = new Date();
-	var date = now.getDate();
-	var month = now.getMonth()+1;
-	
-	LoadLogs("all_log_content",date,month,"true");
-	var oTable = $('#all_log_content').dataTable( {
-	"bProcessing": true,
-	"iDisplayLength":50,
-	"bDeferRender": true,
-	"aoColumns": [
-		{ "sClass": 'txtleft' },
-		{ "sClass": 'txtcenter' },
-		{ "sClass": 'txtleft' },
-		{ "sClass": 'txtleft' }
-	],
-	"bJQueryUI": true,
-	} );
-	$('#log_start_month').val(month);
-	$('#log_start_day').val(date);
-	$("#alertAnchor").click();
+  var fromDate = new Date();
+  fromDate.setHours(fromDate.getHours()-1);  // Current hour - 1
+  
+  var toDate = new Date();
+  
+  $('#datetime_from').datetimepicker();
+  $('#datetime_from').datetimepicker('setDate', (fromDate) );
+  $('#datetime_to').datetimepicker();
+  $('#datetime_to').datetimepicker('setDate', (new Date()) );
+  
+  setActiveMenu('logs_menu');
+  
+  var lustre=true;
+  fromDate = $('#datetime_from').val();
+  toDate = $('#datetime_to').val();
+  
+  //LoadLogs("all_log_content",date,month,"true");
+  var oTable = $('#all_log_content').dataTable( {
+  "bDeferRender": true,
+  "sAjaxDataProp": "response",
+  "bProcessing": true,
+  "iDisplayLength":100,
+  "bDeferRender": true,
+  "sAjaxSource": '/api/getlogs/',
+  "fnServerData": function ( sSource, aoData, fnCallback ) {
+  $.ajax({
+  "dataType": 'json', 
+  "type": "POST", 
+  "url": sSource, 
+  "data": JSON.stringify({'lustre':lustre,'start_time': fromDate,'end_time': toDate}),
+  "contentType": "application/json; charset=utf-8",
+  "success": fnCallback
+  })
+  },
+  "aoColumns": [
+    { "sClass": 'log_line', "mDataProp":"date"},
+    { "sClass": 'log_line', "mDataProp":"host" },
+    { "sClass": 'log_line', "mDataProp":"service" },
+    { "sClass": 'log_line', "mDataProp":"message" }
+  ],
+  "bJQueryUI": true,
+  });
+  
+  $("#alertAnchor").click();
+  //click handler for filter
+  $('#log_filter_btn').click(function()
+  {
+    fromDate = $('#datetime_from').val();
+    toDate = $('#datetime_to').val();
+    
+    if($('#id_only_lustre').is(":checked"))
+    {
+      lustre = true;
+    }
+    else
+    {
+      lustre = false;
+    }
+    RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate);
+  });
+  
+function RefreshTable(tableId, urlData, lustre, fromDate, endDate)
+{
+  $(".dataTables_processing").css('visibility','visible');
+  
+  $.ajax({type: 'POST', url: urlData, dataType: 'json', 
+  data: JSON.stringify({"lustre": lustre, "start_time": fromDate, "end_time":endDate }),
+  contentType:"application/json; charset=utf-8"})
+  .success(function(data, textStatus, jqXHR) 
+  {
+    table = $(tableId).dataTable();
+    oSettings = table.fnSettings();
+    table.fnClearTable(this);
+    for (var i=0; i<data.response.length; i++)
+    {
+      table.oApi._fnAddData(oSettings, data.response[i]);
+    }
+    oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
+    $(".dataTables_processing").css('visibility','hidden');
+    table.fnDraw();
+  });
+}
 });
 </script>
 <style type="">
@@ -58,200 +123,63 @@ $(document).ready(function()
 </style>
 </head>
 <body style="margin: 0px 0px 0px 0px; padding: 0px;">
-<div class="wrapper">
-  <div class="bg">
-    <div class="logohead">
-      <div class="logo"></div>
-      <div class="top_links">
-      	<a href="/dashboard">Dashboard</a> |
-        <a href="/hydracm">Configure</a> |
-        <a href="/dashboard/dbalerts">Alerts</a> |
-        <a href="/dashboard/dbevents">Events</a> |
-        <a href="#" class="active">Log</a>
-      </div>
-      <div style="clear:left;"></div>
-    </div>
-    <div class="leftpanel">
-      <div id="signbtn"> <a href="#" class="btnsignin"><img src="{{STATIC_URL}}images/notifications.png" alt="" /></a> </div>
-      <div id="frmsignin">
-         <div style="border: 2px solid #848484; background-color:#cccccc; min-height:733px;">
-          <!--<div><b id="plusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications.png" alt="" /></b></div>-->
-          <div class="panel" style="display: block;width: 350px;">
-            <div style="float: right"><b id="minusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications_hor.png" alt="" /></b></div>
-            <br/>
-            <div style="font-family:Verdana, Arial, Helvetica, sans-serif;"><a href="#" id="alertAnchor">Alerts</a></div>
-            <div id="alertsDiv" style="display:none;margin-left:5px; height:400px; overflow:auto;">
-              <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
-                <tr>
-                  <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="alert_content">
-                    </table></td>
-                </tr>
-              </table>
-            </div>
-            <div style="font-family:Verdana, Arial, Helvetica, sans-serif;"><a href="#" id="eventsAnchor">Events</a></div>
-            <div id="eventsDiv"  style="display:none;margin-left:5px; height:400px; overflow:auto;">
-              <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
-                <tr>
-                  <td bgcolor="#CCCCCC"><table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
-                      <tr>
-                        <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="event_content">
-                          </table></td>
-                      </tr>
-                    </table></td>
-                </tr>
-              </table>
-            </div>
-            <div style="font-family:Verdana, Arial, Helvetica, sans-serif;"><a href="#" id="jobsAnchor">Jobs</a></div>
-            <div id="jobsDiv"  style="display:none;margin-left:5px; height:400px; overflow:auto;">
-              <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
-                <tr>
-                  <td bgcolor="#CCCCCC"><table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
-                      <tr>
-                        <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="job_content">
-                          </table></td>
-                      </tr>
-                    </table></td>
-                </tr>
-              </table>
-            </div>
-            </ul>
-            <div id="outputDiv"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="rightpanel">
+  <div class="wrapper">
+    <div class="bg">
+    {% include 'header.html' %}
+    {% include 'notification_slider.html' %}  
+      <div class="rightpanel">
       <!-- Dashboard Div - Start -->
       <div id="dashboardDiv">
         <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
           <tr style="background-color:#cccccc;">
-            <td width="40%"><div class="breadCrumbHolder module">
+            <td width="40%">
+              <div class="breadCrumbHolder module">
                 <div id="breadCrumb0" class="breadCrumb module">
                   <ul style="float:left;">
-                    <li> <a href="/dashboard">All FileSystems</a> </li>
                     <li>
-                      <select id="fsSelect">
-                        <option value="">Select File System</option>
-                      </select>
-                    </li>
-                  </ul>
-                </div>
-              </div></td>
-            <td width="60%"><div class="timeint">
-            	Start Month:
-            	<select id="log_start_month">
-            	    <option value="">Select Month</option>
-					<option value="1">January</option>
-					<option value="2">February</option>
-					<option value="3">March</option>
-					<option value="4">April</option>
-					<option value="5">May</option>
-					<option value="6">June</option>
-					<option value="7">July</option>
-					<option value="8">August</option>
-					<option value="9">September</option>
-					<option value="10">October</option>
-					<option value="11">November</option>
-					<option value="12">December</option>
-				</select>
-            	 Start Day: &nbsp;
-                <select id="log_start_day">
-                 	<option value="">Select Day</option>
-					<option value="1"> 1</option>
-					<option value="2"> 2</option>
-					<option value="3"> 3</option>
-					<option value="4"> 4</option>
-					<option value="5"> 5</option>
-					<option value="6"> 6</option>
-					<option value="7"> 7</option>
-					<option value="8"> 8</option>
-					<option value="9"> 9</option>
-					<option value="10">10</option>
-					<option value="11">11</option>
-					<option value="12">12</option>
-					<option value="13">13</option>
-					<option value="14">14</option>
-					<option value="15">15</option>
-					<option value="16">16</option>
-					<option value="17">17</option>
-					<option value="18">18</option>
-					<option value="19">19</option>
-					<option value="20">20</option>
-					<option value="21">21</option>
-					<option value="22">22</option>
-					<option value="23">23</option>
-					<option value="24">24</option>
-					<option value="25">25</option>
-					<option value="26">26</option>
-					<option value="27">27</option>
-					<option value="28">28</option>
-					<option value="29">29</option>
-					<option value="30">30</option>
-					<option value="31">31</option>
-				</select>
+                        <a href="/dashboard">All FileSystems</a> </li>
+	                      <select id="fsSelect">
+		                      <option value="">Select File System</option>
+		                    </select>
+                     </li>
+                   </ul>
+                 </div>
+              </div>
+            </td>
+            <td width="60%">
+              <div class="timeint">
+                From:&nbsp;<input id="datetime_from" />&nbsp;To:&nbsp;<input id="datetime_to" />
                 &nbsp;Only Lustre Messages:&nbsp;
                 <input type="checkbox" id="id_only_lustre" name="only_lustre" checked="checked" value="true">
                 &nbsp;<input value="Filter" id="log_filter_btn" type="button"></input>
-              </div></td>
+              </div>
+            </td>
           </tr>
-          
-         
           <tr>
-            <td colspan="3"><form>
-                <fieldset>
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="display" id="all_log_content">
-                <thead>
-                <tr>
-                	<th width="14%">Log Created At</th>
-                    <th width="15%">Host</th>
-                    <th width="10%">Service</th>
-                    <th width="61%">Message</th>
-                </tr>
-                </thead><tbody></tbody>
+            <td colspan="3">
+              <fieldset>
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="display"  id="all_log_content">
+                  <thead>
+                    <tr>
+                      <th width="14%">Log Created At</th>
+                      <th width="15%">Host</th>
+                      <th width="10%">Service</th>
+                      <th width="61%">Message</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  </tbody>
                 </table>
-                <!--    <table width="100%" border="0" cellpadding="0" cellspacing="0"<>
-                  <tr class="odd">
-                    <td class="bor borleft bortop" height="25">Oct. 11, 2011</td>
-                    <td class="bor bortop" height="25">5:56 p.m.</td>
-                    <td class="bor bortop" height="25">clo-pune-lin02</td>
-                    <td class="bor bortop" height="25"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" alt="" /></td>
-                    <td class="bor borright bortop" height="25" align="left">clo-pune-lin02:primary:ddnfs01-MDT0000 started</td>
-                  </tr>
-                  <tr class="even">
-                    <td class="bor borleft" height="25">Oct. 11, 2011</td>
-                    <td class="bor" height="25">5:40 p.m.</td>
-                    <td class="bor" height="25">clo-pune-lin05</td>
-                    <td class="bor" height="25"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" alt="" /></td>
-                    <td class="bor borright" height="25" align="left">clo-pune-lin02:primary:ddnfs01-MDT0000 started</td>
-                  </tr>
-                  <tr class="odd">
-                    <td class="bor borleft" height="25">Oct. 11, 2011</td>
-                    <td class="bor" height="25">5:39 p.m.</td>
-                    <td class="bor" height="25">clo-pune-lin02</td>
-                    <td class="bor" height="25"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" alt="" /></td>
-                    <td class="bor borright" height="25" align="left">clo-pune-lin02:primary:ddnfs01-MDT0000 started</td>
-                  </tr>
-                  <tr class="even">
-                    <td class="bor borleft" height="25">Oct. 11, 2011</td>
-                    <td class="bor" height="25">5:38 p.m.</td>
-                    <td class="bor" height="25">clo-pune-lin05</td>
-                    <td class="bor" height="25"><img src="{{STATIC_URL}}images/dialog-information.png" width="16" height="16" alt="" /></td>
-                    <td class="bor borright" height="25" align="left">clo-pune-lin02:primary:ddnfs01-MDT0000 started</td>
-                  </tr>
-                </table>    -->
-
-                </fieldset>
-              </form>
-              </h3></td>
+              </fieldset>
+              </h3>
+            </td>
           </tr>
-          
         </table>
       </div>
       <!-- Dashboard Div - End -->
-   
+    </div>
+    <div style="clear:both;"></div>
+    </div>
   </div>
-  <div style="clear:both;"></div>
-</div>
-</div>
 </body>
 </html>

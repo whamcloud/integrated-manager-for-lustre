@@ -246,6 +246,8 @@ $(document).ready(function()
     db_Area_ReadWrite_Data('false');
     db_Area_mdOps_Data('false');
     db_AreaSpline_ioOps_Data('false');
+
+    setActiveMenu('dashboard_menu');
   }   
 /*****************************************************************************
  *  Function to populate info on file system dashboard page
@@ -344,7 +346,8 @@ $(document).ready(function()
     
     $.ajax({type: 'POST', url: "/api/get_fs_targets/", dataType: 'json', data: JSON.stringify({
       "filesystem_id": fsId,
-      "kinds": ["OST"]
+      "kinds": ["OST"],
+      "host_id": ossId
     }), contentType:"application/json; charset=utf-8"})
     .success(function(data, textStatus, jqXHR) 
     {
@@ -536,5 +539,4 @@ $(document).ready(function()
       },
     }
   });
-/******************************************************************************/
 });			// End Of document.ready funtion

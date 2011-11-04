@@ -188,13 +188,45 @@ loadOSSUsageSummary = function (fsId)
       $.each(response, function(resKey, resValue) 
       {
         innerContent = innerContent + 
-        "<tr><td class='greybgcol'>MGS :</td><td class='tblContent greybgcol'>"+resValue.mgs_hostname+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
-        "<tr><td class='greybgcol'>MDS :</td><td class='tblContent greybgcol'>"+resValue.mds_hostname+"</td><td class='greybgcol'>Failover:</td><td class='tblContent greybgcol'>NA</td></tr>"+
-        "<tr><td class='greybgcol'>File System :</td><td class='tblContent greybgcol'>"+resValue.fsname+"</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
-        "<tr><td class='greybgcol'>Total Capacity: </td><td class='tblContent greybgcol'>"+resValue.kbytesused+" </td><td class='greybgcol'>Total Free:</td><td class='tblContent greybgcol'>"+resValue.kbytesfree+"</td></tr>"+
-        "<tr><td class='greybgcol'>Files Total: </td><td class='tblContent greybgcol'>"+resValue.filestotal+" </td><td class='greybgcol'>Files Free:</td><td class='tblContent greybgcol'>"+resValue.filesfree+"</td></tr>"+
-        "<tr><td class='greybgcol'>Standby OSS :</td><td class='tblContent greybgcol'>--</td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
-        "<tr><td class='greybgcol'>Total OSTs:</td><td class='tblContent greybgcol'>"+resValue.noofost+" </td><td>&nbsp;</td><td>&nbsp;</td></tr>"+
+        "<tr><td class='greybgcol'>MGS :</td>" +
+        "<td class='tblContent greybgcol'>"+resValue.mgs_hostname+"</td>" +
+        "<td>&nbsp;</td><td>&nbsp;</td>" +
+        "</tr>"+
+        "<tr>" +
+        "<td class='greybgcol'>MDS :</td>" +
+        "<td class='tblContent greybgcol'>"+resValue.mds_hostname+"</td>" +
+        "<td class='greybgcol'>Failover:</td>" +
+        "<td class='tblContent greybgcol'>NA</td>" +
+        "</tr>"+
+        "<tr>" +
+        "<td class='greybgcol'>File System :</td>" +
+        "<td class='tblContent greybgcol'>"+resValue.fsname+"</td>" +
+        "<td>&nbsp;</td><td>&nbsp;</td>" +
+        "</tr>"+
+        "<tr>" +
+        "<td class='greybgcol'>Total Capacity: </td>" +
+        "<td class='tblContent greybgcol'>"+resValue.bytes_total+" </td>" +
+        "<td class='greybgcol'>Total Free:</td>" +
+        "<td class='tblContent greybgcol'>"+resValue.bytes_free+"</td>" +
+        "</tr>"+
+        "<tr>" +
+        "<td class='greybgcol'>Files Total: </td>" +
+        "<td class='tblContent greybgcol'>"+resValue.inodes_total+" </td>" +
+        "<td class='greybgcol'>Files Free:</td>" +
+        "<td class='tblContent greybgcol'>"+resValue.inodes_free+"</td>" +
+        "</tr>"+
+        "<tr>" +
+        "<td class='greybgcol'>Standby OSS :</td>" +
+        "<td class='tblContent greybgcol'>--</td>" +
+        "<td>&nbsp;</td>" +
+        "<td>&nbsp;</td>" +
+        "</tr>"+
+        "<tr>" +
+        "<td class='greybgcol'>Total OSTs:</td>" +
+        "<td class='tblContent greybgcol'>"+resValue.noofost+" </td>" +
+        "<td>&nbsp;</td>" +
+        "<td>&nbsp;</td>" +
+        "</tr>"+
         "<tr><td class='greybgcol'>Status:</td>";
 
         if(resValue.status == "OK" || resValue.status == "STARTED")
