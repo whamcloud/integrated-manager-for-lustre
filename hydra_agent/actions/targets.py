@@ -128,6 +128,8 @@ def _unconfigure_ha(primary, label, uuid, serial):
     if primary:
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-primary\">'" % unique_label)
         rc, stdout, stderr = cibadmin("-D -X '<primitive id=\"%s\">'" % unique_label)
+        shell.try_run(['crm_resource', '--cleanup', '--resource',
+                       unique_label])
     else:
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" % unique_label)
 
@@ -139,9 +141,7 @@ def configure_ha(args):
     # remove any pre-existing instance of the resource being added
     rc, stdout, stderr = shell.run(shlex.split("crm_resource -r %s -q" % unique_label))
     if rc == 0:
-        # HYD-406
-        if stdout.find("ORPHANED") == -1:
-            _unconfigure_ha(args.primary, args.label, args.uuid, args.serial)
+        _unconfigure_ha(args.primary, args.label, args.uuid, args.serial)
 
     if args.primary:
         # now configure pacemaker for this target
