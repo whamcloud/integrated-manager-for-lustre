@@ -156,9 +156,16 @@
     });
     //Fix Me:Need to find another weay to do thisto load the button + sign css.
     $(document).ajaxComplete(function() {
-      $('button.add').button({icons: {primary: 'ui-icon-plusthick'}});
-      $('button.submit').button({icons: {primary: 'ui-icon-check'}});
-      $('button.advanced').button({icons: {primary: 'ui-icon-gear'}});
+      var apply_button = function(selector, icon) {
+        $(selector).each(function() {
+          if (!$(this).hasClass('ui-button')) {
+            $(this).button({icons: {primary: icon}});
+          }
+        });
+      }
+      apply_button('button.add', 'ui-icon-plusthick');
+      apply_button('button.submit', 'ui-icon-check');
+      apply_button('button.advanced', 'ui-icon-gear');
     });
 </script>
 </head>
@@ -175,7 +182,11 @@
       <div id="signbtn">
         <img id='notification_icon_jobs' class='notification_icon' src="{{STATIC_URL}}images/ajax-loader.gif"/>
         <img id='notification_icon_alerts' class='notification_icon' src="{{STATIC_URL}}images/dialog-warning.png"/>
-        <a href="#" class="btnsignin"><img src="{{STATIC_URL}}images/notifications.png" alt="" /></a> </div>
+        <a href="#" class="btnsignin">
+          <div class='vertical'>Notifications</div>
+          <!--<img src="{{STATIC_URL}}images/notifications.png" alt="" />-->
+        </a>
+      </div>
       <div id="frmsignin">
         <div style="border: 2px solid #848484; background-color:#cccccc; min-height:600px;">
           <div class="panel" style="display: block;width: 350px;">
