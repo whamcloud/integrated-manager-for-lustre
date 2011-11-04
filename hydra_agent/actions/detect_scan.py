@@ -3,12 +3,10 @@ def detect_scan(args):
     pass
 
 import os
-import sys
 import re
-import glob
 import subprocess
 
-from hydra_agent.legacy_audit import normalize_device, Mounts, Fstab
+from utils import normalize_device, Mounts
 from hydra_agent import shell
     
 def get_local_targets():

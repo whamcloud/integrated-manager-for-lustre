@@ -2,7 +2,7 @@
 import os
 import glob
 
-from hydra_agent.legacy_audit import Mounts, normalize_device
+from utils import Mounts, normalize_device
 from hydra_agent.actions.targets import get_resource_locations
 from hydra_agent.actions.lnet_scan import lnet_status
 from hydra_agent import shell

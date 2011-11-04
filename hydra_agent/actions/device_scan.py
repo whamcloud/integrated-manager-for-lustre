@@ -280,7 +280,7 @@ def device_scan(args):
             continue
 
     # Anything in fstab or that is mounted
-    from hydra_agent.legacy_audit import Fstab, Mounts
+    from utils import Fstab, Mounts
     fstab = Fstab()
     mounts = Mounts()
     from itertools import chain
