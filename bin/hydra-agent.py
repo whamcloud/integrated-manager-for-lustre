@@ -64,11 +64,6 @@ if __name__ == '__main__':
     p.add_argument('--args', required=True, help='format arguments')
     p.set_defaults(func=actions.format_target)
 
-    p = subparsers.add_parser('locate-device',
-                         help='find a device node path from a filesystem UUID')
-    p.add_argument('--uuid', required=True, help='label of target to find')
-    p.set_defaults(func=actions.locate_device)
-
     p = subparsers.add_parser('migrate-target',
                               help='migrate a target to a node')
     p.add_argument('--label', required=True, help='label of target to migrate')
