@@ -300,11 +300,6 @@ cursor:pointer;
 /*.maincontainer{
 	min-width:1270px;
 }*/
-.line1{
-	background-image:url(../images/line1.jpg);
-	background-repeat:repeat-x;
-	font-family:Verdana, Arial, Helvetica, sans-serif;
-}
 .closebutton{
 	
 	vertical-align:middle;
@@ -336,16 +331,12 @@ cursor:pointer;
 .palered{
 	background-color:#cc5555;
 }
+
 .bg{
-	background-image: url(../images/line.jpg);
-	background-repeat:repeat-y;
-	background-color:#eeeeee;
-	/*position:absolute;*/
 	margin:auto;
 	min-height:600px;
-	
-	
 }
+
 .wrapper{
 	margin:auto;
 	width:100%;
@@ -406,19 +397,19 @@ cursor:pointer;
 	text-align:left; 
 	padding-bottom:-18px;
 }
-.blueheader{
-	background-image:url(../static/images/line1.jpg); 
-	background-repeat:repeat-x;
-	height:29px;
-}
 
 
 .leftpanel{
 	float:left;
 	width:23px;
-	height:100%;
-	background-color:#cccccc;
-	
+	height:600px;
+    border-right: 1px solid #d6d6d6;
+
+    /*background-color: #e6e6e6;*/
+    background-color: black;
+    background-image: url(../images/ui-bg_glass_75_e6e6e6_400x1.png);
+    background-repeat: repeat-y;
+    background-position: 0% 50%;
 }
 
 .notification_icon {
@@ -679,4 +670,32 @@ h2.section_header {
     text-shadow: #aaa 2px 2px 3px;
     color: #333;
     margin-top: 12px;
+}
+
+.vertical {
+    font-size: 8pt;
+    color: black;
+    text-shadow: #aaa 1px 1px 2px;
+    padding-left: 8px;
+    padding-bottom: 2px;
+    font-weight: normal;
+
+    /* Safari */
+    -webkit-transform: rotate(90deg);
+
+    /* Firefox */
+    -moz-transform: rotate(90deg);
+
+    /* IE */
+    -ms-transform: rotate(90deg);
+
+    /* Opera */
+    -o-transform: rotate(90deg);
+
+    /* Internet Explorer */
+    filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=1);
+}
+
+.vertical:hover {
+    text-shadow: #FFFFCC 1px 1px 2px;
 }
