@@ -10,7 +10,8 @@ class TestNodeMetrics(unittest.TestCase):
         self.metrics = self.audit.metrics()
 
     def test_node_cpustats(self):
-        self.assertEqual(self.metrics['raw']['node']['cpustats']['usage'], 59042)
+        self.assertEqual(self.metrics['raw']['node']['cpustats']['total'], 3540537)
+        self.assertEqual(self.metrics['raw']['node']['cpustats']['user'], 24601)
 
     def test_node_meminfo(self):
         self.assertEqual(self.metrics['raw']['node']['meminfo']['MemTotal'], 3991680)

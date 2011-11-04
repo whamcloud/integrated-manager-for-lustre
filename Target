@@ -93,7 +93,7 @@ Target_stop() {
 
 Target_status() {
     # given the label, figure out the device
-    local DEVICE=$(blkid | sed -ne "/LABEL=\"$TARGET\"/s/:.*//p")
+    local DEVICE=$(blkid | sed -ne "/ UUID=\"$TARGET\"/s/:.*//p")
     # see if it's started
     if cut -d' ' -f1,2 < /proc/mounts | 
             grep -q "^$DEVICE " >/dev/null 2>&1; then

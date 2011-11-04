@@ -26,9 +26,14 @@ class NodeAudit(BaseAudit, FileSystemMixin):
                                                       # 2.6.11+
                                                              # 2.6.24+
         # usr, nice, sys, idle, iowait, irq, softirq, steal, guest
-        usage = sum(slices) - slices[3] - slices[4] # don't include idle/iowait
-        total = sum(slices)
-        return {'usage': usage, 'total': total}
+        # steal seems to only be used on s390; we can ignore it
+        # guest is included in user, so we shouldn't double-count it
+        total  = sum(slices[0:6])
+        user   = sum(slices[0:1])
+        system = slices[2] + sum(slices[5:6])
+        idle   = slices[3]
+        iowait = slices[4]
+        return {'user': user, 'system': system, 'idle': idle, 'iowait': iowait, 'total': total}
 
     def _gather_raw_metrics(self):
         self.raw_metrics['node']['hostname'] = socket.gethostname()

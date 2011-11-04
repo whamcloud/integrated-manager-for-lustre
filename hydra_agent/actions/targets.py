@@ -120,9 +120,9 @@ def register_target(args):
     return {'label': blkid_output.strip()}
 
 def unconfigure_ha(args):
-    _unconfigure_ha(args.primary, args.label, args.serial)
+    _unconfigure_ha(args.primary, args.label, args.uuid, args.serial)
 
-def _unconfigure_ha(primary, label, serial):
+def _unconfigure_ha(primary, label, uuid, serial):
     unique_label = "%s_%s" % (label, serial)
 
     if primary:
@@ -131,7 +131,7 @@ def _unconfigure_ha(primary, label, serial):
     else:
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" % unique_label)
 
-    store_remove_target_info(label)
+    store_remove_target_info(uuid)
 
 def configure_ha(args):
     unique_label = "%s_%s" % (args.label, args.serial)
@@ -139,7 +139,9 @@ def configure_ha(args):
     # remove any pre-existing instance of the resource being added
     rc, stdout, stderr = shell.run(shlex.split("crm_resource -r %s -q" % unique_label))
     if rc == 0:
-        _unconfigure_ha(args.primary, args.label, args.serial)
+        # HYD-406
+        if stdout.find("ORPHANED") == -1:
+            _unconfigure_ha(args.primary, args.label, args.uuid, args.serial)
 
     if args.primary:
         # now configure pacemaker for this target
@@ -158,7 +160,7 @@ def configure_ha(args):
     <nvpair id=\"%s-instance_attributes-target\" name=\"target\" value=\"%s\"/>\
   </instance_attributes>\
 </primitive>" % (unique_label, unique_label, unique_label, unique_label, unique_label,
-            unique_label, unique_label, unique_label, unique_label, args.label))
+            unique_label, unique_label, unique_label, unique_label, args.uuid))
         os.close(tmp_f)
 
         rc, stdout, stderr = cibadmin("-o resources -C -x %s" % tmp_name)
@@ -183,17 +185,18 @@ def configure_ha(args):
         else:
             raise e
 
-    store_write_target_info(args.label, {"bdev": args.device, "mntpt": args.mountpoint})
+    store_write_target_info(args.uuid, {"bdev": args.device, "mntpt": args.mountpoint})
 
 def list_ha_targets(args):
     targets = []
-    for line in shell.try_run("crm_resource --list", shell=True).split("\n"):
+    for line in shell.try_run(['crm_resource', '--list']).split("\n"):
         match = re.match(r"^\s*([^\s]+).+hydra:Target", line)
         if match:
             targets.append(match.groups()[0])
 
     return targets
 
+# these are called by the Target RA from corosync
 def mount_target(args):
     info = store_get_target_info(args.label)
     shell.try_run(['mount', '-t', 'lustre', info['bdev'], info['mntpt']])
@@ -205,22 +208,22 @@ def unmount_target(args):
 def start_target(args):
     from time import sleep
     unique_label = "%s_%s" % (args.label, args.serial)
-    shell.try_run("crm_resource -r %s -p target-role -m -v Started)" % unique_label)
+    shell.try_run(['crm_resource', '-r', unique_label, '-p', 'target-role',
+                   '-m', '-v', 'Started'])
 
     # now wait for it to start
     # FIXME: this may break on non-english systems or new versions of pacemaker
     timeout = 100
     n = 0
     while n < timeout:
-        stdout = shell.try_run("crm resource status %s 2>&1" % unique_label,
-                               shell=True)
+        stdout = shell.try_run("crm resource status %s 2>&1" % unique_label, shell=True)
         if stdout.startswith("resource %s is running on:" % unique_label):
             break
         sleep(1)
         n += 1
 
     # and make sure it didn't start but (the RA) fail(ed)
-    stdout = shell.try_run("crm status", shell=True)
+    stdout = shell.try_run(['crm', 'status'])
 
     failed = True
     for line in stdout.split("\n"):
@@ -230,7 +233,8 @@ def start_target(args):
 
     if failed:
         # try to leave things in a sane state for a failed mount
-        shell.try_run("crm_resource -r %s -p target-role -m -v Stopped)" % unique_label)
+        shell.try_run(['crm_resource', '-r', unique_label, '-p',
+                       'target-role', '-m', '-v', 'Stopped'])
         raise RuntimeError("failed to start target %s" % unique_label)
     else:
         location = get_resource_location(unique_label)
@@ -244,14 +248,16 @@ def stop_target(args):
 def _stop_target(label, serial):
     unique_label = "%s_%s" % (label, serial)
     from time import sleep
-    shell.try_run("crm_resource -r %s -p target-role -m -v Stopped)" % unique_label)
+    shell.try_run(['crm_resource', '-r', unique_label, '-p', 'target-role',
+                  '-m', '-v', 'Stopped'])
 
     # now wait for it
     # FIXME: this may break on non-english systems or new versions of pacemaker
     timeout = 100
     n = 0
     while n < timeout:
-        stdout = shell.try_run("crm resource status %s 2>&1" % unique_label, shell=True)
+        stdout = shell.try_run("crm resource status %s 2>&1" % unique_label,
+                               shell=True)
         if stdout.find("is NOT running") > -1:
             break
         sleep(1)
@@ -270,8 +276,10 @@ def unmigrate_target(args):
     from time import sleep
 
     # just remove the migration constraint
-    shell.try_run("crm configure delete %s-migrated)" % args.label, shell = True)
+    shell.try_run(['crm', 'configure', 'delete', '%s-migrated' % args.label])
     sleep(1)
     
-    shell.try_run("crm_resource -r %s -p target-role -m -v Stopped)" % args.label, shell = True)
-    shell.try_run("crm_resource -r %s -p target-role -m -v Started)" % args.label, shell = True)
+    shell.try_run(['crm_resource', '-r', args.label, '-p', 'target-role',
+                   '-m', '-v', 'Stopped'])
+    shell.try_run(['crm_resource', '-r', args.label, '-p', 'target-role',
+                   '-m', '-v', 'Started'])
