@@ -610,9 +610,23 @@ td.br{
     font-size: 12px;
     font-weight: bold;
 }
-.fs{
+
+table.fs {
 	font-size:12px;
+    border-collapse: collapse;
+    width: 100%;
 }
+
+table.fs td {
+	font-size:12px;
+    padding: 2px;
+    border: 1px solid #ddd;
+}
+
+table.fs th:first-child {
+    text-align: right;
+}
+
 .fw{
 	font-weight:bold;
 }

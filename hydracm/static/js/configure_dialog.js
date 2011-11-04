@@ -32,7 +32,7 @@ $(document).ready(function()
     buttons: 
     {
       "Ok": function() {
-       var fsname = $('#txtfsnameid').val();       
+       var fsname = $('#fs').val();       
        var ost_lun_ids = fvc_get_value($('#new_ost_chooser'));
 
         /* FIXME: hack: using fsname instead of an ID because the edit_fs page loading

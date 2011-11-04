@@ -103,10 +103,12 @@ class GetFileSystem(AnonymousRequestHandler):
                          'mds_hostname':mds_hostname,
                          'mdsstatus':mds_status,
                          # FIXME: the API should not be formatting these, leave it to the presentation layer
-                         'kbytesused':sizeof_fmt((fskbytestotal * 1024)),
-                         'kbytesfree':sizeof_fmt((fskbytesfree *1024)),
-                         'filesfree':fsfilesfree,
-                         'filestotal':fsfilestotal
+                         'bytes_total':sizeof_fmt((fskbytestotal * 1024)),
+                         'bytes_free':sizeof_fmt((fskbytesfree * 1024)),
+                         'bytes_used':sizeof_fmt(((fskbytestotal - fskbytesfree) * 1024)),
+                         'inodes_free':fsfilesfree,
+                         'inodes_total':fsfilestotal,
+                         'inodes_used':(fsfilestotal - fsfilesfree)
         })
         return fs_info  
 

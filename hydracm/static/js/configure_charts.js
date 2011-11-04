@@ -6,28 +6,24 @@ function LoadFSGraph_EditFS(fs_id)
   var chartConfig_Pie_DB = 
   {
     chart:{
-    renderTo: '',
-    marginLeft: '50',
-    width: '180',
-    height: '170',
-    backgroundColor: '#f9f9ff',
+      renderTo: '',
+      width: '100',
+      height: '100',
+      backgroundColor: null,
+      plotShadow: false,
+      borderWidth: 0,
+
     },
     colors: [
       '#A6C56D', 
-      '#C76560', 
-      '#A6C56D', 
-      '#C76560', 
-      '#6087B9', 
-      '#DB843D', 
-      '#92A8CD', 
-      '#A47D7C', 
-      '#B5CA92'
+      '#C76560'
        ],
-    title:{ text: '', style: { fontSize: '12px' }, },
     zoomType: 'xy',
+    title: {},
     xAxis:{ categories: [], text: '' },
     yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
     credits:{ enabled:false },
+    legend: {enabled: false},
     tooltip:
     {
       formatter: function() 
@@ -37,7 +33,7 @@ function LoadFSGraph_EditFS(fs_id)
      },
      plotOptions:
      {
-       pie:{allowPointSelect: true,cursor: 'pointer',showInLegend: true,center:['40%','60%'],size: '100%',dataLabels:{enabled: false,color: '#000000',connectorColor: '#000000'}}
+       pie:{allowPointSelect: true,cursor: 'pointer',showInLegend: true, dataLabels: {enabled: false}}
      },
      series: []
   };
@@ -45,8 +41,8 @@ function LoadFSGraph_EditFS(fs_id)
   var free=0,used=0;
   var freeData = [],usedData = [];
   obj_ost_pie_space = JSON.parse(JSON.stringify(chartConfig_Pie_DB));
-  obj_ost_pie_space.title.text= fs_id + " Space Usage";
-  obj_ost_pie_space.chart.renderTo = "editfs_container2";
+  obj_ost_pie_space.title.text = null;
+  obj_ost_pie_space.chart.renderTo = "editfs_space_usage";
   $.post(fs_Pie_Space_Data_Api_Url,
     {targetkind: 'OST', datafunction: 'Average', fetchmetrics: spaceUsageFetchMatric, 
      starttime: "", filesystem_id: fs_id, endtime: ""})
@@ -78,7 +74,7 @@ function LoadFSGraph_EditFS(fs_id)
     {
       obj_ost_pie_space.series = [{
       type: 'pie',
-      name: 'Browser share',
+      name: '',
       data: [
          ['Free',    free],
          ['Used',    used]
@@ -90,8 +86,8 @@ function LoadFSGraph_EditFS(fs_id)
     var free=0,used=0;
     var freeFilesData = [],totalFilesData = [];
     obj_ost_pie_inode = JSON.parse(JSON.stringify(chartConfig_Pie_DB));
-    obj_ost_pie_inode.title.text= fs_id + " - Files vs Free Files";
-    obj_ost_pie_inode.chart.renderTo = "editfs_container3";  
+    obj_ost_pie_inode.title.text = null;
+    obj_ost_pie_inode.chart.renderTo = "editfs_inode_usage";  
     $.post(fs_Pie_Space_Data_Api_Url,
       {targetkind: 'MDT', datafunction: 'Average', fetchmetrics: spaceUsageFetchMatric, 
        starttime: "", filesystem_id: fs_id, endtime: ""})
@@ -123,7 +119,7 @@ function LoadFSGraph_EditFS(fs_id)
    {
       obj_ost_pie_inode.series = [{
       type: 'pie',
-      name: 'Browser share',
+      name: '',
       data: [
          ['Free',    free],
          ['Used',    used]

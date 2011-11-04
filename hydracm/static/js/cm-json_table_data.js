@@ -433,7 +433,7 @@ function LoadServerConf_ServerConfig()
 function LoadFSData_EditFS()
 {
   var fsname = $('#fs').val();
-  $('#txtfsnameid').val(fsname);
+  $('#fs_name').html(fsname);
   var fs_id = $('#fs_id').val();
   if(fsname!="none")
   {
@@ -445,12 +445,15 @@ function LoadFSData_EditFS()
         var lnet_status_mesg;
         $.each(response, function(resKey, resValue)
         {
-          $('#total_capacity').html(resValue.kbytesused);
-          $('#total_free').html(resValue.kbytesfree);
-          $('#mdt_file_used').html(resValue.filestotal);
-          $('#mdt_file_free').html(resValue.filesfree);
-          $('#total_oss').html(resValue.noofoss);
-          $('#total_ost').html(resValue.noofost);
+          $('#bytes_used').html(resValue.bytes_used);
+          $('#bytes_total').html(resValue.bytes_total);
+          $('#inodes_used').html(resValue.inodes_used);
+          $('#inodes_total').html(resValue.inodes_total);
+          $('#oss_count').html(resValue.noofoss);
+          $('#ost_count').html(resValue.noofost);
+          $('#mgs_name').html(resValue.mgs_hostname);
+          $('#mds_name').html(resValue.mds_hostname);
+          $('#fs_status').html(resValue.status);
         });
       }
     })

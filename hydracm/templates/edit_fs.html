@@ -7,6 +7,7 @@
     var target_table_elements = ['#mgt_configuration_view', '#ost', '#mdt'];
     $.each(target_table_elements, function(i, selector) {
       $(selector).dataTable( {
+        bInfo: false,
         "bProcessing": true,
         "bJQueryUI": true,
         "bFilter": false,
@@ -54,137 +55,96 @@
 <input type="hidden" id="fs" value="{{fs_name}}"/>
 <input type="hidden" id="fs_id" value="{{fs_id}}"/>
 
-<div style="font-weight:bold;">
-  <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px; padding-top:15px;">
+<h2 class='section_header' id='edit_fs_title'>Filesystem <span id='fs_name'/></h2>
+
+<div style='float:left;'>
+  <table class='fs'>
     <tr>
-      <td width="30%" height="138" align="left" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
-          <tr>
-            <td width="25%" height="56" align="left" valign="top" class="KeyTable" style="font-size:12px;">FS name :</td>
-            <td width="35%" align="left" valign="top">
-                <label>
-                <input type="text" name="txtfsname" id="txtfsnameid" style="border: 0px;" readonly="readonly" />
-                </label>
-              </td>
-            <td width="40%" align="left" valign="top"><span id="launch_instance_btn"><span class="first-child">
-              <button class='add' type="button" id="advance_opts">Options</button>
-              </span></span></td>
-          </tr>
-        </table></td>
-      <td width="36%" align="left" valign="top"><fieldset>
-        <legend class="legendClass">
-        </legend>
-        <table width="100%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs" id="fs_summary_tbl">
-          <tr class="greybgcol">
-            <td width="25%" align="right" class="spaceright"><strong>Files Total:</strong></td>
-            <td class="spaceleft" width="17%" align="left"><div id="mdt_file_used"></div></td>
-            <td width="32%" align="right" class="spaceright"><strong>Total Capacity:</strong></td>
-            <td class="spaceleft" width="26%" align="left"><div id="total_capacity"></div></td>
-          </tr>
-          <tr class="greybgcol">
-            <td class="spaceright" align="right"><strong>Files Free:</strong></td>
-            <td class="spaceleft" align="left"><div id="mdt_file_free"></div></td>
-            <td class="spaceright" align="right"><strong>Total Free:</strong></td>
-            <td class="spaceleft" align="left"><div id="total_free"></div></td>
-          </tr>
-          <tr class="greybgcol">
-            <td class="spaceright" align="right"></td>
-            <td class="spaceleft" align="left"></td>
-            <td class="spaceright" align="right"><div id="total_capacity"><strong>Total no OSS:</strong></div></td>
-            <td class="spaceleft" align="left"><div id="total_oss"></div></td>
-          </tr>
-          <tr class="greybgcol">
-            <td class="spaceright" align="right">&nbsp;</td>
-            <td class="spaceleft" align="left">&nbsp;</td>
-            <td align="right" class="spaceright"><strong>Total no OST:</strong></td>
-            <td class="spaceleft" align="left"><div id="total_ost"></div></td>
-          </tr>
-        </table>
-        </fieldset></td>
-      <td width="19%" align="center" valign="top"><div id="editfs_container2" class="round-table-editfs"></div></td>
-      <td width="15%" align="left" valign="top"><div id="editfs_container3" class="round-table-editfs"></div></td>
+      <th>Status:</th><td id='fs_status'></td>
     </tr>
     <tr>
-      <td height="104" colspan="4" align="left" valign="top"><fieldset>
-        <legend class="legendClass">MGT Configuration</legend>
-        <table cellpadding="0" cellspacing="0" border="0" class="display" id="mgt_configuration_view" width="100%">
-          <thead>
-            <tr>
-              <th width="12%">Name</th>
-              <th width="15%">Volume</th>
-              <th width="7%">Primary server</th>
-              <th width="7%">Failover server</th>
-              <th width="12%">Started on</th>
-              <th width='10%'>Action</th>
-              <th width='1%'></th>
-            </tr>
-          </thead>
-          <tbody id="example_content">
-          </tbody>
-        </table>
-        <div class="spacer"></div>
-            </tr>
-          </thead>
-          <tbody id="example_content">
-          </tbody>
-        </table>
-        <div class="spacer"></div>
-        </fieldset></td>
+      <th>MGS:</th><td id='mgs_name'></td>
     </tr>
     <tr>
-      <td height="109" colspan="4" align="left" valign="top"><fieldset>
-        <legend class="legendClass">MDT Configuration</legend>
-        <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
-          <thead>
-            <tr>
-              <th width="12%">Name</th>
-              <th width="15%">Volume</th>
-              <th width="7%">Primary server</th>
-              <th width="7%">Failover server</th>
-              <th width="12%">Started on</th>
-              <th width='10%'>Action</th>
-              <th width='1%'></th>
-            </tr>
-          </thead>
-          <tbody id="mdt_content">
-          </tbody>
-        </table>
-        <div class="spacer"></div>
-        </fieldset></td>
+      <th>MDS:</th><td id='mds_name'></td>
     </tr>
     <tr>
-      <td height="54" colspan="4" align="left" valign="top"><fieldset>
-        <legend class="legendClass">OST Configuration</legend>
-        <div class="buttonspacer">
-          <span class="first-child">
-            <button class='add' type="button" id="btnNewOST">Create new OST</button>
-          </span>
-        </div>
-        <table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
-          <thead>
-            <tr>
-              <th width="12%">Name</th>
-              <th width="15%">Volume</th>
-              <th width="7%">Primary server</th>
-              <th width="7%">Failover server</th>
-              <th width="12%">Started on</th>
-              <th width='10%'>Action</th>
-              <th width='1%'></th>
-            </tr>
-          </thead>
-          <tbody id="ost_content">
-          </tbody>
-        </table>
-        <table width="100%" border="0" cellspacing="0" cellpadding="0">
-          <tr>
-            <td align="right" style="padding-top:5px;">
-             <span class="first-child">
-               <button class='close' type="button" id="cancel_editfs">Cancel</button>
-             </span>
-            </td>
-          </tr>
-        </table>
-        <div class="spacer"></div>
-        </fieldset></td>
+      <th>No. OST:</th><td id='ost_count'></td>
+    </tr>
+    <tr>
+      <th>No. OSS:</th><td id='oss_count'></td>
     </tr>
   </table>
+  <p>
+    <button class='advanced' type="button" id="advance_opts">Advanced...</button>
+  </p>
+</div>
+
+<div style='float:left; margin-left: 12px;'>
+  <div id="editfs_space_usage"></div>
+  <p align=center><span id="bytes_used"/>/<span id="bytes_total"/></p>
+</div>
+<div style='float:left; margin-left: 12px;'>
+  <div id="editfs_inode_usage"></div>
+  <p align=center><span id="inodes_used"/>/<span id="inodes_total"/>&nbsp;inodes</p>
+</div>
+
+<div style='clear:both;'></div>
+
+<h2 class='section_header'>Management target</h2>
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="mgt_configuration_view" width="100%">
+  <thead>
+    <tr>
+      <th width="12%">Name</th>
+      <th width="15%">Volume</th>
+      <th width="7%">Primary&nbsp;server</th>
+      <th width="7%">Failover&nbsp;server</th>
+      <th width="12%">Started&nbsp;on</th>
+      <th width='10%'></th>
+      <th width='1%'></th>
+    </tr>
+  </thead>
+  <tbody id="example_content">
+  </tbody>
+</table>
+
+<h2 class='section_header'>Metadata target</h2>
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
+  <thead>
+    <tr>
+      <th width="12%">Name</th>
+      <th width="15%">Volume</th>
+      <th width="7%">Primary&nbsp;server</th>
+      <th width="7%">Failover&nbsp;server</th>
+      <th width="12%">Started&nbsp;on</th>
+      <th width='10%'></th>
+      <th width='1%'></th>
+    </tr>
+  </thead>
+  <tbody id="mdt_content">
+  </tbody>
+</table>
+
+<h2 class="section_header">Object store targets</h2>
+<p><button class='add' type="button" id="btnNewOST">Create new OST</button></p>
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
+  <thead>
+    <tr>
+      <th width="12%">Name</th>
+      <th width="15%">Volume</th>
+      <th width="7%">Primary&nbsp;server</th>
+      <th width="7%">Failover&nbsp;server</th>
+      <th width="12%">Started&nbsp;on</th>
+      <th width='10%'></th>
+      <th width='1%'></th>
+    </tr>
+  </thead>
+  <tbody id="ost_content">
+  </tbody>
+</table>
+
+<p align='right'>
+  <button class='close' type="button" id="cancel_editfs">Return</button>
+</p>
+
 </div>
