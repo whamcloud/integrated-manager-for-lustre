@@ -153,10 +153,10 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, callback)
     });
 } 
 
-function CreateOSTs(fsname, ost_lun_ids)
+function CreateOSTs(fs_id, ost_lun_ids)
 {
   $.ajax({type: 'POST', url: "/api/create_osts/", dataType: 'json', data: JSON.stringify({
-      "filesystem_id": fsname,
+      "filesystem_id": fs_id,
       "ost_lun_ids": ost_lun_ids
     }), contentType:"application/json; charset=utf-8"})
     .success(function(data, textStatus, jqXHR) 
@@ -165,7 +165,7 @@ function CreateOSTs(fsname, ost_lun_ids)
       {
         var response = data.response;    
         //Reload table with latest ost's.
-        LoadTargets_EditFS($("#fs_id").val());
+        LoadTargets_EditFS(fs_id);
       }
       else
       {

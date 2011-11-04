@@ -32,12 +32,12 @@ $(document).ready(function()
     buttons: 
     {
       "Ok": function() {
-       var fsname = $('#fs').val();       
+       var fs_id = $('#fs_id').val();       
        var ost_lun_ids = fvc_get_value($('#new_ost_chooser'));
 
         /* FIXME: hack: using fsname instead of an ID because the edit_fs page loading
          * code doesn't keep the ID anywhere */
-        CreateOSTs(fsname, ost_lun_ids);
+        CreateOSTs(fs_id, ost_lun_ids);
 
         $(this).dialog("close");
       },

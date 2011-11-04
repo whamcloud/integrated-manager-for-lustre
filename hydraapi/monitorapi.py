@@ -125,13 +125,18 @@ class GetFSVolumeDetails(AnonymousRequestHandler):
     @extract_request_args('filesystem_id')
     def run(self,request,filesystem_id):
         from configure.models import ManagedTarget, ManagedFilesystem
+        from configure.lib.state_manager import StateManager
         if filesystem_id != None:
             filesystem = ManagedFilesystem.objects.get(pk = filesystem_id)
             targets = filesystem.get_targets()
         else:
             targets = ManagedTarget.objects.all()
-
-        return [t.downcast().to_dict() for t in targets]
+        targets_info = []
+        for t in targets:
+            _target = t.to_dict()
+            _target['available_transitions']  = StateManager.available_transitions(t)
+            targets_info.append(_target)  
+        return targets_info
 
 class GetTargets(AnonymousRequestHandler):
     @extract_request_args('filesystem', 'kinds')
@@ -234,13 +239,18 @@ class GetFSTargets(AnonymousRequestHandler):
 class GetServers (AnonymousRequestHandler):
     @extract_request_args('filesystem_id')
     def run(self,request,filesystem_id):
+        from configure.lib.state_manager import StateManager
         if filesystem_id:
             fs = ManagedFilesystem.objects.get(id=filesystem_id)
             hosts = fs.get_servers()
         else:
             hosts = ManagedHost.objects.all()
-
-        return [h.to_dict() for h in hosts]
+        hosts_info = []
+        for h in hosts:
+            _host = h.to_dict()
+            _host['available_transitions'] = StateManager.available_transitions(h)
+            hosts_info.append(_host)
+        return hosts_info
 
 class GetEventsByFilter(AnonymousRequestHandler):
     @extract_request_args('hostname','severity','eventtype','scrollsize','scrollid')
