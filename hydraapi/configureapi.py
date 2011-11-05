@@ -558,3 +558,14 @@ class Notifications(AnonymousRequestHandler):
                 'alerts': [alert.to_dict() for alert in alerts]
                 }
 
+class TransitionConsequences(AnonymousRequestHandler):        
+    @extract_request_args('id', 'content_type_id', 'new_state')
+    def run(self, request, id, content_type_id, new_state):
+        from django.contrib.contenttypes.models import ContentType
+        from configure.lib.state_manager import StateManager
+        ct = ContentType.objects.get_for_id(content_type_id)
+        klass = ct.model_class()
+        instance = klass.objects.get(pk = id)
+        return StateManager().get_transition_consequences(instance, new_state)
+
+

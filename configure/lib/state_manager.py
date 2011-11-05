@@ -41,8 +41,7 @@ class StateManager(object):
            locked by a Job"""
         # If the object is subject to an incomplete StateChangeJob
         # then don't offer any other transitions.
-        from configure.models import Job, StateLock
-        from configure.lib.job import StateChangeJob
+        from configure.models import StateLock
         from django.db.models import Q
 
         # We don't advertise transitions for anything which is currently
@@ -122,6 +121,55 @@ class StateManager(object):
                 instance.id,
                 new_state)
 
+    def get_transition_consequences(self, instance, new_state):
+        """For use in the UI, for warning the user when an
+           action is going to have some consequences which
+           affect an object other than the one they are operating
+           on directly.  Because this is UI rather than business
+           logic, we take some shortcuts here:
+            * Don't calculate expected_states, i.e. ignore running
+              jobs and generate output based on the actual committed
+              states of objects
+            * Don't bother sorting for execution order - output an
+              unordered list.
+        """
+        from configure.models import StatefulObject
+        assert(isinstance(instance, StatefulObject))
+
+        self.expected_states = {}
+        self.deps = set()
+        self.edges = set()
+        self.emit_transition_deps(Transition(
+            instance,
+            self.get_expected_state(instance),
+            new_state))
+
+        job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
+        for d in self.deps:
+            job_log.debug("  dep %s" % (d,))
+        for e in self.edges:
+            job_log.debug("  edge [%s]->[%s]" % (e))
+
+        depended_jobs = []
+        for d in self.deps:
+            job = d.to_job()
+            from configure.lib.job import StateChangeJob
+            if isinstance(job, StateChangeJob):
+                from django.contrib.contenttypes.models import ContentType
+                so = getattr(job, job.stateful_object)
+                stateful_object_id = so.pk
+                stateful_object_content_type_id = ContentType.objects.get_for_model(so).pk
+            else:
+                stateful_object_id = None
+                stateful_object_content_type_id = None
+            depended_jobs.append({
+                'class': job.__class__.__name__,
+                'description': job.description(),
+                'stateful_object_id': stateful_object_id,
+                'stateful_object_content_type_id': stateful_object_content_type_id
+            })
+        return depended_jobs
+
     def _set_state(self, instance, new_state):
         """Return a Job or None if the object is already in new_state"""
         from configure.models import StatefulObject
@@ -143,7 +191,7 @@ class StateManager(object):
 
         self.deps = set()
         self.edges = set()
-        root_transition = self.emit_transition_deps(Transition(
+        self.emit_transition_deps(Transition(
             instance,
             self.get_expected_state(instance),
             new_state))

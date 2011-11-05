@@ -193,14 +193,15 @@ class StateChangeJob(object):
     # Terse human readable verb, e.g. "Change this" (for buttons)
     state_verb = None
 
-    def get_stateful_object(self):
-        from configure.models import StatefulObject
+    def get_stateful_object_id(self):
         stateful_object = getattr(self, self.stateful_object)
+        return stateful_object.pk
 
+    def get_stateful_object(self):
+        stateful_object = getattr(self, self.stateful_object)
         # Get a fresh instance every time, we don't want one hanging around in the job
         # run procedure because steps might be modifying it
         stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
-        assert(isinstance(stateful_object, StatefulObject))
         return stateful_object
 
 class MkfsStep(Step):
