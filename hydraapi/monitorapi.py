@@ -346,13 +346,3 @@ class GetLogs(AnonymousRequestHandler):
         ]
 
 
-def gettimeslice(sample_size=10,interval=5):
-    from datetime import timedelta,datetime
-    current_time = datetime.now()
-    data_slice = []
-    for i in xrange(sample_size):
-        current_time  = current_time - timedelta(seconds=interval)
-        strtime  = current_time.isoformat().split('T')[1]
-        data_slice.append(strtime.split('.')[0])
-    return data_slice
-
