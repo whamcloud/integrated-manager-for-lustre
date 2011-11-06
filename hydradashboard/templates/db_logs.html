@@ -26,21 +26,16 @@
 <script language="javascript" type="text/javascript">
 $(document).ready(function() 
 {
-  var fromDate = new Date();
-  fromDate.setHours(fromDate.getHours()-1);  // Current hour - 1
   //total no of records return by db
   var maxRecords = 0;
-  var toDate = new Date();
   //current  page no
   var pageCnt = 0;
   
   //total count of pages
   var totalPages=0;
-  
+
   $('#datetime_from').datetimepicker();
-  $('#datetime_from').datetimepicker('setDate', (fromDate) );
   $('#datetime_to').datetimepicker();
-  $('#datetime_to').datetimepicker('setDate', (new Date()) );
 
   $('#datetime_from').datetimepicker({
     maxDate: new Date(),
