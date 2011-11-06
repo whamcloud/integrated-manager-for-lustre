@@ -54,7 +54,7 @@ target_dialog_open = function(target_id) {
       properties_markup += keyval_row("Primary server", target_info.primary_server_name);
       properties_markup += keyval_row("Failover server", target_info.failover_server_name);
       properties_markup += keyval_row("Started on", target_info.active_host_name);
-      properties_markup += keyval_row("Alerts", "<span class='alert_indicator alert_indicator_object_id_" + target_info.id + "_" + target_info.content_type_id + "'></span>");
+      properties_markup += keyval_row("Alerts", alert_indicator_markup(target_info.id, target_info.content_type_id));
       properties_markup += "</table>";
       $('#target_dialog_properties').html(properties_markup);
     }

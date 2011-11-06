@@ -16,6 +16,26 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
+
+<script src="{{STATIC_URL}}js/jquery.hoverIntent.js" type="text/javascript"></script>
+<script src="{{STATIC_URL}}js/jquery.bgiframe.min.js" type="text/javascript"></script>
+<script src="{{STATIC_URL}}js/jquery.cluetip.js" type="text/javascript"></script>
+<link rel="stylesheet" href="{{STATIC_URL}}css/jquery.cluetip/jquery.cluetip.css" type="text/css" />
+
+<!-- notifications.js and its dependencies are included early because it contains
+     markup generation functions for things like alert indicators and job spinners
+     which are used by subsequent .js files -->
+<script type="text/javascript">
+  /* This is used for live update functions that want to get information from
+   * the backend since the page was loaded */
+  page_load_time = '{{page_load_time}}';
+</script>
+<script type='text/javascript' src="{{STATIC_URL}}js/jquery.jgrowl_minimized.js"></script>
+<link rel="stylesheet" href="{{STATIC_URL}}css/jquery.jgrowl.css" type='text/css' />
+<link rel="stylesheet" href="{{STATIC_URL}}css/notifications.css" type='text/css' />
+<script type="text/javascript" src="{{STATIC_URL}}js/notifications.js" ></script>
+
+
 <script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
@@ -40,15 +60,7 @@
 <link rel="stylesheet" href="{{STATIC_URL}}css/target_dialog.css" type='text/css' />
 
 
-<script type="text/javascript">
-  /* This is used for live update functions that want to get information from
-   * the backend since the page was loaded */
-  page_load_time = '{{page_load_time}}';
-</script>
-<script type='text/javascript' src="{{STATIC_URL}}js/jquery.jgrowl_minimized.js"></script>
-<link rel="stylesheet" href="{{STATIC_URL}}css/jquery.jgrowl.css" type='text/css' />
-<link rel="stylesheet" href="{{STATIC_URL}}css/notifications.css" type='text/css' />
-<script type="text/javascript" src="{{STATIC_URL}}js/notifications.js" ></script>
+
 
 <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js" ></script>
 <script>
@@ -355,10 +367,12 @@
   <div id='target_dialog_tabs'>
     <ul>
       <li><a href='#target_dialog_properties'>Properties</a></li>
-      <li><a href='#target_dialog_devices'>Devices</a></li>
+      <li><a href='#target_dialog_devices_tab'>Devices</a></li>
     </ul>
     <div id='target_dialog_properties'></div>
-    <div id='target_dialog_devices'></div>
+    <div id='target_dialog_devices_tab'>
+      <div id='target_dialog_devices' class='canvas resource_graph_canvas'></div>
+    </div>
   </div>
 </div>
 <!-- End markup for target_dialog.js -->

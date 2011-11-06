@@ -21,6 +21,19 @@ var active_alerts = {}
 // Map of [id,ct] to map of alert IDs affecting this object
 var alert_effects = {}
 
+alert_indicator_markup = function(id, content_type_id)
+{
+  return "<span class='alert_indicator alert_indicator_object_id_" + id + "_" + content_type_id + "'></span>"
+}
+
+notification_icon_markup = function(id, ct) {
+  return "<span class='notification_object_icon notification_object_id_" + id + "_" + ct + "'/>"
+}
+
+notification_icons_markup = function(id, ct) {
+  return "<span class='notification_icons'>" + alert_indicator_markup(id,ct) + notification_icon_markup(id,ct) + "</span>"
+}
+
 function for_class_starting(element, prefix, callback) {
   $.each(element.attr('class').split(" "), function(i, class_name) {
     if (class_name.indexOf(prefix) == 0) {
@@ -41,11 +54,24 @@ update_alert_indicator = function(element)
 
     var effects = alert_effects[key]
     if (effects && attr_count(effects)) {
-      element.html('Alert!')
+      /*element.html('Alert!')*/
       element.addClass('alert_indicator_active');
+      element.removeClass('alert_indicator_inactive');
+      
+      element.title
+      var tooltip_markup = "Alerts"
+      $.each(effects, function(alert_id, x) {
+        var alert = known_alerts[alert_id]
+        tooltip_markup += "| * " + alert.message;
+      });
+      element.attr('title', tooltip_markup);
+      element.cluetip({splitTitle: '|'});
     } else {
-      element.html('No alerts')
+      /*element.html('No alerts')*/
       element.addClass('alert_indicator_inactive');
+      element.removeClass('alert_indicator_active');
+      element.attr('title', 'No alerts');
+      element.cluetip({splitTitle: '|'});
     }
   });
 }
@@ -91,8 +117,10 @@ activate_alert = function(alert_info) {
   if (!alert_effects[effectee]) {
     alert_effects[effectee] = {}
   }
-
   alert_effects[effectee][alert_info.id] = 1
+  $('.alert_indicator_object_id_' + effectee[0] + '_' + effectee[1]).each(function() {
+    update_alert_indicator($(this));
+  });
 }
 
 deactivate_alert = function(alert_info) {
@@ -107,11 +135,10 @@ deactivate_alert = function(alert_info) {
   /* TODO: get a list of effectees */
   effectee = [alert_info.alert_item_id, alert_info.alert_item_content_type_id]
   delete alert_effects[effectee][alert_info.id]
+  $('.alert_indicator_object_id_' + effectee[0] + '_' + effectee[1]).each(function() {
+    update_alert_indicator($(this));
+  });
 }
-
-
-
-
 
 start_running = function(job_info) {
   if (running_jobs[job_info.id]) {
@@ -354,6 +381,7 @@ update_objects = function(data, silent) {
       if (alert_info.active == false && existing.active == true) {
         notify = true
         jgrowl_args = {header: "Alert cleared"}
+        deactivate_alert(alert_info);
       }
     }
     if (notify && !silent) {

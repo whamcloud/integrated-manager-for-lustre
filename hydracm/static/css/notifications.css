@@ -38,13 +38,17 @@ div.jGrowl div.alert_raised div.jGrowl-message {
 
 span.alert_indicator {
   display: inline-block;
-  width: 64px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
+  /*
   padding-left: 24px;
-  padding-top: 2px;
-  font-size: 12px;
+  padding-top: 3px;
+  */
+  vertical-align: center;
+  font-size: 8pt;
   text-align: left;
   border-radius: 3px;
+  line-height: normal;
 
   background-repeat: no-repeat;
   background-position: 2px;
@@ -52,39 +56,41 @@ span.alert_indicator {
 
 
 span.alert_indicator_active {
+  /*
   color: #664f00;
-  border: 1px solid #664f00;
   background-color: #FFBF00;
+  */
   font-weight: bold;
 
   background-image: url(../images/dialog-warning.png);
 }
 
 span.alert_indicator_inactive {
+  /*
   color: #444;
   background-color: #efe;
-  border: 1px solid #ded;
+  */
+  font-weight: normal;
 
   background-image: url(../images/icon_tick.png);
 }
 
 span.notification_object_icon {
+  display: inline-block;
+  background-repeat: no-repeat;
+  background-position: 4px 4px;
+  width: 24px;
+  height: 24px;
 }
 
 .busy_icon {
-  display: inline-block;
   background-image: url(../images/ajax-loader.gif);
-  background-repeat: no-repeat;
-  background-position: 4px 4px;
-  width: 24px;
-  height: 24px;
 }
 
 .locked_icon {
-  display: inline-block;
   background-image: url(../images/lock.png);
-  background-repeat: no-repeat;
-  background-position: 4px 4px;
-  width: 24px;
-  height: 24px;
+}
+
+span.notification_icons {
+  white-space: nowrap;
 }

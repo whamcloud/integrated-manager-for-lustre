@@ -27,9 +27,6 @@ target_dialog_link = function(target_id, target_name) {
   return "<a href='#' class='target target_id_" + target_id + "'>" + target_name + "</a>"
 }
 
-function notification_icon_markup(id, ct) {
-  return "<span class='notification_object_icon notification_object_id_" + id + "_" + ct + "'/>"
-}
 
 /******************************************************************
 * Function name - LoadFSList_FSList()
@@ -112,7 +109,7 @@ function LoadTargets_EditFS(fs_id)
                 resValue.failover_server_name,
                 resValue.active_host_name,
                 action,
-                notification_icon_markup(resValue.id, resValue.content_type_id)
+                notification_icons_markup(resValue.id, resValue.content_type_id)
               ]
         if (resValue.kind == "OST") {
           $('#ost').dataTable().fnAddData (row);
@@ -303,7 +300,8 @@ function LoadMGTConfiguration_MGTConf()
                 target_dialog_link(resValue.id, resValue.primary_server_name),
                 resValue.failover_server_name,
                 resValue.active_host_name,
-                action
+                action,
+                notification_icons_markup(resValue.id, resValue.content_type_id)
               ]);
         });
       }
@@ -407,7 +405,7 @@ function LoadServerConf_ServerConfig()
           resValue.status,
           lnet_status,
           lnet_status_mesg,
-          notification_icon_markup(resValue.id, resValue.content_type_id)
+          notification_icons_markup(resValue.id, resValue.content_type_id)
         ]);
       });
       // After updating all table rows, update their .notification_object_icon elements
