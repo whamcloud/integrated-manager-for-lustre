@@ -360,44 +360,41 @@ class GetJobs(AnonymousRequestHandler):
 class GetLogs(AnonymousRequestHandler):
     @extract_request_args('start_time','end_time','lustre','scroll_id','scroll_size')
     def run(self,request,start_time,end_time,lustre,scroll_id,scroll_size):
+        # FIXME: scroll_id is a misleading name, should be scroll_offset or page_id
         import datetime
         from monitor.models import Systemevents
         ui_time_format = "%m/%d/%Y %H:%M "
         host=None 
-        if start_time: 
-            start_date = datetime.datetime.strptime(str(start_time),ui_time_format)
-        else:
-            start_date  = datetime.datetime(1970, 1, 1)
-        if end_time:
-            end_date  = datetime.datetime.strptime(str(end_time),ui_time_format)
-        else:
-            end_date = datetime.datetime.now()  
+
         if scroll_id:
-            offset = int(scroll_id)
+            offset = int(scroll_id) * scroll_size
         else:
             offset = 0
-        if scroll_size:
-            limit = int(scroll_size)
-        else:
-            limit = 0
-        log_data = []
+
+        filter_kwargs = {}
+        if start_time:
+            start_date = datetime.datetime.strptime(str(start_time),ui_time_format)
+            filter_kwargs['devicereportedtime__gte'] = start_date
+        if end_time:
+            end_date = datetime.datetime.strptime(str(end_time),ui_time_format)
+            filter_kwargs['devicereportedtime__lte'] = end_date
         if host:
-            log_data = Systemevents.objects.filter(devicereportedtime__gt = start_date,
-                              devicereportedtime__lte = end_date,
-                              fromhost__startswith =host).order_by('-devicereportedtime')
-            iTotalRecords = log_data.count()
-        else:
-            log_data = Systemevents.objects.filter(devicereportedtime__gt = start_date,
-                             devicereportedtime__lte = end_date).order_by('-devicereportedtime')
-            iTotalRecords = log_data.count()
-        iTotalDisplayRecords = offset * limit
+            filter_kwargs['fromhost_startswith'] = host
         if lustre:
-            log_data = log_data.filter(message__startswith=" Lustre")
-            iTotalRecords = log_data.count()
-        if limit == 0:
-            limit = iTotalRecords
-        rec_end_limit = (offset+1)*limit  
-        log_data = log_data.all()[offset*limit: rec_end_limit if rec_end_limit < iTotalRecords else iTotalRecords] 
+            filter_kwargs['message__startswith'] = " Lustre"
+
+
+        log_data = Systemevents.objects.filter(**filter_kwargs).order_by('-devicereportedtime')
+        # iTotalRecords is the number of records before filtering (where here filtering
+        # means datatables filtering, not the filtering we're doing from our other args)
+        iTotalRecords = log_data.count()
+
+        if scroll_size:
+            log_data = log_data.all()[offset:offset + scroll_size]
+
+        # iTotalDisplayRecords is simply the number of records we will return
+        # in this call (i.e. after all filtering and pagination)
+        iTotalDisplayRecords = log_data.count()
         log_records = [
                        { 
                         'message': nid_finder(log_entry.message),
