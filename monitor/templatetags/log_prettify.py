@@ -50,7 +50,7 @@ def pretty_log_line(log_entry):
         replace = match.group()
         replace = normalize_nid(replace)
         try:
-            address =  Nid.objects.get(nid_string = replace).host.address
+            address =  Nid.objects.get(nid_string = replace).lnet_configuration.host.address
             markup = "<a href='#' title='%s'>%s</a>" % (match.group(), address)
             message = message.replace(match.group(),
                        markup,

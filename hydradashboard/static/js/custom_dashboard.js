@@ -40,7 +40,7 @@ $(document).ready(function()
        break;
      case "#ost":
        window.location.hash =  "ost";
-       loadOSTContent($('#ls_fsId').val(), $('#ls_fsName').val(), $('#ls_ossName').val(), $('#ls_ostId').val(), $('#ls_ostName').val());
+       loadOSTContent($('#ls_fsId').val(), $('#ls_fsName').val(), $('#ls_ossName').val(), $('#ls_ostId').val(), $('#ls_ostName').val(), $('#ls_ostKind').val());
        break;
 
      default:
@@ -335,6 +335,8 @@ $(document).ready(function()
   {
     $('#dashboardDiv').hide();$('#fileSystemDiv').hide();$('#ostInfoDiv').hide();
     $('#ossInfoDiv').slideDown("slow");
+    var ostKindMarkUp = "<option value=''></option>";
+    
     var breadCrumbHtml = "<ul>"+
     "<li><a href='/dashboard'>Home</a></li>"+
     "<li><a href='/dashboard'>All FileSystems</a></li>"+
@@ -342,11 +344,11 @@ $(document).ready(function()
     "<li>"+ossName+"</li>"+
     "<li>"+
     "<select id='ostSelect'>"+
-    "<option value=''>Select OST</option>";
+    "<option value=''>Select Target</option>";
     
     $.ajax({type: 'POST', url: "/api/get_fs_targets/", dataType: 'json', data: JSON.stringify({
       "filesystem_id": fsId,
-      "kinds": ["OST"],
+      "kinds": ["OST","MGT","MDT"],
       "host_id": ossId
     }), contentType:"application/json; charset=utf-8"})
     .success(function(data, textStatus, jqXHR) 
@@ -354,6 +356,9 @@ $(document).ready(function()
       var count = 0;
       $.each(data.response, function(i, target_info) {
         breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>"
+        
+        ostKindMarkUp = ostKindMarkUp + "<option value="+target_info.id+">"+target_info.kind+"</option>";
+        
         count += 1; 
       });
     })
@@ -368,6 +373,8 @@ $(document).ready(function()
       "</ul>";
       $("#breadCrumb2").html(breadCrumbHtml);
       $("#breadCrumb2").jBreadCrumb();
+      
+      $("#ostKind").html(ostKindMarkUp);
     });
 
     resetTimeInterval();
@@ -390,11 +397,14 @@ $(document).ready(function()
   {
     if($(this).val()!="")
     {
-      loadOSTContent($('#ls_fsId').val(), $('#ls_fsName').val(), $('#ls_ossName').val(), $(this).val(), $(this).find('option:selected').text());
+      $("#ostKind").attr("value",$(this).val());
+      var ostKind = $("#ostKind").find('option:selected').text();
+      
+      loadOSTContent($('#ls_fsId').val(), $('#ls_fsName').val(), $('#ls_ossName').val(), $(this).val(), $(this).find('option:selected').text(), ostKind);
     }	
   });
 
-  loadOSTContent = function(fsId, fsName, ossName, ostId, ostName)
+  loadOSTContent = function(fsId, fsName, ossName, ostId, ostName, ostKind)
   {
     $('#dashboardDiv').hide();$('#fileSystemDiv').hide();$('#ossInfoDiv').hide();
     $('#ostInfoDiv').slideDown("slow");
@@ -413,16 +423,16 @@ $(document).ready(function()
 
 		/* HYD-375: ostSelect value is a name instead of an ID */
     load_resource_graph("ost_resource_graph_canvas", ostId);
-
-    ost_Pie_Space_Data(ostId, ostName, "", "", 'Average', 'OST', spaceUsageFetchMatric, 'false');
-    ost_Pie_Inode_Data(ostId, ostName, "", "", 'Average', 'OST', spaceUsageFetchMatric, 'false');
-    ost_Area_ReadWrite_Data(ostId, ostName, startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'false');
+    
+    ost_Pie_Space_Data(ostId, ostName, "", "", 'Average', ostKind, spaceUsageFetchMatric, 'false');
+    ost_Pie_Inode_Data(ostId, ostName, "", "", 'Average', ostKind, spaceUsageFetchMatric, 'false');
+    ost_Area_ReadWrite_Data(ostId, ostName, startTime, endTime, 'Average', ostKind, readWriteFetchMatric, 'false');
 
     loadOSTSummary(fsId);
     
     clearAllIntervals();
 
-    $('#ls_ostId').attr("value",ostId);$('#ls_ostName').attr("value",ostName);
+    $('#ls_ostId').attr("value",ostId);$('#ls_ostName').attr("value",ostName);$('#ls_ostKind').attr("value",ostKind);
     window.location.hash =  "ost";
   }
 /******************************************************************************

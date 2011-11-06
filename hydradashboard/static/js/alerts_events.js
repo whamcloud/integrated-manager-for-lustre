@@ -315,16 +315,13 @@ loadLogContent = function(targetJobDivName, maxCount)
 loadHostList = function(fileSystemName)
 {
   var hostList = '<option>All</option>';
-  $.post("/api/listservers/",{filesystem:fileSystemName})
+  $.post("/api/listservers/",{filesystem_id:fileSystemName})
   .success(function(data, textStatus, jqXHR) {
   if(data.success)
   {
     $.each(data.response, function(resKey, resValue)
     {
-      if(resValue.kind.indexOf('OST') != -1)
-      {
-        hostList  =  hostList + "<option value="+resValue.host_address+">"+resValue.host_address+"</option>";
-      }
+      hostList  =  hostList + "<option value="+resValue.id+">"+resValue.host_address+"</option>";
     });
   }
   })
@@ -372,10 +369,10 @@ loadJobContent = function(targetJobDivName)
   });
 }
 
-function FilterEvents(targetEventDivName,hostname,severity,eventtype,scrollsize,scrollid, maxCount)
+function FilterEvents(targetEventDivName,hostid,severity,eventtype,scrollsize,scrollid, maxCount)
 {
   $("#" + targetEventDivName).dataTable().fnClearTable();
-  $.post("/api/geteventsbyfilter/",{"hostname":hostname, "severity":severity, "eventtype":eventtype,"scrollsize":"","scrollid":""}) 
+  $.post("/api/geteventsbyfilter/",{"host_id":hostid,"severity":""+severity,"eventtype":""+eventtype,"scroll_size":"","scroll_id":""}) 
   .success(function(data, textStatus, jqXHR) {
   if(data.success)
   {

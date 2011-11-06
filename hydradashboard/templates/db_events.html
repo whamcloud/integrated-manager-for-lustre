@@ -20,15 +20,13 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
 <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.highlight-3.js"></script>
 <script language="javascript" type="text/javascript">
 $(document).ready(function() 
 {
   setActiveMenu('events_menu');
-	loadHostList(''); 
-	//LoadAllEvents("all_event_content");
-	var oTable = $('#all_event_content').dataTable( {
-  "sAjaxDataProp": "response",
+  loadHostList(''); 
+  var oTable = $('#all_event_content').dataTable( {
+  "sAjaxDataProp": "response.aaData",
   "bProcessing": true,
   "iDisplayLength":50,
   "bDeferRender": true,
@@ -38,39 +36,39 @@ $(document).ready(function()
     "dataType": 'json', 
     "type": "POST", 
     "url": sSource, 
-    "data": ({"hostname":$('#db_events_hostList').val(), "severity":$('#event_severity').val(), "eventtype":$('#event_type').val(),"scrollsize":"","scrollid":""}),
+    "data": ({"host_id":""+$('#db_events_hostList').val(), "severity":""+$('#event_severity').val(), "eventtype":""+$('#event_type').val(),"scroll_size":"","scroll_id":""}),
     "success": fnCallback,
     })
   },
-	"aoColumns": [
-		{ "sClass": 'txtleft ',"mDataProp":"event_created_at" },
-		{ "sClass": 'txtcenter',"mDataProp":"event_severity" },
-		{ "sClass": 'txtleft',"mDataProp":"event_host" },
-		{ "sClass": 'txtleft',"mDataProp":"event_message" }
-	],
-	  "oLanguage": {
-	      "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
-	  },
-	  "bJQueryUI": true,
-	  } );
-	$("#alertAnchor").click();
+  "aoColumns": [
+    { "sClass": 'txtleft ',"mDataProp":"event_created_at" },
+    { "sClass": 'txtcenter',"mDataProp":"event_severity" },
+    { "sClass": 'txtleft',"mDataProp":"event_host" },
+    { "sClass": 'txtleft',"mDataProp":"event_message" }
+  ],
+    "oLanguage": {
+        "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
+    },
+    "bJQueryUI": true,
+    } );
+  $("#alertAnchor").click();
   
   $('#event_filter_btn').click(function()
   {
-    RefreshTable('#all_event_content','/api/getlatestevents/', $('#db_events_hostList').val(),$('#event_severity').val(),$('#event_type').val());
+    RefreshTable('#all_event_content','/api/geteventsbyfilter/', $('#db_events_hostList').val(),$('#event_severity').val(),$('#event_type').val());
   });
   
 function RefreshTable(tableId, urlData, host, severity, eventtype)
 {
   $(".dataTables_processing").css('visibility','visible');
-  $.post(urlData, {"hostname":host, "severity":severity, "eventtype":eventtype,"scrollsize":"","scrollid":""}, function( json )
+  $.post(urlData, {'host_id':host,'severity':severity,'eventtype':eventtype,'scroll_size':'','scroll_id':''}, function( json )
   {
     table = $(tableId).dataTable();
     oSettings = table.fnSettings();
     table.fnClearTable(this);
-    for (var i=0; i<json.response.length; i++)
+    for (var i=0; i<json.response.aaData.length; i++)
     {
-      table.oApi._fnAddData(oSettings, json.response[i]);
+      table.oApi._fnAddData(oSettings, json.response.aaData[i]);
     }
     oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
     $(".dataTables_processing").css('visibility','hidden');
@@ -79,80 +77,77 @@ function RefreshTable(tableId, urlData, host, severity, eventtype)
 }
 });   
 </script>
-<style>
-  .highlight { background-color: yellow }
-</style>
 </head>
 <body style="margin: 0px 0px 0px 0px; padding: 0px;">
 <div class="wrapper">
   <div claiss="bg">
-  {% include 'header.html' %}
-  {% include 'notification_slider.html' %}
-  <!-- Dashboard Div - Start -->
-  <div id="dashboardDiv">
-  <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
-    <tr style="background-color:#cccccc;">
-      <td width="40%"><div class="breadCrumbHolder module">
-        <div id="breadCrumb0" class="breadCrumb module">
-          <ul style="float:left;">
-            <li> <a href="/dashboard">All FileSystems</a> </li>
-            <li>
-              <select id="fsSelect">
-                <option value="">Select File System</option>
+    {% include 'header.html' %}
+    {% include 'notification_slider.html' %}
+    <div class="rightpanel">
+    <!-- Dashboard Div - Start -->
+    <div id="dashboardDiv">
+      <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
+        <tr style="background-color:#cccccc;">
+          <td width="40%"><div class="breadCrumbHolder module">
+            <div id="breadCrumb0" class="breadCrumb module">
+              <ul style="float:left;">
+                <li> <a href="/dashboard">All FileSystems</a> </li>
+                <li>
+                  <select id="fsSelect">
+                    <option value="">Select File System</option>
+                  </select>
+                </li>
+              </ul>
+            </div>
+          </td>
+          <td width="60%">
+            <div class="timeint">
+              Host: &nbsp;
+              <select id="db_events_hostList">
               </select>
-              </li>
-           </ul>
-         </div>
-       </div>
-     </td>
-     <td width="60%">
-       <div class="timeint">
-        Host: &nbsp;
-        <select id="db_events_hostList">
-        </select>
-        &nbsp;
-        Severity: &nbsp;
-        <select id="event_severity">
-          <option value="">Any</option>
-          <option value="Info">Info</option>
-          <option value="Warning">Warning</option>
-          <option value="Error">Error</option>
-        </select>
-        &nbsp;Event type:&nbsp;
-        <select id="event_type">
-          <option value="">Any</option>
-          <option value="Autodetection">Autodetection</option>
-          <option value="Alert">Alert</option>
-          <option value="Syslog">Syslog</option>
-          <option value="Storage resource detection">Storage resource detection</option>
-         </select>
-          <input value="Filter" id="event_filter_btn" type="button"></input>
-       </div>
-      </td>
-    </tr>
-    <tr>
-      <td colspan="3"><form>
-        <fieldset>
-          <table cellpadding="0" cellspacing="0" border="0" class="display" id="all_event_content">
-            <thead>
-              <tr>
-                <th width="14%">Event Created At</th>
-                <th width="10%">Status</th>
-                <th width="15%">Host</th>
-                <th width="56%">Message</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-         </table>
-         </fieldset>
-       </td>
-     </tr>
-   </table>
-   </div>
-      <!-- Dashboard Div - End -->
+                &nbsp;
+                Severity: &nbsp;
+              <select id="event_severity">
+                <option value="">Any</option>
+                <option value="20">Info</option>
+                <option value="30">Warning</option>
+                <option value="40">Error</option>
+              </select>
+               &nbsp;Event type:&nbsp;
+              <select id="event_type">
+                <option value="">Any</option>
+                <option value="LearnEvent">Autodetection</option>
+                <option value="AlertEvent">Alert</option>
+                <option value="SyslogEvent">Syslog</option>
+                <option value="StorageResourceLearnEvent">Storage resource detection</option>
+              </select>
+              <input value="Filter" id="event_filter_btn" type="button"></input>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="3"><form>
+            <fieldset>
+              <table cellpadding="0" cellspacing="0" border="0" class="display" id="all_event_content">
+                <thead>
+                  <tr>
+                    <th width="14%">Event Created At</th>
+                    <th width="10%">Status</th>
+                    <th width="15%">Host</th>
+                    <th width="56%">Message</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </fieldset>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <!-- Dashboard Div - End -->
+    </div>
+    <div style="clear:both;"></div>
   </div>
-  <div style="clear:both;"></div>
- </div>
- </div>
- </body>
+</div>
+</body>
 </html>
