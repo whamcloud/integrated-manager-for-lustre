@@ -607,7 +607,7 @@ loadFileSystemSummary = function (fsId)
         "<td class='greybgcol'>Files Total: </td>" +
         "<td class='tblContent greybgcol'>"+resValue.inodes_total+" </td>" +
         "<td class='greybgcol'>Files Free:</td>" +
-        "<td class='tblContent txtleft'>"+resValue.inodes_used+"</td>" +
+        "<td class='tblContent txtleft'>"+resValue.inodes_free+"</td>" +
         "</tr>"+
         "<tr>" +
         "<td class='greybgcol'>Status:</td>";

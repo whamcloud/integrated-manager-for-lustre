@@ -190,6 +190,10 @@ class GetFSTargets(AnonymousRequestHandler):
         else:
             # kinds = None, means all
             klasses = kind_map.values()
+        host_name=None
+        if host_id:
+            host_name = (ManagedHost.objects.get(id=host_id)).address  
+        
         klass_to_kind = dict([(v,k) for k,v in kind_map.items()])
         result = []
         for klass in klasses:
@@ -201,15 +205,16 @@ class GetFSTargets(AnonymousRequestHandler):
                     fs = ManagedFilesystem.objects.get(id=filesystem_id)
                     targets=klass.objects.filter(filesystem=fs) 
             for t in targets:
-                result.append({
-                    'id': t.id,
-                    'primary_server_name': t.primary_server().pretty_name(),
-                    'kind': kind,
-                    # FIXME: ManagedTarget should get an explicit 'human' string function
-                    # (currently __str__ services this purpose)
-                    'status':t.status_string(),
-                    'label': "%s" % t
-                    })
+                if ( not host_name or t.primary_server().pretty_name() == host_name):   
+                    result.append({
+                        'id': t.id,
+                        'primary_server_name': t.primary_server().pretty_name(),
+                        'kind': kind,
+                        # FIXME: ManagedTarget should get an explicit 'human' string function
+                        # (currently __str__ services this purpose)
+                        'status':t.status_string(),
+                        'label': "%s" % t
+                        })
         return result    
 
 #class GetClients (AnonymousRequestHandler):
@@ -253,30 +258,53 @@ class GetServers (AnonymousRequestHandler):
         return hosts_info
 
 class GetEventsByFilter(AnonymousRequestHandler):
-    @extract_request_args('hostname','severity','eventtype','scrollsize','scrollid')
-    def run(self,request,hostname,severity,eventtype,scrollsize,scrollid):
-        #host_name=hostname
-        #severity_type=severity
-        event_type=eventtype
-        #scroll_size=scrollsize
-        #scroll_id=scrollid
+    @extract_request_args('host_id','severity','eventtype','scroll_size','scroll_id')
+    def run(self,request,host_id,severity,eventtype,scroll_size,scroll_id):
         from monitor.models import Event
+        if scroll_id:
+            offset = int(scroll_id)
+        else:
+            offset = 0
+        if scroll_size:
+            limit = int(scroll_size)
+        else:
+            limit = 0
         filter_args = []
         filter_kwargs = {}
-        if event_type :
-            from django.db.models import Q
-            event_type = event_type.lower
-            filter_args.append(~Q(**{event_type:None}))
-        event_set = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')  
-        return [
-                {
-                 'event_created_at': event.created_at,
-                 'event_host': event.host.pretty_name() if event.host else '',
-                 'event_severity':str(event.severity_class()),
-                 'event_message': event.message(), 
-                }
-                for event in event_set
-        ]
+        if severity:
+            filter_kwargs['severity'] = severity
+        if eventtype:
+             klass = eventtype
+             from django.db.models import Q
+             klass_lower = klass.lower()
+             filter_args.append(~Q(**{klass_lower: None}))
+        if host_id:
+            try:
+                host = ManagedHost.objects.get(id=host_id)
+            except:
+                host = None
+        event_set = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
+        if host:
+            event_set = event_set.filter(host=host)
+
+        iTotalRecords = event_set.count()
+        event_result = {}
+        event_result['sEcho']=offset
+        event_result['iTotalRecords'] = iTotalRecords
+        event_result['iTotalDisplayRecords'] = offset * limit
+        if limit == 0:
+            limit = iTotalRecords
+        rec_end_limit = (offset+1)*limit
+        event_result['aaData'] = [
+                                  {
+                                   'event_created_at': event.created_at,
+                                   'event_host': event.host.pretty_name() if event.host else '',
+                                   'event_severity':str(event.severity_class()),
+                                   'event_message': event.message(), 
+                                   }
+                                   for event in event_set[offset*limit: rec_end_limit if rec_end_limit < iTotalRecords else iTotalRecords]
+                                  ]
+        return event_result  
 
 class GetLatestEvents(AnonymousRequestHandler):
     def run(self,request):
@@ -293,10 +321,30 @@ class GetLatestEvents(AnonymousRequestHandler):
 
 
 class GetAlerts(AnonymousRequestHandler):
-    @extract_request_args('active')
-    def run(self,request,active):
+    @extract_request_args('active','scroll_id','scroll_size')
+    def run(self,request,active,scroll_id,scroll_size):
         from monitor.models import AlertState
-        return [a.to_dict() for a in AlertState.objects.filter(active = active).order_by('end')]
+        if scroll_id:
+            offset = int(scroll_id)
+        else:
+            offset = 0
+        if scroll_size:
+            limit = int(scroll_size)
+        else:
+            limit = 0
+        if active:
+            active = 'True'
+        alerts = AlertState.objects.filter(active = active).order_by('end')
+        iTotalRecords = alerts.count()
+        alert_result = {}
+        alert_result['sEcho']=offset
+        alert_result['iTotalRecords'] = iTotalRecords
+        alert_result['iTotalDisplayRecords'] = offset * limit
+        if limit == 0:
+            limit = iTotalRecords
+        rec_end_limit = (offset+1)*limit
+        alert_result['aaData'] = [a.to_dict() for a in alerts[offset*limit: rec_end_limit if rec_end_limit < iTotalRecords else iTotalRecords]]
+        return alert_result
 
 class GetJobs(AnonymousRequestHandler):
     def run(self,request):
@@ -307,12 +355,11 @@ class GetJobs(AnonymousRequestHandler):
         # This need to fixed to get jobs for any time delta
         # Need input from PM    
         jobs = Job.objects.filter(~Q(state = 'complete') | Q(created_at__gte=datetime.now() - timedelta(minutes=60)))
-
         return [j.to_dict() for j in jobs]
 
 class GetLogs(AnonymousRequestHandler):
-    @extract_request_args('start_time','end_time','lustre')
-    def run(self,request,start_time,end_time,lustre):
+    @extract_request_args('start_time','end_time','lustre','scroll_id','scroll_size')
+    def run(self,request,start_time,end_time,lustre,scroll_id,scroll_size):
         import datetime
         from monitor.models import Systemevents
         ui_time_format = "%m/%d/%Y %H:%M "
@@ -325,24 +372,80 @@ class GetLogs(AnonymousRequestHandler):
             end_date  = datetime.datetime.strptime(str(end_time),ui_time_format)
         else:
             end_date = datetime.datetime.now()  
-        
+        if scroll_id:
+            offset = int(scroll_id)
+        else:
+            offset = 0
+        if scroll_size:
+            limit = int(scroll_size)
+        else:
+            limit = 0
         log_data = []
         if host:
-            log_data = Systemevents.objects.filter(devicereportedtime__gt = start_date,devicereportedtime__lte = end_date,fromhost__startswith =host).order_by('-devicereportedtime')
+            log_data = Systemevents.objects.filter(devicereportedtime__gt = start_date,
+                              devicereportedtime__lte = end_date,
+                              fromhost__startswith =host).order_by('-devicereportedtime')
+            iTotalRecords = log_data.count()
         else:
-            log_data = Systemevents.objects.filter(devicereportedtime__gt = start_date,devicereportedtime__lte = end_date).order_by('-devicereportedtime')
-        
+            log_data = Systemevents.objects.filter(devicereportedtime__gt = start_date,
+                             devicereportedtime__lte = end_date).order_by('-devicereportedtime')
+            iTotalRecords = log_data.count()
+        iTotalDisplayRecords = offset * limit
         if lustre:
             log_data = log_data.filter(message__startswith=" Lustre")
-    
-        return[
-               { 
-                'message': log_entry.message,
-                'service': log_entry.syslogtag,
-                'date': log_entry.devicereportedtime.strftime("%b %d %H:%M:%S"),
-                'host': log_entry.fromhost,
-               }
-               for log_entry in log_data
+            iTotalRecords = log_data.count()
+        if limit == 0:
+            limit = iTotalRecords
+        rec_end_limit = (offset+1)*limit  
+        log_data = log_data.all()[offset*limit: rec_end_limit if rec_end_limit < iTotalRecords else iTotalRecords] 
+        log_records = [
+                       { 
+                        'message': nid_finder(log_entry.message),
+                        'service': log_entry.syslogtag,
+                        'date': log_entry.devicereportedtime.strftime("%b %d %H:%M:%S"),
+                        'host': log_entry.fromhost,
+                       }
+                       for log_entry in log_data
         ]
+        log_result = {}
+        log_result['sEcho']=offset
+        log_result['iTotalRecords'] = iTotalRecords
+        log_result['iTotalDisplayRecords'] = iTotalDisplayRecords
+        log_result['aaData'] = log_records
+        return log_result              
 
+def normalize_nid(string):
+    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
+       direct comparisons between NIDs"""
+    if string[-4:] == "@tcp":
+        string += "0"
+     # remove _ from nids (i.e. @tcp_0 -> @tcp0
+    i = string.find("_")
+    if i > -1:
+        string = string[:i] + string [i + 1:]
+    return string
 
+def nid_finder(message):
+    from configure.models import Nid
+    import re
+    nid_regex = re.compile("(\d{1,3}\.){3}\d{1,3}@tcp(_\d+)?")
+    target_regex = re.compile("\\b(\\w+-(MDT|OST)\\d\\d\\d\\d)\\b")
+    for match in nid_regex.finditer(message):
+        replace = match.group()
+        replace = normalize_nid(replace)
+        try:
+            address =  Nid.objects.get(nid_string = replace).lnet_configuration.host.address
+            markup = "<a href='#' title='%s'>%s</a>" % (match.group(), address)
+            message = message.replace(match.group(),
+                                      markup,
+                                      1)
+        except Nid.DoesNotExist:
+            print "failed to replace " + replace
+    for match in target_regex.finditer(message):
+        # TODO: look up to a target and link to something useful
+        replace = match.group()
+        markup = "<a href='#' title='%s'>%s</a>" % ("foo", match.group())
+        message = message.replace(match.group(),
+                                  markup,
+                                  1)
+    return message  

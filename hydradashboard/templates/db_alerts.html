@@ -23,12 +23,9 @@
 <script language="javascript" type="text/javascript">
 $(document).ready(function() 
 { 
-  //loadAlertContent('all_AlertContent', '', -1);
   setActiveMenu('alerts_menu');
-  //loadAlertContent('active_AlertContent', 'True', -1);
-       
   var oTable = $('#active_AlertContent').dataTable( {
-  "sAjaxDataProp": "response",
+  "sAjaxDataProp": "response.aaData",
   "bProcessing": true,
   "iDisplayLength":50,
   "bDeferRender": true,
@@ -38,25 +35,25 @@ $(document).ready(function()
     "dataType": 'json', 
     "type": "POST", 
     "url": sSource, 
-    "data": ({"active": true}),
+    "data": ({"active":true,"scroll_id":"","scroll_size":""}),
     "success": fnCallback,
     })
   },
-	"aoColumns": [
-		{ "sClass": 'txtleft', "mDataProp":"alert_created_at" },
-		{ "sClass": 'txtcenter', "mDataProp":"alert_severity" },
-		{ "sClass": 'txtleft', "mDataProp":"alert_item" },
-		{ "sClass": 'txtleft', "mDataProp":"message" }
-	],
-	  "oLanguage": {
-	      "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
-	  },
-	  "bJQueryUI": true,
+  "aoColumns": [
+    { "sClass": 'txtleft', "mDataProp":"alert_created_at" },
+    { "sClass": 'txtcenter', "mDataProp":"alert_severity" },
+    { "sClass": 'txtleft', "mDataProp":"alert_item" },
+    { "sClass": 'txtleft', "mDataProp":"message" }
+  ],
+    "oLanguage": {
+        "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
+    },
+    "bJQueryUI": true,
   });
   
   //for alert history
   var oTable = $('#all_AlertContent').dataTable( {
-  "sAjaxDataProp": "response",
+  "sAjaxDataProp": "response.aaData",
   "bProcessing": true,
   "iDisplayLength":50,
   "bDeferRender": true,
@@ -66,20 +63,20 @@ $(document).ready(function()
     "dataType": 'json', 
     "type": "POST", 
     "url": sSource, 
-    "data": ({"active": ""}),
+    "data": ({"active":"","scroll_id":"","scroll_size":""}),
     "success": fnCallback,
     })
   },
-	"aoColumns": [
-		{ "sClass": 'txtleft', "mDataProp":"alert_created_at" },
-		{ "sClass": 'txtcenter', "mDataProp":"alert_severity" },
-		{ "sClass": 'txtleft', "mDataProp":"alert_item" },
-		{ "sClass": 'txtleft', "mDataProp":"message" }
-	],
-	  "oLanguage": {
-	      "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
-	  },
-	  "bJQueryUI": true,
+  "aoColumns": [
+    { "sClass": 'txtleft', "mDataProp":"alert_created_at" },
+    { "sClass": 'txtcenter', "mDataProp":"alert_severity" },
+    { "sClass": 'txtleft', "mDataProp":"alert_item" },
+    { "sClass": 'txtleft', "mDataProp":"message" }
+  ],
+    "oLanguage": {
+        "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
+    },
+    "bJQueryUI": true,
   });
   $("#alertAnchor").click();
 });

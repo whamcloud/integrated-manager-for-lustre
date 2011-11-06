@@ -28,46 +28,83 @@ $(document).ready(function()
 {
   var fromDate = new Date();
   fromDate.setHours(fromDate.getHours()-1);  // Current hour - 1
-  
+  //total no of records return by db
+  var maxRecords = 0;
   var toDate = new Date();
+  //current  page no
+  var pageCnt = 0;
+  
+  //total count of pages
+  var totalPages=0;
   
   $('#datetime_from').datetimepicker();
   $('#datetime_from').datetimepicker('setDate', (fromDate) );
   $('#datetime_to').datetimepicker();
   $('#datetime_to').datetimepicker('setDate', (new Date()) );
-  
+
+  $('#datetime_from').datetimepicker({
+    maxDate: new Date(),
+    onSelect: function (selectedDateTime){
+      var start = $(this).datetimepicker('getDate');
+      $('#datetime_to').datetimepicker('option', 'minDate', new Date(start.getTime()) );
+    }
+  });
+
+  $('#datetime_to').datetimepicker({
+      maxDate: new Date()
+  });
   setActiveMenu('logs_menu');
-  
   var lustre=true;
   fromDate = $('#datetime_from').val();
   toDate = $('#datetime_to').val();
-  
-  //LoadLogs("all_log_content",date,month,"true");
   var oTable = $('#all_log_content').dataTable( {
-  "bDeferRender": true,
-  "sAjaxDataProp": "response",
+  "sAjaxDataProp": "response.aaData",
   "bProcessing": true,
-  "iDisplayLength":100,
+  "iDisplayLength":50,
   "bDeferRender": true,
   "sAjaxSource": '/api/getlogs/',
   "fnServerData": function ( sSource, aoData, fnCallback ) {
   $.ajax({
   "dataType": 'json', 
   "type": "POST", 
-  "url": sSource, 
-  "data": JSON.stringify({'lustre':lustre,'start_time': fromDate,'end_time': toDate}),
+  "url": sSource,
+  "data": JSON.stringify({'lustre':true,'start_time': fromDate,'end_time': toDate,'scroll_id':pageCnt,'scroll_size':50}),
   "contentType": "application/json; charset=utf-8",
-  "success": fnCallback
+  "success":function(data) {
+      maxRecords = data.response.iTotalRecords;
+      DisplayInfo();
+      fnCallback(data);
+    }
   })
   },
   "aoColumns": [
-    { "sClass": 'log_line', "mDataProp":"date"},
+    { "sClass": 'log_line', "mDataProp":"date", "asSorting": [ "desc" ]},
     { "sClass": 'log_line', "mDataProp":"host" },
     { "sClass": 'log_line', "mDataProp":"service" },
     { "sClass": 'log_line', "mDataProp":"message" }
   ],
   "bJQueryUI": true,
+  "fnDrawCallback": function() {
+     //enable next button by default
+     $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
+     
+     //to diable next button for last page.
+     if((pageCnt+1)==totalPages)
+     {
+        $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-disabled");
+     }
+     //to enable previous button once it left first page
+     if(pageCnt>0)
+     {
+        $('#all_log_content_previous').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
+     }
+     //to diplay table info after table draw
+     $('#all_log_content_info').html("<div> Showing "+ (pageCnt+1)+ " of " + totalPages + "</div>");
+   },
   });
+  
+  //clear default table info
+  $("#all_log_content_info").empty();
   
   $("#alertAnchor").click();
   //click handler for filter
@@ -84,30 +121,120 @@ $(document).ready(function()
     {
       lustre = false;
     }
-    RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate);
+    pageCnt=0;
+    RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, '', oTable.fnSettings()._iDisplayLength);
   });
   
-function RefreshTable(tableId, urlData, lustre, fromDate, endDate)
-{
-  $(".dataTables_processing").css('visibility','visible');
-  
-  $.ajax({type: 'POST', url: urlData, dataType: 'json', 
-  data: JSON.stringify({"lustre": lustre, "start_time": fromDate, "end_time":endDate }),
-  contentType:"application/json; charset=utf-8"})
-  .success(function(data, textStatus, jqXHR) 
+  //Change event for changing local pagination combo box
+  $('select[name=all_log_content_length]').change(function()
   {
-    table = $(tableId).dataTable();
-    oSettings = table.fnSettings();
-    table.fnClearTable(this);
-    for (var i=0; i<data.response.length; i++)
+    //FixME: current impl supports data loading from current page. if page needs
+    //to be reset then remove the comments.
+    
+    //pageCnt=0;
+    //stotalPages=0;
+    if(maxRecords!=0)
     {
-      table.oApi._fnAddData(oSettings, data.response[i]);
+      RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
     }
-    oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
-    $(".dataTables_processing").css('visibility','hidden');
-    table.fnDraw();
   });
-}
+  
+  //click handler for next button
+  $('#all_log_content_next').click(function()
+  {   
+    if((pageCnt+1)<totalPages)
+    {
+      Log_Next();
+    }
+  });
+  
+  //click handler for previous button
+  $('#all_log_content_previous').click(function()
+  {
+    Log_Previous();
+    if(pageCnt==0)
+    {
+      oTable.fnSettings().className="sPagePrevDisabled";
+      //$('#btnPrevious').attr('disabled','disable');
+    }
+  });
+  
+  //function to load next page log
+  function Log_Next()
+  {
+      pageCnt++;
+      fromDate = $('#datetime_from').val();
+      toDate = $('#datetime_to').val();
+      RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
+  }
+  
+  //function to load previous page log.
+  function Log_Previous()
+  {
+    if(pageCnt==0)
+    {
+      $('#btnPrevious').attr('disabled','disable');
+    }
+    else
+    {
+      pageCnt--;
+      fromDate = $('#datetime_from').val();
+      toDate = $('#datetime_to').val();
+      RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength)
+    }
+  }
+  
+  //To display footer info
+  function DisplayInfo()
+  {
+    var info_div = "<div class='info'></div>";
+    var dispRecords = oTable.fnSettings()._iDisplayLength;
+    //for blank reponse
+    if(maxRecords!=0)
+    {
+      totalPages = maxRecords / dispRecords;
+      if ((maxRecords % dispRecords) <= 50)
+      {
+        totalPages = Math.round(totalPages);
+        totalPages = totalPages + 1;
+      }
+      else
+      {
+        totalPages = Math.round(totalPages); 
+      }  
+    }
+    else
+    {
+      //for page count 0 for display in info if the 0 records found
+      pageCnt=-1;
+    }
+    $('#all_log_content_info').empty();
+  }
+  
+  //To refresh datatable
+  function RefreshTable(tableId, urlData, lustre, fromDate, endDate, scroll_id, scroll_size)
+  {
+    $(".dataTables_processing").css('visibility','visible');
+    $.ajax({type: 'POST', url: urlData, dataType: 'json', 
+    data: JSON.stringify({"lustre": lustre, "start_time": fromDate, "end_time":endDate,'scroll_id':scroll_id,'scroll_size':scroll_size}),
+    contentType:"application/json; charset=utf-8"})
+    .success(function(data, textStatus, jqXHR) 
+    {
+      maxRecords=data.response.iTotalRecords;
+      table = $(tableId).dataTable();
+      oSettings = table.fnSettings();
+      table.fnClearTable(this);
+      
+      for (var i=0; i<data.response.aaData.length; i++)
+      {
+        table.oApi._fnAddData(oSettings, data.response.aaData[i]);
+      }
+      oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
+      $(".dataTables_processing").css('visibility','hidden');
+      DisplayInfo();
+      table.fnDraw();
+    });
+  }
 });
 </script>
 <style type="">
@@ -138,9 +265,9 @@ function RefreshTable(tableId, urlData, lustre, fromDate, endDate)
                   <ul style="float:left;">
                     <li>
                         <a href="/dashboard">All FileSystems</a> </li>
-	                      <select id="fsSelect">
-		                      <option value="">Select File System</option>
-		                    </select>
+                        <select id="fsSelect">
+                          <option value="">Select File System</option>
+                        </select>
                      </li>
                    </ul>
                  </div>
@@ -161,10 +288,10 @@ function RefreshTable(tableId, urlData, lustre, fromDate, endDate)
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="display"  id="all_log_content">
                   <thead>
                     <tr>
-                      <th width="14%">Log Created At</th>
-                      <th width="15%">Host</th>
+                      <th width="10%">Date</th>
+                      <th width="10%">Host</th>
                       <th width="10%">Service</th>
-                      <th width="61%">Message</th>
+                      <th width="70%">Message</th>
                     </tr>
                   </thead>
                   <tbody>

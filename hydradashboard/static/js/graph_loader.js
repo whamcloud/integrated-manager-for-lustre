@@ -585,20 +585,21 @@ db_Bar_SpaceUsage_Data = function(isZoom)
       var totalDiskSpace=0,totalFreeSpace=0,totalFiles=0,totalFreeFiles=0;
       $.each(response, function(resKey, resValue) 
       {
+        free = 0, used = 0;
         if(resValue.filesystem != undefined)
         {
           totalFreeSpace = resValue.kbytesfree/1024;
           totalDiskSpace = resValue.kbytestotal/1024;
-          free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-          used = Math.round(100 - free);
+          free = ((totalFreeSpace/1024)/(totalDiskSpace/1024))*100;
+          used = 100 - free;
           
           freeData.push(free);
           usedData.push(used);
           
           totalFiles = resValue.filesfree/1024;
           totalFreeFiles = resValue.filestotal/1024;
-          free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-          used = Math.round(100 - free);
+          free = ((totalFiles/1024)/(totalFreeFiles/1024))*100;
+          used = 100 - free;
           
           freeFilesData.push(free);
           totalFilesData.push(used);
