@@ -309,12 +309,15 @@ cursor:pointer;
 }
 .border{
 	border-bottom:1px solid #5e8bc0;
+    font-size:10px;
 }
 .border1{
 	border:1px solid #5e8bc0;
+    font-size:10px;
 }
 .border_red{
      border-bottom:1px solid red;
+     font-size:10px;
 }
 .spacetop{
 	margin-top:3px;
@@ -404,7 +407,7 @@ cursor:pointer;
 	width:23px;
 	height:600px;
     border-right: 1px solid #d6d6d6;
-
+    font-size:10px;
     /*background-color: #e6e6e6;*/
     background-color: black;
     background-image: url(../images/ui-bg_glass_75_e6e6e6_400x1.png);

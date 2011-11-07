@@ -1,0 +1,36 @@
+<html>
+  <head>
+    <!-- CSS to be used with base.html template -->
+    <link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
+    <link href="{{STATIC_URL}}css/clo_BreadCrumb.css" rel="stylesheet" type="text/css" />
+    <link href="{{STATIC_URL}}css/clo_tabs.css" rel="stylesheet" type="text/css" />
+    <link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css"  rel="stylesheet" type="text/css" />
+    <link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
+    <link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
+    {% block css %}{% endblock %}
+    <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
+    <script type="text/javascript" src="{{STATIC_URL}}js/jquery-1.6.4.min.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/jquery.jBreadCrumb.1.1.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.16.custom.min.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
+    <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js"></script>  
+    <!-- JQuery and JQuery-UI -->
+    <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
+    {% block scripts %}{% endblock %}
+    <title>Hydra Dashboard</title>
+  </head>
+  <body style="margin: 0px 0px 0px 0px; padding: 0px;">  
+    <div class="wrapper">
+      <div class="bg">
+        {% include 'header.html'%}
+        {% include 'notification_slider.html' %} 
+        {% block include_content %}{% endblock %}
+        {% block content %}{% endblock %}
+      </div>
+      <div style="clear: both;"></div>     
+    </div> 
+  </body>
+</html>

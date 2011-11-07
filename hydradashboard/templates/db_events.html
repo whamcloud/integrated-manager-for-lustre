@@ -1,153 +1,164 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<title>Hydra Dashboard</title>
-<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
-<link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
-<link href="{{STATIC_URL}}css/clo_BreadCrumb.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/clo_tabs.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-1.6.4.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.jBreadCrumb.1.1.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.16.custom.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js" ></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
-<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
-<script language="javascript" type="text/javascript">
-$(document).ready(function() 
-{
-  setActiveMenu('events_menu');
-  loadHostList(''); 
-  var oTable = $('#all_event_content').dataTable( {
-  "sAjaxDataProp": "response.aaData",
-  "bProcessing": true,
-  "iDisplayLength":50,
-  "bDeferRender": true,
-  "sAjaxSource": '/api/geteventsbyfilter/',
-  "fnServerData": function ( sSource, aoData, fnCallback ) {
-    $.ajax({
-    "dataType": 'json', 
-    "type": "POST", 
-    "url": sSource, 
-    "data": ({"host_id":""+$('#db_events_hostList').val(), "severity":""+$('#event_severity').val(), "eventtype":""+$('#event_type').val(),"scroll_size":"","scroll_id":""}),
-    "success": fnCallback,
-    })
-  },
-  "aoColumns": [
-    { "sClass": 'txtleft ',"mDataProp":"event_created_at" },
-    { "sClass": 'txtcenter',"mDataProp":"event_severity" },
-    { "sClass": 'txtleft',"mDataProp":"event_host" },
-    { "sClass": 'txtleft',"mDataProp":"event_message" }
-  ],
-    "oLanguage": {
-        "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
-    },
-    "bJQueryUI": true,
-    } );
-  $("#alertAnchor").click();
-  
-  $('#event_filter_btn').click(function()
-  {
-    RefreshTable('#all_event_content','/api/geteventsbyfilter/', $('#db_events_hostList').val(),$('#event_severity').val(),$('#event_type').val());
-  });
-  
-function RefreshTable(tableId, urlData, host, severity, eventtype)
-{
-  $(".dataTables_processing").css('visibility','visible');
-  $.post(urlData, {'host_id':host,'severity':severity,'eventtype':eventtype,'scroll_size':'','scroll_id':''}, function( json )
-  {
-    table = $(tableId).dataTable();
-    oSettings = table.fnSettings();
-    table.fnClearTable(this);
-    for (var i=0; i<json.response.aaData.length; i++)
-    {
-      table.oApi._fnAddData(oSettings, json.response.aaData[i]);
-    }
-    oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
-    $(".dataTables_processing").css('visibility','hidden');
-    table.fnDraw();
-  });
-}
-});   
-</script>
-</head>
-<body style="margin: 0px 0px 0px 0px; padding: 0px;">
-<div class="wrapper">
-  <div claiss="bg">
-    {% include 'header.html' %}
-    {% include 'notification_slider.html' %}
-    <div class="rightpanel">
-    <!-- Dashboard Div - Start -->
-    <div id="dashboardDiv">
-      <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
-        <tr style="background-color:#cccccc;">
-          <td width="40%"><div class="breadCrumbHolder module">
-            <div id="breadCrumb0" class="breadCrumb module">
-              <ul style="float:left;">
-                <li> <a href="/dashboard">All FileSystems</a> </li>
-                <li>
-                  <select id="fsSelect">
-                    <option value="">Select File System</option>
-                  </select>
-                </li>
-              </ul>
-            </div>
-          </td>
-          <td width="60%">
-            <div class="timeint">
-              Host: &nbsp;
-              <select id="db_events_hostList">
-              </select>
-                &nbsp;
-                Severity: &nbsp;
-              <select id="event_severity">
-                <option value="">Any</option>
-                <option value="20">Info</option>
-                <option value="30">Warning</option>
-                <option value="40">Error</option>
-              </select>
-               &nbsp;Event type:&nbsp;
-              <select id="event_type">
-                <option value="">Any</option>
-                <option value="LearnEvent">Autodetection</option>
-                <option value="AlertEvent">Alert</option>
-                <option value="SyslogEvent">Syslog</option>
-                <option value="StorageResourceLearnEvent">Storage resource detection</option>
-              </select>
-              <input value="Filter" id="event_filter_btn" type="button"></input>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td colspan="3"><form>
-            <fieldset>
-              <table cellpadding="0" cellspacing="0" border="0" class="display" id="all_event_content">
-                <thead>
-                  <tr>
-                    <th width="14%">Event Created At</th>
-                    <th width="10%">Status</th>
-                    <th width="15%">Host</th>
-                    <th width="56%">Message</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </fieldset>
-          </td>
-        </tr>
-      </table>
-    </div>
-    <!-- Dashboard Div - End -->
-    </div>
-    <div style="clear:both;"></div>
-  </div>
-</div>
-</body>
-</html>
+      {% extends 'hydra_base.html' %}
+      {% block css %}{% endblock %} 
+      {% block scripts %}
+      <script language="javascript" type="text/javascript">
+        $(document).ready(function() 
+        {
+          // Menu Highlighter
+          $('#events_menu').addClass('active');
+          loadHostList(''); 
+          var oTable = $('#all_event_content').dataTable( {
+          "sAjaxDataProp": "response.aaData",
+          "bProcessing": true,
+          "iDisplayLength":50,
+          "bDeferRender": true,
+          "sAjaxSource": '/api/geteventsbyfilter/',
+          "fnServerData": function ( sSource, aoData, fnCallback ) 
+          {
+            $.ajax(
+            {
+              "dataType": 'json', 
+              "type": "POST", 
+              "url": sSource, 
+              "data": ({"host_id":""+$('#db_events_hostList').val(), 
+                        "severity":""+$('#event_severity').val(), 
+                        "eventtype":""+$('#event_type').val(),
+                        "scroll_size":"","scroll_id":""}),
+              "success": fnCallback,
+            })
+          },
+          "aoColumns": [
+            { "sClass": 'txtleft ',"mDataProp":"event_created_at" },
+            { "sClass": 'txtcenter',"mDataProp":"event_severity" },
+            { "sClass": 'txtleft',"mDataProp":"event_host" },
+            { "sClass": 'txtleft',"mDataProp":"event_message" }
+          ],
+          "oLanguage": 
+          {
+            "sProcessing": "<img src='/static/images/loading.gif' " + 
+                           "style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
+          },
+          "bJQueryUI": true,
+        });
+        $("#alertAnchor").click();
+        $('#event_filter_btn').click(function()
+        {  
+          RefreshTable('#all_event_content',
+                       '/api/geteventsbyfilter/', 
+                       $('#db_events_hostList').val(),
+                       $('#event_severity').val(),
+                       $('#event_type').val());
+        });
+        function RefreshTable(tableId, urlData, host, severity, eventtype)
+        {
+          $(".dataTables_processing").css('visibility','visible');
+          $.post(urlData, 
+                 {'host_id':host,
+                  'severity':severity,
+                  'eventtype':eventtype,
+                  'scroll_size':'',
+                  'scroll_id':''
+                 }, 
+            function( json )
+            {
+              table = $(tableId).dataTable();
+              oSettings = table.fnSettings();
+              table.fnClearTable(this);
+              for (var i=0; i<json.response.aaData.length; i++)
+              {
+                table.oApi._fnAddData(oSettings, json.response.aaData[i]);
+              }  
+              oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
+              $(".dataTables_processing").css('visibility','hidden');
+              table.fnDraw();
+            });
+        }
+      }); 
+      loadHostList = function(filesystem_id)
+      {
+        var hostList = '<option>All</option>';
+        $.post("/api/listservers/",{'filesystem_id':filesystem_id})
+        .success(function(data, textStatus, jqXHR) 
+        {
+          if(data.success)
+          {
+            $.each(data.response, function(resKey, resValue)
+            {
+              hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
+            });
+          }
+        })
+        .error(function(event) {
+        })
+        .complete(function(event){
+        $('#db_events_hostList').html(hostList);
+        });
+      }
+      </script>
+      {% endblock %}
+      {% block include_content %}{% endblock %}
+      {% block content %}
+      <div class="rightpanel">
+      <!-- Dashboard Div - Start -->
+      <div id="dashboardDiv">
+        <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
+          <tr style="background-color:#cccccc;">
+            <td width="40%"><div class="breadCrumbHolder module">
+              <div id="breadCrumb0" class="breadCrumb module">
+                <ul style="float:left;">
+                  <li> <a href="/dashboard">All FileSystems</a> </li>
+                  <li>
+                    <select id="fsSelect">
+                      <option value="">Select File System</option>
+                    </select>
+                  </li>
+                </ul>
+              </div>
+            </td>
+            <td width="60%">
+              <div class="timeint">
+                Host: &nbsp;
+                <select id="db_events_hostList">
+                </select>
+                  &nbsp;
+                  Severity: &nbsp;
+                <select id="event_severity">
+                  <option value="">Any</option>
+                  <option value="20">Info</option>
+                  <option value="30">Warning</option>
+                  <option value="40">Error</option>
+                </select>
+                 &nbsp;Event type:&nbsp;
+                <select id="event_type">
+                  <option value="">Any</option>
+                  <option value="LearnEvent">Autodetection</option>
+                  <option value="AlertEvent">Alert</option>
+                  <option value="SyslogEvent">Syslog</option>
+                  <option value="StorageResourceLearnEvent">Storage resource detection</option>
+                </select>
+                <input value="Filter" id="event_filter_btn" type="button"></input>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="3"><form>
+              <fieldset>
+                <table cellpadding="0" cellspacing="0" border="0" class="display" id="all_event_content">
+                  <thead>
+                    <tr>
+                      <th width="14%">Event Created At</th>
+                      <th width="10%">Status</th>
+                      <th width="15%">Host</th>
+                      <th width="56%">Message</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </fieldset>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <!-- Dashboard Div - End -->
+      </div>
+      {% endblock %}

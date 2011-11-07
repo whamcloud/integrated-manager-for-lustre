@@ -1,104 +1,70 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<title>Hydra Dashboard</title>
-<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
-<link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
-<link href="{{STATIC_URL}}css/clo_BreadCrumb.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/clo_tabs.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-1.6.4.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.jBreadCrumb.1.1.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.16.custom.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js" ></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
-<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
-<script language="javascript" type="text/javascript">
-$(document).ready(function() 
-{ 
-  setActiveMenu('alerts_menu');
-  var oTable = $('#active_AlertContent').dataTable( {
-  "sAjaxDataProp": "response.aaData",
-  "bProcessing": true,
-  "iDisplayLength":50,
-  "bDeferRender": true,
-  "sAjaxSource": '/api/getalerts/',
-  "fnServerData": function ( sSource, aoData, fnCallback ) {
-    $.ajax({
-    "dataType": 'json', 
-    "type": "POST", 
-    "url": sSource, 
-    "data": ({"active":true,"scroll_id":"","scroll_size":""}),
-    "success": fnCallback,
-    })
-  },
-  "aoColumns": [
-    { "sClass": 'txtleft', "mDataProp":"alert_created_at" },
-    { "sClass": 'txtcenter', "mDataProp":"alert_severity" },
-    { "sClass": 'txtleft', "mDataProp":"alert_item" },
-    { "sClass": 'txtleft', "mDataProp":"message" }
-  ],
-    "oLanguage": {
-        "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
+    {% extends 'hydra_base.html' %}
+    {% block css %} {% endblock %} 
+    {% block scripts %} 
+    <script type="text/javascript">
+    $(document).ready(function() 
+    { 
+      // Menu Highlighter
+      $('#alerts_menu').addClass('active');
+      var oTable = $('#active_AlertContent').dataTable( {
+      "sAjaxDataProp": "response.aaData",
+      "bProcessing": true,
+      "iDisplayLength":50,
+      "bDeferRender": true,
+      "sAjaxSource": '/api/getalerts/',
+      "fnServerData": function ( sSource, aoData, fnCallback ) {
+      $.ajax({
+      "dataType": 'json', 
+      "type": "POST", 
+      "url": sSource, 
+      "data": ({"active":true,"scroll_id":"","scroll_size":""}),
+      "success": fnCallback,
+      })
     },
-    "bJQueryUI": true,
-  });
-  
-  //for alert history
-  var oTable = $('#all_AlertContent').dataTable( {
-  "sAjaxDataProp": "response.aaData",
-  "bProcessing": true,
-  "iDisplayLength":50,
-  "bDeferRender": true,
-  "sAjaxSource": '/api/getalerts/',
-  "fnServerData": function ( sSource, aoData, fnCallback ) {
-    $.ajax({
-    "dataType": 'json', 
-    "type": "POST", 
-    "url": sSource, 
-    "data": ({"active":"","scroll_id":"","scroll_size":""}),
-    "success": fnCallback,
-    })
-  },
-  "aoColumns": [
-    { "sClass": 'txtleft', "mDataProp":"alert_created_at" },
-    { "sClass": 'txtcenter', "mDataProp":"alert_severity" },
-    { "sClass": 'txtleft', "mDataProp":"alert_item" },
-    { "sClass": 'txtleft', "mDataProp":"message" }
-  ],
-    "oLanguage": {
+    "aoColumns": [
+      { "sClass": 'txtleft', "mDataProp":"alert_created_at" },
+      { "sClass": 'txtcenter', "mDataProp":"alert_severity" },
+      { "sClass": 'txtleft', "mDataProp":"alert_item" },
+      { "sClass": 'txtleft', "mDataProp":"message" }
+      ],
+      "oLanguage": {
         "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
+      },
+      "bJQueryUI": true,
+    });
+    //for alert history
+    var oTable = $('#all_AlertContent').dataTable( {
+      "sAjaxDataProp": "response.aaData",
+      "bProcessing": true,
+      "iDisplayLength":50,
+      "bDeferRender": true,
+      "sAjaxSource": '/api/getalerts/',
+      "fnServerData": function ( sSource, aoData, fnCallback ) {
+      $.ajax({
+      "dataType": 'json', 
+      "type": "POST", 
+      "url": sSource, 
+      "data": ({"active":"","scroll_id":"","scroll_size":""}),
+      "success": fnCallback,
+      })
     },
-    "bJQueryUI": true,
-  });
-  $("#alertAnchor").click();
-});
-</script>
-<style type="">
-.alerts_all_ok {
-  background-color: #DDFFDD;
-  background-image: url("{{STATIC_URL}}images/icon_tick.png");
-  background-position: 4px 4px;
-  background-repeat: no-repeat;
-  border: 1px solid #00AA00;
-  border-radius: 6px 6px 6px 6px;
-  margin: 6px 0 0;
-  padding: 4px 4px 4px 24px;
-}
-</style>
-</head>
-<body style="margin: 0px 0px 0px 0px; padding: 0px;">
-<div class="wrapper">
-  <div class="bg">
-  {% include 'header.html' %}
-  {% include 'notification_slider.html' %} 
+    "aoColumns": [
+      { "sClass": 'txtleft', "mDataProp":"alert_created_at" },
+      { "sClass": 'txtcenter', "mDataProp":"alert_severity" },
+      { "sClass": 'txtleft', "mDataProp":"alert_item" },
+      { "sClass": 'txtleft', "mDataProp":"message" }
+    ],
+      "oLanguage": {
+        "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
+      },
+      "bJQueryUI": true,
+    });
+    $("#alertAnchor").click();
+    });
+    </script>
+    {% endblock %}
+    {% block include_content %}{% endblock %}  
+    {% block content %}
     <div class="rightpanel">
       <!-- Dashboard Div - Start -->
       <div id="dashboardDiv">
@@ -159,8 +125,4 @@ $(document).ready(function()
       </div>
       <!-- Dashboard Div - End -->
     </div>
-  <div style="clear:both;"></div>
-  </div>
-</div>
-</body>
-</html>
+    {% endblock %}

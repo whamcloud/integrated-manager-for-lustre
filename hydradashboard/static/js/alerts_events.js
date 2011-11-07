@@ -359,7 +359,7 @@ loadJobContent = function(targetJobDivName)
   .complete(function(event){
   if(isEmpty == "false")
   {
-    jobTabContent = jobTabContent + "<tr> <td colspan='5' align='center' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='#'>No Jobs</a></td></tr>";
+    jobTabContent = jobTabContent + "<tr> <td colspan='5' align='center' class='alerts_all_ok' >No Jobs</td></tr>";
   }
   else
   {

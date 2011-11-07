@@ -1,255 +1,220 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<title>Hydra Dashboard</title>
-<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
-<link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
-<link href="{{STATIC_URL}}css/clo_BreadCrumb.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/clo_tabs.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-1.6.4.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.jBreadCrumb.1.1.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.16.custom.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js" ></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
-<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
-<!-- Added for datetime picker -->
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-timepicker-addon.js"></script>
-<!-------------------------------->
-<script language="javascript" type="text/javascript">
-$(document).ready(function() 
-{
-  //total no of records return by db
-  var maxRecords = 0;
-  //current  page no
-  var pageCnt = 0;
-  
-  //total count of pages
-  var totalPages=0;
-
-  $('#datetime_from').datetimepicker();
-  $('#datetime_to').datetimepicker();
-
-  $('#datetime_from').datetimepicker({
-    maxDate: new Date(),
-    onSelect: function (selectedDateTime){
-      var start = $(this).datetimepicker('getDate');
-      $('#datetime_to').datetimepicker('option', 'minDate', new Date(start.getTime()) );
-    }
-  });
-
-  $('#datetime_to').datetimepicker({
-      maxDate: new Date()
-  });
-  setActiveMenu('logs_menu');
-  var lustre=true;
-  fromDate = $('#datetime_from').val();
-  toDate = $('#datetime_to').val();
-  var oTable = $('#all_log_content').dataTable( {
-  "sAjaxDataProp": "response.aaData",
-  "bProcessing": true,
-  "iDisplayLength":50,
-  "bDeferRender": true,
-  "sAjaxSource": '/api/getlogs/',
-  "fnServerData": function ( sSource, aoData, fnCallback ) {
-  $.ajax({
-  "dataType": 'json', 
-  "type": "POST", 
-  "url": sSource,
-  "data": JSON.stringify({'lustre':true,'start_time': fromDate,'end_time': toDate,'scroll_id':pageCnt,'scroll_size':50}),
-  "contentType": "application/json; charset=utf-8",
-  "success":function(data) {
-      maxRecords = data.response.iTotalRecords;
-      DisplayInfo();
-      fnCallback(data);
-    }
-  })
-  },
-  "aoColumns": [
-    { "sClass": 'log_line', "mDataProp":"date", "asSorting": [ "desc" ]},
-    { "sClass": 'log_line', "mDataProp":"host" },
-    { "sClass": 'log_line', "mDataProp":"service" },
-    { "sClass": 'log_line', "mDataProp":"message" }
-  ],
-  "bJQueryUI": true,
-  "fnDrawCallback": function() {
-     //enable next button by default
-     $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
-     
-     //to diable next button for last page.
-     if((pageCnt+1)==totalPages)
-     {
-        $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-disabled");
-     }
-     //to enable previous button once it left first page
-     if(pageCnt>0)
-     {
-        $('#all_log_content_previous').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
-     }
-     //to diplay table info after table draw
-     $('#all_log_content_info').html("<div> Showing "+ (pageCnt+1)+ " of " + totalPages + "</div>");
-   },
-  });
-  
-  //clear default table info
-  $("#all_log_content_info").empty();
-  
-  $("#alertAnchor").click();
-  //click handler for filter
-  $('#log_filter_btn').click(function()
-  {
-    fromDate = $('#datetime_from').val();
-    toDate = $('#datetime_to').val();
-    
-    if($('#id_only_lustre').is(":checked"))
-    {
-      lustre = true;
-    }
-    else
-    {
-      lustre = false;
-    }
-    pageCnt=0;
-    RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, '', oTable.fnSettings()._iDisplayLength);
-  });
-  
-  //Change event for changing local pagination combo box
-  $('select[name=all_log_content_length]').change(function()
-  {
-    //FixME: current impl supports data loading from current page. if page needs
-    //to be reset then remove the comments.
-    
-    //pageCnt=0;
-    //stotalPages=0;
-    if(maxRecords!=0)
-    {
-      RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
-    }
-  });
-  
-  //click handler for next button
-  $('#all_log_content_next').click(function()
-  {   
-    if((pageCnt+1)<totalPages)
-    {
-      Log_Next();
-    }
-  });
-  
-  //click handler for previous button
-  $('#all_log_content_previous').click(function()
-  {
-    Log_Previous();
-    if(pageCnt==0)
-    {
-      oTable.fnSettings().className="sPagePrevDisabled";
-      //$('#btnPrevious').attr('disabled','disable');
-    }
-  });
-  
-  //function to load next page log
-  function Log_Next()
-  {
-      pageCnt++;
-      fromDate = $('#datetime_from').val();
-      toDate = $('#datetime_to').val();
-      RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
-  }
-  
-  //function to load previous page log.
-  function Log_Previous()
-  {
-    if(pageCnt==0)
-    {
-      $('#btnPrevious').attr('disabled','disable');
-    }
-    else
-    {
-      pageCnt--;
-      fromDate = $('#datetime_from').val();
-      toDate = $('#datetime_to').val();
-      RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength)
-    }
-  }
-  
-  //To display footer info
-  function DisplayInfo()
-  {
-    var info_div = "<div class='info'></div>";
-    var dispRecords = oTable.fnSettings()._iDisplayLength;
-    //for blank reponse
-    if(maxRecords!=0)
-    {
-      totalPages = maxRecords / dispRecords;
-      if ((maxRecords % dispRecords) <= 50)
+    {% extends 'hydra_base.html' %}
+    {% block css%}{% endblock %}
+    {% block scripts%}
+    <!-- Added for datetime picker -->
+    <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-timepicker-addon.js"></script>
+    <!-------------------------------->
+    <script language="javascript" type="text/javascript">
+      $(document).ready(function() 
       {
-        totalPages = Math.round(totalPages);
-        totalPages = totalPages + 1;
+        // Menu Highlighter
+        $('#logs_menu').addClass('active');       
+        //total no of records return by db
+        var maxRecords = 0;
+        //current  page no
+        var pageCnt = 0;
+        //total count of pages
+        var totalPages=0;
+        $('#datetime_from').datetimepicker();
+        $('#datetime_to').datetimepicker();
+
+        $('#datetime_from').datetimepicker(
+        {
+          maxDate: new Date(),
+          onSelect: function (selectedDateTime)
+          {
+            var start = $(this).datetimepicker('getDate');
+            $('#datetime_to').datetimepicker('option', 'minDate', new Date(start.getTime()));
+          }
+        });
+        $('#datetime_to').datetimepicker(
+        {
+          maxDate: new Date()
+        });
+        var lustre=true;
+        fromDate = $('#datetime_from').val();
+        toDate = $('#datetime_to').val();
+        var oTable = $('#all_log_content').dataTable(
+        {
+          "sAjaxDataProp": "response.aaData",
+          "bProcessing": true,
+          "iDisplayLength":50,
+          "bDeferRender": true,
+          "sAjaxSource": '/api/getlogs/',
+          "fnServerData": function ( sSource, aoData, fnCallback ) 
+         {
+           $.ajax(
+           {
+             "dataType": 'json', 
+             "type": "POST", 
+             "url": sSource,
+             "data": JSON.stringify({'lustre':true,
+                                     'start_time': fromDate,
+                                     'end_time': toDate,
+                                     'scroll_id':pageCnt,
+                                     'scroll_size':50}),
+             "contentType": "application/json; charset=utf-8",
+             "success":function(data) 
+             {
+               maxRecords = data.response.iTotalRecords;
+               DisplayInfo();
+               fnCallback(data);
+             }
+           })
+         },
+         "aoColumns": [
+           { "sClass": 'log_line', "mDataProp":"date", "asSorting": [ "desc" ]},
+           { "sClass": 'log_line', "mDataProp":"host" },
+           { "sClass": 'log_line', "mDataProp":"service" },
+           { "sClass": 'log_line', "mDataProp":"message" }
+         ],
+         "bJQueryUI": true,
+         "fnDrawCallback": function() 
+         {
+           //enable next button by default
+           $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
+           //to diable next button for last page.
+           if((pageCnt+1)==totalPages)
+          {
+            $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-disabled");
+          }
+          //to enable previous button once it left first page
+          if(pageCnt>0)
+          {
+            $('#all_log_content_previous').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
+          }
+          //to diplay table info after table draw
+          $('#all_log_content_info').html("<div> Showing "+ (pageCnt+1)+ " of " + totalPages + "</div>");
+        },
+      });
+      //clear default table info
+      $("#all_log_content_info").empty();
+      $("#alertAnchor").click();
+      //click handler for filter
+      $('#log_filter_btn').click(function()
+      {
+        fromDate = $('#datetime_from').val();
+        toDate = $('#datetime_to').val();
+        if($('#id_only_lustre').is(":checked"))
+        {
+          lustre = true;
+        }
+        else
+        {
+          lustre = false;
+        }
+        pageCnt=0;
+        RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, '', oTable.fnSettings()._iDisplayLength);
+      });
+      //Change event for changing local pagination combo box
+      $('select[name=all_log_content_length]').change(function()
+      {
+        //FixME: current impl supports data loading from current page. if page needs
+        //to be reset then remove the comments.
+        //pageCnt=0;
+        //stotalPages=0;
+        if(maxRecords!=0)
+        {
+          RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
+        }
+      });
+      //click handler for next button
+      $('#all_log_content_next').click(function()
+      {   
+        if((pageCnt+1)<totalPages)
+        {
+          Log_Next();
+        }
+      });
+      //click handler for previous button
+      $('#all_log_content_previous').click(
+        function()
+        {
+          Log_Previous();
+          if(pageCnt==0)
+          {
+            oTable.fnSettings().className="sPagePrevDisabled";
+            //$('#btnPrevious').attr('disabled','disable');
+          }
+        });
+      //function to load next page log
+      function Log_Next()
+      {
+        pageCnt++;
+        fromDate = $('#datetime_from').val();
+        toDate = $('#datetime_to').val();
+        RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
       }
-      else
+      //function to load previous page log.
+      function Log_Previous()
       {
-        totalPages = Math.round(totalPages); 
-      }  
-    }
-    else
-    {
-      //for page count 0 for display in info if the 0 records found
-      pageCnt=-1;
-    }
-    $('#all_log_content_info').empty();
-  }
-  
-  //To refresh datatable
-  function RefreshTable(tableId, urlData, lustre, fromDate, endDate, scroll_id, scroll_size)
-  {
-    $(".dataTables_processing").css('visibility','visible');
-    $.ajax({type: 'POST', url: urlData, dataType: 'json', 
-    data: JSON.stringify({"lustre": lustre, "start_time": fromDate, "end_time":endDate,'scroll_id':scroll_id,'scroll_size':scroll_size}),
-    contentType:"application/json; charset=utf-8"})
-    .success(function(data, textStatus, jqXHR) 
-    {
-      maxRecords=data.response.iTotalRecords;
-      table = $(tableId).dataTable();
-      oSettings = table.fnSettings();
-      table.fnClearTable(this);
-      
-      for (var i=0; i<data.response.aaData.length; i++)
-      {
-        table.oApi._fnAddData(oSettings, data.response.aaData[i]);
+        if(pageCnt==0)
+        {
+          $('#btnPrevious').attr('disabled','disable');
+        }
+        else
+        {
+          pageCnt--;
+          fromDate = $('#datetime_from').val();
+          toDate = $('#datetime_to').val();
+          RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength)
+        }  
       }
-      oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
-      $(".dataTables_processing").css('visibility','hidden');
-      DisplayInfo();
-      table.fnDraw();
+      //To display footer info
+      function DisplayInfo()
+      {
+        var info_div = "<div class='info'></div>";
+        var dispRecords = oTable.fnSettings()._iDisplayLength;
+        //for blank reponse
+        if(maxRecords!=0)
+        {
+          totalPages = maxRecords / dispRecords;
+          if ((maxRecords % dispRecords) <= 50)
+          {
+            totalPages = Math.round(totalPages);
+            totalPages = totalPages + 1;
+          }
+          else
+          {
+            totalPages = Math.round(totalPages); 
+          }  
+        }
+        else
+        {
+          //for page count 0 for display in info if the 0 records found
+          pageCnt=-1;
+        }
+        $('#all_log_content_info').empty();
+      }
+      //To refresh datatable
+      function RefreshTable(tableId, urlData, lustre, fromDate, endDate, scroll_id, scroll_size)
+      {
+        $(".dataTables_processing").css('visibility','visible');
+        $.ajax({type: 'POST', url: urlData, dataType: 'json', 
+        data: JSON.stringify({"lustre": lustre, "start_time": fromDate, "end_time":endDate,'scroll_id':scroll_id,'scroll_size':scroll_size}),
+        contentType:"application/json; charset=utf-8"})
+        .success(function(data, textStatus, jqXHR) 
+        {
+          maxRecords=data.response.iTotalRecords;
+          table = $(tableId).dataTable();
+          oSettings = table.fnSettings();
+          table.fnClearTable(this);
+          for (var i=0; i<data.response.aaData.length; i++)
+          {
+             table.oApi._fnAddData(oSettings, data.response.aaData[i]);
+          }
+          oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
+          $(".dataTables_processing").css('visibility','hidden');
+          DisplayInfo();
+          table.fnDraw();
+        });
+      }
     });
-  }
-});
-</script>
-<style type="">
-.logs_all_ok {
-  background-color: #BEE5FF;
-  background-position: 4px 4px;
-  background-repeat: no-repeat;
-  border: 1px solid #00AA00;
-  border-radius: 6px 6px 6px 6px;
-  margin: 6px 0 0;
-  padding: 4px 4px 4px 24px;
-}
-</style>
-</head>
-<body style="margin: 0px 0px 0px 0px; padding: 0px;">
-  <div class="wrapper">
-    <div class="bg">
-    {% include 'header.html' %}
-    {% include 'notification_slider.html' %}  
-      <div class="rightpanel">
+    </script>
+    {% endblock %} 
+    {% block include_content %}{% endblock %}
+    {% block content %}
+    <div class="rightpanel">
       <!-- Dashboard Div - Start -->
       <div id="dashboardDiv">
         <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
@@ -300,8 +265,4 @@ $(document).ready(function()
       </div>
       <!-- Dashboard Div - End -->
     </div>
-    <div style="clear:both;"></div>
-    </div>
-  </div>
-</body>
-</html>
+    {% endblock %}
