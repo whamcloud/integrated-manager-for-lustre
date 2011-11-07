@@ -52,7 +52,10 @@ def configure_rsyslog(args):
     os.rename(tmp_name, "/etc/rsyslog.conf")
 
     # signal the process
-    shell.try_run(['service', 'rsyslog', 'reload'])
+    rc, stdout, stderr = shell.run(['service', 'rsyslog', 'reload'])
+    if rc != 0:
+        shell.try_run(['service', 'rsyslog', 'restart'])
+
     f.close()
 
 def set_conf_param(args):
