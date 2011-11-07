@@ -150,7 +150,7 @@ class SystemEventsAudit:
                     h = hosts[entry.fromhost]
                 except KeyError:
                     try:
-                        h = ManagedHost.objects.get(address = entry.fromhost)
+                        h = ManagedHost.objects.get(fqdn = entry.fromhost)
                         hosts[entry.fromhost] = h
                     except ManagedHost.DoesNotExist:
                         h = None
