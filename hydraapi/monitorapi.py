@@ -362,16 +362,15 @@ class GetJobs(AnonymousRequestHandler):
         return [j.to_dict() for j in jobs]
 
 class GetLogs(AnonymousRequestHandler):
-    @extract_request_args('start_time','end_time','lustre','scroll_id','scroll_size')
-    def run(self,request,start_time,end_time,lustre,scroll_id,scroll_size):
-        # FIXME: scroll_id is a misleading name, should be scroll_offset or page_id
+    @extract_request_args('host_id','start_time','end_time','lustre','page_id','page_size')
+    def run(self,request,host_id,start_time,end_time,lustre,page_id,page_size):
         import datetime
         from monitor.models import Systemevents
         ui_time_format = "%m/%d/%Y %H:%M "
         host=None 
 
-        if scroll_id:
-            offset = int(scroll_id) * scroll_size
+        if page_id:
+            offset = int(page_id) * page_size
         else:
             offset = 0
 
@@ -382,8 +381,9 @@ class GetLogs(AnonymousRequestHandler):
         if end_time:
             end_date = datetime.datetime.strptime(str(end_time),ui_time_format)
             filter_kwargs['devicereportedtime__lte'] = end_date
-        if host:
-            filter_kwargs['fromhost_startswith'] = host
+        if host_id:
+            host = ManagedHost.objects.get(id=host_id)
+            filter_kwargs['fromhost__startswith'] = host.pretty_name()
         if lustre:
             filter_kwargs['message__startswith'] = " Lustre"
 
@@ -393,8 +393,8 @@ class GetLogs(AnonymousRequestHandler):
         # means datatables filtering, not the filtering we're doing from our other args)
         iTotalRecords = log_data.count()
 
-        if scroll_size:
-            log_data = log_data.all()[offset:offset + scroll_size]
+        if page_size:
+            log_data = log_data.all()[offset:offset + page_size]
 
         # iTotalDisplayRecords is simply the number of records we will return
         # in this call (i.e. after all filtering and pagination)

@@ -12,8 +12,9 @@
           var pageCnt = 0;
           //total count of pages
           var totalPages=0;
-          
-          loadHostList('');
+
+          loadHostList('', 'db_events_hostList');
+
           var lustre=true;
           var oTable = $('#all_event_content').dataTable(
           {
@@ -71,7 +72,7 @@
                $('#all_event_content_info').html("<div> Showing "+ (pageCnt+1)+ " of " + totalPages + "</div>");
              },
           });
-          
+
         //clear default table info
         $("#all_event_content_info").empty();
         $("#alertAnchor").click();
@@ -190,26 +191,6 @@
             });
         }
       }); 
-      loadHostList = function(filesystem_id)
-      {
-        var hostList = '<option>All</option>';
-        $.post("/api/listservers/",{'filesystem_id':filesystem_id})
-        .success(function(data, textStatus, jqXHR) 
-        {
-          if(data.success)
-          {
-            $.each(data.response, function(resKey, resValue)
-            {
-              hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
-            });
-          }
-        })
-        .error(function(event) {
-        })
-        .complete(function(event){
-        $('#db_events_hostList').html(hostList);
-        });
-      }
       </script>
       {% endblock %}
       {% block include_content %}{% endblock %}
