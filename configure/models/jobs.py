@@ -276,6 +276,10 @@ class Job(models.Model):
     # Set to a step index when that step has finished and its result is committed
     finished_step = models.PositiveIntegerField(default = None, blank = True, null = True)
 
+    # Job classes declare whether presentation layer should 
+    # request user confirmation (e.g. removals, stops)
+    requires_confirmation = False
+
     def to_dict(self):
         from monitor.lib.util import time_str
         read_locks = []

@@ -59,7 +59,7 @@ function LoadFSList_FSList()
         resValue.noofost,
         resValue.kbytesused,
         resValue.kbytesfree,
-        CreateActionLink(resValue.fsid, resValue.available_transitions, "SERVER"),
+        CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions, "SERVER"),
         notification_icons_markup(resValue.id, resValue.content_type_id)
         ]); 
       });
@@ -93,7 +93,7 @@ function LoadTargets_EditFS(fs_id)
                 resValue.primary_server_name,
                 resValue.failover_server_name,
                 resValue.active_host_name,
-                CreateActionLink(resValue.id, resValue.available_transitions, "TARGET"),
+                CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions, "TARGET"),
                 notification_icons_markup(resValue.id, resValue.content_type_id)
               ]
         if (resValue.kind == "OST") {
@@ -273,7 +273,7 @@ function LoadMGTConfiguration_MGTConf()
                 target_dialog_link(resValue.id, resValue.primary_server_name),
                 resValue.failover_server_name,
                 resValue.active_host_name,
-                CreateActionLink(resValue.id,resValue.available_transitions[0], "SERVER"),
+                CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions, "SERVER"),
                 notification_icons_markup(resValue.id, resValue.content_type_id)
               ]);
         });
@@ -360,7 +360,7 @@ function LoadServerConf_ServerConfig()
           resValue.pretty_name,
           resValue.failnode,
           resValue.status,
-          CreateActionLink(resValue.id,resValue.available_transitions, "SERVER"),
+          CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions, "SERVER"),
           notification_icons_markup(resValue.id, resValue.content_type_id)
         ]);
       });
@@ -377,44 +377,19 @@ function LoadServerConf_ServerConfig()
   });
 }
 
-function CreateActionLink(id,available_transitions, kind)
+function CreateActionLink(id, ct, available_transitions, kind)
 {
   var ops_action="";
   var action="";
   var function_name;
   var button_class = "ui-state-default ui-corner-all";
-  $.each(available_transitions, function(resKey, resValue)
+  console.log(available_transitions);
+  $.each(available_transitions, function(i, transition)
   {
-    if(kind == "SERVER")
-    {
-      if(resValue.state == "removed")
-      {
-        function_name = "RemoveHost_ServerConfig(\"" + MSG_REMOVE_HOST + "\"," + id + ")";
-      }
-      else
-      {
-        function_name = "Lnet_Operations("+  id + ",\"" + resValue.state + "\",\"" + MSG_LOAD_LNET + "\")";
-      }
-    }
-    else if(kind == "TARGET")
-    {
-      if(resValue.state == "removed")
-      {
-        function_name = "RemoveHost_ServerConfig(\"" + MSG_REMOVE_HOST + "\"," + id + ")";
-      }
-      else
-      {
-        function_name = "SetTargetMountStage("+  id + ",\"" + resValue.state + "\",\"" + MSG_LOAD_LNET + "\")";
-      }
-    }
-    /* ops_action = "<Button class='" + button_class + "'" +
-    " onclick='"+ function_name + "'>" + 
-    resValue.verb + "</Button>&nbsp;";
-    action = action + ops_action; */
-    
-    ops_action = "<Button" +
-    " onclick='"+ function_name + "'>" + 
-    resValue.verb + "</Button>&nbsp;";
+    function_name = "Transition(" + id + "," + ct + ",\"" + transition.state + "\")"
+    ops_action = "<button" +
+      " onclick='"+ function_name + "'>" + 
+      transition.verb + "</button>&nbsp;";
     action = action + ops_action;
   });
   return action;

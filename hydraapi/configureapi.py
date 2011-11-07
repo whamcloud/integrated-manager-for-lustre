@@ -547,14 +547,13 @@ class Notifications(AnonymousRequestHandler):
             affected_objects = set()
 
             from configure.models import StorageResourceAlert, StorageAlertPropagated
-            from configure.models import Lun, LunNode
+            from configure.models import Lun
             from configure.models import ManagedTargetMount
             from configure.models import FilesystemMember
             from monitor.models import TargetOfflineAlert, TargetRecoveryAlert, TargetFailoverAlert, HostContactAlert
 
             def affect_target(target):
-                print "affect_target %s" % target
-                target = tm.target.downcast()
+                target = target.downcast()
                 affected_objects.add(target)
                 if isinstance(target, FilesystemMember):
                     affected_objects.add(target.filesystem)
@@ -562,18 +561,10 @@ class Notifications(AnonymousRequestHandler):
             if isinstance(a, StorageResourceAlert):
                 affected_srrs = [sap['storage_resource_id'] for sap in StorageAlertPropagated.objects.filter(alert_state = a).values('storage_resource_id')]
                 affected_srrs.append(a.alert_item_id)
-                print affected_srrs
-                lun_nodes = LunNode.objects.filter(storage_resource__in = affected_srrs)
-                for ln in lun_nodes:
-                    print "%d %d %s" % (ln.id, ln.lun.id, ln) 
                 luns = Lun.objects.filter(storage_resource__in = affected_srrs)
-                print luns
                 for l in luns:
-                    print "%s (%d)" % (l, l.id)
                     for ln in l.lunnode_set.all():
-                        print "  %s (%d)" % (ln, ln.id)
                         tms = ManagedTargetMount.objects.filter(block_device = ln)
-                        print tms
                         for tm in tms:
                             affect_target(tm.target)
             elif isinstance(a, TargetFailoverAlert):
@@ -627,5 +618,16 @@ class TransitionConsequences(AnonymousRequestHandler):
         klass = ct.model_class()
         instance = klass.objects.get(pk = id)
         return StateManager().get_transition_consequences(instance, new_state)
+
+class Transition(AnonymousRequestHandler):
+    @extract_request_args('id','content_type_id', 'new_state')
+    def run(self, request, id, content_type_id, new_state):
+        from django.contrib.contenttypes.models import ContentType
+        from configure.lib.state_manager import StateManager
+        klass = ContentType.objects.get_for_id(content_type_id).model_class()
+        instance = klass.objects.get(pk = id)
+        StateManager.set_state(instance, new_state)
+
+        return None
 
 

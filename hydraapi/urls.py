@@ -125,6 +125,7 @@ urlpatterns = patterns('',
     (r'^get_server_stats_heatmap/$',CsrfExemptResource(GetHeatMapServerStats)),
 
     (r'^target/$',CsrfExemptResource(configureapi.Target)),
+    (r'^transition/$',CsrfExemptResource(configureapi.Transition)),
     (r'^transition_consequences/$',CsrfExemptResource(configureapi.TransitionConsequences)),
 
 

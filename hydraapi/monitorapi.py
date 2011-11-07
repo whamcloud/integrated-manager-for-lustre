@@ -132,7 +132,7 @@ class GetMgtDetails(AnonymousRequestHandler):
         for mgt in ManagedMgs.objects.all():
             target_info = mgt.to_dict()
             target_info['fs_names'] = [fs.name for fs in ManagedFilesystem.objects.filter(mgs=mgt)]
-            target_info['available_transitions'] = StateManager.available_transitions(mgt),
+            target_info['available_transitions'] = StateManager.available_transitions(mgt)
             all_mgt.append(target_info)
         return all_mgt
 

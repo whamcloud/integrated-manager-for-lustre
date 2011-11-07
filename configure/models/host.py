@@ -628,6 +628,8 @@ class RemoveHostJob(Job, StateChangeJob):
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
 
+    requires_confirmation = True
+
     class Meta:
         app_label = 'configure'
 

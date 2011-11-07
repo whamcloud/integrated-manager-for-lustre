@@ -301,6 +301,8 @@ class RemoveRegisteredTargetJob(Job,StateChangeJob):
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
 
+    requires_confirmation = True
+
     class Meta:
         app_label = 'configure'
 
@@ -330,6 +332,7 @@ for origin in ['unformatted', 'formatted']:
         'target': models.ForeignKey(ManagedTarget),
         'Meta': type('Meta', (object,), {'app_label': 'configure'}),
         'description': description,
+        'requires_confirmation': True,
         'get_steps': get_steps,
         '__module__': __name__,
     })
@@ -414,6 +417,8 @@ class StopTargetJob(Job, StateChangeJob):
     state_transition = (ManagedTarget, 'mounted', 'unmounted')
     state_verb = "Stop"
     target = models.ForeignKey(ManagedTarget)
+
+    requires_confirmation = True
 
     class Meta:
         app_label = 'configure'

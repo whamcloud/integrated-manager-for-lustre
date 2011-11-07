@@ -164,6 +164,7 @@ class StateManager(object):
                 stateful_object_content_type_id = None
             depended_jobs.append({
                 'class': job.__class__.__name__,
+                'requires_confirmation': job.requires_confirmation,
                 'description': job.description(),
                 'stateful_object_id': stateful_object_id,
                 'stateful_object_content_type_id': stateful_object_content_type_id

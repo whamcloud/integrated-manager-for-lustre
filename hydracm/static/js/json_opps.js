@@ -10,70 +10,56 @@ var ERR_COMMON_START_OST = "Error in Starting OST: ";
 var ALERT_TITLE = "Configuration Manager";
 var CONFIRM_TITLE = "Configuration Manager";
 
-RemoveHost_ServerConfig = function (confirm_mesg, host_id)
+TransitionCommit = function(id, ct, state)
 {
-  jConfirm(confirm_mesg, CONFIRM_TITLE, function(r)
-  {
-    if(r == true)
-    {
-    $.post("/api/remove_host/",{"hostid":host_id}).success(function(data, textStatus, jqXHR) {
-        if(data.success)
-        {
-          var response = data.response;    
-          if(response.status != "")
-          {
-            jAlert("Host " + response.hostid + " Deleted", ALERT_TITLE);
-            $('#server_configuration').dataTable().fnClearTable();
-            LoadServerConf_ServerConfig();
-          }
-          else
-          {
-            jAlert(ERR_COMMON_DELETE_HOST,ALERT_TITLE);
-          }
-        }
-        else
-        {
-          jAlert(ERR_COMMON_DELETE_HOST + data.errors, ALERT_TITLE);
-        }
-      })
-      .error(function(event) {
-          jAlert(ERR_COMMON_DELETE_HOST + data.errors,ALERT_TITLE);
-      })
-      .complete(function(event) {
-      });
+  $.post("/api/transition/",{id: id, content_type_id: ct, new_state: state})
+   .success(function(data, textStatus, jqXHR) {
+    if(data.success) {
+    } else {
+        /* Generic server comms error */
     }
-  });
-}
-
-function Lnet_Operations(host_id, opps, confirm_mesg)
-{
-  jConfirm(confirm_mesg, CONFIRM_TITLE, 
-  function(r)
-  {
-    if(r == true)
-    {
-      //Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;);
-      $.post("/api/set_lnet_state/",{"hostid":host_id, "state":opps}).success(function(data, textStatus, jqXHR) {
-      if(data.success)
-      {
-        var response = data.response;    
-        if(response.status == "")
-        {
-          alert(ERR_COMMON_LNET_STATUS, ALERT_TITLE);
-        }
-      }
-      else
-      {
-        jAlert(ERR_COMMON_LNET_STATUS + data.errors, ALERT_TITLE);
-      }
     })
     .error(function(event) {
-         jAlert(ERR_COMMON_LNET_STATUS + data.errors, ALERT_TITLE);
-      })
-    .complete(function(event) {
-    });
-    }
-  });
+        /* Generic server comms error */
+    })
+}
+
+$(document).ready(function() {
+  $('#transition_confirmation_dialog').dialog({autoOpen: false, maxHeight: 400, maxWidth: 800, width: 'auto', height: 'auto'});
+});
+
+Transition = function (id, ct, state)
+{
+  $.post("/api/transition_consequences/", {id: id, content_type_id: ct, new_state: state})
+   .success(function(data, textStatus, jqXHR) {
+     var requires_confirmation = false;
+     if (data.success) {
+       var confirmation_markup = "<p>This action will have the following consequences:</p><ul>";
+       if (data.response.length > 1) {
+       $.each(data.response, function(i, consequence_info) {
+         confirmation_markup += "<li>" + consequence_info.description + "</li>";
+         if (consequence_info.requires_confirmation) {
+           requires_confirmation = true;
+         }
+       });
+       confirmation_markup += "</ul>"
+       } else {
+         requires_confirmation = data.response[0].requires_confirmation;
+         confirmation_markup = "<p><strong>" + data.response[0].description + "</strong></p><p>Are you sure?</p>";
+       }
+
+       if (requires_confirmation) {
+        $('#transition_confirmation_dialog').html(confirmation_markup);
+        $('#transition_confirmation_dialog').dialog('option', 'buttons', {
+          'Cancel': function() {$(this).dialog('close');},
+          'Confirm': function() {TransitionCommit(id, ct, state);$(this).dialog('close');}
+        });
+        $('#transition_confirmation_dialog').dialog('open');
+       } else {
+         TransitionCommit(id, ct, state);
+       }
+     }
+   })
 }
 
 function Add_Host_Table(dialog_id)
@@ -190,7 +176,6 @@ function CreateMGT(lun_id, callback)
 {
   $.post("/api/create_mgt/", {'lun_id': lun_id})
   .success(function(data, textStatus, jqXHR) {
-    console.log(data);
     if(data.success)
     {
       callback();
