@@ -312,6 +312,27 @@ loadLogContent = function(targetJobDivName, maxCount)
   });
 }
 
+loadHostList = function(filesystem_id, targetContainer)
+{
+  var hostList = '<option value=>All</option>';
+  $.post("/api/listservers/",{'filesystem_id':filesystem_id})
+  .success(function(data, textStatus, jqXHR) 
+  {
+    if(data.success)
+    {
+      $.each(data.response, function(resKey, resValue)
+      {
+        hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
+      });
+    }
+  })
+  .error(function(event) {
+  })
+  .complete(function(event){
+  $('#'+targetContainer).html(hostList);
+  });
+}
+
 loadJobContent = function(targetJobDivName)
 {
   $('#'+targetJobDivName).html('<tr><td width="100%" align="center"><img src="/static/images/loading.gif" style="margin-top:10px;margin-bottom:10px" width="16" height="16" /></td></tr>');

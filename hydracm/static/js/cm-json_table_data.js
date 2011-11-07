@@ -59,7 +59,7 @@ function LoadFSList_FSList()
         resValue.noofost,
         resValue.kbytesused,
         resValue.kbytesfree,
-        CreateActionLink(resValue.id, resValue.available_transitions, "SERVER")
+        CreateActionLink(resValue.fsid, resValue.available_transitions, "SERVER")
         ]); 
       });
     }
@@ -406,7 +406,12 @@ function CreateActionLink(id,available_transitions, kind)
         function_name = "SetTargetMountStage("+  id + ",\"" + resValue.state + "\",\"" + MSG_LOAD_LNET + "\")";
       }
     }
-    ops_action = "<Button class='" + button_class + "'" +
+    /* ops_action = "<Button class='" + button_class + "'" +
+    " onclick='"+ function_name + "'>" + 
+    resValue.verb + "</Button>&nbsp;";
+    action = action + ops_action; */
+    
+    ops_action = "<Button" +
     " onclick='"+ function_name + "'>" + 
     resValue.verb + "</Button>&nbsp;";
     action = action + ops_action;

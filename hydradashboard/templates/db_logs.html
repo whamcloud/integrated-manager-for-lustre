@@ -17,6 +17,10 @@
         //total count of pages
         var totalPages=0;
         
+        //load host list
+        loadHostList('', 'logs_hostList');
+        
+        //validation for start an end time
         $('#datetime_from').datetimepicker(
         {
           maxDate: new Date(),
@@ -30,13 +34,14 @@
         {
           maxDate: new Date()
         });
-        
+
         $('#datetime_from').datetimepicker();
         $('#datetime_to').datetimepicker();
-        
+
         var lustre=true;
         fromDate = $('#datetime_from').val();
         toDate = $('#datetime_to').val();
+        var hostId="";
         var oTable = $('#all_log_content').dataTable(
         {
           "sAjaxDataProp": "response.aaData",
@@ -45,51 +50,52 @@
           "bDeferRender": true,
           "sAjaxSource": '/api/getlogs/',
           "fnServerData": function ( sSource, aoData, fnCallback ) 
-         {
-           $.ajax(
-           {
-             "dataType": 'json', 
-             "type": "POST", 
-             "url": sSource,
-             "data": JSON.stringify({'lustre':true,
-                                     'start_time': fromDate,
-                                     'end_time': toDate,
-                                     'scroll_id':pageCnt,
-                                     'scroll_size':50}),
-             "contentType": "application/json; charset=utf-8",
-             "success":function(data) 
-             {
-               maxRecords = data.response.iTotalRecords;
-               DisplayInfo();
-               fnCallback(data);
-             }
-           })
-         },
-         "aoColumns": [
-           { "sClass": 'log_line', "mDataProp":"date", "asSorting": [ "desc" ]},
-           { "sClass": 'log_line', "mDataProp":"host" },
-           { "sClass": 'log_line', "mDataProp":"service" },
-           { "sClass": 'log_line', "mDataProp":"message" }
-         ],
-         "bJQueryUI": true,
-         "fnDrawCallback": function() 
-         {
-           //enable next button by default
-           $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
-           //to diable next button for last page.
-           if((pageCnt+1)==totalPages)
-          {
-            $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-disabled");
-          }
-          //to enable previous button once it left first page
-          if(pageCnt>0)
-          {
-            $('#all_log_content_previous').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
-          }
-          //to diplay table info after table draw
-          $('#all_log_content_info').html("<div> Showing "+ (pageCnt+1)+ " of " + totalPages + "</div>");
-        },
-      });
+	         {
+	           $.ajax(
+	           {
+	             "dataType": 'json', 
+	             "type": "POST", 
+	             "url": sSource,
+	             "data": JSON.stringify({'lustre':true,
+	                                     'host_id': hostId,
+	                                     'start_time': fromDate,
+	                                     'end_time': toDate,
+	                                     'page_id':pageCnt,
+	                                     'page_size':50}),
+	             "contentType": "application/json; charset=utf-8",
+	             "success":function(data) 
+	             {
+	               maxRecords = data.response.iTotalRecords;
+	               DisplayInfo();
+	               fnCallback(data);
+	             }
+	           })
+	         },
+	         "aoColumns": [
+	           { "sClass": 'log_line', "mDataProp":"date", "asSorting": [ "desc" ]},
+	           { "sClass": 'log_line', "mDataProp":"host" },
+	           { "sClass": 'log_line', "mDataProp":"service" },
+	           { "sClass": 'log_line', "mDataProp":"message" }
+	         ],
+	         "bJQueryUI": true,
+	         "fnDrawCallback": function() 
+	         {
+	           //enable next button by default
+	           $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
+	           //to diable next button for last page.
+	           if((pageCnt+1)==totalPages)
+	          {
+	            $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-disabled");
+	          }
+	          //to enable previous button once it left first page
+	          if(pageCnt>0)
+	          {
+	            $('#all_log_content_previous').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
+	          }
+	          //to diplay table info after table draw
+	          $('#all_log_content_info').html("<div> Showing "+ (pageCnt+1)+ " of " + totalPages + "</div>");
+	        },
+	      });
       //clear default table info
       $("#all_log_content_info").empty();
       $("#alertAnchor").click();
@@ -107,14 +113,14 @@
           lustre = false;
         }
         pageCnt=0;
-        RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, '', oTable.fnSettings()._iDisplayLength);
+        RefreshTable('#all_log_content','/api/getlogs/', lustre, hostId, fromDate, toDate, '', oTable.fnSettings()._iDisplayLength);
       });
       //Change event for changing local pagination combo box
       $('select[name=all_log_content_length]').change(function()
       {
         if(maxRecords!=0)
         {
-          RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
+          RefreshTable('#all_log_content','/api/getlogs/', lustre, hostId, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
         }
       });
       //click handler for next button
@@ -141,7 +147,7 @@
         pageCnt++;
         fromDate = $('#datetime_from').val();
         toDate = $('#datetime_to').val();
-        RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
+        RefreshTable('#all_log_content','/api/getlogs/', lustre, hostId, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
       }
       //function to load previous page log.
       function Log_Previous()
@@ -151,7 +157,7 @@
           pageCnt--;
           fromDate = $('#datetime_from').val();
           toDate = $('#datetime_to').val();
-          RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength)
+          RefreshTable('#all_log_content','/api/getlogs/', lustre, hostId, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength)
         }
       }
       //To display footer info
@@ -174,11 +180,11 @@
         $('#all_log_content_info').empty();
       }
       //To refresh datatable
-      function RefreshTable(tableId, urlData, lustre, fromDate, endDate, scroll_id, scroll_size)
+      function RefreshTable(tableId, urlData, lustre, host_id, fromDate, endDate, page_id, page_size)
       {
         $(".dataTables_processing").css('visibility','visible');
         $.ajax({type: 'POST', url: urlData, dataType: 'json', 
-        data: JSON.stringify({"lustre": lustre, "start_time": fromDate, "end_time":endDate,'scroll_id':scroll_id,'scroll_size':scroll_size}),
+        data: JSON.stringify({"lustre": lustre, "host_id": host_id, "start_time": fromDate, "end_time":endDate,'page_id':page_id,'page_size':page_size}),
         contentType:"application/json; charset=utf-8"})
         .success(function(data, textStatus, jqXHR) 
         {
@@ -196,6 +202,11 @@
           table.fnDraw();
         });
       }
+      
+      $('#logs_hostList').change(function()
+      {
+        hostId = $('#logs_hostList').val();
+      });
     });
     </script>
     {% endblock %} 
@@ -206,7 +217,7 @@
       <div id="dashboardDiv">
         <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
           <tr style="background-color:#cccccc;">
-            <td width="40%">
+            <td width="30%">
               <div class="breadCrumbHolder module">
                 <div id="breadCrumb0" class="breadCrumb module">
                   <ul style="float:left;">
@@ -220,8 +231,11 @@
                  </div>
               </div>
             </td>
-            <td width="60%">
+            <td width="70%">
               <div class="timeint">
+                Host: &nbsp;
+                <select id="logs_hostList">
+                </select>
                 From:&nbsp;<input id="datetime_from" />&nbsp;To:&nbsp;<input id="datetime_to" />
                 &nbsp;Only Lustre Messages:&nbsp;
                 <input type="checkbox" id="id_only_lustre" name="only_lustre" checked="checked" value="true">
