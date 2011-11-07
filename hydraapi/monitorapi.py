@@ -21,6 +21,7 @@ from monitor.lib.util import sizeof_fmt
 
 class ListFileSystems(AnonymousRequestHandler):
     def run(self,request):
+        from configure.lib.state_manager import StateManager 
         filesystems = []
         mds_hostname = ''
         for filesystem in ManagedFilesystem.objects.all():
@@ -52,6 +53,7 @@ class ListFileSystems(AnonymousRequestHandler):
             filesystems.append({'fsid':filesystem.id,
                                 'fsname': filesystem.name,
                                 'status':filesystem.status_string(),
+                                'available_transitions': StateManager.available_transitions(filesystem),
                                 'noofoss':no_of_oss,
                                 'noofost':no_of_ost,
                                 'mgs_hostname': filesystem.mgs.primary_server().pretty_name(),
@@ -114,10 +116,12 @@ class GetFileSystem(AnonymousRequestHandler):
 
 class GetMgtDetails(AnonymousRequestHandler):
     def run(self,request):
+        from configure.lib.state_manager import StateManager
         all_mgt = []
         for mgt in ManagedMgs.objects.all():
             target_info = mgt.to_dict()
             target_info['fs_names'] = [fs.name for fs in ManagedFilesystem.objects.filter(mgs=mgt)]
+            target_info['available_transitions'] = StateManager.available_transitions(mgt),
             all_mgt.append(target_info)
         return all_mgt
 
@@ -260,6 +264,7 @@ class GetEventsByFilter(AnonymousRequestHandler):
     @extract_request_args('host_id','severity','eventtype','scroll_size','scroll_id')
     def run(self,request,host_id,severity,eventtype,scroll_size,scroll_id):
         from monitor.models import Event
+        host = None
         if scroll_id:
             offset = int(scroll_id)
         else:
@@ -281,7 +286,7 @@ class GetEventsByFilter(AnonymousRequestHandler):
             try:
                 host = ManagedHost.objects.get(id=host_id)
             except:
-                host = None
+                pass 
         event_set = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
         if host:
             event_set = event_set.filter(host=host)
@@ -413,7 +418,7 @@ class GetLogs(AnonymousRequestHandler):
 
 
 def nid_finder(message):
-    from configure.models import Nid
+    from configure.models import Nid, ManagedTarget 
     from monitor.lib.lustre_audit import normalize_nid
     import re
     # TODO: detect IB/other(cray?) as well as tcp
@@ -432,7 +437,13 @@ def nid_finder(message):
     for match in target_regex.finditer(message):
         # TODO: look up to a target and link to something useful
         replace = match.group()
-        markup = "<a href='#' title='%s'>%s</a>" % ("foo", match.group())
+        #markup = "<a href='#' title='%s'>%s</a>" % ("foo", match.group())
+        markup = match.group() 
+        try:
+            t = ManagedTarget.objects.get(name=markup) 
+            markup =  "<a href='#' class='target target_id_%s'>%s</a>" %(t.id,t.human_name())
+        except:
+            pass
         message = message.replace(match.group(),
                                   markup,
                                   1)

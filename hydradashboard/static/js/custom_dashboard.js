@@ -270,7 +270,7 @@ $(document).ready(function()
     "<li>"+fsName+"</li>"+
     "<li>"+
     "<select id='ossSelect'>"+
-    "<option value=''>Select OSS</option>";
+    "<option value=''>Select Server</option>";
 
     $.post("/api/listservers/",{filesystem_id:fsId}) 
     .success(function(data, textStatus, jqXHR)

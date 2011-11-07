@@ -1,5 +1,6 @@
     {% extends 'hydra_base.html' %}
-    {% block css%}{% endblock %}
+    {% block css%}
+    {% endblock %}
     {% block scripts%}
     <!-- Added for datetime picker -->
     <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-timepicker-addon.js"></script>
@@ -15,9 +16,7 @@
         var pageCnt = 0;
         //total count of pages
         var totalPages=0;
-        $('#datetime_from').datetimepicker();
-        $('#datetime_to').datetimepicker();
-
+        
         $('#datetime_from').datetimepicker(
         {
           maxDate: new Date(),
@@ -31,6 +30,10 @@
         {
           maxDate: new Date()
         });
+        
+        $('#datetime_from').datetimepicker();
+        $('#datetime_to').datetimepicker();
+        
         var lustre=true;
         fromDate = $('#datetime_from').val();
         toDate = $('#datetime_to').val();
@@ -109,10 +112,6 @@
       //Change event for changing local pagination combo box
       $('select[name=all_log_content_length]').change(function()
       {
-        //FixME: current impl supports data loading from current page. if page needs
-        //to be reset then remove the comments.
-        //pageCnt=0;
-        //stotalPages=0;
         if(maxRecords!=0)
         {
           RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
@@ -134,7 +133,6 @@
           if(pageCnt==0)
           {
             oTable.fnSettings().className="sPagePrevDisabled";
-            //$('#btnPrevious').attr('disabled','disable');
           }
         });
       //function to load next page log
@@ -148,17 +146,13 @@
       //function to load previous page log.
       function Log_Previous()
       {
-        if(pageCnt==0)
-        {
-          $('#btnPrevious').attr('disabled','disable');
-        }
-        else
+        if (pageCnt != 0)
         {
           pageCnt--;
           fromDate = $('#datetime_from').val();
           toDate = $('#datetime_to').val();
           RefreshTable('#all_log_content','/api/getlogs/', lustre, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength)
-        }  
+        }
       }
       //To display footer info
       function DisplayInfo()
@@ -169,15 +163,8 @@
         if(maxRecords!=0)
         {
           totalPages = maxRecords / dispRecords;
-          if ((maxRecords % dispRecords) <= 50)
-          {
-            totalPages = Math.round(totalPages);
-            totalPages = totalPages + 1;
-          }
-          else
-          {
-            totalPages = Math.round(totalPages); 
-          }  
+          totalPages = Math.floor(totalPages);
+          totalPages = totalPages + 1;
         }
         else
         {
@@ -245,8 +232,8 @@
           <tr>
             <td colspan="3">
               <fieldset>
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="display"  id="all_log_content">
-                  <thead>
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="log_line"  id="all_log_content">
+                  <thead class="log_line">
                     <tr>
                       <th width="10%">Date</th>
                       <th width="10%">Host</th>
@@ -254,7 +241,7 @@
                       <th width="70%">Message</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody class="log_line">
                   </tbody>
                 </table>
               </fieldset>

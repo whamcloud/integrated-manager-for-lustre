@@ -48,11 +48,9 @@ function LoadFSList_FSList()
     {
       var response = data.response;
       var fsName;
-      var action; 
       $.each(response, function(resKey, resValue)
       {
       fsName = "<a href='#' onclick=LoadEditFSScreen('" + resValue.fsname + "','" + resValue.fsid +"')>" + resValue.fsname + "</a>";
-      action = "<a href='#' onclick='jConfirm(\"" + MSG_START_FSLIST + "\",\"Configuration Manager\", function(r){if(r == true){StartFileSystem(\""+  resValue.fsname +"\");}});'>Start<img src='/static/images/start.png' height=12 width=12 title='Start'/></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' height=15 width=15 title='Configuration Param'/></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_FSLIST + "\",\"Configuration Manager\", function(r){if(r == true){StartFileSystem(\""+  resValue.fsname +"\");}});'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
       $('#fs_list').dataTable().fnAddData ([
         fsName,
         resValue.mgs_hostname,
@@ -61,7 +59,7 @@ function LoadFSList_FSList()
         resValue.noofost,
         resValue.kbytesused,
         resValue.kbytesfree,
-        action
+        CreateActionLink(resValue.id, resValue.available_transitions, "SERVER")
         ]); 
       });
     }
@@ -88,27 +86,13 @@ function LoadTargets_EditFS(fs_id)
       var response = data.response;
       $.each(response, function(resKey, resValue)
       {
-        if(resValue.state == "mounted")
-        {
-          message = "Are you sure you want to stop " + resValue.human_name + "?";
-          action = "<a href='#' onclick='jConfirm(\"" + message + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"unmounted\");}});'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>"; 
-        }
-        else if (resValue.state == 'unmounted')
-        {
-          message = "Are you sure you want to start " + resValue.human_name + "?";
-          action = "<a href='#' onclick='jConfirm(\"" + message + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"mounted\");}});'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
-        }
-        else
-        {
-          action = ""
-        }
         row = [
                 resValue.lun_name,
                 target_dialog_link(resValue.id, resValue.human_name),
                 resValue.primary_server_name,
                 resValue.failover_server_name,
                 resValue.active_host_name,
-                action,
+                CreateActionLink(resValue.id, resValue.available_transitions, "TARGET"),
                 notification_icons_markup(resValue.id, resValue.content_type_id)
               ]
         if (resValue.kind == "OST") {
@@ -119,7 +103,6 @@ function LoadTargets_EditFS(fs_id)
           $('#mdt').dataTable().fnAddData (row);
         }
       });
-
       // After updating all table rows, update their .notification_object_icon elements
       notification_update_icons();
     }
@@ -278,29 +261,18 @@ function LoadMGTConfiguration_MGTConf()
     {
       var response = data.response;
       var fsnames;
-      var message;
       if(data.response!="")
       {
         $.each(response, function(resKey, resValue)
         {
               fsnames = resValue.fs_names;
-              message = "Are you sure you want to stop " + resValue.human_name + "?";
-              if(resValue.state == "mounted")
-              {
-                action = "<a href='#' onclick='jConfirm(\"" + message + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"unmounted\");}});'>Stop<img src='/static/images/stop.png' title='Stop' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
-              }
-              else
-              {
-                action = "<a href='#' onclick='jConfirm(\"" + message + "\",\"Configuration Manager\", function(r){if(r == true){SetTargetMountStage(\""+  resValue.id +"\",\"mounted\");}});'>Start<img src='/static/images/start.png'title='Start' height=15 width=15/></a> | <a href='#'>Remove<img src='/static/images/remove.png' height=15 width=15 title='Remove'/></a>";
-              }
-              
               $('#mgt_configuration').dataTable().fnAddData ([
                 fsnames.toString(),
                 resValue.lun_name,
                 target_dialog_link(resValue.id, resValue.primary_server_name),
                 resValue.failover_server_name,
                 resValue.active_host_name,
-                action,
+                CreateActionLink(resValue.id,resValue.available_transitions[0], "SERVER"),
                 notification_icons_markup(resValue.id, resValue.content_type_id)
               ]);
         });
@@ -381,30 +353,13 @@ function LoadServerConf_ServerConfig()
     if(data.success)
     {
       var response = data.response;
-      var lnet_status_mesg;
-      var lnet_status;
       $.each(response, function(resKey, resValue)
       {
-        lnet_status = resValue.lnet_status;
-        lnet_status_mesg="";
-        if(lnet_status == "lnet_up")
-        {
-          lnet_status_mesg = "<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;,&apos;"+ MSG_STOP_HOST+ "&apos;)'>Stop<img src='/static/images/stop.png' title='Stop Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | <a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_unload&apos;,&apos;"+ MSG_UNLOAD_LNET+ "&apos;)'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15 /></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";
-        }
-        else if(resValue.lnet_status == "lnet_down")
-        {
-          lnet_status_mesg = "<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_up&apos;,&apos;"+ MSG_START_HOST + "&apos;)'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | <a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_down&apos;,&apos;"+ MSG_UNLOAD_LNET + "&apos;)'>Unload<img src='/static/images/unload.png' title='Unload Lnet' height=15 width=15 /></a> | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>"; 
-        }
-        else if(resValue.lnet_status == "lnet_unloaded")
-        {
-          lnet_status_mesg = "<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_up&apos;,&apos;"+ MSG_START_HOST + "&apos;)'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | &nbsp;&nbsp;<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_load&apos;,&apos;"+ MSG_LOAD_LNET + "&apos;)'>Load<img src='/static/images/load.png' title='Load Lnet' height=15 width=15 /></a>&nbsp;&nbsp; | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";  
-        }
         $('#server_configuration').dataTable().fnAddData ([
           resValue.pretty_name,
           resValue.failnode,
           resValue.status,
-          lnet_status,
-          lnet_status_mesg,
+          CreateActionLink(resValue.id,resValue.available_transitions, "SERVER"),
           notification_icons_markup(resValue.id, resValue.content_type_id)
         ]);
       });
@@ -419,6 +374,44 @@ function LoadServerConf_ServerConfig()
   .complete(function(event) 
   {
   });
+}
+
+function CreateActionLink(id,available_transitions, kind)
+{
+  var ops_action="";
+  var action="";
+  var function_name;
+  var button_class = "ui-state-default ui-corner-all";
+  $.each(available_transitions, function(resKey, resValue)
+  {
+    if(kind == "SERVER")
+    {
+      if(resValue.state == "removed")
+      {
+        function_name = "RemoveHost_ServerConfig(\"" + MSG_REMOVE_HOST + "\"," + id + ")";
+      }
+      else
+      {
+        function_name = "Lnet_Operations("+  id + ",\"" + resValue.state + "\",\"" + MSG_LOAD_LNET + "\")";
+      }
+    }
+    else if(kind == "TARGET")
+    {
+      if(resValue.state == "removed")
+      {
+        function_name = "RemoveHost_ServerConfig(\"" + MSG_REMOVE_HOST + "\"," + id + ")";
+      }
+      else
+      {
+        function_name = "SetTargetMountStage("+  id + ",\"" + resValue.state + "\",\"" + MSG_LOAD_LNET + "\")";
+      }
+    }
+    ops_action = "<Button class='" + button_class + "'" +
+    " onclick='"+ function_name + "'>" + 
+    resValue.verb + "</Button>&nbsp;";
+    action = action + ops_action;
+  });
+  return action;
 }
 
 /******************************************************************/

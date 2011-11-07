@@ -312,26 +312,6 @@ loadLogContent = function(targetJobDivName, maxCount)
   });
 }
 
-loadHostList = function(fileSystemName)
-{
-  var hostList = '<option>All</option>';
-  $.post("/api/listservers/",{filesystem_id:fileSystemName})
-  .success(function(data, textStatus, jqXHR) {
-  if(data.success)
-  {
-    $.each(data.response, function(resKey, resValue)
-    {
-      hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
-    });
-  }
-  })
-  .error(function(event) {
-  })
-  .complete(function(event){
-    $('#db_events_hostList').html(hostList);
-  });
-}
-
 loadJobContent = function(targetJobDivName)
 {
   $('#'+targetJobDivName).html('<tr><td width="100%" align="center"><img src="/static/images/loading.gif" style="margin-top:10px;margin-bottom:10px" width="16" height="16" /></td></tr>');

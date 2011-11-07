@@ -10,38 +10,44 @@ var ERR_COMMON_START_OST = "Error in Starting OST: ";
 var ALERT_TITLE = "Configuration Manager";
 var CONFIRM_TITLE = "Configuration Manager";
 
-RemoveHost_ServerConfig = function (host_id)
+RemoveHost_ServerConfig = function (confirm_mesg, host_id)
 {
-  $.post("/api/remove_host/",{"hostid":host_id}).success(function(data, textStatus, jqXHR) {
-      if(data.success)
-      {
-        var response = data.response;    
-        if(response.status != "")
+  jConfirm(confirm_mesg, CONFIRM_TITLE, function(r)
+  {
+    if(r == true)
+    {
+    $.post("/api/remove_host/",{"hostid":host_id}).success(function(data, textStatus, jqXHR) {
+        if(data.success)
         {
-          jAlert("Host " + response.hostid + " Deleted", ALERT_TITLE);
-          $('#server_configuration').dataTable().fnClearTable();
-          LoadServerConf_ServerConfig();
+          var response = data.response;    
+          if(response.status != "")
+          {
+            jAlert("Host " + response.hostid + " Deleted", ALERT_TITLE);
+            $('#server_configuration').dataTable().fnClearTable();
+            LoadServerConf_ServerConfig();
+          }
+          else
+          {
+            jAlert(ERR_COMMON_DELETE_HOST,ALERT_TITLE);
+          }
         }
         else
         {
-          jAlert(ERR_COMMON_DELETE_HOST,ALERT_TITLE);
+          jAlert(ERR_COMMON_DELETE_HOST + data.errors, ALERT_TITLE);
         }
-      }
-      else
-      {
-        jAlert(ERR_COMMON_DELETE_HOST + data.errors, ALERT_TITLE);
-      }
-    })
-    .error(function(event) {
-        jAlert(ERR_COMMON_DELETE_HOST + data.errors,ALERT_TITLE);
-    })
-    .complete(function(event) {
-    });
+      })
+      .error(function(event) {
+          jAlert(ERR_COMMON_DELETE_HOST + data.errors,ALERT_TITLE);
+      })
+      .complete(function(event) {
+      });
+    }
+  });
 }
 
 function Lnet_Operations(host_id, opps, confirm_mesg)
 {
-  jConfirm(confirm_mesg,"Configuration Manager", 
+  jConfirm(confirm_mesg, CONFIRM_TITLE, 
   function(r)
   {
     if(r == true)

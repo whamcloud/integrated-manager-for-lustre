@@ -6,58 +6,173 @@
         {
           // Menu Highlighter
           $('#events_menu').addClass('active');
-          loadHostList(''); 
-          var oTable = $('#all_event_content').dataTable( {
-          "sAjaxDataProp": "response.aaData",
-          "bProcessing": true,
-          "iDisplayLength":50,
-          "bDeferRender": true,
-          "sAjaxSource": '/api/geteventsbyfilter/',
-          "fnServerData": function ( sSource, aoData, fnCallback ) 
+          //total no of records return by db
+          var maxRecords = 0;
+          //current  page no
+          var pageCnt = 0;
+          //total count of pages
+          var totalPages=0;
+          
+          loadHostList('');
+          var lustre=true;
+          var oTable = $('#all_event_content').dataTable(
           {
-            $.ajax(
-            {
-              "dataType": 'json', 
-              "type": "POST", 
-              "url": sSource, 
-              "data": ({"host_id":""+$('#db_events_hostList').val(), 
-                        "severity":""+$('#event_severity').val(), 
-                        "eventtype":""+$('#event_type').val(),
-                        "scroll_size":"","scroll_id":""}),
-              "success": fnCallback,
-            })
-          },
-          "aoColumns": [
-            { "sClass": 'txtleft ',"mDataProp":"event_created_at" },
-            { "sClass": 'txtcenter',"mDataProp":"event_severity" },
-            { "sClass": 'txtleft',"mDataProp":"event_host" },
-            { "sClass": 'txtleft',"mDataProp":"event_message" }
-          ],
-          "oLanguage": 
-          {
-            "sProcessing": "<img src='/static/images/loading.gif' " + 
-                           "style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
-          },
-          "bJQueryUI": true,
-        });
+            "sAjaxDataProp": "response.aaData",
+            "bProcessing": true,
+            "iDisplayLength":25,
+            "bDeferRender": true,
+            "sAjaxSource": '/api/geteventsbyfilter/',
+            "fnServerData": function ( sSource, aoData, fnCallback ) 
+             {
+               $.ajax(
+               {
+                 "dataType": 'json', 
+                 "type": "POST", 
+                 "url": sSource, 
+                 "data": JSON.stringify
+                 ({
+                   "host_id":"", 
+                   "severity":""+$('#event_severity').val(), 
+                   "eventtype":""+$('#event_type').val(),
+                   "scroll_id":pageCnt,
+                   "scroll_size":25
+                 }),
+                 "contentType": "application/json; charset=utf-8",
+                 "success":function(data) 
+                 {
+                   maxRecords = data.response.iTotalRecords;
+                   DisplayInfo();
+                   fnCallback(data);
+                 }
+               })
+             },
+             "aoColumns": [
+                { "sClass": 'txtleft',"mDataProp":"event_created_at", "asSorting": [ "desc" ]},
+                { "sClass": 'txtcenter',"mDataProp":"event_severity" },
+                { "sClass": 'txtleft',"mDataProp":"event_host" },
+                { "sClass": 'txtleft',"mDataProp":"event_message" }
+             ],
+             "bJQueryUI": true,
+             "fnDrawCallback": function() 
+             {
+               //enable next button by default
+               $('#all_event_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
+               //to diable next button for last page.
+               if((pageCnt+1)==totalPages)
+               {
+                 $('#all_event_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-disabled");
+               }
+               //to enable previous button once it left first page
+               if(pageCnt>0)
+               {
+                 $('#all_event_content_previous').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
+               }
+               //to diplay table info after table draw
+               $('#all_event_content_info').html("<div> Showing "+ (pageCnt+1)+ " of " + totalPages + "</div>");
+             },
+          });
+          
+        //clear default table info
+        $("#all_event_content_info").empty();
         $("#alertAnchor").click();
         $('#event_filter_btn').click(function()
         {  
+          pageCnt=0;
           RefreshTable('#all_event_content',
                        '/api/geteventsbyfilter/', 
                        $('#db_events_hostList').val(),
                        $('#event_severity').val(),
-                       $('#event_type').val());
+                       $('#event_type').val(),
+                       pageCnt, 
+                       oTable.fnSettings()._iDisplayLength);
         });
-        function RefreshTable(tableId, urlData, host, severity, eventtype)
+      //Change event for changing local pagination combo box
+        $('select[name=all_event_content_length]').change(function()
+        {
+          if(maxRecords!=0)
+          {
+            RefreshTable('#all_event_content',
+                '/api/geteventsbyfilter/', 
+                $('#db_events_hostList').val(),
+                $('#event_severity').val(),
+                $('#event_type').val(),
+                pageCnt, 
+                oTable.fnSettings()._iDisplayLength);
+          }
+        });
+        //click handler for next button
+        $('#all_event_content_next').click(function()
+        {   
+          if((pageCnt+1)<totalPages)
+          {
+            event_Next();
+          }
+        });
+        //click handler for previous button
+        $('#all_event_content_previous').click(
+          function()
+          {
+            event_Previous();
+            if(pageCnt==0)
+            {
+              oTable.fnSettings().className="sPagePrevDisabled";
+            }
+          });
+      //function to load next page log
+        function event_Next()
+        {
+          pageCnt++;
+          RefreshTable('#all_event_content',
+              '/api/geteventsbyfilter/', 
+              $('#db_events_hostList').val(),
+              $('#event_severity').val(),
+              $('#event_type').val(),
+              pageCnt, 
+              oTable.fnSettings()._iDisplayLength);
+        }
+        //function to load previous page log.
+        function event_Previous()
+        {
+          if (pageCnt != 0)
+          {
+            pageCnt--;
+            RefreshTable('#all_event_content',
+              '/api/geteventsbyfilter/', 
+              $('#db_events_hostList').val(),
+              $('#event_severity').val(),
+              $('#event_type').val(),
+              pageCnt, 
+              oTable.fnSettings()._iDisplayLength);
+          }
+        }
+        //To display footer info
+        function DisplayInfo()
+        {
+          var info_div = "<div class='info'></div>";
+          var dispRecords = oTable.fnSettings()._iDisplayLength;
+          //for blank reponse
+          if(maxRecords!=0)
+          {
+            totalPages = maxRecords / dispRecords;
+            totalPages = Math.floor(totalPages);
+            totalPages = totalPages + 1;
+          }
+          else
+          {
+            //for page count 0 for display in info if the 0 records found
+            pageCnt=-1;
+          }
+          $('#all_event_content_info').empty();
+        }
+        function RefreshTable(tableId, urlData, host, severity, eventtype, scroll_id, scroll_size)
         {
           $(".dataTables_processing").css('visibility','visible');
           $.post(urlData, 
                  {'host_id':host,
                   'severity':severity,
                   'eventtype':eventtype,
-                  'scroll_size':'',
-                  'scroll_id':''
+                  'scroll_size':scroll_size,
+                  'scroll_id':scroll_id
                  }, 
             function( json )
             {
@@ -70,6 +185,7 @@
               }  
               oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
               $(".dataTables_processing").css('visibility','hidden');
+              DisplayInfo();
               table.fnDraw();
             });
         }
