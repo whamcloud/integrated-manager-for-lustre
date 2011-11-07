@@ -26,6 +26,11 @@ alert_indicator_markup = function(id, content_type_id)
   return "<span class='alert_indicator alert_indicator_object_id_" + id + "_" + content_type_id + "'></span>"
 }
 
+alert_indicator_large_markup = function(id, content_type_id)
+{
+  return "<span class='alert_indicator alert_indicator_large alert_indicator_object_id_" + id + "_" + content_type_id + "'></span>"
+}
+
 notification_icon_markup = function(id, ct) {
   return "<span class='notification_object_icon notification_object_id_" + id + "_" + ct + "'/>"
 }
@@ -53,8 +58,15 @@ update_alert_indicator = function(element)
     var key = [parts[4], parts[5]];
 
     var effects = alert_effects[key]
-    if (effects && attr_count(effects)) {
-      /*element.html('Alert!')*/
+    effect_count = attr_count(effects)
+    if (effects && effect_count > 0) {
+      if (element.hasClass('alert_indicator_large')) {
+        var text = effect_count + ' alert';
+        if (effect_count > 1) {
+          text += "s";
+        }
+        element.html(text)
+      }
       element.addClass('alert_indicator_active');
       element.removeClass('alert_indicator_inactive');
       
@@ -67,7 +79,9 @@ update_alert_indicator = function(element)
       element.attr('title', tooltip_markup);
       element.cluetip({splitTitle: '|', cluezIndex: 1002});
     } else {
-      /*element.html('No alerts')*/
+      if (element.hasClass('alert_indicator_large')) {
+        element.html('No alerts')
+      }
       element.addClass('alert_indicator_inactive');
       element.removeClass('alert_indicator_active');
       element.attr('title', 'No alerts');

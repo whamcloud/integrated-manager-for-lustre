@@ -67,7 +67,6 @@ class ListFileSystems(AnonymousRequestHandler):
 class GetFileSystem(AnonymousRequestHandler):
     @extract_request_args('filesystem_id')
     def run(self,request,filesystem_id):
-        fs_info = []  
         filesystem =  ManagedFilesystem.objects.get(id=filesystem_id)
         osts = ManagedOst.objects.filter(filesystem = filesystem)
         no_of_ost = osts.count()
@@ -97,6 +96,10 @@ class GetFileSystem(AnonymousRequestHandler):
         except:
                 pass
 
+
+        from django.contrib.contenttypes.models import ContentType
+        # FIXME: why return a list of one?
+        fs_info = []  
         fs_info.append( {'fsname':filesystem.name,
                          'status':filesystem.status_string(),
                          'noofoss':no_of_oss,
@@ -110,7 +113,10 @@ class GetFileSystem(AnonymousRequestHandler):
                          'bytes_used':sizeof_fmt(((fskbytestotal - fskbytesfree) * 1024)),
                          'inodes_free':fsfilesfree,
                          'inodes_total':fsfilestotal,
-                         'inodes_used':(fsfilestotal - fsfilesfree)
+                         'inodes_used':(fsfilestotal - fsfilesfree),
+                         'id': filesystem.id,
+                         'content_type_id': ContentType.objects.get_for_model(filesystem).id
+
         })
         return fs_info  
 

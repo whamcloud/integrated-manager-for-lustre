@@ -40,20 +40,24 @@ span.alert_indicator {
   display: inline-block;
   width: 20px;
   height: 20px;
-  /*
-  padding-left: 24px;
-  padding-top: 3px;
-  */
   vertical-align: center;
-  font-size: 8pt;
-  text-align: left;
   border-radius: 3px;
-  line-height: normal;
 
   background-repeat: no-repeat;
   background-position: 2px;
 }
 
+span.alert_indicator_large {
+  width: 65px;
+  height: 20px;
+  padding-left: 24px;
+  padding-top: 3px;
+  vertical-align: center;
+  font-size: 8pt;
+  text-align: left;
+  border-radius: 3px;
+  line-height: normal;
+}
 
 span.alert_indicator_active {
   /*

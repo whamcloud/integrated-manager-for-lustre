@@ -450,6 +450,9 @@ function LoadFSData_EditFS()
           $('#mgs_name').html(resValue.mgs_hostname);
           $('#mds_name').html(resValue.mds_hostname);
           $('#fs_status').html(resValue.status);
+          console.log(alert_indicator_large_markup(resValue.id, resValue.content_type_id));
+          console.log($('#fs_alerts'))
+          $('#fs_alerts').html(alert_indicator_large_markup(resValue.id, resValue.content_type_id));
         });
       }
     })
