@@ -279,8 +279,7 @@ $(document).ready(function()
       {
         $.each(data.response, function(resKey, resValue)
         {
-          breadCrumbHtml  =  breadCrumbHtml + 
-          "<option value="+resValue.id+">"+resValue.host_address+"</option>";
+          breadCrumbHtml += "<option value="+resValue.id+">" + resValue.pretty_name + "</option>";
         });
        }
     })

@@ -400,7 +400,7 @@ function LoadServerConf_ServerConfig()
           lnet_status_mesg = "<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_up&apos;,&apos;"+ MSG_START_HOST + "&apos;)'>Start<img src='/static/images/start.png' title='Start Lnet' height=15 width=15 /></a> | <a href='#' onclick='jConfirm(\"" + MSG_REMOVE_HOST + "\",\"Configuration Manager\", function(r){if(r == true){RemoveHost_ServerConfig("+  resValue.id +");}});'>Remove<img src='/static/images/remove.png' title='Remove' height=15 width=15 id='"+ resValue.id +"'/></a> | &nbsp;&nbsp;<a href='#' onclick='Lnet_Operations("+  resValue.id +",&apos;lnet_load&apos;,&apos;"+ MSG_LOAD_LNET + "&apos;)'>Load<img src='/static/images/load.png' title='Load Lnet' height=15 width=15 /></a>&nbsp;&nbsp; | <a href='#'>Configuration<img src='/static/images/configuration.png' title='Configuration' height=15 width=15/></a>";  
         }
         $('#server_configuration').dataTable().fnAddData ([
-          resValue.host_address,
+          resValue.pretty_name,
           resValue.failnode,
           resValue.status,
           lnet_status,

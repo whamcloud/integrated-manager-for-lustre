@@ -321,7 +321,7 @@ loadHostList = function(fileSystemName)
   {
     $.each(data.response, function(resKey, resValue)
     {
-      hostList  =  hostList + "<option value="+resValue.id+">"+resValue.host_address+"</option>";
+      hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
     });
   }
   })
