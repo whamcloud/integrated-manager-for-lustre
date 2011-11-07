@@ -9,6 +9,8 @@ from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
+from django.contrib.contenttypes.models import ContentType
+
 from requesthandler import (AnonymousRequestHandler,
                             extract_request_args)
 from configure.models import (ManagedFilesystem,
@@ -50,6 +52,7 @@ class ListFileSystems(AnonymousRequestHandler):
             except:
                 pass 
 
+            # FIXME: fsid and fsname are bad names, they should be 'id' and 'name'
             filesystems.append({'fsid':filesystem.id,
                                 'fsname': filesystem.name,
                                 'status':filesystem.status_string(),
@@ -60,7 +63,10 @@ class ListFileSystems(AnonymousRequestHandler):
                                 'mds_hostname': mds_hostname,
                                 # FIXME: the API should not be formatting these, leave it to the presentation layer
                                 'kbytesused': sizeof_fmt((fskbytestotal * 1024)),
-                                'kbytesfree': sizeof_fmt((fskbytesfree *1024))})
+                                'kbytesfree': sizeof_fmt((fskbytesfree *1024)),
+                                'id': filesystem.id,
+                                'content_type_id': ContentType.objects.get_for_model(filesystem).id
+                                 })
 
         return filesystems
 
@@ -97,7 +103,6 @@ class GetFileSystem(AnonymousRequestHandler):
                 pass
 
 
-        from django.contrib.contenttypes.models import ContentType
         # FIXME: why return a list of one?
         fs_info = []  
         fs_info.append( {'fsname':filesystem.name,

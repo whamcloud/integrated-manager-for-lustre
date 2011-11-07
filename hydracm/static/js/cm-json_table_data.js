@@ -59,7 +59,8 @@ function LoadFSList_FSList()
         resValue.noofost,
         resValue.kbytesused,
         resValue.kbytesfree,
-        CreateActionLink(resValue.fsid, resValue.available_transitions, "SERVER")
+        CreateActionLink(resValue.fsid, resValue.available_transitions, "SERVER"),
+        notification_icons_markup(resValue.id, resValue.content_type_id)
         ]); 
       });
     }
@@ -450,8 +451,6 @@ function LoadFSData_EditFS()
           $('#mgs_name').html(resValue.mgs_hostname);
           $('#mds_name').html(resValue.mds_hostname);
           $('#fs_status').html(resValue.status);
-          console.log(alert_indicator_large_markup(resValue.id, resValue.content_type_id));
-          console.log($('#fs_alerts'))
           $('#fs_alerts').html(alert_indicator_large_markup(resValue.id, resValue.content_type_id));
         });
       }
