@@ -125,6 +125,10 @@ def unconfigure_ha(args):
 def _unconfigure_ha(primary, label, uuid, serial):
     unique_label = "%s_%s" % (label, serial)
 
+    if get_resource_location(unique_label):
+        raise RuntimeError("cannot unconfigure-ha: %s is still running " % \
+                           unique_label)
+
     if primary:
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-primary\">'" % unique_label)
         rc, stdout, stderr = cibadmin("-D -X '<primitive id=\"%s\">'" % unique_label)
