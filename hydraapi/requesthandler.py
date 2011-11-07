@@ -5,19 +5,25 @@
 # REST API request handler definitions and other decoratoins
 from piston.handler import BaseHandler
 from jsonutils import render_to_json
-from  django.views.decorators.csrf  import csrf_exempt
-#
+from django.views.decorators.csrf  import csrf_exempt
+
+import settings
+
+import logging
+hydraapi_log = logging.getLogger('hydraapi')
+handler = logging.FileHandler(settings.API_LOG_PATH)
+handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+hydraapi_log.addHandler(handler)
+
+if settings.DEBUG:
+    hydraapi_log.setLevel(logging.DEBUG)
+else:
+    hydraapi_log.setLevel(logging.WARNING)
+
 def extract_exception(f):
     """Decorator to catch boto exceptions and convert them
     to simple exceptions with slightly nicer error messages.
     """
-    import settings
-    import logging
-    hydraapi_log = logging.getLogger('hydraapi')
-    hydraapi_log.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(settings.API_LOG_PATH)
-    handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-    hydraapi_log.addHandler(handler)
     import functools
     @functools.wraps(f)
     def _extract_exception(*args, **kwds):
