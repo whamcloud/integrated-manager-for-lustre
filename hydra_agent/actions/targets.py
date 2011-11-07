@@ -142,10 +142,14 @@ def _unconfigure_ha(primary, label, uuid, serial):
 def configure_ha(args):
     unique_label = "%s_%s" % (args.label, args.serial)
 
-    # remove any pre-existing instance of the resource being added
-    rc, stdout, stderr = shell.run(shlex.split("crm_resource -r %s -q" % unique_label))
+    # see if this resource exists and matches what we are adding
+    rc, stdout, stderr = shell.run(shlex.split("crm_resource -r %s -g target" % unique_label))
     if rc == 0:
-        _unconfigure_ha(args.primary, args.label, args.uuid, args.serial)
+        info = store_get_target_info(stdout.rstrip("\n"))
+        if info['bdev'] == args.device and info['mntpt'] == args.mountpoint:
+            return
+        else:
+            raise RuntimeError("A resource with the name %s already exists" % unique_label)
 
     if args.primary:
         # now configure pacemaker for this target
