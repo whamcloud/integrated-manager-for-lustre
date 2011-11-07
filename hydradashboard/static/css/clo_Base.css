@@ -381,14 +381,16 @@ cursor:pointer;
 }
 .timeint{
 	float:right;
-	color:#FFFFFF;
+	color:#222;
 	background-color:#bbbbbb;
-	height:31px;
 	position:relative;
+    border-radius: 4px;
 	/*margin-top:-31px;*/
 	padding-left:10px;
+    padding-bottom: 1px; 
 	border:1px solid #848484;
     font-size: 12px;
+    white-space: nowrap;
 }
 .magbutton{
 	background-image: url(../images/mglass.png); 
