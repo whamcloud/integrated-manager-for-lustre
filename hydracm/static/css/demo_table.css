@@ -35,7 +35,6 @@
 	clear: both;
 	_height: 302px;
 	zoom: 1; /* Feeling sorry for IE */
-	border-bottom:#999999 solid 1px;
 }
 
 .dataTables_processing {
@@ -57,29 +56,41 @@
 .dataTables_length {
 	width: 50%;
 	float: left;
-	height:28px;
-	border-bottom:#999999 solid 1px;
+	height:22px;
+    font-size: 8pt;
+    padding-left: 4px;
+    font-weight: normal;
 }
 
 .dataTables_filter {
-	width: 50%;
+	width: 49%;
 	float: right;
 	text-align: right;
-	height:28px;
-	border-bottom:#999999 solid 1px;
+	height:22px;
+    font-size: 8pt;
+    font-weight: normal;
+}
+
+.dataTables_filter input {
+    border-radius: 5px;
+    border: 1px solid #999;
 }
 
 .dataTables_info {
 	width: 60%;
+    height: 18px;
 	float: left;
+    font-size: 8pt;
+    font-weight: normal;
+    padding-left: 4px;
+    padding-top: 2px;
 }
 
 .dataTables_paginate {
 	width: 44px;
-	* width: 50px;
+    height: 20px;
 	float: right;
 	text-align: right;
-	padding-top:5px;
 }
 
 /* Pagination nested */
@@ -135,7 +146,6 @@ table.display thead th {
 	border-bottom: 1px solid black;
 	font-weight: bold;
 	cursor: pointer;
-	* cursor: hand;
 	font-size:13px;
 	/*background-image:url(../images/line1.jpg);
 	background-repeat:repeat-x;
