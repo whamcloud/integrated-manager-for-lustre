@@ -50,7 +50,7 @@ class StateManager(object):
         # using get_expected_state in place of .state below.
         active_locks = StateLock.filter_by_locked_item(stateful_object).filter(~Q(job__state = 'complete')).count()
         if active_locks > 0:
-            return None
+            return []
 
         # XXX: could alternatively use expected_state here if you want to advertise 
         # what jobs can really be added (i.e. advertise transitions which will
