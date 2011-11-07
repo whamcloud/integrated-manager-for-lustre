@@ -81,63 +81,63 @@ def calculate_elapsed_steps(db_last_update, db_steps, update_time, interval):
 
 def simple_update(ds_list, update_time, interval):
     for ds in ds_list:
-        if math.isnan(ds.pdp_new):
-            ds.unknown_seconds += math.floor(interval)
+        if math.isnan(ds.prep.new_val):
+            ds.prep.unknown_seconds += math.floor(interval)
         else:
-            if math.isnan(ds.pdp_scratch):
-                ds.pdp_scratch = ds.pdp_new
+            if math.isnan(ds.prep.scratch):
+                ds.prep.scratch = ds.prep.new_val
             else:
-                ds.pdp_scratch += ds.pdp_new
+                ds.prep.scratch += ds.prep.new_val
 
-        debug_print("%s scratch %lf, unknown %lu" % (ds.name, ds.pdp_scratch,
-                                                     ds.unknown_seconds))
+        debug_print("%s scratch %lf, unknown %lu" % (ds.name, ds.prep.scratch,
+                                                     ds.prep.unknown_seconds))
 
-        ds.save()
+        ds.prep.save(force_update=True)
 
 def process_pdp_st(ds, db_step, interval, pre_int, post_int, seconds):
     pre_unknown  = 0.0
 
-    debug_print("pdp_new: %10.2f pdp_scratch: %10.2f" % (ds.pdp_new, ds.pdp_scratch))
-    if math.isnan(ds.pdp_new):
+    debug_print("prep.new_val: %10.2f prep.scratch: %10.2f" % (ds.prep.new_val, ds.prep.scratch))
+    if math.isnan(ds.prep.new_val):
         pre_unknown = pre_int
     else:
-        if math.isnan(ds.pdp_scratch):
-            ds.pdp_scratch = 0.0
-        ds.pdp_scratch += ds.pdp_new / interval * pre_int
+        if math.isnan(ds.prep.scratch):
+            ds.prep.scratch = 0.0
+        ds.prep.scratch += ds.prep.new_val / interval * pre_int
 
-    debug_print("interval: %lf, heartbeat: %lu, step: %lu, unknown_seconds: %lu" % (interval, ds.heartbeat, db_step, ds.unknown_seconds))
-    if interval > ds.heartbeat or (db_step / 2.0) < ds.unknown_seconds:
-        ds.pdp_temp = DNAN
+    debug_print("interval: %lf, heartbeat: %lu, step: %lu, prep.unknown_seconds: %lu" % (interval, ds.heartbeat, db_step, ds.prep.unknown_seconds))
+    if interval > ds.heartbeat or (db_step / 2.0) < ds.prep.unknown_seconds:
+        ds.prep.temp_val = DNAN
     else:
         try:
-            ds.pdp_temp = ds.pdp_scratch / ((seconds - ds.unknown_seconds) - pre_unknown)
+            ds.prep.temp_val = ds.prep.scratch / ((seconds - ds.prep.unknown_seconds) - pre_unknown)
         except ZeroDivisionError:
             # Both C and Ruby handle this OK without all the flailing. :P
-            ds.pdp_temp = DNAN
-        debug_print("%10.2f = %10.2f / ((%d - %d) - %d)" % (ds.pdp_temp, ds.pdp_scratch, seconds, ds.unknown_seconds, pre_unknown))
+            ds.prep.temp_val = DNAN
+        debug_print("%10.2f = %10.2f / ((%d - %d) - %d)" % (ds.prep.temp_val, ds.prep.scratch, seconds, ds.prep.unknown_seconds, pre_unknown))
             
-    if math.isnan(ds.pdp_new):
-        ds.unknown_seconds = math.floor(post_int)
-        ds.pdp_scratch = DNAN
+    if math.isnan(ds.prep.new_val):
+        ds.prep.unknown_seconds = math.floor(post_int)
+        ds.prep.scratch = DNAN
     else:
-        ds.unknown_seconds = 0
-        ds.pdp_scratch = ds.pdp_new / interval * post_int
-        debug_print("%lf = %lf / %lf * %lu" % (ds.pdp_scratch, ds.pdp_new, interval, post_int))
+        ds.prep.unknown_seconds = 0
+        ds.prep.scratch = ds.prep.new_val / interval * post_int
+        debug_print("%lf = %lf / %lf * %lu" % (ds.prep.scratch, ds.prep.new_val, interval, post_int))
 
     debug_print("in process_pdp_st:")
     debug_print("pre_int: %10.2f" % pre_int)
     debug_print("post_int: %10.2f" % post_int)
     debug_print("seconds (diff_pdp_st): %d" % seconds)
-    debug_print("pdp_temp: %10.2f" % ds.pdp_temp)
-    debug_print("scratch: %10.2f" % ds.pdp_scratch)
+    debug_print("prep.temp_val: %10.2f" % ds.prep.temp_val)
+    debug_print("scratch: %10.2f" % ds.prep.scratch)
 
-    ds.save()
+    ds.prep.save(force_update=True)
 
 def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_count):
     for ds in db.ds_cache:
         process_pdp_st(ds, db.step, interval, pre_int, post_int,
                        elapsed_steps * db.step)
-        debug_print("PDP UPD %s elapsed_steps %d pdp_temp %lf new_prep: %lf new_unknown_sec: %d" % (ds.name, elapsed_steps, ds.pdp_temp, ds.pdp_scratch, ds.unknown_seconds))
+        debug_print("PDP UPD %s elapsed_steps %d prep.temp_val %lf new_prep: %lf new_unknown_sec: %d" % (ds.name, elapsed_steps, ds.prep.temp_val, ds.prep.scratch, ds.prep.unknown_seconds))
 
     for rra in db.rra_cache:
         start_pdp_offset = rra.cdp_per_row - pdp_count % rra.cdp_per_row
@@ -157,7 +157,7 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_cou
                 cdp_prep.update(rra, ds, elapsed_steps, start_pdp_offset)
             else:
                 debug_print("%d: no consolidation necessary" % rra.id)
-                cdp_prep.primary = ds.pdp_temp
+                cdp_prep.primary = ds.prep.temp_val
                 if elapsed_steps > 2:
                     cdp_prep.reset(ds, elapsed_steps)
 

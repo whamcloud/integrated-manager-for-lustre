@@ -219,7 +219,7 @@ class Database(models.Model):
         else:
             for update in sorted(updates.keys()):
                 new_values = self.parse_update_dict(updates[update],
-                                                     missing_ds_block)
+                                                    missing_ds_block)
                 self.single_update(self._parse_time(update), new_values)
 
     def fetch(self, archive_type, start_time=None,
@@ -255,10 +255,10 @@ class Database(models.Model):
 
         if fetch_metrics is None:
             for ds in self.datasources.all():
-                results[ds.name] = ds.last_reading
+                results[ds.name] = ds.prep.last_reading
         else:
             for ds in self.datasources.filter(name__in=fetch_metrics):
-                results[ds.name] = ds.last_reading
+                results[ds.name] = ds.prep.last_reading
 
         return (self.last_update, results)
 
@@ -327,19 +327,11 @@ class Datasource(PoorMansStiModel):
     """
     A Datasource identifies a source of Primary Data Points.
     """
-    # persistent record fields
     database        = models.ForeignKey(Database, related_name="datasources")
     name            = models.CharField(max_length=255)
     heartbeat       = models.BigIntegerField()
     min_reading     = SciFloatField(null=True, blank=True)
     max_reading     = SciFloatField(null=True, blank=True)
-    last_reading    = SciFloatField(null=True, blank=True)
-    pdp_scratch     = SciFloatField(null=True, default=0.0)
-    unknown_seconds = models.BigIntegerField(default=0)
-
-    # ephemeral attributes
-    pdp_new         = DNAN
-    pdp_temp        = DNAN
 
     class Meta:
         unique_together = ("database", "name")
@@ -349,13 +341,6 @@ class Datasource(PoorMansStiModel):
         if self.id is None:
             new_ds = True
 
-        if new_ds:
-            # We need to initialize the unknown seconds counter based
-            # on where we are relative to the last update and the next
-            # step.
-            self.unknown_seconds = (self.database.last_update %
-                                    self.database.step)
-
         super(Datasource, self).save(*args, **kwargs)
 
         if new_ds:
@@ -364,6 +349,8 @@ class Datasource(PoorMansStiModel):
             # and the entities will be precreated when the Archives are
             # defined.  This path should only be taken when a DS is added
             # after a Database has already been set up.
+            prep = PdpPrep(datasource=self)
+            prep.save(new_prep=True, force_insert=True)
             for rra in self.database.archives.all():
                 debug_print("Associating new DS with rra: %s" % rra.__dict__)
                 rra.create_ds_prep(self)
@@ -371,6 +358,7 @@ class Datasource(PoorMansStiModel):
 
     # This seems to be necessary to avoid integrity errors on delete.  Grumble.
     def delete(self, *args, **kwargs):
+        self.prep.delete(*args, **kwargs)
         for prep in self.preps.all():
             prep.delete(*args, **kwargs)
         for cdp in self.cdps.all():
@@ -382,21 +370,21 @@ class Datasource(PoorMansStiModel):
 
     def add_new_reading(self, new_reading, update_time, interval):
         # stash this for debugging
-        saved_last = self.last_reading
+        saved_last = self.prep.last_reading
 
         if self.heartbeat < interval:
-            self.last_reading = DNAN
+            self.prep.last_reading = DNAN
 
         if math.isnan(new_reading) or self.heartbeat < interval:
-            self.pdp_new = DNAN
+            self.prep.new_val = DNAN
         else:
-            self.pdp_new = self.transform_reading(new_reading,
-                                                  update_time,
-                                                  interval)
+            self.prep.new_val = self.transform_reading(new_reading,
+                                                       update_time,
+                                                       interval)
 
             # Make sure that we're inside the bounds defined by the DS.
             try:
-                rate = self.pdp_new / interval
+                rate = self.prep.new_val / interval
             except ZeroDivisionError:
                 rate = DNAN
 
@@ -405,12 +393,12 @@ class Datasource(PoorMansStiModel):
                   rate > self.max_reading)) or
                 ((not math.isnan(self.min_reading) and
                   rate < self.min_reading))):
-                self.pdp_new = DNAN
+                self.prep.new_val = DNAN
 
         # save this for the next run
-        self.last_reading = new_reading
+        self.prep.last_reading = new_reading
 
-        debug_print("%s @ %d: (%10.2f) %10.2f -> %10.2f" % (self.name, update_time, saved_last, new_reading, self.pdp_new))
+        debug_print("%s @ %d: (%10.2f) %10.2f -> %10.2f" % (self.name, update_time, saved_last, new_reading, self.prep.new_val))
 
 class Absolute(Datasource):
     """
@@ -453,10 +441,10 @@ class Counter(Datasource):
         proxy = True
 
     def transform_reading(self, value, update_time, interval):
-        if math.isnan(self.last_reading) or math.isnan(value):
+        if math.isnan(self.prep.last_reading) or math.isnan(value):
              return DNAN
 
-        value -= self.last_reading
+        value -= self.prep.last_reading
 
         if value < 0.0:
             value += 4294967296.0 # 2^32
@@ -487,10 +475,10 @@ class Derive(Datasource):
         proxy = True
 
     def transform_reading(self, value, update_time, interval):
-        if math.isnan(self.last_reading):
+        if math.isnan(self.prep.last_reading):
             return DNAN
         else:
-            return value - self.last_reading
+            return value - self.prep.last_reading
 
 class Gauge(Datasource):
     """
@@ -509,6 +497,31 @@ class Gauge(Datasource):
 
     def transform_reading(self, value, update_time, interval):
         return value * interval
+
+class PdpPrep(models.Model):
+    """
+    Provides storage for primary data points prior to consolidation.
+    """
+    datasource      = models.OneToOneField(Datasource,
+                                           primary_key=True,
+                                           related_name="prep")
+    last_reading    = SciFloatField(null=True)
+    scratch         = SciFloatField(null=True, default=0.0)
+    unknown_seconds = models.BigIntegerField(default=0)
+
+    # ephemeral attributes
+    new_val       = DNAN
+    temp_val      = DNAN
+
+    def save(self, new_prep=False, *args, **kwargs):
+        if new_prep:
+            # We need to initialize the unknown seconds counter based
+            # on where we are relative to the last update and the next
+            # step.
+            self.unknown_seconds = (self.datasource.database.last_update %
+                                    self.datasource.database.step)
+
+        super(PdpPrep, self).save(*args, **kwargs)
 
 class Archive(PoorMansStiModel):
     """
@@ -630,13 +643,13 @@ class Average(Archive):
 
     def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
         if math.isnan(cdp_prep.value):
-            return ds.pdp_temp * elapsed_steps
+            return ds.prep.temp_val * elapsed_steps
 
-        return cdp_prep.value + ds.pdp_temp * elapsed_steps
+        return cdp_prep.value + ds.prep.temp_val * elapsed_steps
 
     def initialize_cdp_value(self, cdp_prep, ds, start_pdp_offset):
         cum_val = 0.0 if math.isnan(cdp_prep.value) else cdp_prep.value
-        cur_val = 0.0 if math.isnan(ds.pdp_temp) else ds.pdp_temp
+        cur_val = 0.0 if math.isnan(ds.prep.temp_val) else ds.prep.temp_val
         primary = ((cum_val + cur_val * start_pdp_offset) /
                    (self.cdp_per_row - cdp_prep.unknown_pdps))
         debug_print("%10.9f = (%10.9f + %10.9f * %lu) / (%lu - %lu)" % (primary, cum_val, cur_val, start_pdp_offset, self.cdp_per_row, cdp_prep.unknown_pdps))
@@ -644,10 +657,10 @@ class Average(Archive):
 
     def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
         overlap_count = ((elapsed_steps - start_pdp_offset) % self.cdp_per_row)
-        if overlap_count == 0 or math.isnan(ds.pdp_temp):
+        if overlap_count == 0 or math.isnan(ds.prep.temp_val):
             cdp_prep.value = 0
         else:
-            cdp_prep.value = ds.pdp_temp * overlap_count
+            cdp_prep.value = ds.prep.temp_val * overlap_count
 
 class Last(Archive):
     """
@@ -665,17 +678,17 @@ class Last(Archive):
         proxy = True
 
     def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
-        return ds.pdp_temp
+        return ds.prep.temp_val
 
     def initialize_cdp_value(self, cdp_prep, ds, start_pdp_offset):
-        return ds.pdp_temp
+        return ds.prep.temp_val
 
     def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
         overlap_count = ((elapsed_steps - start_pdp_offset) % self.cdp_per_row)
-        if overlap_count == 0 or math.isnan(ds.pdp_temp):
+        if overlap_count == 0 or math.isnan(ds.prep.temp_val):
             cdp_prep.value = DNAN
         else:
-            cdp_prep.value = ds.pdp_temp
+            cdp_prep.value = ds.prep.temp_val
 
 class Max(Archive):
     """
@@ -694,13 +707,13 @@ class Max(Archive):
 
     def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
         if math.isnan(cdp_prep.value):
-            return ds.pdp_temp
+            return ds.prep.temp_val
 
-        return ds.pdp_temp if (ds.pdp_temp > cdp_prep.value) else cdp_prep.value
+        return ds.prep.temp_val if (ds.prep.temp_val > cdp_prep.value) else cdp_prep.value
 
     def initialize_cdp_value(self, cdp_prep, ds, start_pdp_offset):
         cum_val = -DINF if math.isnan(cdp_prep.value) else cdp_prep.value
-        cur_val = -DINF if math.isnan(ds.pdp_temp) else ds.pdp_temp
+        cur_val = -DINF if math.isnan(ds.prep.temp_val) else ds.prep.temp_val
 
         if cur_val > cum_val:
             return cur_val
@@ -709,10 +722,10 @@ class Max(Archive):
 
     def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
         overlap_count = ((elapsed_steps - start_pdp_offset) % self.cdp_per_row)
-        if overlap_count == 0 or math.isnan(ds.pdp_temp):
+        if overlap_count == 0 or math.isnan(ds.prep.temp_val):
             cdp_prep.value = -DINF
         else:
-            cdp_prep.value = ds.pdp_temp
+            cdp_prep.value = ds.prep.temp_val
 
 class Min(Archive):
     """
@@ -731,13 +744,13 @@ class Min(Archive):
 
     def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
         if math.isnan(cdp_prep.value):
-            return ds.pdp_temp
+            return ds.prep.temp_val
 
-        return ds.pdp_temp if (ds.pdp_temp < cdp_prep.value) else cdp_prep.value
+        return ds.prep.temp_val if (ds.prep.temp_val < cdp_prep.value) else cdp_prep.value
 
     def initialize_cdp_value(self, cdp_prep, ds, start_pdp_offset):
         cum_val = DINF if math.isnan(cdp_prep.value) else cdp_prep.value
-        cur_val = DINF if math.isnan(ds.pdp_temp) else ds.pdp_temp
+        cur_val = DINF if math.isnan(ds.prep.temp_val) else ds.prep.temp_val
 
         if cur_val < cum_val:
             return cur_val
@@ -746,10 +759,10 @@ class Min(Archive):
 
     def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
         overlap_count = ((elapsed_steps - start_pdp_offset) % self.cdp_per_row)
-        if overlap_count == 0 or math.isnan(ds.pdp_temp):
+        if overlap_count == 0 or math.isnan(ds.prep.temp_val):
             cdp_prep.value = DINF
         else:
-            cdp_prep.value = ds.pdp_temp
+            cdp_prep.value = ds.prep.temp_val
 
 class CDP(models.Model):
     """
@@ -790,21 +803,21 @@ class CdpPrep(models.Model):
             # on where we are in the archive's consolidation cycle.
             db_step = self.datasource.database.step
             db_update = self.datasource.database.last_update
-            self.unknown_pdps = ((db_update - self.datasource.unknown_seconds)
+            self.unknown_pdps = ((db_update - self.datasource.prep.unknown_seconds)
                                  % (db_step * self.archive.cdp_per_row)
                                  / db_step)
 
         super(CdpPrep, self).save(*args, **kwargs)
 
     def update(self, rra, ds, elapsed_steps, start_pdp_offset):
-        debug_print("->update: ds.pdp_temp %10.2f rra.steps_since_update %d elapsed_steps %d start_pdp_offset %d rra.cdp_per_row %d xff %10.2f" % (ds.pdp_temp, rra.steps_since_update, elapsed_steps, start_pdp_offset, rra.cdp_per_row, rra.xff))
+        debug_print("->update: ds.prep.temp_val %10.2f rra.steps_since_update %d elapsed_steps %d start_pdp_offset %d rra.cdp_per_row %d xff %10.2f" % (ds.prep.temp_val, rra.steps_since_update, elapsed_steps, start_pdp_offset, rra.cdp_per_row, rra.xff))
 
         if rra.steps_since_update > 0:
-            if math.isnan(ds.pdp_temp):
+            if math.isnan(ds.prep.temp_val):
                 self.unknown_pdps += start_pdp_offset
                 self.secondary = DNAN
             else:
-                self.secondary = ds.pdp_temp
+                self.secondary = ds.prep.temp_val
 
             if self.unknown_pdps > rra.cdp_per_row * rra.xff:
                 debug_print("%d > %d * %10.2f" % (self.unknown_pdps, rra.cdp_per_row, rra.xff))
@@ -815,7 +828,7 @@ class CdpPrep(models.Model):
                 debug_print("primary after initialize_cdp: %10.9f" % self.primary)
             rra.carryover_cdp_value(self, ds, elapsed_steps, start_pdp_offset)
 
-            if math.isnan(ds.pdp_temp):
+            if math.isnan(ds.prep.temp_val):
                 self.unknown_pdps = ((elapsed_steps - start_pdp_offset)
                                      % rra.cdp_per_row)
                 debug_print("%d = ((%d - %d) %% %d)" % (self.unknown_pdps, elapsed_steps, start_pdp_offset, rra.cdp_per_row))
@@ -823,7 +836,7 @@ class CdpPrep(models.Model):
                 debug_print("resetting unknown counter")
                 self.unknown_pdps = 0
         else:
-            if math.isnan(ds.pdp_temp):
+            if math.isnan(ds.prep.temp_val):
                 self.unknown_pdps += elapsed_steps
             else:
                 self.value = rra.calculate_cdp_value(self, ds, elapsed_steps)
@@ -832,6 +845,6 @@ class CdpPrep(models.Model):
 
     def reset(self, ds, elapsed_steps):
         debug_print("->reset_cdp")
-        self.primary = ds.pdp_temp
-        self.secondary = ds.pdp_temp
+        self.primary = ds.prep.temp_val
+        self.secondary = ds.prep.temp_val
         self.save(force_update=True)
