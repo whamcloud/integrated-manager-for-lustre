@@ -55,9 +55,14 @@ def normalize_nid(string):
     """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow 
        direct comparisons between NIDs"""
     if string[-4:] == "@tcp":
-        return string + "0"
-    else:
-        return string
+        string += "0"
+
+    # remove _ from nids (i.e. @tcp_0 -> @tcp0
+    i = string.find("_")
+    if i > -1:
+        string = string[:i] + string [i + 1:]
+
+    return string
 
 def normalize_nids(nid_list):
     """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow 

@@ -394,10 +394,11 @@ class GetLogs(AnonymousRequestHandler):
         # iTotalDisplayRecords is simply the number of records we will return
         # in this call (i.e. after all filtering and pagination)
         iTotalDisplayRecords = log_data.count()
-        log_records = [
-                       { 
-                        'message': nid_finder(log_entry.message),
-                        'service': log_entry.syslogtag,
+
+
+        log_records = [{'message': nid_finder(log_entry.message),
+                        # Trim trailing colon from e.g. 'kernel:'
+                        'service': log_entry.syslogtag.rstrip(":"),
                         'date': log_entry.devicereportedtime.strftime("%b %d %H:%M:%S"),
                         'host': log_entry.fromhost,
                        }
@@ -410,31 +411,22 @@ class GetLogs(AnonymousRequestHandler):
         log_result['aaData'] = log_records
         return log_result              
 
-def normalize_nid(string):
-    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
-       direct comparisons between NIDs"""
-    if string[-4:] == "@tcp":
-        string += "0"
-     # remove _ from nids (i.e. @tcp_0 -> @tcp0
-    i = string.find("_")
-    if i > -1:
-        string = string[:i] + string [i + 1:]
-    return string
 
 def nid_finder(message):
     from configure.models import Nid
+    from monitor.lib.lustre_audit import normalize_nid
     import re
+    # TODO: detect IB/other(cray?) as well as tcp
     nid_regex = re.compile("(\d{1,3}\.){3}\d{1,3}@tcp(_\d+)?")
     target_regex = re.compile("\\b(\\w+-(MDT|OST)\\d\\d\\d\\d)\\b")
     for match in nid_regex.finditer(message):
         replace = match.group()
         replace = normalize_nid(replace)
         try:
-            address =  Nid.objects.get(nid_string = replace).lnet_configuration.host.address
+            address = Nid.objects.get(nid_string = replace).lnet_configuration.host.address
             markup = "<a href='#' title='%s'>%s</a>" % (match.group(), address)
             message = message.replace(match.group(),
-                                      markup,
-                                      1)
+                                      markup)
         except Nid.DoesNotExist:
             print "failed to replace " + replace
     for match in target_regex.finditer(message):
