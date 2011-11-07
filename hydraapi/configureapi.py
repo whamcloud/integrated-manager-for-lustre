@@ -535,6 +535,66 @@ class Notifications(AnonymousRequestHandler):
         jobs = Job.objects.filter(*job_filter_args, **job_filter_kwargs).order_by('-modified_at')
         from monitor.models import AlertState
         alerts = AlertState.objects.filter(*alert_filter_args, **alert_filter_kwargs).order_by('-end')
+
+        # >> FIXME HYD-421 Hack: this info should be provided in a more generic way by 
+        #    AlertState subclasses
+        # NB adding a 'what_do_i_affect' method to 
+        alert_dicts = []
+        for a in alerts:
+            a = a.downcast()
+            alert_dict = a.to_dict()
+
+            affected_objects = set()
+
+            from configure.models import StorageResourceAlert, StorageAlertPropagated
+            from configure.models import Lun, LunNode
+            from configure.models import ManagedTargetMount
+            from configure.models import FilesystemMember
+            from monitor.models import TargetOfflineAlert, TargetRecoveryAlert, TargetFailoverAlert, HostContactAlert
+
+            def affect_target(target):
+                print "affect_target %s" % target
+                target = tm.target.downcast()
+                affected_objects.add(target)
+                if isinstance(target, FilesystemMember):
+                    affected_objects.add(target.filesystem)
+
+            if isinstance(a, StorageResourceAlert):
+                affected_srrs = [sap['storage_resource_id'] for sap in StorageAlertPropagated.objects.filter(alert_state = a).values('storage_resource_id')]
+                affected_srrs.append(a.alert_item_id)
+                print affected_srrs
+                lun_nodes = LunNode.objects.filter(storage_resource__in = affected_srrs)
+                for ln in lun_nodes:
+                    print "%d %d %s" % (ln.id, ln.lun.id, ln) 
+                luns = Lun.objects.filter(storage_resource__in = affected_srrs)
+                print luns
+                for l in luns:
+                    print "%s (%d)" % (l, l.id)
+                    for ln in l.lunnode_set.all():
+                        print "  %s (%d)" % (ln, ln.id)
+                        tms = ManagedTargetMount.objects.filter(block_device = ln)
+                        print tms
+                        for tm in tms:
+                            affect_target(tm.target)
+            elif isinstance(a, TargetFailoverAlert):
+                affect_target(a.alert_item.target)
+            elif isinstance(a, TargetOfflineAlert) or isinstance(a, TargetRecoveryAlert):
+                affect_target(a.alert_item)
+            elif isinstance(a, HostContactAlert):
+                tms = ManagedTargetMount.objects.filter(host = a.alert_item)
+                for tm in tms:
+                    affect_target(tm.target)
+
+            alert_dict['affected'] = []
+            alert_dict['affected'].append([a.alert_item_id, a.alert_item_type_id])
+            for ao in affected_objects:
+                from django.contrib.contenttypes.models import ContentType
+                ct = ContentType.objects.get_for_model(ao)
+                alert_dict['affected'].append([ao.pk, ct.pk])
+
+            alert_dicts.append(alert_dict)
+        # << 
+
         if jobs.count() > 0 and alerts.count() > 0:
             latest_job = jobs[0]
             latest_alert = alerts[0]
@@ -555,7 +615,7 @@ class Notifications(AnonymousRequestHandler):
         return {
                 'last_modified': last_modified,
                 'jobs': [job.to_dict() for job in jobs],
-                'alerts': [alert.to_dict() for alert in alerts]
+                'alerts': alert_dicts
                 }
 
 class TransitionConsequences(AnonymousRequestHandler):        

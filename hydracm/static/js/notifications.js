@@ -112,14 +112,14 @@ activate_alert = function(alert_info) {
   active_alerts[alert_info.id] = alert_info
   active_alert_count += 1;
 
-  /* TODO: get a list of effectees */
-  effectee = [alert_info.alert_item_id, alert_info.alert_item_content_type_id]
-  if (!alert_effects[effectee]) {
-    alert_effects[effectee] = {}
-  }
-  alert_effects[effectee][alert_info.id] = 1
-  $('.alert_indicator_object_id_' + effectee[0] + '_' + effectee[1]).each(function() {
-    update_alert_indicator($(this));
+  $.each(alert_info.affected, function(i, effectee) {
+    if (!alert_effects[effectee]) {
+      alert_effects[effectee] = {}
+    }
+    alert_effects[effectee][alert_info.id] = 1
+    $('.alert_indicator_object_id_' + effectee[0] + '_' + effectee[1]).each(function() {
+      update_alert_indicator($(this));
+    });
   });
 }
 
@@ -132,11 +132,11 @@ deactivate_alert = function(alert_info) {
   delete active_alerts[alert_info.id]
   active_alert_count -= 1;
 
-  /* TODO: get a list of effectees */
-  effectee = [alert_info.alert_item_id, alert_info.alert_item_content_type_id]
-  delete alert_effects[effectee][alert_info.id]
-  $('.alert_indicator_object_id_' + effectee[0] + '_' + effectee[1]).each(function() {
-    update_alert_indicator($(this));
+  $.each(alert_info.affected, function(i, effectee) {
+    delete alert_effects[effectee][alert_info.id]
+    $('.alert_indicator_object_id_' + effectee[0] + '_' + effectee[1]).each(function() {
+      update_alert_indicator($(this));
+    });
   });
 }
 
@@ -409,7 +409,6 @@ poll_jobs = function() {
 }
 
 $(document).ready(function() {
-
   $.ajax({type: 'POST', url: "/api/notifications/", dataType: 'json', data: JSON.stringify({filter_opts: {since_time: "", initial: true}}), contentType:"application/json; charset=utf-8"})
   .success(function(data, textStatus, jqXHR) {
     if (data.success) {
