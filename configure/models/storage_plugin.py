@@ -349,7 +349,7 @@ class StorageResourceAlert(AlertState):
                 alert = self,
                 severity = logging.WARNING)
 
-    def begin_event(self):
+    def end_event(self):
         import logging
         return AlertEvent(
                 message_str = "Cleared storage alert: %s" % self.message(),
