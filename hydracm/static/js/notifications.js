@@ -65,13 +65,13 @@ update_alert_indicator = function(element)
         tooltip_markup += "| * " + alert.message;
       });
       element.attr('title', tooltip_markup);
-      element.cluetip({splitTitle: '|'});
+      element.cluetip({splitTitle: '|', cluezIndex: 1002});
     } else {
       /*element.html('No alerts')*/
       element.addClass('alert_indicator_inactive');
       element.removeClass('alert_indicator_active');
       element.attr('title', 'No alerts');
-      element.cluetip({splitTitle: '|'});
+      element.cluetip({splitTitle: '|', cluezIndex: 1002});
     }
   });
 }
