@@ -594,28 +594,32 @@ class Archive(PoorMansStiModel):
         debug_print("saved %10.2f -> datapoints[%d]" % (cdp.value,
                                                         self.current_row))
 
-        # Now, if we're about to wrap our row counter, we need to do
-        # a little housekeeping to nuke CDPs which are no longer visible
-        # to this RRA.
-        # FIXME: This sort of housekeeping might be better done in some
-        # place that doesn't interfere with inserts being as fast as
-        # possible.  Waiting until a fetch occurs probably isn't ideal,
-        # though.
-        if self.current_row == self.rows - 1:
-            debug_print("Housekeeping: Deleting old CDPs")
-            old = ["%d" % cdp.id for cdp in
-                   self.cdps.filter(datasource=ds).order_by("-id")[self.rows:]]
+    def purge_ds_cdps(self, ds):
+        debug_print("Housekeeping: Deleting old CDPs")
+        old = ["%d" % cdp.id for cdp in
+               self.cdps.filter(datasource=ds).order_by("-id")[self.rows:]]
 
-            if len(old) > 0:
-                # We can avoid a useless select if we just nuke the
-                # old CDPs directly.
-                from django.db import connection, transaction
-                cursor = connection.cursor()
-                cursor.execute("DELETE FROM r3d_cdp WHERE id IN (%s)" %
-                               ",".join(old))
-                transaction.commit_unless_managed()
+        if len(old) > 0:
+            # We can avoid a useless select if we just nuke the
+            # old CDPs directly.
+            from django.db import connection, transaction
+            cursor = connection.cursor()
+            cursor.execute("DELETE FROM r3d_cdp WHERE id IN (%s)" %
+                           ",".join(old))
+            transaction.commit_unless_managed()
 
-            debug_print("deleted %d old CDPs" % len(old))
+        debug_print("deleted %d old CDPs" % len(old))
+
+    def purge_cdps(self, ds_cache=None):
+        import settings
+        if not (hasattr(settings, R3D_AUTOPURGE) and settings.R3D_AUTOPURGE):
+            return
+
+        if not ds_cache:
+            ds_cache = self.database.datasources
+
+        for ds in ds_cache:
+            self.ds_purge_cdps(ds)
 
     def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
         raise RuntimeError, "Method not implemented at this level"
