@@ -172,8 +172,6 @@ class GetTargets(AnonymousRequestHandler):
                     })
         return result
 
-# FIXME: this is actually returning information about all filesystems, and all targets
-# neither of which is a 'volume'.
 class GetFSTargets(AnonymousRequestHandler):
     @extract_request_args('filesystem_id','host_id','kinds')
     def run(self, request, filesystem_id,host_id,kinds):
@@ -190,9 +188,9 @@ class GetFSTargets(AnonymousRequestHandler):
         else:
             # kinds = None, means all
             klasses = kind_map.values()
-        host_name=None
+        host_filter = None
         if host_id:
-            host_name = (ManagedHost.objects.get(id=host_id)).address  
+            host_filter = ManagedHost.objects.get(id=host_id)
         
         klass_to_kind = dict([(v,k) for k,v in kind_map.items()])
         result = []
@@ -205,16 +203,17 @@ class GetFSTargets(AnonymousRequestHandler):
                     fs = ManagedFilesystem.objects.get(id=filesystem_id)
                     targets=klass.objects.filter(filesystem=fs) 
             for t in targets:
-                if ( not host_name or t.primary_server().pretty_name() == host_name):   
-                    result.append({
-                        'id': t.id,
-                        'primary_server_name': t.primary_server().pretty_name(),
-                        'kind': kind,
-                        # FIXME: ManagedTarget should get an explicit 'human' string function
-                        # (currently __str__ services this purpose)
-                        'status':t.status_string(),
-                        'label': "%s" % t
-                        })
+                if host_filter:
+                    if ManagedTargetMount.objects.filter(target = t, host = host_filter).count() == 0:
+                        continue
+
+                result.append({
+                    'id': t.id,
+                    'primary_server_name': t.primary_server().pretty_name(),
+                    'kind': kind,
+                    'status':t.status_string(),
+                    'label': t.human_name()
+                    })
         return result    
 
 #class GetClients (AnonymousRequestHandler):
