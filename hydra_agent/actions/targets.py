@@ -202,11 +202,11 @@ def list_ha_targets(args):
 
 # these are called by the Target RA from corosync
 def mount_target(args):
-    info = store_get_target_info(args.label)
+    info = store_get_target_info(args.uuid)
     shell.try_run(['mount', '-t', 'lustre', info['bdev'], info['mntpt']])
 
 def unmount_target(args):
-    info = store_get_target_info(args.label)
+    info = store_get_target_info(args.uuid)
     shell.try_run(["umount", info['bdev']])
 
 def start_target(args):

@@ -43,11 +43,11 @@ if __name__ == '__main__':
     p.set_defaults(func=actions.unconfigure_ha)
 
     p = subparsers.add_parser('mount-target', help='mount a target')
-    p.add_argument('--label', required=True, help='label of target to mount')
+    p.add_argument('--uuid', required=True, help='uuid of target to mount')
     p.set_defaults(func=actions.mount_target)
 
     p = subparsers.add_parser('unmount-target', help='unmount a target')
-    p.add_argument('--label', required=True, help='label of target to unmount')
+    p.add_argument('--uuid', required=True, help='uuid of target to unmount')
     p.set_defaults(func=actions.unmount_target)
 
     p = subparsers.add_parser('start-target', help='start a target')
