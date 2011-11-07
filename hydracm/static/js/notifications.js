@@ -51,6 +51,17 @@ function debug(msg) {
   //console.log(msg);
 }
 
+cluetip_tooltip_format = function(element, title, objects, attr)
+{
+  var tooltip = title;
+  $.each(objects, function(i, obj) {
+    tooltip += "| \u2022 " + obj[attr]
+  });
+
+  element.attr('title', tooltip);
+  element.cluetip({splitTitle: '|', cluezIndex: 1002});
+}
+
 update_alert_indicator = function(element)
 {
   for_class_starting(element, 'alert_indicator_object_id_', function(class_name) {
@@ -71,13 +82,11 @@ update_alert_indicator = function(element)
       element.removeClass('alert_indicator_inactive');
       
       element.title
-      var tooltip_markup = "Alerts"
+      var alerts = {};
       $.each(effects, function(alert_id, x) {
-        var alert = known_alerts[alert_id]
-        tooltip_markup += "| * " + alert.message;
+        alerts[alert_id] = known_alerts[alert_id]
       });
-      element.attr('title', tooltip_markup);
-      element.cluetip({splitTitle: '|', cluezIndex: 1002});
+      cluetip_tooltip_format(element, "Alerts", alerts, 'message');
     } else {
       if (element.hasClass('alert_indicator_large')) {
         element.html('No alerts')
@@ -97,12 +106,10 @@ update_alert_indicators = function()
   });
 }
 
-$(document).ajaxComplete(update_alert_indicators)
-
 update_sidebar_icons = function() {
   if (running_job_count > 0) {
     $('#notification_icon_jobs').show()
-    $('#notification_icon_jobs').attr('title', running_job_count + " jobs running")
+    cluetip_tooltip_format($('#notification_icon_jobs'), running_job_count + " jobs running:", running_jobs, 'description');
   } else {
     $('#notification_icon_jobs').hide()
     $('#notification_icon_jobs').attr('title', '');
@@ -111,6 +118,7 @@ update_sidebar_icons = function() {
   if (active_alert_count > 0) {
     $('#notification_icon_alerts').show()
     $('#notification_icon_alerts').attr('title', active_alert_count + " alerts active")
+    cluetip_tooltip_format($('#notification_icon_alerts'), active_alert_count + " alerts active:", active_alerts, 'message');
   } else {
     $('#notification_icon_alerts').hide()
     $('#notification_icon_alerts').attr('title', '');
@@ -263,29 +271,20 @@ notification_update_icon = function(key, element) {
   if (obj_write_locks && attr_count(obj_write_locks) > 0) {
     element.show();
     element.addClass('busy_icon');
-    var tooltip = "Ongoing operations: "
     debug(obj_write_locks)
+    var jobs = {}
     $.each(obj_write_locks, function(job_id, x) {
-      job = known_jobs[job_id]
-      if (!job) {
-        throw "Job " + job_id + " not found!"
-      }
-      tooltip += " " + job.description;
+      jobs[job_id] = known_jobs[job_id]
     });
-    element.attr('title', tooltip);
+    cluetip_tooltip_format(element, "Ongoing operations: ", jobs, 'description');
   } else if (obj_read_locks && attr_count(obj_read_locks) > 0) {
     element.show();
     element.addClass('locked_icon');
-    var tooltip = "Locked by pending operations:"
-    debug(obj_read_locks);
+    var jobs = {}
     $.each(obj_read_locks, function(job_id, x) {
-      job = known_jobs[job_id]
-      if (!job) {
-        throw "Job " + job_id + " not found!"
-      }
-      tooltip += " " + job.description;
+      jobs[job_id] = known_jobs[job_id]
     });
-    element.attr('title', tooltip);
+    cluetip_tooltip_format(element, "Locked by pending operations: ", jobs, 'description');
   } else {
     element.removeClass('locked_icon');
     element.removeClass('busy_icon');
@@ -432,4 +431,8 @@ $(document).ready(function() {
     }
   });
 });
+
+$(document).ajaxComplete(update_alert_indicators)
+$(document).ajaxComplete(notification_update_icons)
+
 

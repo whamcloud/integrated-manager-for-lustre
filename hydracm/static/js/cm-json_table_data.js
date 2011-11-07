@@ -104,8 +104,6 @@ function LoadTargets_EditFS(fs_id)
           $('#mdt').dataTable().fnAddData (row);
         }
       });
-      // After updating all table rows, update their .notification_object_icon elements
-      notification_update_icons();
     }
   })
   .error(function(event)
@@ -364,8 +362,6 @@ function LoadServerConf_ServerConfig()
           notification_icons_markup(resValue.id, resValue.content_type_id)
         ]);
       });
-      // After updating all table rows, update their .notification_object_icon elements
-      notification_update_icons();
     }
   })
   .error(function(event)
