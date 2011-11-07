@@ -411,30 +411,35 @@ class ResourceManager(object):
        # we need the coarse one for protecting local_id_to_global_id etc, the later
        # part of actually updating stats just needs to be locked on a per-statistic basis
         with self._instance_lock:
-            session = self._sessions[scannable_id]
-            record_pk = session.local_id_to_global_id[local_resource_id]
-            from configure.models import StorageResourceRecord, StorageResourceStatistic
-            record = StorageResourceRecord.objects.get(pk = record_pk)
-            for stat_name, stat_data in update_data.items():
-                stat_properties = record.get_statistic_properties(stat_name)
-                try:
-                    stat_record = StorageResourceStatistic.objects.get(
-                            storage_resource = record, name = stat_name)
-                    if stat_record.sample_period != stat_properties.sample_period:
-                        log.warning("Plugin stat period for '%s' changed, expunging old statistics", stat_name)
-                        stat_record.delete()
-                        raise StorageResourceStatistic.DoesNotExist
+                session = self._sessions[scannable_id]
+                record_pk = session.local_id_to_global_id[local_resource_id]
+                self._persist_update_stats(record_pk, update_data)
+                
+    @transaction.autocommit
+    def _persist_update_stats(self, record_pk, update_data):
+        from configure.models import StorageResourceRecord, StorageResourceStatistic
+        record = StorageResourceRecord.objects.get(pk = record_pk)
+        for stat_name, stat_data in update_data.items():
+            stat_properties = record.get_statistic_properties(stat_name)
+            try:
+                stat_record = StorageResourceStatistic.objects.get(
+                        storage_resource = record, name = stat_name)
+                if stat_record.sample_period != stat_properties.sample_period:
+                    log.warning("Plugin stat period for '%s' changed, expunging old statistics", stat_name)
+                    stat_record.delete()
+                    raise StorageResourceStatistic.DoesNotExist
 
-                except StorageResourceStatistic.DoesNotExist:
-                    stat_record = StorageResourceStatistic.objects.create(
-                            storage_resource = record, name = stat_name, sample_period = stat_properties.sample_period)
-                from r3d.exceptions import BadUpdateString
-                try:
-                    stat_record.update(stat_name, stat_properties, stat_data)
-                except BadUpdateString:
-                    # FIXME: Initial insert usually fails because r3d isn't getting
-                    # its start time from the first insert time
-                    pass
+            except StorageResourceStatistic.DoesNotExist:
+                stat_record = StorageResourceStatistic.objects.create(
+                        storage_resource = record, name = stat_name, sample_period = stat_properties.sample_period)
+            from r3d.exceptions import BadUpdateString
+            try:
+                stat_record.update(stat_name, stat_properties, stat_data)
+            except BadUpdateString:
+                # FIXME: Initial insert usually fails because r3d isn't getting
+                # its start time from the first insert time
+                pass
+
 
     @transaction.autocommit
     def _resource_modify_parent(self, record_pk, parent_pk, remove):
