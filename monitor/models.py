@@ -239,8 +239,11 @@ class AlertState(models.Model):
     def to_dict(self):
         from monitor.lib.util import time_str
         return {
+         # FIXME: retire misnamed 'alert_created_at'
          'alert_created_at': self.begin,
          'alert_created_at_short': self.begin,
+         'begin': self.begin,
+         'end': self.end,
          'alert_severity':'alert', # FIXME: Still need to figure out wheather to pass enum or display string.
          'alert_item': str(self.alert_item), 
          'alert_message': self.message(),

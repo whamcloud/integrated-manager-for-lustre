@@ -347,8 +347,11 @@ class GetAlerts(AnonymousRequestHandler):
             limit = int(scroll_size)
         else:
             limit = 0
+
         if active:
-            active = 'True'
+            active = True
+        else:
+            active = None
         alerts = AlertState.objects.filter(active = active).order_by('end')
         iTotalRecords = alerts.count()
         alert_result = {}
