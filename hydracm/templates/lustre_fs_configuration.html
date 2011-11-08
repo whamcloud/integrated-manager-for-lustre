@@ -23,8 +23,8 @@
           { "sClass": 'txtright' },
           { "sClass": 'txtright' },
           { "sClass": 'txtright' },
-          { "sClass": 'txtcenter' },
-          { "sClass": 'txtleft' }
+          { "sClass": 'txtcenter', bSortable: false},
+          { "sClass": 'txtleft', bSortable: false}
         ]
       });
     //Create New FS button click handler      
@@ -42,14 +42,14 @@
 <table cellpadding="0" cellspacing="0" border="0" class="display" id="fs_list" width="100%">
   <thead>
     <tr>
-      <th width="9%">FS Name</th>
-      <th width="10%">MGS Name</th>
-      <th width="10%">MDS Name</th>
-      <th width="9%">No of OSS</th>
-      <th width="9%">No of OST</th>
+      <th width="9%">Name</th>
+      <th width="10%">Management server</th>
+      <th width="10%">Metadata server</th>
+      <th width="9%">No. OSS</th>
+      <th width="9%">No. OST</th>
       <th width="5%">Total</th>
       <th width="5%">Free</th>
-      <th width="17%">Action</th>
+      <th width="1%"></th>
       <th width="1%"></th>
     </tr>
   </thead>

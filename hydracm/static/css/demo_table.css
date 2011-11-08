@@ -146,12 +146,13 @@ table.display thead th {
 	border-bottom: 1px solid black;
 	font-weight: bold;
 	cursor: pointer;
-	font-size:13px;
+	font-size:8pt;
 	/*background-image:url(../images/line1.jpg);
 	background-repeat:repeat-x;
 	background-color:#5ed6ff;*/
 	background-color:#cccccc;
 	color:#4c4c4c;
+  white-space: nowrap;
 }
 
 table.display tfoot th {

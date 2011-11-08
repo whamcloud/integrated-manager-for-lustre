@@ -55,10 +55,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                 'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
                 'pretty_name': self.pretty_name(),
                 'address' : self.address,
-                'failnode':'',
                 'kind' : self.role() ,
                 'lnet_status' : str(self.state),
-                'lnet_states': self.states, 
                 'status':self.status_string()}
 
     @classmethod

@@ -88,8 +88,8 @@ function LoadTargets_EditFS(fs_id)
       $.each(response, function(resKey, resValue)
       {
         row = [
-                resValue.lun_name,
                 target_dialog_link(resValue.id, resValue.human_name),
+                resValue.lun_name,
                 resValue.primary_server_name,
                 resValue.failover_server_name,
                 resValue.active_host_name,
@@ -356,7 +356,6 @@ function LoadServerConf_ServerConfig()
       {
         $('#server_configuration').dataTable().fnAddData ([
           resValue.pretty_name,
-          resValue.failnode,
           resValue.status,
           CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions, "SERVER"),
           notification_icons_markup(resValue.id, resValue.content_type_id)
@@ -376,7 +375,7 @@ function LoadServerConf_ServerConfig()
 function CreateActionLink(id, ct, available_transitions, kind)
 {
   var ops_action="";
-  var action="";
+  var action="<span class='transition_buttons'>";
   var function_name;
   var button_class = "ui-state-default ui-corner-all";
   console.log(available_transitions);
@@ -386,8 +385,9 @@ function CreateActionLink(id, ct, available_transitions, kind)
     ops_action = "<button" +
       " onclick='"+ function_name + "'>" + 
       transition.verb + "</button>&nbsp;";
-    action = action + ops_action;
+    action += ops_action;
   });
+  action += "</span>"
   return action;
 }
 
