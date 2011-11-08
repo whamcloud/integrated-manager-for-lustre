@@ -198,7 +198,7 @@ loadEventContent = function(targetEventDivName, maxCount)
           cssClassName='brightyellow';
           imgName="/static/images/dialog-warning.png";
         }
-        eventTabContent = eventTabContent + "<tr class='"+cssClassName+"'><td width='20%' align='left' valign='top' class='border' style='font-weight:normal'>" +  resValue.event_created_at + "</td><td width='7%' align='left' valign='top' class='border' class='txtcenter'><img src='"+imgName+"' width='16' height='16' class='spacetop'/></td><td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.event_host +  "</td><td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.event_message + "</td></tr>";
+        eventTabContent = eventTabContent + "<tr class='"+cssClassName+"'><td width='20%' align='left' valign='top' class='border' style='font-weight:normal'>" +  resValue.event_created_at + "</td><td width='7%' align='left' valign='top' class='border' class='txtcenter'><img src='"+imgName+"' width='16' height='16' class='spacetop'/></td><td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.event_host +  "&nbsp;</td><td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + resValue.event_message + "</td></tr>";
       }
     });
   }
@@ -360,7 +360,7 @@ loadJobContent = function(targetJobDivName)
   }
   else
   {
-    jobTabContent = jobTabContent + "<tr><td colspan='5' align='right' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='/dashboard/dblogs/'>(All Jobs)</a></td></tr>";
+    jobTabContent = jobTabContent + "<tr><td colspan='5' align='right' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='#'>(All Jobs)</a></td></tr>";
   }
   $("#"+targetJobDivName).html(jobTabContent);
   });
