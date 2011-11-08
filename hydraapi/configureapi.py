@@ -171,7 +171,6 @@ class GetResources(AnonymousRequestHandler):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(module_name, class_name)
         attr_columns = resource_class.get_columns()
-        columns = ['id', 'Name'] + attr_columns
 
         rows = []
         from django.utils.html import conditional_escape
@@ -184,10 +183,11 @@ class GetResources(AnonymousRequestHandler):
             # NB What we output here is logically markup, not strings, so we escape.
             # (underlying storage_plugin.attributes do their own escaping
             row = [record.pk, alias_markup]
-            row = row + [resource.format(c) for c in attr_columns]
+            row = row + [resource.format(c['name']) for c in attr_columns]
                 
             rows.append(row)    
 
+        columns = ['id', 'Name'] + [c['label'] for c in attr_columns]
         datatables_columns = [{'sTitle': c} for c in columns]
         return {'aaData': rows, 'aoColumns': datatables_columns}
 

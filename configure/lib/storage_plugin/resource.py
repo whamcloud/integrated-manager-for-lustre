@@ -171,10 +171,7 @@ class StorageResource(object):
 
     @classmethod
     def get_columns(cls):
-        if hasattr(cls, 'columns'):
-            return cls.columns
-        else:
-            return cls._storage_attributes.keys()
+        return [{'name': name, 'label': props.get_label(name)} for (name,props) in cls._storage_attributes.items()]
 
     def to_json(self, stack = []):
         dct = {}
