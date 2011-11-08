@@ -351,9 +351,7 @@ class CreateOSTs(AnonymousRequestHandler):
     @extract_request_args('filesystem_id', 'ost_lun_ids')
     def run(self, request, filesystem_id, ost_lun_ids):
         from configure.models import ManagedFilesystem, ManagedOst
-        # FIXME: hack: using filesystem name instead of ID because
-        # of a frontend bug.
-        fs = ManagedFilesystem.objects.get(name=filesystem_id)
+        fs = ManagedFilesystem.objects.get(id=filesystem_id)
         osts = []
         for lun_id in ost_lun_ids:
             osts.append(create_target(lun_id, ManagedOst, filesystem = fs))
