@@ -142,14 +142,18 @@ def _unconfigure_ha(primary, label, uuid, serial):
 def configure_ha(args):
     unique_label = "%s_%s" % (args.label, args.serial)
 
-    # remove any pre-existing instance of the resource being added
-    rc, stdout, stderr = shell.run(shlex.split("crm_resource -r %s -q" % unique_label))
-    if rc == 0:
-        _unconfigure_ha(args.primary, args.label, args.uuid, args.serial)
-
     if args.primary:
         # now configure pacemaker for this target
         from tempfile import mkstemp
+        # but first see if this resource exists and matches what we are adding
+        rc, stdout, stderr = shell.run(shlex.split("crm_resource -r %s -g target" % unique_label))
+        if rc == 0:
+            info = store_get_target_info(stdout.rstrip("\n"))
+            if info['bdev'] == args.device and info['mntpt'] == args.mountpoint:
+                return
+            else:
+                raise RuntimeError("A resource with the name %s already exists" % unique_label)
+
         tmp_f, tmp_name = mkstemp()
         os.write(tmp_f, "<primitive class=\"ocf\" provider=\"hydra\" type=\"Target\" id=\"%s\">\
   <meta_attributes id=\"%s-meta_attributes\">\
@@ -174,6 +178,20 @@ def configure_ha(args):
         score = 10
         preference = "secondary"
 
+    rc, stdout, stderr = shell.run(['crm', '-D', 'plain', 'configure' ,'show',
+                                    '%s-%s' % (unique_label, preference)])
+    out = stdout.rstrip("\n")
+    if len(out) > 0:
+        # stupid crm and it's "colouring" is not even completely disabled
+        # when using -D plain
+        compare = "[?1034hlocation %s-%s %s %s: %s" % (unique_label, preference,
+                                                unique_label, score,
+                                                os.uname()[1])
+        if out == compare:
+            return
+        else:
+            raise RuntimeError("A constraint with the name %s-%s already exists" % (unique_label, preference))
+        
     rc, stdout, stderr = cibadmin("-o constraints -C -X '<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>'" % (unique_label,
                                   preference,
                                   os.uname()[1],
