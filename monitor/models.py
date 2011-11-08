@@ -90,14 +90,16 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
             # Not implemented as an instance method because
             # we will need to use _base_manager to ensure
             # we can get at the object
-            instance = clss._base_manager.get(pk = id)
+            instance = clss._base_manager.get(pk = id).downcast()
+            klass = instance.content_type.model_class()
+
             if instance.not_deleted:
                 instance.not_deleted = None
                 instance.save()
 
             from monitor.lib.lustre_audit import audit_log
-            updated = AlertState.filter_by_item_id(clss, id).update(active = False)
-            audit_log.info("Lowered %d alerts while deleting %s %s" % (updated, clss, id))
+            updated = AlertState.filter_by_item_id(klass, id).update(active = False)
+            audit_log.info("Lowered %d alerts while deleting %s %s" % (updated, klass, id))
 
         dct['objects'] = DeletableManager()
         dct['delete']  = delete
