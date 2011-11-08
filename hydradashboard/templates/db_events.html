@@ -15,8 +15,7 @@
 
           loadHostList('', 'db_events_hostList');
 
-          var lustre=true;
-          var oTable = $('#all_event_content').dataTable(
+          var oTable = $('#events_table').dataTable(
           {
             "sAjaxDataProp": "response.aaData",
             "bProcessing": true,
@@ -35,10 +34,10 @@
                    "host_id":"", 
                    "severity":""+$('#event_severity').val(), 
                    "eventtype":""+$('#event_type').val(),
-                   "scroll_id":pageCnt,
-                   "scroll_size":25
+                   "page_id":pageCnt,
+                   "page_size":25
                  }),
-                 "contentType": "application/json; charset=utf-8",
+                 "contentType": "application/json",
                  "success":function(data) 
                  {
                    maxRecords = data.response.iTotalRecords;
@@ -57,29 +56,29 @@
              "fnDrawCallback": function() 
              {
                //enable next button by default
-               $('#all_event_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
+               $('#events_table_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
                //to diable next button for last page.
                if((pageCnt+1)==totalPages)
                {
-                 $('#all_event_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-disabled");
+                 $('#events_table_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-disabled");
                }
                //to enable previous button once it left first page
                if(pageCnt>0)
                {
-                 $('#all_event_content_previous').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
+                 $('#events_table_previous').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
                }
                //to diplay table info after table draw
-               $('#all_event_content_info').html("<div> Showing "+ (pageCnt+1)+ " of " + totalPages + "</div>");
+               $('#events_table_info').html("<div> Showing "+ (pageCnt+1)+ " of " + totalPages + "</div>");
              },
           });
 
         //clear default table info
-        $("#all_event_content_info").empty();
+        $("#events_table_info").empty();
         $("#alertAnchor").click();
         $('#event_filter_btn').click(function()
         {  
           pageCnt=0;
-          RefreshTable('#all_event_content',
+          RefreshTable('#events_table',
                        '/api/geteventsbyfilter/', 
                        $('#db_events_hostList').val(),
                        $('#event_severity').val(),
@@ -88,11 +87,11 @@
                        oTable.fnSettings()._iDisplayLength);
         });
       //Change event for changing local pagination combo box
-        $('select[name=all_event_content_length]').change(function()
+        $('select[name=events_table_length]').change(function()
         {
           if(maxRecords!=0)
           {
-            RefreshTable('#all_event_content',
+            RefreshTable('#events_table',
                 '/api/geteventsbyfilter/', 
                 $('#db_events_hostList').val(),
                 $('#event_severity').val(),
@@ -102,7 +101,7 @@
           }
         });
         //click handler for next button
-        $('#all_event_content_next').click(function()
+        $('#events_table_next').click(function()
         {   
           if((pageCnt+1)<totalPages)
           {
@@ -110,7 +109,7 @@
           }
         });
         //click handler for previous button
-        $('#all_event_content_previous').click(
+        $('#events_table_previous').click(
           function()
           {
             event_Previous();
@@ -123,7 +122,7 @@
         function event_Next()
         {
           pageCnt++;
-          RefreshTable('#all_event_content',
+          RefreshTable('#events_table',
               '/api/geteventsbyfilter/', 
               $('#db_events_hostList').val(),
               $('#event_severity').val(),
@@ -137,7 +136,7 @@
           if (pageCnt != 0)
           {
             pageCnt--;
-            RefreshTable('#all_event_content',
+            RefreshTable('#events_table',
               '/api/geteventsbyfilter/', 
               $('#db_events_hostList').val(),
               $('#event_severity').val(),
@@ -163,32 +162,29 @@
             //for page count 0 for display in info if the 0 records found
             pageCnt=-1;
           }
-          $('#all_event_content_info').empty();
+          $('#events_table_info').empty();
         }
-        function RefreshTable(tableId, urlData, host, severity, eventtype, scroll_id, scroll_size)
+        function RefreshTable(tableId, urlData, host, severity, eventtype, page_id, page_size)
         {
-          $(".dataTables_processing").css('visibility','visible');
-          $.post(urlData, 
-                 {'host_id':host,
-                  'severity':severity,
-                  'eventtype':eventtype,
-                  'scroll_size':scroll_size,
-                  'scroll_id':scroll_id
-                 }, 
-            function( json )
-            {
-              table = $(tableId).dataTable();
-              oSettings = table.fnSettings();
-              table.fnClearTable(this);
-              for (var i=0; i<json.response.aaData.length; i++)
-              {
-                table.oApi._fnAddData(oSettings, json.response.aaData[i]);
-              }  
-              oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
-              $(".dataTables_processing").css('visibility','hidden');
-              DisplayInfo();
-              table.fnDraw();
-            });
+           $(".dataTables_processing").css('visibility','visible');
+           $.ajax({type: 'POST', url: urlData, dataType: 'json',
+           data: JSON.stringify({"host_id":host, "severity":""+severity ,"eventtype":""+eventtype,'page_id':page_id,'page_size':page_size}),
+           contentType:"application/json; charset=utf-8"})
+           .success(function(data, textStatus, jqXHR)
+           {
+             maxRecords=data.response.iTotalRecords;
+             table = $('#event_table').dataTable();
+             oSettings = oTable.fnSettings();
+             oTable.fnClearTable(this);
+             for (var i=0; i<data.response.aaData.length; i++)
+             {
+               oTable.oApi._fnAddData(oSettings, data.response.aaData[i]);
+             }
+             oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
+             $(".dataTables_processing").css('visibility','hidden');
+             DisplayInfo();
+             oTable.fnDraw();
+           });
         }
       }); 
       </script>
@@ -240,7 +236,7 @@
           <tr>
             <td colspan="3"><form>
               <fieldset>
-                <table cellpadding="0" cellspacing="0" border="0" class="display" id="all_event_content">
+                <table cellpadding="0" cellspacing="0" border="0" class="display" id="events_table">
                   <thead>
                     <tr>
                       <th width="14%">Event Created At</th>

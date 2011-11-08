@@ -272,54 +272,38 @@ class GetServers (AnonymousRequestHandler):
         return hosts_info
 
 class GetEventsByFilter(AnonymousRequestHandler):
-    @extract_request_args('host_id','severity','eventtype','scroll_size','scroll_id')
-    def run(self,request,host_id,severity,eventtype,scroll_size,scroll_id):
-        from monitor.models import Event
-        host = None
-        if scroll_id:
-            offset = int(scroll_id)
-        else:
-            offset = 0
-        if scroll_size:
-            limit = int(scroll_size)
-        else:
-            limit = 0
-        filter_args = []
-        filter_kwargs = {}
-        if severity:
-            filter_kwargs['severity'] = severity
-        if eventtype:
-             klass = eventtype
-             from django.db.models import Q
-             klass_lower = klass.lower()
-             filter_args.append(~Q(**{klass_lower: None}))
-        if host_id:
-            try:
-                host = ManagedHost.objects.get(id=host_id)
-            except:
-                pass 
-        event_set = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
-        if host:
-            event_set = event_set.filter(host=host)
+    @extract_request_args('host_id','severity','eventtype','page_size','page_id')
+    def run(self,request,host_id,severity,eventtype,page_size,page_id):
+        return geteventsbyfilter(host_id,severity,eventtype,page_size,page_id)
 
-        iTotalRecords = event_set.count()
-        event_result = {}
-        event_result['sEcho']=offset
-        event_result['iTotalRecords'] = iTotalRecords
-        event_result['iTotalDisplayRecords'] = offset * limit
-        if limit == 0:
-            limit = iTotalRecords
-        rec_end_limit = (offset+1)*limit
-        event_result['aaData'] = [
-                                  {
-                                   'event_created_at': event.created_at,
-                                   'event_host': event.host.pretty_name() if event.host else '',
-                                   'event_severity':str(event.severity_class()),
-                                   'event_message': event.message(), 
-                                   }
-                                   for event in event_set[offset*limit: rec_end_limit if rec_end_limit < iTotalRecords else iTotalRecords]
-                                  ]
-        return event_result  
+def geteventsbyfilter(host_id,severity,eventtype,page_size,page_id):
+    from monitor.models import Event
+    host = None
+    filter_args = []
+    filter_kwargs = {}
+    if severity:
+        filter_kwargs['severity'] = severity
+    if eventtype:
+         klass = eventtype
+         from django.db.models import Q
+         klass_lower = klass.lower()
+         filter_args.append(~Q(**{klass_lower: None}))
+    if host_id:
+        host = ManagedHost.objects.get(id=host_id)
+    
+    event_set = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
+    
+    if host:
+        event_set = event_set.filter(host=host)
+    event_result = [{
+                     'event_created_at': event.created_at,
+                     'event_host': event.host.pretty_name() if event.host else '',
+                     'event_severity':str(event.severity_class()),
+                     'event_message': event.message() 
+                    }
+                    for event in event_set
+                   ]
+    return paginate_result(page_id,page_size,event_result)  
 
 class GetLatestEvents(AnonymousRequestHandler):
     def run(self,request):
@@ -334,102 +318,78 @@ class GetLatestEvents(AnonymousRequestHandler):
                 for event in Event.objects.all().order_by('-created_at')
         ]
 
-
 class GetAlerts(AnonymousRequestHandler):
-    @extract_request_args('active','scroll_id','scroll_size')
-    def run(self,request,active,scroll_id,scroll_size):
+    @extract_request_args('active','page_id','page_size')
+    def run(self,request,active,page_id,page_size):
         from monitor.models import AlertState
-        if scroll_id:
-            offset = int(scroll_id)
-        else:
-            offset = 0
-        if scroll_size:
-            limit = int(scroll_size)
-        else:
-            limit = 0
-
         if active:
             active = True
         else:
             active = None
-        alerts = AlertState.objects.filter(active = active).order_by('end')
-        iTotalRecords = alerts.count()
-        alert_result = {}
-        alert_result['sEcho']=offset
-        alert_result['iTotalRecords'] = iTotalRecords
-        alert_result['iTotalDisplayRecords'] = offset * limit
-        if limit == 0:
-            limit = iTotalRecords
-        rec_end_limit = (offset+1)*limit
-        alert_result['aaData'] = [a.to_dict() for a in alerts[offset*limit: rec_end_limit if rec_end_limit < iTotalRecords else iTotalRecords]]
-        return alert_result
+        alert_result = [a.to_dict() for a in AlertState.objects.filter(active = active).order_by('end')]
+        return paginate_result(page_id,page_size,alert_result)
 
 class GetJobs(AnonymousRequestHandler):
     def run(self,request):
         from configure.models import Job
         from datetime import timedelta, datetime
         from django.db.models import Q
-        # Only retive Job logs for past 60 minutes.
-        # This need to fixed to get jobs for any time delta
-        # Need input from PM    
         jobs = Job.objects.filter(~Q(state = 'complete') | Q(created_at__gte=datetime.now() - timedelta(minutes=60)))
         return [j.to_dict() for j in jobs]
 
 class GetLogs(AnonymousRequestHandler):
     @extract_request_args('host_id','start_time','end_time','lustre','page_id','page_size')
     def run(self,request,host_id,start_time,end_time,lustre,page_id,page_size):
-        import datetime
-        from monitor.models import Systemevents
-        ui_time_format = "%m/%d/%Y %H:%M "
-        host=None 
+        return get_logs(host_id,start_time,end_time,lustre,page_id,page_size)
 
-        if page_id:
-            offset = int(page_id) * page_size
-        else:
-            offset = 0
+def get_logs(host_id,start_time,end_time,lustre,page_id,page_size):
+    import datetime
+    from monitor.models import Systemevents
+    ui_time_format = "%m/%d/%Y %H:%M "
+    host=None 
+    filter_kwargs = {}
+    if start_time:
+        start_date = datetime.datetime.strptime(str(start_time),ui_time_format)
+        filter_kwargs['devicereportedtime__gte'] = start_date
+    if end_time:
+        end_date = datetime.datetime.strptime(str(end_time),ui_time_format)
+        filter_kwargs['devicereportedtime__lte'] = end_date
+    if host_id:
+        host = ManagedHost.objects.get(id=host_id)
+        filter_kwargs['fromhost__startswith'] = host.pretty_name()
+    if lustre:
+        filter_kwargs['message__startswith'] = " Lustre"
 
-        filter_kwargs = {}
-        if start_time:
-            start_date = datetime.datetime.strptime(str(start_time),ui_time_format)
-            filter_kwargs['devicereportedtime__gte'] = start_date
-        if end_time:
-            end_date = datetime.datetime.strptime(str(end_time),ui_time_format)
-            filter_kwargs['devicereportedtime__lte'] = end_date
-        if host_id:
-            host = ManagedHost.objects.get(id=host_id)
-            filter_kwargs['fromhost__startswith'] = host.pretty_name()
-        if lustre:
-            filter_kwargs['message__startswith'] = " Lustre"
+    log_data = Systemevents.objects.filter(**filter_kwargs).order_by('-devicereportedtime')
+    log_records = [{'message': nid_finder(log_entry.message),
+                    # Trim trailing colon from e.g. 'kernel:'
+                    'service': log_entry.syslogtag.rstrip(":"),
+                    'date': log_entry.devicereportedtime.strftime("%b %d %H:%M:%S"),
+                    'host': log_entry.fromhost,
+                   }
+                   for log_entry in log_data
+    ]
+    return paginate_result(page_id,page_size,log_records)              
 
-
-        log_data = Systemevents.objects.filter(**filter_kwargs).order_by('-devicereportedtime')
-        # iTotalRecords is the number of records before filtering (where here filtering
-        # means datatables filtering, not the filtering we're doing from our other args)
-        iTotalRecords = log_data.count()
-
-        if page_size:
-            log_data = log_data.all()[offset:offset + page_size]
-
-        # iTotalDisplayRecords is simply the number of records we will return
-        # in this call (i.e. after all filtering and pagination)
-        iTotalDisplayRecords = log_data.count()
-
-
-        log_records = [{'message': nid_finder(log_entry.message),
-                        # Trim trailing colon from e.g. 'kernel:'
-                        'service': log_entry.syslogtag.rstrip(":"),
-                        'date': log_entry.devicereportedtime.strftime("%b %d %H:%M:%S"),
-                        'host': log_entry.fromhost,
-                       }
-                       for log_entry in log_data
-        ]
-        log_result = {}
-        log_result['sEcho']=offset
-        log_result['iTotalRecords'] = iTotalRecords
-        log_result['iTotalDisplayRecords'] = iTotalDisplayRecords
-        log_result['aaData'] = log_records
-        return log_result              
-
+def paginate_result(page_id,page_size,result):
+    if page_id:
+        offset = int(page_id) * page_size
+    else:
+        offset = 0
+    # iTotalRecords is the number of records before filtering (where here filtering
+    # means datatables filtering, not the filtering we're doing from our other args)
+    iTotalRecords = len(result)
+    if page_size:
+        result = result[offset:offset + page_size]
+    # iTotalDisplayRecords is simply the number of records we will return
+    # in this call (i.e. after all filtering and pagination)
+    iTotalDisplayRecords = len(result)
+    paginated_result = {}
+    paginated_result['sEcho'] = offset
+    paginated_result['iTotalRecords'] = iTotalRecords
+    paginated_result['iTotalDisplayRecords'] = iTotalDisplayRecords
+    paginated_result['aaData'] = result
+    return paginated_result
 
 def nid_finder(message):
     from configure.models import Nid, ManagedTarget 

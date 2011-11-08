@@ -22,10 +22,7 @@ from monitorapi import (ListFileSystems,
                         GetFSVolumeDetails)
 
 import configureapi
-from configureapi import (FormatFileSystem,
-                          StopFileSystem,
-                          StartFileSystem,
-                          AddHost,  
+from configureapi import (AddHost,  
                           TestHost,
                           RemoveHost,
                           GetLuns,
@@ -93,9 +90,6 @@ urlpatterns = patterns('',
     (r'^list_audit/$',CsrfExemptResource(HydraAudit)),
     (r'^clear_audit/$',CsrfExemptResource(ClearAudit)),
     
-    (r'^format_filesystem/$',CsrfExemptResource(FormatFileSystem)), 
-    (r'^stop_filesystem/$',CsrfExemptResource(StopFileSystem)), 
-    (r'^start_filesystem/$',CsrfExemptResource(StartFileSystem)),
     (r'^create_new_fs/$',CsrfExemptResource(CreateNewFilesystem)),
     (r'^create_fs/$',CsrfExemptResource(CreateFilesystem)),
     (r'^create_mgt/$',CsrfExemptResource(CreateMGT)),

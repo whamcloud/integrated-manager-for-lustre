@@ -151,10 +151,17 @@ $(document).ready(function()
       startTime = startTimeValue * (24 * 60);
     else if(timeFactor == "week")
       startTime = startTimeValue * (7 * 24 * 60);
-			
-    initiatePolling();
+
+    if(! $('#dashboardDiv').is(':hidden'))
+      loadLandingPageGraphs();
+    else if(! $('#fileSystemDiv').is(':hidden'))
+      loadFileSytemGraphs();
+    else if(! $('#ossInfoDiv').is(':hidden'))
+      loadServerGraphs();
+    else if(! $('#ostInfoDiv').is(':hidden'))
+      loadTargetGraphs();
   }
-  
+
   initiatePolling = function(){
     if(! $('#dashboardDiv').is(':hidden'))
       initDashboardPolling();
@@ -420,19 +427,17 @@ $(document).ready(function()
 
     resetTimeInterval();
 
-		/* HYD-375: ostSelect value is a name instead of an ID */
-    load_resource_graph("ost_resource_graph_canvas", ostId);
-    
-    ost_Pie_Space_Data(ostId, ostName, "", "", 'Average', ostKind, spaceUsageFetchMatric, 'false');
-    ost_Pie_Inode_Data(ostId, ostName, "", "", 'Average', ostKind, spaceUsageFetchMatric, 'false');
-    ost_Area_ReadWrite_Data(ostId, ostName, startTime, endTime, 'Average', ostKind, readWriteFetchMatric, 'false');
-
-    loadOSTSummary(fsId);
+		$('#ls_ostId').attr("value",ostId);$('#ls_ostName').attr("value",ostName);$('#ls_ostKind').attr("value",ostKind);
+    window.location.hash =  "ost";
     
     clearAllIntervals();
-
-    $('#ls_ostId').attr("value",ostId);$('#ls_ostName').attr("value",ostName);$('#ls_ostKind').attr("value",ostKind);
-    window.location.hash =  "ost";
+    
+    loadOSTSummary(fsId);
+    
+    loadTargetGraphs();
+    
+    /* HYD-375: ostSelect value is a name instead of an ID */
+    load_resource_graph("ost_resource_graph_canvas", ostId);
   }
 /******************************************************************************
  * Function for controlling tabs on oss dashboard
