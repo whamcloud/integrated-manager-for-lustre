@@ -1,70 +1,71 @@
 <div class="leftpanel">
   <div id="signbtn">
+    <img id='notification_icon_jobs' class='notification_icon' src="{{STATIC_URL}}images/ajax-loader.gif"/>
+    <img id='notification_icon_alerts' class='notification_icon' src="{{STATIC_URL}}images/dialog-warning.png"/>
     <a href="#" class="btnsignin">
-      <img src="{{STATIC_URL}}images/notifications.png" alt="" />
+      <div class='vertical'>Notifications</div>
     </a>
   </div>
   <div id="frmsignin">
-  <div style="border: 2px solid #848484; background-color: #cccccc; min-height: 600px;">
-  <div class="panel" style="display: block; width: 350px;">
-  <div style="float: right">
-    <b id="minusImg" class="open-close">
-      <img src="{{STATIC_URL}}images/notifications_hor.png" alt="" />
-    </b>
-  </div>
-  <br/>
-  <div style="font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px; font-weight: bold; padding-left: 5px;">
-    <a href="#" id="alertAnchor">Alerts</a>
-  </div>
-  <div id="alertsDiv" style="display: none; margin-left: 5px; height: 400px; overflow: auto;">
-    <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
-      <tr>
-	    <td>
-		  <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="alert_content">
-          </table>
-		</td>
-	  </tr>
-    </table>
-  </div>
-  <div style="font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px; font-weight: bold; padding-left: 5px;">
-    <a href="#" id="eventsAnchor">Events</a>
-  </div>
-  <div id="eventsDiv" style="display: none; margin-left: 5px; height: 400px; overflow: auto;">
-    <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
-	  <tr>
-		<td bgcolor="#CCCCCC">
-		  <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
-			<tr>
+    <div style="border: 2px solid #848484; background-color:#cccccc; min-height:600px;">
+      <div class="panel" style="display: block;width: 350px;">
+        <div style="float: right"><b id="minusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications_hor.png" alt="" />
+          </b>
+        </div>
+          <br/>
+        <div style="font-family:Verdana, Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; padding-left:5px;">
+          <a href="#" id="alertAnchor">Alerts</a>
+        </div>
+        <div id="alertsDiv" style="display:none; margin-left:5px; height:400px; overflow:auto;">
+          <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
+            <tr>
               <td>
-			    <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="event_content">
-				</table>
-			  </td>
-			</tr>
-		  </table>
-		</td>
-	  </tr>
-    </table>
-  </div>
-  <div style="font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px; font-weight: bold; padding-left: 5px;">
-    <a href="#" id="jobsAnchor">Jobs</a>
-  </div>
-  <div id="jobsDiv" style="display: none; margin-left: 5px; height: 400px; overflow: auto;">
-    <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
-      <tr>
-	    <td bgcolor="#CCCCCC">
-		  <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
-			<tr>
-			  <td>
-				<table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="job_content">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="alert_content">
                 </table>
-			  </td>
-			</tr>
-		  </table>
-		</td>
-      </tr>
-    </table>
-  </div>
-  </div>
-  </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div style="font-family:Verdana, Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; padding-left:5px;">
+          <a href="#" id="eventsAnchor">Events</a>
+        </div>
+        <div id="eventsDiv"  style="display:none; margin-left:5px; height:400px; overflow:auto;">
+          <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
+            <tr>
+              <td bgcolor="#CCCCCC">
+                <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
+                  <tr>
+                    <td>
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="event_content">
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div style="font-family:Verdana, Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; padding-left:5px;">
+          <a href="#" id="jobsAnchor">Jobs</a>
+        </div>
+        <div id="jobsDiv" style="display:none; margin-left:5px; height:400px; overflow:auto;">
+          <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
+            <tr>
+              <td bgcolor="#CCCCCC">
+                <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
+                  <tr>
+                    <td >
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="job_content">
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div id="outputDiv"></div>
+      </div>
+    </div>
   </div>
 </div>

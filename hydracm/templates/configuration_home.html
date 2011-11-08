@@ -1,67 +1,46 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<title>Hydra Configuration</title>
-<link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
+{% extends 'hydra_base.html' %}
+{% block css %}
 <link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_page.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/demo_table.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css" rel="stylesheet" type="text/css" />
 <link href="{{STATIC_URL}}css/jquery.alerts.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-1.6.4.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.16.custom.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.easing.1.3.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
+<link rel="stylesheet" href="{{STATIC_URL}}css/jquery.cluetip/jquery.cluetip.css" type="text/css" />
+<link rel="stylesheet" href="{{STATIC_URL}}css/jquery.jgrowl.css" type='text/css' />
+<link rel="stylesheet" href="{{STATIC_URL}}css/notifications.css" type='text/css' />
+<link href="{{STATIC_URL}}css/storage_resource_dialog.css" rel="stylesheet" type="text/css" />
+<link href="{{STATIC_URL}}css/storage_resource_create.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="{{STATIC_URL}}css/filesystem_configuration.css" type='text/css' />
+<link href="{{STATIC_URL}}css/js-graph-it.css" rel="stylesheet" type="text/css" />
+<link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="{{STATIC_URL}}css/target_dialog.css" type='text/css' />
+{% endblock %}
 
+{% block scripts %}
+<script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
 <script src="{{STATIC_URL}}js/jquery.hoverIntent.js" type="text/javascript"></script>
 <script src="{{STATIC_URL}}js/jquery.bgiframe.min.js" type="text/javascript"></script>
 <script src="{{STATIC_URL}}js/jquery.cluetip.js" type="text/javascript"></script>
-<link rel="stylesheet" href="{{STATIC_URL}}css/jquery.cluetip/jquery.cluetip.css" type="text/css" />
-
 <!-- notifications.js and its dependencies are included early because it contains
      markup generation functions for things like alert indicators and job spinners
      which are used by subsequent .js files -->
 <script type="text/javascript">
   /* This is used for live update functions that want to get information from
    * the backend since the page was loaded */
-  page_load_time = '{{page_load_time}}';
+page_load_time = '{{page_load_time}}';
 </script>
-<script type='text/javascript' src="{{STATIC_URL}}js/jquery.jgrowl_minimized.js"></script>
-<link rel="stylesheet" href="{{STATIC_URL}}css/jquery.jgrowl.css" type='text/css' />
-<link rel="stylesheet" href="{{STATIC_URL}}css/notifications.css" type='text/css' />
 <script type="text/javascript" src="{{STATIC_URL}}js/notifications.js" ></script>
-
+<script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_dialog.js"></script>
+<script type='text/javascript' src="{{STATIC_URL}}js/jquery.jgrowl_minimized.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.alerts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
-
-<link href="{{STATIC_URL}}css/storage_resource_dialog.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_dialog.js"></script>
-
-<link href="{{STATIC_URL}}css/storage_resource_create.css" rel="stylesheet" type="text/css" />
 <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_create.js"></script>
-
 <script type='text/javascript' src="{{STATIC_URL}}js/filesystem_configuration.js"></script>
-<link rel="stylesheet" href="{{STATIC_URL}}css/filesystem_configuration.css" type='text/css' />
-
 <!-- js-graph-it is a dependency of resource_graph -->
 <script type="text/javascript" src="{{STATIC_URL}}js/js-graph-it.js" ></script>
-<link href="{{STATIC_URL}}css/js-graph-it.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
 <script type='text/javascript' src="{{STATIC_URL}}js/resource_graph.js"></script>
 <script type='text/javascript' src="{{STATIC_URL}}js/target_dialog.js"></script>
-<link rel="stylesheet" href="{{STATIC_URL}}css/target_dialog.css" type='text/css' />
-
-
-
-
-<script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js" ></script>
 <script>
   //Global vars for hydracm UI
   //create new File system
@@ -88,7 +67,7 @@
     });
   });    
   // Document Ready Handler for configuration_home.html   
-  $(document).ready(function() {  
+  $(document).ready(function() {
       if (window.location.hash) {
           $("#tabs").select(window.location.hash);
       } else {
@@ -97,6 +76,7 @@
     // Fix Me: move all this to a js and load in ready.
     //--------------------------------------------------------------------//  
     // Create new FS view -> click handler for "Create new MGT" 
+    $('#hydracm_menu').addClass('active');
     $("#popup-new-mgt tbody").delegate("tr", "click", function() {
       var radio = $("td:eq(0) input", this);
       radio.attr('checked', true);
@@ -182,153 +162,87 @@
       $("button").button();
     });
 </script>
-</head>
-<link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
-<body style="margin: 0px 0px 0px 0px; padding: 0px;">
-<div class="wrapper">
-  <div class="bg">
-    <div class="logohead">
-      <div class="logo"></div>
-      <div class="top_links"> <a href="/dashboard">Dashboard</a> | <a href="/hydracm" class="active">Configure</a> | <a href="/dashboard/dbalerts">Alerts</a> | <a href="/dashboard/dbevents">Events</a> | <a href="/dashboard/dblogs">Log</a> </div>
-      <div style="clear:left;"></div>
-    </div>
-    <div class="leftpanel">
-      <div id="signbtn">
-        <img id='notification_icon_jobs' class='notification_icon' src="{{STATIC_URL}}images/ajax-loader.gif"/>
-        <img id='notification_icon_alerts' class='notification_icon' src="{{STATIC_URL}}images/dialog-warning.png"/>
-        <a href="#" class="btnsignin">
-          <div class='vertical'>Notifications</div>
-          <!--<img src="{{STATIC_URL}}images/notifications.png" alt="" />-->
-        </a>
-      </div>
-      <div id="frmsignin">
-        <div style="border: 2px solid #848484; background-color:#cccccc; min-height:600px;">
-          <div class="panel" style="display: block;width: 350px;">
-            <div style="float: right"><b id="minusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications_hor.png" alt="" /></b></div>
-            <br/>
-            <div style="font-family:Verdana, Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; padding-left:5px;"><a href="#" id="alertAnchor">Alerts</a></div>
-            <div id="alertsDiv" style="display:none; margin-left:5px; height:400px; overflow:auto;">
-              <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
-                <tr>
-                  <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="alert_content">
-                    </table></td>
-                </tr>
-              </table>
-            </div>
-            <div style="font-family:Verdana, Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; padding-left:5px;"><a href="#" id="eventsAnchor">Events</a></div>
-            <div id="eventsDiv"  style="display:none; margin-left:5px; height:400px; overflow:auto;">
-              <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
-                <tr>
-                  <td bgcolor="#CCCCCC"><table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
-                      <tr>
-                        <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="event_content">
-                          </table></td>
-                      </tr>
-                    </table></td>
-                </tr>
-              </table>
-            </div>
-            <div style="font-family:Verdana, Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; padding-left:5px;"><a href="#" id="jobsAnchor">Jobs</a></div>
-            <div id="jobsDiv" style="display:none; margin-left:5px; height:400px; overflow:auto;">
-              <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
-                <tr>
-                  <td bgcolor="#CCCCCC"><table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
-                      <tr>
-                        <td ><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="job_content">
-                          </table></td>
-                      </tr>
-                    </table></td>
-                </tr>
-              </table>
-            </div>
+{% endblock %}
+{% block include_content %}{% endblock %}
+{% block content %}
+<div class="rightpanel" align="top">
+  <div id="dashboardDiv">
+    <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="3" align="top" style="border: 1px;border-color: blue" >
+      <tr>
+        <td valign="top" width="100%" height="100%">
+          <div id="tabs">
+            <ul>
+              <li><a href='/hydracm/fstab/' title='lustreFS_content'>Filesystems</a></li>
+              <li><a href='/hydracm/mgttab/' title='mgts'>MGTs</a></li>
+              <li><a href='/hydracm/volumetab/' title='volumes'>Volumes</a></li>
+              <li><a href='/hydracm/servertab/' title='servers'>Servers</a></li>
+              <li><a href='/hydracm/storage_tab/' title='storage'>Storage</a></li>
             </ul>
             <div id="outputDiv"></div>
           </div>
-        </div>
-      </div>
-    </div>
-    <div class="rightpanel">
-      <div id="dashboardDiv">
-        <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="3" align="top" style="border: 1px;border-color: blue" >
-          <tr>
-            <td width="100%" height="100%">
-              <div id="tabs">
-                <ul>
-                  <li><a href=/hydracm/fstab/ title='lustreFS_content'>Filesystems</a></li>
-                  <li><a href=/hydracm/mgttab/ title='mgts'>MGTs</a></li>
-                  <li><a href=/hydracm/volumetab/ title='volumes'>Volumes</a></li>
-                  <li><a href=/hydracm/servertab/ title='servers'>Servers</a></li>
-                  <li><a href=/hydracm/storage_tab/ title='storage'>Storage</a></li>
-                </ul>
-              </div>
-            </td>
-          </tr>
-        </table>
-      </div>
-    </div>
+        </td>
+      </tr>
+    </table>
   </div>
-</div>
 </div>
 <!-- create new fs dialogs -->
 <div id="configParam" title="Configuration Parameters">
-  <form id="form1" name="form1" method="post" action="">
-    <table width="75%" border="0" cellspacing="0" cellpadding="0">
-      <tr>
-        <td align="center" valign="middle" class="fontStyle">Property</td>
-        <td align="center" class="fontStyle">Value</td>
-      </tr>
-      <tr>
-        <td width="59%" height="27" align="right" valign="middle" class="fntsize">lite.max_cachd_mb: </td>
-        <td width="41%"><label>
-          <input type="text" name="textfield" id="textfield" />
-          </label></td>
-      </tr>
-      <tr>
-        <td height="26" align="right" valign="middle" class="fntsize">lite.max_cached_mb:</td>
-        <td><input type="text" name="textfield2" id="textfield2" /></td>
-      </tr>
-      <tr>
-        <td height="25" align="right" valign="middle" class="fntsize">lite.max_read_ahead_mb:</td>
-        <td><input type="text" name="textfield3" id="textfield3" /></td>
-      </tr>
-      <tr>
-        <td height="27" align="right" valign="middle" class="fntsize">lite.max_cached_whole_mb:</td>
-        <td><input type="text" name="textfield4" id="textfield4" /></td>
-      </tr>
-      <tr>
-        <td height="28" align="right" valign="middle" class="fntsize">lite.max_statahead_max:</td>
-        <td><input type="text" name="textfield5" id="textfield5" /></td>
-      </tr>
-      <tr>
-        <td height="28" align="right" valign="middle" class="fntsize">sys.at_early_margin:</td>
-        <td><input type="text" name="textfield6" id="textfield6" /></td>
-      </tr>
-      <tr>
-        <td height="28" align="right" valign="middle" class="fntsize">sys.at_extra:</td>
-        <td><input type="text" name="textfield7" id="textfield7" /></td>
-      </tr>
-      <tr>
-        <td height="26" align="right" valign="middle" class="fntsize">sys.at_history:</td>
-        <td><input type="text" name="textfield8" id="textfield8" /></td>
-      </tr>
-      <tr>
-        <td height="27" align="right" valign="middle" class="fntsize">sys.at_max:</td>
-        <td><input type="text" name="textfield9" id="textfield9" /></td>
-      </tr>
-      <tr>
-        <td height="26" align="right" valign="middle" class="fntsize">sys.at_min:</td>
-        <td><input type="text" name="textfield10" id="textfield10" /></td>
-      </tr>
-      <tr>
-        <td height="28" align="right" valign="middle" class="fntsize">sys.ldlm_timeout:</td>
-        <td><input type="text" name="textfield11" id="textfield11" /></td>
-      </tr>
-      <tr>
-        <td align="right" valign="middle" class="fntsize">sys.timeout:</td>
-        <td><input type="text" name="textfield12" id="textfield12" /></td>
-      </tr>
-    </table>
-  </form>
+  <table width="75%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="center" valign="middle" class="fontStyle">Property</td>
+      <td align="center" class="fontStyle">Value</td>
+    </tr>
+    <tr>
+      <td width="59%" height="27" align="right" valign="middle" class="fntsize">lite.max_cachd_mb: </td>
+      <td width="41%"><label>
+        <input type="text" name="textfield" id="textfield" />
+        </label></td>
+    </tr>
+    <tr>
+      <td height="26" align="right" valign="middle" class="fntsize">lite.max_cached_mb:</td>
+      <td><input type="text" name="textfield2" id="textfield2" /></td>
+    </tr>
+    <tr>
+      <td height="25" align="right" valign="middle" class="fntsize">lite.max_read_ahead_mb:</td>
+      <td><input type="text" name="textfield3" id="textfield3" /></td>
+    </tr>
+    <tr>
+      <td height="27" align="right" valign="middle" class="fntsize">lite.max_cached_whole_mb:</td>
+      <td><input type="text" name="textfield4" id="textfield4" /></td>
+    </tr>
+    <tr>
+      <td height="28" align="right" valign="middle" class="fntsize">lite.max_statahead_max:</td>
+      <td><input type="text" name="textfield5" id="textfield5" /></td>
+    </tr>
+     <tr>
+     <td height="28" align="right" valign="middle" class="fntsize">sys.at_early_margin:</td>
+     <td><input type="text" name="textfield6" id="textfield6" /></td>
+    </tr>
+    <tr>
+      <td height="28" align="right" valign="middle" class="fntsize">sys.at_extra:</td>
+      <td><input type="text" name="textfield7" id="textfield7" /></td>
+    </tr>
+    <tr>
+      <td height="26" align="right" valign="middle" class="fntsize">sys.at_history:</td>
+      <td><input type="text" name="textfield8" id="textfield8" /></td>
+    </tr>
+    <tr>
+      <td height="27" align="right" valign="middle" class="fntsize">sys.at_max:</td>
+      <td><input type="text" name="textfield9" id="textfield9" /></td>
+    </tr>
+    <tr>
+      <td height="26" align="right" valign="middle" class="fntsize">sys.at_min:</td>
+      <td><input type="text" name="textfield10" id="textfield10" /></td>
+    </tr>
+    <tr>
+      <td height="28" align="right" valign="middle" class="fntsize">sys.ldlm_timeout:</td>
+      <td><input type="text" name="textfield11" id="textfield11" /></td>
+    </tr>
+    <tr>
+      <td align="right" valign="middle" class="fntsize">sys.timeout:</td>
+      <td><input type="text" name="textfield12" id="textfield12" /></td>
+    </tr>
+  </table>
 </div>
 
 <!-- new OST popup showing all usable luns-->
@@ -359,7 +273,7 @@
 <!-- Markup for storage_resource_create.js -->
 <div style="overflow-y: auto; max-height: 700px;" id="storage_resource_create_dialog">
   <table id='storage_resource_create_fields'>
-    <tr><th>Resource class:</th><td colspan=2><select style="width: 200px;" id='storage_resource_create_classes'></select></td></td></tr>
+    <tr><th>Resource class:</th><td colspan=2><select style="width: 200px;" id='storage_resource_create_classes'></select></td></tr>
   </table>
 </div>
 <!-- End markup for storage_resource_create.js -->
@@ -383,6 +297,4 @@
 <div style="overflow-y: auto; max-height: 700px;" id="transition_confirmation_dialog">
 </div>
 <!-- End markup for transition confirmation dialog -->
-
-</body>
-</html>
+{% endblock %}
