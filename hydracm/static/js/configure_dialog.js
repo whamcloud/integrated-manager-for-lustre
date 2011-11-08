@@ -35,8 +35,6 @@ $(document).ready(function()
        var fs_id = $('#fs_id').val();       
        var ost_lun_ids = fvc_get_value($('#new_ost_chooser'));
 
-        /* FIXME: hack: using fsname instead of an ID because the edit_fs page loading
-         * code doesn't keep the ID anywhere */
         CreateOSTs(fs_id, ost_lun_ids);
 
         $(this).dialog("close");
