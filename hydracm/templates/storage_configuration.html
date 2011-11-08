@@ -52,8 +52,6 @@
                     options += "<option value='" + res_class_pair[0] + "'>" + res_class_pair[1] + "</option>"
                 });
                 $('#resource_class_select').html(options);
-                /*$('#resource_class_select').selectmenu();*/
-                $('#resource_class_select').css('width', '300px');
 
                 /* Select the default resource class */
                 $('#resource_class_select option[value="' + response.default + '"]').attr('selected', 'selected');
