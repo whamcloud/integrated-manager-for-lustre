@@ -36,6 +36,7 @@ class WorkaroundGenericForeignKey(GenericForeignKey):
             ct_id = getattr(instance, f.get_attname(), None)
             if ct_id:
                 ct = self.get_content_type(id=ct_id, using=instance._state.db)
+                from django.core.exceptions import ObjectDoesNotExist
                 try:
                     rel_obj = ct.model_class()._base_manager.using(ct._state.db).get(pk=getattr(instance, self.fk_field))
 

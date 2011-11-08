@@ -1,13 +1,13 @@
 /* global */
 div.ui-cluetip {
-  font-size: 1em;
+  font-size: 9pt;
 }
 .ui-cluetip-header,
 .ui-cluetip-content {
-  padding: 12px;
+  padding: 6px;
 }
 .ui-cluetip-header {
-  font-size: 1em;
+  font-size: 9pt;
   margin: 0;
   overflow: hidden;
 }

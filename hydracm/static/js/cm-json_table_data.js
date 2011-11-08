@@ -1,15 +1,3 @@
-//confirmation dialog messages
-var MSG_STOP_HOST = "Are you sure you want to stop this host?";
-var MSG_START_HOST = "Are you sure you want to start host?";
-var MSG_REMOVE_HOST = "Are you sure you want to remove host?";
-var MSG_UNLOAD_LNET = "Lnet will be unloaded, Are you sure?";
-var MSG_LOAD_LNET = "Are you sure you want to load lnet?";
-var MSG_START_FSLIST = "This is will start Filesystem, Are you sure?";
-var MSG_STOP_FSLIST = "Are you sure you want to stop filesystem?";
-var MSG_REMOVE_FSLIST = "Are you sure you want to remove filesystem?";
-var MSG_MGT_START = "Are you sure you want to start MGT?";
-var MSG_MGT_STOP = "Are you sure you want to stop MGT?";
-var MSG_MGT_REMOVE = "Are you sure you want to Remove MGT?";
 //Error dialog messages
 var ERR_FSLIST_LOAD = "Error occured in loading Filesystem: ";
 var ERR_EDITFS_MGT_LOAD = "Error occured in loading MGT: ";
@@ -288,56 +276,6 @@ function LoadMGTConfiguration_MGTConf()
 }
 
 /******************************************************************/
-//Function name - LoadVolumeConf_VolumeConfig()
-//Param - none
-//Return - none
-//Used in - Volume Configuration (volume_configuration.html)
-/******************************************************************/
-
-function LoadVolumeConf_VolumeConfig()
-{
-  $('#volume_configuration').dataTable().fnClearTable();
-  $.post("/api/get_luns/",{"category": "usable"}).success(function(data, textStatus, jqXHR)
-  {
-    if(data.success)
-    {
-      var response = data.response;
-      var primaryServer;
-      $.each(response, function(resKey, resValue)
-      {
-        primaryServer = "<select>";
-        $.each(resValue.available_hosts, function(resFailoverKey, resFailoverValue)
-        {
-          if(resFailoverValue.label==undefined)
-          {
-            primaryServer = primaryServer + "<option value='volvo'>&nbsp;&nbsp;None&nbsp;&nbsp;</option>";
-          }
-          else
-          {
-            primaryServer = primaryServer + "<option value='volvo'>" + resFailoverValue.label + "</option>";
-          }
-          primaryServer = primaryServer + "</select>";
-        });
-        $('#volume_configuration').dataTable().fnAddData ([
-          resValue.name,
-          primaryServer,
-          "",
-          resValue.status,
-          resValue.size
-        ]); 
-      });
-    }
-  })
-  .error(function(event)
-  {
-    jAlert(ERR_COMMON_VOLUME_LOAD + data.errors);
-  })
-  .complete(function(event) 
-  {
-  });
-}
-
-/******************************************************************/
 //Function name - LoadServerConf_ServerConfig()
 //Param - none
 //Return - none
@@ -356,7 +294,7 @@ function LoadServerConf_ServerConfig()
       {
         $('#server_configuration').dataTable().fnAddData ([
           resValue.pretty_name,
-          resValue.status,
+          resValue.lnet_state,
           CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions, "SERVER"),
           notification_icons_markup(resValue.id, resValue.content_type_id)
         ]);

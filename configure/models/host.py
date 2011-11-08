@@ -56,7 +56,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                 'pretty_name': self.pretty_name(),
                 'address' : self.address,
                 'kind' : self.role() ,
-                'lnet_status' : str(self.state),
+                'lnet_state' : self.state,
                 'status':self.status_string()}
 
     @classmethod
