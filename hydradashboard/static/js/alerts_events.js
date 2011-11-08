@@ -73,10 +73,6 @@ $(document).ready(function()
    $("#minusImg").hide();$("#plusImg").show();*/
    return false;
   });
-  $('#event_filter_btn').click(function()
-  {
-    FilterEvents("all_event_content", $('#db_events_hostList').val(),$('#intervalSelect').val(),$('#unitSelect').val(),"","",-1);
-  });
   
 });
 //******************************************************************************/
@@ -367,22 +363,6 @@ loadJobContent = function(targetJobDivName)
     jobTabContent = jobTabContent + "<tr><td colspan='5' align='right' bgcolor='#FFFFFF' style='font-family:Verdana, Arial, Helvetica, sans-serif;'><a href='/dashboard/dblogs/'>(All Jobs)</a></td></tr>";
   }
   $("#"+targetJobDivName).html(jobTabContent);
-  });
-}
-
-function FilterEvents(targetEventDivName,hostid,severity,eventtype,scrollsize,scrollid, maxCount)
-{
-  $("#" + targetEventDivName).dataTable().fnClearTable();
-  $.post("/api/geteventsbyfilter/",{"host_id":hostid,"severity":""+severity,"eventtype":""+eventtype,"scroll_size":"","scroll_id":""}) 
-  .success(function(data, textStatus, jqXHR) {
-  if(data.success)
-  {
-    LoadEventTable(targetEventDivName,data.response);
-  }
-  })
-  .error(function(event) {
-  })
-  .complete(function(event){
   });
 }
 

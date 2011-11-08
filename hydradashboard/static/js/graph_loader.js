@@ -1226,25 +1226,21 @@ setZoomDialogTitle = function(titleName)
 *****************************************************************************/
 initDashboardPolling = function()
 {
-  if(isPollingFlag)
+  dashboardPollingInterval = self.setInterval(function()
   {
-    dashboardPollingInterval = self.setInterval(function()
-    {
-      db_Bar_SpaceUsage_Data('false');
-      db_Line_connectedClients_Data('false');
-      db_LineBar_CpuMemoryUsage_Data('false');
-      db_Area_ReadWrite_Data('false');
-      db_Area_mdOps_Data('false');
-    }, 10000);
-  }
-  else
-  {
-    db_Bar_SpaceUsage_Data('false');
-    db_Line_connectedClients_Data('false');
-    db_LineBar_CpuMemoryUsage_Data('false');
-    db_Area_ReadWrite_Data('false');
-    db_Area_mdOps_Data('false');
-  }
+    loadLandingPageGraphs();
+  }, 10000);
+}
+/*****************************************************************************
+ * Function to load graphs on the dashboard lading page
+*****************************************************************************/
+loadLandingPageGraphs = function()
+{
+  db_Bar_SpaceUsage_Data('false');
+  db_Line_connectedClients_Data('false');
+  db_LineBar_CpuMemoryUsage_Data('false');
+  db_Area_ReadWrite_Data('false');
+  db_Area_mdOps_Data('false');
 }
 /*****************************************************************************
  * Function to clear dashboard pooling intervals

@@ -13,6 +13,23 @@
 var ost_Pie_Space_Data_Api_Url = "/api/get_stats_for_targets/";
 var ost_Pie_Inode_Data_Api_Url = "/api/get_stats_for_targets/";
 var ost_Area_ReadWrite_Data_Api_Url = "/api/get_stats_for_targets/";
+/******************************************************************************
+* OST specific functions
+******************************************************************************/
+show_hide_targetSpaceUsageContainer = function(displayValue)
+{
+  $("#target_space_usage_container").css("display", displayValue);
+}
+show_hide_targetFilesUsageContainer = function(displayValue)
+{
+  $("#target_inodes_container").css("display", displayValue);
+}
+show_hide_targetReadWriteContainer = function(displayValue)
+{
+  $("#target_read_write_container_magni").css("display" ,displayValue);
+  $("#target_read_write_container").css("display", displayValue);
+}
+
 /*****************************************************************************
  * Configuration object for space usage - Pie Chart
 ******************************************************************************/
@@ -74,7 +91,7 @@ ost_Pie_Space_Data = function(targetId, targetName, sDate, endDate, dataFunction
   var freeData = [],usedData = [];
   obj_ost_pie_space = JSON.parse(JSON.stringify(ChartConfig_OST_Space));
   obj_ost_pie_space.title.text= targetName + " Space Usage";
-  obj_ost_pie_space.chart.renderTo = "ost_container2";
+  obj_ost_pie_space.chart.renderTo = "target_space_usage_container";
 
   $.post(ost_Pie_Space_Data_Api_Url,
   { 
@@ -132,7 +149,7 @@ ost_Pie_Inode_Data = function(targetId, targetName, sDate, endDate, dataFunction
   var freeFilesData = [],totalFilesData = [];
   obj_ost_pie_inode = JSON.parse(JSON.stringify(ChartConfig_OST_Space));
   obj_ost_pie_inode.title.text= targetName + " - Files vs Free Inodes";
-  obj_ost_pie_inode.chart.renderTo = "ost_container3";    
+  obj_ost_pie_inode.chart.renderTo = "target_inodes_container";    
   $.post(ost_Pie_Inode_Data_Api_Url,
   {
     targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
@@ -236,7 +253,7 @@ ost_Area_ReadWrite_Data = function(targetId, targetName, sDate, endDate, dataFun
   })
   .complete(function(event)
   {
-    obj_oss_Area_ReadWrite_Data.chart.renderTo = "ost_avgReadDiv";
+    obj_oss_Area_ReadWrite_Data.chart.renderTo = "target_read_write_container";
     obj_oss_Area_ReadWrite_Data.chart.width='500';
     $.each(stats, function(i, stat_name) 
     {
@@ -337,20 +354,31 @@ loadOSTSummary = function (fsId)
 *****************************************************************************/
 initOSTPolling = function()
 {
-  if(isPollingFlag)
+  ossPollingInterval = self.setInterval(function()
   {
-    ossPollingInterval = self.setInterval(function()
-    {
-      ost_Pie_Space_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
-      ost_Pie_Inode_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
-      ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, "Average", $('#ls_ostKind').val(), readWriteFetchMatric, "false");
-    }, 10000);
-  }
-  else
+    loadTargetGraphs();
+  }, 10000);
+}
+/*****************************************************************************
+ * Function to load graphs on the ost dashboard page
+*****************************************************************************/
+loadTargetGraphs = function()
+{
+  var ostKind = $("#ls_ostKind").val();
+  if(ostKind == 'OST')
   {
     ost_Pie_Space_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
     ost_Pie_Inode_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
     ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, "Average", $('#ls_ostKind').val(), readWriteFetchMatric, "false");
+    show_hide_targetSpaceUsageContainer("block"); 
+    show_hide_targetFilesUsageContainer("block");
+    show_hide_targetReadWriteContainer("block") 
+  }
+  else
+  {
+    show_hide_targetSpaceUsageContainer("none"); 
+    show_hide_targetFilesUsageContainer("none");
+    show_hide_targetReadWriteContainer("none")
   }
 }
-/*********************************************************************************************/
+/*****************************************************************************/

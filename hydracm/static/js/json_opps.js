@@ -84,36 +84,6 @@ function Add_Host_Table(dialog_id)
   $('#hostdetails_container').html(oTable);
 }
 
-function StartFileSystem(filesystem)
-{
-  $.post("/api/start_filesystem/",{"filesystem":filesysme}).success(function(data, textStatus, jqXHR) {
-    if(data.success)
-    {
-      var response = data.response;    
-    }
-  })
-  .error(function(event) {
-       jAlert(ERR_COMMON_FS_START + data.errors, ALERT_TITLE);
-    })
-  .complete(function(event) {
-  });
-}
-
-function StopFileSystem(filesystem)
-{
-  $.post("/api/stop_filesystem/",{"filesystem":filesysme}).success(function(data, textStatus, jqXHR) {
-    if(data.success)
-    {
-      var response = data.response;    
-    }
-  })
-  .error(function(event) {
-       jAlert(ERR_COMMON_FS_START + data.errors, ALERT_TITLE);
-    })
-  .complete(function(event) {
-  });
-}
-
 function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, callback)
 {
   $.ajax({type: 'POST', url: "/api/create_new_fs/", dataType: 'json', data: JSON.stringify({

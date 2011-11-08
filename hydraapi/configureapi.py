@@ -9,52 +9,10 @@ from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
-from configure.models import (ManagedFilesystem,
-                              ManagedHost)
+from configure.models import ManagedHost
 from configure.lib.state_manager import (StateManager)
 from requesthandler import (AnonymousRequestHandler,
                             extract_request_args)
-#
-class FormatFileSystem(AnonymousRequestHandler):
-    @extract_request_args('filesystem')
-    def run(self,request,filesystem):
-        format_fs_list = []
-        fs = ManagedFilesystem.objects.get(name =  filesystem) 
-        for target in fs.get_targets():
-            if target.state == 'unformatted':
-                transition_job = StateManager.set_state(target,'formatted')
-                format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status':transition_job.status}
-                                     )
-            else:
-                format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status': transition_job.status}
-                                     )
-        return format_fs_list
-    
-class StopFileSystem(AnonymousRequestHandler):
-    @extract_request_args('filesystem')
-    def run(self,request,filesystem):
-        format_fs_list = []
-        fs = ManagedFilesystem.objects.get(name =  filesystem)
-        for target in fs.get_targets():
-            if not target.state == 'unmounted':
-                transition_job = StateManager.set_state(target.downcast(),'unmounted')
-                format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status': transition_job.status}
-                                     )
-            else:
-                format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status': transition_job.status}
-                                     )
-        return format_fs_list
-
-class StartFileSystem(AnonymousRequestHandler):
-    @extract_request_args('filesystem')
-    def run(self,request,filesystem):
-        format_fs_list = []
-        fs = ManagedFilesystem.objects.get(name = filesystem)
-        for target in fs.get_targets():
-            transition_job = StateManager.set_state(target.downcast(),'mounted')
-            format_fs_list.append({'filesystem': fs.name,'target':target.name,'job_id': transition_job.task_id,'status': transition_job.status}
-                                 )
-        return format_fs_list
 
 class TestHost(AnonymousRequestHandler):
     @extract_request_args('hostname')

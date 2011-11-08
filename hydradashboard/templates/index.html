@@ -12,7 +12,7 @@
       <script type="text/javascript" src="{{STATIC_URL}}js/graph_loader.js"></script>
       <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
       <!-- exporting.js added for exporting graphs -->
-      <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/exporting.js"></script>
+      <!--<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/exporting.js"></script> -->
       <!-- js-graph-it is a dependency of resource_graph -->
       <script type="text/javascript" src="{{STATIC_URL}}js/js-graph-it.js" ></script>
       <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/resource_graph.js"></script>
@@ -313,7 +313,7 @@
 					          <div id="tab1" class="tab_content">
 					            <fieldset>
 					              <legend class="legendClass">
-					                OSS Usage Summary
+					                Usage Summary
 					              </legend>
 					              <table width="100%" border="0" align="left">
 					                <tr>
@@ -326,7 +326,7 @@
 					            </fieldset>
 					            <fieldset>
 					              <legend class="legendClass">
-					                OSS Performance Summary 
+					                Performance Summary 
 					              </legend>
 					              <table width="100%" border="0">
 					                <td valign="top" class="text" width="50%" align="center">
@@ -389,9 +389,6 @@
               <tr>
 				        <td colspan="4">
 				          <fieldset>
-				            <legend class="legendClass">
-				              OST Usage  Summary 
-				            </legend>
 				            <table width="100%" border="0">
 				              <tr>
 				                <td colspan="2" valign="top" class="text" width="30%" align="center" style="font-family: Verdana, Arial, Helvetica, sans-serif;"><br />
@@ -400,11 +397,11 @@
 				                </td>
 				                <td width="25%" valign="top" class="text" align="center">
 				                  <div style="clear: right;"></div>
-				                  <div id="ost_container2" class="round-table">Space Usage</div>
+				                  <div id="target_space_usage_container" class="round-table">Space Usage</div>
 				                </td>
 				                <td width="25%" valign="top" class="text" align="center">
 				                  <div style="clear: right;"></div>
-				                  <div id="ost_container3" class="round-table">Files Vs Free Inodes</div>
+				                  <div id="target_inodes_container" class="round-table">Files Vs Free Inodes</div>
 				                </td>
 				              </tr>
 				            </table>
@@ -414,25 +411,15 @@
               <tr>
 				        <td colspan="3">
 				          <fieldset>
-				            <legend class="legendClass">
-				              OST Performance Summary
-				            </legend>
 				            <table width="100%" border="0">
 					            <tr>
 					              <td valign="top" class="text" width="50%" align="center">
-					               <div class="magni" style="margin-left: 515px">
+					               <div id="target_read_write_container_magni" class="magni" style="margin-left: 810px">
 					                 <input type="button" value=" " class="magbutton" 
 					                 onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
 					               </div>
 					               <div style="clear: right;"></div>
-					               <div id="ost_avgReadDiv" style="width: 500px" class="round-table">Disk Read and Write</div>
-					              </td>
-					              <td valign="top" class="text" width="50%" align="center">
-					                <div class="magni" style="margin-left: 515px">
-					                  <input type="button" value=" " class="magbutton" onclick="" />
-					                </div>
-					                <div style="clear: right;"></div>
-					                <div id="ost_avgWriteDiv" style="width: 500px" class="round-table">Any other parameter graph</div>
+					               <div id="target_read_write_container" style="width: 500px" class="round-table">Disk Read and Write</div>
 					              </td>
 					            </tr>
 				            </table>
