@@ -298,6 +298,11 @@ class Database(models.Model):
         return "\n".join([json.dumps(o, indent=2) for o in 
                           [json.loads(j) for j in output]])
 
+    def purge_cdps(self):
+        for rra in self.archives.all():
+            for ds in self.datasources.all():
+                rra.purge_ds_cdps(ds)
+
 # http://djangosnippets.org/snippets/2408/
 # Grumble.
 from abc import abstractmethod
@@ -612,17 +617,6 @@ class Archive(PoorMansStiModel):
             transaction.commit_unless_managed()
 
         debug_print("deleted %d old CDPs" % len(old))
-
-    def purge_cdps(self, ds_cache=None):
-        import settings
-        if not (hasattr(settings, R3D_AUTOPURGE) and settings.R3D_AUTOPURGE):
-            return
-
-        if not ds_cache:
-            ds_cache = self.database.datasources
-
-        for ds in ds_cache:
-            self.ds_purge_cdps(ds)
 
     def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
         raise RuntimeError, "Method not implemented at this level"
