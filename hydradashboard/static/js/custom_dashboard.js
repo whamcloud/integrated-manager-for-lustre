@@ -359,8 +359,11 @@ $(document).ready(function()
     }), contentType:"application/json; charset=utf-8"})
     .success(function(data, textStatus, jqXHR) 
     {
+      var targets = data.response;
+      targets = targets.sort(function(a,b) {return a.label > b.label;})
+
       var count = 0;
-      $.each(data.response, function(i, target_info) {
+      $.each(targets, function(i, target_info) {
         breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>"
         
         ostKindMarkUp = ostKindMarkUp + "<option value="+target_info.id+">"+target_info.kind+"</option>";
