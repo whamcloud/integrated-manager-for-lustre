@@ -164,9 +164,12 @@ class Database(models.Model):
 
     def load_cached_associations(self):
         # Try to preload stuff as much as possible.
-        self.ds_cache = list(self.datasources.order_by('id'))
+        self.pdp_cache = list(PdpPrep.objects.select_related().filter(datasource__database__id=self.id).order_by('datasource'))
+        # This is ass-backwards, but that's django for you.
+        self.ds_cache = [pdp.datasource for pdp in self.pdp_cache]
+
         self.rra_cache = list(self.archives.order_by('id'))
-        self.prep_cache = list(CdpPrep.objects.order_by('datasource', 'archive'))
+        self.pcdp_cache = list(CdpPrep.objects.select_related().filter(archive__database__id=self.id).order_by('datasource', 'archive'))
 
     def parse_update_dict(self, update, missing_ds_block=None):
         new_values = []

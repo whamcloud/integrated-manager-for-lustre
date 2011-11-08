@@ -147,7 +147,7 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_cou
             rra.steps_since_update = 0
 
         for ds in db.ds_cache:
-            cdp_prep = [prep for prep in db.prep_cache
+            cdp_prep = [prep for prep in db.pcdp_cache
                         if (prep.datasource_id == ds.id
                             and prep.archive_id == rra.id)][0]
 
@@ -165,7 +165,7 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_cou
 
         for idx in range(0, rra.steps_since_update):
             for ds in db.ds_cache:
-                cdp_prep = [prep for prep in db.prep_cache
+                cdp_prep = [prep for prep in db.pcdp_cache
                             if (prep.datasource_id == ds.id
                                 and prep.archive_id == rra.id)][0]
 
