@@ -548,7 +548,7 @@ class Notifications(AnonymousRequestHandler):
 
             from configure.models import StorageResourceAlert, StorageAlertPropagated
             from configure.models import Lun
-            from configure.models import ManagedTargetMount
+            from configure.models import ManagedTargetMount, ManagedMgs
             from configure.models import FilesystemMember
             from monitor.models import TargetOfflineAlert, TargetRecoveryAlert, TargetFailoverAlert, HostContactAlert
 
@@ -557,6 +557,9 @@ class Notifications(AnonymousRequestHandler):
                 affected_objects.add(target)
                 if isinstance(target, FilesystemMember):
                     affected_objects.add(target.filesystem)
+                elif isinstance(target, ManagedMgs):
+                    for fs in target.managedfilesystem_set.all():
+                        affected_objects.add(fs)
 
             if isinstance(a, StorageResourceAlert):
                 affected_srrs = [sap['storage_resource_id'] for sap in StorageAlertPropagated.objects.filter(alert_state = a).values('storage_resource_id')]
