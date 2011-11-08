@@ -76,6 +76,7 @@ class Migration(SchemaMigration):
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'mod': ('django.db.models.fields.CharField', [], {'max_length': '50'}),
             'rows': ('django.db.models.fields.BigIntegerField', [], {}),
+            'current_row': ('django.db.models.fields.BigIntegerField', [], {'default': '0'}),
             'xff': ('r3d.models.SciFloatField', [], {'default': '0.5'})
         },
         'r3d.cdp': {
