@@ -358,7 +358,7 @@ class AlertState(models.Model):
 
 class TargetOfflineAlert(AlertState):
     def message(self):
-        return "Target offline"
+        return "Target %s offline" % (self.alert_item)
 
     def begin_event(self):
         return AlertEvent(
@@ -376,7 +376,7 @@ class TargetOfflineAlert(AlertState):
 
 class TargetFailoverAlert(AlertState):
     def message(self):
-        return "Target failed over"
+        return "Target %s failed over to server %s" % (self.alert_item.target, self.alert_item.host)
 
     def begin_event(self):
         # FIXME: reporting this event against the primary server
@@ -397,7 +397,7 @@ class TargetFailoverAlert(AlertState):
 
 class TargetRecoveryAlert(AlertState):
     def message(self):
-        return "Target in recovery"
+        return "Target %s in recovery" % self.alert_item
 
     def begin_event(self):
         return AlertEvent(
@@ -415,7 +415,7 @@ class TargetRecoveryAlert(AlertState):
 
 class HostContactAlert(AlertState):
     def message(self):
-        return "Host contact lost"
+        return "Lost contact with host %s" % self.alert_item
 
     def begin_event(self):
         return AlertEvent(
@@ -433,7 +433,7 @@ class HostContactAlert(AlertState):
 
 class LNetOfflineAlert(AlertState):
     def message(self):
-        return "LNet offline"
+        return "LNet offline on server %s" % self.alert_item
 
     def begin_event(self):
         return AlertEvent(

@@ -91,20 +91,14 @@ class ResourceQuery(object):
         # Get the StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk=record_id)
 
-        # Load the appropriate plugin
-        plugin_module = record.resource_class.storage_plugin.module_name
-
         # Get the StorageResource class and have it translate the alert_class
         klass = storage_plugin_manager.get_resource_class_by_id(
             record.resource_class_id)
-        msg = klass.alert_message(alert_class)
+        msg = "%s (%s %s)" % (klass.alert_message(alert_class), klass.human_class(), record.alias_or_name())
         return msg
 
     def record_class_and_instance_string(self, record):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
-        # Load the appropriate plugin
-        plugin_module = record.resource_class.storage_plugin.module_name
-
         # Get the StorageResource class and have it translate the alert_class
         klass = storage_plugin_manager.get_resource_class_by_id(
             record.resource_class_id)
