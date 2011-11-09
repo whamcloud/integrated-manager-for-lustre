@@ -18,22 +18,31 @@
                     resourceTable = null;
                     $('#resource_table').html("")
                 } 
+                data.response.aoColumns.push({mDataProp: '_alert_markup', sWidth: "1%"})
+                for (var i=0, iLen=data.response.aaData.length; i<iLen; i++) {
+                  data.response.aaData[i]._alert_markup = alert_indicator_markup(
+                    data.response.aaData[i].id, data.response.aaData[i].content_type_id); 
+                }
                 resourceTable = $('#resource_table').dataTable({
                     "bJQueryUI": true,
                     "bPaginate": true,
                     "bAutoWidth": false,
                     "aaData": data.response['aaData'],
                     "iDisplayLength":25,
-                    "aoColumns": data.response['aoColumns']
+                    "aoColumns": data.response['aoColumns'],
+                    fnInitComplete: function(oSettings) {
+                      for (var i=0, iLen=oSettings.aoData.length; i<iLen; i++) {
+                        if (oSettings.aoData[i]._aData._alerts.length > 0) {
+                          oSettings.aoData[i].nTr.className += " resource_alert";
+                        }
+                      }
+                    }
                 }); 
-                /* Column 0 is the internal ID column */
-                resourceTable.fnSetColumnVis(0, false);
 
                 $('#resource_table tbody tr').live('click', function() {
                     var aPos = resourceTable.fnGetPosition(this);
                     var data = resourceTable.fnGetData(aPos);
-                    var resource_record_id = data[0]
-                    console.log(resource_record_id);
+                    var resource_record_id = data.id
                 });
             }
         });

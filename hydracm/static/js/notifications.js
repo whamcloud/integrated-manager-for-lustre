@@ -26,6 +26,11 @@ alert_indicator_markup = function(id, content_type_id)
   return "<span class='alert_indicator alert_indicator_object_id_" + id + "_" + content_type_id + "'></span>"
 }
 
+alert_indicator_list_markup = function(id, content_type_id)
+{
+  return "<span class='alert_indicator alert_indicator_list alert_indicator_object_id_" + id + "_" + content_type_id + "'></span>"
+}
+
 alert_indicator_large_markup = function(id, content_type_id)
 {
   return "<span class='alert_indicator alert_indicator_large alert_indicator_object_id_" + id + "_" + content_type_id + "'></span>"
@@ -70,31 +75,49 @@ update_alert_indicator = function(element)
 
     var effects = alert_effects[key]
     effect_count = attr_count(effects)
-    if (effects && effect_count > 0) {
-      if (element.hasClass('alert_indicator_large')) {
-        var text = effect_count + ' alert';
-        if (effect_count > 1) {
-          text += "s";
-        }
-        element.html(text)
+    if (element.hasClass('alert_indicator_list')) {
+      var list_markup = "<ul>";
+      if (effect_count > 0) {
+        $.each(effects, function(alert_id, x) {
+          var alert_info = known_alerts[alert_id]
+          list_markup += "<li>" + alert_info.message + "</li>"
+        });
+        list_markup += "</ul>";
+        element.html(list_markup);
+        element.removeClass('alert_indicator_inactive');
+        element.addClass('alert_indicator_active');
+      } else {
+        element.html("No alerts");
+        element.removeClass('alert_indicator_active');
+        element.addClass('alert_indicator_inactive');
       }
-      element.addClass('alert_indicator_active');
-      element.removeClass('alert_indicator_inactive');
-      
-      element.title
-      var alerts = {};
-      $.each(effects, function(alert_id, x) {
-        alerts[alert_id] = known_alerts[alert_id]
-      });
-      cluetip_tooltip_format(element, "Alerts", alerts, 'message');
     } else {
-      if (element.hasClass('alert_indicator_large')) {
-        element.html('No alerts')
+      if (effect_count > 0) {
+        if (element.hasClass('alert_indicator_large')) {
+          var text = effect_count + ' alert';
+          if (effect_count > 1) {
+            text += "s";
+          }
+          element.html(text)
+        }
+        element.addClass('alert_indicator_active');
+        element.removeClass('alert_indicator_inactive');
+        
+        element.title
+        var alerts = {};
+        $.each(effects, function(alert_id, x) {
+          alerts[alert_id] = known_alerts[alert_id]
+        });
+        cluetip_tooltip_format(element, "Alerts", alerts, 'message');
+      } else {
+        if (element.hasClass('alert_indicator_large')) {
+          element.html('No alerts')
+        }
+        element.addClass('alert_indicator_inactive');
+        element.removeClass('alert_indicator_active');
+        element.attr('title', 'No alerts');
+        element.cluetip({splitTitle: '|', cluezIndex: 1002});
       }
-      element.addClass('alert_indicator_inactive');
-      element.removeClass('alert_indicator_active');
-      element.attr('title', 'No alerts');
-      element.cluetip({splitTitle: '|', cluezIndex: 1002});
     }
   });
 }

@@ -4,6 +4,7 @@
 # ==============================
 #REST API Controller for Lustre File systems resource in configure namespace
 from django.core.management import setup_environ
+from django.contrib.contenttypes.models import ContentType
 
 # Hydra server imports
 import settings
@@ -140,14 +141,23 @@ class GetResources(AnonymousRequestHandler):
 
             # NB What we output here is logically markup, not strings, so we escape.
             # (underlying storage_plugin.attributes do their own escaping
-            row = [record.pk, alias_markup]
-            row = row + [resource.format(c['name']) for c in attr_columns]
+            row = {
+                    'id': record.pk,
+                    'content_type_id': ContentType.objects.get_for_model(record).id,
+                    'name': alias_markup,
+                    0: 'wtf'
+                    }
+            for c in attr_columns:
+                row[c['name']] = resource.format(c['name'])
+
+            row['_alerts'] = [a.to_dict() for a in ResourceQuery().resource_get_alerts(resource)]
                 
             rows.append(row)    
 
-        columns = ['id', 'Name'] + [c['label'] for c in attr_columns]
-        datatables_columns = [{'sTitle': c} for c in columns]
-        return {'aaData': rows, 'aoColumns': datatables_columns}
+        columns = [{'mdataProp': 'id', 'bVisible': False}, {'mDataProp': 'name', 'sTitle': 'Name'}]
+        for c in attr_columns:
+            columns.append({'sTitle': c['label'], 'mDataProp': c['name']})
+        return {'aaData': rows, 'aoColumns': columns}
 
 # FIXME: this should be part of /storage_resource/
 # FIXME: should return a 204 status code
@@ -182,6 +192,7 @@ class GetResource(AnonymousRequestHandler):
             stats[s.name] = s.to_dict()
 
         return {'id': record.pk,
+                'content_type_id': ContentType.objects.get_for_model(record).id,
                 'class_name': resource.human_class(),
                 'alias': record.alias,
                 'default_alias': record.to_resource().human_string(),
@@ -606,7 +617,6 @@ class Notifications(AnonymousRequestHandler):
 class TransitionConsequences(AnonymousRequestHandler):        
     @extract_request_args('id', 'content_type_id', 'new_state')
     def run(self, request, id, content_type_id, new_state):
-        from django.contrib.contenttypes.models import ContentType
         from configure.lib.state_manager import StateManager
         ct = ContentType.objects.get_for_id(content_type_id)
         klass = ct.model_class()
@@ -616,7 +626,6 @@ class TransitionConsequences(AnonymousRequestHandler):
 class Transition(AnonymousRequestHandler):
     @extract_request_args('id','content_type_id', 'new_state')
     def run(self, request, id, content_type_id, new_state):
-        from django.contrib.contenttypes.models import ContentType
         from configure.lib.state_manager import StateManager
         klass = ContentType.objects.get_for_id(content_type_id).model_class()
         instance = klass.objects.get(pk = id)

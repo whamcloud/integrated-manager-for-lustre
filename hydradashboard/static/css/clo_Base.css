@@ -751,3 +751,7 @@ table.chart_grid td div.chart {
 table.chart_grid td table {
     width: 100%;
 }
+
+.resource_alert {
+  color: #ff0000;
+}

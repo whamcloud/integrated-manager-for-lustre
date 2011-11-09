@@ -11,6 +11,11 @@ div#storage_attributes {
 
 div#storage_alerts {
     float: left;
+    width: 49%;
+}
+
+div#storage_alerts table {
+    font-size: 9pt;
 }
 
 table.storage_attributes {

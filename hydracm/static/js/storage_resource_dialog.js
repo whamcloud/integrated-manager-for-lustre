@@ -171,11 +171,7 @@ function load_resource(resource) {
     }); 
     $('table#attributes').html(attr_markup);
 
-    var alert_markup = "";
-    $.each(resource.alerts, function(i, alrt) {
-        alert_markup += "<tr><td><img src='/static/images/dialog-error.png'></td><td>" + alrt.alert_message + "</td><td>" + alrt.alert_item + "</td></tr>";
-    }); 
-    $('table#alerts').html(alert_markup);
+    $('div#storage_alerts').html(alert_indicator_list_markup(resource.id, resource.content_type_id));
 
     var row = 0;
     var col = 0;

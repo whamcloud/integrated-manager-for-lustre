@@ -59,6 +59,7 @@ span.alert_indicator_large {
   line-height: normal;
 }
 
+
 span.alert_indicator_active {
   /*
   color: #664f00;
@@ -77,6 +78,34 @@ span.alert_indicator_inactive {
   font-weight: normal;
 
   background-image: url(../images/icon_tick.png);
+}
+
+span.alert_indicator_list.alert_indicator_inactive {
+  padding-left: 24px;
+  padding-top: 3px;
+}
+span.alert_indicator_list {
+  overflow-y: auto;
+  width: auto;
+  height: auto;
+}
+
+span.alert_indicator_list ul {
+  list-style: none;
+  margin-left: 0px;
+  padding-left: 0px;
+}
+
+span.alert_indicator_list ul li {
+  padding-left: 24px;
+  background-image: url(../images/dialog-warning.png);
+  background-repeat: no-repeat;
+  background-position: 2px;
+}
+
+
+span.alert_indicator_list.alert_indicator_active {
+  background-image: none;
 }
 
 span.notification_object_icon {
@@ -98,3 +127,4 @@ span.notification_object_icon {
 span.notification_icons {
   white-space: nowrap;
 }
+
