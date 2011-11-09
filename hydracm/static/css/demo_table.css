@@ -152,7 +152,7 @@ table.display thead th {
 	background-color:#5ed6ff;*/
 	background-color:#cccccc;
 	color:#4c4c4c;
-    /*white-space: nowrap;*/
+    white-space: nowrap;
 }
 
 table.display tfoot th {
