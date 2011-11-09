@@ -13,9 +13,10 @@
       <!-- exporting.js added for exporting graphs -->
       <!--<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/exporting.js"></script> -->
       <script id="source" language="javascript" type="text/javascript">
-      $(function () 
-      {
-        loadView(window.location.hash);
+      $(document).ready(function() {
+        setTimeout(function() {
+          loadView(window.location.hash);
+        }, 1);
         $('#fsSelect').attr("value","");
         $('#intervalSelect').attr("value","");
         $("#alertAnchor").click();
@@ -72,89 +73,63 @@
                 </div>
               </td>
             </tr>
+          </table>
+          <table class='chart_grid'>
             <tr>
-              <td colspan="3">
-                <fieldset>
-                  <table width="100%" border="0">
-                    <tr>
-                      <td valign="top" class="text" width="30%" align="center">
-                        <div id="container" class="round-table" style="width: 300px">All File System Space Usage</div>
-                      </td>
-                      <td valign="top" class="text" width="30%" align="center">
-                        <div id="container3" class="round-table" style="width: 300px">Connected Clients</div>
-                      </td>
-                      <td valign="top" class="text" width="30%" align="left">
-                        <div id="container_fs_list" style="width: 365px" >
-                          <table id="allFileSystemSummaryTbl" class="display">
-                            <thead>
-                              <tr>
-                                <th>Filesystem</th>
-                                <th>OSS</th>
-                                <th>OST</th>
-                                <th>Total</th>
-                                <th>Free</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                            </tbody>
-                          </table>
-                        </div>
-                      </td>
-                    </tr>
+              <td valign="top"  align="center">
+                <div class='chart' id="container" >All File System Space Usage</div>
+              </td>
+              <td valign="top"  align="center">
+                <div class='chart' id="container3" >Connected Clients</div>
+              </td>
+              <td valign="top"  align="left">
+                <div id="container_fs_list">
+                  <table id="allFileSystemSummaryTbl" class="display">
+                    <thead>
+                      <tr>
+                        <th>Filesystem</th>
+                        <th>OSS</th>
+                        <th>OST</th>
+                        <th>Total</th>
+                        <th>Free</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
                   </table>
-                </fieldset>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td valign="top"  align="center">
+                <div class="magni">
+                  <input type="button" value="" class="magbutton" 
+                  onclick="db_LineBar_CpuMemoryUsage_Data('true');setZoomDialogTitle('All File Systems: CPU and Memory Usage');" />
+                </div>
+                <div class='chart' id="avgCPUDiv" >Filesystems CPU and Memory Usage</div>
+              </td>
+              <td valign="top"  align="center">
+                <div class="magni">
+                  <input type="button" value="" class="magbutton" 
+                  onclick="db_Area_ReadWrite_Data('true');setZoomDialogTitle('All File Systems: Disk Read and Write');" />
+                </div>
+                <div class='chart' id="avgMemoryDiv" >Filesystems Disk Read and Write</div>
+              </td>
+              <td valign="top"  align="center">
+                <div class="magni">
+                  <input type="button" value="" class="magbutton"
+                  onclick="db_Area_mdOps_Data('true');setZoomDialogTitle('All File Systems: MDOP/s');" />
+                </div>
+                <div class='chart' id="avgReadDiv" >MDOP/s</div>
               </td>
             </tr>
             <tr>
               <td colspan="3">
-                <fieldset>
-                  <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td valign="top" class="text" width="30%" align="center">
-                        <div class="magni">
-                          <input type="button" value="" style="margin-left: 115px" class="magbutton" 
-                          onclick="db_LineBar_CpuMemoryUsage_Data('true');setZoomDialogTitle('All File Systems: CPU and Memory Usage');" />
-                        </div>
-                        <div style="clear: right;"></div>
-                        <div id="avgCPUDiv" class="round-table" style="width: 300px">Filesystems CPU and Memory Usage</div>
-                      </td>
-                      <td valign="top" class="text" width="30%" align="center">
-                        <div class="magni">
-                          <input type="button" value="" style="margin-left: 115px" class="magbutton" 
-                          onclick="db_Area_ReadWrite_Data('true');setZoomDialogTitle('All File Systems: Disk Read and Write');" />
-                        </div>
-                        <div style="clear: right;"></div>
-                        <div id="avgMemoryDiv" class="round-table" style="width: 300px">Filesystems Disk Read and Write</div>
-                      </td>
-                      <td valign="top" class="text" width="30%" align="center">
-                        <div class="magni">
-                          <input type="button" value="" style="margin-left: 115px" class="magbutton"
-                          onclick="db_Area_mdOps_Data('true');setZoomDialogTitle('All File Systems: MDOP/s');" />
-                        </div>
-                        <div style="clear: right;"></div>
-                        <div id="avgReadDiv" class="round-table" style="width: 300px">MDOP/s</div>
-                      </td>
-                    </tr>
-                  </table>
-                </fieldset>
-              </td>
-            </tr>
-            <tr>
-              <td colspan="3">
-                <fieldset>
-                  <table border="0" cellpadding="0" cellspacing="0" align="center">
-                    <tr>
-                      <td valign="top" class="text" align="center">
-                        <div class="magni">
-                          <input type="button" class="magbutton" style="margin-left: 680px"
-                          onclick="db_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
-                        </div>
-                        <div style="clear: right;"></div>
-                        <div id="db_iopsSpline" class="round-table" style="width: 900px"></div>
-                      </td>
-                    </tr>
-                  </table>
-                </fieldset>
+                <div class="magni">
+                  <input type="button" class="magbutton" 
+                  onclick="db_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
+                </div>
+                <div class='chart' id="db_iopsSpline"></div>
               </td>
             </tr>
           </table>
@@ -189,82 +164,56 @@
                   </div>
                 </td>
 				      </tr>
+            </table>
+            <table class='chart_grid'>
 				      <tr>
-                <td colspan="4">
-                  <fieldset>
-		                <legend class="legendClass">
-		                  Filesystems Usage Summary 
-		                </legend>
-		                <table width="100%" border="0">
-		                  <tr>
-			                  <td colspan="2" valign="top" class="text" width="30%" align="center" style="font-family: Verdana, Arial, Helvetica, sans-serif;"><br />
-			                    <table id="fileSystemSummaryTbl" width="100%">
-			                    </table>
-			                  </td>
-			                  <td width="30%" valign="top" class="text" align="center">
-			                   <div id="fs_container2" class="round-table" style="width: 300px">File system space usage</div>
-			                  </td>
-			                  <td width="30%" valign="top" class="text" align="center">
-			                    <div id="fs_container3" class="round-table" style="width: 300px">Connected clients</div>
-			                  </td>
-			                </tr>
-		                </table>
-                  </fieldset>
+                <td valign="top" align="center" style="font-family: Verdana, Arial, Helvetica, sans-serif;">
+                  <table id="fileSystemSummaryTbl" width="100%">
+                  </table>
+                </td>
+                <td width="30%" valign="top"  align="center">
+                 <div id="fs_container2" class="chart" >File system space usage</div>
+                </td>
+                <td width="30%" valign="top"  align="center">
+                  <div id="fs_container3" class="chart" >Connected clients</div>
                 </td>
               </tr>
               <tr>
-                <td colspan="3">
-                  <fieldset>
-                    <legend class="legendClass">
-                      File System  Performance Summary
-                    </legend>
-                    <table width="100%" border="0">
-	                    <tr>
-	                      <td valign="top" class="text" width="30%" align="center">
-	                        <div class="magni">
-	                          <input type="button" value="" style="margin-left: 115px" class="magbutton" 
-	                          onclick="fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System: CPU and Memory Usage');" />
-	                        </div>
-	                        <div style="clear: right;"></div>
-	                        <div id="fs_avgCPUDiv" class="round-table" style="width: 300px">Server CPU and Memory Usage</div>
-	                      </td>
-	                      <td valign="top" class="text" width="30%" align="center">
-	                        <div class="magni">
-	                          <input type="button" value="" style="margin-left: 115px" class="magbutton" 
-	                          onclick="fs_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('File System: Disk Read and Write');" />
-	                        </div>
-	                        <div style="clear: right;"></div>
-	                        <div id="fs_avgMemoryDiv" class="round-table" style="width: 300px">Disk Read and Write</div>
-	                      </td>
-	                      <td valign="top" class="text" width="30%" align="center">
-	                        <div class="magni">
-	                          <input type="button" value="" style="margin-left: 115px" class="magbutton" 
-	                          onclick="fs_Area_mdOps_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', mdOpsFetchmatric, 'true');setZoomDialogTitle('File System: MDOP/s');" />
-	                        </div>
-	                        <div style="clear: right;"></div>
-	                        <div id="fs_avgReadDiv" class="round-table" style="width: 300px">MDOP/s</div>
-	                      </td>
-	                    </tr>
-                    </table>
-                  </fieldset>
+                <td valign="top"  width="30%" align="center">
+                  <div class="magni">
+                    <input type="button" value="" class="magbutton" 
+                    onclick="fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System: CPU and Memory Usage');" />
+                  </div>
+                  <div id="fs_avgCPUDiv" class="chart" >Server CPU and Memory Usage</div>
+                </td>
+                <td valign="top"  align="center">
+                  <div class="magni">
+                    <input type="button" value="" class="magbutton" 
+                    onclick="fs_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('File System: Disk Read and Write');" />
+                  </div>
+                  <div id="fs_avgMemoryDiv" class="chart" >Disk Read and Write</div>
+                </td>
+                <td valign="top"  width="30%" align="center">
+                  <div class="magni">
+                    <input type="button" value="" class="magbutton" 
+                    onclick="fs_Area_mdOps_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', mdOpsFetchmatric, 'true');setZoomDialogTitle('File System: MDOP/s');" />
+                  </div>
+                  <div id="fs_avgReadDiv" class="chart" >MDOP/s</div>
                 </td>
               </tr>
 	            <tr>
 	              <td colspan="3">
-				          <fieldset>
 				            <table border="0" align="center">
 				              <tr>
-				                <td valign="top" class="text" align="center">
+				                <td valign="top"  align="center">
 				                  <div class="magni">
-				                    <input type="button" class="magbutton" style="margin-left: 680px" 
+				                    <input type="button" class="magbutton"  
 				                    onclick="fs_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
 				                  </div>
-				                  <div style="clear: right;"></div>
-				                  <div id="fs_iopsSpline" class="round-table" style="width: 900px"></div>
+				                  <div id="fs_iopsSpline" class="chart"></div>
 				                </td>
 				              </tr>
 				            </table>
-				          </fieldset>
 	              </td>
 	            </tr>   
             </table>
@@ -300,57 +249,33 @@
                   </div>
                 </td>
               </tr>
+            </table>
+            <table class='chart_grid'>
               <tr>
-                <td colspan="4">
-                  <ul class="tabs">
-					          <li><a href="#tab1">Usage Summary</a></li>
-					        </ul>
-					        <div class="tab_container">
-					          <div id="tab1" class="tab_content">
-					            <fieldset>
-					              <legend class="legendClass">
-					                Usage Summary
-					              </legend>
-					              <table width="100%" border="0" align="left">
-					                <tr>
-					                  <td colspan="2" valign="top" class="text" width="50%" align="left"><br />
-					                    <table id="ossSummaryTbl" width="40%" align="left">
-					                    </table>
-					                  </td>
-					                </tr>
-					              </table>
-					            </fieldset>
-					            <fieldset>
-					              <legend class="legendClass">
-					                Performance Summary 
-					              </legend>
-					              <table width="100%" border="0">
-					                <td valign="top" class="text" width="50%" align="center">
-					                  <div class="magni" style="margin-left: 515px">
-					                    <input type="button" value="" class="magbutton"
-					                    onclick="oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('Server: CPU and Memory Usage');" />   
-					                  </div>
-					                  <div style="clear: right;"></div>
-					                  <div id="oss_avgReadDiv" class="round-table" style="width: 500px">Server CPU and Memory</div>
-					                </td>
-					                <td valign="top" class="text" width="50%" align="center">
-					                  <div class="magni" style="margin-left: 515px">
-					                    <input type="button" value="" class="magbutton"
-					                     onclick="oss_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('Server: Disk Read and Write');" />  
-					                  </div>
-					                  <div style="clear: right;"></div>
-					                  <div id="oss_avgWriteDiv" class="round-table" style="width: 500px">Disk Read and Write</div>
-					                </td>
-					              </table>
-					            </fieldset>
-					          </div>
-					        </div>
-                  <!-- end of tab_container  -->
+                <td>
+                  <table id="ossSummaryTbl" width="40%" align="left">
+                  </table>
                 </td>
+                <td></td>
+                <td></td>
               </tr>
-					    <tr>
-					      <td colspan="3"></td>
-					    </tr>
+              <tr>
+                <td>
+                  <div class="magni">
+                    <input type="button" value="" class="magbutton"
+                    onclick="oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('Server: CPU and Memory Usage');" />   
+                  </div>
+                  <div id="oss_avgReadDiv" class="chart">Server CPU and Memory</div>
+                </td>
+                <td>
+                  <div class="magni">
+                    <input type="button" value="" class="magbutton"
+                     onclick="oss_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('Server: Disk Read and Write');" />  
+                  </div>
+                  <div id="oss_avgWriteDiv" class="chart" >Disk Read and Write</div>
+                </td>
+                <td></td>
+              </tr>
             </table>
           </div>
           <!-- FileSystem Servers Div - End -->
@@ -382,49 +307,31 @@
 				          </div>
 				        </td>
               </tr>   
+            </table>
+            <table class='chart_grid'>
               <tr>
-				        <td colspan="4">
-				          <fieldset>
-				            <table width="100%" border="0">
-				              <tr>
-				                <td colspan="2" valign="top" class="text" width="30%" align="center" style="font-family: Verdana, Arial, Helvetica, sans-serif;"><br />
-				                  <table id="ostSummaryTbl" width="100%">
-				                  </table>
-				                </td>
-				                <td width="25%" valign="top" class="text" align="center">
-				                  <div style="clear: right;"></div>
-				                  <div id="target_space_usage_container" class="round-table">Space Usage</div>
-				                </td>
-				                <td width="25%" valign="top" class="text" align="center">
-				                  <div style="clear: right;"></div>
-				                  <div id="target_inodes_container" class="round-table">Files Vs Free Inodes</div>
-				                </td>
-				              </tr>
-				            </table>
-				          </fieldset>
-				        </td>
-              </tr>
-              <tr>
-				        <td colspan="3">
-				          <fieldset>
-				            <table width="100%" border="0">
-					            <tr>
-					              <td valign="top" class="text" width="50%" align="center">
-					               <div id="target_read_write_container_magni" class="magni" style="margin-left: 810px">
-					                 <input type="button" value=" " class="magbutton" 
-					                 onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
-					               </div>
-					               <div style="clear: right;"></div>
-					               <div id="target_read_write_container" style="width: 500px" class="round-table">Disk Read and Write</div>
-					              </td>
-					            </tr>
-				            </table>
-                  </fieldset>
+                <td>
+                  <table id="ostSummaryTbl" width="100%">
+                  </table>
+                </td>
+                <td width="25%" valign="top"  align="center">
+                  <div id="target_space_usage_container" class="chart">Space Usage</div>
+                </td>
+                <td>
                 </td>
               </tr>
               <tr>
-                <td align="center" colspan="4" width="100%"> 
-                  <div id="ost_resource_graph_canvas" class="canvas resource_graph_canvas round-table"></div>
+				        <td>
+                   <div id="target_read_write_container_magni" class="magni">
+                     <input type="button" value=" " class="magbutton" 
+                     onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
+                   </div>
+                   <div id="target_read_write_container" class="chart">Disk Read and Write</div>
+                </td>
+                <td width="25%" valign="top"  align="center">
+                  <div id="target_inodes_container" class="chart">iNode usage</div>
+                </td>
+                <td>
                 </td>
               </tr>
             </table>

@@ -198,49 +198,39 @@ $(document).ready(function()
     .success(function(data, textStatus, jqXHR) 
     {
       var innerContent = "<option value=''>Select File System</option>";
-      $.each(data, function(key, val)
-      {
-        if(key=='success' && val == true)
+      if (data.success) {
+        $.each(data.response, function(resKey, resValue) 
         {
-          $.each(data, function(key1, val1) 
-          {
-            if(key1=='response')
-            {
-              $.each(val1, function(resKey, resValue) 
-              {
-                innerContent = innerContent + 
-                "<option value="+resValue.fsid+">"+resValue.fsname+"</option>";
+          innerContent = innerContent + 
+          "<option value="+resValue.fsid+">"+resValue.fsname+"</option>";
 
-                $('#allFileSystemSummaryTbl')
-                .dataTable(
-                {
-                  "aoColumns": [
-                    { "sClass": 'txtleft'},
-                    { "sClass": 'txtright'},
-                    { "sClass": 'txtright'},
-                    { "sClass": 'txtright'},
-                    { "sClass": 'txtright'}
-                  ],
-                  "iDisplayLength":5,
-                  "bRetrieve":true,
-                  "bFilter":false,
-                  "bLengthChange": false,
-                  "bAutoWidth": true,
-                  "bSort": false,
-                  "bJQueryUI": true
-                })
-                .fnAddData([
-                  resValue.fsname,
-                  resValue.noofoss,
-                  resValue.noofost,
-                  resValue.kbytesused,
-                  resValue.kbytesfree,
-                ]);
-              });
-            }
-          });
-        }
-      });
+          $('#allFileSystemSummaryTbl')
+          .dataTable(
+          {
+            "aoColumns": [
+              { "sClass": 'txtleft'},
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'}
+            ],
+            "iDisplayLength":5,
+            "bRetrieve":true,
+            "bFilter":false,
+            "bLengthChange": false,
+            "bAutoWidth": true,
+            "bSort": false,
+            "bJQueryUI": true
+          })
+          .fnAddData([
+            resValue.fsname,
+            resValue.noofoss,
+            resValue.noofost,
+            resValue.kbytesused,
+            resValue.kbytesfree,
+          ]);
+        });
+      }
       $('#fsSelect').html(innerContent);
     })
     .error(function(event) {

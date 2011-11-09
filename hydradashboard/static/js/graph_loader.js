@@ -59,11 +59,6 @@ var chartConfig_Bar_SpaceUsage =
   chart:
   {
     renderTo: '',
-    marginLeft: '50',
-    width: '300',
-    height: '200',
-    style:{ width:'100%',  height:'200'},
-    marginBottom: 35,
     defaultSeriesType: 'column',
     backgroundColor: '#f9f9ff',
   },
@@ -119,11 +114,6 @@ var chartConfig_Line_clientConnected =
   chart: 
   {
     renderTo: 'container3',
-    marginLeft: '50',
-    width: '300',
-    height: '200',
-    style:{ width:'100%',  height:'210'},
-    marginBottom: 35,
     zoomType: 'xy',
     backgroundColor: '#f9f9ff',
   },
@@ -173,11 +163,6 @@ var chartConfig_LineBar_CPUMemoryUsage =
   chart: 
   {
     renderTo: 'avgCPUDiv',
-    marginLeft: '50',
-    width: '300',
-    height: '200',
-    style:{ width:'100%',  height:'210'},
-    marginBottom: 35,
     zoomType: 'xy',
     backgroundColor: '#f9f9ff',
   },
@@ -234,12 +219,6 @@ var chartConfig_Area_ReadWrite =
   {
     renderTo: 'avgMemoryDiv',
     defaultSeriesType: 'area',
-    marginLeft: '50',
-    width: '300',
-    height: '200',
-    style:{ width:'100%',  height:'210'},
-    marginRight: 0,
-    marginBottom: 35,
     backgroundColor: '#f9f9ff',
     zoomType: 'xy'
   },
@@ -292,12 +271,6 @@ var chartConfig_Area_mdOps  =
   chart:
   {
     defaultSeriesType: 'area',
-    marginLeft: '50',
-    height: '200',
-    width: '300',
-    style:{ width:'100%',  height:'210'},
-    marginRight: 0,
-    marginBottom: 35,
     zoomType: 'xy',
     backgroundColor: '#f9f9ff'
   },
@@ -390,12 +363,6 @@ var chartConfig_HeatMap =
   {
     renderTo: '', 
     defaultSeriesType: 'scatter',
-    marginLeft: '50',
-    width: '900',
-    height: '200',
-    style:{ width:'100%',  height:'210'},
-    marginRight: 0,
-    marginBottom: 35,
     zoomType: 'xy'
   },
   title: 
@@ -478,12 +445,6 @@ var chartConfig_AreaSpline =
   {
     renderTo: 'container',
     defaultSeriesType: 'areaspline',
-    marginLeft: '50',
-    width: '900',
-    height: '200',
-    style:{ width:'100%',  height:'210'},
-    marginRight: 0,
-    marginBottom: 35,
     zoomType: 'xy'
   },
   title: 
@@ -1207,8 +1168,7 @@ renderZoomDialog = function(object)
   object.yAxis.labels={style:{fontSize:'12px', fontWeight:'bold'}};
   object.chart.width = "780";
   object.chart.height = "360";
-  object.chart.style.height = "360";
-  object.chart.style.width = "100%";
+  object.chart.style = {height: "360", width: "100%"}
   object.chart.renderTo = "zoomDialog";
   object.legend.enabled = true;
 }

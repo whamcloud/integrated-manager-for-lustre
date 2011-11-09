@@ -174,66 +174,6 @@ img{
 /* Page Specific
  ---------------------------------------------------------------------*/
 
-#container 
-{
-text-align:left;
-border-top-left-radius:2em;
-border-top-right-radius:2em;
-border-bottom-right-radius:2em;
-border-bottom-left-radius:2em; 
-border:1px solid #848484;
-	}
-	
-#container1 
-{
-text-align:left;
-border-top-left-radius:2em;
-border-top-right-radius:2em;
-border-bottom-right-radius:2em;
-border-bottom-left-radius:2em; 
-border:1px solid #848484;
-	}
-#container2 
-{
-text-align:left;
-border-top-left-radius:2em;
-border-top-right-radius:2em;
-border-bottom-right-radius:2em;
-border-bottom-left-radius:2em; 
-border:1px solid #848484;
-	}
-#container3
-{
-text-align:left;
-border-top-left-radius:2em;
-border-top-right-radius:2em;
-border-bottom-right-radius:2em;
-border-bottom-left-radius:2em; 
-border:1px solid #848484;
-	}
-
-.round-table
-{
-text-align:left;
-height:100%;
-border-top-left-radius:2em;
-border-top-right-radius:2em;
-border-bottom-right-radius:2em;
-border-bottom-left-radius:2em; 
-border:1px solid #848484;
-width: 250px;
-height: 202px;
-margin: 0 auto;
-padding-left:20px;
-padding-right:20px;
-padding-top:1px;
-background-color:#f9f9ff;
-/*background-image:url(../images/loading.gif) center no-repeat;*/
-background-image:url(../images/wait_progress.gif);
-background-repeat: no-repeat;
-background-position:center 40% ;
-}
-	
 .breadCrumbHolder
 {
 	/*margin:0 0 20px 0;
@@ -368,17 +308,15 @@ cursor:pointer;
 	font-size:14px;
 }
 .magni{
-	float:right;
+    width: 16px;
 	height:16px;
-	/*margin-right:12px;*/
-	margin-left:235px;
-	margin-top:1px;
-	width:100px;
 	padding-bottom:5px;
 	position:absolute;
-	
-	
+    z-index: 999;
+    right: 12px;
+    top: 6px;
 }
+
 .timeint{
 	float:right;
 	color:#222;
@@ -520,13 +458,14 @@ a.btnsigninon {
 	text-decoration:none;padding:4px;
 	font-weight:bold;
 }
+
 .top_links a:hover{
 	color:#fff;
 	text-decoration:none;
-	/*background-color:#5ed6ff;*/
 	background-color:#054358;
 	padding:4px;
 }
+
 .top_links a.active{
 	color:#fff;
 	text-decoration:none;
@@ -727,4 +666,26 @@ tr.log_error {
 }
 
 tr.log_info {
+}
+
+table.chart_grid {
+    width: 100%;
+}
+
+table.chart_grid tr {
+}
+
+table.chart_grid tr td {
+    width: 30%;
+    position: relative;
+}
+
+table.chart_grid td div.chart {
+    height: 200px;
+    width: 100%;
+}
+
+
+table.chart_grid td table {
+    width: 100%;
 }
