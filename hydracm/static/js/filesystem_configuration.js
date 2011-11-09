@@ -68,7 +68,7 @@ fvc_button = function(element, opts) {
   var table_id = element.attr('id') + "_table";
 
   expander_div.html(
-      "<table id='" + table_id + "'>" + 
+      "<table class='display' id='" + table_id + "'>" + 
         "<thead>" +
         "  <tr>" +
         "    <th></th>" +
