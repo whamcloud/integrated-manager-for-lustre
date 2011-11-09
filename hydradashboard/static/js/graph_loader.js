@@ -82,7 +82,7 @@ var chartConfig_Bar_SpaceUsage =
   legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
   title:{text:'', style: { fontSize: '12px' } },
   zoomType: 'xy',
-  xAxis:{ categories: ['Usage'], text: '', labels : { rotation: 310, style:{fontSize:'8px', fontWeight:'regular'} } },
+  xAxis:{ categories: ['Usage'], text: '', labels : {align: 'right', rotation: 310, style:{fontSize:'8px', fontWeight:'regular'} } },
   yAxis:{max:100, min:0, startOnTick:false, title:{text:'Percentage'}, plotLines: [ { value: 0,width: 1, color: '#808080' } ] },
   credits:{ enabled:false },
   tooltip:
