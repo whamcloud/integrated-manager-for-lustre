@@ -321,6 +321,41 @@ class CreateOSTs(AnonymousRequestHandler):
         for target in osts:
             StateManager.set_state(target, 'mounted')
 
+class GetTargetConfParams(AnonymousRequestHandler):
+    @extract_request_args('target_id', 'kinds')
+    def run(self, request, target_id, kinds):
+        from configure.lib.conf_param import (FilesystemClientConfParam,
+                                              FilesystemGlobalConfParam,
+                                              OstConfParam,
+                                              MdtConfParam,
+                                              get_conf_params,
+                                              all_params)
+        kind_map = {"FSC":FilesystemClientConfParam,
+                    "FS": FilesystemGlobalConfParam,
+                    "OST":OstConfParam,
+                    "MDT":MdtConfParam}
+        if kinds:
+            klasses = []
+            for kind in kinds:
+                try:
+                    klasses.append(kind_map[kind])
+                except KeyError:
+                    raise RuntimeError("Unknown target kind '%s' (kinds are %s)" % (kind, kind_map.keys()))
+        else:
+            klasses = kind_map.values()
+        result = []
+        for klass in klasses:
+            conf_params = get_conf_params([klass])
+            conf_param_list = [] 
+            for conf_param in conf_params:
+                conf_param_list.append(
+                                       {'conf_param':conf_param,
+                                        'conf_param_help':all_params[conf_param][2]
+                                       }  
+                                      ) 
+            result.extend(conf_param_list)
+        return result
+
 class Target(AnonymousRequestHandler):
     @extract_request_args('id')
     def run(self, request, id):

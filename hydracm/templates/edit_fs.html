@@ -37,8 +37,7 @@
     // Advance Options button click handler.
     $('#advance_opts').click(function()
     {
-      $('#configParam').dialog('open');
-       return false;
+      GetConfigurationParam("",["FS","FSC"]);
     });
     // Cancel button click handler for Edit FS view
     $('#cancel_editfs').click(function() {

@@ -7,64 +7,46 @@
     </a>
   </div>
   <div id="frmsignin">
-    <div style="border: 2px solid #848484; background-color:#cccccc; min-height:600px;">
-      <div class="panel" style="display: block;width: 350px;">
-        <div style="float: right"><b id="minusImg" class="open-close"><img src="{{STATIC_URL}}images/notifications_hor.png" alt="" />
-          </b>
+    <!--<div style="border: 2px solid #848484; background-color:#cccccc; min-height:600px;">-->
+    <div>
+      <div class="round-slider"  style="display: block;width: 350px;">
+        <div style="float: right">
+          <a href="#" id="minusImg" style="text-decoration: none;">
+            <div class='horizontal'> << Notifications</div>
+          </a>
         </div>
-          <br/>
-        <div style="font-family:Verdana, Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; padding-left:5px;">
-          <a href="#" id="alertAnchor">Alerts</a>
+        <br/><br/>
+        <!-- Alerts anchor and alert div -->
+        <div>
+          <div class="slider_content" id="alertAnchor">Alerts</div>
         </div>
-        <div id="alertsDiv" style="display:none; margin-left:5px; height:400px; overflow:auto;">
-          <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF">
-            <tr>
-              <td>
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="alert_content">
-                </table>
-              </td>
-            </tr>
+        <div id="alertsDiv" class="notification_table">
+          <div class="border"></div>
+          <table id="alert_content" style="padding-top:5px" width="100%" border="0" cellpadding="0" cellspacing="0" >
           </table>
         </div>
-        <div style="font-family:Verdana, Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; padding-left:5px;">
-          <a href="#" id="eventsAnchor">Events</a>
+        <br/>
+        <div class="border"></div>
+        <!-- Events anchor and events div -->
+        <div>
+          <div class="slider_content" id="eventsAnchor">Events</div>
         </div>
-        <div id="eventsDiv"  style="display:none; margin-left:5px; height:400px; overflow:auto;">
-          <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
-            <tr>
-              <td bgcolor="#CCCCCC">
-                <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
-                  <tr>
-                    <td>
-                      <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" id="event_content">
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
+        <div id="eventsDiv" class="notification_table">
+          <div class="border"></div>
+          <table id="event_content"  width="100%" border="0" cellpadding="0" cellspacing="0">
           </table>
         </div>
-        <div style="font-family:Verdana, Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; padding-left:5px;">
-          <a href="#" id="jobsAnchor">Jobs</a>
+        <br/>
+        <div class="border"></div>
+        <!-- Jobs anchor and jobs div -->
+        <div>
+          <div class="slider_content" id="jobsAnchor">Jobs</div>
         </div>
-        <div id="jobsDiv" style="display:none; margin-left:5px; height:400px; overflow:auto;">
-          <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="red">
-            <tr>
-              <td bgcolor="#CCCCCC">
-                <table width="100%" border="0" cellpadding="0" cellspacing="0" bordercolor="#0040FF" class="border1">
-                  <tr>
-                    <td >
-                      <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#c3e1f1" class="border1" id="job_content">
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
+        <div id="jobsDiv" class="notification_table">
+          <div class="border"></div>
+          <table id="job_content"  width="100%" border="0" cellpadding="0" cellspacing="0">
           </table>
         </div>
-        <div id="outputDiv"></div>
       </div>
     </div>
   </div>

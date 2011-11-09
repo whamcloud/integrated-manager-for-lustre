@@ -143,6 +143,20 @@ page_load_time = '{{page_load_time}}';
         { "sClass": 'txtleft' }
       ]
     });
+   
+    //Edit fs/Create new fs/ost view -> jquery data table init for Fs Configuration param
+    var oFSConfigParam = $('#config_param_table').dataTable( {
+      "iDisplayLength":30,
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bPaginate" : false,
+      "bSort": false,
+      "bFilter" : false,
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtcenter' }
+      ]
+    });
     //--------------------------------------------------------------------//  
     });
     //Fix Me:Need to find another weay to do thisto load the button + sign css.
@@ -166,8 +180,8 @@ page_load_time = '{{page_load_time}}';
 {% block include_content %}{% endblock %}
 {% block content %}
 <div class="rightpanel" align="top">
-  <div id="dashboardDiv">
-    <table height="100%" width="100%" border="0" cellspacing="0" cellpadding="3" align="top" style="border: 1px;border-color: blue" >
+  <div id="dashboardDiv"> 
+    <table height="520" width="100%" border="0" cellspacing="0" cellpadding="3" align="top" style="border: 1px;border-color: blue" >
       <tr>
         <td valign="top" width="100%" height="100%">
           <div id="tabs">
@@ -187,62 +201,14 @@ page_load_time = '{{page_load_time}}';
 </div>
 <!-- create new fs dialogs -->
 <div id="configParam" title="Configuration Parameters">
-  <table width="75%" border="0" cellspacing="0" cellpadding="0">
-    <tr>
-      <td align="center" valign="middle" class="fontStyle">Property</td>
-      <td align="center" class="fontStyle">Value</td>
-    </tr>
-    <tr>
-      <td width="59%" height="27" align="right" valign="middle" class="fntsize">lite.max_cachd_mb: </td>
-      <td width="41%"><label>
-        <input type="text" name="textfield" id="textfield" />
-        </label></td>
-    </tr>
-    <tr>
-      <td height="26" align="right" valign="middle" class="fntsize">lite.max_cached_mb:</td>
-      <td><input type="text" name="textfield2" id="textfield2" /></td>
-    </tr>
-    <tr>
-      <td height="25" align="right" valign="middle" class="fntsize">lite.max_read_ahead_mb:</td>
-      <td><input type="text" name="textfield3" id="textfield3" /></td>
-    </tr>
-    <tr>
-      <td height="27" align="right" valign="middle" class="fntsize">lite.max_cached_whole_mb:</td>
-      <td><input type="text" name="textfield4" id="textfield4" /></td>
-    </tr>
-    <tr>
-      <td height="28" align="right" valign="middle" class="fntsize">lite.max_statahead_max:</td>
-      <td><input type="text" name="textfield5" id="textfield5" /></td>
-    </tr>
-     <tr>
-     <td height="28" align="right" valign="middle" class="fntsize">sys.at_early_margin:</td>
-     <td><input type="text" name="textfield6" id="textfield6" /></td>
-    </tr>
-    <tr>
-      <td height="28" align="right" valign="middle" class="fntsize">sys.at_extra:</td>
-      <td><input type="text" name="textfield7" id="textfield7" /></td>
-    </tr>
-    <tr>
-      <td height="26" align="right" valign="middle" class="fntsize">sys.at_history:</td>
-      <td><input type="text" name="textfield8" id="textfield8" /></td>
-    </tr>
-    <tr>
-      <td height="27" align="right" valign="middle" class="fntsize">sys.at_max:</td>
-      <td><input type="text" name="textfield9" id="textfield9" /></td>
-    </tr>
-    <tr>
-      <td height="26" align="right" valign="middle" class="fntsize">sys.at_min:</td>
-      <td><input type="text" name="textfield10" id="textfield10" /></td>
-    </tr>
-    <tr>
-      <td height="28" align="right" valign="middle" class="fntsize">sys.ldlm_timeout:</td>
-      <td><input type="text" name="textfield11" id="textfield11" /></td>
-    </tr>
-    <tr>
-      <td align="right" valign="middle" class="fntsize">sys.timeout:</td>
-      <td><input type="text" name="textfield12" id="textfield12" /></td>
-    </tr>
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" id="config_param_table">
+   <thead>
+      <th>Property</th>
+      <th>value</th>
+   </thead>
+   <tbody></tbody>
   </table>
+  <div id="config_param_tooltip"></div>
 </div>
 
 <!-- new OST popup showing all usable luns-->
