@@ -547,6 +547,7 @@ class Archive(PoorMansStiModel):
 
     # ephemeral attributes
     steps_since_update = 0
+    nan_cdps           = 0
 
     def create_filler_cdps(self, ds):
         # When a DS has been added after the initial inserts, we need to

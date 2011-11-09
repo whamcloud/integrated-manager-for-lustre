@@ -169,7 +169,21 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_cou
                             if (prep.datasource_id == ds.id
                                 and prep.archive_id == rra.id)][0]
 
-                rra.store_ds_cdp(ds, cdp_prep)
+                # Optimization for times when we're playing catch-up after
+                # a long period of disuse.  Rather than pointlessly storing
+                # row after row of NaNs and then discarding them, we'll
+                # just ignore new ones if we've already got a full set of NaN
+                # rows.
+                if math.isnan(cdp_prep.primary):
+                    # Don't bother storing another NaN if we've already got
+                    # a full set of NaNs in there.
+                    if rra.nan_cdps < rra.rows:
+                        rra.store_ds_cdp(ds, cdp_prep)
+                    rra.nan_cdps += 1
+                else:
+                    # Reset the NaN counter
+                    rra.nan_cdps = 0
+                    rra.store_ds_cdp(ds, cdp_prep)
 
             # FIXME: At some point try to stash this somewhere we're already
             # updating, maybe.
