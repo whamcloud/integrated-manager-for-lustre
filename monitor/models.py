@@ -7,7 +7,6 @@ from django.db import models, transaction
 from polymorphic.models import DowncastMetaclass
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
-from metrics import get_instance_metrics
 
 from collections import defaultdict
 
@@ -121,6 +120,7 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
 class MeasuredEntity(object):
     """Provides mix-in access to metrics specific to the instance."""
     def __get_metrics(self):
+        from metrics import get_instance_metrics
         self._metrics = get_instance_metrics(self)
         return self._metrics
 
