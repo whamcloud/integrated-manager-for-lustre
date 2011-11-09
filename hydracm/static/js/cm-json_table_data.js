@@ -24,8 +24,8 @@ target_dialog_link = function(target_id, target_name) {
 *******************************************************************/
 function LoadEditFSScreen(fs_name, fs_id)
 {
-  $('#lustreFS_content').empty();
-  $('#lustreFS_content').load('/hydracm/editfs?fs_name=' + fs_name + '&fs_id=' + fs_id);
+  $('#filesystems').empty();
+  $('#filesystems').load('/hydracm/editfs?fs_name=' + fs_name + '&fs_id=' + fs_id);
 }
 
 function LoadFSList_FSList()

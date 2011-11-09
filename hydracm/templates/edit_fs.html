@@ -41,8 +41,8 @@
     });
     // Cancel button click handler for Edit FS view
     $('#cancel_editfs').click(function() {
-       $('#lustreFS_content').empty();
-      $('#lustreFS_content').load('/hydracm/fstab');
+       $('#filesystems').empty();
+      $('#filesystems').load('/hydracm/fstab');
     });
     //Load Pie Charts for a selected File system
     LoadFSGraph_EditFS( $("#fs_id").val());
