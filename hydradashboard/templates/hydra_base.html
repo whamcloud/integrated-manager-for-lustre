@@ -36,7 +36,11 @@
        * the backend since the page was loaded */
       page_load_time = '{{page_load_time}}';
     </script>
+    <!-- notifications.js and its dependencies are included early because it contains
+     markup generation functions for things like alert indicators and job spinners
+     which are used by subsequent .js files -->
     <script type='text/javascript' src="{{STATIC_URL}}js/jquery.jgrowl_minimized.js"></script>
+    <script src="{{STATIC_URL}}js/jquery.cluetip.js" type="text/javascript"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/notifications.js" ></script>
 
     <!-- Object links for popping up dialogs -->
