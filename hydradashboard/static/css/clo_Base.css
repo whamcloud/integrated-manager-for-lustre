@@ -721,3 +721,10 @@ h2.section_header {
 span.transition_buttons {
   white-space: nowrap;
 }
+
+tr.log_error {
+  color: #ff0000;
+}
+
+tr.log_info {
+}

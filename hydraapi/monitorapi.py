@@ -360,12 +360,19 @@ def get_logs(host_id,start_time,end_time,lustre,page_id,page_size):
     if lustre:
         filter_kwargs['message__startswith'] = " Lustre"
 
+    def log_class(log_entry):
+        if log_entry.message.find('LustreError') != -1:
+            return 'log_error'
+        else:
+            return 'log_info'
+
     log_data = Systemevents.objects.filter(**filter_kwargs).order_by('-devicereportedtime')
     log_records = [{'message': nid_finder(log_entry.message),
                     # Trim trailing colon from e.g. 'kernel:'
                     'service': log_entry.syslogtag.rstrip(":"),
                     'date': log_entry.devicereportedtime.strftime("%b %d %H:%M:%S"),
                     'host': log_entry.fromhost,
+                    'class': log_class(log_entry)
                    }
                    for log_entry in log_data
     ]
