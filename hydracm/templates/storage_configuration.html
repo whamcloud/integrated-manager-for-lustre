@@ -18,7 +18,7 @@
                     resourceTable = null;
                     $('#resource_table').html("")
                 } 
-                data.response.aoColumns.push({mDataProp: '_alert_markup', sWidth: "1%"})
+                data.response.aoColumns.push({mDataProp: '_alert_markup', sWidth: "1%", bSortable: false})
                 for (var i=0, iLen=data.response.aaData.length; i<iLen; i++) {
                   data.response.aaData[i]._alert_markup = alert_indicator_markup(
                     data.response.aaData[i].id, data.response.aaData[i].content_type_id); 
