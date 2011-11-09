@@ -563,3 +563,35 @@ class Systemevents(models.Model):
 class LastSystemeventsProcessed(models.Model):
     last = models.IntegerField(default = 0)
 
+class FrontLineMetricStore(models.Model):
+    """Fast simple metrics store.  Should be backed by MEMORY engine."""
+    # Can't create a model table with no PK, which makes sense, I guess.
+    content_type    = models.ForeignKey(ContentType, null=True)
+    object_id       = models.PositiveIntegerField(null=True)
+    content_object  = GenericForeignKey('content_type', 'object_id')
+    insert_time     = models.DateTimeField()
+    metric_name     = models.CharField(max_length=255)
+    metric_type     = models.CharField(max_length=64)
+    value           = models.FloatField()
+
+    @classmethod
+    def store_update(cls, ct, o_id, update_time, update):
+        from datetime import datetime as dt
+        from django.db import connection, transaction
+        cursor = connection.cursor()
+
+        for name, data in update.items():
+            params = [dt.now(), ct.id, o_id, name]
+            try:
+                params.append(data['type'])
+                params.append(data['value'])
+            except TypeError:
+                # FIXME: do we really want to default this, or raise?
+                params.append('Counter')
+                params.append(data)
+
+            # Bypass the ORM for this -- we don't care about instantiating
+            # objects from these inserts.
+            sql = "INSERT into monitor_frontlinemetricstore (insert_time, content_type_id, object_id, metric_name, metric_type, value) VALUES (%s, %s, %s, %s, %s, %s)"
+            cursor.execute(sql, params)
+            transaction.commit_unless_managed()

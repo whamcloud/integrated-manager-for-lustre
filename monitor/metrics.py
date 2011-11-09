@@ -97,9 +97,10 @@ class R3dMetricStore(MetricStore):
             if hasattr(measured_object, 'content_type'):
                 measured_object = measured_object.downcast()
 
-            ct = ContentType.objects.get_for_model(measured_object)
-            self.r3d = Database.objects.get(object_id=measured_object.id,
-                                            content_type=ct)
+            self.ct = ContentType.objects.get_for_model(measured_object)
+            self.mo_id = measured_object.id
+            self.r3d = Database.objects.get(object_id=self.mo_id,
+                                            content_type=self.ct)
         except Database.DoesNotExist:
             self._create_r3d(measured_object, sample_period, **kwargs)
 
@@ -239,7 +240,13 @@ class HostMetricStore(R3dMetricStore):
         except KeyError:
             pass
 
-        self.r3d.update({self._update_time(): update}, _autocreate_ds)
+        if (hasattr(settings, 'USE_FRONTLINE_METRICSTORE')
+            and settings.USE_FRONTLINE_METRICSTORE):
+            from monitor.models import FrontLineMetricStore
+            FrontLineMetricStore.store_update(self.ct, self.mo_id,
+                                              self._update_time(), update)
+        else:
+            self.r3d.update({self._update_time(): update}, _autocreate_ds)
 
 class TargetMetricStore(R3dMetricStore):
     """
@@ -294,6 +301,12 @@ class TargetMetricStore(R3dMetricStore):
         #            ds_name = "brw_%s_%s_%s"  % (key, bucket, direction)
         #            update[ds_name] = brw_stats[key]['buckets'][bucket][direction]['count']
 
+    if (hasattr(settings, 'USE_FRONTLINE_METRICSTORE')
+        and settings.USE_FRONTLINE_METRICSTORE):
+        from monitor.models import FrontLineMetricStore
+        FrontLineMetricStore.store_update(self.ct, self.mo_id,
+                                          self._update_time(), update)
+    else:
         self.r3d.update({self._update_time(): update}, _autocreate_ds)
 
 class FilesystemMetricStore(R3dMetricStore):
