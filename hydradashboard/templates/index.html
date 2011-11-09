@@ -4,7 +4,6 @@
       <link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
       {% endblock %}  
       {% block scripts %}
-      <script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
       <script type="text/javascript" src="{{STATIC_URL}}js/custom_dashboard.js"></script>
       <script type="text/javascript" src="{{STATIC_URL}}js/custom_filesystem.js"></script>
       <script type="text/javascript" src="{{STATIC_URL}}js/custom_oss.js"></script>
@@ -13,9 +12,6 @@
       <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
       <!-- exporting.js added for exporting graphs -->
       <!--<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/exporting.js"></script> -->
-      <!-- js-graph-it is a dependency of resource_graph -->
-      <script type="text/javascript" src="{{STATIC_URL}}js/js-graph-it.js" ></script>
-      <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/resource_graph.js"></script>
       <script id="source" language="javascript" type="text/javascript">
       $(function () 
       {

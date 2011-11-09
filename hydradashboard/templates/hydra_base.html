@@ -15,8 +15,27 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.16.custom.min.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/jqeasy.dropdown.min.js"></script>
+
+    <script type="text/javascript" src="{{STATIC_URL}}js/highcharts.js"></script>
+
     <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
+
     <script type="text/javascript" src="{{STATIC_URL}}js/alerts_events.js"></script>  
+    <!-- Alert indicators and job spinnners -->
+    <script type="text/javascript">
+      /* This is used for live update functions that want to get information from
+       * the backend since the page was loaded */
+      page_load_time = '{{page_load_time}}';
+    </script>
+    <script type='text/javascript' src="{{STATIC_URL}}js/jquery.jgrowl_minimized.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/notifications.js" ></script>
+
+    <!-- Object links for popping up dialogs -->
+    <script type="text/javascript" src="{{STATIC_URL}}js/js-graph-it.js" ></script>
+    <script type='text/javascript' src="{{STATIC_URL}}js/resource_graph.js"></script>
+    <script type='text/javascript' src="{{STATIC_URL}}js/target_dialog.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_dialog.js"></script>
+
     <!-- JQuery and JQuery-UI -->
     <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
     {% block scripts %}{% endblock %}
