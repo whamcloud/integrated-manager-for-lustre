@@ -174,6 +174,34 @@ img{
 /* Page Specific
  ---------------------------------------------------------------------*/
 
+.round-slider
+{
+float:left;
+width:23px;
+height:500px;
+border-right: 1px solid #d6d6d6;
+font-size:10px;
+/*background-color: #e6e6e6;*/
+background-color: black;
+background-image: url(../images/ui-bg_glass_75_e6e6e6_400x1.png);
+background-repeat: no-repeat;
+background-position: 0% 50%;
+border-top-left-radius:2em;
+border-top-right-radius:2em;
+border-bottom-right-radius:2em;
+border-bottom-left-radius:2em; 
+border:1px solid #848484;
+margin: 0 auto;
+padding-left:20px;
+padding-right:20px;
+padding-top:1px;
+background-color:#f9f9ff;
+/*background-image:url(../images/loading.gif) center no-repeat;
+background-image:url(../images/wait_progress.gif);
+background-repeat: no-repeat;
+background-position:center 40% ;*/
+}
+	
 .breadCrumbHolder
 {
 	/*margin:0 0 20px 0;
@@ -248,11 +276,7 @@ cursor:pointer;
 	padding-right:6px;
 }
 .border{
-	border-bottom:1px solid #5e8bc0;
-    font-size:10px;
-}
-.border1{
-	border:1px solid #5e8bc0;
+	border-bottom:1px solid #AAAAAA;
     font-size:10px;
 }
 .border_red{
@@ -599,6 +623,17 @@ table.fs th:first-child {
     padding-right:10px;width:50%;text-align:center;
     border-radius:3px 3px 3px 3px;
 }
+.slider_content {
+    font-size: 10pt;
+    font-weight: bold;
+    text-shadow: #aaa 2px 2px 3px;
+    color: #333;
+    margin-top: 12px;
+}
+.slider_content:hover {
+    cursor:pointer;
+    text-shadow: #aaa 4px 4px 6px;
+}
 .alert_labels{
     color:#1C76AD;
     font-weight:bold;
@@ -643,6 +678,20 @@ h2.section_header {
     text-shadow: #FFFFCC 1px 1px 2px;
 }
 
+.horizontal {
+    font-size: 8pt;
+    color: black;
+    text-shadow: #aaa 1px 1px 2px;
+    padding-top:8px;
+    padding-left: 8px;
+    padding-bottom: 2px;
+    font-weight: normal;
+}
+
+.horizontal:hover {
+    text-shadow: #FFFFCC 1px 1px 2px;
+}
+
 .log_line {
     font-family: courier;
     font-size: 12px;
@@ -659,6 +708,19 @@ h2.section_header {
 
 span.transition_buttons {
   white-space: nowrap;
+}
+
+.no_notification {
+  background-color:'#F0F0F0';
+  font-family:'Verdana, Arial, Helvetica, sans-serif';
+  font-size:12px;
+}
+
+.notification_table{
+  display:none; 
+  margin-left:5px; 
+  height:300px;
+  overflow:auto;
 }
 
 tr.log_error {

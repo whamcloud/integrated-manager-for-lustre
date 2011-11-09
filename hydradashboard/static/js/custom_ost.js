@@ -13,6 +13,9 @@
 var ost_Pie_Space_Data_Api_Url = "/api/get_stats_for_targets/";
 var ost_Pie_Inode_Data_Api_Url = "/api/get_stats_for_targets/";
 var ost_Area_ReadWrite_Data_Api_Url = "/api/get_stats_for_targets/";
+var mdt_ops_fetch_metrics= ["stats_close", "stats_getattr", "stats_getxattr", "stats_link",
+                        "stats_mkdir", "stats_mknod", "stats_open", "stats_rename",
+                        "stats_rmdir", "stats_setattr", "stats_statfs", "stats_unlink"];
 /******************************************************************************
 * OST specific functions
 ******************************************************************************/
@@ -26,8 +29,11 @@ show_hide_targetFilesUsageContainer = function(displayValue)
 }
 show_hide_targetReadWriteContainer = function(displayValue)
 {
-  $("#target_read_write_container_magni").css("display" ,displayValue);
-  $("#target_read_write_container").css("display", displayValue);
+  $("#target_read_write_container_div").css("display" ,displayValue);
+}
+show_hide_targetMgtOpsContainer = function(displayValue)
+{
+  $("#target_mgt_ops_container_div").css("display" ,displayValue);
 }
 
 /*****************************************************************************
@@ -193,6 +199,68 @@ ost_Pie_Inode_Data = function(targetId, targetName, sDate, endDate, dataFunction
           ]
        }];
       chart = new Highcharts.Chart(obj_ost_pie_inode);
+  });
+}
+/*****************************************************************************
+ * Function for mgt ops - Area Chart
+ * Param - Target Id, isZoom
+ * Return - Returns the graph plotted in container
+*****************************************************************************/
+ost_Area_mgtOps_Data = function(targetId, isZoom)
+{
+  var closeData = [], getattrData = [], getxattrData = [], linkData = [], mkdirData = [], mknodData = [], openData = [], renameData = [], rmdirData = [], setattrData = [], statfsData = [], unlinkData = [];
+  obj_db_Area_mdOps_Data = JSON.parse(JSON.stringify(chartConfig_Area_mdOps));
+
+  var values = new Object();
+  var stats = mdOpsFetchmatric;
+  $.each(stats, function(i, stat_name)
+  {
+    values[stat_name] = [];
+  });
+  $.post(ost_Area_ReadWrite_Data_Api_Url,
+  {
+    targetkind: "MDT", datafunction: "Average", fetchmetrics: stats.join(" "),
+    starttime: startTime,  target_id: targetId, endtime: endTime
+  })
+  .success(function(data, textStatus, jqXHR)
+  {
+    var targetName='';
+    var avgDiskReadApiResponse = data;
+    if(avgDiskReadApiResponse.success)
+    {
+      var response = avgDiskReadApiResponse.response;
+      $.each(response, function(resKey, resValue)
+      {
+        if(resValue.filesystem != undefined)
+        {
+          ts = resValue.timestamp * 1000;
+          $.each(stats, function(i, stat_name)
+          {
+            if (resValue[stat_name] != null || resValue[stat_name] != undefined)
+            {
+              values[stat_name].push([ts, resValue[stat_name]])
+            }
+          });
+          }
+      });
+    }
+  })
+  .error(function(event)
+  {
+  })
+  .complete(function(event)
+  {
+    obj_db_Area_mdOps_Data.chart.renderTo = "target_mgt_ops_container";
+    obj_db_Area_mdOps_Data.chart.width = "480";
+    if(isZoom == 'true')
+    {
+      renderZoomDialog(obj_db_Area_mdOps_Data);
+    }
+    $.each(stats, function(i, stat_name)
+    {
+      obj_db_Area_mdOps_Data.series[i].data = values[stat_name];
+    });
+    chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
   });
 }
 
@@ -370,15 +438,25 @@ loadTargetGraphs = function()
     ost_Pie_Space_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
     ost_Pie_Inode_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
     ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, "Average", $('#ls_ostKind').val(), readWriteFetchMatric, "false");
-    show_hide_targetSpaceUsageContainer("block"); 
+    show_hide_targetSpaceUsageContainer("block");
     show_hide_targetFilesUsageContainer("block");
-    show_hide_targetReadWriteContainer("block") 
+    show_hide_targetReadWriteContainer("block");
+    show_hide_targetMgtOpsContainer("none");
+  }
+  else if (ostKind == 'MDT')
+  {
+    ost_Area_mgtOps_Data($('#ls_ostId').val(), "false");
+    show_hide_targetReadWriteContainer("none")
+    show_hide_targetSpaceUsageContainer("none"); 
+    show_hide_targetFilesUsageContainer("none");
+    show_hide_targetMgtOpsContainer("block");
   }
   else
   {
-    show_hide_targetSpaceUsageContainer("none"); 
+    show_hide_targetSpaceUsageContainer("none");
     show_hide_targetFilesUsageContainer("none");
-    show_hide_targetReadWriteContainer("none")
+    show_hide_targetReadWriteContainer("none");
+    show_hide_targetMgtOpsContainer("none");
   }
 }
 /*****************************************************************************/

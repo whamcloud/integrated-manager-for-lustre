@@ -34,7 +34,8 @@ from configureapi import (AddHost,
                           SetTargetMountStage,
                           GetJobStatus,
                           SetJobStatus,
-                          Notifications)
+                          Notifications,
+                          GetTargetConfParams)
 
 # FIXME: instead of doing this big list of imports, should introspect available
 # RequestHandler objects and get their url name from them.
@@ -101,6 +102,7 @@ urlpatterns = patterns('',
     (r'^set_target_stage/$',CsrfExemptResource(SetTargetMountStage)),
     (r'^get_job_status/$',CsrfExemptResource(GetJobStatus)),
     (r'^set_job_status/$',CsrfExemptResource(SetJobStatus)), 
+    (r'^get_conf_params/$',CsrfExemptResource(GetTargetConfParams)), 
 
     (r'^get_fs_stats_for_targets_fake/$',CsrfExemptResource(GetFSTargetStats_fake)),
     (r'^get_fs_stats_for_server_fake/$',CsrfExemptResource(GetFSServerStats_fake)),

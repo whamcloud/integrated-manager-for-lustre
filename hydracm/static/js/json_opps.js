@@ -183,3 +183,45 @@ function SetTargetMountStage(target_id, state)
     {
     });
 }
+
+function GetConfigurationParam(target_id, kinds)
+{
+  $.ajax({type: 'POST', url: "/api/get_conf_params/", dataType: 'json', data: JSON.stringify({
+      "target_id": target_id,
+      "kinds": kinds
+    }), contentType:"application/json; charset=utf-8"})
+    .success(function(data, textStatus, jqXHR) 
+    {
+      if(data.success)
+      {
+        CreateTable_FS_Config_Param(data.response);
+      }
+      else
+      {
+         jAlert(ERR_COMMON_START_OST + data.errors, ALERT_TITLE);
+      }
+    })
+    .error(function(event) 
+    {
+    })
+    .complete(function(event) 
+    {
+    });
+}
+
+function CreateTable_FS_Config_Param(data)
+{
+  var property_box="";
+  $('#config_param_table').dataTable().fnClearTable();
+  $.each(data, function(resKey, resValue)
+  {   
+    property_box = "<input type=textbox id='id_" + resValue.conf_param + 
+    "' title='" + resValue.conf_param_help + "' />";
+       
+    $('#config_param_table').dataTable().fnAddData ([
+      resValue.conf_param, 
+      property_box      
+    ]);
+  });
+  $('#configParam').dialog('open');
+}
