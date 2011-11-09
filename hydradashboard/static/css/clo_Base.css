@@ -783,3 +783,10 @@ span.transition_buttons {
   height:300px;
   overflow:auto;
 }
+
+tr.log_error {
+  color: #ff0000;
+}
+
+tr.log_info {
+}

@@ -49,6 +49,11 @@
           "iDisplayLength":50,
           "bDeferRender": true,
           "sAjaxSource": '/api/getlogs/',
+          fnInitComplete: function(oSettings) {
+            for (var i=0, iLen=oSettings.aoData.length; i<iLen; i++) {
+                oSettings.aoData[i].nTr.className += " "+oSettings.aoData[i]._aData.class;
+            }
+          },
           "fnServerData": function ( sSource, aoData, fnCallback ) 
 	         {
 	           $.ajax(
@@ -72,6 +77,7 @@
 	           })
 	         },
 	         "aoColumns": [
+	           { "sClass": 'log_line', "mDataProp":"class", bVisible: false},
 	           { "sClass": 'log_line', "mDataProp":"date", "asSorting": [ "desc" ]},
 	           { "sClass": 'log_line', "mDataProp":"host" },
 	           { "sClass": 'log_line', "mDataProp":"service" },
@@ -182,6 +188,7 @@
       //To refresh datatable
       function RefreshTable(tableId, urlData, lustre, host_id, fromDate, endDate, page_id, page_size)
       {
+        console.log('RefreshTable');
         $(".dataTables_processing").css('visibility','visible');
         $.ajax({type: 'POST', url: urlData, dataType: 'json', 
         data: JSON.stringify({"lustre": lustre, "host_id": host_id, "start_time": fromDate, "end_time":endDate,'page_id':page_id,'page_size':page_size}),
@@ -249,6 +256,7 @@
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="log_line"  id="all_log_content">
                   <thead class="log_line">
                     <tr>
+                      <th width="0%"></th>
                       <th width="10%">Date</th>
                       <th width="10%">Host</th>
                       <th width="10%">Service</th>
