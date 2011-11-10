@@ -131,6 +131,7 @@ urlpatterns = patterns('',
     (r'^getjobs/$',CsrfExemptResource(GetJobs)),
     (r'^getlogs/$',CsrfExemptResource(GetLogs)),
     (r'^notifications/$',CsrfExemptResource(Notifications)),
+    (r'^object_summary/$',CsrfExemptResource(configureapi.ObjectSummary)),
 
     (r'^get_resource_classes/$', CsrfExemptResource(GetResourceClasses)),
     (r'^get_resources/$', CsrfExemptResource(GetResources)),

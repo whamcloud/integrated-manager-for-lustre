@@ -41,7 +41,7 @@ function LoadFSList_FSList()
         resValue.noofost,
         resValue.kbytesused,
         resValue.kbytesfree,
-        CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions, "SERVER"),
+        CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
         notification_icons_markup(resValue.id, resValue.content_type_id)
         ]); 
       });
@@ -75,7 +75,7 @@ function LoadTargets_EditFS(fs_id)
                 resValue.primary_server_name,
                 resValue.failover_server_name,
                 resValue.active_host_name,
-                CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions, "TARGET"),
+                CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
                 notification_icons_markup(resValue.id, resValue.content_type_id)
               ]
         if (resValue.kind == "OST") {
@@ -253,7 +253,7 @@ function LoadMGTConfiguration_MGTConf()
                 target_dialog_link(resValue.id, resValue.primary_server_name),
                 resValue.failover_server_name,
                 resValue.active_host_name,
-                CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions, "SERVER"),
+                CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
                 notification_icons_markup(resValue.id, resValue.content_type_id)
               ]);
         });
@@ -289,7 +289,7 @@ function LoadServerConf_ServerConfig()
         $('#server_configuration').dataTable().fnAddData ([
           resValue.pretty_name,
           resValue.lnet_state,
-          CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions, "SERVER"),
+          CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
           notification_icons_markup(resValue.id, resValue.content_type_id)
         ]);
       });
@@ -304,10 +304,10 @@ function LoadServerConf_ServerConfig()
   });
 }
 
-function CreateActionLink(id, ct, available_transitions, kind)
+function CreateActionLink(id, ct, available_transitions)
 {
   var ops_action="";
-  var action="<span class='transition_buttons'>";
+  var action="<span class='transition_buttons object_transitions object_transitions_" + id + "_" + ct + "'>";
   var function_name;
   var button_class = "ui-state-default ui-corner-all";
   $.each(available_transitions, function(i, transition)

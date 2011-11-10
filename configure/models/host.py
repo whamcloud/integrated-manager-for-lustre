@@ -41,6 +41,10 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     def __str__(self):
         return self.pretty_name()
 
+    # TODO: standardize on one name for the display name functions (across all StatefulObjects)
+    def human_name(self):
+        return self.pretty_name()
+
     def save(self, *args, **kwargs):
         from django.core.exceptions import ValidationError
         MIN_LENGTH = 1

@@ -444,6 +444,42 @@ poll_jobs = function() {
   })
 }
 
+poll_objects = function() {
+  /* Hash which will become a list (ghetto set) */
+  var objects = {}
+  $('.object_transitions').each(function() {
+    for_class_starting($(this), 'object_transitions_', function(class_name){
+      var parts = class_name.split("_");
+      var key = [parts[2], parts[3]]
+      var value = {id: parts[2], content_type_id: parts[3]}
+      objects[key] = value
+    });
+  });
+  var object_list = [];
+  $.each(objects, function(key, value) {
+    object_list.push(value);
+  });
+  
+  /* FIXME: using POST instead of GET because otherwise jQuery forces the JSON payload to
+   * be urlencoded and django-piston doesn't get our args out properly */
+  $.ajax({type: 'POST', url: "/api/object_summary/", dataType: 'json', data: JSON.stringify({objects: object_list}), contentType:"application/json; charset=utf-8"})
+  .success(function(data, textStatus, jqXHR) {
+    if (!data.success) {
+      debug("Error calling object_summary")
+      setTimeout(poll_objects, error_retry_period);
+    } else {
+      setTimeout(poll_objects, poll_period);
+      $.each(data.response, function(i, object_info) {
+        /* TODO: only rewrite markup on change */
+        $(".object_transitions_" + object_info.id + "_" + object_info.content_type_id).replaceWith(
+          CreateActionLink(object_info.id, object_info.content_type_id, object_info.available_transitions, ""));
+        /* TODO: also update name and state cells */
+        console.log(object_info);
+      });
+    }
+  })
+}
+
 $(document).ready(function() {
   $.ajax({type: 'POST', url: "/api/notifications/", dataType: 'json', data: JSON.stringify({filter_opts: {since_time: "", initial: true}}), contentType:"application/json; charset=utf-8"})
   .success(function(data, textStatus, jqXHR) {
@@ -453,6 +489,8 @@ $(document).ready(function() {
       setTimeout(poll_jobs, poll_period);
     }
   });
+
+  setTimeout(poll_objects, poll_period);
 });
 
 $(document).ajaxComplete(update_alert_indicators)

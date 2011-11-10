@@ -635,4 +635,19 @@ class Transition(AnonymousRequestHandler):
 
         return None
 
+class ObjectSummary(AnonymousRequestHandler):
+    @extract_request_args('objects')
+    def run(self, request, objects):
+        result = []
+        for o in objects:
+            from configure.lib.state_manager import StateManager
+            klass = ContentType.objects.get_for_id(o['content_type_id']).model_class()
+            instance = klass.objects.get(pk = o['id'])
+
+            result.append({'id': o['id'],
+                           'content_type_id': o['content_type_id'],
+                           'name': instance.human_name(),
+                           'state': instance.state,
+                           'available_transitions': StateManager.available_transitions(instance)})
+        return result 
 
