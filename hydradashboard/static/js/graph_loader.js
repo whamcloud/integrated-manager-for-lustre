@@ -33,7 +33,7 @@ var mdOpsFetchmatric = ["stats_close", "stats_getattr", "stats_getxattr", "stats
                         "stats_mkdir", "stats_mknod", "stats_open", "stats_rename", 
                         "stats_rmdir", "stats_setattr", "stats_statfs", "stats_unlink"]
 var ioOpsFetchmatric = ["stats_connect","stats_create","stats_destroy","stats_disconnect",
-                        "stats_get_info","stats_get_page","stats_llog_init","stats_ping",
+                        "stats_get_info","stats_llog_init","stats_ping",
                         "stats_punch","stats_preprw","stats_set_info_async","stats_statfs","stats_sync"];
 /*******************************************************************************
  * Global variable declaratiom
