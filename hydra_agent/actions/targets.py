@@ -105,9 +105,12 @@ def register_target(args):
 
     shell.try_run(["mount", "-t", "lustre", args.device, args.mountpoint])
     shell.try_run(["umount", args.mountpoint])
-    blkid_output = shell.try_run(["blkid", "-o", "value", "-s", "LABEL", args.device])
+    blkid_output = shell.try_run(["blkid", "-c/dev/null", "-o", "value", "-s", "LABEL", args.device])
     if blkid_output.find("ffff") != -1:
         # Oh hey, we reproduced HYD-268, see if the tunefs output is any different from the blkid output
+        # This shouldn't happen, although before we added '-c/dev/null' it did occasionally.
+        # Leaving this check here so that we can confirm things are okay -- time of writing is Nov2011,
+        # if you're reading this more than a couple of months later then cull this branch.
         import subprocess
         tunefs_text = subprocess.Popen(["tunefs.lustre", "--dryrun", args.device], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.read()
         name = re.search("Target:\\s+(.*)\n", tunefs_text).group(1)
