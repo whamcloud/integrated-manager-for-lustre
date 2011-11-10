@@ -33,7 +33,7 @@ def monitor_exec(monitor_id, counter):
                 settings.AUDIT_PERIOD * 2)
         success = UpdateScan().run(monitor.host.pk, raw_data)
         if success:
-            monitor.update(last_success = datetime.datetime.now())
+            monitor.update(last_success = datetime.now())
     except Exception:
         audit_log.error("Exception auditing host %s" % monitor.host)
         import sys
