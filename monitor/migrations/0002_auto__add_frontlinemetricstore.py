@@ -17,22 +17,16 @@ class Migration(SchemaMigration):
             ('metric_name', self.gf('django.db.models.fields.CharField')(max_length=255)),
             ('metric_type', self.gf('django.db.models.fields.CharField')(max_length=64)),
             ('value', self.gf('django.db.models.fields.FloatField')()),
+            ('complete', self.gf('django.db.models.fields.BooleanField')(default=False, db_index=True)),
         ))
         db.send_create_signal('monitor', ['FrontLineMetricStore'])
 
         # Change it to use the MEMORY engine
         db.execute('ALTER TABLE monitor_frontlinemetricstore ENGINE = MEMORY')
 
-        # Add some sensible indexing to it
-        db.execute('CREATE INDEX idx_fms_cot ON monitor_frontlinemetricstore (content_type_id, object_id, insert_time)')
-
-        # FIXME? Drop django-created indexes for performance? Might have
-        # unintended consequences.
 
     def backwards(self, orm):
         
-        db.execute('DROP INDEX idx_fms_cot ON monitor_frontlinemetricstore')
-
         # Deleting model 'FrontLineMetricStore'
         db.delete_table('monitor_frontlinemetricstore')
 
@@ -142,6 +136,7 @@ class Migration(SchemaMigration):
         },
         'monitor.frontlinemetricstore': {
             'Meta': {'object_name': 'FrontLineMetricStore'},
+            'complete': ('django.db.models.fields.BooleanField', [], {'default': 'False', 'db_index': 'True'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'insert_time': ('django.db.models.fields.DateTimeField', [], {}),
