@@ -27,6 +27,8 @@
           useUTC:false
           }
         });
+
+        $('.magbutton').button({icons: {primary: 'ui-icon-zoomin'}});
       });
       </script>
       {% endblock %}
@@ -110,21 +112,21 @@
             <tr>
               <td valign="top"  align="center">
                 <div class="magni">
-                  <input type="button" value="" class="magbutton" 
+                  <button value="" class="magbutton" 
                   onclick="db_LineBar_CpuMemoryUsage_Data('true');setZoomDialogTitle('All File Systems: CPU and Memory Usage');" />
                 </div>
                 <div class='chart' id="avgCPUDiv" >Filesystems CPU and Memory Usage</div>
               </td>
               <td valign="top"  align="center">
                 <div class="magni">
-                  <input type="button" value="" class="magbutton" 
+                  <button value="" class="magbutton" 
                   onclick="db_Area_ReadWrite_Data('true');setZoomDialogTitle('All File Systems: Disk Read and Write');" />
                 </div>
                 <div class='chart' id="avgMemoryDiv" >Filesystems Disk Read and Write</div>
               </td>
               <td valign="top"  align="center">
                 <div class="magni">
-                  <input type="button" value="" class="magbutton"
+                  <button value="" class="magbutton"
                   onclick="db_Area_mdOps_Data('true');setZoomDialogTitle('All File Systems: MDOP/s');" />
                 </div>
                 <div class='chart' id="avgReadDiv" >MDOP/s</div>
@@ -133,7 +135,7 @@
             <tr>
               <td colspan="3">
                 <div class="magni">
-                  <input type="button" class="magbutton" 
+                  <button class="magbutton" 
                   onclick="db_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
                 </div>
                 <div class='chart' id="db_iopsSpline"></div>
@@ -188,21 +190,21 @@
               <tr>
                 <td valign="top"  width="30%" align="center">
                   <div class="magni">
-                    <input type="button" value="" class="magbutton" 
+                    <button value="" class="magbutton" 
                     onclick="fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System: CPU and Memory Usage');" />
                   </div>
                   <div id="fs_avgCPUDiv" class="chart" >Server CPU and Memory Usage</div>
                 </td>
                 <td valign="top"  align="center">
                   <div class="magni">
-                    <input type="button" value="" class="magbutton" 
+                    <button value="" class="magbutton" 
                     onclick="fs_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('File System: Disk Read and Write');" />
                   </div>
                   <div id="fs_avgMemoryDiv" class="chart" >Disk Read and Write</div>
                 </td>
                 <td valign="top"  width="30%" align="center">
                   <div class="magni">
-                    <input type="button" value="" class="magbutton" 
+                    <button value="" class="magbutton" 
                     onclick="fs_Area_mdOps_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', mdOpsFetchmatric, 'true');setZoomDialogTitle('File System: MDOP/s');" />
                   </div>
                   <div id="fs_avgReadDiv" class="chart" >MDOP/s</div>
@@ -214,7 +216,7 @@
 				              <tr>
 				                <td valign="top"  align="center">
 				                  <div class="magni">
-				                    <input type="button" class="magbutton"  
+				                    <button class="magbutton"  
 				                    onclick="fs_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
 				                  </div>
 				                  <div id="fs_iopsSpline" class="chart"></div>
@@ -269,14 +271,14 @@
               <tr>
                 <td>
                   <div class="magni">
-                    <input type="button" value="" class="magbutton"
+                    <button value="" class="magbutton"
                     onclick="oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('Server: CPU and Memory Usage');" />   
                   </div>
                   <div id="oss_avgReadDiv" class="chart">Server CPU and Memory</div>
                 </td>
                 <td>
                   <div class="magni">
-                    <input type="button" value="" class="magbutton"
+                    <button value="" class="magbutton"
                      onclick="oss_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('Server: Disk Read and Write');" />  
                   </div>
                   <div id="oss_avgWriteDiv" class="chart" >Disk Read and Write</div>
@@ -333,7 +335,7 @@
                 <td>
                   <div id="target_read_write_container_div" style="display: none">
                     <div class="magni">
-	                    <input type="button" class="magbutton" 
+	                    <button class="magbutton" 
 	                    onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
 	                  </div>
 	                  <div id="target_read_write_container" class="chart">Disk Read and Write</div>
@@ -342,7 +344,7 @@
                 <td>
                   <div id="target_mgt_ops_container_div" style="display: none">
                     <div class="magni">
-                      <input type="button" class="magbutton" 
+                      <button class="magbutton" 
                       onclick="ost_Area_mgtOps_Data($('#ls_ostId').val(),'true');setZoomDialogTitle('Target: MGT Ops');" />
                     </div>
                     <div id="target_mgt_ops_container" class="chart">MGT Ops</div>
