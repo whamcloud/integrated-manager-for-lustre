@@ -92,11 +92,8 @@ Target_stop() {
 }
 
 Target_status() {
-    # given the label, figure out the device
-    local DEVICE=$(blkid | sed -ne "/ UUID=\"$TARGET\"/s/:.*//p")
-    # see if it's started
-    if cut -d' ' -f1,2 < /proc/mounts | 
-            grep -q "^$DEVICE " >/dev/null 2>&1; then
+    # call the agent to see if it's running
+    if hydra-agent.py target-running --uuid $TARGET; then
         rc=$OCF_SUCCESS
         msg="$TARGET is started (running)"
     else
