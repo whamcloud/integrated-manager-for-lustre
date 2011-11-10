@@ -3,181 +3,43 @@
       {% block scripts %}
       <script language="javascript" type="text/javascript">
         $(document).ready(function() 
-        {
+        { 
           // Menu Highlighter
           $('#events_menu').addClass('active');
-          //total no of records return by db
-          var maxRecords = 0;
-          //current  page no
-          var pageCnt = 0;
-          //total count of pages
-          var totalPages=0;
-
+          //load host combo list
           loadHostList('', 'db_events_hostList');
-
+                
           var oTable = $('#events_table').dataTable(
           {
-            "sAjaxDataProp": "response.aaData",
             "bProcessing": true,
-            "iDisplayLength":25,
-            "bDeferRender": true,
-            "sAjaxSource": '/api/geteventsbyfilter/',
+            "bServerSide":true,
+            "bFilter": false,
+            "sAjaxSource": "/dashboard/get_dt_events/",
             "fnServerData": function ( sSource, aoData, fnCallback ) 
-             {
-               $.ajax(
-               {
-                 "dataType": 'json', 
-                 "type": "POST", 
-                 "url": sSource, 
-                 "data": JSON.stringify
-                 ({
-                   "host_id":"", 
-                   "severity":""+$('#event_severity').val(), 
-                   "eventtype":""+$('#event_type').val(),
-                   "page_id":pageCnt,
-                   "page_size":25
-                 }),
-                 "contentType": "application/json",
-                 "success":function(data) 
-                 {
-                   maxRecords = data.response.iTotalRecords;
-                   DisplayInfo();
-                   fnCallback(data);
-                 }
-               })
-             },
-             "aoColumns": [
-                { "sClass": 'txtleft',"mDataProp":"event_created_at", "asSorting": [ "desc" ]},
-                { "sClass": 'txtcenter',"mDataProp":"event_severity" },
-                { "sClass": 'txtleft',"mDataProp":"event_host" },
-                { "sClass": 'txtleft',"mDataProp":"event_message" }
-             ],
-             "bJQueryUI": true,
-             "fnDrawCallback": function() 
-             {
-               //enable next button by default
-               $('#events_table_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
-               //to diable next button for last page.
-               if((pageCnt+1)==totalPages)
-               {
-                 $('#events_table_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-disabled");
-               }
-               //to enable previous button once it left first page
-               if(pageCnt>0)
-               {
-                 $('#events_table_previous').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
-               }
-               //to diplay table info after table draw
-               $('#events_table_info').html("<div> Showing "+ (pageCnt+1)+ " of " + totalPages + "</div>");
-             },
-          });
-
-           //clear default table info
-           $("#events_table_info").empty();
-           $("#alertAnchor").click();
-           $('#filter_btn').click(function() 
-           {      
-             pageCnt=0;
-             RefreshTable($('#db_events_hostList').val(),
-                          $('#event_severity').val(),
-                          $('#event_type').val(),
-                          pageCnt, 
-                          oTable.fnSettings()._iDisplayLength);
-           });
-           //Change event for changing local pagination combo box
-            $('select[name=events_table_length]').change(function()
             {
-              if(maxRecords!=0)
+              aoData.push({"name":"host_id", "value": $('#db_events_hostList').val()});
+              aoData.push({"name":"severity", "value": $('#event_severity').val()});
+              aoData.push({"name":"event_type", "value": $('#event_type').val()});
+              $.getJSON( sSource, aoData, function (json) 
               {
-                 RefreshTable($('#db_events_hostList').val(),
-                 $('#event_severity').val(),
-                 $('#event_type').val(),
-                 pageCnt, 
-                 oTable.fnSettings()._iDisplayLength);
-              }
-            });
-            //click handler for next button
-            $('#events_table_next').click(function()
-            {   
-              if((pageCnt+1)<totalPages)
-              {
-                event_Next();
-              }
-            });
-            //click handler for previous button
-            $('#events_table_previous').click(
-            function()
-            {
-              event_Previous();
-              if(pageCnt==0)
-              {
-                oTable.fnSettings().className="sPagePrevDisabled";
-              }
-            });
-            //function to load next page log
-            function event_Next()
-            {
-              pageCnt++;
-              RefreshTable($('#db_events_hostList').val(),
-              $('#event_severity').val(),
-              $('#event_type').val(),
-              pageCnt, 
-              oTable.fnSettings()._iDisplayLength);
-            }
-            //function to load previous page log.
-            function event_Previous()
-            {
-              if (pageCnt != 0)
-              {
-                pageCnt--;
-                RefreshTable($('#db_events_hostList').val(),
-                $('#event_severity').val(),
-                $('#event_type').val(),
-                pageCnt, 
-                oTable.fnSettings()._iDisplayLength);
-              }
-            }
-            //To display footer info
-            function DisplayInfo()
-            {
-              var info_div = "<div class='info'></div>";
-              var dispRecords = oTable.fnSettings()._iDisplayLength;
-              //for blank reponse
-              if(maxRecords!=0)
-              {
-                totalPages = maxRecords / dispRecords;
-                totalPages = Math.floor(totalPages);
-                totalPages = totalPages + 1;
-              }
-              else
-              {
-                //for page count 0 for display in info if the 0 records found
-                pageCnt=-1;
-              }
-              $('#events_table_info').empty();
-            }
-            function RefreshTable(host, severity, eventtype, page_id, page_size)
-            {
-              $(".dataTables_processing").css('visibility','visible');
-              $.ajax({type: 'POST', url:'/api/geteventsbyfilter/' , dataType: 'json',
-              data: JSON.stringify({"host_id":host, "severity":""+severity ,"eventtype":""+eventtype,'page_id':page_id,'page_size':page_size}),
-              contentType:"application/json; charset=utf-8"})
-              .success(function(data, textStatus, jqXHR)
-              {
-                maxRecords=data.response.iTotalRecords;
-                oSettings = oTable.fnSettings();
-                oTable.fnClearTable(this);
-                for (var i=0; i<data.response.aaData.length; i++)
-                {
-                  oTable.oApi._fnAddData(oSettings, data.response.aaData[i]);
-                }
-                oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
-                $(".dataTables_processing").css('visibility','hidden');
-                DisplayInfo();
-                oTable.fnDraw();
+                fnCallback(json);
               });
-            }
-         }); 
+            }, 
+            "aoColumns": [
+                { "sClass": 'txtleft',"mDataProp":"date", "asSorting": [ "desc" ],"bSortable":false},
+                { "sClass": 'txtcenter',"mDataProp":"event_severity", "bSortable":false},
+                { "sClass": 'txtleft',"mDataProp":"event_host", "bSortable":false},
+                { "sClass": 'txtleft',"mDataProp":"event_message","bSortable":false}
+             ], 
+             "bJQueryUI": true
+          });
+          
+          //click handler for filter button
+          $('#filter_btn').click(function()
+          {
+            oTable.fnDraw();
+          });
+        });
       </script>
       {% endblock %}
       {% block include_content %}{% endblock %}
@@ -203,6 +65,7 @@
               <div class="timeint">
                 Host: &nbsp;
                 <select id="db_events_hostList">
+                <option value="">All</option>
                 </select>
                   &nbsp;
                   Severity: &nbsp;
@@ -230,10 +93,10 @@
                 <table cellpadding="0" cellspacing="0" border="0" class="display" id="events_table">
                   <thead>
                     <tr>
-                      <th width="14%">Event Created At</th>
+                      <th width="5%">Event Created At</th>
                       <th width="10%">Status</th>
-                      <th width="15%">Host</th>
-                      <th width="56%">Message</th>
+                      <th width="10%">Host</th>
+                      <th width="75%">Message</th>
                     </tr>
                   </thead>
                   <tbody></tbody>

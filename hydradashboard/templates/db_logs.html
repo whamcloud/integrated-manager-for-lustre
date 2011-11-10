@@ -10,13 +10,6 @@
       {
         // Menu Highlighter
         $('#logs_menu').addClass('active');       
-        //total no of records return by db
-        var maxRecords = 0;
-        //current  page no
-        var pageCnt = 0;
-        //total count of pages
-        var totalPages=0;
-        
         //load host list
         loadHostList('', 'logs_hostList');
         
@@ -39,181 +32,44 @@
         $('#datetime_to').datetimepicker();
 
         var lustre=true;
-        fromDate = $('#datetime_from').val();
-        toDate = $('#datetime_to').val();
-        var hostId="";
         var oTable = $('#all_log_content').dataTable(
         {
-          "sAjaxDataProp": "response.aaData",
           "bProcessing": true,
-          "iDisplayLength":50,
-          "bDeferRender": true,
-          "sAjaxSource": '/api/getlogs/',
+          "bFilter":true,
+          "bSorting":false,
+          "bServerSide":true,
+          "sAjaxSource": '/dashboard/get_dt_logs/',
+          "fnServerData": function ( sSource, aoData, fnCallback ) {
+            aoData.push({"name":"host_id", "value": $('#logs_hostList').val()});
+            aoData.push({"name":"start_time", "value": $('#datetime_from').val()});
+            aoData.push({"name":"end_time", "value": $('#datetime_to').val()});
+            aoData.push({"name":"lustre", "value": $('#id_only_lustre').is(':checked')});
+            
+              $.getJSON( sSource, aoData, function (json) {
+                fnCallback(json);
+              });
+            }, 
           fnInitComplete: function(oSettings) {
             for (var i=0, iLen=oSettings.aoData.length; i<iLen; i++) {
                 oSettings.aoData[i].nTr.className += " "+oSettings.aoData[i]._aData.class;
             }
           },
-          "fnServerData": function ( sSource, aoData, fnCallback ) 
-	         {
-	           $.ajax(
-	           {
-	             "dataType": 'json', 
-	             "type": "POST", 
-	             "url": sSource,
-	             "data": JSON.stringify({'lustre':true,
-	                                     'host_id': hostId,
-	                                     'start_time': fromDate,
-	                                     'end_time': toDate,
-	                                     'page_id':pageCnt,
-	                                     'page_size':50}),
-	             "contentType": "application/json; charset=utf-8",
-	             "success":function(data) 
-	             {
-	               maxRecords = data.response.iTotalRecords;
-	               DisplayInfo();
-	               fnCallback(data);
-	             }
-	           })
-	         },
            aaSorting: [[1, 'desc']],
 	         "aoColumns": [
 	           { "sClass": 'log_line', "mDataProp":"class", bVisible: false},
-             { "sClass": 'log_line', "mDataProp":"date"},
-	           { "sClass": 'log_line', "mDataProp":"host" },
-	           { "sClass": 'log_line', "mDataProp":"service" },
-	           { "sClass": 'log_line', "mDataProp":"message" }
+               { "sClass": 'log_line', "mDataProp":"date", "bSortable":false},
+	           { "sClass": 'log_line', "mDataProp":"host", "bSortable":false},
+	           { "sClass": 'log_line', "mDataProp":"service", "bSortable":false},
+	           { "sClass": 'log_line', "mDataProp":"message","bSearchable":true, "bSortable":false}
 	         ],
-	         "bJQueryUI": true,
-	         "fnDrawCallback": function() 
-	         {
-	           //enable next button by default
-	           $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
-	           //to diable next button for last page.
-	           if((pageCnt+1)==totalPages)
-	          {
-	            $('#all_log_content_next').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-disabled");
-	          }
-	          //to enable previous button once it left first page
-	          if(pageCnt>0)
-	          {
-	            $('#all_log_content_previous').attr("class","fg-button ui-button ui-state-dfault ui-corner-right ui-state-enable");
-	          }
-	          //to diplay table info after table draw
-	          $('#all_log_content_info').html("<div> Showing "+ (pageCnt+1)+ " of " + totalPages + "</div>");
-	        },
+	         "bJQueryUI": true, 
 	      });
       //clear default table info
-      $("#all_log_content_info").empty();
       $("#alertAnchor").click();
       //click handler for filter
       $('#log_filter_btn').click(function()
       {
-        fromDate = $('#datetime_from').val();
-        toDate = $('#datetime_to').val();
-        if($('#id_only_lustre').is(":checked"))
-        {
-          lustre = true;
-        }
-        else
-        {
-          lustre = false;
-        }
-        pageCnt=0;
-        RefreshTable('#all_log_content','/api/getlogs/', lustre, hostId, fromDate, toDate, '', oTable.fnSettings()._iDisplayLength);
-      });
-      //Change event for changing local pagination combo box
-      $('select[name=all_log_content_length]').change(function()
-      {
-        if(maxRecords!=0)
-        {
-          RefreshTable('#all_log_content','/api/getlogs/', lustre, hostId, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
-        }
-      });
-      //click handler for next button
-      $('#all_log_content_next').click(function()
-      {   
-        if((pageCnt+1)<totalPages)
-        {
-          Log_Next();
-        }
-      });
-      //click handler for previous button
-      $('#all_log_content_previous').click(
-        function()
-        {
-          Log_Previous();
-          if(pageCnt==0)
-          {
-            oTable.fnSettings().className="sPagePrevDisabled";
-          }
-        });
-      //function to load next page log
-      function Log_Next()
-      {
-        pageCnt++;
-        fromDate = $('#datetime_from').val();
-        toDate = $('#datetime_to').val();
-        RefreshTable('#all_log_content','/api/getlogs/', lustre, hostId, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength);
-      }
-      //function to load previous page log.
-      function Log_Previous()
-      {
-        if (pageCnt != 0)
-        {
-          pageCnt--;
-          fromDate = $('#datetime_from').val();
-          toDate = $('#datetime_to').val();
-          RefreshTable('#all_log_content','/api/getlogs/', lustre, hostId, fromDate, toDate, pageCnt, oTable.fnSettings()._iDisplayLength)
-        }
-      }
-      //To display footer info
-      function DisplayInfo()
-      {
-        var info_div = "<div class='info'></div>";
-        var dispRecords = oTable.fnSettings()._iDisplayLength;
-        //for blank reponse
-        if(maxRecords!=0)
-        {
-          totalPages = maxRecords / dispRecords;
-          totalPages = Math.floor(totalPages);
-          totalPages = totalPages + 1;
-        }
-        else
-        {
-          //for page count 0 for display in info if the 0 records found
-          pageCnt=-1;
-        }
-        $('#all_log_content_info').empty();
-      }
-      //To refresh datatable
-      function RefreshTable(tableId, urlData, lustre, host_id, fromDate, endDate, page_id, page_size)
-      {
-        console.log('RefreshTable');
-        $(".dataTables_processing").css('visibility','visible');
-        $.ajax({type: 'POST', url: urlData, dataType: 'json', 
-        data: JSON.stringify({"lustre": lustre, "host_id": host_id, "start_time": fromDate, "end_time":endDate,'page_id':page_id,'page_size':page_size}),
-        contentType:"application/json; charset=utf-8"})
-        .success(function(data, textStatus, jqXHR) 
-        {
-          maxRecords=data.response.iTotalRecords;
-          table = $(tableId).dataTable();
-          oSettings = table.fnSettings();
-          table.fnClearTable(this);
-          for (var i=0; i<data.response.aaData.length; i++)
-          {
-             table.oApi._fnAddData(oSettings, data.response.aaData[i]);
-          }
-          oSettings.aiDisplay = oSettings.aiDisplayMaster.slice();
-          $(".dataTables_processing").css('visibility','hidden');
-          DisplayInfo();
-          table.fnDraw();
-        });
-      }
-      
-      $('#logs_hostList').change(function()
-      {
-        hostId = $('#logs_hostList').val();
+        oTable.fnDraw();
       });
     });
     </script>
@@ -243,6 +99,7 @@
               <div class="timeint">
                 Host: &nbsp;
                 <select id="logs_hostList">
+                <option value="">All</option>
                 </select>
                 From:&nbsp;<input id="datetime_from" />&nbsp;To:&nbsp;<input id="datetime_to" />
                 &nbsp;Only Lustre Messages:&nbsp;

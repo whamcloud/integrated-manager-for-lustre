@@ -14,6 +14,7 @@
       <!--<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/exporting.js"></script> -->
       <script id="source" language="javascript" type="text/javascript">
       $(document).ready(function() {
+        $('#dashboard_menu').addClass('active');
         setTimeout(function() {
           loadView(window.location.hash);
         }, 1);
@@ -324,32 +325,25 @@
               </tr>
               <tr>
                 <td>
-                 <div class="magni">
-                   <input type="button" class="magbutton" 
-                   onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
-                 </div>
-                 <div id="target_read_write_container" class="chart">Disk Read and Write</div>
+                  <div id="target_read_write_container_div" style="display: none">
+                    <div class="magni">
+	                    <input type="button" class="magbutton" 
+	                    onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
+	                  </div>
+	                  <div id="target_read_write_container" class="chart">Disk Read and Write</div>
+	                </div>
                 </td>
                 <td>
-                 <div class="magni">
-                   <input type="button" class="magbutton" 
-                   onclick="ost_Area_mgtOps_Data($('#ls_ostId').val(),'true');setZoomDialogTitle('Target: MGT Ops');" />
-                 </div>
-                 <div id="target_mgt_ops_container" class="chart">MGT Ops</div>
+                  <div id="target_mgt_ops_container_div" style="display: none">
+                    <div class="magni">
+                      <input type="button" class="magbutton" 
+                      onclick="ost_Area_mgtOps_Data($('#ls_ostId').val(),'true');setZoomDialogTitle('Target: MGT Ops');" />
+                    </div>
+                    <div id="target_mgt_ops_container" class="chart">MGT Ops</div>
+                  </div>
                 </td>
                 <td></td>
               </tr>
-              <tr>
-               <td>
-                 <div id="target_read_write_container_div" style="display: none">
-                 </div>
-               </td>
-               <td>
-                 <div id="target_mgt_ops_container_div" style="display: none">
-                 </div>
-               </td>
-               <td></td>
-             </tr>
             </table>
           </div>
           <!-- FileSystem Targets Div - End -->

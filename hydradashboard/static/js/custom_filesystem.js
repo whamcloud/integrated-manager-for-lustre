@@ -45,21 +45,22 @@ fs_Bar_SpaceUsage_Data = function(fsId, sDate, endDate, dataFunction, targetKind
 	      if(resValue.filesystem != undefined)
 	      {
 	        totalFreeSpace = resValue.kbytesfree/1024;
-	        totalDiskSpace = resValue.kbytestotal/1024;
-	        free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-	        used = Math.round(100 - free);
-	        freeData.push(free);
-	        usedData.push(used);
-
-	        totalFiles = resValue.filesfree/1024;
-  		    totalFreeFiles = resValue.filestotal/1024;
-  		    free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-  		    used = Math.round(100 - free);
-
-  		    freeFilesData.push(free);
-  		    totalFilesData.push(used);
-
-  		    categories.push(resValue.filesystem);
+          totalDiskSpace = resValue.kbytestotal/1024;
+          free = ((totalFreeSpace/1024)/(totalDiskSpace/1024))*100;
+          used = 100 - free;
+          
+          freeData.push(free);
+          usedData.push(used);
+          
+          totalFiles = resValue.filesfree/1024;
+          totalFreeFiles = resValue.filestotal/1024;
+          free = ((totalFiles/1024)/(totalFreeFiles/1024))*100;
+          used = 100 - free;
+          
+          freeFilesData.push(free);
+          totalFilesData.push(used);
+          
+          categories.push(resValue.filesystem);
 	      }
 	    });
 	  }
