@@ -2,6 +2,7 @@
 var add_host_dialog = function() {
   $('#add_host_tabs').tabs('select', '#add_host_prompt');
   $('#add_host_dialog').dialog('open');
+  $('#add_host_address').focus();
 }
 
 $(document).ready(function() {
@@ -9,11 +10,6 @@ $(document).ready(function() {
       autoOpen: false,
       title: "Add server",
       resizable: false
-  });
-  $('#add_host_dialog').keyup(function(ev) {
-    if (e.keyCode == 27) {
-      $('#add_host_dialog').dialog('close')
-    }
   });
   $('#add_host_tabs').tabs()
 
@@ -29,8 +25,6 @@ $(document).ready(function() {
           ev.preventDefault();
           return false;
       }
-      /* TODO: would also like to have enter work
-           for going confirm->complete */
   });
   function submit_complete(result) {
       console.log('submit_complete: ' + result);
@@ -86,7 +80,6 @@ $(document).ready(function() {
           data = $.parseJSON(event.responseText);
           add_host_error(data['error']);
       });
-      console.log('preventing default');
       ev.preventDefault();
   });
 
@@ -100,7 +93,6 @@ $(document).ready(function() {
       })
       .error(function(event) {
           console.log(event.responseText);
-          data = $.parseJSON(event.responseText);
           add_host_error(data['error'])
       });
 
@@ -114,6 +106,6 @@ $(document).ready(function() {
 
   $('.add_host_back_button').click(function(ev) {
       $('#add_host_tabs').tabs('select', '#add_host_prompt')
-            ev.preventDefault();
-        });
+      ev.preventDefault();
+  });
 });
