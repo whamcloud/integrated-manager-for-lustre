@@ -41,7 +41,8 @@ def hydracmnewfstab(request):
             RequestContext(request, {}))
 
 def hydracmeditfs(request):
-    fs_name=request.GET.get("fs_name")
     fs_id=request.GET.get("fs_id")
+    from configure.models import ManagedFilesystem
+    fs = ManagedFilesystem.objects.get(pk = fs_id)
     return render_to_response("edit_fs.html",
-            RequestContext(request, {"fs_name":fs_name,"fs_id":fs_id}))
+            RequestContext(request, {"fs_name": fs.name, "fs_id":fs_id}))

@@ -59,9 +59,8 @@
       }
       else
       {
-        CreateFS(fs_name, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, function() {
-          $('#filesystems').empty();
-          $('#filesystems').load('/hydracm/fstab');
+        CreateFS(fs_name, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, function(fs_id) {
+          $.address.value('filesystems_edit_' + fs_id);
         });  
       }
     });
@@ -70,14 +69,6 @@
     {
       GetConfigurationParam("",["FS","FSC"]);
     });
-    // Create New FS view Cancel button click handler.  
-    $('#cancel_editfs').click(function() {
-      $('#filesystems').empty();
-      $('#filesystems').load('/hydracm/fstab');
-    });
-  });
-  $(document).ajaxComplete(function() {
-      $('button.close').button({icons: {primary: 'ui-icon-closethick'}});
   });
 
 </script>
@@ -163,6 +154,7 @@
         <span class="step_number">5.</span> <span class="step_caption">Finish</span><br>
       </div>
       <div class='step_body'>
+        <button class='back_button'/>
         <button class='submit' id='btnCreateFS'>Create filesystem now</button>
       </div>
     </td>

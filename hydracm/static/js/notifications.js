@@ -414,7 +414,7 @@ update_objects = function(data, silent) {
         jgrowl_args = {header: "Alert cleared"}
       }
     } else {
-      if (alert_info.active == false && existing.active == true) {
+      if (!(alert_info.active) && existing.active) {
         notify = true
         jgrowl_args = {header: "Alert cleared"}
         deactivate_alert(alert_info);

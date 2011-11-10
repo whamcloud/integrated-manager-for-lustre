@@ -272,6 +272,8 @@ class CreateNewFilesystem(AnonymousRequestHandler):
         for target in osts:
             StateManager.set_state(target, 'mounted')
 
+        return fs.pk
+
 class CreateFilesystem(AnonymousRequestHandler):
     @extract_request_args('mgs_id','fsname')
     def run(self,request,mgs_id,fsname):

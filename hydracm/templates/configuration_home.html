@@ -8,6 +8,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.address-1.4.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.idTabs.min.js"></script>
 <script src="{{STATIC_URL}}js/jquery.hoverIntent.js" type="text/javascript"></script>
 <script src="{{STATIC_URL}}js/jquery.bgiframe.min.js" type="text/javascript"></script>
@@ -18,7 +19,76 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_create.js"></script>
 <script type='text/javascript' src="{{STATIC_URL}}js/filesystem_configuration.js"></script>
-<script>
+<script type="text/javascript">
+
+/*
+$(document).ready(function() {
+  var History = window.History;
+  console.log(History.enabled);
+  History.Adapter.bind(window, 'statechange', function() {
+    var State = History.getState();
+    // location.hash scheme is tab_page_id
+    // e.g. initial load is just ''
+    var hash = State.url.split('#')[1]
+    console.log(hash)
+    if (!hash) {
+      History.pushState(null, null, '#filesystems');
+    } else {
+      var parts = hash.split('_')
+      $("#tabs").tabs('select', '#' + parts[0]);
+    }
+  });
+  History.pushState(null, null, "foo");
+});
+*/
+
+$(document).ajaxComplete(function() {
+  $('button.back_button:not(.ui-button)').each(function() {
+    $(this).html('Back');
+    $(this).click(function() {window.history.back();});
+    $(this).button({icons: {primary: 'ui-icon-arrowreturnthick-1-w'}});
+  });
+  $('a.button:not(.ui-button)').each(function() {
+    $(this).button();
+  });
+
+  $('a.address_link[address!=true]').each(function() {
+    $(this).address();
+  });
+});
+
+$(document).ready(function() {
+  $.address.change(function(ev) {
+    var path = ev.value;
+    console.log('address.change: ' + path);
+    var parts;
+    if (path == '/') {
+      parts = ['filesystems'];
+    } else {
+      parts = path.substr(1).split('_')
+    }
+    if (parts[1]) {
+      if (parts[0] == 'filesystems' && parts[1] == 'new') {
+        console.log('#' + parts[0]);
+        $("#tabs").tabs('select', '#' + parts[0]);
+        $('#filesystems').empty();
+        $('#filesystems').load('/hydracm/filesystems_new/', function(){$(this).fadeIn(100)});
+      } else if (parts[0] == 'filesystems' && parts[1] == 'edit') {
+        var fs_id = parts[2];
+        $("#tabs").tabs('select', '#' + parts[0]);
+        $('#filesystems').empty();
+        $('#filesystems').load('/hydracm/filesystems_edit/?fs_id=' + fs_id);
+      }
+    } else {
+      $("#tabs").tabs('select', '#' + parts[0]);
+      $('#filesystems').empty();
+      $('#' + parts[0]).load('/hydracm/' + parts[0] + '_tab/')
+    }
+  });
+
+  $('#tabs ul:first a').address();
+});
+
   //Global vars for hydracm UI
   //create new File system
   var oNewMGT_RowData=[];
@@ -29,31 +99,13 @@
   var mdt_node_id = "";
   // Function for hydracm Tab based view (File system/MGT/Volume/Server/Storage)
   $(function() {
-    $( "#tabs" ).tabs({
-      ajaxOptions: {
-        error: function( xhr, status, index, anchor ) {
-          $( anchor.hash ).html(
-            "Resource not found, Please contact administrator." );
-        }
-            },
-            select: function(event, ui) {
-                console.log(event);
-                console.log(ui);
-                window.location.hash = ui.panel.id
-      }
-    });
+    $("#tabs").tabs({selected: -1});
   });    
   // Document Ready Handler for configuration_home.html   
   $(document).ready(function() {
-      if (window.location.hash) {
-          $("#tabs").select(window.location.hash);
-      } else {
-          $("#tabs").select("filesystems");
-      }
     // Fix Me: move all this to a js and load in ready.
     //--------------------------------------------------------------------//  
     // Create new FS view -> click handler for "Create new MGT" 
-    $('#hydracm_menu').addClass('active');
     $("#popup-new-mgt tbody").delegate("tr", "click", function() {
       var radio = $("td:eq(0) input", this);
       radio.attr('checked', true);
@@ -163,13 +215,17 @@
         <td valign="top" width="100%" height="100%">
           <div id="tabs">
             <ul>
-              <li><a href='/hydracm/fstab/' title='filesystems'>Filesystems</a></li>
-              <li><a href='/hydracm/mgttab/' title='mgts'>MGTs</a></li>
-              <li><a href='/hydracm/volumetab/' title='volumes'>Volumes</a></li>
-              <li><a href='/hydracm/servertab/' title='servers'>Servers</a></li>
-              <li><a href='/hydracm/storage_tab/' title='storage'>Storage</a></li>
+              <li><a href='#filesystems' title='filesystems'>Filesystems</a></li>
+              <li><a href='#mgts' title='mgts'>MGTs</a></li>
+              <li><a href='#volumes' title='volumes'>Volumes</a></li>
+              <li><a href='#servers' title='servers'>Servers</a></li>
+              <li><a href='#storage' title='storage'>Storage</a></li>
             </ul>
-            <div id="outputDiv"></div>
+            <div id='filesystems'></div>
+            <div id='mgts'></div>
+            <div id='volumes'></div>
+            <div id='servers'></div>
+            <div id='storage'></div>
           </div>
         </td>
       </tr>

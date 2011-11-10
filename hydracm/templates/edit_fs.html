@@ -39,11 +39,6 @@
     {
       GetConfigurationParam("",["FS","FSC"]);
     });
-    // Cancel button click handler for Edit FS view
-    $('#cancel_editfs').click(function() {
-       $('#filesystems').empty();
-      $('#filesystems').load('/hydracm/fstab');
-    });
     //Load Pie Charts for a selected File system
     LoadFSGraph_EditFS( $("#fs_id").val());
   });
@@ -146,7 +141,7 @@
 </table>
 
 <p align='right'>
-  <button class='close' type="button" id="cancel_editfs">Return</button>
+  <a class='address_link button' href="filesystems">Back to filesystems</a>
 </p>
 
 </div>

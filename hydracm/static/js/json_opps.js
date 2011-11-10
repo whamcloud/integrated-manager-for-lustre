@@ -84,7 +84,7 @@ function Add_Host_Table(dialog_id)
   $('#hostdetails_container').html(oTable);
 }
 
-function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, callback)
+function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success)
 {
   $.ajax({type: 'POST', url: "/api/create_new_fs/", dataType: 'json', data: JSON.stringify({
       "fsname":fsname,
@@ -97,7 +97,10 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, callback)
     {
       if(data.success)
       {
-        var response = data.response;    
+        var fs_id = data.response;    
+        if (success) {
+          success(fs_id);
+        }
       }
       else
       {
@@ -109,9 +112,6 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, callback)
     })
     .complete(function(event) 
     {
-      if (callback) {
-        callback();
-      }
     });
 } 
 

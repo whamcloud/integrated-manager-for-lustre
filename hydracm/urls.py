@@ -15,11 +15,12 @@ from views import (hydracm,
 
 urlpatterns = patterns('',
     (r'^$', hydracm),
-    (r'^fstab/', hydracmfstab),
-    (r'^mgttab/', hydracmmgttab),
-    (r'^volumetab/', hydracmvolumetab),
-    (r'^servertab/', hydracmservertab), 
-    (r'^newfstab/', hydracmnewfstab),
-    (r'^editfs/', hydracmeditfs),
-    (r'^storage_tab/', storage_tab)
+    (r'^config/.*$', hydracm),
+    (r'^filesystems_tab/', hydracmfstab),
+    (r'^mgts_tab/', hydracmmgttab),
+    (r'^volumes_tab/', hydracmvolumetab),
+    (r'^servers_tab/', hydracmservertab), 
+    (r'^storage_tab/', storage_tab),
+    (r'^filesystems_new/', hydracmnewfstab),
+    (r'^filesystems_edit/', hydracmeditfs)
 )

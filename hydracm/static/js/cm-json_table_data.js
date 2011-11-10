@@ -22,12 +22,6 @@ target_dialog_link = function(target_id, target_name) {
 * Return - none
 * Used in - File System list (lustre_fs_configuration.html)
 *******************************************************************/
-function LoadEditFSScreen(fs_name, fs_id)
-{
-  $('#filesystems').empty();
-  $('#filesystems').load('/hydracm/editfs?fs_name=' + fs_name + '&fs_id=' + fs_id);
-}
-
 function LoadFSList_FSList()
 {
   $.get("/api/listfilesystems/").success(function(data, textStatus, jqXHR)
@@ -38,7 +32,7 @@ function LoadFSList_FSList()
       var fsName;
       $.each(response, function(resKey, resValue)
       {
-      fsName = "<a href='#' onclick=LoadEditFSScreen('" + resValue.fsname + "','" + resValue.fsid +"')>" + resValue.fsname + "</a>";
+      fsName = "<a href='#filesystems_edit_" + resValue.fsid +"' class='address_link'>" + resValue.fsname + "</a>";
       $('#fs_list').dataTable().fnAddData ([
         fsName,
         resValue.mgs_hostname,
@@ -316,7 +310,6 @@ function CreateActionLink(id, ct, available_transitions, kind)
   var action="<span class='transition_buttons'>";
   var function_name;
   var button_class = "ui-state-default ui-corner-all";
-  console.log(available_transitions);
   $.each(available_transitions, function(i, transition)
   {
     function_name = "Transition(" + id + "," + ct + ",\"" + transition.state + "\")"
