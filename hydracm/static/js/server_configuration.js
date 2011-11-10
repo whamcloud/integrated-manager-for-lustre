@@ -1,8 +1,19 @@
+
+var add_host_dialog = function() {
+  $('#add_host_tabs').tabs('select', '#add_host_prompt');
+  $('#add_host_dialog').dialog('open');
+}
+
 $(document).ready(function() {
   $('#add_host_dialog').dialog({
       autoOpen: false,
       title: "Add server",
       resizable: false
+  });
+  $('#add_host_dialog').keyup(function(ev) {
+    if (e.keyCode == 27) {
+      $('#add_host_dialog').dialog('close')
+    }
   });
   $('#add_host_tabs').tabs()
 
@@ -15,6 +26,8 @@ $(document).ready(function() {
       if (ev.which == 13) {
           $('.add_host_submit_button').click();
           ev.stopPropagation();
+          ev.preventDefault();
+          return false;
       }
       /* TODO: would also like to have enter work
            for going confirm->complete */
@@ -22,6 +35,7 @@ $(document).ready(function() {
   function submit_complete(result) {
       console.log('submit_complete: ' + result);
       $('#add_host_tabs').tabs('select', '#add_host_confirm');
+      $('.add_host_confirm_button').focus();
 
       $('#add_host_address_label').html(result['address']);
       $('#add_host_resolve').toggleClass('success', result['resolve']);
@@ -72,13 +86,15 @@ $(document).ready(function() {
           data = $.parseJSON(event.responseText);
           add_host_error(data['error']);
       });
-      ev.stopPropagation();
+      console.log('preventing default');
+      ev.preventDefault();
   });
 
   $('.add_host_confirm_button').click(function(ev) {
           $.post('/api/add_host/', {hostname: $('#add_host_address_label').html(), commit: true})
       .success(function(data, textStatus, jqXHR) {
           $('#add_host_tabs').tabs('select', '#add_host_complete');
+          $('.add_host_back_button').focus();
           $('#server_configuration').dataTable().fnClearTable();
           LoadServerConf_ServerConfig();
       })
@@ -88,18 +104,16 @@ $(document).ready(function() {
           add_host_error(data['error'])
       });
 
-      ev.stopPropagation();
+      ev.preventDefault();
   });
 
   $('.add_host_close_button').click(function(ev) {
       $('#add_host_dialog').dialog('close')
-
-      ev.stopPropagation();
+      ev.preventDefault();
   });
 
   $('.add_host_back_button').click(function(ev) {
       $('#add_host_tabs').tabs('select', '#add_host_prompt')
-
-            ev.stopPropagation();
+            ev.preventDefault();
         });
 });
