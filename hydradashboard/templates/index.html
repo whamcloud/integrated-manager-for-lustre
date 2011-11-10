@@ -21,6 +21,12 @@
         $('#fsSelect').attr("value","");
         $('#intervalSelect').attr("value","");
         $("#alertAnchor").click();
+        // This will show the chart time based on client timezone
+        Highcharts.setOptions({
+          global:{
+          useUTC:false
+          }
+        });
       });
       </script>
       {% endblock %}
