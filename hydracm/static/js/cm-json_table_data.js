@@ -70,7 +70,7 @@ function LoadTargets_EditFS(fs_id)
       $.each(response, function(resKey, resValue)
       {
         row = [
-                target_dialog_link(resValue.id, resValue.human_name),
+                target_dialog_link(resValue.id, object_name_markup(resValue.id, resValue.content_type_id, resValue.human_name)),
                 resValue.lun_name,
                 resValue.primary_server_name,
                 resValue.failover_server_name,
@@ -287,8 +287,8 @@ function LoadServerConf_ServerConfig()
       $.each(response, function(resKey, resValue)
       {
         $('#server_configuration').dataTable().fnAddData ([
-          resValue.pretty_name,
-          resValue.lnet_state,
+          object_name_markup(resValue.id, resValue.content_type_id, resValue.pretty_name),
+          object_state_markup(resValue.id, resValue.content_type_id, resValue.lnet_state),
           CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
           notification_icons_markup(resValue.id, resValue.content_type_id)
         ]);

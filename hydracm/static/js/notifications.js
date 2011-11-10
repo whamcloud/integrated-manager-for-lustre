@@ -444,9 +444,19 @@ poll_jobs = function() {
   })
 }
 
+object_name_markup = function(id, ct, name) {
+  return "<span class='object_name object_name_" + id + "_" + ct + "'>" + name + "</span>";
+}
+
+object_state_markup = function(id, ct, state) {
+  return "<span class='object_state object_state_" + id + "_" + ct + "'>" + state + "</span>";
+}
+
 poll_objects = function() {
   /* Hash which will become a list (ghetto set) */
   var objects = {}
+  /* TODO: check other object_* so that something doesn't have to have transitions
+   * to be included in the update */
   $('.object_transitions').each(function() {
     for_class_starting($(this), 'object_transitions_', function(class_name){
       var parts = class_name.split("_");
@@ -473,8 +483,8 @@ poll_objects = function() {
         /* TODO: only rewrite markup on change */
         $(".object_transitions_" + object_info.id + "_" + object_info.content_type_id).replaceWith(
           CreateActionLink(object_info.id, object_info.content_type_id, object_info.available_transitions, ""));
-        /* TODO: also update name and state cells */
-        console.log(object_info);
+        $(".object_name_" + object_info.id + "_" + object_info.content_type_id).html(object_info.human_name)
+        $(".object_state_" + object_info.id + "_" + object_info.content_type_id).html(object_info.state)
       });
     }
   })
