@@ -203,7 +203,7 @@ class UpdateScan(object):
                     active_mount = None
                 else:
                     try: 
-                        host = ManagedHost.objects.get(address = node_name)
+                        host = ManagedHost.objects.get(fqdn = node_name)
                         try:
                             active_mount = ManagedTargetMount.objects.get(target = target, host = host)
                         except ManagedTargetMount.DoesNotExist:
