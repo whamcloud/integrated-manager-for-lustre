@@ -305,3 +305,16 @@ def unmigrate_target(args):
                    '-m', '-v', 'Stopped'])
     shell.try_run(['crm_resource', '-r', args.label, '-p', 'target-role',
                    '-m', '-v', 'Started'])
+
+def target_running(args):
+    from sys import exit
+    info = store_get_target_info(args.uuid)
+
+    for line in open("/proc/mounts").readlines():
+        print "%s == %s, %s == %s" % (line.split()[0], info['bdev'],
+                                      line.split()[1], info['mntpt'])
+        if line.split()[0] == info['bdev'] and \
+           line.split()[1] == info['mntpt']:
+            exit(0)
+
+    exit(1)

@@ -76,6 +76,12 @@ if __name__ == '__main__':
                    help='label of target to cancel migration of')
     p.set_defaults(func=actions.unmigrate_target)
 
+    p = subparsers.add_parser('target-running',
+                              help='check if a target is running')
+    p.add_argument('--uuid', required=True,
+                   help='uuid of target to check')
+    p.set_defaults(func=actions.target_running)
+
     p = subparsers.add_parser('fail-node',
                               help='fail (i.e. shut down) this node')
     p.set_defaults(func=actions.fail_node)
