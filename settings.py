@@ -227,8 +227,13 @@ AUDIT_MAX_AGE = 3600 * 24
 
 SQL_RETRY_PERIOD = 10
 
+# metrics settings
+USE_FRONTLINE_METRICSTORE = True
+
 CELERY_ROUTES = (
         {"monitor.tasks.audit_all": {"queue": "periodic"}},
+        {"monitor.tasks.purge_and_optimize_metrics": {"queue": "periodic"}},
+        {"monitor.tasks.drain_flms_table": {"queue": "periodic"}},
         {"monitor.tasks.parse_log_entries": {"queue": "parselog"}},
         {"configure.tasks.janitor": {"queue": "periodic"}},
         {"configure.tasks.set_state": {"queue": "serialize"}},

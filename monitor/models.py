@@ -7,7 +7,6 @@ from django.db import models, transaction
 from polymorphic.models import DowncastMetaclass
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
-from metrics import get_instance_metrics
 
 from collections import defaultdict
 
@@ -121,6 +120,7 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
 class MeasuredEntity(object):
     """Provides mix-in access to metrics specific to the instance."""
     def __get_metrics(self):
+        from metrics import get_instance_metrics
         self._metrics = get_instance_metrics(self)
         return self._metrics
 
@@ -563,3 +563,41 @@ class Systemevents(models.Model):
 class LastSystemeventsProcessed(models.Model):
     last = models.IntegerField(default = 0)
 
+class FrontLineMetricStore(models.Model):
+    """Fast simple metrics store.  Should be backed by MEMORY engine."""
+    content_type    = models.ForeignKey(ContentType, null=True)
+    object_id       = models.PositiveIntegerField(null=True)
+    content_object  = GenericForeignKey('content_type', 'object_id')
+    insert_time     = models.DateTimeField()
+    metric_name     = models.CharField(max_length=255)
+    metric_type     = models.CharField(max_length=64)
+    value           = models.FloatField()
+    complete        = models.BooleanField(default=False, db_index=True)
+
+    @classmethod
+    def store_update(cls, ct, o_id, update_time, update):
+        from datetime import datetime as dt
+        from django.db import connection, transaction
+        cursor = connection.cursor()
+
+        names = update.keys()
+        for name in names:
+            data = update[name]
+            params = [dt.now(), ct.id, o_id, name]
+            try:
+                params.append(data['type'])
+                params.append(data['value'])
+            except TypeError:
+                # FIXME: do we really want to default this, or raise?
+                params.append('Counter')
+                params.append(data)
+
+            # Use this to signal that all of the metrics for this update
+            # have been inserted.
+            params.append(1 if name == names[-1] else 0)
+
+            # Bypass the ORM for this -- we don't care about instantiating
+            # objects from these inserts.
+            sql = "INSERT into monitor_frontlinemetricstore (insert_time, content_type_id, object_id, metric_name, metric_type, value, complete) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+            cursor.execute(sql, params)
+            transaction.commit_unless_managed()

@@ -19,11 +19,26 @@ if settings.DEBUG:
 else:
     metrics_log.setLevel(logging.INFO)
 
+DRAIN_LOCK_NAME = 'FLMS_LOCK'
+DRAIN_LOCK_TIME = 60 * 30 # Try 30 minutes, adjust as necessary.
+
 class MetricStore(object):
     """
     Base class for storage-backend-specific subclasses.
     """
     pass
+
+def _autocreate_ds(db, key, payload):
+    # FIXME should include the app label in this query to avoid risk of
+    # name overlap with other apps
+    ct = ContentType.objects.get(model=payload['type'])
+    ds_klass = ct.model_class()
+
+    db.datasources.add(ds_klass.objects.create(name=key,
+                                               heartbeat=db.step * 2,
+                                               database=db))
+    metrics_log.info("Added new %s to DB (%s -> %s)" % (payload['type'],
+                                                        key, db.name))
 
 class R3dMetricStore(MetricStore):
     """
@@ -97,9 +112,10 @@ class R3dMetricStore(MetricStore):
             if hasattr(measured_object, 'content_type'):
                 measured_object = measured_object.downcast()
 
-            ct = ContentType.objects.get_for_model(measured_object)
-            self.r3d = Database.objects.get(object_id=measured_object.id,
-                                            content_type=ct)
+            self.ct = ContentType.objects.get_for_model(measured_object)
+            self.mo_id = measured_object.id
+            self.r3d = Database.objects.get(object_id=self.mo_id,
+                                            content_type=self.ct)
         except Database.DoesNotExist:
             self._create_r3d(measured_object, sample_period, **kwargs)
 
@@ -111,9 +127,13 @@ class R3dMetricStore(MetricStore):
         import time
         return int(time.time())
 
+    def update_r3d(self, update):
+        self.r3d.update(update, _autocreate_ds)
+
     def list(self):
-        """Returns a list of metric names for this wrapper's database."""
-        return [ds.name for ds in self.r3d.datasources.all()]
+        """Returns a dict of name:type pairs for this wrapper's database."""
+        return dict([[ds.name, ds.__class__.__name__]
+                     for ds in self.r3d.datasources.all()])
 
     def fetch(self, cfname, **kwargs):
         """
@@ -136,18 +156,6 @@ class R3dMetricStore(MetricStore):
         an optional list of metrics to filter output.
         """
         return self.r3d.fetch_last(fetch_metrics)
-
-def _autocreate_ds(db, key, payload):
-    # FIXME should include the app label in this query to avoid risk of
-    # name overlap with other apps
-    ct = ContentType.objects.get(model=payload['type'])
-    ds_klass = ct.model_class()
-
-    db.datasources.add(ds_klass.objects.create(name=key,
-                                               heartbeat=db.step * 2,
-                                               database=db))
-    metrics_log.info("Added new %s to DB (%s -> %s)" % (payload['type'],
-                                                        key, db.name))
 
 def minimal_archives(db):
     """
@@ -239,7 +247,13 @@ class HostMetricStore(R3dMetricStore):
         except KeyError:
             pass
 
-        self.r3d.update({self._update_time(): update}, _autocreate_ds)
+        if (hasattr(settings, 'USE_FRONTLINE_METRICSTORE')
+            and settings.USE_FRONTLINE_METRICSTORE):
+            from models import FrontLineMetricStore
+            FrontLineMetricStore.store_update(self.ct, self.mo_id,
+                                              self._update_time(), update)
+        else:
+            self.update_r3d({self._update_time(): update})
 
 class TargetMetricStore(R3dMetricStore):
     """
@@ -294,7 +308,13 @@ class TargetMetricStore(R3dMetricStore):
         #            ds_name = "brw_%s_%s_%s"  % (key, bucket, direction)
         #            update[ds_name] = brw_stats[key]['buckets'][bucket][direction]['count']
 
-        self.r3d.update({self._update_time(): update}, _autocreate_ds)
+        if (hasattr(settings, 'USE_FRONTLINE_METRICSTORE')
+            and settings.USE_FRONTLINE_METRICSTORE):
+            from models import FrontLineMetricStore
+            FrontLineMetricStore.store_update(self.ct, self.mo_id,
+                                              self._update_time(), update)
+        else:
+            self.update_r3d({self._update_time(): update})
 
 class FilesystemMetricStore(R3dMetricStore):
     """
@@ -309,22 +329,28 @@ class FilesystemMetricStore(R3dMetricStore):
         """Don't use this -- will raise a NotImplementedError!"""
         raise NotImplementedError, "Filesystem-level update() not supported!"
 
-    def list(self, target_class):
+    def list(self, query_class):
         """
-        list(target_class)
+        list(query_class)
 
-        Given a target class (ObjectStoreTarget, Metadatatarget, etc.),
-        returns a list of metric names found in all target metrics.
+        Given a query class (ManagedOst, ManagedMst, ManagedHost, etc.),
+        returns a dict of metric name:type pairs found in all target metrics.
         """
-        metric_names = []
+        metrics = {}
 
-        for target in target_class.objects.filter(filesystem=self.filesystem):
-            metric_names.extend(target.metrics.list())
+        from django.core.exceptions import FieldError
+        try:
+            fs_components = query_class.objects.filter(filesystem=self.filesystem)
+        except FieldError:
+            if query_class.__name__ == "ManagedHost":
+                fs_components = self.filesystem.get_servers()
+            else:
+                raise NotImplementedError, "Unknown query class: %s" % query_class.__name__
 
-        # stupid de-dupe hack
-        set = {}
-        map(set.__setitem__, metric_names, [])
-        return set.keys()
+        for comp in fs_components:
+            metrics.update(comp.metrics.list())
+
+        return metrics
 
     def fetch(self, cfname, query_class, **kwargs):
         """
@@ -437,3 +463,105 @@ def get_instance_metrics(measured_object):
         return FilesystemMetricStore(measured_object, settings.AUDIT_PERIOD)
     else:
         raise NotImplementedError
+
+class FlmsDrain(object):
+    # This class exists to drain the FrontLineMetricStorage table.  Perhaps
+    # I should have named it FlmsLance, I dunno.  There is some pretty
+    # flagrant disregard for the ORM in here, so if you have delicate
+    # sensibilities it might be best to just go read Garfield comics instead.
+    from django.db import transaction
+
+    def __init__(self, *args, **kwargs):
+        self.entity_cache = {}
+        super(FlmsDrain, self).__init__(*args, **kwargs)
+
+    def _update_groups(self):
+        from monitor.models import FrontLineMetricStore
+        return FrontLineMetricStore.objects.filter(complete=True).order_by("insert_time")
+
+    def _reconstitute_update(self, group):
+        from monitor.models import FrontLineMetricStore
+        ids = []
+        update = {}
+        for row in FrontLineMetricStore.objects.filter(content_type=group.content_type_id,
+                                                       object_id=group.object_id,
+                                                       insert_time=group.insert_time):
+            update[row.metric_name] = {'type': row.metric_type, 'value': row.value}
+            ids.append(row.id)
+
+        return ids, update
+
+    def _find_measured_entity(self, group):
+        try:
+            return self.entity_cache[(group.content_type_id, group.object_id)]
+        except KeyError:
+            ct = ContentType.objects.get(id=group.content_type_id)
+            entity = ct.model_class().objects.get(id=group.object_id)
+            self.entity_cache[(group.content_type_id, group.object_id)] = entity
+            return entity
+
+    # Throw together a quicky locking framework to keep us from
+    # stomping all over ourselves.
+    def find_lock(self):
+        from monitor.models import FrontLineMetricStore
+        try:
+            return FrontLineMetricStore.objects.get(metric_type=DRAIN_LOCK_NAME)
+        except FrontLineMetricStore.DoesNotExist:
+            return None
+
+    def query_lock(self):
+        lock = self.find_lock()
+        try:
+            return (lock.value, "%s" % lock.insert_time)
+        except AttributeError:
+            return None
+
+    def unlock(self):
+        lock = self.find_lock()
+        try:
+            lock.delete()
+        except AttributeError:
+            pass
+
+    def lock(self, req_id, expire_time=DRAIN_LOCK_TIME):
+        from monitor.models import FrontLineMetricStore
+        import datetime
+        now = datetime.datetime.now()
+
+        lock = self.find_lock()
+        if lock:
+            if lock.insert_time < now:
+                self.unlock()
+            else:
+                return False
+
+        then = now + datetime.timedelta(seconds=expire_time)
+        FrontLineMetricStore.objects.create(insert_time=then,
+                                            metric_name=DRAIN_LOCK_NAME,
+                                            metric_type=DRAIN_LOCK_NAME,
+                                            value=req_id)
+
+        return True
+
+    @transaction.commit_on_success
+    def run(self):
+        """Call this to drain entries from the FrontLineMetricStorage
+        table.  Takes no arguments, returns nothing."""
+        from django.db import connection
+
+        # FIXME: Should there be an upper limit to how many drained rows
+        # we deal with at a time?
+        drained_rows = []
+        for group in self._update_groups():
+            ids, update = self._reconstitute_update(group)
+            entity = self._find_measured_entity(group)
+            entity.metrics.update_r3d({group.insert_time: update})
+            drained_rows.extend(ids)
+
+        if len(drained_rows) > 0:
+            cursor = connection.cursor()
+            cursor.execute("DELETE FROM %s WHERE id IN (%s)" %
+                           ("monitor_frontlinemetricstore",
+                            ",".join(["%d" % r for r in sorted(drained_rows)])))
+
+        metrics_log.debug("Drained %d rows from FLMS" % len(drained_rows))
