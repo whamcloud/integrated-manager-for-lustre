@@ -37,7 +37,7 @@ def get_db_logs(request):
                           request.GET.get('end_time',None),
                           request.GET.get('lustre'),
                           int(request.GET.get('iDisplayStart',0)),
-                          int(request.GET.get('iDisplayStart',0)) + min(int(request.GET.get('iDisplayLength',10)),100),
+                          min(int(request.GET.get('iDisplayLength',10)),100),
                           request.GET.get('sSearch', '').encode('utf-8'),
                           int(request.GET.get('iSortingCols',0)))
     return send_datatable_response(log_result,int(request.GET.get('sEcho',0)))
@@ -48,7 +48,7 @@ def get_db_events(request):
                                      request.GET.get('severity',None),
                                      request.GET.get('eventtype'),
                                      int(request.GET.get('iDisplayStart',0)),
-                                     int(request.GET.get('iDisplayStart',0)) + min(int(request.GET.get('iDisplayLength',10)),100),
+                                     min(int(request.GET.get('iDisplayLength',10)),100),
                                      int(request.GET.get('iSortingCols',0)))  
     return send_datatable_response(event_result,int(request.GET.get('sEcho',0)))
     
