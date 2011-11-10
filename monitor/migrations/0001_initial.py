@@ -6,204 +6,196 @@ from django.db import models
 
 class Migration(SchemaMigration):
 
-    # Hack these out for the moment to avoid forcing the use of South
-    # pre-SC.  Longer-term, we'll want to do this correctly.
     def forwards(self, orm):
-        pass
+        
+        # Adding model 'Event'
+        db.create_table('monitor_event', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
+            ('severity', self.gf('django.db.models.fields.IntegerField')()),
+            ('host', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['configure.ManagedHost'], null=True, blank=True)),
+            ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], null=True)),
+        ))
+        db.send_create_signal('monitor', ['Event'])
+
+        # Adding model 'LearnEvent'
+        db.create_table('monitor_learnevent', (
+            ('event_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.Event'], unique=True, primary_key=True)),
+            ('learned_item_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'])),
+            ('learned_item_id', self.gf('django.db.models.fields.PositiveIntegerField')()),
+        ))
+        db.send_create_signal('monitor', ['LearnEvent'])
+
+        # Adding model 'AlertEvent'
+        db.create_table('monitor_alertevent', (
+            ('event_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.Event'], unique=True, primary_key=True)),
+            ('message_str', self.gf('django.db.models.fields.CharField')(max_length=512)),
+            ('alert', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['monitor.AlertState'])),
+        ))
+        db.send_create_signal('monitor', ['AlertEvent'])
+
+        # Adding model 'SyslogEvent'
+        db.create_table('monitor_syslogevent', (
+            ('event_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.Event'], unique=True, primary_key=True)),
+            ('message_str', self.gf('django.db.models.fields.CharField')(max_length=512)),
+            ('lustre_pid', self.gf('django.db.models.fields.IntegerField')(null=True)),
+        ))
+        db.send_create_signal('monitor', ['SyslogEvent'])
+
+        # Adding model 'ClientConnectEvent'
+        db.create_table('monitor_clientconnectevent', (
+            ('syslogevent_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.SyslogEvent'], unique=True, primary_key=True)),
+        ))
+        db.send_create_signal('monitor', ['ClientConnectEvent'])
+
+        # Adding model 'AlertState'
+        db.create_table('monitor_alertstate', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('alert_item_type', self.gf('django.db.models.fields.related.ForeignKey')(related_name='alertstate_alert_item_type', to=orm['contenttypes.ContentType'])),
+            ('alert_item_id', self.gf('django.db.models.fields.PositiveIntegerField')()),
+            ('begin', self.gf('django.db.models.fields.DateTimeField')()),
+            ('end', self.gf('django.db.models.fields.DateTimeField')()),
+            ('active', self.gf('django.db.models.fields.NullBooleanField')(null=True, blank=True)),
+            ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], null=True)),
+        ))
+        db.send_create_signal('monitor', ['AlertState'])
+
+        # Adding unique constraint on 'AlertState', fields ['alert_item_type', 'alert_item_id', 'content_type', 'active']
+        db.create_unique('monitor_alertstate', ['alert_item_type_id', 'alert_item_id', 'content_type_id', 'active'])
+
+        # Adding model 'TargetOfflineAlert'
+        db.create_table('monitor_targetofflinealert', (
+            ('alertstate_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.AlertState'], unique=True, primary_key=True)),
+        ))
+        db.send_create_signal('monitor', ['TargetOfflineAlert'])
+
+        # Adding model 'TargetFailoverAlert'
+        db.create_table('monitor_targetfailoveralert', (
+            ('alertstate_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.AlertState'], unique=True, primary_key=True)),
+        ))
+        db.send_create_signal('monitor', ['TargetFailoverAlert'])
+
+        # Adding model 'TargetRecoveryAlert'
+        db.create_table('monitor_targetrecoveryalert', (
+            ('alertstate_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.AlertState'], unique=True, primary_key=True)),
+        ))
+        db.send_create_signal('monitor', ['TargetRecoveryAlert'])
+
+        # Adding model 'HostContactAlert'
+        db.create_table('monitor_hostcontactalert', (
+            ('alertstate_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.AlertState'], unique=True, primary_key=True)),
+        ))
+        db.send_create_signal('monitor', ['HostContactAlert'])
+
+        # Adding model 'LNetOfflineAlert'
+        db.create_table('monitor_lnetofflinealert', (
+            ('alertstate_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.AlertState'], unique=True, primary_key=True)),
+        ))
+        db.send_create_signal('monitor', ['LNetOfflineAlert'])
+
+        # Adding model 'TargetParam'
+        db.create_table('monitor_targetparam', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('target', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['configure.ManagedTarget'])),
+            ('key', self.gf('django.db.models.fields.CharField')(max_length=128)),
+            ('value', self.gf('django.db.models.fields.CharField')(max_length=512)),
+        ))
+        db.send_create_signal('monitor', ['TargetParam'])
+
+        # Adding model 'TargetRecoveryInfo'
+        db.create_table('monitor_targetrecoveryinfo', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('recovery_status', self.gf('django.db.models.fields.TextField')()),
+            ('target', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['configure.ManagedTarget'])),
+        ))
+        db.send_create_signal('monitor', ['TargetRecoveryInfo'])
+
+        # Adding model 'Systemevents'
+        db.create_table(u'SystemEvents', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True, db_column='ID')),
+            ('customerid', self.gf('django.db.models.fields.BigIntegerField')(null=True, db_column='CustomerID', blank=True)),
+            ('receivedat', self.gf('django.db.models.fields.DateTimeField')(null=True, db_column='ReceivedAt', blank=True)),
+            ('devicereportedtime', self.gf('django.db.models.fields.DateTimeField')(null=True, db_column='DeviceReportedTime', blank=True)),
+            ('facility', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='Facility', blank=True)),
+            ('priority', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='Priority', blank=True)),
+            ('fromhost', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='FromHost', blank=True)),
+            ('message', self.gf('django.db.models.fields.TextField')(db_column='Message', blank=True)),
+            ('ntseverity', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='NTSeverity', blank=True)),
+            ('importance', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='Importance', blank=True)),
+            ('eventsource', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='EventSource', blank=True)),
+            ('eventuser', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='EventUser', blank=True)),
+            ('eventcategory', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='EventCategory', blank=True)),
+            ('eventid', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='EventID', blank=True)),
+            ('eventbinarydata', self.gf('django.db.models.fields.TextField')(db_column='EventBinaryData', blank=True)),
+            ('maxavailable', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='MaxAvailable', blank=True)),
+            ('currusage', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='CurrUsage', blank=True)),
+            ('minusage', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='MinUsage', blank=True)),
+            ('maxusage', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='MaxUsage', blank=True)),
+            ('infounitid', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='InfoUnitID', blank=True)),
+            ('syslogtag', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='SysLogTag', blank=True)),
+            ('eventlogtype', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='EventLogType', blank=True)),
+            ('genericfilename', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='GenericFileName', blank=True)),
+            ('systemid', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='SystemID', blank=True)),
+        ))
+        db.send_create_signal('monitor', ['Systemevents'])
+
+        # Adding model 'LastSystemeventsProcessed'
+        db.create_table('monitor_lastsystemeventsprocessed', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('last', self.gf('django.db.models.fields.IntegerField')(default=0)),
+        ))
+        db.send_create_signal('monitor', ['LastSystemeventsProcessed'])
+
 
     def backwards(self, orm):
-        pass
+        
+        # Removing unique constraint on 'AlertState', fields ['alert_item_type', 'alert_item_id', 'content_type', 'active']
+        db.delete_unique('monitor_alertstate', ['alert_item_type_id', 'alert_item_id', 'content_type_id', 'active'])
 
-#--    def forwards(self, orm):
-#--        
-#--        # Adding model 'Event'
-#--        db.create_table('monitor_event', (
-#--            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-#--            ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
-#--            ('severity', self.gf('django.db.models.fields.IntegerField')()),
-#--            ('host', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['configure.ManagedHost'], null=True, blank=True)),
-#--            ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], null=True)),
-#--        ))
-#--        db.send_create_signal('monitor', ['Event'])
-#--
-#--        # Adding model 'LearnEvent'
-#--        db.create_table('monitor_learnevent', (
-#--            ('event_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.Event'], unique=True, primary_key=True)),
-#--            ('learned_item_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'])),
-#--            ('learned_item_id', self.gf('django.db.models.fields.PositiveIntegerField')()),
-#--        ))
-#--        db.send_create_signal('monitor', ['LearnEvent'])
-#--
-#--        # Adding model 'AlertEvent'
-#--        db.create_table('monitor_alertevent', (
-#--            ('event_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.Event'], unique=True, primary_key=True)),
-#--            ('message_str', self.gf('django.db.models.fields.CharField')(max_length=512)),
-#--            ('alert', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['monitor.AlertState'])),
-#--        ))
-#--        db.send_create_signal('monitor', ['AlertEvent'])
-#--
-#--        # Adding model 'SyslogEvent'
-#--        db.create_table('monitor_syslogevent', (
-#--            ('event_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.Event'], unique=True, primary_key=True)),
-#--            ('message_str', self.gf('django.db.models.fields.CharField')(max_length=512)),
-#--            ('lustre_pid', self.gf('django.db.models.fields.IntegerField')(null=True)),
-#--        ))
-#--        db.send_create_signal('monitor', ['SyslogEvent'])
-#--
-#--        # Adding model 'ClientConnectEvent'
-#--        db.create_table('monitor_clientconnectevent', (
-#--            ('syslogevent_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.SyslogEvent'], unique=True, primary_key=True)),
-#--        ))
-#--        db.send_create_signal('monitor', ['ClientConnectEvent'])
-#--
-#--        # Adding model 'AlertState'
-#--        db.create_table('monitor_alertstate', (
-#--            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-#--            ('alert_item_type', self.gf('django.db.models.fields.related.ForeignKey')(related_name='alertstate_alert_item_type', to=orm['contenttypes.ContentType'])),
-#--            ('alert_item_id', self.gf('django.db.models.fields.PositiveIntegerField')()),
-#--            ('begin', self.gf('django.db.models.fields.DateTimeField')()),
-#--            ('end', self.gf('django.db.models.fields.DateTimeField')()),
-#--            ('active', self.gf('django.db.models.fields.NullBooleanField')(null=True, blank=True)),
-#--            ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], null=True)),
-#--        ))
-#--        db.send_create_signal('monitor', ['AlertState'])
-#--
-#--        # Adding unique constraint on 'AlertState', fields ['alert_item_type', 'alert_item_id', 'content_type', 'active']
-#--        db.create_unique('monitor_alertstate', ['alert_item_type_id', 'alert_item_id', 'content_type_id', 'active'])
-#--
-#--        # Adding model 'TargetOfflineAlert'
-#--        db.create_table('monitor_targetofflinealert', (
-#--            ('alertstate_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.AlertState'], unique=True, primary_key=True)),
-#--        ))
-#--        db.send_create_signal('monitor', ['TargetOfflineAlert'])
-#--
-#--        # Adding model 'TargetFailoverAlert'
-#--        db.create_table('monitor_targetfailoveralert', (
-#--            ('alertstate_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.AlertState'], unique=True, primary_key=True)),
-#--        ))
-#--        db.send_create_signal('monitor', ['TargetFailoverAlert'])
-#--
-#--        # Adding model 'TargetRecoveryAlert'
-#--        db.create_table('monitor_targetrecoveryalert', (
-#--            ('alertstate_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.AlertState'], unique=True, primary_key=True)),
-#--        ))
-#--        db.send_create_signal('monitor', ['TargetRecoveryAlert'])
-#--
-#--        # Adding model 'HostContactAlert'
-#--        db.create_table('monitor_hostcontactalert', (
-#--            ('alertstate_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.AlertState'], unique=True, primary_key=True)),
-#--        ))
-#--        db.send_create_signal('monitor', ['HostContactAlert'])
-#--
-#--        # Adding model 'LNetOfflineAlert'
-#--        db.create_table('monitor_lnetofflinealert', (
-#--            ('alertstate_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['monitor.AlertState'], unique=True, primary_key=True)),
-#--        ))
-#--        db.send_create_signal('monitor', ['LNetOfflineAlert'])
-#--
-#--        # Adding model 'TargetParam'
-#--        db.create_table('monitor_targetparam', (
-#--            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-#--            ('target', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['configure.ManagedTarget'])),
-#--            ('key', self.gf('django.db.models.fields.CharField')(max_length=128)),
-#--            ('value', self.gf('django.db.models.fields.CharField')(max_length=512)),
-#--        ))
-#--        db.send_create_signal('monitor', ['TargetParam'])
-#--
-#--        # Adding model 'TargetRecoveryInfo'
-#--        db.create_table('monitor_targetrecoveryinfo', (
-#--            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-#--            ('recovery_status', self.gf('django.db.models.fields.TextField')()),
-#--            ('target', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['configure.ManagedTarget'])),
-#--        ))
-#--        db.send_create_signal('monitor', ['TargetRecoveryInfo'])
-#--
-#--        # Adding model 'Systemevents'
-#--        db.create_table(u'SystemEvents', (
-#--            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True, db_column='ID')),
-#--            ('customerid', self.gf('django.db.models.fields.BigIntegerField')(null=True, db_column='CustomerID', blank=True)),
-#--            ('receivedat', self.gf('django.db.models.fields.DateTimeField')(null=True, db_column='ReceivedAt', blank=True)),
-#--            ('devicereportedtime', self.gf('django.db.models.fields.DateTimeField')(null=True, db_column='DeviceReportedTime', blank=True)),
-#--            ('facility', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='Facility', blank=True)),
-#--            ('priority', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='Priority', blank=True)),
-#--            ('fromhost', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='FromHost', blank=True)),
-#--            ('message', self.gf('django.db.models.fields.TextField')(db_column='Message', blank=True)),
-#--            ('ntseverity', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='NTSeverity', blank=True)),
-#--            ('importance', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='Importance', blank=True)),
-#--            ('eventsource', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='EventSource', blank=True)),
-#--            ('eventuser', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='EventUser', blank=True)),
-#--            ('eventcategory', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='EventCategory', blank=True)),
-#--            ('eventid', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='EventID', blank=True)),
-#--            ('eventbinarydata', self.gf('django.db.models.fields.TextField')(db_column='EventBinaryData', blank=True)),
-#--            ('maxavailable', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='MaxAvailable', blank=True)),
-#--            ('currusage', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='CurrUsage', blank=True)),
-#--            ('minusage', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='MinUsage', blank=True)),
-#--            ('maxusage', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='MaxUsage', blank=True)),
-#--            ('infounitid', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='InfoUnitID', blank=True)),
-#--            ('syslogtag', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='SysLogTag', blank=True)),
-#--            ('eventlogtype', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='EventLogType', blank=True)),
-#--            ('genericfilename', self.gf('django.db.models.fields.CharField')(max_length=60, db_column='GenericFileName', blank=True)),
-#--            ('systemid', self.gf('django.db.models.fields.IntegerField')(null=True, db_column='SystemID', blank=True)),
-#--        ))
-#--        db.send_create_signal('monitor', ['Systemevents'])
-#--
-#--        # Adding model 'LastSystemeventsProcessed'
-#--        db.create_table('monitor_lastsystemeventsprocessed', (
-#--            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-#--            ('last', self.gf('django.db.models.fields.IntegerField')(default=0)),
-#--        ))
-#--        db.send_create_signal('monitor', ['LastSystemeventsProcessed'])
-#--
-#--
-#--    def backwards(self, orm):
-#--        
-#--        # Removing unique constraint on 'AlertState', fields ['alert_item_type', 'alert_item_id', 'content_type', 'active']
-#--        db.delete_unique('monitor_alertstate', ['alert_item_type_id', 'alert_item_id', 'content_type_id', 'active'])
-#--
-#--        # Deleting model 'Event'
-#--        db.delete_table('monitor_event')
-#--
-#--        # Deleting model 'LearnEvent'
-#--        db.delete_table('monitor_learnevent')
-#--
-#--        # Deleting model 'AlertEvent'
-#--        db.delete_table('monitor_alertevent')
-#--
-#--        # Deleting model 'SyslogEvent'
-#--        db.delete_table('monitor_syslogevent')
-#--
-#--        # Deleting model 'ClientConnectEvent'
-#--        db.delete_table('monitor_clientconnectevent')
-#--
-#--        # Deleting model 'AlertState'
-#--        db.delete_table('monitor_alertstate')
-#--
-#--        # Deleting model 'TargetOfflineAlert'
-#--        db.delete_table('monitor_targetofflinealert')
-#--
-#--        # Deleting model 'TargetFailoverAlert'
-#--        db.delete_table('monitor_targetfailoveralert')
-#--
-#--        # Deleting model 'TargetRecoveryAlert'
-#--        db.delete_table('monitor_targetrecoveryalert')
-#--
-#--        # Deleting model 'HostContactAlert'
-#--        db.delete_table('monitor_hostcontactalert')
-#--
-#--        # Deleting model 'LNetOfflineAlert'
-#--        db.delete_table('monitor_lnetofflinealert')
-#--
-#--        # Deleting model 'TargetParam'
-#--        db.delete_table('monitor_targetparam')
-#--
-#--        # Deleting model 'TargetRecoveryInfo'
-#--        db.delete_table('monitor_targetrecoveryinfo')
-#--
-#--        # Deleting model 'Systemevents'
-#--        db.delete_table(u'SystemEvents')
-#--
-#--        # Deleting model 'LastSystemeventsProcessed'
-#--        db.delete_table('monitor_lastsystemeventsprocessed')
+        # Deleting model 'Event'
+        db.delete_table('monitor_event')
+
+        # Deleting model 'LearnEvent'
+        db.delete_table('monitor_learnevent')
+
+        # Deleting model 'AlertEvent'
+        db.delete_table('monitor_alertevent')
+
+        # Deleting model 'SyslogEvent'
+        db.delete_table('monitor_syslogevent')
+
+        # Deleting model 'ClientConnectEvent'
+        db.delete_table('monitor_clientconnectevent')
+
+        # Deleting model 'AlertState'
+        db.delete_table('monitor_alertstate')
+
+        # Deleting model 'TargetOfflineAlert'
+        db.delete_table('monitor_targetofflinealert')
+
+        # Deleting model 'TargetFailoverAlert'
+        db.delete_table('monitor_targetfailoveralert')
+
+        # Deleting model 'TargetRecoveryAlert'
+        db.delete_table('monitor_targetrecoveryalert')
+
+        # Deleting model 'HostContactAlert'
+        db.delete_table('monitor_hostcontactalert')
+
+        # Deleting model 'LNetOfflineAlert'
+        db.delete_table('monitor_lnetofflinealert')
+
+        # Deleting model 'TargetParam'
+        db.delete_table('monitor_targetparam')
+
+        # Deleting model 'TargetRecoveryInfo'
+        db.delete_table('monitor_targetrecoveryinfo')
+
+        # Deleting model 'Systemevents'
+        db.delete_table(u'SystemEvents')
+
+        # Deleting model 'LastSystemeventsProcessed'
+        db.delete_table('monitor_lastsystemeventsprocessed')
 
 
     models = {
