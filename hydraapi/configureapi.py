@@ -646,7 +646,7 @@ class ObjectSummary(AnonymousRequestHandler):
 
             result.append({'id': o['id'],
                            'content_type_id': o['content_type_id'],
-                           'name': instance.human_name(),
+                           'human_name': instance.human_name(),
                            'state': instance.state,
                            'available_transitions': StateManager.available_transitions(instance)})
         return result 
