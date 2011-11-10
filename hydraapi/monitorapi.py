@@ -272,31 +272,30 @@ class GetServers (AnonymousRequestHandler):
         return hosts_info
 
 class GetEventsByFilter(AnonymousRequestHandler):
-    @extract_request_args('host_id','severity','eventtype','page_size','page_id')
+    @extract_request_args('host_id','severity','eventtype','page_id','page_size')
     def run(self,request,host_id,severity,eventtype,page_size,page_id):
-        return geteventsbyfilter(host_id,severity,eventtype,page_size,page_id)
+        return geteventsbyfilter(host_id,severity,eventtype,page_id,page_size)
 
-def geteventsbyfilter(host_id,severity,eventtype,page_size,page_id):
+def geteventsbyfilter(host_id,severity,eventtype,page_id,page_size,sort_column=None):
     from monitor.models import Event
     host = None
     filter_args = []
     filter_kwargs = {}
     if severity:
         filter_kwargs['severity'] = severity
+    if host_id:
+        host = ManagedHost.objects.get(id=host_id)
+        filter_kwargs['host'] = host
     if eventtype:
          klass = eventtype
          from django.db.models import Q
          klass_lower = klass.lower()
          filter_args.append(~Q(**{klass_lower: None}))
-    if host_id:
-        host = ManagedHost.objects.get(id=host_id)
     
     event_set = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
     
-    if host:
-        event_set = event_set.filter(host=host)
     event_result = [{
-                     'event_created_at': event.created_at,
+                     'date': event.created_at.strftime("%b %d %H:%M:%S"),
                      'event_host': event.host.pretty_name() if event.host else '',
                      'event_severity':str(event.severity_class()),
                      'event_message': event.message() 
@@ -342,7 +341,7 @@ class GetLogs(AnonymousRequestHandler):
     def run(self,request,host_id,start_time,end_time,lustre,page_id,page_size):
         return get_logs(host_id,start_time,end_time,lustre,page_id,page_size)
 
-def get_logs(host_id,start_time,end_time,lustre,page_id,page_size):
+def get_logs(host_id,start_time,end_time,lustre,page_id,page_size,custom_search=None,sort_column=None):
     import datetime
     from monitor.models import Systemevents
     ui_time_format = "%m/%d/%Y %H:%M "
@@ -359,13 +358,15 @@ def get_logs(host_id,start_time,end_time,lustre,page_id,page_size):
         filter_kwargs['fromhost__startswith'] = host.pretty_name()
     if lustre:
         filter_kwargs['message__startswith'] = " Lustre"
+    if custom_search:
+        filter_kwargs['message__icontains'] = custom_search
 
     def log_class(log_entry):
         if log_entry.message.find('LustreError') != -1:
             return 'log_error'
         else:
             return 'log_info'
-
+    
     log_data = Systemevents.objects.filter(**filter_kwargs).order_by('-devicereportedtime')
     log_records = [{'message': nid_finder(log_entry.message),
                     # Trim trailing colon from e.g. 'kernel:'
@@ -380,7 +381,7 @@ def get_logs(host_id,start_time,end_time,lustre,page_id,page_size):
 
 def paginate_result(page_id,page_size,result):
     if page_id:
-        offset = int(page_id) * page_size
+        offset = int(page_id)
     else:
         offset = 0
     # iTotalRecords is the number of records before filtering (where here filtering
@@ -390,9 +391,8 @@ def paginate_result(page_id,page_size,result):
         result = result[offset:offset + page_size]
     # iTotalDisplayRecords is simply the number of records we will return
     # in this call (i.e. after all filtering and pagination)
-    iTotalDisplayRecords = len(result)
+    iTotalDisplayRecords = iTotalRecords
     paginated_result = {}
-    paginated_result['sEcho'] = offset
     paginated_result['iTotalRecords'] = iTotalRecords
     paginated_result['iTotalDisplayRecords'] = iTotalDisplayRecords
     paginated_result['aaData'] = result

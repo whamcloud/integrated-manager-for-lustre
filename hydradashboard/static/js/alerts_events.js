@@ -175,7 +175,7 @@ loadEventContent = function(targetEventDivName, maxCount)
           eventTabContent = eventTabContent +
                             "<tr class='" + cssClassName + "'>" +
           		              "<td width='20%' align='left' valign='top' class='border' style='font-weight:normal'>" +  
-          		              resValue.event_created_at + 
+          		              resValue.date + 
           		              "</td>" +
           		              "<td width='7%' align='left' valign='top' class='border' class='txtcenter'>" +
           		              "<img src='" + imgName + "' width='16' height='16' class='spacetop'/>" +
@@ -250,7 +250,7 @@ loadJobContent = function(targetJobDivName)
 
 loadHostList = function(filesystem_id, targetContainer)
 {
-  var hostList = '<option value=>All</option>';
+  var hostList = '<option value="">All</option>';
   $.post("/api/listservers/",{'filesystem_id':filesystem_id})
   .success(function(data, textStatus, jqXHR) 
   {
@@ -268,7 +268,7 @@ loadHostList = function(filesystem_id, targetContainer)
   $('#'+targetContainer).html(hostList);
   });
 }
-
+ 
 setActiveMenu = function(menu_element){
     $('#'+menu_element).addClass('active');
 }

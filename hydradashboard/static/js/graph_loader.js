@@ -32,9 +32,7 @@ var readWriteFetchMatric = ["stats_read_bytes", "stats_write_bytes"];
 var mdOpsFetchmatric = ["stats_close", "stats_getattr", "stats_getxattr", "stats_link", 
                         "stats_mkdir", "stats_mknod", "stats_open", "stats_rename", 
                         "stats_rmdir", "stats_setattr", "stats_statfs", "stats_unlink"]
-var ioOpsFetchmatric = ["stats_connect","stats_create","stats_destroy","stats_disconnect",
-                        "stats_get_info","stats_llog_init","stats_ping",
-                        "stats_punch","stats_preprw","stats_set_info_async","stats_statfs","stats_sync"];
+var ioOpsFetchmatric = ["stats_read_bytes", "stats_write_bytes"];
 /*******************************************************************************
  * Global variable declaratiom
 ******************************************************************************/

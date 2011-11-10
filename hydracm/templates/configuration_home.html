@@ -41,7 +41,7 @@ $(document).ready(function() {
   History.pushState(null, null, "foo");
 });
 */
-
+ 
 $(document).ajaxComplete(function() {
   $('button.back_button:not(.ui-button)').each(function() {
     $(this).html('Back');
@@ -99,6 +99,9 @@ $(document).ready(function() {
   var mdt_node_id = "";
   // Function for hydracm Tab based view (File system/MGT/Volume/Server/Storage)
   $(function() {
+  
+  // Menu Highlighter
+  $('#hydracm_menu').addClass('active');
     $("#tabs").tabs({selected: -1});
   });    
   // Document Ready Handler for configuration_home.html   
