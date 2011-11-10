@@ -101,7 +101,7 @@ class UpdateScan(object):
         # avoid raising alerts for deleted hosts by doing this check inside 
         # our transaction
         if not host.not_deleted:
-            return
+            return False
 
         self.host_data = host_data
 
@@ -123,6 +123,8 @@ class UpdateScan(object):
             self.update_target_mounts()
 
         HostContactAlert.notify(self.host, not contact)
+
+        return contact
 
     def update_lnet(self):
         # Update LNet status
