@@ -310,14 +310,12 @@ def unmigrate_target(args):
                    '-m', '-v', 'Started'])
 
 def target_running(args):
-    from sys import exit
+    from os import _exit
+    from hydra_agent.actions.utils import Mounts
     info = store_get_target_info(args.uuid)
+    mounts = Mounts()
+    for device, mntpnt, fstype in mounts.all():
+        if device == info['bdev'] and mntpnt == info['mntpt']:
+            _exit(0)
 
-    for line in open("/proc/mounts").readlines():
-        print "%s == %s, %s == %s" % (line.split()[0], info['bdev'],
-                                      line.split()[1], info['mntpt'])
-        if line.split()[0] == info['bdev'] and \
-           line.split()[1] == info['mntpt']:
-            exit(0)
-
-    exit(1)
+    _exit(1)
