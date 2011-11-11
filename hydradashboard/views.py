@@ -46,7 +46,7 @@ def get_db_events(request):
     from hydraapi.monitorapi import geteventsbyfilter
     event_result = geteventsbyfilter(request.GET.get('host_id',None),
                                      request.GET.get('severity',None),
-                                     request.GET.get('eventtype'),
+                                     request.GET.get('event_type'),
                                      int(request.GET.get('iDisplayStart',0)),
                                      min(int(request.GET.get('iDisplayLength',10)),100),
                                      int(request.GET.get('iSortingCols',0)))  
