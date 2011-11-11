@@ -6,6 +6,9 @@ var add_host_dialog = function() {
 }
 
 $(document).ready(function() {
+  /* FIXME: HYD-439 this code is getting re-run each time the 
+   * user navigates to the server configuration tab, resulting
+   * in multiple signal handlers for e.g. adding the host */
   $('#add_host_dialog').dialog({
       autoOpen: false,
       title: "Add server",
