@@ -191,21 +191,21 @@
                 <td valign="top"  width="30%" align="center">
                   <div class="magni">
                     <button value="" class="magbutton" 
-                    onclick="fs_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System: CPU and Memory Usage');" />
+                    onclick="fs_LineBar_CpuMemoryUsage_Data($('#ls_fsId').val(), startTime, endTime, 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System: CPU and Memory Usage');" />
                   </div>
                   <div id="fs_avgCPUDiv" class="chart" >Server CPU and Memory Usage</div>
                 </td>
                 <td valign="top"  align="center">
                   <div class="magni">
                     <button value="" class="magbutton" 
-                    onclick="fs_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('File System: Disk Read and Write');" />
+                    onclick="fs_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('File System: Disk Read and Write');" />
                   </div>
                   <div id="fs_avgMemoryDiv" class="chart" >Disk Read and Write</div>
                 </td>
                 <td valign="top"  width="30%" align="center">
                   <div class="magni">
                     <button value="" class="magbutton" 
-                    onclick="fs_Area_mdOps_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', mdOpsFetchmatric, 'true');setZoomDialogTitle('File System: MDOP/s');" />
+                    onclick="fs_Area_mdOps_Data($('#ls_fsId').val(), startTime, endTime, 'Average', 'MDT', mdOpsFetchmatric, 'true');setZoomDialogTitle('File System: MDOP/s');" />
                   </div>
                   <div id="fs_avgReadDiv" class="chart" >MDOP/s</div>
                 </td>
@@ -272,14 +272,14 @@
                 <td>
                   <div class="magni">
                     <button value="" class="magbutton"
-                    onclick="oss_LineBar_CpuMemoryUsage_Data($('#fsSelect').val(), startTime, endTime, 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('Server: CPU and Memory Usage');" />   
+                    onclick="oss_LineBar_CpuMemoryUsage_Data($('#ls_ossId').val(), startTime, endTime, 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('Server: CPU and Memory Usage');" />   
                   </div>
                   <div id="oss_avgReadDiv" class="chart">Server CPU and Memory</div>
                 </td>
                 <td>
                   <div class="magni">
                     <button value="" class="magbutton"
-                     onclick="oss_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('Server: Disk Read and Write');" />  
+                     onclick="oss_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('Server: Disk Read and Write');" />  
                   </div>
                   <div id="oss_avgWriteDiv" class="chart" >Disk Read and Write</div>
                 </td>
@@ -336,7 +336,7 @@
                   <div id="target_read_write_container_div" style="display: none">
                     <div class="magni">
 	                    <button class="magbutton" 
-	                    onclick="ost_Area_ReadWrite_Data($('#fsSelect').val(), startTime, endTime, 'Average', 'MDT', readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
+	                    onclick="ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, 'Average', $('#ls_ostKind').val(), readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
 	                  </div>
 	                  <div id="target_read_write_container" class="chart">Disk Read and Write</div>
 	                </div>
@@ -345,7 +345,7 @@
                   <div id="target_mgt_ops_container_div" style="display: none">
                     <div class="magni">
                       <button class="magbutton" 
-                      onclick="ost_Area_mgtOps_Data($('#ls_ostId').val(),'true');setZoomDialogTitle('Target: MGT Ops');" />
+                      onclick="ost_Area_mgtOps_Data($('#ls_ostId').val(), 'true');setZoomDialogTitle('Target: MGT Ops');" />
                     </div>
                     <div id="target_mgt_ops_container" class="chart">MGT Ops</div>
                   </div>

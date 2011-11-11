@@ -16,7 +16,7 @@
 ******************************************************************************/
 var fs_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_Line_connectedClients_Data_Api_Url = "/api/get_fs_stats_for_client/";
-var fs_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_server/";
+var fs_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_Area_mdOps_Data_Api_Url = "/api/get_fs_stats_for_targets/";
 var fs_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
