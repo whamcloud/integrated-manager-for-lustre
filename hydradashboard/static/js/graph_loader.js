@@ -286,7 +286,7 @@ var chartConfig_Area_mdOps  =
   ],
   title: 
   {
-    text: 'Metadata ops',
+    text: 'Metadata op/s',
     style: { fontSize: '12px' },
   },
   xAxis: 
@@ -447,7 +447,7 @@ var chartConfig_AreaSpline =
   },
   title: 
   {
-    text: 'IOPs',
+    text: 'IO op/s',
     style: { fontSize: '12px' }
   },
   legend: 
@@ -469,7 +469,7 @@ var chartConfig_AreaSpline =
   {
     title: 
     {
-      text: 'IO Iops'
+      text: 'IO op/s'
     }
   },
   tooltip: 

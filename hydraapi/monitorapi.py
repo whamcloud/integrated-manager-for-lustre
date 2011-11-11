@@ -356,7 +356,7 @@ def get_logs(host_id,start_time,end_time,lustre,page_id,page_size,custom_search=
     if host_id:
         host = ManagedHost.objects.get(id=host_id)
         filter_kwargs['fromhost__startswith'] = host.pretty_name()
-    if lustre:
+    if lustre == 'true':
         filter_kwargs['message__startswith'] = " Lustre"
     if custom_search:
         filter_kwargs['message__icontains'] = custom_search
