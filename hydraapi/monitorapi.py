@@ -292,17 +292,16 @@ def geteventsbyfilter(host_id,severity,eventtype,page_id,page_size,sort_column=N
          klass_lower = klass.lower()
          filter_args.append(~Q(**{klass_lower: None}))
     
-    event_set = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
+    events = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
     
-    event_result = [{
-                     'date': event.created_at.strftime("%b %d %H:%M:%S"),
-                     'event_host': event.host.pretty_name() if event.host else '',
-                     'event_severity':str(event.severity_class()),
-                     'event_message': event.message() 
-                    }
-                    for event in event_set
-                   ]
-    return paginate_result(page_id,page_size,event_result)  
+    def format_fn(event):
+        return {
+                 'date': event.created_at.strftime("%b %d %H:%M:%S"),
+                 'event_host': event.host.pretty_name() if event.host else '',
+                 'event_severity':str(event.severity_class()),
+                 'event_message': event.message() 
+               }
+    return paginate_result(page_id, page_size, events, format_fn)  
 
 class GetLatestEvents(AnonymousRequestHandler):
     def run(self,request):
@@ -325,8 +324,12 @@ class GetAlerts(AnonymousRequestHandler):
             active = True
         else:
             active = None
-        alert_result = [a.to_dict() for a in AlertState.objects.filter(active = active).order_by('end')]
-        return paginate_result(page_id,page_size,alert_result)
+        alerts = AlertState.objects.filter(active = active).order_by('end')
+
+        def format_fn(alert):
+            return alert.to_dict()
+
+        return paginate_result(page_id, page_size, alerts, format_fn)
 
 class GetJobs(AnonymousRequestHandler):
     def run(self,request):
@@ -367,35 +370,38 @@ def get_logs(host_id,start_time,end_time,lustre,page_id,page_size,custom_search=
         else:
             return 'log_info'
     
-    log_data = Systemevents.objects.filter(**filter_kwargs).order_by('-devicereportedtime')
-    log_records = [{'message': nid_finder(log_entry.message),
+    def format_fn(systemevent_record):
+        return {'message': nid_finder(systemevent_record.message),
                     # Trim trailing colon from e.g. 'kernel:'
-                    'service': log_entry.syslogtag.rstrip(":"),
-                    'date': log_entry.devicereportedtime.strftime("%b %d %H:%M:%S"),
-                    'host': log_entry.fromhost,
-                    'class': log_class(log_entry)
+                    'service': systemevent_record.syslogtag.rstrip(":"),
+                    'date': systemevent_record.devicereportedtime.strftime("%b %d %H:%M:%S"),
+                    'host': systemevent_record.fromhost,
+                    'class': log_class(systemevent_record)
                    }
-                   for log_entry in log_data
-    ]
-    return paginate_result(page_id,page_size,log_records)              
 
-def paginate_result(page_id,page_size,result):
+    log_data = Systemevents.objects.filter(**filter_kwargs).order_by('-devicereportedtime')
+    return paginate_result(page_id, page_size, log_data, format_fn)
+
+def paginate_result(page_id,page_size,result, format_fn):
     if page_id:
         offset = int(page_id)
     else:
         offset = 0
     # iTotalRecords is the number of records before filtering (where here filtering
     # means datatables filtering, not the filtering we're doing from our other args)
-    iTotalRecords = len(result)
+    iTotalRecords = result.count()
+    # This is equal because we are not doing any datatables filtering here yet.
+    iTotalDisplayRecords = iTotalRecords
+
     if page_size:
         result = result[offset:offset + page_size]
+
     # iTotalDisplayRecords is simply the number of records we will return
     # in this call (i.e. after all filtering and pagination)
-    iTotalDisplayRecords = iTotalRecords
     paginated_result = {}
     paginated_result['iTotalRecords'] = iTotalRecords
     paginated_result['iTotalDisplayRecords'] = iTotalDisplayRecords
-    paginated_result['aaData'] = result
+    paginated_result['aaData'] = [format_fn(r) for r in result]
     return paginated_result
 
 def nid_finder(message):
