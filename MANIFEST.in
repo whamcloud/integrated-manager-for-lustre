@@ -1,6 +1,7 @@
 include Makefile
 include monitor.wsgi
 include monitor/templates/*
+include monitor/migrations/*
 include monitor/templatetags/*
 include monitor/bin/*.py
 include monitor/fixtures/*
