@@ -409,8 +409,16 @@ class DetectScan(object):
             return False
 
     def learn_target_mounts(self):
-        # We will compare any found target mounts to all known MGSs
+        # HACK: HYD-451: to deal with multipath, when a given target appears more than
+        # once we arbitrarily pick one instance.  We should be using 
+        # the storage resource information to pick the 'right' one (e.g.
+        # the mpath devmapper node rather than that underlying devices)
+        culled_local_info = {}
         for local_info in self.host_data['local_targets']:
+            culled_local_info[local_info['name']] = local_info
+
+        # We will compare any found target mounts to all known MGSs
+        for local_info in culled_local_info.values():
             # We learned all targetmounts for MGSs in learn_mgs
             if local_info['name'] == 'MGS':
                 continue
