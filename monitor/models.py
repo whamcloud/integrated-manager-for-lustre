@@ -583,7 +583,7 @@ class FrontLineMetricStore(models.Model):
         names = update.keys()
         for name in names:
             data = update[name]
-            params = [dt.now(), ct.id, o_id, name]
+            params = [dt.fromtimestamp(update_time), ct.id, o_id, name]
             try:
                 params.append(data['type'])
                 params.append(data['value'])
