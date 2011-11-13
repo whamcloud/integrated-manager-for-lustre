@@ -210,29 +210,19 @@ $(document).ready(function() {
 {% endblock %}
 {% block include_content %}{% endblock %}
 {% block content %}
-<div class="rightpanel" align="top">
-  <div id="dashboardDiv"> 
-    <table height="520" width="100%" border="0" cellspacing="0" cellpadding="3" align="top" style="border: 1px;border-color: blue" >
-      <tr>
-        <td valign="top" width="100%" height="100%">
-          <div id="tabs">
-            <ul>
-              <li><a href='#filesystems' title='filesystems'>Filesystems</a></li>
-              <li><a href='#mgts' title='mgts'>MGTs</a></li>
-              <li><a href='#volumes' title='volumes'>Volumes</a></li>
-              <li><a href='#servers' title='servers'>Servers</a></li>
-              <li><a href='#storage' title='storage'>Storage</a></li>
-            </ul>
-            <div id='filesystems'></div>
-            <div id='mgts'></div>
-            <div id='volumes'></div>
-            <div id='servers'></div>
-            <div id='storage'></div>
-          </div>
-        </td>
-      </tr>
-    </table>
-  </div>
+<div id="tabs">
+  <ul>
+    <li><a href='#filesystems' title='filesystems'>Filesystems</a></li>
+    <li><a href='#mgts' title='mgts'>MGTs</a></li>
+    <li><a href='#volumes' title='volumes'>Volumes</a></li>
+    <li><a href='#servers' title='servers'>Servers</a></li>
+    <li><a href='#storage' title='storage'>Storage</a></li>
+  </ul>
+  <div id='filesystems'></div>
+  <div id='mgts'></div>
+  <div id='volumes'></div>
+  <div id='servers'></div>
+  <div id='storage'></div>
 </div>
 <!-- create new fs dialogs -->
 <div id="configParam" title="Configuration Parameters">

@@ -54,14 +54,16 @@
     <title>Chroma server</title>
   </head>
   <body style="margin: 0px 0px 0px 0px; padding: 0px;">  
-    <div class="wrapper">
-      <div class="bg">
-        {% include 'header.html'%}
-        {% include 'notification_slider.html' %} 
-        {% block include_content %}{% endblock %}
-        {% block content %}{% endblock %}
+    {% include 'header.html'%}
+    <div class='columns'>
+      <div style="clear:both"></div>
+      {% include 'notification_slider.html' %} 
+      <div class='rightpanel'>
+      {% block include_content %}{% endblock %}
+      {% block content %}{% endblock %}
+      <div>
       </div>
-      <div style="clear: both;"></div>     
-    </div> 
+      </div>
+    </div>
   </body>
 </html>
