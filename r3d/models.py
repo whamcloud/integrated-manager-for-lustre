@@ -299,9 +299,23 @@ class Database(models.Model):
                           [json.loads(j) for j in output]])
 
     def purge_cdps(self):
+        debug_print("Housekeeping: Deleting old CDPs")
+
+        old_cdps = []
         for rra in self.archives.all():
             for ds in self.datasources.all():
-                rra.purge_ds_cdps(ds)
+                old_cdps.extend(rra.find_obsolete_cdps(ds))
+
+        if len(old_cdps) > 0:
+            # We can avoid a useless select if we just nuke the
+            # old CDPs directly.
+            from django.db import connection, transaction
+            cursor = connection.cursor()
+            cursor.execute("DELETE FROM r3d_cdp WHERE id IN (%s)" %
+                           ",".join(old_cdps))
+            transaction.commit_unless_managed()
+
+        debug_print("deleted %d old CDPs" % len(old_cdps))
 
 # http://djangosnippets.org/snippets/2408/
 # Grumble.
@@ -603,10 +617,13 @@ class Archive(PoorMansStiModel):
         debug_print("saved %10.2f -> datapoints[%d]" % (cdp.value,
                                                         self.current_row))
 
+    def find_obsolete_cdps(self, ds):
+       return ["%d" % cdp.id for cdp in
+               self.cdps.filter(datasource=ds).order_by("-id")[self.rows:]]
+ 
     def purge_ds_cdps(self, ds):
         debug_print("Housekeeping: Deleting old CDPs")
-        old = ["%d" % cdp.id for cdp in
-               self.cdps.filter(datasource=ds).order_by("-id")[self.rows:]]
+        old = self.find_obsolete_cdps(self, ds)
 
         if len(old) > 0:
             # We can avoid a useless select if we just nuke the
