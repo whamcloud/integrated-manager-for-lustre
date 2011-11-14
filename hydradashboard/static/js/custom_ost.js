@@ -70,7 +70,7 @@ var ChartConfig_OST_Space =
   {
     formatter: function() 
     {
-       return '<b>'+ this.point.name +'</b>: '+ this.y +' %';
+       return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %';
     }
   },
   plotOptions:
@@ -141,6 +141,13 @@ ost_Pie_Space_Data = function(targetId, targetName, sDate, endDate, dataFunction
              ['Used',    used]
         ]
     }];
+    obj_ost_pie_space.tooltip = 
+    {
+      formatter: function() 
+      {
+         return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %';
+      }
+    };
     chart = new Highcharts.Chart(obj_ost_pie_space);
   });
 } 
@@ -198,6 +205,13 @@ ost_Pie_Inode_Data = function(targetId, targetName, sDate, endDate, dataFunction
             ['Used',    used]
           ]
        }];
+    obj_ost_pie_inode.tooltip = 
+    {
+      formatter: function() 
+      {
+         return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %';
+      }
+    };
       chart = new Highcharts.Chart(obj_ost_pie_inode);
   });
 }

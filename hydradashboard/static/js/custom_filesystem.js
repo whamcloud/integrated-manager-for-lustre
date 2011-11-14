@@ -666,6 +666,7 @@ loadFileSytemGraphs = function()
   fs_LineBar_CpuMemoryUsage_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", cpuMemoryFetchMatric, false);
   fs_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, false);
   fs_Area_mdOps_Data($('#ls_fsId').val(), startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
+  fs_AreaSpline_ioOps_Data('false');
 }
 /*****************************************************************************/
 /******************************************************************************
