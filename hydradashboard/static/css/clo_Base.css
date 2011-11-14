@@ -591,7 +591,6 @@ td.br{
 table.fs {
 	font-size:12px;
     border-collapse: collapse;
-    width: 100%;
 }
 
 table.fs td {
