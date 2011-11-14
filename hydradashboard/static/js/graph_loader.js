@@ -1199,6 +1199,7 @@ loadLandingPageGraphs = function()
   db_LineBar_CpuMemoryUsage_Data('false');
   db_Area_ReadWrite_Data('false');
   db_Area_mdOps_Data('false');
+  db_AreaSpline_ioOps_Data('false');
 }
 /*****************************************************************************
  * Function to clear dashboard pooling intervals
