@@ -144,7 +144,7 @@ class GetResources(AnonymousRequestHandler):
             row = {
                     'id': record.pk,
                     'content_type_id': ContentType.objects.get_for_model(record).id,
-                    'name': alias_markup,
+                    '_alias': alias_markup,
                     0: 'wtf'
                     }
             for c in attr_columns:
@@ -154,7 +154,7 @@ class GetResources(AnonymousRequestHandler):
                 
             rows.append(row)    
 
-        columns = [{'mdataProp': 'id', 'bVisible': False}, {'mDataProp': 'name', 'sTitle': 'Name'}]
+        columns = [{'mdataProp': 'id', 'bVisible': False}, {'mDataProp': '_alias', 'sTitle': 'Name'}]
         for c in attr_columns:
             columns.append({'sTitle': c['label'], 'mDataProp': c['name']})
         return {'aaData': rows, 'aoColumns': columns}
@@ -256,18 +256,17 @@ class CreateNewFilesystem(AnonymousRequestHandler):
         # Test that all values in all_lun_ids are unique
         assert len(set(all_lun_ids)) == len(all_lun_ids)
         
-
-        fs = create_fs(mgt_id, fsname)
-        mdt = create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
-        osts = []
-        for lun_id in ost_lun_ids:
-            osts.append(create_target(lun_id, ManagedOst, filesystem = fs))
-
         from django.db import transaction
-        transaction.commit()
+        with transaction.commit_on_success():
+            fs = create_fs(mgt_id, fsname)
+            mdt = create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
+            osts = []
+            for lun_id in ost_lun_ids:
+                osts.append(create_target(lun_id, ManagedOst, filesystem = fs))
+        # Important that a commit happens here so that the targets
+        # land in DB before the set_state jobs act upon them.
 
         from configure.lib.state_manager import StateManager
-
         StateManager.set_state(mdt, 'mounted')
         for target in osts:
             StateManager.set_state(target, 'mounted')
