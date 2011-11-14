@@ -148,11 +148,13 @@ class StoragePlugin(object):
         self.teardown()
 
     def commit_resource_creates(self):
+        from configure.lib.storage_plugin.resource_manager import resource_manager 
         if len(self._delta_new_resources) > 0:
             resource_manager.session_add_resources(self._scannable_id, self._delta_new_resources)
         self._delta_new_resources = []
 
     def commit_resource_deletes(self):
+        from configure.lib.storage_plugin.resource_manager import resource_manager 
         # Resources deleted since last update
         if len(self._delta_delete_resources) > 0:
             resource_manager.session_add_resources(self._scannable_id, self._delta_delete_resources)
