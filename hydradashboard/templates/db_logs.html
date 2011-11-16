@@ -49,11 +49,12 @@
                 fnCallback(json);
               });
             }, 
-          fnInitComplete: function(oSettings) {
+          /* This is no longer required as API is passing the css class in datatable rquired css field
+            fnInitComplete: function(oSettings) {
             for (var i=0, iLen=oSettings.aoData.length; i<iLen; i++) {
                 oSettings.aoData[i].nTr.className += " "+oSettings.aoData[i]._aData.class;
             }
-          },
+          },*/
            aaSorting: [[1, 'desc']],
 	         "aoColumns": [
 	           { "sClass": 'log_line', "mDataProp":"class", bVisible: false},
