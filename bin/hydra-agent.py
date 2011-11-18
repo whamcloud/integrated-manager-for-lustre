@@ -95,6 +95,10 @@ if __name__ == '__main__':
                         help='unconfigure rsyslog to forward to another node')
     p.set_defaults(func=actions.unconfigure_rsyslog)
 
+    p = subparsers.add_parser('daemon',
+                              help='start daemon (publish with avahi)')
+    p.set_defaults(func=actions.publish_daemon)
+
     p = subparsers.add_parser('get-fqdn')
     p.set_defaults(func=actions.get_fqdn)
     p = subparsers.add_parser('update-scan')
