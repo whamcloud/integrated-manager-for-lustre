@@ -851,7 +851,7 @@ db_Area_mdOps_Data = function(isZoom)
   });
 }
 /*****************************************************************************
- * Function for mdOps - Area Spline Chart
+ * Function for ioOps - Area Spline Chart
  * Params - fetchmatrics, isZoom
  * Return - Returns the graph plotted in container
 *****************************************************************************/

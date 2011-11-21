@@ -64,16 +64,27 @@ start() {
 
     echo -n "Starting the Hydra worker daemon: "
     run_celeryd start
+    echo -n "Starting the Hydra host discovery daemon: "
+    # we don't need --pidfile here since hydra-host-discover.py is a daemon
+    # and takes care of creating the pid file
+    daemon /usr/bin/hydra-host-discover.py
     echo
 }
 
 restart() {
     echo -n "Restarting the Hydra worker daemon: "
     run_celeryd restart
+    echo -n "Restarting the Hydra host discovery daemon: "
+    kill $(cat /var/run/hydra-host-discover.pid)
+    # we don't need --pidfile here since hydra-host-discover.py is a daemon
+    # and takes care of creating the pid file
+    daemon /usr/bin/hydra-host-discover.py
     echo
 }
 
 stop() {
+    echo -n "Stopping the Hydra host discovery daemon: "
+    kill $(cat /var/run/hydra-host-discover.pid)
     echo -n "Stopping the Hydra worker daemon: "
     python /usr/share/hydra-server/manage.py celeryd_multi stop ${WORKER_NAMES} --pidfile=$PIDFILE --logfile=$LOGFILE
     echo

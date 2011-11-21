@@ -28,3 +28,5 @@ install:
 	#cp -a settings.py $(DESTDIR)/etc/hydra-server
 	install -d -p $(DESTDIR)/usr/share/hydra-server
 	cp -a __init__.py manage.py middleware.py monitor hydraapi hydracm hydradashboard configure monitor.wsgi polymorphic settings.py production_version.py urls.py $(DESTDIR)/usr/share/hydra-server
+	install -d -m 755 $(DESTDIR)/usr/bin
+	install -m 755 hydra-host-discover.py $(DESTDIR)/usr/bin
