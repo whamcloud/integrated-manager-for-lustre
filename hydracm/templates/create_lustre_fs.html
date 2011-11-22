@@ -63,16 +63,17 @@
           $.address.value('filesystems_edit_' + fs_id);
         });  
       }
-    });
+    }); 
     //Advance Options button click handler.
     $('#advance_opts').click(function()
     {
-      GetConfigurationParam("",["FS","FSC"]);
+      GetConfigurationParam("",["FS","FSC"],"config_param_table");
+      $('#configParam').dialog('open'); 
     });
   });
 
 </script>
-<table style="font-size:12px; padding-top:15px;">
+<table height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size:12px; padding-top:15px;">
   <tr>
     <td width="30%" align="left" valign="top">
       <div class='step_header'>

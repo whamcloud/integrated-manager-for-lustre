@@ -75,9 +75,9 @@ function Add_Host_Table(dialog_id)
           "Close": function() { 
                 $(this).dialog("close");
               },
-          "Continue": function() { 
-            AddHost_ServerConfig($('#txtHostName').val(),dialog_id); 
-          } 
+          "Continue": function() {
+            AddHost_ServerConfig($('#txtHostName').val(),dialog_id);
+          }
         }
       });
       
@@ -113,7 +113,7 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success)
     .complete(function(event) 
     {
     });
-} 
+}
 
 function CreateOSTs(fs_id, ost_lun_ids)
 {
@@ -184,8 +184,9 @@ function SetTargetMountStage(target_id, state)
     });
 }
 
-function GetConfigurationParam(target_id, kinds)
+function GetConfigurationParam(target_id, kinds, table_id)
 {
+  $('#' + table_id).dataTable().fnClearTable();
   $.ajax({type: 'POST', url: "/api/get_conf_params/", dataType: 'json', data: JSON.stringify({
       "target_id": target_id,
       "kinds": kinds
@@ -194,34 +195,58 @@ function GetConfigurationParam(target_id, kinds)
     {
       if(data.success)
       {
-        CreateTable_FS_Config_Param(data.response);
+        CreateTable_FS_Config_Param(data.response, table_id);
       }
       else
       {
          jAlert(ERR_COMMON_START_OST + data.errors, ALERT_TITLE);
       }
     })
-    .error(function(event) 
-    {
-    })
-    .complete(function(event) 
-    {
-    });
+    .error(function(event){})
+    .complete(function(event){});
 }
 
-function CreateTable_FS_Config_Param(data)
+function CreateTable_FS_Config_Param(data, table_id)
 {
   var property_box="";
-  $('#config_param_table').dataTable().fnClearTable();
+  var text_index = 0;
   $.each(data, function(resKey, resValue)
   {   
-    property_box = "<input type=textbox id='id_" + resValue.conf_param + 
-    "' title='" + resValue.conf_param_help + "' />";
-       
-    $('#config_param_table').dataTable().fnAddData ([
+    property_box = "<input type=textbox value='" + resValue.value + "' id='" + text_index + 
+    "' title='" + resValue.conf_param_help + "'/>"; 
+    text_index++;
+    $('#' + table_id).dataTable().fnAddData ([
       resValue.conf_param, 
-      property_box      
+      property_box,
+      resValue.value
     ]);
   });
-  $('#configParam').dialog('open');
+}
+
+function ApplyConfigParam(table_obj)
+{
+  var oSetting = table_obj.fnSettings();
+  //var config_arr = new Array();
+  for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
+    if(oSetting.aoData[i]._aData[2] != $("input#"+i).val())
+    {
+      //config_arr.push("name:"oSetting.aoData[i]._aData[0] + "," + "value:"$("input#"+i).val()); 
+    }
+  }
+   $.post("/api/set_conf_params/",({"target_id": target_id, 
+                                    "conf_params": JSON.stringify(config_arr)}))
+    .success(function(data, textStatus, jqXHR) 
+    {
+      if(data.success)
+      {
+        jAlert("Update Successful");
+        $('#target_dialog').dialog('close'); 
+      }
+      else
+      {
+         jAlert(ERR_COMMON_START_OST + data.errors, ALERT_TITLE); 
+      }
+    })
+    .error(function(event){})
+    .complete(function(event){});
 }

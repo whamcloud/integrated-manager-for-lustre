@@ -183,12 +183,38 @@ $(document).ready(function() {
       "bPaginate" : false,
       "bSort": false,
       "bFilter" : false,
+      "bAutoWidth":false,
       "aoColumns": [
         { "sClass": 'txtleft' },
-        { "sClass": 'txtcenter' }
+        { "sClass": 'txtcenter' },
+        { "bVisible": false } 
+      ]
+    });
+    var oTargetFSConfigParam = $('#target_config_param_table').dataTable( {
+      "iDisplayLength":30,
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bPaginate" : false,
+      "bSort": false,
+      "bFilter" : false,
+      "bAutoWidth":false,
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtcenter' },
+        { "bVisible": false }
       ]
     });
     //--------------------------------------------------------------------//  
+    $('#ConfigParam_Cancel').click(function()
+    {
+      $('#target_dialog').dialog('close');
+    });
+    
+    $('#ConfigParam_Apply').click(function()
+    {
+      ApplyConfigParam(oTargetFSConfigParam);
+    });
+    
     });
     //Fix Me:Need to find another weay to do thisto load the button + sign css.
     $(document).ajaxComplete(function() {
@@ -230,10 +256,10 @@ $(document).ready(function() {
    <thead>
       <th>Property</th>
       <th>value</th>
+      <th></th>
    </thead>
    <tbody></tbody>
-  </table>
-  <div id="config_param_tooltip"></div>
+  </table> 
 </div>
 
 <!-- new OST popup showing all usable luns-->
@@ -274,10 +300,22 @@ $(document).ready(function() {
     <ul>
       <li><a href='#target_dialog_properties'>Properties</a></li>
       <li><a href='#target_dialog_devices_tab'>Devices</a></li>
+      <li><a href='#target_dialog_config_param_tab'>Advanced...</a></li>
     </ul>
     <div id='target_dialog_properties'></div>
     <div id='target_dialog_devices_tab'>
       <div id='target_dialog_devices' class='canvas resource_graph_canvas'></div>
+    </div>
+    <div id='target_dialog_config_param_tab'>
+      <table border="0" cellspacing="0" cellpadding="0" id="target_config_param_table">
+        <thead>
+          <th>Property</th>
+          <th>value</th>
+          <th></th> 
+        </thead> 
+        <tbody></tbody>
+      </table>
+      <div align="right"><button id="ConfigParam_Apply">Apply</button> <button id="ConfigParam_Cancel">Cancel</button></div>
     </div>
   </div>
 </div>

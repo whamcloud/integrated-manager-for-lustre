@@ -20,7 +20,6 @@ from monitorapi import (ListFileSystems,
                         GetJobs,
                         GetLogs,
                         GetFSVolumeDetails)
-
 import configureapi
 from configureapi import (AddHost,  
                           TestHost,
@@ -35,7 +34,8 @@ from configureapi import (AddHost,
                           GetJobStatus,
                           SetJobStatus,
                           Notifications,
-                          GetTargetConfParams)
+                          GetTargetConfParams,
+                          SetTargetConfParams)
 
 # FIXME: instead of doing this big list of imports, should introspect available
 # RequestHandler objects and get their url name from them.
@@ -49,14 +49,6 @@ from configureapi import (GetResource,
                          CreateStorageResource,
                          CreatableStorageResourceClasses,
                          StorageResourceClassFields)
-
-#Once R3D starts getting correct data  replace fakestatsmetricapi with statmetricapi
-from fakestatsmetricapi import(GetFSTargetStats_fake,
-                           GetFSServerStats_fake,
-                           GetServerStats_fake,
-                           GetTargetStats_fake,
-                           GetFSClientsStats_fake,
-                           GetFSOSTHeatMap)  
 
 from statsmetricapi import(GetFSTargetStats,
                            GetFSServerStats,
@@ -103,13 +95,7 @@ urlpatterns = patterns('',
     (r'^get_job_status/$',CsrfExemptResource(GetJobStatus)),
     (r'^set_job_status/$',CsrfExemptResource(SetJobStatus)), 
     (r'^get_conf_params/$',CsrfExemptResource(GetTargetConfParams)), 
-
-    (r'^get_fs_stats_for_targets_fake/$',CsrfExemptResource(GetFSTargetStats_fake)),
-    (r'^get_fs_stats_for_server_fake/$',CsrfExemptResource(GetFSServerStats_fake)),
-    (r'^get_stats_for_server_fake/$',CsrfExemptResource(GetServerStats_fake)),
-    (r'^get_stats_for_targets_fake/$',CsrfExemptResource(GetTargetStats_fake)),
-    (r'^get_fs_stats_for_client_fake/$',CsrfExemptResource(GetFSClientsStats_fake)),
-    (r'^get_fs_ost_heatmap_fake/$',CsrfExemptResource(GetFSOSTHeatMap)),
+    (r'^set_conf_params/$',CsrfExemptResource(SetTargetConfParams)),
 
     (r'^get_fs_stats_for_targets/$',CsrfExemptResource(GetFSTargetStats)),
     (r'^get_fs_stats_for_server/$',CsrfExemptResource(GetFSServerStats)),
@@ -123,7 +109,6 @@ urlpatterns = patterns('',
     (r'^target/$',CsrfExemptResource(configureapi.Target)),
     (r'^transition/$',CsrfExemptResource(configureapi.Transition)),
     (r'^transition_consequences/$',CsrfExemptResource(configureapi.TransitionConsequences)),
-
 
     (r'^geteventsbyfilter/$',CsrfExemptResource(GetEventsByFilter)),
     (r'^getlatestevents/$',CsrfExemptResource(GetLatestEvents)),

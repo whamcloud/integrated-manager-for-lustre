@@ -1,9 +1,6 @@
-
 $(document).ready(function() {
   $('#target_dialog').dialog({
     autoOpen: false,
-    maxWidth: 950,
-    maxHeight: 1024,
     width: 'auto',
     height: 'auto'
   });
@@ -58,5 +55,7 @@ target_dialog_open = function(target_id) {
       properties_markup += "</table>";
       $('#target_dialog_properties').html(properties_markup);
     }
-  });
+  }); 
+    //load Config param in target dialog box.
+    GetConfigurationParam(target_id,"", "target_config_param_table");
 }

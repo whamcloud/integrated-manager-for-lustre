@@ -1,6 +1,6 @@
 <script language="javascript">
   $(document).ready(function() {
-    // Loading the File system summary data in Table fs_summary_tbl
+    // Loading the File system summary data in Table fs_summary_tbl 
     // data is loaded in divs defined in table.    
     LoadFSData_EditFS();
 
@@ -11,7 +11,7 @@
         "bProcessing": true,
         "bJQueryUI": true,
         "bFilter": false,
-        "bPaginate": false,
+        "bPaginate": false, 
         "oLanguage": {
             "sEmptyTable": "No MGT to display"
         },
@@ -37,7 +37,8 @@
     // Advance Options button click handler.
     $('#advance_opts').click(function()
     {
-      GetConfigurationParam("",["FS","FSC"]);
+      GetConfigurationParam($("#fs_id").val(),"", "config_param_table");
+      $('#configParam').dialog('open');
     });
     //Load Pie Charts for a selected File system
     LoadFSGraph_EditFS( $("#fs_id").val());
