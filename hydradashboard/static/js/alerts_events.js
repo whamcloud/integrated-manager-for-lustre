@@ -16,24 +16,35 @@ var CORRECT_GIF = "/static/images/dialog_correct.gif";
 var WARNING_PNG = "/static/images/dialog-warning.png";
 var INFO_PNG = "/static/images/dialog-information.png";
 
+var job_action_buttons = ['Pause', 'Resume', 'Cancel', 'Complete'];
+
 $(document).ready(function() 
 {
   $("#alertAnchor").click(function()
   {
-    toggleSliderDiv('alertsDiv')
-    loadAlertContent('alert_content', 'True', 10);
+    toggleSliderDiv('alertsDiv');
+    if($('#alertsDiv').css('display') == 'block')
+    {
+      loadAlertContent('alert_content', 'True', 10);  // load only when target div visible
+    }
   });
   
   $("#eventsAnchor").click(function()
   {
     toggleSliderDiv('eventsDiv')
-    loadEventContent('event_content' , 10);
+    if($('#eventsDiv').css('display') == 'block')
+    {
+      loadEventContent('event_content' , 10);
+    }
   });
   
   $("#jobsAnchor").click(function()
   {
-    toggleSliderDiv('jobsDiv');      
-    loadJobContent('job_content');
+    toggleSliderDiv('jobsDiv');
+    if($('#jobsDiv').css('display') == 'block')
+    {
+      loadJobContent('job_content');
+    }
   });
   
   $("#minusImg").click(function()
@@ -175,7 +186,7 @@ loadEventContent = function(targetEventDivName, maxCount)
           eventTabContent = eventTabContent +
                             "<tr class='" + cssClassName + "'>" +
           		              "<td width='20%' align='left' valign='top' class='border' style='font-weight:normal'>" +  
-          		              resValue.date + 
+          		              resValue.event_created_at + 
           		              "</td>" +
           		              "<td width='7%' align='left' valign='top' class='border' class='txtcenter'>" +
           		              "<img src='" + imgName + "' width='16' height='16' class='spacetop'/>" +
@@ -218,18 +229,26 @@ loadJobContent = function(targetJobDivName)
         pagecnt++;
         if (maxpagecnt > pagecnt)
         {
-          jobTabContent = jobTabContent + 
+          jobTabContent = jobTabContent +
                           "<tr>" +
                           "<td width='35%' align='left' valign='top' class='border' style='font-weight:normal'>" +
                           resValue.description + 
                           "</td>" + 
-                          "<td width='15%' align='left' valign='top' class='border'>" +
-                          "&nbsp;" +
+                          "<td width='40%' align='left' valign='top' class='border'>&nbsp;";
+          
+                          if(resValue.state != job_action_buttons[3].toLowerCase()
+                              && resValue.state != job_action_buttons[0].toLowerCase())       // for adding pause button
+                            jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[0]);
+                          
+                          if(resValue.state == job_action_buttons[0].toLowerCase())           // for adding resume button
+                            jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[1]);
+                          
+                          if(resValue.state != job_action_buttons[3].toLowerCase())           // for adding cancel button
+                            jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[2]);
+                          
+                          jobTabContent = jobTabContent +
                           "</td>" +
-                          "<td width='18%' align='center' valign='top' class='border' style='font-weight:normal'>" +
-                          "&nbsp;" +
-                          "</td>" +
-                          "<td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + 
+                          "<td width='25%' align='left' valign='top' class='border' style='font-weight:normal'>" + 
                           resValue.created_at + 
                           "</td>" +
                           "</tr>";
@@ -245,6 +264,38 @@ loadJobContent = function(targetJobDivName)
       jobTabContent = jobTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Jobs</td></tr>";
     }
     $("#"+targetJobDivName).html(jobTabContent);
+  });
+}
+
+createButtonForJob = function(job_id, status)
+{
+  var button = "<input type='button' class='ui-button ui-state-default ui-corner-all ui-button-text-only notification_job_buttons' " +
+              "onclick=job_action("+job_id+",'"+status.toLowerCase()+"') value="+status+" />";
+  return button;
+}
+
+job_action = function(job_id, state)
+{
+  $.ajax({type: 'POST', url: "/api/set_job_status/", dataType: 'json', data: JSON.stringify({
+    "job_id": job_id,
+    "state": state
+  }), contentType:"application/json; charset=utf-8"})
+  .success(function(data, textStatus, jqXHR) 
+  {
+    if(data.success)
+    {
+      loadJobContent('job_content');
+    }
+    else
+    {
+       jAlert("Error:" + data.errors, "Job Status");
+    }
+  })
+  .error(function(event) 
+  {
+  })
+  .complete(function(event) 
+  {
   });
 }
 

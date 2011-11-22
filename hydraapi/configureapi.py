@@ -333,6 +333,34 @@ class CreateOSTs(AnonymousRequestHandler):
         for target in osts:
             StateManager.set_state(target, 'mounted')
 
+class SetTargetConfParams(AnonymousRequestHandler):
+    @extract_request_args('target_id', 'conf_params')
+    def run(self, request, target_id, conf_params):
+        from configure.models import ManagedTarget,ManagedFilesystem,ManagedMdt,ManagedOst
+        from django.shortcuts import get_object_or_404
+        from configure.models import ApplyConfParams
+        from configure.lib.conf_param import all_params
+        from configure.lib.state_manager import StateManager
+        
+        target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
+        
+        def handle_conf_param(target,conf_params,mgs,**kwargs):
+            for k,v in conf_params:
+                 model_klass, param_value_obj, help_text = all_params[k]
+                 p = model_klass(key = k,
+                                 value = v,
+                                 **kwargs)
+                 mgs.set_conf_params([p])
+                 StateManager().add_job(ApplyConfParams(mgs = mgs))
+        
+        if isinstance(target, ManagedMdt):
+            handle_conf_param(target,conf_params,target.filesystem.mgs.downcast(),mdt = target)
+        elif (type(target.downcast().__class__) == ManagedOst):
+            handle_conf_param(target,conf_params,target.filesystem.mgs.downcast(),ost = target)
+        else:
+            fs = ManagedFilesystem.objects.get(id=target_id)
+            handle_conf_param(target,conf_params,fs.mgs.downcast(),filesystem = fs)
+
 class GetTargetConfParams(AnonymousRequestHandler):
     @extract_request_args('target_id', 'kinds')
     def run(self, request, target_id, kinds):
@@ -342,10 +370,35 @@ class GetTargetConfParams(AnonymousRequestHandler):
                                               MdtConfParam,
                                               get_conf_params,
                                               all_params)
+        from configure.models import ManagedTarget,ManagedMdt,ManagedOst 
+        from django.shortcuts import get_object_or_404        
         kind_map = {"FSC":FilesystemClientConfParam,
                     "FS": FilesystemGlobalConfParam,
                     "OST":OstConfParam,
                     "MDT":MdtConfParam}
+        result = []
+        
+        def get_conf_param_for_target(target):
+            conf_param_result = []
+            for conf_param in target.get_conf_params():
+                conf_param_result.append({'conf_param':conf_param.key,
+                                          'value':conf_param.value,
+                                          'conf_param_help':all_params[conf_param.key][2]
+                                         }
+                                        )
+            return conf_param_result  
+        
+        if target_id:
+            target = get_object_or_404(ManagedTarget, pk = target_id).downcast() 
+            if isinstance(target, ManagedMdt):
+                result.extend(get_conf_param_for_target(target))
+                kinds = ["MDT"]
+            elif isinstance(target, ManagedOst):
+                result.extend(get_conf_param_for_target(target))
+                kinds = ["OST"]
+            else:
+                return result
+        #Fix me: Need a way to identify if the target is Filesystem or MGS    
         if kinds:
             klasses = []
             for kind in kinds:
@@ -355,17 +408,11 @@ class GetTargetConfParams(AnonymousRequestHandler):
                     raise RuntimeError("Unknown target kind '%s' (kinds are %s)" % (kind, kind_map.keys()))
         else:
             klasses = kind_map.values()
-        result = []
         for klass in klasses:
             conf_params = get_conf_params([klass])
-            conf_param_list = []
             for conf_param in conf_params:
-                conf_param_list.append(
-                                       {'conf_param':conf_param,
-                                        'conf_param_help':all_params[conf_param][2]
-                                       }
-                                      )
-            result.extend(conf_param_list)
+                if not result.__contains__(conf_params): 
+                    result.append({'conf_param': conf_param, 'value': '', 'conf_param_help': all_params[conf_param][2]}) 
         return result
 
 class Target(AnonymousRequestHandler):

@@ -619,7 +619,9 @@ table.fs th:first-child {
     font-size: 12px;
 }
 .txtcenter{
-	text-align:center;
+    text-align:center;
+    font-weight:normal;
+    font-size: 12px;
 }
 .tblContent{
     font-weight: normal;
@@ -773,3 +775,8 @@ table.chart_grid td table {
   color: #ff0000;
 }
 
+.notification_job_buttons{
+  width: 50px;
+  height: 20px;
+  font-size: 9px;
+}
