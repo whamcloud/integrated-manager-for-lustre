@@ -10,7 +10,7 @@ from django.contrib.contenttypes.generic import GenericForeignKey
 
 from collections import defaultdict
 
-import simplejson as json
+import json
 import pickle
 
 from logging import INFO, WARNING

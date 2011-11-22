@@ -7,20 +7,21 @@
 from django.http import HttpResponse
 from functools import wraps
 from datetimeencoder import DjangoTimeJSONEncoder
-import simplejson
 import urllib2
 
 def make_json_call(url, **params):
     """Call one URL, passing JSON-encoded parameters.
     Return the result value.
     """
+    import json
+
     # Build a request for the given URL.
     request = urllib2.Request(url)
     # Declare our desire to receive a JSON response.
     request.add_header('Accept', 'application/json')
     # Add any outgoing parameters to the body of the request.
     if params:
-        encoded_params = simplejson.dumps(params)
+        encoded_params = json.dumps(params)
         print "input_params=>%s" %encoded_params
         request.add_header('Content-Length', str(len(encoded_params)))
         request.add_header('Content-Type', 'application/json')
@@ -32,15 +33,15 @@ def make_json_call(url, **params):
             # reraise the original erro
             raise Exception(e)
 
-    faultstring = simplejson.loads(raw_response).get('faultstring')
+    faultstring = json.loads(raw_response).get('faultstring')
     if faultstring:
         raise Exception(faultstring)
-    result = simplejson.loads(raw_response)
+    result = json.loads(raw_response)
     return result
     
 def render_to_json(**jsonargs):
     """
-    Renders a JSON response with a given returned instance. Assumes simplejson.dumps() can
+    Renders a JSON response with a given returned instance. Assumes json.dumps() can
     handle the result. The default output uses an indent of 4.
     
     @render_to_json()

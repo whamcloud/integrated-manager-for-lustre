@@ -9,7 +9,6 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponse
 from django.utils.cache import add_never_cache_headers
-from django.utils import simplejson
 
 import settings
 setup_environ(settings)
@@ -53,10 +52,12 @@ def get_db_events(request):
     return send_datatable_response(event_result,int(request.GET.get('sEcho',0)))
     
 def send_datatable_response(result,sEcho):
+    import json 
+
     response_dict = {}
     response_dict.update({'aaData':result['aaData']})
     response_dict.update({'sEcho': sEcho, 'iTotalRecords': result['iTotalRecords'], 'iTotalDisplayRecords':result['iTotalDisplayRecords']})
-    response =  HttpResponse(simplejson.dumps(response_dict), mimetype='application/javascript')
+    response =  HttpResponse(json.dumps(response_dict), mimetype='application/javascript')
     #prevent from caching datatables result
     add_never_cache_headers(response)
     return response
