@@ -5,8 +5,9 @@
 # ==============================
 
 from collections import defaultdict
-
+from django.db import transaction
 from configure.lib.job import job_log
+
 
 class Transition(object):
     def __init__(self, stateful_object, old_state, new_state):
@@ -33,10 +34,11 @@ class Transition(object):
         kwargs = {stateful_object_attr: self.stateful_object}
         return job_klass(**kwargs)
 
+
 class StateManager(object):
     @classmethod
     def available_transitions(cls, stateful_object):
-        """Return a list states to which the object can be set from 
+        """Return a list states to which the object can be set from
            its current state, or None if the object is currently
            locked by a Job"""
         # If the object is subject to an incomplete StateChangeJob
@@ -52,7 +54,7 @@ class StateManager(object):
         if active_locks > 0:
             return []
 
-        # XXX: could alternatively use expected_state here if you want to advertise 
+        # XXX: could alternatively use expected_state here if you want to advertise
         # what jobs can really be added (i.e. advertise transitions which will
         # be available when current jobs are complete)
         #from_state = self.get_expected_state(stateful_object)
@@ -81,7 +83,6 @@ class StateManager(object):
                 new_state,
                 from_states)
 
-
     @classmethod
     def add_job(cls, job):
         from configure.tasks import add_job
@@ -96,7 +97,6 @@ class StateManager(object):
 
         # Important: the Job must not be committed until all
         # its dependencies and locks are in.
-        from django.db import transaction
         @transaction.commit_on_success
         def instantiate_job():
             job.save()
@@ -104,7 +104,6 @@ class StateManager(object):
             job.create_dependencies()
         instantiate_job()
 
-        from django.db import transaction
         transaction.commit()
         from configure.models import Job
         Job.run_next()
@@ -176,11 +175,11 @@ class StateManager(object):
         from configure.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
 
-        # Work out the eventual states (and which writelock'ing job to depend on to 
+        # Work out the eventual states (and which writelock'ing job to depend on to
         # ensure that state) from all non-'complete' jobs in the queue
 
         self.expected_states = {}
-        # TODO: find out how to do a DB query that just gives us the latest WL for 
+        # TODO: find out how to do a DB query that just gives us the latest WL for
         # each locked_item (same result for less iterations of this loop)
         from configure.models import StateWriteLock
         from django.db.models import Q
@@ -212,17 +211,19 @@ class StateManager(object):
                 object_edges[parent].append(child)
 
             leaf_distance_cache = {}
+
             def leaf_distance(obj, depth = 0, hops = 0):
                 if obj in leaf_distance_cache:
                     return leaf_distance_cache[obj] + hops
+
                 depth = depth + 1
                 #print " " * depth + "leaf_distance %s %s" % (obj, hops)
                 max_child_hops = hops
                 for child in object_edges[obj]:
                     child_hops = leaf_distance(child, depth, hops + 1)
                     max_child_hops = max(child_hops, max_child_hops)
-                
-                leaf_distance_cache[obj] = max_child_hops - hops;
+
+                leaf_distance_cache[obj] = max_child_hops - hops
 
                 return max_child_hops
 
@@ -230,13 +231,13 @@ class StateManager(object):
             for o in objects:
                 object_leaf_distances.append((o, leaf_distance(o)))
 
-            object_leaf_distances.sort(lambda x,y: cmp(x[1], y[1]))
+            object_leaf_distances.sort(lambda x, y: cmp(x[1], y[1]))
             return [obj for obj, ld in object_leaf_distances]
 
         # XXX
         # VERY IMPORTANT: this sort is what gives us the following rule:
         #  The order of the rows in the Job table corresponds to the order in which
-        #  the jobs would run (including accounting for dependencies) in the absence 
+        #  the jobs would run (including accounting for dependencies) in the absence
         #  of parallelism.
         # XXX
         self.deps = sort_graph(self.deps, self.edges)
@@ -244,7 +245,6 @@ class StateManager(object):
         jobs = {}
         # Important: the Job must not land in the database until all
         # its dependencies and locks are in.
-        from django.db import transaction
         with transaction.commit_on_success():
             for d in self.deps:
                 job = d.to_job()

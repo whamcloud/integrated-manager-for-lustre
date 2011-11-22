@@ -14,9 +14,11 @@ from configure.lib.storage_plugin.log import storage_plugin_log
 from collections import defaultdict
 import threading
 
+
 class Statistic(object):
     def __init__(self):
         pass
+
 
 class StorageResourceMetaclass(type):
     def __new__(cls, name, bases, dct):
@@ -62,6 +64,7 @@ class StorageResourceMetaclass(type):
 
         return super(StorageResourceMetaclass, cls).__new__(cls, name, bases, dct)
 
+
 class StorageResource(object):
     __metaclass__ = StorageResourceMetaclass
 
@@ -106,7 +109,7 @@ class StorageResource(object):
     @classmethod
     def get_all_attribute_properties(cls):
         attr_name_pairs = cls._storage_attributes.items()
-        attr_name_pairs.sort(lambda a,b: cmp(a[1].creation_counter, b[1].creation_counter))
+        attr_name_pairs.sort(lambda a, b: cmp(a[1].creation_counter, b[1].creation_counter))
         return attr_name_pairs
 
     @classmethod
@@ -137,7 +140,7 @@ class StorageResource(object):
             tmp = self._delta_stats
             self._delta_stats = {}
         return tmp
-    
+
     def __init__(self, **kwargs):
         self._storage_dict = {}
         self._plugin = None
@@ -154,7 +157,7 @@ class StorageResource(object):
         self._delta_stats_lock = threading.Lock()
         self._delta_stats = defaultdict(list)
 
-        for k,v in kwargs.items():
+        for k, v in kwargs.items():
             if not k in self._storage_attributes:
                 raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._storage_attributes.keys()))
             setattr(self, k, v)
@@ -171,7 +174,7 @@ class StorageResource(object):
 
     @classmethod
     def get_columns(cls):
-        return [{'name': name, 'label': props.get_label(name)} for (name,props) in cls._storage_attributes.items()]
+        return [{'name': name, 'label': props.get_label(name)} for (name, props) in cls._storage_attributes.items()]
 
     def to_json(self, stack = []):
         dct = {}
@@ -182,7 +185,7 @@ class StorageResource(object):
         dct['icon'] = self.icon
         dct.update(dict(list(self.format_all())))
         dct['children'] = []
-        
+
         stack = stack + [self]
         # This is a bit ropey, .children is actually only added when doing a resource_tree from resourcemanager
         for c in self._children:
@@ -195,8 +198,8 @@ class StorageResource(object):
 
     def human_string(self, ancestors=[]):
         """Subclasses should implement a function which formats a string for
-        presentation, possibly in a tree display as a child of 'parent' (a 
-        StorageResource instance) or if parent is None then for display 
+        presentation, possibly in a tree display as a child of 'parent' (a
+        StorageResource instance) or if parent is None then for display
         on its own."""
         return self.__str__()
 
@@ -267,7 +270,6 @@ class StorageResource(object):
     def id_tuple(self):
         return self.attrs_to_id_tuple(self._storage_dict)
 
-
     def add_parent(self, parent_resource):
         # TODO: lock parents + Delta_parents
         if not parent_resource in self._parents:
@@ -283,20 +285,20 @@ class StorageResource(object):
     def validate(self):
         """Call validate() on the ResourceAttribute for all _storage_dict items, and
            ensure that all non-optional ResourceAttributes have a value in _storage_dict"""
-        for k,v in self._storage_dict.items():
+        for k, v in self._storage_dict.items():
             if k in self._storage_attributes:
                 self._storage_attributes[k].validate(v)
 
-        for k,a in self._storage_attributes.items():
+        for k, a in self._storage_attributes.items():
             if not k in self._storage_dict and not a.optional:
                 raise ValueError("Missing mandatory attribute %s" % k)
-                
+
     def get_parent(self, parent_klass):
-        """Return one member of self._parents of class 'parent_klass'.  Raises 
+        """Return one member of self._parents of class 'parent_klass'.  Raises
            an exception if there are multiple matches or no matches."""
         parents_filtered = [p for p in self._parents if isinstance(p, parent_klass)]
         if len(parents_filtered) == 0:
-            raise RuntimeError("No parents of class %s" % parent_klass)   
+            raise RuntimeError("No parents of class %s" % parent_klass)
         elif len(parents_filtered) > 1:
             raise RuntimeError("Multiple parents of class %s" % parent_klass)
         else:
@@ -317,6 +319,7 @@ class StorageResource(object):
         else:
             return cls.__name__
 
+
 class GlobalId(object):
     """An Id which is globally unique"""
     def __init__(self, *args):
@@ -324,9 +327,11 @@ class GlobalId(object):
         assert(len(args) > 0)
         self.id_fields = args
 
+
 class ScannableId(GlobalId):
     """An Id which is unique within a scannable resource"""
     pass
+
 
 class ScannableResource(object):
     """Used for marking which StorageResource subclasses are for scanning (like couplets, hosts)"""

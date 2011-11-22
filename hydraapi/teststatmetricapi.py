@@ -2,7 +2,7 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-# Test utility for testing the REST GET and POST calls using 
+# Test utility for testing the REST GET and POST calls using
 # command line arguments.
 from django.core.management import setup_environ
 import optparse
@@ -32,7 +32,7 @@ def main(args):
         option_parser.print_help()
         exit(-1)
     base_url = options.url.rstrip('/')
-    
+
     print  'Unit Test 1: All File system Usage Bar/Column graph:'
     api_url = base_url + '/api/get_fs_stats_for_targets/'
     print 'api_url: %s' % api_url
@@ -42,13 +42,13 @@ def main(args):
                              endtime='',
                              datafunction='Average',
                              targetkind='OST',
-                             fetchmetrics="kbytestotal kbytesfree filestotal filesfree",   
+                             fetchmetrics="kbytestotal kbytesfree filestotal filesfree",
                              )
     print 'result:'
     print result
     print '\n\n'
 
-    print 'Unit Test 2: File system Usage Bar/Column graph:' 
+    print 'Unit Test 2: File system Usage Bar/Column graph:'
     api_url = base_url + '/api/get_fs_stats_for_targets/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
@@ -140,7 +140,7 @@ def main(args):
                                  endtime='',
                                  datafunction='Average',
                                  targetkind='OST',
-                                 fetchmetrics="stats_read_bytes stats_write_bytes",   
+                                 fetchmetrics="stats_read_bytes stats_write_bytes",
                                  )
         print 'result:'
         print result
@@ -154,7 +154,7 @@ def main(args):
                              starttime=options.start_time,
                              endtime='',
                              datafunction='Average',
-                             fetchmetrics="num_exports",   
+                             fetchmetrics="num_exports",
                              )
     print 'result:'
     print result
@@ -173,7 +173,7 @@ def main(args):
     print 'result:'
     print result
     print '\n\n'
-    
+
 
     return 0
 

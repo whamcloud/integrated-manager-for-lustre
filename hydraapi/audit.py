@@ -4,7 +4,7 @@
 # ==============================
 
 # REST API Conrtoller for Hydra server Audit resource.
-# 
+#
 from django.core.management import setup_environ
 
 # Hydra Server Imports
@@ -16,7 +16,7 @@ from configure.models import Monitor
 
 #REST API Controler for Hydra audit related operations/actions
 class HydraAudit(AnonymousRequestHandler):
-    def run(self,request):
+    def run(self, request):
         audit_list = []
         for m in Monitor.objects.all():
             from celery.result import AsyncResult
@@ -30,21 +30,21 @@ class HydraAudit(AnonymousRequestHandler):
                                'state': m.state,
                                'task_id' : m.task_id,
                                'task_state' : task_state
-                              }    
+                              }
             )
             return audit_list
 
-class ClearAudit(AnonymousRequestHandler):     
-    def run(self,request):
+class ClearAudit(AnonymousRequestHandler):
+    def run(self, request):
         audit_list = []
         for m in Monitor.objects.all():
-            m.update(state = 'idle',task_id = None)
+            m.update(state = 'idle', task_id = None)
             audit_list.append(
                               {
                                'host' : m.host,
                                'state': m.state,
                                'task_id' : m.task_id,
-                               'audit_cleared' : 'True' 
+                               'audit_cleared' : 'True'
                               }
-            )  
+            )
         return audit_list

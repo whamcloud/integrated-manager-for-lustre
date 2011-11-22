@@ -44,51 +44,51 @@ def extract_exception(f):
 class RequestHandler(BaseHandler):
     #allowed_methods = ('GET', 'POST')
     allowed_methods = ('GET')
-    
+
     def __init__(self):
         BaseHandler.__init__(self)
-    
+
     def read(self, request):
         """Serve GET requests from the client. It calls the registered function with the GET parameters
-        :param request: A HTTP GET request 
+        :param request: A HTTP GET request
         """
-        
+
         if self.run is None:
             raise Exception("No function registered! Unable to process request.")
         request.data = request.GET
         return self.run(request)
-    
+
     def create(self, request):
         return self.run(request)
 
 class AnonymousRequestHandler(RequestHandler):
-    
+
     allowed_methods = ('GET', 'POST')
-    
+
     def __init__(self, *args, **kwargs):
         RequestHandler.__init__(self)
-    
+
     @render_to_json()
     @extract_exception
     def read(self, request):
         return RequestHandler.read(self, request)
-    
+
     @render_to_json()
     @extract_exception
     def create(self, request):
         return RequestHandler.create(self, request)
 
 class AuthorisedRequestHandler(RequestHandler):
-    
+
     allowed_methods = ('GET', 'POST')
-    
+
     def __init__(self, registered_function, *args, **kwargs):
         RequestHandler.__init__(self, registered_function)
     @render_to_json()
 #    @login_required # This will be rquired when we will need session management
     def read(self, request):
         return RequestHandler.read(self, request)
-    
+
     @csrf_exempt
     @render_to_json()
 #    @login_required # This will be required when we will need session management
@@ -114,9 +114,9 @@ class extract_request_args:
                 try:
                     call_args[value] = data[value]
                 except:
-                    errors[value] = [ "This field is required." ] 
+                    errors[value] = [ "This field is required." ]
                     pass
-                
+
             if len(errors) > 0:
                 raise Exception(errors)
             return f(wrapped_self, request, **call_args)
@@ -137,7 +137,7 @@ class extract_request_args_old:
             data = request.data
             errors = { }
             #Fill in the callArgs with values from the request data
-            for key,value in self.args.items():
+            for key, value in self.args.items():
                 try:
                     call_args[key] = data[value]
                 except:

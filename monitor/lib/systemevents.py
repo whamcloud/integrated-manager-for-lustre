@@ -173,7 +173,7 @@ class SystemEventsAudit:
                             fn = self.selectors[hit]
                             try:
                                 fn(entry, h)
-                            except Exception,e:
+                            except Exception, e:
                                 syslog_events_log.error("Failed to parse log line %s using handler %s: %s" % (entry.message, fn, e))
                     # now that we have some real events, i don't think we
                     # need to keep logging this noise, but let's leave it

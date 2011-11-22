@@ -121,8 +121,8 @@ def get_log_data(display_month, display_day, only_lustre):
 
 def log_viewer(request):
     import datetime
-    start_month_choices = [(i, datetime.date(1970, i, 1).strftime('%B')) for i in range(1,13)]
-    start_day_choices = [(i, "%2d" % i) for i in range(1,31)]
+    start_month_choices = [(i, datetime.date(1970, i, 1).strftime('%B')) for i in range(1, 13)]
+    start_day_choices = [(i, "%2d" % i) for i in range(1, 31)]
 
     from django import forms
     class LogViewerForm(forms.Form):
@@ -205,7 +205,7 @@ def ajax_exception(fn):
     def wrapped(*args, **kwargs):
         try:
             return fn(*args, **kwargs)
-        except Exception,e:
+        except Exception, e:
             from django.db import transaction
 
             # Roll back any active transaction
@@ -228,7 +228,7 @@ def host(request):
         from django.db.utils import IntegrityError
         try:
             ManagedHost.create_from_string(address)
-        except IntegrityError,e:
+        except IntegrityError, e:
             raise RuntimeError("Cannot add '%s', possible duplicate address. (%s)" % (address, e))
 
         result = {'success': True}

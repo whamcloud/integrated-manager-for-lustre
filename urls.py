@@ -12,7 +12,7 @@ urlpatterns = patterns('',
     (r'^djcelery/', include('djcelery.urls')),
     (r'^api/', include('hydraapi.urls')),
     (r'^dashboard/', include('hydradashboard.urls')),
-    (r'^hydracm/', include('hydracm.urls')), 
+    (r'^hydracm/', include('hydracm.urls')),
     # Uncomment the admin/doc line below to enable admin documentation:
     # (r'^admin/doc/', include('django.contrib.admindocs.urls')),
 

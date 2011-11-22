@@ -31,28 +31,28 @@ def dblogs(request):
 
 def get_db_logs(request):
     from hydraapi.monitorapi import get_logs
-    log_result = get_logs(request.GET.get('host_id',None),
-                          request.GET.get('start_time',None),
-                          request.GET.get('end_time',None),
+    log_result = get_logs(request.GET.get('host_id', None),
+                          request.GET.get('start_time', None),
+                          request.GET.get('end_time', None),
                           request.GET.get('lustre'),
-                          int(request.GET.get('iDisplayStart',0)),
-                          min(int(request.GET.get('iDisplayLength',10)),100),
+                          int(request.GET.get('iDisplayStart', 0)),
+                          min(int(request.GET.get('iDisplayLength', 10)), 100),
                           request.GET.get('sSearch', '').encode('utf-8'),
-                          int(request.GET.get('iSortingCols',0)))
-    return send_datatable_response(log_result,int(request.GET.get('sEcho',0)))
+                          int(request.GET.get('iSortingCols', 0)))
+    return send_datatable_response(log_result, int(request.GET.get('sEcho', 0)))
 
 def get_db_events(request):
     from hydraapi.monitorapi import geteventsbyfilter
-    event_result = geteventsbyfilter(request.GET.get('host_id',None),
-                                     request.GET.get('severity',None),
+    event_result = geteventsbyfilter(request.GET.get('host_id', None),
+                                     request.GET.get('severity', None),
                                      request.GET.get('event_type'),
-                                     int(request.GET.get('iDisplayStart',0)),
-                                     min(int(request.GET.get('iDisplayLength',10)),100),
-                                     int(request.GET.get('iSortingCols',0)))  
-    return send_datatable_response(event_result,int(request.GET.get('sEcho',0)))
-    
-def send_datatable_response(result,sEcho):
-    import json 
+                                     int(request.GET.get('iDisplayStart', 0)),
+                                     min(int(request.GET.get('iDisplayLength', 10)), 100),
+                                     int(request.GET.get('iSortingCols', 0)))
+    return send_datatable_response(event_result, int(request.GET.get('sEcho', 0)))
+
+def send_datatable_response(result, sEcho):
+    import json
 
     response_dict = {}
     response_dict.update({'aaData':result['aaData']})

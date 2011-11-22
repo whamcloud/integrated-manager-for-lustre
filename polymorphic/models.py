@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 def nested_commit_on_success(func):
     """Like commit_on_success, but doesn't commit existing transactions.
 
-    This decorator is used to run a function within the scope of a 
+    This decorator is used to run a function within the scope of a
     database transaction, committing the transaction on success and
     rolling it back if an exception occurs.
 
@@ -17,7 +17,7 @@ def nested_commit_on_success(func):
     whoever is managing the active transaction.
     """
     from django.db import transaction
- 
+
     commit_on_success = transaction.commit_on_success(func)
     def _nested_commit_on_success(*args, **kwds):
         if transaction.is_managed():
@@ -32,7 +32,7 @@ class PolymorphicMetaclass(ModelBase):
             if(not self.content_type):
                 self.content_type = ContentType.objects.get_for_model(self.__class__)
 
-            # We make sure this is happening inside a transaction 
+            # We make sure this is happening inside a transaction
             # because otherwise another thread could try to get
             # objects of the base class, this metaclass will try
             # to downcast, and fail because the instance of the
@@ -40,7 +40,7 @@ class PolymorphicMetaclass(ModelBase):
             @nested_commit_on_success
             def base_save():
                 models.Model.save(self, *args, **kwargs)
-            base_save();
+            base_save()
 
 
         def downcast(self):
@@ -49,7 +49,7 @@ class PolymorphicMetaclass(ModelBase):
                 return self
             # NB Use _base_manager to get a 'plain' Manager which is guaranteed
             # not to filter any records out
-            return model._base_manager.get(id=self.id)  
+            return model._base_manager.get(id=self.id)
 
         if issubclass(dct.get('__metaclass__', type), PolymorphicMetaclass):
           dct['content_type'] = models.ForeignKey(ContentType, editable=False, null=True)

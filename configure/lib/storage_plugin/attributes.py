@@ -7,6 +7,7 @@
 """This module defines ResourceAttribute and its subclasses, which represent
 the datatypes that StorageResource objects may store as attributes"""
 
+
 class ResourceAttribute(object):
     """Base class for declared attributes of StorageResource.  This is
        to StorageResource as models.fields.Field is to models.Model"""
@@ -33,8 +34,8 @@ class ResourceAttribute(object):
             return " ".join([words[0].title()] + words[1:])
 
     def validate(self, value):
-        """Note: this validation is NOT intended to be used for catching cases 
-        in production, it does not provide hooks for user-friendly error messages 
+        """Note: this validation is NOT intended to be used for catching cases
+        in production, it does not provide hooks for user-friendly error messages
         etc.  Think of it more as an assert."""
         pass
 
@@ -55,6 +56,7 @@ class ResourceAttribute(object):
         from django.utils.html import conditional_escape
         return conditional_escape(value)
 
+
 class String(ResourceAttribute):
     def __init__(self, max_length = None, *args, **kwargs):
         self.max_length = max_length
@@ -64,6 +66,7 @@ class String(ResourceAttribute):
         if self.max_length != None and len(value) > self.max_length:
             raise RuntimeError("Value '%s' too long (max %s)" % (value, self.max_length))
 
+
 class Boolean(ResourceAttribute):
     def encode(self, value):
         # Use an explicit 'encode' so that if someone sets the attribute to something
@@ -72,6 +75,7 @@ class Boolean(ResourceAttribute):
 
     def decode(self, value):
         return value
+
 
 class Integer(ResourceAttribute):
     def __init__(self, min_val = None, max_val = None, *args, **kwargs):
@@ -85,15 +89,16 @@ class Integer(ResourceAttribute):
         if self.max_val != None and value > self.max_val:
             raise RuntimeError("Value %s too high (max %s)" % (value, self.max_val))
 
+
 # TODO: This is useful if the caller can give you an exact number of bytes
 # , but where the caller has a "10GB" or somesuch, that's rounded
 # and we should have an explicitly inexact Bytes class which would take
 # a string and parse it to a rounded number of bytes.
-
 class Bytes(ResourceAttribute):
     def to_markup(self, value):
         from monitor.lib.util import sizeof_fmt
         return sizeof_fmt(int(value))
+
 
 class Enum(ResourceAttribute):
     def __init__(self, *args, **kwargs):
@@ -108,20 +113,24 @@ class Enum(ResourceAttribute):
         if not value in self.options:
             raise ValueError("Value '%s' is not one of %s" % (value, self.options))
 
+
 class Uuid(ResourceAttribute):
     def validate(self, value):
         stripped = value.replace("-", "")
         if not len(stripped) == 32:
             raise ValueError("'%s' is not a valid UUID" % value)
 
+
 class PosixPath(ResourceAttribute):
     pass
+
 
 class HostName(ResourceAttribute):
     pass
 
+
 class ResourceReference(ResourceAttribute):
-    # NB no 'encode' impl here because it has to be a special case to 
+    # NB no 'encode' impl here because it has to be a special case to
     # resolve a local resource to a global ID
 
     def decode(self, value):
@@ -129,12 +138,12 @@ class ResourceReference(ResourceAttribute):
         pk = json.loads(value)
         if pk:
             from configure.models import StorageResourceRecord
-            
+
             record = StorageResourceRecord.objects.get(pk = pk)
             return record.to_resource()
         else:
             return None
-        
+
     def to_markup(self, value):
         from configure.models import StorageResourceRecord
         if value == None:
@@ -160,5 +169,3 @@ class ResourceReference(ResourceAttribute):
             raise RuntimeError("ResourceReference set to None but not optional" % value)
         elif not isinstance(value, StorageResource):
             raise RuntimeError("Cannot take ResourceReference to %s" % value)
-
-

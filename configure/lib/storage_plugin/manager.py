@@ -14,15 +14,17 @@ from configure.models.storage_plugin import *
 from django.db import transaction
 import json
 
+
 class LoadedResourceClass(object):
-    """Convenience store of introspected information about StorageResource 
+    """Convenience store of introspected information about StorageResource
        subclasses from loaded modules."""
     def __init__(self, resource_class, resource_class_id):
         self.resource_class = resource_class
         self.resource_class_id = resource_class_id
 
+
 class LoadedPlugin(object):
-    """Convenience store of introspected information about loaded 
+    """Convenience store of introspected information about loaded
        plugin modules."""
     def __init__(self, plugin_manager, module, plugin_class):
         # Map of name string to class
@@ -53,6 +55,7 @@ class LoadedPlugin(object):
                     class_stat, created = StorageResourceClassStatistic.objects.get_or_create(
                             resource_class = vrc,
                             name = name)
+
 
 class StoragePluginManager(object):
     def __init__(self):
@@ -98,7 +101,7 @@ class StoragePluginManager(object):
         record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, kwargs)
 
         # XXX should we let people modify root records?  e.g. change the IP
-        # address of a controller rather than deleting it, creating a new 
+        # address of a controller rather than deleting it, creating a new
         # one and letting the pplugin repopulate us with 'new' resources?
         # This will present the challenge of what to do with instances of
         # StorageResource subclasses which are already present in running plugins.
@@ -134,7 +137,7 @@ class StoragePluginManager(object):
     def load_plugin(self, module):
         """Load a StoragePlugin class from a module given a
            python path like 'configure.lib.lvm',
-           or simply return it if it was already loaded.  Note that the 
+           or simply return it if it was already loaded.  Note that the
            StoragePlugin within the module will not be instantiated when this
            returns, caller is responsible for instantiating it.
 
@@ -155,7 +158,7 @@ class StoragePluginManager(object):
         for name, cls in inspect.getmembers(plugin):
             if inspect.isclass(cls) and issubclass(cls, StoragePlugin) and cls != StoragePlugin:
                 plugin_klasses.append(cls)
-                
+
         # Make sure we have exactly one StoragePlugin subclass
         if len(plugin_klasses) > 1:
             raise RuntimeError("Module %s defines more than one StoragePlugin: %s!" % (module, plugin_klasses))
@@ -169,5 +172,3 @@ class StoragePluginManager(object):
 
 
 storage_plugin_manager = StoragePluginManager()
-
-

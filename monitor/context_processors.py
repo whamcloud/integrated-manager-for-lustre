@@ -3,9 +3,11 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+
 def app_data(request):
     from settings import VERSION
     return {'APP_VERSION': VERSION}
+
 
 def menu_items(request):
     items = []
@@ -22,4 +24,3 @@ def menu_items(request):
         pass
 
     return {'menu_items': items}
-

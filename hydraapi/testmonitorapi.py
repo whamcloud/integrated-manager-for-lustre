@@ -2,7 +2,7 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-# Test utility for testing the REST GET and POST calls using 
+# Test utility for testing the REST GET and POST calls using
 # command line arguments.
 from django.core.management import setup_environ
 import optparse
@@ -29,7 +29,7 @@ def main(args):
         option_parser.print_help()
         exit(-1)
     base_url = options.url.rstrip('/')
-    print 'Unit Test 1: Get list of All File systems:' 
+    print 'Unit Test 1: Get list of All File systems:'
     api_url = base_url + '/api/listfilesystems/'
     print 'api_url: %s' % api_url
     result  = make_json_call(api_url,
@@ -37,7 +37,7 @@ def main(args):
     print 'result:'
     print result
     print '\n\n'
-    
+
     print 'Unit Test 2: Get File system:'
     api_url = base_url + '/api/getfilesystem/'
     print 'api_url: %s' % api_url
@@ -47,14 +47,14 @@ def main(args):
     print 'result:'
     print result
     print '\n\n'
-    
+
     print 'Unit Test 3: Get targets for a File system:'
     api_url = base_url + '/api/get_fs_targets/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem_id=options.fs_id,
                              kinds=['MDT','MGT','OST'],
-                             host_id=None    
+                             host_id=None
                              )
     print 'result:'
     print result
@@ -66,12 +66,12 @@ def main(args):
     result = make_json_call(api_url,
                              filesystem_id='',
                              kinds=['MDT','MGT','OST'],
-                             host_id=None 
+                             host_id=None
                              )
     print 'result:'
     print result
-    print '\n\n'    
-    
+    print '\n\n'
+
     print 'Unit Test 5: Get targets for All File systems:'
     api_url = base_url + '/api/get_targets/'
     print 'api_url: %s' % api_url
@@ -107,12 +107,12 @@ def main(args):
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem_id=options.fs_id,
-                             kinds=['MDT','MGT','OST']  
+                             kinds=['MDT','MGT','OST']
                             )
     print 'result:'
     print result
     print '\n\n'
- 
+
     print 'Unit  Test 9: Get servers/hosts for All File systems'
     api_url = base_url + '/api/listservers/'
     print 'api_url: %s' % api_url
@@ -121,8 +121,8 @@ def main(args):
                             )
     print 'result:'
     print result
-    print '\n\n'  
-    
+    print '\n\n'
+
 #    print 'Unit  Test 10: Get Clients for a File systems'
 #    api_url = base_url + '/api/getclients/'
 #    print 'api_url: %s' % api_url

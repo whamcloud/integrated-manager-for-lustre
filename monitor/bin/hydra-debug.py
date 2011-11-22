@@ -26,7 +26,7 @@ def log():
     return getLogger(file_log_name)
 
 def screen(string):
-    print string 
+    print string
     log().debug(string)
 
 
@@ -79,11 +79,10 @@ class HydraDebug(cmd.Cmd, object):
         osts = ManagedOst.objects.filter(filesystem = filesystem)
         for ost in osts:
             self.__volume_row(ost, table)
-        
+
         self.__filesystem_title(filesystem)
         screen(table.draw())
         screen("\n")
-
 
     def do_volume_list(self, filesystem_name):
         """volume_list [filesystem name]

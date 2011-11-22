@@ -8,20 +8,22 @@ from re import escape
 
 import logging
 import settings
-import time
 
 from configure.lib.agent import Agent
 
 job_log = logging.getLogger('job')
 job_log.setLevel(logging.DEBUG)
 handler = logging.FileHandler(settings.JOB_LOG_PATH)
-handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+handler.setFormatter(logging.Formatter(
+        '[%(asctime)s] %(message)s',
+        '%d/%b/%Y:%H:%M:%S'))
 job_log.addHandler(handler)
 if settings.DEBUG:
     job_log.setLevel(logging.DEBUG)
     job_log.addHandler(logging.StreamHandler())
 else:
     job_log.setLevel(logging.INFO)
+
 
 class Dependable(object):
     def all(self):
@@ -47,11 +49,16 @@ class Dependable(object):
            is set on their object)"""
         return NotImplementedError
 
+
 class DependOn(Dependable):
-    def __init__(self, stateful_object, preferred_state, acceptable_states = None, fix_state = None):
-        """preferred_state: what we will try to put the dependency into if 
+    def __init__(self,
+            stateful_object,
+            preferred_state,
+            acceptable_states = None,
+            fix_state = None):
+        """preferred_state: what we will try to put the dependency into if
            it is not already in one of acceptable_states.
-           fix_state: what we will try to put the depender into if his 
+           fix_state: what we will try to put the depender into if his
            dependency can no longer be satisfied."""
         if not acceptable_states:
             self.acceptable_states = [preferred_state]
@@ -61,26 +68,28 @@ class DependOn(Dependable):
             else:
                 self.acceptable_states = acceptable_states
 
-        # Preferred state is a piece of metadata which tells callers how to 
+        # Preferred state is a piece of metadata which tells callers how to
         # get our stateful_object into an acceptable state -- i.e. "If X is not
-        # in one of Y then put it into Z" where X is stateful_object, Y is 
+        # in one of Y then put it into Z" where X is stateful_object, Y is
         # acceptable_states, Z is preferred_state.
         self.preferred_state = preferred_state
 
         # fix_state is a piece of metadata which tells callers how to eliminate
-        # this dependency, i.e. "I depend on X in Y but I wouldn't if I was in 
-        # state Z" where X is stateful_object, Y is acceptable_states, Z is 
+        # this dependency, i.e. "I depend on X in Y but I wouldn't if I was in
+        # state Z" where X is stateful_object, Y is acceptable_states, Z is
         # fix_state.
         self.fix_state = fix_state
         self.stateful_object = stateful_object
 
     def satisfied(self):
-        result = self.stateful_object.state in self.acceptable_states
         satisfied = self.stateful_object.state in self.acceptable_states
         if not satisfied:
-            job_log.warning("DependOn not satisfied: %s in state %s, not one of %s" % 
-                    (self.stateful_object, self.stateful_object.state, self.acceptable_states))
+            job_log.warning("DependOn not satisfied: %s in state %s, not one of %s" %
+                    (self.stateful_object,
+                     self.stateful_object.state,
+                     self.acceptable_states))
         return satisfied
+
 
 class MultiDependable(Dependable):
     def __init__(self, *args):
@@ -89,6 +98,7 @@ class MultiDependable(Dependable):
             self.objects = args[0]
         else:
             self.objects = args
+
 
 class DependAll(MultiDependable):
     """Stores a list of Dependables, all of which must be in the
@@ -99,6 +109,7 @@ class DependAll(MultiDependable):
                 return False
 
         return True
+
 
 class DependAny(MultiDependable):
     """Stores a list of Dependables, one or more of which must be in the
@@ -113,36 +124,6 @@ class DependAny(MultiDependable):
 
         return False
 
-class StepPaused(Exception):
-    """A step did not execute because the job is paused."""
-    pass
-
-class StepAborted(Exception):
-    """A step did not execute because the job has errored."""
-    pass
-
-class StepFailed(Exception):
-    """A step executed and returned an exception.  The job has been marked as errored."""
-    def __init__(self, step_exception):
-        self.step_exception = step_exception
-    pass
-
-class StepCleanError(Exception):
-    """A step encountered an error which prevented it making any changes,
-       such the step may be retried at will.  For example, an attempt to
-       mkfs over ssh failed to establish a connection: there is no risk that
-       mkfs command started running"""
-    pass
-
-class StepDirtyError(Exception):
-    """A step encountered an error which may have left the system in 
-       an inconsistent state.  For example, connectivity was lost partway
-       through a mkfs operation: we don't know if the filesystem is formatted
-       or not"""
-    pass
-
-
-STEP_PAUSE_DELAY = 10
 
 class Step(object):
     def __init__(self, job, args, result):
@@ -163,7 +144,7 @@ class Step(object):
         self.final = True
 
     def is_idempotent(self):
-        """Indicate whether the step is idempotent.  For example, mounting 
+        """Indicate whether the step is idempotent.  For example, mounting
            a target.  Step subclasses which are idempotent should override this and
            return True."""
         return False
@@ -172,7 +153,9 @@ class Step(object):
         raise NotImplementedError
 
     def retry(self):
-        steps = self.get_steps()
+        pass
+        # TODO
+        #steps = self.get_steps()
         # Which one failed?
 
     def invoke_agent(self, host, command):
@@ -181,6 +164,7 @@ class Step(object):
             self.result.save()
         agent = Agent(host = host, log = job_log, console_callback = console_callback)
         return agent.invoke(command)
+
 
 class StateChangeJob(object):
     """Subclasses must define a class attribute 'stateful_object'
@@ -203,6 +187,7 @@ class StateChangeJob(object):
         # run procedure because steps might be modifying it
         stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
         return stateful_object
+
 
 class MkfsStep(Step):
     def _mkfs_args(self, target):
@@ -244,9 +229,9 @@ class MkfsStep(Step):
         target = ManagedTarget.objects.get(id = target_id).downcast()
         target_mount = target.managedtargetmount_set.get(primary = True)
         return "Format %s on %s" % (target, target_mount.host)
-    
+
     def run(self, kwargs):
-        from configure.models import ManagedTarget, Lun
+        from configure.models import ManagedTarget
 
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id).downcast()
@@ -258,13 +243,14 @@ class MkfsStep(Step):
         args = self._mkfs_args(target)
         result = self.invoke_agent(target_mount.host, "format-target --args %s" % escape(json.dumps(args)))
         fs_uuid = result['uuid']
-        lun_node = target_mount.block_device
         target.uuid = fs_uuid
         target.save()
+
 
 class NullStep(Step):
     def run(self, kwargs):
         pass
+
 
 class AnyTargetMountStep(Step):
     def _run_agent_command(self, target, command):
@@ -281,7 +267,7 @@ class AnyTargetMountStep(Step):
 
         for tm in available_tms:
             job_log.debug("command '%s' on target %s trying targetmount %s" % (command, target, tm))
-            
+
             try:
                 return self.invoke_agent(tm.host, command)
                 # Success!
@@ -295,6 +281,7 @@ class AnyTargetMountStep(Step):
         # Should never fall through, if succeeded then returned, if failed all then
         # re-raise exception on last failure
         assert False
+
 
 class MountStep(AnyTargetMountStep):
     def is_idempotent(self):
@@ -319,6 +306,7 @@ class MountStep(AnyTargetMountStep):
 
             raise
 
+
 class UnmountStep(AnyTargetMountStep):
     def is_idempotent(self):
         return True
@@ -330,6 +318,7 @@ class UnmountStep(AnyTargetMountStep):
 
         self._run_agent_command(target, "stop-target --label %s --serial %s" % (target.name, target.pk))
         target.set_active_mount(None)
+
 
 class RegisterTargetStep(Step):
     def is_idempotent(self):
@@ -346,6 +335,7 @@ class RegisterTargetStep(Step):
         job_log.debug("Registration complete, updating target %d with name=%s" % (target.id, label))
         target.name = label
         target.save()
+
 
 class ConfigurePacemakerStep(Step):
     def is_idempotent(self):
@@ -367,6 +357,7 @@ class ConfigurePacemakerStep(Step):
                                     target_mount.primary and "--primary" or "",
                                     target_mount.mount_point))
 
+
 class UnconfigurePacemakerStep(Step):
     def is_idempotent(self):
         return True
@@ -386,6 +377,7 @@ class UnconfigurePacemakerStep(Step):
                                     target_mount.target.pk,
                                     target_mount.primary and "--primary" or ""))
 
+
 class StartLNetStep(Step):
     def is_idempotent(self):
         return True
@@ -394,6 +386,7 @@ class StartLNetStep(Step):
         from configure.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "start-lnet")
+
 
 class StopLNetStep(Step):
     def is_idempotent(self):
@@ -404,6 +397,7 @@ class StopLNetStep(Step):
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "stop-lnet")
 
+
 class LoadLNetStep(Step):
     def is_idempotent(self):
         return True
@@ -413,6 +407,7 @@ class LoadLNetStep(Step):
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "load-lnet")
 
+
 class UnloadLNetStep(Step):
     def is_idempotent(self):
         return True
@@ -421,6 +416,7 @@ class UnloadLNetStep(Step):
         from configure.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "unload-lnet")
+
 
 class ConfParamStep(Step):
     def is_idempotent(self):
@@ -434,6 +430,7 @@ class ConfParamStep(Step):
                 "set-conf-param --args %s" % escape(json.dumps({
                     'key': conf_param.get_key(), 'value': conf_param.value})))
 
+
 class ConfParamVersionStep(Step):
     def is_idempotent(self):
         return True
@@ -444,6 +441,7 @@ class ConfParamVersionStep(Step):
             filter(pk = kwargs['mgs_id']).\
             update(conf_param_version_applied = kwargs['version'])
 
+
 class DeleteTargetStep(Step):
     def is_idempotent(self):
         return True
@@ -451,6 +449,7 @@ class DeleteTargetStep(Step):
     def run(self, kwargs):
         from configure.models import ManagedTarget
         ManagedTarget.delete(kwargs['target_id'])
+
 
 class DeleteTargetMountStep(Step):
     def is_idempotent(self):
@@ -460,6 +459,7 @@ class DeleteTargetMountStep(Step):
         from configure.models import ManagedTargetMount
         ManagedTargetMount.delete(kwargs['target_mount_id'])
 
+
 class DeleteFilesystemStep(Step):
     def is_idempotent(self):
         return True
@@ -468,6 +468,7 @@ class DeleteFilesystemStep(Step):
         from configure.models import ManagedFilesystem
         ManagedFilesystem.delete(kwargs['filesystem_id'])
 
+
 class DeleteHostStep(Step):
     def is_idempotent(self):
         return True
@@ -475,6 +476,3 @@ class DeleteHostStep(Step):
     def run(self, kwargs):
         from configure.models import ManagedHost
         ManagedHost.delete(kwargs['host_id'])
-
-
-

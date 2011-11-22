@@ -2,7 +2,7 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-# Test utility for testing the REST GET and POST calls using 
+# Test utility for testing the REST GET and POST calls using
 # command line arguments.
 from django.core.management import setup_environ
 import optparse
@@ -24,7 +24,7 @@ def main(args):
                              )
     option_parser.add_option('--filesystem', dest='filesystem_name',
                              help="Name of the host whose chart data is to be retrived")
-#    option_parser.add_option('--hostid', dest='host_id',  
+#    option_parser.add_option('--hostid', dest='host_id',
 #                             help="Name of the filesystem whose chart data is to be retrieved")
 #    option_parser.add_option('--target', dest='target_name',
 #                             help="Name of the target (MDT/MGT/OST) whose chart data is to be retrieved")
@@ -45,7 +45,7 @@ def main(args):
         option_parser.print_help()
         exit(-1)
     base_url = options.url.rstrip('/')
-    
+
     # Fetch data for last 10 minutes
     interval=600
     # Unit Test 1 File system Free Space Chart data:
@@ -58,7 +58,7 @@ def main(args):
                              endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
                              datafunction='Average',
                              targetkind='OST',
-                             fetchmetrics="kbytestotal kbytesfree filestotal filesfree",   
+                             fetchmetrics="kbytestotal kbytesfree filestotal filesfree",
                              )
     print '\n result:'
     print result
@@ -181,7 +181,7 @@ def main(args):
                              endtime=str(datetime.datetime.now() - datetime.timedelta(seconds=interval)),
                              datafunction='Average',
                              targetkind='MDT',
-                             fetchmetrics="stats_read_bytes stats_write_bytes",   
+                             fetchmetrics="stats_read_bytes stats_write_bytes",
                              )
     print '\n result:'
     print result

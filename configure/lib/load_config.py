@@ -3,11 +3,12 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.models import *
+from django.db import transaction
+
 
 def _validate_conf_params(conf_params):
     from configure.lib.conf_param import all_params
-    for key,val in conf_params.items():
+    for key, val in conf_params.items():
         try:
             model_klass, param_value_obj, help_text = all_params[key]
             param_value_obj.validate(val)
@@ -15,7 +16,10 @@ def _validate_conf_params(conf_params):
             # Let users set params we've never heard of, good luck.
             pass
 
+
 def _find_or_create_target(klass, mounts, **kwargs):
+    from configure.models import ManagedHost, ManagedTargetMount
+
     target = None
     for m in mounts:
         host = ManagedHost.objects.get(address = m['host'])
@@ -31,7 +35,9 @@ def _find_or_create_target(klass, mounts, **kwargs):
     _create_mounts(target, mounts)
     return target
 
+
 def _create_mounts(target, mounts):
+    from configure.models import ManagedHost, Lun, LunNode, ManagedTargetMount
     lun = None
     for m in mounts:
         host = ManagedHost.objects.get(address = m['host'])
@@ -57,29 +63,31 @@ def _create_mounts(target, mounts):
             primary = True
 
         try:
-            tm = ManagedTargetMount.objects.get(
+            ManagedTargetMount.objects.get(
                     block_device = lun_node,
                     target = target,
                     host = host,
                     primary = primary)
-        except:
-            tm = ManagedTargetMount.objects.create(
+        except ManagedTargetMount.DoesNotExist:
+            ManagedTargetMount.objects.create(
                     block_device = lun_node,
                     target = target,
                     host = host,
                     mount_point = target.default_mount_path(host),
                     primary = primary)
 
+
 # FIXME: we rely on the good faith of the .json file's author to use
 # our canonical names for devices.  We must normalize them to avoid
 # the risk of double-using a LUN.
 def _load(text):
+    from configure.models import ManagedHost, ManagedMgs, ManagedFilesystem
     import json
     data = json.loads(text)
 
     for host_info in data['hosts']:
         try:
-            host = ManagedHost.objects.get(address = host_info['address'])
+            ManagedHost.objects.get(address = host_info['address'])
         except ManagedHost.DoesNotExist:
             ManagedHost.create_from_string(host_info['address'])
 
@@ -91,6 +99,8 @@ def _load(text):
         from configure.lib.conf_param import all_params
         conf_param_objects = []
 
+        from configure.models import ManagedMdt, MdtConfParam, FilesystemClientConfParam, ManagedOst, OstConfParam
+
         # Look for the MGS that the user specified by hostname
         fs_mgs_host = ManagedHost.objects.get(address = filesystem_info['mgs'])
         mgs = ManagedMgs.objects.get(managedtargetmount__host = fs_mgs_host)
@@ -98,10 +108,10 @@ def _load(text):
                 name = filesystem_info['name'], mgs = mgs)
 
         fs_conf_params = {}
-        if filesystem_info.has_key('conf_params'):
+        if 'conf_params' in filesystem_info:
             fs_conf_params = filesystem_info['conf_params']
             _validate_conf_params(fs_conf_params)
-        for k,v in fs_conf_params.items():
+        for k, v in fs_conf_params.items():
             try:
                 klass, ignore, ignore = all_params[k]
             except:
@@ -115,29 +125,29 @@ def _load(text):
         mdt = _find_or_create_target(ManagedMdt, mdt_info['mounts'], filesystem = filesystem)
 
         mdt_conf_params = {}
-        if mdt_info.has_key('conf_params'):
+        if 'conf_params' in mdt_info:
             mdt_conf_params = mdt_info['conf_params']
             _validate_conf_params(mdt_conf_params)
-        for k,v in mdt_conf_params.items():
+        for k, v in mdt_conf_params.items():
             conf_param_objects.append(MdtConfParam(mdt = mdt, key = k, value = v))
 
         for ost_info in filesystem_info['osts']:
             ost = _find_or_create_target(ManagedOst, ost_info['mounts'], filesystem = filesystem)
 
             ost_conf_params = {}
-            if ost_info.has_key('conf_params'):
+            if 'conf_params' in ost_info:
                 ost_conf_params = ost_info['conf_params']
                 _validate_conf_params(ost_conf_params)
-                for k,v in ost_conf_params.items():
+                for k, v in ost_conf_params.items():
                     conf_param_objects.append(OstConfParam(ost = ost, key = k, value = v))
         mgs.set_conf_params(conf_param_objects)
 
-from django.db import transaction
+
 @transaction.commit_on_success
 def load_string(text):
     _load(text)
 
-from django.db import transaction
+
 @transaction.commit_on_success
 def load_file(path):
     text = open(path).read()

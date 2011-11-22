@@ -11,7 +11,7 @@ they use to periodically update this central store.
 Concurrency:
     This code is written for multi-threaded use within a single process.
     It is not safe to have multiple processes running plugins at this stage.
-    We serialize operations from different plugins using a big lock, and 
+    We serialize operations from different plugins using a big lock, and
     we use the autocommit decorator on persistence functions because
     otherwise we would have to explicitly commit at the start of
     each one to see changes from other threads.
@@ -32,16 +32,18 @@ from django.db import transaction
 from collections import defaultdict
 import threading
 
+
 class PluginSession(object):
     def __init__(self, scannable_id, update_period):
         self.local_id_to_global_id = {}
         self.scannable_id = scannable_id
         self.update_period = update_period
 
+
 class EdgeIndex(object):
     def __init__(self):
         # Define: Edges go 'from' child 'to' parent
-        # Map of 'from' to (from,to)
+        # Map of 'from' to (from, to)
         self._parent_from_edge = defaultdict(set)
         # Map of 'to' to (from, to)
         self._parent_to_edge = defaultdict(set)
@@ -67,9 +69,9 @@ class EdgeIndex(object):
         edges = edges | self._parent_from_edge[node]
         edges = edges | self._parent_to_edge[node]
         for e in edges:
-            for k,v in self._parent_from_edge.items():
+            for k, v in self._parent_from_edge.items():
                 v.remove(e)
-            for k,v in self._parent_to_edge.items():
+            for k, v in self._parent_to_edge.items():
                 v.remove(e)
         del self._parent_to_edge[node]
         del self._parent_from_edge[node]
@@ -81,6 +83,7 @@ class EdgeIndex(object):
             child = srr['id']
             parent = srr['parents']
             self.add_parent(child, parent)
+
 
 class SubscriberIndex(object):
     def __init__(self):
@@ -138,6 +141,7 @@ class SubscriberIndex(object):
                 for i in instances:
                     self.add_subscriber(i['resource__id'], s_key, attribute_object.decode(i['value']))
 
+
 class ResourceManager(object):
     def __init__(self):
         self._sessions = {}
@@ -145,7 +149,7 @@ class ResourceManager(object):
 
         # Map of (resource_global_id, alert_class) to AlertState pk
         self._active_alerts = {}
-        
+
         # In-memory bidirectional lookup table of resource parent-child relationships
         self._edges = EdgeIndex()
         self._edges.populate()
@@ -171,7 +175,7 @@ class ResourceManager(object):
             self._sessions[scannable_id] = session
             self._persist_new_resources(session, initial_resources)
             self._cull_lost_resources(session, initial_resources)
-            
+
             # TODO: cull any resources which are in the database with
             # ScannableIds for this scannable but not in the initial
             # resource list
@@ -194,6 +198,7 @@ class ResourceManager(object):
     @transaction.commit_on_success
     def _persist_created_hosts(self, session, scannable_id):
         log.debug("_persist_created_hosts")
+
         # FIXME: look up more efficiently (don't currently keep an in-memory record of the
         # class of each resource)
         def get_session_resources_of_type(session, klass):
@@ -213,7 +218,7 @@ class ResourceManager(object):
                         resource.address,
                         virtual_machine = record.pk)
                 record.update_attribute('host_id', host.pk)
-                
+
                 # NB any instances of this resource within the plugin session
                 # that reported it won't see the change to host_id attribute, but that's
                 # fine, they have no right to know.
@@ -223,6 +228,7 @@ class ResourceManager(object):
         from configure.lib.storage_plugin.query import ResourceQuery
         from configure.lib.storage_plugin import base_resources
         from configure.models import Lun, LunNode, ManagedHost
+
         def lun_get_or_create(resource_id):
             try:
                 return Lun.objects.get(storage_resource = resource_id)
@@ -255,7 +261,7 @@ class ResourceManager(object):
         for record in node_resources:
             r = record.to_resource()
             # A node which has children is already in use
-            # (it might contain partitions, be an LVM PV, be in 
+            # (it might contain partitions, be an LVM PV, be in
             #  use by a local filesystem, or as swap)
             if ResourceQuery().record_has_children(r._handle):
                 continue
@@ -286,14 +292,14 @@ class ResourceManager(object):
                     use = False
 
                 # FIXME: assumes that we discover the device nodes AFTER the underlying storage,
-                # in order that the underlying VDs will be here when we look for home 
+                # in order that the underlying VDs will be here when we look for home
                 # controller information.  This is true for controller-hosted virtual machines,
-                # as we set up the VMs after scanning the controller for the first time, but 
+                # as we set up the VMs after scanning the controller for the first time, but
                 # it is not true in the general case.
 
                 from configure.models import StorageResourceRecord
                 ancestor_virtual_disks = ResourceQuery().record_find_ancestors(
-                        record.pk, base_resources.VirtualDisk) 
+                        record.pk, base_resources.VirtualDisk)
                 # collect home controller information
                 vd_home_controllers = set()
                 for vd_id in ancestor_virtual_disks:
@@ -355,7 +361,7 @@ class ResourceManager(object):
 
             touched_luns.add(lun_node.pk)
             touched_lun_nodes.add(lun_node.pk)
-            # BUG: when mjmac set up on IU, it saw mpath devices fine as 
+            # BUG: when mjmac set up on IU, it saw mpath devices fine as
             # LunNodes.  But when he created some CLVM LVs on multipath
             # devices, the multipath devices stayed (see TODO below) AND
             # the new LV devices didn't appear.  Why didn't they get promoted
@@ -364,10 +370,10 @@ class ResourceManager(object):
             # - simplest thing would be to have the agent lie and claim
             # that the device node is always there (based on LV presence
             # in 'lvs' output.  But that's a hack.  And appearing in 'lvs'
-            # just means the PVs are on shared storage that the host has 
+            # just means the PVs are on shared storage that the host has
             # access to, not necessarily that the host is in the pacemaker
             # group that will access the LVs.
-        
+
         # TODO: do this checking on create/remove/link operations too
         for lun_node in LunNode.objects.filter(host = host):
             if not lun_node.pk in touched_lun_nodes:
@@ -414,7 +420,7 @@ class ResourceManager(object):
                 session = self._sessions[scannable_id]
                 record_pk = session.local_id_to_global_id[local_resource_id]
                 self._persist_update_stats(record_pk, update_data)
-                
+
     @transaction.autocommit
     def _persist_update_stats(self, record_pk, update_data):
         from configure.models import StorageResourceRecord, StorageResourceStatistic
@@ -440,7 +446,6 @@ class ResourceManager(object):
                 # its start time from the first insert time
                 pass
 
-
     @transaction.autocommit
     def _resource_modify_parent(self, record_pk, parent_pk, remove):
         from configure.models import StorageResourceRecord
@@ -458,7 +463,7 @@ class ResourceManager(object):
 
     def session_add_resources(self, scannable_id, resources):
         """NB this is plural because new resources may be interdependent
-        and if so they must be added in a blob so that we can hook up the 
+        and if so they must be added in a blob so that we can hook up the
         parent relationships"""
         with self._instance_lock:
             self._persist_new_resources(self._sessions[scannable_id], resources)
@@ -485,7 +490,7 @@ class ResourceManager(object):
                     self._persist_alert_unpropagate(alert_state)
                 if (record_pk, alert_class) in self._active_alerts:
                     del self._active_alerts[(record_pk, alert_class)]
-    
+
     def _get_descendents(self, record_global_pk):
         def collect_children(resource_id):
             result = set()
@@ -494,7 +499,7 @@ class ResourceManager(object):
             for c in child_record_ids:
                 result = result | collect_children(c)
             return result
-        
+
         return list(collect_children(record_global_pk))
 
     # FIXME: the alert propagation and unpropagation should happen with the AlertState
@@ -517,7 +522,7 @@ class ResourceManager(object):
     #   for creations.
     # * If we _persist_alert down, then lose power, we will forget all about the alert
     #   before we remove the PropagatedAlerts for it: actually need to do a two step
-    #   removal where we check if there's something there, and if there is then we 
+    #   removal where we check if there's something there, and if there is then we
     #   remove the propagated alerts, and then finally mark inactive the alert itself.
     @transaction.autocommit
     def _persist_alert(self, record_pk, active, alert_class, attribute):
@@ -549,7 +554,6 @@ class ResourceManager(object):
 
             log.info("Culling resource '%s' of scannable %s" % (r.pk, session.scannable_id))
             #r.delete()
-
 
     def _persist_new_resource(self, session, resource):
         from configure.models import StorageResourceRecord
@@ -610,7 +614,7 @@ class ResourceManager(object):
             import logging
             # Record a user-visible event
             StorageResourceLearnEvent(severity = logging.INFO, storage_resource = record).save()
-            
+
             # IMPORTANT: THIS TOTALLY RELIES ON SERIALIZATION OF ALL CREATION OPERATIONS
             # IN A SINGLE PROCESS INSTANCE OF THIS CLASS
 
@@ -641,7 +645,7 @@ class ResourceManager(object):
 
         session.local_id_to_global_id[resource._handle] = record.pk
         self._resource_persist_attributes(session, resource, record)
-        
+
         if created:
             log.debug("persist_new_resource[%s] %s %s %s" % (session.scannable_id, created, record.pk, resource._handle))
         return record

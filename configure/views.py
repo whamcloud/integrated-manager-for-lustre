@@ -13,17 +13,18 @@ from django import forms
 from configure.models import *
 
 # IMPORTANT
-# These views are implicitly transactions.  If you create an object and then 
+# These views are implicitly transactions.  If you create an object and then
 # submit a celery job that does something to it, the job could execute before
 # the transaction is committed, and fail because the object doesn't exist.
 # If you create an object which you're going to refer to in a celery job,
 # then commit your transaction before starting your celery job
 
+
 def _create_target_mounts(node, target, failover_host = None):
     primary = ManagedTargetMount(
         block_device = node,
         target = target,
-        host = node.host, 
+        host = node.host,
         mount_point = target.default_mount_path(node.host),
         primary = True)
     primary.save()
@@ -33,13 +34,14 @@ def _create_target_mounts(node, target, failover_host = None):
         failover = ManagedTargetMount(
             block_device = failover_node,
             target = target,
-            host = failover_host, 
+            host = failover_host,
             mount_point = target.default_mount_path(failover_host),
             primary = False)
         failover.save()
         return [primary, failover]
     else:
         return [primary]
+
 
 def _set_target_states(form, targets, mounts):
     assert(isinstance(form, CreateTargetsForm))
@@ -70,6 +72,7 @@ class CreateTargetsForm(forms.Form):
             raise forms.ValidationError("A target must be formatted to be registered.")
 
         return cleaned_data
+
 
 def create_mgs(request, host_id):
     host = get_object_or_404(ManagedHost, id = int(host_id))
@@ -111,6 +114,7 @@ def create_mgs(request, host_id):
         'form': form
         }))
 
+
 def create_fs(request, mgs_id):
     mgs = get_object_or_404(ManagedMgs, id = int(mgs_id))
 
@@ -133,6 +137,7 @@ def create_fs(request, mgs_id):
         'form': form
         }))
 
+
 def create_oss(request, host_id):
     host = get_object_or_404(ManagedHost, id = int(host_id))
     nodes = host.available_lun_nodes()
@@ -141,14 +146,16 @@ def create_oss(request, host_id):
     class CreateOssForm(CreateTargetsForm):
         filesystem = forms.ChoiceField(choices = [(f.id, f.name) for f in ManagedFilesystem.objects.all()])
         failover_partner = forms.ChoiceField(choices = [(None, 'None')] + [(h.id, h) for h in other_hosts])
+
         def __init__(self, *args, **kwargs):
             super(CreateTargetsForm, self).__init__(*args, **kwargs)
             self.fields.keyOrder = ['filesystem', 'failover_partner', 'format_now', 'register_now', 'start_now']
-        
+
     class CreateOssNodeForm(forms.Form):
         def __init__(self, node, *args, **kwargs):
             self.node = node
             super(CreateOssNodeForm, self).__init__(*args, **kwargs)
+
         use = forms.BooleanField(required=False)
 
     if request.method == 'GET':
@@ -200,6 +207,7 @@ def create_oss(request, host_id):
         'node_forms': node_forms
         }))
 
+
 def create_mds(request, host_id):
     host = get_object_or_404(ManagedHost, id = int(host_id))
     nodes = host.available_lun_nodes()
@@ -247,11 +255,13 @@ def create_mds(request, host_id):
         'form': form
         }))
 
+
 def jobs(request):
     jobs = Job.objects.all().order_by("-id")
     return render_to_response("jobs.html", RequestContext(request, {
         'jobs': jobs
         }))
+
 
 def _jobs_json():
     import json
@@ -284,7 +294,6 @@ def _jobs_json():
             'description': job.description(),
             'actions': actions
         })
-    jobs_json = json.dumps(jobs_dicts)
 
     from configure.lib.state_manager import StateManager
     state_manager = StateManager()
@@ -295,8 +304,6 @@ def _jobs_json():
     can_create_mds = (ManagedMdt.objects.count() != ManagedFilesystem.objects.count())
     can_create_oss = ManagedMdt.objects.count() > 0
     for i in chain(*[k.objects.all() for k in klasses]):
-        from django.contrib.contenttypes.models import ContentType
-        
         actions = []
         if isinstance(i, StatefulObject):
             state = i.state
@@ -318,7 +325,7 @@ def _jobs_json():
                         })
         else:
             state = ""
-        
+
         if isinstance(i, ManagedMgs):
             actions.append({
                 "name": "create_fs",
@@ -347,8 +354,8 @@ def _jobs_json():
                     "caption": "Setup OSS",
                     "url": reverse('configure.views.create_oss', kwargs={"host_id": i.id})
                     })
-                
-        if isinstance(i, ManagedFilesystem): 
+
+        if isinstance(i, ManagedFilesystem):
             url = reverse('configure.views.filesystem', kwargs={"filesystem_id": i.id})
         elif isinstance(i, ManagedTarget):
             url = reverse('configure.views.target', kwargs={"target_id": i.id})
@@ -370,6 +377,7 @@ def _jobs_json():
                 'stateful_objects': stateful_objects
             }, indent = 4)
 
+
 def jobs_json(request):
     return HttpResponse(_jobs_json(), 'application/json')
 
@@ -381,6 +389,7 @@ def job(request, job_id):
     return render_to_response("job.html", RequestContext(request, {
         'job': job
         }))
+
 
 class ConfParamForm(forms.Form):
     value = forms.CharField(min_length = 0, max_length = 512)
@@ -412,7 +421,7 @@ class ConfParamForm(forms.Form):
         from configure.lib.conf_param import all_params
         model_klass, param_value_obj, help_text = all_params[key]
 
-        # TODO: avoid using "" to signify param removal, so that 
+        # TODO: avoid using "" to signify param removal, so that
         # params can in theory be set to empty strings
         if len(value) == 0:
             value = None
@@ -422,6 +431,7 @@ class ConfParamForm(forms.Form):
                 value = value,
                 **kwargs)
         mgs.downcast().set_conf_params([p])
+
 
 def _handle_conf_param_form(request, mgs, form_klass, **kwargs):
     if request.method == 'GET':
@@ -437,20 +447,23 @@ def _handle_conf_param_form(request, mgs, form_klass, **kwargs):
 
     return form
 
+
 def filesystem(request, filesystem_id):
     filesystem = get_object_or_404(ManagedFilesystem, id = filesystem_id)
 
     from configure.lib.conf_param import get_conf_params
+
     class FilesystemConfParamForm(ConfParamForm):
-        key = forms.ChoiceField(choices = [(i,i) for i in get_conf_params([FilesystemClientConfParam, FilesystemGlobalConfParam])])
+        key = forms.ChoiceField(choices = [(i, i) for i in get_conf_params([FilesystemClientConfParam, FilesystemGlobalConfParam])])
 
     conf_param_form = _handle_conf_param_form(request, filesystem.mgs.downcast(), FilesystemConfParamForm, filesystem = filesystem)
-    
+
     return render_to_response("filesystem.html", RequestContext(request, {
         'filesystem': filesystem,
         'conf_param_list': filesystem.get_conf_params(),
         'conf_param_form': conf_param_form
         }))
+
 
 def target(request, target_id):
     target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
@@ -462,7 +475,7 @@ def target(request, target_id):
         # Create a variant of ConfParamForm showing the options available
         # for an MDT
         class MdtConfParamForm(ConfParamForm):
-            key = forms.ChoiceField(choices = [(i,i) for i in get_conf_params([MdtConfParam])])
+            key = forms.ChoiceField(choices = [(i, i) for i in get_conf_params([MdtConfParam])])
 
         conf_param_form = _handle_conf_param_form(
                 request,
@@ -473,7 +486,7 @@ def target(request, target_id):
         # Create a variant of ConfParamForm showing the options available
         # for an OST
         class OstConfParamForm(ConfParamForm):
-            key = forms.ChoiceField(choices = [(i,i) for i in get_conf_params([OstConfParam])])
+            key = forms.ChoiceField(choices = [(i, i) for i in get_conf_params([OstConfParam])])
 
         conf_param_form = _handle_conf_param_form(
                 request,
@@ -495,6 +508,7 @@ def states(request):
         'initial_data': _jobs_json()
         }))
 
+
 def set_state(request, content_type_id, stateful_object_id, new_state):
     stateful_object_klass = ContentType.objects.get(id = content_type_id).model_class()
     stateful_object = stateful_object_klass.objects.get(id = stateful_object_id)
@@ -504,11 +518,13 @@ def set_state(request, content_type_id, stateful_object_id, new_state):
 
     return HttpResponse(status = 201)
 
+
 def job_cancel(request, job_id):
     job = get_object_or_404(Job, pk = job_id)
     job.cancel()
 
     return HttpResponse(status = 200)
+
 
 def job_pause(request, job_id):
     job = get_object_or_404(Job, pk = job_id)
@@ -516,11 +532,13 @@ def job_pause(request, job_id):
 
     return HttpResponse(status = 200)
 
+
 def job_unpause(request, job_id):
     job = get_object_or_404(Job, pk = job_id)
     job.unpause()
 
     return HttpResponse(status = 200)
+
 
 def conf_param_help(request, conf_param_name):
     try:
@@ -531,12 +549,14 @@ def conf_param_help(request, conf_param_name):
 
     return HttpResponse(help_text, mimetype = 'text/plain')
 
+
 def _resource_class_tree(plugin, klass):
     """Resource tree using all instances of 'klass' as origins"""
     records = StorageResourceRecord.objects.filter(
         resource_class__class_name = klass,
         resource_class__storage_plugin__module_name = plugin)
     return _resource_tree(records)
+
 
 def _resource_tree(root_records):
     from configure.lib.storage_plugin.query import ResourceQuery
@@ -552,7 +572,7 @@ def _resource_tree(root_records):
         from settings import STATIC_URL
         from django.core.urlresolvers import reverse
         resource_dict['attr'] = {
-                'srr_url': "%s" %  reverse('configure.views.storage_resource_inner', kwargs={'srr_id': resource_dict['id']}),
+                'srr_url': "%s" % reverse('configure.views.storage_resource_inner', kwargs={'srr_id': resource_dict['id']}),
                 'srr_id': resource_dict['id']
                 }
         resource_dict['data'] = {
@@ -574,6 +594,7 @@ def _resource_tree(root_records):
 
     return json.dumps(tree, cls = ResourceJsonEncoder, indent=4)
 
+
 def storage_browser(request):
     from configure.models import StorageResourceClass
     if StorageResourceClass.objects.count() == 0:
@@ -588,5 +609,3 @@ def storage_browser(request):
         'resource_form': resource_form,
         'resource_tree': resource_tree
         }))
-
-

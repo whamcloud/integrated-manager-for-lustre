@@ -5,11 +5,12 @@ from configure.lib.storage_plugin.log import storage_plugin_log
 
 from django.db import transaction
 
+
 class ResourceQuery(object):
     def __init__(self):
         # Map StorageResourceRecord ID to instantiated StorageResource
         self._pk_to_resource = {}
-        
+
         # Record plugins which fail to load
         self._errored_plugins = set()
 
@@ -104,7 +105,7 @@ class ResourceQuery(object):
             record.resource_class_id)
 
         return klass.human_class(), record.to_resource().human_string()
-        
+
     def _record_to_resource_parents(self, record):
         if isinstance(record, StorageResourceRecord):
             pk = record.pk
@@ -131,16 +132,16 @@ class ResourceQuery(object):
         else:
             if record.pk in self._pk_to_resource:
                 return self._pk_to_resource[record.pk]
-            
+
         plugin_module = record.resource_class.storage_plugin.module_name
         if plugin_module in self._errored_plugins:
             return None
-            
+
         resource = record.to_resource()
         self._pk_to_resource[record.pk] = resource
         return resource
 
-    # These get_ functions are wrapped in transactions to ensure that 
+    # These get_ functions are wrapped in transactions to ensure that
     # e.g. after reading a parent relationship the parent record will really
     # still be there when we SELECT it.
     # XXX this could potentially cause problems if used from a view function
@@ -181,11 +182,11 @@ class ResourceQuery(object):
 
     def get_class_resources(self, class_or_classes, **kwargs):
         try:
-            n = len(class_or_classes)
+            len(class_or_classes)
             classes = class_or_classes
         except TypeError:
             classes = [class_or_classes]
-            
+
         records = StorageResourceRecord.objects.filter(resource_class__in = classes, **kwargs)
         return records
 
@@ -194,14 +195,14 @@ class ResourceQuery(object):
                 resource_class = resource_class).values('pk')
         for r in records:
             yield r['pk']
-    
+
     def _load_record_and_children(self, record):
         storage_plugin_log.debug("load_record_and_children: %s" % record)
         resource = self._record_to_resource_parents(record)
         if resource:
             children_records = StorageResourceRecord.objects.filter(
                 parents = record)
-                
+
             children_resources = []
             for c in children_records:
                 child_resource = self._load_record_and_children(c)
@@ -218,7 +219,5 @@ class ResourceQuery(object):
         for record in root_records:
             tree.append(self._load_record_and_children(record))
         storage_plugin_log.debug("<< get_resource_tree")
-        
-        return tree    
 
-
+        return tree

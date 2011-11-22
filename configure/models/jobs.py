@@ -6,6 +6,7 @@
 from django.db import models
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
+from picklefield.fields import PickledObjectField
 
 from monitor.models import WorkaroundGenericForeignKey
 #from django.contrib.contenttypes.generic import GenericForeignKey
@@ -17,6 +18,7 @@ from configure.lib.job import StateChangeJob, DependOn, DependAll
 
 MAX_STATE_STRING = 32
 
+
 def _subclasses(obj):
     """Used to introspect all descendents of a class.  Used because metaclasses
        are a PITA when doing multiple inheritance"""
@@ -26,6 +28,7 @@ def _subclasses(obj):
         for sc in _subclasses(sc_obj):
             sc_recr.append(sc)
     return sc_recr
+
 
 class StatefulObject(models.Model):
     # Use of abstract base classes to avoid django bug #12002
@@ -71,7 +74,7 @@ class StatefulObject(models.Model):
 
     @classmethod
     def _build_maps(cls):
-        """Populate route_map and transition_map attributes by introspection of 
+        """Populate route_map and transition_map attributes by introspection of
            this class and related StateChangeJob classes.  It is legal to call this
            twice or concurrently."""
         cls = StatefulObject.so_child(cls)
@@ -84,12 +87,11 @@ class StatefulObject(models.Model):
             transition_options[from_state].append(to_state)
             job_class_map[(from_state, to_state)] = c
 
-
         transition_map = defaultdict(list)
         route_map = {}
-        shortest_routes = []
         for begin_state in cls.states:
             all_routes = set()
+
             # Enumerate all possible routes from this state
             def get_routes(stack, explore_state):
                 if explore_state in stack:
@@ -106,11 +108,9 @@ class StatefulObject(models.Model):
                 for next_state in transition_options[explore_state]:
                     get_routes(stack, next_state)
 
-
-
             get_routes([], begin_state)
 
-            # For all valid routes with more than 2 states, 
+            # For all valid routes with more than 2 states,
             # all truncations of 2 or more states are also valid routes.
             truncations = set()
             for r in all_routes:
@@ -125,7 +125,7 @@ class StatefulObject(models.Model):
 
             # Pick the shortest route to each end state
             for (end_state, possible_routes) in routes.items():
-                possible_routes.sort(lambda a,b: cmp(len(a), len(b)))
+                possible_routes.sort(lambda a, b: cmp(len(a), len(b)))
                 shortest_route = possible_routes[0]
 
                 transition_map[begin_state].append(end_state)
@@ -158,7 +158,7 @@ class StatefulObject(models.Model):
         if not hasattr(cls, 'transition_map'):
             cls._build_maps()
 
-        return cls.transition_map[begin_state]     
+        return cls.transition_map[begin_state]
 
     @classmethod
     def get_verb(cls, begin_state, end_state):
@@ -202,6 +202,7 @@ class StatefulObject(models.Model):
         querysets = [fn(self) for fn in lookup_fns]
         return chain(*querysets)
 
+
 class StateLock(models.Model):
     """Lock is the wrong word really, these objects exist for the lifetime of the Job.
     All locks depend on the last pending job to write to a stateful object on which
@@ -227,6 +228,7 @@ class StateLock(models.Model):
     def filter_by_locked_item(cls, stateful_object):
         ctype = ContentType.objects.get_for_model(stateful_object)
         return cls.objects.filter(locked_item_type = ctype, locked_item_id = stateful_object.id)
+
 
 class StateReadLock(StateLock):
     #locked_state = models.CharField(max_length = MAX_STATE_STRING)
@@ -276,7 +278,7 @@ class Job(models.Model):
     # Set to a step index when that step has finished and its result is committed
     finished_step = models.PositiveIntegerField(default = None, blank = True, null = True)
 
-    # Job classes declare whether presentation layer should 
+    # Job classes declare whether presentation layer should
     # request user confirmation (e.g. removals, stops)
     requires_confirmation = False
 
@@ -315,16 +317,14 @@ class Job(models.Model):
         """Called by a wait_for job to notify that it is complete"""
         from django.db.models import F
         Job.objects.get_or_create(pk = self.id)
-        Job.objects.filter(pk = self.id).update(wait_for_completions = F('wait_for_completions')+1)
-   
+        Job.objects.filter(pk = self.id).update(wait_for_completions = F('wait_for_completions') + 1)
+
     def create_dependencies(self):
-        """Examine overlaps between self's statelocks and those of 
+        """Examine overlaps between self's statelocks and those of
            earlier jobs which are still pending, and generate wait_for
            dependencies when we have a write lock and they have a read lock
            or generate depend_on dependencies when we have a read or write lock and
            they have a write lock"""
-        from configure.lib.job import job_log
-
         wait_fors = set()
         for lock in self.statelock_set.all():
             if isinstance(lock, StateWriteLock):
@@ -372,12 +372,12 @@ class Job(models.Model):
             stateful_object = self.get_stateful_object()
             target_klass, old_state, new_state = self.state_transition
 
-            # Take read lock on everything from get_stateful_object's get_deps if 
+            # Take read lock on everything from get_stateful_object's get_deps if
             # this is a StateChangeJob.  We do things depended on by both the old
             # and the new state: e.g. if we are taking a mount from unmounted->mounted
             # then we need to lock the new state's requirement of lnet_up, whereas
-            # if we're going from mounted->unmounted we need to lock the old state's 
-            # requirement of lnet_up (to prevent someone stopping lnet while 
+            # if we're going from mounted->unmounted we need to lock the old state's
+            # requirement of lnet_up (to prevent someone stopping lnet while
             # we're still running)
             from itertools import chain
             for d in chain(stateful_object.get_deps(old_state).all(), stateful_object.get_deps(new_state).all()):
@@ -415,6 +415,7 @@ class Job(models.Model):
     def cancel(self):
         from configure.lib.job import job_log
         job_log.debug("Job %d: Job.cancel" % self.id)
+
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
@@ -430,7 +431,6 @@ class Job(models.Model):
 
         if self.task_id:
             job_log.debug("job %d: revoking task %s" % (self.id, self.task_id))
-            from celery.result import AsyncResult
             from celery.task.control import revoke
             revoke(self.task_id, terminate = True)
             self.task_id = None
@@ -440,6 +440,7 @@ class Job(models.Model):
     def pause(self):
         from configure.lib.job import job_log
         job_log.debug("Job %d: Job.pause" % self.id)
+
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
@@ -454,6 +455,7 @@ class Job(models.Model):
     def unpause(self):
         from configure.lib.job import job_log
         job_log.debug("Job %d: Job.unpause" % self.id)
+
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
@@ -506,7 +508,7 @@ class Job(models.Model):
         # matter here: we've reached our point in the queue, all I need to check now
         # is - are this Job's immediate dependencies satisfied?  And are any deps
         # for a statefulobject's new state satisfied?  If so, continue.  If not, cancel.
-        
+
         try:
             deps_satisfied = self.all_deps().satisfied()
         except Exception, e:
@@ -595,7 +597,7 @@ class Job(models.Model):
         except NotImplementedError:
             return "<Job %s>" % id
 
-from picklefield.fields import PickledObjectField
+
 class StepResult(models.Model):
     job = models.ForeignKey(Job)
     step_klass = PickledObjectField()
@@ -612,7 +614,7 @@ class StepResult(models.Model):
 
     modified_at = models.DateTimeField(auto_now = True)
     created_at = models.DateTimeField(auto_now_add = True)
-    
+
     def step_number(self):
         """Template helper"""
         return self.step_index + 1
@@ -626,5 +628,3 @@ class StepResult(models.Model):
 
     class Meta:
         app_label = 'configure'
-
-

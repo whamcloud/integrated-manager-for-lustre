@@ -22,7 +22,7 @@ from monitorapi import (ListFileSystems,
                         GetFSVolumeDetails)
 
 import configureapi
-from configureapi import (AddHost,  
+from configureapi import (AddHost,
                           TestHost,
                           RemoveHost,
                           GetLuns,
@@ -56,7 +56,7 @@ from fakestatsmetricapi import(GetFSTargetStats_fake,
                            GetServerStats_fake,
                            GetTargetStats_fake,
                            GetFSClientsStats_fake,
-                           GetFSOSTHeatMap)  
+                           GetFSOSTHeatMap)
 
 from statsmetricapi import(GetFSTargetStats,
                            GetFSServerStats,
@@ -67,9 +67,9 @@ from statsmetricapi import(GetFSTargetStats,
                            GetHeatMapFSStats,
                            GetHeatMapServerStats)
 
-from audit import HydraAudit,ClearAudit
+from audit import HydraAudit, ClearAudit
 
-# Cross Site Referance related class 
+# Cross Site Referance related class
 class CsrfExemptResource(Resource):
     """A Custom Resource that is csrf exempt"""
     def __init__(self, handler, authentication=None):
@@ -78,60 +78,60 @@ class CsrfExemptResource(Resource):
 
 # hydra api urls definitions.
 urlpatterns = patterns('',
-    (r'^listfilesystems/$',CsrfExemptResource(ListFileSystems)),
-    (r'^getfilesystem/$',CsrfExemptResource(GetFileSystem)),
-    (r'^get_fs_targets/$',CsrfExemptResource(GetFSTargets)),
-    (r'^get_targets/$',CsrfExemptResource(GetTargets)),
-    (r'^get_mgts/$',CsrfExemptResource(GetMgtDetails)),
-    (r'^getvolumesdetails/$',CsrfExemptResource(GetFSVolumeDetails)),
-    (r'^listservers/$',CsrfExemptResource(GetServers)),
-    #(r'^getclients/$',CsrfExemptResource(GetClients)),
-    (r'^get_luns/$',CsrfExemptResource(GetLuns)),
-    
-    (r'^list_audit/$',CsrfExemptResource(HydraAudit)),
-    (r'^clear_audit/$',CsrfExemptResource(ClearAudit)),
-    
-    (r'^create_new_fs/$',CsrfExemptResource(CreateNewFilesystem)),
-    (r'^create_fs/$',CsrfExemptResource(CreateFilesystem)),
-    (r'^create_mgt/$',CsrfExemptResource(CreateMGT)),
-    (r'^create_osts/$',CsrfExemptResource(CreateOSTs)),  
-    (r'^test_host/$',CsrfExemptResource(TestHost)),
-    (r'^add_host/$',CsrfExemptResource(AddHost)),
-    (r'^remove_host/$',CsrfExemptResource(RemoveHost)),
-    (r'^set_lnet_state/$',CsrfExemptResource(SetLNetStatus)),
-    (r'^set_target_stage/$',CsrfExemptResource(SetTargetMountStage)),
-    (r'^get_job_status/$',CsrfExemptResource(GetJobStatus)),
-    (r'^set_job_status/$',CsrfExemptResource(SetJobStatus)), 
-    (r'^get_conf_params/$',CsrfExemptResource(GetTargetConfParams)), 
+    (r'^listfilesystems/$', CsrfExemptResource(ListFileSystems)),
+    (r'^getfilesystem/$', CsrfExemptResource(GetFileSystem)),
+    (r'^get_fs_targets/$', CsrfExemptResource(GetFSTargets)),
+    (r'^get_targets/$', CsrfExemptResource(GetTargets)),
+    (r'^get_mgts/$', CsrfExemptResource(GetMgtDetails)),
+    (r'^getvolumesdetails/$', CsrfExemptResource(GetFSVolumeDetails)),
+    (r'^listservers/$', CsrfExemptResource(GetServers)),
+    #(r'^getclients/$', CsrfExemptResource(GetClients)),
+    (r'^get_luns/$', CsrfExemptResource(GetLuns)),
 
-    (r'^get_fs_stats_for_targets_fake/$',CsrfExemptResource(GetFSTargetStats_fake)),
-    (r'^get_fs_stats_for_server_fake/$',CsrfExemptResource(GetFSServerStats_fake)),
-    (r'^get_stats_for_server_fake/$',CsrfExemptResource(GetServerStats_fake)),
-    (r'^get_stats_for_targets_fake/$',CsrfExemptResource(GetTargetStats_fake)),
-    (r'^get_fs_stats_for_client_fake/$',CsrfExemptResource(GetFSClientsStats_fake)),
-    (r'^get_fs_ost_heatmap_fake/$',CsrfExemptResource(GetFSOSTHeatMap)),
+    (r'^list_audit/$', CsrfExemptResource(HydraAudit)),
+    (r'^clear_audit/$', CsrfExemptResource(ClearAudit)),
 
-    (r'^get_fs_stats_for_targets/$',CsrfExemptResource(GetFSTargetStats)),
-    (r'^get_fs_stats_for_server/$',CsrfExemptResource(GetFSServerStats)),
-    (r'^get_fs_stats_for_mgs/$',CsrfExemptResource(GetFSMGSStats)),
-    (r'^get_stats_for_server/$',CsrfExemptResource(GetServerStats)),
-    (r'^get_stats_for_targets/$',CsrfExemptResource(GetTargetStats)),
-    (r'^get_fs_stats_for_client/$',CsrfExemptResource(GetFSClientsStats)),
-    (r'^get_fs_stats_heatmap/$',CsrfExemptResource(GetHeatMapFSStats)),
-    (r'^get_server_stats_heatmap/$',CsrfExemptResource(GetHeatMapServerStats)),
+    (r'^create_new_fs/$', CsrfExemptResource(CreateNewFilesystem)),
+    (r'^create_fs/$', CsrfExemptResource(CreateFilesystem)),
+    (r'^create_mgt/$', CsrfExemptResource(CreateMGT)),
+    (r'^create_osts/$', CsrfExemptResource(CreateOSTs)),
+    (r'^test_host/$', CsrfExemptResource(TestHost)),
+    (r'^add_host/$', CsrfExemptResource(AddHost)),
+    (r'^remove_host/$', CsrfExemptResource(RemoveHost)),
+    (r'^set_lnet_state/$', CsrfExemptResource(SetLNetStatus)),
+    (r'^set_target_stage/$', CsrfExemptResource(SetTargetMountStage)),
+    (r'^get_job_status/$', CsrfExemptResource(GetJobStatus)),
+    (r'^set_job_status/$', CsrfExemptResource(SetJobStatus)),
+    (r'^get_conf_params/$', CsrfExemptResource(GetTargetConfParams)),
 
-    (r'^target/$',CsrfExemptResource(configureapi.Target)),
-    (r'^transition/$',CsrfExemptResource(configureapi.Transition)),
-    (r'^transition_consequences/$',CsrfExemptResource(configureapi.TransitionConsequences)),
+    (r'^get_fs_stats_for_targets_fake/$', CsrfExemptResource(GetFSTargetStats_fake)),
+    (r'^get_fs_stats_for_server_fake/$', CsrfExemptResource(GetFSServerStats_fake)),
+    (r'^get_stats_for_server_fake/$', CsrfExemptResource(GetServerStats_fake)),
+    (r'^get_stats_for_targets_fake/$', CsrfExemptResource(GetTargetStats_fake)),
+    (r'^get_fs_stats_for_client_fake/$', CsrfExemptResource(GetFSClientsStats_fake)),
+    (r'^get_fs_ost_heatmap_fake/$', CsrfExemptResource(GetFSOSTHeatMap)),
+
+    (r'^get_fs_stats_for_targets/$', CsrfExemptResource(GetFSTargetStats)),
+    (r'^get_fs_stats_for_server/$', CsrfExemptResource(GetFSServerStats)),
+    (r'^get_fs_stats_for_mgs/$', CsrfExemptResource(GetFSMGSStats)),
+    (r'^get_stats_for_server/$', CsrfExemptResource(GetServerStats)),
+    (r'^get_stats_for_targets/$', CsrfExemptResource(GetTargetStats)),
+    (r'^get_fs_stats_for_client/$', CsrfExemptResource(GetFSClientsStats)),
+    (r'^get_fs_stats_heatmap/$', CsrfExemptResource(GetHeatMapFSStats)),
+    (r'^get_server_stats_heatmap/$', CsrfExemptResource(GetHeatMapServerStats)),
+
+    (r'^target/$', CsrfExemptResource(configureapi.Target)),
+    (r'^transition/$', CsrfExemptResource(configureapi.Transition)),
+    (r'^transition_consequences/$', CsrfExemptResource(configureapi.TransitionConsequences)),
 
 
-    (r'^geteventsbyfilter/$',CsrfExemptResource(GetEventsByFilter)),
-    (r'^getlatestevents/$',CsrfExemptResource(GetLatestEvents)),
-    (r'^getalerts/$',CsrfExemptResource(GetAlerts)),
-    (r'^getjobs/$',CsrfExemptResource(GetJobs)),
-    (r'^getlogs/$',CsrfExemptResource(GetLogs)),
-    (r'^notifications/$',CsrfExemptResource(Notifications)),
-    (r'^object_summary/$',CsrfExemptResource(configureapi.ObjectSummary)),
+    (r'^geteventsbyfilter/$', CsrfExemptResource(GetEventsByFilter)),
+    (r'^getlatestevents/$', CsrfExemptResource(GetLatestEvents)),
+    (r'^getalerts/$', CsrfExemptResource(GetAlerts)),
+    (r'^getjobs/$', CsrfExemptResource(GetJobs)),
+    (r'^getlogs/$', CsrfExemptResource(GetLogs)),
+    (r'^notifications/$', CsrfExemptResource(Notifications)),
+    (r'^object_summary/$', CsrfExemptResource(configureapi.ObjectSummary)),
 
     (r'^get_resource_classes/$', CsrfExemptResource(GetResourceClasses)),
     (r'^get_resources/$', CsrfExemptResource(GetResources)),

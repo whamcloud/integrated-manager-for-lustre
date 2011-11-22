@@ -5,9 +5,7 @@ from south.v2 import SchemaMigration
 from django.db import models
 
 class Migration(SchemaMigration):
-
     def forwards(self, orm):
-        
         # Adding model 'FrontLineMetricStore'
         db.create_table('monitor_frontlinemetricstore', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
@@ -24,9 +22,7 @@ class Migration(SchemaMigration):
         # Change it to use the MEMORY engine
         db.execute('ALTER TABLE monitor_frontlinemetricstore ENGINE = MEMORY')
 
-
     def backwards(self, orm):
-        
         # Deleting model 'FrontLineMetricStore'
         db.delete_table('monitor_frontlinemetricstore')
 

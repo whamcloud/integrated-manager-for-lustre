@@ -11,21 +11,23 @@ from monitor.lib.util import timeit
 from monitor.metrics import metrics_log
 
 import settings
+from settings import AUDIT_PERIOD
+
 
 @task()
 def monitor_exec(monitor_id, counter):
     from configure.models import Monitor
     monitor = Monitor.objects.get(pk = monitor_id)
 
-    # Conditions indicating that we've restarted or that 
+    # Conditions indicating that we've restarted or that
     if not (monitor.state in ['tasked', 'tasking']):
         audit_log.warn("Host %s monitor %s (audit %s) found unfinished (crash recovery).  Ending task." % (monitor.host, monitor.id, monitor.counter))
         monitor.update(state = 'idle', task_id = None)
-        return 
+        return
     elif monitor.counter != counter:
-        audit_log.warn("Host %s monitor found bad counter %s != %s.  Ending task." % (monitor.host,  monitor.counter, counter))
+        audit_log.warn("Host %s monitor found bad counter %s != %s.  Ending task." % (monitor.host, monitor.counter, counter))
         monitor.update(state = 'idle', task_id = None)
-        return 
+        return
 
     monitor.update(state = 'started')
     audit_log.debug("Monitor %s started" % monitor.host)
@@ -47,7 +49,7 @@ def monitor_exec(monitor_id, counter):
     audit_log.debug("Monitor %s completed" % monitor.host)
     return None
 
-from settings import AUDIT_PERIOD
+
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def audit_all():
     from configure.models import ManagedHost
@@ -61,11 +63,13 @@ def audit_all():
         if not tasked:
             audit_log.info("audit_all: host %s audit (%d) still in progress" % (monitor.host, monitor.counter))
 
+
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def parse_log_entries():
     from monitor.lib.systemevents import SystemEventsAudit
     audit_log.info("parse_log_entries: running")
     SystemEventsAudit().parse_log_entries()
+
 
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def drain_flms_table():
@@ -74,7 +78,7 @@ def drain_flms_table():
 
     drain = FlmsDrain()
     acquire_lock = lambda: drain.lock(os.getpid())
-    query_lock   = lambda: drain.query_lock()
+    query_lock = lambda: drain.query_lock()
     release_lock = lambda: drain.unlock()
 
     if acquire_lock():
@@ -86,13 +90,15 @@ def drain_flms_table():
 
     metrics_log.warn("Drain task with pid %d has a lock until %s!" % query_lock())
 
+
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD * 180))
 @timeit(logger=metrics_log)
 def purge_and_optimize_metrics():
     from monitor.metrics import FlmsDrain
     from r3d.models import Database
     from django.db import connection
-    import os, time
+    import os
+    import time
 
     # Run the purge first, outside of a lock.  Some performance hit, but
     # we shouldn't see any deadlocks.  We may need to revisit this if we do.
@@ -105,7 +111,7 @@ def purge_and_optimize_metrics():
     # to avoid contending with a drain operation while we're optimizing.
     drain = FlmsDrain()
     acquire_lock = lambda: drain.lock(os.getpid(), 60 * 5)
-    query_lock   = lambda: drain.query_lock()
+    query_lock = lambda: drain.query_lock()
     release_lock = lambda: drain.unlock()
 
     attempts = 10
@@ -119,10 +125,12 @@ def purge_and_optimize_metrics():
                 return
             finally:
                 release_lock()
+
         attempts -= 1
         time.sleep(1)
 
     metrics_log.warn("Drain task with pid %d has a lock until %s!" % query_lock())
+
 
 @task()
 def test_host_contact(host):
@@ -141,7 +149,7 @@ def test_host_contact(host):
         from subprocess import call
         ping = (0 == call(['ping', '-c 1', resolved_address]))
 
-    # Don't depend on ping to try invoking agent, could well have 
+    # Don't depend on ping to try invoking agent, could well have
     # SSH but no ping
     agent = False
     if resolve:

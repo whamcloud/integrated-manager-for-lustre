@@ -2,7 +2,7 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-# Test utility for testing the REST GET and POST calls using 
+# Test utility for testing the REST GET and POST calls using
 # command line arguments.
 from django.core.management import setup_environ
 import optparse
@@ -23,7 +23,7 @@ def main(args):
                              )
     option_parser.add_option('--hostId', dest='host_id',
                              help="Name of the host for which event alert job information is to be retrived")
-    option_parser.add_option('--severity', dest='severity_type',  
+    option_parser.add_option('--severity', dest='severity_type',
                              help="severity for which event alert job information is to be retrieved")
     option_parser.add_option('--eventtype', dest='event_type',
                              help="event type for which event alert job information is to be retrieved")
@@ -38,7 +38,7 @@ def main(args):
         option_parser.print_help()
         exit(-1)
     base_url = options.url.rstrip('/')
-    
+
     print 'Unit Test 1: Get Events by Filter:'
     api_url = base_url + '/api/geteventsbyfilter/'
     print 'api_url: %s' % api_url
@@ -60,7 +60,7 @@ def main(args):
                              )
     print 'result:'
     print result
-    print '\n\n'    
+    print '\n\n'
 
     print 'Unit Test 3: Get All Alerts:'
     api_url = base_url + '/api/getalerts/'
@@ -80,7 +80,7 @@ def main(args):
     result = make_json_call(api_url,
                             active='True',
                             page_size=options.pageSize,
-                            page_id=options.pageId, 
+                            page_id=options.pageId,
                            )
     print 'result:'
     print result
@@ -114,7 +114,7 @@ def main(args):
     api_url = base_url + '/api/getlogs/'
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
-                            host_id=options.host_id,  
+                            host_id=options.host_id,
                             start_time=None,
                             end_time=None,
                             lustre='true',

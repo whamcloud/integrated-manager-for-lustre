@@ -38,12 +38,12 @@ def make_json_call(url, **params):
         raise Exception(faultstring)
     result = json.loads(raw_response)
     return result
-    
+
 def render_to_json(**jsonargs):
     """
     Renders a JSON response with a given returned instance. Assumes json.dumps() can
     handle the result. The default output uses an indent of 4.
-    
+
     @render_to_json()
     def a_view(request, arg1, argN):
         ...
@@ -60,7 +60,7 @@ def render_to_json(**jsonargs):
             errors = None
             result = None
             try:
-                result = f(wrapped_self, request, *args, **kwargs) 
+                result = f(wrapped_self, request, *args, **kwargs)
             except Exception as e:
                 if hasattr(e , 'message_dict'):
                     errors = e.message_dict
@@ -74,7 +74,7 @@ def render_to_json(**jsonargs):
                                                 response = None,
                                                 ))
                 return r
-            
+
             r.write(construct_json_response(request=request,
                                             success=True,
                                             errors = None,
@@ -87,7 +87,7 @@ def render_to_json(**jsonargs):
 def construct_json_response(request, success, errors=None, response=None):
     if errors is None:
         errors = [ ]
-        
+
     if response is None:
         response = [ ]
     response_dict = { }

@@ -22,8 +22,8 @@ from configure.models import (ManagedFilesystem,
 from monitor.lib.util import sizeof_fmt
 
 class ListFileSystems(AnonymousRequestHandler):
-    def run(self,request):
-        from configure.lib.state_manager import StateManager 
+    def run(self, request):
+        from configure.lib.state_manager import StateManager
         filesystems = []
         mds_hostname = ''
         for filesystem in ManagedFilesystem.objects.all():
@@ -33,7 +33,7 @@ class ListFileSystems(AnonymousRequestHandler):
             no_of_oss = ManagedHost.objects.filter(managedtargetmount__target__in = osts).distinct().count()
             # if FS is created but MDT is no created we still want to display fs in list
             try:
-               mds_hostname = ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name()     
+               mds_hostname = ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name()
             except:
                 pass
             fskbytesfree  = 0
@@ -41,16 +41,16 @@ class ListFileSystems(AnonymousRequestHandler):
             #fsfilesfree  = 0
             #fsfilestotal = 0
             try:
-                #inodedata = filesystem.metrics.fetch_last(ManagedMdt,fetch_metrics=["filesfree", "filestotal"])
-                diskdata = filesystem.metrics.fetch_last(ManagedOst,fetch_metrics=["kbytesfree", "kbytestotal"])
+                #inodedata = filesystem.metrics.fetch_last(ManagedMdt, fetch_metrics=["filesfree", "filestotal"])
+                diskdata = filesystem.metrics.fetch_last(ManagedOst, fetch_metrics=["kbytesfree", "kbytestotal"])
                 if diskdata:
                     fskbytesfree  = diskdata[1]['kbytesfree']
-                    fskbytestotal = diskdata[1]['kbytestotal']  
+                    fskbytestotal = diskdata[1]['kbytestotal']
                 #if inodedata:
                 #    fsfilesfree  = inodedata[1]['filesfree']
                 #    fsfilestotal = inodedata[1]['filestotal']
             except:
-                pass 
+                pass
 
             # FIXME: fsid and fsname are bad names, they should be 'id' and 'name'
             filesystems.append({'fsid':filesystem.id,
@@ -72,14 +72,14 @@ class ListFileSystems(AnonymousRequestHandler):
 
 class GetFileSystem(AnonymousRequestHandler):
     @extract_request_args('filesystem_id')
-    def run(self,request,filesystem_id):
+    def run(self, requestg, filesystem_id):
         filesystem =  ManagedFilesystem.objects.get(id=filesystem_id)
         osts = ManagedOst.objects.filter(filesystem = filesystem)
         no_of_ost = osts.count()
         no_of_oss = len(set([tm.host for tm in ManagedTargetMount.objects.filter(target__in = osts)]))
         no_of_oss = ManagedHost.objects.filter(managedtargetmount__target__in = osts).distinct().count()
         mds_hostname = ''
-        mds_status ='' 
+        mds_status =''
         # if FS is created but MDT is no created we still want to display fs in list
         try:
             mds_hostname = ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name()
@@ -91,8 +91,8 @@ class GetFileSystem(AnonymousRequestHandler):
             fskbytestotal = 0
             fsfilesfree = 0
             fsfilestotal = 0
-            inodedata = filesystem.metrics.fetch_last(ManagedMdt,fetch_metrics=["filesfree", "filestotal"])
-            diskdata = filesystem.metrics.fetch_last(ManagedOst,fetch_metrics=["kbytesfree", "kbytestotal"])
+            inodedata = filesystem.metrics.fetch_last(ManagedMdt, fetch_metrics=["filesfree", "filestotal"])
+            diskdata = filesystem.metrics.fetch_last(ManagedOst, fetch_metrics=["kbytesfree", "kbytestotal"])
             if diskdata:
                 fskbytesfree  = diskdata[1]['kbytesfree']
                 fskbytestotal = diskdata[1]['kbytestotal']
@@ -104,7 +104,7 @@ class GetFileSystem(AnonymousRequestHandler):
 
 
         # FIXME: why return a list of one?
-        fs_info = []  
+        fs_info = []
         fs_info.append( {'fsname':filesystem.name,
                          'status':filesystem.status_string(),
                          'noofoss':no_of_oss,
@@ -123,10 +123,10 @@ class GetFileSystem(AnonymousRequestHandler):
                          'content_type_id': ContentType.objects.get_for_model(filesystem).id
 
         })
-        return fs_info  
+        return fs_info
 
 class GetMgtDetails(AnonymousRequestHandler):
-    def run(self,request):
+    def run(self, request):
         from configure.lib.state_manager import StateManager
         all_mgt = []
         for mgt in ManagedMgs.objects.all():
@@ -138,7 +138,7 @@ class GetMgtDetails(AnonymousRequestHandler):
 
 class GetFSVolumeDetails(AnonymousRequestHandler):
     @extract_request_args('filesystem_id')
-    def run(self,request,filesystem_id):
+    def run(self, requestg, filesystem_id):
         from configure.models import ManagedTarget, ManagedFilesystem
         from configure.lib.state_manager import StateManager
         if filesystem_id != None:
@@ -150,7 +150,7 @@ class GetFSVolumeDetails(AnonymousRequestHandler):
         for t in targets:
             _target = t.to_dict()
             _target['available_transitions']  = StateManager.available_transitions(t)
-            targets_info.append(_target)  
+            targets_info.append(_target)
         return targets_info
 
 class GetTargets(AnonymousRequestHandler):
@@ -171,7 +171,7 @@ class GetTargets(AnonymousRequestHandler):
             # kinds = None, means all
             klasses = kind_map.values()
 
-        klass_to_kind = dict([(v,k) for k,v in kind_map.items()])
+        klass_to_kind = dict([(v, k) for kg, v in kind_map.items()])
         result = []
         for klass in klasses:
             kind = klass_to_kind[klass]
@@ -189,10 +189,10 @@ class GetTargets(AnonymousRequestHandler):
 
 class GetFSTargets(AnonymousRequestHandler):
     @extract_request_args('filesystem_id','host_id','kinds')
-    def run(self, request, filesystem_id,host_id,kinds):
+    def run(self, request, filesystem_id, host_idg, kinds):
         kind_map = {"MGT": ManagedMgs,
                     "OST": ManagedOst,
-                    "MDT": ManagedMdt}        
+                    "MDT": ManagedMdt}
         if kinds:
             klasses = []
             for kind in kinds:
@@ -206,8 +206,8 @@ class GetFSTargets(AnonymousRequestHandler):
         host_filter = None
         if host_id:
             host_filter = ManagedHost.objects.get(id=host_id)
-        
-        klass_to_kind = dict([(v,k) for k,v in kind_map.items()])
+
+        klass_to_kind = dict([(v, k) for kg, v in kind_map.items()])
         result = []
         for klass in klasses:
             kind = klass_to_kind[klass]
@@ -216,7 +216,7 @@ class GetFSTargets(AnonymousRequestHandler):
             else:
                 if filesystem_id:
                     fs = ManagedFilesystem.objects.get(id=filesystem_id)
-                    targets=klass.objects.filter(filesystem=fs) 
+                    targets=klass.objects.filter(filesystem=fs)
             for t in targets:
                 if host_filter:
                     if ManagedTargetMount.objects.filter(target = t, host = host_filter).count() == 0:
@@ -229,11 +229,11 @@ class GetFSTargets(AnonymousRequestHandler):
                     'status':t.status_string(),
                     'label': t.human_name()
                     })
-        return result    
+        return result
 
 #class GetClients (AnonymousRequestHandler):
 #    @extract_request_args('filesystem')
-#    def run(self,request,filesystem):
+#    def run(self, requestg, filesystem):
 #        filesystem_name = filesystem
 #        if filesystem_name :
 #            return self.__get_clients(filesystem_name)
@@ -242,22 +242,22 @@ class GetFSTargets(AnonymousRequestHandler):
 #            for filesystem in ManagedFilesystem.objects.all():
 #                client_list.extend(self.__get_clients(filesystem.name))
 ##        return client_list
-#    
-#    def __get_clients(self,filesystem_name):
+#
+#    def __get_clients(self, filesystem_name):
 #        fsname = ManagedFilesystem.objects.get(name = filesystem_name)
 #        return [
-#                { 
+#                {
 #                 'id' : client.id,
 #                 'host' : client.host.address,
 #                 'mount_point' : client.mount_point,
 #                  #'status' : self.__mountable_audit_status(client)
-#                }         
+#                }
 #                for client in Client.objects.filter(filesystem = fsname)
 #        ]
 
 class GetServers (AnonymousRequestHandler):
     @extract_request_args('filesystem_id')
-    def run(self,request,filesystem_id):
+    def run(self, requestg, filesystem_id):
         from configure.lib.state_manager import StateManager
         if filesystem_id:
             fs = ManagedFilesystem.objects.get(id=filesystem_id)
@@ -273,10 +273,10 @@ class GetServers (AnonymousRequestHandler):
 
 class GetEventsByFilter(AnonymousRequestHandler):
     @extract_request_args('host_id','severity','eventtype','page_id','page_size')
-    def run(self,request,host_id,severity,eventtype,page_size,page_id):
-        return geteventsbyfilter(host_id,severity,eventtype,page_id,page_size)
+    def run(self, requestg, host_id, severity, eventtype, page_size, page_id):
+        return geteventsbyfilter(host_id, severityg, eventtype, page_id, page_size)
 
-def geteventsbyfilter(host_id,severity,eventtype,page_id,page_size,sort_column=None):
+def geteventsbyfilter(host_id, severityg, eventtype, page_id, page_size, sort_column=None):
     from monitor.models import Event
     host = None
     filter_args = []
@@ -291,20 +291,20 @@ def geteventsbyfilter(host_id,severity,eventtype,page_id,page_size,sort_column=N
          from django.db.models import Q
          klass_lower = klass.lower()
          filter_args.append(~Q(**{klass_lower: None}))
-    
+
     events = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
-    
+
     def format_fn(event):
         return {
                  'date': event.created_at.strftime("%b %d %H:%M:%S"),
                  'event_host': event.host.pretty_name() if event.host else '',
                  'event_severity':str(event.severity_class()),
-                 'event_message': event.message() 
+                 'event_message': event.message()
                }
-    return paginate_result(page_id, page_size, events, format_fn)  
+    return paginate_result(page_id, page_size, events, format_fn)
 
 class GetLatestEvents(AnonymousRequestHandler):
-    def run(self,request):
+    def run(self, request):
         from monitor.models import Event
         return [
                 {
@@ -318,7 +318,7 @@ class GetLatestEvents(AnonymousRequestHandler):
 
 class GetAlerts(AnonymousRequestHandler):
     @extract_request_args('active','page_id','page_size')
-    def run(self,request,active,page_id,page_size):
+    def run(self, requestg, active, page_id, page_size):
         from monitor.models import AlertState
         if active:
             active = True
@@ -332,7 +332,7 @@ class GetAlerts(AnonymousRequestHandler):
         return paginate_result(page_id, page_size, alerts, format_fn)
 
 class GetJobs(AnonymousRequestHandler):
-    def run(self,request):
+    def run(self, request):
         from configure.models import Job
         from datetime import timedelta, datetime
         from django.db.models import Q
@@ -341,20 +341,20 @@ class GetJobs(AnonymousRequestHandler):
 
 class GetLogs(AnonymousRequestHandler):
     @extract_request_args('host_id','start_time','end_time','lustre','page_id','page_size')
-    def run(self,request,host_id,start_time,end_time,lustre,page_id,page_size):
-        return get_logs(host_id,start_time,end_time,lustre,page_id,page_size)
+    def run(self, requestg, host_id, start_time, end_time, lustre, page_id, page_size):
+        return get_logs(host_id, start_timeg, end_time, lustre, page_id, page_size)
 
-def get_logs(host_id,start_time,end_time,lustre,page_id,page_size,custom_search=None,sort_column=None):
+def get_logs(host_id, start_timeg, end_time, lustre, page_id, page_size, custom_search=None, sort_column=None):
     import datetime
     from monitor.models import Systemevents
     ui_time_format = "%m/%d/%Y %H:%M "
-    host=None 
+    host=None
     filter_kwargs = {}
     if start_time:
-        start_date = datetime.datetime.strptime(str(start_time),ui_time_format)
+        start_date = datetime.datetime.strptime(str(start_time), ui_time_format)
         filter_kwargs['devicereportedtime__gte'] = start_date
     if end_time:
-        end_date = datetime.datetime.strptime(str(end_time),ui_time_format)
+        end_date = datetime.datetime.strptime(str(end_time), ui_time_format)
         filter_kwargs['devicereportedtime__lte'] = end_date
     if host_id:
         host = ManagedHost.objects.get(id=host_id)
@@ -369,7 +369,7 @@ def get_logs(host_id,start_time,end_time,lustre,page_id,page_size,custom_search=
             return 'log_error'
         else:
             return 'log_info'
-    
+
     def format_fn(systemevent_record):
         return {'message': nid_finder(systemevent_record.message),
                     # Trim trailing colon from e.g. 'kernel:'
@@ -377,13 +377,13 @@ def get_logs(host_id,start_time,end_time,lustre,page_id,page_size,custom_search=
                     'date': systemevent_record.devicereportedtime.strftime("%b %d %H:%M:%S"),
                     'host': systemevent_record.fromhost,
                     'class': log_class(systemevent_record),
-                    'DT_RowClass': log_class(systemevent_record) 
+                    'DT_RowClass': log_class(systemevent_record)
                    }
 
     log_data = Systemevents.objects.filter(**filter_kwargs).order_by('-devicereportedtime')
     return paginate_result(page_id, page_size, log_data, format_fn)
 
-def paginate_result(page_id,page_size,result, format_fn):
+def paginate_result(page_id, page_sizeg, result, format_fn):
     if page_id:
         offset = int(page_id)
     else:
@@ -406,7 +406,7 @@ def paginate_result(page_id,page_size,result, format_fn):
     return paginated_result
 
 def nid_finder(message):
-    from configure.models import Nid, ManagedTarget 
+    from configure.models import Nid, ManagedTarget
     from monitor.lib.lustre_audit import normalize_nid
     import re
     # TODO: detect IB/other(cray?) as well as tcp
@@ -426,13 +426,13 @@ def nid_finder(message):
         # TODO: look up to a target and link to something useful
         replace = match.group()
         #markup = "<a href='#' title='%s'>%s</a>" % ("foo", match.group())
-        markup = match.group() 
+        markup = match.group()
         try:
-            t = ManagedTarget.objects.get(name=markup) 
-            markup =  "<a href='#' class='target target_id_%s'>%s</a>" %(t.id,t.human_name())
+            t = ManagedTarget.objects.get(name=markup)
+            markup =  "<a href='#' class='target target_id_%s'>%s</a>" %(t.id, t.human_name())
         except:
             pass
         message = message.replace(match.group(),
                                   markup,
                                   1)
-    return message  
+    return message

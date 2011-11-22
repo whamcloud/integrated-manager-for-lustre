@@ -20,6 +20,7 @@ from configure.lib.state_manager import StateManager
 from collections import defaultdict
 import cmd
 
+
 class HydraDebug(cmd.Cmd, object):
     def __init__(self):
         super(HydraDebug, self).__init__()
@@ -102,13 +103,13 @@ class HydraDebug(cmd.Cmd, object):
                 return None
         else:
             raise NotImplementedError()
-    
+
     def do_test_conf_param(self, args):
         from configure.lib.conf_param import all_params
         from sys import stderr, stdout
         stdout.write("#!/bin/bash\n")
         stdout.write("set -e\n")
-        for p,(param_obj_klass, param_validator, help_text) in all_params.items():
+        for p, (param_obj_klass, param_validator, help_text) in all_params.items():
             for test_val in param_validator.test_vals():
                 instance = self._conf_param_test_instance(p, test_val, param_obj_klass)
                 if not instance:
@@ -137,6 +138,7 @@ class HydraDebug(cmd.Cmd, object):
             resources = ResourceQuery().get_all_resources()
         else:
             resources = []
+
             def iterate(record):
                 res = record.to_resource()
                 resources.append(res)
@@ -144,6 +146,7 @@ class HydraDebug(cmd.Cmd, object):
                     p_res = iterate(p)
                     res._parents.append(p_res)
                 return res
+
             start_id = int(arg_string)
             from configure.models import StorageResourceRecord
             start_record = StorageResourceRecord.objects.get(pk = start_id)
@@ -185,4 +188,3 @@ if __name__ == '__main__':
             print "Exiting..."
     else:
         cmdline().onecmd(" ".join(sys.argv[1:]))
-

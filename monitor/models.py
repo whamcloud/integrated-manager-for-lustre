@@ -4,16 +4,17 @@
 # ==============================
 
 from django.db import models, transaction
-from polymorphic.models import DowncastMetaclass
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
 
-from collections import defaultdict
+from polymorphic.models import DowncastMetaclass
+from polymorphic.models import DowncastManager
+from polymorphic.models import PolymorphicMetaclass
 
 import json
-import pickle
 
-from logging import INFO, WARNING
+from logging import INFO, WARNING, ERROR
+
 
 class WorkaroundGenericForeignKey(GenericForeignKey):
     """TEMPORARY workaround for django bug #16048 while we wait for
@@ -44,13 +45,13 @@ class WorkaroundGenericForeignKey(GenericForeignKey):
             setattr(instance, self.cache_attr, rel_obj)
             return rel_obj
 
-from polymorphic.models import DowncastManager
+
 class DeletableManager(DowncastManager):
     """Filters results to return only not-deleted records"""
     def get_query_set(self):
         return super(DeletableManager, self).get_query_set().filter(not_deleted = True)
 
-from polymorphic.models import PolymorphicMetaclass
+
 class DeletableDowncastableMetaclass(PolymorphicMetaclass):
     """Make a django model 'downcastable and 'deletable'.
 
@@ -58,11 +59,11 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
     the delete() method and the DeletableManager.
 
     The not_deleted attribute is logically a True/False 'deleted' attribute, but is
-    implemented this (admittedly ugly) way in order to work with django's 
+    implemented this (admittedly ugly) way in order to work with django's
     unique_together option.  When 'not_deleted' is included in the unique_together
     tuple, the uniqeness constraint is applied only to objects which have not
     been deleted -- e.g. an MGS can only have one filesystem with a given name, but
-    once you've deleted that filesystem you should be able to create more with the 
+    once you've deleted that filesystem you should be able to create more with the
     same name.
 
     The manager we set is a subclass of polymorphic.models.DowncastManager, so we inherit the
@@ -75,7 +76,7 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
         @transaction.commit_on_success
         def delete(clss, id):
             """Mark a record as deleted, returns nothing.
-            
+
             Looks up the model instance by pk, sets the not_deleted attribute
             to None and saves the model instance.
 
@@ -101,8 +102,8 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
             audit_log.info("Lowered %d alerts while deleting %s %s" % (updated, klass, id))
 
         dct['objects'] = DeletableManager()
-        dct['delete']  = delete
-        # Conditional to only create the 'deleted' attribute on the immediate 
+        dct['delete'] = delete
+        # Conditional to only create the 'deleted' attribute on the immediate
         # user of the metaclass, not again on subclasses.
         if issubclass(dct.get('__metaclass__', type), DeletableDowncastableMetaclass):
             # Please forgive me.  Logically this would be a field called 'deleted' which would
@@ -110,12 +111,13 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
             # True or None.  The reason is: unique_together constraints.
             dct['not_deleted'] = models.NullBooleanField(default = True)
 
-        if dct.has_key('Meta'):
+        if 'Meta' in dct:
             if hasattr(dct['Meta'], 'unique_together'):
                 if not 'not_deleted' in dct['Meta'].unique_together:
                     dct['Meta'].unique_together = dct['Meta'].unique_together + ('not_deleted',)
 
         return super(DeletableDowncastableMetaclass, cls).__new__(cls, name, bases, dct)
+
 
 class MeasuredEntity(object):
     """Provides mix-in access to metrics specific to the instance."""
@@ -128,9 +130,6 @@ class MeasuredEntity(object):
 
 #class Router(models.Model, MeasuredEntity):
 #    host = models.ForeignKey(Host)
-
-
-
 #class Client(Mountable, FilesystemMember):
 #    def role(self):
 #        return "Client"
@@ -149,6 +148,7 @@ class MeasuredEntity(object):
 #    def __str__(self):
 #        return "%s-client %d" % (self.filesystem.name, self.id)
 
+
 class Event(models.Model):
     __metaclass__ = DowncastMetaclass
 
@@ -162,7 +162,6 @@ class Event(models.Model):
 
     def severity_class(self):
         # CSS class from an Event severity -- FIXME: this should be a templatetag
-        from logging import INFO, WARNING, ERROR
         try:
             return {INFO: 'info', WARNING: 'warning', ERROR: 'error'}[self.severity]
         except KeyError:
@@ -170,6 +169,7 @@ class Event(models.Model):
 
     def message(self):
         raise NotImplementedError
+
 
 class LearnEvent(Event):
     # Every environment at some point reinvents void* :-)
@@ -192,6 +192,7 @@ class LearnEvent(Event):
         else:
             return "Discovered %s" % self.learned_item
 
+
 class AlertEvent(Event):
     message_str = models.CharField(max_length = 512)
     alert = models.ForeignKey('AlertState')
@@ -202,6 +203,7 @@ class AlertEvent(Event):
 
     def message(self):
         return self.message_str
+
 
 class SyslogEvent(Event):
     message_str = models.CharField(max_length = 512)
@@ -214,11 +216,12 @@ class SyslogEvent(Event):
     def message(self):
         return self.message_str
 
-class ClientConnectEvent(SyslogEvent):
 
+class ClientConnectEvent(SyslogEvent):
     @staticmethod
     def type_name():
         return "ClientConnect"
+
 
 class AlertState(models.Model):
     """Records a period of time during which a particular
@@ -246,8 +249,8 @@ class AlertState(models.Model):
          'alert_created_at_short': self.begin,
          'begin': self.begin,
          'end': self.end,
-         'alert_severity':'alert', # FIXME: Still need to figure out wheather to pass enum or display string.
-         'alert_item': str(self.alert_item), 
+         'alert_severity': 'alert',  # FIXME: Still need to figure out wheather to pass enum or display string.
+         'alert_item': str(self.alert_item),
          'alert_message': self.message(),
          'message': self.message(),
          'active': bool(self.active),
@@ -263,6 +266,7 @@ class AlertState(models.Model):
 
     def begin_event(self):
         return None
+
     def end_event(self):
         return None
 
@@ -273,29 +277,29 @@ class AlertState(models.Model):
     def filter_by_item(cls, item):
         if hasattr(item, 'content_type'):
             # A DowncastMetaclass object
-            return cls.objects.filter(active = True, 
+            return cls.objects.filter(active = True,
                     alert_item_id = item.id,
                     alert_item_type = item.content_type)
         else:
-            return cls.objects.filter(active = True, 
+            return cls.objects.filter(active = True,
                     alert_item_id = item.pk,
                     alert_item_type__model = item.__class__.__name__.lower(),
                     alert_item_type__app_label = item.__class__._meta.app_label)
 
     @classmethod
     def filter_by_item_id(cls, item_class, item_id):
-        return cls.objects.filter(active = True, 
+        return cls.objects.filter(active = True,
                 alert_item_id = item_id,
                 alert_item_type__model = item_class.__name__.lower(),
                 alert_item_type__app_label = item_class._meta.app_label)
 
     @classmethod
     def filter_by_item_ids(cls, item_class, item_ids):
-        return cls.objects.filter(active = True, 
+        return cls.objects.filter(active = True,
                 alert_item_id__in = item_ids,
                 alert_item_type__model = item_class.__name__.lower(),
                 alert_item_type__app_label = item_class._meta.app_label)
-    
+
     @classmethod
     def notify(alert_klass, alert_item, active, **kwargs):
         if hasattr(alert_item, 'content_type'):
@@ -356,6 +360,7 @@ class AlertState(models.Model):
 
         return alert_state
 
+
 class TargetOfflineAlert(AlertState):
     def message(self):
         return "Target %s offline" % (self.alert_item)
@@ -366,7 +371,7 @@ class TargetOfflineAlert(AlertState):
                 host = self.alert_item.primary_server(),
                 alert = self,
                 severity = WARNING)
-        
+
     def end_event(self):
         return AlertEvent(
                 message_str = "%s started" % self.alert_item,
@@ -374,26 +379,28 @@ class TargetOfflineAlert(AlertState):
                 alert = self,
                 severity = INFO)
 
+
 class TargetFailoverAlert(AlertState):
     def message(self):
         return "Target %s failed over to server %s" % (self.alert_item.target, self.alert_item.host)
 
     def begin_event(self):
         # FIXME: reporting this event against the primary server
-        # of a target because we don't have enough information 
-        # to 
+        # of a target because we don't have enough information
+        # to
         return AlertEvent(
                 message_str = "%s failover mounted" % self.alert_item.target,
                 host = self.alert_item.host,
                 alert = self,
                 severity = WARNING)
-        
+
     def end_event(self):
         return AlertEvent(
                 message_str = "%s failover unmounted" % self.alert_item.target,
                 host = self.alert_item.host,
                 alert = self,
                 severity = INFO)
+
 
 class TargetRecoveryAlert(AlertState):
     def message(self):
@@ -413,6 +420,7 @@ class TargetRecoveryAlert(AlertState):
                 alert = self,
                 severity = INFO)
 
+
 class HostContactAlert(AlertState):
     def message(self):
         return "Lost contact with host %s" % self.alert_item
@@ -430,6 +438,7 @@ class HostContactAlert(AlertState):
                 host = self.alert_item,
                 alert = self,
                 severity = INFO)
+
 
 class LNetOfflineAlert(AlertState):
     def message(self):
@@ -449,6 +458,7 @@ class LNetOfflineAlert(AlertState):
                 alert = self,
                 severity = INFO)
 
+
 class TargetParam(models.Model):
     target = models.ForeignKey('configure.ManagedTarget')
     key = models.CharField(max_length=128)
@@ -464,7 +474,7 @@ class TargetParam(models.Model):
         for key, value_list in params.items():
             for value in value_list:
                 new_params.add((key, value))
-        
+
         for del_param in old_params - new_params:
             target.targetparam_set.get(key = del_param[0], value = del_param[1]).delete()
             audit_log.info("del_param: %s" % (del_param,))
@@ -472,15 +482,15 @@ class TargetParam(models.Model):
             target.targetparam_set.create(key = add_param[0], value = add_param[1])
             audit_log.info("add_param: %s" % (add_param,))
 
+
 class TargetRecoveryInfo(models.Model):
-    # When a volume is present, we will have been able to interrogate 
+    # When a volume is present, we will have been able to interrogate
     # its recovery status
     # JSON-encoded dict parsed from /proc/fs/lustre/*/*/recovery_status
     recovery_status = models.TextField()
 
     target = models.ForeignKey('configure.ManagedTarget')
 
-    from django.db import transaction
     @staticmethod
     @transaction.commit_on_success
     def update(target, recovery_status):
@@ -488,21 +498,22 @@ class TargetRecoveryInfo(models.Model):
         instance = TargetRecoveryInfo.objects.create(
                 target = target,
                 recovery_status = json.dumps(recovery_status))
-        return instance.is_recovering(recovery_status) 
+        return instance.is_recovering(recovery_status)
 
     def is_recovering(self, data = None):
         if not data:
             data = json.loads(self.recovery_status)
-        return (data.has_key("status") and data["status"] == "RECOVERING")
+        return ("status" in data and data["status"] == "RECOVERING")
 
     def recovery_status_str(self):
         data = json.loads(self.recovery_status)
-        if data.has_key("status") and data["status"] == "RECOVERING":
+        if 'status' in data and data["status"] == "RECOVERING":
             return "%s %ss remaining" % (data["status"], data["time_remaining"])
-        elif data.has_key("status"):
+        elif 'status' in data:
             return data["status"]
         else:
             return "N/A"
+
 
 class Systemevents(models.Model):
     id = models.AutoField(primary_key=True, db_column='ID')
@@ -549,6 +560,7 @@ class Systemevents(models.Model):
                                        db_column='GenericFileName', blank=True)
     systemid = models.IntegerField(null=True, db_column='SystemID',
                                    blank=True)
+
     class Meta:
         db_table = u'SystemEvents'
 
@@ -560,19 +572,21 @@ class Systemevents(models.Model):
         else:
             return "normal"
 
+
 class LastSystemeventsProcessed(models.Model):
     last = models.IntegerField(default = 0)
 
+
 class FrontLineMetricStore(models.Model):
     """Fast simple metrics store.  Should be backed by MEMORY engine."""
-    content_type    = models.ForeignKey(ContentType, null=True)
-    object_id       = models.PositiveIntegerField(null=True)
-    content_object  = GenericForeignKey('content_type', 'object_id')
-    insert_time     = models.DateTimeField()
-    metric_name     = models.CharField(max_length=255)
-    metric_type     = models.CharField(max_length=64)
-    value           = models.FloatField()
-    complete        = models.BooleanField(default=False, db_index=True)
+    content_type = models.ForeignKey(ContentType, null=True)
+    object_id = models.PositiveIntegerField(null=True)
+    content_object = GenericForeignKey('content_type', 'object_id')
+    insert_time = models.DateTimeField()
+    metric_name = models.CharField(max_length=255)
+    metric_type = models.CharField(max_length=64)
+    value = models.FloatField()
+    complete = models.BooleanField(default=False, db_index=True)
 
     @classmethod
     def store_update(cls, ct, o_id, update_time, update):

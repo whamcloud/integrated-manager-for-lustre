@@ -13,11 +13,12 @@ from configure.lib.agent import AgentException
 from configure.lib.job import job_log
 from monitor.lib.util import timeit
 
+
 class RetryOnSqlErrorTask(Task):
-    """Because state required to guarantee completion (or recognition of failure) of 
+    """Because state required to guarantee completion (or recognition of failure) of
     a job is stored in the database, if there is an exception accessing the database
-    then we must retry the celery task.  Otherwise, e.g. if the DB is inaccessible 
-    when recording the completion of a job, we will fail to mark it as complete, 
+    then we must retry the celery task.  Otherwise, e.g. if the DB is inaccessible
+    when recording the completion of a job, we will fail to mark it as complete,
     fail to start any dependents, and stall the whole system forever (HYD-343)"""
     abstract = True
     max_retries = None
@@ -33,6 +34,7 @@ class RetryOnSqlErrorTask(Task):
             job_log.error("Internal error %s" % e)
             self.retry(args, kwargs, e, countdown=settings.SQL_RETRY_PERIOD)
 
+
 def _complete_orphan_jobs():
     """This task applies timeouts to cover for crashes/bugs which cause
        something to die between putting the DB in a state which expects
@@ -45,7 +47,7 @@ def _complete_orphan_jobs():
     # state as 'tasked' and committing its task_id to the database.
     # TODO: reconcile this vs. whatever timeout celery is using to talk to AMQP
     # TODO: reconcile this vs. whatever timeout django.db is using to talk to MySQL
-    grace_period = timedelta(seconds = 60)
+    grace_period = timedelta(seconds=60)
 
     from configure.models import Job
     # These are jobs which failed between tasking and tasked
@@ -76,6 +78,7 @@ def _complete_orphan_jobs():
         job_log.error("Job %d found by janitor (completing since %s), resuming" % (job.id, job.modified_at))
         job.complete(errored = job.errored, cancelled = job.cancelled)
 
+
 def _remove_old_jobs():
     """Avoid an unlimited buildup of Job objects over long periods of time.  Set
        JOB_MAX_AGE to None to have immortal Jobs."""
@@ -92,6 +95,7 @@ def _remove_old_jobs():
         # Jobs cannot be deleted in one go because of intra-job foreign keys
         for j in old_jobs:
             j.delete()
+
 
 def _job_task_health():
     """Check that all jobs which have a task_id set are either really running in
@@ -116,7 +120,7 @@ def _job_task_health():
 
     for job in Job.objects.filter(~Q(task_id = None)).filter(~Q(state = 'complete')):
         task_state = job.task_state()
-        # This happens if celery managed to ack the task but couldn't update the 
+        # This happens if celery managed to ack the task but couldn't update the
         # result, e.g. when we retry on a DB error and the result can't make
         # it to the DB either.
         if task_state == 'STARTED' and not job.task_id in really_running_tasks:
@@ -127,6 +131,7 @@ def _job_task_health():
         if not task_state in ['PENDING', 'STARTED', 'RETRY']:
             job_log.warning("Job %s has state %s task_id %s but task state is %s" % (job.id, job.state, job.task_id, task_state))
 
+
 @periodic_task(run_every = timedelta(seconds = settings.JANITOR_PERIOD))
 @timeit(logger=job_log)
 def janitor():
@@ -135,6 +140,7 @@ def janitor():
     _remove_old_jobs()
     if settings.DEBUG:
         _job_task_health()
+
 
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
@@ -159,6 +165,7 @@ def notify_state(content_type, object_id, new_state, from_states):
             job_log.info("notify_state: Updating state of item %d (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
             instance.state = new_state
             instance.save()
+
 
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
@@ -189,19 +196,12 @@ def set_state(content_type, object_id, new_state):
     from configure.lib.state_manager import StateManager
     StateManager()._set_state(instance, new_state)
 
+
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def add_job(job):
     from configure.lib.state_manager import StateManager
     StateManager()._add_job(job)
-
-#def complete_on_internal_error
-"""Actual execution of job steps is wrapped in an exception handler to log errors
-and mark jobs complete.  However, it could be possible for the actual job execution 
-code to throw exceptions -- this is considered an internal error, probably a 
-bug with hydra or a plugin.  When this happens, we must log it and then complete
-the job to avoid stalling the job queue"""
-#def retry_on_db_exception
 
 
 @task(base = RetryOnSqlErrorTask)
@@ -217,21 +217,16 @@ def complete_job(job_id):
             job.state = 'complete'
             job.save()
     else:
-        # This should 
         assert job.state == 'complete'
 
     job_log.debug("Job %d completed, running any dependents...", job_id)
     Job.run_next()
 
+
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def run_job(job_id):
     job_log.info("Job %d: run_job" % job_id)
-    #from MySQLdb import ProgrammingError, OperationalError
-    #import random
-    #if random.randint(1,5) != 1:
-    #    job_log.debug("Job %d shafted" % job_id)
-    #    raise ProgrammingError("Your move, sucka!")
 
     from configure.models import Job, StepResult
     job = Job.objects.get(pk = job_id)
@@ -255,7 +250,7 @@ def run_job(job_id):
         return None
 
     if job.started_step:
-        job_log.warning("Job %d restarting, started,finished=%s,%s" % (job.id, job.started_step, job.finished_step))
+        job_log.warning("Job %d restarting, started, finished=%s,%s" % (job.id, job.started_step, job.finished_step))
         if job.started_step != job.finished_step:
             if steps[job.started_step].is_idempotent():
                 job_log.info("Job %d step %d will be re-run (it is idempotent)" % (job.id, job.started_step))
@@ -335,7 +330,7 @@ def run_job(job_id):
             result.backtrace = backtrace
             result.state = 'failed'
             result.save()
-            
+
             return None
         finally:
             result.save()

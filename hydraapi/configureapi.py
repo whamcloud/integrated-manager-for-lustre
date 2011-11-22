@@ -17,7 +17,7 @@ from requesthandler import (AnonymousRequestHandler,
 
 class TestHost(AnonymousRequestHandler):
     @extract_request_args('hostname')
-    def run(self,request,hostname):
+    def run(self, request, hostname):
         from monitor.tasks import test_host_contact
         from configure.models import Monitor
         host = ManagedHost(address = hostname)
@@ -27,44 +27,44 @@ class TestHost(AnonymousRequestHandler):
 
 class AddHost(AnonymousRequestHandler):
     @extract_request_args('hostname')
-    def run(self,request,hostname):
+    def run(self, request, hostname):
         host = ManagedHost.create_from_string(hostname)
         return {'host_id':host.id, 'host': host.address, 'status': 'added'}
 
 class RemoveHost(AnonymousRequestHandler):
     @extract_request_args('hostid')
-    def run(self,request,hostid):
+    def run(self, request, hostid):
         host =  ManagedHost.objects.get(id = hostid)
         transition_job = StateManager.set_state(host,'removed')
         return {'hostid': hostid,'job_id': transition_job.task_id,'status': transition_job.status}
 
 class SetLNetStatus(AnonymousRequestHandler):
     @extract_request_args('hostid','state')
-    def run(self,request,hostid,state):
+    def run(self, request, hostid, state):
         host =  ManagedHost.objects.get(id = hostid)
-        transition_job = StateManager.set_state(host,state)
+        transition_job = StateManager.set_state(host, state)
         return {'hostid': hostid,'job_id': transition_job.task_id,'status': transition_job.status}
 
 class SetTargetMountStage(AnonymousRequestHandler):
     @extract_request_args('target_id','state')
-    def run(self,request,target_id,state):
+    def run(self, request, target_id, state):
         from configure.models import ManagedTarget
-        target = ManagedTarget.objects.get(id=target_id)                       
-        transition_job = StateManager.set_state(target.downcast(),state)
+        target = ManagedTarget.objects.get(id=target_id)
+        transition_job = StateManager.set_state(target.downcast(), state)
         return {'target_id': target_id,'job_id': transition_job.task_id,'status': transition_job.status}
-                   
+
 class RemoveFileSystem(AnonymousRequestHandler):
     @extract_request_args('filesystemid')
-    def run(self,request,filesystemid):
+    def run(self, request, filesystemid):
         from configure.models import ManagedFilesystem
         from configure.models.state_manager import StateManager
-        fs = ManagedFilesystem.objects.get(id = filesystemid)    
+        fs = ManagedFilesystem.objects.get(id = filesystemid)
         transition_job = StateManager.set_state(fs,'removed')
         return {'filesystemid': filesystemid,'job_id': transition_job.task_id,'status': transition_job.status}
 
 class RemoveClient(AnonymousRequestHandler):
     @extract_request_args('clientid')
-    def run(self,request,clientid):
+    def run(self, request, clientid):
         from configure.models import ManagedTargetMount
         from configure.models.state_manager import StateManager
         mtm = ManagedTargetMount.objects.get(id = clientid)
@@ -73,7 +73,7 @@ class RemoveClient(AnonymousRequestHandler):
 
 class GetJobStatus(AnonymousRequestHandler):
     @extract_request_args('job_id')
-    def run(self,request,job_id):
+    def run(self, request, job_id):
         from django.shortcuts import get_object_or_404
         from configure.models import Job
         job = get_object_or_404(Job, id = job_id)
@@ -82,7 +82,7 @@ class GetJobStatus(AnonymousRequestHandler):
 
 class SetJobStatus(AnonymousRequestHandler):
     @extract_request_args('job_id','state')
-    def run(self,request,job_id,state):
+    def run(self, request, job_id, state):
         assert state in ['pause','cancel','resume']
         from django.shortcuts import get_object_or_404
         from configure.models import Job
@@ -90,9 +90,9 @@ class SetJobStatus(AnonymousRequestHandler):
         if state == 'pause':
             job.pause()
         elif state == 'cancel':
-            job.cancel()   
-        else: 
-            job.resume() 
+            job.cancel()
+        else:
+            job.resume()
         return {'transition_job_status': job.status,'job_info': job.info,'job_result': job.result}
 
 class GetResourceClasses(AnonymousRequestHandler):
@@ -151,8 +151,8 @@ class GetResources(AnonymousRequestHandler):
                 row[c['name']] = resource.format(c['name'])
 
             row['_alerts'] = [a.to_dict() for a in ResourceQuery().resource_get_alerts(resource)]
-                
-            rows.append(row)    
+
+            rows.append(row)
 
         columns = [{'mdataProp': 'id', 'bVisible': False}, {'mDataProp': '_alias', 'sTitle': 'Name'}]
         for c in attr_columns:
@@ -204,7 +204,7 @@ class GetResource(AnonymousRequestHandler):
 
 class GetLuns(AnonymousRequestHandler):
     @extract_request_args('category')
-    def run(cls,request, category):
+    def run(cls, request, category):
         assert category in ['unused', 'usable']
 
         from configure.models import Lun, LunNode
@@ -249,13 +249,13 @@ class CreateNewFilesystem(AnonymousRequestHandler):
         else:
             mgt_lun_id = ManagedMgs.objects.get(pk = mgt_id).get_lun()
 
-        # This is a brute safety measure, to be superceded by 
+        # This is a brute safety measure, to be superceded by
         # some appropriate validation that gives a helpful
         # error to the user.
         all_lun_ids = [mgt_lun_id] + [mdt_lun_id] + ost_lun_ids
         # Test that all values in all_lun_ids are unique
         assert len(set(all_lun_ids)) == len(all_lun_ids)
-        
+
         from django.db import transaction
         with transaction.commit_on_success():
             fs = create_fs(mgt_id, fsname)
@@ -275,13 +275,13 @@ class CreateNewFilesystem(AnonymousRequestHandler):
 
 class CreateFilesystem(AnonymousRequestHandler):
     @extract_request_args('mgs_id','fsname')
-    def run(self,request,mgs_id,fsname):
-        create_fs(mgs_id,fsname)
+    def run(self, request, mgs_id, fsname):
+        create_fs(mgs_id, fsname)
 
-def create_fs(mgs_id,fsname):
+def create_fs(mgs_id, fsname):
         from configure.models import ManagedFilesystem, ManagedMgs
         mgs = ManagedMgs.objects.get(id=mgs_id)
-        fs = ManagedFilesystem(mgs=mgs,name = fsname)
+        fs = ManagedFilesystem(mgs=mgs, name = fsname)
         fs.save()
         return fs
 
@@ -358,13 +358,13 @@ class GetTargetConfParams(AnonymousRequestHandler):
         result = []
         for klass in klasses:
             conf_params = get_conf_params([klass])
-            conf_param_list = [] 
+            conf_param_list = []
             for conf_param in conf_params:
                 conf_param_list.append(
                                        {'conf_param':conf_param,
                                         'conf_param_help':all_params[conf_param][2]
-                                       }  
-                                      ) 
+                                       }
+                                      )
             result.extend(conf_param_list)
         return result
 
@@ -425,7 +425,7 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
                         return j
                 return None
 
-            this_row.sort(lambda a,b: cmp(nextrow_affinity(a), nextrow_affinity(b)))
+            this_row.sort(lambda a, b: cmp(nextrow_affinity(a), nextrow_affinity(b)))
 
         box_width = 120
         box_height = 80
@@ -449,7 +449,7 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
         from settings import STATIC_URL
         for i, items in rows.items():
             total_height = len(items) * box_height + (len(items) - 1) * ypad
-            y = (height - total_height) / 2 
+            y = (height - total_height) / 2
             for record in items:
                 resource = record.to_resource()
                 alert_count = len(ResourceQuery().resource_get_alerts(resource))
@@ -539,9 +539,9 @@ class Notifications(AnonymousRequestHandler):
         from monitor.models import AlertState
         alerts = AlertState.objects.filter(*alert_filter_args, **alert_filter_kwargs).order_by('-end')
 
-        # >> FIXME HYD-421 Hack: this info should be provided in a more generic way by 
+        # >> FIXME HYD-421 Hack: this info should be provided in a more generic way by
         #    AlertState subclasses
-        # NB adding a 'what_do_i_affect' method to 
+        # NB adding a 'what_do_i_affect' method to
         alert_dicts = []
         for a in alerts:
             a = a.downcast()
@@ -590,7 +590,7 @@ class Notifications(AnonymousRequestHandler):
                 alert_dict['affected'].append([ao.pk, ct.pk])
 
             alert_dicts.append(alert_dict)
-        # << 
+        # <<
 
         if jobs.count() > 0 and alerts.count() > 0:
             latest_job = jobs[0]
@@ -615,7 +615,7 @@ class Notifications(AnonymousRequestHandler):
                 'alerts': alert_dicts
                 }
 
-class TransitionConsequences(AnonymousRequestHandler):        
+class TransitionConsequences(AnonymousRequestHandler):
     @extract_request_args('id', 'content_type_id', 'new_state')
     def run(self, request, id, content_type_id, new_state):
         from configure.lib.state_manager import StateManager
@@ -648,5 +648,5 @@ class ObjectSummary(AnonymousRequestHandler):
                            'human_name': instance.human_name(),
                            'state': instance.state,
                            'available_transitions': StateManager.available_transitions(instance)})
-        return result 
+        return result
 

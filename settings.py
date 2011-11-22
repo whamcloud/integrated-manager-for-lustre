@@ -110,8 +110,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.transaction.TransactionMiddleware',
     'pagination.middleware.PaginationMiddleware',
     'middleware.ExceptionPrinterMiddleware',
-) + [('debug_toolbar.middleware.DebugToolbarMiddleware',), ()][debug_toolbar==None]
-
+) + [('debug_toolbar.middleware.DebugToolbarMiddleware',), ()][debug_toolbar == None]
 
 
 from django.conf import global_settings
@@ -159,13 +158,15 @@ INSTALLED_APPS = (
     'hydraapi',
     'hydradashboard',
     'hydracm'
-    ) + [('debug_toolbar',), ()][debug_toolbar==None] \
-      + [('django_extensions',), ()][django_extensions==None]
+    ) + [('debug_toolbar',), ()][debug_toolbar == None] \
+      + [('django_extensions',), ()][django_extensions == None]
 
 INTERNAL_IPS = ('192.168.0.4',)
 
+
 def custom_show_toolbar(request):
     return DEBUG
+
 
 DEBUG_TOOLBAR_CONFIG = {
     'INTERCEPT_REDIRECTS': False,
@@ -202,12 +203,12 @@ LOGGING = {
         },
     },
     'loggers': {
-        'django.request':{
+        'django.request': {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
             'propagate': True,
         },
-        'django.db.backends':{
+        'django.db.backends': {
             'handlers': [],
             'level': 'DEBUG',
             'propagate': True,
@@ -285,5 +286,3 @@ except NameError:
         from local_settings import *
     except ImportError:
         pass
-
-

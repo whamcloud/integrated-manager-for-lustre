@@ -8,13 +8,16 @@ from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll
 from configure.models.jobs import StatefulObject, Job
 from monitor.models import DeletableDowncastableMetaclass, MeasuredEntity
 
+
 class FilesystemMember(models.Model):
-    """A Mountable for a particular filesystem, such as 
+    """A Mountable for a particular filesystem, such as
        MDT, OST or Client"""
     filesystem = models.ForeignKey('ManagedFilesystem')
-    # uSE OF ABSTRACT BASE CLASSES TO AVOID DJANGO BUG #12002
+
+    # Use of abstract base classes to avoid django bug #12002
     class Meta:
         abstract = True
+
 
 class ManagedTarget(StatefulObject):
     __metaclass__ = DeletableDowncastableMetaclass
@@ -61,7 +64,7 @@ class ManagedTarget(StatefulObject):
         return [p.value for p in params]
 
     def get_params(self):
-        return [(p.key,p.value) for p in self.targetparam_set.all()]
+        return [(p.key, p.value) for p in self.targetparam_set.all()]
 
     def primary_host(self):
         return TargetMount.objects.get(target = self, primary = True).host
@@ -75,7 +78,7 @@ class ManagedTarget(StatefulObject):
     def __str__(self):
         return self.human_name()
 
-    # unformatted: I exist in theory in the database 
+    # unformatted: I exist in theory in the database
     # formatted: I've been mkfs'd
     # unmounted: I've registered with the MGS, I'm not mounted
     # mounted: I've registered with the MGS, I'm mounted
@@ -92,14 +95,14 @@ class ManagedTarget(StatefulObject):
         self.active_mount = active_mount
         self.save()
 
-        # FIXME: these alert updates should be in the same trans as 
+        # FIXME: these alert updates should be in the same trans as
         # saving active_mount, otherwise next call we'll think active_mount is
         # already set, return out, and fail to update alerts
 
         from monitor.models import TargetFailoverAlert, TargetOfflineAlert
-        TargetOfflineAlert.notify(self, active_mount == None)    
+        TargetOfflineAlert.notify(self, active_mount == None)
         for tm in self.managedtargetmount_set.filter(primary = False):
-            TargetFailoverAlert.notify(tm, active_mount == tm)    
+            TargetFailoverAlert.notify(tm, active_mount == tm)
 
     class Meta:
         app_label = 'configure'
@@ -107,13 +110,13 @@ class ManagedTarget(StatefulObject):
     def get_deps(self, state = None):
         if not state:
             state = self.state
-        
+
         deps = []
         if state == 'mounted' and self.active_mount:
-            # Depend on the TargetMount which is currently active being 
+            # Depend on the TargetMount which is currently active being
             # in state 'configured' and its host being in state 'lnet_up'
             # (in order to ensure that when lnet is stopped, this target will
-            # be stopped, and if a TM is unconfigured then we will be 
+            # be stopped, and if a TM is unconfigured then we will be
             # unmounted while it happens)
             target_mount = self.active_mount
             deps.append(DependOn(target_mount.host.downcast(), 'lnet_up', fix_state='unmounted'))
@@ -144,7 +147,7 @@ class ManagedTarget(StatefulObject):
     def get_lun(self):
         # FIXME: next time I'm breaking the schema, should make
         # lun an attribute of the ManagedTarget so that it
-        # can be a OneToOne relation and thereby have a 
+        # can be a OneToOne relation and thereby have a
         # contraint to ensure that two targets can't possibly use
         # the same Lun (and make this function redundant)
         return self.managedtargetmount_set.get(primary = True).block_device.lun
@@ -169,7 +172,7 @@ class ManagedTarget(StatefulObject):
 
         from django.contrib.contenttypes.models import ContentType
 
-        return {'id':self.pk,
+        return {'id': self.pk,
                 'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
                 'kind': self.role(),
                 'human_name': self.human_name(),
@@ -182,6 +185,7 @@ class ManagedTarget(StatefulObject):
                 'filesystem_id': filesystem_id,
                 'filesystem_name': filesystem_name
                 }
+
 
 class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
     class Meta:
@@ -211,6 +215,7 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
             except ManagedTargetMount.DoesNotExist:
                 return candidate
 
+
 class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
     # TODO: constraint to allow only one MetadataTarget per MGS.  The reason
     # we don't just use a OneToOneField is to use FilesystemMember to represent
@@ -233,6 +238,7 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
 
     def default_mount_path(self, host):
         return "/mnt/%s/mdt" % self.filesystem.name
+
 
 class ManagedMgs(ManagedTarget, MeasuredEntity):
     conf_param_version = models.IntegerField(default = 0)
@@ -272,9 +278,8 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
 
     def set_conf_params(self, params):
         """params is a list of unsaved ConfParam objects"""
-
-        # Obtain a version
         from django.db import transaction
+
         @transaction.commit_on_success()
         def get_version():
             from django.db.models import F
@@ -295,7 +300,8 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
         from configure.models.conf_param import ConfParam
         return ConfParam.get_latest_params(self.confparam_set.all())
 
-class RemoveRegisteredTargetJob(Job,StateChangeJob):
+
+class RemoveRegisteredTargetJob(Job, StateChangeJob):
     state_transition = (ManagedTarget, 'unmounted', 'removed')
     stateful_object = 'target'
     state_verb = "Remove"
@@ -313,6 +319,7 @@ class RemoveRegisteredTargetJob(Job,StateChangeJob):
         # TODO: actually do something with Lustre before deleting this from our DB
         from configure.lib.job import DeleteTargetStep
         return [(DeleteTargetStep, {'target_id': self.target.id})]
+
 
 # FIXME: this is a pretty horrible way of generating job classes for
 # a number of originating states to the same end state
@@ -386,6 +393,7 @@ class RegisterTargetJob(Job, StateChangeJob):
 
         return DependAll(deps)
 
+
 class StartTargetJob(Job, StateChangeJob):
     stateful_object = 'target'
     state_transition = (ManagedTarget, 'unmounted', 'mounted')
@@ -412,6 +420,7 @@ class StartTargetJob(Job, StateChangeJob):
         from configure.lib.job import MountStep
         return [(MountStep, {"target_id": self.target.id})]
 
+
 class StopTargetJob(Job, StateChangeJob):
     stateful_object = 'target'
     state_transition = (ManagedTarget, 'mounted', 'unmounted')
@@ -437,6 +446,7 @@ class StopTargetJob(Job, StateChangeJob):
     def get_steps(self):
         from configure.lib.job import UnmountStep
         return [(UnmountStep, {"target_id": self.target.id})]
+
 
 class FormatTargetJob(Job, StateChangeJob):
     state_transition = (ManagedTarget, 'unformatted', 'formatted')
@@ -476,4 +486,3 @@ class FormatTargetJob(Job, StateChangeJob):
     def get_steps(self):
         from configure.lib.job import MkfsStep
         return [(MkfsStep, {'target_id': self.target.id})]
-

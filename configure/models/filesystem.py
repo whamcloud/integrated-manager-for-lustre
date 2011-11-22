@@ -8,6 +8,7 @@ from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll
 from configure.models.jobs import StatefulObject, Job
 from monitor.models import DeletableDowncastableMetaclass, MeasuredEntity
 
+
 class ManagedFilesystem(StatefulObject, MeasuredEntity):
     __metaclass__ = DeletableDowncastableMetaclass
     name = models.CharField(max_length=8)
@@ -22,9 +23,9 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
     def get_filesystem_targets(self):
         from configure.models import ManagedOst, ManagedMdt
         osts = list(ManagedOst.objects.filter(filesystem = self).all())
-        # NB using __str__ instead of name because name may not 
+        # NB using __str__ instead of name because name may not
         # be set in all cases
-        osts.sort(lambda i,j: cmp(i.__str__()[-4:], j.__str__()[-4:]))
+        osts.sort(lambda i, j: cmp(i.__str__()[-4:], j.__str__()[-4:]))
 
         return list(ManagedMdt.objects.filter(filesystem = self).all()) + osts
 
@@ -45,7 +46,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
             target_statuses = dict([(t, t.status_string()) for t in self.get_targets()])
 
         from configure.models.target import ManagedMgs
-        filesystem_targets_statuses = [v for k,v in target_statuses.items() if not k.__class__ == ManagedMgs]
+        filesystem_targets_statuses = [v for k, v in target_statuses.items() if not k.__class__ == ManagedMgs]
         all_statuses = target_statuses.values()
 
         good_status = set(["STARTED", "FAILOVER"])
@@ -71,13 +72,13 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
                 raise ValueError("NIDs for MGS host %s not known" % host)
 
             nid_specs.append(nids)
-            
+
         return ":".join(nid_specs)
 
     def mount_example(self):
         try:
             return "mount -t lustre %s:/%s /mnt/client" % (self.mgs_spec(), self.name)
-        except ValueError,e:
+        except ValueError, e:
             return "Not ready to mount: %s" % e
 
     def __str__(self):
@@ -91,13 +92,13 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
     def get_conf_params(self):
         from itertools import chain
         from configure.models.conf_param import ConfParam
-        params = chain(self.filesystemclientconfparam_set.all(),self.filesystemglobalconfparam_set.all())
+        params = chain(self.filesystemclientconfparam_set.all(), self.filesystemglobalconfparam_set.all())
         return ConfParam.get_latest_params(params)
 
     def get_deps(self, state = None):
         if not state:
             state = self.state
-        
+
         mgs = self.mgs.downcast()
         allowed_mgs_states = set(mgs.states) - set(['removed'])
         if state != 'removed':
@@ -115,6 +116,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
             'ManagedTarget': lambda mmgs: ManagedFilesystem.objects.filter(mgs = mmgs)
             }
 
+
 class RemoveFilesystemJob(Job, StateChangeJob):
     state_transition = (ManagedFilesystem, 'created', 'removed')
     stateful_object = 'filesystem'
@@ -130,6 +132,7 @@ class RemoveFilesystemJob(Job, StateChangeJob):
     def get_steps(self):
         from configure.lib.job import DeleteFilesystemStep
         return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
+
 
 MyModel = type('MyModel', (models.Model,), {
     'field': models.BooleanField(),

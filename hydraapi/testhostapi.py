@@ -2,7 +2,7 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-# Test utility for testing the REST GET and POST calls using 
+# Test utility for testing the REST GET and POST calls using
 # command line arguments.
 from django.core.management import setup_environ
 import optparse
@@ -36,7 +36,7 @@ def main(args):
         exit(-1)
     base_url = options.url.rstrip('/')
     if options.operation == 'add':
-        
+
         # Test 1 :
         api_url = base_url + '/api/addhost/'
         print 'api_url: %s' % api_url

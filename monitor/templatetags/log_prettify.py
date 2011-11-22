@@ -13,12 +13,12 @@ target_regex = re.compile("\\b(\\w+-(MDT|OST)\\d\\d\\d\\d)\\b")
 
 from configure.models import Nid, ManagedHost
 
-# XXX tsk tsk tsk.  this is a copy of the same function from 
+# XXX tsk tsk tsk.  this is a copy of the same function from
 #     monitor/lib/lustre_audit.py
 #     we need to build a library of this kind of stuff that everyone
 #     can use
 def normalize_nid(string):
-    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow 
+    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
        direct comparisons between NIDs"""
     if string[-4:] == "@tcp":
         string += "0"

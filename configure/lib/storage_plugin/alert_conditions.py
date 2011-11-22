@@ -1,10 +1,12 @@
 
+
 class AlertCondition(object):
     def __init__(self):
         self._name = None
 
     def set_name(self, name):
         self._name = name
+
 
 class AttrValAlertCondition(AlertCondition):
     def __init__(self, attribute, error_states = [], warn_states = [], info_states = [], message = None, *args, **kwargs):
@@ -31,7 +33,7 @@ class AttrValAlertCondition(AlertCondition):
                 result.append(alert_name)
 
         return result
-    
+
     def test(self, resource):
         result = []
         import logging

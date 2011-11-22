@@ -8,6 +8,7 @@ from configure.lib.job import StateChangeJob, DependOn, DependAll
 from configure.models.jobs import Job
 from configure.models.host import DeletableStatefulObject
 
+
 class ManagedTargetMount(DeletableStatefulObject):
     """Associate a particular Lustre target with a device node on a host"""
     # FIXME: both LunNode and TargetMount refer to the host
@@ -32,7 +33,7 @@ class ManagedTargetMount(DeletableStatefulObject):
                 from django.core.exceptions import ValidationError
                 raise ValidationError("Cannot have multiple primary mounts for target %s" % self.target)
 
-        # If this is an MGS, there may not be another MGS on 
+        # If this is an MGS, there may not be another MGS on
         # this host
         from configure.models.target import ManagedMgs
         if isinstance(self.target.downcast(), ManagedMgs):
@@ -43,9 +44,6 @@ class ManagedTargetMount(DeletableStatefulObject):
                 raise ValidationError("Cannot have multiple MGS mounts on host %s" % self.host.address)
 
         return super(ManagedTargetMount, self).save(force_insert, force_update, using)
-
-    def __str__(self):
-        return "%s" % (self.target.downcast())
 
     def device(self):
         return self.block_device.path
@@ -71,7 +69,7 @@ class ManagedTargetMount(DeletableStatefulObject):
         parts = self.block_device.path.split("-iscsi-")
         if len(parts) == 2:
             return parts[1]
-        
+
         # Strip /dev/mapper if possible
         parts = self.block_device.path.split("/dev/mapper/")
         if len(parts) == 2:
@@ -84,7 +82,6 @@ class ManagedTargetMount(DeletableStatefulObject):
 
         # Fall through, do nothing
         return self.block_device
-
 
     class Meta:
         app_label = 'configure'
@@ -125,13 +122,14 @@ class ManagedTargetMount(DeletableStatefulObject):
 
     # Reverse dependencies are records of other classes which must check
     # our get_deps when they change state.
-    # It tells them how, given an instance of the other class, to find 
+    # It tells them how, given an instance of the other class, to find
     # instances of this class which may depend on it.
     reverse_deps = {
             # We depend on it being in a registered state
             'ManagedTarget': (lambda mt: ManagedTargetMount.objects.filter(target = mt)),
             'ManagedHost': (lambda mh: ManagedTargetMount.objects.filter(host = mh)),
             }
+
 
 class RemoveTargetMountJob(Job, StateChangeJob):
     state_transition = (ManagedTargetMount, 'configured', 'removed')
@@ -175,6 +173,7 @@ class RemoveUnconfiguredTargetMountJob(Job, StateChangeJob):
         from configure.lib.job import DeleteTargetMountStep
         return [(DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
 
+
 class ConfigureTargetMountJob(Job, StateChangeJob):
     state_transition = (ManagedTargetMount, 'unconfigured', 'configured')
     stateful_object = 'target_mount'
@@ -192,12 +191,10 @@ class ConfigureTargetMountJob(Job, StateChangeJob):
         return[(ConfigurePacemakerStep, {'target_mount_id': self.target_mount.id})]
 
     def get_deps(self):
-        # To configure a TM for a target, required that it is in a 
+        # To configure a TM for a target, required that it is in a
         # registered state
         deps = []
         deps.append(DependOn(self.target_mount.target.downcast(), preferred_state = 'unmounted', acceptable_states = ['unmounted', 'mounted']))
         if not self.target_mount.primary:
             deps.append(DependOn(self.target_mount.target.managedtargetmount_set.get(primary=True).downcast(), 'configured'))
         return DependAll(deps)
-
-

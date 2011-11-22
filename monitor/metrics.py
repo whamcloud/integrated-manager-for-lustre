@@ -1,5 +1,4 @@
 
-import re
 import math
 import os
 from django.contrib.contenttypes.models import ContentType
@@ -20,13 +19,15 @@ else:
     metrics_log.setLevel(logging.INFO)
 
 DRAIN_LOCK_NAME = 'FLMS_LOCK'
-DRAIN_LOCK_TIME = 60 * 30 # Try 30 minutes, adjust as necessary.
+DRAIN_LOCK_TIME = 60 * 30  # Try 30 minutes, adjust as necessary.
+
 
 class MetricStore(object):
     """
     Base class for storage-backend-specific subclasses.
     """
     pass
+
 
 def _autocreate_ds(db, key, payload):
     # FIXME should include the app label in this query to avoid risk of
@@ -39,6 +40,7 @@ def _autocreate_ds(db, key, payload):
                                                database=db))
     metrics_log.info("Added new %s to DB (%s -> %s)" % (payload['type'],
                                                         key, db.name))
+
 
 class R3dMetricStore(MetricStore):
     """
@@ -157,6 +159,7 @@ class R3dMetricStore(MetricStore):
         """
         return self.r3d.fetch_last(fetch_metrics)
 
+
 def minimal_archives(db):
     """
     Workaround performance issues, create the least possible archives
@@ -166,6 +169,8 @@ def minimal_archives(db):
                                            database=db,
                                            cdp_per_row=1,
                                            rows=60))
+
+
 class VendorMetricStore(R3dMetricStore):
     def __init__(self, *args, **kwargs):
         kwargs['rra_create_fn'] = minimal_archives
@@ -194,6 +199,7 @@ class VendorMetricStore(R3dMetricStore):
 
         # Skipping sanitize
         self.r3d.update(r3d_format, _autocreate_ds)
+
 
 class HostMetricStore(R3dMetricStore):
     """
@@ -254,6 +260,7 @@ class HostMetricStore(R3dMetricStore):
                                               self._update_time(), update)
         else:
             self.update_r3d({self._update_time(): update})
+
 
 class TargetMetricStore(R3dMetricStore):
     """
@@ -316,18 +323,19 @@ class TargetMetricStore(R3dMetricStore):
         else:
             self.update_r3d({self._update_time(): update})
 
+
 class FilesystemMetricStore(R3dMetricStore):
     """
     Wrapper class for Filesystem-level aggregate metrics.  Read-only.
     """
-    def __init__(self, managed_object,*args, **kwargs):
+    def __init__(self, managed_object, *args, **kwargs):
         # Override the parent __init__(), as we don't need an R3D for
         # a Filesystem.
         self.filesystem = managed_object
 
     def update(self, *args, **kwargs):
         """Don't use this -- will raise a NotImplementedError!"""
-        raise NotImplementedError, "Filesystem-level update() not supported!"
+        raise NotImplementedError("Filesystem-level update() not supported!")
 
     def list(self, query_class):
         """
@@ -345,7 +353,7 @@ class FilesystemMetricStore(R3dMetricStore):
             if query_class.__name__ == "ManagedHost":
                 fs_components = self.filesystem.get_servers()
             else:
-                raise NotImplementedError, "Unknown query class: %s" % query_class.__name__
+                raise NotImplementedError("Unknown query class: %s" % query_class.__name__)
 
         for comp in fs_components:
             metrics.update(comp.metrics.list())
@@ -379,14 +387,14 @@ class FilesystemMetricStore(R3dMetricStore):
             if query_class.__name__ == "ManagedHost":
                 fs_components = self.filesystem.get_servers()
             else:
-                raise NotImplementedError, "Unknown query class: %s" % query_class.__name__
+                raise NotImplementedError("Unknown query class: %s" % query_class.__name__)
 
         for fs_component in fs_components:
             for row in fs_component.metrics.fetch(cfname, **kwargs):
                 row_ts = row[0]
                 row_dict = row[1]
 
-                if not results.has_key(row_ts):
+                if not row_ts in results:
                     results[row_ts] = {}
 
                 for metric in row_dict.keys():
@@ -446,6 +454,7 @@ class FilesystemMetricStore(R3dMetricStore):
 
         return tuple(results)
 
+
 def get_instance_metrics(measured_object):
     """
     Convenience method which allows retrieval of the associated
@@ -463,6 +472,7 @@ def get_instance_metrics(measured_object):
         return FilesystemMetricStore(measured_object, settings.AUDIT_PERIOD)
     else:
         raise NotImplementedError
+
 
 class FlmsDrain(object):
     # This class exists to drain the FrontLineMetricStorage table.  Perhaps

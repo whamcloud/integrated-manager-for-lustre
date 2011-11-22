@@ -11,6 +11,7 @@ from monitor.models import Event, AlertState, AlertEvent
 # is pretty arbitrary
 MAX_NAME_LENGTH = 128
 
+
 class StoragePluginRecord(models.Model):
     """Reference to a module defining a StoragePlugin subclass"""
     module_name = models.CharField(max_length = MAX_NAME_LENGTH)
@@ -18,6 +19,7 @@ class StoragePluginRecord(models.Model):
     class Meta:
         unique_together = ('module_name',)
         app_label = 'configure'
+
 
 class StorageResourceClass(models.Model):
     """Reference to a StorageResource subclass"""
@@ -35,6 +37,7 @@ class StorageResourceClass(models.Model):
         unique_together = ('storage_plugin', 'class_name')
         app_label = 'configure'
 
+
 class StorageResourceRecord(models.Model):
     """Reference to an instance of a StorageResource"""
     resource_class = models.ForeignKey(StorageResourceClass)
@@ -47,7 +50,7 @@ class StorageResourceRecord(models.Model):
     storage_id_scope = models.ForeignKey('StorageResourceRecord',
             blank = True, null = True)
 
-    # XXX aargh when the id_scope is nullable a unique_together across it 
+    # XXX aargh when the id_scope is nullable a unique_together across it
     # doesn't enforce uniqueness for GlobalID resources
 
     # Parent-child relationships between resources
@@ -162,6 +165,7 @@ class StorageResourceRecord(models.Model):
 
         return klass._storage_statistics[stat_name]
 
+
 class SimpleHistoStoreBin(models.Model):
     histo_store_time = models.ForeignKey('SimpleHistoStoreTime')
     bin_idx = models.IntegerField()
@@ -170,12 +174,14 @@ class SimpleHistoStoreBin(models.Model):
     class Meta:
         app_label = 'configure'
 
+
 class SimpleHistoStoreTime(models.Model):
     storage_resource_statistic = models.ForeignKey('StorageResourceStatistic')
     time = models.PositiveIntegerField()
 
     class Meta:
         app_label = 'configure'
+
 
 class SimpleScalarStoreDatapoint(models.Model):
     storage_resource_statistic = models.ForeignKey('StorageResourceStatistic')
@@ -184,6 +190,7 @@ class SimpleScalarStoreDatapoint(models.Model):
 
     class Meta:
         app_label = 'configure'
+
 
 class StorageResourceStatistic(models.Model):
     class Meta:
@@ -224,8 +231,6 @@ class StorageResourceStatistic(models.Model):
                         time = ts,
                         value = val,
                         storage_resource_statistic = self)
-
-
         #self.metrics.update(stat_name, stat_properties, stat_data)
 
     def to_dict(self):
@@ -289,17 +294,18 @@ class StorageResourceStatistic(models.Model):
                 'type': type_name,
                 'data': data}
 
+
 class StorageResourceAttribute(models.Model):
     """An attribute of a StorageResource instance.
-    
+
     Note that we store the denormalized key name of the attribute
     for each storageresource instance, to support schemaless attribute
     dictionaries.  If we made the executive decision to remove this
-    and only allow explicitly declared fields, then we would normalize 
+    and only allow explicitly declared fields, then we would normalize
     out the attribute names.
     """
     resource = models.ForeignKey(StorageResourceRecord)
-    # TODO: specialized attribute tables for common types like 
+    # TODO: specialized attribute tables for common types like
     # short strings, integers
     value = models.TextField()
     key = models.CharField(max_length = 64)
@@ -308,6 +314,7 @@ class StorageResourceAttribute(models.Model):
         unique_together = ('resource', 'key')
         app_label = 'configure'
 
+
 class StorageResourceClassStatistic(models.Model):
     resource_class = models.ForeignKey(StorageResourceClass)
     name = models.CharField(max_length = 64)
@@ -315,6 +322,7 @@ class StorageResourceClassStatistic(models.Model):
     class Meta:
         unique_together = ('resource_class', 'name')
         app_label = 'configure'
+
 
 class StorageResourceStatistic(models.Model):
     resource = models.ForeignKey(StorageResourceRecord)
@@ -325,6 +333,7 @@ class StorageResourceStatistic(models.Model):
 
     class Meta:
         app_label = 'configure'
+
 
 class StorageResourceAlert(AlertState):
     """Used by configure.lib.storage_plugin"""
@@ -359,6 +368,7 @@ class StorageResourceAlert(AlertState):
     class Meta:
         app_label = 'configure'
 
+
 class StorageAlertPropagated(models.Model):
     storage_resource = models.ForeignKey(StorageResourceRecord)
     alert_state = models.ForeignKey(StorageResourceAlert)
@@ -366,6 +376,7 @@ class StorageAlertPropagated(models.Model):
     class Meta:
         unique_together = ('storage_resource', 'alert_state')
         app_label = 'configure'
+
 
 class StorageResourceLearnEvent(Event):
     storage_resource = models.ForeignKey(StorageResourceRecord)
@@ -381,5 +392,3 @@ class StorageResourceLearnEvent(Event):
 
     class Meta:
         app_label = 'configure'
-
-

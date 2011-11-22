@@ -5,9 +5,7 @@ from south.v2 import SchemaMigration
 from django.db import models
 
 class Migration(SchemaMigration):
-
     def forwards(self, orm):
-        
         # Adding model 'Event'
         db.create_table('monitor_event', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
@@ -146,9 +144,7 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('monitor', ['LastSystemeventsProcessed'])
 
-
     def backwards(self, orm):
-        
         # Removing unique constraint on 'AlertState', fields ['alert_item_type', 'alert_item_id', 'content_type', 'active']
         db.delete_unique('monitor_alertstate', ['alert_item_type_id', 'alert_item_id', 'content_type_id', 'active'])
 
@@ -196,7 +192,6 @@ class Migration(SchemaMigration):
 
         # Deleting model 'LastSystemeventsProcessed'
         db.delete_table('monitor_lastsystemeventsprocessed')
-
 
     models = {
         'configure.lun': {

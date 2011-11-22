@@ -4,9 +4,12 @@
 # ==============================
 
 from django.db import models
+from django.db import transaction
+
 from configure.models.jobs import StatefulObject, Job
 from configure.lib.job import StateChangeJob, DependOn, DependAll, Step
 from monitor.models import MeasuredEntity, DeletableDowncastableMetaclass, DowncastMetaclass
+
 
 class DeletableStatefulObject(StatefulObject):
     """Use this class to create your own downcastable classes if you need to override 'save', because
@@ -16,6 +19,7 @@ class DeletableStatefulObject(StatefulObject):
     class Meta:
         abstract = True
         app_label = 'configure'
+
 
 class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # FIXME: either need to make address non-unique, or need to
@@ -55,18 +59,16 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def to_dict(self):
         from django.contrib.contenttypes.models import ContentType
-        return {'id' : self.id,
+        return {'id': self.id,
                 'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
                 'pretty_name': self.pretty_name(),
-                'address' : self.address,
-                'kind' : self.role() ,
-                'lnet_state' : self.state,
-                'status':self.status_string()}
+                'address': self.address,
+                'kind': self.role(),
+                'lnet_state': self.state,
+                'status': self.status_string()}
 
     @classmethod
     def create_from_string(cls, address_string, virtual_machine = None):
-        from django.db import transaction
-
         # Single transaction for creating Host and related database objects
         # * Firstly because we don't want any of these unless they're all setup
         # * Secondly because we want them committed before creating any Jobs which
@@ -74,7 +76,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         with transaction.commit_on_success():
             host, created = ManagedHost.objects.get_or_create(address = address_string)
             monitor, created = Monitor.objects.get_or_create(host = host)
-            lnet_configuration,created = LNetConfiguration.objects.get_or_create(host = host)
+            lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
 
             from configure.lib.storage_plugin.manager import storage_plugin_manager
             storage_plugin_manager.create_root_resource('linux',
@@ -102,7 +104,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return name[:-12]
         else:
             return name
-    
+
     def _role_strings(self):
         roles = set()
         for mountable in self.managedtargetmount_set.all():
@@ -162,7 +164,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def ssh_params(self):
         if self.address.find("@") != -1:
-            user,host = self.address.split("@")
+            user, host = self.address.split("@")
         else:
             user = self.DEFAULT_USERNAME
             host = self.address
@@ -174,10 +176,11 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
         return user, host, port
 
+
 class Lun(models.Model):
     storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
 
-    # Size may be null for LunNodes created when setting up 
+    # Size may be null for LunNodes created when setting up
     # from a JSON file which just tells us a path.
     size = models.BigIntegerField(blank = True, null = True)
 
@@ -251,7 +254,6 @@ class Lun(models.Model):
         else:
             return resource.human_string()
 
-
     def ha_status(self):
         """Tell the caller two things:
          * is the Lun configured enough for use as a target?
@@ -291,6 +293,7 @@ class Lun(models.Model):
                 detail_status = (HA_CAP_YES, CONFIGURED_NO)
                 return 'unconfigured'
 
+
 class LunNode(models.Model):
     lun = models.ForeignKey(Lun)
     host = models.ForeignKey(ManagedHost)
@@ -325,7 +328,7 @@ class LunNode(models.Model):
                 iscsi_iqn = "".join(short_name.split("-iscsi-")[1:])
                 short_name = "iSCSI %s" % iscsi_iqn
 
-            # e.g. /dev/disk/by-path/pci-0000:00:06.0-scsi-0:0:3:0    
+            # e.g. /dev/disk/by-path/pci-0000:00:06.0-scsi-0:0:3:0
             if short_name.startswith("pci-") and short_name.find("-scsi-") != -1:
                 scsi_id = "".join(short_name.split("-scsi-")[1:])
                 short_name = "SCSI %s" % scsi_id
@@ -353,6 +356,7 @@ class LunNode(models.Model):
 
         return "%s (%s)" % (short_name, human_size)
 
+
 class Monitor(models.Model):
     __metaclass__ = DowncastMetaclass
 
@@ -361,16 +365,15 @@ class Monitor(models.Model):
     class Meta:
         app_label = 'configure'
 
-    #idle, tasking, tasked, started, 
+    #idle, tasking, tasked, started,
     state = models.CharField(max_length = 32, default = 'idle')
     task_id = models.CharField(max_length=36, blank = True, null = True, default = None)
     counter = models.IntegerField(default = 0)
     last_success = models.DateTimeField(blank = True, null = True)
 
-    from django.db import transaction
     @transaction.commit_on_success
     def update(self, **kwargs):
-        for k,v in kwargs.items():
+        for k, v in kwargs.items():
             setattr(self, k, v)
         self.save()
 
@@ -402,6 +405,7 @@ class Monitor(models.Model):
         except Exception, e:
             return e
 
+
 class LNetConfiguration(StatefulObject):
     states = ['nids_unknown', 'nids_known']
     initial_state = 'nids_unknown'
@@ -418,6 +422,7 @@ class LNetConfiguration(StatefulObject):
     class Meta:
         app_label = 'configure'
 
+
 class Nid(models.Model):
     """Simplified NID representation for those we detect already-configured"""
     lnet_configuration = models.ForeignKey(LNetConfiguration)
@@ -425,6 +430,7 @@ class Nid(models.Model):
 
     class Meta:
         app_label = 'configure'
+
 
 class LearnNidsStep(Step):
     def is_idempotent(self):
@@ -439,6 +445,7 @@ class LearnNidsStep(Step):
             Nid.objects.get_or_create(
                     lnet_configuration = host.lnetconfiguration,
                     nid_string = normalize_nid(nid_string))
+
 
 class ConfigureLNetJob(Job, StateChangeJob):
     state_transition = (LNetConfiguration, 'nids_unknown', 'nids_known')
@@ -458,6 +465,7 @@ class ConfigureLNetJob(Job, StateChangeJob):
     class Meta:
         app_label = 'configure'
 
+
 class ConfigureRsyslogStep(Step):
     def is_idempotent(self):
         return True
@@ -468,15 +476,16 @@ class ConfigureRsyslogStep(Step):
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "configure-rsyslog --node %s" % uname()[1])
 
+
 class UnconfigureRsyslogStep(Step):
     def is_idempotent(self):
         return True
 
     def run(self, kwargs):
         from configure.models import ManagedHost
-        from os import uname
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "unconfigure-rsyslog")
+
 
 class LearnHostnameStep(Step):
     def is_idempotent(self):
@@ -496,7 +505,6 @@ class LearnHostnameStep(Step):
             # TODO: make this an Event or Alert?
             host.fqdn = None
             job_log.error("Cannot complete setup of host %s, it is reporting an already-used FQDN %s" % (host, fqdn))
-
 
 
 class SetupHostJob(Job, StateChangeJob):
@@ -541,6 +549,7 @@ class DetectTargetsStep(Step):
             if not success:
                 raise RuntimeError("Audit host %s failed during FS target detection, aborting" % host)
 
+
 class DetectTargetsJob(Job):
     class Meta:
         app_label = 'configure'
@@ -576,6 +585,7 @@ class LoadLNetJob(Job, StateChangeJob):
         from configure.lib.job import LoadLNetStep
         return [(LoadLNetStep, {'host_id': self.host.id})]
 
+
 class UnloadLNetJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'lnet_down', 'lnet_unloaded')
     stateful_object = 'host'
@@ -591,7 +601,8 @@ class UnloadLNetJob(Job, StateChangeJob):
     def get_steps(self):
         from configure.lib.job import UnloadLNetStep
         return [(UnloadLNetStep, {'host_id': self.host.id})]
-    
+
+
 class StartLNetJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'lnet_down', 'lnet_up')
     stateful_object = 'host'
@@ -608,6 +619,7 @@ class StartLNetJob(Job, StateChangeJob):
         from configure.lib.job import StartLNetStep
         return [(StartLNetStep, {'host_id': self.host.id})]
 
+
 class StopLNetJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'lnet_up', 'lnet_down')
     stateful_object = 'host'
@@ -623,6 +635,7 @@ class StopLNetJob(Job, StateChangeJob):
     def get_steps(self):
         from configure.lib.job import StopLNetStep
         return [(StopLNetStep, {'host_id': self.host.id})]
+
 
 class RemoveHostJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'lnet_unloaded', 'removed')
@@ -641,4 +654,3 @@ class RemoveHostJob(Job, StateChangeJob):
     def get_steps(self):
         from configure.lib.job import DeleteHostStep
         return [(DeleteHostStep, {'host_id': self.host.id})]
-

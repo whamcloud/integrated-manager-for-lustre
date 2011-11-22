@@ -2,6 +2,7 @@
 
 import re
 
+
 class ParamType(object):
     def validate(self, val):
         """Opportunity for subclasses to validate and/or transform"""
@@ -9,7 +10,6 @@ class ParamType(object):
 
     def test_vals(self):
         raise NotImplementedError()
-
 
 
 class IntegerParam(ParamType):
@@ -40,10 +40,12 @@ class IntegerParam(ParamType):
 
         return vals
 
+
 class BooleanParam(IntegerParam):
     """Value is 0 or 1"""
     def __init__(self):
         super(BooleanParam, self).__init__(min_val = 0, max_val = 1)
+
 
 class EnumParam(ParamType):
     """Value is one of self.options"""
@@ -57,12 +59,13 @@ class EnumParam(ParamType):
     def test_vals(self):
         return self.options
 
+
 class BytesParam(ParamType):
     """A size in bytes, written with a unit letter at the end in the format supported
        by lprocfs_write_frac_u64.  e.g. "40m", "20G".  Valid postfixes are [ptgmkPTGMK].
 
        If units attribute is non-null, this just stores an integer, i.e. for settings
-       where the unit is built into the name of the setting.  Use BytesParam instead of 
+       where the unit is built into the name of the setting.  Use BytesParam instead of
        integerparam so that for presentation it is possible to display "40MB" instead of
        just displaying "40" and leaving it to the user to notice that the setting ends _mb."""
     def __init__(self, units = None, min_val = None, max_val = None):
@@ -125,6 +128,7 @@ class BytesParam(ParamType):
             raise ValueError()
         if self.max_val and bytes_val > self._str_to_bytes(self.max_val):
             raise ValueError()
+
 
 class PercentageParam(IntegerParam):
     def __init__(self):
@@ -229,16 +233,13 @@ If you see multiple early replies for the same RPC asking for multiple 30-second
 for service in ['mdt.MDS.mds', 'mdt.MDS.mds_readpage', 'mdt.MDS.mds_setattr']:
     for param in ['thread_min', 'thread_max', 'thread_started']:
         all_params[service + "." + param] = (MdtConfParam, IntegerParam(), "")
-    
+
 for service in ['ost.OSS.ost', 'ost.OSS.ost_io', 'ost.OSS.ost_create']:
     for param in ['thread_min', 'thread_max', 'thread_started']:
         all_params[service + "." + param] = (OstConfParam, IntegerParam(), "")
 
 
-
 def get_conf_params(klasses):
-    l = [k for k,v in all_params.items() if v[0] in klasses]
+    l = [k for k, v in all_params.items() if v[0] in klasses]
     l.sort()
     return l
-
-

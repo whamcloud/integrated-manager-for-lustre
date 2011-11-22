@@ -7,6 +7,7 @@ DEFAULT_SAMPLE_PERIOD = 10
 
 UNITS_BYTES = 1
 
+
 class BaseStatistic(object):
     def __init__(self, sample_period = DEFAULT_SAMPLE_PERIOD, units = None, label = None):
         """'units' can be None for dimensionless scalars, UNITS_BYTES for
@@ -40,18 +41,21 @@ class BaseStatistic(object):
     def validate(self, value):
         pass
 
+
 class Gauge(BaseStatistic):
     def r3d_type(self):
         return 'Gauge'
+
 
 class Counter(BaseStatistic):
     def r3d_type(self):
         return 'Counter'
 
+
 class BytesHistogram(BaseStatistic):
     def __init__(self, *args, **kwargs):
         """
-        e.g. bins=[(0,256), (257, 512), (513, 2048), (2049, 4096), (4097,)]
+        e.g. bins=[(0, 256), (257, 512), (513, 2048), (2049, 4096), (4097,)]
         """
         self.bins = kwargs.pop('bins')
 
@@ -59,8 +63,8 @@ class BytesHistogram(BaseStatistic):
 
     def format_bin(self, bin):
         return u"\u2264%s" % (self.format_units(bin[1]))
-    
+
     def validate(self, value):
         if len(value) != len(self.bins):
-            raise RuntimeError("Invalid histogram value, got %d bins, expected %d" % 
+            raise RuntimeError("Invalid histogram value, got %d bins, expected %d" %
                     len(value), len(self.bins))

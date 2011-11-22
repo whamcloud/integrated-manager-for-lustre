@@ -11,8 +11,10 @@ from monitor.lib.util import timeit
 
 import threading
 
+
 class ResourceNotFound(Exception):
     pass
+
 
 class ResourceIndex(object):
     def __init__(self, scannable_id):
@@ -46,14 +48,15 @@ class ResourceIndex(object):
     def all(self):
         return self._local_id_to_resource.values()
 
+
 class StoragePlugin(object):
     def initial_scan(self, root_resource):
         """To be implemented by subclasses.  Identify all resources
            present at this time and call register_resource on them.
-           
+
            Any plugin which throws an exception from here is assumed
            to be broken - this will not be retried.  If one of your
-           controllers is not contactable, you must handle that and 
+           controllers is not contactable, you must handle that and
            when it comes back up let us know during an update call."""
         raise NotImplementedError
 
@@ -101,7 +104,7 @@ class StoragePlugin(object):
         self.update_period = settings.PLUGIN_DEFAULT_UPDATE_PERIOD
 
     def do_initial_scan(self, root_resource):
-        from configure.lib.storage_plugin.resource_manager import resource_manager 
+        from configure.lib.storage_plugin.resource_manager import resource_manager
 
         root_resource._handle = self.generate_handle()
         root_resource._handle_global = False
@@ -126,13 +129,12 @@ class StoragePlugin(object):
     def check_alert_conditions(self):
         for resource in self._index.all():
             # Check if any AlertConditions are matched
-            for name,ac in resource._alert_conditions.items():
+            for name, ac in resource._alert_conditions.items():
                 alert_list = ac.test(resource)
                 for name, attribute, active in alert_list:
                     self.notify_alert(active, resource, name, attribute)
 
     def do_periodic_update(self, root_resource):
-        from configure.lib.storage_plugin.resource_manager import resource_manager 
         self.update_scan(root_resource)
 
         # Resources created since last update
@@ -148,27 +150,27 @@ class StoragePlugin(object):
         self.teardown()
 
     def commit_resource_creates(self):
-        from configure.lib.storage_plugin.resource_manager import resource_manager 
+        from configure.lib.storage_plugin.resource_manager import resource_manager
         if len(self._delta_new_resources) > 0:
             resource_manager.session_add_resources(self._scannable_id, self._delta_new_resources)
         self._delta_new_resources = []
 
     def commit_resource_deletes(self):
-        from configure.lib.storage_plugin.resource_manager import resource_manager 
+        from configure.lib.storage_plugin.resource_manager import resource_manager
         # Resources deleted since last update
         if len(self._delta_delete_resources) > 0:
             resource_manager.session_add_resources(self._scannable_id, self._delta_delete_resources)
         self._delta_delete_resources = []
 
     def commit_resource_updates(self):
-        from configure.lib.storage_plugin.resource_manager import resource_manager 
+        from configure.lib.storage_plugin.resource_manager import resource_manager
         # Resources with changed attributes
         for resource in self._index.all():
             deltas = resource.flush_deltas()
             # If there were changes to attributes
             if len(deltas['attributes']) > 0:
                 resource_manager.session_update_resource(
-                        self._scannable_id, resource._handle, deltas['attributes']) 
+                        self._scannable_id, resource._handle, deltas['attributes'])
 
             # If there were parents added or removed
             if len(deltas['parents']) > 0:
@@ -185,10 +187,10 @@ class StoragePlugin(object):
                                 parent_resource._handle)
 
     def commit_alerts(self):
-        from configure.lib.storage_plugin.resource_manager import resource_manager 
+        from configure.lib.storage_plugin.resource_manager import resource_manager
         with self._alerts_lock:
-            for (resource,attribute,alert_class) in self._delta_alerts:
-                active = self._alerts[(resource,attribute,alert_class)]
+            for (resource, attribute, alert_class) in self._delta_alerts:
+                active = self._alerts[(resource, attribute, alert_class)]
                 resource_manager.session_notify_alert(
                         self._scannable_id, resource._handle,
                         active, alert_class, attribute)
@@ -200,7 +202,7 @@ class StoragePlugin(object):
         sent_stats = 0
         for resource in self._index.all():
             r_stats = resource.flush_stats()
-            from configure.lib.storage_plugin.resource_manager import resource_manager 
+            from configure.lib.storage_plugin.resource_manager import resource_manager
             resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
             sent_stats += len(r_stats)
         self.log.debug("<< Plugin.commit_resource_statistics %s (%s sent)", self._scannable_id, sent_stats)
@@ -209,7 +211,7 @@ class StoragePlugin(object):
         with self._resource_lock:
             try:
                 existing = self._index.get(klass, **attrs)
-                for k,v in attrs.items():
+                for k, v in attrs.items():
                     setattr(existing, k, v)
                 for p in parents:
                     existing.add_parent(p)
@@ -231,7 +233,7 @@ class StoragePlugin(object):
 
     def notify_alert(self, active, resource, alert_name, attribute = None):
         # This will be flushed through to the database by update_scan
-        key = (resource,attribute,alert_name)
+        key = (resource, attribute, alert_name)
         value = active
         with self._alerts_lock:
             try:
@@ -261,4 +263,3 @@ class StoragePlugin(object):
         resource._plugin = self
         self._index.add(resource)
         self._delta_new_resources.append(resource._handle)
-

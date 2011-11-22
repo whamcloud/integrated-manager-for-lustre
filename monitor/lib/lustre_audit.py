@@ -44,7 +44,7 @@ def nids_to_mgs(host, nid_strings):
     except ManagedMgs.MultipleObjectsReturned:
         audit_log.error("Unhandled case: two MGSs have mounts on host(s) %s for nids %s" % (hosts, unique_nids))
         # TODO: detect and report the pathological case where someone has given
-        # us two NIDs that refer to different hosts which both have a 
+        # us two NIDs that refer to different hosts which both have a
         # targetmount for a ManagedMgs, but they're not the
         # same ManagedMgs.
         raise ManagedMgs.DoesNotExist
@@ -52,7 +52,7 @@ def nids_to_mgs(host, nid_strings):
     return mgs
 
 def normalize_nid(string):
-    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow 
+    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
        direct comparisons between NIDs"""
     if string[-4:] == "@tcp":
         string += "0"
@@ -60,12 +60,12 @@ def normalize_nid(string):
     # remove _ from nids (i.e. @tcp_0 -> @tcp0
     i = string.find("_")
     if i > -1:
-        string = string[:i] + string [i + 1:]
+        string = string[:i] + string[i + 1:]
 
     return string
 
 def normalize_nids(nid_list):
-    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow 
+    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
        direct comparisons between NIDs"""
     return [normalize_nid(n) for n in nid_list]
 
@@ -82,11 +82,11 @@ class UpdateScan(object):
     def is_valid(self):
         try:
             assert(isinstance(self.host_data, dict))
-            assert(self.host_data.has_key('lnet_up'))
-            assert(self.host_data.has_key('lnet_loaded'))
-            assert(self.host_data.has_key('mounts'))
-            assert(self.host_data.has_key('metrics'))
-            assert(self.host_data.has_key('resource_locations'))
+            assert('lnet_up' in self.host_data)
+            assert('lnet_loaded' in self.host_data)
+            assert('mounts' in self.host_data)
+            assert('metrics' in self.host_data)
+            assert('resource_locations' in self.host_data)
             # TODO: more thorough validation
             return True
         except AssertionError:
@@ -97,8 +97,8 @@ class UpdateScan(object):
         host = ManagedHost.objects.get(pk=host_id)
         self.host = host
 
-        # Possible that we were started just before a host was deleted: 
-        # avoid raising alerts for deleted hosts by doing this check inside 
+        # Possible that we were started just before a host was deleted:
+        # avoid raising alerts for deleted hosts by doing this check inside
         # our transaction
         if not host.not_deleted:
             return False
@@ -156,7 +156,7 @@ class UpdateScan(object):
             else:
                 recovery_status = {}
 
-            # Update to active_mount and alerts for autodetected 
+            # Update to active_mount and alerts for autodetected
             # targets done here instead of resource_locations
             if target_mount.target.state == 'autodetected':
                 target = target_mount.target
@@ -174,9 +174,9 @@ class UpdateScan(object):
 
     def update_resource_locations(self):
         if self.host_data['resource_locations'] == None:
-            # None here means that it was not possible to obtain a 
+            # None here means that it was not possible to obtain a
             # list from corosync: corosync may well be absent if
-            # we're monitoring a non-hydra-managed autodetected 
+            # we're monitoring a non-hydra-managed autodetected
             # system.  But if there are non-autodetected mounts
             # then this is a problem.
             from django.db.models import Q
@@ -202,7 +202,7 @@ class UpdateScan(object):
                 if node_name == None:
                     active_mount = None
                 else:
-                    try: 
+                    try:
                         host = ManagedHost.objects.get(fqdn = node_name)
                         try:
                             active_mount = ManagedTargetMount.objects.get(target = target, host = host)
@@ -300,34 +300,34 @@ class DetectScan(object):
  #                   TargetParam.update_params(target_mount.target, mount_info['params'])
 
         return contact
-    
+
     def is_primary(self, local_target_info):
         if self.host.lnetconfiguration.state != 'nids_known':
-             raise NoLNetInfo("Cannot setup target %s without LNet info" % local_target_info['name'])
+            raise NoLNetInfo("Cannot setup target %s without LNet info" % local_target_info['name'])
 
         local_nids = set(self.host.lnetconfiguration.get_nids())
 
-        if not local_target_info['params'].has_key('failover.node'):
-             # If the target has no failover nodes, then it is accessed by only 
-             # one (primary) host, i.e. this one
-             primary = True
+        if not 'failover.node' in local_target_info['params']:
+            # If the target has no failover nodes, then it is accessed by only
+            # one (primary) host, i.e. this one
+            primary = True
         elif len(local_nids) > 0:
-             # We know this hosts's nids, and which nids are secondaries for this target,
-             # so we can work out whether we're primary by a process of elimination
-             failover_nids = []
-             for failover_str in local_target_info['params']['failover.node']:
-                 failover_nids.extend(failover_str.split(","))
-             failover_nids = set(normalize_nids(failover_nids))
+            # We know this hosts's nids, and which nids are secondaries for this target,
+            # so we can work out whether we're primary by a process of elimination
+            failover_nids = []
+            for failover_str in local_target_info['params']['failover.node']:
+                failover_nids.extend(failover_str.split(","))
+            failover_nids = set(normalize_nids(failover_nids))
 
-             primary = not (local_nids & failover_nids)
-  
+            primary = not (local_nids & failover_nids)
+
         return primary
 
     def is_valid(self):
         try:
             assert(isinstance(self.host_data, dict))
-            assert(self.host_data.has_key('mgs_targets'))
-            assert(self.host_data.has_key('local_targets'))
+            assert('mgs_targets' in self.host_data)
+            assert('local_targets' in self.host_data)
             # TODO: more thorough validation
             return True
         except AssertionError:
@@ -379,12 +379,12 @@ class DetectScan(object):
                     block_device = lunnode)
             audit_log.info("Learned MGS mount %s" % (tm.host))
             self.learn_event(tm)
-            
+
         return mgs
 
     def target_available_here(self, mgs, local_info):
         target_nids = []
-        if local_info['params'].has_key('failover.node'):
+        if 'failover.node' in local_info['params']:
             for failover_str in local_info['params']['failover.node']:
                 target_nids.extend(failover_str.split(","))
         mgs_host = mgs.primary_server()
@@ -410,7 +410,7 @@ class DetectScan(object):
 
     def learn_target_mounts(self):
         # HACK: HYD-451: to deal with multipath, when a given target appears more than
-        # once we arbitrarily pick one instance.  We should be using 
+        # once we arbitrarily pick one instance.  We should be using
         # the storage resource information to pick the 'right' one (e.g.
         # the mpath devmapper node rather than that underlying devices)
         culled_local_info = {}
@@ -426,7 +426,7 @@ class DetectScan(object):
             # Build a list of MGS nids for this local target
             tgt_mgs_nids = []
             try:
-                # NB I'm not sure whether tunefs.lustre will give me 
+                # NB I'm not sure whether tunefs.lustre will give me
                 # one comma-separated mgsnode, or a series of mgsnode
                 # settings, so handle both
                 for n in local_info['params']['mgsnode']:
@@ -446,14 +446,13 @@ class DetectScan(object):
                 audit_log.warning("Ignoring %s on %s, as it is not mountable on this host" % (local_info['name'], self.host))
                 continue
 
-            # TODO: detect case where we find a targetmount that matches one 
+            # TODO: detect case where we find a targetmount that matches one
             # which already exists for a different target, where the other target
             # has no name -- in this case we are overlapping with a blank target
             # that was created during configuration.
             target = self.get_or_create_target(mgs, local_info)
             if not target:
                 continue
-
 
             # Match a Target which has the same name as this local target,
             # and uses a filesystem on the same MGS

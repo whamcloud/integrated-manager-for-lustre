@@ -16,6 +16,7 @@ from configure.lib.storage_plugin import statistics
 from configure.lib.agent import Agent
 from configure.models import ManagedHost
 
+
 class DeviceNode(StorageResource):
     # NB ideally we would get this from exploring the graph rather than
     # tagging it onto each one, but this is simpler for now - jcs
@@ -29,14 +30,15 @@ class DeviceNode(StorageResource):
                          "/dev/mapper/",
                          "/dev/disk/by-id/",
                          "/dev/disk/by-path/"]
-        strip_strings.sort(lambda a,b: cmp(len(b), len(a)))
+        strip_strings.sort(lambda a, b: cmp(len(b), len(a)))
         for s in strip_strings:
             if path.startswith(s):
                 path = path[len(s):]
         return "%s:%s" % (self.host.human_string(), path)
 
+
 class HydraHostProxy(StorageResource, ScannableResource):
-    # FIXME using address here is troublesome for hosts whose 
+    # FIXME using address here is troublesome for hosts whose
     # addresses might change.  However it is useful for doing
     # an update_or_create on VMs discovered on controllers.  Hmm.
     # I wonder if what I really want is a HostResource base and then
@@ -63,6 +65,7 @@ class HydraHostProxy(StorageResource, ScannableResource):
 
 HACK_TEST_STATS = False
 
+
 class ScsiDevice(base_resources.LogicalDrive):
     identifier = GlobalId('serial')
 
@@ -72,7 +75,7 @@ class ScsiDevice(base_resources.LogicalDrive):
 
     if HACK_TEST_STATS:
         test_stat = statistics.Gauge()
-        test_hist = statistics.BytesHistogram(bins = [(0,256), (257,512), (513, 2048), (2049, 8192)])
+        test_hist = statistics.BytesHistogram(bins = [(0, 256), (257, 512), (513, 2048), (2049, 8192)])
         beef_alert = alert_conditions.AttrValAlertCondition('serial', warn_states = ['SQEMU    QEMU HARDDISK  WD-deadbeef0'], message = "Beef alert in sector 2!")
 
     def human_string(self, ancestors = []):
@@ -85,6 +88,7 @@ class ScsiDevice(base_resources.LogicalDrive):
             return self.serial[1:]
         else:
             return self.serial
+
 
 class UnsharedDeviceNode(DeviceNode):
     """A device node whose underlying device has no SCSI ID
@@ -99,6 +103,7 @@ class UnsharedDeviceNode(DeviceNode):
         else:
             return self.path
 
+
 class UnsharedDevice(base_resources.LogicalDrive):
     identifier = ScannableId('path')
     # Annoying duplication of this from the node, but it really
@@ -108,17 +113,19 @@ class UnsharedDevice(base_resources.LogicalDrive):
     def human_string(self):
         return self.path
 
+
 class ScsiDeviceNode(DeviceNode):
     """SCSI in this context is a catch-all to refer to
     block devices which look like real disks to the host OS"""
     identifier = ScannableId('path')
     #human_name = "SCSI device node"
     host = attributes.ResourceReference()
-        
+
 
 class MultipathDeviceNode(DeviceNode):
     identifier = ScannableId('path')
     human_name = "Multipath device node"
+
 
 class LvmDeviceNode(DeviceNode):
     identifier = ScannableId('path')
@@ -131,7 +138,7 @@ class LvmDeviceNode(DeviceNode):
 
 
 # FIXME: partitions should really be GlobalIds (they can be seen from more than
-# one host) where the ID is their number plus the a foreign key to the parent 
+# one host) where the ID is their number plus the a foreign key to the parent
 # ScsiDevice or UnsharedDevice(HYD-272)
 # TODO: include containng object human_string in partition human_string
 class Partition(base_resources.LogicalDrive):
@@ -142,9 +149,11 @@ class Partition(base_resources.LogicalDrive):
     def human_string(self):
         return self.path
 
+
 class PartitionDeviceNode(DeviceNode):
     identifier = ScannableId('path')
     human_name = "Linux partition"
+
 
 class LocalMount(StorageResource):
     """A local filesystem consuming a storage resource -- reported so that
@@ -154,6 +163,7 @@ class LocalMount(StorageResource):
 
     fstype = attributes.String()
     mount_point = attributes.String()
+
 
 class Linux(StoragePlugin):
     def __init__(self, *args, **kwargs):
@@ -183,7 +193,7 @@ class Linux(StoragePlugin):
                     # An inactive LV has no block device
                     pass
         mpath_block_devices = set()
-        for mp_name, mp in devices['mpath'].items(): 
+        for mp_name, mp in devices['mpath'].items():
             mpath_block_devices.add(mp['block_device'])
 
         dm_block_devices = lv_block_devices | mpath_block_devices
@@ -241,11 +251,11 @@ class Linux(StoragePlugin):
         edges = []
         for bdev in devices['devs'].values():
             if bdev['major_minor'] in lv_block_devices:
-                res,created = self.update_or_create(LvmDeviceNode,
+                res, created = self.update_or_create(LvmDeviceNode,
                                     host = root_resource,
                                     path = bdev['path'])
             elif bdev['major_minor'] in mpath_block_devices:
-                res,created = self.update_or_create(MultipathDeviceNode,
+                res, created = self.update_or_create(MultipathDeviceNode,
                                     host = root_resource,
                                     path = bdev['path'])
             elif bdev['parent']:
@@ -326,11 +336,12 @@ class Linux(StoragePlugin):
                 import random
                 num = random.randint(10, 20)
                 scsi_dev.test_stat = num
-                scsi_dev.test_hist = [random.randint(50,100) for r in range(0,4)]
+                scsi_dev.test_hist = [random.randint(50, 100) for r in range(0, 4)]
+
 
 class LvmGroup(base_resources.StoragePool):
     identifier = GlobalId('uuid')
-    
+
     uuid = attributes.Uuid()
     name = attributes.String()
     size = attributes.Bytes()
@@ -340,6 +351,7 @@ class LvmGroup(base_resources.StoragePool):
 
     def human_string(self, parent = None):
         return self.name
+
 
 class LvmVolume(base_resources.LogicalDrive):
     # Q: Why is this identified by LV UUID and VG UUID rather than just
@@ -360,5 +372,3 @@ class LvmVolume(base_resources.LogicalDrive):
 
     def human_string(self, ancestors = []):
         return "%s-%s" % (self.vg.name, self.name)
-
-
