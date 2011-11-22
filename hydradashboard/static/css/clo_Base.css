@@ -776,7 +776,7 @@ table.chart_grid td table {
 }
 
 .notification_job_buttons{
-    width: 50px;
-    height: 15px;
-    font-size:8px;        
+  width: 50px;
+  height: 20px;
+  font-size: 9px;
 }
