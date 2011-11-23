@@ -219,8 +219,6 @@ LOGGING = {
     }
 }
 
-SYSLOG_PATH = '/var/log/messages'
-
 # Periods given in seconds
 AUDIT_PERIOD = 10
 JANITOR_PERIOD = 60
