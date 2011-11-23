@@ -136,12 +136,7 @@ BROKER_VHOST = "hydravhost"
 CELERY_RESULT_BACKEND = "database"
 CELERY_RESULT_DBURI = "mysql://root:@localhost/hydra"
 
-# This is here because south is broken by something that happens when
-# doing a 'python manage.py test': it creates databases using migrations,
-# but then in between tests something removes all rows from all tables,
-# including south's record of which migrations have been run, so when
-# a subsequent test runs a 'syncdb', south tries to create tables
-# which already exist.
+# HYD-471: This must be set for unit tests to pass in general
 SOUTH_TESTS_MIGRATE = False
 
 INSTALLED_APPS = (
