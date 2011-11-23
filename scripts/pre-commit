@@ -119,7 +119,7 @@ def main(all_files):
     result = 0
     
     print 'Running Django Code Validator...'
-    return_code = subprocess.call('$VIRTUAL_ENV/bin/python manage.py validate', shell=True)
+    return_code = subprocess.call('python manage.py validate', shell=True)
     result = return_code or result
     
     for check in CHECKS:
