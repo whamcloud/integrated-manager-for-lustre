@@ -22,7 +22,7 @@ def make_json_call(url, **params):
     # Add any outgoing parameters to the body of the request.
     if params:
         encoded_params = json.dumps(params)
-        print "input_params=>%s" %encoded_params
+        print "input_params=>%s" % encoded_params
         request.add_header('Content-Length', str(len(encoded_params)))
         request.add_header('Content-Type', 'application/json')
         request.add_data(encoded_params)
@@ -86,11 +86,11 @@ def render_to_json(**jsonargs):
 
 def construct_json_response(request, success, errors=None, response=None):
     if errors is None:
-        errors = [ ]
+        errors = []
 
     if response is None:
-        response = [ ]
-    response_dict = { }
+        response = []
+    response_dict = {}
     response_dict['success'] = success
     response_dict['errors'] = errors
     response_dict['response'] =  response

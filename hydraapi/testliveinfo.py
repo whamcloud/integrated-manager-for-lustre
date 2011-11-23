@@ -12,6 +12,7 @@ setup_environ(settings)
 
 from jsonutils import make_json_call
 
+
 def main(args):
     option_parser = optparse.OptionParser(
         '%prog [OPTIONS]\nRetrieves chart data of Lustre volumes for a filesystem  from Hydra server .\nExample: testliveinfo.py  --host_id 1 --severity  --eventtype  --page_size  --page_id')
@@ -125,7 +126,8 @@ def main(args):
     print result
     print '\n\n'
 
-
     return 0
+
+
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

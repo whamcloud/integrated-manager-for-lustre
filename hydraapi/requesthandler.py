@@ -15,10 +15,12 @@ handler = logging.FileHandler(settings.API_LOG_PATH)
 handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
 hydraapi_log.addHandler(handler)
 
+
 if settings.DEBUG:
     hydraapi_log.setLevel(logging.DEBUG)
 else:
     hydraapi_log.setLevel(logging.WARNING)
+
 
 def extract_exception(f):
     """Decorator to catch boto exceptions and convert them
@@ -41,6 +43,7 @@ def extract_exception(f):
             raise
     return _extract_exception
 
+
 class RequestHandler(BaseHandler):
     #allowed_methods = ('GET', 'POST')
     allowed_methods = ('GET')
@@ -61,8 +64,8 @@ class RequestHandler(BaseHandler):
     def create(self, request):
         return self.run(request)
 
-class AnonymousRequestHandler(RequestHandler):
 
+class AnonymousRequestHandler(RequestHandler):
     allowed_methods = ('GET', 'POST')
 
     def __init__(self, *args, **kwargs):
@@ -78,8 +81,8 @@ class AnonymousRequestHandler(RequestHandler):
     def create(self, request):
         return RequestHandler.create(self, request)
 
-class AuthorisedRequestHandler(RequestHandler):
 
+class AuthorisedRequestHandler(RequestHandler):
     allowed_methods = ('GET', 'POST')
 
     def __init__(self, registered_function, *args, **kwargs):
@@ -95,6 +98,7 @@ class AuthorisedRequestHandler(RequestHandler):
     def create(self, request):
         return RequestHandler.create(self, request)
 
+
 class extract_request_args:
     """Extracts specified keys from the request dictionary and calls the wrapped
     function
@@ -106,21 +110,22 @@ class extract_request_args:
             # This will be rquired for session management
             #if request.session:
             #    request.session.set_expiry(request.user.get_inactivity_timeout())
-            call_args = { }
+            call_args = {}
             data = request.data
-            errors = { }
+            errors = {}
             #Fill in the callArgs with values from the request data
             for value in self.args:
                 try:
                     call_args[value] = data[value]
                 except:
-                    errors[value] = [ "This field is required." ]
+                    errors[value] = ["This field is required."]
                     pass
 
             if len(errors) > 0:
                 raise Exception(errors)
             return f(wrapped_self, request, **call_args)
         return wrapped_f
+
 
 class extract_request_args_old:
     """Extracts specified keys from the request dictionary and calls the wrapped
@@ -133,15 +138,15 @@ class extract_request_args_old:
             # This will be rquired for session management
             #if request.session:
             #    request.session.set_expiry(request.user.get_inactivity_timeout())
-            call_args = { }
+            call_args = {}
             data = request.data
-            errors = { }
+            errors = {}
             #Fill in the callArgs with values from the request data
             for key, value in self.args.items():
                 try:
                     call_args[key] = data[value]
                 except:
-                    errors[value] = [ "This field is required." ]
+                    errors[value] = ["This field is required."]
                     pass
 
             if len(errors) > 0:

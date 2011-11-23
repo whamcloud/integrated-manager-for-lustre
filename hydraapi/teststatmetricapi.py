@@ -12,6 +12,8 @@ import settings
 setup_environ(settings)
 
 from jsonutils import make_json_call
+
+
 def main(args):
     option_parser = optparse.OptionParser(
         '%prog [OPTIONS]\nRetrieves chart data of Lustre volumes for a filesystem_id  from Hydra server .\nExample: testgraphapi.py --filesystem_id 1 --starttime 5')
@@ -93,7 +95,6 @@ def main(args):
     print result
     print '\n\n'
 
-
     print'Unit Test 6:  All File system MIOPs Chart data:'
     api_url = base_url + '/api/get_fs_stats_for_targets/'
     print 'api_url: %s' % api_url
@@ -174,8 +175,8 @@ def main(args):
     print result
     print '\n\n'
 
-
     return 0
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

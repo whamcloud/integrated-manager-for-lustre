@@ -13,6 +13,7 @@ setup_environ(settings)
 
 from jsonutils import make_json_call
 
+
 def main(args):
     option_parser = optparse.OptionParser(
         '%prog [OPTIONS]\nRetrieves chart data of Lustre volumes for a filesystem  from Hydra server .\nExample: testgraphapi.py --filesystem punefs --hostname clo-pune-lon01 --targetname=hulkfs01-MDT0000 --starttime 29-20-2011 09:30:45  --endtime  29-20-2011 09:31:45  --interval NA  --datafunction average')
@@ -47,7 +48,7 @@ def main(args):
     base_url = options.url.rstrip('/')
 
     # Fetch data for last 10 minutes
-    interval=600
+    interval = 600
     # Unit Test 1 File system Free Space Chart data:
 
     api_url = base_url + '/api/get_fs_stats_for_targets/'
@@ -138,11 +139,6 @@ def main(args):
     print result
     print '\n\n'
 
-
-
-
-
-
    # Unit Test 4 File system CPU and Memory Charts:
     api_url = base_url + '/api/get_fs_stats_for_server/'
     print 'api_url: %s' % api_url
@@ -170,7 +166,6 @@ def main(args):
     print '\n result:'
     print result
     print '\n\n'
-
 
     # Unit Test 6 Target Read Vs Writes:
     api_url = base_url + '/api/get_stats_for_targets/'

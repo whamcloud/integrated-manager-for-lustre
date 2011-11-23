@@ -57,8 +57,8 @@ class GetFSTargetStats_fake(AnonymousRequestHandler):
                         for slice in current_slice
                 ]
             else:
-                all_fs_stats=[]
-                fs_stats=[]
+                all_fs_stats = []
+                fs_stats = []
                 current_slice = gettimeslice()
                 for filesystem in ManagedFilesystem.objects.all():
                     for slice in current_slice:
@@ -89,8 +89,8 @@ class GetFSTargetStats_fake(AnonymousRequestHandler):
                         for slice in current_slice
                 ]
             else:
-                all_fs_stats=[]
-                fs_stats=[]
+                all_fs_stats = []
+                fs_stats = []
                 current_slice = gettimeslice()
                 for filesystem in ManagedFilesystem.objects.all():
                     for slice in current_slice:
@@ -173,7 +173,7 @@ class GetServerStats_fake(AnonymousRequestHandler):
                                      )
             return data_slice
         else:
-            raise Exception("Unable to find host with hostid=%s" %hostid)
+            raise Exception("Unable to find host with hostid=%s" % hostid)
 
 class GetTargetStats_fake(AnonymousRequestHandler):
     @extract_request_args('target','starttime','endtime','datafunction','targetkind','fetchmetrics')
@@ -243,11 +243,11 @@ class GetFSOSTHeatMap(AnonymousRequestHandler):
     def run(self, request, filesystem, starttime, endtime , datafunction, fetchmetrics):
          from random import randrange
          ost_data = []
-         ost_size=50
+         ost_size = 50
          current_slice = gettimeslice(100, 5)
          for i in xrange(ost_size):
              for slice in current_slice:
-                ost_name='ost' + str(i)
+                ost_name = 'ost' + str(i)
                 cpu = randrange(0, 100, 1)
                 ost_data.append(
                          {
@@ -263,19 +263,20 @@ class GetFSOSTHeatMap(AnonymousRequestHandler):
     def getcolor(self, cpu):
        if cpu <= 25:
             return '#00ff00'
-       elif cpu <=50:
+       elif cpu <= 50:
             return '#001f00'
-       elif cpu <=75:
+       elif cpu <= 75:
             return '#ffff00'
-       elif cpu <=100:
+       elif cpu <= 100:
             return '#ff0000'
+
 
 def gettimeslice(sample_size=10, interval=5):
     from datetime import timedelta, datetime
     current_time = datetime.now()
     data_slice = []
     for i in xrange(sample_size):
-        current_time  = current_time - timedelta(seconds=interval)
-        strtime  = current_time.isoformat().split('T')[1]
+        current_time = current_time - timedelta(seconds=interval)
+        strtime = current_time.isoformat().split('T')[1]
         data_slice.append(strtime.split('.')[0])
     return data_slice
