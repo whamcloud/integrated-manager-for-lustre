@@ -99,10 +99,6 @@ def check_files(files, check):
 
 
 def main(all_files):
-    # Stash any changes to the working tree that are not going to be committed
-    if not all_files:
-        subprocess.call(['git', 'stash', '-u', '--keep-index'], stdout=subprocess.PIPE)
-    
     files = []
     if all_files:
         for root, dirs, file_names in os.walk('.'):
@@ -125,11 +121,6 @@ def main(all_files):
     for check in CHECKS:
         result = check_files(files, check) or result
     
-    # Unstash changes to the working tree that we had stashed
-    if not all_files:
-        #subprocess.call(['git', 'reset', '--hard'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        subprocess.call(['git', 'stash', 'pop', '-q'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
     sys.exit(result)
 
 
