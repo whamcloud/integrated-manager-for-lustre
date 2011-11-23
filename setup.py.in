@@ -30,7 +30,7 @@ setup(name = 'hydra-server',
                                        'static/css/*.css', 'static/css/smoothness/*.css', 'static/css/smoothness/images/*.png',
                                        'static/images/*', 'static/js/*' ,'static/css/images/*'],
                     'hydracm': ['templates/*.html', 'static/css/*.css',
-                                  'static/images/*', 'static/js/*', 'static/images/storage_plugin/*']
+                                  'static/images/*.png', 'static/images/*.jpg', 'static/js/*', 'static/images/storage_plugin/*']
                    }
       )
 
