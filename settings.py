@@ -106,7 +106,6 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.transaction.TransactionMiddleware',
     'pagination.middleware.PaginationMiddleware',
     'middleware.ExceptionPrinterMiddleware',
@@ -137,12 +136,19 @@ BROKER_VHOST = "hydravhost"
 CELERY_RESULT_BACKEND = "database"
 CELERY_RESULT_DBURI = "mysql://root:@localhost/hydra"
 
+# This is here because south is broken by something that happens when
+# doing a 'python manage.py test': it creates databases using migrations,
+# but then in between tests something removes all rows from all tables,
+# including south's record of which migrations have been run, so when
+# a subsequent test runs a 'syncdb', south tries to create tables
+# which already exist.
+SOUTH_TESTS_MIGRATE = False
+
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
-    'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.admin',
     'django.contrib.admindocs',
