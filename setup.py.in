@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
-import os
 import sys
 
 print sys.argv[1]
@@ -27,10 +26,18 @@ setup(name = 'hydra-server',
                     'configure': [],
                     'hydraapi': [],
                     'hydradashboard': ['templates/*.html',
-                                       'static/css/*.css', 'static/css/smoothness/*.css', 'static/css/smoothness/images/*.png',
-                                       'static/images/*', 'static/js/*' ,'static/css/images/*'],
-                    'hydracm': ['templates/*.html', 'static/css/*.css',
-                                  'static/images/*.png', 'static/images/*.jpg', 'static/js/*', 'static/images/storage_plugin/*']
+                                       'static/css/*.css',
+                                       'static/css/smoothness/*.css',
+                                       'static/css/smoothness/images/*.png',
+                                       'static/images/*',
+                                       'static/js/*',
+                                       'static/css/images/*'],
+                    'hydracm': ['templates/*.html',
+                                'static/css/*.css',
+                                'static/images/*.png',
+                                'static/images/*.jpg',
+                                'static/js/*',
+                                'static/images/storage_plugin/*']
                    }
       )
 
