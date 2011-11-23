@@ -1,4 +1,4 @@
-from django.conf.urls.defaults import *
+from django.conf.urls.defaults import patterns, include
 
 from django.contrib import admin
 admin.autodiscover()
@@ -6,9 +6,6 @@ admin.autodiscover()
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = patterns('',
-    (r'^monitor/', include('monitor.urls')),
-    (r'^configure/', include('configure.urls')),
-
     (r'^djcelery/', include('djcelery.urls')),
     (r'^api/', include('hydraapi.urls')),
     (r'^dashboard/', include('hydradashboard.urls')),

@@ -1,12 +1,87 @@
 
 
-{% extends 'base.html' %}
+{% extends 'hydra_base.html' %}
 
 {% block css %}
-<link rel="stylesheet" type='text/css' href="{{STATIC_URL}}css/jobs.css"/>
-{% endblock %}
+<style type="text/css">
+#stateful_objects {
+    padding-left: 0px;
+}
 
-{% block scripts %}
+#stateful_objects li {
+    list-style: none;
+    margin-top: 6px;
+    border-radius: 6px;
+    border: 1px solid #09f;
+    padding: 6px;
+    font-size: 0.9em;
+    font-weight: normal;
+    color: #222;
+}
+
+#stateful_objects li span.name {
+    font-weight: bold;
+    text-shadow: #aaa 2px 2px 3px;
+}
+
+#stateful_objects li span.state_label {
+    font-size: 0.95em;
+    float: right;
+}
+
+#stateful_objects li span.state {
+    font-style: italic;
+    font-size: 0.95em;
+    float: right;
+}
+
+span.hshrink {
+    display: inline-block;
+    float: left;
+    margin-right: 12px;
+    padding-left: 6px;
+    border-left: 1px solid gray;
+}
+
+#jobs {
+    padding: 3px;
+    padding-left: 0px;
+}
+
+div#content {
+    padding: 12px;
+}
+
+h2 {
+    text-shadow: #aaa 2px 2px 3px;
+    margin-bottom: 6px;
+    margin-top: 0px;
+}
+
+#jobs li {
+    list-style: none;
+    margin-bottom: 3px;
+    font-size: 0.9em;
+    color: #222;
+    font-weight: normal;
+}
+
+#jobs li span.description {
+    font-style: italic;
+}
+
+#jobs li a {
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+#jobs li span.time {
+    margin-left: 12px;
+}
+
+img.icon {
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -68,32 +143,11 @@
 
     job_markup = function(container, job) {
         container.children('.description').html(
-            job['description'] + "<a href='/configure/job/" + job['id'] + "/'> [details]</a>"
+            job['description'] + "<a href='/hydracm/job/" + job['id'] + "/'> [details]</a>"
         );
 
         container.children('.time').html(job['created_at']);
-        action_container = container.children('.actions')
         valid_urls = []
-        job['actions'].forEach(function(action) {
-            valid_urls.push(action['url']);
-            if(action_container.children('a[href="' + action['url'] + '"]').length == 0) {
-                link = $("<a href='" + action['url'] + "'>" + action['caption'] + "</a>")
-                link.click(function(event){
-                    event.preventDefault();
-                    action_request = $.get(action['url'])
-                        .error(function(event) {
-                            console.log(event);
-                        });
-                });
-                link.button();
-                action_container.append(link);
-            }
-        });
-        action_container.children().each(function() {
-            if (valid_urls.indexOf($(this).attr('href')) == -1) {
-                $(this).remove()
-            }
-        });
 
         if (job['state'] == 'pending') {
             container.children('.icon').attr('src', "{{STATIC_URL}}/images/icon_hourglass.png");
@@ -122,7 +176,6 @@
                     $("<li class='ui-state-default'>" + 
                         "<img class='icon'/>" + 
                         "<span class='description'></span>" + 
-                        "<span class='actions'></span>" + 
                         "<span class='time'></span>" + 
                         "</li>").attr({'id': id})
                 )
@@ -146,7 +199,7 @@
     }
 
     jobs_update = function() {
-        jobs_request = $.get("{% url configure.views.jobs_json %}")
+        jobs_request = $.get("{% url hydracm.views.jobs_json %}")
             .success(function(data, textStatus, jqXHR) {
                 setTimeout('jobs_update();', 1000);
                 load_json(data)

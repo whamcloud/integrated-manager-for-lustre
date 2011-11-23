@@ -116,10 +116,7 @@ MIDDLEWARE_CLASSES = (
 from django.conf import global_settings
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS +\
     ("django.core.context_processors.request",
-     "monitor.context_processors.menu_items",
-     "hydracm.context_processors.page_load_time",
-     "monitor.context_processors.app_data")
-
+     "hydracm.context_processors.page_load_time")
 
 ROOT_URLCONF = 'urls'
 
