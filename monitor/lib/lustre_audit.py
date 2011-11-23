@@ -9,8 +9,9 @@ import settings
 setup_environ(settings)
 
 # Access to 'monitor' database
-from monitor.models import *
-from configure.models import *
+from monitor.models import TargetRecoveryAlert, TargetRecoveryInfo, HostContactAlert, LNetOfflineAlert, LearnEvent
+from configure.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, ManagedTargetMount, FilesystemMember
+from configure.models import ManagedHost, Nid, LunNode, Lun, ManagedFilesystem
 from django.db import transaction
 
 import re
@@ -30,7 +31,7 @@ def nids_to_mgs(host, nid_strings):
     """nid_strings: nids of a target.  host: host on which the target was seen.
     Return a ManagedMgs or raise ManagedMgs.DoesNotExist"""
     if set(nid_strings) == set(["0@lo"]) or len(nid_strings) == 0:
-        return ManagedMgs.objects.get(targetmount__host = self.host)
+        return ManagedMgs.objects.get(targetmount__host = host)
 
     from django.db.models import Count
     nids = Nid.objects.values('nid_string').filter(nid_string__in = nid_strings).annotate(Count('id'))
@@ -356,7 +357,7 @@ class DetectScan(object):
 
             try:
                 mgs = ManagedMgs.objects.get(managedtargetmount__host = self.host)
-                raise RuntimeError("Multiple MGSs on host %s" % host)
+                raise RuntimeError("Multiple MGSs on host %s" % self.host)
             except ManagedMgs.DoesNotExist:
                 pass
 
@@ -466,7 +467,7 @@ class DetectScan(object):
                     if isinstance(target, FilesystemMember) and target.filesystem.mgs == mgs:
                         matched_target = target
             except ManagedTarget.DoesNotExist:
-                audit_log.warning("Target %s has mount point on %s but has not been detected on any MGS" % (name_val, self.host))
+                audit_log.warning("Target %s has mount point on %s but has not been detected on any MGS" % (local_info['name'], self.host))
 
             if not matched_target:
                 continue
@@ -558,33 +559,34 @@ class DetectScan(object):
         LearnEvent(severity = INFO, host = self.host, learned_item = learned_item).save()
 
     def learn_clients(self):
-        for mount_point, client_info in self.host_data['client_mounts'].items():
+        pass
+        #for mount_point, client_info in self.host_data['client_mounts'].items():
             # Find the MGS
-            try:
-                # Lustre lets you use either
-                # a comma or a colon as a delimiter
-                nids = re.split("[:,]", client_info['nid'])
-                client_mgs_nids = set(normalize_nids(nids))
-                mgs = nids_to_mgs(self.host, client_mgs_nids)
-            except ManagedMgs.DoesNotExist:
-                audit_log.warning("Ignoring client mount for unknown mgs %s" % client_info['nid'])
-                continue
+            #try:
+            #    # Lustre lets you use either
+            #    # a comma or a colon as a delimiter
+            #    nids = re.split("[:,]", client_info['nid'])
+            #    client_mgs_nids = set(normalize_nids(nids))
+            #    mgs = nids_to_mgs(self.host, client_mgs_nids)
+            #except ManagedMgs.DoesNotExist:
+            #    audit_log.warning("Ignoring client mount for unknown mgs %s" % client_info['nid'])
+            #    continue
 
             # Find the filesystem
-            try:
-                fs = ManagedFilesystem.objects.get(name = client_info['filesystem'], mgs = mgs)
-            except ManagedFilesystem.DoesNotExist:
-                audit_log.warning("Ignoring client mount for unknown filesystem '%s' on %s" % (client_info['filesystem'], self.host))
-                continue
-
-            # Instantiate Client
-            (client, created) = Client.objects.get_or_create(
-                    host = self.host, mount_point = mount_point, filesystem = fs)
-            if created:
-                audit_log.info("Learned client %s" % client)
-                self.learn_event(client)
+            #try:
+            #    fs = ManagedFilesystem.objects.get(name = client_info['filesystem'], mgs = mgs)
+            #except ManagedFilesystem.DoesNotExist:
+            #    audit_log.warning("Ignoring client mount for unknown filesystem '%s' on %s" % (client_info['filesystem'], self.host))
+            #    continue
 
             # TODO: sort out client monitoring
+            # Instantiate Client
+            #(client, created) = Client.objects.get_or_create(
+            #        host = self.host, mount_point = mount_point, filesystem = fs)
+            #if created:
+            #    audit_log.info("Learned client %s" % client)
+            #    self.learn_event(client)
+
             #self.audited_mountables[client.downcast()] = client_info['mounted']
 
     def learn_mgs_info(self):

@@ -2,7 +2,7 @@
 import math
 import os
 from django.contrib.contenttypes.models import ContentType
-from r3d.models import *
+from r3d.models import Average, Database
 
 import settings
 import logging
@@ -89,6 +89,7 @@ class R3dMetricStore(MetricStore):
         # not so far back that we waste lots of time with filling in
         # null data.
         # FIXME HYD-366: this should be set at first insert.
+        import time
         start_time = int(time.time()) - 1
         ct = ContentType.objects.get_for_model(measured_object)
         self.r3d = Database.objects.create(name="%s-%d" % (ct, measured_object.id),
@@ -274,12 +275,13 @@ class TargetMetricStore(R3dMetricStore):
         update = {}
 
         stats = {}
-        brw_stats = {}
+        #brw_stats = {}
         for key in metrics:
             if key == "stats":
                 stats = metrics[key]
             elif key == "brw_stats":
-                brw_stats = metrics[key]
+                pass
+                #brw_stats = metrics[key]
             else:
                 ds_name = key
                 update[ds_name] = {'value': metrics[key], 'type': 'Gauge'}

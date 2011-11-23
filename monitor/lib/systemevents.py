@@ -3,11 +3,10 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from django.core.management import setup_environ
 import settings
 
 # Access to 'monitor' database
-from monitor.models import *
+from monitor.models import SyslogEvent, ClientConnectEvent, Systemevents
 from django.db import transaction
 
 import logging
@@ -57,7 +56,7 @@ find_one_in_many = plain_find_one_in_many
 #
 # LustreError: 122-1: Can't start acceptor on port 988: port already in use
 def port_used_handler(entry, h):
-    SyslogEvent(severity = ERROR, host = h,
+    SyslogEvent(severity = logging.ERROR, host = h,
                 message_str = "Lustre port already being used").save()
 
 #
@@ -68,7 +67,7 @@ def port_used_handler(entry, h):
 # Lustre: 9150:0:(ldlm_lib.c:871:target_handle_connect()) lustre-OST0000: connection from 26959b68-1208-1fca-1f07-da2dc872c55f@192.168.122.218@tcp t0 exp 0000000000000000 cur 1317994930 last 0
 # Lustre: 31793:0:(ldlm_lib.c:877:target_handle_connect()) MGS:            connection from e5232e74-1e61-fad1-b59b-6e4a7d674016@192.168.122.218@tcp t0 exp 0000000000000000 cur 1317994928 last 0
 def client_connection_handler(entry, h):
-    sev = INFO
+    sev = logging.INFO
     # get the client NID out of the string
     nid_start = entry.message.find("@") + 1
     nid_len = entry.message[nid_start:].find(" ")
@@ -109,7 +108,6 @@ def server_security_flavor_handler(entry, h):
 # Lustre: 2689:0:(genops.c:1379:obd_export_evict_by_uuid()) lustre-OST0001: evicting 26959b68-1208-1fca-1f07-da2dc872c55f at adminstrative request
 #
 def client_eviction_handler(entry, h):
-    sev = WARNING
     # get the client UUID out of the string
     uuid_start = entry.message.find("evicting ") + 9
     uuid_len = entry.message[uuid_start:].find(" ")
@@ -117,17 +115,18 @@ def client_eviction_handler(entry, h):
         entry.message[uuid_start:uuid_start + uuid_len]
     lustre_pid = entry.message[9:9 + \
                                entry.message[9:].find(":")]
-    ClientConnectEvent(severity = sev, host = h, message_str = msg,
+    ClientConnectEvent(severity = logging.WARNING, host = h, message_str = msg,
                        lustre_pid = lustre_pid).save()
 
 class SystemEventsAudit:
-    from monitor.models import LastSystemeventsProcessed
 
     def get_last_id(self):
+        from monitor.models import LastSystemeventsProcessed
         l, c = LastSystemeventsProcessed.objects.get_or_create(id__gt = 0)
         return l.last
 
     def store_last_id(self, last):
+        from monitor.models import LastSystemeventsProcessed
         l = LastSystemeventsProcessed.objects.get()
         l.last = last
         l.save()
@@ -140,7 +139,6 @@ class SystemEventsAudit:
                 }
 
     def parse_log_entries(self):
-        from logging import INFO, ERROR
         from configure.models import ManagedHost
 
         trans_size = 100

@@ -14,10 +14,10 @@ from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
-from monitor.models import *
-from configure.models import *
+from monitor.models import LearnEvent
+from configure.models import ManagedHost, ManagedMdt, ManagedOst, ManagedMgs, ManagedFilesystem, Monitor
 
-from logging import getLogger, FileHandler, INFO, StreamHandler
+from logging import getLogger, FileHandler, INFO
 file_log_name = __name__
 getLogger(file_log_name).setLevel(INFO)
 getLogger(file_log_name).addHandler(FileHandler("%s.log" % 'hydra'))
@@ -32,7 +32,8 @@ def screen(string):
 
 import cmd
 try:
-    from texttable import Texttable
+    import texttable
+    Texttable = texttable.Texttable
 except ImportError:
     print "[Warning, texttable not installed, some commands won't work]"
     Texttable = None
@@ -97,9 +98,9 @@ class HydraDebug(cmd.Cmd, object):
     def __list_clients_filesystem(self, filesystem):
         table = Texttable()
         table.header(['id', 'host', 'mount point', 'status'])
-        clients = Client.objects.filter(filesystem = filesystem)
-        for client in clients:
-            table.add_row([client.id, client.host.address, client.mount_point, self.__mountable_audit_status(client)])
+        #clients = Client.objects.filter(filesystem = filesystem)
+        #for client in clients:
+        #    table.add_row([client.id, client.host.address, client.mount_point, self.__mountable_audit_status(client)])
 
         self.__filesystem_title(filesystem)
         screen(table.draw())
