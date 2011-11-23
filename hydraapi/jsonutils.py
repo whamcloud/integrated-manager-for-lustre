@@ -9,6 +9,7 @@ from functools import wraps
 from datetimeencoder import DjangoTimeJSONEncoder
 import urllib2
 
+
 def make_json_call(url, **params):
     """Call one URL, passing JSON-encoded parameters.
     Return the result value.
@@ -39,6 +40,7 @@ def make_json_call(url, **params):
     result = json.loads(raw_response)
     return result
 
+
 def render_to_json(**jsonargs):
     """
     Renders a JSON response with a given returned instance. Assumes json.dumps() can
@@ -62,7 +64,7 @@ def render_to_json(**jsonargs):
             try:
                 result = f(wrapped_self, request, *args, **kwargs)
             except Exception as e:
-                if hasattr(e , 'message_dict'):
+                if hasattr(e, 'message_dict'):
                     errors = e.message_dict
                 else:
                     #failure_exception = FailureException(str(e))
@@ -84,6 +86,7 @@ def render_to_json(**jsonargs):
         return inner_json
     return outer
 
+
 def construct_json_response(request, success, errors=None, response=None):
     if errors is None:
         errors = []
@@ -93,6 +96,5 @@ def construct_json_response(request, success, errors=None, response=None):
     response_dict = {}
     response_dict['success'] = success
     response_dict['errors'] = errors
-    response_dict['response'] =  response
+    response_dict['response'] = response
     return DjangoTimeJSONEncoder().encode(request, response_dict)
-

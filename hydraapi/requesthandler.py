@@ -27,6 +27,7 @@ def extract_exception(f):
     to simple exceptions with slightly nicer error messages.
     """
     import functools
+
     @functools.wraps(f)
     def _extract_exception(*args, **kwds):
         from itertools import chain
@@ -87,6 +88,7 @@ class AuthorisedRequestHandler(RequestHandler):
 
     def __init__(self, registered_function, *args, **kwargs):
         RequestHandler.__init__(self, registered_function)
+
     @render_to_json()
 #    @login_required # This will be rquired when we will need session management
     def read(self, request):
@@ -105,6 +107,7 @@ class extract_request_args:
     """
     def __init__(self, *args):
         self.args = args
+
     def __call__(self, f):
         def wrapped_f(wrapped_self, request):
             # This will be rquired for session management
@@ -133,6 +136,7 @@ class extract_request_args_old:
     """
     def __init__(self, **kwargs):
         self.args = kwargs
+
     def __call__(self, f):
         def wrapped_f(wrapped_self, request):
             # This will be rquired for session management

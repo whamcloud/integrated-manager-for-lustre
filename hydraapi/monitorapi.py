@@ -34,7 +34,7 @@ class ListFileSystems(AnonymousRequestHandler):
             no_of_oss = ManagedHost.objects.filter(managedtargetmount__target__in = osts).distinct().count()
             # if FS is created but MDT is no created we still want to display fs in list
             try:
-               mds_hostname = ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name()
+                mds_hostname = ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name()
             except:
                 pass
 
@@ -46,7 +46,7 @@ class ListFileSystems(AnonymousRequestHandler):
                 #inodedata = filesystem.metrics.fetch_last(ManagedMdt, fetch_metrics=["filesfree", "filestotal"])
                 diskdata = filesystem.metrics.fetch_last(ManagedOst, fetch_metrics=["kbytesfree", "kbytestotal"])
                 if diskdata:
-                    fskbytesfree  = diskdata[1]['kbytesfree']
+                    fskbytesfree = diskdata[1]['kbytesfree']
                     fskbytestotal = diskdata[1]['kbytestotal']
                 #if inodedata:
                 #    fsfilesfree  = inodedata[1]['filesfree']
@@ -55,37 +55,37 @@ class ListFileSystems(AnonymousRequestHandler):
                 pass
 
             # FIXME: fsid and fsname are bad names, they should be 'id' and 'name'
-            filesystems.append({'fsid':filesystem.id,
+            filesystems.append({'fsid': filesystem.id,
                                 'fsname': filesystem.name,
-                                'status':filesystem.status_string(),
+                                'status': filesystem.status_string(),
                                 'available_transitions': StateManager.available_transitions(filesystem),
-                                'noofoss':no_of_oss,
-                                'noofost':no_of_ost,
+                                'noofoss': no_of_oss,
+                                'noofost': no_of_ost,
                                 'mgs_hostname': filesystem.mgs.primary_server().pretty_name(),
                                 'mds_hostname': mds_hostname,
                                 # FIXME: the API should not be formatting these, leave it to the presentation layer
                                 'kbytesused': sizeof_fmt((fskbytestotal * 1024)),
                                 'kbytesfree': sizeof_fmt((fskbytesfree * 1024)),
                                 'id': filesystem.id,
-                                'content_type_id': ContentType.objects.get_for_model(filesystem).id
-                                 })
+                                'content_type_id': ContentType.objects.get_for_model(filesystem).id})
 
         return filesystems
+
 
 class GetFileSystem(AnonymousRequestHandler):
     @extract_request_args('filesystem_id')
     def run(self, request, filesystem_id):
-        filesystem =  ManagedFilesystem.objects.get(id=filesystem_id)
+        filesystem = ManagedFilesystem.objects.get(id=filesystem_id)
         osts = ManagedOst.objects.filter(filesystem = filesystem)
         no_of_ost = osts.count()
         no_of_oss = len(set([tm.host for tm in ManagedTargetMount.objects.filter(target__in = osts)]))
         no_of_oss = ManagedHost.objects.filter(managedtargetmount__target__in = osts).distinct().count()
         mds_hostname = ''
-        mds_status =''
+        mds_status = ''
         # if FS is created but MDT is no created we still want to display fs in list
         try:
             mds_hostname = ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name()
-            mds_status   = ManagedMdt.objects.get(filesystem = filesystem).primary_server().status_string()
+            mds_status = ManagedMdt.objects.get(filesystem = filesystem).primary_server().status_string()
         except:
             pass
         try:
@@ -96,30 +96,30 @@ class GetFileSystem(AnonymousRequestHandler):
             inodedata = filesystem.metrics.fetch_last(ManagedMdt, fetch_metrics=["filesfree", "filestotal"])
             diskdata = filesystem.metrics.fetch_last(ManagedOst, fetch_metrics=["kbytesfree", "kbytestotal"])
             if diskdata:
-                fskbytesfree  = diskdata[1]['kbytesfree']
+                fskbytesfree = diskdata[1]['kbytesfree']
                 fskbytestotal = diskdata[1]['kbytestotal']
             if inodedata:
-                fsfilesfree  = inodedata[1]['filesfree']
+                fsfilesfree = inodedata[1]['filesfree']
                 fsfilestotal = inodedata[1]['filestotal']
         except:
                 pass
 
         # FIXME: why return a list of one?
         fs_info = []
-        fs_info.append({'fsname':filesystem.name,
-                        'status':filesystem.status_string(),
-                        'noofoss':no_of_oss,
-                        'noofost':no_of_ost,
-                        'mgs_hostname':filesystem.mgs.primary_server().pretty_name(),
-                        'mds_hostname':mds_hostname,
-                        'mdsstatus':mds_status,
+        fs_info.append({'fsname': filesystem.name,
+                        'status': filesystem.status_string(),
+                        'noofoss': no_of_oss,
+                        'noofost': no_of_ost,
+                        'mgs_hostname': filesystem.mgs.primary_server().pretty_name(),
+                        'mds_hostname': mds_hostname,
+                        'mdsstatus': mds_status,
                         # FIXME: the API should not be formatting these, leave it to the presentation layer
-                        'bytes_total':sizeof_fmt((fskbytestotal * 1024)),
-                        'bytes_free':sizeof_fmt((fskbytesfree * 1024)),
-                        'bytes_used':sizeof_fmt(((fskbytestotal - fskbytesfree) * 1024)),
-                        'inodes_free':fsfilesfree,
-                        'inodes_total':fsfilestotal,
-                        'inodes_used':(fsfilestotal - fsfilesfree),
+                        'bytes_total': sizeof_fmt((fskbytestotal * 1024)),
+                        'bytes_free': sizeof_fmt((fskbytesfree * 1024)),
+                        'bytes_used': sizeof_fmt(((fskbytestotal - fskbytesfree) * 1024)),
+                        'inodes_free': fsfilesfree,
+                        'inodes_total': fsfilestotal,
+                        'inodes_used': (fsfilestotal - fsfilesfree),
                         'id': filesystem.id,
                         'content_type_id': ContentType.objects.get_for_model(filesystem).id})
         return fs_info
@@ -150,7 +150,7 @@ class GetFSVolumeDetails(AnonymousRequestHandler):
         targets_info = []
         for t in targets:
             _target = t.to_dict()
-            _target['available_transitions']  = StateManager.available_transitions(t)
+            _target['available_transitions'] = StateManager.available_transitions(t)
             targets_info.append(_target)
         return targets_info
 
@@ -191,7 +191,7 @@ class GetTargets(AnonymousRequestHandler):
 
 
 class GetFSTargets(AnonymousRequestHandler):
-    @extract_request_args('filesystem_id','host_id','kinds')
+    @extract_request_args('filesystem_id', 'host_id', 'kinds')
     def run(self, request, filesystem_id, host_id, kinds):
         kind_map = {"MGT": ManagedMgs,
                     "OST": ManagedOst,
@@ -219,7 +219,7 @@ class GetFSTargets(AnonymousRequestHandler):
             else:
                 if filesystem_id:
                     fs = ManagedFilesystem.objects.get(id=filesystem_id)
-                    targets=klass.objects.filter(filesystem=fs)
+                    targets = klass.objects.filter(filesystem=fs)
             for t in targets:
                 if host_filter:
                     if ManagedTargetMount.objects.filter(target = t, host = host_filter).count() == 0:
@@ -229,7 +229,7 @@ class GetFSTargets(AnonymousRequestHandler):
                     'id': t.id,
                     'primary_server_name': t.primary_server().pretty_name(),
                     'kind': kind,
-                    'status':t.status_string(),
+                    'status': t.status_string(),
                     'label': t.human_name()
                     })
         return result
@@ -277,7 +277,7 @@ class GetServers (AnonymousRequestHandler):
 
 
 class GetEventsByFilter(AnonymousRequestHandler):
-    @extract_request_args('host_id','severity','eventtype','page_id','page_size')
+    @extract_request_args('host_id', 'severity', 'eventtype', 'page_id', 'page_size')
     def run(self, request, host_id, severity, eventtype, page_size, page_id):
         return geteventsbyfilter(host_id, severity, eventtype, page_id, page_size)
 
@@ -293,10 +293,10 @@ def geteventsbyfilter(host_id, severity, eventtype, page_id, page_size, sort_col
         host = ManagedHost.objects.get(id=host_id)
         filter_kwargs['host'] = host
     if eventtype:
-         klass = eventtype
-         from django.db.models import Q
-         klass_lower = klass.lower()
-         filter_args.append(~Q(**{klass_lower: None}))
+        klass = eventtype
+        from django.db.models import Q
+        klass_lower = klass.lower()
+        filter_args.append(~Q(**{klass_lower: None}))
 
     events = Event.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
 
@@ -304,7 +304,7 @@ def geteventsbyfilter(host_id, severity, eventtype, page_id, page_size, sort_col
         return {
                  'date': event.created_at.strftime("%b %d %H:%M:%S"),
                  'event_host': event.host.pretty_name() if event.host else '',
-                 'event_severity':str(event.severity_class()),
+                 'event_severity': str(event.severity_class()),
                  'event_message': event.message()
                }
     return paginate_result(page_id, page_size, events, format_fn)
@@ -325,7 +325,7 @@ class GetLatestEvents(AnonymousRequestHandler):
 
 
 class GetAlerts(AnonymousRequestHandler):
-    @extract_request_args('active','page_id','page_size')
+    @extract_request_args('active', 'page_id', 'page_size')
     def run(self, request, active, page_id, page_size):
         from monitor.models import AlertState
         if active:
@@ -350,7 +350,7 @@ class GetJobs(AnonymousRequestHandler):
 
 
 class GetLogs(AnonymousRequestHandler):
-    @extract_request_args('host_id','start_time','end_time','lustre','page_id','page_size')
+    @extract_request_args('host_id', 'start_time', 'end_time', 'lustre', 'page_id', 'page_size')
     def run(self, request, host_id, start_time, end_time, lustre, page_id, page_size):
         return get_logs(host_id, start_time, end_time, lustre, page_id, page_size)
 
@@ -359,7 +359,7 @@ def get_logs(host_id, start_time, end_time, lustre, page_id, page_size, custom_s
     import datetime
     from monitor.models import Systemevents
     ui_time_format = "%m/%d/%Y %H:%M "
-    host=None
+    host = None
     filter_kwargs = {}
     if start_time:
         start_date = datetime.datetime.strptime(str(start_time), ui_time_format)
@@ -442,7 +442,7 @@ def nid_finder(message):
         markup = match.group()
         try:
             t = ManagedTarget.objects.get(name=markup)
-            markup =  "<a href='#' class='target target_id_%s'>%s</a>" %(t.id, t.human_name())
+            markup = "<a href='#' class='target target_id_%s'>%s</a>" % (t.id, t.human_name())
         except:
             pass
         message = message.replace(match.group(),

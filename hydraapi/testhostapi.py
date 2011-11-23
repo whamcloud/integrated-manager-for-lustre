@@ -13,6 +13,7 @@ setup_environ(settings)
 
 from jsonutils import make_json_call
 
+
 def main(args):
     option_parser = optparse.OptionParser(
         '%prog [OPTIONS]\nHost resource APIs for Lustre volumes for a filesystem  from Hydra server .\nExample: testhostapi.py --hostname clo-centos6-x64-t1 --operation add/remove')
@@ -36,7 +37,6 @@ def main(args):
         exit(-1)
     base_url = options.url.rstrip('/')
     if options.operation == 'add':
-
         # Test 1 :
         api_url = base_url + '/api/addhost/'
         print 'api_url: %s' % api_url
@@ -57,6 +57,7 @@ def main(args):
         print result
         print '\n\n'
     return 0
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

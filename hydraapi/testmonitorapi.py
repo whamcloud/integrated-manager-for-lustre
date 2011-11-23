@@ -12,6 +12,7 @@ setup_environ(settings)
 
 from jsonutils import make_json_call
 
+
 def main(args):
     option_parser = optparse.OptionParser(
         '%prog [OPTIONS]\nRetrieves List of Lustre volumes for a filesystem_id  from Hydra server .\nExample: testmonitorapi.py --filesystem_id 1')
@@ -32,8 +33,7 @@ def main(args):
     print 'Unit Test 1: Get list of All File systems:'
     api_url = base_url + '/api/listfilesystems/'
     print 'api_url: %s' % api_url
-    result  = make_json_call(api_url,
-                             )
+    result = make_json_call(api_url,)
     print 'result:'
     print result
     print '\n\n'
@@ -53,7 +53,7 @@ def main(args):
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem_id=options.fs_id,
-                             kinds=['MDT','MGT','OST'],
+                             kinds=['MDT', 'MGT', 'OST'],
                              host_id=None
                              )
     print 'result:'
@@ -65,7 +65,7 @@ def main(args):
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem_id='',
-                             kinds=['MDT','MGT','OST'],
+                             kinds=['MDT', 'MGT', 'OST'],
                              host_id=None
                              )
     print 'result:'
@@ -77,7 +77,7 @@ def main(args):
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem='',
-                             kinds=['MDT','MGT','OST']
+                             kinds=['MDT', 'MGT', 'OST']
                              )
     print 'result:'
     print result
@@ -107,7 +107,7 @@ def main(args):
     print 'api_url: %s' % api_url
     result = make_json_call(api_url,
                              filesystem_id=options.fs_id,
-                             kinds=['MDT','MGT','OST']
+                             kinds=['MDT', 'MGT', 'OST']
                             )
     print 'result:'
     print result
@@ -164,6 +164,7 @@ def main(args):
     print '\n\n'
 
     return 0
+
+
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
-

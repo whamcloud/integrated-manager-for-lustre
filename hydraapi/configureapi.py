@@ -15,6 +15,7 @@ from configure.lib.state_manager import (StateManager)
 from requesthandler import (AnonymousRequestHandler,
                             extract_request_args)
 
+
 class TestHost(AnonymousRequestHandler):
     @extract_request_args('hostname')
     def run(self, request, hostname):
@@ -25,33 +26,38 @@ class TestHost(AnonymousRequestHandler):
         job = test_host_contact.delay(host)
         return {'task_id': job.task_id, 'status': job.status}
 
+
 class AddHost(AnonymousRequestHandler):
     @extract_request_args('hostname')
     def run(self, request, hostname):
         host = ManagedHost.create_from_string(hostname)
-        return {'host_id':host.id, 'host': host.address, 'status': 'added'}
+        return {'host_id': host.id, 'host': host.address, 'status': 'added'}
+
 
 class RemoveHost(AnonymousRequestHandler):
     @extract_request_args('hostid')
     def run(self, request, hostid):
-        host =  ManagedHost.objects.get(id = hostid)
-        transition_job = StateManager.set_state(host,'removed')
-        return {'hostid': hostid,'job_id': transition_job.task_id,'status': transition_job.status}
+        host = ManagedHost.objects.get(id = hostid)
+        transition_job = StateManager.set_state(host, 'removed')
+        return {'hostid': hostid, 'job_id': transition_job.task_id, 'status': transition_job.status}
+
 
 class SetLNetStatus(AnonymousRequestHandler):
-    @extract_request_args('hostid','state')
+    @extract_request_args('hostid', 'state')
     def run(self, request, hostid, state):
-        host =  ManagedHost.objects.get(id = hostid)
+        host = ManagedHost.objects.get(id = hostid)
         transition_job = StateManager.set_state(host, state)
-        return {'hostid': hostid,'job_id': transition_job.task_id,'status': transition_job.status}
+        return {'hostid': hostid, 'job_id': transition_job.task_id, 'status': transition_job.status}
+
 
 class SetTargetMountStage(AnonymousRequestHandler):
-    @extract_request_args('target_id','state')
+    @extract_request_args('target_id', 'state')
     def run(self, request, target_id, state):
         from configure.models import ManagedTarget
         target = ManagedTarget.objects.get(id=target_id)
         transition_job = StateManager.set_state(target.downcast(), state)
-        return {'target_id': target_id,'job_id': transition_job.task_id,'status': transition_job.status}
+        return {'target_id': target_id, 'job_id': transition_job.task_id, 'status': transition_job.status}
+
 
 class RemoveFileSystem(AnonymousRequestHandler):
     @extract_request_args('filesystemid')
@@ -59,8 +65,9 @@ class RemoveFileSystem(AnonymousRequestHandler):
         from configure.models import ManagedFilesystem
         from configure.models.state_manager import StateManager
         fs = ManagedFilesystem.objects.get(id = filesystemid)
-        transition_job = StateManager.set_state(fs,'removed')
-        return {'filesystemid': filesystemid,'job_id': transition_job.task_id,'status': transition_job.status}
+        transition_job = StateManager.set_state(fs, 'removed')
+        return {'filesystemid': filesystemid, 'job_id': transition_job.task_id, 'status': transition_job.status}
+
 
 class RemoveClient(AnonymousRequestHandler):
     @extract_request_args('clientid')
@@ -68,8 +75,9 @@ class RemoveClient(AnonymousRequestHandler):
         from configure.models import ManagedTargetMount
         from configure.models.state_manager import StateManager
         mtm = ManagedTargetMount.objects.get(id = clientid)
-        transition_job = StateManager.set_state(mtm,'removed')
-        return {'clientid': clientid,'job_id': transition_job.task_id,'status': transition_job.status}
+        transition_job = StateManager.set_state(mtm, 'removed')
+        return {'clientid': clientid, 'job_id': transition_job.task_id, 'status': transition_job.status}
+
 
 class GetJobStatus(AnonymousRequestHandler):
     @extract_request_args('job_id')
@@ -78,12 +86,13 @@ class GetJobStatus(AnonymousRequestHandler):
         from configure.models import Job
         job = get_object_or_404(Job, id = job_id)
         job = job.downcast()
-        return {'job_status': job.status,'job_info': job.info,'job_result': job.result}
+        return {'job_status': job.status, 'job_info': job.info, 'job_result': job.result}
+
 
 class SetJobStatus(AnonymousRequestHandler):
-    @extract_request_args('job_id','state')
+    @extract_request_args('job_id', 'state')
     def run(self, request, job_id, state):
-        assert state in ['pause','cancel','resume']
+        assert state in ['pause', 'cancel', 'resume']
         from django.shortcuts import get_object_or_404
         from configure.models import Job
         job = get_object_or_404(Job, id = job_id)
@@ -93,7 +102,8 @@ class SetJobStatus(AnonymousRequestHandler):
             job.cancel()
         else:
             job.resume()
-        return {'transition_job_status': job.status,'job_info': job.info,'job_result': job.result}
+        return {'transition_job_status': job.status, 'job_info': job.info, 'job_result': job.result}
+
 
 class GetResourceClasses(AnonymousRequestHandler):
     def run(self, request):
@@ -124,8 +134,9 @@ class GetResourceClasses(AnonymousRequestHandler):
                 'default': natural_id(default_resource)
                 }
 
+
 class GetResources(AnonymousRequestHandler):
-    @extract_request_args('module_name','class_name')
+    @extract_request_args('module_name', 'class_name')
     def run(self, request, module_name, class_name):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(module_name, class_name)
@@ -159,10 +170,11 @@ class GetResources(AnonymousRequestHandler):
             columns.append({'sTitle': c['label'], 'mDataProp': c['name']})
         return {'aaData': rows, 'aoColumns': columns}
 
+
 # FIXME: this should be part of /storage_resource/
 # FIXME: should return a 204 status code
 class SetResourceAlias(AnonymousRequestHandler):
-    @extract_request_args('resource_id','alias')
+    @extract_request_args('resource_id', 'alias')
     def run(cls, request, resource_id, alias):
         from configure.models import StorageResourceRecord
         from django.shortcuts import get_object_or_404
@@ -173,6 +185,7 @@ class SetResourceAlias(AnonymousRequestHandler):
             record.alias = alias
         record.save()
         return {}
+
 
 class GetResource(AnonymousRequestHandler):
     @extract_request_args('resource_id')
@@ -202,6 +215,7 @@ class GetResource(AnonymousRequestHandler):
                 'charts': resource.get_charts(),
                 'propagated_alerts': prop_alerts}
 
+
 class GetLuns(AnonymousRequestHandler):
     @extract_request_args('category')
     def run(cls, request, category):
@@ -228,13 +242,14 @@ class GetLuns(AnonymousRequestHandler):
                              'name': lun.human_name(),
                              'kind': lun.human_kind(),
                              'available_hosts': available_hosts,
-                             'size':sizeof_fmt(lun.size),
+                             'size': sizeof_fmt(lun.size),
                              'status': lun.ha_status()
                            })
         return devices
 
+
 class CreateNewFilesystem(AnonymousRequestHandler):
-    @extract_request_args('fsname','mgt_id','mgt_lun_id','mdt_lun_id','ost_lun_ids')
+    @extract_request_args('fsname', 'mgt_id', 'mgt_lun_id', 'mdt_lun_id', 'ost_lun_ids')
     def run(self, request, fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids):
         # mgt_id and mgt_lun_id are mutually exclusive:
         # * mgt_id is a PK of an existing ManagedMgt to use
@@ -273,10 +288,12 @@ class CreateNewFilesystem(AnonymousRequestHandler):
 
         return fs.pk
 
+
 class CreateFilesystem(AnonymousRequestHandler):
-    @extract_request_args('mgs_id','fsname')
+    @extract_request_args('mgs_id', 'fsname')
     def run(self, request, mgs_id, fsname):
         create_fs(mgs_id, fsname)
+
 
 def create_fs(mgs_id, fsname):
         from configure.models import ManagedFilesystem, ManagedMgs
@@ -284,6 +301,7 @@ def create_fs(mgs_id, fsname):
         fs = ManagedFilesystem(mgs=mgs, name = fsname)
         fs.save()
         return fs
+
 
 class CreateMGT(AnonymousRequestHandler):
     @extract_request_args('lun_id')
@@ -317,6 +335,7 @@ def create_target(lun_id, target_klass, **kwargs):
 
     return target
 
+
 class CreateOSTs(AnonymousRequestHandler):
     @extract_request_args('filesystem_id', 'ost_lun_ids')
     def run(self, request, filesystem_id, ost_lun_ids):
@@ -333,33 +352,35 @@ class CreateOSTs(AnonymousRequestHandler):
         for target in osts:
             StateManager.set_state(target, 'mounted')
 
+
 class SetTargetConfParams(AnonymousRequestHandler):
     @extract_request_args('target_id', 'conf_params')
     def run(self, request, target_id, conf_params):
-        from configure.models import ManagedTarget,ManagedFilesystem,ManagedMdt,ManagedOst
+        from configure.models import ManagedTarget, ManagedFilesystem, ManagedMdt, ManagedOst
         from django.shortcuts import get_object_or_404
         from configure.models import ApplyConfParams
         from configure.lib.conf_param import all_params
         from configure.lib.state_manager import StateManager
-        
+
         target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
-        
-        def handle_conf_param(target,conf_params,mgs,**kwargs):
-            for k,v in conf_params:
-                 model_klass, param_value_obj, help_text = all_params[k]
-                 p = model_klass(key = k,
-                                 value = v,
-                                 **kwargs)
-                 mgs.set_conf_params([p])
-                 StateManager().add_job(ApplyConfParams(mgs = mgs))
-        
+
+        def handle_conf_param(target, conf_params, mgs, **kwargs):
+            for k, v in conf_params:
+                model_klass, param_value_obj, help_text = all_params[k]
+                p = model_klass(key = k,
+                                value = v,
+                                **kwargs)
+                mgs.set_conf_params([p])
+                StateManager().add_job(ApplyConfParams(mgs = mgs))
+
         if isinstance(target, ManagedMdt):
-            handle_conf_param(target,conf_params,target.filesystem.mgs.downcast(),mdt = target)
+            handle_conf_param(target, conf_params, target.filesystem.mgs.downcast(), mdt = target)
         elif (type(target.downcast().__class__) == ManagedOst):
-            handle_conf_param(target,conf_params,target.filesystem.mgs.downcast(),ost = target)
+            handle_conf_param(target, conf_params, target.filesystem.mgs.downcast(), ost = target)
         else:
             fs = ManagedFilesystem.objects.get(id=target_id)
-            handle_conf_param(target,conf_params,fs.mgs.downcast(),filesystem = fs)
+            handle_conf_param(target, conf_params, fs.mgs.downcast(), filesystem = fs)
+
 
 class GetTargetConfParams(AnonymousRequestHandler):
     @extract_request_args('target_id', 'kinds')
@@ -370,26 +391,26 @@ class GetTargetConfParams(AnonymousRequestHandler):
                                               MdtConfParam,
                                               get_conf_params,
                                               all_params)
-        from configure.models import ManagedTarget,ManagedMdt,ManagedOst 
-        from django.shortcuts import get_object_or_404        
-        kind_map = {"FSC":FilesystemClientConfParam,
+        from configure.models import ManagedTarget, ManagedMdt, ManagedOst
+        from django.shortcuts import get_object_or_404
+        kind_map = {"FSC": FilesystemClientConfParam,
                     "FS": FilesystemGlobalConfParam,
-                    "OST":OstConfParam,
-                    "MDT":MdtConfParam}
+                    "OST": OstConfParam,
+                    "MDT": MdtConfParam}
         result = []
-        
+
         def get_conf_param_for_target(target):
             conf_param_result = []
             for conf_param in target.get_conf_params():
-                conf_param_result.append({'conf_param':conf_param.key,
-                                          'value':conf_param.value,
-                                          'conf_param_help':all_params[conf_param.key][2]
+                conf_param_result.append({'conf_param': conf_param.key,
+                                          'value': conf_param.value,
+                                          'conf_param_help': all_params[conf_param.key][2]
                                          }
                                         )
-            return conf_param_result  
-        
+            return conf_param_result
+
         if target_id:
-            target = get_object_or_404(ManagedTarget, pk = target_id).downcast() 
+            target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
             if isinstance(target, ManagedMdt):
                 result.extend(get_conf_param_for_target(target))
                 kinds = ["MDT"]
@@ -398,7 +419,7 @@ class GetTargetConfParams(AnonymousRequestHandler):
                 kinds = ["OST"]
             else:
                 return result
-        #Fix me: Need a way to identify if the target is Filesystem or MGS    
+        #FIXME: Need a way to identify if the target is Filesystem or MGS
         if kinds:
             klasses = []
             for kind in kinds:
@@ -411,9 +432,10 @@ class GetTargetConfParams(AnonymousRequestHandler):
         for klass in klasses:
             conf_params = get_conf_params([klass])
             for conf_param in conf_params:
-                if not result.__contains__(conf_params): 
-                    result.append({'conf_param': conf_param, 'value': '', 'conf_param_help': all_params[conf_param][2]}) 
+                if not result.__contains__(conf_params):
+                    result.append({'conf_param': conf_param, 'value': '', 'conf_param_help': all_params[conf_param][2]})
         return result
+
 
 class Target(AnonymousRequestHandler):
     @extract_request_args('id')
@@ -422,6 +444,7 @@ class Target(AnonymousRequestHandler):
         from django.shortcuts import get_object_or_404
         target = get_object_or_404(ManagedTarget, pk = id).downcast()
         return target.to_dict()
+
 
 class GetTargetResourceGraph(AnonymousRequestHandler):
     @extract_request_args('target_id')
@@ -463,6 +486,7 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
         for i in range(0, len(rows) - 1):
             this_row = rows[i]
             next_row = rows[i + 1]
+
             def nextrow_affinity(obj):
                 # if this has a link to anything in the next row, what
                 # index in the next row?
@@ -530,17 +554,20 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
             'lustre_alerts': [a.to_dict() for a in lustre_alerts],
             'graph': graph}
 
+
 class CreateStorageResource(AnonymousRequestHandler):
     @extract_request_args('plugin', 'resource_class', 'attributes')
     def run(self, request, plugin, resource_class, attributes):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         storage_plugin_manager.create_root_resource(plugin, resource_class, **attributes)
 
+
 class CreatableStorageResourceClasses(AnonymousRequestHandler):
     @extract_request_args()
     def run(self, request):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         return storage_plugin_manager.get_scannable_resource_classes()
+
 
 class StorageResourceClassFields(AnonymousRequestHandler):
     @extract_request_args('plugin', 'resource_class')
@@ -555,6 +582,7 @@ class StorageResourceClassFields(AnonymousRequestHandler):
                 'optional': attr.optional,
                 'class': attr.__class__.__name__})
         return result
+
 
 class Notifications(AnonymousRequestHandler):
     @extract_request_args('filter_opts')
@@ -662,6 +690,7 @@ class Notifications(AnonymousRequestHandler):
                 'alerts': alert_dicts
                 }
 
+
 class TransitionConsequences(AnonymousRequestHandler):
     @extract_request_args('id', 'content_type_id', 'new_state')
     def run(self, request, id, content_type_id, new_state):
@@ -671,8 +700,9 @@ class TransitionConsequences(AnonymousRequestHandler):
         instance = klass.objects.get(pk = id)
         return StateManager().get_transition_consequences(instance, new_state)
 
+
 class Transition(AnonymousRequestHandler):
-    @extract_request_args('id','content_type_id', 'new_state')
+    @extract_request_args('id', 'content_type_id', 'new_state')
     def run(self, request, id, content_type_id, new_state):
         from configure.lib.state_manager import StateManager
         klass = ContentType.objects.get_for_id(content_type_id).model_class()
@@ -680,6 +710,7 @@ class Transition(AnonymousRequestHandler):
         StateManager.set_state(instance, new_state)
 
         return None
+
 
 class ObjectSummary(AnonymousRequestHandler):
     @extract_request_args('objects')
@@ -696,4 +727,3 @@ class ObjectSummary(AnonymousRequestHandler):
                            'state': instance.state,
                            'available_transitions': StateManager.available_transitions(instance)})
         return result
-
