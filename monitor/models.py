@@ -306,9 +306,9 @@ class AlertState(models.Model):
             alert_item = alert_item.downcast()
 
         if active:
-            return alert_klass.high(alert_item, **kwargs)
+            alert_klass.high(alert_item, **kwargs)
         else:
-            return alert_klass.low(alert_item, **kwargs)
+            alert_klass.low(alert_item, **kwargs)
 
     @classmethod
     def high(alert_klass, alert_item, **kwargs):
@@ -317,7 +317,8 @@ class AlertState(models.Model):
         now = datetime.datetime.now()
         try:
             alert_state = alert_klass.filter_by_item(alert_item).get(**kwargs)
-            created = False
+            alert_state.end = now
+            alert_state.save()
         except alert_klass.DoesNotExist:
             alert_state = alert_klass(
                     active = True,
@@ -326,22 +327,14 @@ class AlertState(models.Model):
                     alert_item = alert_item, **kwargs)
             try:
                 alert_state.save()
-                created = True
+                be = alert_state.begin_event()
+                if be:
+                    be.save()
             except IntegrityError:
-                # Handle colliding inserts
-                # NB not using get_or_create because of GenericForeignKey (https://code.djangoproject.com/ticket/2316)
-                alert_state = alert_klass.filter_by_item(alert_item).get(**kwargs)
-                created = False
-
-        if created:
-            be = alert_state.begin_event()
-            if be:
-                be.save()
-        else:
-            alert_state.end = now
-            alert_state.save()
-
-        return alert_state
+                # Handle colliding inserts: drop out here, no need to update
+                # the .end of the existing record as we are logically concurrent
+                # with the creator.
+                pass
 
     @classmethod
     def low(alert_klass, alert_item, **kwargs):
@@ -357,8 +350,6 @@ class AlertState(models.Model):
                 ee.save()
         except alert_klass.DoesNotExist:
             alert_state = None
-
-        return alert_state
 
 
 class TargetOfflineAlert(AlertState):
