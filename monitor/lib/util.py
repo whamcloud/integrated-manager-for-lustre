@@ -1,7 +1,9 @@
 
+
 def time_str(dt):
     import time
     return time.strftime("%Y-%m-%dT%H:%M:%S", dt.timetuple())
+
 
 def sizeof_fmt(num):
     # http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size/1094933#1094933
@@ -9,6 +11,7 @@ def sizeof_fmt(num):
         if num < 1024.0:
             return "%3.1f%s" % (num, x)
         num /= 1024.0
+
 
 def sizeof_fmt_detailed(num):
     for x in ['', 'kB', 'MB', 'GB', 'TB', 'EB', 'ZB', 'YB']:
@@ -18,12 +21,14 @@ def sizeof_fmt_detailed(num):
 
     return int(num)
 
+
 class timeit(object):
     def __init__(self, logger):
         self.logger = logger
 
     def __call__(self, method):
         from functools import wraps
+
         @wraps(method)
         def timed(*args, **kw):
             import time
@@ -49,5 +54,3 @@ class timeit(object):
                 return method(*args, **kw)
 
         return timed
-
-

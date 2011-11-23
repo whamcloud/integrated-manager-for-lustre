@@ -3,6 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+
 def page_load_time(request):
     import time
     return {'page_load_time': time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())}

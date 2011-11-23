@@ -16,36 +16,44 @@ def hydracm(request):
     return render_to_response("configuration_home.html",
             RequestContext(request, {}))
 
+
 def hydracmfstab(request):
     return render_to_response("lustre_fs_configuration.html",
             RequestContext(request, {}))
+
 
 def hydracmmgttab(request):
     return render_to_response("new_mgt.html",
             RequestContext(request, {}))
 
+
 def hydracmvolumetab(request):
     return render_to_response("volume_configuration.html",
             RequestContext(request, {}))
+
 
 def hydracmservertab(request):
     return render_to_response("server_configuration.html",
             RequestContext(request, {}))
 
+
 def storage_tab(request):
     return render_to_response("storage_configuration.html",
             RequestContext(request, {}))
+
 
 def hydracmnewfstab(request):
     return render_to_response("create_lustre_fs.html",
             RequestContext(request, {}))
 
+
 def hydracmeditfs(request):
-    fs_id=request.GET.get("fs_id")
+    fs_id = request.GET.get("fs_id")
     from configure.models import ManagedFilesystem
     fs = ManagedFilesystem.objects.get(pk = fs_id)
     return render_to_response("edit_fs.html",
-            RequestContext(request, {"fs_name": fs.name, "fs_id":fs_id}))
+            RequestContext(request, {"fs_name": fs.name, "fs_id": fs_id}))
+
 
 def states(request):
     return render_to_response("states.html", RequestContext(request, {
@@ -57,6 +65,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
+
 def set_state(request, content_type_id, stateful_object_id, new_state):
     stateful_object_klass = ContentType.objects.get(id = content_type_id).model_class()
     stateful_object = stateful_object_klass.objects.get(id = stateful_object_id)
@@ -65,6 +74,7 @@ def set_state(request, content_type_id, stateful_object_id, new_state):
     StateManager.set_state(stateful_object, new_state)
 
     return HttpResponse(status = 201)
+
 
 def _jobs_json():
     import json
@@ -130,19 +140,16 @@ def _jobs_json():
                 'stateful_objects': stateful_objects
             }, indent = 4)
 
+
 def job(request, job_id):
     from configure.models import Job
     job = get_object_or_404(Job, id = job_id)
     job = job.downcast()
 
     return render_to_response("job.html", RequestContext(request, {
-        'job': job 
-        })) 
+        'job': job
+        }))
 
 
 def jobs_json(request):
     return HttpResponse(_jobs_json(), 'application/json')
-
-
-
-

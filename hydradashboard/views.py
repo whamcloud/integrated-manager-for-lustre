@@ -13,21 +13,26 @@ from django.utils.cache import add_never_cache_headers
 import settings
 setup_environ(settings)
 
+
 def dashboard(request):
     return render_to_response("index.html",
             RequestContext(request, {}))
+
 
 def dbalerts(request):
     return render_to_response("db_alerts.html",
             RequestContext(request, {}))
 
+
 def dbevents(request):
     return render_to_response("db_events.html",
             RequestContext(request, {}))
 
+
 def dblogs(request):
     return render_to_response("db_logs.html",
             RequestContext(request, {}))
+
 
 def get_db_logs(request):
     from hydraapi.monitorapi import get_logs
@@ -41,6 +46,7 @@ def get_db_logs(request):
                           int(request.GET.get('iSortingCols', 0)))
     return send_datatable_response(log_result, int(request.GET.get('sEcho', 0)))
 
+
 def get_db_events(request):
     from hydraapi.monitorapi import geteventsbyfilter
     event_result = geteventsbyfilter(request.GET.get('host_id', None),
@@ -51,13 +57,14 @@ def get_db_events(request):
                                      int(request.GET.get('iSortingCols', 0)))
     return send_datatable_response(event_result, int(request.GET.get('sEcho', 0)))
 
+
 def send_datatable_response(result, sEcho):
     import json
 
     response_dict = {}
-    response_dict.update({'aaData':result['aaData']})
-    response_dict.update({'sEcho': sEcho, 'iTotalRecords': result['iTotalRecords'], 'iTotalDisplayRecords':result['iTotalDisplayRecords']})
-    response =  HttpResponse(json.dumps(response_dict), mimetype='application/javascript')
+    response_dict.update({'aaData': result['aaData']})
+    response_dict.update({'sEcho': sEcho, 'iTotalRecords': result['iTotalRecords'], 'iTotalDisplayRecords': result['iTotalDisplayRecords']})
+    response = HttpResponse(json.dumps(response_dict), mimetype='application/javascript')
     #prevent from caching datatables result
     add_never_cache_headers(response)
     return response

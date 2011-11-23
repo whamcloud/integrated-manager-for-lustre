@@ -22,8 +22,10 @@ file_log_name = __name__
 getLogger(file_log_name).setLevel(INFO)
 getLogger(file_log_name).addHandler(FileHandler("%s.log" % 'hydra'))
 
+
 def log():
     return getLogger(file_log_name)
+
 
 def screen(string):
     print string
@@ -37,6 +39,7 @@ try:
 except ImportError:
     print "[Warning, texttable not installed, some commands won't work]"
     Texttable = None
+
 
 class HydraDebug(cmd.Cmd, object):
     def __init__(self):
@@ -159,6 +162,7 @@ class HydraDebug(cmd.Cmd, object):
             else:
                 task_state = ""
             print "%s %s %s %s" % (m.host, m.state, m.task_id, task_state)
+
     def do_audit_clear(self, line):
         for m in Monitor.objects.all():
             m.update(state = 'idle', task_id = None)
@@ -183,6 +187,7 @@ class HydraDebug(cmd.Cmd, object):
         host = ManagedHost.objects.get(address = hostname)
         self._print_stat(host.metrics, stat_name)
 
+
 if __name__ == '__main__':
     cmdline = HydraDebug
 
@@ -193,5 +198,3 @@ if __name__ == '__main__':
             screen("Exiting...")
     else:
         cmdline().onecmd(" ".join(sys.argv[1:]))
-
-

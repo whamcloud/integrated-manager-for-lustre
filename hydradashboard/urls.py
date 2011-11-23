@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from django.conf.urls.defaults import *
+from django.conf.urls.defaults import patterns
 from views import (dashboard,
                    dbalerts,
                    dbevents,

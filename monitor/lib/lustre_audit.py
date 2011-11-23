@@ -27,6 +27,7 @@ if settings.DEBUG:
 else:
     audit_log.setLevel(logging.INFO)
 
+
 def nids_to_mgs(host, nid_strings):
     """nid_strings: nids of a target.  host: host on which the target was seen.
     Return a ManagedMgs or raise ManagedMgs.DoesNotExist"""
@@ -52,6 +53,7 @@ def nids_to_mgs(host, nid_strings):
 
     return mgs
 
+
 def normalize_nid(string):
     """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
        direct comparisons between NIDs"""
@@ -65,10 +67,12 @@ def normalize_nid(string):
 
     return string
 
+
 def normalize_nids(nid_list):
     """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
        direct comparisons between NIDs"""
     return [normalize_nid(n) for n in nid_list]
+
 
 class NoLNetInfo(Exception):
     pass
@@ -609,5 +613,3 @@ class DetectScan(object):
             if created:
                 audit_log.info("Learned filesystem '%s'" % fs_name)
                 self.learn_event(fs)
-
-

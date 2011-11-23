@@ -25,6 +25,7 @@ else:
 
 _re_cache = {}
 
+
 def re_find_one_in_many(haystack, needles):
     """Find the first instance of any of 'needles' in haystack"""
     if not isinstance(needles, tuple):
@@ -42,6 +43,7 @@ def re_find_one_in_many(haystack, needles):
     else:
         return None
 
+
 def plain_find_one_in_many(haystack, needles):
     for n in needles:
         if haystack.find(n) != -1:
@@ -51,6 +53,7 @@ def plain_find_one_in_many(haystack, needles):
 # in the future, we can switch to REs or a combination
 find_one_in_many = plain_find_one_in_many
 
+
 #
 # acceptor port is already being used
 #
@@ -58,6 +61,7 @@ find_one_in_many = plain_find_one_in_many
 def port_used_handler(entry, h):
     SyslogEvent(severity = logging.ERROR, host = h,
                 message_str = "Lustre port already being used").save()
+
 
 #
 # client connected to services:
@@ -87,6 +91,7 @@ def client_connection_handler(entry, h):
     ClientConnectEvent(severity = sev, host = h, message_str = msg,
                        lustre_pid = lustre_pid).save()
 
+
 #
 # Lustre: 5629:0:(sec.c:1474:sptlrpc_import_sec_adapt()) import lustre-MDT0000->NET_0x20000c0a87ada_UUID netid 20000: select flavor null
 #
@@ -101,6 +106,7 @@ def server_security_flavor_handler(entry, h):
     event.message_str = "%s with security flavor %s" % \
                         (event.message_str, flavour)
     event.save()
+
 
 #
 # client evicted by the admin:
@@ -118,8 +124,8 @@ def client_eviction_handler(entry, h):
     ClientConnectEvent(severity = logging.WARNING, host = h, message_str = msg,
                        lustre_pid = lustre_pid).save()
 
-class SystemEventsAudit:
 
+class SystemEventsAudit:
     def get_last_id(self):
         from monitor.models import LastSystemeventsProcessed
         l, c = LastSystemeventsProcessed.objects.get_or_create(id__gt = 0)
