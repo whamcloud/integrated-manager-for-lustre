@@ -9,7 +9,6 @@ to define their system elements"""
 from configure.lib.storage_plugin.attributes import ResourceAttribute
 from configure.lib.storage_plugin.statistics import BaseStatistic
 from configure.lib.storage_plugin.alert_conditions import AlertCondition
-from configure.lib.storage_plugin.log import storage_plugin_log
 
 from collections import defaultdict
 import threading
@@ -135,12 +134,6 @@ class StorageResource(object):
     def get_attribute_properties(cls, name):
         return cls._storage_attributes[name]
 
-    def flush_stats(self):
-        with self._delta_stats_lock:
-            tmp = self._delta_stats
-            self._delta_stats = {}
-        return tmp
-
     def __init__(self, **kwargs):
         self._storage_dict = {}
         self._plugin = None
@@ -258,7 +251,6 @@ class StorageResource(object):
     @classmethod
     def attrs_to_id_tuple(cls, attrs):
         """Serialized ID for use in StorageResourceRecord.storage_id_str"""
-        import json
         identifier_val = []
         for f in cls.identifier.id_fields:
             if f in attrs:

@@ -14,10 +14,10 @@ from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
-from configure.models import *
+from configure.models import ManagedFilesystem, ManagedHost, FilesystemClientConfParam, FilesystemGlobalConfParam
+from configure.models import ManagedMdt, ManagedOst, MdtConfParam, OstConfParam
 from configure.lib.state_manager import StateManager
 
-from collections import defaultdict
 import cmd
 
 

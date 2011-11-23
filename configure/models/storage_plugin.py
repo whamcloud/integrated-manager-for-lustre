@@ -71,7 +71,7 @@ class StorageResourceRecord(models.Model):
         # Root resource do not have parents so they must be globally identified
         from configure.lib.storage_plugin.resource import GlobalId
         if not isinstance(resource_class.identifier, GlobalId):
-            raise RuntimeError("Cannot create root resource of class %s, it is not globally identified" % resource_class_name)
+            raise RuntimeError("Cannot create root resource of class %s, it is not globally identified" % resource_class)
 
         # NB assumes that none of the items in ID tuple are ResourceReferences: this
         # would raise an exception from json encoding.

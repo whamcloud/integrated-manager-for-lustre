@@ -248,7 +248,6 @@ class Linux(StoragePlugin):
         # Okay, now we've got ScsiDeviceNodes, time to build the devicemapper ones
         # on top of them.  These can come in any order and be nested to any depth.
         # So we have to build a graph and then traverse it to populate our resources.
-        edges = []
         for bdev in devices['devs'].values():
             if bdev['major_minor'] in lv_block_devices:
                 res, created = self.update_or_create(LvmDeviceNode,

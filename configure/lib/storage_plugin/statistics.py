@@ -13,7 +13,7 @@ class BaseStatistic(object):
         """'units' can be None for dimensionless scalars, UNITS_BYTES for
         sizes in bytes, or a string for arbitrary units"""
         try:
-            test = int(sample_period)
+            int(sample_period)
         except ValueError:
             raise RuntimeError("sample period '%s' is not an integer!" % sample_period)
 

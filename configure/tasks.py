@@ -84,12 +84,12 @@ def _remove_old_jobs():
        JOB_MAX_AGE to None to have immortal Jobs."""
 
     try:
-        from settings import JOB_MAX_AGE
-    except ImportError:
-        JOB_MAX_AGE = None
+        max_age = settings.JOB_MAX_AGE
+    except AttributeError:
+        max_age = None
 
     from configure.models import Job
-    old_jobs = Job.objects.filter(created_at__lt = datetime.now() - timedelta(seconds = JOB_MAX_AGE))
+    old_jobs = Job.objects.filter(created_at__lt = datetime.now() - timedelta(seconds = max_age))
     if old_jobs.count() > 0:
         job_log.info("Removing %d old Job objects" % old_jobs.count())
         # Jobs cannot be deleted in one go because of intra-job foreign keys

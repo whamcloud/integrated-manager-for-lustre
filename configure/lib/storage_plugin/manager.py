@@ -10,9 +10,9 @@ access to StoragePlugins and their StorageResources"""
 from configure.lib.storage_plugin.resource import StorageResource, ScannableResource
 from configure.lib.storage_plugin.plugin import StoragePlugin
 from configure.lib.storage_plugin.log import storage_plugin_log
-from configure.models.storage_plugin import *
+from configure.models.storage_plugin import StoragePluginRecord, StorageResourceClassStatistic
+from configure.models.storage_plugin import StorageResourceRecord, StorageResourceClass
 from django.db import transaction
-import json
 
 
 class LoadedResourceClass(object):

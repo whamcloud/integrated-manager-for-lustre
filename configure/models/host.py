@@ -206,8 +206,6 @@ class Lun(models.Model):
     def get_usable_luns(cls):
         """Get all Luns which are not used by Targets and have enough LunNode configuration
         to be used as a Target (i.e. have only one node or at least have a primary node set)"""
-        from django.db.models import Count
-
         # Our result will be a subset of unused_luns
         unused_luns = cls.get_unused_luns()
 
@@ -260,37 +258,22 @@ class Lun(models.Model):
          * is the configuration (if present) HA?
          by returning one of 'unconfigured', 'configured-ha', 'configured-noha'
         """
-
-        HA_CAP_YES = 0
-        HA_CAP_NO = 1
-        HA_CAP_MAYBE = 2
-        CONFIGURED_NO = 3
-        CONFIGURED_YES_HA = 4
-        CONFIGURED_YES_NOHA = 5
-
-        detail_status = None
         if not self.shareable:
-            detail_status = (HA_CAP_NO, CONFIGURED_YES_NOHA)
             return 'configured-noha'
         else:
             lunnode_count = self.lunnode_set.count()
             primary_count = self.lunnode_set.filter(primary = True).count()
             failover_count = self.lunnode_set.filter(primary = False, use = True).count()
             if lunnode_count == 1 and primary_count == 0:
-                detail_status = (HA_CAP_MAYBE, CONFIGURED_NO)
                 return 'configured-noha'
             elif lunnode_count == 1 and primary_count > 0:
-                detail_status = (HA_CAP_MAYBE, CONFIGURED_YES_NOHA)
                 return 'configured-noha'
             elif primary_count > 0 and failover_count == 0:
-                detail_status = (HA_CAP_YES, CONFIGURED_YES_NOHA)
                 return 'configured-noha'
             elif primary_count > 0 and failover_count > 0:
-                detail_status = (HA_CAP_YES, CONFIGURED_YES_HA)
                 return 'configured-ha'
             else:
                 # Has no LunNodes, or has >1 but no primary
-                detail_status = (HA_CAP_YES, CONFIGURED_NO)
                 return 'unconfigured'
 
 

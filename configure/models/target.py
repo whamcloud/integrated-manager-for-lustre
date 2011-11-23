@@ -67,7 +67,8 @@ class ManagedTarget(StatefulObject):
         return [(p.key, p.value) for p in self.targetparam_set.all()]
 
     def primary_host(self):
-        return TargetMount.objects.get(target = self, primary = True).host
+        from configure.models.target_mount import ManagedTargetMount
+        return ManagedTargetMount.objects.get(target = self, primary = True).host
 
     def human_name(self):
         if self.name:

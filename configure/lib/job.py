@@ -203,8 +203,6 @@ class MkfsStep(Step):
 
         if isinstance(target, FilesystemMember):
             kwargs['fsname'] = target.filesystem.name
-            mgs = target.filesystem.mgs.downcast()
-            nids = mgs.nids()
             kwargs['mgsnode'] = target.filesystem.mgs.nids()
 
         kwargs['reformat'] = True

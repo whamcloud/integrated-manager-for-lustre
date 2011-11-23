@@ -389,9 +389,11 @@ class ResourceManager(object):
                         log.info("Keeping Lun %s, reffed by another LunNode" % lun_node)
 
     def session_update_resource(self, scannable_id, local_resource_id, attrs):
-        with self._instance_lock:
-            session = self._sessions[scannable_id]
-            record_pk = session.local_id_to_global_id[local_resource_id]
+        #with self._instance_lock:
+        #    session = self._sessions[scannable_id]
+        #    record_pk = session.local_id_to_global_id[local_resource_id]
+        #    # TODO: implement
+        pass
 
     def session_resource_add_parent(self, scannable_id, local_resource_id, local_parent_id):
         with self._instance_lock:
