@@ -375,7 +375,7 @@ class SetTargetConfParams(AnonymousRequestHandler):
 
         if isinstance(target, ManagedMdt):
             handle_conf_param(target, conf_params, target.filesystem.mgs.downcast(), mdt = target)
-        elif (type(target.downcast().__class__) == ManagedOst):
+        elif isinstance(target, ManagedOst):
             handle_conf_param(target, conf_params, target.filesystem.mgs.downcast(), ost = target)
         else:
             fs = ManagedFilesystem.objects.get(id=target_id)

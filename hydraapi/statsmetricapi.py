@@ -15,6 +15,7 @@ from configure.models import (ManagedFilesystem,
                             ManagedMdt,
                             ManagedOst,
                             ManagedHost)
+from django.shortcuts import get_object_or_404
 
 
 class GetFSTargetStats(AnonymousRequestHandler):
@@ -23,7 +24,7 @@ class GetFSTargetStats(AnonymousRequestHandler):
         assert targetkind in ['OST', 'MDT', 'HOST']
         interval = ''
         if filesystem_id:
-            fs = ManagedFilesystem.objects.get(id=filesystem_id)
+            fs = get_object_or_404(ManagedFilesystem, pk = filesystem_id)
             return self.metrics_fetch(fs, targetkind, fetchmetrics, starttime, endtime, interval)
         else:
             all_fs_stats = []
@@ -90,7 +91,7 @@ class GetFSServerStats(AnonymousRequestHandler):
     def run(self, request, filesystem_id, starttime, endtime, datafunction, fetchmetrics):
         interval = ''
         if filesystem_id:
-            fs = ManagedFilesystem.objects.get(id = filesystem_id)
+            fs = get_object_or_404(ManagedFilesystem, pk = filesystem_id)
             return self.metrics_fetch(fs, fetchmetrics, starttime, endtime, interval)
         else:
             all_fs_stats = []
@@ -131,7 +132,7 @@ class GetFSMGSStats(AnonymousRequestHandler):
         interval = ''
         if filesystem_id:
             mgs_stats_metric = []
-            fs = ManagedFilesystem.objects.get(id=filesystem_id)
+            fs = get_object_or_404(ManagedFilesystem, pk = filesystem_id)
             mgs = fs.mgs
             mgs_stats_metric.append(self.metrics_fetch(mgs, fetchmetrics, starttime, endtime, interval))
             return mgs_stats_metric
@@ -174,7 +175,7 @@ class GetServerStats(AnonymousRequestHandler):
     def run(self, request, host_id, starttime, endtime, datafunction, fetchmetrics):
         interval = ''
         if host_id:
-            host = ManagedHost.objects.get(id=host_id)
+            host = get_object_or_404(ManagedHost, pk = host_id)
             return self.metrics_fetch(host, fetchmetrics, starttime, endtime, interval)
         else:
             raise Exception("Unable to find host with host_id=%s" % host_id)
@@ -212,15 +213,17 @@ class GetTargetStats(AnonymousRequestHandler):
         assert targetkind in ['OST', 'MDT']
         interval = ''
         if targetkind == 'OST':
-            target = ManagedOst.objects.get(id=target_id)
+            target = get_object_or_404(ManagedOst, pk = target_id)
             return self.metrics_fetch(target, fetchmetrics, starttime, endtime, interval)
         elif targetkind == 'MDT':
-            target = ManagedMdt.objects.get(id=target_id)
+            target = get_object_or_404(ManagedMdt, pk = target_id)
             return self.metrics_fetch(target, fetchmetrics, starttime, endtime, interval)
 
     def metrics_fetch(self, target, fetch_metrics, start_time, end_time, interval, datafunction='Average'):
         if start_time:
             start_time = int(start_time)
+            #Fix Me: ManagedOst/Mdt.metrics.fetch() still not supporting start_time as datetime.datetime.
+            # remove below commented code once support is in place.
             #start_time = getstartdate(start_time)
             if fetch_metrics:
                 target_stats = target.metrics.fetch(datafunction, fetch_metrics=fetch_metrics.split(), start_time=start_time)
@@ -253,7 +256,7 @@ class GetFSClientsStats(AnonymousRequestHandler):
         interval = ''
         client_stats = []
         if filesystem_id:
-            fs = ManagedFilesystem.objects.get(id=filesystem_id)
+            fs = get_object_or_404(ManagedFilesystem, pk = filesystem_id)
             return self.metrics_fetch(fs, starttime, endtime, interval)
         else:
             for fs in ManagedFilesystem.objects.all():

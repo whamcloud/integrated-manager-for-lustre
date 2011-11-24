@@ -113,6 +113,7 @@ class extract_request_args:
             # This will be rquired for session management
             #if request.session:
             #    request.session.set_expiry(request.user.get_inactivity_timeout())
+            import urllib2
             call_args = {}
             data = request.data
             errors = {}
@@ -125,35 +126,6 @@ class extract_request_args:
                     pass
 
             if len(errors) > 0:
-                raise Exception(errors)
-            return f(wrapped_self, request, **call_args)
-        return wrapped_f
-
-
-class extract_request_args_old:
-    """Extracts specified keys from the request dictionary and calls the wrapped
-    function
-    """
-    def __init__(self, **kwargs):
-        self.args = kwargs
-
-    def __call__(self, f):
-        def wrapped_f(wrapped_self, request):
-            # This will be rquired for session management
-            #if request.session:
-            #    request.session.set_expiry(request.user.get_inactivity_timeout())
-            call_args = {}
-            data = request.data
-            errors = {}
-            #Fill in the callArgs with values from the request data
-            for key, value in self.args.items():
-                try:
-                    call_args[key] = data[value]
-                except:
-                    errors[value] = ["This field is required."]
-                    pass
-
-            if len(errors) > 0:
-                raise Exception(errors)
+                raise urllib2.URLError(errors)
             return f(wrapped_self, request, **call_args)
         return wrapped_f

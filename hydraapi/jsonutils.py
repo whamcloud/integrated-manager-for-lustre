@@ -63,6 +63,7 @@ def render_to_json(**jsonargs):
             result = None
             try:
                 result = f(wrapped_self, request, *args, **kwargs)
+                r = get_http_response_with_status_code()
             except Exception as e:
                 if hasattr(e, 'message_dict'):
                     errors = e.message_dict
@@ -70,6 +71,7 @@ def render_to_json(**jsonargs):
                     #failure_exception = FailureException(str(e))
                     #errors = failure_exception.message_dicta
                     errors = str(e)
+                r = get_http_response_with_status_code(e)
                 r.write(construct_json_response(request=request,
                                                 success=False,
                                                 errors = errors,
@@ -98,3 +100,20 @@ def construct_json_response(request, success, errors=None, response=None):
     response_dict['errors'] = errors
     response_dict['response'] = response
     return DjangoTimeJSONEncoder().encode(request, response_dict)
+
+
+def get_http_response_with_status_code(exception=None):
+    from django.http import Http404
+    from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+    from django.db import  IntegrityError
+    exception_status_code = {urllib2.URLError: 400,
+                             PermissionDenied: 401,
+                             Http404: 404,
+                             ObjectDoesNotExist: 404,
+                             IntegrityError: 409}
+    res = HttpResponse(mimetype='application/json')
+    if not exception:
+        return res
+    else:
+        res.status_code = exception_status_code.get(type(exception), None) or exception_status_code.get(exception.__class__.__base__, None) or 500
+    return res
