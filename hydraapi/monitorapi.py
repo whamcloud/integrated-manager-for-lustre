@@ -387,7 +387,6 @@ def get_logs(host_id, start_time, end_time, lustre, page_id, page_size, custom_s
                     'service': systemevent_record.syslogtag.rstrip(":"),
                     'date': systemevent_record.devicereportedtime.strftime("%b %d %H:%M:%S"),
                     'host': systemevent_record.fromhost,
-                    'class': log_class(systemevent_record),
                     'DT_RowClass': log_class(systemevent_record)
                    }
 
