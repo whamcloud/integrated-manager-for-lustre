@@ -112,8 +112,6 @@ def get_http_response_with_status_code(exception=None):
                              ObjectDoesNotExist: 404,
                              IntegrityError: 409}
     res = HttpResponse(mimetype='application/json')
-    if not exception:
-        return res
-    else:
+    if exception:
         res.status_code = exception_status_code.get(type(exception), None) or exception_status_code.get(exception.__class__.__base__, None) or 500
     return res
