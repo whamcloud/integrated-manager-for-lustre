@@ -25,7 +25,6 @@ WARNING:
 from configure.lib.storage_plugin.log import storage_plugin_log as log
 from configure.lib.storage_plugin.resource import ScannableId, GlobalId
 from configure.lib.storage_plugin.manager import storage_plugin_manager
-from monitor.lib.util import timeit
 
 from django.db import transaction
 
@@ -158,7 +157,6 @@ class ResourceManager(object):
         self._subscriber_index = SubscriberIndex()
         self._subscriber_index.populate()
 
-    @timeit(logger = log)
     def session_open(self,
             scannable_id,
             scannable_local_id,

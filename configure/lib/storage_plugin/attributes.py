@@ -64,7 +64,7 @@ class String(ResourceAttribute):
 
     def validate(self, value):
         if self.max_length != None and len(value) > self.max_length:
-            raise RuntimeError("Value '%s' too long (max %s)" % (value, self.max_length))
+            raise ValueError("Value '%s' too long (max %s)" % (value, self.max_length))
 
 
 class Boolean(ResourceAttribute):
@@ -85,9 +85,9 @@ class Integer(ResourceAttribute):
 
     def validate(self, value):
         if self.min_val != None and value < self.min_val:
-            raise RuntimeError("Value %s too low (min %s)" % (value, self.min_val))
+            raise ValueError("Value %s too low (min %s)" % (value, self.min_val))
         if self.max_val != None and value > self.max_val:
-            raise RuntimeError("Value %s too high (max %s)" % (value, self.max_val))
+            raise ValueError("Value %s too high (max %s)" % (value, self.max_val))
 
 
 # TODO: This is useful if the caller can give you an exact number of bytes
@@ -166,6 +166,6 @@ class ResourceReference(ResourceAttribute):
         if value == None and self.optional:
             return
         elif value == None and not self.optional:
-            raise RuntimeError("ResourceReference set to None but not optional" % value)
+            raise ValueError("ResourceReference set to None but not optional")
         elif not isinstance(value, StorageResource):
-            raise RuntimeError("Cannot take ResourceReference to %s" % value)
+            raise ValueError("Cannot take ResourceReference to %s" % value)

@@ -136,9 +136,9 @@ class StorageDaemon(object):
         # We will be polling, to need to commit to see new data
         with transaction.commit_manually():
             transaction.commit()
-            records = storage_plugin_manager.get_scannable_resource_ids(plugin)
-        for r in records:
-            yield r['id']
+            ids = storage_plugin_manager.get_scannable_resource_ids(plugin)
+            transaction.commit()
+        return ids
 
     def all_sessions(self):
         for session_map in self.plugins.values():

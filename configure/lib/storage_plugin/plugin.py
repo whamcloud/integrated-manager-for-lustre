@@ -7,7 +7,6 @@ import settings
 
 from configure.lib.storage_plugin.resource import StorageResource
 from configure.lib.storage_plugin.log import storage_plugin_log
-from monitor.lib.util import timeit
 
 import threading
 
@@ -196,15 +195,15 @@ class StoragePlugin(object):
                         active, alert_class, attribute)
             self._delta_alerts.clear()
 
-    @timeit(logger = storage_plugin_log)
     def commit_resource_statistics(self):
         self.log.debug(">> Plugin.commit_resource_statistics %s", self._scannable_id)
         sent_stats = 0
         for resource in self._index.all():
             r_stats = resource.flush_stats()
-            from configure.lib.storage_plugin.resource_manager import resource_manager
-            resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
-            sent_stats += len(r_stats)
+            if len(r_stats) > 0:
+                from configure.lib.storage_plugin.resource_manager import resource_manager
+                resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
+                sent_stats += len(r_stats)
         self.log.debug("<< Plugin.commit_resource_statistics %s (%s sent)", self._scannable_id, sent_stats)
 
     def update_or_create(self, klass, parents = [], **attrs):

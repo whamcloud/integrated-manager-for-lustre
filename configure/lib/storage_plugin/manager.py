@@ -29,32 +29,24 @@ class LoadedPlugin(object):
     def __init__(self, plugin_manager, module, plugin_class):
         # Map of name string to class
         self.resource_classes = {}
-        self.module = module
         self.plugin_class = plugin_class
-        self.plugin_record, created = StoragePluginRecord.objects.get_or_create(module_name = module.__name__)
+        self.plugin_record, created = StoragePluginRecord.objects.get_or_create(module_name = module)
         self.scannable_resource_classes = []
 
-        import inspect
-        for name, cls in inspect.getmembers(module):
-            if inspect.isclass(cls) and issubclass(cls, StorageResource) and cls != StorageResource:
-                if issubclass(cls, ScannableResource):
-                    self.scannable_resource_classes.append(name)
+        for cls in plugin_class._resource_classes:
+            # Populate database records for the classes
+            vrc, created = StorageResourceClass.objects.get_or_create(
+                    storage_plugin = self.plugin_record,
+                    class_name = cls.__name__)
+            for name, stat_obj in cls._storage_statistics.items():
+                class_stat, created = StorageResourceClassStatistic.objects.get_or_create(
+                        resource_class = vrc,
+                        name = name)
 
-                # FIXME: this limits plugin authors to putting everything in the same
-                # module, don't forget to tell them that!  Doesn't mean they can't break
-                # code up between files, but names must all be in the module.
-                vrc, created = StorageResourceClass.objects.get_or_create(
-                        storage_plugin = self.plugin_record,
-                        class_name = name)
-
-                plugin_manager.resource_class_id_to_class[vrc.id] = cls
-
-                self.resource_classes[name] = LoadedResourceClass(cls, vrc.id)
-
-                for name, stat_obj in cls._storage_statistics.items():
-                    class_stat, created = StorageResourceClassStatistic.objects.get_or_create(
-                            resource_class = vrc,
-                            name = name)
+            plugin_manager.resource_class_id_to_class[vrc.id] = cls
+            self.resource_classes[cls.__name__] = LoadedResourceClass(cls, vrc.id)
+            if issubclass(cls, ScannableResource):
+                self.scannable_resource_classes.append(cls.__name__)
 
 
 class StoragePluginManager(object):
@@ -73,10 +65,11 @@ class StoragePluginManager(object):
 
     def get_scannable_resource_ids(self, plugin):
         loaded_plugin = self.loaded_plugins[plugin]
-        return StorageResourceRecord.objects.\
+        records = StorageResourceRecord.objects.\
                filter(resource_class__storage_plugin = loaded_plugin.plugin_record).\
                filter(resource_class__class_name__in = loaded_plugin.scannable_resource_classes).\
                filter(parents = None).values('id')
+        return [r['id'] for r in records]
 
     def get_scannable_resource_classes(self):
         class_records = []
@@ -107,6 +100,7 @@ class StoragePluginManager(object):
         # StorageResource subclasses which are already present in running plugins.
 
         storage_plugin_log.debug("create_root_resource created %d" % (record.id))
+        return record.pk
 
     def register_plugin(self, plugin_instance):
         """Register a particular instance of a StoragePlugin"""
@@ -124,8 +118,16 @@ class StoragePluginManager(object):
             loaded_plugin = self.loaded_plugins[plugin_module]
         except KeyError:
             raise RuntimeError("Plugin %s not found (not one of %s)" % (plugin_module, self.loaded_plugins.keys()))
-        return loaded_plugin.resource_classes[resource_class_name].resource_class, loaded_plugin.resource_classes[resource_class_name].resource_class_id
 
+        try:
+            loaded_resource = loaded_plugin.resource_classes[resource_class_name]
+        except KeyError:
+            raise RuntimeError("Resource %s not found in %s (not one of %s)" % (
+                resource_class_name, plugin_module, loaded_plugin.resource_classes.keys()))
+
+        return loaded_resource.resource_class, loaded_resource.resource_class_id
+
+    # FIXME: rename to get_all_resource_classes
     def get_all_resources(self):
         for plugin in self.loaded_plugins.values():
             for loaded_res in plugin.resource_classes.values():
@@ -133,6 +135,10 @@ class StoragePluginManager(object):
 
     def get_plugin_class(self, module):
         return self.loaded_plugins[module].plugin_class
+
+    def _load_plugin(self, module_name, plugin_klass):
+        storage_plugin_log.debug("_load_plugin %s %s" % (module_name, plugin_klass))
+        self.loaded_plugins[module_name] = LoadedPlugin(self, module_name, plugin_klass)
 
     def load_plugin(self, module):
         """Load a StoragePlugin class from a module given a
@@ -143,19 +149,21 @@ class StoragePluginManager(object):
 
            @return A subclass of StoragePlugin"""
         if module in self.loaded_plugins:
-            return self.loaded_plugins[module].plugin_class
+            raise RuntimeError("Duplicate storage plugin module %s" % module)
 
         # Load the module
         mod = __import__(module)
         components = module.split('.')
+        plugin_name = module
         for comp in components[1:]:
             mod = getattr(mod, comp)
-        plugin = mod
+            plugin_name = comp
+        plugin_module = mod
 
         # Find all StoragePlugin subclasses in the module
         plugin_klasses = []
         import inspect
-        for name, cls in inspect.getmembers(plugin):
+        for name, cls in inspect.getmembers(plugin_module):
             if inspect.isclass(cls) and issubclass(cls, StoragePlugin) and cls != StoragePlugin:
                 plugin_klasses.append(cls)
 
@@ -167,7 +175,16 @@ class StoragePluginManager(object):
         else:
             plugin_klass = plugin_klasses[0]
 
-        self.loaded_plugins[plugin_klass.__module__] = LoadedPlugin(self, plugin, plugin_klass)
+        # Populate _resource_classes from all StorageResource in the same module
+        # (or leave it untouched if the plugin author overrode it)
+        if not hasattr(plugin_klass, '_resource_classes'):
+            import inspect
+            plugin_klass._resource_classes = []
+            for name, cls in inspect.getmembers(plugin_module):
+                if inspect.isclass(cls) and issubclass(cls, StorageResource) and cls != StorageResource:
+                    plugin_klass._resource_classes.append(cls)
+
+        self._load_plugin(plugin_name, plugin_klass)
         return plugin_klass
 
 
