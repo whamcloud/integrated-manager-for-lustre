@@ -365,10 +365,10 @@ class SetTargetConfParams(AnonymousRequestHandler):
         target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
 
         def handle_conf_param(target, conf_params, mgs, **kwargs):
-            for k, v in conf_params:
-                model_klass, param_value_obj, help_text = all_params[k]
-                p = model_klass(key = k,
-                                value = v,
+            for conf_param in conf_params:
+                model_klass, param_value_obj, help_text = all_params[conf_param]
+                p = model_klass(key = conf_param,
+                                value = conf_params[conf_param],
                                 **kwargs)
                 mgs.set_conf_params([p])
                 StateManager().add_job(ApplyConfParams(mgs = mgs))
