@@ -60,7 +60,9 @@ CHECKS = [
         'output': 'Running Pyflakes...',
         'command': 'pyflakes %s',
         'match_files': ['.*\.py$', '.*setup.py.in'],
-        'ignore_files': ['.*settings/.*', '.*manage.py', '.*migrations.*', '.*/terrain/.*', '.*configure/models/__init__.py', '.*settings.py'],
+        # NB excluding configure/models/__init__.py and configure/tests.py because they import things
+        # but don't use them
+        'ignore_files': ['.*settings/.*', '.*manage.py', '.*migrations.*', '.*/terrain/.*', '.*configure/models/__init__.py', '.*settings.py', '.*configure/tests.py'],
         'print_filename': False,
     },
     {
