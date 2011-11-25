@@ -212,7 +212,7 @@ $(document).ready(function() {
     
     $('#ConfigParam_Apply').click(function()
     {
-      ApplyConfigParam(oTargetFSConfigParam);
+      ApplyConfigParam(oTargetFSConfigParam, $('#config_home_target_id').val());
     });
     
     });
@@ -236,6 +236,7 @@ $(document).ready(function() {
 {% endblock %}
 {% block include_content %}{% endblock %}
 {% block content %}
+<input type=hidden id="config_home_target_id" value="" />
 <div id="tabs">
   <ul>
     <li><a href='#filesystems' title='filesystems'>Filesystems</a></li>
