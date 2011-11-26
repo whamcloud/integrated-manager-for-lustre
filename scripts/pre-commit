@@ -116,9 +116,14 @@ def main(all_files):
     
     result = 0
     
-    print 'Running Django Code Validator...'
-    return_code = subprocess.call('python manage.py validate', shell=True)
-    result = return_code or result
+    p = subprocess.Popen(['python', 'manage.py', '--version'], stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    if p.returncode == 0:
+        print 'Running Django Code Validator...'
+        return_code = subprocess.call('python manage.py validate', shell=True)
+        result = return_code or result
+    else:
+        print 'NOT Running Django Code Validator...'
     
     for check in CHECKS:
         result = check_files(files, check) or result
