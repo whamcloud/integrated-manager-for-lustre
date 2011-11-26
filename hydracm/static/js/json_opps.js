@@ -6,6 +6,7 @@ var ERR_COMMON_CREATE_OST = "Error in Creating OST: ";
 var ERR_COMMON_CREATE_MGT = "Error in Creating MGT: ";
 var ERR_COMMON_CREATE_MDT = "Error in Creating MDT: ";
 var ERR_COMMON_START_OST = "Error in Starting OST: ";
+var ERR_CONFIF_PARAM = "Error in Param Cofiguration: ";
 
 var ALERT_TITLE = "Configuration Manager";
 var CONFIRM_TITLE = "Configuration Manager";
@@ -213,7 +214,7 @@ function CreateTable_FS_Config_Param(data, table_id)
   $.each(data, function(resKey, resValue)
   {   
     property_box = "<input type=textbox value='" + resValue.value + "' id='" + text_index + 
-    "' title='" + resValue.conf_param_help + "'/>"; 
+    "' title='" + resValue.conf_param_help + "' onblur='validateNumber("+text_index+")'/>"; 
     text_index++;
     $('#' + table_id).dataTable().fnAddData ([
       resValue.conf_param, 
@@ -223,30 +224,51 @@ function CreateTable_FS_Config_Param(data, table_id)
   });
 }
 
-function ApplyConfigParam(table_obj)
+function validateNumber(obj_id)
 {
+    if (isNaN($("#"+obj_id).val()))
+    {
+        jAlert("Please enter numeric value");
+        $("#"+obj_id).attr("value","");
+        $("#"+obj_id).focus();
+    }
+}
+
+function ApplyConfigParam(table_obj,target_id)
+{
+  var change_flag = false;
   var oSetting = table_obj.fnSettings();
-  //var config_arr = new Array();
+  var config_json = {}
   for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
     if(oSetting.aoData[i]._aData[2] != $("input#"+i).val())
     {
-      //config_arr.push("name:"oSetting.aoData[i]._aData[0] + "," + "value:"$("input#"+i).val()); 
+       config_json[oSetting.aoData[i]._aData[0]] = $("input#"+i).val();
+       change_flag = true;
     }
   }
-   $.post("/api/set_conf_params/",({"target_id": target_id, 
-                                    "conf_params": JSON.stringify(config_arr)}))
-    .success(function(data, textStatus, jqXHR) 
+  if(change_flag)
+  {
+    $.ajax({type: 'POST', url: "/api/set_conf_params/", dataType: 'json', data: JSON.stringify({
+      "target_id": target_id,
+      "conf_params": config_json
+    }), contentType:"application/json; charset=utf-8"})   
+    .success(function(data, textStatus, jqXHR)
     {
       if(data.success)
       {
         jAlert("Update Successful");
-        $('#target_dialog').dialog('close'); 
       }
       else
       {
-         jAlert(ERR_COMMON_START_OST + data.errors, ALERT_TITLE); 
+         jAlert(ERR_CONFIF_PARAM + data.errors, ALERT_TITLE); 
       }
     })
-    .error(function(event){})
-    .complete(function(event){});
+    .error(function(event){
+      jAlert(ERR_CONFIF_PARAM + data.errors, ALERT_TITLE); 
+    })
+    .complete(function(event){
+      $('#target_dialog').dialog('close'); 
+    });
+  }
 }
+

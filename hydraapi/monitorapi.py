@@ -75,7 +75,8 @@ class ListFileSystems(AnonymousRequestHandler):
 class GetFileSystem(AnonymousRequestHandler):
     @extract_request_args('filesystem_id')
     def run(self, request, filesystem_id):
-        filesystem = ManagedFilesystem.objects.get(id=filesystem_id)
+        from django.shortcuts import get_object_or_404
+        filesystem = get_object_or_404(ManagedFilesystem, pk = filesystem_id)
         osts = ManagedOst.objects.filter(filesystem = filesystem)
         no_of_ost = osts.count()
         no_of_oss = len(set([tm.host for tm in ManagedTargetMount.objects.filter(target__in = osts)]))
@@ -387,7 +388,6 @@ def get_logs(host_id, start_time, end_time, lustre, page_id, page_size, custom_s
                     'service': systemevent_record.syslogtag.rstrip(":"),
                     'date': systemevent_record.devicereportedtime.strftime("%b %d %H:%M:%S"),
                     'host': systemevent_record.fromhost,
-                    'class': log_class(systemevent_record),
                     'DT_RowClass': log_class(systemevent_record)
                    }
 

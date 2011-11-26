@@ -56,6 +56,7 @@ target_dialog_open = function(target_id) {
       $('#target_dialog_properties').html(properties_markup);
     }
   }); 
+    $('#config_home_target_id').attr('value',target_id);
     //load Config param in target dialog box.
     GetConfigurationParam(target_id,"", "target_config_param_table");
 }

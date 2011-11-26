@@ -212,7 +212,7 @@ $(document).ready(function() {
     
     $('#ConfigParam_Apply').click(function()
     {
-      ApplyConfigParam(oTargetFSConfigParam);
+      ApplyConfigParam(oTargetFSConfigParam, $('#config_home_target_id').val());
     });
     
     });
@@ -236,6 +236,7 @@ $(document).ready(function() {
 {% endblock %}
 {% block include_content %}{% endblock %}
 {% block content %}
+<input type=hidden id="config_home_target_id" value="" />
 <div id="tabs">
   <ul>
     <li><a href='#filesystems' title='filesystems'>Filesystems</a></li>
@@ -298,9 +299,9 @@ $(document).ready(function() {
 <div style="overflow-y: auto; max-height: 700px;" id="target_dialog">
   <div id='target_dialog_tabs'>
     <ul>
-      <li><a href='#target_dialog_properties'>Properties</a></li>
-      <li><a href='#target_dialog_devices_tab'>Devices</a></li>
-      <li><a href='#target_dialog_config_param_tab'>Advanced...</a></li>
+      <li><a href='#target_dialog_properties' onfocus="this.blur()" tabindex="-1">Properties</a></li>
+      <li><a href='#target_dialog_devices_tab' onfocus="this.blur()" tabindex="-1">Devices</a></li>
+      <li><a href='#target_dialog_config_param_tab' onfocus="this.blur()" tabindex="-1">Advanced...</a></li>
     </ul>
     <div id='target_dialog_properties'></div>
     <div id='target_dialog_devices_tab'>
