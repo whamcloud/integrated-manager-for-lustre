@@ -4,7 +4,7 @@
 # ==============================
 
 from hydra_agent.cmds import lustre
-import unittest
+from django.utils import unittest
 
 class TestLustreTunefsCommand(unittest.TestCase):
     def test_mdt_tunefs(self):

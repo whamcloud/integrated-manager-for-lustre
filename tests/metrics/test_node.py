@@ -1,4 +1,4 @@
-import unittest
+from django.utils import unittest
 import os
 from hydra_agent.audit.node import NodeAudit
 
