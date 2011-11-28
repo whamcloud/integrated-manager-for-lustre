@@ -3,9 +3,6 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-import json
-from re import escape
-
 import logging
 import settings
 
@@ -143,11 +140,14 @@ class Step(object):
     def mark_final(self):
         self.final = True
 
+    idempotent = False
+
     def is_idempotent(self):
         """Indicate whether the step is idempotent.  For example, mounting
-           a target.  Step subclasses which are idempotent should override this and
-           return True."""
-        return False
+           a target.  Step subclasses which are always idempotent should set the
+           idempotent class attribute.   Subclasses which may be idempotent should
+           override this method."""
+        return self.idempotent
 
     def run(self, kwargs):
         raise NotImplementedError
@@ -164,6 +164,10 @@ class Step(object):
             self.result.save()
         agent = Agent(host = host, log = job_log, console_callback = console_callback)
         return agent.invoke(command)
+
+
+class IdempotentStep(Step):
+    idempotent = True
 
 
 class StateChangeJob(object):
@@ -187,62 +191,6 @@ class StateChangeJob(object):
         # run procedure because steps might be modifying it
         stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
         return stateful_object
-
-
-class MkfsStep(Step):
-    def _mkfs_args(self, target):
-        from configure.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember
-        kwargs = {}
-        primary_mount = target.managedtargetmount_set.get(primary = True)
-
-        kwargs['target_types'] = {
-            ManagedMgs: "mgs",
-            ManagedMdt: "mdt",
-            ManagedOst: "ost"
-            }[target.__class__]
-
-        if isinstance(target, FilesystemMember):
-            kwargs['fsname'] = target.filesystem.name
-            kwargs['mgsnode'] = target.filesystem.mgs.nids()
-
-        kwargs['reformat'] = True
-
-        fail_nids = []
-        for secondary_mount in target.managedtargetmount_set.filter(primary = False):
-            host = secondary_mount.host
-            failhost_nids = host.lnetconfiguration.get_nids()
-            assert(len(failhost_nids) != 0)
-            fail_nids.extend(failhost_nids)
-        if len(fail_nids) > 0:
-            kwargs['failnode'] = fail_nids
-
-        kwargs['device'] = primary_mount.block_device.path
-
-        return kwargs
-
-    @classmethod
-    def describe(cls, kwargs):
-        from configure.models import ManagedTarget
-        target_id = kwargs['target_id']
-        target = ManagedTarget.objects.get(id = target_id).downcast()
-        target_mount = target.managedtargetmount_set.get(primary = True)
-        return "Format %s on %s" % (target, target_mount.host)
-
-    def run(self, kwargs):
-        from configure.models import ManagedTarget
-
-        target_id = kwargs['target_id']
-        target = ManagedTarget.objects.get(id = target_id).downcast()
-
-        target_mount = target.managedtargetmount_set.get(primary = True)
-        # This is a primary target mount so must have a LunNode
-        assert(target_mount.block_device != None)
-
-        args = self._mkfs_args(target)
-        result = self.invoke_agent(target_mount.host, "format-target --args %s" % escape(json.dumps(args)))
-        fs_uuid = result['uuid']
-        target.uuid = fs_uuid
-        target.save()
 
 
 class NullStep(Step):
@@ -279,198 +227,3 @@ class AnyTargetMountStep(Step):
         # Should never fall through, if succeeded then returned, if failed all then
         # re-raise exception on last failure
         assert False
-
-
-class MountStep(AnyTargetMountStep):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedTarget, ManagedHost, ManagedTargetMount
-        target_id = kwargs['target_id']
-        target = ManagedTarget.objects.get(id = target_id)
-
-        result = self._run_agent_command(target, "start-target --label %s --serial %s" % (target.name, target.pk))
-        try:
-            started_on = ManagedHost.objects.get(fqdn = result['location'])
-        except ManagedHost.DoesNotExist:
-            job_log.error("Target %s (%s) found on host %s, which is not a ManagedHost" % (target, target_id, result['location']))
-            raise
-        try:
-            target.set_active_mount(target.managedtargetmount_set.get(host = started_on))
-        except ManagedTargetMount.DoesNotExist:
-            job_log.error("Target %s (%s) found on host %s (%s), which has no ManagedTargetMount for this target" % (target, target_id, started_on, started_on.pk))
-            raise
-
-            raise
-
-
-class UnmountStep(AnyTargetMountStep):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedTarget
-        target_id = kwargs['target_id']
-        target = ManagedTarget.objects.get(id = target_id)
-
-        self._run_agent_command(target, "stop-target --label %s --serial %s" % (target.name, target.pk))
-        target.set_active_mount(None)
-
-
-class RegisterTargetStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedTargetMount
-        target_mount_id = kwargs['target_mount_id']
-        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
-
-        result = self.invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.block_device.path, target_mount.mount_point))
-        label = result['label']
-        target = target_mount.target
-        job_log.debug("Registration complete, updating target %d with name=%s" % (target.id, label))
-        target.name = label
-        target.save()
-
-
-class ConfigurePacemakerStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedTargetMount
-        target_mount_id = kwargs['target_mount_id']
-        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
-
-        # target.name should have been populated by RegisterTarget
-        assert(target_mount.block_device != None and target_mount.target.name != None)
-
-        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --uuid %s --serial %s %s --mountpoint %s" % (
-                                    target_mount.block_device.path,
-                                    target_mount.target.name,
-                                    target_mount.target.uuid,
-                                    target_mount.target.pk,
-                                    target_mount.primary and "--primary" or "",
-                                    target_mount.mount_point))
-
-
-class UnconfigurePacemakerStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedTargetMount
-        target_mount_id = kwargs['target_mount_id']
-        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
-
-        # we would never have succeeded configuring in the first place if target
-        # didn't have its name
-        assert(target_mount.target.name != None)
-
-        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s --uuid %s --serial %s %s" % (
-                                    target_mount.target.name,
-                                    target_mount.target.uuid,
-                                    target_mount.target.pk,
-                                    target_mount.primary and "--primary" or ""))
-
-
-class StartLNetStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "start-lnet")
-
-
-class StopLNetStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "stop-lnet")
-
-
-class LoadLNetStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "load-lnet")
-
-
-class UnloadLNetStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "unload-lnet")
-
-
-class ConfParamStep(Step):
-    def is_idempotent(self):
-        return False
-
-    def run(self, kwargs):
-        from configure.models import ConfParam
-        conf_param = ConfParam.objects.get(pk = kwargs['conf_param_id']).downcast()
-
-        self.invoke_agent(conf_param.mgs.primary_server(),
-                "set-conf-param --args %s" % escape(json.dumps({
-                    'key': conf_param.get_key(), 'value': conf_param.value})))
-
-
-class ConfParamVersionStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedMgs
-        ManagedMgs.objects.\
-            filter(pk = kwargs['mgs_id']).\
-            update(conf_param_version_applied = kwargs['version'])
-
-
-class DeleteTargetStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedTarget
-        ManagedTarget.delete(kwargs['target_id'])
-
-
-class DeleteTargetMountStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedTargetMount
-        ManagedTargetMount.delete(kwargs['target_mount_id'])
-
-
-class DeleteFilesystemStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedFilesystem
-        ManagedFilesystem.delete(kwargs['filesystem_id'])
-
-
-class DeleteHostStep(Step):
-    def is_idempotent(self):
-        return True
-
-    def run(self, kwargs):
-        from configure.models import ManagedHost
-        ManagedHost.delete(kwargs['host_id'])

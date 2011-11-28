@@ -4,7 +4,7 @@
 # ==============================
 
 from django.db import models
-from configure.lib.job import StateChangeJob, DependOn, DependAll
+from configure.lib.job import StateChangeJob, DependOn, DependAll, Step
 from configure.models.jobs import Job
 from configure.models.host import DeletableStatefulObject
 
@@ -131,6 +131,53 @@ class ManagedTargetMount(DeletableStatefulObject):
             }
 
 
+class DeleteTargetMountStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedTargetMount
+        ManagedTargetMount.delete(kwargs['target_mount_id'])
+
+
+class ConfigurePacemakerStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedTargetMount
+        target_mount_id = kwargs['target_mount_id']
+        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
+
+        # target.name should have been populated by RegisterTarget
+        assert(target_mount.block_device != None and target_mount.target.name != None)
+
+        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --uuid %s --serial %s %s --mountpoint %s" % (
+                                    target_mount.block_device.path,
+                                    target_mount.target.name,
+                                    target_mount.target.uuid,
+                                    target_mount.target.pk,
+                                    target_mount.primary and "--primary" or "",
+                                    target_mount.mount_point))
+
+
+class UnconfigurePacemakerStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedTargetMount
+        target_mount_id = kwargs['target_mount_id']
+        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
+
+        # we would never have succeeded configuring in the first place if target
+        # didn't have its name
+        assert(target_mount.target.name != None)
+
+        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s --uuid %s --serial %s %s" % (
+                                    target_mount.target.name,
+                                    target_mount.target.uuid,
+                                    target_mount.target.pk,
+                                    target_mount.primary and "--primary" or ""))
+
+
 class RemoveTargetMountJob(Job, StateChangeJob):
     state_transition = (ManagedTargetMount, 'configured', 'removed')
     stateful_object = 'target_mount'
@@ -144,7 +191,6 @@ class RemoveTargetMountJob(Job, StateChangeJob):
         return "Removing target mount %s from configuration" % (self.target_mount.downcast())
 
     def get_steps(self):
-        from configure.lib.job import UnconfigurePacemakerStep, DeleteTargetMountStep
         return [(UnconfigurePacemakerStep, {'target_mount_id': self.target_mount.id}),
                 (DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
 
@@ -170,7 +216,6 @@ class RemoveUnconfiguredTargetMountJob(Job, StateChangeJob):
         return "Removing target mount %s from configuration" % (self.target_mount.downcast())
 
     def get_steps(self):
-        from configure.lib.job import DeleteTargetMountStep
         return [(DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
 
 
@@ -187,7 +232,6 @@ class ConfigureTargetMountJob(Job, StateChangeJob):
         return "Configuring %s on %s" % (self.target_mount.target.downcast(), self.target_mount.host)
 
     def get_steps(self):
-        from configure.lib.job import ConfigurePacemakerStep
         return[(ConfigurePacemakerStep, {'target_mount_id': self.target_mount.id})]
 
     def get_deps(self):

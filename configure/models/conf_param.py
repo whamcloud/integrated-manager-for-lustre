@@ -3,13 +3,38 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import json
+from re import escape
+
 from django.db import models
-from configure.lib.job import DependOn
+from configure.lib.job import DependOn, Step
 from polymorphic.models import DowncastMetaclass
 
 from configure.models.jobs import Job
 from configure.models.target import ManagedMgs, ManagedMdt, ManagedOst
 from configure.models.filesystem import ManagedFilesystem
+
+
+class ConfParamStep(Step):
+    idempotent = False
+
+    def run(self, kwargs):
+        from configure.models import ConfParam
+        conf_param = ConfParam.objects.get(pk = kwargs['conf_param_id']).downcast()
+
+        self.invoke_agent(conf_param.mgs.primary_server(),
+                "set-conf-param --args %s" % escape(json.dumps({
+                    'key': conf_param.get_key(), 'value': conf_param.value})))
+
+
+class ConfParamVersionStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedMgs
+        ManagedMgs.objects.\
+            filter(pk = kwargs['mgs_id']).\
+            update(conf_param_version_applied = kwargs['version'])
 
 
 class ApplyConfParams(Job):

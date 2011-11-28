@@ -3,8 +3,11 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import json
+from re import escape
+
 from django.db import models
-from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll
+from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll, Step, NullStep, AnyTargetMountStep, job_log
 from configure.models.jobs import StatefulObject, Job
 from monitor.models import DeletableDowncastableMetaclass, MeasuredEntity
 
@@ -302,6 +305,14 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
         return ConfParam.get_latest_params(self.confparam_set.all())
 
 
+class DeleteTargetStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedTarget
+        ManagedTarget.delete(kwargs['target_id'])
+
+
 class RemoveRegisteredTargetJob(Job, StateChangeJob):
     state_transition = (ManagedTarget, 'unmounted', 'removed')
     stateful_object = 'target'
@@ -318,7 +329,6 @@ class RemoveRegisteredTargetJob(Job, StateChangeJob):
 
     def get_steps(self):
         # TODO: actually do something with Lustre before deleting this from our DB
-        from configure.lib.job import DeleteTargetStep
         return [(DeleteTargetStep, {'target_id': self.target.id})]
 
 
@@ -329,7 +339,6 @@ for origin in ['unformatted', 'formatted']:
         return "Removing target %s from configuration" % (self.target.downcast())
 
     def get_steps(self):
-        from configure.lib.job import DeleteTargetStep
         return [(DeleteTargetStep, {'target_id': self.target.id})]
 
     name = "RemoveTargetJob_%s" % origin
@@ -347,6 +356,22 @@ for origin in ['unformatted', 'formatted']:
     import sys
     this_module = sys.modules[__name__]
     setattr(this_module, name, cls)
+
+
+class RegisterTargetStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedTargetMount
+        target_mount_id = kwargs['target_mount_id']
+        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
+
+        result = self.invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.block_device.path, target_mount.mount_point))
+        label = result['label']
+        target = target_mount.target
+        job_log.debug("Registration complete, updating target %d with name=%s" % (target.id, label))
+        target.name = label
+        target.save()
 
 
 class RegisterTargetJob(Job, StateChangeJob):
@@ -374,7 +399,6 @@ class RegisterTargetJob(Job, StateChangeJob):
         steps = []
         # FIXME: somehow need to avoid advertising this transition for MGS targets
         # currently as hack this is just a no-op for MGSs which marks them registered
-        from configure.lib.job import RegisterTargetStep, NullStep
         target = self.target.downcast()
         if isinstance(target, ManagedMgs):
             steps.append((NullStep, {}))
@@ -393,6 +417,27 @@ class RegisterTargetJob(Job, StateChangeJob):
             deps.append(DependOn(mgs, "mounted"))
 
         return DependAll(deps)
+
+
+class MountStep(AnyTargetMountStep):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedTarget, ManagedHost, ManagedTargetMount
+        target_id = kwargs['target_id']
+        target = ManagedTarget.objects.get(id = target_id)
+
+        result = self._run_agent_command(target, "start-target --label %s --serial %s" % (target.name, target.pk))
+        try:
+            started_on = ManagedHost.objects.get(fqdn = result['location'])
+        except ManagedHost.DoesNotExist:
+            job_log.error("Target %s (%s) found on host %s, which is not a ManagedHost" % (target, target_id, result['location']))
+            raise
+        try:
+            target.set_active_mount(target.managedtargetmount_set.get(host = started_on))
+        except ManagedTargetMount.DoesNotExist:
+            job_log.error("Target %s (%s) found on host %s (%s), which has no ManagedTargetMount for this target" % (target, target_id, started_on, started_on.pk))
+            raise
 
 
 class StartTargetJob(Job, StateChangeJob):
@@ -418,8 +463,19 @@ class StartTargetJob(Job, StateChangeJob):
         return DependAll([DependAny(lnet_deps), DependAll(config_deps)])
 
     def get_steps(self):
-        from configure.lib.job import MountStep
         return [(MountStep, {"target_id": self.target.id})]
+
+
+class UnmountStep(AnyTargetMountStep):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedTarget
+        target_id = kwargs['target_id']
+        target = ManagedTarget.objects.get(id = target_id)
+
+        self._run_agent_command(target, "stop-target --label %s --serial %s" % (target.name, target.pk))
+        target.set_active_mount(None)
 
 
 class StopTargetJob(Job, StateChangeJob):
@@ -445,8 +501,63 @@ class StopTargetJob(Job, StateChangeJob):
         return DependAll(deps)
 
     def get_steps(self):
-        from configure.lib.job import UnmountStep
         return [(UnmountStep, {"target_id": self.target.id})]
+
+
+class MkfsStep(Step):
+    def _mkfs_args(self, target):
+        from configure.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember
+        kwargs = {}
+        primary_mount = target.managedtargetmount_set.get(primary = True)
+
+        kwargs['target_types'] = {
+            ManagedMgs: "mgs",
+            ManagedMdt: "mdt",
+            ManagedOst: "ost"
+            }[target.__class__]
+
+        if isinstance(target, FilesystemMember):
+            kwargs['fsname'] = target.filesystem.name
+            kwargs['mgsnode'] = target.filesystem.mgs.nids()
+
+        kwargs['reformat'] = True
+
+        fail_nids = []
+        for secondary_mount in target.managedtargetmount_set.filter(primary = False):
+            host = secondary_mount.host
+            failhost_nids = host.lnetconfiguration.get_nids()
+            assert(len(failhost_nids) != 0)
+            fail_nids.extend(failhost_nids)
+        if len(fail_nids) > 0:
+            kwargs['failnode'] = fail_nids
+
+        kwargs['device'] = primary_mount.block_device.path
+
+        return kwargs
+
+    @classmethod
+    def describe(cls, kwargs):
+        from configure.models import ManagedTarget
+        target_id = kwargs['target_id']
+        target = ManagedTarget.objects.get(id = target_id).downcast()
+        target_mount = target.managedtargetmount_set.get(primary = True)
+        return "Format %s on %s" % (target, target_mount.host)
+
+    def run(self, kwargs):
+        from configure.models import ManagedTarget
+
+        target_id = kwargs['target_id']
+        target = ManagedTarget.objects.get(id = target_id).downcast()
+
+        target_mount = target.managedtargetmount_set.get(primary = True)
+        # This is a primary target mount so must have a LunNode
+        assert(target_mount.block_device != None)
+
+        args = self._mkfs_args(target)
+        result = self.invoke_agent(target_mount.host, "format-target --args %s" % escape(json.dumps(args)))
+        fs_uuid = result['uuid']
+        target.uuid = fs_uuid
+        target.save()
 
 
 class FormatTargetJob(Job, StateChangeJob):
@@ -485,5 +596,4 @@ class FormatTargetJob(Job, StateChangeJob):
         return DependAll(deps)
 
     def get_steps(self):
-        from configure.lib.job import MkfsStep
         return [(MkfsStep, {'target_id': self.target.id})]

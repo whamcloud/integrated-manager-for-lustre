@@ -416,8 +416,7 @@ class Nid(models.Model):
 
 
 class LearnNidsStep(Step):
-    def is_idempotent(self):
-        return True
+    idempotent = True
 
     def run(self, kwargs):
         from configure.models import ManagedHost, Nid
@@ -450,8 +449,7 @@ class ConfigureLNetJob(Job, StateChangeJob):
 
 
 class ConfigureRsyslogStep(Step):
-    def is_idempotent(self):
-        return True
+    idempotent = True
 
     def run(self, kwargs):
         from configure.models import ManagedHost
@@ -461,8 +459,7 @@ class ConfigureRsyslogStep(Step):
 
 
 class UnconfigureRsyslogStep(Step):
-    def is_idempotent(self):
-        return True
+    idempotent = True
 
     def run(self, kwargs):
         from configure.models import ManagedHost
@@ -471,8 +468,7 @@ class UnconfigureRsyslogStep(Step):
 
 
 class LearnHostnameStep(Step):
-    def is_idempotent(self):
-        return True
+    idempotent = True
 
     def run(self, kwargs):
         from configure.models import ManagedHost
@@ -552,6 +548,42 @@ class DetectTargetsJob(Job):
         return DependAll(deps)
 
 
+class StartLNetStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        self.invoke_agent(host, "start-lnet")
+
+
+class StopLNetStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        self.invoke_agent(host, "stop-lnet")
+
+
+class LoadLNetStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        self.invoke_agent(host, "load-lnet")
+
+
+class UnloadLNetStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        self.invoke_agent(host, "unload-lnet")
+
+
 class LoadLNetJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'lnet_unloaded', 'lnet_down')
     stateful_object = 'host'
@@ -565,7 +597,6 @@ class LoadLNetJob(Job, StateChangeJob):
         return "Loading LNet module on %s" % self.host
 
     def get_steps(self):
-        from configure.lib.job import LoadLNetStep
         return [(LoadLNetStep, {'host_id': self.host.id})]
 
 
@@ -582,7 +613,6 @@ class UnloadLNetJob(Job, StateChangeJob):
         return "Unloading LNet module on %s" % self.host
 
     def get_steps(self):
-        from configure.lib.job import UnloadLNetStep
         return [(UnloadLNetStep, {'host_id': self.host.id})]
 
 
@@ -599,7 +629,6 @@ class StartLNetJob(Job, StateChangeJob):
         return "Start LNet on %s" % self.host
 
     def get_steps(self):
-        from configure.lib.job import StartLNetStep
         return [(StartLNetStep, {'host_id': self.host.id})]
 
 
@@ -616,8 +645,15 @@ class StopLNetJob(Job, StateChangeJob):
         return "Stop LNet on %s" % self.host
 
     def get_steps(self):
-        from configure.lib.job import StopLNetStep
         return [(StopLNetStep, {'host_id': self.host.id})]
+
+
+class DeleteHostStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedHost
+        ManagedHost.delete(kwargs['host_id'])
 
 
 class RemoveHostJob(Job, StateChangeJob):
@@ -635,5 +671,4 @@ class RemoveHostJob(Job, StateChangeJob):
         return "Remove host %s from configuration" % self.host
 
     def get_steps(self):
-        from configure.lib.job import DeleteHostStep
         return [(DeleteHostStep, {'host_id': self.host.id})]

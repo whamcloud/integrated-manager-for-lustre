@@ -4,7 +4,7 @@
 # ==============================
 
 from django.db import models
-from configure.lib.job import StateChangeJob, DependOn, DependAll
+from configure.lib.job import StateChangeJob, DependOn, DependAll, Step
 from configure.models.jobs import StatefulObject, Job
 from monitor.models import DeletableDowncastableMetaclass, MeasuredEntity
 
@@ -117,6 +117,14 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
             }
 
 
+class DeleteFilesystemStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedFilesystem
+        ManagedFilesystem.delete(kwargs['filesystem_id'])
+
+
 class RemoveFilesystemJob(Job, StateChangeJob):
     state_transition = (ManagedFilesystem, 'created', 'removed')
     stateful_object = 'filesystem'
@@ -130,7 +138,6 @@ class RemoveFilesystemJob(Job, StateChangeJob):
         return "Removing filesystem %s from configuration" % (self.filesystem.name)
 
     def get_steps(self):
-        from configure.lib.job import DeleteFilesystemStep
         return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
 
 
