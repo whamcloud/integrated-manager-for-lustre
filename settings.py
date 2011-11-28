@@ -1,15 +1,5 @@
 # Django settings for hydra project.
 
-try:
-    import debug_toolbar
-except:
-    debug_toolbar = None
-
-try:
-    import django_extensions
-except:
-    django_extensions = None
-
 import sys
 import os
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
@@ -101,17 +91,6 @@ TEMPLATE_LOADERS = (
 #     'django.template.loaders.eggs.Loader',
 )
 
-MIDDLEWARE_CLASSES = (
-    'django.middleware.common.CommonMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.middleware.transaction.TransactionMiddleware',
-    'pagination.middleware.PaginationMiddleware',
-    'middleware.ExceptionPrinterMiddleware',
-) + [('debug_toolbar.middleware.DebugToolbarMiddleware',), ()][debug_toolbar == None]
-
-
 from django.conf import global_settings
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS +\
     ("django.core.context_processors.request",
@@ -156,15 +135,31 @@ INSTALLED_APPS = (
     'hydraapi',
     'hydradashboard',
     'hydracm'
-    ) + [('debug_toolbar',), ()][debug_toolbar == None] \
-      + [('django_extensions',), ()][django_extensions == None]
+    )
 
-INTERNAL_IPS = ('192.168.0.4',)
+OPTIONAL_APPS = ['debug_toolbar', 'django_extensions', 'django_coverage']
+for app in OPTIONAL_APPS:
+    try:
+        __import__(app)
+        INSTALLED_APPS = INSTALLED_APPS + (app,)
+    except ImportError:
+        pass
+
+MIDDLEWARE_CLASSES = (
+    'django.middleware.common.CommonMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.middleware.transaction.TransactionMiddleware',
+    'pagination.middleware.PaginationMiddleware',
+    'middleware.ExceptionPrinterMiddleware',
+)
+if 'debug_toolbar' in INSTALLED_APPS:
+    MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
 
 
 def custom_show_toolbar(request):
     return DEBUG
-
 
 DEBUG_TOOLBAR_CONFIG = {
     'INTERCEPT_REDIRECTS': False,
@@ -269,6 +264,9 @@ INSTALLED_STORAGE_PLUGINS = ["linux"]
 
 # Enable discovery-order assignment of LunNodes as 1st primary=true, 2nd use=true, subsequent use=false
 PRIMARY_LUN_HACK = True
+
+# For django_coverage
+COVERAGE_REPORT_HTML_OUTPUT_DIR = '/tmp/test_html'
 
 try:
     from production_version import VERSION

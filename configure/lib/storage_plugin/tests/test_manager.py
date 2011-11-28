@@ -1,9 +1,9 @@
 
-from django.utils import unittest
+from django.test import TestCase
 from helper import load_test_plugins
 
 
-class TestCornerCases(unittest.TestCase):
+class TestCornerCases(TestCase):
     def test_0classes(self):
         with self.assertRaisesRegexp(RuntimeError, "Module unloadable_plugin_0classes does not define a StoragePlugin"):
             load_test_plugins(['unloadable_plugin_0classes'])
@@ -23,7 +23,7 @@ class TestCornerCases(unittest.TestCase):
         mgr.get_plugin_class('loadable_submodule_plugin')
 
 
-class TestLoad(unittest.TestCase):
+class TestLoad(TestCase):
     def setUp(self):
         import loadable_plugin
         self.loadable_plugin = loadable_plugin

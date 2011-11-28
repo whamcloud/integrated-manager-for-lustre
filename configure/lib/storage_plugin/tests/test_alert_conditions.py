@@ -1,5 +1,5 @@
 
-from django.utils import unittest
+from django.test import TestCase
 
 from configure.lib.storage_plugin import alert_conditions
 
@@ -9,7 +9,7 @@ class FakeResource:
         self.status = status
 
 
-class TestAlertConditions(unittest.TestCase):
+class TestAlertConditions(TestCase):
     def test_attrvalalertcondition_empty(self):
         avac = alert_conditions.AttrValAlertCondition('status')
         avac.set_name('avac')

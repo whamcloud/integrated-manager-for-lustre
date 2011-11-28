@@ -25,7 +25,6 @@ class ResourceIndex(object):
 
     def add(self, resource):
         self._local_id_to_resource[resource._handle] = resource
-        resource.id_tuple()
 
         # Why don't we need a scope resource in here?
         # Because if it's a ScannableId then only items for that
@@ -36,6 +35,14 @@ class ResourceIndex(object):
         if resource_id in self._resource_id_to_resource:
             raise RuntimeError("Duplicate resource added to index")
         self._resource_id_to_resource[resource_id] = resource
+
+    def remove(self, resource):
+        resource_id = (resource.id_tuple(), resource.__class__)
+        if not resource_id in self._resource_id_to_resource:
+            raise RuntimeError("Remove non-existent resource")
+
+        del self._local_id_to_resource[resource._handle]
+        del self._resource_id_to_resource[resource_id]
 
     def get(self, klass, **attrs):
         id_tuple = klass(**attrs).id_tuple()
@@ -81,6 +88,7 @@ class StoragePlugin(object):
     def __init__(self, scannable_id = None):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         self._handle = storage_plugin_manager.register_plugin(self)
+        self._initialized = False
 
         self._handle_lock = threading.Lock()
         self._instance_lock = threading.Lock()
@@ -103,6 +111,10 @@ class StoragePlugin(object):
         self.update_period = settings.PLUGIN_DEFAULT_UPDATE_PERIOD
 
     def do_initial_scan(self, root_resource):
+        if self._initialized:
+            raise RuntimeError("Tried to initialize %s twice!" % self)
+        self._initialized = True
+
         from configure.lib.storage_plugin.resource_manager import resource_manager
 
         root_resource._handle = self.generate_handle()
@@ -158,7 +170,7 @@ class StoragePlugin(object):
         from configure.lib.storage_plugin.resource_manager import resource_manager
         # Resources deleted since last update
         if len(self._delta_delete_resources) > 0:
-            resource_manager.session_add_resources(self._scannable_id, self._delta_delete_resources)
+            resource_manager.session_remove_resources(self._scannable_id, self._delta_delete_resources)
         self._delta_delete_resources = []
 
     def commit_resource_updates(self):
@@ -226,9 +238,10 @@ class StoragePlugin(object):
         """Note: this does not immediately unregister the resource, rather marks it
         for removal at the next periodic update"""
         with self._resource_lock:
-            pass
-        # TODO: remove this resource from indices
-        # and add it to the _delta_delete_resource list
+            self._index.remove(resource)
+            self._delta_delete_resources.append(resource)
+            # TODO: it would be useful if local resource instances had a
+            # way to invalidate their handles to detect buggy plugins
 
     def notify_alert(self, active, resource, alert_name, attribute = None):
         # This will be flushed through to the database by update_scan
@@ -261,4 +274,4 @@ class StoragePlugin(object):
 
         resource._plugin = self
         self._index.add(resource)
-        self._delta_new_resources.append(resource._handle)
+        self._delta_new_resources.append(resource)
