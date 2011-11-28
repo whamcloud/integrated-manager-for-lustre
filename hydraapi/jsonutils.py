@@ -23,7 +23,6 @@ def make_json_call(url, **params):
     # Add any outgoing parameters to the body of the request.
     if params:
         encoded_params = json.dumps(params)
-        print "input_params=>%s" % encoded_params
         request.add_header('Content-Length', str(len(encoded_params)))
         request.add_header('Content-Type', 'application/json')
         request.add_data(encoded_params)
