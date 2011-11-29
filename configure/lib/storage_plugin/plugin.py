@@ -228,9 +228,10 @@ class StoragePlugin(object):
                     existing.add_parent(p)
                 return existing, False
             except ResourceNotFound:
-                resource = klass(**attrs)
+                resource = klass(parents = parents, **attrs)
                 for p in parents:
                     resource.add_parent(p)
+
                 self._register_resource(resource)
                 return resource, True
 

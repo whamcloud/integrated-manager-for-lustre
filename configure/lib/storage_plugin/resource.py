@@ -102,7 +102,6 @@ class StorageResource(object):
             else:
                 raw = val
             result.append((name, {'raw': raw, 'markup': props.to_markup(val), 'label': props.get_label(name)}))
-        print "get_attribute_items: %s" % result
         return result
 
     @classmethod
@@ -139,7 +138,11 @@ class StorageResource(object):
         self._plugin = None
         self._handle = None
         self._handle_global = None
-        self._parents = []
+        if 'parents' in kwargs:
+            self._parents = kwargs['parents']
+            del kwargs['parents']
+        else:
+            self._parents = []
 
         # Accumulate changes since last call to flush_deltas()
         self._delta_lock = threading.Lock()
@@ -154,12 +157,13 @@ class StorageResource(object):
             if not k in self._storage_attributes:
                 raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._storage_attributes.keys()))
             setattr(self, k, v)
+        self.flush_deltas()
 
     def flush_deltas(self):
         with self._delta_lock:
             deltas = {'attributes': self._delta_attrs,
                       'parents': self._delta_parents}
-            self._delta_attrs.clear()
+            self._delta_attrs = {}
             self._delta_parents = []
 
         # Blackhawk down!
@@ -216,7 +220,7 @@ class StorageResource(object):
 
             self._storage_dict[key] = value
             with self._delta_lock:
-                self._delta_attrs['key'] = value
+                self._delta_attrs[key] = value
         elif key in self._storage_statistics:
             stat_obj = self._storage_statistics[key]
             stat_obj.validate(value)
@@ -263,16 +267,18 @@ class StorageResource(object):
         return self.attrs_to_id_tuple(self._storage_dict)
 
     def add_parent(self, parent_resource):
-        # TODO: lock parents + Delta_parents
-        if not parent_resource in self._parents:
-            self._parents.append(parent_resource)
-            self._delta_parents.append(parent_resource)
+        # TODO: lock _parents
+        with self._delta_lock:
+            if parent_resource not in self._parents:
+                self._parents.append(parent_resource)
+                self._delta_parents.append(parent_resource)
 
     def remove_parent(self, parent_resource):
-        # TODO: lock parents + Delta_parents
-        if parent_resource in self._parents:
-            self._parents.remove(parent_resource)
-            self._delta_parents.append(parent_resource)
+        # TODO: lock _parents
+        with self._delta_lock:
+            if parent_resource in self._parents:
+                self._parents.remove(parent_resource)
+                self._delta_parents.append(parent_resource)
 
     def validate(self):
         """Call validate() on the ResourceAttribute for all _storage_dict items, and
@@ -327,4 +333,8 @@ class ScannableId(GlobalId):
 
 class ScannableResource(object):
     """Used for marking which StorageResource subclasses are for scanning (like couplets, hosts)"""
+    pass
+
+
+class ScannableStorageResource(StorageResource, ScannableResource):
     pass

@@ -19,8 +19,23 @@ class TestSecondResource(StorageResource, ScannableResource):
     identifier = GlobalId('name')
 
 
+class TestResourceExtraInfo(StorageResource, ScannableResource):
+    name = attributes.String()
+    extra_info = attributes.String()
+    identifier = GlobalId('name')
+
+
+class TestResourceStatistic(StorageResource, ScannableResource):
+    name = attributes.String()
+    extra_info = attributes.String()
+    identifier = GlobalId('name')
+
+
 class TestPlugin(StoragePlugin):
-    _resource_classes = [TestResource, TestSecondResource]
+    _resource_classes = [TestResource,
+                         TestSecondResource,
+                         TestResourceExtraInfo,
+                         TestResourceStatistic]
 
     def __init__(self, *args, **kwargs):
         self.initial_scan_called = False
@@ -173,3 +188,57 @@ class TestAddRemove(TestCase):
 
             instance.do_periodic_update(self.scannable_resource)
             rm.session_remove_resources.assert_called_once_with(instance._scannable_id, [instance.resource1])
+
+    def test_update_modify_parents(self):
+        with mock.patch('configure.lib.storage_plugin.resource_manager.resource_manager') as rm:
+            instance = TestPlugin(self.scannable_global_id)
+            instance.do_initial_scan(self.scannable_resource)
+
+            # Insert two resources, both having no parents
+            def report_unrelated(self, root_resource):
+                self.resource1, created = self.update_or_create(TestSecondResource, name = 'test1')
+                self.resource2, created = self.update_or_create(TestSecondResource, name = 'test2')
+                self.resource3, created = self.update_or_create(TestSecondResource, name = 'test3')
+            instance.update_scan = types.MethodType(report_unrelated, instance)
+            instance.do_periodic_update(self.scannable_resource)
+
+            # Create a parent relationship between them
+            def add_parents(self, root_resource):
+                self.resource1.add_parent(self.resource2)
+            instance.update_scan = types.MethodType(add_parents, instance)
+            instance.do_periodic_update(self.scannable_resource)
+            rm.session_resource_add_parent.assert_called_once_with(instance._scannable_id,
+                                                                   instance.resource1._handle,
+                                                                   instance.resource2._handle)
+
+            # Remove the relationship
+            def remove_parents(self, root_resource):
+                self.resource1.remove_parent(self.resource2)
+            instance.update_scan = types.MethodType(remove_parents, instance)
+            instance.do_periodic_update(self.scannable_resource)
+            rm.session_resource_remove_parent.assert_called_once_with(instance._scannable_id,
+                                                                      instance.resource1._handle,
+                                                                      instance.resource2._handle)
+
+    def test_update_modify_attributes(self):
+        with mock.patch('configure.lib.storage_plugin.resource_manager.resource_manager') as rm:
+            instance = TestPlugin(self.scannable_global_id)
+            instance.do_initial_scan(self.scannable_resource)
+
+            # Insert two resources, both having no parents
+            def report1(self, root_resource):
+                self.resource, created = self.update_or_create(TestResourceExtraInfo, name = 'test1', extra_info = 'foo')
+            instance.update_scan = types.MethodType(report1, instance)
+            instance.do_periodic_update(self.scannable_resource)
+
+            # Modify the extra_info attribute
+            def modify(self, root_resource):
+                self.resource.extra_info = 'bar'
+            instance.update_scan = types.MethodType(modify, instance)
+            instance.do_periodic_update(self.scannable_resource)
+            rm.session_update_resource.assert_called_once_with(instance._scannable_id,
+                                                               instance.resource._handle,
+                                                               {'extra_info': 'bar'})
+
+    def test_update_statistics(self):
+        pass
