@@ -1,24 +1,24 @@
 
 from django.test import TestCase
-from helper import load_test_plugins
+from helper import load_plugins
 
 
 class TestCornerCases(TestCase):
     def test_0classes(self):
         with self.assertRaisesRegexp(RuntimeError, "Module unloadable_plugin_0classes does not define a StoragePlugin"):
-            load_test_plugins(['unloadable_plugin_0classes'])
+            load_plugins(['unloadable_plugin_0classes'])
 
     def test_2classes(self):
         with self.assertRaisesRegexp(RuntimeError, "Module unloadable_plugin_2classes defines more than one StoragePlugin"):
-            load_test_plugins(['unloadable_plugin_2classes'])
+            load_plugins(['unloadable_plugin_2classes'])
 
     def test_dupemodule(self):
         with self.assertRaisesRegexp(RuntimeError, "Duplicate storage plugin module loadable_plugin"):
-            load_test_plugins(['loadable_plugin', 'loadable_plugin'])
+            load_plugins(['loadable_plugin', 'loadable_plugin'])
 
     def test_submodule(self):
         # Check we can load a plugin via a dotted reference
-        mgr = load_test_plugins(['submodule.loadable_submodule_plugin'])
+        mgr = load_plugins(['submodule.loadable_submodule_plugin'])
         # Check that the path has been stripped from the reference
         mgr.get_plugin_class('loadable_submodule_plugin')
 
@@ -27,7 +27,7 @@ class TestLoad(TestCase):
     def setUp(self):
         import loadable_plugin
         self.loadable_plugin = loadable_plugin
-        self.manager = load_test_plugins(['loadable_plugin'])
+        self.manager = load_plugins(['loadable_plugin'])
 
     def test_load(self):
         """Test that the manager correctly loaded and introspected

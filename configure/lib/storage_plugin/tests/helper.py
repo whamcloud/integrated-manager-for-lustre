@@ -1,6 +1,6 @@
 
 
-def load_test_plugins(mod_names):
+def load_plugins(mod_names):
     import sys
     import os
     import settings

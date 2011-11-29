@@ -78,8 +78,8 @@ class TestReferenceAttribute(TestCase):
         import configure.lib.storage_plugin.manager
         self.original_mgr = configure.lib.storage_plugin.manager.storage_plugin_manager
 
-        from helper import load_test_plugins
-        mgr = load_test_plugins(['loadable_plugin'])
+        from helper import load_plugins
+        mgr = load_plugins(['loadable_plugin'])
         configure.lib.storage_plugin.manager.storage_plugin_manager = mgr
         self.record_pk = mgr.create_root_resource('loadable_plugin', 'TestScannableResource', name = 'foobar')
 
