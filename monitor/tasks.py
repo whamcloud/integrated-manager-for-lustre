@@ -9,9 +9,9 @@ from datetime import timedelta, datetime
 from monitor.lib.lustre_audit import audit_log
 from monitor.lib.util import timeit
 from monitor.metrics import metrics_log
+from settings import AUDIT_PERIOD, EMAIL_ALERTS_PERIOD
 
 import settings
-from settings import AUDIT_PERIOD
 
 
 @task()
@@ -166,3 +166,40 @@ def test_host_contact(host):
             'ping': ping,
             'agent': agent,
             }
+
+
+@periodic_task(run_every=timedelta(seconds=EMAIL_ALERTS_PERIOD))
+def mail_alerts():
+    from monitor.models import AlertState, AlertEmail
+
+    alerts = AlertState.objects.filter(alertemail = None)
+    if not alerts:
+        # no un-e-mailed alerts yet so just bail
+        return
+
+    alert_email = AlertEmail()
+    alert_email.save()
+    alert_email.alerts.add(*alerts)
+    alert_email.save()
+
+    send_alerts_email.delay(id = alert_email.id)
+
+
+@task()
+def send_alerts_email(id):
+    from monitor.models import AlertState, AlertEmail
+    from django.contrib.auth.models import User
+    from django.core.mail import send_mail
+
+    alert_email = AlertEmail.objects.get(pk = id)
+
+    # for a recipient:
+    for user in User.objects.all():
+        message = "New Chroma Alerts:"
+        for alert in AlertState.objects.filter(id__in = alert_email.alerts.all()):
+            message += "\n%s %s" % (alert.begin, alert.message())
+            if alert.active:
+                message += "  Alert state is currently active"
+
+        send_mail('New Chroma Server alerts', message, settings.EMAIL_SENDER,
+                  [user.email])

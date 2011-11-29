@@ -217,6 +217,7 @@ LOGGING = {
 AUDIT_PERIOD = 10
 JANITOR_PERIOD = 60
 PLUGIN_DEFAULT_UPDATE_PERIOD = 5
+EMAIL_ALERTS_PERIOD = 300
 
 JOB_MAX_AGE = 3600 * 24 * 7
 AUDIT_MAX_AGE = 3600 * 24
@@ -230,6 +231,7 @@ CELERY_ROUTES = (
         {"monitor.tasks.audit_all": {"queue": "periodic"}},
         {"monitor.tasks.purge_and_optimize_metrics": {"queue": "periodic"}},
         {"monitor.tasks.drain_flms_table": {"queue": "periodic"}},
+        {"monitor.tasks.mail_alerts": {"queue": "periodic"}},
         {"monitor.tasks.parse_log_entries": {"queue": "parselog"}},
         {"configure.tasks.janitor": {"queue": "periodic"}},
         {"configure.tasks.set_state": {"queue": "serialize"}},
@@ -239,6 +241,7 @@ CELERY_ROUTES = (
         {"configure.tasks.run_job": {"queue": "jobs"}},
         {"monitor.tasks.test_host_contact": {"queue": "ssh"}},
         {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
+        {"monitor.tasks.send_alerts_email": {"queue": "jobs"}},
         )
 
 CELERY_TRACK_STARTED = True
@@ -261,6 +264,9 @@ else:
     AUDIT_LOG_PATH = "/var/log/hydra/audit.log"
     API_LOG_PATH = "/var/log/hydra/hydraapi.log"
     SYSLOG_EVENTS_LOG_PATH = "/var/log/hydra/syslog_events.log"
+
+EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
+EMAIL_SENDER = "chroma-server@whamcloud.com"
 
 _plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'configure', 'plugins')
 sys.path.append(_plugins_path)

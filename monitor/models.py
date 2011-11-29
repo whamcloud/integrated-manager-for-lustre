@@ -606,3 +606,13 @@ class FrontLineMetricStore(models.Model):
             sql = "INSERT into monitor_frontlinemetricstore (insert_time, content_type_id, object_id, metric_name, metric_type, value, complete) VALUES (%s, %s, %s, %s, %s, %s, %s)"
             cursor.execute(sql, params)
             transaction.commit_unless_managed()
+
+
+class AlertEmail(models.Model):
+    alerts = models.ManyToManyField(AlertState)
+
+    def __str__(self):
+        str = ""
+        for a in self.alerts.all():
+            str += " %s" % a
+        return str
