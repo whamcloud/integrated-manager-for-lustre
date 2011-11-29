@@ -1,12 +1,13 @@
 ## Copyright 2011 Whamcloud, Inc.
 ## Authors: Michael MacDonald <mjmac@whamcloud.com>
 
-import time, unittest
+import time
 import fudge
+from django.test import TestCase
 from r3d.exceptions import *
 from r3d.lib import *
 
-class TestParseUpdateString(unittest.TestCase):
+class TestParseUpdateString(TestCase):
     # slightly DRY-er, but not great
     def dry_fput(self, stub):
         self.now = int(time.time())
@@ -19,7 +20,7 @@ class TestParseUpdateString(unittest.TestCase):
         self.assertRaises(BadUpdateString, parse_update_string, "@Oct 12:1:2")
         self.assertRaises(BadUpdateString, parse_update_string, ":2")
 
-class TestParseDsVals(unittest.TestCase):
+class TestParseDsVals(TestCase):
     def test_valid_string_single_ds(self):
         values = parse_ds_vals("12345")
         self.assertEquals(values[0], 12345)
@@ -41,7 +42,7 @@ class TestParseDsVals(unittest.TestCase):
     def test_invalid_string(self):
         self.assertRaises(BadUpdateString, parse_ds_vals, "x:y:2")
 
-class TestParseTimeString(unittest.TestCase):
+class TestParseTimeString(TestCase):
     @fudge.patch('time.time')
     def test_valid_N_string(self, fake_time):
         (fake_time.expects_call()
@@ -68,7 +69,7 @@ class TestParseTimeString(unittest.TestCase):
         int_time = 123456
         self.assertEquals(parse_update_time(float_time), int_time)
 
-class TestCalculateElapsedSteps(unittest.TestCase):
+class TestCalculateElapsedSteps(TestCase):
     def test_one_exact_step(self):
         last_update = 920805600
         step_length = 300
