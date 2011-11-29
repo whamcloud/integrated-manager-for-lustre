@@ -137,13 +137,17 @@ INSTALLED_APPS = (
     'hydracm'
     )
 
-OPTIONAL_APPS = ['debug_toolbar', 'django_extensions', 'django_coverage']
+OPTIONAL_APPS = ['debug_toolbar', 'django_extensions', 'django_coverage', 'django_nose']
 for app in OPTIONAL_APPS:
+    import imp
     try:
-        __import__(app)
+        imp.find_module(app)
         INSTALLED_APPS = INSTALLED_APPS + (app,)
     except ImportError:
         pass
+
+if 'django_nose' in INSTALLED_APPS:
+    TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
