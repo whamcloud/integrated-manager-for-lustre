@@ -43,6 +43,7 @@ else:
 class PluginSession(threading.Thread):
     def __init__(self, root_resource_id, *args, **kwargs):
         self.stopping = False
+        self.finished = False
         self.root_resource_id = root_resource_id
 
         super(PluginSession, self).__init__(*args, **kwargs)
@@ -64,7 +65,7 @@ class PluginSession(threading.Thread):
             try:
                 self._scan_loop(plugin_klass, root_resource)
             except Exception:
-                run_duration = datetime.datetime.now()- last_retry
+                run_duration = datetime.datetime.now() - last_retry
                 if last_retry and run_duration > datetime.timedelta(seconds = RETRY_DELAY_MAX):
                     # If the last run was long running (i.e. probably ran okay until something went
                     # wrong) then retry quickly.
@@ -90,6 +91,7 @@ class PluginSession(threading.Thread):
                 daemon_log.info("Session %s: out of scan loop cleanly" % self.root_resource_id)
 
         daemon_log.info("Session %s: Dropped out of retry loop" % self.root_resource_id)
+        self.finished = True
 
     def _scan_loop(self, plugin_klass, root_resource):
         daemon_log.debug("Session %s: starting scan loop" % root_resource._handle)
@@ -103,7 +105,10 @@ class PluginSession(threading.Thread):
                 daemon_log.debug("Session %s: >>periodic_update" % root_resource._handle)
                 instance.do_periodic_update(root_resource)
                 daemon_log.debug("Session %s: <<periodic_update" % root_resource._handle)
-                time.sleep(instance.update_period)
+
+                i = 0
+                while i < instance.update_period and not self.stopping:
+                    time.sleep(1)
         except Exception:
             raise
         finally:
@@ -112,10 +117,74 @@ class PluginSession(threading.Thread):
     def stop(self):
         self.stopping = True
 
+class MessageReceiver(threading.Thread):
+    def __init__(self, daemon, *args, **kwargs):
+        self.stopping = False
+        self.daemon = daemon
+        super(MessageReceiver, self).__init__(*args, **kwargs)
+
+    def _run_consumer(self):
+        from kombu import BrokerConnection, Exchange, Queue
+        import settings
+
+        storage_plugin_exchange = Exchange("storage_plugin", "direct", durable = True)
+        removal_queue = Queue("removals", exchange = storage_plugin_exchange, routing_key = "removals")
+
+        def handle_recv(body, message):
+            self.daemon.remove_resource(body['resource_global_id'])
+
+        with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:
+            conn.connect()
+            removal_queue(conn.channel()).declare()
+            with conn.Consumer([removal_queue], callbacks=[handle_recv]):
+                while not self.stopping:
+                    conn.drain_events()
+            return True
+
+    def run(self):
+        retry_period = 10
+        max_retry_period = 60
+
+        daemon_log.info("Starting MessageReceiver main loop")
+        while not self.stopping:
+            try:
+                self._run_consumer()
+            except Exception, e:
+                daemon_log.error("Exception %s running AMQP consumer" % e)
+                daemon_log.error("Retrying in %d seconds" % retry_period)
+
+                from time import sleep
+                i = 0
+                while i < retry_period and not self.stopping:
+                    sleep(1)
+                    i += 1
+                if retry_period < max_retry_period:
+                    retry_period *= 2
+        daemon_log.info("Finished MessageReceiver main loop")
+
+    def stop(self):
+        self.stopping = True
+
 class StorageDaemon(object):
+    @classmethod
+    def request_remove_resource(cls, resource_id):
+        from kombu import BrokerConnection, Exchange, Queue
+        import settings
+
+        storage_plugin_exchange = Exchange("storage_plugin", "direct", durable = True)
+        removal_queue = Queue("removals", exchange = storage_plugin_exchange, routing_key = "removals")
+
+        with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:
+            removal_queue(conn.channel()).declare()
+            with conn.Producer(exchange = storage_plugin_exchange, serializer = 'json', routing_key = 'removals') as producer:
+                producer.publish({'resource_id': resource_id})
+
     def __init__(self):
         self.stopping = False
 
+        self._session_lock = threading.Lock()
+
+        self._all_sessions = {}
         # Map of module name to map of root_resource_id to PluginSession
         self.plugins = {}
         from configure.lib.storage_plugin.manager import storage_plugin_manager
@@ -123,12 +192,34 @@ class StorageDaemon(object):
             # Create sessions for all root resources
             sessions = {}    
             for srr_id in self.root_resource_ids(p):
-                sessions[srr_id] = PluginSession(srr_id)
+                session = PluginSession(srr_id)
+                sessions[srr_id] = session
+                self._all_sessions[srr_id] = session
 
             self.plugins[p] = sessions
 
         session_count = reduce(lambda x,y: x+y, [len(s) for s in self.plugins.values()])
         daemon_log.info("StorageDaemon: Loaded %s plugins, %s sessions" % (len(self.plugins), session_count))
+
+    def remove_resource(self, resource_id):
+        # Is there a session to kill?
+        kill_session = None
+        daemon_log.info("StorageDaemon: removing %s" % resource_id)
+        with self._session_lock:
+            try:
+                kill_session = self._all_sessions[resource_id]
+            except KeyError:
+                pass
+
+            if kill_session != None:
+                kill_session.stop()
+                daemon_log.info("StorageDaemon: waiting for session to stop")
+                from time import sleep
+                while(not kill_session.stopped):
+                    sleep(1)
+
+            from configure.lib.storage_plugin.resource_manager import resource_manager
+            resource_manager.global_remove_resource(resource_id)
 
     def root_resource_ids(self, plugin):
         """Return the PK of all StorageResourceRecords for 'plugin' which have no parents"""
@@ -140,27 +231,24 @@ class StorageDaemon(object):
             transaction.commit()
         return ids
 
-    def all_sessions(self):
-        for session_map in self.plugins.values():
-            for session in session_map.values():
-                yield session
-
     def main_loop(self):
         daemon_log.info("StorageDaemon: entering main loop")
-        for session in self.all_sessions():
+        for scannable_id, session in self._all_sessions.items():
             session.start()
 
         while not self.stopping:
             time.sleep(5)
 
             # Look for any new root resources and start sessions for them
-            for plugin,sessions in self.plugins.items():
-                for rrid in self.root_resource_ids(plugin):
-                    if not rrid in sessions:
-                        daemon_log.info("StorageDaemon: new session for resource %s" % rrid)
-                        s = PluginSession(rrid)
-                        sessions[rrid] = s
-                        s.start()
+            with self._session_lock:
+                for plugin,sessions in self.plugins.items():
+                    for rrid in self.root_resource_ids(plugin):
+                        if not rrid in sessions:
+                            daemon_log.info("StorageDaemon: new session for resource %s" % rrid)
+                            s = PluginSession(rrid)
+                            sessions[rrid] = s
+                            self._all_sessions[rrid] = s
+                            s.start()
         
         daemon_log.info("StorageDaemon: leaving main loop")
 
@@ -168,10 +256,10 @@ class StorageDaemon(object):
 
     def _stop_sessions(self):
         daemon_log.info("StorageDaemon: stopping sessions")
-        for session in self.all_sessions():
+        for scannable_id, session in self._all_sessions.items():
             session.stop()
         daemon_log.info("StorageDaemon: joining sessions")
-        for session in self.all_sessions():
+        for scannable_id, session in self._all_sessions.items():
             session.join()
 
     def stop(self):
@@ -189,8 +277,11 @@ if __name__ == '__main__':
     try:
         daemon.main_loop()
     except Exception, e:
-        daemon_log.error("Exception in main loop, terminating")
-        daemon_log.error(e)
+        import sys
+        import traceback
+        exc_info = sys.exc_info()
+        backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+        daemon_log.warning("Exception in main loop.  backtrace: %s" % backtrace)
         os._exit(-1)
 
 
