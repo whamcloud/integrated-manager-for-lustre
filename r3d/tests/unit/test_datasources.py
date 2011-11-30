@@ -33,6 +33,8 @@ class TestAbsolute(DataSourceTestCase):
     pass
 
 class TestCounter(DataSourceTestCase):
+    __test__ = False
+
     @fudge.patch('r3d.models.Datasource.database')
     def test_first_update_pdp_temp(self, fake_database):
         self.ds.last_reading = lib.DNAN
