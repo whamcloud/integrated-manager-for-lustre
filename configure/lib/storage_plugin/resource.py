@@ -139,7 +139,7 @@ class StorageResource(object):
         self._handle = None
         self._handle_global = None
         if 'parents' in kwargs:
-            self._parents = kwargs['parents']
+            self._parents = list(kwargs['parents'])
             del kwargs['parents']
         else:
             self._parents = []
@@ -270,6 +270,7 @@ class StorageResource(object):
         # TODO: lock _parents
         with self._delta_lock:
             if parent_resource not in self._parents:
+                print "add_parent %s %s" % (self, parent_resource)
                 self._parents.append(parent_resource)
                 self._delta_parents.append(parent_resource)
 

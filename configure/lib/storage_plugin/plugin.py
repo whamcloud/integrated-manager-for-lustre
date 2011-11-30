@@ -159,6 +159,8 @@ class StoragePlugin(object):
 
     def do_teardown(self):
         self.teardown()
+        from configure.lib.storage_plugin.resource_manager import resource_manager
+        resource_manager.session_close(self._scannable_id)
 
     def commit_resource_creates(self):
         from configure.lib.storage_plugin.resource_manager import resource_manager
@@ -226,13 +228,14 @@ class StoragePlugin(object):
                     setattr(existing, k, v)
                 for p in parents:
                     existing.add_parent(p)
+                for p in parents:
+                    assert p._handle != existing._handle
                 return existing, False
             except ResourceNotFound:
                 resource = klass(parents = parents, **attrs)
-                for p in parents:
-                    resource.add_parent(p)
-
                 self._register_resource(resource)
+                for p in parents:
+                    assert p._handle != resource._handle
                 return resource, True
 
     def unregister_resource(self, resource):

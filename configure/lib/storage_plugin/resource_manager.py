@@ -108,13 +108,21 @@ class SubscriberIndex(object):
     def remove_subscriber(self, resource_id, field_name, field_value):
         self._subscribe_value_to_id[(field_name, field_value)].remove(resource_id)
 
-    def add_resource(self, resource_id, resource):
+    def add_resource(self, resource_id, resource = None):
+        if not resource:
+            from configure.models import StorageResourceRecord
+            resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
+
         for field_name, key in resource._provides:
             self.add_provider(resource_id, key, getattr(resource, field_name))
         for field_name, key in resource._subscribes:
             self.add_subscriber(resource_id, key, getattr(resource, field_name))
 
-    def remove_resource(self, resource_id, resource):
+    def remove_resource(self, resource_id, resource = None):
+        if not resource:
+            from configure.models import StorageResourceRecord
+            resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
+
         for field_name, key in resource._provides:
             self.remove_provider(resource_id, key, getattr(resource, field_name))
         for field_name, key in resource._subscribes:
@@ -162,7 +170,7 @@ class ResourceManager(object):
             scannable_local_id,
             initial_resources,
             update_period):
-        log.info(">> session_open %s (%s resources)" % (scannable_id, len(initial_resources)))
+        log.debug(">> session_open %s (%s resources)" % (scannable_id, len(initial_resources)))
         with self._instance_lock:
             if scannable_id in self._sessions:
                 log.warning("Clearing out old session for scannable ID %s" % scannable_id)
@@ -191,7 +199,14 @@ class ResourceManager(object):
             # we should created a ManagedHost to go with it (e.g. discovering VMs)
             self._persist_created_hosts(session, scannable_id)
 
-        log.info("<< session_open %s" % scannable_id)
+        log.debug("<< session_open %s" % scannable_id)
+
+    def session_close(self, scannable_id):
+        with self._instance_lock:
+            try:
+                del self._sessions[scannable_id]
+            except KeyError:
+                log.warning("Cannot remove session for %s, it does not exist" % scannable_id)
 
     @transaction.commit_on_success
     def _persist_created_hosts(self, session, scannable_id):
@@ -545,15 +560,28 @@ class ResourceManager(object):
                 ~Q(pk__in = reported_global_ids),
                 storage_id_scope = session.scannable_id)
         for r in lost_resources:
-            for dependent in StorageResourceRecord.objects.filter(
-                    parents = r):
-                dependent.parents.remove(r)
+            self._cull_resource(r)
 
-            log.info("Culling resource '%s' of scannable %s" % (r.pk, session.scannable_id))
-            log.info("%s" % r.to_resource())
+    def _cull_resource(self, resource_record):
+        log.info("Culling resource '%s'" % resource_record.pk)
+        from configure.models import StorageResourceRecord
 
-            log.info("Culling resource '%s' of scannable %s" % (r.pk, session.scannable_id))
-            #r.delete()
+        for dependent in StorageResourceRecord.objects.filter(
+                parents = resource_record):
+            dependent.parents.remove(resource_record)
+
+        # TODO: find ResourceReference attributes on other objects
+        # that refer to this one and unhook them or if they're non-optional
+        # then delete that resource
+
+        self._subscriber_index.remove_resource(resource_record.pk)
+        resource_record.delete()
+
+    def global_remove_resource(self, resource_id):
+        with self._instance_lock:
+            # Ensure that no open sessions are holding a reference to this ID
+            from configure.models import StorageResourceRecord
+            self._cull_resource(StorageResourceRecord.objects.get(pk = resource_id))
 
     def _persist_new_resource(self, session, resource):
         from configure.models import StorageResourceRecord
