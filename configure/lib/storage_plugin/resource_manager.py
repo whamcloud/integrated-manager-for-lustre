@@ -574,6 +574,9 @@ class ResourceManager(object):
         # that refer to this one and unhook them or if they're non-optional
         # then delete that resource
 
+        # TODO: find where lustre target objects or host objects hold a reference
+        # to this resource
+
         self._subscriber_index.remove_resource(resource_record.pk)
         resource_record.delete()
 
@@ -581,7 +584,29 @@ class ResourceManager(object):
         with self._instance_lock:
             # Ensure that no open sessions are holding a reference to this ID
             from configure.models import StorageResourceRecord
-            self._cull_resource(StorageResourceRecord.objects.get(pk = resource_id))
+            try:
+                record = StorageResourceRecord.objects.get(pk = resource_id)
+            except StorageResourceRecord.DoesNotExist:
+                log.error("ResourceManager received invalid request to remove non-existent resource %s" % resource_id)
+                return
+
+            resource = record.to_resource()
+            from configure.lib.storage_plugin.resource import ScannableResource
+            if isinstance(resource, ScannableResource):
+                scoped_resources = StorageResourceRecord.objects.filter(
+                    storage_id_scope = resource_id)
+                for r in scoped_resources:
+                    self._cull_resource(r)
+
+            self._cull_resource(record)
+
+            # TODO: deal with GlobalId resources that get left behind, like SCSI IDs,
+            # LVM VGs and LVs.  Could look for islands of GlobalId resources with no
+            # relationships to ScannableResources, but that could falsely remove some
+            # things still existing: e.g. what if a host was just only reporting LVM
+            # things?  they wouldn't have any parents.  Probably the more robust way to
+            # do this is to track which scannables have had sessions which reported
+            # a given GlobalId resource, and treat that like a reference count
 
     def _persist_new_resource(self, session, resource):
         from configure.models import StorageResourceRecord

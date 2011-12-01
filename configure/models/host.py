@@ -83,8 +83,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                     'HydraHostProxy', host_id = host.pk,
                     virtual_machine = virtual_machine)
 
-        print "%s %s %s" % (host.pk, monitor.pk, lnet_configuration.pk)
-
         # Attempt some initial setup jobs
         from configure.lib.state_manager import StateManager
         StateManager().set_state(host, 'lnet_unloaded')
@@ -652,6 +650,17 @@ class DeleteHostStep(Step):
     idempotent = True
 
     def run(self, kwargs):
+        from configure.lib.storage_plugin.query import ResourceQuery
+        from configure.models import StorageResourceRecord
+        try:
+            record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = kwargs['host_id'])
+        except StorageResourceRecord.DoesNotExist:
+            # This is allowed, to account for the case where we submit the request_remove_resource,
+            # then crash, then get restarted.
+            pass
+        from configure.lib.storage_plugin.daemon import StorageDaemon
+        StorageDaemon.request_remove_resource(record.pk)
+
         from configure.models import ManagedHost
         ManagedHost.delete(kwargs['host_id'])
 

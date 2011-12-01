@@ -221,3 +221,14 @@ class ResourceQuery(object):
         storage_plugin_log.debug("<< get_resource_tree")
 
         return tree
+
+    def get_record_by_attributes(self, plugin, klass, **attrs):
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from configure.models import StorageResourceRecord
+        import json
+        klass, klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, klass)
+        resource = klass(**attrs)
+        return StorageResourceRecord.objects.get(
+                resource_class__id = klass_id,
+                storage_id_str = json.dumps(resource.id_tuple()),
+                storage_id_scope = None)

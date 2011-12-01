@@ -178,6 +178,11 @@ class HydraDebug(cmd.Cmd, object):
         from configure.lib.state_manager import StateManager
         StateManager().add_job(job)
 
+    def do_remove_resource(self, arg_string):
+        resource_id = int(arg_string)
+        from configure.lib.storage_plugin.daemon import StorageDaemon
+        StorageDaemon.request_remove_resource(resource_id)
+
 if __name__ == '__main__':
     cmdline = HydraDebug
 

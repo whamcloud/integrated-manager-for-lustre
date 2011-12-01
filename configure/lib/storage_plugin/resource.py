@@ -270,7 +270,6 @@ class StorageResource(object):
         # TODO: lock _parents
         with self._delta_lock:
             if parent_resource not in self._parents:
-                print "add_parent %s %s" % (self, parent_resource)
                 self._parents.append(parent_resource)
                 self._delta_parents.append(parent_resource)
 
