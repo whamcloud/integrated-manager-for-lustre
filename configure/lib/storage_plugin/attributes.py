@@ -4,13 +4,15 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-"""This module defines BaseResourceAttribute and its subclasses, which represent
+"""This module defines BaseResourceAttribute subclasses, which represent
 the datatypes that StorageResource objects may store as attributes"""
 
 from configure.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
 
 
 class String(BaseResourceAttribute):
+    """A unicode string.  A maximum length may optionally be specified in the
+    constructor using the ``max_length`` keyword argument"""
     def __init__(self, max_length = None, *args, **kwargs):
         self.max_length = max_length
         super(String, self).__init__(*args, **kwargs)
@@ -21,6 +23,8 @@ class String(BaseResourceAttribute):
 
 
 class Boolean(BaseResourceAttribute):
+    """A True/False value.  Any truthy value may be assigned to this, but it will be
+    stored as True or False."""
     def encode(self, value):
         # Use an explicit 'encode' so that if someone sets the attribute to something
         # truthy but big (like a string) we don't end up storing that
@@ -31,6 +35,8 @@ class Boolean(BaseResourceAttribute):
 
 
 class Integer(BaseResourceAttribute):
+    """An integer.  This may optionally be bounded by setting the inclusive
+    ``min_val`` and/or ``max_val`` keyword arguments to the constructor."""
     def __init__(self, min_val = None, max_val = None, *args, **kwargs):
         self.min_val = min_val
         self.max_val = max_val
@@ -48,12 +54,24 @@ class Integer(BaseResourceAttribute):
 # and we should have an explicitly inexact Bytes class which would take
 # a string and parse it to a rounded number of bytes.
 class Bytes(BaseResourceAttribute):
+    """An exact size in bytes.  This will be formatted with appropriate units
+    and rounding when presented to the user, and should be used in preference to
+    storing values in kilobytes/megabytes etc whereever possible."""
     def to_markup(self, value):
         from monitor.lib.util import sizeof_fmt
         return sizeof_fmt(int(value))
 
 
 class Enum(BaseResourceAttribute):
+    """An enumerated type.  Arguments to the constructor are the possible values, for example
+
+      status = Enum('good', 'bad', 'ugly')
+      ...
+      status = 'good'  # valid
+      status = 'other' # invalid
+
+    Assigning any value not in those options will fail validation.  When presented to the user,
+    this will appear as a dropdown box of available options."""
     def __init__(self, *args, **kwargs):
         self.options = args
 
@@ -68,6 +86,13 @@ class Enum(BaseResourceAttribute):
 
 
 class Uuid(BaseResourceAttribute):
+    """A UUID string.  Arguments may have any style of hyphenation.  For example:
+      wwn = Uuid()
+      ...
+      wwn = "b44f7d8e-a40d-4b96-b241-2ab462b4c1c1"  # valid
+      wwn = "b44f7d8ea40d4b96b2412ab462b4c1c1"  # valid
+      wwn = "other"  # invalid
+    """
     def validate(self, value):
         stripped = value.replace("-", "")
         if not len(stripped) == 32:
@@ -75,14 +100,23 @@ class Uuid(BaseResourceAttribute):
 
 
 class PosixPath(BaseResourceAttribute):
+    """A POSIX filesystem path, e.g. /tmp/myfile.txt"""
     pass
 
 
 class HostName(BaseResourceAttribute):
+    """A DNS hostname, e.g. whamcloud.com"""
     pass
 
 
 class ResourceReference(BaseResourceAttribute):
+    """A reference to another resource.  Conceptually similar to a
+    foreign key in a database.  Creating circular relationships using
+    this attribute has undefined (most likely fatal) behaviour.  Assign
+    instantiated StorageResource objects to this attribute.  When a storage
+    resource is deleted, any other resources having a reference to it are affected:
+     * If the ResourceReference has ``optional = True`` then the field is cleared
+     * Otherwise, the referencing resource is also deleted"""
     # NB no 'encode' impl here because it has to be a special case to
     # resolve a local resource to a global ID
 
