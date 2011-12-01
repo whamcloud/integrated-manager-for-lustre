@@ -45,7 +45,7 @@ class AverageRraTest(TestCase):
         import os, re
 
         datafile = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "..", "data", "avg_rra.txt"))
+                        "..", "sample_data", "avg_rra.txt"))
         for line in datafile.readlines():
             if re.match("^#", line):
                 continue
@@ -66,7 +66,7 @@ class AverageRraTest(TestCase):
 
         results = []
         xport = parse(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                      "..", "data", filename))
+                      "..", "sample_data", filename))
         legend = get_legend(xport)
         for row in xport.getElementsByTagName("row"):
             row_dict = {}
@@ -148,7 +148,7 @@ class MinRraTest(TestCase):
         import os, re
 
         datafile = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "..", "data", "min_rra.txt"))
+                        "..", "sample_data", "min_rra.txt"))
         for line in datafile.readlines():
             if re.match("^#", line):
                 continue
@@ -169,7 +169,7 @@ class MinRraTest(TestCase):
 
         results = []
         xport = parse(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                      "..", "data", filename))
+                      "..", "sample_data", filename))
         legend = get_legend(xport)
         for row in xport.getElementsByTagName("row"):
             row_dict = {}
@@ -251,7 +251,7 @@ class MaxRraTest(TestCase):
         import os, re
 
         datafile = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "..", "data", "max_rra.txt"))
+                        "..", "sample_data", "max_rra.txt"))
         for line in datafile.readlines():
             if re.match("^#", line):
                 continue
@@ -272,7 +272,7 @@ class MaxRraTest(TestCase):
 
         results = []
         xport = parse(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                      "..", "data", filename))
+                      "..", "sample_data", filename))
         legend = get_legend(xport)
         for row in xport.getElementsByTagName("row"):
             row_dict = {}
@@ -354,7 +354,7 @@ class LastRraTest(TestCase):
         import os, re
 
         datafile = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "..", "data", "last_rra.txt"))
+                        "..", "sample_data", "last_rra.txt"))
         for line in datafile.readlines():
             if re.match("^#", line):
                 continue
@@ -375,7 +375,7 @@ class LastRraTest(TestCase):
 
         results = []
         xport = parse(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                      "..", "data", filename))
+                      "..", "sample_data", filename))
         legend = get_legend(xport)
         for row in xport.getElementsByTagName("row"):
             row_dict = {}

@@ -29,7 +29,7 @@ class BugHyd330(TestCase):
         import os, re
 
         datafile = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "..", "data", "hyd330.txt"))
+                        "..", "sample_data", "hyd330.txt"))
         for line in datafile.readlines():
             if re.match("^#", line):
                 continue
