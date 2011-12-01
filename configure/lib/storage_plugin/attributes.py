@@ -4,60 +4,13 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-"""This module defines ResourceAttribute and its subclasses, which represent
+"""This module defines BaseResourceAttribute and its subclasses, which represent
 the datatypes that StorageResource objects may store as attributes"""
 
-
-class ResourceAttribute(object):
-    """Base class for declared attributes of StorageResource.  This is
-       to StorageResource as models.fields.Field is to models.Model"""
-
-    # This is a hack to store the order in which attributes are declared so
-    # that I can sort the StorageResource attribute dict for presentation in the same order
-    # as the plugin author declared the attributes.
-    creation_counter = 0
-
-    def __init__(self, subscribe = None, provide = None, optional = False, label = None):
-        self.optional = optional
-        self.subscribe = subscribe
-        self.provide = provide
-        self.label = label
-
-        self.creation_counter = ResourceAttribute.creation_counter
-        ResourceAttribute.creation_counter += 1
-
-    def get_label(self, name):
-        if self.label:
-            return self.label
-        else:
-            words = name.split("_")
-            return " ".join([words[0].title()] + words[1:])
-
-    def validate(self, value):
-        """Note: this validation is NOT intended to be used for catching cases
-        in production, it does not provide hooks for user-friendly error messages
-        etc.  Think of it more as an assert."""
-        pass
-
-    def human_readable(self, value):
-        """Subclasses should format their value for human consumption, e.g.
-           1024 => 1kB"""
-        return value
-
-    def encode(self, value):
-        import json
-        return json.dumps(value)
-
-    def decode(self, value):
-        import json
-        return json.loads(value)
-
-    def to_markup(self, value):
-        from django.utils.html import conditional_escape
-        return conditional_escape(value)
+from configure.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
 
 
-class String(ResourceAttribute):
+class String(BaseResourceAttribute):
     def __init__(self, max_length = None, *args, **kwargs):
         self.max_length = max_length
         super(String, self).__init__(*args, **kwargs)
@@ -67,7 +20,7 @@ class String(ResourceAttribute):
             raise ValueError("Value '%s' too long (max %s)" % (value, self.max_length))
 
 
-class Boolean(ResourceAttribute):
+class Boolean(BaseResourceAttribute):
     def encode(self, value):
         # Use an explicit 'encode' so that if someone sets the attribute to something
         # truthy but big (like a string) we don't end up storing that
@@ -77,7 +30,7 @@ class Boolean(ResourceAttribute):
         return value
 
 
-class Integer(ResourceAttribute):
+class Integer(BaseResourceAttribute):
     def __init__(self, min_val = None, max_val = None, *args, **kwargs):
         self.min_val = min_val
         self.max_val = max_val
@@ -94,18 +47,18 @@ class Integer(ResourceAttribute):
 # , but where the caller has a "10GB" or somesuch, that's rounded
 # and we should have an explicitly inexact Bytes class which would take
 # a string and parse it to a rounded number of bytes.
-class Bytes(ResourceAttribute):
+class Bytes(BaseResourceAttribute):
     def to_markup(self, value):
         from monitor.lib.util import sizeof_fmt
         return sizeof_fmt(int(value))
 
 
-class Enum(ResourceAttribute):
+class Enum(BaseResourceAttribute):
     def __init__(self, *args, **kwargs):
         self.options = args
 
         if not self.options:
-            raise ValueError("Enum ResourceAttribute must be given 'options' argument")
+            raise ValueError("Enum BaseResourceAttribute must be given 'options' argument")
 
         super(Enum, self).__init__(**kwargs)
 
@@ -114,22 +67,22 @@ class Enum(ResourceAttribute):
             raise ValueError("Value '%s' is not one of %s" % (value, self.options))
 
 
-class Uuid(ResourceAttribute):
+class Uuid(BaseResourceAttribute):
     def validate(self, value):
         stripped = value.replace("-", "")
         if not len(stripped) == 32:
             raise ValueError("'%s' is not a valid UUID" % value)
 
 
-class PosixPath(ResourceAttribute):
+class PosixPath(BaseResourceAttribute):
     pass
 
 
-class HostName(ResourceAttribute):
+class HostName(BaseResourceAttribute):
     pass
 
 
-class ResourceReference(ResourceAttribute):
+class ResourceReference(BaseResourceAttribute):
     # NB no 'encode' impl here because it has to be a special case to
     # resolve a local resource to a global ID
 

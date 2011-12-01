@@ -6,7 +6,7 @@
 """This modules defines the StorageResource class, which StoragePlugins subclass use
 to define their system elements"""
 
-from configure.lib.storage_plugin.attributes import ResourceAttribute
+from configure.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
 from configure.lib.storage_plugin.statistics import BaseStatistic
 from configure.lib.storage_plugin.alert_conditions import AlertCondition
 
@@ -40,7 +40,7 @@ class StorageResourceMetaclass(type):
                 dct['_alert_conditions'].update(base._alert_conditions)
 
         for field_name, field_obj in dct.items():
-            if isinstance(field_obj, ResourceAttribute):
+            if isinstance(field_obj, BaseResourceAttribute):
                 dct['_storage_attributes'][field_name] = field_obj
                 del dct[field_name]
                 if field_obj.provide:
@@ -281,8 +281,8 @@ class StorageResource(object):
                 self._delta_parents.append(parent_resource)
 
     def validate(self):
-        """Call validate() on the ResourceAttribute for all _storage_dict items, and
-           ensure that all non-optional ResourceAttributes have a value in _storage_dict"""
+        """Call validate() on the BaseResourceAttribute for all _storage_dict items, and
+           ensure that all non-optional BaseResourceAttributes have a value in _storage_dict"""
         for k, v in self._storage_dict.items():
             if k in self._storage_attributes:
                 self._storage_attributes[k].validate(v)
