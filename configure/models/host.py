@@ -27,7 +27,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # can be multiple servers on one hostname, eg ddn10ke
 
     # A URI like ssh://user@flint02:22/
-    address = models.CharField(max_length = 255, unique = True)
+    address = models.CharField(max_length = 255)
 
     # A fully qualified domain name like flint02.testnet
     fqdn = models.CharField(max_length = 255, blank = True, null = True, unique = True)
