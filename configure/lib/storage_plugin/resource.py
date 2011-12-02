@@ -198,7 +198,10 @@ class StorageResource(object):
         presentation, possibly in a tree display as a child of 'parent' (a
         StorageResource instance) or if parent is None then for display
         on its own."""
-        return self.__str__()
+        id = self.id_tuple()
+        if len(id) == 1:
+            id = id[0]
+        return "%s %s" % (self.human_class(), id)
 
     def __setattr__(self, key, value):
         if key.startswith("_"):
