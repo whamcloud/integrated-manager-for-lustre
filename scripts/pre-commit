@@ -57,6 +57,13 @@ DISABLED_CHECKS = [
 ]
 CHECKS = [
     {
+        'output': 'Validating source as UTF-8...',
+        'command': './scripts/validate_utf8.py %s',
+        'match_files': ['.*\.py$', '.*setup.py.in'],
+        'ignore_files': [],
+        'print_filename': False
+    },
+    {
         'output': 'Running Pyflakes...',
         'command': 'pyflakes %s',
         'match_files': ['.*\.py$', '.*setup.py.in'],
