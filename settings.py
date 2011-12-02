@@ -4,6 +4,10 @@ import sys
 import os
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
+# We require python >= 2.6.5 for http://bugs.python.org/issue4978
+if sys.version_info < (2, 6, 5):
+    raise EnvironmentError("Python >= 2.6.5 is required")
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
