@@ -183,7 +183,7 @@ class TestAddRemove(TestCase):
             rm.session_add_resources.assert_called_once_with(instance._scannable_id, [instance.resource1])
 
             def remove1(self, root_resource):
-                self.unregister_resource(self.resource1)
+                self.remove(self.resource1)
             instance.update_scan = types.MethodType(remove1, instance)
 
             instance.do_periodic_update(self.scannable_resource)

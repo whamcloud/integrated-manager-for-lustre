@@ -65,6 +65,8 @@ class Bytes(BaseResourceAttribute):
 class Enum(BaseResourceAttribute):
     """An enumerated type.  Arguments to the constructor are the possible values, for example
 
+    ::
+
       status = Enum('good', 'bad', 'ugly')
       ...
       status = 'good'  # valid
@@ -87,11 +89,14 @@ class Enum(BaseResourceAttribute):
 
 class Uuid(BaseResourceAttribute):
     """A UUID string.  Arguments may have any style of hyphenation.  For example:
-      wwn = Uuid()
-      ...
-      wwn = "b44f7d8e-a40d-4b96-b241-2ab462b4c1c1"  # valid
-      wwn = "b44f7d8ea40d4b96b2412ab462b4c1c1"  # valid
-      wwn = "other"  # invalid
+
+    ::
+
+       wwn = Uuid()
+       ...
+       resource.wwn = "b44f7d8e-a40d-4b96-b241-2ab462b4c1c1"  # valid
+       resource.wwn = "b44f7d8ea40d4b96b2412ab462b4c1c1"  # valid
+       resource.wwn = "other"  # invalid
     """
     def validate(self, value):
         stripped = value.replace("-", "")
@@ -111,12 +116,18 @@ class HostName(BaseResourceAttribute):
 
 class ResourceReference(BaseResourceAttribute):
     """A reference to another resource.  Conceptually similar to a
-    foreign key in a database.  Creating circular relationships using
-    this attribute has undefined (most likely fatal) behaviour.  Assign
+    foreign key in a database.  Assign
     instantiated StorageResource objects to this attribute.  When a storage
     resource is deleted, any other resources having a reference to it are affected:
-     * If the ResourceReference has ``optional = True`` then the field is cleared
-     * Otherwise, the referencing resource is also deleted"""
+    * If the ResourceReference has ``optional = True`` then the field is cleared
+    * Otherwise, the referencing resource is also deleted
+
+    .. note::
+
+       Creating circular reference relationships using
+       this attribute has undefined (most likely fatal) behaviour.
+
+    """
     # NB no 'encode' impl here because it has to be a special case to
     # resolve a local resource to a global ID
 

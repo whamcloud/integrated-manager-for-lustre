@@ -2,15 +2,15 @@
 from django.test import TestCase
 
 from configure.lib.storage_plugin import attributes
-from configure.lib.storage_plugin import resource_attribute
+from configure.lib.storage_plugin import base_resource_attribute
 
 
 class TestAttributes(TestCase):
     def test_label(self):
-        attr = resource_attribute.BaseResourceAttribute(label = 'foobar')
+        attr = base_resource_attribute.BaseResourceAttribute(label = 'foobar')
         self.assertEqual(attr.get_label('my_attribute'), 'foobar')
 
-        attr = resource_attribute.BaseResourceAttribute()
+        attr = base_resource_attribute.BaseResourceAttribute()
         self.assertEqual(attr.get_label('my_attribute'), 'My attribute')
 
     def test_string(self):

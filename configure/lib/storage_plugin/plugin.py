@@ -57,26 +57,33 @@ class ResourceIndex(object):
 
 class StoragePlugin(object):
     def initial_scan(self, root_resource):
-        """To be implemented by subclasses.  Identify all resources
+        """Mandatory.  Identify all resources
            present at this time and call register_resource on them.
 
-           Any plugin which throws an exception from here is assumed
-           to be broken - this will not be retried.  If one of your
-           controllers is not contactable, you must handle that and
-           when it comes back up let us know during an update call."""
+           If you return from this function you must have succeeded
+           in communicating with the scannable resource.  Any
+           resources which were present previously and are absent
+           when initial_scan returns are assumed to be
+           permanently absent and are deleted.  If for any reason
+           you cannot return all resources (for example, communication
+           failure with a controller), you must raise an exception."""
         raise NotImplementedError
 
     def update_scan(self, root_resource):
-        """Optionally implemented by subclasses.  Perform any required
+        """Optional.  Perform any required
            periodic refresh of data and update any resource instances.
            Guaranteed that initial_scan will have been called before this."""
         pass
 
     def teardown(self):
-        """Optionally implemented by subclasses.  Perform any teardown
+        """Optional.  Perform any teardown
            required before terminating.  Guaranteed not to be called
            concurrently with initial_scan or update_scan.  Guaranteed
-           that initial_scan or update_scan will not be called after this."""
+           that initial_scan or update_scan will not be called after this.
+           Guaranteed that once initial_scan has been entered this will
+           later be called unless the whole process terminates
+           prematurely.  This function will be called even if initial_scan
+           or update_scan raises an exception."""
         pass
 
     def generate_handle(self):
@@ -221,6 +228,18 @@ class StoragePlugin(object):
         self.log.debug("<< Plugin.commit_resource_statistics %s (%s sent)", self._scannable_id, sent_stats)
 
     def update_or_create(self, klass, parents = [], **attrs):
+        """Report a storage resource.  If it already exists then
+        it will be updated, otherwise it will be created.  The resulting
+        resource instance is returned.
+
+        Note that the 'created' return value indicates whether this
+        is the first report of the resource within this plugin session,
+        not whether it is the first report of the resource ever (e.g.
+        from a different or previous plugin session).
+
+        :returns: (resource, created) -- the storage resource and a boolean
+                  indicating whether this was the first report this session.
+        """
         with self._resource_lock:
             try:
                 existing = self._index.get(klass, **attrs)
@@ -238,7 +257,7 @@ class StoragePlugin(object):
                     assert p._handle != resource._handle
                 return resource, True
 
-    def unregister_resource(self, resource):
+    def remove(self, resource):
         """Note: this does not immediately unregister the resource, rather marks it
         for removal at the next periodic update"""
         with self._resource_lock:
