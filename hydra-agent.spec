@@ -17,7 +17,10 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 Conflicts: sysklogd
-Requires: python-simplejson python-argparse rsyslog pacemaker fence-agents avahi-dnsconfd avahi-python python-daemon
+Requires: python-simplejson python-argparse rsyslog pacemaker avahi-python python-daemon
+%if 0%{?rhel} > 5
+Requires: fence-agents avahi-dnsconfd
+%endif
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
