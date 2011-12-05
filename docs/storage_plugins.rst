@@ -14,11 +14,11 @@ To present device information to Chroma, a python module is written using
 the API described in this document:
 
 * The objects to be reported are described by declaring a series of
-  python classes: :ref:storage_resources
+  python classes: :ref:`storage_resources`
 * Certain of these objects are used to store the contact information
-  such as IP addresses for managed devices: :ref:scannable_resource_resources
+  such as IP addresses for managed devices: :ref:`scannable_storage_resources`
 * A main plugin class is implemented to provide required hooks for
-  initialization and teardown: :ref:storage_plugins
+  initialization and teardown: :ref:`storage_plugins`
 
 The API is designed to minimize the lines of code required to write a plugin, 
 minimize the duplication of effort between different plugins, and make as much
@@ -143,7 +143,7 @@ by its shelf and slot number, like this:
 Relationships
 ~~~~~~~~~~~~~
 
-The ``update_or_create`` function used to report resources (see :ref:storage_plugins) 
+The ``update_or_create`` function used to report resources (see :ref:`storage_plugins`) 
 takes a ``parents`` argument which is the list of which directly affect the 
 status of this resource.  This relationship does not imply ownership, rather 
 a "a problem with parent is a problem with child" relationship.  For example,
@@ -159,7 +159,7 @@ Alert conditions
 
 Bad values of attributes may be declared using class attributes 
 of the types from ``configure.lib.storage_plugin.alert_conditions``,
-see :ref:alert_conditions
+see :ref:`storage_plugin_alert_conditions`
 
 .. _scannable_storage_resources:
 
@@ -394,6 +394,8 @@ Built-in resource classes
 
 .. automodule:: configure.lib.storage_plugin.builtin_resources
    :members:
+
+.. _storage_plugin_alert_conditions:
 
 Alert conditions
 ----------------
