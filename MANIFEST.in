@@ -5,6 +5,7 @@ include monitor/bin/*.py
 include monitor/fixtures/*
 include configure/bin/*.py
 include configure/bin/storage-daemon
+include configure/migrations/*.py
 include hydradashboard/templates/*
 include hydracm/templates/*
 graft polymorphic
