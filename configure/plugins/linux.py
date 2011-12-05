@@ -7,7 +7,7 @@ from configure.lib.storage_plugin.plugin import StoragePlugin
 from configure.lib.storage_plugin.resource import StorageResource, ScannableId, GlobalId, ScannableResource
 
 from configure.lib.storage_plugin import attributes
-from configure.lib.storage_plugin import base_resources
+from configure.lib.storage_plugin import builtin_resources
 from configure.lib.storage_plugin import alert_conditions
 from configure.lib.storage_plugin import statistics
 
@@ -66,7 +66,7 @@ class HydraHostProxy(StorageResource, ScannableResource):
 HACK_TEST_STATS = False
 
 
-class ScsiDevice(base_resources.LogicalDrive):
+class ScsiDevice(builtin_resources.LogicalDrive):
     identifier = GlobalId('serial')
 
     serial = attributes.String(subscribe = 'scsi_serial')
@@ -104,7 +104,7 @@ class UnsharedDeviceNode(DeviceNode):
             return self.path
 
 
-class UnsharedDevice(base_resources.LogicalDrive):
+class UnsharedDevice(builtin_resources.LogicalDrive):
     identifier = ScannableId('path')
     # Annoying duplication of this from the node, but it really
     # is the closest thing we have to a real ID.
@@ -141,7 +141,7 @@ class LvmDeviceNode(DeviceNode):
 # one host) where the ID is their number plus the a foreign key to the parent
 # ScsiDevice or UnsharedDevice(HYD-272)
 # TODO: include containng object human_string in partition human_string
-class Partition(base_resources.LogicalDrive):
+class Partition(builtin_resources.LogicalDrive):
     identifier = ScannableId('path')
     human_name = "Linux partition"
     path = attributes.PosixPath()
@@ -338,7 +338,7 @@ class Linux(StoragePlugin):
                 scsi_dev.test_hist = [random.randint(50, 100) for r in range(0, 4)]
 
 
-class LvmGroup(base_resources.StoragePool):
+class LvmGroup(builtin_resources.StoragePool):
     identifier = GlobalId('uuid')
 
     uuid = attributes.Uuid()
@@ -352,7 +352,7 @@ class LvmGroup(base_resources.StoragePool):
         return self.name
 
 
-class LvmVolume(base_resources.LogicalDrive):
+class LvmVolume(builtin_resources.LogicalDrive):
     # Q: Why is this identified by LV UUID and VG UUID rather than just
     #    LV UUID?  Isn't the LV UUID unique enough?
     # A: We're matching LVM2's behaviour.  If you e.g. image a machine that

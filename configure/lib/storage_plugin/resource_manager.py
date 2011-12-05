@@ -222,8 +222,8 @@ class ResourceManager(object):
                 if isinstance(resource, klass):
                     yield (record, resource)
 
-        from configure.lib.storage_plugin import base_resources
-        for record, resource in get_session_resources_of_type(session, base_resources.VirtualMachine):
+        from configure.lib.storage_plugin import builtin_resources
+        for record, resource in get_session_resources_of_type(session, builtin_resources.VirtualMachine):
             if not resource.host_id:
                 from configure.models import ManagedHost
                 log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
@@ -239,7 +239,7 @@ class ResourceManager(object):
     @transaction.commit_on_success
     def _persist_lun_updates(self, scannable_id, scannable_resource):
         from configure.lib.storage_plugin.query import ResourceQuery
-        from configure.lib.storage_plugin import base_resources
+        from configure.lib.storage_plugin import builtin_resources
         from configure.models import Lun, LunNode, ManagedHost
 
         def lun_get_or_create(resource_id):
@@ -261,7 +261,7 @@ class ResourceManager(object):
 
         # Update LunNode objects for DeviceNodes
         node_types = []
-        # FIXME: mechanism to get subclasses of base_resources.DeviceNode
+        # FIXME: mechanism to get subclasses of builtin_resources.DeviceNode
         node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'ScsiDeviceNode')[1])
         node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'UnsharedDeviceNode')[1])
         node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'LvmDeviceNode')[1])
@@ -279,7 +279,7 @@ class ResourceManager(object):
             if ResourceQuery().record_has_children(r._handle):
                 continue
 
-            device = ResourceQuery().record_find_ancestor(record.pk, base_resources.LogicalDrive)
+            device = ResourceQuery().record_find_ancestor(record.pk, builtin_resources.LogicalDrive)
             if device == None:
                 log.error("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
                 continue
@@ -312,7 +312,7 @@ class ResourceManager(object):
 
                 from configure.models import StorageResourceRecord
                 ancestor_virtual_disks = ResourceQuery().record_find_ancestors(
-                        record.pk, base_resources.VirtualDisk)
+                        record.pk, builtin_resources.VirtualDisk)
                 # collect home controller information
                 vd_home_controllers = set()
                 for vd_id in ancestor_virtual_disks:
