@@ -1,4 +1,7 @@
-VERSION := 0.3.$(shell date +%Y%m%d%H%M%S)
+
+# If we have local changes, set the version to 'dev'
+VERSION := $(shell echo 0.3.`date +%Y%m%d`_`git rev-parse --short HEAD`)
+
 RELEASE := 1
 
 cleandist:
