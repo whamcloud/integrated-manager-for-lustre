@@ -7,6 +7,7 @@ from django.db import transaction
 
 from configure.lib.storage_plugin.log import storage_plugin_log
 
+
 # Thread-per-session is just a convenient way of coding this.  The actual required
 # behaviour is for a session to always run in the same process.  So we could
 # equally use a thread pool for advancing the loop of each session, or we
@@ -115,7 +116,7 @@ class StorageDaemon(object):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         for p in storage_plugin_manager.loaded_plugins.keys():
             # Create sessions for all root resources
-            sessions = {}    
+            sessions = {}
             for srr_id in self.root_resource_ids(p):
                 session = PluginSession(srr_id)
                 sessions[srr_id] = session
@@ -123,7 +124,7 @@ class StorageDaemon(object):
 
             self.plugins[p] = sessions
 
-        session_count = reduce(lambda x,y: x+y, [len(s) for s in self.plugins.values()])
+        session_count = reduce(lambda x, y: x + y, [len(s) for s in self.plugins.values()])
         storage_plugin_log.info("StorageDaemon: Loaded %s plugins, %s sessions" % (len(self.plugins), session_count))
 
     def remove_resource(self, resource_id):
@@ -166,7 +167,7 @@ class StorageDaemon(object):
 
             # Look for any new root resources and start sessions for them
             with self._session_lock:
-                for plugin,sessions in self.plugins.items():
+                for plugin, sessions in self.plugins.items():
                     for rrid in self.root_resource_ids(plugin):
                         if not rrid in sessions:
                             storage_plugin_log.info("StorageDaemon: new session for resource %s" % rrid)
@@ -174,7 +175,7 @@ class StorageDaemon(object):
                             sessions[rrid] = s
                             self._all_sessions[rrid] = s
                             s.start()
-        
+
         storage_plugin_log.info("StorageDaemon: leaving main loop")
 
         self._stop_sessions()
@@ -189,5 +190,3 @@ class StorageDaemon(object):
 
     def stop(self):
         self.stopping = True
-
-
