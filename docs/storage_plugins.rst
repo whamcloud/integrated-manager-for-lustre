@@ -309,7 +309,8 @@ Running a plugin
 Chroma loads plugins specified by the ``settings.INSTALLED_STORAGE_PLUGINS``.  This variable
 is a list of module names within the python import path.  If your plugin is located
 at ``/home/developer/project/my_plugin.py`` then you would create a ``local_settings.py`` file
-in the ``hydra-server`` directory with the following content:
+in the ``hydra-server`` directory (``/usr/share/hydra-server`` when installed
+from RPM) with the following content:
 
 ::
 
