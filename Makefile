@@ -1,4 +1,11 @@
-VERSION := 0.3.$(shell date +%Y%m%d%H%M%S)
+
+# If we have local changes, set the version to 'dev'
+if ! git diff-index --quiet HEAD --; then
+	VERSION := "dev"
+else
+	VERSION := 0.3.$(shell date +%Y%m%d)-$(shell git rev-parse --short HEAD)
+fi
+
 RELEASE := 1
 
 cleandist:
