@@ -19,7 +19,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: Django >= 1.3, mod_wsgi, httpd, python-dateutil, python-uuid, python-multiprocessing, python-paramiko, django-pagination, django-kombu, django-celery, rsyslog-mysql, mysql-server, MySQL-python >= 1.2.1p2, rabbitmq-server, django-picklefield, python-amqplib, django-piston, django-r3d, avahi-dnsconfd avahi-python, python-daemon, pygobject2
+Requires: Django >= 1.3, mod_wsgi, httpd, python-dateutil, python-uuid, python-multiprocessing, python-paramiko, django-pagination, python-kombu, django-celery, rsyslog-mysql, mysql-server, MySQL-python >= 1.2.1p2, rabbitmq-server, django-picklefield, python-amqplib, django-piston, django-r3d, avahi-dnsconfd avahi-python, python-daemon, pygobject2
 Conflicts: hydra-agent
 
 %description
