@@ -109,7 +109,7 @@ class PosixPath(BaseResourceAttribute):
     pass
 
 
-class HostName(BaseResourceAttribute):
+class Hostname(BaseResourceAttribute):
     """A DNS hostname, e.g. whamcloud.com"""
     pass
 
