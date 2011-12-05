@@ -40,6 +40,7 @@ start() {
         echo "create database hydra" | mysql
         # and populate it
         python $PYTHONPATH/manage.py syncdb --noinput
+        python $PYTHONPATH/manage.py migrate configure
         python $PYTHONPATH/manage.py migrate
         # reload rsyslog since it will have complained about the missing
         # table when it started
