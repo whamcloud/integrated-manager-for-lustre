@@ -8,8 +8,7 @@ Name: %{name}
 Version: %{version}
 Release: %{release}
 Source0: %{name}-%{version}.tar.gz
-Source1: hydra-server.conf
-Source2: hydra-worker-init.sh
+Source1: hydra-agent-init.sh
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -18,7 +17,10 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 Conflicts: sysklogd
-Requires: python-simplejson python-argparse rsyslog pacemaker fence-agents
+Requires: python-simplejson python-argparse rsyslog pacemaker avahi-python python-daemon
+%if 0%{?rhel} > 5
+Requires: fence-agents avahi-dnsconfd
+%endif
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
@@ -32,6 +34,8 @@ This is the Whamcloud Monitoring and Adminstration Interface
 %install
 rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --root=%{buildroot}
+mkdir -p $RPM_BUILD_ROOT/etc/init.d/
+cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/hydra-agent
 
 %clean
 rm -rf %{buildroot}
@@ -39,6 +43,7 @@ rm -rf %{buildroot}
 %post
 chkconfig rsyslog on
 chkconfig corosync on
+chkconfig hydra-agent on
 # disable SELinux -- it prevents both lustre and pacemaker from working
 sed -ie 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config
 # the above only disables on the next boot.  disable it currently, also
@@ -49,3 +54,4 @@ echo 0 > /selinux/enforce
 %{_bindir}/hydra-agent.py*
 %{python_sitelib}/*
 /usr/lib/ocf/resource.d/hydra/Target
+%attr(0755,root,root)/etc/init.d/hydra-agent

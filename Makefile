@@ -20,6 +20,7 @@ rpms: production cleandist tarball
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/hydra-agent-*.tar.gz _topdir/SOURCES
+	cp hydra-agent-init.sh _topdir/SOURCES
 	cp hydra-agent.spec _topdir/SPECS
 	rpmbuild --define "_topdir $$(pwd)/_topdir" \
 		--define "version $(VERSION)" \
