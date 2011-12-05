@@ -23,6 +23,12 @@ class TestCornerCases(TestCase):
         mgr.get_plugin_class('loadable_submodule_plugin')
 
 
+class TestExample(TestCase):
+    def test_load(self):
+        """Test that the example plugin used in documentation loads"""
+        load_plugins(['example_plugin'])
+
+
 class TestLoad(TestCase):
     def setUp(self):
         import loadable_plugin

@@ -9,6 +9,14 @@ class AlertCondition(object):
 
 
 class AttrValAlertCondition(AlertCondition):
+    """A condition that checks an attribute against certain values indicating varying
+    severities of alert.  For example, if you had a 'status' attribute on your
+    'widget' resource class which could be 'OK' or 'FAILED' then you might
+    create an AttrValAlertCondition like this:
+    ::
+
+        AttrValAlertCondition('status', error_states = ['FAILED'], message = "Widget failed")"""
+
     def __init__(self, attribute, error_states = [], warn_states = [], info_states = [], message = None, *args, **kwargs):
         self.error_states = error_states
         self.warn_states = warn_states

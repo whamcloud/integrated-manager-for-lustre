@@ -60,7 +60,17 @@ class Counter(BaseStatistic):
 
 
 class BytesHistogram(BaseStatistic):
-    """A fixed-length array of integers used for representing histogram data"""
+    """A fixed-length array of integers used for representing histogram data.  The number of
+    bins and the value range of each bin is specified in the ``bins`` constructor argument:
+
+    ::
+
+        BytesHistogram(bins = [(0, 512), (513, 1024), (1025, 4096), (4097,)])
+
+    :param bins: a list of tuples, either length 2 for a bounded range or length 1
+                 to represent "this value or higher".
+
+    """
     def __init__(self, *args, **kwargs):
         """
         e.g. bins=[(0, 256), (257, 512), (513, 2048), (2049, 4096), (4097,)]
