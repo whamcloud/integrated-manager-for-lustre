@@ -14,11 +14,11 @@
 /*******************************************************************************
  * API URL's for all the graphs on file system dashboard page
 ******************************************************************************/
-var fs_Bar_SpaceUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
-var fs_Line_connectedClients_Data_Api_Url = "/api/get_fs_stats_for_client/";
-var fs_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_fs_stats_for_targets/";
-var fs_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
-var fs_Area_mdOps_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var fs_Bar_SpaceUsage_Data_Api_Url = "get_fs_stats_for_targets/";
+var fs_Line_connectedClients_Data_Api_Url = "get_fs_stats_for_client/";
+var fs_LineBar_CpuMemoryUsage_Data_Api_Url = "get_fs_stats_for_targets/";
+var fs_Area_ReadWrite_Data_Api_Url = "get_fs_stats_for_targets/";
+var fs_Area_mdOps_Data_Api_Url = "get_fs_stats_for_targets/";
 var fs_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
 /*****************************************************************************
  * Function for space usage for selected file system - Pie Chart
@@ -27,65 +27,57 @@ var fs_HeatMap_Data_Api_Url = "/api/get_fs_ost_heatmap/";
 /*****************************************************************************/
 fs_Bar_SpaceUsage_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
+  var api_params = {
+      targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
+      starttime: "", filesystem_id: fsId, endtime: ""
+  };
+
   var free=0,used=0;
   var freeData = [],usedData = [],categories = [],freeFilesData = [],totalFilesData = [];
-  $.post(fs_Bar_SpaceUsage_Data_Api_Url,
-  {
-    targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-    starttime: "", filesystem_id: fsId, endtime: ""
-  })
-	.success(function(data, textStatus, jqXHR) 
-  {   
-	  if(data.success)
+  invoke_api_call(api_post, fs_Bar_SpaceUsage_Data_Api_Url, api_params,
+    success_callback = function(data)
+    {
+	  var response = data.response;
+	  var totalDiskSpace=0,totalFreeSpace=0,totalFiles=0,totalFreeFiles=0;
+	  $.each(response, function(resKey, resValue) 
 	  {
-	    var response = data.response;
-	    var totalDiskSpace=0,totalFreeSpace=0,totalFiles=0,totalFreeFiles=0;
-	    $.each(response, function(resKey, resValue) 
-		  {
-	      if(resValue.filesystem != undefined)
-	      {
-	        totalFreeSpace = resValue.kbytesfree/1024;
-          totalDiskSpace = resValue.kbytestotal/1024;
+	    if(resValue.filesystem != undefined)
+	    {
+	      totalFreeSpace = resValue.kbytesfree/1024;
+	      totalDiskSpace = resValue.kbytestotal/1024;
           free = ((totalFreeSpace/1024)/(totalDiskSpace/1024))*100;
           used = 100 - free;
-          
+
           freeData.push(free);
           usedData.push(used);
-          
+
           totalFiles = resValue.filesfree/1024;
           totalFreeFiles = resValue.filestotal/1024;
           free = ((totalFiles/1024)/(totalFreeFiles/1024))*100;
           used = 100 - free;
-          
+
           freeFilesData.push(free);
           totalFilesData.push(used);
-          
+
           categories.push(resValue.filesystem);
-	      }
-	    });
-	  }
-  })
-	.error(function(event) 
-  {
-	  // Display of appropriate error message
-	})
-  .complete(function(event)
-  {
-    obj_fs_Bar_SpaceUsage_Data = JSON.parse(JSON.stringify(chartConfig_Bar_SpaceUsage));
-	  obj_fs_Bar_SpaceUsage_Data.chart.renderTo = "fs_container2";
-	  obj_fs_Bar_SpaceUsage_Data.xAxis.categories = categories;
-    obj_fs_Bar_SpaceUsage_Data.title.text="All File System Space Usage";
-    obj_fs_Bar_SpaceUsage_Data.series = 
-      [
-       {data: freeData, stack: 0, name: 'Free Space'}, {data: usedData, stack: 0, name: 'Used Space'},					// first stack
-       {data: freeFilesData, stack: 1, name: 'Free Files'}, {data: totalFilesData, stack: 1, name: 'Used Files'}		// second stack
-      ];		
-    if(isZoom == 'true')
-	  {
-      renderZoomDialog(obj_fs_Bar_SpaceUsage_Data);
-	  }
-    chart = new Highcharts.Chart(obj_fs_Bar_SpaceUsage_Data);
-  });
+        }
+	  });
+
+      obj_fs_Bar_SpaceUsage_Data = JSON.parse(JSON.stringify(chartConfig_Bar_SpaceUsage));
+      obj_fs_Bar_SpaceUsage_Data.chart.renderTo = "fs_container2";
+      obj_fs_Bar_SpaceUsage_Data.xAxis.categories = categories;
+      obj_fs_Bar_SpaceUsage_Data.title.text="All File System Space Usage";
+      obj_fs_Bar_SpaceUsage_Data.series = 
+        [
+          {data: freeData, stack: 0, name: 'Free Space'}, {data: usedData, stack: 0, name: 'Used Space'},					// first stack
+          {data: freeFilesData, stack: 1, name: 'Free Files'}, {data: totalFilesData, stack: 1, name: 'Used Files'}		// second stack
+        ];		
+      if(isZoom == 'true')
+      {
+        renderZoomDialog(obj_fs_Bar_SpaceUsage_Data);
+      }
+      chart = new Highcharts.Chart(obj_fs_Bar_SpaceUsage_Data);
+    });
 }
 /*****************************************************************************
  * Function for number of clients connected	- Line Chart
@@ -94,17 +86,17 @@ fs_Bar_SpaceUsage_Data = function(fsId, sDate, endDate, dataFunction, targetKind
 /*****************************************************************************/
 fs_Line_connectedClients_Data = function(fsId, sDate, endDate, dataFunction, fetchMetrics, isZoom)
 {
+  var api_params = {
+    datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem_id: fsId, endtime: endDate
+  };
+
   obj_fs_Line_connectedClients_Data = JSON.parse(JSON.stringify(chartConfig_Line_clientConnected));
   var clientMountData = [];
   var count=0;
   var fileSystemName = "";
-  $.post(fs_Line_connectedClients_Data_Api_Url,
-  {
-    datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem_id: fsId, endtime: endDate
-  })
-  .success(function(data, textStatus, jqXHR) 
-  {   
-    if(data.success)
+  
+  invoke_api_call(api_post, fs_Line_connectedClients_Data_Api_Url, api_params,
+    success_callback = function(data)
     {
       var response = data.response;
       $.each(response, function(resKey, resValue) 
@@ -137,23 +129,15 @@ fs_Line_connectedClients_Data = function(fsId, sDate, endDate, dataFunction, fet
              }
            }
          }
-       });
-       obj_fs_Line_connectedClients_Data.series[count] = { name: fileSystemName, data: clientMountData}; 
+      });
+      obj_fs_Line_connectedClients_Data.series[count] = { name: fileSystemName, data: clientMountData}; 
+      obj_fs_Line_connectedClients_Data.chart.renderTo = "fs_container3";
+      if(isZoom == 'true')
+      {
+        renderZoomDialog(obj_fs_Line_connectedClients_Data);
       }
-  })
-  .error(function(event) 
-  {
-    // Display of appropriate error message
-  })
-  .complete(function(event)
-  {
-    obj_fs_Line_connectedClients_Data.chart.renderTo = "fs_container3";
-    if(isZoom == 'true')
-    {
-      renderZoomDialog(obj_fs_Line_connectedClients_Data);
-  	}
-    chart = new Highcharts.Chart(obj_fs_Line_connectedClients_Data);
- });
+      chart = new Highcharts.Chart(obj_fs_Line_connectedClients_Data);
+    });
 }
 /*****************************************************************************
  * Function for cpu and memory usage - Line + Column Chart
@@ -162,49 +146,41 @@ fs_Line_connectedClients_Data = function(fsId, sDate, endDate, dataFunction, fet
 *****************************************************************************/
 fs_LineBar_CpuMemoryUsage_Data = function(fsId, sDate, endDate, dataFunction, targetkind, fetchMetrics, isZoom)
 {
+  var api_params = {
+    targetkind: 'HOST', datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem_id: fsId, endtime: endDate
+  };
+
   var count = 0;
   var cpuData = [], memoryData = [];
   obj_fs_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
-  $.post(fs_LineBar_CpuMemoryUsage_Data_Api_Url,
-  {
-    targetkind: 'HOST', datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, filesystem_id: fsId, endtime: endDate
-  })
-  .success(function(data, textStatus, jqXHR) 
-  {
-    var hostName='';
-    var fsCPUMemoryApiResponse = data;
-    if(fsCPUMemoryApiResponse.success)
+  
+  invoke_api_call(api_post, fs_LineBar_CpuMemoryUsage_Data_Api_Url, api_params,
+    success_callback = function(data)
     {
-      var response = fsCPUMemoryApiResponse.response;
+      var hostName='';
+      var response = data.response;
       $.each(response, function(resKey, resValue) 
       {
-          if (resValue.cpu_total != undefined && resValue.mem_MemTotal != undefined)
-          {
-            ts = resValue.timestamp * 1000
-            var sum_cpu = resValue.cpu_user + resValue.cpu_system + resValue.cpu_iowait;
-            var pct_cpu = ((100 * sum_cpu + (resValue.cpu_total / 2)) / resValue.cpu_total);
-            cpuData.push([ts,(pct_cpu)]);
-            var used_mem = resValue.mem_MemTotal - resValue.mem_MemFree
-            var pct_mem = 100 * (used_mem / resValue.mem_MemTotal)
-            memoryData.push([ts,(pct_mem)]);
-           }
+        if (resValue.cpu_total != undefined && resValue.mem_MemTotal != undefined)
+        {
+          ts = resValue.timestamp * 1000
+          var sum_cpu = resValue.cpu_user + resValue.cpu_system + resValue.cpu_iowait;
+          var pct_cpu = ((100 * sum_cpu + (resValue.cpu_total / 2)) / resValue.cpu_total);
+          cpuData.push([ts,(pct_cpu)]);
+          var used_mem = resValue.mem_MemTotal - resValue.mem_MemFree
+          var pct_mem = 100 * (used_mem / resValue.mem_MemTotal)
+          memoryData.push([ts,(pct_mem)]);
+         }
       });
-    }
-  })
-  .error(function(event) 
-  {
-    // Display of appropriate error message
-  })
-  .complete(function(event)
-  {
-    obj_fs_LineBar_CpuMemoryUsage_Data.chart.renderTo = "fs_avgCPUDiv";
-    if(isZoom == 'true')
-    {
-      renderZoomDialog(obj_fs_LineBar_CpuMemoryUsage_Data);
-    }
-    obj_fs_LineBar_CpuMemoryUsage_Data.series[0].data = cpuData;
-    obj_fs_LineBar_CpuMemoryUsage_Data.series[1].data = memoryData;
-    chart = new Highcharts.Chart(obj_fs_LineBar_CpuMemoryUsage_Data);
+
+      obj_fs_LineBar_CpuMemoryUsage_Data.chart.renderTo = "fs_avgCPUDiv";
+      if(isZoom == 'true')
+      {
+        renderZoomDialog(obj_fs_LineBar_CpuMemoryUsage_Data);
+      }
+      obj_fs_LineBar_CpuMemoryUsage_Data.series[0].data = cpuData;
+      obj_fs_LineBar_CpuMemoryUsage_Data.series[1].data = memoryData;
+      chart = new Highcharts.Chart(obj_fs_LineBar_CpuMemoryUsage_Data);
   });
 }
 /*****************************************************************************
@@ -214,25 +190,25 @@ fs_LineBar_CpuMemoryUsage_Data = function(fsId, sDate, endDate, dataFunction, ta
 *****************************************************************************/
 fs_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
-  obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
   var values = new Object();
   var stats = readWriteFetchMatric;
   $.each(stats, function(i, stat_name)
   {
     values[stat_name] = [];
   });
-  $.post(fs_Area_ReadWrite_Data_Api_Url,
-  {
-    targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
-    starttime: startTime, filesystem_id: fsId, endtime: endTime
-  })
-  .success(function(data, textStatus, jqXHR) 
-  {
-    var hostName='';
-    var avgMemoryApiResponse = data;
-    if(avgMemoryApiResponse.success)
+
+  var api_params = {
+      targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
+      starttime: startTime, filesystem_id: fsId, endtime: endTime
+  };
+
+  obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
+
+  invoke_api_call(api_post, fs_Area_ReadWrite_Data_Api_Url, api_params,
+    success_callback = function(data)
     {
-      var response = avgMemoryApiResponse.response;
+      var hostName='';
+      var response = data.response;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -257,25 +233,17 @@ fs_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKind
            }
          }
       });
-    }
-  })
-  .error(function(event)
-  {
-    // Display of appropriate error message
-  })
-  .complete(function(event)
-  {
-    obj_db_Area_ReadWrite_Data.chart.renderTo = "fs_avgMemoryDiv";
-    $.each(stats, function(i, stat_name)
-    {
-      obj_db_Area_ReadWrite_Data.series[i].data = values[stat_name];
+      obj_db_Area_ReadWrite_Data.chart.renderTo = "fs_avgMemoryDiv";
+      $.each(stats, function(i, stat_name)
+      {
+        obj_db_Area_ReadWrite_Data.series[i].data = values[stat_name];
+      });
+      if(isZoom == 'true')
+      {
+        renderZoomDialog(obj_db_Area_ReadWrite_Data);
+      }
+      chart = new Highcharts.Chart(obj_db_Area_ReadWrite_Data);
     });
-    if(isZoom == 'true')
-    {
-      renderZoomDialog(obj_db_Area_ReadWrite_Data);
-    }
-    chart = new Highcharts.Chart(obj_db_Area_ReadWrite_Data);
-  });
 }
 /*****************************************************************************
  * Function for mdOps - Area Chart
@@ -284,7 +252,7 @@ fs_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKind
 *****************************************************************************/
 fs_Area_mdOps_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
-	var readData = [], writeData = [], statData = [], closeData = [], openData = [];
+  var readData = [], writeData = [], statData = [], closeData = [], openData = [];
   obj_db_Area_mdOps_Data = JSON.parse(JSON.stringify(chartConfig_Area_mdOps));
 
   var values = new Object();
@@ -293,18 +261,17 @@ fs_Area_mdOps_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fe
   {
     values[stat_name] = [];
   });
-  $.post(db_Area_mdOps_Data_Api_Url,
-  {
-    targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
-    starttime: startTime, filesystem_id: fsId, endtime: endTime
-  })
-  .success(function(data, textStatus, jqXHR) 
-  {
-    var targetName='';
-    var avgDiskReadApiResponse = data;
-    if(avgDiskReadApiResponse.success)
+  
+  var api_params = {
+      targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
+      starttime: startTime, filesystem_id: fsId, endtime: endTime
+  };
+  
+  invoke_api_call(api_post, fs_Area_mdOps_Data_Api_Url, api_params,
+    success_callback = function(data)
     {
-      var response = avgDiskReadApiResponse.response;
+      var targetName='';
+      var response = data.response;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -319,25 +286,18 @@ fs_Area_mdOps_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fe
           });
         }
       });
-    }
-  })
-  .error(function(event) 
-  {
-    // Display of appropriate error message
-  })
-  .complete(function(event)
-  {
-    obj_db_Area_mdOps_Data.chart.renderTo = "fs_avgReadDiv";
-    if(isZoom == 'true') 
-    {
-      renderZoomDialog(obj_db_Area_mdOps_Data);
-    }
-    $.each(stats, function(i, stat_name) 
-    {
-      obj_db_Area_mdOps_Data.series[i].data = values[stat_name];
+
+      obj_db_Area_mdOps_Data.chart.renderTo = "fs_avgReadDiv";
+      if(isZoom == 'true') 
+      {
+        renderZoomDialog(obj_db_Area_mdOps_Data);
+      }
+      $.each(stats, function(i, stat_name) 
+      {
+        obj_db_Area_mdOps_Data.series[i].data = values[stat_name];
+      });
+      chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
     });
-    chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
-  });
 }
 /*****************************************************************************
  * Function for mdOps - Area Spline Chart
@@ -354,68 +314,66 @@ fs_AreaSpline_ioOps_Data = function(isZoom)
   {
     values[stat_name] = [];
   });
-  $.post("/api/get_fs_stats_heatmap/",
-  {
-    fetchmetrics: stats.join(" "), endtime: endTime, datafunction: "Average", 
-    starttime: startTime, filesystem: $("#ls_fsName").val(), targetkind:"OST"
-  })
-  .success(function(data, textStatus, jqXHR) 
-  {
-    var targetName='';
-    var count=0;
-    var iopsDataResponse = data;
-    if(iopsDataResponse.success)
+
+  var api_params = {
+      fetchmetrics: stats.join(" "), endtime: endTime, datafunction: "Average", 
+      starttime: startTime, filesystem: $("#ls_fsName").val(), targetkind:"OST"
+  };
+
+  invoke_api_call(api_post, "get_fs_stats_heatmap/", api_params,
+    success_callback = function(data)
     {
+      var targetName='';
+      var count=0;
       var response = data.response;
       $.each(response, function(resKey, resValue)
       {
-          if (targetName != resValue.targetname && targetName !='')
+        if (targetName != resValue.targetname && targetName !='')
+        {
+          $.each(stats, function(i, stat_name)
           {
-            $.each(stats, function(i, stat_name)
+            obj_db_AreaSpline_ioOps_Data.series[count] = 
             {
-              obj_db_AreaSpline_ioOps_Data.series[count] = 
-              {
-                  name: targetName + ' : '+stat_name,
-                  data: values[stat_name],
-              };
-              count++;
-            });
-            $.each(stats, function(i, stat_name)
-            {
-              values[stat_name] = [];
-            });
-            
+                name: targetName + ' : '+stat_name,
+                data: values[stat_name],
+            };
+            count++;
+          });
+          $.each(stats, function(i, stat_name)
+          {
+            values[stat_name] = [];
+          });
 
-            targetName = resValue.targetname;
-            
-            if(targetName != undefined)
-            {
-              ts = resValue.timestamp * 1000;
-              $.each(stats, function(i, stat_name) 
-              {
-                if (resValue[stat_name] != null || resValue[stat_name] != undefined) 
-                {
-                  values[stat_name].push([ts, resValue[stat_name]]);
-                }
-              });
-            }
-          }
-          else
+          targetName = resValue.targetname;
+
+          if(targetName != undefined)
           {
-            targetName = resValue.targetname;
-            
-            if(targetName != undefined)
+            ts = resValue.timestamp * 1000;
+            $.each(stats, function(i, stat_name) 
             {
-              ts = resValue.timestamp * 1000;
-              $.each(stats, function(i, stat_name) 
+              if (resValue[stat_name] != null || resValue[stat_name] != undefined) 
               {
-                if (resValue[stat_name] != null || resValue[stat_name] != undefined) 
-                {
-                  values[stat_name].push([ts, resValue[stat_name]]);
-                }
-              });
-            }
+                values[stat_name].push([ts, resValue[stat_name]]);
+              }
+            });
           }
+        }
+        else
+        {
+          targetName = resValue.targetname;
+
+          if(targetName != undefined)
+          {
+            ts = resValue.timestamp * 1000;
+            $.each(stats, function(i, stat_name) 
+            {
+              if (resValue[stat_name] != null || resValue[stat_name] != undefined) 
+              {
+                values[stat_name].push([ts, resValue[stat_name]]);
+              }
+            });
+          }
+        }
       });
       $.each(stats, function(i, stat_name)
       {
@@ -425,25 +383,13 @@ fs_AreaSpline_ioOps_Data = function(isZoom)
           data: values[stat_name],
         };
       });
-    }
-  })
-  .error(function(event) 
-  {
-    // Display of appropriate error message
-  })
-  .complete(function(event)
-  {
-    obj_db_AreaSpline_ioOps_Data.chart.renderTo = "fs_iopsSpline";
-    if(isZoom == 'true') 
-    {
-      renderZoomDialog(obj_db_AreaSpline_ioOps_Data);
-    }
-    /*$.each(stats, function(i, stat_name) 
-    {
-      obj_db_AreaSpline_ioOps_Data.series[i].data = values[stat_name];
-    });*/
-    chart = new Highcharts.Chart(obj_db_AreaSpline_ioOps_Data);
-  });
+      obj_db_AreaSpline_ioOps_Data.chart.renderTo = "fs_iopsSpline";
+      if(isZoom == 'true') 
+      {
+        renderZoomDialog(obj_db_AreaSpline_ioOps_Data);
+      }
+      chart = new Highcharts.Chart(obj_db_AreaSpline_ioOps_Data);
+    });
 }
 /*****************************************************************************
  * Function to plot heat map for CPU Usage
@@ -562,14 +508,15 @@ fs_HeatMap_ReadWriteData = function(fetchmetrics, isZoom)
 loadFileSystemSummary = function (fsId)
 {
   var innerContent = "";
-	$('#fileSystemSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
-	"<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />" +
-	"</td></tr>");
-	$.post("/api/getfilesystem/",{filesystem_id: fsId})
-  .success(function(data, textStatus, jqXHR) 
-  {
-    if(data.success)
-    {
+  $('#fileSystemSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
+  "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />" +
+  "</td></tr>");
+
+  var api_params = {filesystem_id: fsId};
+
+  invoke_api_call(api_post, "getfilesystem/", api_params, 
+	success_callback = function(data)
+	{
       var response = data.response;
       $.each(response, function(resKey, resValue) 
       {
@@ -635,15 +582,8 @@ loadFileSystemSummary = function (fsId)
           	  "</tr>";
         }
       });
-    }
-  })
-	.error(function(event) 
-	{
 
-	})
-	.complete(function(event)
-	{
-		$('#fileSystemSummaryTbl').html(innerContent);
+      $('#fileSystemSummaryTbl').html(innerContent);
 	});
 }
 /*****************************************************************************

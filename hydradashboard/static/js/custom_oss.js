@@ -9,8 +9,8 @@
 ******************************************************************************
  * API URL's for all the graphs on OSS dashboard page
 ******************************************************************************/
-var oss_LineBar_CpuMemoryUsage_Data_Api_Url = "/api/get_stats_for_server/";
-var oss_Area_ReadWrite_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+var oss_LineBar_CpuMemoryUsage_Data_Api_Url = "get_stats_for_server/";
+var oss_Area_ReadWrite_Data_Api_Url = "get_fs_stats_for_targets/";
 /******************************************************************************
  * Function for cpu and memory usage - Line + Column Chart
  * Param - File System name, start date, end date, datafunction (average/min/max),fetchematrics, isZoom
@@ -44,17 +44,16 @@ oss_LineBar_CpuMemoryUsage_Data = function(hostId, sDate, endDate, dataFunction,
     }
   ];
   obj_oss_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(custom_chart));
-  $.post(oss_LineBar_CpuMemoryUsage_Data_Api_Url,
-  {
+  
+  var api_params = {
     datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, host_id: hostId, endtime: endDate
-  })
-  .success(function(data, textStatus, jqXHR) 
-  {
-    var hostName='';
-    var ossCPUMemoryApiResponse = data;
-    if(ossCPUMemoryApiResponse.success)
+  };
+  
+  invoke_api_call(api_post, oss_LineBar_CpuMemoryUsage_Data_Api_Url, api_params,
+    success_callback = function(data)
     {
-      var response = ossCPUMemoryApiResponse.response;
+      var hostName='';
+      var response = data.response;
       $.each(response, function(resKey, resValue) 
       {
         if(resValue.host != undefined)
@@ -75,29 +74,21 @@ oss_LineBar_CpuMemoryUsage_Data = function(hostId, sDate, endDate, dataFunction,
            }
         }
       });
-    }
-  })
-  .error(function(event)
-  {
-    // Display of appropriate error message
-  })
-  .complete(function(event)
-  {
-    //obj_oss_LineBar_CpuMemoryUsage_Data.xAxis.categories = categories;
-    obj_oss_LineBar_CpuMemoryUsage_Data.chart.renderTo = "oss_avgReadDiv";
-    obj_oss_LineBar_CpuMemoryUsage_Data.chart.width='500';
-    if(isZoom == 'true')
-    {
-      renderZoomDialog(obj_oss_LineBar_CpuMemoryUsage_Data);
-    }
 
-    obj_oss_LineBar_CpuMemoryUsage_Data.series[0].data = cpuUserData;
-    obj_oss_LineBar_CpuMemoryUsage_Data.series[1].data = cpuSystemData;
-    obj_oss_LineBar_CpuMemoryUsage_Data.series[2].data = cpuIowaitData;
-    obj_oss_LineBar_CpuMemoryUsage_Data.series[3].data = memoryData;
+      obj_oss_LineBar_CpuMemoryUsage_Data.chart.renderTo = "oss_avgReadDiv";
+      obj_oss_LineBar_CpuMemoryUsage_Data.chart.width='500';
+      if(isZoom == 'true')
+      {
+        renderZoomDialog(obj_oss_LineBar_CpuMemoryUsage_Data);
+      }
+  
+      obj_oss_LineBar_CpuMemoryUsage_Data.series[0].data = cpuUserData;
+      obj_oss_LineBar_CpuMemoryUsage_Data.series[1].data = cpuSystemData;
+      obj_oss_LineBar_CpuMemoryUsage_Data.series[2].data = cpuIowaitData;
+      obj_oss_LineBar_CpuMemoryUsage_Data.series[3].data = memoryData;
 
-    chart = new Highcharts.Chart(obj_oss_LineBar_CpuMemoryUsage_Data);
-  });
+      chart = new Highcharts.Chart(obj_oss_LineBar_CpuMemoryUsage_Data);
+    });
 }
 /*****************************************************************************
  * Function for disk read and write - Area Chart
@@ -113,18 +104,17 @@ oss_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKin
   {
     values[stat_name] = [];
   });
-  $.post(oss_Area_ReadWrite_Data_Api_Url,
-  {
+  
+  var api_params = {
     targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
-	  starttime: startTime, filesystem_id: fsId, endtime: endTime
-	})
-  .success(function(data, textStatus, jqXHR) 
-  {
-    var hostName='';
-    var avgMemoryApiResponse = data;
-    if(avgMemoryApiResponse.success)
+    starttime: startTime, filesystem_id: fsId, endtime: endTime
+  };
+  
+  invoke_api_call(api_post, oss_Area_ReadWrite_Data_Api_Url, api_params,
+    success_callback = function(data)
     {
-      var response = avgMemoryApiResponse.response;
+      var hostName='';
+      var response = data.response;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -145,29 +135,22 @@ oss_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKin
                   values[stat_name].push([ts, (0 - resValue[stat_name])]);    
                 }
               }
-	          });
-	        }
-	      }
-	    });
-	  }
-	 })
-	 .error(function(event) 
-	 {
-	   // Display of appropriate error message
-	 })
-  .complete(function(event)
-  {
-    obj_oss_Area_ReadWrite_Data.chart.renderTo = "oss_avgWriteDiv";
-    obj_oss_Area_ReadWrite_Data.chart.width='500';
-    $.each(stats, function(i, stat_name) 
-    {
-      obj_oss_Area_ReadWrite_Data.series[i].data = values[stat_name];
-    });
-    if(isZoom == 'true')
-    {
-      renderZoomDialog(obj_oss_Area_ReadWrite_Data);
-    }
-    chart = new Highcharts.Chart(obj_oss_Area_ReadWrite_Data);
+            });
+          }
+        }
+      });
+
+      obj_oss_Area_ReadWrite_Data.chart.renderTo = "oss_avgWriteDiv";
+      obj_oss_Area_ReadWrite_Data.chart.width='500';
+      $.each(stats, function(i, stat_name) 
+      {
+        obj_oss_Area_ReadWrite_Data.series[i].data = values[stat_name];
+      });
+      if(isZoom == 'true')
+      {
+        renderZoomDialog(obj_oss_Area_ReadWrite_Data);
+      }
+      chart = new Highcharts.Chart(obj_oss_Area_ReadWrite_Data);
   });
 }
 /*****************************************************************************
@@ -179,10 +162,11 @@ loadOSSUsageSummary = function (fsId)
 {
   $('#ossSummaryTbl').html("<tr><td width='100%' align='center' height='180px'><img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
   var innerContent = "";
-  $.post("/api/getfilesystem/",{filesystem_id: fsId})
-  .success(function(data, textStatus, jqXHR) 
-  {
-    if(data.success)
+
+  var api_params = {filesystem_id: fsId};
+
+  invoke_api_call(api_post, "getfilesystem/", api_params, 
+    success_callback = function(data)
     {
       var response = data.response;
       $.each(response, function(resKey, resValue) 
@@ -242,16 +226,9 @@ loadOSSUsageSummary = function (fsId)
           innerContent = innerContent + "<td><div class='tblContent txtleft status_stopped'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
         }
       });
-    }
-  })
-	.error(function(event) 
-	{
-	  
-	})
-	.complete(function(event)
-	{
-	  $('#ossSummaryTbl').html(innerContent);
-  });
+
+      $('#ossSummaryTbl').html(innerContent);
+    });
 }
 /*****************************************************************************
  * Function to initialize polling of graphs on the oss dashboard page

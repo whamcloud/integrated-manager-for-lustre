@@ -10,9 +10,9 @@
 ******************************************************************************
  * API URL's for all the graphs on OST dashboard page
 ******************************************************************************/
-var ost_Pie_Space_Data_Api_Url = "/api/get_stats_for_targets/";
-var ost_Pie_Inode_Data_Api_Url = "/api/get_stats_for_targets/";
-var ost_Area_ReadWrite_Data_Api_Url = "/api/get_stats_for_targets/";
+var ost_Pie_Space_Data_Api_Url = "get_stats_for_targets/";
+var ost_Pie_Inode_Data_Api_Url = "get_stats_for_targets/";
+var ost_Area_ReadWrite_Data_Api_Url = "get_stats_for_targets/";
 var mdt_ops_fetch_metrics= ["stats_close", "stats_getattr", "stats_getxattr", "stats_link",
                         "stats_mkdir", "stats_mknod", "stats_open", "stats_rename",
                         "stats_rmdir", "stats_setattr", "stats_statfs", "stats_unlink"];
@@ -99,14 +99,13 @@ ost_Pie_Space_Data = function(targetId, targetName, sDate, endDate, dataFunction
   obj_ost_pie_space.title.text= targetName + " Space Usage";
   obj_ost_pie_space.chart.renderTo = "target_space_usage_container";
 
-  $.post(ost_Pie_Space_Data_Api_Url,
-  { 
-    targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-    starttime: "", target_id: targetId, endtime: ""
-  })
-  .success(function(data, textStatus, jqXHR) 
-  {   
-    if(data.success)
+  var api_params = { 
+      targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
+      starttime: "", target_id: targetId, endtime: ""
+  };
+  
+  invoke_api_call(api_post, ost_Pie_Space_Data_Api_Url, api_params,
+    success_callback = function(data)
     {
       var response = data.response;
       var totalDiskSpace=0,totalFreeSpace=0;
@@ -123,33 +122,26 @@ ost_Pie_Space_Data = function(targetId, targetName, sDate, endDate, dataFunction
           usedData.push(used);
         }
       });
-    }
-  })
-  .error(function(event) 
-  {
-    // Display of appropriate error message
-  })
-  .complete(function(event) 
-  {
-    obj_ost_pie_space.series = 
-    [{
-      type: 'pie',
-      name: 'Browser share',
-      data: 
-        [
-             ['Free',    free],
-             ['Used',    used]
-        ]
-    }];
-    obj_ost_pie_space.tooltip = 
-    {
-      formatter: function() 
+ 
+      obj_ost_pie_space.series = 
+      [{
+        type: 'pie',
+        name: 'Browser share',
+        data: 
+          [
+               ['Free',    free],
+               ['Used',    used]
+          ]
+      }];
+      obj_ost_pie_space.tooltip = 
       {
-         return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %';
-      }
-    };
-    chart = new Highcharts.Chart(obj_ost_pie_space);
-  });
+        formatter: function() 
+        {
+           return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %';
+        }
+      };
+      chart = new Highcharts.Chart(obj_ost_pie_space);
+    });
 } 
 /*****************************************************************************
  * Function for free inodes - Pie Chart
@@ -162,15 +154,15 @@ ost_Pie_Inode_Data = function(targetId, targetName, sDate, endDate, dataFunction
   var freeFilesData = [],totalFilesData = [];
   obj_ost_pie_inode = JSON.parse(JSON.stringify(ChartConfig_OST_Space));
   obj_ost_pie_inode.title.text= targetName + " - Files vs Free Inodes";
-  obj_ost_pie_inode.chart.renderTo = "target_inodes_container";    
-  $.post(ost_Pie_Inode_Data_Api_Url,
-  {
-    targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
-    starttime: "", target_id: targetId, endtime: ""
-  })
-  .success(function(data, textStatus, jqXHR) 
-  {   
-    if(data.success)
+  obj_ost_pie_inode.chart.renderTo = "target_inodes_container";
+  
+  var api_params = {
+      targetkind: targetKind, datafunction: dataFunction, fetchmetrics: fetchMetrics, 
+      starttime: "", target_id: targetId, endtime: ""
+  };
+  
+  invoke_api_call(api_post, ost_Pie_Inode_Data_Api_Url, api_params,
+    success_callback = function(data)
     {
       var response = data.response;
       var totalFiles=0,totalFreeFiles=0;
@@ -187,15 +179,8 @@ ost_Pie_Inode_Data = function(targetId, targetName, sDate, endDate, dataFunction
           totalFilesData.push(used);
         }   
       });
-    }
-  })
-  .error(function(event) 
-  {
-    // Display of appropriate error message
-  })
-  .complete(function(event) 
-  {
-    obj_ost_pie_inode.series = 
+
+      obj_ost_pie_inode.series = 
       [{
         type: 'pie',
         name: 'Browser share',
@@ -204,16 +189,16 @@ ost_Pie_Inode_Data = function(targetId, targetName, sDate, endDate, dataFunction
             ['Free',    free],
             ['Used',    used]
           ]
-       }];
-    obj_ost_pie_inode.tooltip = 
-    {
-      formatter: function() 
+      }];
+      obj_ost_pie_inode.tooltip = 
       {
-         return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %';
-      }
-    };
+        formatter: function() 
+        {
+           return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %';
+        }
+      };
       chart = new Highcharts.Chart(obj_ost_pie_inode);
-  });
+    });
 }
 /*****************************************************************************
  * Function for mgt ops - Area Chart
@@ -231,18 +216,17 @@ ost_Area_mgtOps_Data = function(targetId, isZoom)
   {
     values[stat_name] = [];
   });
-  $.post(ost_Area_ReadWrite_Data_Api_Url,
-  {
-    targetkind: "MDT", datafunction: "Average", fetchmetrics: stats.join(" "),
-    starttime: startTime,  target_id: targetId, endtime: endTime
-  })
-  .success(function(data, textStatus, jqXHR)
-  {
-    var targetName='';
-    var avgDiskReadApiResponse = data;
-    if(avgDiskReadApiResponse.success)
+  
+  var api_params = {
+      targetkind: "MDT", datafunction: "Average", fetchmetrics: stats.join(" "),
+      starttime: startTime,  target_id: targetId, endtime: endTime
+  };
+  
+  invoke_api_call(api_post, ost_Area_ReadWrite_Data_Api_Url, api_params,
+    success_callback = function(data)
     {
-      var response = avgDiskReadApiResponse.response;
+      var targetName='';
+      var response = data.response;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -257,25 +241,19 @@ ost_Area_mgtOps_Data = function(targetId, isZoom)
           });
           }
       });
-    }
-  })
-  .error(function(event)
-  {
-  })
-  .complete(function(event)
-  {
-    obj_db_Area_mdOps_Data.chart.renderTo = "target_mgt_ops_container";
-    obj_db_Area_mdOps_Data.chart.width = "480";
-    if(isZoom == 'true')
-    {
-      renderZoomDialog(obj_db_Area_mdOps_Data);
-    }
-    $.each(stats, function(i, stat_name)
-    {
-      obj_db_Area_mdOps_Data.series[i].data = values[stat_name];
+
+      obj_db_Area_mdOps_Data.chart.renderTo = "target_mgt_ops_container";
+      obj_db_Area_mdOps_Data.chart.width = "480";
+      if(isZoom == 'true')
+      {
+        renderZoomDialog(obj_db_Area_mdOps_Data);
+      }
+      $.each(stats, function(i, stat_name)
+      {
+        obj_db_Area_mdOps_Data.series[i].data = values[stat_name];
+      });
+      chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
     });
-    chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
-  });
 }
 
 /*****************************************************************************
@@ -291,18 +269,17 @@ ost_Area_ReadWrite_Data = function(targetId, targetName, sDate, endDate, dataFun
   $.each(stats, function(i, stat_name){
     values[stat_name] = [];
   });
-  $.post(ost_Area_ReadWrite_Data_Api_Url,
-  {
-    targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
-    starttime: startTime, target_id: targetId, endtime: endTime
-  })
-  .success(function(data, textStatus, jqXHR) 
-  {
-    var hostName='';
-    var avgMemoryApiResponse = data;
-    if(avgMemoryApiResponse.success)
+  
+  var api_params = {
+      targetkind: targetKind, datafunction: dataFunction, fetchmetrics: stats.join(" "),
+      starttime: startTime, target_id: targetId, endtime: endTime
+  };
+  
+  invoke_api_call(api_post, ost_Area_ReadWrite_Data_Api_Url, api_params,
+    success_callback = function(data)
     {
-      var response = avgMemoryApiResponse.response;
+      var hostName='';
+      var response = data.response;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -327,26 +304,19 @@ ost_Area_ReadWrite_Data = function(targetId, targetName, sDate, endDate, dataFun
           }
         }
       });
-    }
-  })
-  .error(function(event) 
-  {
-    // Display of appropriate error message
-  })
-  .complete(function(event)
-  {
-    obj_oss_Area_ReadWrite_Data.chart.renderTo = "target_read_write_container";
-    obj_oss_Area_ReadWrite_Data.chart.width='500';
-    $.each(stats, function(i, stat_name) 
-    {
-      obj_oss_Area_ReadWrite_Data.series[i].data = values[stat_name];
+
+      obj_oss_Area_ReadWrite_Data.chart.renderTo = "target_read_write_container";
+      obj_oss_Area_ReadWrite_Data.chart.width='500';
+      $.each(stats, function(i, stat_name) 
+      {
+        obj_oss_Area_ReadWrite_Data.series[i].data = values[stat_name];
+      });
+      if(isZoom == 'true')
+      {
+        renderZoomDialog(obj_oss_Area_ReadWrite_Data);
+      }
+      chart = new Highcharts.Chart(obj_oss_Area_ReadWrite_Data);
     });
-    if(isZoom == 'true')
-    {
-      renderZoomDialog(obj_oss_Area_ReadWrite_Data);
-    }
-    chart = new Highcharts.Chart(obj_oss_Area_ReadWrite_Data);
-  });
 }
 /*****************************************************************************
  * Function to load OST usage summary information
@@ -358,10 +328,11 @@ loadOSTSummary = function (fsId)
   var innerContent = "";
   $('#ostSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
       "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
-  $.post("/api/getfilesystem/",{filesystem_id: fsId})
-  .success(function(data, textStatus, jqXHR) 
-  {
-    if(data.success)
+
+  var api_params = {filesystem_id: fsId};
+
+  invoke_api_call(api_post, "getfilesystem/", api_params, 
+    success_callback = function(data)
     {
       var response = data.response;
       $.each(response, function(resKey, resValue) 
@@ -420,16 +391,9 @@ loadOSTSummary = function (fsId)
           innerContent = innerContent +"<td><div class='tblContent txtleft status_stopped'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
         }
       });
-    }
-  })
-  .error(function(event) 
-  {
 
-  })
-  .complete(function(event)
-  {
-    $('#ostSummaryTbl').html(innerContent);
-  });
+      $('#ostSummaryTbl').html(innerContent);
+    });
 }
 /*****************************************************************************
  * Function to initialize polling of graphs on the ost dashboard page

@@ -194,11 +194,10 @@ $(document).ready(function()
     "<span class='fontStyle style2 style9'><b>Free Space</b></span></td>" +
     "</tr>";
 
-     $.get("/api/listfilesystems")
-    .success(function(data, textStatus, jqXHR) 
-    {
-      var innerContent = "<option value=''>Select File System</option>";
-      if (data.success) {
+    invoke_api_call(api_get, "listfilesystems", "",
+      success_callback = function(data)
+      {
+        var innerContent = "<option value=''>Select File System</option>";
         $.each(data.response, function(resKey, resValue) 
         {
           innerContent = innerContent + 
@@ -230,21 +229,17 @@ $(document).ready(function()
             resValue.kbytesfree,
           ]);
         });
-      }
-      $('#fsSelect').html(innerContent);
-    })
-    .error(function(event) {
+        $('#fsSelect').html(innerContent);
+      });
 
-    });
-     
-    db_Bar_SpaceUsage_Data('false');
-    db_Line_connectedClients_Data('false');
-    db_LineBar_CpuMemoryUsage_Data('false');
-    db_Area_ReadWrite_Data('false');
-    db_Area_mdOps_Data('false');
-    db_AreaSpline_ioOps_Data('false');
-
-    setActiveMenu('dashboard_menu');
+      db_Bar_SpaceUsage_Data('false');
+      db_Line_connectedClients_Data('false');
+      db_LineBar_CpuMemoryUsage_Data('false');
+      db_Area_ReadWrite_Data('false');
+      db_Area_mdOps_Data('false');
+      db_AreaSpline_ioOps_Data('false');
+  
+      setActiveMenu('dashboard_menu');
   }   
 /*****************************************************************************
  *  Function to populate info on file system dashboard page
@@ -269,29 +264,22 @@ $(document).ready(function()
     "<select id='ossSelect'>"+
     "<option value=''>Select Server</option>";
 
-    $.post("/api/listservers/",{filesystem_id:fsId}) 
-    .success(function(data, textStatus, jqXHR)
-    {
-      if(data.success)
+    var api_params = {filesystem_id : fsId};
+    invoke_api_call(api_post, "listservers/", api_params, 
+      success_callback = function(data)
       {
         $.each(data.response, function(resKey, resValue)
         {
           breadCrumbHtml += "<option value="+resValue.id+">" + resValue.pretty_name + "</option>";
         });
-       }
-    })
-    .error(function(event) 
-    {
-      //$('#outputDiv').html("Error loading list, check connection between browser and Hydra server");
-    })
-    .complete(function(event){
-      breadCrumbHtml = breadCrumbHtml +
-      "</select>"+
-      "</li>"+
-      "</ul>";
-      $("#breadCrumb1").html(breadCrumbHtml);
-      $("#breadCrumb1").jBreadCrumb();
-    });
+
+        breadCrumbHtml = breadCrumbHtml +
+        "</select>"+
+        "</li>"+
+        "</ul>";
+        $("#breadCrumb1").html(breadCrumbHtml);
+        $("#breadCrumb1").jBreadCrumb();
+      });
 
     resetTimeInterval();
 
@@ -341,40 +329,38 @@ $(document).ready(function()
     "<li>"+
     "<select id='ostSelect'>"+
     "<option value=''>Select Target</option>";
-    
-    $.ajax({type: 'POST', url: "/api/get_fs_targets/", dataType: 'json', data: JSON.stringify({
-      "filesystem_id": fsId,
-      "kinds": ["OST","MGT","MDT"],
-      "host_id": ossId
-    }), contentType:"application/json; charset=utf-8"})
-    .success(function(data, textStatus, jqXHR) 
-    {
-      var targets = data.response;
-      targets = targets.sort(function(a,b) {return a.label > b.label;})
 
-      var count = 0;
-      $.each(targets, function(i, target_info) {
-        breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>"
-        
-        ostKindMarkUp = ostKindMarkUp + "<option value="+target_info.id+">"+target_info.kind+"</option>";
-        
-        count += 1; 
+    var api_params = {
+        "filesystem_id": fsId,
+        "kinds": ["OST","MGT","MDT"],
+        "host_id": ossId
+    }; 
+
+    invoke_api_call(api_post, "get_fs_targets/", api_params, 
+      success_callback = function(data)
+      {
+        var targets = data.response;
+        targets = targets.sort(function(a,b) {return a.label > b.label;})
+  
+        var count = 0;
+        $.each(targets, function(i, target_info) 
+        {
+          breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>"
+  
+          ostKindMarkUp = ostKindMarkUp + "<option value="+target_info.id+">"+target_info.kind+"</option>";
+  
+          count += 1; 
+        });
+
+        breadCrumbHtml = breadCrumbHtml +      	
+        "</select>"+
+        "</li>"+
+        "</ul>";
+        $("#breadCrumb2").html(breadCrumbHtml);
+        $("#breadCrumb2").jBreadCrumb();
+
+        $("#ostKind").html(ostKindMarkUp);
       });
-    })
-    .error(function(event) 
-    {
-    })
-    .complete(function(event)
-    {
-      breadCrumbHtml = breadCrumbHtml +      	
-      "</select>"+
-      "</li>"+
-      "</ul>";
-      $("#breadCrumb2").html(breadCrumbHtml);
-      $("#breadCrumb2").jBreadCrumb();
-      
-      $("#ostKind").html(ostKindMarkUp);
-    });
 
     resetTimeInterval();
 
@@ -383,9 +369,9 @@ $(document).ready(function()
     oss_Area_ReadWrite_Data(fsId, startTime, endTime, "Average", "OST", readWriteFetchMatric, 'false');
 
     loadOSSUsageSummary(fsId);
-    
+
     clearAllIntervals();
-	        
+
     $('#ls_ossId').attr("value",ossId);$('#ls_ossName').attr("value",ossName);
     window.location.hash =  "oss";
   }
