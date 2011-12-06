@@ -204,9 +204,13 @@ class GetResource(AnonymousRequestHandler):
         for s in StorageResourceStatistic.objects.filter(storage_resource = resource_id):
             stats[s.name] = s.to_dict()
 
+        from configure.lib.storage_plugin.resource import ScannableResource
+        scannable = isinstance(resource, ScannableResource)
+
         return {'id': record.pk,
                 'content_type_id': ContentType.objects.get_for_model(record).id,
                 'class_name': resource.human_class(),
+                'scannable': scannable,
                 'alias': record.alias,
                 'default_alias': record.to_resource().human_string(),
                 'attributes': resource.get_attribute_items(),
@@ -560,6 +564,13 @@ class CreateStorageResource(AnonymousRequestHandler):
     def run(self, request, plugin, resource_class, attributes):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         storage_plugin_manager.create_root_resource(plugin, resource_class, **attributes)
+
+
+class DeleteStorageResource(AnonymousRequestHandler):
+    @extract_request_args('resource_id')
+    def run(self, request, resource_id):
+        from configure.lib.storage_plugin.daemon import StorageDaemon
+        StorageDaemon.request_remove_resource(resource_id)
 
 
 class CreatableStorageResourceClasses(AnonymousRequestHandler):

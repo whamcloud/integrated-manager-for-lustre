@@ -120,6 +120,7 @@ urlpatterns = patterns('',
     (r'^set_resource_alias/$', CsrfExemptResource(SetResourceAlias)),
     (r'^get_target_resource_graph/$', CsrfExemptResource(GetTargetResourceGraph)),
 
+    (r'^delete_storage_resource/$', CsrfExemptResource(configureapi.DeleteStorageResource)),
     (r'^storage_resource/$', CsrfExemptResource(CreateStorageResource)),
     (r'^storage_resource_class_fields/$', CsrfExemptResource(StorageResourceClassFields)),
     (r'^creatable_storage_resource_classes/$', CsrfExemptResource(CreatableStorageResourceClasses)),

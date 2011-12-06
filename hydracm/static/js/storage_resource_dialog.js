@@ -6,6 +6,8 @@ $(document).ready(function() {
   $('#storage_resource_dialog').dialog({autoOpen: false, modal: true, minWidth: 950, maxHeight: 1024});
   $('#alias_save_button').button();
   $('#alias_reset_button').button();
+  $('#remove_resource_button').button();
+  $('#remove_resource_button').click(remove_resource);
 
   /* Event for a.storage_resource elements to pop up details dialog */
   $('a.storage_resource').live('click', function() {
@@ -157,8 +159,11 @@ function load_resource(resource) {
     }
     $("input#alias_default_entry").attr('value', resource.default_alias);
 
+    $('#remove_resource_button').toggle(resource.scannable)
+
     var attr_markup = "";
     var rowclass = "odd";
+    console.log(resource);
     $.each(resource.attributes, function(i,j) {
       name = j[0]
       attr_info = j[1]
@@ -169,7 +174,7 @@ function load_resource(resource) {
       }
         attr_markup += "<tr class='" + rowclass + "'><th>" + attr_info.label + ": </th><td>" + attr_info.markup + "</td></tr>";
     }); 
-    $('table#attributes').html(attr_markup);
+    $('table#storage_attributes').html(attr_markup);
 
     $('div#storage_alerts').html(alert_indicator_list_markup(resource.id, resource.content_type_id));
 
@@ -204,6 +209,11 @@ function load_resource(resource) {
       });
       populate_graph(chart_element_id[i], chart_info, stat_infos);
     });
+}
+
+function remove_resource(ev) {
+  invoke_api_call("POST", "delete_storage_resource/", {resource_id: resource_id}, function() {})
+  ev.preventDefault();
 }
 
     function save_alias(new_name) {
