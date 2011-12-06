@@ -180,7 +180,6 @@ class StoragePluginManager(object):
         import os
         import settings
         log = logging.getLogger("storage_plugin_log_%s" % module)
-        print "creating log %s for %s" % (log, module)
         handler = logging.FileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
         handler.setFormatter(logging.Formatter("[%%(asctime)s %s] %%(message)s" % module, '%d/%b/%Y:%H:%M:%S'))
         log.addHandler(handler)

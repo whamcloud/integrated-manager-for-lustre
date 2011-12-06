@@ -264,13 +264,6 @@ class StorageResourceStatistic(models.Model):
                         .order_by('-time')[:100]
                     dps = list(dps)
                     dps.reverse()
-                    #import time
-                    #begin = int(time.time()) - 60
-                    #end = int(time.time())
-                    #dps = SimpleScalarStoreDatapoint.objects.filter(storage_resource_statistic = self).\
-                    #filter(time__gt = begin).filter(time__lt = end).order_by('time')
-                    #if dps.count() == 0:
-                    #    print "No DPs between %s and %s for stat %s" % (begin, end, self.pk)
                 finally:
                     transaction.commit()
             type_name = 'timeseries'

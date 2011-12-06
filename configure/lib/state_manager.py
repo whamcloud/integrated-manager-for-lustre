@@ -217,7 +217,6 @@ class StateManager(object):
                     return leaf_distance_cache[obj] + hops
 
                 depth = depth + 1
-                #print " " * depth + "leaf_distance %s %s" % (obj, hops)
                 max_child_hops = hops
                 for child in object_edges[obj]:
                     child_hops = leaf_distance(child, depth, hops + 1)
@@ -248,7 +247,6 @@ class StateManager(object):
         with transaction.commit_on_success():
             for d in self.deps:
                 job = d.to_job()
-                print "job.__class__ = %s" % job.__class__
                 job.save()
                 job.create_locks()
                 job.create_dependencies()
