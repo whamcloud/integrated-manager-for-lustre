@@ -15,7 +15,7 @@ storage_plugin_log = logging.getLogger('storage_plugin_log')
 handler = logging.FileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
 handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
 storage_plugin_log.addHandler(handler)
-if settings.DEBUG:
+if settings.STORAGE_PLUGIN_DEBUG:
     storage_plugin_log.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))

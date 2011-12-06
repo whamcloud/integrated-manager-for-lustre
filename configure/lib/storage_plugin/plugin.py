@@ -108,9 +108,6 @@ class StoragePlugin(object):
         self._delta_new_resources = []
         self._delta_delete_resources = []
 
-        # TODO: give each one its own log, or at least a prefix
-        self.log = storage_plugin_log
-
         self._alerts_lock = threading.Lock()
         self._delta_alerts = set()
         self._alerts = {}
@@ -217,7 +214,7 @@ class StoragePlugin(object):
             self._delta_alerts.clear()
 
     def commit_resource_statistics(self):
-        self.log.debug(">> Plugin.commit_resource_statistics %s", self._scannable_id)
+        storage_plugin_log.debug(">> Plugin.commit_resource_statistics %s", self._scannable_id)
         sent_stats = 0
         for resource in self._index.all():
             r_stats = resource.flush_stats()
@@ -225,7 +222,7 @@ class StoragePlugin(object):
                 from configure.lib.storage_plugin.resource_manager import resource_manager
                 resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
                 sent_stats += len(r_stats)
-        self.log.debug("<< Plugin.commit_resource_statistics %s (%s sent)", self._scannable_id, sent_stats)
+        storage_plugin_log.debug("<< Plugin.commit_resource_statistics %s (%s sent)", self._scannable_id, sent_stats)
 
     def update_or_create(self, klass, parents = [], **attrs):
         """Report a storage resource.  If it already exists then

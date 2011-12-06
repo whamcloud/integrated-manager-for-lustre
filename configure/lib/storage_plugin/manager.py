@@ -175,6 +175,21 @@ class StoragePluginManager(object):
         else:
             plugin_klass = plugin_klasses[0]
 
+        # Hook in a logger to the StoragePlugin subclass
+        import logging
+        import os
+        import settings
+        log = logging.getLogger("storage_plugin_log_%s" % module)
+        print "creating log %s for %s" % (log, module)
+        handler = logging.FileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
+        handler.setFormatter(logging.Formatter("[%%(asctime)s %s] %%(message)s" % module, '%d/%b/%Y:%H:%M:%S'))
+        log.addHandler(handler)
+        if module in settings.STORAGE_PLUGIN_DEBUG_PLUGINS:
+            log.setLevel(logging.DEBUG)
+        else:
+            log.setLevel(logging.WARNING)
+        plugin_klass.log = log
+
         # Populate _resource_classes from all StorageResource in the same module
         # (or leave it untouched if the plugin author overrode it)
         if not hasattr(plugin_klass, '_resource_classes'):
