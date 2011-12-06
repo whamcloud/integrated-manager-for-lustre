@@ -2,7 +2,20 @@
 import datetime
 from south.db import db
 from south.v2 import SchemaMigration
+from south.signals import pre_migrate, post_migrate
 from django.db import models
+
+def disable_fk_checks(sender, **kwargs):
+    db.execute("SET FOREIGN_KEY_CHECKS=0;")
+
+def enable_fk_checks(sender, **kwargs):
+    db.execute("SET FOREIGN_KEY_CHECKS=1;")
+
+# Workaround for HYD-494
+if db.backend_name == "mysql":
+    pre_migrate.connect(disable_fk_checks)
+    # this may not be necessary, but better safe than sorry
+    post_migrate.connect(enable_fk_checks)
 
 class Migration(SchemaMigration):
 
