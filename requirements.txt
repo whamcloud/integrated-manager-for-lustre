@@ -14,3 +14,4 @@ django-piston>=0.2.3
 MySQL-python
 django-pagination
 coverage
+python-daemon>=1.5.2,<1.6
