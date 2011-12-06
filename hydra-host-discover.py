@@ -10,7 +10,7 @@ import daemon, daemon.pidlockfile
 import lockfile
 import sys
 import urllib
-import simplejson as json
+import json
 
 TYPE = "_hydra-agent._tcp"
 
