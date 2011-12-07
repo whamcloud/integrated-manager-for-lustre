@@ -261,6 +261,11 @@ class StateManager(object):
 
         job_log.debug("emit_transition_deps: %s %s->%s" % (transition.stateful_object, transition.old_state, transition.new_state))
 
+        # Update our worldview to record that any subsequent dependencies may
+        # assume that we are in our new state
+        self.expected_states[transition.stateful_object] = transition.new_state
+        job_log.debug("Updating expected_state[%s] = %s" % (transition.stateful_object, transition.new_state))
+
         # E.g. for 'unformatted'->'registered' for a ManagedTarget we
         # would get ['unformatted', 'formatted', 'registered']
         route = transition.stateful_object.get_route(transition.old_state, transition.new_state)
@@ -320,7 +325,7 @@ class StateManager(object):
                 if dependency.stateful_object == root_transition.stateful_object \
                         and not root_transition.new_state in dependency.acceptable_states:
                     assert dependency.fix_state != None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
-                    job_log.debug("Reverse dependency: %s required %s to be in state %s, fixing by setting it to state %s" % (dependent, root_transition.stateful_object, dependency.acceptable_states, dependency.fix_state))
+                    job_log.debug("Reverse dependency: %s in state %s required %s to be in state %s, fixing by setting it to state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states, dependency.fix_state))
                     dep_transition = self.emit_transition_deps(Transition(
                             dependent,
                             dependent_state, dependency.fix_state))

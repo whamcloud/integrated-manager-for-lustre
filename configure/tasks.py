@@ -166,6 +166,9 @@ def notify_state(content_type, object_id, new_state, from_states):
             instance.state = new_state
             instance.save()
 
+            # FIXME: should check the new state against reverse dependencies
+            # and apply any fix_states
+
 
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)

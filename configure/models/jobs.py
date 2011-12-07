@@ -48,6 +48,9 @@ class StatefulObject(models.Model):
         if not self.state:
             self.state = self.initial_state
 
+    def not_state(self, state):
+        return list(set(self.states) - set([state]))
+
     def get_deps(self, state = None):
         """Return static dependencies, e.g. a targetmount in state
            mounted has a dependency on a host in state lnet_started but
@@ -133,6 +136,7 @@ class StatefulObject(models.Model):
 
         cls.route_map = route_map
         cls.transition_map = transition_map
+
         cls.job_class_map = job_class_map
 
     @classmethod
@@ -150,15 +154,14 @@ class StatefulObject(models.Model):
         except KeyError:
             raise RuntimeError("%s->%s not legal state transition for %s" % (begin_state, end_state, cls))
 
-    @classmethod
-    def get_available_states(cls, begin_state):
-        if not begin_state in cls.states:
-            raise RuntimeError("%s not legal state for %s, legal states are %s" % (begin_state, cls, cls.states))
+    def get_available_states(self, begin_state):
+        if not begin_state in self.states:
+            raise RuntimeError("%s not legal state for %s, legal states are %s" % (begin_state, self.__class__, self.states))
 
-        if not hasattr(cls, 'transition_map'):
-            cls._build_maps()
+        if not hasattr(self, 'transition_map'):
+            self.__class__._build_maps()
 
-        return cls.transition_map[begin_state]
+        return self.transition_map[begin_state]
 
     @classmethod
     def get_verb(cls, begin_state, end_state):

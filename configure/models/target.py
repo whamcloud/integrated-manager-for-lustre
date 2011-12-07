@@ -130,8 +130,9 @@ class ManagedTarget(StatefulObject):
             # the target instead of stopping it.
 
         if isinstance(self, FilesystemMember) and self.state != 'removed':
-            # Make sure I'm removed if filesystem goes 'created'->'removed'
-            deps.append(DependOn(self.filesystem.downcast(), 'created', fix_state='removed'))
+            # Make sure I'm removed if filesystem goes to 'removed'
+            deps.append(DependOn(self.filesystem, 'available',
+                acceptable_states = self.filesystem.not_state('removed'), fix_state='removed'))
 
         return DependAll(deps)
 
