@@ -3,10 +3,11 @@
 *.log
 local_settings.py
 database.db
-monitor.lib.lustre_audit.log
-sql.log
 MANIFEST
 celerybeat-schedule
 celerystate.db
 hydra-server.spec
 setup.py
+*~
+*.pid
+*.log
