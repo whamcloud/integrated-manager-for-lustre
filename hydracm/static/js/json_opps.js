@@ -92,7 +92,8 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success)
       "mgt_id":mgt_id,
       "mgt_lun_id":mgt_lun_id,
       "mdt_lun_id":mdt_lun_id,
-      "ost_lun_ids": ost_lun_ids
+      "ost_lun_ids": ost_lun_ids,
+      "conf_params":""  
     }), contentType:"application/json; charset=utf-8"})
   .success(function(data, textStatus, jqXHR) 
     {

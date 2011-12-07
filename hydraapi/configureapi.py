@@ -253,8 +253,8 @@ class GetLuns(AnonymousRequestHandler):
 
 
 class CreateNewFilesystem(AnonymousRequestHandler):
-    @extract_request_args('fsname', 'mgt_id', 'mgt_lun_id', 'mdt_lun_id', 'ost_lun_ids')
-    def run(self, request, fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids):
+    @extract_request_args('fsname', 'mgt_id', 'mgt_lun_id', 'mdt_lun_id', 'ost_lun_ids', 'conf_params')
+    def run(self, request, fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, conf_params):
         # mgt_id and mgt_lun_id are mutually exclusive:
         # * mgt_id is a PK of an existing ManagedMgt to use
         # * mgt_lun_id is a PK of a Lun to use for a new ManagedMgt
@@ -277,7 +277,7 @@ class CreateNewFilesystem(AnonymousRequestHandler):
 
         from django.db import transaction
         with transaction.commit_on_success():
-            fs = create_fs(mgt_id, fsname)
+            fs = create_fs(mgt_id, fsname, conf_params)
             mdt = create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
             osts = []
             for lun_id in ost_lun_ids:
@@ -293,17 +293,14 @@ class CreateNewFilesystem(AnonymousRequestHandler):
         return fs.pk
 
 
-class CreateFilesystem(AnonymousRequestHandler):
-    @extract_request_args('mgs_id', 'fsname')
-    def run(self, request, mgs_id, fsname):
-        create_fs(mgs_id, fsname)
-
-
-def create_fs(mgs_id, fsname):
+def create_fs(mgs_id, fsname, conf_params):
         from configure.models import ManagedFilesystem, ManagedMgs
         mgs = ManagedMgs.objects.get(id=mgs_id)
         fs = ManagedFilesystem(mgs=mgs, name = fsname)
         fs.save()
+
+        if conf_params:
+            set_target_conf_param(fs.id, conf_params)
         return fs
 
 
@@ -360,30 +357,34 @@ class CreateOSTs(AnonymousRequestHandler):
 class SetTargetConfParams(AnonymousRequestHandler):
     @extract_request_args('target_id', 'conf_params')
     def run(self, request, target_id, conf_params):
-        from configure.models import ManagedTarget, ManagedFilesystem, ManagedMdt, ManagedOst
-        from django.shortcuts import get_object_or_404
-        from configure.models import ApplyConfParams
-        from configure.lib.conf_param import all_params
-        from configure.lib.state_manager import StateManager
+        set_target_conf_param(target_id, conf_params)
 
-        target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
 
-        def handle_conf_param(target, conf_params, mgs, **kwargs):
-            for conf_param in conf_params:
-                model_klass, param_value_obj, help_text = all_params[conf_param]
-                p = model_klass(key = conf_param,
-                                value = conf_params[conf_param],
-                                **kwargs)
-                mgs.set_conf_params([p])
-                StateManager().add_job(ApplyConfParams(mgs = mgs))
+def set_target_conf_param(target_id, conf_params):
+    from configure.models import ManagedTarget, ManagedFilesystem, ManagedMdt, ManagedOst
+    from django.shortcuts import get_object_or_404
+    from configure.models import ApplyConfParams
+    from configure.lib.conf_param import all_params
+    from configure.lib.state_manager import StateManager
 
-        if isinstance(target, ManagedMdt):
-            handle_conf_param(target, conf_params, target.filesystem.mgs.downcast(), mdt = target)
-        elif isinstance(target, ManagedOst):
-            handle_conf_param(target, conf_params, target.filesystem.mgs.downcast(), ost = target)
-        else:
-            fs = ManagedFilesystem.objects.get(id=target_id)
-            handle_conf_param(target, conf_params, fs.mgs.downcast(), filesystem = fs)
+    target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
+
+    def handle_conf_param(target, conf_params, mgs, **kwargs):
+        for conf_param in conf_params:
+            model_klass, param_value_obj, help_text = all_params[conf_param]
+            p = model_klass(key = conf_param,
+                            value = conf_params[conf_param],
+                            **kwargs)
+            mgs.set_conf_params([p])
+            StateManager().add_job(ApplyConfParams(mgs = mgs))
+
+    if isinstance(target, ManagedMdt):
+        handle_conf_param(target, conf_params, target.filesystem.mgs.downcast(), mdt = target)
+    elif isinstance(target, ManagedOst):
+        handle_conf_param(target, conf_params, target.filesystem.mgs.downcast(), ost = target)
+    else:
+        fs = ManagedFilesystem.objects.get(id=target_id)
+        handle_conf_param(target, conf_params, fs.mgs.downcast(), filesystem = fs)
 
 
 class GetTargetConfParams(AnonymousRequestHandler):
@@ -395,7 +396,7 @@ class GetTargetConfParams(AnonymousRequestHandler):
                                               MdtConfParam,
                                               get_conf_params,
                                               all_params)
-        from configure.models import ManagedTarget, ManagedMdt, ManagedOst
+        from configure.models import ManagedFilesystem, ManagedTarget, ManagedMdt, ManagedOst
         from django.shortcuts import get_object_or_404
         kind_map = {"FSC": FilesystemClientConfParam,
                     "FS": FilesystemGlobalConfParam,
@@ -421,9 +422,12 @@ class GetTargetConfParams(AnonymousRequestHandler):
             elif isinstance(target, ManagedOst):
                 result.extend(get_conf_param_for_target(target))
                 kinds = ["OST"]
+            # Create FS and Edit FS calls are passing kinds as ["FSC", "FS"]
+            elif kinds == ["FS", "FSC"]:
+                target = get_object_or_404(ManagedFilesystem, pk = target_id).downcast()
+                result.extend(get_conf_param_for_target(target))
             else:
                 return result
-        #FIXME: Need a way to identify if the target is Filesystem or MGS
         if kinds:
             klasses = []
             for kind in kinds:
