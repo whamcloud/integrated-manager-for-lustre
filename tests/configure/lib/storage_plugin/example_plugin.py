@@ -2,7 +2,7 @@
 from configure.lib.storage_plugin.plugin import StoragePlugin
 from configure.lib.storage_plugin.resource import StorageResource, GlobalId, ScannableResource, ScannableId
 from configure.lib.storage_plugin import attributes, statistics
-from configure.lib.storage_plugin import base_resources
+from configure.lib.storage_plugin import builtin_resources
 
 
 class Couplet(StorageResource, ScannableResource):
@@ -12,13 +12,13 @@ class Couplet(StorageResource, ScannableResource):
     address_2 = attributes.Hostname()
 
 
-class Controller(base_resources.Controller):
+class Controller(builtin_resources.Controller):
     identifier = ScannableId('index')
 
     index = attributes.Enum(0, 1)
 
 
-class HardDrive(base_resources.PhysicalDisk):
+class HardDrive(builtin_resources.PhysicalDisk):
     serial_number = attributes.String()
     capacity = attributes.Bytes()
     temperature = statistics.Gauge(units = 'C')
@@ -26,7 +26,7 @@ class HardDrive(base_resources.PhysicalDisk):
     identifier = ScannableId('serial_number')
 
 
-class RaidPool(base_resources.StoragePool):
+class RaidPool(builtin_resources.StoragePool):
     local_id = attributes.Integer()
     raid_type = attributes.Enum('raid0', 'raid1', 'raid5', 'raid6')
     capacity = attributes.Bytes()
@@ -37,7 +37,7 @@ class RaidPool(base_resources.StoragePool):
         return self.local_id
 
 
-class Lun(base_resources.VirtualDisk):
+class Lun(builtin_resources.VirtualDisk):
     local_id = attributes.Integer()
     capacity = attributes.Bytes()
     name = attributes.String()
