@@ -174,6 +174,7 @@ class StateManager(object):
         """Return a Job or None if the object is already in new_state"""
         from configure.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
+        job_log.debug("_set_state %s %s" % (instance, new_state))
 
         # Work out the eventual states (and which writelock'ing job to depend on to
         # ensure that state) from all non-'complete' jobs in the queue
@@ -255,7 +256,9 @@ class StateManager(object):
         from configure.models import Job
         Job.run_next()
 
-    def emit_transition_deps(self, transition):
+    def emit_transition_deps(self, transition, transition_stack = {}):
+        job_log.debug("emit_transition_deps: %s" % (transition))
+
         if transition in self.deps:
             return transition
 
@@ -263,8 +266,9 @@ class StateManager(object):
 
         # Update our worldview to record that any subsequent dependencies may
         # assume that we are in our new state
-        self.expected_states[transition.stateful_object] = transition.new_state
-        job_log.debug("Updating expected_state[%s] = %s" % (transition.stateful_object, transition.new_state))
+        transition_stack = dict(transition_stack.items())
+        transition_stack[transition.stateful_object] = transition.new_state
+        job_log.debug("Updating transition_stack[%s] = %s" % (transition.stateful_object, transition.new_state))
 
         # E.g. for 'unformatted'->'registered' for a ManagedTarget we
         # would get ['unformatted', 'formatted', 'registered']
@@ -276,57 +280,68 @@ class StateManager(object):
         for i in range(0, len(route) - 1):
             dep_transition = Transition(transition.stateful_object, route[i], route[i + 1])
             self.deps.add(dep_transition)
-            self.collect_dependencies(dep_transition)
+            self.collect_dependencies(dep_transition, transition_stack)
             if prev:
                 self.edges.add((dep_transition, prev))
             prev = dep_transition
 
         return prev
 
-    def collect_dependencies(self, root_transition):
+    def collect_dependencies(self, root_transition, transition_stack):
+        job_log.debug("collect_dependencies: %s" % (root_transition))
         # What is explicitly required for this state transition?
         transition_deps = root_transition.to_job().get_deps()
         for dependency in transition_deps.all():
             from configure.lib.job import DependOn
             assert(isinstance(dependency, DependOn))
             old_state = self.get_expected_state(dependency.stateful_object)
+            job_log.debug("cd %s %s %s" % (dependency.stateful_object, old_state, dependency.acceptable_states))
             if not old_state in dependency.acceptable_states:
                 dep_transition = self.emit_transition_deps(Transition(
                         dependency.stateful_object,
                         old_state,
-                        dependency.preferred_state))
+                        dependency.preferred_state), transition_stack)
                 self.edges.add((root_transition, dep_transition))
+
+        def get_mid_transition_expected_state(object):
+            try:
+                old_state = transition_stack[object]
+            except KeyError:
+                old_state = self.get_expected_state(object)
+            return old_state
 
         # What will statically be required in our new state?
         stateful_deps = root_transition.stateful_object.get_deps(root_transition.new_state)
         for dependency in stateful_deps.all():
+            if dependency.stateful_object in transition_stack:
+                continue
             # When we start running it will be in old_state
-            old_state = self.get_expected_state(dependency.stateful_object)
+            old_state = get_mid_transition_expected_state(dependency.stateful_object)
+
             # Is old_state not what we want?
             if not old_state in dependency.acceptable_states:
+                job_log.debug("new state static requires = %s %s %s" % (dependency.stateful_object, old_state, dependency.acceptable_states))
                 # Emit some transitions to get depended_on into depended_state
                 dep_transition = self.emit_transition_deps(Transition(
                         dependency.stateful_object,
                         old_state,
-                        dependency.preferred_state))
+                        dependency.preferred_state), transition_stack)
                 # Record that root_dep depends on depended_on making it into depended_state
                 self.edges.add((root_transition, dep_transition))
 
         # What was depending on our old state?
         # Iterate over all objects which *might* depend on this one
         for dependent in root_transition.stateful_object.get_dependent_objects():
+            if dependent in transition_stack:
+                continue
             # What state do we expect the dependent to be in?
-            # FIXME: expected_state tells us the state at the start of a _set_state run,
-            # not the state when root_transition is going to happen, we should have been
-            # recording a stack of transitions on the way to this point in order to know
-            # the true expected state prior to root_transition.
-            dependent_state = self.get_expected_state(dependent)
+            dependent_state = get_mid_transition_expected_state(dependent)
             for dependency in dependent.get_deps(dependent_state).all():
                 if dependency.stateful_object == root_transition.stateful_object \
                         and not root_transition.new_state in dependency.acceptable_states:
                     assert dependency.fix_state != None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
-                    job_log.debug("Reverse dependency: %s in state %s required %s to be in state %s, fixing by setting it to state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states, dependency.fix_state))
+                    job_log.debug("Reverse dependency: %s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states, root_transition.new_state, dependency.fix_state))
                     dep_transition = self.emit_transition_deps(Transition(
                             dependent,
-                            dependent_state, dependency.fix_state))
+                            dependent_state, dependency.fix_state), transition_stack)
                     self.edges.add((root_transition, dep_transition))

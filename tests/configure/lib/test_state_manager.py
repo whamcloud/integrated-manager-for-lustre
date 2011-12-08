@@ -13,7 +13,7 @@ class TestStateManager(TestCase):
         Job.objects.update(state = 'complete')
 
         # Simulate a successful SetupHostJob
-        host.state = address
+        host.state = 'lnet_unloaded'
         host.fqdn = fqdn
         host.save()
 
@@ -55,6 +55,95 @@ class TestStateManager(TestCase):
     def tearDown(self):
         self.patch_agent.stop()
         self.patch_delay_task.stop()
+
+    def _set_state_and_run(self, stateful_object, new_state):
+        # Patch run_next to avoid attempting to .run any
+        # jobs in set_state
+        stateful_object = stateful_object.__class__.objects.get(pk = stateful_object.pk)
+        with patch('configure.models.Job.run_next'):
+            from configure.lib.state_manager import StateManager
+            StateManager()._set_state(stateful_object, new_state)
+
+            # Do a simulated run through the jobs
+            from configure.models import Job
+            from configure.lib.job import StateChangeJob
+            from django.db.models import Q
+            for j in Job.objects.filter(~Q(state = 'complete')):
+                # Use .run to check dependencies
+                j.run()
+                self.assertEqual(j.state, 'tasked')
+
+                # Pretend success and update the state -- only
+                # works when the only side effect is the invoke_agent
+                # stuff we're mocking out
+                if isinstance(j, StateChangeJob):
+                    new_state = j.state_transition[2]
+                    obj = j.get_stateful_object()
+                    obj.state = new_state
+                    obj.save()
+
+                j.state = 'complete'
+                j.save()
+
+    def test_start_target(self):
+        from hydraapi.configureapi import create_target
+        from configure.models import ManagedMgs
+        mgt = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unformatted')
+        self._set_state_and_run(mgt, 'mounted')
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
+        self._set_state_and_run(mgt, 'unmounted')
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unmounted')
+        self._set_state_and_run(mgt, 'mounted')
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
+        self._set_state_and_run(mgt, 'removed')
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'removed')
+
+    def _test_lun(self, host):
+        from configure.models import Lun, LunNode
+        lun = Lun.objects.create(shareable = False)
+        node = LunNode.objects.create(lun = lun, host = host, path = "/fake/path/%s" % lun.id, primary = True)
+        return node
+
+    def test_start_filesystem(self):
+        from celery.app.amqp import TaskPublisher
+        TaskPublisher.delay_task.reset_mock()
+
+        from hydraapi.configureapi import create_fs, create_target
+        from configure.models import ManagedMgs, ManagedMdt, ManagedOst
+        mgt = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
+        fs = create_fs(mgt.pk, "testfs", {})
+        mdt = create_target(self._test_lun(self.host).id, ManagedMdt, filesystem = fs)
+        ost = create_target(self._test_lun(self.host).id, ManagedOst, filesystem = fs)
+
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unformatted')
+        self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'unformatted')
+        self.assertEqual(ManagedOst.objects.get(pk = ost.pk).state, 'unformatted')
+
+        self._set_state_and_run(fs, 'available')
+
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
+        self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'mounted')
+        self.assertEqual(ManagedOst.objects.get(pk = ost.pk).state, 'mounted')
+
+        self._set_state_and_run(fs, 'stopped')
+
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unmounted')
+        self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'unmounted')
+        self.assertEqual(ManagedOst.objects.get(pk = ost.pk).state, 'unmounted')
+
+        self._set_state_and_run(fs, 'available')
+
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
+        self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'mounted')
+        self.assertEqual(ManagedOst.objects.get(pk = ost.pk).state, 'mounted')
+
+        self._set_state_and_run(fs, 'removed')
+
+        # Hey, why is this MGS getting unmounted when I remove the filesystem?
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unmounted')
+        self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'removed')
+        self.assertEqual(ManagedOst.objects.get(pk = ost.pk).state, 'removed')
 
     def test_create_host(self):
         from celery.app.amqp import TaskPublisher
