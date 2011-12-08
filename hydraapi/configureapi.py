@@ -300,7 +300,7 @@ def create_fs(mgs_id, fsname, conf_params):
         fs.save()
 
         if conf_params:
-            set_target_conf_param(fs.id, conf_params)
+            set_target_conf_param(fs.id, conf_params, True)
         return fs
 
 
@@ -355,19 +355,22 @@ class CreateOSTs(AnonymousRequestHandler):
 
 
 class SetTargetConfParams(AnonymousRequestHandler):
-    @extract_request_args('target_id', 'conf_params')
-    def run(self, request, target_id, conf_params):
-        set_target_conf_param(target_id, conf_params)
+    @extract_request_args('target_id', 'conf_params', 'IsFS')
+    def run(self, request, target_id, conf_params, IsFS):
+        set_target_conf_param(target_id, conf_params, IsFS)
 
 
-def set_target_conf_param(target_id, conf_params):
+def set_target_conf_param(target_id, conf_params, IsFS):
     from configure.models import ManagedTarget, ManagedFilesystem, ManagedMdt, ManagedOst
     from django.shortcuts import get_object_or_404
     from configure.models import ApplyConfParams
     from configure.lib.conf_param import all_params
     from configure.lib.state_manager import StateManager
 
-    target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
+    if IsFS:
+        target = get_object_or_404(ManagedFilesystem, pk = target_id)
+    else:
+        target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
 
     def handle_conf_param(target, conf_params, mgs, **kwargs):
         for conf_param in conf_params:
@@ -378,13 +381,12 @@ def set_target_conf_param(target_id, conf_params):
             mgs.set_conf_params([p])
             StateManager().add_job(ApplyConfParams(mgs = mgs))
 
-    if isinstance(target, ManagedMdt):
+    if IsFS:
+        handle_conf_param(target, conf_params, target.mgs.downcast(), filesystem = target)
+    elif isinstance(target, ManagedMdt):
         handle_conf_param(target, conf_params, target.filesystem.mgs.downcast(), mdt = target)
     elif isinstance(target, ManagedOst):
         handle_conf_param(target, conf_params, target.filesystem.mgs.downcast(), ost = target)
-    else:
-        fs = ManagedFilesystem.objects.get(id=target_id)
-        handle_conf_param(target, conf_params, fs.mgs.downcast(), filesystem = fs)
 
 
 class GetTargetConfParams(AnonymousRequestHandler):
@@ -414,7 +416,17 @@ class GetTargetConfParams(AnonymousRequestHandler):
                                         )
             return conf_param_result
 
-        if target_id:
+        def search_conf_param(result, conf_param):
+            for param in result:
+                if param.get('conf_param') == conf_param:
+                    return True
+            return False
+
+        # Create FS and Edit FS calls are passing kinds as ["FSC", "FS"]
+        if kinds == ["FS", "FSC"] and target_id:
+                target = get_object_or_404(ManagedFilesystem, pk = target_id).downcast()
+                result.extend(get_conf_param_for_target(target))
+        elif target_id:
             target = get_object_or_404(ManagedTarget, pk = target_id).downcast()
             if isinstance(target, ManagedMdt):
                 result.extend(get_conf_param_for_target(target))
@@ -422,12 +434,9 @@ class GetTargetConfParams(AnonymousRequestHandler):
             elif isinstance(target, ManagedOst):
                 result.extend(get_conf_param_for_target(target))
                 kinds = ["OST"]
-            # Create FS and Edit FS calls are passing kinds as ["FSC", "FS"]
-            elif kinds == ["FS", "FSC"]:
-                target = get_object_or_404(ManagedFilesystem, pk = target_id).downcast()
-                result.extend(get_conf_param_for_target(target))
             else:
                 return result
+
         if kinds:
             klasses = []
             for kind in kinds:
@@ -440,7 +449,7 @@ class GetTargetConfParams(AnonymousRequestHandler):
         for klass in klasses:
             conf_params = get_conf_params([klass])
             for conf_param in conf_params:
-                if not result.__contains__(conf_params):
+                if not search_conf_param(result, conf_param):
                     result.append({'conf_param': conf_param, 'value': '', 'conf_param_help': all_params[conf_param][2]})
         return result
 
