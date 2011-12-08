@@ -278,7 +278,7 @@ class CreateNewFilesystem(AnonymousRequestHandler):
         from django.db import transaction
         with transaction.commit_on_success():
             fs = create_fs(mgt_id, fsname, conf_params)
-            mdt = create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
+            create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
             osts = []
             for lun_id in ost_lun_ids:
                 osts.append(create_target(lun_id, ManagedOst, filesystem = fs))
@@ -286,9 +286,7 @@ class CreateNewFilesystem(AnonymousRequestHandler):
         # land in DB before the set_state jobs act upon them.
 
         from configure.lib.state_manager import StateManager
-        StateManager.set_state(mdt, 'mounted')
-        for target in osts:
-            StateManager.set_state(target, 'mounted')
+        StateManager.set_state(fs, 'available')
 
         return fs.pk
 
