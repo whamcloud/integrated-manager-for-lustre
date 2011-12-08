@@ -129,7 +129,7 @@ class ManagedTarget(StatefulObject):
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
 
-        if isinstance(self, FilesystemMember) and self.state != 'removed':
+        if isinstance(self, FilesystemMember) and state != 'removed':
             # Make sure I'm removed if filesystem goes to 'removed'
             deps.append(DependOn(self.filesystem, 'available',
                 acceptable_states = self.filesystem.not_state('removed'), fix_state='removed'))
