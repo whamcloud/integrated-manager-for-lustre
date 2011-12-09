@@ -332,7 +332,6 @@ function CreateActionLink(id, ct, available_transitions)
 function LoadFSData_EditFS()
 {
   var fsname = $('#fs').val();
-  $('#fs_name').html(fsname);
   var fs_id = $('#fs_id').val();
   if(fsname!="none")
   {
@@ -354,6 +353,7 @@ function LoadFSData_EditFS()
           $('#mds_name').html(resValue.mds_hostname);
           $('#fs_status').html(resValue.status);
           $('#fs_alerts').html(alert_indicator_large_markup(resValue.id, resValue.content_type_id));
+          $('#fs_name').html(resValue.fsname);
         });
       }
     })
