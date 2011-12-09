@@ -19,7 +19,6 @@ handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H
 syslog_events_log.addHandler(handler)
 if settings.DEBUG:
     syslog_events_log.setLevel(logging.DEBUG)
-    syslog_events_log.addHandler(logging.StreamHandler())
 else:
     syslog_events_log.setLevel(logging.INFO)
 

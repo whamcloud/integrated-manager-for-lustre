@@ -14,7 +14,6 @@ handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s',
 metrics_log.addHandler(handler)
 if settings.DEBUG:
     metrics_log.setLevel(logging.DEBUG)
-    metrics_log.addHandler(logging.StreamHandler())
 else:
     metrics_log.setLevel(logging.INFO)
 

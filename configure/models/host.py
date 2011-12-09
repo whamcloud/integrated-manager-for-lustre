@@ -85,8 +85,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
         # Attempt some initial setup jobs
         from configure.lib.state_manager import StateManager
-        StateManager().set_state(host, 'lnet_unloaded')
-        StateManager().set_state(lnet_configuration, 'nids_known')
+        StateManager.set_state(host, 'lnet_unloaded')
+        StateManager.set_state(lnet_configuration, 'nids_known')
 
         return host
 

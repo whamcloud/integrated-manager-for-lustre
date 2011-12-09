@@ -17,8 +17,5 @@ handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H
 storage_plugin_log.addHandler(handler)
 if settings.STORAGE_PLUGIN_DEBUG:
     storage_plugin_log.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-    storage_plugin_log.addHandler(handler)
 else:
     storage_plugin_log.setLevel(logging.WARNING)
