@@ -1,16 +1,10 @@
 
 from django.test import TestCase
 
-host_info = {
-        'myaddress': {
-            'fqdn': 'myaddress.mycompany.com',
-            'nids': ["192.168.0.1@tcp"]
-        }
-}
-
 
 class MockAgent(object):
     label_counter = 0
+    mock_servers = {}
 
     def __init__(self, host, log = None, console_callback = None, timeout = None):
         self.host = host
@@ -18,9 +12,9 @@ class MockAgent(object):
     def invoke(self, cmdline):
         print "invoke_agent %s %s" % (self.host, cmdline)
         if cmdline == "get-fqdn":
-            return host_info[self.host.address]['fqdn']
+            return self.mock_servers[self.host.address]['fqdn']
         elif cmdline == "lnet-scan":
-            return host_info[self.host.address]['nids']
+            return self.mock_servers[self.host.address]['nids']
         elif cmdline.startswith("format-target"):
             import uuid
             return {'uuid': uuid.uuid1().__str__()}
@@ -32,7 +26,7 @@ class MockAgent(object):
             return {'label': "foofs-TTT%04d" % self.label_counter}
 
 
-class TestStateManager(TestCase):
+class JobTestCase(TestCase):
     def setUp(self):
         # FIXME: have to do this before every test because otherwise
         # one test will get all the setup of StoragePluginClass records,
@@ -55,6 +49,7 @@ class TestStateManager(TestCase):
         # Intercept attempts to call out to lustre servers
         import configure.lib.agent
         self.old_agent = configure.lib.agent.Agent
+        MockAgent.mock_servers = self.mock_servers
         configure.lib.agent.Agent = MockAgent
 
         from configure.models import ManagedHost
@@ -71,6 +66,15 @@ class TestStateManager(TestCase):
             settings.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
         else:
             delattr(settings, 'CELERY_ALWAYS_EAGER')
+
+
+class TestStateManager(JobTestCase):
+    mock_servers = {
+            'myaddress': {
+                'fqdn': 'myaddress.mycompany.com',
+                'nids': ["192.168.0.1@tcp"]
+            }
+    }
 
     def test_start_target(self):
         from hydraapi.configureapi import create_target
