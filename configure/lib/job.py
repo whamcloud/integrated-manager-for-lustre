@@ -6,8 +6,6 @@
 import logging
 import settings
 
-from configure.lib.agent import Agent
-
 job_log = logging.getLogger('job')
 job_log.setLevel(logging.DEBUG)
 handler = logging.FileHandler(settings.JOB_LOG_PATH)
@@ -17,7 +15,6 @@ handler.setFormatter(logging.Formatter(
 job_log.addHandler(handler)
 if settings.DEBUG:
     job_log.setLevel(logging.DEBUG)
-    job_log.addHandler(logging.StreamHandler())
 else:
     job_log.setLevel(logging.INFO)
 
@@ -162,6 +159,8 @@ class Step(object):
         def console_callback(chunk):
             self.result.console = self.result.console + chunk
             self.result.save()
+
+        from configure.lib.agent import Agent
         agent = Agent(host = host, log = job_log, console_callback = console_callback)
         return agent.invoke(command)
 
