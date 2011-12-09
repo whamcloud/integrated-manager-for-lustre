@@ -1,35 +1,38 @@
 
 from django.test import TestCase
-from mock import patch
+
+host_info = {
+        'myaddress': {
+            'fqdn': 'myaddress.mycompany.com',
+            'nids': ["192.168.0.1@tcp"]
+        }
+}
+
+
+class MockAgent(object):
+    label_counter = 0
+
+    def __init__(self, host, log = None, console_callback = None, timeout = None):
+        self.host = host
+
+    def invoke(self, cmdline):
+        print "invoke_agent %s %s" % (self.host, cmdline)
+        if cmdline == "get-fqdn":
+            return host_info[self.host.address]['fqdn']
+        elif cmdline == "lnet-scan":
+            return host_info[self.host.address]['nids']
+        elif cmdline.startswith("format-target"):
+            import uuid
+            return {'uuid': uuid.uuid1().__str__()}
+        elif cmdline.startswith('start-target'):
+            # FIXME: this will be nodename when HYD-455 is done
+            return {'location': self.host.fqdn}
+        elif cmdline.startswith('register-target'):
+            self.label_counter += 1
+            return {'label': "foofs-TTT%04d" % self.label_counter}
 
 
 class TestStateManager(TestCase):
-    def _create_configured_host(self, address, fqdn, nids):
-        from configure.models import ManagedHost
-        host = ManagedHost.create_from_string('myaddress')
-
-        # Suppress the jobs that were enqueued during host creation
-        from configure.models import Job
-        Job.objects.update(state = 'complete')
-
-        # Simulate a successful SetupHostJob
-        host.state = 'lnet_unloaded'
-        host.fqdn = fqdn
-        host.save()
-
-        # Simulate a successful ConfigureLNetJob
-        host.lnetconfiguration.state = 'nids_known'
-        host.lnetconfiguration.save()
-        from configure.models import Nid
-        for n in nids:
-            Nid.objects.get_or_create(
-                    lnet_configuration = host.lnetconfiguration,
-                    nid_string = n)
-
-        # Get a fresh host instance to make sure we aren't getting
-        # any stale data from the setup
-        return ManagedHost.objects.get(pk = host.pk)
-
     def setUp(self):
         # FIXME: have to do this before every test because otherwise
         # one test will get all the setup of StoragePluginClass records,
@@ -42,62 +45,49 @@ class TestStateManager(TestCase):
         import configure.lib.storage_plugin.manager
         configure.lib.storage_plugin.manager.storage_plugin_manager = configure.lib.storage_plugin.manager.StoragePluginManager()
 
-        # Intercept attempts to call out to hosts
-        self.patch_agent = patch('configure.lib.agent.Agent')
-        self.patch_agent.start()
+        import settings
+        if hasattr(settings, 'CELERY_ALWAYS_EAGER'):
+            self.old_celery_always_eager = settings.CELERY_ALWAYS_EAGER
+        else:
+            self.old_celery_always_eager = None
+        settings.CELERY_ALWAYS_EAGER = True
 
-        # Intercept attempts to created delayed tasks
-        self.patch_delay_task = patch('celery.app.amqp.TaskPublisher.delay_task')
-        self.patch_delay_task.start().return_value = 1
+        # Intercept attempts to call out to lustre servers
+        import configure.lib.agent
+        self.old_agent = configure.lib.agent.Agent
+        configure.lib.agent.Agent = MockAgent
 
-        self.host = self._create_configured_host('myaddress', 'myaddress.mycompany.com', ["192.168.0.1@tcp"])
+        from configure.models import ManagedHost
+        self.host = ManagedHost.create_from_string('myaddress')
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).lnetconfiguration.state, 'nids_known')
 
     def tearDown(self):
-        self.patch_agent.stop()
-        self.patch_delay_task.stop()
+        import configure.lib.agent
+        configure.lib.agent.Agent = self.old_agent
 
-    def _set_state_and_run(self, stateful_object, new_state):
-        # Patch run_next to avoid attempting to .run any
-        # jobs in set_state
-        stateful_object = stateful_object.__class__.objects.get(pk = stateful_object.pk)
-        with patch('configure.models.Job.run_next'):
-            from configure.lib.state_manager import StateManager
-            StateManager()._set_state(stateful_object, new_state)
-
-            # Do a simulated run through the jobs
-            from configure.models import Job
-            from configure.lib.job import StateChangeJob
-            from django.db.models import Q
-            for j in Job.objects.filter(~Q(state = 'complete')):
-                # Use .run to check dependencies
-                j.run()
-                self.assertEqual(j.state, 'tasked')
-
-                # Pretend success and update the state -- only
-                # works when the only side effect is the invoke_agent
-                # stuff we're mocking out
-                if isinstance(j, StateChangeJob):
-                    new_state = j.state_transition[2]
-                    obj = j.get_stateful_object()
-                    obj.state = new_state
-                    obj.save()
-
-                j.state = 'complete'
-                j.save()
+        import settings
+        if self.old_celery_always_eager:
+            settings.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
+        else:
+            delattr(settings, 'CELERY_ALWAYS_EAGER')
 
     def test_start_target(self):
         from hydraapi.configureapi import create_target
         from configure.models import ManagedMgs
+        from configure.lib.state_manager import StateManager
         mgt = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unformatted')
-        self._set_state_and_run(mgt, 'mounted')
+        StateManager.set_state(mgt, 'mounted')
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
-        self._set_state_and_run(mgt, 'unmounted')
+        StateManager.set_state(mgt, 'unmounted')
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unmounted')
-        self._set_state_and_run(mgt, 'mounted')
+        StateManager.set_state(mgt, 'mounted')
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
-        self._set_state_and_run(mgt, 'removed')
-        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'removed')
+        StateManager.set_state(mgt, 'removed')
+        with self.assertRaises(ManagedMgs.DoesNotExist):
+            ManagedMgs.objects.get(pk = mgt.pk)
+        self.assertEqual(ManagedMgs._base_manager.get(pk = mgt.pk).state, 'removed')
 
     def _test_lun(self, host):
         from configure.models import Lun, LunNode
@@ -106,9 +96,6 @@ class TestStateManager(TestCase):
         return node
 
     def test_start_filesystem(self):
-        from celery.app.amqp import TaskPublisher
-        TaskPublisher.delay_task.reset_mock()
-
         from hydraapi.configureapi import create_fs, create_target
         from configure.models import ManagedMgs, ManagedMdt, ManagedOst
         mgt = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
@@ -120,65 +107,57 @@ class TestStateManager(TestCase):
         self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'unformatted')
         self.assertEqual(ManagedOst.objects.get(pk = ost.pk).state, 'unformatted')
 
-        self._set_state_and_run(fs, 'available')
+        from configure.lib.state_manager import StateManager
+        StateManager.set_state(fs, 'available')
 
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
         self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'mounted')
         self.assertEqual(ManagedOst.objects.get(pk = ost.pk).state, 'mounted')
 
-        self._set_state_and_run(fs, 'stopped')
+        StateManager.set_state(fs, 'stopped')
 
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unmounted')
         self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'unmounted')
         self.assertEqual(ManagedOst.objects.get(pk = ost.pk).state, 'unmounted')
 
-        self._set_state_and_run(fs, 'available')
+        StateManager.set_state(fs, 'available')
 
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
         self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'mounted')
         self.assertEqual(ManagedOst.objects.get(pk = ost.pk).state, 'mounted')
 
-        self._set_state_and_run(fs, 'removed')
+        StateManager.set_state(fs, 'removed')
 
         # Hey, why is this MGS getting unmounted when I remove the filesystem?
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unmounted')
-        self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'removed')
-        self.assertEqual(ManagedOst.objects.get(pk = ost.pk).state, 'removed')
-
-    def test_create_host(self):
-        from celery.app.amqp import TaskPublisher
-        TaskPublisher.delay_task.reset_mock()
-
-        from configure.models import ManagedHost
-        host = ManagedHost.create_from_string('myaddress')
-
-        self.assertEqual(TaskPublisher.delay_task.call_count, 2)
-        calls = TaskPublisher.delay_task.call_args_list
-        self.assertEqual(calls[0][0], ('configure.tasks.set_state', ((u'configure', u'managedhost'), host.id, 'lnet_unloaded'), {}))
-        self.assertEqual(calls[1][0], ('configure.tasks.set_state', ((u'configure', u'lnetconfiguration'), host.lnetconfiguration.id, 'nids_known'), {}))
+        with self.assertRaises(ManagedMdt.DoesNotExist):
+            ManagedMdt.objects.get(pk = mdt.pk)
+        self.assertEqual(ManagedMdt._base_manager.get(pk = mdt.pk).state, 'removed')
+        with self.assertRaises(ManagedOst.DoesNotExist):
+            ManagedOst.objects.get(pk = ost.pk)
+        self.assertEqual(ManagedOst._base_manager.get(pk = ost.pk).state, 'removed')
 
     def test_invalid_state(self):
         from configure.lib.state_manager import StateManager
-        with self.assertRaisesRegexp(RuntimeError, "not legal state"):
-            StateManager()._set_state(self.host, 'lnet_rhubarb')
+        with self.assertRaisesRegexp(RuntimeError, "is invalid for"):
+            StateManager.set_state(self.host, 'lnet_rhubarb')
 
-    def test_load_lnet(self):
-        from celery.app.amqp import TaskPublisher
-        TaskPublisher.delay_task.reset_mock()
-
+    def test_1step(self):
         # Should be a simple one-step operation
         from configure.lib.state_manager import StateManager
-        StateManager()._set_state(self.host, 'lnet_down')
+        from configure.models import ManagedHost
+        # Our self.host is initially lnet_up
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
 
-        # Should have created one Job
-        from configure.models import Job
-        from django.db.models import Q
-        job = Job.objects.get(~Q(state = 'complete'))
+        # This tests a state transition which is done by a single job
+        StateManager.set_state(self.host, 'lnet_down')
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_down')
 
-        # That Job should have been started
-        self.assertEqual(job.state, 'tasked')
+    def test_2steps(self):
+        from configure.lib.state_manager import StateManager
+        from configure.models import ManagedHost
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
 
-        # That Job should have been passed to run_job
-        self.assertEqual(TaskPublisher.delay_task.call_count, 1)
-        calls = TaskPublisher.delay_task.call_args_list
-        self.assertEqual(calls[0][0], ('configure.tasks.run_job', (job.id,), {}))
+        # This tests a state transition which requires two jobs acting on the same object
+        StateManager.set_state(self.host, 'lnet_unloaded')
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_unloaded')
