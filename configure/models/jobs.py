@@ -555,10 +555,17 @@ class Job(models.Model):
 
         # Save the celery task ID
         # =======================
-        self.task_id = celery_job.task_id
-        self.state = 'tasked'
-        self.save()
-        job_log.debug("Job %d tasking->tasked (%s)" % (self.id, self.task_id))
+        from celery.result import EagerResult, AsyncResult
+        if isinstance(celery_job, AsyncResult):
+            self.task_id = celery_job.task_id
+            self.state = 'tasked'
+            self.save()
+            job_log.debug("Job %d tasking->tasked (%s)" % (self.id, self.task_id))
+        elif isinstance(celery_job, EagerResult):
+            # Eager execution happens when under test
+            job_log.debug("Job %d ran eagerly" % (self.id))
+        else:
+            raise NotImplementedError()
 
     @classmethod
     def cancel_job(cls, job_id):
