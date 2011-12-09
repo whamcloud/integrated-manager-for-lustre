@@ -85,15 +85,21 @@ function Add_Host_Table(dialog_id)
   $('#hostdetails_container').html(oTable);
 }
 
-function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success)
+function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, config_json)
 {
+  var conf_params;
+  if(JSON.stringify(config_json) == '{}')
+    conf_params = "";
+  else
+    conf_params = config_json;
+
   $.ajax({type: 'POST', url: "/api/create_new_fs/", dataType: 'json', data: JSON.stringify({
       "fsname":fsname,
       "mgt_id":mgt_id,
       "mgt_lun_id":mgt_lun_id,
       "mdt_lun_id":mdt_lun_id,
       "ost_lun_ids": ost_lun_ids,
-      "conf_params":""  
+      "conf_params": conf_params
     }), contentType:"application/json; charset=utf-8"})
   .success(function(data, textStatus, jqXHR) 
     {
@@ -235,7 +241,7 @@ function validateNumber(obj_id)
     }
 }
 
-function ApplyConfigParam(table_obj,target_id)
+function ApplyConfigParam(table_obj,target_id,target_dialog,isFS)
 {
   var change_flag = false;
   var oSetting = table_obj.fnSettings();
@@ -247,11 +253,16 @@ function ApplyConfigParam(table_obj,target_id)
        change_flag = true;
     }
   }
+
+  if(typeof(isFS) == "undefined")
+    isFS = "";
+
   if(change_flag)
   {
     $.ajax({type: 'POST', url: "/api/set_conf_params/", dataType: 'json', data: JSON.stringify({
       "target_id": target_id,
-      "conf_params": config_json
+      "conf_params": config_json,
+      "IsFS": isFS
     }), contentType:"application/json; charset=utf-8"})   
     .success(function(data, textStatus, jqXHR)
     {
@@ -268,7 +279,7 @@ function ApplyConfigParam(table_obj,target_id)
       jAlert(ERR_CONFIF_PARAM + data.errors, ALERT_TITLE); 
     })
     .complete(function(event){
-      $('#target_dialog').dialog('close'); 
+      $('#'+target_dialog).dialog('close'); 
     });
   }
 }

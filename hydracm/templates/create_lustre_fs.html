@@ -3,6 +3,7 @@
   // Globals for Create new fs Page.
   var ERR_FSNAME_EMPTY = "Please enter valid File system name";
   var ERR_OST_EMPTY = "Please select at least one device for OST creation";
+  var advanced_tab_clicked = false; 
   $(document).ready(function() {
     /* Populate existing MGT list */
     $.ajax({type: 'POST', url: "/api/get_targets/", dataType: 'json', data: JSON.stringify({
@@ -59,15 +60,29 @@
       }
       else
       {
+        var config_json = {};
+        var oSetting = $('#config_param_table').dataTable().fnSettings();
+        for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
+          if(oSetting.aoData[i]._aData[2] != $("input#"+i).val())
+          {
+             config_json[oSetting.aoData[i]._aData[0]] = $("input#"+i).val();
+          }
+        }
+
         CreateFS(fs_name, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, function(fs_id) {
           $.address.value('filesystems_edit_' + fs_id);
-        });  
+        }, config_json);
       }
     }); 
     //Advance Options button click handler.
     $('#advance_opts').click(function()
     {
-      GetConfigurationParam("",["FS","FSC"],"config_param_table");
+   	  // If clicked first time then only fetch parameters else show already entered values
+      if(!advanced_tab_clicked)
+      {
+        GetConfigurationParam("",["FS","FSC"],"config_param_table");
+      	advanced_tab_clicked = true;
+      }
       $('#configParam').dialog('open'); 
     });
   });

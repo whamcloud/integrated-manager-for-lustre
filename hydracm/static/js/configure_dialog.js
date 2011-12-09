@@ -11,11 +11,19 @@ $(document).ready(function()
     position:"center",
     buttons: 
     {
-      "Apply": function() { 
-      /* $(this).dialog("close"); */
+      "Apply": function() {
+        if($('#fs_id').val() == undefined)
+        {
+          $(this).dialog("close");
+        }
+        else
+        {
+          var fsConfigParam = $('#config_param_table').dataTable();
+          ApplyConfigParam(fsConfigParam, $('#fs_id').val(), 'configParam', true);
+        }
       },
       "Close": function() { 
-        $(this).dialog("close"); 
+        $(this).dialog("close");
       }, 
     }
   });
