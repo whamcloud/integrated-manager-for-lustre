@@ -292,6 +292,5 @@ class StoragePlugin(object):
         resource._handle = self.generate_handle()
         resource._handle_global = False
 
-        resource._plugin = self
         self._index.add(resource)
         self._delta_new_resources.append(resource)

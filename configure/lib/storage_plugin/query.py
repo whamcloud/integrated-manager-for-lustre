@@ -232,3 +232,16 @@ class ResourceQuery(object):
                 resource_class__id = klass_id,
                 storage_id_str = json.dumps(resource.id_tuple()),
                 storage_id_scope = None)
+
+    def get_scannable_id_record_by_attributes(self, scope, plugin, klass, **attrs):
+        # FIXME: horrendous function name indicating overcomplication
+        # this is for getting a resource which uses a ScannableId identifier attribute
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from configure.models import StorageResourceRecord
+        import json
+        klass, klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, klass)
+        resource = klass(**attrs)
+        return StorageResourceRecord.objects.get(
+                resource_class__id = klass_id,
+                storage_id_str = json.dumps(resource.id_tuple()),
+                storage_id_scope = scope)

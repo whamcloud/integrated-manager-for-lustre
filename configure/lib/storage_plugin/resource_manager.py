@@ -24,7 +24,6 @@ WARNING:
 
 from configure.lib.storage_plugin.log import storage_plugin_log as log
 from configure.lib.storage_plugin.resource import ScannableId, GlobalId
-from configure.lib.storage_plugin.manager import storage_plugin_manager
 
 from django.db import transaction
 
@@ -130,6 +129,7 @@ class SubscriberIndex(object):
 
     def populate(self):
         from configure.models import StorageResourceAttribute
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         for resource_class_id, resource_class in storage_plugin_manager.get_all_resources():
 
             for p_attr, p_key in resource_class._provides:
@@ -259,6 +259,7 @@ class ResourceManager(object):
                         shareable = shareable)
                 return lun
 
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         # Update LunNode objects for DeviceNodes
         node_types = []
         # FIXME: mechanism to get subclasses of builtin_resources.DeviceNode
@@ -272,6 +273,7 @@ class ResourceManager(object):
         touched_luns = set()
         touched_lun_nodes = set()
         for record in node_resources:
+            log.debug("lunnode record %s" % record.pk)
             r = record.to_resource()
             # A node which has children is already in use
             # (it might contain partitions, be an LVM PV, be in
@@ -387,8 +389,12 @@ class ResourceManager(object):
             # access to, not necessarily that the host is in the pacemaker
             # group that will access the LVs.
 
+        log.debug("touched lun nodes %s" % touched_lun_nodes)
+        log.debug("LunNode count %s" % LunNode.objects.count())
+
         # TODO: do this checking on create/remove/link operations too
         for lun_node in LunNode.objects.filter(host = host):
+            log.debug("lun_node %s" % lun_node.pk)
             if not lun_node.pk in touched_lun_nodes:
                 lun = lun_node.lun
                 from configure.models import ManagedTargetMount
@@ -577,6 +583,12 @@ class ResourceManager(object):
         # TODO: find where lustre target objects or host objects hold a reference
         # to this resource
 
+        from configure.models import Lun, LunNode
+        for klass in [Lun, LunNode]:
+            for instance in klass.objects.filter(storage_resource__id = resource_record.pk):
+                instance.storage_resource = None
+                instance.save()
+
         self._subscriber_index.remove_resource(resource_record.pk)
         resource_record.delete()
 
@@ -627,6 +639,7 @@ class ResourceManager(object):
         else:
             raise NotImplementedError
 
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(
                 resource.__class__.__module__,
                 resource.__class__.__name__)
@@ -731,6 +744,7 @@ class ResourceManager(object):
     @transaction.autocommit
     def _resource_persist_attributes(self, session, resource, record):
         from configure.models import StorageResourceAttribute
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         # TODO: remove existing attrs not in storage_dict
         resource_class = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
 

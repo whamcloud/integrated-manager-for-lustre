@@ -135,7 +135,6 @@ class StorageResource(object):
 
     def __init__(self, **kwargs):
         self._storage_dict = {}
-        self._plugin = None
         self._handle = None
         self._handle_global = None
         if 'parents' in kwargs:
