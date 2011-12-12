@@ -39,12 +39,11 @@ class JobTestCase(TestCase):
         import configure.lib.storage_plugin.manager
         configure.lib.storage_plugin.manager.storage_plugin_manager = configure.lib.storage_plugin.manager.StoragePluginManager()
 
-        import settings
-        if hasattr(settings, 'CELERY_ALWAYS_EAGER'):
-            self.old_celery_always_eager = settings.CELERY_ALWAYS_EAGER
-        else:
-            self.old_celery_always_eager = None
-        settings.CELERY_ALWAYS_EAGER = True
+        # NB by this stage celery has already read in its settings, so we have to update
+        # ALWAYS_EAGER inside celery instead of in settings.*
+        from celery.app import app_or_default
+        self.old_celery_always_eager = app_or_default().conf.CELERY_ALWAYS_EAGER
+        app_or_default().conf.CELERY_ALWAYS_EAGER = True
 
         # Intercept attempts to call out to lustre servers
         import configure.lib.agent
@@ -61,11 +60,9 @@ class JobTestCase(TestCase):
         import configure.lib.agent
         configure.lib.agent.Agent = self.old_agent
 
-        import settings
-        if self.old_celery_always_eager:
-            settings.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
-        else:
-            delattr(settings, 'CELERY_ALWAYS_EAGER')
+        from celery.app import app_or_default
+        self.old_celery_always_eager = app_or_default().conf.CELERY_ALWAYS_EAGER
+        app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
 
 
 class TestStateManager(JobTestCase):
