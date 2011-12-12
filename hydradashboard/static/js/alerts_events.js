@@ -12,9 +12,12 @@
  * 
  *******************************************************************************************************************************************************/
 var ERROR_PNG = "/static/images/dialog-error.png";
-var CORRECT_GIF = "/static/images/dialog_correct.gif";
+var CORRECT_GIF = "/static/images/dialog_correct.png";
 var WARNING_PNG = "/static/images/dialog-warning.png";
 var INFO_PNG = "/static/images/dialog-information.png";
+var PAUSE_PNG = "/static/images/gtk-media-pause.png";
+var CANCEL_PNG = "/static/images/gtk-cancel.png";
+var RUNNING_GIF = "/static/images/loading.gif";
 
 var job_action_buttons = ['Pause', 'Resume', 'Cancel', 'Complete'];
 
@@ -122,46 +125,44 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
   var maxpagecnt=maxCount;
   progress_show(targetAlertDivName);
 
-  $.post("/api/getalerts/",{"active": status,"page_id":"","page_size":""})
-  .success(function(data, textStatus, jqXHR) 
-  {
-    if(data.success)
+  var api_params = {"active": status,"page_id":"","page_size":""};
+  
+  invoke_api_call(api_post, "getalerts/", api_params, handlers = 
     {
-      $.each(data.response.aaData, function(resKey, resValue)
+      200 : function(data)
       {
-        pagecnt++;
-        if(maxpagecnt > pagecnt || maxpagecnt < 0)
+        $.each(data.response.aaData, function(resKey, resValue)
         {
-          var imgName = getImage(resValue.alert_severity);
-
-          alertTabContent = alertTabContent + 
-                            "<tr>" +
-                            "<td width='20%' align='left' class='border' valign='top'>" +  
-                              resValue.alert_created_at + 
-                            "</td>" +
-                            "<td width='7%' align='left' class='border' valign='top'>" +
-                            "<img src='" + imgName + "' width='16' height='16' class='spacetop' />" +
-                            "</td>" +
-                            "<td width='30%' align='left' class='border' valign='top'>" + 
-                              resValue.alert_item +  
-                            "</td>" + 
-                            "<td width='38%' align='left' class='border' valign='top'>" + 
-                              resValue.alert_message + 
-                            "</td>" + 
-                            "</tr>";
+          pagecnt++;
+          if(maxpagecnt > pagecnt || maxpagecnt < 0)
+          {
+            var imgName = getImage(resValue.alert_severity);
+  
+            alertTabContent = alertTabContent + 
+                              "<tr>" +
+                              "<td width='20%' align='left' class='border' valign='top'>" +  
+                                resValue.alert_created_at + 
+                              "</td>" +
+                              "<td width='7%' align='left' class='border' valign='top'>" +
+                              "<img src='" + imgName + "' width='16' height='16' class='spacetop' />" +
+                              "</td>" +
+                              "<td width='30%' align='left' class='border' valign='top'>" + 
+                                resValue.alert_item +  
+                              "</td>" + 
+                              "<td width='38%' align='left' class='border' valign='top'>" + 
+                                resValue.alert_message + 
+                              "</td>" + 
+                              "</tr>";
+          }
+        });
+  
+        if(pagecnt == 0)
+        {
+          alertTabContent = alertTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Alerts</td></tr>";
         }
-      });
-    }
-  })
-  .error(function(event) {})
-  .complete(function(event)
-  {
-    if(pagecnt == 0)
-    {
-      alertTabContent = alertTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Alerts</td></tr>";
-    }
-    $("#"+targetAlertDivName).html(alertTabContent);
-  });
+        $("#"+targetAlertDivName).html(alertTabContent);
+      }
+    });
 }
 
 loadEventContent = function(targetEventDivName, maxCount)
@@ -170,10 +171,9 @@ loadEventContent = function(targetEventDivName, maxCount)
   var pagecnt=0
   var maxpagecnt=maxCount;
   progress_show(targetEventDivName);
-  $.get("/api/getlatestevents/") 
-  .success(function(data, textStatus, jqXHR) 
-  {
-    if(data.success)
+  
+  invoke_api_call(api_get, "getlatestevents", "",
+    success_callback = function(data)
     {
       $.each(data.response, function(resKey, resValue)
       {
@@ -200,71 +200,78 @@ loadEventContent = function(targetEventDivName, maxCount)
           		              "</tr>";
         }
       });
-    }
-  })
-  .error(function(event) { })
-  .complete(function(event)
-  {
-    if(pagecnt == 0)
-    {
-      eventTabContent = eventTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Events</td></tr>";
-    }
-    $("#"+targetEventDivName).html(eventTabContent);
-  });
+
+      if(pagecnt == 0)
+      {
+        eventTabContent = eventTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Events</td></tr>";
+      }
+      $("#"+targetEventDivName).html(eventTabContent);
+    });
 }
 
 loadJobContent = function(targetJobDivName)
 {
-  var jobTabContent;
+  var jobTabContent="";
   var maxpagecnt=10;
   var pagecnt=0;
   progress_show(targetJobDivName);
-  $.get("/api/getjobs/")
-  .success(function(data, textStatus, jqXHR)
-  {
-    if(data.success)
+  
+  invoke_api_call(api_get, "getjobs", "",
+    success_callback = function(data)
     {
       $.each(data.response, function(resKey, resValue)
       {
         pagecnt++;
         if (maxpagecnt > pagecnt)
         {
+          var image_path = "";
+          
+          if(resValue.state == job_action_buttons[0].toLowerCase())
+            image_path = PAUSE_PNG;
+          else if(resValue.state == job_action_buttons[2].toLowerCase())
+            image_path = CANCEL_PNG;
+          else if(resValue.state == job_action_buttons[3].toLowerCase())
+            image_path = CORRECT_GIF;
+          
           jobTabContent = jobTabContent +
                           "<tr>" +
                           "<td width='35%' align='left' valign='top' class='border' style='font-weight:normal'>" +
+                          "<img src="+image_path+ " />" +
                           resValue.description + 
                           "</td>" + 
                           "<td width='40%' align='left' valign='top' class='border'>&nbsp;";
-          
+
                           if(resValue.state != job_action_buttons[3].toLowerCase()
                               && resValue.state != job_action_buttons[0].toLowerCase())       // for adding pause button
+                          {
                             jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[0]);
+                          }
                           
                           if(resValue.state == job_action_buttons[0].toLowerCase())           // for adding resume button
+                          {
                             jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[1]);
+                          }
                           
                           if(resValue.state != job_action_buttons[3].toLowerCase())           // for adding cancel button
+                          {
                             jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[2]);
-                          
+                          }
+
                           jobTabContent = jobTabContent +
                           "</td>" +
                           "<td width='25%' align='left' valign='top' class='border' style='font-weight:normal'>" + 
-                          resValue.created_at + 
+                          resValue.created_at +
                           "</td>" +
                           "</tr>";
         }
       });
-    }
-  })
-  .error(function(event) { })
-  .complete(function(event)
-  {
-    if(pagecnt == 0)
-    {
-      jobTabContent = jobTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Jobs</td></tr>";
-    }
-    $("#"+targetJobDivName).html(jobTabContent);
-  });
+
+      if(pagecnt == 0)
+      {
+        jobTabContent = jobTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Jobs</td></tr>";
+      }
+      $("#"+targetJobDivName).html(jobTabContent);
+    });
 }
 
 createButtonForJob = function(job_id, status)
@@ -276,50 +283,39 @@ createButtonForJob = function(job_id, status)
 
 job_action = function(job_id, state)
 {
-  $.ajax({type: 'POST', url: "/api/set_job_status/", dataType: 'json', data: JSON.stringify({
-    "job_id": job_id,
-    "state": state
-  }), contentType:"application/json; charset=utf-8"})
-  .success(function(data, textStatus, jqXHR) 
-  {
-    if(data.success)
+  var api_params = {
+      "job_id": job_id,
+      "state": state
+  };
+
+  invoke_api_call(api_post, "set_job_status/", api_params, handlers = 
     {
-      loadJobContent('job_content');
-    }
-    else
-    {
-       jAlert("Error:" + data.errors, "Job Status");
-    }
-  })
-  .error(function(event) 
-  {
-  })
-  .complete(function(event) 
-  {
-  });
+      200 : function(data)
+      {
+        loadJobContent('job_content');
+      }
+    });
 }
 
 loadHostList = function(filesystem_id, targetContainer)
 {
   var hostList = '<option value="">All</option>';
-  $.post("/api/listservers/",{'filesystem_id':filesystem_id})
-  .success(function(data, textStatus, jqXHR) 
-  {
-    if(data.success)
+  
+  var api_params = {'filesystem_id':filesystem_id};
+
+  invoke_api_call(api_post, "listservers/", api_params, handlers = 
     {
-      $.each(data.response, function(resKey, resValue)
+      200 : function(data)
       {
-        hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
-      });
-    }
-  })
-  .error(function(event) {
-  })
-  .complete(function(event){
-  $('#'+targetContainer).html(hostList);
-  });
+        $.each(data.response, function(resKey, resValue)
+        {
+          hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
+        });
+        $('#'+targetContainer).html(hostList);
+      }
+    });
 }
- 
+
 setActiveMenu = function(menu_element){
-    $('#'+menu_element).addClass('active');
+  $('#'+menu_element).addClass('active');
 }
