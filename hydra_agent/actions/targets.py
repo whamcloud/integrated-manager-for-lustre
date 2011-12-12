@@ -32,7 +32,18 @@ def get_resource_location(resource_name):
     elif len(stdout.strip()) == 0:
         return None
     else:
-        node_name = re.search("^resource [^ ]+ is running on: (.*)$", stdout.strip()).group(1)
+        try:
+            # Amusingly (?) corosync will sometimes report that a target is running on more than one
+            # node, by outputting a number of 'is running on' lines.
+            # This happens while we are adding a target -- a separate process doing a get_resource_locations
+            # sees one of these multi-line outputs from 'crm_resource --locate'
+            line_count = len(stdout.strip().split('\n'))
+            if line_count > 1:
+                return None
+
+            node_name = re.search("^resource [^ ]+ is running on: (.*)$", stdout.strip()).group(1)
+        except AttributeError:
+            raise RuntimeError("Bad crm_resource output '%s'" % stdout.strip())
         return node_name
 
 def get_resource_locations():
