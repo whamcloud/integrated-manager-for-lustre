@@ -47,11 +47,14 @@ class ZeroconfService:
 
 
 def publish_daemon(args):
-    with daemon.DaemonContext(pidfile = \
-                   daemon.pidlockfile.PIDLockFile('/var/run/hydra-agent.pid')):
+    context = daemon.DaemonContext(pidfile = daemon.pidlockfile.PIDLockFile('/var/run/hydra-agent.pid'))
+    context.open()
+    try:
         service = ZeroconfService(name="%s" % os.uname()[1], port=22)
         service.publish()
         while True:
             time.sleep(86400)
         # don't need to call service.unpublish() since the service
         # will be unpublished when this daemon exits
+    finally:
+        context.close()
