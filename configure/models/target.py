@@ -73,14 +73,14 @@ class ManagedTarget(StatefulObject):
         from configure.models.target_mount import ManagedTargetMount
         return ManagedTargetMount.objects.get(target = self, primary = True).host
 
-    def human_name(self):
+    def get_label(self):
         if self.name:
             return self.name
         else:
             return "Unregistered %s %s" % (self.downcast().role(), self.id)
 
     def __str__(self):
-        return self.human_name()
+        return self.get_label()
 
     # unformatted: I exist in theory in the database
     # formatted: I've been mkfs'd
@@ -180,8 +180,8 @@ class ManagedTarget(StatefulObject):
         return {'id': self.pk,
                 'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
                 'kind': self.role(),
-                'human_name': self.human_name(),
-                'lun_name': self.get_lun().human_name(),
+                'label': self.get_label(),
+                'lun_name': self.get_lun().get_label(),
                 'active_host_name': active_host_name,
                 'status': self.status_string(),
                 'state': self.state,

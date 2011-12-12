@@ -45,8 +45,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     def __str__(self):
         return self.pretty_name()
 
-    # TODO: standardize on one name for the display name functions (across all StatefulObjects)
-    def human_name(self):
+    def get_label(self):
         return self.pretty_name()
 
     def save(self, *args, **kwargs):
@@ -225,7 +224,9 @@ class Lun(models.Model):
             else:
                 yield lun
 
-    def human_kind(self):
+    def get_kind(self):
+        """:return: A string or unicode string which is a human readable noun corresponding
+        to the class of storage e.g. LVM LV, Linux partition, iSCSI LUN"""
         if not self.storage_resource_id:
             return "Unknown"
 
@@ -234,7 +235,7 @@ class Lun(models.Model):
         resource_klass = record.to_resource_class()
         return resource_klass.get_class_label()
 
-    def human_name(self):
+    def get_label(self):
         if not self.storage_resource_id:
             lunnode = self.lunnode_set.all()[0]
             return "%s:%s" % (lunnode.host, lunnode.path)
@@ -298,7 +299,7 @@ class LunNode(models.Model):
 
     def pretty_string(self):
         from monitor.lib.util import sizeof_fmt
-        lun_name = self.lun.human_name()
+        lun_name = self.lun.get_label()
         if lun_name:
             short_name = lun_name
         elif self.path.startswith('/dev/disk/by-path/'):

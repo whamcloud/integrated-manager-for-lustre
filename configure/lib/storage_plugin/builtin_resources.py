@@ -8,13 +8,13 @@ from configure.lib.storage_plugin import attributes
 
 
 class Host(StorageResource):
-    human_name = 'Host'
+    class_label = 'Host'
     icon = 'host'
 
 
 class PhysicalDisk(StorageResource):
     """A physical storage device, such as a hard drive or SSD"""
-    human_name = 'Physical disk'
+    class_label = 'Physical disk'
     icon = 'physical_disk'
 
 
@@ -22,14 +22,14 @@ class VirtualDisk(StorageResource):
     """A storage device which will be presented to Linux servers.  Optionally set the ``home_controller``
     attribute to a resource representing a controller (half of a couplet) so that Chroma can infer
     which paths are the best for this device."""
-    human_name = 'Virtual disk'
+    class_label = 'Virtual disk'
     icon = 'virtual_disk'
     home_controller = attributes.ResourceReference(optional = True)
 
 
 class StoragePool(StorageResource):
     """An aggregation of physical drives"""
-    human_name = 'Storage pool'
+    class_label = 'Storage pool'
     icon = 'storage_pool'
 
 

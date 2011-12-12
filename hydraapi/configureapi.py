@@ -24,6 +24,7 @@ class TestHost(AnonymousRequestHandler):
         host = ManagedHost(address = hostname)
         host.monitor = Monitor(host = host)
         job = test_host_contact.delay(host)
+
         return {'task_id': job.task_id, 'status': job.status}
 
 
@@ -243,8 +244,8 @@ class GetLuns(AnonymousRequestHandler):
                 }) for ln in LunNode.objects.filter(lun = lun)])
             devices.append({
                              'id': lun.id,
-                             'name': lun.human_name(),
-                             'kind': lun.human_kind(),
+                             'name': lun.get_label(),
+                             'kind': lun.get_kind(),
                              'available_hosts': available_hosts,
                              'size': sizeof_fmt(lun.size),
                              'status': lun.ha_status()
@@ -745,7 +746,7 @@ class ObjectSummary(AnonymousRequestHandler):
 
             result.append({'id': o['id'],
                            'content_type_id': o['content_type_id'],
-                           'human_name': instance.human_name(),
+                           'label': instance.get_label(),
                            'state': instance.state,
                            'available_transitions': StateManager.available_transitions(instance)})
         return result

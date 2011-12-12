@@ -70,7 +70,7 @@ function LoadTargets_EditFS(fs_id)
       $.each(response, function(resKey, resValue)
       {
         row = [
-                target_dialog_link(resValue.id, object_name_markup(resValue.id, resValue.content_type_id, resValue.human_name)),
+                target_dialog_link(resValue.id, object_name_markup(resValue.id, resValue.content_type_id, resValue.label)),
                 resValue.lun_name,
                 resValue.primary_server_name,
                 resValue.failover_server_name,

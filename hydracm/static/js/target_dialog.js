@@ -27,7 +27,7 @@ target_dialog_open = function(target_id) {
     if (data.success) {
       var target_info = data.response;
       console.log(target_info);
-      $('#target_dialog').dialog('option', 'title', target_info.human_name);
+      $('#target_dialog').dialog('option', 'title', target_info.label);
 
       var row_counter = 0;
       var keyval_row = function(k,v) {
@@ -44,7 +44,7 @@ target_dialog_open = function(target_id) {
 
       var properties_markup = "";
       properties_markup += "<table>";
-      properties_markup += keyval_row("Name", target_info.human_name);
+      properties_markup += keyval_row("Name", target_info.label);
       if (target_info.filesystem_name) {
         properties_markup += keyval_row("Filesystem", target_info.filesystem_name);
       }

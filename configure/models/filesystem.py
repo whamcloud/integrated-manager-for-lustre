@@ -18,7 +18,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
     states = ['unavailable', 'stopped', 'available', 'removed']
     initial_state = 'unavailable'
 
-    def human_name(self):
+    def get_label(self):
         return self.name
 
     def get_available_states(self, begin_state):

@@ -184,9 +184,7 @@ class GetTargets(AnonymousRequestHandler):
                     'id': t.id,
                     'primary_server_name': t.primary_server().pretty_name(),
                     'kind': kind,
-                    # FIXME: ManagedTarget should get an explicit 'human' string function
-                    # (currently __str__ services this purpose)
-                    'label': "%s" % t
+                    'label': "%s" % t.get_label()
                     })
         return result
 
@@ -231,7 +229,7 @@ class GetFSTargets(AnonymousRequestHandler):
                     'primary_server_name': t.primary_server().pretty_name(),
                     'kind': kind,
                     'status': t.status_string(),
-                    'label': t.human_name()
+                    'label': t.get_label()
                     })
         return result
 
@@ -442,7 +440,7 @@ def nid_finder(message):
         markup = match.group()
         try:
             t = ManagedTarget.objects.get(name=markup)
-            markup = "<a href='#' class='target target_id_%s'>%s</a>" % (t.id, t.human_name())
+            markup = "<a href='#' class='target target_id_%s'>%s</a>" % (t.id, t.get_label())
         except:
             pass
         message = message.replace(match.group(),
