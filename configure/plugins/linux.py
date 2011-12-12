@@ -22,9 +22,9 @@ class DeviceNode(StorageResource):
     # tagging it onto each one, but this is simpler for now - jcs
     host = attributes.ResourceReference()
     path = attributes.PosixPath()
-    human_name = 'Device node'
+    class_label = 'Device node'
 
-    def human_string(self):
+    def get_label(self):
         path = self.path
         strip_strings = ["/dev/",
                          "/dev/mapper/",
@@ -34,7 +34,7 @@ class DeviceNode(StorageResource):
         for s in strip_strings:
             if path.startswith(s):
                 path = path[len(s):]
-        return "%s:%s" % (self.host.human_string(), path)
+        return "%s:%s" % (self.host.get_label(), path)
 
 
 class HydraHostProxy(StorageResource, ScannableResource):
@@ -49,7 +49,7 @@ class HydraHostProxy(StorageResource, ScannableResource):
     host_id = attributes.Integer()
     virtual_machine = attributes.ResourceReference(optional = True)
 
-    def human_string(self, parent = None):
+    def get_label(self, parent = None):
         host = ManagedHost._base_manager.get(pk=self.host_id)
         return "%s" % host
 
@@ -71,14 +71,14 @@ class ScsiDevice(builtin_resources.LogicalDrive):
 
     serial = attributes.String(subscribe = 'scsi_serial')
 
-    human_name = "SCSI device"
+    class_label = "SCSI device"
 
     if HACK_TEST_STATS:
         test_stat = statistics.Gauge()
         test_hist = statistics.BytesHistogram(bins = [(0, 256), (257, 512), (513, 2048), (2049, 8192)])
         beef_alert = alert_conditions.AttrValAlertCondition('serial', warn_states = ['SQEMU    QEMU HARDDISK  WD-deadbeef0'], message = "Beef alert in sector 2!")
 
-    def human_string(self, ancestors = []):
+    def get_label(self, ancestors = []):
         qemu_strip_hack = "SQEMU    QEMU HARDDISK  "
 
         if self.serial.startswith(qemu_strip_hack):
@@ -95,9 +95,9 @@ class UnsharedDeviceNode(DeviceNode):
     and is therefore assumed to be unshared"""
     identifier = ScannableId('path')
 
-    human_name = "Local disk"
+    class_label = "Local disk"
 
-    def human_string(self, ancestors = []):
+    def get_label(self, ancestors = []):
         if self.path.startswith("/dev/"):
             return self.path[5:]
         else:
@@ -110,7 +110,7 @@ class UnsharedDevice(builtin_resources.LogicalDrive):
     # is the closest thing we have to a real ID.
     path = attributes.PosixPath()
 
-    def human_string(self):
+    def get_label(self):
         return self.path
 
 
@@ -118,41 +118,41 @@ class ScsiDeviceNode(DeviceNode):
     """SCSI in this context is a catch-all to refer to
     block devices which look like real disks to the host OS"""
     identifier = ScannableId('path')
-    #human_name = "SCSI device node"
+    #class_label = "SCSI device node"
     host = attributes.ResourceReference()
 
 
 class MultipathDeviceNode(DeviceNode):
     identifier = ScannableId('path')
-    human_name = "Multipath device node"
+    class_label = "Multipath device node"
 
 
 class LvmDeviceNode(DeviceNode):
     identifier = ScannableId('path')
-    human_name = "LVM device node"
+    class_label = "LVM device node"
 
-    def human_string(self):
+    def get_label(self):
         # LVM devices are only presented once per host,
         # so just need to say which host this device node is for
-        return "%s" % (self.host.human_string())
+        return "%s" % (self.host.get_label())
 
 
 # FIXME: partitions should really be GlobalIds (they can be seen from more than
 # one host) where the ID is their number plus the a foreign key to the parent
 # ScsiDevice or UnsharedDevice(HYD-272)
-# TODO: include containng object human_string in partition human_string
+# TODO: include containng object get_label in partition get_label
 class Partition(builtin_resources.LogicalDrive):
     identifier = ScannableId('path')
-    human_name = "Linux partition"
+    class_label = "Linux partition"
     path = attributes.PosixPath()
 
-    def human_string(self):
+    def get_label(self):
         return self.path
 
 
 class PartitionDeviceNode(DeviceNode):
     identifier = ScannableId('path')
-    human_name = "Linux partition"
+    class_label = "Linux partition"
 
 
 class LocalMount(StorageResource):
@@ -346,9 +346,9 @@ class LvmGroup(builtin_resources.StoragePool):
     size = attributes.Bytes()
 
     icon = 'lvm_vg'
-    human_name = 'Volume group'
+    class_label = 'Volume group'
 
-    def human_string(self, parent = None):
+    def get_label(self, parent = None):
         return self.name
 
 
@@ -367,7 +367,7 @@ class LvmVolume(builtin_resources.LogicalDrive):
     name = attributes.String()
 
     icon = 'lvm_lv'
-    human_name = 'Logical volume'
+    class_label = 'Logical volume'
 
-    def human_string(self, ancestors = []):
+    def get_label(self, ancestors = []):
         return "%s-%s" % (self.vg.name, self.name)

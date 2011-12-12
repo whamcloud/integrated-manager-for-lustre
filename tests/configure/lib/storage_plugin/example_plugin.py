@@ -33,7 +33,7 @@ class RaidPool(builtin_resources.StoragePool):
 
     identifier = ScannableId('local_id')
 
-    def human_string(self):
+    def get_label(self):
         return self.local_id
 
 
@@ -46,7 +46,7 @@ class Lun(builtin_resources.VirtualDisk):
 
     identifier = ScannableId('local_id')
 
-    def human_string(self):
+    def get_label(self):
         return self.name
 
 

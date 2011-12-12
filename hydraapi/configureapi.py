@@ -209,10 +209,10 @@ class GetResource(AnonymousRequestHandler):
 
         return {'id': record.pk,
                 'content_type_id': ContentType.objects.get_for_model(record).id,
-                'class_name': resource.human_class(),
+                'class_name': resource.get_class_label(),
                 'scannable': scannable,
                 'alias': record.alias,
-                'default_alias': record.to_resource().human_string(),
+                'default_alias': record.to_resource().get_label(),
                 'attributes': resource.get_attribute_items(),
                 'alerts': alerts,
                 'stats': stats,
@@ -548,7 +548,7 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
                     'top': y,
                     'title': record.alias_or_name(),
                     'icon': "%simages/storage_plugin/%s.png" % (STATIC_URL, resource.icon),
-                    'type': resource.human_class(),
+                    'type': resource.get_class_label(),
                     'id': record.id,
                     'highlight': highlight
                     })

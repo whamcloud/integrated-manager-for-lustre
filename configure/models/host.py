@@ -232,7 +232,7 @@ class Lun(models.Model):
         from configure.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
         resource_klass = record.to_resource_class()
-        return resource_klass.human_class()
+        return resource_klass.get_class_label()
 
     def human_name(self):
         if not self.storage_resource_id:
@@ -248,7 +248,7 @@ class Lun(models.Model):
         if record.alias:
             return record.alias
         else:
-            return resource.human_string()
+            return resource.get_label()
 
     def ha_status(self):
         """Tell the caller two things:

@@ -148,7 +148,7 @@ class StorageResourceRecord(models.Model):
         else:
             if not resource:
                 resource = self.to_resource()
-            return resource.human_string()
+            return resource.get_label()
 
     def to_resource_class(self):
         from configure.lib.storage_plugin.manager import storage_plugin_manager

@@ -175,9 +175,8 @@ class StorageResource(object):
     def to_json(self, stack = []):
         dct = {}
         dct['id'] = self._handle
-        #dct['human_string'] = self.human_string(stack)
-        dct['human_string'] = self.human_string()
-        dct['human_class'] = self.human_class()
+        dct['label'] = self.get_label()
+        dct['class_label'] = self.get_class_label()
         dct['icon'] = self.icon
         dct.update(dict(list(self.format_all())))
         dct['children'] = []
@@ -192,7 +191,7 @@ class StorageResource(object):
     def __str__(self):
         return "<%s %s>" % (self.__class__.__name__, self._handle)
 
-    def human_string(self, ancestors=[]):
+    def get_label(self, ancestors=[]):
         """Subclasses should implement a function which formats a string for
         presentation, possibly in a tree display as a child of 'parent' (a
         StorageResource instance) or if parent is None then for display
@@ -200,7 +199,7 @@ class StorageResource(object):
         id = self.id_tuple()
         if len(id) == 1:
             id = id[0]
-        return "%s %s" % (self.human_class(), id)
+        return "%s %s" % (self.get_class_label(), id)
 
     def __setattr__(self, key, value):
         if key.startswith("_"):
@@ -313,9 +312,9 @@ class StorageResource(object):
         return self._handle
 
     @classmethod
-    def human_class(cls):
-        if hasattr(cls, 'human_name'):
-            return cls.human_name
+    def get_class_label(cls):
+        if hasattr(cls, 'class_label'):
+            return cls.class_label
         else:
             return cls.__name__
 

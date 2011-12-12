@@ -151,7 +151,7 @@ class ResourceReference(BaseResourceAttribute):
         if record.alias:
             name = record.alias
         else:
-            name = value.human_string()
+            name = value.get_label()
 
         from django.utils.html import conditional_escape
         name = conditional_escape(name)

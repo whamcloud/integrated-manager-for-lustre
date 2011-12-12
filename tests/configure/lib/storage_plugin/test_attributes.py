@@ -111,7 +111,7 @@ class TestReferenceAttribute(TestCase):
 
         resource = rr.decode(json.dumps(self.record_pk))
         markup = rr.to_markup(resource)
-        self.assertEqual(markup, hyperlink_markup(self.record_pk, resource.human_string()))
+        self.assertEqual(markup, hyperlink_markup(self.record_pk, resource.get_label()))
 
         from configure.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = self.record_pk)

@@ -266,10 +266,10 @@ constructors:
 Resource classes are by default referred to by their python class name, qualified
 with the plugin module name.  For example, if the ``acme`` plugin had a class called
 ``HardDrive`` then it would be called ``acme.HardDrive``.  This can be overridden by setting
-the ``human_name`` class attribute on a StorageResource class.
+the ``class_label`` class attribute on a StorageResource class.
 
 Instances of resources have a default human readable name of their class name followed by
-their identifier attributes.  This can be overridden by implementing the ``human_string``
+their identifier attributes.  This can be overridden by implementing the ``get_label``
 function on the storage resource class, returning a string or unicode string for the instance.
 
 Charts
