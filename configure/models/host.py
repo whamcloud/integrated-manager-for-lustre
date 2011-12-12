@@ -371,7 +371,8 @@ class Monitor(models.Model):
         if self.state == 'idle':
             self.update(state = 'tasking', counter = self.counter + 1)
             celery_task = monitor_exec.delay(self.id, self.counter)
-            self.update(state = 'tasked', task_id = celery_task.task_id)
+            Monitor.objects.filter(pk = self.pk).update(task_id = celery_task.task_id)
+            Monitor.objects.filter(state = 'tasking', pk = self.pk).update(state = 'tasked')
 
             return True
         else:
