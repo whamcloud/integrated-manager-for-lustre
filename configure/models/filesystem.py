@@ -218,3 +218,12 @@ class StopAvailableFilesystemJob(FilesystemJob, Job, StateChangeJob):
 
     def description(self):
         return "Stop filesystem %s" % (self.filesystem.name)
+
+
+class MakeAvailableFilesystemUnavailable(FilesystemJob, Job, StateChangeJob):
+    state_verb = None
+    state_transition = (ManagedFilesystem, 'available', 'unavailable')
+    filesystem = models.ForeignKey('ManagedFilesystem')
+
+    def description(self):
+        return "Make filesystem %s unavailable" % (self.filesystem.name)

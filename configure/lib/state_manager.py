@@ -60,9 +60,14 @@ class StateManager(object):
         #from_state = self.get_expected_state(stateful_object)
         from_state = stateful_object.state
         available_states = stateful_object.get_available_states(from_state)
-        return [
-                {"state": to_state,
-                "verb": stateful_object.get_verb(from_state, to_state)} for to_state in available_states]
+        transitions = []
+        for to_state in available_states:
+            verb = stateful_object.get_verb(from_state, to_state)
+            # NB: a None verb means its an internal transition that shouldn't be advertised
+            if verb != None:
+                transitions.append({"state": to_state, "verb": verb})
+
+        return transitions
 
     def get_expected_state(self, stateful_object_instance):
         try:
@@ -113,7 +118,7 @@ class StateManager(object):
         """Add a 0 or more Jobs to have 'instance' reach 'new_state'"""
         import configure.tasks
         from django.contrib.contenttypes.models import ContentType
-        job_log.debug("set_state %s %s" % (instance, new_state))
+        job_log.info("StateManager.set_state %s %s" % (instance, new_state))
         if new_state not in instance.states:
             raise RuntimeError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
         return configure.tasks.set_state.delay(
@@ -198,12 +203,6 @@ class StateManager(object):
             self.get_expected_state(instance),
             new_state))
 
-        job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
-        for d in self.deps:
-            job_log.debug("  dep %s" % (d,))
-        for e in self.edges:
-            job_log.debug("  edge [%s]->[%s]" % (e))
-
         def sort_graph(objects, edges):
             """Sort items in a graph by their longest path from a leaf.  Items
                at the start of the result are the leaves.  Roots come last."""
@@ -243,6 +242,10 @@ class StateManager(object):
         # XXX
         self.deps = sort_graph(self.deps, self.edges)
 
+        job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
+        for e in self.edges:
+            job_log.debug("  edge [%s]->[%s]" % (e))
+
         jobs = {}
         # Important: the Job must not land in the database until all
         # its dependencies and locks are in.
@@ -253,6 +256,7 @@ class StateManager(object):
                 job.create_locks()
                 job.create_dependencies()
                 jobs[d] = job
+                job_log.debug("  dep %s (Job %s)" % (d, job.pk))
 
         from configure.models import Job
         Job.run_next()

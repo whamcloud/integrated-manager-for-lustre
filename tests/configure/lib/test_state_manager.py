@@ -98,7 +98,7 @@ class TestStateManager(JobTestCase):
 
     def test_start_filesystem(self):
         from hydraapi.configureapi import create_fs, create_target
-        from configure.models import ManagedMgs, ManagedMdt, ManagedOst
+        from configure.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
         mgt = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
         fs = create_fs(mgt.pk, "testfs", {})
         mdt = create_target(self._test_lun(self.host).id, ManagedMdt, filesystem = fs)
@@ -127,10 +127,15 @@ class TestStateManager(JobTestCase):
         self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'mounted')
         self.assertEqual(ManagedOst.objects.get(pk = ost.pk).state, 'mounted')
 
+        StateManager.set_state(ManagedMdt.objects.get(pk = mdt.pk), 'unmounted')
+        self.assertEqual(ManagedMdt.objects.get(pk = mdt.pk).state, 'unmounted')
+        self.assertEqual(ManagedFilesystem.objects.get(pk = fs.pk).state, 'unavailable')
+
         StateManager.set_state(fs, 'removed')
 
-        # Hey, why is this MGS getting unmounted when I remove the filesystem?
+        # FIXME: Hey, why is this MGS getting unmounted when I remove the filesystem?
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unmounted')
+
         with self.assertRaises(ManagedMdt.DoesNotExist):
             ManagedMdt.objects.get(pk = mdt.pk)
         self.assertEqual(ManagedMdt._base_manager.get(pk = mdt.pk).state, 'removed')
