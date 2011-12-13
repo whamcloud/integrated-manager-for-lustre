@@ -76,6 +76,9 @@ class DependOn(Dependable):
         self.stateful_object = stateful_object
 
     def satisfied(self):
+        # Get fresh instance to make sure we're seeing the latest state
+        self.stateful_object = self.stateful_object.__class__.objects.get(pk = self.stateful_object.pk)
+
         satisfied = self.stateful_object.state in self.acceptable_states
         if not satisfied:
             job_log.warning("DependOn not satisfied: %s in state %s, not one of %s" %
