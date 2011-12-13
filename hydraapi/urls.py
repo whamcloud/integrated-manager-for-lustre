@@ -55,8 +55,9 @@ from statsmetricapi import(GetFSTargetStats,
                            GetServerStats,
                            GetTargetStats,
                            GetFSClientsStats,
-                           GetHeatMapFSStats,
-                           GetHeatMapServerStats)
+                           GetHeatMapFSStats)
+
+from managedhostapi import ManagedHostsHandler
 
 
 # Cross Site Referance related class
@@ -98,7 +99,6 @@ urlpatterns = patterns('',
     (r'^get_stats_for_targets/$', CsrfExemptResource(GetTargetStats)),
     (r'^get_fs_stats_for_client/$', CsrfExemptResource(GetFSClientsStats)),
     (r'^get_fs_stats_heatmap/$', CsrfExemptResource(GetHeatMapFSStats)),
-    (r'^get_server_stats_heatmap/$', CsrfExemptResource(GetHeatMapServerStats)),
 
     (r'^target/$', CsrfExemptResource(configureapi.Target)),
     (r'^transition/$', CsrfExemptResource(configureapi.Transition)),
@@ -122,4 +122,6 @@ urlpatterns = patterns('',
     (r'^storage_resource/$', CsrfExemptResource(CreateStorageResource)),
     (r'^storage_resource_class_fields/$', CsrfExemptResource(StorageResourceClassFields)),
     (r'^creatable_storage_resource_classes/$', CsrfExemptResource(CreatableStorageResourceClasses)),
+
+    (r'^hosts/$', CsrfExemptResource(ManagedHostsHandler)),
 )
