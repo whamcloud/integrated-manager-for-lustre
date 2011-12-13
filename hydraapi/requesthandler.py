@@ -101,6 +101,34 @@ class AuthorisedRequestHandler(RequestHandler):
         return RequestHandler.create(self, request)
 
 
+class AnonymousRESTRequestHandler(BaseHandler):
+    allowed_methods = ('GET', 'PUT', 'POST', 'DELETE')
+
+    def __init__(self, *args, **kwargs):
+        BaseHandler.__init__(self)
+
+    @render_to_json()
+    @extract_exception
+    def read(self, request):
+        request.data = request.GET
+        return self.get(request)
+
+    @render_to_json()
+    @extract_exception
+    def create(self, request):
+        return self.post(request)
+
+    @render_to_json()
+    @extract_exception
+    def update(self, request):
+        return self.put(request)
+
+    @render_to_json()
+    @extract_exception
+    def delete(self, request):
+        return self.remove(request)
+
+
 class extract_request_args:
     """Extracts specified keys from the request dictionary and calls the wrapped
     function
@@ -120,7 +148,16 @@ class extract_request_args:
             #Fill in the callArgs with values from the request data
             for value in self.args:
                 try:
-                    call_args[value] = data[value]
+                    if value.__contains__('='):
+                        try:
+                            optional_value = value.split('=')[0]
+                            call_args[optional_value] = data[optional_value]
+                        except:
+                            # It's Okay to pass this exception as the value is optional
+                            call_args[optional_value] = value.split('=')[1]
+                            pass
+                    else:
+                        call_args[value] = data[value]
                 except:
                     errors[value] = ["This field is required."]
                     pass

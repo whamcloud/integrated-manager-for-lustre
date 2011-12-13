@@ -41,11 +41,6 @@ var startTime = "5";
 var endTime = "";
 var isPollingFlag=false;
 /*******************************************************************************
- * API Type Constants
-******************************************************************************/
-var api_get = "GET";
-var api_post = "POST";
-/*******************************************************************************
  * API URL's for all the graphs on landing page
 ******************************************************************************/
 var db_Bar_SpaceUsage_Data_Api_Url = "get_fs_stats_for_targets/";
