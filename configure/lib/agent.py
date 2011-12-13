@@ -126,8 +126,8 @@ class Agent(object):
                     backtrace = data['backtrace']
                     self.log.error("Agent returned exception from host %s running '%s': %s" % (self.host, cmdline, backtrace))
                     raise AgentException(self.host.id, cmdline, exception, backtrace)
-            except KeyError:
-                raise RuntimeError("Malformed output from agent: '%s'" % out)
+            except KeyError, e:
+                raise RuntimeError("Malformed output (%s) from agent: '%s'" % (e, out))
 
         else:
             raise RuntimeError("Error running agent on %s" % (self.host))
