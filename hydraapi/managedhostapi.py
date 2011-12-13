@@ -16,7 +16,7 @@ from hydraapi.requesthandler import APIResponse
 
 
 class ManagedHostsHandler (AnonymousRESTRequestHandler):
-    @extract_request_args('host_id=None', 'filesystem_id=None')
+    @extract_request_args('host_id=', 'filesystem_id=')
     def get(self, request, host_id = None, filesystem_id = None):
         hosts = []
         if host_id:
