@@ -1,7 +1,7 @@
 function LoadFSGraph_EditFS(fs_id)
 {
   var spaceUsageFetchMatric = "kbytestotal kbytesfree filestotal filesfree";
-  var fs_Pie_Space_Data_Api_Url = "/api/get_fs_stats_for_targets/";
+  var fs_Pie_Space_Data_Api_Url = "get_fs_stats_for_targets/";
   /*******************************************************************************/
   var chartConfig_Pie_DB = 
   {
@@ -43,88 +43,82 @@ function LoadFSGraph_EditFS(fs_id)
   obj_ost_pie_space = JSON.parse(JSON.stringify(chartConfig_Pie_DB));
   obj_ost_pie_space.title.text = null;
   obj_ost_pie_space.chart.renderTo = "editfs_space_usage";
-  $.post(fs_Pie_Space_Data_Api_Url,
-    {targetkind: 'OST', datafunction: 'Average', fetchmetrics: spaceUsageFetchMatric, 
-     starttime: "", filesystem_id: fs_id, endtime: ""})
-    .success(function(data, textStatus, jqXHR) 
-    {   
-      if(data.success)
+  
+  var api_params = {
+      targetkind: 'OST', datafunction: 'Average', fetchmetrics: spaceUsageFetchMatric, 
+      starttime: "", filesystem_id: fs_id, endtime: ""
+  };
+  
+  invoke_api_call(api_post, fs_Pie_Space_Data_Api_Url, api_params, 
+  success_callback = function(data)
+  {
+    var response = data.response;
+    var totalDiskSpace=0,totalFreeSpace=0;
+    $.each(response, function(resKey, resValue) 
+    {
+      if(resValue.filesystem != undefined)
       {
-        var response = data.response;
-        var totalDiskSpace=0,totalFreeSpace=0;
-        $.each(response, function(resKey, resValue) 
-        {
-          if(resValue.filesystem != undefined)
-          {
-            totalFreeSpace = resValue.kbytesfree/1024;
-            totalDiskSpace = resValue.kbytestotal/1024;
-            free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
-            used = Math.round(100 - free);
-            freeData.push(free);
-            usedData.push(used);
-          }
-        });
+        totalFreeSpace = resValue.kbytesfree/1024;
+        totalDiskSpace = resValue.kbytestotal/1024;
+        free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
+        used = Math.round(100 - free);
+        freeData.push(free);
+        usedData.push(used);
       }
-    })
-    .error(function(event) 
-    {
-        // Display of appropriate error message
-    })
-    .complete(function(event) 
-    {
-      obj_ost_pie_space.series = [{
-      type: 'pie',
-      name: '',
-      data: [
-         ['Free',    free],
-         ['Used',    used]
-        ]
-      }];
-      chart = new Highcharts.Chart(obj_ost_pie_space);
     });
-     
-    var free=0,used=0;
-    var freeFilesData = [],totalFilesData = [];
-    obj_ost_pie_inode = JSON.parse(JSON.stringify(chartConfig_Pie_DB));
-    obj_ost_pie_inode.title.text = null;
-    obj_ost_pie_inode.chart.renderTo = "editfs_inode_usage";  
-    $.post(fs_Pie_Space_Data_Api_Url,
-      {targetkind: 'MDT', datafunction: 'Average', fetchmetrics: spaceUsageFetchMatric, 
-       starttime: "", filesystem_id: fs_id, endtime: ""})
-    .success(function(data, textStatus, jqXHR) 
-    {   
-      if(data.success)
+
+    obj_ost_pie_space.series = [{
+    type: 'pie',
+    name: '',
+    data: [
+       ['Free',    free],
+       ['Used',    used]
+      ]
+    }];
+    chart = new Highcharts.Chart(obj_ost_pie_space);
+  },
+  error_callback = function(data){
+  });
+
+  var free=0,used=0;
+  var freeFilesData = [],totalFilesData = [];
+  obj_ost_pie_inode = JSON.parse(JSON.stringify(chartConfig_Pie_DB));
+  obj_ost_pie_inode.title.text = null;
+  obj_ost_pie_inode.chart.renderTo = "editfs_inode_usage";
+
+  var api_params = {
+      targetkind: 'MDT', datafunction: 'Average', fetchmetrics: spaceUsageFetchMatric, 
+      starttime: "", filesystem_id: fs_id, endtime: ""
+  };
+
+  invoke_api_call(api_post, fs_Pie_Space_Data_Api_Url, api_params, 
+  success_callback = function(data)
+  {
+    var response = data.response;
+    var totalFiles=0,totalFreeFiles=0;
+    $.each(response, function(resKey, resValue) 
+    {
+      if(resValue.filesystem != undefined)
       {
-        var response = data.response;
-        var totalFiles=0,totalFreeFiles=0;
-        $.each(response, function(resKey, resValue) 
-        {
-          if(resValue.filesystem != undefined)
-          {
-            totalFiles = resValue.filesfree;
-            totalFreeFiles = resValue.filestotal;
-            free = Math.round(((totalFiles)/(totalFreeFiles))*100);
-            used = Math.round(100 - free);
-            freeFilesData.push(free);
-            totalFilesData.push(used);
-          }   
-        });
-      }
-   })
-   .error(function(event) 
-   {
-      // Display of appropriate error message
-   })
-   .complete(function(event) 
-   {
-      obj_ost_pie_inode.series = [{
-      type: 'pie',
-      name: '',
-      data: [
-         ['Free',    free],
-         ['Used',    used]
-       ]
-      }];
-      chart = new Highcharts.Chart(obj_ost_pie_inode);
-   });
+        totalFiles = resValue.filesfree;
+        totalFreeFiles = resValue.filestotal;
+        free = Math.round(((totalFiles)/(totalFreeFiles))*100);
+        used = Math.round(100 - free);
+        freeFilesData.push(free);
+        totalFilesData.push(used);
+      }   
+    });
+
+    obj_ost_pie_inode.series = [{
+    type: 'pie',
+    name: '',
+    data: [
+       ['Free',    free],
+       ['Used',    used]
+     ]
+    }];
+    chart = new Highcharts.Chart(obj_ost_pie_inode);
+  },
+  error_callback = function(data){
+  });
 }

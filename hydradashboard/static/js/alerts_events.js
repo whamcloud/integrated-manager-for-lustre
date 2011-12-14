@@ -162,6 +162,8 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
         }
         $("#"+targetAlertDivName).html(alertTabContent);
       }
+    },
+    error_callback = function(data){
     });
 }
 
@@ -206,6 +208,8 @@ loadEventContent = function(targetEventDivName, maxCount)
         eventTabContent = eventTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Events</td></tr>";
       }
       $("#"+targetEventDivName).html(eventTabContent);
+    },
+    error_callback = function(data){
     });
 }
 
@@ -221,49 +225,45 @@ loadJobContent = function(targetJobDivName)
     {
       $.each(data.response, function(resKey, resValue)
       {
-        pagecnt++;
-        if (maxpagecnt > pagecnt)
-        {
-          var image_path = "";
-          
-          if(resValue.state == job_action_buttons[0].toLowerCase())
-            image_path = PAUSE_PNG;
-          else if(resValue.state == job_action_buttons[2].toLowerCase())
-            image_path = CANCEL_PNG;
-          else if(resValue.state == job_action_buttons[3].toLowerCase())
-            image_path = CORRECT_GIF;
-          
-          jobTabContent = jobTabContent +
-                          "<tr>" +
-                          "<td width='35%' align='left' valign='top' class='border' style='font-weight:normal'>" +
-                          "<img src="+image_path+ " />" +
-                          resValue.description + 
-                          "</td>" + 
-                          "<td width='40%' align='left' valign='top' class='border'>&nbsp;";
+        var image_path = "";
+        
+        if(resValue.state == job_action_buttons[0].toLowerCase())
+          image_path = PAUSE_PNG;
+        else if(resValue.state == job_action_buttons[2].toLowerCase())
+          image_path = CANCEL_PNG;
+        else if(resValue.state == job_action_buttons[3].toLowerCase())
+          image_path = CORRECT_GIF;
+        
+        jobTabContent = jobTabContent +
+                        "<tr>" +
+                        "<td width='35%' align='left' valign='top' class='border' style='font-weight:normal'>" +
+                        "<img src="+image_path+ " />" +
+                        resValue.description + 
+                        "</td>" + 
+                        "<td width='40%' align='left' valign='top' class='border'>&nbsp;";
 
-                          if(resValue.state != job_action_buttons[3].toLowerCase()
-                              && resValue.state != job_action_buttons[0].toLowerCase())       // for adding pause button
-                          {
-                            jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[0]);
-                          }
-                          
-                          if(resValue.state == job_action_buttons[0].toLowerCase())           // for adding resume button
-                          {
-                            jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[1]);
-                          }
-                          
-                          if(resValue.state != job_action_buttons[3].toLowerCase())           // for adding cancel button
-                          {
-                            jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[2]);
-                          }
+                        if(resValue.state != job_action_buttons[3].toLowerCase()
+                            && resValue.state != job_action_buttons[0].toLowerCase())       // for adding pause button
+                        {
+                          jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[0]);
+                        }
+                        
+                        if(resValue.state == job_action_buttons[0].toLowerCase())           // for adding resume button
+                        {
+                          jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[1]);
+                        }
+                        
+                        if(resValue.state != job_action_buttons[3].toLowerCase())           // for adding cancel button
+                        {
+                          jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[2]);
+                        }
 
-                          jobTabContent = jobTabContent +
-                          "</td>" +
-                          "<td width='25%' align='left' valign='top' class='border' style='font-weight:normal'>" + 
-                          resValue.created_at +
-                          "</td>" +
-                          "</tr>";
-        }
+                        jobTabContent = jobTabContent +
+                        "</td>" +
+                        "<td width='25%' align='left' valign='top' class='border' style='font-weight:normal'>" + 
+                        resValue.created_at +
+                        "</td>" +
+                        "</tr>";
       });
 
       if(pagecnt == 0)
@@ -271,6 +271,8 @@ loadJobContent = function(targetJobDivName)
         jobTabContent = jobTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Jobs</td></tr>";
       }
       $("#"+targetJobDivName).html(jobTabContent);
+    },
+    error_callback = function(data){
     });
 }
 
@@ -294,6 +296,8 @@ job_action = function(job_id, state)
       {
         loadJobContent('job_content');
       }
+    },
+    error_callback = function(data){
     });
 }
 
@@ -313,6 +317,8 @@ loadHostList = function(filesystem_id, targetContainer)
         });
         $('#'+targetContainer).html(hostList);
       }
+    },
+    error_callback = function(data){
     });
 }
 

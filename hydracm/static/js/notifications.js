@@ -429,19 +429,19 @@ update_objects = function(data, silent) {
 poll_jobs = function() {
   /* FIXME: using POST instead of GET because otherwise jQuery forces the JSON payload to
    * be urlencoded and django-piston doesn't get our args out properly */
-  $.ajax({type: 'POST', url: "/api/notifications/", dataType: 'json', data: JSON.stringify({filter_opts: {since_time: last_check, initial: false}}), contentType:"application/json; charset=utf-8"})
-  .success(function(data, textStatus, jqXHR) {
-    if (!data.success) {
-      debug("Error calling jobs_since")
-      setTimeout(poll_jobs, error_retry_period);
-      return;
-    }
-
+  invoke_api_call(api_post, "notifications/", {filter_opts: {since_time: last_check, initial: false}}, 
+  success_callback = function(data)
+  {
     update_objects(data);
     update_sidebar_icons();
 
     setTimeout(poll_jobs, poll_period);
-  })
+  },
+  error_callback = function(data)
+  {
+    debug("Error calling jobs_since")
+    setTimeout(poll_jobs, error_retry_period);
+  });
 }
 
 object_name_markup = function(id, ct, name) {
@@ -472,34 +472,36 @@ poll_objects = function() {
   
   /* FIXME: using POST instead of GET because otherwise jQuery forces the JSON payload to
    * be urlencoded and django-piston doesn't get our args out properly */
-  $.ajax({type: 'POST', url: "/api/object_summary/", dataType: 'json', data: JSON.stringify({objects: object_list}), contentType:"application/json; charset=utf-8"})
-  .success(function(data, textStatus, jqXHR) {
-    if (!data.success) {
-      debug("Error calling object_summary")
-      setTimeout(poll_objects, error_retry_period);
-    } else {
-      setTimeout(poll_objects, poll_period);
-      $.each(data.response, function(i, object_info) {
-        /* TODO: only rewrite markup on change */
-        $(".object_transitions_" + object_info.id + "_" + object_info.content_type_id).replaceWith(
-          CreateActionLink(object_info.id, object_info.content_type_id, object_info.available_transitions, ""));
-        $(".object_name_" + object_info.id + "_" + object_info.content_type_id).html(object_info.label)
-        $(".object_state_" + object_info.id + "_" + object_info.content_type_id).html(object_info.state)
-      });
-    }
-  })
+  invoke_api_call(api_post, "object_summary/", {objects: object_list}, 
+  success_callback = function(data)
+  {
+    setTimeout(poll_objects, poll_period);
+    $.each(data.response, function(i, object_info) {
+      /* TODO: only rewrite markup on change */
+      $(".object_transitions_" + object_info.id + "_" + object_info.content_type_id).replaceWith(
+        CreateActionLink(object_info.id, object_info.content_type_id, object_info.available_transitions, ""));
+      $(".object_name_" + object_info.id + "_" + object_info.content_type_id).html(object_info.label)
+      $(".object_state_" + object_info.id + "_" + object_info.content_type_id).html(object_info.state)
+    });
+  },
+  error_callback = function(data)
+  {
+    debug("Error calling object_summary")
+    setTimeout(poll_objects, error_retry_period);
+  });
 }
 
 $(document).ready(function() {
-  $.ajax({type: 'POST', url: "/api/notifications/", dataType: 'json', data: JSON.stringify({filter_opts: {since_time: "", initial: true}}), contentType:"application/json; charset=utf-8"})
-  .success(function(data, textStatus, jqXHR) {
-    if (data.success) {
-      update_objects(data, silent = true);
-      update_sidebar_icons();
-      setTimeout(poll_jobs, poll_period);
-    }
+  invoke_api_call(api_post, "notifications/", {filter_opts: {since_time: "", initial: true}}, 
+  success_callback = function(data)
+  {
+    update_objects(data, silent = true);
+    update_sidebar_icons();
+    setTimeout(poll_jobs, poll_period);
+  },
+  error_callback = function(data){
   });
-
+  
   setTimeout(poll_objects, poll_period);
 });
 

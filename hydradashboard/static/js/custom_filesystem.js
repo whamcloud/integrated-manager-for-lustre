@@ -77,6 +77,8 @@ fs_Bar_SpaceUsage_Data = function(fsId, sDate, endDate, dataFunction, targetKind
         renderZoomDialog(obj_fs_Bar_SpaceUsage_Data);
       }
       chart = new Highcharts.Chart(obj_fs_Bar_SpaceUsage_Data);
+    },
+    error_callback = function(data){
     });
 }
 /*****************************************************************************
@@ -137,6 +139,8 @@ fs_Line_connectedClients_Data = function(fsId, sDate, endDate, dataFunction, fet
         renderZoomDialog(obj_fs_Line_connectedClients_Data);
       }
       chart = new Highcharts.Chart(obj_fs_Line_connectedClients_Data);
+    },
+    error_callback = function(data){
     });
 }
 /*****************************************************************************
@@ -181,7 +185,9 @@ fs_LineBar_CpuMemoryUsage_Data = function(fsId, sDate, endDate, dataFunction, ta
       obj_fs_LineBar_CpuMemoryUsage_Data.series[0].data = cpuData;
       obj_fs_LineBar_CpuMemoryUsage_Data.series[1].data = memoryData;
       chart = new Highcharts.Chart(obj_fs_LineBar_CpuMemoryUsage_Data);
-  });
+    },
+    error_callback = function(data){
+    });
 }
 /*****************************************************************************
  * Function for disk read and write - Area Chart
@@ -243,6 +249,8 @@ fs_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKind
         renderZoomDialog(obj_db_Area_ReadWrite_Data);
       }
       chart = new Highcharts.Chart(obj_db_Area_ReadWrite_Data);
+    },
+    error_callback = function(data){
     });
 }
 /*****************************************************************************
@@ -297,6 +305,8 @@ fs_Area_mdOps_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fe
         obj_db_Area_mdOps_Data.series[i].data = values[stat_name];
       });
       chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
+    },
+    error_callback = function(data){
     });
 }
 /*****************************************************************************
@@ -389,6 +399,8 @@ fs_AreaSpline_ioOps_Data = function(isZoom)
         renderZoomDialog(obj_db_AreaSpline_ioOps_Data);
       }
       chart = new Highcharts.Chart(obj_db_AreaSpline_ioOps_Data);
+    },
+    error_callback = function(data){
     });
 }
 /*****************************************************************************
@@ -584,7 +596,9 @@ loadFileSystemSummary = function (fsId)
       });
 
       $('#fileSystemSummaryTbl').html(innerContent);
-	});
+	},
+    error_callback = function(data){
+    });
 }
 /*****************************************************************************
  * Function to initialize polling of graphs on the file system dashboard page

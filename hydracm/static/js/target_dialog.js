@@ -21,10 +21,11 @@ target_dialog_open = function(target_id) {
   $('#target_dialog').dialog('open');
 
   load_resource_graph('target_dialog_devices', target_id);
-
-  $.get('/api/target/', {id: target_id})
-  .success(function(data, textStatus, jqXHR) {
-    if (data.success) {
+  
+  invoke_api_call(api_post, "target/", {id: target_id}, handlers = 
+  {
+    200 : function(data)
+    {
       var target_info = data.response;
       console.log(target_info);
       $('#target_dialog').dialog('option', 'title', target_info.label);
@@ -55,8 +56,11 @@ target_dialog_open = function(target_id) {
       properties_markup += "</table>";
       $('#target_dialog_properties').html(properties_markup);
     }
-  }); 
-    $('#config_home_target_id').attr('value',target_id);
-    //load Config param in target dialog box.
-    GetConfigurationParam(target_id,"", "target_config_param_table");
+  },
+  error_callback = function(data){
+  });
+
+  $('#config_home_target_id').attr('value',target_id);
+  //load Config param in target dialog box.
+  GetConfigurationParam(target_id,"", "target_config_param_table");
 }

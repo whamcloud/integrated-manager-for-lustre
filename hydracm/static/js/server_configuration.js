@@ -73,33 +73,39 @@ $(document).ready(function() {
   $('.add_host_submit_button').click(function(ev) {
       $('#add_host_tabs').tabs('select', '#add_host_loading');
 
-      $.post('/api/test_host/', {hostname: $('#add_host_address').attr('value'), commit: false})
-      .success(function(data, textStatus, jqXHR) {
-          task_id = data.response.task_id
-          submit_poll(task_id) 
-      })
-      .error(function(event) {
-          console.log(event.responseText);
-          data = $.parseJSON(event.responseText);
-          add_host_error(data['error']);
+      invoke_api_call(api_post, "test_host/", {hostname: $('#add_host_address').attr('value'), commit: false}, 
+      success_callback = function(data)
+      {
+        task_id = data.response.task_id
+        submit_poll(task_id);
+      },
+      error_callback = function(data)
+      {
+        console.log(event.responseText);
+        data = $.parseJSON(event.responseText);
+        add_host_error(data['error']);
       });
+      
       ev.preventDefault();
   });
 
   $('.add_host_confirm_button').click(function(ev) {
-          $.post('/api/add_host/', {hostname: $('#add_host_address_label').html(), commit: true})
-      .success(function(data, textStatus, jqXHR) {
-          $('#add_host_tabs').tabs('select', '#add_host_complete');
-          $('.add_host_back_button').focus();
-          $('#server_configuration').dataTable().fnClearTable();
-          LoadServerConf_ServerConfig();
-      })
-      .error(function(event) {
-          console.log(event.responseText);
-          add_host_error(data['error'])
-      });
-
-      ev.preventDefault();
+    
+    invoke_api_call(api_post, "add_host/", {hostname: $('#add_host_address_label').html(), commit: true}, 
+    success_callback = function(data)
+    {
+      $('#add_host_tabs').tabs('select', '#add_host_complete');
+      $('.add_host_back_button').focus();
+      $('#server_configuration').dataTable().fnClearTable();
+      LoadServerConf_ServerConfig();
+    },
+    error_callback = function(data)
+    {
+      console.log(event.responseText);
+      add_host_error(data['error']);
+    });
+    
+    ev.preventDefault();
   });
 
   $('.add_host_close_button').click(function(ev) {

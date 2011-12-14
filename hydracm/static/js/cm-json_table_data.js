@@ -24,14 +24,13 @@ target_dialog_link = function(target_id, target_name) {
 *******************************************************************/
 function LoadFSList_FSList()
 {
-  $.get("/api/listfilesystems/").success(function(data, textStatus, jqXHR)
+  invoke_api_call(api_get, "listfilesystems", "", 
+  success_callback = function(data)
   {
-    if(data.success)
+    var response = data.response;
+    var fsName;
+    $.each(response, function(resKey, resValue)
     {
-      var response = data.response;
-      var fsName;
-      $.each(response, function(resKey, resValue)
-      {
       fsName = "<a href='#filesystems_edit_" + resValue.fsid +"' class='address_link'>" + resValue.fsname + "</a>";
       $('#fs_list').dataTable().fnAddData ([
         fsName,
@@ -43,29 +42,27 @@ function LoadFSList_FSList()
         resValue.kbytesfree,
         CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
         notification_icons_markup(resValue.id, resValue.content_type_id)
-        ]); 
-      });
-    }
-  })
-  .error(function(event)
+        ]);
+    });
+  },
+  error_callback = function(data)
   {
     jAlert(ERR_FSLIST_LOAD + data.errors);
-  })
-  .complete(function(event) 
-  {
   });
 }
 
 function LoadTargets_EditFS(fs_id)
 {
-  $.get("/api/getvolumesdetails/",{filesystem_id:fs_id})
-  .success(function(data, textStatus, jqXHR) {
-    $('#ost').dataTable().fnClearTable();
-    $('#mdt').dataTable().fnClearTable();
-    $('#mgt_configuration_view').dataTable().fnClearTable();
+  var api_params = {filesystem_id : fs_id};
 
-    if(data.success)
+  invoke_api_call(api_post, "getvolumesdetails/", api_params, handlers = 
+  {
+    200 : function(data)
     {
+      $('#ost').dataTable().fnClearTable();
+      $('#mdt').dataTable().fnClearTable();
+      $('#mgt_configuration_view').dataTable().fnClearTable();
+  
       var response = data.response;
       $.each(response, function(resKey, resValue)
       {
@@ -87,13 +84,10 @@ function LoadTargets_EditFS(fs_id)
         }
       });
     }
-  })
-  .error(function(event)
+  },
+  error_callback = function(data)
   {
-     jAlert(ERR_EDITFS_OST_LOAD + data.errors);
-  })
-  .complete(function(event) 
-  {
+    jAlert(ERR_EDITFS_OST_LOAD + data.errors);
   });
 }
 
@@ -106,9 +100,11 @@ function LoadTargets_EditFS(fs_id)
 
 function LoadUsableVolumeList(datatable_container, select_widget_fn)
 {
-  $.post("/api/get_luns/", {'category': 'usable'}).success(function(data, textStatus, jqXHR)
+  var api_params = {'category': 'usable'};
+
+  invoke_api_call(api_post, "get_luns/", api_params, handlers = 
   {
-    if(data.success)
+    200 : function(data)
     {
       $.each(data.response, function(resKey, volume_info)
       {
@@ -137,11 +133,11 @@ function LoadUsableVolumeList(datatable_container, select_widget_fn)
         ]); 
       });
     }
-  })
-  .error(function(event)
+  },
+  error_callback = function(data)
   {
     jAlert(ERR_COMMON_VOLUME_LOAD + data.errors);
-  })
+  });
 }
 
 /******************************************************************/
@@ -153,9 +149,11 @@ function LoadUsableVolumeList(datatable_container, select_widget_fn)
 
 function LoadUnused_VolumeConf()
 {
-  $.get("/api/get_luns/", {'category': 'unused'}).success(function(data, textStatus, jqXHR)
+  var api_params = {'category': 'unused'};
+
+  invoke_api_call(api_post, "get_luns/", api_params, handlers = 
   {
-    if(data.success)
+    200 : function(data)
     {
       $.each(data.response, function(resKey, resValue)
       {
@@ -217,13 +215,10 @@ function LoadUnused_VolumeConf()
         ]); 
       });
     }
-  })
-  .error(function(event) 
+  },
+  error_callback = function(data)
   {
-     jAlert(ERR_COMMON_VOLUME_LOAD + data.errors);
-  })
-  .complete(function(event) 
-  {
+    jAlert(ERR_COMMON_VOLUME_LOAD + data.errors);
   });
 }
 
@@ -236,36 +231,29 @@ function LoadUnused_VolumeConf()
 
 function LoadMGTConfiguration_MGTConf()
 {
-  $.get("/api/get_mgts/").success(function(data, textStatus, jqXHR)
+  invoke_api_call(api_get, "get_mgts/", "", 
+  success_callback = function(data)
   {
-    if(data.success)
+    var response = data.response;
+    var fsnames;
+
+    $.each(response, function(resKey, resValue)
     {
-      var response = data.response;
-      var fsnames;
-      if(data.response!="")
-      {
-        $.each(response, function(resKey, resValue)
-        {
-              fsnames = resValue.fs_names;
-              $('#mgt_configuration').dataTable().fnAddData ([
-                fsnames.toString(),
-                resValue.lun_name,
-                target_dialog_link(resValue.id, resValue.primary_server_name),
-                resValue.failover_server_name,
-                resValue.active_host_name,
-                CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
-                notification_icons_markup(resValue.id, resValue.content_type_id)
-              ]);
-        });
-      }
-    }
-  })
-  .error(function(event)
+          fsnames = resValue.fs_names;
+          $('#mgt_configuration').dataTable().fnAddData ([
+            fsnames.toString(),
+            resValue.lun_name,
+            target_dialog_link(resValue.id, resValue.primary_server_name),
+            resValue.failover_server_name,
+            resValue.active_host_name,
+            CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
+            notification_icons_markup(resValue.id, resValue.content_type_id)
+          ]);
+    });
+  },
+  error_callback = function(data)
   {
     jAlert(ERR_EDITFS_MGT_LOAD);
-  })
-  .complete(function(event) 
-  {
   });
 }
 
@@ -278,11 +266,13 @@ function LoadMGTConfiguration_MGTConf()
 
 function LoadServerConf_ServerConfig()
 {
-  $.post("/api/listservers/",{"filesystem_id": ""}).success(function(data, textStatus, jqXHR)
+  var api_params = {"filesystem_id": ""};
+
+  invoke_api_call(api_post, "listservers/", api_params, handlers = 
   {
-    $('#server_configuration').dataTable().fnClearTable();
-    if(data.success)
+    200 : function(data)
     {
+      $('#server_configuration').dataTable().fnClearTable();
       var response = data.response;
       $.each(response, function(resKey, resValue)
       {
@@ -294,13 +284,10 @@ function LoadServerConf_ServerConfig()
         ]);
       });
     }
-  })
-  .error(function(event)
+  },
+  error_callback = function(data)
   {
     jAlert(ERR_SERVER_CONF_LOAD + data.errors);
-  })
-  .complete(function(event) 
-  {
   });
 }
 
@@ -335,9 +322,11 @@ function LoadFSData_EditFS()
   var fs_id = $('#fs_id').val();
   if(fsname!="none")
   {
-    $.post("/api/getfilesystem/",{"filesystem_id":fs_id}).success(function(data, textStatus, jqXHR)
+    var api_params = {"filesystem_id":fs_id};
+
+    invoke_api_call(api_post, "getfilesystem/", api_params, handlers = 
     {
-      if(data.success)
+      200 : function(data)
       {
         var response = data.response;
         var lnet_status_mesg;
@@ -356,13 +345,10 @@ function LoadFSData_EditFS()
           $('#fs_name').html(resValue.fsname);
         });
       }
-    })
-    .error(function(event)
+    },
+    error_callback = function(data)
     {
       jAlert(ERR_EDITFS_FSDATA_LOAD+ data.errors);
-    })
-    .complete(function(event) 
-    {
     });
   }
 }
