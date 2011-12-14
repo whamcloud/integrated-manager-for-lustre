@@ -18,31 +18,33 @@ var no_handler_msg = "No handler for ";
 /********************************************************************************
 // Generic function that handles API requests 
 /********************************************************************************/
-function invoke_api_call(request_type, api_url, api_args, callback)
+function invoke_api_call(request_type, api_url, api_args, success_callback, error_callback)
 {
   $.ajax({type: request_type, url: API_PREFIX + api_url, dataType: 'json', data: JSON.stringify(api_args),
           contentType:"application/json; charset=utf-8"}
   )
   .success(function(data, textStatus, jqXHR)
   {
-    if(typeof(callback) == "function")
-      callback(data);
+    if(typeof(success_callback) == "function")
+      success_callback(data);
     else
     {
       var status_code = jqXHR.status;
-      if(callback[status_code] != undefined)
-        callback[status_code](data);
+      if(success_callback[status_code] != undefined)
+        success_callback[status_code](data);
       else
         no_handler(api_url, status_code);
     }
   })
   .error(function(data, textStatus, jqXHR)
   {
-    if(typeof(callback) != "function")
+    if(typeof(error_callback) == "function")
+      error_callback(data);
+    else
     {
       var status_code = jqXHR.status;
-      if(callback[status_code] != undefined)
-        callback[status_code](data);
+      if(error_callback[status_code] != undefined)
+        error_callback[status_code](data);
     }
   })
   .complete(function(event)

@@ -142,7 +142,7 @@ $(document).ready(function()
   setStartEndTime = function(timeFactor, startTimeValue, endTimeValue)
   {
     endTime = endTimeValue;
-		
+
     if(timeFactor == "minutes")
       startTime = startTimeValue;
     else if(timeFactor == "hour")
@@ -230,6 +230,8 @@ $(document).ready(function()
           ]);
         });
         $('#fsSelect').html(innerContent);
+      },
+      error_callback = function(data){
       });
 
       db_Bar_SpaceUsage_Data('false');
@@ -279,6 +281,8 @@ $(document).ready(function()
         "</ul>";
         $("#breadCrumb1").html(breadCrumbHtml);
         $("#breadCrumb1").jBreadCrumb();
+      },
+      error_callback = function(data){
       });
 
     resetTimeInterval();
@@ -360,6 +364,8 @@ $(document).ready(function()
         $("#breadCrumb2").jBreadCrumb();
 
         $("#ostKind").html(ostKindMarkUp);
+      },
+      error_callback = function(data){
       });
 
     resetTimeInterval();
