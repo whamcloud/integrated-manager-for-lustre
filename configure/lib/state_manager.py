@@ -69,11 +69,81 @@ class StateManager(object):
 
         return transitions
 
+    @classmethod
+    def _run_opportunistic_jobs(cls, changed_stateful_object = None):
+        """Call this when an object state changes, to see if anything
+        in the queue of opportunistic jobs is now able to run"""
+        from configure.models import OpportunisticJob
+        pending_opportunistic_jobs = OpportunisticJob.objects.filter(run = False)
+        count = pending_opportunistic_jobs.count()
+        if count > 0:
+            job_log.info("Opportunistic jobs waiting: %s" % count)
+
+        for oj in pending_opportunistic_jobs:
+            job = oj.get_job()
+            # FIXME: should check if some of the job's dependencies are absent, e.g.
+            # if you try to set a conf param on an offline MGS, then delete the MGS -- otherwise
+            # jobs will linger in the opportunistic queue indefinitely in that (admittedly rare)
+            # scenario.
+            if job._deps_satisfied():
+                job_log.info("Opportunistic job %s (%s) ready to run, adding" % (oj.pk, job.description()))
+                StateManager()._add_job(job)
+                oj.run = True
+                import datetime
+                oj.run_at = datetime.datetime.now()
+                oj.save()
+
     def get_expected_state(self, stateful_object_instance):
         try:
             return self.expected_states[stateful_object_instance]
         except KeyError:
             return stateful_object_instance.state
+
+    @classmethod
+    def complete_job(cls, job_id):
+        from configure.tasks import complete_job
+        complete_job.delay(job_id)
+
+    @classmethod
+    def _complete_job(cls, job_id):
+        from configure.models import Job
+
+        job = Job.objects.get(pk = job_id)
+        if job.state == 'completing':
+            with transaction.commit_on_success():
+                for dependent in job.wait_for_job.all():
+                    dependent.notify_wait_for_complete()
+                job.state = 'complete'
+                job.save()
+        else:
+            assert job.state == 'complete'
+
+        # FIXME: we use cancelled to indicate a job which didn't run
+        # because its dependencies failed, and also to indicate a job
+        # that was deliberately cancelled by the user.  We should
+        # distinguish so that opportunistic retry doesn't happen when
+        # the user has explicitly cancelled something.
+        job = job.downcast()
+
+        from configure.lib.job import StateChangeJob
+        if isinstance(job, StateChangeJob):
+            cls._run_opportunistic_jobs(job.get_stateful_object())
+
+        if (job.errored or job.cancelled) and job.opportunistic_retry:
+            copy_args = {}
+            for field in [f for f in job._meta.fields if not f in Job._meta.fields]:
+                if not field.name.endswith("_ptr"):
+                    copy_args[field.name] = getattr(job, field.name)
+            # Get all attributes which aren't in the base Job class
+            future_job = job.__class__(**copy_args)
+
+            from configure.models.jobs import OpportunisticJob
+            oj = OpportunisticJob(job = future_job)
+            oj.save()
+            job_log.warn("Job %s failed, transforming to OpportunisticJob %s" % (job.pk, oj.pk))
+
+        job_log.debug("Job %s completed, running any dependents..." % job_id)
+        Job.run_next()
 
     @classmethod
     def notify_state(cls, instance, new_state, from_states):
@@ -89,6 +159,33 @@ class StateManager(object):
                 from_states)
 
     @classmethod
+    def _notify_state(cls, content_type, object_id, new_state, from_states):
+        # Get the StatefulObject
+        from django.contrib.contenttypes.models import ContentType
+        model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
+        instance = model_klass.objects.get(pk = object_id).downcast()
+
+        # Assert its class
+        from configure.models import StatefulObject
+        assert(isinstance(instance, StatefulObject))
+
+        # If a state update is needed/possible
+        if instance.state in from_states and instance.state != new_state:
+            # Check that no incomplete jobs hold a lock on this object
+            from django.db.models import Q
+            from configure.models import StateLock
+            outstanding_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
+            if outstanding_locks == 0:
+                # No jobs lock this object, go ahead and update its state
+                job_log.info("notify_state: Updating state of item %d (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
+                instance.state = new_state
+                instance.save()
+
+                # FIXME: should check the new state against reverse dependencies
+                # and apply any fix_states
+            cls._run_opportunistic_jobs(instance)
+
+    @classmethod
     def add_job(cls, job):
         from configure.tasks import add_job
         celery_task = add_job.delay(job)
@@ -97,19 +194,19 @@ class StateManager(object):
     def _add_job(self, job):
         """Add a job, and any others which are required in order to reach its prerequisite state"""
         for dependency in job.get_deps().all():
-            if not dependency.stateful_object.state in dependency.acceptable_states:
-                self._set_state(dependency.stateful_object, dependency.preferred_state)
+            if not dependency.satisfied():
+                job_log.info("_add_job: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
+                self._set_state(dependency.get_stateful_object(), dependency.preferred_state)
 
+        job_log.info("_add_job: done checking dependencies")
         # Important: the Job must not be committed until all
         # its dependencies and locks are in.
-        @transaction.commit_on_success
-        def instantiate_job():
+        with transaction.commit_on_success():
             job.save()
             job.create_locks()
             job.create_dependencies()
-        instantiate_job()
+            job_log.info("_add_job: created %s (%s)" % (job.pk, job.description()))
 
-        transaction.commit()
         from configure.models import Job
         Job.run_next()
 

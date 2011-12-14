@@ -6,10 +6,15 @@ class MockAgent(object):
     label_counter = 0
     mock_servers = {}
 
+    succeed = True
+
     def __init__(self, host, log = None, console_callback = None, timeout = None):
         self.host = host
 
     def invoke(self, cmdline):
+        if not self.succeed:
+            raise RuntimeError("Test-generated failure")
+
         print "invoke_agent %s %s" % (self.host, cmdline)
         if cmdline == "get-fqdn":
             return self.mock_servers[self.host.address]['fqdn']
@@ -44,6 +49,8 @@ class JobTestCase(TestCase):
         from celery.app import app_or_default
         self.old_celery_always_eager = app_or_default().conf.CELERY_ALWAYS_EAGER
         app_or_default().conf.CELERY_ALWAYS_EAGER = True
+        self.old_celery_eager_propagates_exceptions = app_or_default().conf.CELERY_EAGER_PROPAGATES_EXCEPTIONS
+        app_or_default().conf.CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
 
         # Intercept attempts to call out to lustre servers
         import configure.lib.agent
@@ -61,8 +68,8 @@ class JobTestCase(TestCase):
         configure.lib.agent.Agent = self.old_agent
 
         from celery.app import app_or_default
-        self.old_celery_always_eager = app_or_default().conf.CELERY_ALWAYS_EAGER
         app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
+        app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_eager_propagates_exceptions
 
 
 class TestStateManager(JobTestCase):
@@ -142,6 +149,40 @@ class TestStateManager(JobTestCase):
         with self.assertRaises(ManagedOst.DoesNotExist):
             ManagedOst.objects.get(pk = ost.pk)
         self.assertEqual(ManagedOst._base_manager.get(pk = ost.pk).state, 'removed')
+
+    def test_opportunistic_execution(self):
+        # Set up an MGS, leave it offline
+        from hydraapi.configureapi import create_fs, create_target
+        from configure.models import ManagedMgs, ManagedMdt, ManagedOst
+        mgt = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
+        fs = create_fs(mgt.pk, "testfs", {})
+        create_target(self._test_lun(self.host).id, ManagedMdt, filesystem = fs)
+        create_target(self._test_lun(self.host).id, ManagedOst, filesystem = fs)
+
+        from configure.lib.state_manager import StateManager
+        StateManager.set_state(ManagedMgs.objects.get(pk = mgt.pk), 'unmounted')
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unmounted')
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 0)
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 0)
+
+        try:
+            # Make it so that an MGS start operation will fail
+            MockAgent.succeed = False
+
+            from hydraapi.configureapi import set_target_conf_param
+            params = {"llite.max_cached_mb": "32"}
+            set_target_conf_param(fs.pk, params, True)
+
+            self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 1)
+            self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 0)
+        finally:
+            MockAgent.succeed = True
+
+        StateManager.set_state(mgt, 'mounted')
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
+
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 1)
+        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 1)
 
     def test_invalid_state(self):
         from configure.lib.state_manager import StateManager

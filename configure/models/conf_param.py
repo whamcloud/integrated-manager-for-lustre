@@ -40,6 +40,8 @@ class ConfParamVersionStep(Step):
 class ApplyConfParams(Job):
     mgs = models.ForeignKey(ManagedMgs)
 
+    opportunistic_retry = True
+
     class Meta:
         app_label = 'configure'
 
@@ -56,7 +58,6 @@ class ApplyConfParams(Job):
         if new_param_count > 0:
             job_log.info("ApplyConfParams %d, applying %d new conf_params" % (self.id, new_param_count))
             # If we have some new params, create N ConfParamSteps and one ConfParamVersionStep
-            from configure.lib.job import ConfParamStep, ConfParamVersionStep
             highest_version = 0
             for param in new_params:
                 steps.append((ConfParamStep, {"conf_param_id": param.id}))
@@ -71,7 +72,7 @@ class ApplyConfParams(Job):
         return steps
 
     def get_deps(self):
-        return DependOn(self.mgs.downcast(), 'mounted')
+        return DependOn(self.mgs, 'mounted')
 
 
 class ConfParam(models.Model):

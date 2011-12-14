@@ -30,6 +30,22 @@ def _subclasses(obj):
     return sc_recr
 
 
+class OpportunisticJob(models.Model):
+    job = PickledObjectField()
+    run = models.BooleanField(default = False)
+    run_at = models.DateTimeField(null = True, blank = True)
+
+    class Meta:
+        app_label = 'configure'
+
+    def get_job(self):
+        job = self.job
+        # Jobs here are meant to be unsaved instances
+        assert not job.pk
+
+        return job
+
+
 class StatefulObject(models.Model):
     # Use of abstract base classes to avoid django bug #12002
     class Meta:
@@ -285,6 +301,10 @@ class Job(models.Model):
     # request user confirmation (e.g. removals, stops)
     requires_confirmation = False
 
+    #: Whether the job should be added to opportunistic Job queue if it doesn't run
+    #  successfully.
+    opportunistic_retry = False
+
     def to_dict(self):
         from monitor.lib.util import time_str
         read_locks = []
@@ -500,9 +520,26 @@ class Job(models.Model):
         else:
             return self.get_deps()
 
+    def _deps_satisfied(self):
+        from configure.lib.job import job_log
+
+        try:
+            result = self.all_deps().satisfied()
+        except Exception, e:
+            # Catchall exception handler to ensure progression even if Job
+            # subclasses have bugs in their get_deps etc.
+            job_log.error("Job %d: internal error %s" % (self.id, e))
+            result = False
+
+        job_log.debug("Job %s: deps satisfied=%s" % (self.id, result))
+        for d in self.all_deps().all():
+            satisfied = d.satisfied()
+            job_log.debug("  %s %s (actual %s) %s" % (d.stateful_object, d.acceptable_states, d.stateful_object.state, satisfied))
+        return result
+
     def run(self):
         from configure.lib.job import job_log
-        job_log.info("Job %d: Job.run" % self.id)
+        job_log.info("Job %d: Job.run %s" % (self.id, self.description()))
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
@@ -512,24 +549,13 @@ class Job(models.Model):
         # is - are this Job's immediate dependencies satisfied?  And are any deps
         # for a statefulobject's new state satisfied?  If so, continue.  If not, cancel.
 
-        try:
-            deps_satisfied = self.all_deps().satisfied()
-        except Exception, e:
-            # Catchall exception handler to ensure progression even if Job
-            # subclasses have bugs in their get_deps etc.
-            job_log.error("Job %d: internal error %s" % (self.id, e))
-            self.complete(errored = True)
-            return
+        deps_satisfied = self._deps_satisfied()
 
         if not deps_satisfied:
+            job_log.warning("Job %d: cancelling because of failed dependency" % (self.id))
             self.complete(cancelled = True)
             # TODO: tell someone WHICH dependency
-            job_log.warning("Job %d: cancelling because of failed dependency" % (self.id))
             return
-
-        job_log.debug("Job %d: deps okay" % self.id)
-        for d in self.all_deps().all():
-            job_log.debug("  %s %s (actual %s) %s" % (d.stateful_object, d.acceptable_states, d.stateful_object.state, d.satisfied()))
 
         # Set state to 'tasked'
         # =====================
@@ -555,17 +581,15 @@ class Job(models.Model):
 
         # Save the celery task ID
         # =======================
-        from celery.result import EagerResult, AsyncResult
-        if isinstance(celery_job, AsyncResult):
+        from celery.result import EagerResult
+        if isinstance(celery_job, EagerResult):
+            # Eager execution happens when under test
+            job_log.debug("Job %d ran eagerly" % (self.id))
+        else:
             self.task_id = celery_job.task_id
             self.state = 'tasked'
             self.save()
             job_log.debug("Job %d tasking->tasked (%s)" % (self.id, self.task_id))
-        elif isinstance(celery_job, EagerResult):
-            # Eager execution happens when under test
-            job_log.debug("Job %d ran eagerly" % (self.id))
-        else:
-            raise NotImplementedError()
 
     @classmethod
     def cancel_job(cls, job_id):
@@ -578,10 +602,11 @@ class Job(models.Model):
         success = not (errored or cancelled)
         if success and isinstance(self, StateChangeJob):
             new_state = self.state_transition[2]
-            obj = self.get_stateful_object()
-            obj.state = new_state
-            job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.pk, new_state, obj))
-            obj.save()
+            with transaction.commit_on_success():
+                obj = self.get_stateful_object()
+                obj.state = new_state
+                job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.pk, new_state, obj))
+                obj.save()
 
         job_log.info("Job %d completing (errored=%s, cancelled=%s)" %
                 (self.id, self.errored, self.cancelled))
@@ -591,8 +616,8 @@ class Job(models.Model):
             self.cancelled = cancelled
             self.save()
 
-        from configure.tasks import complete_job
-        complete_job.delay(self.id)
+        from configure.lib.state_manager import StateManager
+        StateManager.complete_job(self.pk)
 
     def description(self):
         raise NotImplementedError

@@ -145,29 +145,8 @@ def janitor():
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def notify_state(content_type, object_id, new_state, from_states):
-    # Get the StatefulObject
-    from django.contrib.contenttypes.models import ContentType
-    model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
-    instance = model_klass.objects.get(pk = object_id).downcast()
-
-    # Assert its class
-    from configure.models import StatefulObject
-    assert(isinstance(instance, StatefulObject))
-
-    # If a state update is needed/possible
-    if instance.state in from_states and instance.state != new_state:
-        # Check that no incomplete jobs hold a lock on this object
-        from django.db.models import Q
-        from configure.models import StateLock
-        outstanding_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
-        if outstanding_locks == 0:
-            # No jobs lock this object, go ahead and update its state
-            job_log.info("notify_state: Updating state of item %d (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
-            instance.state = new_state
-            instance.save()
-
-            # FIXME: should check the new state against reverse dependencies
-            # and apply any fix_states
+    from configure.lib.state_manager import StateManager
+    StateManager._notify_state(content_type, object_id, new_state, from_states)
 
 
 @task(base = RetryOnSqlErrorTask)
@@ -210,20 +189,8 @@ def add_job(job):
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def complete_job(job_id):
-    from configure.models import Job
-
-    job = Job.objects.get(pk = job_id)
-    if job.state == 'completing':
-        with transaction.commit_on_success():
-            for dependent in job.wait_for_job.all():
-                dependent.notify_wait_for_complete()
-            job.state = 'complete'
-            job.save()
-    else:
-        assert job.state == 'complete'
-
-    job_log.debug("Job %d completed, running any dependents...", job_id)
-    Job.run_next()
+    from configure.lib.state_manager import StateManager
+    StateManager._complete_job(job_id)
 
 
 @task(base = RetryOnSqlErrorTask)
