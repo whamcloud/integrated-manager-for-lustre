@@ -339,6 +339,17 @@ class GetAlerts(AnonymousRequestHandler):
         return paginate_result(page_id, page_size, alerts, format_fn)
 
 
+class UpdateScan(AnonymousRequestHandler):
+    @extract_request_args('fqdn', 'update_scan')
+    def run(self, request, fqdn, update_scan):
+        from configure.models import ManagedHost
+        from django.shortcuts import get_object_or_404
+        host = get_object_or_404(ManagedHost, fqdn = fqdn)
+
+        from monitor.lib.lustre_audit import UpdateScan
+        UpdateScan().run(host.pk, update_scan)
+
+
 class GetJobs(AnonymousRequestHandler):
     def run(self, request):
         from configure.models import Job

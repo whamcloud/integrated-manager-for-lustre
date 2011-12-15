@@ -7,6 +7,7 @@ from django.conf.urls.defaults import patterns
 from piston.resource import Resource
 
 # Hydra server imports
+import monitorapi
 from monitorapi import (ListFileSystems,
                         GetFileSystem,
                         GetFSTargets,
@@ -124,4 +125,6 @@ urlpatterns = patterns('',
     (r'^creatable_storage_resource_classes/$', CsrfExemptResource(CreatableStorageResourceClasses)),
 
     (r'^hosts/$', CsrfExemptResource(ManagedHostsHandler)),
+
+    (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),
 )
