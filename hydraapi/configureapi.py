@@ -742,7 +742,10 @@ class ObjectSummary(AnonymousRequestHandler):
         for o in objects:
             from configure.lib.state_manager import StateManager
             klass = ContentType.objects.get_for_id(o['content_type_id']).model_class()
-            instance = klass.objects.get(pk = o['id'])
+            try:
+                instance = klass.objects.get(pk = o['id'])
+            except klass.DoesNotExist:
+                continue
 
             result.append({'id': o['id'],
                            'content_type_id': o['content_type_id'],
