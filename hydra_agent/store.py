@@ -69,7 +69,7 @@ class AgentStore(object):
 
     @classmethod
     def remove_target_info(cls, name):
-        self._unlink_if_exists(cls._json_path(name))
+        cls._unlink_if_exists(cls._json_path(name))
 
     @classmethod
     def set_target_info(cls, name, info):
