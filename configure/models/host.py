@@ -30,7 +30,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     address = models.CharField(max_length = 255)
 
     # A fully qualified domain name like flint02.testnet
-    fqdn = models.CharField(max_length = 255, blank = True, null = True, unique = True)
+    fqdn = models.CharField(max_length = 255, blank = True, null = True)
 
     # TODO: separate the LNET state [unloaded, down, up] from the host state [created, removed]
     states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
@@ -53,6 +53,15 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         MIN_LENGTH = 1
         if len(self.address) < MIN_LENGTH:
             raise ValidationError("Address '%s' is too short" % self.address)
+
+        if self.fqdn:
+            try:
+                from django.db.models import Q
+                from django.db import IntegrityError
+                ManagedHost.objects.get(~Q(pk = self.pk), fqdn = self.fqdn)
+                raise IntegrityError("FQDN %s in use" % self.fqdn)
+            except ManagedHost.DoesNotExist:
+                pass
 
         super(ManagedHost, self).save(*args, **kwargs)
 
@@ -386,6 +395,11 @@ class Monitor(models.Model):
         try:
             return Agent(self.host, log = audit_log, timeout = timeout).invoke(command)
         except Exception, e:
+            import sys
+            import traceback
+            exc_info = sys.exc_info()
+            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            audit_log.error(backtrace)
             return e
 
 
@@ -471,19 +485,56 @@ class LearnHostnameStep(Step):
     idempotent = True
 
     def run(self, kwargs):
+        from configure.lib.job import job_log
+
         from configure.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         fqdn = self.invoke_agent(host, "get-fqdn")
+        assert fqdn != None
 
         from django.db import IntegrityError
         try:
             host.fqdn = fqdn
             host.save()
+            job_log.info("Learned FQDN '%s' for host %s (%s)" % (fqdn, host.pk, host.address))
         except IntegrityError:
-            from configure.lib.job import job_log
             # TODO: make this an Event or Alert?
             host.fqdn = None
             job_log.error("Cannot complete setup of host %s, it is reporting an already-used FQDN %s" % (host, fqdn))
+            raise
+
+
+class SetServerConfStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        import settings
+        if not settings.HTTP_AUDIT:
+            return
+
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        import settings
+        if settings.SERVER_HTTP_URL:
+            url = settings.SERVER_HTTP_URL
+        else:
+            import socket
+            fqdn = socket.getfqdn()
+            url = "http://%s/" % fqdn
+        self.invoke_agent(host, "set-server-conf", {"url": url})
+
+
+class RemoveServerConfStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        import settings
+        if not settings.HTTP_AUDIT:
+            return
+
+        from configure.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        self.invoke_agent(host, "remove-server-conf")
 
 
 class SetupHostJob(Job, StateChangeJob):
@@ -497,7 +548,8 @@ class SetupHostJob(Job, StateChangeJob):
 
     def get_steps(self):
         return [(LearnHostnameStep, {'host_id': self.managed_host.pk}),
-                (ConfigureRsyslogStep, {'host_id': self.managed_host.pk})]
+                (ConfigureRsyslogStep, {'host_id': self.managed_host.pk}),
+                (SetServerConfStep, {'host_id': self.managed_host.pk})]
 
     class Meta:
         app_label = 'configure'
@@ -682,4 +734,5 @@ class RemoveHostJob(Job, StateChangeJob):
         return "Remove host %s from configuration" % self.host
 
     def get_steps(self):
-        return [(DeleteHostStep, {'host_id': self.host.id})]
+        return [(RemoveServerConfStep, {'host_id': self.host.id}),
+                (DeleteHostStep, {'host_id': self.host.id})]

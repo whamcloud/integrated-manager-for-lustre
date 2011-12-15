@@ -208,12 +208,7 @@ LOGGING = {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
             'propagate': True,
-        },
-        'django.db.backends': {
-            'handlers': [],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+        }
     }
 }
 
@@ -285,6 +280,13 @@ PRIMARY_LUN_HACK = True
 
 # For django_coverage
 COVERAGE_REPORT_HTML_OUTPUT_DIR = '/tmp/test_html'
+
+# If your server isn't serving at port 80 on its FQDN
+# SERVER_HTTP_URL = http://myhost.mydomain:80/
+SERVER_HTTP_URL = None
+
+# Optionally use HTTP auditing
+HTTP_AUDIT = False
 
 try:
     from production_version import VERSION

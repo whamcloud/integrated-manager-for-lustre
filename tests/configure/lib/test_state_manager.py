@@ -11,11 +11,11 @@ class MockAgent(object):
     def __init__(self, host, log = None, console_callback = None, timeout = None):
         self.host = host
 
-    def invoke(self, cmdline):
+    def invoke(self, cmdline, args = None):
         if not self.succeed:
             raise RuntimeError("Test-generated failure")
 
-        print "invoke_agent %s %s" % (self.host, cmdline)
+        print "invoke_agent %s %s %s" % (self.host, cmdline, args)
         if cmdline == "get-fqdn":
             return self.mock_servers[self.host.address]['fqdn']
         elif cmdline == "lnet-scan":

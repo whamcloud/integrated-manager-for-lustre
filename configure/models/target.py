@@ -3,9 +3,6 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-import json
-from re import escape
-
 from django.db import models
 from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll, Step, NullStep, AnyTargetMountStep, job_log
 from configure.models.jobs import StatefulObject, Job
@@ -555,7 +552,7 @@ class MkfsStep(Step):
         assert(target_mount.block_device != None)
 
         args = self._mkfs_args(target)
-        result = self.invoke_agent(target_mount.host, "format-target --args %s" % escape(json.dumps(args)))
+        result = self.invoke_agent(target_mount.host, "format-target", args)
         fs_uuid = result['uuid']
         target.uuid = fs_uuid
         target.save()

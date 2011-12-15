@@ -52,6 +52,7 @@ def monitor_exec(monitor_id, counter):
 
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def audit_all():
+    return
     from configure.models import ManagedHost
     for host in ManagedHost.objects.all():
         if host.monitor:
@@ -66,6 +67,7 @@ def audit_all():
 
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def parse_log_entries():
+    return
     from monitor.lib.systemevents import SystemEventsAudit
     audit_log.info("parse_log_entries: running")
     SystemEventsAudit().parse_log_entries()
@@ -73,6 +75,7 @@ def parse_log_entries():
 
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def drain_flms_table():
+    return
     from monitor.metrics import FlmsDrain
     import os
 
