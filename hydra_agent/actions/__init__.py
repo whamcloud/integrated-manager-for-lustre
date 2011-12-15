@@ -19,7 +19,8 @@ from update_scan import update_scan
 from detect_scan import detect_scan
 from targets import *
 from clear_targets import clear_targets
-from avahi_publish import publish_daemon
+
+import server_conf
 
 def fail_node(args):
     # force a manual failover by failing a node

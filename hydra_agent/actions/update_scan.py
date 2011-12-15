@@ -10,7 +10,7 @@ from hydra_agent import shell
 # FIXME: weird naming, 'LocalAudit' is the class that fetches stats
 from hydra_agent.audit.local import LocalAudit
 
-def update_scan(args):
+def update_scan(args = None):
     mounts = []
     for device, mntpnt, fstype in Mounts().all():
         if fstype != 'lustre':

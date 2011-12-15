@@ -1,5 +1,5 @@
 
-from hydra_agent.store import *
+from hydra_agent.store import AgentStore
 from hydra_agent import shell
 import simplejson as json
 import errno
@@ -151,7 +151,7 @@ def _unconfigure_ha(primary, label, uuid, serial):
     else:
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" % unique_label)
 
-    store_remove_target_info(uuid)
+    AgentStore.remove_target_info(uuid)
 
 def configure_ha(args):
     unique_label = "%s_%s" % (args.label, args.serial)
@@ -162,7 +162,7 @@ def configure_ha(args):
         # but first see if this resource exists and matches what we are adding
         rc, stdout, stderr = shell.run(shlex.split("crm_resource -r %s -g target" % unique_label))
         if rc == 0:
-            info = store_get_target_info(stdout.rstrip("\n"))
+            info = AgentStore.get_target_info(stdout.rstrip("\n"))
             if info['bdev'] == args.device and info['mntpt'] == args.mountpoint:
                 return
             else:
@@ -221,7 +221,7 @@ def configure_ha(args):
         else:
             raise e
 
-    store_write_target_info(args.uuid, {"bdev": args.device, "mntpt": args.mountpoint})
+    AgentStore.set_target_info(args.uuid, {"bdev": args.device, "mntpt": args.mountpoint})
 
 def list_ha_targets(args):
     targets = []
@@ -234,11 +234,11 @@ def list_ha_targets(args):
 
 # these are called by the Target RA from corosync
 def mount_target(args):
-    info = store_get_target_info(args.uuid)
+    info = AgentStore.get_target_info(args.uuid)
     shell.try_run(['mount', '-t', 'lustre', info['bdev'], info['mntpt']])
 
 def unmount_target(args):
-    info = store_get_target_info(args.uuid)
+    info = AgentStore.get_target_info(args.uuid)
     shell.try_run(["umount", info['bdev']])
 
 def start_target(args):
@@ -323,7 +323,7 @@ def unmigrate_target(args):
 def target_running(args):
     from os import _exit
     from hydra_agent.actions.utils import Mounts
-    info = store_get_target_info(args.uuid)
+    info = AgentStore.get_target_info(args.uuid)
     mounts = Mounts()
     for device, mntpnt, fstype in mounts.all():
         if device == info['bdev'] and mntpnt == info['mntpt']:

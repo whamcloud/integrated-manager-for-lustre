@@ -5,14 +5,14 @@
 # ==============================
 
 import hydra_agent.actions as actions
-from hydra_agent.store import store_init
 
 import pickle
 import simplejson as json
 import argparse
 
 if __name__ == '__main__':
-    store_init()
+    from hydra_agent.store import AgentStore
+    AgentStore.setup()
 
     parser = argparse.ArgumentParser(description = 'Hydra Agent.')
     subparsers = parser.add_subparsers()
@@ -95,9 +95,20 @@ if __name__ == '__main__':
                         help='unconfigure rsyslog to forward to another node')
     p.set_defaults(func=actions.unconfigure_rsyslog)
 
+    p = subparsers.add_parser('set-server-conf')
+    p.add_argument('--args', required = True)
+    p.set_defaults(func=actions.server_conf.set_server_conf)
+
+    p = subparsers.add_parser('remove-server-conf')
+    p.set_defaults(func=actions.server_conf.remove_server_conf)
+
+
+
+    import hydra_agent.main_loop
     p = subparsers.add_parser('daemon',
                               help='start daemon (publish with avahi)')
-    p.set_defaults(func=actions.publish_daemon)
+    p.add_argument('--foreground', action='store_true')
+    p.set_defaults(func=hydra_agent.main_loop.run_main_loop)
 
     p = subparsers.add_parser('get-fqdn')
     p.set_defaults(func=actions.get_fqdn)

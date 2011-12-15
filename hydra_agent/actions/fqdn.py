@@ -1,5 +1,5 @@
 
 
-def get_fqdn(self):
+def get_fqdn(args = None):
     from socket import getfqdn
     return getfqdn()
