@@ -410,7 +410,7 @@ class Job(models.Model):
             # Take a write lock on get_stateful_object if this is a StateChangeJob
             StateWriteLock.objects.create(
                     job = self,
-                    locked_item = self.get_stateful_object(),
+                    locked_item = stateful_object,
                     begin_state = old_state,
                     end_state = new_state)
 
@@ -499,23 +499,24 @@ class Job(models.Model):
         # changed), but that is a *good thing* -- this is a last check before running
         # which will safely cancel the job if something has changed that breaks our deps.
         if isinstance(self, StateChangeJob):
+            stateful_object = self.get_stateful_object()
             target_klass, old_state, new_state = self.state_transition
 
             # Generate dependencies (which will fail) for any dependents
             # which depend on our old state (bit of a roundabout way of doing it)
             dependent_deps = []
-            dependents = self.get_stateful_object().get_dependent_objects()
+            dependents = stateful_object.get_dependent_objects()
             for dependent in dependents:
                 for dependent_dependency in dependent.get_deps().all():
-                    if dependent_dependency.stateful_object == self.get_stateful_object() \
+                    if dependent_dependency.stateful_object == stateful_object \
                             and not new_state in dependent_dependency.acceptable_states:
                         dependent_deps.append(DependOn(dependent, dependent_dependency.fix_state))
 
             return DependAll(
                     DependAll(dependent_deps),
                     self.get_deps(),
-                    self.get_stateful_object().get_deps(new_state),
-                    DependOn(self.get_stateful_object(), old_state)
+                    stateful_object.get_deps(new_state),
+                    DependOn(stateful_object, old_state)
                     )
         else:
             return self.get_deps()
@@ -559,11 +560,8 @@ class Job(models.Model):
 
         # Set state to 'tasked'
         # =====================
-        @transaction.commit_on_success()
-        def mark_tasked():
-            return Job.objects.filter(pk = self.id, state = 'pending').update(state = 'tasking')
-
-        updated = mark_tasked()
+        with transaction.commit_on_success():
+            updated = Job.objects.filter(pk = self.id, state = 'pending').update(state = 'tasking')
 
         if updated == 0:
             # Someone else already started this job, bug out
