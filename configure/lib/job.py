@@ -10,7 +10,7 @@ job_log = logging.getLogger('job')
 job_log.setLevel(logging.DEBUG)
 handler = logging.FileHandler(settings.JOB_LOG_PATH)
 handler.setFormatter(logging.Formatter(
-        '[%(asctime)s] %(message)s',
+        '[%(asctime)s][%(levelname)s] %(message)s',
         '%d/%b/%Y:%H:%M:%S'))
 job_log.addHandler(handler)
 if settings.DEBUG:
@@ -159,14 +159,14 @@ class Step(object):
         #steps = self.get_steps()
         # Which one failed?
 
-    def invoke_agent(self, host, command):
+    def invoke_agent(self, host, command, args = None):
         def console_callback(chunk):
             self.result.console = self.result.console + chunk
             self.result.save()
 
         from configure.lib.agent import Agent
         agent = Agent(host = host, log = job_log, console_callback = console_callback)
-        return agent.invoke(command)
+        return agent.invoke(command, args)
 
 
 class IdempotentStep(Step):

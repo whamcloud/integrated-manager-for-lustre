@@ -107,8 +107,13 @@ class Agent(object):
             self.log.error(stderr_buf)
         return result_code, stdout_buf, stderr_buf
 
-    def invoke(self, cmdline):
-        code, out, err = self._ssh("hydra-agent.py %s" % cmdline)
+    def invoke(self, cmd, args = None):
+        args_str = ""
+        if args:
+            from re import escape
+            args_str = "--args %s" % escape(json.dumps(args))
+        cmdline = "hydra-agent.py %s %s" % (cmd, args_str)
+        code, out, err = self._ssh(cmdline)
 
         if code == 0:
             # May raise a ValueError
@@ -119,8 +124,7 @@ class Agent(object):
 
             try:
                 if data['success']:
-                    result = data['result']
-                    return result
+                    return data['result']
                 else:
                     exception = pickle.loads(data['exception'])
                     backtrace = data['backtrace']
