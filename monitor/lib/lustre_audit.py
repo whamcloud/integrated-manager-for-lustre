@@ -123,6 +123,10 @@ class UpdateScan(object):
 
         HostContactAlert.notify(self.host, not contact)
 
+        if contact:
+            from datetime import datetime
+            self.host.monitor.update(last_success = datetime.now())
+
         return contact
 
     def update_lnet(self):

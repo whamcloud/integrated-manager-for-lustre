@@ -4,7 +4,7 @@
 # ==============================
 
 from celery.task import task, periodic_task
-from datetime import timedelta, datetime
+from datetime import timedelta
 
 from monitor.lib.lustre_audit import audit_log
 from monitor.lib.util import timeit
@@ -35,9 +35,7 @@ def monitor_exec(monitor_id, counter):
         from monitor.lib.lustre_audit import UpdateScan
         raw_data = monitor.invoke('update-scan',
                 settings.AUDIT_PERIOD * 2)
-        success = UpdateScan().run(monitor.host.pk, raw_data)
-        if success:
-            monitor.update(last_success = datetime.now())
+        UpdateScan().run(monitor.host.pk, raw_data)
     except Exception:
         audit_log.error("Exception auditing host %s" % monitor.host)
         import sys
@@ -52,16 +50,29 @@ def monitor_exec(monitor_id, counter):
 
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def audit_all():
+    import settings
     from configure.models import ManagedHost
-    for host in ManagedHost.objects.all():
-        if host.monitor:
-            monitor = host.monitor
-        else:
-            continue
+    if settings.HTTP_AUDIT:
+        from datetime import datetime
+        for host in ManagedHost.objects.all().values('id', 'monitor__last_success'):
+            # Ignore hosts that have never had a success
+            if not host['monitor__last_success']:
+                continue
 
-        tasked = monitor.try_schedule()
-        if not tasked:
-            audit_log.info("audit_all: host %s audit (%d) still in progress" % (monitor.host, monitor.counter))
+            time_since = datetime.now() - host['monitor__last_success']
+            if time_since > timedelta(seconds=settings.AUDIT_PERIOD * 2):
+                from monitor.models import HostContactAlert
+                HostContactAlert.notify(ManagedHost.objects.get(pk = host['id']), True)
+    else:
+        for host in ManagedHost.objects.all():
+            if host.monitor:
+                monitor = host.monitor
+            else:
+                continue
+
+            tasked = monitor.try_schedule()
+            if not tasked:
+                audit_log.info("audit_all: host %s audit (%d) still in progress" % (monitor.host, monitor.counter))
 
 
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
