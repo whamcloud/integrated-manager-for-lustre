@@ -211,15 +211,6 @@ class StopUnavailableFilesystemJob(FilesystemJob, Job, StateChangeJob):
         return "Stop filesystem %s" % (self.filesystem.name)
 
 
-class StopAvailableFilesystemJob(FilesystemJob, Job, StateChangeJob):
-    state_verb = "Stop"
-    state_transition = (ManagedFilesystem, 'available', 'stopped')
-    filesystem = models.ForeignKey('ManagedFilesystem')
-
-    def description(self):
-        return "Stop filesystem %s" % (self.filesystem.name)
-
-
 class MakeAvailableFilesystemUnavailable(FilesystemJob, Job, StateChangeJob):
     state_verb = None
     state_transition = (ManagedFilesystem, 'available', 'unavailable')
