@@ -225,15 +225,20 @@ loadJobContent = function(targetJobDivName)
     {
       $.each(data.response, function(resKey, resValue)
       {
+        pagecnt++;
         var image_path = "";
         
         if(resValue.state == job_action_buttons[0].toLowerCase())
           image_path = PAUSE_PNG;
-        else if(resValue.state == job_action_buttons[2].toLowerCase())
+        else if(resValue.state == job_action_buttons[2].toLowerCase() || resValue.cancelled)
           image_path = CANCEL_PNG;
+        else if(resValue.errored)
+          image_path = ERROR_PNG;
         else if(resValue.state == job_action_buttons[3].toLowerCase())
           image_path = CORRECT_GIF;
-        
+        else if(resValue.state != job_action_buttons[3].toLowerCase() && resValue.state != job_action_buttons[0].toLowerCase())
+          image_path = RUNNING_GIF;
+                
         jobTabContent = jobTabContent +
                         "<tr>" +
                         "<td width='35%' align='left' valign='top' class='border' style='font-weight:normal'>" +
