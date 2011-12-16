@@ -2,15 +2,10 @@
 import os
 import time
 import logging
-from daemon import DaemonContext
-from daemon.pidlockfile import PIDLockFile
 
 from hydra_agent.actions.avahi_publish import ZeroconfService
 
 daemon_log = logging.getLogger('daemon')
-handler = logging.FileHandler("/var/log/hydra-agent.log")
-handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-daemon_log.addHandler(handler)
 daemon_log.setLevel(logging.INFO)
 
 def run_main_loop(args):
@@ -44,8 +39,16 @@ class MainLoop(object):
 
     def run(self, foreground):
         if not foreground:
+            from daemon import DaemonContext
+            from daemon.pidlockfile import PIDLockFile
+
             context = DaemonContext(pidfile = PIDLockFile(MainLoop.PID_FILE))
             context.open()
+            # NB Have to set up logger after entering DaemonContext because it closes all files when
+            # it forks
+            handler = logging.FileHandler("/var/log/hydra-agent.log")
+            handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+            daemon_log.addHandler(handler)
             daemon_log.info("Starting in the background")
         else:
             context = None
