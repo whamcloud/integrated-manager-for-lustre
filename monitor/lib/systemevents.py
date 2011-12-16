@@ -12,15 +12,7 @@ from django.db import transaction
 import logging
 import re
 
-syslog_events_log = logging.getLogger('syslog_events')
-syslog_events_log.setLevel(logging.DEBUG)
-handler = logging.FileHandler(settings.SYSLOG_EVENTS_LOG_PATH)
-handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-syslog_events_log.addHandler(handler)
-if settings.DEBUG:
-    syslog_events_log.setLevel(logging.DEBUG)
-else:
-    syslog_events_log.setLevel(logging.INFO)
+syslog_events_log = settings.setup_log('syslog_events')
 
 _re_cache = {}
 

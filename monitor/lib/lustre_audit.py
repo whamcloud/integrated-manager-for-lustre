@@ -14,18 +14,7 @@ from configure.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, 
 from configure.models import ManagedHost, Nid, LunNode, Lun, ManagedFilesystem
 from django.db import transaction
 
-import re
-
-import logging
-audit_log = logging.getLogger('audit')
-audit_log.setLevel(logging.DEBUG)
-handler = logging.FileHandler(settings.AUDIT_LOG_PATH)
-handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-audit_log.addHandler(handler)
-if settings.DEBUG:
-    audit_log.setLevel(logging.DEBUG)
-else:
-    audit_log.setLevel(logging.INFO)
+audit_log = settings.setup_log('audit')
 
 
 def nids_to_mgs(host, nid_strings):
@@ -524,6 +513,7 @@ class DetectScan(object):
         elif name.find("-OST") != -1:
             klass = ManagedOst
 
+        import re
         fsname = re.search("([\w\-]+)-\w+", name).group(1)
         try:
             filesystem = ManagedFilesystem.objects.get(name = fsname, mgs = mgs)

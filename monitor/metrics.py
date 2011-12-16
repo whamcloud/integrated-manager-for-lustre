@@ -1,21 +1,10 @@
 
 import math
-import os
 from django.contrib.contenttypes.models import ContentType
 from r3d.models import Average, Database
 
 import settings
-import logging
-metrics_log = logging.getLogger('metrics')
-metrics_log.setLevel(logging.DEBUG)
-handler = logging.FileHandler(os.path.join(settings.LOG_PATH, 'metrics.log'))
-handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s',
-                                       '%d/%b/%Y:%H:%M:%S'))
-metrics_log.addHandler(handler)
-if settings.DEBUG:
-    metrics_log.setLevel(logging.DEBUG)
-else:
-    metrics_log.setLevel(logging.INFO)
+metrics_log = settings.setup_log('metrics')
 
 DRAIN_LOCK_NAME = 'FLMS_LOCK'
 DRAIN_LOCK_TIME = 60 * 30  # Try 30 minutes, adjust as necessary.

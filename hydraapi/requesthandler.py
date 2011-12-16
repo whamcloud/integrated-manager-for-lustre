@@ -9,17 +9,7 @@ from django.views.decorators.csrf  import csrf_exempt
 
 import settings
 
-import logging
-hydraapi_log = logging.getLogger('hydraapi')
-handler = logging.FileHandler(settings.API_LOG_PATH)
-handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-hydraapi_log.addHandler(handler)
-
-
-if settings.DEBUG:
-    hydraapi_log.setLevel(logging.DEBUG)
-else:
-    hydraapi_log.setLevel(logging.WARNING)
+hydraapi_log = settings.setup_log('hydraapi')
 
 
 def extract_exception(f):

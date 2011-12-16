@@ -181,7 +181,7 @@ class StoragePluginManager(object):
         import settings
         log = logging.getLogger("storage_plugin_log_%s" % module)
         handler = logging.FileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
-        handler.setFormatter(logging.Formatter("[%%(asctime)s %s] %%(message)s" % module, '%d/%b/%Y:%H:%M:%S'))
+        handler.setFormatter(logging.Formatter("[%%(asctime)s: %%(levelname)s/%s] %%(message)s" % module, '%d/%b/%Y:%H:%M:%S'))
         log.addHandler(handler)
         if module in settings.STORAGE_PLUGIN_DEBUG_PLUGINS:
             log.setLevel(logging.DEBUG)

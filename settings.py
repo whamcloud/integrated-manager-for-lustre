@@ -250,19 +250,29 @@ CELERY_DISABLE_RATE_LIMITS = True
 # crashes (only works with proper AMQP backend like RabbitMQ, not DJKombu)
 CELERY_ACKS_LATE = True
 
-# Development defaults for log output
 if DEBUG:
     LOG_PATH = ""
-    JOB_LOG_PATH = "job.log"
-    AUDIT_LOG_PATH = "audit.log"
-    API_LOG_PATH = "hydraapi.log"
-    SYSLOG_EVENTS_LOG_PATH = "syslog_events.log"
 else:
     LOG_PATH = "/var/log/hydra"
-    JOB_LOG_PATH = "/var/log/hydra/job.log"
-    AUDIT_LOG_PATH = "/var/log/hydra/audit.log"
-    API_LOG_PATH = "/var/log/hydra/hydraapi.log"
-    SYSLOG_EVENTS_LOG_PATH = "/var/log/hydra/syslog_events.log"
+
+
+def setup_log(log_name):
+    import logging
+    logger = logging.getLogger('job')
+    logger.setLevel(logging.DEBUG)
+    filename = "%s.log" % log_name
+    if DEBUG:
+        path = filename
+    else:
+        path = os.path.join(LOG_PATH, filename)
+    handler = logging.FileHandler(path)
+    handler.setFormatter(logging.Formatter('[%(asctime)s: %(levelname)s/%(name)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+    logger.addHandler(handler)
+    if DEBUG:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+    return logger
 
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
 EMAIL_SENDER = "chroma-server@whamcloud.com"

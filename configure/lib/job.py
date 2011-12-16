@@ -3,20 +3,8 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-import logging
 import settings
-
-job_log = logging.getLogger('job')
-job_log.setLevel(logging.DEBUG)
-handler = logging.FileHandler(settings.JOB_LOG_PATH)
-handler.setFormatter(logging.Formatter(
-        '[%(asctime)s][%(levelname)s] %(message)s',
-        '%d/%b/%Y:%H:%M:%S'))
-job_log.addHandler(handler)
-if settings.DEBUG:
-    job_log.setLevel(logging.DEBUG)
-else:
-    job_log.setLevel(logging.INFO)
+job_log = settings.setup_log('job')
 
 
 class Dependable(object):
