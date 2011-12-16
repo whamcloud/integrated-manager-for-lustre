@@ -102,12 +102,6 @@ class UpdateScan(object):
         host = ManagedHost.objects.get(pk=host_id)
         self.host = host
 
-        # Possible that we were started just before a host was deleted:
-        # avoid raising alerts for deleted hosts by doing this check inside
-        # our transaction
-        if not host.not_deleted:
-            return False
-
         self.host_data = host_data
 
         if isinstance(host_data, Exception):
