@@ -42,8 +42,8 @@ class JobTestCase(TestCase):
     def _test_lun(self, host):
         from configure.models import Lun, LunNode
         lun = Lun.objects.create(shareable = False)
-        node = LunNode.objects.create(lun = lun, host = host, path = "/fake/path/%s" % lun.id, primary = True)
-        return node
+        LunNode.objects.create(lun = lun, host = host, path = "/fake/path/%s" % lun.id, primary = True)
+        return lun
 
     def setUp(self):
         # FIXME: have to do this before every test because otherwise
@@ -72,7 +72,7 @@ class JobTestCase(TestCase):
         configure.lib.agent.Agent = MockAgent
 
         from configure.models import ManagedHost
-        self.host = ManagedHost.create_from_string('myaddress')
+        self.host = ManagedHost.create_from_string(self.mock_servers.items()[0][0])
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).lnetconfiguration.state, 'nids_known')
 
