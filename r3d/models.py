@@ -380,11 +380,14 @@ class Datasource(PoorMansStiModel):
 
     # This seems to be necessary to avoid integrity errors on delete.  Grumble.
     def delete(self, *args, **kwargs):
-        self.prep.delete(*args, **kwargs)
-        for prep in self.preps.all():
-            prep.delete(*args, **kwargs)
-        for cdp in self.cdps.all():
-            cdp.delete(*args, **kwargs)
+        # Let's not mess around with the ORM -- just delete these quick-like.
+        from django.db import connection, transaction
+        cursor = connection.cursor()
+        for table in "r3d_pdpprep r3d_cdpprep r3d_cdp".split():
+            cursor.execute("DELETE FROM %s WHERE datasource_id = %s" %
+                           (table, self.id))
+        transaction.commit_unless_managed()
+
         super(Datasource, self).delete(*args, **kwargs)
 
     def transform_reading(self, value, update_time, interval):
@@ -590,14 +593,6 @@ class Archive(PoorMansStiModel):
         # On RRA create, we need to precreate the CdpPreps.
         if new_rra:
             self.seed_preps()
-
-    # This seems to be necessary to avoid integrity errors on delete.  Grumble.
-    def delete(self, *args, **kwargs):
-        for prep in self.preps.all():
-            prep.delete(*args, **kwargs)
-        for cdp in self.cdps.all():
-            cdp.delete(*args, **kwargs)
-        super(Archive, self).delete(*args, **kwargs)
 
     def ds_cdps(self, ds):
         # Fetch the rows in reverse, newest to oldest, limited by the max
