@@ -37,7 +37,29 @@ class MainLoop(object):
         except urllib2.URLError, e:
             daemon_log.error("Failed to open %s: %s" % (url, e))
 
+    def _main_loop(self):
+        # Before entering the loop, set up avahi
+        self._publish_avahi()
+
+        # Try loading the server information (where to send audit info)
+        from hydra_agent.store import AgentStore
+        server_conf = AgentStore.get_server_conf()
+
+        report_interval = 10
+        from hydra_agent.actions.update_scan import update_scan
+        while True:
+            if server_conf:
+                self._send_update(server_conf['url'], update_scan())
+
+            time.sleep(report_interval)
+
+            # If we were not yet configured for audit, periodically 
+            # check for configuration.
+            if not server_conf:
+                server_conf = AgentStore.get_server_conf()
+
     def run(self, foreground):
+        """Daemonize and handle unexpected exceptions"""
         if not foreground:
             from daemon import DaemonContext
             from daemon.pidlockfile import PIDLockFile
@@ -56,26 +78,18 @@ class MainLoop(object):
             daemon_log.addHandler(logging.StreamHandler())
             daemon_log.info("Starting in the foreground")
 
-        # Before entering the loop, set up avahi
-        self._publish_avahi()
-
-        # Try loading the server information (where to send audit info)
-        from hydra_agent.store import AgentStore
-        server_conf = AgentStore.get_server_conf()
-
         try:
-            report_interval = 10
-            from hydra_agent.actions.update_scan import update_scan
-            while True:
-                if server_conf:
-                    self._send_update(server_conf['url'], update_scan())
+            self._main_loop()
+            # NB duplicating context.close between branches because
+            # python 2.4 has no 'finally'
+            context.close()
+        except Exception:
+            import sys
+            import traceback
+            exc_info = sys.exc_info()
+            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            daemon_log.error("Unhandled exception: %s" % backtrace)
+            # NB duplicating context.close between branches because
+            # python 2.4 has no 'finally'
+            context.close()
 
-                time.sleep(report_interval)
-
-                # If we were not yet configured for audit, periodically 
-                # check for configuration.
-                if not server_conf:
-                    server_conf = AgentStore.get_server_conf()
-        finally:
-            if context:
-                context.close()
