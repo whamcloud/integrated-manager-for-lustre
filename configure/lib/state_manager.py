@@ -151,6 +151,7 @@ class StateManager(object):
            the audit code safely update the state of e.g. a mount it doesn't find
            to 'unmounted' without risking incorrectly transitioning from 'unconfigured'"""
         if instance.state in from_states and instance.state != new_state:
+            job_log.info("Enqueuing notify_state %s %s->%s" % (instance, instance.state, new_state))
             from configure.tasks import notify_state
             notify_state.delay(
                 instance.content_type.natural_key(),
@@ -183,7 +184,7 @@ class StateManager(object):
 
                 # FIXME: should check the new state against reverse dependencies
                 # and apply any fix_states
-            cls._run_opportunistic_jobs(instance)
+                cls._run_opportunistic_jobs(instance)
 
     @classmethod
     def add_job(cls, job):
