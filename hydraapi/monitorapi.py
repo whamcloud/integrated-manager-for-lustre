@@ -428,7 +428,9 @@ def paginate_result(page_id, page_size, result, format_fn):
 
 
 def nid_finder(message):
-    from configure.models import Nid, ManagedTarget
+    from hydraapi import api_log
+
+    from configure.models import ManagedHost, ManagedTarget
     from monitor.lib.lustre_audit import normalize_nid
     import re
     # TODO: detect IB/other(cray?) as well as tcp
@@ -438,12 +440,17 @@ def nid_finder(message):
         replace = match.group()
         replace = normalize_nid(replace)
         try:
-            address = Nid.objects.get(nid_string = replace).lnet_configuration.host.address
-            markup = "<a href='#' title='%s'>%s</a>" % (match.group(), address)
-            message = message.replace(match.group(),
-                                      markup)
-        except Nid.DoesNotExist:
-            print "failed to replace " + replace
+            host = ManagedHost.get_by_nid(replace)
+        except ManagedHost.DoesNotExist:
+            api_log.warn("No host has NID %s" % replace)
+            continue
+        except ManagedHost.MultipleObjectsReturned:
+            api_log.warn("Multiple hosts have NID %s" % replace)
+            continue
+
+        markup = "<a href='#' title='%s'>%s</a>" % (match.group(), host.address)
+        message = message.replace(match.group(),
+                                  markup)
     for match in target_regex.finditer(message):
         # TODO: look up to a target and link to something useful
         replace = match.group()

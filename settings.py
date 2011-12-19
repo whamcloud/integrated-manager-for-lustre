@@ -289,8 +289,12 @@ PRIMARY_LUN_HACK = True
 COVERAGE_REPORT_HTML_OUTPUT_DIR = '/tmp/test_html'
 
 # If your server isn't serving at port 80 on its FQDN
-# SERVER_HTTP_URL = http://myhost.mydomain:80/
+# SERVER_HTTP_URL = "http://myhost.mydomain:80/"
 SERVER_HTTP_URL = None
+
+# If your log server isn't running on this host's FQDN
+# LOG_SERVER_HOSTNAME = "mylogserver.mydoman"
+LOG_SERVER_HOSTNAME = None
 
 # Optionally use HTTP auditing
 HTTP_AUDIT = False

@@ -182,6 +182,43 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
         return user, host, port
 
+    @classmethod
+    def get_by_nid(cls, nid_string):
+        """Resolve a NID string to a ManagedHost (best effort).  Not guaranteed to work:
+         * The NID might not exist for any host
+         * The NID might exist for multiple hosts
+
+         Note: this function may return deleted hosts (useful behaviour if you're e.g. resolving
+         NID to hostname for historical logs).
+        """
+
+        hosts = ManagedHost._base_manager.filter(lnetconfiguration__nid__nid_string = nid_string)
+        # We can resolve the NID to a host if there is exactly one not-deleted
+        # host with that NID (and 0 or more deleted hosts), or if there are
+        # no not-deleted hosts with that NID but exactly one deleted host with that NID
+        if hosts.count() == 0:
+            raise ManagedHost.DoesNotExist()
+        elif hosts.count() == 1:
+            return hosts[0]
+        else:
+            active_hosts = [h for h in hosts if h.not_deleted]
+            if len(active_hosts) > 1:
+                # If more than one not-deleted host has this NID, we cannot pick one
+                raise ManagedHost.MultipleObjectsReturned()
+            else:
+                fqdns = set([h.fqdn for h in hosts])
+                if len(fqdns) == 1:
+                    # If all the hosts with this NID had the same FQDN, pick one to return
+                    if len(active_hosts) > 0:
+                        # If any of the hosts were not deleted, prioritize that
+                        return active_hosts[0]
+                    else:
+                        # Else return an arbitrary one
+                        return hosts[0]
+                else:
+                    # If the hosts with this NID had different FQDNs, refuse to pick one
+                    raise ManagedHost.MultipleObjectsReturned()
+
 
 class Lun(models.Model):
     storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
@@ -466,10 +503,16 @@ class ConfigureRsyslogStep(Step):
     idempotent = True
 
     def run(self, kwargs):
+        import settings
+        if settings.LOG_SERVER_HOSTNAME:
+            hostname = settings.LOG_SERVER_HOSTNAME
+        else:
+            from os import uname
+            hostname = uname()[1]
+
         from configure.models import ManagedHost
-        from os import uname
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "configure-rsyslog --node %s" % uname()[1])
+        self.invoke_agent(host, "configure-rsyslog --node %s" % hostname)
 
 
 class UnconfigureRsyslogStep(Step):
