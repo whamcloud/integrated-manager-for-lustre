@@ -258,13 +258,10 @@ else:
 
 def setup_log(log_name):
     import logging
-    logger = logging.getLogger('job')
+    logger = logging.getLogger(log_name)
     logger.setLevel(logging.DEBUG)
     filename = "%s.log" % log_name
-    if DEBUG:
-        path = filename
-    else:
-        path = os.path.join(LOG_PATH, filename)
+    path = os.path.join(LOG_PATH, filename)
     handler = logging.FileHandler(path)
     handler.setFormatter(logging.Formatter('[%(asctime)s: %(levelname)s/%(name)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
     logger.addHandler(handler)

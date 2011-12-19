@@ -90,6 +90,7 @@ class UpdateScan(object):
     def run(self, host_id, host_data):
         host = ManagedHost.objects.get(pk=host_id)
         self.host = host
+        audit_log.debug("UpdateScan.run: %s" % self.host)
 
         self.host_data = host_data
 
