@@ -7,9 +7,7 @@ from piston.handler import BaseHandler
 from jsonutils import render_to_json
 from django.views.decorators.csrf  import csrf_exempt
 
-import settings
-
-hydraapi_log = settings.setup_log('hydraapi')
+from hydraapi import api_log
 
 
 def extract_exception(f):
@@ -24,13 +22,13 @@ def extract_exception(f):
         from django.http import HttpRequest
         params = chain([a for a in args if not isinstance(a, HttpRequest)], kwds.values())
         try:
-            hydraapi_log.info("API call %s(%s)" % (f.__name__, ", ".join(map(repr, params))))
+            api_log.info("API call %s(%s)" % (f.__name__, ", ".join(map(repr, params))))
             return f(*args, **kwds)
         except Exception:
             import sys
             import traceback
-            hydraapi_log.error("API error %s(%s)" % (f.__name__, ", ".join(map(repr, params))))
-            hydraapi_log.error("\n".join(traceback.format_exception(*(sys.exc_info()))))
+            api_log.error("API error %s(%s)" % (f.__name__, ", ".join(map(repr, params))))
+            api_log.error("\n".join(traceback.format_exception(*(sys.exc_info()))))
             raise
     return _extract_exception
 

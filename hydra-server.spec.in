@@ -57,7 +57,7 @@ mkdir -p /var/log/hydra
 touch /var/log/hydra/job.log
 touch /var/log/hydra/audit.log
 touch /var/log/hydra/storage_plugin.log
-touch /var/log/hydra/hydraapi.log
+touch /var/log/hydra/api.log
 touch /var/log/hydra/metrics.log
 chown -R apache:apache /var/log/hydra
 
