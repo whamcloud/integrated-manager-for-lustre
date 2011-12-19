@@ -219,6 +219,8 @@ class GetFSTargets(AnonymousRequestHandler):
                 if filesystem_id:
                     fs = ManagedFilesystem.objects.get(id=filesystem_id)
                     targets = klass.objects.filter(filesystem=fs)
+                else:
+                    targets = klass.objects.all()
             for t in targets:
                 if host_filter:
                     if ManagedTargetMount.objects.filter(target = t, host = host_filter).count() == 0:
