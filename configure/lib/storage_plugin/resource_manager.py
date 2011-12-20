@@ -400,10 +400,10 @@ class ResourceManager(object):
                 from configure.models import ManagedTargetMount
                 if ManagedTargetMount.objects.filter(block_device = lun_node).count() == 0:
                     log.info("Removing LunNode %s" % lun_node)
-                    lun_node.delete()
-                    if lun.lunnode_set.count() == 0:
+                    LunNode.delete(lun.pk)
+                    if LunNode.objects.filter(lun = lun).count() == 0:
                         log.info("Removing Lun %s" % lun_node)
-                        lun.delete()
+                        Lun.delete(lun.pk)
                     else:
                         log.info("Keeping Lun %s, reffed by another LunNode" % lun_node)
 

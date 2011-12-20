@@ -233,6 +233,8 @@ class Lun(models.Model):
     # for shared storage to not provide a serial number.
     shareable = models.BooleanField()
 
+    __metaclass__ = DeletableMetaclass
+
     class Meta:
         unique_together = ('storage_resource',)
         app_label = 'configure'
