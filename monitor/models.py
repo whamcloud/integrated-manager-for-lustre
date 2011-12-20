@@ -46,17 +46,92 @@ class WorkaroundGenericForeignKey(GenericForeignKey):
             return rel_obj
 
 
-class DeletableManager(DowncastManager):
+class DeletableDowncastableManager(DowncastManager):
+    """Filters results to return only not-deleted records"""
+    def get_query_set(self):
+        return super(DeletableDowncastableManager, self).get_query_set().filter(not_deleted = True)
+
+
+class DeletableManager(models.Manager):
     """Filters results to return only not-deleted records"""
     def get_query_set(self):
         return super(DeletableManager, self).get_query_set().filter(not_deleted = True)
+
+
+def _make_deletable(metaclass, dct):
+    @classmethod
+    # commit_on_success to ensure that the object is only marked deleted
+    # if the updates to alerts also succeed
+    @transaction.commit_on_success
+    def delete(clss, id):
+        """Mark a record as deleted, returns nothing.
+
+        Looks up the model instance by pk, sets the not_deleted attribute
+        to None and saves the model instance.
+
+        Additionally marks any AlertStates referring to this item as inactive.
+
+        This is provided as a class method which takes an ID rather than as an
+        instance method, in order to use ._base_manager rather than .objects -- this
+        allows us to find the object even if it was already deleted, making this
+        operation idempotent rather than throwing a DoesNotExist on the second try.
+        """
+        # Not implemented as an instance method because
+        # we will need to use _base_manager to ensure
+        # we can get at the object
+        instance = clss._base_manager.get(pk = id)
+        if hasattr(instance, 'content_type'):
+            klass = instance.content_type.model_class()
+        else:
+            klass = instance.__class__
+
+        if instance.not_deleted:
+            instance.not_deleted = None
+            instance.save()
+
+        from monitor.lib.lustre_audit import audit_log
+        updated = AlertState.filter_by_item_id(klass, id).update(active = False)
+        audit_log.info("Lowered %d alerts while deleting %s %s" % (updated, klass, id))
+
+    dct['objects'] = DeletableManager()
+    dct['delete'] = delete
+    # Conditional to only create the 'deleted' attribute on the immediate
+    # user of the metaclass, not again on subclasses.
+    if issubclass(dct.get('__metaclass__', type), metaclass):
+        # Please forgive me.  Logically this would be a field called 'deleted' which would
+        # be True or False.  Instead, it is a field called 'not_deleted' which can be
+        # True or None.  The reason is: unique_together constraints.
+        dct['not_deleted'] = models.NullBooleanField(default = True)
+
+    if 'Meta' in dct:
+        if hasattr(dct['Meta'], 'unique_together'):
+            if not 'not_deleted' in dct['Meta'].unique_together:
+                dct['Meta'].unique_together = dct['Meta'].unique_together + ('not_deleted',)
+
+
+class DeletableMetaclass(models.base.ModelBase):
+    """Make a django model 'deletable', such that the default delete() method
+    (an SQL DELETE) is replaced with something which keeps the record in the
+    database but will hide it from future queries.
+
+    The not_deleted attribute is logically a True/False 'deleted' attribute, but is
+    implemented this (admittedly ugly) way in order to work with django's
+    unique_together option.  When 'not_deleted' is included in the unique_together
+    tuple, the uniqeness constraint is applied only to objects which have not
+    been deleted -- e.g. an MGS can only have one filesystem with a given name, but
+    once you've deleted that filesystem you should be able to create more with the
+    same name.
+    """
+    def __new__(cls, name, bases, dct):
+        _make_deletable(cls, dct)
+        return super(DeletableMetaclass, cls).__new__(cls, name, bases, dct)
 
 
 class DeletableDowncastableMetaclass(PolymorphicMetaclass):
     """Make a django model 'downcastable and 'deletable'.
 
     This combines the DowncastMetaclass behavior with the not_deleted attribute,
-    the delete() method and the DeletableManager.
+    the delete() method and the DeletableDowncastableManager.
 
     The not_deleted attribute is logically a True/False 'deleted' attribute, but is
     implemented this (admittedly ugly) way in order to work with django's
@@ -70,52 +145,7 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
     full DowncastMetaclass behaviour.
     """
     def __new__(cls, name, bases, dct):
-        @classmethod
-        # commit_on_success to ensure that the object is only marked deleted
-        # if the updates to alerts also succeed
-        @transaction.commit_on_success
-        def delete(clss, id):
-            """Mark a record as deleted, returns nothing.
-
-            Looks up the model instance by pk, sets the not_deleted attribute
-            to None and saves the model instance.
-
-            Additionally marks any AlertStates referring to this item as inactive.
-
-            This is provided as a class method which takes an ID rather than as an
-            instance method, in order to use ._base_manager rather than .objects -- this
-            allows us to find the object even if it was already deleted, making this
-            operation idempotent rather than throwing a DoesNotExist on the second try.
-            """
-            # Not implemented as an instance method because
-            # we will need to use _base_manager to ensure
-            # we can get at the object
-            instance = clss._base_manager.get(pk = id).downcast()
-            klass = instance.content_type.model_class()
-
-            if instance.not_deleted:
-                instance.not_deleted = None
-                instance.save()
-
-            from monitor.lib.lustre_audit import audit_log
-            updated = AlertState.filter_by_item_id(klass, id).update(active = False)
-            audit_log.info("Lowered %d alerts while deleting %s %s" % (updated, klass, id))
-
-        dct['objects'] = DeletableManager()
-        dct['delete'] = delete
-        # Conditional to only create the 'deleted' attribute on the immediate
-        # user of the metaclass, not again on subclasses.
-        if issubclass(dct.get('__metaclass__', type), DeletableDowncastableMetaclass):
-            # Please forgive me.  Logically this would be a field called 'deleted' which would
-            # be True or False.  Instead, it is a field called 'not_deleted' which can be
-            # True or None.  The reason is: unique_together constraints.
-            dct['not_deleted'] = models.NullBooleanField(default = True)
-
-        if 'Meta' in dct:
-            if hasattr(dct['Meta'], 'unique_together'):
-                if not 'not_deleted' in dct['Meta'].unique_together:
-                    dct['Meta'].unique_together = dct['Meta'].unique_together + ('not_deleted',)
-
+        _make_deletable(cls, dct)
         return super(DeletableDowncastableMetaclass, cls).__new__(cls, name, bases, dct)
 
 

@@ -8,7 +8,7 @@ from django.db import transaction
 
 from configure.models.jobs import StatefulObject, Job
 from configure.lib.job import StateChangeJob, DependOn, DependAll, Step
-from monitor.models import MeasuredEntity, DeletableDowncastableMetaclass, DowncastMetaclass
+from monitor.models import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass, DowncastMetaclass
 
 
 class DeletableStatefulObject(StatefulObject):
@@ -260,7 +260,7 @@ class Lun(models.Model):
 
         # TODO: avoid O(N) queries
         for lun in unused_luns:
-            lunnode_count = lun.lunnode_set.count()
+            lunnode_count = LunNode.objects.filter(lun = lun).count()
             if lunnode_count == 0:
                 # A lun is unusable if it has no LunNodes
                 continue
@@ -326,6 +326,8 @@ class LunNode(models.Model):
     lun = models.ForeignKey(Lun)
     host = models.ForeignKey(ManagedHost)
     path = models.CharField(max_length = 512)
+
+    __metaclass__ = DeletableMetaclass
 
     storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
 
@@ -757,6 +759,9 @@ class DeleteHostStep(Step):
             pass
         from configure.lib.storage_plugin.daemon import StorageDaemon
         StorageDaemon.request_remove_resource(record.pk)
+
+        for ln in LunNode.objects.filter(host__id = kwargs['host_id']):
+            LunNode.delete(ln.pk)
 
         from configure.models import ManagedHost
         ManagedHost.delete(kwargs['host_id'])

@@ -1,5 +1,5 @@
 
-from test_state_manager import JobTestCase
+from tests.configure.helper import JobTestCase
 
 
 class TestJsonImport(JobTestCase):

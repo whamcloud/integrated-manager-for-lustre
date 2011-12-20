@@ -33,7 +33,7 @@ class TestSessions(TestCase):
         resource_manager.session_close(self.scannable_resource_id)
         self.assertEqual(len(resource_manager._sessions), 0)
 
-from tests.configure.lib.test_state_manager import JobTestCase
+from tests.configure.helper import JobTestCase
 
 
 class TestLuns(JobTestCase):
