@@ -347,6 +347,30 @@ class LunNode(models.Model):
 
         return "%s (%s)" % (short_name, human_size)
 
+    @transaction.commit_on_success
+    def set_usable_lun_nodes(self, secondary_lunnodes):
+        def save_or_assert(lun_node, is_primary = True, is_use = True):
+            try:
+                managed_target = lun_node.managedtargetmount_set.get()
+                raise AssertionError('LunNode is in use by ManagedTarget %s', managed_target.target.name)
+            except:
+                pass
+                lun_node.primary = is_primary
+                lun_node.use = is_use
+                lun_node.save()
+        # set primary LunNode
+        save_or_assert(self)
+        # set secondary LunNodes
+        for lunnode in secondary_lunnodes:
+            save_or_assert(lunnode, False)
+        # Reset non secondary/primary LunNodes for same Lun to primary=False and use=False
+        other_lunnodes = LunNode.objects.get(lun = self.lun)
+        # Adding primary LunNode to this list to identify all non secondry/primary LunNodes for a same Lun
+        secondary_lunnodes.append(self)
+        for o_lunnode in other_lunnodes:
+            if o_lunnode not in secondary_lunnodes:
+                save_or_assert(o_lunnode, False, False)
+
 
 class Monitor(models.Model):
     __metaclass__ = DowncastMetaclass

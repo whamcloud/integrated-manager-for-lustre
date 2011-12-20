@@ -221,6 +221,24 @@ class GetResource(AnonymousRequestHandler):
                 'propagated_alerts': prop_alerts}
 
 
+class SetVolumePrimary(AnonymousRequestHandler):
+    @extract_request_args('lun_id', 'primary_host_id', 'secondary_host_ids')
+    def run(cls, request, lun_id, primary_host_id, secondary_host_ids):
+        from configure.models import Lun, LunNode
+        from django.shortcuts import get_object_or_404
+
+        if primary_host_id in secondary_host_ids:
+            raise AssertionError('Primary host and Secondary host can not be same for a volume lun')
+
+        volume_lun = get_object_or_404(Lun, pk = lun_id)
+        primary_host = get_object_or_404(ManagedHost, pk = primary_host_id)
+        filter_kargs = {'lun': volume_lun, 'host': primary_host}
+        primary_lun_node = LunNode.objects.filter(**filter_kargs)
+        secondary_lun_nodes = LunNode.objects.extra(where = ['host_id IN ' + secondary_host_ids.__str__()])
+
+        primary_lun_node.set_usable_lun_nodes(secondary_lun_nodes)
+
+
 class GetLuns(AnonymousRequestHandler):
     @extract_request_args('category')
     def run(cls, request, category):
