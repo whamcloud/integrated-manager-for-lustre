@@ -43,6 +43,22 @@ class TestLustreAudit(unittest.TestCase):
     def test_version_info(self):
         self.assertEqual(self.audit.version_info(), (2, 0, 66))
 
+class TestMissingLustreVersion(unittest.TestCase):
+    """No idea how this might happen, but it shouldn't crash the audit."""
+    def setUp(self):
+        self.test_root = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.test_root, "proc/fs/lustre"))
+        self.audit = LustreAudit(fscontext=self.test_root)
+
+    def test_version(self):
+        self.assertEqual(self.audit.version(), "0.0.0")
+
+    def test_version_info(self):
+        self.assertEqual(self.audit.version_info(), (0, 0, 0))
+
+    def tearDown(self):
+        shutil.rmtree(self.test_root)
+
 class TestLustreAuditGoodHealth(unittest.TestCase):
     def setUp(self):
         self.test_root = tempfile.mkdtemp()

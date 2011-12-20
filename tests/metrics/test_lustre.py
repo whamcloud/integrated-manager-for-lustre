@@ -31,7 +31,7 @@ class TestLocalLustreMetrics(unittest.TestCase):
 class TestPathologicalUseCases(unittest.TestCase):
     # AKA: The world will always build a better idiot! ;)
     def test_loaded_module_no_stats(self):
-        """Loaded module with no stats file should be skipped."""
+        """Loaded modules with no stats files should be skipped."""
         # An easily-repeatable example of when this happens is when
         # lnet.ko is loaded but LNet is stopped.
         self.test_root = tempfile.mkdtemp()
@@ -58,6 +58,36 @@ lnet 233888 3 ptlrpc,ksocklnd,obdclass, Live 0xffffffffa076e000
         audit.metrics()
 
         shutil.rmtree(self.test_root)
+
+    def test_missing_brw_stats(self):
+        """Catch a race where brw_stats hasn't been created yet."""
+        self.test_root = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.test_root, "proc/fs/lustre"))
+
+        f = open(os.path.join(self.test_root, "proc/modules"), "w+")
+        f.write("obdfilter 265823 4 - Live 0xffffffffa06b5000")
+        f.close()
+
+        f = open(os.path.join(self.test_root, "proc/fs/lustre/devices"), "w+")
+        f.write("  2 UP obdfilter test-OST0000 test-OST0000_UUID 5")
+        f.close()
+
+        # Create dummy nodestats files
+        f = open(os.path.join(self.test_root, "proc/meminfo"), "w")
+        f.write("MemTotal:        3991680 kB\n")
+        f.close()
+        f = open(os.path.join(self.test_root, "proc/stat"), "w")
+        f.write("cpu  24601 2 33757 3471279 10892 6 676 0 0\n")
+        f.close()
+
+        audit = LocalAudit(fscontext=self.test_root)
+        assert ObdfilterAudit in audit.audit_classes()
+
+        # this shouldn't raise a runtime error
+        audit.metrics()
+
+        shutil.rmtree(self.test_root)
+
 
     def test_loaded_module_no_device(self):
         """Loaded module with no device entry should be skipped."""
