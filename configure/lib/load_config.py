@@ -152,3 +152,54 @@ def load_string(text):
 def load_file(path):
     text = open(path).read()
     _load(text)
+
+
+def save_filesystems(filesystem_names = None):
+    from configure.models import ManagedFilesystem, ManagedMdt, ManagedOst
+    filesystems = []
+    if filesystem_names:
+        filesystems = [ManagedFilesystem.objects.get(name = fsname) for fsname in filesystem_names]
+    else:
+        filesystems = list(ManagedFilesystem.objects.all())
+
+    hosts = set()
+    mgss = set()
+    for fs in filesystems:
+        targets = fs.get_targets()
+        for t in targets:
+            for tm in t.managedtargetmount_set.all():
+                hosts.add(tm.host)
+        mgss.add(fs.mgs)
+
+    def target_dict(t):
+        result = {"mounts": []}
+        for tm in t.managedtargetmount_set.all():
+            result['mounts'].append({
+                "host": tm.host.address,
+                "device_node": tm.block_device.path,
+                "primary": tm.primary
+                })
+        return result
+
+    dump = {}
+    dump['hosts'] = []
+    for h in hosts:
+        dump['hosts'].append({'address': h.address})
+
+    dump['mgss'] = []
+    for mgs in mgss:
+        dump['mgss'].append(target_dict(mgs))
+
+    dump['filesystems'] = []
+    for fs in filesystems:
+        fs_dict = {}
+        fs_dict['name'] = fs.name
+        fs_dict['mgs'] = fs.mgs.primary_server().address
+        fs_dict['mdt'] = target_dict(ManagedMdt.objects.get(filesystem = fs))
+        fs_dict['osts'] = []
+        for ost in ManagedOst.objects.filter(filesystem = fs):
+            fs_dict['osts'].append(target_dict(ost))
+        dump['filesystems'].append(fs_dict)
+
+    import json
+    return json.dumps(dump, indent = 4)

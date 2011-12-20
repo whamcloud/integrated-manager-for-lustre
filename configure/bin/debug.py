@@ -33,6 +33,13 @@ class HydraDebug(cmd.Cmd, object):
         from configure.lib.load_config import load_file
         load_file(config_file)
 
+    def do_save_config(self, fs_names):
+        fs_names = fs_names.split()
+        if len(fs_names) == 0:
+            fs_names = None
+        from configure.lib.load_config import save_filesystems
+        print save_filesystems(fs_names)
+
     def do_format_fs(self, fs_name):
         fs = ManagedFilesystem.objects.get(name = fs_name)
         for target in fs.get_targets():
