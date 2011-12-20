@@ -80,16 +80,32 @@ class StateManager(object):
             job_log.info("Opportunistic jobs waiting: %s" % count)
 
         for oj in pending_opportunistic_jobs:
+            import datetime
+
             job = oj.get_job()
+
+            # Skip running a job if it's a state-change and the object
+            # is already in the 'new' state.
+            from configure.lib.job import StateChangeJob
+            if isinstance(job, StateChangeJob):
+                stateful_object = job.get_stateful_object()
+                new_state = job.state_transition[2]
+                if new_state == stateful_object.state:
+                    job_log.info("Opportunistic job %s: skipping (%s already in state %s)" % (
+                        oj.pk, stateful_object, new_state))
+                    oj.run = True()
+                    oj.run_at = datetime.datetime.now()
+                    oj.save()
+                    continue
+
             # FIXME: should check if some of the job's dependencies are absent, e.g.
             # if you try to set a conf param on an offline MGS, then delete the MGS -- otherwise
             # jobs will linger in the opportunistic queue indefinitely in that (admittedly rare)
             # scenario.
             if job._deps_satisfied():
-                job_log.info("Opportunistic job %s (%s) ready to run, adding" % (oj.pk, job.description()))
+                job_log.info("Opportunistic job %s (%s) ready to run" % (oj.pk, job.description()))
                 StateManager()._add_job(job)
                 oj.run = True
-                import datetime
                 oj.run_at = datetime.datetime.now()
                 oj.save()
 
