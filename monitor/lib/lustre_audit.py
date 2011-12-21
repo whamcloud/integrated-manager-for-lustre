@@ -258,6 +258,7 @@ class UpdateScan(object):
 
         return count
 
+
 class DetectScan(object):
     def __init__(self):
         self.raw_data = None
