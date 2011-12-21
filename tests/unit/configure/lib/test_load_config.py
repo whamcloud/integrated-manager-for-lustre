@@ -16,7 +16,7 @@ class TestJsonImport(JobTestCase):
 
     def test_export(self):
         import os
-        path = os.path.join(os.path.dirname(__file__), "../../sample_data/example.json")
+        path = os.path.join(os.path.dirname(__file__), "../../../sample_data/example.json")
         from configure.lib.load_config import load_file, save_filesystems
         load_file(path)
 
@@ -27,7 +27,7 @@ class TestJsonImport(JobTestCase):
 
     def test_import(self):
         import os
-        path = os.path.join(os.path.dirname(__file__), "../../sample_data/example.json")
+        path = os.path.join(os.path.dirname(__file__), "../../../sample_data/example.json")
         from configure.lib.load_config import load_file
         load_file(path)
 
