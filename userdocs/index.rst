@@ -9,7 +9,10 @@ Welcome to Chroma's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+
+   installation_guide
+   user_manual
 
 
 
