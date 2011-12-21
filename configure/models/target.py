@@ -260,7 +260,13 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
     def nids(self):
         """Return a list of NID strings"""
         nids = []
-        for target_mount in self.managedtargetmount_set.all():
+        # Note: order by -primary in order that the first argument passed to mkfs
+        # in failover configurations is the primary mount -- Lustre will use the
+        # first --mgsnode argument as the NID to connect to for target registration,
+        # and if that is the secondary NID then bad things happen during first
+        # filesystem start.
+        # HYD-521: need to verify that the mgsnode behaviour here is as expected
+        for target_mount in self.managedtargetmount_set.all().order_by('-primary'):
             host = target_mount.host.downcast()
             nids.extend(host.lnetconfiguration.get_nids())
 
