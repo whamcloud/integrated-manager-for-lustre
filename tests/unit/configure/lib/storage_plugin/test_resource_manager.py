@@ -1,6 +1,7 @@
 
 from django.test import TestCase
 from helper import load_plugins
+from tests.unit.configure.helper import JobTestCase
 
 
 class TestSessions(TestCase):
@@ -32,8 +33,6 @@ class TestSessions(TestCase):
         # Close a session
         resource_manager.session_close(self.scannable_resource_id)
         self.assertEqual(len(resource_manager._sessions), 0)
-
-from tests.configure.helper import JobTestCase
 
 
 class TestLuns(JobTestCase):

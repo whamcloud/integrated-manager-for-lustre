@@ -138,7 +138,8 @@ INSTALLED_APPS = (
     'configure',
     'hydraapi',
     'hydradashboard',
-    'hydracm'
+    'hydracm',
+    'benchmark'
     )
 
 OPTIONAL_APPS = ['debug_toolbar', 'django_extensions', 'django_coverage', 'django_nose']

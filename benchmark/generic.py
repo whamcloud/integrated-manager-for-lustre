@@ -1,0 +1,2 @@
+class GenericBenchmark(object):
+    pass

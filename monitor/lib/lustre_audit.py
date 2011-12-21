@@ -72,6 +72,7 @@ class UpdateScan(object):
         self.audited_mountables = {}
         self.host = None
         self.host_data = None
+        self.update_time = None
 
     def is_valid(self):
         try:
@@ -215,7 +216,7 @@ class UpdateScan(object):
     def store_lustre_target_metrics(self, target_name, metrics):
         # TODO: Re-enable MGS metrics storage if it turns out it's useful.
         if target_name == "MGS":
-            return
+            return 0
 
         try:
             target = ManagedTarget.objects.get(name=target_name,
@@ -223,18 +224,19 @@ class UpdateScan(object):
         except ManagedTarget.DoesNotExist:
             # Unknown target -- ignore metrics
             audit_log.warning("Discarding metrics for unknown target: %s" % target_name)
-            return
+            return 0
 
-        target.downcast().metrics.update(metrics)
+        return target.downcast().metrics.update(metrics, self.update_time)
 
     def store_node_metrics(self, metrics):
-        self.host.downcast().metrics.update(metrics)
+        return self.host.downcast().metrics.update(metrics, self.update_time)
 
     def store_metrics(self):
         """
         Pass the received metrics into the metrics library for storage.
         """
         raw_metrics = self.host_data['metrics']['raw']
+        count = 0
 
         try:
             node_metrics = raw_metrics['node']
@@ -243,17 +245,18 @@ class UpdateScan(object):
             except KeyError:
                 pass
 
-            self.store_node_metrics(node_metrics)
+            count += self.store_node_metrics(node_metrics)
         except KeyError:
             pass
 
         try:
             for target in raw_metrics['lustre']['target']:
                 target_metrics = raw_metrics['lustre']['target'][target]
-                self.store_lustre_target_metrics(target, target_metrics)
+                count += self.store_lustre_target_metrics(target, target_metrics)
         except KeyError:
             pass
 
+        return count
 
 class DetectScan(object):
     def __init__(self):

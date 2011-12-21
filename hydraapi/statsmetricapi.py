@@ -154,7 +154,7 @@ def metrics_fetch(target, target_name, target_kind, fetch_metrics, start_time, e
             else:
                 target_stats = target.metrics.fetch_last()
         if target_kind == 'MANAGED_HOST':
-            target_name_value = target.human_name()
+            target_name_value = target.pretty_name()
         else:
             target_name_value = target.name
     chart_stats = []
