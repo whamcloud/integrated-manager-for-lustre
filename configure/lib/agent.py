@@ -75,6 +75,7 @@ class Agent(object):
         # successful TCP connection (Transport.banner_timeout).
         ssh.connect(hostname, **args)
         transport = ssh.get_transport()
+        transport.set_keepalive(20)
         channel = transport.open_session()
         channel.settimeout(SSH_READ_TIMEOUT)
 
