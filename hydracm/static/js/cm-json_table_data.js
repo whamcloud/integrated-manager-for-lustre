@@ -161,7 +161,11 @@ function LoadUnused_VolumeConf()
         var blank_select = "<select disabled='disabled'>" + blank_option + "</select>"
         var primarySelect;
         var failoverSelect;
-        var host_count = 0
+        var host_count = 0;
+        var original_mapped_host_ids = "";
+        var lun_id = 0, primary_host_id = 0, secondary_host_id = 0;
+        lun_id = resValue.id;
+                
         $.each(resValue.available_hosts, function(host_id, host_info) 
         {
           host_count += 1;
@@ -175,14 +179,14 @@ function LoadUnused_VolumeConf()
         {
           $.each(resValue.available_hosts, function(host_id, host_info) 
           {
-            primarySelect = "<select disabled='disabled'><option value='" + host_id + "'>" + host_info.label + "</option></select>";
+            primarySelect = "<select id='primary_host_"+lun_id+"' disabled='disabled'><option value='" + host_id + "'>" + host_info.label + "</option></select>";
           });
-        failoverSelect = blank_select
+          failoverSelect = blank_select
         } 
         else 
         {
-          primarySelect = "<select>";
-          failoverSelect = "<select>";
+          primarySelect = "<select id='primary_host_"+lun_id+"'>";
+          failoverSelect = "<select id='secondary_host_"+lun_id+"'>";
           primarySelect += blank_option
           failoverSelect += blank_option
           $.each(resValue.available_hosts, function(host_id, host_info)
@@ -191,27 +195,36 @@ function LoadUnused_VolumeConf()
             {
               primarySelect += "<option value='" + host_id + "' selected='selected'>" + host_info.label + "</option>";
               failoverSelect += "<option value='" + host_id + "'>" + host_info.label + "</option>";
+              primary_host_id = host_id;
             }
             else if (host_info.use) 
             {
               primarySelect += "<option value='" + host_id + "'>" + host_info.label + "</option>";
               failoverSelect += "<option value='" + host_id + "' selected='selected'>" + host_info.label + "</option>";
+              secondary_host_id = host_id;
             } 
             else 
             {
               primarySelect += "<option value='" + host_id + "'>" + host_info.label + "</option>";
               failoverSelect += "<option value='" + host_id + "' selected='selected'>" + host_info.label + "</option>";
+              secondary_host_id = host_id;
             }
           });
           failoverSelect += "</select>";
           primarySelect += "</select>";
         }
+        
+        var original_mapped_host_ids = lun_id + "_" + primary_host_id + "_" + secondary_host_id;
+        var hiddenIds = "<input type='text' id='"+lun_id+"' value="+original_mapped_host_ids+">";
+        
         $('#volume_configuration').dataTable().fnAddData ([
           resValue.name,
           primarySelect,
           failoverSelect,
           resValue.size,
-          resValue.status
+          resValue.status,
+          original_mapped_host_ids,
+          hiddenIds
         ]); 
       });
     }

@@ -7,6 +7,7 @@ var ERR_COMMON_CREATE_MGT = "Error in Creating MGT: ";
 var ERR_COMMON_CREATE_MDT = "Error in Creating MDT: ";
 var ERR_COMMON_START_OST = "Error in Starting OST: ";
 var ERR_CONFIF_PARAM = "Error in Param Cofiguration: ";
+var ERR_VOLUME_CONFIF = "Error in setting volume cofiguration ";
 
 var ALERT_TITLE = "Configuration Manager";
 var CONFIRM_TITLE = "Configuration Manager";
@@ -248,4 +249,25 @@ function ApplyConfigParam(table_obj,target_id,target_dialog,isFS)
 
     $('#'+target_dialog).dialog('close'); 
   }
+}
+
+save_primary_failover_server = function (confirmation_markup, api_params)
+{
+   $('#transition_confirmation_dialog').html(confirmation_markup);
+   $('#transition_confirmation_dialog').dialog('option', 'buttons', {
+     'Cancel': function() {$(this).dialog('close');},
+     'Confirm': function() {
+       invoke_api_call(api_post, "set_volumes_usable/", api_params, 
+       success_callback = function(data)
+       {
+         jAlert("Update Successful");
+       },
+       error_callback = function(data)
+       {
+         jAlert(ERR_VOLUME_CONFIF);
+       });
+       $(this).dialog('close');
+      }
+   });
+   $('#transition_confirmation_dialog').dialog('open');
 }
