@@ -222,21 +222,24 @@ class GetResource(AnonymousRequestHandler):
 
 
 class SetVolumePrimary(AnonymousRequestHandler):
-    @extract_request_args('lun_id', 'primary_host_id', 'secondary_host_ids')
-    def run(cls, request, lun_id, primary_host_id, secondary_host_ids):
+    @extract_request_args('lun_ids', 'primary_host_ids', 'secondary_host_ids')
+    def run(cls, request, lun_ids, primary_host_ids, secondary_host_ids):
         from configure.models import Lun, LunNode
         from django.shortcuts import get_object_or_404
 
-        if primary_host_id in secondary_host_ids:
-            raise AssertionError('Primary host and Secondary host can not be same for a volume lun')
-
-        volume_lun = get_object_or_404(Lun, pk = lun_id)
-        primary_host = get_object_or_404(ManagedHost, pk = primary_host_id)
-        filter_kargs = {'lun': volume_lun, 'host': primary_host}
-        primary_lun_node = LunNode.objects.filter(**filter_kargs)
-        secondary_lun_nodes = LunNode.objects.extra(where = ['host_id IN ' + secondary_host_ids.__str__()])
-
-        primary_lun_node.set_usable_lun_nodes(secondary_lun_nodes)
+        def set_usable_luns(primary_host_id, secondary_host_id):
+            if primary_host_id != secondary_host_id:
+                raise AssertionError('Primary host and Secondary host can not be same for a volume lun')
+            volume_lun = get_object_or_404(Lun, pk = lun_id)
+            primary_host = get_object_or_404(ManagedHost, pk = primary_host_id)
+            filter_kargs = {'lun': volume_lun, 'host': primary_host}
+            primary_lun_node = LunNode.objects.filter(**filter_kargs)
+            secondary_host = get_object_or_404(ManagedHost, pk = secondary_host_id)
+            filter_kargs = {'lun': volume_lun, 'host': secondary_host}
+            secondary_lun_nodes = LunNode.objects.filter(**filter_kargs)
+            primary_lun_node.set_usable_lun_nodes(secondary_lun_nodes)
+        for lun_id in lun_ids:
+            set_usable_luns(lun_id, primary_host_ids.__getitem__(lun_id.index), secondary_host_ids.__getitem__(lun_id.index))
 
 
 class GetLuns(AnonymousRequestHandler):

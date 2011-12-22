@@ -35,7 +35,8 @@ from configureapi import (AddHost,
                           SetJobStatus,
                           Notifications,
                           GetTargetConfParams,
-                          SetTargetConfParams)
+                          SetTargetConfParams,
+                          SetVolumePrimary)
 
 # FIXME: instead of doing this big list of imports, should introspect available
 # RequestHandler objects and get their url name from them.
@@ -127,4 +128,6 @@ urlpatterns = patterns('',
     (r'^hosts/$', CsrfExemptResource(ManagedHostsHandler)),
 
     (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),
+
+    (r'^set_volumes_usable/$', CsrfExemptResource(SetVolumePrimary)),
 )

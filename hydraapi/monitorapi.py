@@ -231,7 +231,8 @@ class GetFSTargets(AnonymousRequestHandler):
                     'primary_server_name': t.primary_server().pretty_name(),
                     'kind': kind,
                     'status': t.status_string(),
-                    'label': t.get_label()
+                    'label': t.get_label(),
+                    'filesystem_id': t.filesystem_id if type(t) != ManagedMgs else None
                     })
         return result
 
