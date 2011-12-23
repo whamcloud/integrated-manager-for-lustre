@@ -405,12 +405,11 @@ class LunNode(models.Model):
         for lunnode in secondary_lunnodes:
             save_or_assert(lunnode, False)
         # Reset non secondary/primary LunNodes for same Lun to primary=False and use=False
-        other_lunnodes = LunNode.objects.get(lun = self.lun)
-        # Adding primary LunNode to this list to identify all non secondry/primary LunNodes for a same Lun
-        secondary_lunnodes.append(self)
+        other_lunnodes = LunNode.objects.filter(lun = self.lun)
         for o_lunnode in other_lunnodes:
             if o_lunnode not in secondary_lunnodes:
-                save_or_assert(o_lunnode, False, False)
+                if o_lunnode != self:
+                    save_or_assert(o_lunnode, False, False)
 
 
 class Monitor(models.Model):

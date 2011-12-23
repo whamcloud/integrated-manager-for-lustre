@@ -227,8 +227,8 @@ class SetVolumePrimary(AnonymousRequestHandler):
         from configure.models import Lun, LunNode
         from django.shortcuts import get_object_or_404
 
-        def set_usable_luns(primary_host_id, secondary_host_id):
-            if primary_host_id != secondary_host_id:
+        def set_usable_luns(lun_id, primary_host_id, secondary_host_id):
+            if primary_host_id == secondary_host_id:
                 raise AssertionError('Primary host and Secondary host can not be same for a volume lun')
             volume_lun = get_object_or_404(Lun, pk = lun_id)
             primary_host = get_object_or_404(ManagedHost, pk = primary_host_id)
@@ -237,9 +237,11 @@ class SetVolumePrimary(AnonymousRequestHandler):
             secondary_host = get_object_or_404(ManagedHost, pk = secondary_host_id)
             filter_kargs = {'lun': volume_lun, 'host': secondary_host}
             secondary_lun_nodes = LunNode.objects.filter(**filter_kargs)
-            primary_lun_node.set_usable_lun_nodes(secondary_lun_nodes)
-        for lun_id in lun_ids:
-            set_usable_luns(lun_id, primary_host_ids.__getitem__(lun_id.index), secondary_host_ids.__getitem__(lun_id.index))
+            for p_lun_node in primary_lun_node:
+                p_lun_node.set_usable_lun_nodes(secondary_lun_nodes)
+
+        for i in range(len(lun_ids)):
+            set_usable_luns(lun_ids.__getitem__(i), primary_host_ids.__getitem__(i), secondary_host_ids.__getitem__(i))
 
 
 class GetLuns(AnonymousRequestHandler):
