@@ -29,6 +29,7 @@ function LoadFSList_FSList()
   {
     var response = data.response;
     var fsName;
+    $('#fs_list').dataTable().fnClearTable();
     $.each(response, function(resKey, resValue)
     {
       fsName = "<a href='#filesystems_edit_" + resValue.fsid +"' class='address_link'>" + resValue.fsname + "</a>";
@@ -150,11 +151,13 @@ function LoadUsableVolumeList(datatable_container, select_widget_fn)
 function LoadUnused_VolumeConf()
 {
   var api_params = {'category': 'unused'};
-
+  
   invoke_api_call(api_post, "get_luns/", api_params, handlers = 
   {
     200 : function(data)
     {
+      $('#volume_configuration').dataTable().fnClearTable();
+      
       $.each(data.response, function(resKey, resValue)
       {
         var blank_option = "<option value='-1'>---</option>";
@@ -165,7 +168,7 @@ function LoadUnused_VolumeConf()
         var original_mapped_host_ids = "";
         var lun_id = 0, primary_host_id = 0, secondary_host_id = 0;
         lun_id = resValue.id;
-                
+
         $.each(resValue.available_hosts, function(host_id, host_info) 
         {
           host_count += 1;
@@ -213,9 +216,9 @@ function LoadUnused_VolumeConf()
           failoverSelect += "</select>";
           primarySelect += "</select>";
         }
-        
+
         var original_mapped_host_ids = lun_id + "_" + primary_host_id + "_" + secondary_host_id;
-        var hiddenIds = "<input type='text' id='"+lun_id+"' value="+original_mapped_host_ids+">";
+        var hiddenIds = original_mapped_host_ids;
         
         $('#volume_configuration').dataTable().fnAddData ([
           resValue.name,
@@ -249,7 +252,7 @@ function LoadMGTConfiguration_MGTConf()
   {
     var response = data.response;
     var fsnames;
-
+    $('#mgt_configuration').dataTable().fnClearTable();
     $.each(response, function(resKey, resValue)
     {
           fsnames = resValue.fs_names;
