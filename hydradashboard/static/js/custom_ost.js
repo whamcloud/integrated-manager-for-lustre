@@ -143,6 +143,7 @@ ost_Pie_Space_Data = function(targetId, targetName, sDate, endDate, dataFunction
       chart = new Highcharts.Chart(obj_ost_pie_space);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 } 
 /*****************************************************************************
@@ -202,6 +203,7 @@ ost_Pie_Inode_Data = function(targetId, targetName, sDate, endDate, dataFunction
       chart = new Highcharts.Chart(obj_ost_pie_inode);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
@@ -259,6 +261,7 @@ ost_Area_mgtOps_Data = function(targetId, isZoom)
       chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 
@@ -324,6 +327,7 @@ ost_Area_ReadWrite_Data = function(targetId, targetName, sDate, endDate, dataFun
       chart = new Highcharts.Chart(obj_oss_Area_ReadWrite_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
@@ -403,6 +407,7 @@ loadOSTSummary = function (fsId)
       $('#ostSummaryTbl').html(innerContent);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************

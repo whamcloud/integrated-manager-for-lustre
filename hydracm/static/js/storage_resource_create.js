@@ -43,14 +43,13 @@ function storage_resource_create_save()
 
   console.log(attrs);
 
-  invoke_api_call(api_post, "storage_resource/", {'plugin': module_name, 'resource_class': class_name, 'attributes': attrs}, handlers = 
+  invoke_api_call(api_post, "storage_resource/", {'plugin': module_name, 'resource_class': class_name, 'attributes': attrs},
+  success_callback = function(data)
   {
-    200 : function(data)
-    {
-      $('#storage_resource_create_dialog').dialog('close');
-    }
+    $('#storage_resource_create_dialog').dialog('close');
   },
   error_callback = function(data){
+    common_error_handler(data);
   });
 }
 
@@ -61,27 +60,26 @@ function storage_resource_create_load_fields()
   var module_name = tokens[0]
   var class_name = tokens[1]
 
-  invoke_api_call(api_post, "storage_resource_class_fields/", {'plugin': module_name, 'resource_class': class_name},  handlers = 
+  invoke_api_call(api_post, "storage_resource_class_fields/", {'plugin': module_name, 'resource_class': class_name},  
+  success_callback = function(data)
   {
-    200 : function(data)
+    $('#storage_resource_create_fields tr.field').remove();
+    var row_markup = "";
+    $.each(data.response, function(i, field_info)
     {
-      $('#storage_resource_create_fields tr.field').remove();
-      var row_markup = "";
-      $.each(data.response, function(i, field_info)
-      {
-        row_markup += "<tr class='field'><th>" + field_info.label + ":</th><td><input type='entry' id='storage_resource_create_field_" + field_info.name + "'></input></td>";
-        if (field_info.optional) {
-          row_markup += "<td class='field_info'>Optional</td>"
-        } else {
-          row_markup += "<td class='field_info'></td>"
-        }
-        row_markup += "</tr>"
-      });
-      $('#storage_resource_create_fields').append(row_markup);
-      $('#storage_resource_create_save').attr('disabled', false);
-    }
+      row_markup += "<tr class='field'><th>" + field_info.label + ":</th><td><input type='entry' id='storage_resource_create_field_" + field_info.name + "'></input></td>";
+      if (field_info.optional) {
+        row_markup += "<td class='field_info'>Optional</td>"
+      } else {
+        row_markup += "<td class='field_info'></td>"
+      }
+      row_markup += "</tr>"
+    });
+    $('#storage_resource_create_fields').append(row_markup);
+    $('#storage_resource_create_save').attr('disabled', false);
   },
   error_callback = function(data){
+    common_error_handler(data);
   });
 }
 
@@ -101,6 +99,7 @@ function storage_resource_create() {
     storage_resource_create_load_fields();
   },
   error_callback = function(data){
+    common_error_handler(data);
   });
 }
 

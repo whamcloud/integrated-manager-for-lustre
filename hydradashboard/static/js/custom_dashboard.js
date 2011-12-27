@@ -232,6 +232,7 @@ $(document).ready(function()
         $('#fsSelect').html(innerContent);
       },
       error_callback = function(data){
+        common_error_handler(data);
       });
 
       db_Bar_SpaceUsage_Data('false');
@@ -283,6 +284,7 @@ $(document).ready(function()
         $("#breadCrumb1").jBreadCrumb();
       },
       error_callback = function(data){
+        common_error_handler(data);
       });
 
     resetTimeInterval();
@@ -366,6 +368,7 @@ $(document).ready(function()
         $("#ostKind").html(ostKindMarkUp);
       },
       error_callback = function(data){
+        common_error_handler(data);
       });
 
     resetTimeInterval();

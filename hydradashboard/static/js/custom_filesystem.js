@@ -79,6 +79,7 @@ fs_Bar_SpaceUsage_Data = function(fsId, sDate, endDate, dataFunction, targetKind
       chart = new Highcharts.Chart(obj_fs_Bar_SpaceUsage_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
@@ -141,6 +142,7 @@ fs_Line_connectedClients_Data = function(fsId, sDate, endDate, dataFunction, fet
       chart = new Highcharts.Chart(obj_fs_Line_connectedClients_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
@@ -187,6 +189,7 @@ fs_LineBar_CpuMemoryUsage_Data = function(fsId, sDate, endDate, dataFunction, ta
       chart = new Highcharts.Chart(obj_fs_LineBar_CpuMemoryUsage_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
@@ -251,6 +254,7 @@ fs_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKind
       chart = new Highcharts.Chart(obj_db_Area_ReadWrite_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
@@ -307,6 +311,7 @@ fs_Area_mdOps_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fe
       chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
@@ -401,6 +406,7 @@ fs_AreaSpline_ioOps_Data = function(isZoom)
       chart = new Highcharts.Chart(obj_db_AreaSpline_ioOps_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
@@ -598,6 +604,7 @@ loadFileSystemSummary = function (fsId)
       $('#fileSystemSummaryTbl').html(innerContent);
 	},
     error_callback = function(data){
+	  common_error_handler(data);
     });
 }
 /*****************************************************************************

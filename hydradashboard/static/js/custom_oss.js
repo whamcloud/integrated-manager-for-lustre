@@ -90,6 +90,7 @@ oss_LineBar_CpuMemoryUsage_Data = function(hostId, sDate, endDate, dataFunction,
       chart = new Highcharts.Chart(obj_oss_LineBar_CpuMemoryUsage_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
@@ -155,6 +156,7 @@ oss_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKin
       chart = new Highcharts.Chart(obj_oss_Area_ReadWrite_Data);
   },
   error_callback = function(data){
+    common_error_handler(data);
   });
 }
 /*****************************************************************************
@@ -234,6 +236,7 @@ loadOSSUsageSummary = function (fsId)
       $('#ossSummaryTbl').html(innerContent);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************

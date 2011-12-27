@@ -127,44 +127,43 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
 
   var api_params = {"active": status,"page_id":"","page_size":""};
   
-  invoke_api_call(api_post, "getalerts/", api_params, handlers = 
+  invoke_api_call(api_post, "getalerts/", api_params, 
+  success_callback = function(data)
+  {
+    $.each(data.response.aaData, function(resKey, resValue)
     {
-      200 : function(data)
+      pagecnt++;
+      if(maxpagecnt > pagecnt || maxpagecnt < 0)
       {
-        $.each(data.response.aaData, function(resKey, resValue)
-        {
-          pagecnt++;
-          if(maxpagecnt > pagecnt || maxpagecnt < 0)
-          {
-            var imgName = getImage(resValue.alert_severity);
-  
-            alertTabContent = alertTabContent + 
-                              "<tr>" +
-                              "<td width='20%' align='left' class='border' valign='top'>" +  
-                                resValue.alert_created_at + 
-                              "</td>" +
-                              "<td width='7%' align='left' class='border' valign='top'>" +
-                              "<img src='" + imgName + "' width='16' height='16' class='spacetop' />" +
-                              "</td>" +
-                              "<td width='30%' align='left' class='border' valign='top'>" + 
-                                resValue.alert_item +  
-                              "</td>" + 
-                              "<td width='38%' align='left' class='border' valign='top'>" + 
-                                resValue.alert_message + 
-                              "</td>" + 
-                              "</tr>";
-          }
-        });
-  
-        if(pagecnt == 0)
-        {
-          alertTabContent = alertTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Alerts</td></tr>";
-        }
-        $("#"+targetAlertDivName).html(alertTabContent);
+        var imgName = getImage(resValue.alert_severity);
+
+        alertTabContent = alertTabContent + 
+                          "<tr>" +
+                          "<td width='20%' align='left' class='border' valign='top'>" +  
+                            resValue.alert_created_at + 
+                          "</td>" +
+                          "<td width='7%' align='left' class='border' valign='top'>" +
+                          "<img src='" + imgName + "' width='16' height='16' class='spacetop' />" +
+                          "</td>" +
+                          "<td width='30%' align='left' class='border' valign='top'>" + 
+                            resValue.alert_item +  
+                          "</td>" + 
+                          "<td width='38%' align='left' class='border' valign='top'>" + 
+                            resValue.alert_message + 
+                          "</td>" + 
+                          "</tr>";
       }
-    },
-    error_callback = function(data){
     });
+
+    if(pagecnt == 0)
+    {
+      alertTabContent = alertTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Alerts</td></tr>";
+    }
+    $("#"+targetAlertDivName).html(alertTabContent);
+  },
+  error_callback = function(data){
+    common_error_handler(data);
+  });
 }
 
 loadEventContent = function(targetEventDivName, maxCount)
@@ -210,6 +209,7 @@ loadEventContent = function(targetEventDivName, maxCount)
       $("#"+targetEventDivName).html(eventTabContent);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 
@@ -278,6 +278,7 @@ loadJobContent = function(targetJobDivName)
       $("#"+targetJobDivName).html(jobTabContent);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 
@@ -295,15 +296,14 @@ job_action = function(job_id, state)
       "state": state
   };
 
-  invoke_api_call(api_post, "set_job_status/", api_params, handlers = 
-    {
-      200 : function(data)
-      {
-        loadJobContent('job_content');
-      }
-    },
-    error_callback = function(data){
-    });
+  invoke_api_call(api_post, "set_job_status/", api_params,
+  success_callback = function(data)
+  {
+    loadJobContent('job_content');
+  },
+  error_callback = function(data){
+    common_error_handler(data);
+  });
 }
 
 loadHostList = function(filesystem_id, targetContainer)
@@ -312,19 +312,18 @@ loadHostList = function(filesystem_id, targetContainer)
   
   var api_params = {'filesystem_id':filesystem_id};
 
-  invoke_api_call(api_post, "listservers/", api_params, handlers = 
+  invoke_api_call(api_post, "listservers/", api_params,
+  success_callback = function(data)
+  {
+    $.each(data.response, function(resKey, resValue)
     {
-      200 : function(data)
-      {
-        $.each(data.response, function(resKey, resValue)
-        {
-          hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
-        });
-        $('#'+targetContainer).html(hostList);
-      }
-    },
-    error_callback = function(data){
+      hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
     });
+    $('#'+targetContainer).html(hostList);
+  },
+  error_callback = function(data){
+    common_error_handler(data);
+  });
 }
 
 setActiveMenu = function(menu_element){
