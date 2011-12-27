@@ -164,80 +164,100 @@ oss_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKin
  * Param - File System Id
  * Return - Returns the summary information of the selected file system
 *****************************************************************************/
-loadOSSUsageSummary = function (fsId)
+loadOSSUsageSummary = function (file_systems_ids)
 {
-  $('#ossSummaryTbl').html("<tr><td width='100%' align='center' height='180px'><img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
+  $('#serverSummaryTbl')
+  .dataTable(
+  {
+    "aoColumns": [
+      { "sClass": 'txtright'},
+      { "sClass": 'txtright'},
+      { "sClass": 'txtright'},
+      { "sClass": 'txtright'},
+      { "sClass": 'txtright'},
+      { "sClass": 'txtright'},
+      { "sClass": 'txtright'},
+      { "sClass": 'txtright'},
+      { "sClass": 'txtright'},
+      { "sClass": 'txtright'}
+    ],
+    "iDisplayLength":5,
+    "bRetrieve":true,
+    "bFilter":false,
+    "bLengthChange": false,
+    "bAutoWidth": true,
+    "bSort": false,
+    "bJQueryUI": true
+  }).fnClearTable();
+  
   var innerContent = "";
 
-  var api_params = {filesystem_id: fsId};
-
-  invoke_api_call(api_post, "getfilesystem/", api_params, 
-    success_callback = function(data)
-    {
-      var response = data.response;
-      $.each(response, function(resKey, resValue) 
+  for(var x=0; x<file_systems_ids.length; x++)
+  {
+    var api_params = {filesystem_id: file_systems_ids[x]};
+    
+    invoke_api_call(api_post, "getfilesystem/", api_params, 
+      success_callback = function(data)
       {
-        innerContent = innerContent + 
-        "<tr><td class='greybgcol'>MGS :</td>" +
-        "<td class='tblContent greybgcol'>"+resValue.mgs_hostname+"</td>" +
-        "<td>&nbsp;</td><td>&nbsp;</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>MDS :</td>" +
-        "<td class='tblContent greybgcol'>"+resValue.mds_hostname+"</td>" +
-        "<td class='greybgcol'>Failover:</td>" +
-        "<td class='tblContent greybgcol'>NA</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>File System :</td>" +
-        "<td class='tblContent greybgcol'>"+resValue.fsname+"</td>" +
-        "<td>&nbsp;</td><td>&nbsp;</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Total Capacity: </td>" +
-        "<td class='tblContent greybgcol'>"+resValue.bytes_total+" </td>" +
-        "<td class='greybgcol'>Total Free:</td>" +
-        "<td class='tblContent greybgcol'>"+resValue.bytes_free+"</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Files Total: </td>" +
-        "<td class='tblContent greybgcol'>"+resValue.inodes_total+" </td>" +
-        "<td class='greybgcol'>Files Free:</td>" +
-        "<td class='tblContent greybgcol'>"+resValue.inodes_free+"</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Standby OSS :</td>" +
-        "<td class='tblContent greybgcol'>--</td>" +
-        "<td>&nbsp;</td>" +
-        "<td>&nbsp;</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Total OSTs:</td>" +
-        "<td class='tblContent greybgcol'>"+resValue.noofost+" </td>" +
-        "<td>&nbsp;</td>" +
-        "<td>&nbsp;</td>" +
-        "</tr>"+
-        "<tr><td class='greybgcol'>Status:</td>";
-
-        if(resValue.status == "OK" || resValue.status == "STARTED")
+        var response = data.response;
+        var innerContent="";
+        
+        $.each(response, function(resKey, resValue) 
         {
-          innerContent = innerContent + "<td><div class='tblContent txtleft status_ok'>"+resValue.status+"<div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
-        }
-        else if(resValue.status == "WARNING" || resValue.status == "RECOVERY")
-        {
-          innerContent = innerContent + "<td><div class='tblContent txtleft status_warning'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
-        }
-        else if(resValue.status == "STOPPED")
-        {
-          innerContent = innerContent + "<td><div class='tblContent txtleft status_stopped'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
-        }
+          if(resValue.status == "OK" || resValue.status == "STARTED")
+          {
+            innerContent = "<div class='tblContent txtleft status_ok'>"+resValue.status+"<div>";
+          }
+          else if(resValue.status == "WARNING" || resValue.status == "RECOVERY")
+          {
+            innerContent = "<div class='tblContent txtleft status_warning'>"+resValue.status+"</div>";
+          }
+          else if(resValue.status == "STOPPED")
+          {
+            innerContent = "<div class='tblContent txtleft status_stopped'>"+resValue.status+"</div>";
+          }
+  
+          $('#serverSummaryTbl')
+          .dataTable(
+          {
+            "aoColumns": [
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'},
+              { "sClass": 'txtright'}
+            ],
+            "iDisplayLength":5,
+            "bRetrieve":true,
+            "bFilter":false,
+            "bLengthChange": false,
+            "bAutoWidth": true,
+            "bSort": false,
+            "bJQueryUI": true
+          })
+          .fnAddData([
+            resValue.fsname,
+            resValue.mgs_hostname,
+            resValue.mds_hostname,
+            resValue.bytes_total,
+            resValue.bytes_free,
+            resValue.inodes_total,
+            resValue.inodes_free,
+            "--",
+            resValue.noofost,
+            innerContent,
+          ]);
+        });
+      },
+      error_callback = function(data){
+        common_error_handler(data);
       });
-
-      $('#ossSummaryTbl').html(innerContent);
-    },
-    error_callback = function(data){
-      common_error_handler(data);
-    });
+  }
 }
 /*****************************************************************************
  * Function to initialize polling of graphs on the oss dashboard page
