@@ -21,23 +21,35 @@ var active_alerts = {}
 // Map of [id,ct] to map of alert IDs affecting this object
 var alert_effects = {}
 
+var id_counter = 1;
+function get_indicator_id()
+{
+  id_counter += 1;
+  return "notifications_" + id_counter;
+}
+
+indicator_markup = function(classes) {
+  var el = $('<span/>')
+  return "<span id='" + get_indicator_id() + "' class='" + classes.join(" ") + "'></span><span class='tooltip-text'></span>";
+}
+
 alert_indicator_markup = function(id, content_type_id)
 {
-  return "<span class='alert_indicator alert_indicator_object_id_" + id + "_" + content_type_id + "'></span>"
+  return indicator_markup(['alert_indicator', "alert_indicator_object_id_" + id + "_" + content_type_id])
 }
 
 alert_indicator_list_markup = function(id, content_type_id)
 {
-  return "<span class='alert_indicator alert_indicator_list alert_indicator_object_id_" + id + "_" + content_type_id + "'></span>"
+  return indicator_markup(['alert_indicator', "alert_indicator_list", "alert_indicator_object_id_" + id + "_" + content_type_id])
 }
 
 alert_indicator_large_markup = function(id, content_type_id)
 {
-  return "<span class='alert_indicator alert_indicator_large alert_indicator_object_id_" + id + "_" + content_type_id + "'></span>"
+  return indicator_markup(['alert_indicator', "alert_indicator_large", "alert_indicator_object_id_" + id + "_" + content_type_id])
 }
 
 notification_icon_markup = function(id, ct) {
-  return "<span class='notification_object_icon notification_object_id_" + id + "_" + ct + "'/>"
+  return indicator_markup(['notification_object_icon', "notification_object_id_" + id + "_" + ct])
 }
 
 notification_icons_markup = function(id, ct) {
@@ -59,12 +71,15 @@ function debug(msg) {
 cluetip_tooltip_format = function(element, title, objects, attr)
 {
   var tooltip = title;
+  tooltip += "<ul>"
   $.each(objects, function(i, obj) {
-    tooltip += "| \u2022 " + obj[attr]
+    tooltip += "<li>" + obj[attr] + "</li>";
   });
+  tooltip += "</ul>"
 
-  element.attr('title', tooltip);
-  element.cluetip({splitTitle: '|', cluezIndex: 1002});
+  element.next('.tooltip-text').html(tooltip);
+  element.attr('rel', "#" + element.attr('id') + " + .tooltip-text");
+  element.cluetip({cluezIndex: 1002, local: true, hideLocal: true});
 }
 
 update_alert_indicator = function(element)
@@ -103,7 +118,6 @@ update_alert_indicator = function(element)
         element.addClass('alert_indicator_active');
         element.removeClass('alert_indicator_inactive');
         
-        element.title
         var alerts = {};
         $.each(effects, function(alert_id, x) {
           alerts[alert_id] = known_alerts[alert_id]
@@ -135,16 +149,13 @@ update_sidebar_icons = function() {
     cluetip_tooltip_format($('#notification_icon_jobs'), running_job_count + " jobs running:", running_jobs, 'description');
   } else {
     $('#notification_icon_jobs').hide()
-    $('#notification_icon_jobs').attr('title', '');
   }
 
   if (active_alert_count > 0) {
     $('#notification_icon_alerts').show()
-    $('#notification_icon_alerts').attr('title', active_alert_count + " alerts active")
     cluetip_tooltip_format($('#notification_icon_alerts'), active_alert_count + " alerts active:", active_alerts, 'message');
   } else {
     $('#notification_icon_alerts').hide()
-    $('#notification_icon_alerts').attr('title', '');
   }
 }
 
@@ -311,7 +322,6 @@ notification_update_icon = function(key, element) {
   } else {
     element.removeClass('locked_icon');
     element.removeClass('busy_icon');
-    element.attr('title', "");
   }
 }
 
