@@ -183,7 +183,7 @@ class StoragePluginManager(object):
         handler = logging.FileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
         handler.setFormatter(logging.Formatter("[%%(asctime)s: %%(levelname)s/%s] %%(message)s" % module, '%d/%b/%Y:%H:%M:%S'))
         log.addHandler(handler)
-        if module in settings.STORAGE_PLUGIN_DEBUG_PLUGINS:
+        if module in settings.STORAGE_PLUGIN_DEBUG_PLUGINS or settings.STORAGE_PLUGIN_DEBUG:
             log.setLevel(logging.DEBUG)
         else:
             log.setLevel(logging.WARNING)
