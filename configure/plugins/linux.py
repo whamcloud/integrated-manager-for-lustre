@@ -182,7 +182,71 @@ class Linux(StoragePlugin):
         host = ManagedHost.objects.get(pk=root_resource.host_id)
 
         self.agent = Agent(host = host, log = self.log)
-        devices = self.agent.invoke("device-scan")
+        #devices = self.agent.invoke("device-scan")
+        from kombu import BrokerConnection, Exchange, Queue
+        import settings
+
+        devices = None
+
+        with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:
+            conn.connect()
+
+            plugin_name = 'linux'
+            exchange = Exchange("plugin_data", "direct", durable = True)
+
+            # Send a request for information from the plugin on this host
+            request_routing_key = "plugin_data_request_%s_%s" % (plugin_name, host.fqdn)
+            import uuid
+            request_id = uuid.uuid1().__str__()
+            with conn.Producer(exchange = exchange, serializer = 'json', routing_key = request_routing_key) as producer:
+                producer.publish({'id': request_id})
+            self.log.info("Sent request for %s (%s)" % (request_routing_key, request_id))
+
+            # Wait for a response containing some information about the devices on the host
+            self.log.info("Waiting for response for %s" % host)
+            exchange = Exchange("plugin_data", "direct", durable = True)
+            response_routing_key = "plugin_data_response_%s_%s" % (plugin_name, host.fqdn)
+            response_queue = Queue(response_routing_key, exchange = exchange, routing_key = response_routing_key)
+            response_queue(conn.channel()).declare()
+            response_data = []
+
+            def handle_response(body, message):
+                #self.log.warning("handle_response %s: %s" % (host.fqdn, body))
+                try:
+                    id = body['id']
+                except KeyError:
+                    import json
+                    self.log.warning("Malformed response '%s' on %s" % (json.dumps(body), response_routing_key))
+                else:
+                    if id == request_id:
+                        response_data.append(body['data'])
+                        self.log.warning("Got response for request %s" % request_id)
+                    else:
+                        self.log.warning("Dropping unexpected response %s on %s" % (id, response_routing_key))
+                finally:
+                    message.ack()
+
+            with conn.Consumer([response_queue], callbacks=[handle_response]):
+                from socket import timeout
+                exhausted = False
+                while not exhausted:
+                    try:
+                        # TODO: couple this timeout to the HTTP reporting interval
+                        conn.drain_events(timeout = 30.0)
+                    except timeout, e:
+                        self.log.info("drain_events timeout %s" % e)
+                        exhausted = True
+            if len(response_data) > 0:
+                devices = response_data[0]
+
+        if devices != None:
+            self.log.info("Host %s got devices" % host.fqdn)
+        else:
+            raise RuntimeError("No response getting devices for %s" % host.fqdn)
+        #self.log.debug("devices = %s" % json.dumps(devices, indent=4))
+
+        #import json
+        #self.log.debug("devices = %s" % json.dumps(devices, indent=4))
 
         lv_block_devices = set()
         for vg, lv_list in devices['lvs'].items():

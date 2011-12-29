@@ -97,7 +97,7 @@ class StorageDaemon(object):
         from kombu import BrokerConnection, Exchange, Queue
         import settings
 
-        storage_plugin_exchange = Exchange("storage_plugin", "direct", durable = True)
+        storage_plugin_exchange = Exchange("plugin_control", "direct", durable = True)
         removal_queue = Queue("removals", exchange = storage_plugin_exchange, routing_key = "removals")
 
         with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:

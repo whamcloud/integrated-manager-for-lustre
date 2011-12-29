@@ -342,14 +342,69 @@ class GetAlerts(AnonymousRequestHandler):
 
 
 class UpdateScan(AnonymousRequestHandler):
-    @extract_request_args('fqdn', 'update_scan')
-    def run(self, request, fqdn, update_scan):
+    @extract_request_args('fqdn', 'token', 'update_scan', 'plugins')
+    def run(self, request, fqdn, token, update_scan, plugins):
+        from hydraapi import api_log
+
         from configure.models import ManagedHost
         from django.shortcuts import get_object_or_404
         host = get_object_or_404(ManagedHost, fqdn = fqdn)
 
-        from monitor.lib.lustre_audit import UpdateScan
-        UpdateScan().run(host.pk, update_scan)
+        if token != host.agent_token:
+            api_log.error("Invalid token for host %s" % token)
+            from hydraapi.requesthandler import APIResponse
+            return APIResponse({}, 403)
+
+        if update_scan:
+            from monitor.lib.lustre_audit import UpdateScan
+            UpdateScan().run(host.pk, update_scan)
+
+        # TODO: make sure UpdateScan is committing because we might fail out here
+        # if we can't get to rabbitmq, but we'd like to save the updatescan info even if that
+        # is the case.
+
+        response = {'plugins': {}}
+        for plugin_name, response_dict in plugins.items():
+            from kombu import BrokerConnection, Exchange, Queue
+            import settings
+
+            # TODO connection caching
+            exchange = Exchange("plugin_data", "direct", durable = True)
+            with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:
+                conn.connect()
+                # If we got some data from this plugin on the agent, send it to the
+                # plugin on the server
+                #api_log.info("Data for %s = %s" % (plugin_name, data))
+                api_log.info("Plugin responses for %s from %s: %s" % (plugin_name, host.fqdn, len(response_dict)))
+                for request_id, response_data in response_dict.items():
+                    response_routing_key = "plugin_data_response_%s_%s" % (plugin_name, host.fqdn)
+                    with conn.Producer(exchange = exchange, serializer = 'json', routing_key = response_routing_key) as producer:
+                        producer.publish({'id': request_id, 'data': response_data})
+
+                # See if there are any requests for this agent plugin
+                request_routing_key = "plugin_data_request_%s_%s" % (plugin_name, host.fqdn)
+
+                requests = []
+
+                def handle_request(body, message):
+                    api_log.info("UpdateScan %s: Passing on request %s" % (host.fqdn, body['id']))
+                    requests.append(body)
+                    message.ack()
+
+                request_queue = Queue(request_routing_key, exchange = exchange, routing_key = request_routing_key)
+                request_queue(conn.channel()).declare()
+                with conn.Consumer([request_queue], callbacks=[handle_request]):
+                    from socket import timeout
+                    try:
+                        conn.drain_events(timeout = 0.1)
+                    except timeout:
+                        pass
+
+                api_log.info("Got %s requests for %s" % (len(requests), host.fqdn))
+                if len(requests) > 0:
+                    response['plugins'][plugin_name] = requests
+
+        return response
 
 
 class GetJobs(AnonymousRequestHandler):

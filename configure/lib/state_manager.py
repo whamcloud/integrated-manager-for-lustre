@@ -93,7 +93,7 @@ class StateManager(object):
                 if new_state == stateful_object.state:
                     job_log.info("Opportunistic job %s: skipping (%s already in state %s)" % (
                         oj.pk, stateful_object, new_state))
-                    oj.run = True()
+                    oj.run = True
                     oj.run_at = datetime.datetime.now()
                     oj.save()
                     continue

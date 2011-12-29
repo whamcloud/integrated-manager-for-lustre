@@ -32,6 +32,9 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # A fully qualified domain name like flint02.testnet
     fqdn = models.CharField(max_length = 255, blank = True, null = True)
 
+    # A basic authentication mechanism
+    agent_token = models.CharField(max_length = 64)
+
     # TODO: separate the LNET state [unloaded, down, up] from the host state [created, removed]
     states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
@@ -82,7 +85,16 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         # * Secondly because we want them committed before creating any Jobs which
         #   will try to use them.
         with transaction.commit_on_success():
-            host, created = ManagedHost.objects.get_or_create(address = address_string)
+            try:
+                host = ManagedHost.objects.get(address = address_string)
+            except ManagedHost.DoesNotExist:
+                import uuid
+                # NB: this is NOT A CRYPTOGRAPHICALLY SECURE RANDOM NUMBER,
+                # it is a very lightweight security measure intended primarily
+                # to make the system more robust
+                token = uuid.uuid4().__str__()
+                host = ManagedHost.objects.create(address = address_string, agent_token = token)
+
             monitor, created = Monitor.objects.get_or_create(host = host)
             lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
 
@@ -592,7 +604,7 @@ class SetServerConfStep(Step):
             import socket
             fqdn = socket.getfqdn()
             url = "http://%s/" % fqdn
-        self.invoke_agent(host, "set-server-conf", {"url": url})
+        self.invoke_agent(host, "set-server-conf", {"url": url, 'token': host.agent_token})
 
 
 class RemoveServerConfStep(Step):
