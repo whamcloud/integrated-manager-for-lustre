@@ -178,7 +178,7 @@ def _parse_sys_block():
 
     return block_device_nodes, node_block_devices
 
-def device_scan(args):
+def device_scan(args = None):
     # Map of block devices major:minors to /dev/ path.
     block_device_nodes, node_block_devices = _parse_sys_block()
 
