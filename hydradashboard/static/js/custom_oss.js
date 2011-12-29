@@ -170,16 +170,16 @@ loadOSSUsageSummary = function (file_systems_ids)
   .dataTable(
   {
     "aoColumns": [
+      { "sClass": 'txtleft'},
+      { "sClass": 'txtleft'},
+      { "sClass": 'txtleft'},
       { "sClass": 'txtright'},
       { "sClass": 'txtright'},
       { "sClass": 'txtright'},
       { "sClass": 'txtright'},
       { "sClass": 'txtright'},
       { "sClass": 'txtright'},
-      { "sClass": 'txtright'},
-      { "sClass": 'txtright'},
-      { "sClass": 'txtright'},
-      { "sClass": 'txtright'}
+      { "sClass": 'txtleft'}
     ],
     "iDisplayLength":5,
     "bRetrieve":true,
@@ -206,31 +206,31 @@ loadOSSUsageSummary = function (file_systems_ids)
         {
           if(resValue.status == "OK" || resValue.status == "STARTED")
           {
-            innerContent = "<div class='tblContent txtleft status_ok'>"+resValue.status+"<div>";
+            innerContent = "<div class='tblContent status_ok'>"+resValue.status+"<div>";
           }
           else if(resValue.status == "WARNING" || resValue.status == "RECOVERY")
           {
-            innerContent = "<div class='tblContent txtleft status_warning'>"+resValue.status+"</div>";
+            innerContent = "<div class='tblContent status_warning'>"+resValue.status+"</div>";
           }
-          else if(resValue.status == "STOPPED")
+          else if(resValue.status == "STOPPED" || resValue.status == "OFFLINE")
           {
-            innerContent = "<div class='tblContent txtleft status_stopped'>"+resValue.status+"</div>";
+            innerContent = "<div class='tblContent status_stopped'>"+resValue.status+"</div>";
           }
   
           $('#serverSummaryTbl')
           .dataTable(
           {
             "aoColumns": [
+              { "sClass": 'txtleft'},
+              { "sClass": 'txtleft'},
+              { "sClass": 'txtleft'},
               { "sClass": 'txtright'},
               { "sClass": 'txtright'},
               { "sClass": 'txtright'},
               { "sClass": 'txtright'},
               { "sClass": 'txtright'},
               { "sClass": 'txtright'},
-              { "sClass": 'txtright'},
-              { "sClass": 'txtright'},
-              { "sClass": 'txtright'},
-              { "sClass": 'txtright'}
+              { "sClass": 'txtleft'}
             ],
             "iDisplayLength":5,
             "bRetrieve":true,

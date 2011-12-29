@@ -471,8 +471,11 @@ $(document).ready(function()
   
           ost_file_system_MarkUp = ost_file_system_MarkUp + "<option value="+target_info.id+">"+target_info.filesystem_id+"</option>";
           
-          if(!find_file_system_id(file_systems_ids, target_info.filesystem_id))
-            file_systems_ids.push(target_info.filesystem_id);
+          if(target_info.filesystem_id != null)
+          {
+            if(!find_file_system_id(file_systems_ids, target_info.filesystem_id))
+              file_systems_ids.push(target_info.filesystem_id);
+          }
   
           count += 1; 
         });
@@ -567,7 +570,14 @@ $(document).ready(function()
     
     clearAllIntervals();
     
-    loadOSTSummary(fsId);
+    if(fsId > 0)
+    {
+      loadOSTSummary(fsId);
+    }
+    else
+    {
+      $('#ostSummaryTbl').html("");
+    }
     
     loadTargetGraphs();
     

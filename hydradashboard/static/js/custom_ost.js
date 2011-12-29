@@ -398,7 +398,7 @@ loadOSTSummary = function (fsId)
         {
           innerContent = innerContent +"<td><div class='tblContent txtleft status_warning'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
         }
-        else if(resValue.status == "STOPPED")
+        else if(resValue.status == "STOPPED" || resValue.status == "OFFLINE")
         {
           innerContent = innerContent +"<td><div class='tblContent txtleft status_stopped'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
         }
