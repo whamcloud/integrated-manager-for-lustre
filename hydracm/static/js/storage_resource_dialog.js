@@ -26,15 +26,14 @@ $(document).ready(function() {
 });
 
 function popup_resource(id) {
-  invoke_api_call(api_post, "get_resource/", {'resource_id': id}, handlers = 
+  invoke_api_call(api_post, "get_resource/", {'resource_id': id}, 
+  success_callback = function(data)
   {
-    200 : function(data)
-    {
-      load_resource(data.response);
-      $('#storage_resource_dialog').dialog('open');
-    }
+    load_resource(data.response);
+    $('#storage_resource_dialog').dialog('open');
   },
   error_callback = function(data){
+    common_error_handler(data);
   });
 }
 
@@ -219,35 +218,36 @@ function remove_resource(ev) {
   ev.preventDefault();
 }
 
-function save_alias(new_name) {
-    $("a#alias_save_button").hide();
-    $("a#alias_reset_button").hide();
-    $("img#alias_spinner").show();
-    $("input#alias_edit_entry").attr('disabled', 'disabled');
+    function save_alias(new_name) {
+        $("a#alias_save_button").hide();
+        $("a#alias_reset_button").hide();
+        $("img#alias_spinner").show();
+        $("input#alias_edit_entry").attr('disabled', 'disabled');
 
-    invoke_api_call(api_post, "set_resource_alias/", {'resource_id': resource_id,'alias': new_name}, success_callback = function() {},
-    error_callback = function()
-    {
-      console.log("Error posting new alias");
+        invoke_api_call(api_post, "set_resource_alias/", {'resource_id': resource_id,'alias': new_name}, success_callback = function() {},
+        error_callback = function()
+        {
+          console.log("Error posting new alias");
+          common_error_handler(data);
+        });
+        
+        $("a#alias_save_button").show()
+        $("a#alias_reset_button").show();
+        $("img#alias_spinner").hide();
+        $("input#alias_edit_entry").removeAttr('disabled');
+        
+    }
+    $(document).ready(function() {
+        $("a#alias_reset_button").click(function() {
+            var reset_val = $("input#alias_default_entry").attr('value');
+            $("input#alias_edit_entry").attr('value', reset_val);
+            save_alias("");
+
+        });
+        $("a#alias_save_button").click(function() {
+            var new_name = $("input#alias_edit_entry").attr('value');
+            save_alias(new_name);
+        })
     });
-    
-    $("a#alias_save_button").show()
-    $("a#alias_reset_button").show();
-    $("img#alias_spinner").hide();
-    $("input#alias_edit_entry").removeAttr('disabled');
-}
-
-$(document).ready(function() {
-    $("a#alias_reset_button").click(function() {
-        var reset_val = $("input#alias_default_entry").attr('value');
-        $("input#alias_edit_entry").attr('value', reset_val);
-        save_alias("");
-
-    });
-    $("a#alias_save_button").click(function() {
-        var new_name = $("input#alias_edit_entry").attr('value');
-        save_alias(new_name);
-    })
-});
 
 

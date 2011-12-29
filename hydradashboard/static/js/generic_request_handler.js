@@ -52,6 +52,13 @@ function invoke_api_call(request_type, api_url, api_args, success_callback, erro
   });
 }
 /********************************************************************************
+//Function to display generic error message 
+/********************************************************************************/
+function common_error_handler(data)
+{
+  $.jGrowl(standard_error_msg + data.errors , { sticky: true });
+}
+/********************************************************************************
 // Function to display error message when no handler for success/error code is specified 
 /********************************************************************************/
 function no_handler(api_url, status_code)

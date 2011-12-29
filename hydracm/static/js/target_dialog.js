@@ -22,42 +22,41 @@ target_dialog_open = function(target_id) {
 
   load_resource_graph('target_dialog_devices', target_id);
   
-  invoke_api_call(api_post, "target/", {id: target_id}, handlers = 
+  invoke_api_call(api_post, "target/", {id: target_id}, 
+  success_callback = function(data)
   {
-    200 : function(data)
-    {
-      var target_info = data.response;
-      console.log(target_info);
-      $('#target_dialog').dialog('option', 'title', target_info.label);
+    var target_info = data.response;
+    console.log(target_info);
+    $('#target_dialog').dialog('option', 'title', target_info.human_name);
 
-      var row_counter = 0;
-      var keyval_row = function(k,v) {
-        row_counter += 1;
-        var row_class;
-        if (row_counter % 2 == 0) {
-          row_class = 'even';
-        } else {
-          row_class = 'odd';
-        }
-
-        return "<tr class='" + row_class + "'><th>" + k + ":</th><td>" + v + "</td></tr>"
+    var row_counter = 0;
+    var keyval_row = function(k,v) {
+      row_counter += 1;
+      var row_class;
+      if (row_counter % 2 == 0) {
+        row_class = 'even';
+      } else {
+        row_class = 'odd';
       }
 
-      var properties_markup = "";
-      properties_markup += "<table>";
-      properties_markup += keyval_row("Name", target_info.label);
-      if (target_info.filesystem_name) {
-        properties_markup += keyval_row("Filesystem", target_info.filesystem_name);
-      }
-      properties_markup += keyval_row("Primary server", target_info.primary_server_name);
-      properties_markup += keyval_row("Failover server", target_info.failover_server_name);
-      properties_markup += keyval_row("Started on", target_info.active_host_name);
-      properties_markup += keyval_row("Alerts", alert_indicator_large_markup(target_info.id, target_info.content_type_id));
-      properties_markup += "</table>";
-      $('#target_dialog_properties').html(properties_markup);
+      return "<tr class='" + row_class + "'><th>" + k + ":</th><td>" + v + "</td></tr>"
     }
+
+    var properties_markup = "";
+    properties_markup += "<table>";
+    properties_markup += keyval_row("Name", target_info.human_name);
+    if (target_info.filesystem_name) {
+      properties_markup += keyval_row("Filesystem", target_info.filesystem_name);
+    }
+    properties_markup += keyval_row("Primary server", target_info.primary_server_name);
+    properties_markup += keyval_row("Failover server", target_info.failover_server_name);
+    properties_markup += keyval_row("Started on", target_info.active_host_name);
+    properties_markup += keyval_row("Alerts", alert_indicator_large_markup(target_info.id, target_info.content_type_id));
+    properties_markup += "</table>";
+    $('#target_dialog_properties').html(properties_markup);
   },
   error_callback = function(data){
+    common_error_handler(data);
   });
 
   $('#config_home_target_id').attr('value',target_id);

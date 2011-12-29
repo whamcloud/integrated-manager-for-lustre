@@ -7,6 +7,7 @@ var ERR_COMMON_CREATE_MGT = "Error in Creating MGT: ";
 var ERR_COMMON_CREATE_MDT = "Error in Creating MDT: ";
 var ERR_COMMON_START_OST = "Error in Starting OST: ";
 var ERR_CONFIF_PARAM = "Error in Param Cofiguration: ";
+var ERR_VOLUME_CONFIF = "Error in setting volume cofiguration ";
 
 var ALERT_TITLE = "Configuration Manager";
 var CONFIRM_TITLE = "Configuration Manager";
@@ -22,39 +23,38 @@ $(document).ready(function() {
 
 Transition = function (id, ct, state)
 {
-  invoke_api_call(api_post, "transition_consequences/", {id: id, content_type_id: ct, new_state: state}, handlers = 
+  invoke_api_call(api_post, "transition_consequences/", {id: id, content_type_id: ct, new_state: state}, 
+  success_callback = function(data)  
   {
-    200 : function(data)
-    {
-      var requires_confirmation = false;
+    var requires_confirmation = false;
 
-      var confirmation_markup = "<p>This action will have the following consequences:</p><ul>";
-      if (data.response.length > 1) {
-      $.each(data.response, function(i, consequence_info) {
-        confirmation_markup += "<li>" + consequence_info.description + "</li>";
-        if (consequence_info.requires_confirmation) {
-          requires_confirmation = true;
-        }
-      });
-      confirmation_markup += "</ul>"
-      } else {
-        requires_confirmation = data.response[0].requires_confirmation;
-        confirmation_markup = "<p><strong>" + data.response[0].description + "</strong></p><p>Are you sure?</p>";
+    var confirmation_markup = "<p>This action will have the following consequences:</p><ul>";
+    if (data.response.length > 1) {
+    $.each(data.response, function(i, consequence_info) {
+      confirmation_markup += "<li>" + consequence_info.description + "</li>";
+      if (consequence_info.requires_confirmation) {
+        requires_confirmation = true;
       }
-  
-      if (requires_confirmation) {
-       $('#transition_confirmation_dialog').html(confirmation_markup);
-       $('#transition_confirmation_dialog').dialog('option', 'buttons', {
-         'Cancel': function() {$(this).dialog('close');},
-         'Confirm': function() {TransitionCommit(id, ct, state);$(this).dialog('close');}
-       });
-       $('#transition_confirmation_dialog').dialog('open');
-      } else {
-        TransitionCommit(id, ct, state);
-      }
+    });
+    confirmation_markup += "</ul>"
+    } else {
+      requires_confirmation = data.response[0].requires_confirmation;
+      confirmation_markup = "<p><strong>" + data.response[0].description + "</strong></p><p>Are you sure?</p>";
+    }
+
+    if (requires_confirmation) {
+     $('#transition_confirmation_dialog').html(confirmation_markup);
+     $('#transition_confirmation_dialog').dialog('option', 'buttons', {
+       'Cancel': function() {$(this).dialog('close');},
+       'Confirm': function() {TransitionCommit(id, ct, state);$(this).dialog('close');}
+     });
+     $('#transition_confirmation_dialog').dialog('open');
+    } else {
+      TransitionCommit(id, ct, state);
     }
   },
   error_callback = function(data){
+    common_error_handler(data);
   });
 }
 
@@ -97,14 +97,12 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
       "conf_params": conf_params
   };
   
-  invoke_api_call(api_post, "create_new_fs/", api_params, handlers = 
+  invoke_api_call(api_post, "create_new_fs/", api_params,
+  success_callback = function(data)
   {
-    200 : function(data)
-    {
-      var fs_id = data.response;    
-      if (success) {
-        success(fs_id);
-      }
+    var fs_id = data.response;    
+    if (success) {
+      success(fs_id);
     }
   },
   error_callback = function(data){
@@ -119,13 +117,11 @@ function CreateOSTs(fs_id, ost_lun_ids)
       "ost_lun_ids": ost_lun_ids
   };
   
-  invoke_api_call(api_post, "create_osts/", api_params, handlers = 
+  invoke_api_call(api_post, "create_osts/", api_params,
+  success_callback = function(data)
   {
-    200 : function(data)
-    {
-      //Reload table with latest ost's.
-      LoadTargets_EditFS(fs_id);
-    }
+    //Reload table with latest ost's.
+    LoadTargets_EditFS(fs_id);
   },
   error_callback = function(data){
     jAlert("Error", ALERT_TITLE);
@@ -134,12 +130,10 @@ function CreateOSTs(fs_id, ost_lun_ids)
 
 function CreateMGT(lun_id, callback)
 {
-  invoke_api_call(api_post, "create_mgt/", {'lun_id': lun_id}, handlers = 
+  invoke_api_call(api_post, "create_mgt/", {'lun_id': lun_id},
+  success_callback = function(data)
   {
-    200 : function(data)
-    {
-      callback();
-    }
+    callback();
   },
   error_callback = function(data)
   {
@@ -149,14 +143,12 @@ function CreateMGT(lun_id, callback)
 
 function SetTargetMountStage(target_id, state)
 {
-  invoke_api_call(api_post, "set_target_stage/", {"target_id": target_id, "state": state}, handlers = 
+  invoke_api_call(api_post, "set_target_stage/", {"target_id": target_id, "state": state}, 
+  success_callback = function(data)
   {
-    200 : function(data)
-    {
-        // Note: success here simply means that the operation
-        // was submitted, not that it necessarily completed (that
-        // happens asynchronously)
-    }
+    // Note: success here simply means that the operation
+    // was submitted, not that it necessarily completed (that
+    // happens asynchronously)
   },
   error_callback = function(data)
   {
@@ -172,12 +164,10 @@ function GetConfigurationParam(target_id, kinds, table_id)
       "kinds": kinds
   };
   
-  invoke_api_call(api_post, "get_conf_params/", api_params, handlers = 
+  invoke_api_call(api_post, "get_conf_params/", api_params, 
+  success_callback = function(data)
   {
-    200 : function(data)
-    {
-      CreateTable_FS_Config_Param(data.response, table_id);
-    }
+    CreateTable_FS_Config_Param(data.response, table_id);
   },
   error_callback = function(data)
   {
@@ -248,4 +238,25 @@ function ApplyConfigParam(table_obj,target_id,target_dialog,isFS)
 
     $('#'+target_dialog).dialog('close'); 
   }
+}
+
+save_primary_failover_server = function (confirmation_markup, api_params)
+{
+   $('#transition_confirmation_dialog').html(confirmation_markup);
+   $('#transition_confirmation_dialog').dialog('option', 'buttons', {
+     'Cancel': function() {$(this).dialog('close');},
+     'Confirm': function() {
+       invoke_api_call(api_post, "set_volumes_usable/", api_params, 
+       success_callback = function(data)
+       {
+         jAlert("Update Successful");
+       },
+       error_callback = function(data)
+       {
+         jAlert(ERR_VOLUME_CONFIF);
+       });
+       $(this).dialog('close');
+      }
+   });
+   $('#transition_confirmation_dialog').dialog('open');
 }

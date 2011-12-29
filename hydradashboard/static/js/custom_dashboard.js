@@ -21,6 +21,9 @@
  * 17) $("#heatmap_parameter_select").change();
  * 18) reloadHeatMap(fetchmetric);
 /*****************************************************************************/
+var filesystem_list_content = "";
+var server_list_content = "";
+
 $(document).ready(function()
 {
 /********************************************************************************
@@ -53,6 +56,8 @@ $(document).ready(function()
   load_breadcrumbs = function()
   {		
     $("#breadCrumb0").jBreadCrumb();
+    $("#fsSelect").attr("value", $("#ls_fsId").val());
+    $("#serverSelect").attr("value", $("#ls_ossId").val());
   }
 /******************************************************************************
  * Events for controlling left panel
@@ -197,10 +202,27 @@ $(document).ready(function()
     invoke_api_call(api_get, "listfilesystems", "",
       success_callback = function(data)
       {
-        var innerContent = "<option value=''>Select File System</option>";
+        filesystem_list_content = "<option value=''>Select File System</option>";
+        $('#allFileSystemSummaryTbl').dataTable({
+          "aoColumns": [
+                        { "sClass": 'txtleft'},
+                        { "sClass": 'txtright'},
+                        { "sClass": 'txtright'},
+                        { "sClass": 'txtright'},
+                        { "sClass": 'txtright'}
+                      ],
+                      "iDisplayLength":5,
+                      "bRetrieve":true,
+                      "bFilter":false,
+                      "bLengthChange": false,
+                      "bAutoWidth": true,
+                      "bSort": false,
+                      "bJQueryUI": true
+                    }).fnClearTable();
+        
         $.each(data.response, function(resKey, resValue) 
         {
-          innerContent = innerContent + 
+          filesystem_list_content = filesystem_list_content + 
           "<option value="+resValue.fsid+">"+resValue.fsname+"</option>";
 
           $('#allFileSystemSummaryTbl')
@@ -229,9 +251,12 @@ $(document).ready(function()
             resValue.kbytesfree,
           ]);
         });
-        $('#fsSelect').html(innerContent);
+        $('#fsSelect').html(filesystem_list_content);
+        
+        load_breadcrumbs();
       },
       error_callback = function(data){
+        common_error_handler(data);
       });
 
       db_Bar_SpaceUsage_Data('false');
@@ -242,11 +267,65 @@ $(document).ready(function()
       db_AreaSpline_ioOps_Data('false');
   
       setActiveMenu('dashboard_menu');
-  }   
+  }
+  
+  $("#selectView").live('change', function ()
+  {
+    showView($(this).val());
+  });
+  
+  showView = function(view_value)
+  {
+    var breadCrumbHtml = "<ul style='float: left;'>"+
+    "<li><a href='/dashboard'>Home</a></li>"+
+    "<li>"+get_view_selection_markup()+"</li>"+
+    "<li>" +
+    "<select id='fsSelect' style='display:none'>"+
+    "</select>" +
+    "<select id='serverSelect' style='display:none'>"+
+    "</select>" +
+    "</li>"+
+    "</ul>";
+    $("#breadCrumb0").html(breadCrumbHtml);
+    
+    loadLandingPage();
+    $('#fileSystemDiv').hide();$('#ossInfoDiv').hide();$('#ostInfoDiv').hide();
+    $('#dashboardDiv').slideDown("slow");
+
+    if(view_value == "filesystem_view")
+    {
+      $("#fsSelect").css("display","block");
+      $("#serverSelect").css("display","none");
+    }
+    else if(view_value == "server_view")
+    {
+      server_list_content = "";
+      server_list_content += "<option value=''>Select Server</option>";
+      var api_params = {filesystem_id : ""};
+      invoke_api_call(api_post, "listservers/", api_params, 
+        success_callback = function(data)
+        {
+          $.each(data.response, function(resKey, resValue)
+          {
+            server_list_content += "<option value="+resValue.id+">" + resValue.pretty_name + "</option>";
+          });
+          $("#serverSelect").html(server_list_content);
+          $("#fsSelect").css("display","none");
+          $("#serverSelect").css("display","block");
+          
+          $('#ls_fsId').attr("value", "");
+          $('#ls_ossId').attr("value", "");
+          
+          load_breadcrumbs();
+        },
+        error_callback = function(data){
+        });
+    }
+  }
 /*****************************************************************************
  *  Function to populate info on file system dashboard page
 ******************************************************************************/
-  $("#fsSelect").change(function()
+  $("#fsSelect").live('change', function ()
   {
     if($(this).val()!="")
     {
@@ -258,31 +337,49 @@ $(document).ready(function()
   {
     $('#dashboardDiv').hide();$('#ossInfoDiv').hide();$('#ostInfoDiv').hide();
     $('#fileSystemDiv').slideDown("slow");
+    var ostKindMarkUp = "<option value=''></option>";
+    
     var breadCrumbHtml = "<ul>"+
     "<li><a href='/dashboard'>Home</a></li>"+
-    "<li><a href='/dashboard'>All FileSystems</a></li>"+
-    "<li>"+fsName+"</li>"+
+    "<li>"+get_view_selection_markup()+"</li>"+
+    "<li>"+get_filesystem_list_markup()+"</li>"+
     "<li>"+
-    "<select id='ossSelect'>"+
-    "<option value=''>Select Server</option>";
+    "<select id='ostSelect'>"+
+    "<option value=''>Select Target</option>";
 
-    var api_params = {filesystem_id : fsId};
-    invoke_api_call(api_post, "listservers/", api_params, 
+    var api_params = {
+        "filesystem_id": fsId,
+        "kinds": ["OST","MGT","MDT"],
+        "host_id": ""
+    }; 
+
+    invoke_api_call(api_post, "get_fs_targets/", api_params, 
       success_callback = function(data)
       {
-        $.each(data.response, function(resKey, resValue)
+        var targets = data.response;
+        targets = targets.sort(function(a,b) {return a.label > b.label;})
+  
+        var count = 0;
+        $.each(targets, function(i, target_info) 
         {
-          breadCrumbHtml += "<option value="+resValue.id+">" + resValue.pretty_name + "</option>";
+          breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>"
+  
+          ostKindMarkUp = ostKindMarkUp + "<option value="+target_info.id+">"+target_info.kind+"</option>";
+  
+          count += 1; 
         });
 
-        breadCrumbHtml = breadCrumbHtml +
+        breadCrumbHtml = breadCrumbHtml +       
         "</select>"+
         "</li>"+
         "</ul>";
-        $("#breadCrumb1").html(breadCrumbHtml);
-        $("#breadCrumb1").jBreadCrumb();
+        $("#breadCrumb0").html(breadCrumbHtml);
+        load_breadcrumbs();
+
+        $("#ostKind").html(ostKindMarkUp);
       },
       error_callback = function(data){
+        common_error_handler(data);
       });
 
     resetTimeInterval();
@@ -311,6 +408,14 @@ $(document).ready(function()
 /*******************************************************************************
  * Function to populate info on oss dashboard page
 ********************************************************************************/
+  $("#serverSelect").live('change', function ()
+  {
+    if($(this).val()!="")
+    {
+      loadOSSContent($('#ls_fsId').val(), $('#ls_fsName').val(), $(this).val(), $(this).find('option:selected').text());
+    }   
+  });
+  
   $("#ossSelect").live('change', function ()
   {
     if($(this).val()!="")
@@ -324,22 +429,33 @@ $(document).ready(function()
     $('#dashboardDiv').hide();$('#fileSystemDiv').hide();$('#ostInfoDiv').hide();
     $('#ossInfoDiv').slideDown("slow");
     var ostKindMarkUp = "<option value=''></option>";
+    var ost_file_system_MarkUp = "<option value=''></option>";
     
     var breadCrumbHtml = "<ul>"+
     "<li><a href='/dashboard'>Home</a></li>"+
-    "<li><a href='/dashboard'>All FileSystems</a></li>"+
-    "<li><a href='#fs' onclick='showFSDashboard()'>"+fsName+"</a></li>"+
-    "<li>"+ossName+"</li>"+
-    "<li>"+
+    "<li>"+get_view_selection_markup()+"</li>";
+    if(fsId == "")
+    {
+      breadCrumbHtml += "<li>"+get_server_list_markup()+"</li>";
+    }
+    else
+    {
+      breadCrumbHtml +="<li><a href='#fs' onclick='showFSDashboard()'>"+fsName+"</a></li>"+
+      "<li>"+ossName+"</li>";
+    }
+    breadCrumbHtml += "<li>"+
     "<select id='ostSelect'>"+
     "<option value=''>Select Target</option>";
 
     var api_params = {
-        "filesystem_id": fsId,
+        "filesystem_id": "",
         "kinds": ["OST","MGT","MDT"],
         "host_id": ossId
     }; 
 
+    var file_systems_ids = new Array();
+    var file_count = 0;
+    
     invoke_api_call(api_post, "get_fs_targets/", api_params, 
       success_callback = function(data)
       {
@@ -350,22 +466,36 @@ $(document).ready(function()
         $.each(targets, function(i, target_info) 
         {
           breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>"
-  
+          
           ostKindMarkUp = ostKindMarkUp + "<option value="+target_info.id+">"+target_info.kind+"</option>";
+  
+          ost_file_system_MarkUp = ost_file_system_MarkUp + "<option value="+target_info.id+">"+target_info.filesystem_id+"</option>";
+          
+          if(target_info.filesystem_id != null)
+          {
+            if(!find_file_system_id(file_systems_ids, target_info.filesystem_id))
+              file_systems_ids.push(target_info.filesystem_id);
+          }
   
           count += 1; 
         });
-
+        
         breadCrumbHtml = breadCrumbHtml +      	
         "</select>"+
         "</li>"+
         "</ul>";
-        $("#breadCrumb2").html(breadCrumbHtml);
-        $("#breadCrumb2").jBreadCrumb();
+        $("#breadCrumb0").html(breadCrumbHtml);
+        load_breadcrumbs();
 
         $("#ostKind").html(ostKindMarkUp);
+        $("#ost_file_system").html(ost_file_system_MarkUp);
+        
+        $('#ossSummaryTblDiv').show();
+        $('#serverSummaryTblDiv').show();
+        loadOSSUsageSummary(file_systems_ids);
       },
       error_callback = function(data){
+        common_error_handler(data);
       });
 
     resetTimeInterval();
@@ -374,12 +504,21 @@ $(document).ready(function()
 
     oss_Area_ReadWrite_Data(fsId, startTime, endTime, "Average", "OST", readWriteFetchMatric, 'false');
 
-    loadOSSUsageSummary(fsId);
-
     clearAllIntervals();
 
     $('#ls_ossId').attr("value",ossId);$('#ls_ossName').attr("value",ossName);
     window.location.hash =  "oss";
+  }
+  
+  find_file_system_id = function(file_systems_ids, file_system_id)
+  {
+    for(var x=0; x<file_systems_ids.length; x++)
+    {
+      if(file_systems_ids[x] == file_system_id)
+      {
+        return true;
+      }
+    }
   }
 /*******************************************************************************
  * Function to populate info on ost dashboard page
@@ -391,6 +530,11 @@ $(document).ready(function()
       $("#ostKind").attr("value",$(this).val());
       var ostKind = $("#ostKind").find('option:selected').text();
       
+      if($('#ls_fsId').val() == "")
+      {
+        $("#ost_file_system").attr("value",$(this).val());
+      }
+      
       loadOSTContent($('#ls_fsId').val(), $('#ls_fsName').val(), $('#ls_ossName').val(), $(this).val(), $(this).find('option:selected').text(), ostKind);
     }	
   });
@@ -401,23 +545,39 @@ $(document).ready(function()
     $('#ostInfoDiv').slideDown("slow");
     var breadCrumbHtml = "<ul>"+
     "<li><a href='/dashboard'>Home</a></li>"+
-    "<li><a href='/dashboard'>All FileSystems</a></li>"+
-    "<li><a href='#fs' onclick='showFSDashboard()'>"+fsName+"</a></li>"+
-    "<li><a href='#oss' onclick='showOSSDashboard()'>"+ossName+"</a></li>"+
-    "<li>"+ostName+"</li>"+
+    "<li>"+get_view_selection_markup()+"</li>";
+    if(fsId == "")
+    {
+      breadCrumbHtml += "<li><a href='#oss' onclick='showOSSDashboard()'>"+ossName+"</a></li>";
+      fsId =  $("#ost_file_system").find('option:selected').text();
+    }
+    else
+    {
+      breadCrumbHtml += "<li><a href='#fs' onclick='showFSDashboard()'>"+fsName+"</a></li>";
+      //"<li><a href='#oss' onclick='showOSSDashboard()'>"+ossName+"</a></li>";
+    }
+    
+    breadCrumbHtml += "<li>"+ostName+"</li>"+
     "</ul>";
 
-    $("#breadCrumb3").html(breadCrumbHtml);
-    $("#breadCrumb3").jBreadCrumb();
+    $("#breadCrumb0").html(breadCrumbHtml);
+    load_breadcrumbs();
 
     resetTimeInterval();
 
-		$('#ls_ostId').attr("value",ostId);$('#ls_ostName').attr("value",ostName);$('#ls_ostKind').attr("value",ostKind);
+    $('#ls_ostId').attr("value",ostId);$('#ls_ostName').attr("value",ostName);$('#ls_ostKind').attr("value",ostKind);
     window.location.hash =  "ost";
     
     clearAllIntervals();
     
-    loadOSTSummary(fsId);
+    if(fsId > 0)
+    {
+      loadOSTSummary(fsId);
+    }
+    else
+    {
+      $('#ostSummaryTbl').html("");
+    }
     
     loadTargetGraphs();
     
@@ -520,6 +680,41 @@ $(document).ready(function()
       }
      }
    }
+/******************************************************************************
+ * Function to get markup for breadcrumb view selection
+******************************************************************************/
+  get_view_selection_markup = function()
+  {
+    var view_selection_markup = "<select id='selectView'>";
+    if($("#selectView").val() == "filesystem_view")
+      view_selection_markup += "<option value='filesystem_view' selected>File System View</option>";
+    else
+      view_selection_markup += "<option value='filesystem_view'>File System View</option>";
+    
+    if($("#selectView").val() == "server_view")
+      view_selection_markup += "<option value='server_view' selected>Server View</option>";
+    else
+      view_selection_markup += "<option value='server_view'>Server View</option>";
+    
+    view_selection_markup += "</select>";
+    return view_selection_markup;
+  }
+  
+  get_filesystem_list_markup = function()
+  {
+    var filesystem_list_markup = "<select id='fsSelect'>";
+    filesystem_list_markup += filesystem_list_content;
+    filesystem_list_markup += "</select>";
+    return filesystem_list_markup;
+  }
+  
+  get_server_list_markup = function()
+  {
+    var server_list_markup = "<select id='serverSelect'>";
+    server_list_markup += server_list_content;
+    server_list_markup += "</select>";
+    return server_list_markup;
+  }
 /******************************************************************************
  * Function to show zoom popup dialog
 ******************************************************************************/  

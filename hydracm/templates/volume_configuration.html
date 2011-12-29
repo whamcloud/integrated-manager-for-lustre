@@ -6,17 +6,78 @@
     var oVolumeConfiguration = $('#volume_configuration').dataTable( {
       "bProcessing": true,
       "bJQueryUI": true,
-      iDisplayLength: 25,
+      "iDisplayLength": 25,
+      "bAutoWidth":false,
       "oLanguage": {
-          "sEmptyTable": "No Volumes to display"
+        "sEmptyTable": "No Volumes to display"
       },
       "aoColumns": [
         { "sClass": 'txtleft' },
         { "sClass": 'txtleft' },
         { "sClass": 'txtleft' },
         { "sClass": 'txtright' },
-        { "sClass": 'txtright' }
+        { "sClass": 'txtright' },
+        { "bVisible": false },
+        { "bVisible": false },
       ]
+    });
+
+    $("#btnApplyConfig").click(function ()
+	{
+      var oSetting = $('#volume_configuration').dataTable().fnSettings();
+      var confirmation_markup = "This action will have the following consequences: <br /><br />";
+      var api_params = {};
+      var alun_ids = [];
+      var aprimary_host_ids = [];
+      var asecondary_host_ids = [];
+      for (var i=1, iLen=oSetting.aoData.length; i<iLen; i++) 
+      {
+        if (oSetting.aoData[i]._aData[5] != oSetting.aoData[i]._aData[6])
+        {
+          params = oSetting.aoData[i]._aData[6].split("_") 
+          alun_ids.push(parseInt(params[0]));
+          aprimary_host_ids.push(parseInt(params[1]));
+          asecondary_host_ids.push(parseInt(params[2]));
+          confirmation_markup += "- Volume configuration change for "+oSetting.aoData[i]._aData[0]+"<br />";    
+        }
+      }
+      if(alun_ids.length > 0)
+      {
+      	api_params = {'lun_ids': alun_ids, 'primary_host_ids': aprimary_host_ids, 'secondary_host_ids': asecondary_host_ids};
+      	save_primary_failover_server(confirmation_markup, api_params);
+      }
+	});
+
+    $('select[id *="_host"]').live('change', function ()
+    {
+      var oSetting = $('#volume_configuration').dataTable().fnSettings();
+      //Note : Lun_id i storage as part of select control id E.g. primary_host_<Lun_id>
+      var Lun_id = $(this).attr("id").split("_")[2];
+      for (var i=1, iLen=oSetting.aoData.length; i<iLen; i++)
+      {
+        var rowParams = oSetting.aoData[i]._aData[6].split("_");
+        var row_lun_id = rowParams[0];
+        var old_primary_host_id = rowParams[1];
+        var old_secondary_host_id =  rowParams[2];
+        var new_primary_host_id;
+        var new_secondary_host_id;
+        if($(this).attr("id").indexOf("primary_host") == 0)
+        {
+          new_primary_host_id  = $(this).val();
+          new_secondary_host_id = old_secondary_host_id;
+        }
+        else
+        {
+          new_secondary_host_id = $(this).val();
+          new_primary_host_id = old_primary_host_id  
+        }
+        if (Lun_id == row_lun_id && (old_primary_host_id != new_primary_host_id || old_secondary_host_id != new_secondary_host_id))
+        { 
+          oSetting.aoData[i]._aData[6] = Lun_id + '_' + 
+                                         new_primary_host_id + '_' +
+                                         new_secondary_host_id;
+        }
+      }
     });
   });
 </script>
@@ -25,14 +86,20 @@
 <table class="display tight_lines" id="volume_configuration" width="100%">
   <thead>
     <tr>
-      <th width="19%">Name</th>
-      <th width="15%">Primary server</th>
-      <th width="19%">Failover server</th>
-      <th width="17%">Size</th>
-      <th width="17%">Status</th>
+      <th width="20%">Name</th>
+      <th width="25%">Primary server</th>
+      <th width="25%">Failover server</th>
+      <th width="10%">Size</th>
+      <th width="20%">Status</th>
+      <th></th>
+      <th></th>
     </tr>
   </thead>
   <tbody id="volume_configuration_content">
-    <tr><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
   </tbody>
 </table>
+<div align="right">
+  <button type="button" id="btnApplyConfig">Apply</button>
+  <button type="button" id="btnCancelConfig">Cancel</button>
+</div>

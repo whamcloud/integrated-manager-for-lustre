@@ -1,6 +1,5 @@
 import random
 import sys, time
-import copy
 
 from django.contrib.contenttypes.models import ContentType
 from django.test.simple import DjangoTestSuiteRunner
@@ -25,16 +24,6 @@ class GenStatsDict(dict):
         return newval
 
 class Generator(object):
-    @classmethod
-    def autocreate_ds(cls, db, key, val):
-        # FIXME: exercise other DS types
-        ct = ContentType.objects.get(model="Counter")
-        ds_klass = ct.model_class()
-
-        db.datasources.add(ds_klass.objects.create(name=key,
-                                                   heartbeat=db.step * 2,
-                                                   database=db))
-
     def __init__(self, fs, **kwargs):
         self.create_entity(fs)
         self.init_stats(**kwargs)

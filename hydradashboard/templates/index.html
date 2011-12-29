@@ -42,46 +42,56 @@
       <input type="hidden" id="ls_ostId" />
       <input type="hidden" id="ls_ostKind" />
       <select id="ostKind" style="display:none">
-      </select>     
+      </select>
+      <select id="ost_file_system" style="display:none">
+      </select>
+      	<!-- Breadcrumb menu and time interval selection - Start -->
+    	<table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue;">
+          <tr style="background-color: #ccc">
+            <td width="50%">
+              <div class="breadCrumbHolder module">
+               <div id="breadCrumb0" class="breadCrumb module">
+                 <ul style="float: left;">
+                   <li><a href="/dashboard">Home</a></li>
+                   <li>
+                     <select id="selectView">
+                       <option value="filesystem_view" selected="selected">File System View</option>
+                       <option value="server_view">Server View</option>
+                     </select>
+                   </li>
+                   <li>
+                     <select id="fsSelect">
+                     </select>
+                   </li>
+                 </ul>
+               </div>
+              </div>
+            </td>
+            <td width="50%">
+              <div class="timeint">
+                <input id="db_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>
+                &nbsp;&nbsp;<font color="black">|</font> 
+                Time Interval: &nbsp;
+                <select id="intervalSelect">
+                  <option value="">Select</option>
+                  <option value="minutes">Minutes</option>
+                  <option value="hour">Hour</option>
+                  <option value="day">Day</option>
+                  <option value="week">Week</option>
+                </select> 
+                &nbsp;&nbsp;<font color="black">|</font>
+                Unit: &nbsp; 
+                <select id="unitSelect">
+                  <option value=''>Select</option>
+                </select>
+              </div>
+            </td>
+          </tr>
+        </table>
+        <!-- Breadcrumb menu nad time interval selection - End -->
+             
         <!-- Dashboard Div - Start -->
         <div id="dashboardDiv">
-          <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue;">
-            <tr style="background-color: #ccc">
-              <td width="50%">
-                <div class="breadCrumbHolder module">
-	                <div id="breadCrumb0" class="breadCrumb module">
-	                  <ul style="float: left;">
-	                    <li><a href="/dashboard">All FileSystems</a></li>
-	                    <li>
-	                      <select id="fsSelect">
-	                        <option value="">Select File System</option>
-	                      </select>
-	                    </li>
-	                  </ul>
-	                </div>
-                </div>
-              </td>
-              <td width="50%">
-                <div class="timeint">
-                  <input id="db_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>
-                  &nbsp;&nbsp;<font color="black">|</font> 
-                  Time Interval: &nbsp;
-                  <select id="intervalSelect">
-                    <option value="">Select</option>
-                    <option value="minutes">Minutes</option>
-                    <option value="hour">Hour</option>
-                    <option value="day">Day</option>
-                    <option value="week">Week</option>
-                  </select> 
-                  &nbsp;&nbsp;<font color="black">|</font>
-                  Unit: &nbsp; 
-                  <select id="unitSelect">
-                    <option value=''>Select</option>
-                  </select>
-                </div>
-              </td>
-            </tr>
-          </table>
           <table class='chart_grid'>
             <tr>
               <td valign="top"  align="center">
@@ -146,35 +156,8 @@
 
           <!-- FileSystem Div - Start -->
           <div id="fileSystemDiv" style="display: none">
-            <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue">
-              <tr style="background-color: #cccccc;">
-                <td width="50%">
-                  <div class="breadCrumbHolder module">
-					          <div id="breadCrumb1" class="breadCrumb module">
-					          </div>
-                  </div>
-                </td>
-                <td width="50%">
-                  <div class="timeint">
-                    <input id="fs_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>
-                    &nbsp;&nbsp;<font color="black">|</font>
-                    Time Interval:&nbsp;
-			              <select id="intervalSelect">
-			                <option value="">Select</option>
-			                <option value="minutes">Minutes</option>
-			                <option value="hour">Hour</option>
-			                <option value="day">Day</option>
-			                <option value="week">Week</option>
-			              </select><font color="black">|</font> &nbsp;Unit:&nbsp;
-			              <select id="unitSelect">
-			                <option value=''>Select</option>
-			              </select>
-                  </div>
-                </td>
-				      </tr>
-            </table>
             <table class='chart_grid'>
-				      <tr>
+			  <tr>
                 <td valign="top" align="center" style="font-family: Verdana, Arial, Helvetica, sans-serif;">
                   <table id="fileSystemSummaryTbl" width="100%">
                   </table>
@@ -230,39 +213,33 @@
 
           <!-- FileSystem Servers Div - Start -->
           <div id="ossInfoDiv" style="display: none">
-            <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue">
-              <tr style="background-color: #cccccc;">
-                <td width="50%">
-                  <div class="breadCrumbHolder module">
-                    <div id="breadCrumb2" class="breadCrumb module"></div>
-                  </div>
-                </td>
-                <td width="50%">
-                  <div class="timeint">
-                    <input id="oss_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>
-                    &nbsp;&nbsp;<font color="black">|</font>
-                    Time Interval: &nbsp;
-                    <select id="intervalSelect">
-                      <option value="">Select</option>
-					            <option value="minutes">Minutes</option>
-					            <option value="hour">Hour</option>
-					            <option value="day">Day</option>
-					            <option value="week">Week</option>
-                    </select> 
-                    &nbsp;&nbsp;<font color="black">|</font> 
-					          Unit:&nbsp; 
-					          <select id="unitSelect">
-					            <option value=''>Select</option>
-					          </select>
-                  </div>
-                </td>
-              </tr>
-            </table>
             <table class='chart_grid'>
               <tr>
-                <td>
-                  <table id="ossSummaryTbl" width="40%" align="left">
-                  </table>
+                <td colspan="4">
+                  <div id="ossSummaryTblDiv" style="display: none">
+                  	<table id="ossSummaryTbl" width="40%" align="left">
+                  	</table>
+                  </div>
+                  <div id="serverSummaryTblDiv" style="display: none">
+	                  <table id="serverSummaryTbl" class="display">
+	                  	<thead>
+                      	  <tr>
+                      	    <th>File System</th>
+                        	<th>MGS</th>
+                        	<th>MDS</th>
+                        	<th>Total Capacity</th>
+                        	<th>Total Free</th>
+                        	<th>Files Total</th>
+                        	<th>Files Free</th>
+                        	<th>Standby OSS</th>
+                        	<th>Total OST</th>
+                        	<th>Status</th>
+                      	  </tr>
+                    	</thead>
+                    	<tbody>
+                    	</tbody>
+	                  </table>
+	              </div>
                 </td>
                 <td></td>
                 <td></td>
@@ -290,32 +267,6 @@
            
           <!-- Filesystem Targets  Div - Start -->
           <div id="ostInfoDiv" style="display: none">
-            <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue">
-              <tr style="background-color: #cccccc;">
-				        <td width="50%">
-				          <div class="breadCrumbHolder module">
-				            <div id="breadCrumb3" class="breadCrumb module"></div>
-				          </div>
-				        </td>
-				        <td width="50%">
-				          <div class="timeint">
-				            <input id="ost_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>&nbsp;&nbsp;<font color="black">|</font> 
-				            Time Interval: &nbsp; 
-				            <select id="intervalSelect">
-				              <option value="">Select</option>
-				              <option value="minutes">Minutes</option>
-				              <option value="hour">Hour</option>
-				              <option value="day">Day</option>
-				              <option value="week">Week</option>
-				            </select> &nbsp; <font color="black">|</font>
-				            Unit:&nbsp; 
-				            <select id="unitSelect">
-				              <option value=''>Select</option>
-				            </select>
-				          </div>
-				        </td>
-              </tr>   
-            </table>
             <table class='chart_grid'>
               <tr>
                 <td>

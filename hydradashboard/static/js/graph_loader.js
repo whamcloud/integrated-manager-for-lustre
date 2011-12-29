@@ -584,6 +584,7 @@ db_Bar_SpaceUsage_Data = function(isZoom)
       chart = new Highcharts.Chart(obj_db_Bar_SpaceUsage_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 
@@ -648,6 +649,7 @@ db_Line_connectedClients_Data = function(isZoom)
       chart = new Highcharts.Chart(obj_db_Line_connectedClients_Data);
    },
    error_callback = function(data){
+     common_error_handler(data);
    });
 }
 
@@ -695,6 +697,7 @@ db_LineBar_CpuMemoryUsage_Data = function(isZoom)
       chart = new Highcharts.Chart(obj_db_LineBar_CpuMemoryUsage_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
@@ -760,6 +763,7 @@ db_Area_ReadWrite_Data = function(isZoom)
       chart = new Highcharts.Chart(obj_db_Area_ReadWrite_Data);
   },
   error_callback = function(data){
+    common_error_handler(data);
   });
 }
 /*****************************************************************************
@@ -816,6 +820,7 @@ db_Area_mdOps_Data = function(isZoom)
       chart = new Highcharts.Chart(obj_db_Area_mdOps_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
@@ -911,6 +916,7 @@ db_AreaSpline_ioOps_Data = function(isZoom)
       chart = new Highcharts.Chart(obj_db_AreaSpline_ioOps_Data);
     },
     error_callback = function(data){
+      common_error_handler(data);
     });
 }
 /*****************************************************************************
