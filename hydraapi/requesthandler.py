@@ -157,18 +157,6 @@ class extract_request_args:
 
 
 class APIResponse:
-    HTTP_SUCCESS_CODES = dict(ALL_OK = 200,
-                              CREATED = 201,
-                              ACCEPTED = 202,
-                              NON_AUTH = 203,
-                              DELETED = 204,
-                              RESET_CONTENT = 205,
-                              PARTIAL_CONTENT = 206)
-    content = None
-
     def __init__(self, content, status):
-        status = self.HTTP_SUCCESS_CODES.get(self.HTTP_SUCCESS_CODES.ALL_OK)
-        if status not in self.HTTP_SUCCESS_CODES.values():
-            raise Exception("Invalid HTTP success status code: unable to create APIResponse")
         self.content = content
         self.status = status
