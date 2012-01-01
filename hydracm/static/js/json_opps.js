@@ -100,7 +100,7 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
   invoke_api_call(api_post, "create_new_fs/", api_params,
   success_callback = function(data)
   {
-    var fs_id = data.response;    
+    var fs_id = data.response.id;    
     if (success) {
       success(fs_id);
     }
