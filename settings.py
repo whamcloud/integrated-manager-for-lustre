@@ -297,8 +297,7 @@ SERVER_HTTP_URL = None
 # LOG_SERVER_HOSTNAME = "mylogserver.mydoman"
 LOG_SERVER_HOSTNAME = None
 
-# Optionally use HTTP auditing
-HTTP_AUDIT = False
+HTTP_AUDIT = True
 
 try:
     from production_version import VERSION
