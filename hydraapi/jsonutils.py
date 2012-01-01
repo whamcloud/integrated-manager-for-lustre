@@ -63,7 +63,7 @@ def render_to_json(**jsonargs):
             try:
                 from hydraapi.requesthandler import APIResponse
                 result = f(wrapped_self, request, *args, **kwargs)
-                if type(result) == APIResponse:
+                if isinstance(result, APIResponse):
                     r.status_code = result.status
                     result = result.content
             except Exception as e:
