@@ -367,44 +367,17 @@ class UpdateScan(AnonymousRequestHandler):
 
         response = {'plugins': {}}
         for plugin_name, response_dict in plugins.items():
-            from kombu import BrokerConnection, Exchange, Queue
-            import settings
+            from configure.lib.storage_plugin.messaging import PluginRequest, PluginResponse
 
-            # TODO connection caching
-            exchange = Exchange("plugin_data", "direct", durable = True)
-            with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:
-                conn.connect()
-                # If we got some data from this plugin on the agent, send it to the
-                # plugin on the server
-                #api_log.info("Data for %s = %s" % (plugin_name, data))
-                api_log.info("Plugin responses for %s from %s: %s" % (plugin_name, host.fqdn, len(response_dict)))
-                for request_id, response_data in response_dict.items():
-                    response_routing_key = "plugin_data_response_%s_%s" % (plugin_name, host.fqdn)
-                    with conn.Producer(exchange = exchange, serializer = 'json', routing_key = response_routing_key) as producer:
-                        producer.publish({'id': request_id, 'data': response_data})
+            # If the agent returned any responses for requests to the plugin, add
+            # them to server queues
+            for request_id, response_data in response_dict.items():
+                PluginResponse.send(plugin_name, host.fqdn, request_id, response_data)
 
-                # See if there are any requests for this agent plugin
-                request_routing_key = "plugin_data_request_%s_%s" % (plugin_name, host.fqdn)
-
-                requests = []
-
-                def handle_request(body, message):
-                    api_log.info("UpdateScan %s: Passing on request %s" % (host.fqdn, body['id']))
-                    requests.append(body)
-                    message.ack()
-
-                request_queue = Queue(request_routing_key, exchange = exchange, routing_key = request_routing_key)
-                request_queue(conn.channel()).declare()
-                with conn.Consumer([request_queue], callbacks=[handle_request]):
-                    from socket import timeout
-                    try:
-                        conn.drain_events(timeout = 0.1)
-                    except timeout:
-                        pass
-
-                api_log.info("Got %s requests for %s" % (len(requests), host.fqdn))
-                if len(requests) > 0:
-                    response['plugins'][plugin_name] = requests
+            # If any requests have been added to server queues for this plugin, pass
+            # them to the agent.
+            requests = PluginRequest.receive_all(plugin_name, host.fqdn)
+            response['plugins'][plugin_name] = requests
 
         return response
 
