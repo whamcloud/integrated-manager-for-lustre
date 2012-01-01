@@ -30,6 +30,58 @@ def _subclasses(obj):
     return sc_recr
 
 
+class Command(models.Model):
+    """A command is something a user gives, like "Start this filesystem".  Commands
+    may be composed of multiple jobs.  The jobs for a command may be created after
+    the command is created."""
+    jobs_created = models.BooleanField(default = False)
+    jobs = models.ManyToManyField('Job')
+
+    complete = models.BooleanField(default = False)
+    errored = models.BooleanField(default = False)
+    cancelled = models.BooleanField(default = False)
+    message = models.CharField(max_length = 512)
+
+    def to_dict(self):
+        jobs = None
+        if self.jobs_created:
+            jobs = [j.id for j in self.jobs.all()],
+        return {
+                "complete": self.complete,
+                "errored": self.errored,
+                "cancelled": self.cancelled,
+                "jobs": jobs,
+                "message": self.message
+               }
+
+    @classmethod
+    def set_state(cls, object, state, message = None):
+        if object.state == state:
+            raise RuntimeError("%s is already in state %s" % (object, state))
+
+        if not message:
+            old_state = object.state
+            new_state = state
+            route = object.get_route(old_state, new_state)
+            from configure.lib.state_manager import Transition
+            job = Transition(object, route[-2], route[-1]).to_job()
+            message = job.description()
+
+        with transaction.commit_on_success():
+            command = Command.objects.create(message = message)
+
+        # FIXME: Troublesome: if we crash here, the Command will be
+        # in the DB, but the jobs will never make it.
+
+        from configure.lib.state_manager import StateManager
+        StateManager.set_state(object, state, command.pk)
+
+        return command
+
+    class Meta:
+        app_label = 'configure'
+
+
 class OpportunisticJob(models.Model):
     job = PickledObjectField()
     run = models.BooleanField(default = False)
@@ -274,6 +326,7 @@ class StateWriteLock(StateLock):
 
 
 class Job(models.Model):
+    """A job is an operation on a particular object, for example starting a filesystem target."""
     __metaclass__ = DowncastMetaclass
 
     states = ('pending', 'tasked', 'complete', 'completing', 'cancelling', 'paused')

@@ -346,13 +346,14 @@ class UpdateScan(AnonymousRequestHandler):
     @extract_request_args('fqdn', 'token', 'update_scan', 'plugins')
     def run(self, request, fqdn, token, update_scan, plugins):
         from hydraapi import api_log
+        api_log.debug("UpdateScan %s" % fqdn)
 
         from configure.models import ManagedHost
         from django.shortcuts import get_object_or_404
         host = get_object_or_404(ManagedHost, fqdn = fqdn)
 
         if token != host.agent_token:
-            api_log.error("Invalid token for host %s" % token)
+            api_log.error("Invalid token for host %s: %s" % (fqdn, token))
             from hydraapi.requesthandler import APIResponse
             return APIResponse({}, 403)
 

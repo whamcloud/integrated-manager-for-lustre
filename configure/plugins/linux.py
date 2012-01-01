@@ -180,6 +180,8 @@ class Linux(StoragePlugin):
     # call to update_scan, or maybe we could give them a separate function for that.
     def initial_scan(self, root_resource):
         host = ManagedHost.objects.get(pk=root_resource.host_id)
+        if host.state == 'unconfigured':
+            raise RuntimeError("Not yet ready to get device info for host %s" % host)
 
         self.agent = Agent(host = host, log = self.log)
         #devices = self.agent.invoke("device-scan")

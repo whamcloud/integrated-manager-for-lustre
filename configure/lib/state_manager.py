@@ -134,6 +134,18 @@ class StateManager(object):
         else:
             assert job.state == 'complete'
 
+        from configure.models import Command
+        for command in Command.objects.filter(jobs = job):
+            jobs = command.jobs.all().values('state', 'errored', 'cancelled')
+            if set([j['state'] for j in jobs]) == set(['complete']):
+                if True in [j['errored'] for j in jobs]:
+                    command.errored = True
+                elif True in [j['cancelled'] for j in jobs]:
+                    command.cancelled = True
+
+                command.complete = True
+                command.save()
+
         # FIXME: we use cancelled to indicate a job which didn't run
         # because its dependencies failed, and also to indicate a job
         # that was deliberately cancelled by the user.  We should
@@ -213,7 +225,7 @@ class StateManager(object):
         for dependency in job.get_deps().all():
             if not dependency.satisfied():
                 job_log.info("_add_job: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
-                self._set_state(dependency.get_stateful_object(), dependency.preferred_state)
+                self._set_state(dependency.get_stateful_object(), dependency.preferred_state, None)
 
         job_log.info("_add_job: done checking dependencies")
         # Important: the Job must not be committed until all
@@ -228,7 +240,7 @@ class StateManager(object):
         Job.run_next()
 
     @classmethod
-    def set_state(cls, instance, new_state):
+    def set_state(cls, instance, new_state, command_id = None):
         """Add a 0 or more Jobs to have 'instance' reach 'new_state'"""
         import configure.tasks
         from django.contrib.contenttypes.models import ContentType
@@ -238,7 +250,8 @@ class StateManager(object):
         return configure.tasks.set_state.delay(
                 ContentType.objects.get_for_model(instance).natural_key(),
                 instance.id,
-                new_state)
+                new_state,
+                command_id)
 
     def get_transition_consequences(self, instance, new_state):
         """For use in the UI, for warning the user when an
@@ -290,9 +303,10 @@ class StateManager(object):
             })
         return depended_jobs
 
-    def _set_state(self, instance, new_state):
-        """Return a Job or None if the object is already in new_state"""
-        from configure.models import StatefulObject
+    def _set_state(self, instance, new_state, command_id):
+        """Return a Job or None if the object is already in new_state.
+        command_id should refer to a command instance or be None."""
+        from configure.models import StatefulObject, Command
         assert(isinstance(instance, StatefulObject))
         job_log.debug("_set_state %s %s" % (instance, new_state))
 
@@ -308,6 +322,17 @@ class StateManager(object):
             self.expected_states[wl.locked_item] = wl.end_state
 
         if new_state == self.get_expected_state(instance):
+            if command_id:
+                command = Command.objects.get(pk = command_id)
+                command.jobs_created = True
+                command.complete = True
+                command.save()
+                if instance.state != new_state:
+                    # This is a no-op because of an in-progress Job:
+                    job = StateWriteLock.filter_by_locked_item.filter(~Q(job__state = 'complete')).latest('id').job
+                    command.jobs.add(job)
+
+            # Pick out whichever job made it so, and attach that to the Command
             return None
 
         self.deps = set()
@@ -364,6 +389,10 @@ class StateManager(object):
         # Important: the Job must not land in the database until all
         # its dependencies and locks are in.
         with transaction.commit_on_success():
+            command = None
+            if command_id:
+                command = Command.objects.get(pk = command_id)
+
             for d in self.deps:
                 job = d.to_job()
                 job.save()
@@ -371,6 +400,11 @@ class StateManager(object):
                 job.create_dependencies()
                 jobs[d] = job
                 job_log.debug("  dep %s (Job %s)" % (d, job.pk))
+                if command:
+                    command.jobs.add(job)
+            if command:
+                command.jobs_created = True
+                command.save()
 
         from configure.models import Job
         Job.run_next()

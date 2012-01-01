@@ -11,9 +11,10 @@ import settings
 setup_environ(settings)
 
 from configure.models import ManagedHost
-from configure.lib.state_manager import (StateManager)
+from configure.models import Command
 from requesthandler import (AnonymousRequestHandler,
                             extract_request_args)
+from hydraapi.requesthandler import APIResponse
 
 
 class TestHost(AnonymousRequestHandler):
@@ -39,16 +40,16 @@ class RemoveHost(AnonymousRequestHandler):
     @extract_request_args('hostid')
     def run(self, request, hostid):
         host = ManagedHost.objects.get(id = hostid)
-        transition_job = StateManager.set_state(host, 'removed')
-        return {'hostid': hostid, 'job_id': transition_job.task_id, 'status': transition_job.status}
+        command = Command.set_state(host, 'removed')
+        return APIResponse(command.to_dict(), 202)
 
 
 class SetLNetStatus(AnonymousRequestHandler):
     @extract_request_args('hostid', 'state')
     def run(self, request, hostid, state):
         host = ManagedHost.objects.get(id = hostid)
-        transition_job = StateManager.set_state(host, state)
-        return {'hostid': hostid, 'job_id': transition_job.task_id, 'status': transition_job.status}
+        command = Command.set_state(host, state)
+        return APIResponse(command.to_dict(), 202)
 
 
 class SetTargetMountStage(AnonymousRequestHandler):
@@ -56,28 +57,26 @@ class SetTargetMountStage(AnonymousRequestHandler):
     def run(self, request, target_id, state):
         from configure.models import ManagedTarget
         target = ManagedTarget.objects.get(id=target_id)
-        transition_job = StateManager.set_state(target.downcast(), state)
-        return {'target_id': target_id, 'job_id': transition_job.task_id, 'status': transition_job.status}
+        command = Command.set_state(target.downcast(), state)
+        return APIResponse(command.to_dict(), 202)
 
 
 class RemoveFileSystem(AnonymousRequestHandler):
     @extract_request_args('filesystemid')
     def run(self, request, filesystemid):
         from configure.models import ManagedFilesystem
-        from configure.models.state_manager import StateManager
         fs = ManagedFilesystem.objects.get(id = filesystemid)
-        transition_job = StateManager.set_state(fs, 'removed')
-        return {'filesystemid': filesystemid, 'job_id': transition_job.task_id, 'status': transition_job.status}
+        command = Command.set_state(fs, 'removed')
+        return APIResponse(command.to_dict(), 202)
 
 
 class RemoveClient(AnonymousRequestHandler):
     @extract_request_args('clientid')
     def run(self, request, clientid):
         from configure.models import ManagedTargetMount
-        from configure.models.state_manager import StateManager
         mtm = ManagedTargetMount.objects.get(id = clientid)
-        transition_job = StateManager.set_state(mtm, 'removed')
-        return {'clientid': clientid, 'job_id': transition_job.task_id, 'status': transition_job.status}
+        command = Command.set_state(mtm, 'removed')
+        return APIResponse(command.to_dict(), 202)
 
 
 class GetJobStatus(AnonymousRequestHandler):
@@ -231,6 +230,8 @@ class SetVolumePrimary(AnonymousRequestHandler):
             if primary_host_id == secondary_host_id:
                 raise AssertionError('Primary host and Secondary host can not be same for a volume lun')
             volume_lun = get_object_or_404(Lun, pk = lun_id)
+            from hydraapi import api_log
+            api_log.info("primary_host_id = %s" % primary_host_id)
             primary_host = get_object_or_404(ManagedHost, pk = primary_host_id)
             filter_kargs = {'lun': volume_lun, 'host': primary_host}
             primary_lun_node = LunNode.objects.filter(**filter_kargs)
@@ -309,10 +310,9 @@ class CreateNewFilesystem(AnonymousRequestHandler):
         # Important that a commit happens here so that the targets
         # land in DB before the set_state jobs act upon them.
 
-        from configure.lib.state_manager import StateManager
-        StateManager.set_state(fs, 'available')
+        Command.set_state(fs, 'available', "Creating filesystem %s" % fsname)
 
-        return fs.pk
+        return APIResponse({'id': fs.id}, 201)
 
 
 def create_fs(mgs_id, fsname, conf_params):
@@ -335,8 +335,9 @@ class CreateMGT(AnonymousRequestHandler):
         from django.db import transaction
         transaction.commit()
 
-        from configure.lib.state_manager import StateManager
-        StateManager.set_state(mgt, 'mounted')
+        from configure.models import Command
+        command = Command.set_state(mgt, 'mounted', "Creating MGT")
+        return APIResponse(command.to_dict(), 202)
 
 
 def create_target(lun_id, target_klass, **kwargs):
@@ -363,17 +364,22 @@ class CreateOSTs(AnonymousRequestHandler):
     @extract_request_args('filesystem_id', 'ost_lun_ids')
     def run(self, request, filesystem_id, ost_lun_ids):
         from configure.models import ManagedFilesystem, ManagedOst
+        from django.db import transaction
+
         fs = ManagedFilesystem.objects.get(id=filesystem_id)
         osts = []
-        for lun_id in ost_lun_ids:
-            osts.append(create_target(lun_id, ManagedOst, filesystem = fs))
-
-        from django.db import transaction
-        transaction.commit()
+        with transaction.commit_on_success():
+            for lun_id in ost_lun_ids:
+                osts.append(create_target(lun_id, ManagedOst, filesystem = fs))
 
         from configure.lib.state_manager import StateManager
+        from configure.models import Command
+        with transaction.commit_on_success():
+            command = Command(message = "Creating OSTs")
+            command.save()
         for target in osts:
-            StateManager.set_state(target, 'mounted')
+            StateManager.set_state(target, 'mounted', command.pk)
+        return APIResponse(command.to_dict(), 202)
 
 
 class SetTargetConfParams(AnonymousRequestHandler):
@@ -750,12 +756,12 @@ class TransitionConsequences(AnonymousRequestHandler):
 class Transition(AnonymousRequestHandler):
     @extract_request_args('id', 'content_type_id', 'new_state')
     def run(self, request, id, content_type_id, new_state):
-        from configure.lib.state_manager import StateManager
         klass = ContentType.objects.get_for_id(content_type_id).model_class()
         instance = klass.objects.get(pk = id)
-        StateManager.set_state(instance, new_state)
 
-        return None
+        from configure.models import Command
+        command = Command.set_state(instance, new_state)
+        return APIResponse(command.to_dict(), 202)
 
 
 class ObjectSummary(AnonymousRequestHandler):

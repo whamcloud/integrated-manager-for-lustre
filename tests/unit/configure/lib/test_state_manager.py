@@ -1,5 +1,5 @@
 
-from tests.configure.helper import JobTestCase, MockAgent
+from tests.unit.configure.helper import JobTestCase, MockAgent
 
 
 class JobTestCaseWithHost(JobTestCase):
@@ -17,6 +17,38 @@ class JobTestCaseWithHost(JobTestCase):
         self.host = ManagedHost.create_from_string(self.mock_servers.items()[0][0])
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).lnetconfiguration.state, 'nids_known')
+
+
+class TestTransitionsWithCommands(JobTestCaseWithHost):
+    def test_onejob(self):
+        # Our self.host is initially lnet_up
+        from configure.models import ManagedHost
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
+
+        from configure.models import Command
+
+        # This tests a state transition which is done by a single job
+        command_id = Command.set_state(self.host, 'lnet_down').id
+        self.assertEqual(Command.objects.get(pk = command_id).jobs_created, True)
+        self.assertEqual(Command.objects.get(pk = command_id).complete, True)
+        self.assertEqual(Command.objects.get(pk = command_id).jobs.count(), 1)
+
+        command_id = Command.set_state(self.host, 'lnet_down').id
+        self.assertEqual(Command.objects.get(pk = command_id).jobs_created, True)
+        self.assertEqual(Command.objects.get(pk = command_id).complete, True)
+        self.assertEqual(Command.objects.get(pk = command_id).jobs.count(), 0)
+
+    def test_2steps(self):
+        from configure.models import ManagedHost
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
+
+        # This tests a state transition which requires two jobs acting on the same object
+        from configure.models import Command
+        command_id = Command.set_state(self.host, 'lnet_unloaded').id
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_unloaded')
+        self.assertEqual(Command.objects.get(pk = command_id).jobs_created, True)
+        self.assertEqual(Command.objects.get(pk = command_id).complete, True)
+        self.assertEqual(Command.objects.get(pk = command_id).jobs.count(), 2)
 
 
 class TestFSTransitions(JobTestCaseWithHost):

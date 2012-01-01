@@ -151,7 +151,7 @@ def notify_state(content_type, object_id, new_state, from_states):
 
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
-def set_state(content_type, object_id, new_state):
+def set_state(content_type, object_id, new_state, command_id):
     """content_type: a ContentType natural key tuple
        object_id: the pk of a StatefulObject instance
        new_state: the string of a state in the StatefulObject's states attribute"""
@@ -176,7 +176,7 @@ def set_state(content_type, object_id, new_state):
     instance = model_klass.objects.get(pk = object_id)
 
     from configure.lib.state_manager import StateManager
-    StateManager()._set_state(instance, new_state)
+    StateManager()._set_state(instance, new_state, command_id)
 
 
 @task(base = RetryOnSqlErrorTask)
