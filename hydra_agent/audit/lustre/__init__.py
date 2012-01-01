@@ -48,7 +48,11 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         modname = cls.__name__.replace('Audit', '').lower()
         filter = lambda line: line.startswith(modname)
         obj = cls(fscontext=fscontext)
-        list = obj.read_lines("/proc/modules", filter)
+        try:
+            list = obj.read_lines("/proc/modules", filter)
+        except IOError:
+            list = []
+
         return len(list) == 1
 
     def __init__(self, fscontext=None, **kwargs):
@@ -113,8 +117,11 @@ class LustreAudit(BaseAudit, FileSystemMixin):
 
     def version(self):
         """Returns a string representation of the local Lustre version."""
-        stats = self.dict_from_file("/proc/fs/lustre/version")
-        return stats["lustre:"]
+        try:
+            stats = self.dict_from_file("/proc/fs/lustre/version")
+            return stats["lustre:"]
+        except IOError:
+            return "0.0.0"
 
     def version_info(self):
         """Returns a tuple containing int components of the local Lustre version."""
@@ -300,8 +307,13 @@ class ObdfilterAudit(TargetAudit):
         """, re.VERBOSE)
 
         path = os.path.join(self.target_root, target, "brw_stats")
+        try:
+            lines = self.read_lines(path)
+        except IOError:
+            return histograms
+
         hist_key = None
-        for line in self.read_lines(path):
+        for line in lines:
             header = re.match(header_re, line)
             if header is not None:
                 hist_key = hist_map[header.group('name')]
