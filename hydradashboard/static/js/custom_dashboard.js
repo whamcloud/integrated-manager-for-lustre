@@ -302,7 +302,7 @@ $(document).ready(function()
       server_list_content = "";
       server_list_content += "<option value=''>Select Server</option>";
       var api_params = {filesystem_id : ""};
-      invoke_api_call(api_post, "listservers/", api_params, 
+      invoke_api_call(api_get, "hosts/", api_params, 
         success_callback = function(data)
         {
           $.each(data.response, function(resKey, resValue)

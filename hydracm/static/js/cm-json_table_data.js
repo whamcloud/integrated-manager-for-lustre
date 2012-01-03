@@ -278,7 +278,7 @@ function LoadServerConf_ServerConfig()
 {
   var api_params = {"filesystem_id": ""};
 
-  invoke_api_call(api_post, "listservers/", api_params, 
+  invoke_api_call(api_get, "hosts/", api_params, 
   success_callback = function(data)
   {
     $('#server_configuration').dataTable().fnClearTable();

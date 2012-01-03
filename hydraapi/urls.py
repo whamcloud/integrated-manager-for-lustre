@@ -14,7 +14,6 @@ from monitorapi import (ListFileSystems,
                         GetTargets,
                         GetMgtDetails,
                         #GetClients,
-                        GetServers,
                         GetEventsByFilter,
                         GetLatestEvents,
                         GetAlerts,
@@ -22,10 +21,7 @@ from monitorapi import (ListFileSystems,
                         GetLogs,
                         GetFSVolumeDetails)
 import configureapi
-from configureapi import (AddHost,
-                          TestHost,
-                          RemoveHost,
-                          GetLuns,
+from configureapi import (GetLuns,
                           CreateNewFilesystem,
                           CreateMGT,
                           CreateOSTs,
@@ -59,7 +55,7 @@ from statsmetricapi import(GetFSTargetStats,
                            GetFSClientsStats,
                            GetHeatMapFSStats)
 
-from managedhostapi import ManagedHostsHandler
+from managedhostapi import (ManagedHostsHandler, TestHost)
 
 
 # Cross Site Referance related class
@@ -77,7 +73,6 @@ urlpatterns = patterns('',
     (r'^get_targets/$', CsrfExemptResource(GetTargets)),
     (r'^get_mgts/$', CsrfExemptResource(GetMgtDetails)),
     (r'^getvolumesdetails/$', CsrfExemptResource(GetFSVolumeDetails)),
-    (r'^listservers/$', CsrfExemptResource(GetServers)),
     #(r'^getclients/$', CsrfExemptResource(GetClients)),
     (r'^get_luns/$', CsrfExemptResource(GetLuns)),
 
@@ -85,8 +80,6 @@ urlpatterns = patterns('',
     (r'^create_mgt/$', CsrfExemptResource(CreateMGT)),
     (r'^create_osts/$', CsrfExemptResource(CreateOSTs)),
     (r'^test_host/$', CsrfExemptResource(TestHost)),
-    (r'^add_host/$', CsrfExemptResource(AddHost)),
-    (r'^remove_host/$', CsrfExemptResource(RemoveHost)),
     (r'^set_lnet_state/$', CsrfExemptResource(SetLNetStatus)),
     (r'^set_target_stage/$', CsrfExemptResource(SetTargetMountStage)),
     (r'^get_job_status/$', CsrfExemptResource(GetJobStatus)),

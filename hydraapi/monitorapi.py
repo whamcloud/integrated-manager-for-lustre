@@ -261,23 +261,6 @@ class GetFSTargets(AnonymousRequestHandler):
 #        ]
 
 
-class GetServers (AnonymousRequestHandler):
-    @extract_request_args('filesystem_id')
-    def run(self, request, filesystem_id):
-        from configure.lib.state_manager import StateManager
-        if filesystem_id:
-            fs = ManagedFilesystem.objects.get(id=filesystem_id)
-            hosts = fs.get_servers()
-        else:
-            hosts = ManagedHost.objects.all()
-        hosts_info = []
-        for h in hosts:
-            _host = h.to_dict()
-            _host['available_transitions'] = StateManager.available_transitions(h)
-            hosts_info.append(_host)
-        return hosts_info
-
-
 class GetEventsByFilter(AnonymousRequestHandler):
     @extract_request_args('host_id', 'severity', 'eventtype', 'page_id', 'page_size')
     def run(self, request, host_id, severity, eventtype, page_size, page_id):

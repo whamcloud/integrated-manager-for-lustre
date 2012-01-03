@@ -73,7 +73,7 @@ $(document).ready(function() {
   $('.add_host_submit_button').click(function(ev) {
       $('#add_host_tabs').tabs('select', '#add_host_loading');
 
-      invoke_api_call(api_post, "test_host/", {hostname: $('#add_host_address').attr('value'), commit: false}, 
+      invoke_api_call(api_get, "test_host/?hostname=" + $('#add_host_address').attr('value') + "&commit=false", "", 
       success_callback = function(data)
       {
         task_id = data.response.task_id
@@ -91,7 +91,7 @@ $(document).ready(function() {
 
   $('.add_host_confirm_button').click(function(ev) {
     
-    invoke_api_call(api_post, "add_host/", {hostname: $('#add_host_address_label').html(), commit: true}, 
+    invoke_api_call(api_post, "hosts/", {host_name: $('#add_host_address_label').html(), commit: true}, 
     success_callback = function(data)
     {
       $('#add_host_tabs').tabs('select', '#add_host_complete');

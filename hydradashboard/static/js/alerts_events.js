@@ -312,7 +312,7 @@ loadHostList = function(filesystem_id, targetContainer)
   
   var api_params = {'filesystem_id':filesystem_id};
 
-  invoke_api_call(api_post, "listservers/", api_params,
+  invoke_api_call(api_get, "hosts/", api_params,
   success_callback = function(data)
   {
     $.each(data.response, function(resKey, resValue)

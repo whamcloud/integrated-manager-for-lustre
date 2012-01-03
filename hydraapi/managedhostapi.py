@@ -13,6 +13,7 @@ from configure.models import (ManagedHost, ManagedFilesystem)
 from configure.lib.state_manager import StateManager
 from requesthandler import (AnonymousRESTRequestHandler, extract_request_args)
 from hydraapi.requesthandler import APIResponse
+from configure.models import Command
 
 
 class ManagedHostsHandler (AnonymousRESTRequestHandler):
@@ -52,5 +53,16 @@ class ManagedHostsHandler (AnonymousRESTRequestHandler):
     @extract_request_args('id')
     def remove(self, request, id):
         host = get_object_or_404(ManagedHost, pk = id)
-        transition_job = StateManager.set_state(host, 'removed')
-        return {'id': host.id, 'job_id': transition_job.task_id, 'status': transition_job.status}
+        command = Command.set_state(host, 'removed')
+        return APIResponse(command.to_dict(), 202)
+
+
+class TestHost(AnonymousRESTRequestHandler):
+    @extract_request_args('hostname')
+    def get(self, request, hostname):
+        from monitor.tasks import test_host_contact
+        from configure.models import Monitor
+        host = ManagedHost(address = hostname)
+        host.monitor = Monitor(host = host)
+        job = test_host_contact.delay(host)
+        return {'task_id': job.task_id, 'status': job.status}
