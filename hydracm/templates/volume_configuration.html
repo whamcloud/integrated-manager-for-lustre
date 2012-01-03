@@ -1,4 +1,5 @@
 <script>
+  var config_change_flag = false; 
   $(document).ready(function() {
     //cm-json_table_data = > load list of unused luns 
     LoadUnused_VolumeConf();
@@ -26,11 +27,16 @@
 	{
       var oSetting = $('#volume_configuration').dataTable().fnSettings();
       var confirmation_markup = "This action will have the following consequences: <br /><br />";
+      var same_primary_secondary_error_markup = "<b>Volumes should have different primary and secondary servers</b><br /><br />"+
+      											"Following volumes are having same primary and secondary servers:<br /><br />";
+      var no_server_error_markup  = "<b>Please select valid Primary/Failover server for following volumes:</b><br /><br />";
+	  var same_server_error_flag = false;
+	  var no_server_error_flag = false;
       var api_params = {};
       var alun_ids = [];
       var aprimary_host_ids = [];
       var asecondary_host_ids = [];
-      for (var i=1, iLen=oSetting.aoData.length; i<iLen; i++) 
+      for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) 
       {
         if (oSetting.aoData[i]._aData[5] != oSetting.aoData[i]._aData[6])
         {
@@ -38,22 +44,95 @@
           alun_ids.push(parseInt(params[0]));
           aprimary_host_ids.push(parseInt(params[1]));
           asecondary_host_ids.push(parseInt(params[2]));
-          confirmation_markup += "- Volume configuration change for "+oSetting.aoData[i]._aData[0]+"<br />";    
+          if(parseInt(params[1]) == -1 || parseInt(params[2]) == -1)
+          {
+            no_server_error_markup += "- "+oSetting.aoData[i]._aData[0]+"<br />";
+            no_server_error_flag = true;
+          }
+          else if(parseInt(params[1]) == parseInt(params[2]))
+          {
+            same_primary_secondary_error_markup += "- "+oSetting.aoData[i]._aData[0]+"<br />";
+            same_server_error_flag = true;
+          }
+          else
+          {
+            confirmation_markup += "- Volume configuration change for "+oSetting.aoData[i]._aData[0]+"<br />";
+          }
         }
       }
-      if(alun_ids.length > 0)
+      
+      if(alun_ids.length > 0 && !same_server_error_flag && !no_server_error_flag)
       {
-      	api_params = {'lun_ids': alun_ids, 'primary_host_ids': aprimary_host_ids, 'secondary_host_ids': asecondary_host_ids};
+        api_params = {'lun_ids': alun_ids, 'primary_host_ids': aprimary_host_ids, 'secondary_host_ids': asecondary_host_ids};
       	save_primary_failover_server(confirmation_markup, api_params);
       }
+      else
+      {
+        if(no_server_error_flag)
+        {
+          $('#volume_error_dialog').html(no_server_error_markup);
+          $('#volume_error_dialog').dialog('open');
+        }
+        else if(same_server_error_flag)
+        {
+          $('#volume_error_dialog').html(same_primary_secondary_error_markup);
+          $('#volume_error_dialog').dialog('open');
+        }
+      }
 	});
+
+    $("#btnCancelConfig").click(function ()
+    {
+      if(config_change_flag)
+      {
+        $('#cancel_volume_conf').html("<br /><br />Do you want to continue cancelling changes ?");
+        $('#cancel_volume_conf').dialog('open');
+      }
+    });
+
+    $('#cancel_volume_conf').dialog
+    ({
+      autoOpen: false,
+      width: 450,
+      height:200,
+      show: "clip",
+      modal: true,
+      position:"center",
+      buttons: 
+      {
+        "Yes": function() {
+      	    config_change_flag = false;
+      		LoadUnused_VolumeConf();
+      		$(this).dialog("close");
+        },
+        "No": function() {
+          $(this).dialog("close");
+        }, 
+      }
+    });
+
+    $('#volume_error_dialog').dialog
+    ({
+      autoOpen: false,
+      width: 500,
+      height:200,
+      show: "clip",
+      modal: true,
+      position:"center",
+      buttons: 
+      {
+        "Ok": function() {
+      	  $(this).dialog("close");
+        } 
+      }
+    });
 
     $('select[id *="_host"]').live('change', function ()
     {
       var oSetting = $('#volume_configuration').dataTable().fnSettings();
       //Note : Lun_id i storage as part of select control id E.g. primary_host_<Lun_id>
       var Lun_id = $(this).attr("id").split("_")[2];
-      for (var i=1, iLen=oSetting.aoData.length; i<iLen; i++)
+      for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++)
       {
         var rowParams = oSetting.aoData[i]._aData[6].split("_");
         var row_lun_id = rowParams[0];
@@ -76,6 +155,8 @@
           oSetting.aoData[i]._aData[6] = Lun_id + '_' + 
                                          new_primary_host_id + '_' +
                                          new_secondary_host_id;
+
+          config_change_flag = true;
         }
       }
     });
@@ -103,3 +184,11 @@
   <button type="button" id="btnApplyConfig">Apply</button>
   <button type="button" id="btnCancelConfig">Cancel</button>
 </div>
+<!-- Markup for cancel volume confirmation dialog -->
+<div id="cancel_volume_conf">
+</div>
+<!-- End markup for cancel volume confirmation dialog -->
+<!-- Markup for volume configuration error dialog -->
+<div style="overflow-y: auto; max-height: 700px;" id="volume_error_dialog">
+</div>
+<!-- End markup for volume configuration error dialog -->
