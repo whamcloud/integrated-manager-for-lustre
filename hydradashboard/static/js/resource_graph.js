@@ -1,12 +1,11 @@
 
 function load_resource_graph(container_name, target_id) {
-  $.get("/api/get_target_resource_graph/", {target_id: target_id})
-   .success(function(data) {
-     if (data.success) {
-       container = $("#" + container_name)
-       render_resource_graph(container, data.response.graph);
-     }
-   });
+    invoke_api_call(api_post, "get_target_resource_graph/", {target_id: target_id},
+    success_callback = function(data)
+    {
+     container = $("#" + container_name)
+     render_resource_graph(container, data.response.graph);
+    });
 }
 
 function render_resource_graph(container, graph) {

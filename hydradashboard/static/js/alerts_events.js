@@ -160,9 +160,6 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
       alertTabContent = alertTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Alerts</td></tr>";
     }
     $("#"+targetAlertDivName).html(alertTabContent);
-  },
-  error_callback = function(data){
-    common_error_handler(data);
   });
 }
 
@@ -207,9 +204,6 @@ loadEventContent = function(targetEventDivName, maxCount)
         eventTabContent = eventTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Events</td></tr>";
       }
       $("#"+targetEventDivName).html(eventTabContent);
-    },
-    error_callback = function(data){
-      common_error_handler(data);
     });
 }
 
@@ -276,9 +270,6 @@ loadJobContent = function(targetJobDivName)
         jobTabContent = jobTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Jobs</td></tr>";
       }
       $("#"+targetJobDivName).html(jobTabContent);
-    },
-    error_callback = function(data){
-      common_error_handler(data);
     });
 }
 
@@ -300,9 +291,6 @@ job_action = function(job_id, state)
   success_callback = function(data)
   {
     loadJobContent('job_content');
-  },
-  error_callback = function(data){
-    common_error_handler(data);
   });
 }
 
@@ -320,9 +308,6 @@ loadHostList = function(filesystem_id, targetContainer)
       hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
     });
     $('#'+targetContainer).html(hostList);
-  },
-  error_callback = function(data){
-    common_error_handler(data);
   });
 }
 

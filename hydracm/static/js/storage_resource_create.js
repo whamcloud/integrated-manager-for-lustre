@@ -47,9 +47,6 @@ function storage_resource_create_save()
   success_callback = function(data)
   {
     $('#storage_resource_create_dialog').dialog('close');
-  },
-  error_callback = function(data){
-    common_error_handler(data);
   });
 }
 
@@ -77,9 +74,6 @@ function storage_resource_create_load_fields()
     });
     $('#storage_resource_create_fields').append(row_markup);
     $('#storage_resource_create_save').attr('disabled', false);
-  },
-  error_callback = function(data){
-    common_error_handler(data);
   });
 }
 
@@ -97,9 +91,6 @@ function storage_resource_create() {
     });
     $('#storage_resource_create_classes').html(option_markup);
     storage_resource_create_load_fields();
-  },
-  error_callback = function(data){
-    common_error_handler(data);
   });
 }
 

@@ -45,10 +45,6 @@ function LoadFSList_FSList()
         notification_icons_markup(resValue.id, resValue.content_type_id)
         ]);
     });
-  },
-  error_callback = function(data)
-  {
-    common_error_handler(data);
   });
 }
 
@@ -83,10 +79,6 @@ function LoadTargets_EditFS(fs_id)
         $('#mdt').dataTable().fnAddData (row);
       }
     });
-  },
-  error_callback = function(data)
-  {
-    common_error_handler(data);
   });
 }
 
@@ -130,10 +122,6 @@ function LoadUsableVolumeList(datatable_container, select_widget_fn)
         failoverHostname
       ]); 
     });
-  },
-  error_callback = function(data)
-  {
-    common_error_handler(data);
   });
 }
 
@@ -225,10 +213,6 @@ function LoadUnused_VolumeConf()
         hiddenIds
       ]); 
     });
-  },
-  error_callback = function(data)
-  {
-    common_error_handler(data);
   });
 }
 
@@ -260,10 +244,6 @@ function LoadMGTConfiguration_MGTConf()
             notification_icons_markup(resValue.id, resValue.content_type_id)
           ]);
     });
-  },
-  error_callback = function(data)
-  {
-    common_error_handler(data);
   });
 }
 
@@ -292,10 +272,6 @@ function LoadServerConf_ServerConfig()
         notification_icons_markup(resValue.id, resValue.content_type_id)
       ]);
     });
-  },
-  error_callback = function(data)
-  {
-    common_error_handler(data);
   });
 }
 
@@ -351,10 +327,6 @@ function LoadFSData_EditFS()
         $('#fs_alerts').html(alert_indicator_large_markup(resValue.id, resValue.content_type_id));
         $('#fs_name').html(resValue.fsname);
       });
-    },
-    error_callback = function(data)
-    {
-      common_error_handler(data);
     });
   }
 }

@@ -254,9 +254,6 @@ $(document).ready(function()
         $('#fsSelect').html(filesystem_list_content);
         
         load_breadcrumbs();
-      },
-      error_callback = function(data){
-        common_error_handler(data);
       });
 
       db_Bar_SpaceUsage_Data('false');
@@ -317,8 +314,6 @@ $(document).ready(function()
           $('#ls_ossId').attr("value", "");
           
           load_breadcrumbs();
-        },
-        error_callback = function(data){
         });
     }
   }
@@ -377,9 +372,6 @@ $(document).ready(function()
         load_breadcrumbs();
 
         $("#ostKind").html(ostKindMarkUp);
-      },
-      error_callback = function(data){
-        common_error_handler(data);
       });
 
     resetTimeInterval();
@@ -493,9 +485,6 @@ $(document).ready(function()
         $('#ossSummaryTblDiv').show();
         $('#serverSummaryTblDiv').show();
         loadOSSUsageSummary(file_systems_ids);
-      },
-      error_callback = function(data){
-        common_error_handler(data);
       });
 
     resetTimeInterval();

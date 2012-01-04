@@ -1,13 +1,13 @@
 var ERR_COMMON_DELETE_HOST = "Error in deleting host: ";
 var ERR_COMMON_LNET_STATUS = "Error in setting lnet status: ";
 var ERR_COMMON_ADD_HOST = "Error in Adding host: ";
-var ERR_COMMON_FS_START = "Error in starting File System: ";
-var ERR_COMMON_CREATE_OST = "Error in Creating OST: ";
-var ERR_COMMON_CREATE_MGT = "Error in Creating MGT: ";
+var ERR_COMMON_FS = "Error in creating File System";
+var ERR_COMMON_CREATE_OST = "Error in Creating OST";
+var ERR_COMMON_CREATE_MGT = "Error in Creating MGT";
 var ERR_COMMON_CREATE_MDT = "Error in Creating MDT: ";
 var ERR_COMMON_START_OST = "Error in Starting OST: ";
-var ERR_CONFIF_PARAM = "Error in Param Cofiguration: ";
-var ERR_VOLUME_CONFIF = "Error in setting volume cofiguration ";
+var ERR_CONFIF_PARAM = "Error in setting Cofiguration Params: ";
+var ERR_VOLUME_CONFIG = "Error in setting volume cofiguration ";
 
 var ALERT_TITLE = "Configuration Manager";
 var CONFIRM_TITLE = "Configuration Manager";
@@ -52,9 +52,6 @@ Transition = function (id, ct, state)
     } else {
       TransitionCommit(id, ct, state);
     }
-  },
-  error_callback = function(data){
-    common_error_handler(data);
   });
 }
 
@@ -106,7 +103,7 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
     }
   },
   error_callback = function(data){
-    jAlert("Error", ALERT_TITLE);
+    jAlert(ERR_COMMON_FS, ALERT_TITLE);
   });
 }
 
@@ -124,7 +121,7 @@ function CreateOSTs(fs_id, ost_lun_ids)
     LoadTargets_EditFS(fs_id);
   },
   error_callback = function(data){
-    jAlert("Error", ALERT_TITLE);
+    jAlert(ERR_COMMON_CREATE_OST, ALERT_TITLE);
   });
 }
 
@@ -152,7 +149,10 @@ function SetTargetMountStage(target_id, state)
   },
   error_callback = function(data)
   {
-    jAlert(ERR_COMMON_START_OST + data.errors, ALERT_TITLE);
+    if(data.errors != undefined)
+    {
+      jAlert(ERR_COMMON_START_OST + data.errors, ALERT_TITLE);
+    }
   });
 }
 
@@ -171,7 +171,10 @@ function GetConfigurationParam(target_id, kinds, table_id)
   },
   error_callback = function(data)
   {
-    jAlert(ERR_COMMON_START_OST + data.errors, ALERT_TITLE);
+    if(data.errors != undefined)
+    {
+      jAlert(ERR_COMMON_START_OST + data.errors, ALERT_TITLE);
+    }
   });
 }
 
@@ -233,7 +236,10 @@ function ApplyConfigParam(table_obj,target_id,target_dialog,isFS)
     },
     error_callback = function(data)
     {
-      jAlert(ERR_CONFIF_PARAM + data.errors, ALERT_TITLE);
+      if(data.errors != undefined)
+      {
+        jAlert(ERR_CONFIF_PARAM + data.errors, ALERT_TITLE);
+      }
     });
 
     $('#'+target_dialog).dialog('close'); 
@@ -253,7 +259,7 @@ save_primary_failover_server = function (confirmation_markup, api_params)
        },
        error_callback = function(data)
        {
-         jAlert(ERR_VOLUME_CONFIF);
+         jAlert(ERR_VOLUME_CONFIG, ALERT_TITLE);
        });
        $(this).dialog('close');
       }

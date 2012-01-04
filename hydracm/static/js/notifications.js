@@ -510,9 +510,6 @@ $(document).ready(function() {
     update_objects(data, silent = true);
     update_sidebar_icons();
     setTimeout(poll_jobs, poll_period);
-  },
-  error_callback = function(data){
-    common_error_handler(data);
   });
   
   setTimeout(poll_objects, poll_period);

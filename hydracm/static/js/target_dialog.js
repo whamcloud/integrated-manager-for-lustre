@@ -54,9 +54,6 @@ target_dialog_open = function(target_id) {
     properties_markup += keyval_row("Alerts", alert_indicator_large_markup(target_info.id, target_info.content_type_id));
     properties_markup += "</table>";
     $('#target_dialog_properties').html(properties_markup);
-  },
-  error_callback = function(data){
-    common_error_handler(data);
   });
 
   $('#config_home_target_id').attr('value',target_id);

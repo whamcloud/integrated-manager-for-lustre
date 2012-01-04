@@ -76,9 +76,6 @@ function LoadFSGraph_EditFS(fs_id)
       ]
     }];
     chart = new Highcharts.Chart(obj_ost_pie_space);
-  },
-  error_callback = function(data){
-    common_error_handler(data);
   });
 
   var free=0,used=0;
@@ -119,8 +116,5 @@ function LoadFSGraph_EditFS(fs_id)
      ]
     }];
     chart = new Highcharts.Chart(obj_ost_pie_inode);
-  },
-  error_callback = function(data){
-    common_error_handler(data);
   });
 }
