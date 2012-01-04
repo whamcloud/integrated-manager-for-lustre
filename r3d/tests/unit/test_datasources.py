@@ -7,11 +7,12 @@ import fudge
 from r3d import lib
 import r3d.models
 
+
 class DataSourceTestCase(TestCase):
     @fudge.patch('r3d.models.Datasource.database')
     def setUp(self, fake_database):
         test_class = getattr(r3d.models,
-                             self.__class__.__name__.replace("Test",""))
+                             self.__class__.__name__.replace("Test", ""))
         ds = test_class()
         ds.name = "speed"
         ds.heartbeat = 600
@@ -29,8 +30,10 @@ class DataSourceTestCase(TestCase):
         self.update_time = 920805000
         self.interval = float(self.update_time) - float(ds.database.last_update)
 
+
 class TestAbsolute(DataSourceTestCase):
     pass
+
 
 class TestCounter(DataSourceTestCase):
     __test__ = False
@@ -46,8 +49,10 @@ class TestCounter(DataSourceTestCase):
         self.ds.update_pdp_temp(self.update_time, self.interval)
         self.assertEqual(self.ds.pdp_temp, 12)
 
+
 class TestDerive(DataSourceTestCase):
     pass
+
 
 class TestGauge(DataSourceTestCase):
     pass

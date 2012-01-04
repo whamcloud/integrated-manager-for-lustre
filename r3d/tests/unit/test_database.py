@@ -1,9 +1,11 @@
 ## Copyright 2011 Whamcloud, Inc.
 ## Authors: Michael MacDonald <mjmac@whamcloud.com>
 
+import time
+import datetime
 from django.test import TestCase
 from r3d.models import Database
-import time, datetime
+
 
 class TestDatabaseTimes(TestCase):
     def setUp(self):

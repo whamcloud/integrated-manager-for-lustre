@@ -3,8 +3,9 @@
 
 from django.test import TestCase
 import r3d.models
-from r3d.models import *
+from r3d.models import Database, Counter, Gauge, Average
 import json
+
 
 class SingleDsTutorialTest(TestCase):
     """
@@ -96,6 +97,7 @@ class SingleDsTutorialTest(TestCase):
 
     def tearDown(self):
         self.rrd.delete()
+
 
 class MultiDsTutorialTest(TestCase):
     """
@@ -213,6 +215,7 @@ class MultiDsTutorialTest(TestCase):
     def tearDown(self):
         self.rrd.delete()
 
+
 class LongerMultiDSOverlaps(TestCase):
     """
     Start with two DSes, but feed one DS values for a while, and the other
@@ -271,6 +274,7 @@ class LongerMultiDSOverlaps(TestCase):
 
     def tearDown(self):
         self.rrd.delete()
+
 
 class PostCreateNewDs(TestCase):
     """
@@ -336,6 +340,7 @@ class PostCreateNewDs(TestCase):
 
     def tearDown(self):
         self.rrd.delete()
+
 
 class SingleDsUpdateDictTest(TestCase):
     """
@@ -425,6 +430,7 @@ class SingleDsUpdateDictTest(TestCase):
     def tearDown(self):
         self.rrd.delete()
 
+
 class PostCreateNewDsUpdateDict(TestCase):
     """
     As with the previous PostCreate test case, we'll:
@@ -509,6 +515,7 @@ class PostCreateNewDsUpdateDict(TestCase):
 
     def tearDown(self):
         self.rrd.delete()
+
 
 class PostCreateNewDsUpdateDictWithOpts(TestCase):
     """

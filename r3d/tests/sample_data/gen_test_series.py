@@ -2,8 +2,8 @@
 
 import time
 import re
-import math, random
-import os, sys
+import math
+import random
 import argparse
 
 # Generate a series of data points for use in testing R3D's fidelity
@@ -12,6 +12,7 @@ import argparse
 # 920804400:1234:456
 # ...
 # 920804450:1832:23
+
 
 def ds_str(string):
     ds_re = re.compile(r"""
@@ -22,13 +23,14 @@ def ds_str(string):
     (?P<max>[\d\.U]+)
     (:(?P<start>\d+))?
     $
-    """, re.VERBOSE|re.IGNORECASE)
+    """, re.VERBOSE | re.IGNORECASE)
 
     match = ds_re.match(string)
     if match:
         return match
     else:
         raise ValueError
+
 
 def setup_parser():
     parser = argparse.ArgumentParser(
@@ -64,6 +66,7 @@ def setup_parser():
     )
     return parser
 
+
 class Datasource(object):
     def __init__(self, db_start=int(time.time()), db_step=1, rows=1,
                  heartbeat=1, min_val="U", max_val="U", ds_start=0):
@@ -83,10 +86,12 @@ class Datasource(object):
         fn = lambda v: "U" if math.isnan(v) else v
         return fn(self.counter)
 
+
 class Counter(Datasource):
     """Generates steadily-incrementing values."""
     def _next_value(self, row_time):
         self.counter += row_time % (self.db_step * random.randint(1, 1000))
+
 
 class Absolute(Datasource):
     """Generates rapidly-incrementing, often-wrapping values."""
@@ -98,15 +103,18 @@ class Absolute(Datasource):
             self.counter = self.min_val
             self._next_value(row_time)
 
+
 class Gauge(Datasource):
     """Generates completely random (between min/max) values."""
     def _next_value(self, row_time):
         self.counter = random.uniform(self.min_val, self.max_val)
 
+
 class Derive(Datasource):
     """Generates steadily-incrementing values."""
     def _next_value(self, row_time):
         self.counter += row_time % (self.db_step * random.randint(1, 1000))
+
 
 def generate_row(row_time):
     row = ["%d" % row_time]
@@ -116,7 +124,7 @@ def generate_row(row_time):
         else:
             row.append("%d" % int(ds.value(row_time)))
 
-    print ":".join(row)    
+    print ":".join(row)
 
 if __name__ == "__main__":
     args = setup_parser().parse_args()
@@ -158,4 +166,3 @@ if __name__ == "__main__":
             slow_until = row_time + (args.step * random.randint(1, 10))
 
         generate_row(row_time)
-

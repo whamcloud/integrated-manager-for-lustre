@@ -2,9 +2,8 @@
 ## Authors: Michael MacDonald <mjmac@whamcloud.com>
 
 from django.test import TestCase
-import r3d.models
-from r3d.models import *
-import json
+from r3d.models import Database, Counter, Gauge, Average
+
 
 class BugHyd330(TestCase):
     """HYD-330 Stats go haywire when they aren't sent in fast enough."""
@@ -26,7 +25,8 @@ class BugHyd330(TestCase):
                                                      database=self.rrd))
 
     def update_database(self):
-        import os, re
+        import os
+        import re
 
         datafile = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "..", "sample_data", "hyd330.txt"))
@@ -76,6 +76,7 @@ class BugHyd330(TestCase):
 
     def tearDown(self):
         self.rrd.delete()
+
 
 class BugHyd352(TestCase):
     """

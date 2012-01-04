@@ -2,9 +2,8 @@
 ## Authors: Michael MacDonald <mjmac@whamcloud.com>
 
 from django.test import TestCase
-import r3d.models
-from r3d.models import *
-import json
+from r3d.models import Database, Counter, Gauge, Derive, Absolute, Min, Max, Average, Last
+
 
 class AverageRraTest(TestCase):
     """
@@ -42,7 +41,8 @@ class AverageRraTest(TestCase):
                                                      database=self.rrd))
 
     def update_database(self):
-        import os, re
+        import os
+        import re
 
         datafile = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "..", "sample_data", "avg_rra.txt"))
@@ -52,7 +52,7 @@ class AverageRraTest(TestCase):
             self.rrd.update(line[:-1])
 
     def load_xport(self, filename):
-        from xml.dom.minidom import parse, parseString
+        from xml.dom.minidom import parse
         import os
 
         def get_row_time(row):
@@ -109,6 +109,7 @@ class AverageRraTest(TestCase):
     def tearDown(self):
         self.rrd.delete()
 
+
 class MinRraTest(TestCase):
     """
     Tests each DS type with a high-resolution Min RRA and a
@@ -145,7 +146,8 @@ class MinRraTest(TestCase):
                                                  database=self.rrd))
 
     def update_database(self):
-        import os, re
+        import os
+        import re
 
         datafile = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "..", "sample_data", "min_rra.txt"))
@@ -155,7 +157,7 @@ class MinRraTest(TestCase):
             self.rrd.update(line[:-1])
 
     def load_xport(self, filename):
-        from xml.dom.minidom import parse, parseString
+        from xml.dom.minidom import parse
         import os
 
         def get_row_time(row):
@@ -212,6 +214,7 @@ class MinRraTest(TestCase):
     def tearDown(self):
         self.rrd.delete()
 
+
 class MaxRraTest(TestCase):
     """
     Tests each DS type with a high-resolution Max RRA and a
@@ -248,7 +251,8 @@ class MaxRraTest(TestCase):
                                                  database=self.rrd))
 
     def update_database(self):
-        import os, re
+        import os
+        import re
 
         datafile = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "..", "sample_data", "max_rra.txt"))
@@ -258,7 +262,7 @@ class MaxRraTest(TestCase):
             self.rrd.update(line[:-1])
 
     def load_xport(self, filename):
-        from xml.dom.minidom import parse, parseString
+        from xml.dom.minidom import parse
         import os
 
         def get_row_time(row):
@@ -315,6 +319,7 @@ class MaxRraTest(TestCase):
     def tearDown(self):
         self.rrd.delete()
 
+
 class LastRraTest(TestCase):
     """
     Tests each DS type with a high-resolution Last RRA and a
@@ -351,7 +356,8 @@ class LastRraTest(TestCase):
                                                  database=self.rrd))
 
     def update_database(self):
-        import os, re
+        import os
+        import re
 
         datafile = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "..", "sample_data", "last_rra.txt"))
@@ -361,7 +367,7 @@ class LastRraTest(TestCase):
             self.rrd.update(line[:-1])
 
     def load_xport(self, filename):
-        from xml.dom.minidom import parse, parseString
+        from xml.dom.minidom import parse
         import os
 
         def get_row_time(row):
@@ -418,6 +424,7 @@ class LastRraTest(TestCase):
     def tearDown(self):
         self.rrd.delete()
 
+
 class DatabaseNamesShouldBeUnique(TestCase):
     """
     Database names should be unique.  While the primary mechanism
@@ -425,14 +432,9 @@ class DatabaseNamesShouldBeUnique(TestCase):
     Database names should also be useful for access.
     """
     def test_double_create_raises_integrity_error(self):
-        from django.contrib.auth.models import User
-        from django.contrib.contenttypes.models import ContentType
         from django.db import IntegrityError
 
         audit_freq = 1
-
-        user = User.objects.create(username='test', email='test@test.test')
-        ct = ContentType.objects.get_for_model(user)
 
         self.rrd = Database.objects.create(name="uniq_test",
                                            start=1318119547,
@@ -446,6 +448,7 @@ class DatabaseNamesShouldBeUnique(TestCase):
 
     def tearDown(self):
         self.rrd.delete()
+
 
 class SimpleFetchWithDateTimes(TestCase):
     """

@@ -1,17 +1,19 @@
 ## Copyright 2011 Whamcloud, Inc.
 ## Authors: Michael MacDonald <mjmac@whamcloud.com>
 
+import time
+import math
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
-import time, math
-from r3d.exceptions import *
+from r3d.exceptions import BadUpdateString, BadUpdateTime
 from r3d import lib
 from r3d.lib import DNAN, DINF, debug_print
 
+
 class SciFloatField(models.FloatField):
     """
-    Basic FloatField class, but aware of NaN/Inf.  When the value retrieved from 
+    Basic FloatField class, but aware of NaN/Inf.  When the value retrieved from
     the DB is NULL (None), converts it to float("NaN").  Conversely, when the
     value to be saved in the DB is float("NaN"), converts it to None (NULL).
 
@@ -38,6 +40,7 @@ class SciFloatField(models.FloatField):
             return float("Inf") if value > 0 else -float("Inf")
         else:
             return value
+
 
 class Database(models.Model):
     """
@@ -69,16 +72,16 @@ class Database(models.Model):
     def default_start(cls):
         return int(time.time() - 86400)
 
-    name        = models.CharField(max_length=255, unique=True)
-    start       = models.BigIntegerField(default=lambda: Database.default_start())
-    step        = models.BigIntegerField(default=300)
+    name = models.CharField(max_length=255, unique=True)
+    start = models.BigIntegerField(default=lambda: Database.default_start())
+    step = models.BigIntegerField(default=300)
     last_update = models.BigIntegerField(blank=True)
 
     # Leverage the ContentTypes framework to allow R3D databases to be
     # optionally associated with other apps' models.
-    content_type    = models.ForeignKey(ContentType, null=True)
-    object_id       = models.PositiveIntegerField(null=True)
-    content_object  = generic.GenericForeignKey('content_type', 'object_id')
+    content_type = models.ForeignKey(ContentType, null=True)
+    object_id = models.PositiveIntegerField(null=True)
+    content_object = generic.GenericForeignKey('content_type', 'object_id')
 
     class Meta:
         unique_together = ('content_type', 'object_id')
@@ -93,7 +96,7 @@ class Database(models.Model):
             return int(float(in_time))
 
     def __init__(self, *args, **kwargs):
-        if kwargs.has_key("start"):
+        if "start" in kwargs:
             kwargs['start'] = self._parse_time(kwargs['start'])
 
         super(Database, self).__init__(*args, **kwargs)
@@ -119,10 +122,10 @@ class Database(models.Model):
         debug_print("vvv--------------------------------------------------vvv")
 
         if len(new_values) != len(self.ds_cache):
-            raise BadUpdateString, "Update string DS count doesn't match database DS count"
+            raise BadUpdateString("Update string DS count doesn't match database DS count")
 
         if interval < 1:
-            raise BadUpdateTime, "Illegal update time %d (minimum one second step from %d)" % (update_time, self.last_update)
+            raise BadUpdateTime("Illegal update time %d (minimum one second step from %d)" % (update_time, self.last_update))
 
         (elapsed_steps,
          pre_int,
@@ -201,7 +204,7 @@ class Database(models.Model):
             # Reload caches
             self.load_cached_associations()
         elif len(update.keys()) > 0:
-            raise ValueError, "Unknown metrics: %s" % update.keys()
+            raise ValueError("Unknown metrics: %s" % update.keys())
 
         return new_values
 
@@ -282,7 +285,7 @@ class Database(models.Model):
             output.append(serialize("json", Archive.objects.filter(id=rra.id)))
             for ds in self.datasources.all():
                 output.append(serialize("json", rra.preps.filter(datasource=ds.id)))
-            ds_cdps =  {}
+            ds_cdps = {}
             for ds in self.datasources.all():
                 ds_cdps[ds] = rra.ds_cdps(ds)
 
@@ -295,7 +298,7 @@ class Database(models.Model):
                     continue
                 output.append(json.dumps([idx, row_vals]))
 
-        return "\n".join([json.dumps(o, indent=2) for o in 
+        return "\n".join([json.dumps(o, indent=2) for o in
                           [json.loads(j) for j in output]])
 
     def purge_cdps(self):
@@ -317,9 +320,9 @@ class Database(models.Model):
 
         debug_print("deleted %d old CDPs" % len(old_cdps))
 
+
 # http://djangosnippets.org/snippets/2408/
 # Grumble.
-from abc import abstractmethod
 class PoorMansStiModel(models.Model):
     classes = dict()
     mod = models.CharField(max_length=50)
@@ -331,7 +334,7 @@ class PoorMansStiModel(models.Model):
     def __init__(self, *args, **kwargs):
         super(PoorMansStiModel, self).__init__(*args, **kwargs)
         if self.cls:
-            if not PoorMansStiModel.classes.has_key(self.cls):
+            if not self.cls in PoorMansStiModel.classes:
                 x = getattr(__import__(self.mod, globals(), locals(),
                                        [self.cls]), self.cls)
                 self.__class__ = x
@@ -345,15 +348,16 @@ class PoorMansStiModel(models.Model):
             self.mod = self.__class__.__module__
         super(PoorMansStiModel, self).save(*args, **kwargs)
 
+
 class Datasource(PoorMansStiModel):
     """
     A Datasource identifies a source of Primary Data Points.
     """
-    database        = models.ForeignKey(Database, related_name="datasources")
-    name            = models.CharField(max_length=255)
-    heartbeat       = models.BigIntegerField()
-    min_reading     = SciFloatField(null=True, blank=True)
-    max_reading     = SciFloatField(null=True, blank=True)
+    database = models.ForeignKey(Database, related_name="datasources")
+    name = models.CharField(max_length=255)
+    heartbeat = models.BigIntegerField()
+    min_reading = SciFloatField(null=True, blank=True)
+    max_reading = SciFloatField(null=True, blank=True)
 
     class Meta:
         unique_together = ("database", "name")
@@ -425,6 +429,7 @@ class Datasource(PoorMansStiModel):
 
         debug_print("%s @ %d: (%10.2f) %10.2f -> %10.2f" % (self.name, update_time, saved_last, new_reading, self.prep.new_val))
 
+
 class Absolute(Datasource):
     """
     Absolute counters get reset upon reading. This is used for fast counters
@@ -443,6 +448,7 @@ class Absolute(Datasource):
     """
     class Meta:
         proxy = True
+
 
 class Counter(Datasource):
     """
@@ -467,17 +473,18 @@ class Counter(Datasource):
 
     def transform_reading(self, value, update_time, interval):
         if math.isnan(self.prep.last_reading) or math.isnan(value):
-             return DNAN
+            return DNAN
 
         value -= self.prep.last_reading
 
         if value < 0.0:
-            value += 4294967296.0 # 2^32
+            value += 4294967296.0  # 2^32
 
         if value < 0.0:
-            value += 18446744069414584320.0 # 2^64-2^32
+            value += 18446744069414584320.0  # 2^64-2^32
 
         return value
+
 
 class Derive(Datasource):
     """
@@ -505,6 +512,7 @@ class Derive(Datasource):
         else:
             return value - self.prep.last_reading
 
+
 class Gauge(Datasource):
     """
     Stores the current reading (e.g. temperature, stock price, etc.)
@@ -523,20 +531,21 @@ class Gauge(Datasource):
     def transform_reading(self, value, update_time, interval):
         return value * interval
 
+
 class PdpPrep(models.Model):
     """
     Provides storage for primary data points prior to consolidation.
     """
-    datasource      = models.OneToOneField(Datasource,
+    datasource = models.OneToOneField(Datasource,
                                            primary_key=True,
                                            related_name="prep")
-    last_reading    = SciFloatField(null=True)
-    scratch         = SciFloatField(null=True, default=0.0)
+    last_reading = SciFloatField(null=True)
+    scratch = SciFloatField(null=True, default=0.0)
     unknown_seconds = models.BigIntegerField(default=0)
 
     # ephemeral attributes
-    new_val       = DNAN
-    temp_val      = DNAN
+    new_val = DNAN
+    temp_val = DNAN
 
     def save(self, new_prep=False, *args, **kwargs):
         if new_prep:
@@ -548,6 +557,7 @@ class PdpPrep(models.Model):
 
         super(PdpPrep, self).save(*args, **kwargs)
 
+
 class Archive(PoorMansStiModel):
     """
     An Archive represents a fixed set of rows, each containing
@@ -556,15 +566,15 @@ class Archive(PoorMansStiModel):
     per CDP).
     """
     # persistent record fields
-    database        = models.ForeignKey(Database, related_name="archives")
-    xff             = SciFloatField(default=0.5)
-    cdp_per_row     = models.BigIntegerField()
-    rows            = models.BigIntegerField()
-    current_row     = models.BigIntegerField(default=0)
+    database = models.ForeignKey(Database, related_name="archives")
+    xff = SciFloatField(default=0.5)
+    cdp_per_row = models.BigIntegerField()
+    rows = models.BigIntegerField()
+    current_row = models.BigIntegerField(default=0)
 
     # ephemeral attributes
     steps_since_update = 0
-    nan_cdps           = 0
+    nan_cdps = 0
 
     def create_filler_cdps(self, ds):
         # When a DS has been added after the initial inserts, we need to
@@ -613,9 +623,9 @@ class Archive(PoorMansStiModel):
                                                         self.current_row))
 
     def find_obsolete_cdps(self, ds):
-       return ["%d" % cdp.id for cdp in
-               self.cdps.filter(datasource=ds).order_by("-id")[self.rows:]]
- 
+        return ["%d" % cdp.id for cdp in
+            self.cdps.filter(datasource=ds).order_by("-id")[self.rows:]]
+
     def purge_ds_cdps(self, ds):
         debug_print("Housekeeping: Deleting old CDPs")
         old = self.find_obsolete_cdps(self, ds)
@@ -632,13 +642,14 @@ class Archive(PoorMansStiModel):
         debug_print("deleted %d old CDPs" % len(old))
 
     def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
-        raise RuntimeError, "Method not implemented at this level"
+        raise RuntimeError("Method not implemented at this level")
 
     def initialize_cdp_value(self, cdp_prep, ds, start_pdp_offset):
-        raise RuntimeError, "Method not implemented at this level"
+        raise RuntimeError("Method not implemented at this level")
 
     def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
-        raise RuntimeError, "Method not implemented at this level"
+        raise RuntimeError("Method not implemented at this level")
+
 
 class Average(Archive):
     """
@@ -676,6 +687,7 @@ class Average(Archive):
         else:
             cdp_prep.value = ds.prep.temp_val * overlap_count
 
+
 class Last(Archive):
     """
     Stores the last (most current) data point.
@@ -703,6 +715,7 @@ class Last(Archive):
             cdp_prep.value = DNAN
         else:
             cdp_prep.value = ds.prep.temp_val
+
 
 class Max(Archive):
     """
@@ -741,6 +754,7 @@ class Max(Archive):
         else:
             cdp_prep.value = ds.prep.temp_val
 
+
 class Min(Archive):
     """
     Stores the smallest data point.
@@ -778,31 +792,33 @@ class Min(Archive):
         else:
             cdp_prep.value = ds.prep.temp_val
 
+
 class CDP(models.Model):
     """
     Stores a Datasource's data points after they've been run through
     the associated Archive's consolidation function.
 
     """
-    archive         = models.ForeignKey(Archive,
-                                        db_index=True,
-                                        related_name="cdps")
-    datasource      = models.ForeignKey(Datasource,
-                                        db_index=True,
-                                        related_name="cdps")
-    value           = SciFloatField(null=True)
+    archive = models.ForeignKey(Archive,
+                                db_index=True,
+                                related_name="cdps")
+    datasource = models.ForeignKey(Datasource,
+                                   db_index=True,
+                                   related_name="cdps")
+    value = SciFloatField(null=True)
+
 
 class CdpPrep(models.Model):
     """
     Provides temporary storage for data points during the consolidation
     process.
     """
-    archive         = models.ForeignKey(Archive, related_name="preps")
-    datasource      = models.ForeignKey(Datasource, related_name="preps")
-    value           = SciFloatField(null=True)
-    primary         = SciFloatField(null=True, default=0.0)
-    secondary       = SciFloatField(null=True, default=0.0)
-    unknown_pdps    = models.BigIntegerField(default=0)
+    archive = models.ForeignKey(Archive, related_name="preps")
+    datasource = models.ForeignKey(Datasource, related_name="preps")
+    value = SciFloatField(null=True)
+    primary = SciFloatField(null=True, default=0.0)
+    secondary = SciFloatField(null=True, default=0.0)
+    unknown_pdps = models.BigIntegerField(default=0)
 
     class Meta:
         unique_together = ("archive", "datasource")

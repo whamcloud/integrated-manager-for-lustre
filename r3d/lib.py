@@ -1,16 +1,19 @@
 ## Copyright 2011 Whamcloud, Inc.
 ## Authors: Michael MacDonald <mjmac@whamcloud.com>
 
-import math, time
-from r3d.exceptions import *
+import math
+import time
+from r3d.exceptions import BadUpdateString, BadSearchTime
 
-DNAN  = float('nan')
-DINF  = float('inf')
+DNAN = float('nan')
+DINF = float('inf')
 DEBUG = False
+
 
 def debug_print(string, end="\n"):
     if DEBUG:
         print "%s%s" % (string, end),
+
 
 def parse_update_time(time_string):
     """
@@ -24,7 +27,8 @@ def parse_update_time(time_string):
         try:
             return int(float(time_string))
         except ValueError:
-            raise BadUpdateString, "Can't parse time from '%s'" % time_string
+            raise BadUpdateString("Can't parse time from '%s'" % time_string)
+
 
 def parse_ds_vals(ds_string):
     """
@@ -40,7 +44,8 @@ def parse_ds_vals(ds_string):
     try:
         return [float(fixup(val)) for val in ds_string.split(":")]
     except ValueError:
-        raise BadUpdateString, "Can't parse ds vals from '%s'" % ds_string
+        raise BadUpdateString("Can't parse ds vals from '%s'" % ds_string)
+
 
 def parse_update_string(update_string):
     """
@@ -50,16 +55,17 @@ def parse_update_string(update_string):
     colon-separated.
     """
     if "@" in update_string:
-        raise BadUpdateString, "At-style time formats not supported"
+        raise BadUpdateString("At-style time formats not supported")
 
     time_string, ds_string = update_string.partition(":")[::2]
     if time_string == "" or ds_string == "":
-        raise BadUpdateString, "No time and/or ds vals in '%s'" % update_string
+        raise BadUpdateString("No time and/or ds vals in '%s'" % update_string)
 
     return parse_update_time(time_string), parse_ds_vals(ds_string)
 
+
 def calculate_elapsed_steps(db_last_update, db_steps, update_time, interval):
-    pre_int, post_int = (0,0)
+    pre_int, post_int = (0, 0)
     current_pdp_age = db_last_update % db_steps
     current_pdp_start = db_last_update - current_pdp_age
 
@@ -79,6 +85,7 @@ def calculate_elapsed_steps(db_last_update, db_steps, update_time, interval):
 
     return elapsed_steps, pre_int, post_int, pdp_count
 
+
 def simple_update(ds_list, update_time, interval):
     for ds in ds_list:
         if math.isnan(ds.prep.new_val):
@@ -94,8 +101,9 @@ def simple_update(ds_list, update_time, interval):
 
         ds.prep.save(force_update=True)
 
+
 def process_pdp_st(ds, db_step, interval, pre_int, post_int, seconds):
-    pre_unknown  = 0.0
+    pre_unknown = 0.0
 
     debug_print("prep.new_val: %10.2f prep.scratch: %10.2f" % (ds.prep.new_val, ds.prep.scratch))
     if math.isnan(ds.prep.new_val):
@@ -115,7 +123,7 @@ def process_pdp_st(ds, db_step, interval, pre_int, post_int, seconds):
             # Both C and Ruby handle this OK without all the flailing. :P
             ds.prep.temp_val = DNAN
         debug_print("%10.2f = %10.2f / ((%d - %d) - %d)" % (ds.prep.temp_val, ds.prep.scratch, seconds, ds.prep.unknown_seconds, pre_unknown))
-            
+
     if math.isnan(ds.prep.new_val):
         ds.prep.unknown_seconds = math.floor(post_int)
         ds.prep.scratch = DNAN
@@ -132,6 +140,7 @@ def process_pdp_st(ds, db_step, interval, pre_int, post_int, seconds):
     debug_print("scratch: %10.2f" % ds.prep.scratch)
 
     ds.prep.save(force_update=True)
+
 
 def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_count):
     for ds in db.ds_cache:
@@ -195,6 +204,7 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_cou
         if rra.steps_since_update > 0:
             rra.save()
 
+
 # FIXME: This monster needs a serious refactoring.  At some point.
 def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metrics):
     best_full_rra = None
@@ -211,13 +221,12 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
     real_end = end_time
     real_step = step
     chosen_rra = None
-    dp_rows = []
 
     if not start_time < end_time:
-        raise BadSearchTime, "start (%d) must be less than end (%d)!" % (start_time, end_time)
+        raise BadSearchTime("start (%d) must be less than end (%d)!" % (start_time, end_time))
 
     debug_print("Looking for start %d end %d step %d" % (start_time, end_time, step))
-    
+
     for rra in db.archives.filter(cls=archive_type):
         cal_end = (db.last_update -
                    (db.last_update % (rra.cdp_per_row * db.step)))
@@ -243,7 +252,7 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
                 tmp_match -= (cal_start - start_time)
 
             if (first_part > 0 or (best_match < tmp_match) or
-                (best_match == tmp_match and 
+                (best_match == tmp_match and
                  tmp_step_diff < best_part_step_diff)):
                 debug_print("best partial so far")
                 first_part = 0
@@ -259,7 +268,7 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
     elif first_part == 0:
         chosen_rra = best_part_rra
     else:
-        raise RuntimeError, "No RRA for CF %s" % archive_type
+        raise RuntimeError("No RRA for CF %s" % archive_type)
 
     real_step = db.step * chosen_rra.cdp_per_row
     real_start -= start_time % real_step

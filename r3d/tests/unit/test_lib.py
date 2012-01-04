@@ -3,9 +3,11 @@
 
 import time
 import fudge
+import math
 from django.test import TestCase
-from r3d.exceptions import *
-from r3d.lib import *
+from r3d.exceptions import BadUpdateString
+from r3d.lib import parse_update_string, parse_update_time, parse_ds_vals, calculate_elapsed_steps
+
 
 class TestParseUpdateString(TestCase):
     # slightly DRY-er, but not great
@@ -19,6 +21,7 @@ class TestParseUpdateString(TestCase):
         self.assertRaises(BadUpdateString, parse_update_string, "")
         self.assertRaises(BadUpdateString, parse_update_string, "@Oct 12:1:2")
         self.assertRaises(BadUpdateString, parse_update_string, ":2")
+
 
 class TestParseDsVals(TestCase):
     def test_valid_string_single_ds(self):
@@ -41,6 +44,7 @@ class TestParseDsVals(TestCase):
 
     def test_invalid_string(self):
         self.assertRaises(BadUpdateString, parse_ds_vals, "x:y:2")
+
 
 class TestParseTimeString(TestCase):
     @fudge.patch('time.time')
@@ -69,12 +73,13 @@ class TestParseTimeString(TestCase):
         int_time = 123456
         self.assertEquals(parse_update_time(float_time), int_time)
 
+
 class TestCalculateElapsedSteps(TestCase):
     def test_one_exact_step(self):
         last_update = 920805600
         step_length = 300
         update_time = 920805900
-        interval    = float(update_time) - float(last_update)
+        interval = float(update_time) - float(last_update)
 
         (elapsed_steps,
          pre_int,
