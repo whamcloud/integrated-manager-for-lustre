@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-import time
 from optparse import make_option
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
 from benchmark.metrics import Benchmark
+
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (

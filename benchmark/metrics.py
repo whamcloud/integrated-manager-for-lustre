@@ -1,7 +1,7 @@
 import random
-import sys, time
+import sys
+import time
 
-from django.contrib.contenttypes.models import ContentType
 from django.test.simple import DjangoTestSuiteRunner
 from django.db import transaction
 
@@ -10,6 +10,7 @@ import settings
 from configure.models import ManagedHost, ManagedOst, ManagedMdt, ManagedFilesystem, ManagedMgs, ManagedTargetMount, Lun, LunNode
 from monitor.lib.lustre_audit import UpdateScan
 from benchmark.generic import GenericBenchmark
+
 
 class GenStatsDict(dict):
     def __getitem__(self, key):
@@ -23,6 +24,7 @@ class GenStatsDict(dict):
 
         return newval
 
+
 class Generator(object):
     def __init__(self, fs, **kwargs):
         self.create_entity(fs)
@@ -30,6 +32,7 @@ class Generator(object):
 
     def __repr__(self):
         return "%s %s" % (self.name, self.stats)
+
 
 class ServerGenerator(Generator):
     def __repr__(self):
@@ -53,6 +56,7 @@ class ServerGenerator(Generator):
         self.entity = ManagedHost.objects.get_or_create(address=self.name)[0]
         self.entity.metrics
 
+
 class TargetGenerator(Generator):
     def __init__(self, host, fs, **kwargs):
         self.host = host
@@ -70,6 +74,7 @@ class TargetGenerator(Generator):
                                           host = self.host,
                                           mount_point = uuid.uuid4(),
                                           primary = True)
+
 
 class OstGenerator(TargetGenerator):
     def init_stats(self, **kwargs):
@@ -89,6 +94,7 @@ class OstGenerator(TargetGenerator):
                                     (oss_idx * kwargs['ost']) + idx)
         super(OstGenerator, self).__init__(host, fs, **kwargs)
 
+
 class OssGenerator(ServerGenerator):
     def __init__(self, idx, fs, **kwargs):
         self.name = "oss%02d" % idx
@@ -96,6 +102,7 @@ class OssGenerator(ServerGenerator):
         self.target_list = [ost for ost in
                             [OstGenerator(host=self.entity, oss_idx=idx, idx=ost_idx, fs=fs, **kwargs)
                                 for ost_idx in range(0, kwargs['ost'])]]
+
 
 class MdtGenerator(TargetGenerator):
     def init_stats(self, **kwargs):
@@ -114,11 +121,13 @@ class MdtGenerator(TargetGenerator):
         self.name = "%s-MDT%04d" % (kwargs['fsname'], 0)
         super(MdtGenerator, self).__init__(host, fs, **kwargs)
 
+
 class MdsGenerator(ServerGenerator):
     def __init__(self, fs, **kwargs):
         self.name = "mds00"
         super(MdsGenerator, self).__init__(fs, **kwargs)
         self.target_list = [MdtGenerator(host=self.entity, fs=fs, **kwargs)]
+
 
 class Benchmark(GenericBenchmark):
     def __init__(self, *args, **kwargs):
@@ -144,10 +153,10 @@ class Benchmark(GenericBenchmark):
         def drop_constraints(cursor, table):
             cursor.execute("SHOW CREATE TABLE %s" % table)
             l = cursor.fetchone()[1].split()
-            constraints = [l[i+1] for i in range(0, len(l) - 1) if l[i] == 'CONSTRAINT' and l[i+2] == 'FOREIGN']
+            constraints = [l[i + 1] for i in range(0, len(l) - 1) if l[i] == 'CONSTRAINT' and l[i + 2] == 'FOREIGN']
             for constraint in constraints:
                 cursor.execute("ALTER TABLE %s DROP FOREIGN KEY %s" %
-                               (table, constraint.replace('`','')))
+                               (table, constraint.replace('`', '')))
 
         # We need to finagle this by hand since we're not using migrations.
         if kwargs['use_flms'] and kwargs['use_flms_mem']:
