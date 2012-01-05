@@ -2,6 +2,7 @@
 *.sw?
 *.log
 local_settings.py
+production_version.py*
 database.db
 MANIFEST
 celerybeat-schedule
@@ -12,3 +13,5 @@ setup.py
 *.pid
 *.log
 _build
+_topdir
+dist
