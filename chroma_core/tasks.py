@@ -419,7 +419,7 @@ def test_host_contact(host):
     agent = False
     if resolve:
         try:
-            Agent(host).invoke('get-fqdn', timeout = settings.AUDIT_PERIOD * 2)
+            Agent(host).invoke('get-fqdn')
             agent = True
         except Exception, e:
             audit_log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))

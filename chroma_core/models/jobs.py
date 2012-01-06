@@ -115,6 +115,7 @@ class StatefulObject(models.Model):
         app_label = 'chroma_core'
 
     state = models.CharField(max_length = MAX_STATE_STRING)
+    immutable_state = models.BooleanField(default=False)
     states = None
     initial_state = None
 
@@ -233,6 +234,13 @@ class StatefulObject(models.Model):
             raise RuntimeError("%s->%s not legal state transition for %s" % (begin_state, end_state, cls))
 
     def get_available_states(self, begin_state):
+        if self.immutable_state:
+            # The only available state transition for immutable objects is
+            # to a special "forgotten" state, which is a shortcut state
+            # to allow us to get to what is effectively 'removed' without
+            # passing through all the normal states (which would fail).
+            return ['forgotten']
+
         if not begin_state in self.states:
             raise RuntimeError("%s not legal state for %s, legal states are %s" % (begin_state, self.__class__, self.states))
 

@@ -88,8 +88,9 @@ class ManagedTarget(StatefulObject):
     # unmounted: I'm set up in HA, ready to mount
     # mounted: Im mounted
     # removed: this target no longer exists in real life
+    # forgotten: Special "just delete it" state which bypasses transitions
     # Additional states needed for 'deactivated'?
-    states = ['unformatted', 'formatted', 'registered', 'unmounted', 'mounted', 'removed', 'autodetected']
+    states = ['unformatted', 'formatted', 'registered', 'unmounted', 'mounted', 'removed', 'forgotten']
     initial_state = 'unformatted'
     active_mount = models.ForeignKey('ManagedTargetMount', blank = True, null = True)
 
@@ -116,7 +117,7 @@ class ManagedTarget(StatefulObject):
             state = self.state
 
         deps = []
-        if state == 'mounted' and self.active_mount:
+        if state == 'mounted' and self.active_mount and not self.immutable_state:
             # Depend on the active mount's host having LNet up, so that if
             # LNet is stopped on that host this target will be stopped first.
             target_mount = self.active_mount
@@ -125,14 +126,22 @@ class ManagedTarget(StatefulObject):
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
 
-        if isinstance(self, FilesystemMember) and state != 'removed':
-            # Make sure I'm removed if filesystem goes to 'removed'
-            deps.append(DependOn(self.filesystem, 'available',
-                acceptable_states = self.filesystem.not_state('removed'), fix_state='removed'))
+        if isinstance(self, FilesystemMember) and state not in ['removed', 'forgotten']:
+            # Make sure I follow if filesystem goes to 'removed'
+            # or 'forgotten'
+            if self.immutable_state:
+                deps.append(DependOn(self.filesystem, 'available',
+                    acceptable_states = self.filesystem.not_state('forgotten'), fix_state='forgotten'))
+            else:
+                deps.append(DependOn(self.filesystem, 'available',
+                    acceptable_states = self.filesystem.not_state('removed'), fix_state='removed'))
 
-        if state != 'removed':
+        if state not in ['removed', 'forgotten']:
             for tm in self.managedtargetmount_set.all():
-                deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = tm.host.not_state('removed'), fix_state = 'removed'))
+                if self.immutable_state:
+                    deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
+                else:
+                    deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
 
         return DependAll(deps)
 
@@ -690,3 +699,29 @@ class FormatTargetJob(Job, StateChangeJob):
 
     def get_steps(self):
         return [(MkfsStep, {'target_id': self.target.id})]
+
+
+# Generate boilerplate classes for various origin->forgotten jobs.
+# This may go away as a result of work tracked in HYD-627.
+for origin in ['unmounted', 'mounted']:
+    def forget_description(self):
+        return "Removing unmanaged target %s" % (self.target.downcast())
+
+    def forget_get_steps(self):
+        return [(DeleteTargetStep, {'target_id': self.target.id})]
+
+    name = "ForgetTargetJob_%s" % origin
+    cls = type(name, (Job, StateChangeJob), {
+        'state_transition': (ManagedTarget, origin, 'forgotten'),
+        'stateful_object': 'target',
+        'state_verb': "Remove",
+        'target': models.ForeignKey(ManagedTarget),
+        'Meta': type('Meta', (object,), {'app_label': 'chroma_core'}),
+        'description': forget_description,
+        'requires_confirmation': True,
+        'get_steps': forget_get_steps,
+        '__module__': __name__,
+    })
+    import sys
+    this_module = sys.modules[__name__]
+    setattr(this_module, name, cls)

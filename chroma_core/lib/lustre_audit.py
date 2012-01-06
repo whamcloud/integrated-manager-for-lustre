@@ -107,10 +107,18 @@ class UpdateScan(object):
             # Get state of Client objects
             #self.learn_clients()
 
-            self.store_metrics()
+            # Forgotten entities should be ignored so that they're
+            # not "rediscovered" or monitored.
+            self.cull_forgotten_data()
+
+            # Older agents don't send this list
+            if 'capabilities' in host_data:
+                self.learn_unmanaged_host()
+
             self.update_lnet()
             self.update_resource_locations()
             self.update_target_mounts()
+            self.store_metrics()
 
         HostContactAlert.notify(self.host, not contact)
 
@@ -120,13 +128,73 @@ class UpdateScan(object):
 
         return contact
 
+    def cull_forgotten_data(self):
+        mounted_uuids = dict([(m['fs_uuid'], m) for m in self.host_data['mounts']])
+        forgotten_uuids = dict([(mt.uuid, mt) for mt in ManagedTarget._base_manager.filter(state = 'forgotten')])
+        for forgotten_uuid in forgotten_uuids:
+            if forgotten_uuid in mounted_uuids:
+                audit_log.debug("Culling forgotten ManagedTarget: %s" % forgotten_uuids[forgotten_uuid].name)
+                self.host_data['mounts'].remove(mounted_uuids[forgotten_uuid])
+
+    def _audited_lnet_state(self):
+        return {(False, False): 'lnet_unloaded',
+                (True, False): 'lnet_down',
+                (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'],
+                                          self.host_data['lnet_up'])]
+
+    def learn_unmanaged_host(self):
+        # FIXME: What to do if we split out rsyslog into an optional
+        # package?  Rename it to configure_rsyslog?
+        def _agent_can_manage(cap_list):
+            return len([c for c in cap_list if "manage_" in c]) > 0
+
+        # If the agent is capable of managing things, we don't want to
+        # mess around in here.
+        if _agent_can_manage(self.host_data['capabilities']):
+            return False
+
+        # If a host is monitor-only, then we can't effect any changes
+        # on its state via the agent.  We still want to be aware of state
+        # changes as they happen, though.  There are a few scenarios
+        # to account for:
+        #
+        # 1. If we encounter an unmanaged host which is presenting a
+        #    greater number of mounted targets than what we already
+        #    know about, then it's a good trigger for running a
+        #    DetectTargetsJob.
+        #
+        # TODO: This is a terrible way to do it.  The right way to do
+        # is probably to compare the set of known mount uuids vs. the
+        # audited mounts.  Commenting it out for now, as there are
+        # concerns about automatic initiation of DetectTargetsJobs anyhow.
+        #if len(self.host.managedtargetmount_set.all()) < len(self.host_data['mounts']):
+            # Only try this if LNet is actually up and running. I don't
+            # know why there would be more mounts than we already know about
+            # if this weren't the case, but there's no point in running
+            # useless jobs if there aren't Lustre targets to find.
+            #
+            # NB: This may result in a bit of flailing if not all of
+            # the hosts are in 'lnet_up'.  I'm undecided as to whether
+            # this is a good thing or if the dependency should be relaxed.
+            #from chroma_core.models import DetectTargetsJob
+            #if self.host.state == "lnet_up":
+            #    audit_log.debug("Running DetectTargetsJob")
+            #    job = DetectTargetsJob()
+            #    StateManager().add_job(job)
+
+        # Finally, ensure that the host is flagged as immutable, from
+        # our perspective.
+        if not self.host.immutable_state:
+            audit_log.debug("Setting immutable_state flag on %s" % self.host)
+            self.host.immutable_state = True
+            self.host.save()
+
     def update_lnet(self):
         # Update LNet status
         from chroma_core.lib.state_manager import StateManager
-        state = {(False, False): 'lnet_unloaded',
-                (True, False): 'lnet_down',
-                (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'], self.host_data['lnet_up'])]
-        StateManager.notify_state(self.host.downcast(), state, ['lnet_unloaded', 'lnet_down', 'lnet_up'])
+        StateManager.notify_state(self.host.downcast(),
+                                  self._audited_lnet_state(),
+                                  ['lnet_unloaded', 'lnet_down', 'lnet_up'])
         # Update LNet alerts
         # TODO: also set the alert status in Job completions when the state is changed,
         # rather than waiting for this scan to notice.
@@ -150,9 +218,9 @@ class UpdateScan(object):
             else:
                 recovery_status = {}
 
-            # Update to active_mount and alerts for autodetected
+            # Update to active_mount and alerts for monitor-only
             # targets done here instead of resource_locations
-            if target_mount.target.state == 'autodetected':
+            if target_mount.target.immutable_state:
                 target = target_mount.target
                 if mounted_locally:
                     target.set_active_mount(target_mount)
@@ -170,11 +238,11 @@ class UpdateScan(object):
         if self.host_data['resource_locations'] == None:
             # None here means that it was not possible to obtain a
             # list from corosync: corosync may well be absent if
-            # we're monitoring a non-hydra-managed autodetected
-            # system.  But if there are non-autodetected mounts
+            # we're monitoring a non-hydra-managed monitor-only
+            # system.  But if there are managed mounts
             # then this is a problem.
             from django.db.models import Q
-            if ManagedTargetMount.objects.filter(~Q(target__state = 'autodetected'), host = self.host).count() > 0:
+            if ManagedTargetMount.objects.filter(~Q(target__immutable_state = True), host = self.host).count() > 0:
                 audit_log.error("Got no resource_locations from host %s, but there are hydra-configured mounts on that server!" % self.host)
             return
 
@@ -192,7 +260,7 @@ class UpdateScan(object):
                 continue
 
             # If we're operating on a Managed* rather than a purely monitored target
-            if target.state != 'autodetected':
+            if not target.immutable_state:
                 if node_name == None:
                     active_mount = None
                 else:
@@ -219,14 +287,18 @@ class UpdateScan(object):
             return 0
 
         try:
-            target = ManagedTarget.objects.get(name=target_name,
+            # get ALL targets -- including forgotten/deleted
+            target = ManagedTarget._base_manager.get(name=target_name,
                                         managedtargetmount__host=self.host)
         except ManagedTarget.DoesNotExist:
             # Unknown target -- ignore metrics
             audit_log.warning("Discarding metrics for unknown target: %s" % target_name)
             return 0
 
-        return target.downcast().metrics.update(metrics, self.update_time)
+        if target.state == 'forgotten':
+            return 0
+        else:
+            return target.downcast().metrics.update(metrics, self.update_time)
 
     def store_node_metrics(self, metrics):
         return self.host.downcast().metrics.update(metrics, self.update_time)
@@ -339,7 +411,7 @@ class DetectScan(object):
                 lunnode = self.get_lun_node_for_target(None, self.host, mgs_local_info['device'])
                 primary = self.is_primary(mgs_local_info)
                 tm = ManagedTargetMount.objects.create(
-                        state = 'autodetected',
+                        immutable_state = True,
                         target = mgs,
                         host = self.host,
                         primary = primary,
@@ -357,19 +429,21 @@ class DetectScan(object):
             except ManagedMgs.DoesNotExist:
                 pass
 
-            lunnode = self.get_lun_node_for_target(None, self.host, mgs_local_info['device'])
+            lunnode = self.get_lun_node_for_target(None, self.host,
+                                                   mgs_local_info['device'])
 
             primary = self.is_primary(mgs_local_info)
 
             # We didn't find an existing ManagedMgs referring to
             # this LUN, create one
-            mgs = ManagedMgs(uuid = mgs_local_info['uuid'], name = "MGS", state = 'autodetected')
+            mgs = ManagedMgs(uuid = mgs_local_info['uuid'],
+                             state = "mounted", lun = lunnode.lun,
+                             name = "MGS", immutable_state = True)
             mgs.save()
             audit_log.info("Learned MGS on %s" % self.host)
             self.learn_event(mgs)
 
             tm = ManagedTargetMount.objects.create(
-                    state = 'autodetected',
                     target = mgs,
                     host = self.host,
                     primary = primary,
@@ -451,31 +525,14 @@ class DetectScan(object):
             if not target:
                 continue
 
-            # Match a Target which has the same name as this local target,
-            # and uses a filesystem on the same MGS
-            # TODO: expand this to cover targets other than FilesystemMember,
-            # currently MGS TargetMount is a special case elsewhere
-            matched_target = None
-            try:
-                targets = ManagedTarget.objects.filter(name = local_info['name'])
-
-                for target in targets:
-                    if isinstance(target, FilesystemMember) and target.filesystem.mgs == mgs:
-                        matched_target = target
-            except ManagedTarget.DoesNotExist:
-                audit_log.warning("Target %s has mount point on %s but has not been detected on any MGS" % (local_info['name'], self.host))
-
-            if not matched_target:
-                continue
-
             try:
                 primary = self.is_primary(local_info)
                 lunnode = self.get_lun_node_for_target(target, self.host, local_info['device'])
-                (tm, created) = ManagedTargetMount.objects.get_or_create(target = matched_target,
+                (tm, created) = ManagedTargetMount.objects.get_or_create(target = target,
                         host = self.host, primary = primary,
                         block_device = lunnode)
                 if created:
-                    tm.state = 'autodetected'
+                    tm.immutable_state = True
                     tm.save()
                     audit_log.info("Learned association %d between %s and host %s" % (tm.id, local_info['name'], self.host))
                     self.learn_event(tm)
@@ -544,7 +601,11 @@ class DetectScan(object):
                     return target
 
             # Fall through, no targets with that name exist on this MGS
-            target = klass(uuid = uuid, name = name, filesystem = filesystem, state = 'autodetected')
+            lunnode = self.get_lun_node_for_target(None, self.host,
+                                                   device_node_path)
+            target = klass(uuid = uuid, name = name, filesystem = filesystem,
+                           state = "mounted", lun = lunnode.lun,
+                           immutable_state = True)
             target.save()
             audit_log.info("%s %s %s" % (mgs.id, name, device_node_path))
             audit_log.info("Learned %s %s" % (klass.__name__, name))
@@ -604,5 +665,7 @@ class DetectScan(object):
         for fs_name, targets in self.host_data['mgs_targets'].items():
             (fs, created) = ManagedFilesystem.objects.get_or_create(name = fs_name, mgs = mgs)
             if created:
+                fs.immutable_state = True
+                fs.save()
                 audit_log.info("Learned filesystem '%s'" % fs_name)
                 self.learn_event(fs)
