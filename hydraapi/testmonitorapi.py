@@ -102,27 +102,6 @@ def main(args):
     print result
     print '\n\n'
 
-    print'Unit  Test 8: Get servers/hosts for a File system:'
-    api_url = base_url + '/api/listservers/'
-    print 'api_url: %s' % api_url
-    result = make_json_call(api_url,
-                             filesystem_id=options.fs_id,
-                             kinds=['MDT', 'MGT', 'OST']
-                            )
-    print 'result:'
-    print result
-    print '\n\n'
-
-    print 'Unit  Test 9: Get servers/hosts for All File systems'
-    api_url = base_url + '/api/listservers/'
-    print 'api_url: %s' % api_url
-    result = make_json_call(api_url,
-                             filesystem_id=''
-                            )
-    print 'result:'
-    print result
-    print '\n\n'
-
 #    print 'Unit  Test 10: Get Clients for a File systems'
 #    api_url = base_url + '/api/getclients/'
 #    print 'api_url: %s' % api_url

@@ -13,7 +13,6 @@ from configure.models import (ManagedHost, ManagedFilesystem)
 from configure.lib.state_manager import StateManager
 from requesthandler import (AnonymousRESTRequestHandler, extract_request_args)
 from hydraapi.requesthandler import APIResponse
-from configure.models import Command
 
 
 class ManagedHostsHandler (AnonymousRESTRequestHandler):
@@ -42,19 +41,8 @@ class ManagedHostsHandler (AnonymousRESTRequestHandler):
         api_res = APIResponse(result, 201)
         return api_res
 
-    @extract_request_args('id', 'state')
-    def put(self, request, id, state):
-        host = get_object_or_404(ManagedHost, pk = id)
-        if state not in host.states:
-            raise Exception('Invalid state, possible states for this host are:%' % host.states)
-        transition_job = StateManager.set_state(host, state)
-        return {'id': host.id, 'job_id': transition_job.task_id, 'status': transition_job.status}
-
-    @extract_request_args('id')
-    def remove(self, request, id):
-        host = get_object_or_404(ManagedHost, pk = id)
-        command = Command.set_state(host, 'removed')
-        return APIResponse(command.to_dict(), 202)
+    # Note: For Managed Host Remove/Delete and State transitions, we are using common
+    #       APIs. /api/transition/ and /api/transition_consequences/
 
 
 class TestHost(AnonymousRESTRequestHandler):
