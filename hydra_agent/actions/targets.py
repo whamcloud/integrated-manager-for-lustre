@@ -1,4 +1,5 @@
 
+from hydra_agent.plugins import AgentPlugin
 from hydra_agent.store import AgentStore
 from hydra_agent import shell
 import simplejson as json
@@ -9,6 +10,7 @@ import re
 
 LIBDIR = "/var/lib/hydra"
 
+
 def create_libdir():
     try:
         os.makedirs(LIBDIR)
@@ -17,6 +19,7 @@ def create_libdir():
             pass
         else:
             raise e
+
 
 def get_resource_location(resource_name):
     try:
@@ -46,8 +49,9 @@ def get_resource_location(resource_name):
             raise RuntimeError("Bad crm_resource output '%s'" % stdout.strip())
         return node_name
 
+
 def get_resource_locations():
-    """Parse `corosync status` to identify where (if anywhere) 
+    """Parse `corosync status` to identify where (if anywhere)
        resources (i.e. targets) are running."""
     try:
         rc, stdout, stderr = shell.run(['crm_resource', '-l'])
@@ -56,7 +60,6 @@ def get_resource_locations():
         return None
 
     locations = {}
-
 
     if rc == 234:
         # crm_resource returns 234 if there are no resources to list
@@ -71,6 +74,7 @@ def get_resource_locations():
             locations[resource_name] = get_resource_location(resource_name)
 
     return locations
+
 
 def cibadmin(command_args):
     from time import sleep
@@ -92,6 +96,7 @@ def cibadmin(command_args):
 
     return rc, stdout, stderr
 
+
 def format_target(args):
     from hydra_agent.cmds import lustre
 
@@ -104,6 +109,7 @@ def format_target(args):
     uuid = blkid_output.strip()
 
     return {'uuid': uuid}
+
 
 def register_target(args):
     try:
@@ -125,7 +131,7 @@ def register_target(args):
         import subprocess
         tunefs_text = subprocess.Popen(["tunefs.lustre", "--dryrun", args.device], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.read()
         name = re.search("Target:\\s+(.*)\n", tunefs_text).group(1)
-        # Now let's see if we get a different answer after 5 seconds 
+        # Now let's see if we get a different answer after 5 seconds
         import time
         time.sleep(5)
         blkid_later = shell.try_run(["blkid", "-o", "value", "-s", "LABEL", args.device])
@@ -133,8 +139,10 @@ def register_target(args):
 
     return {'label': blkid_output.strip()}
 
+
 def unconfigure_ha(args):
     _unconfigure_ha(args.primary, args.label, args.uuid, args.serial)
+
 
 def _unconfigure_ha(primary, label, uuid, serial):
     unique_label = "%s_%s" % (label, serial)
@@ -152,6 +160,7 @@ def _unconfigure_ha(primary, label, uuid, serial):
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" % unique_label)
 
     AgentStore.remove_target_info(uuid)
+
 
 def configure_ha(args):
     unique_label = "%s_%s" % (args.label, args.serial)
@@ -192,7 +201,7 @@ def configure_ha(args):
         score = 10
         preference = "secondary"
 
-    rc, stdout, stderr = shell.run(['crm', '-D', 'plain', 'configure' ,'show',
+    rc, stdout, stderr = shell.run(['crm', '-D', 'plain', 'configure', 'show',
                                     '%s-%s' % (unique_label, preference)])
     out = stdout.rstrip("\n")
     if len(out) > 0:
@@ -205,7 +214,7 @@ def configure_ha(args):
             return
         else:
             raise RuntimeError("A constraint with the name %s-%s already exists" % (unique_label, preference))
-        
+
     rc, stdout, stderr = cibadmin("-o constraints -C -X '<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>'" % (unique_label,
                                   preference,
                                   os.uname()[1],
@@ -223,6 +232,7 @@ def configure_ha(args):
 
     AgentStore.set_target_info(args.uuid, {"bdev": args.device, "mntpt": args.mountpoint})
 
+
 def list_ha_targets(args):
     targets = []
     for line in shell.try_run(['crm_resource', '--list']).split("\n"):
@@ -232,14 +242,17 @@ def list_ha_targets(args):
 
     return targets
 
-# these are called by the Target RA from corosync
+
 def mount_target(args):
+    # these are called by the Target RA from corosync
     info = AgentStore.get_target_info(args.uuid)
     shell.try_run(['mount', '-t', 'lustre', info['bdev'], info['mntpt']])
+
 
 def unmount_target(args):
     info = AgentStore.get_target_info(args.uuid)
     shell.try_run(["umount", info['bdev']])
+
 
 def start_target(args):
     from time import sleep
@@ -278,8 +291,10 @@ def start_target(args):
             raise RuntimeError("Started %s but now can't locate it!" % unique_label)
         return {'location': location}
 
+
 def stop_target(args):
     _stop_target(args.label, args.serial)
+
 
 def _stop_target(label, serial):
     unique_label = "%s_%s" % (label, serial)
@@ -302,11 +317,13 @@ def _stop_target(label, serial):
     if n == timeout:
         raise RuntimeError("failed to stop target %s" % unique_label)
 
+
 def migrate_target(args):
     # a migration scores at 500 to force it higher than stickiness
     score = 500
     shell.try_run(shlex.split("crm configure location %s-migrated %s %s: %s" % \
                         (args.label, args.label, score, args.node)))
+
 
 def unmigrate_target(args):
     from time import sleep
@@ -314,11 +331,12 @@ def unmigrate_target(args):
     # just remove the migration constraint
     shell.try_run(['crm', 'configure', 'delete', '%s-migrated' % args.label])
     sleep(1)
-    
+
     shell.try_run(['crm_resource', '-r', args.label, '-p', 'target-role',
                    '-m', '-v', 'Stopped'])
     shell.try_run(['crm_resource', '-r', args.label, '-p', 'target-role',
                    '-m', '-v', 'Started'])
+
 
 def target_running(args):
     from os import _exit
@@ -330,3 +348,71 @@ def target_running(args):
             _exit(0)
 
     _exit(1)
+
+
+class TargetsPlugin(AgentPlugin):
+    def register_commands(self, parser):
+        p = parser.add_parser('register-target', help='register a target')
+        p.add_argument('--device', required=True, help='device for target')
+        p.add_argument('--mountpoint', required=True, help='mountpoint for target')
+        p.set_defaults(func=register_target)
+
+        p = parser.add_parser('configure-ha',
+                                  help='configure a target\'s HA parameters')
+        p.add_argument('--device', required=True, help='device of the target')
+        p.add_argument('--label', required=True, help='label of the target')
+        p.add_argument('--uuid', required=True, help='uuid of the target')
+        p.add_argument('--serial', required=True, help='serial of the target')
+        p.add_argument('--primary', action='store_true',
+                       help='target is primary on this node')
+        p.add_argument('--mountpoint', required=True, help='mountpoint for target')
+        p.set_defaults(func=configure_ha)
+
+        p = parser.add_parser('unconfigure-ha',
+                                  help='unconfigure a target\'s HA parameters')
+        p.add_argument('--label', required=True, help='label of the target')
+        p.add_argument('--uuid', required=True, help='uuid of the target')
+        p.add_argument('--serial', required=True, help='serial of target')
+        p.add_argument('--primary', action='store_true',
+                       help='target is primary on this node')
+        p.set_defaults(func=unconfigure_ha)
+
+        p = parser.add_parser('mount-target', help='mount a target')
+        p.add_argument('--uuid', required=True, help='uuid of target to mount')
+        p.set_defaults(func=mount_target)
+
+        p = parser.add_parser('unmount-target', help='unmount a target')
+        p.add_argument('--uuid', required=True, help='uuid of target to unmount')
+        p.set_defaults(func=unmount_target)
+
+        p = parser.add_parser('start-target', help='start a target')
+        p.add_argument('--label', required=True, help='label of target to start')
+        p.add_argument('--serial', required=True, help='serial of target to start')
+        p.set_defaults(func=start_target)
+
+        p = parser.add_parser('stop-target', help='stop a target')
+        p.add_argument('--label', required=True, help='label of target to stop')
+        p.add_argument('--serial', required=True, help='serial of target to stop')
+        p.set_defaults(func=stop_target)
+
+        p = parser.add_parser('format-target', help='format a target')
+        p.add_argument('--args', required=True, help='format arguments')
+        p.set_defaults(func=format_target)
+
+        p = parser.add_parser('migrate-target',
+                                  help='migrate a target to a node')
+        p.add_argument('--label', required=True, help='label of target to migrate')
+        p.add_argument('--node', required=True, help='node to migrate target to')
+        p.set_defaults(func=migrate_target)
+
+        p = parser.add_parser('unmigrate-target',
+                                  help='cancel prevous target migrate')
+        p.add_argument('--label', required=True,
+                       help='label of target to cancel migration of')
+        p.set_defaults(func=unmigrate_target)
+
+        p = parser.add_parser('target-running',
+                                  help='check if a target is running')
+        p.add_argument('--uuid', required=True,
+                       help='uuid of target to check')
+        p.set_defaults(func=target_running)

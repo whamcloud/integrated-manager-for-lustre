@@ -16,8 +16,9 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
+BuildRequires: python-setuptools
 Conflicts: sysklogd
-Requires: python-simplejson python-argparse rsyslog pacemaker avahi-python python-daemon
+Requires: python-simplejson python-argparse rsyslog pacemaker avahi-python python-daemon python-setuptools
 %if 0%{?rhel} > 5
 Requires: fence-agents avahi-dnsconfd
 %endif
@@ -36,6 +37,8 @@ rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --root=%{buildroot}
 mkdir -p $RPM_BUILD_ROOT/etc/init.d/
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/hydra-agent
+# FIXME: get rid of this link after the server's been updated
+ln -s %{_bindir}/hydra-agent $RPM_BUILD_ROOT%{_bindir}/hydra-agent.py
 
 %clean
 rm -rf %{buildroot}
@@ -51,7 +54,7 @@ echo 0 > /selinux/enforce
 
 %files
 %defattr(-,root,root)
-%{_bindir}/hydra-agent.py*
+%{_bindir}/hydra-agent*
 %{python_sitelib}/*
 /usr/lib/ocf/resource.d/hydra/Target
 %attr(0755,root,root)/etc/init.d/hydra-agent

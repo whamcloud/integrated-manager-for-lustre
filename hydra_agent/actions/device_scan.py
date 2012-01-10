@@ -1,14 +1,15 @@
-#
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
 from hydra_agent.log import agent_log
 from hydra_agent import shell
+from hydra_agent.plugins import AgentPlugin
 
 import os
 import glob
 import re
+
 
 def _dev_major_minor(path):
     """Return a string if 'path' is a block device or link to one, else return None"""
@@ -23,6 +24,7 @@ def _dev_major_minor(path):
     else:
         return None
 
+
 def _find_block_devs(folder):
     # Map of major_minor to path
     result = {}
@@ -33,6 +35,7 @@ def _find_block_devs(folder):
 
     return result
 
+
 def _get_vgs():
     out = shell.try_run(["vgs", "--units", "b", "--noheadings", "-o", "vg_name,vg_uuid,vg_size"])
 
@@ -41,6 +44,7 @@ def _get_vgs():
         name, uuid, size_str = line.split()
         size = int(size_str[0:-1], 10)
         yield (name, uuid, size)
+
 
 def _get_lvs(vg_name):
     out = shell.try_run(["lvs", "--units", "b", "--noheadings", "-o", "lv_name,lv_uuid,lv_size,lv_path", vg_name])
@@ -52,6 +56,8 @@ def _get_lvs(vg_name):
         yield (name, uuid, size, path)
 
 old_udev = None
+
+
 def _device_node(device_name, major_minor, path, size, parent):
     # This is a WTF, when I declare old_udev at module scope this function can't see it?!?!
     global old_udev
@@ -60,15 +66,15 @@ def _device_node(device_name, major_minor, path, size, parent):
     # (old one doesn't have --version, new one does)
     SCSI_ID_PATH = "/sbin/scsi_id"
     if old_udev == None:
-        rc, out, err = shell.run(['scsi_id', '--version'])
+        rc, out, err = shell.run([SCSI_ID_PATH, '--version'])
         old_udev = (rc != 0)
 
-    # Note: we use -p 0x80 with scsi_id in order to get 
+    # Note: we use -p 0x80 with scsi_id in order to get
     # a textual id along the lines of:
     # * SQEMU    QEMU HARDDISK  WD-deadbeef0
     # * SOPNFILERVIRTUAL-DISK   9iI2mH-4Ddf-k3Ov
     # * SDDN     S2A 9550       058C4A531100
-    # As well as being more readable than the 0x83 ID, this 
+    # As well as being more readable than the 0x83 ID, this
     # gets us the serial number for QEMU devices if the user
     # has set one, whereas that doesn't show up in 0x83.
 
@@ -88,7 +94,7 @@ def _device_node(device_name, major_minor, path, size, parent):
             serial = out.strip()
 
     # The downside to using -p 0x80 is that if the user hasn't manually
-    # set serials for their scsi devices, multiple different devices on 
+    # set serials for their scsi devices, multiple different devices on
     # the same host return the same string, so we need an explicit
     # exclusion for that
     if serial == "SQEMU    QEMU HARDDISK  0":
@@ -97,7 +103,7 @@ def _device_node(device_name, major_minor, path, size, parent):
     # FIXME: different controllers may want to use different identifiers,
     # should separate these out so that can pick from e.g. 0x80 vs. 0x83
 
-    # Special case for DDN 10KE which correlates volumes via 
+    # Special case for DDN 10KE which correlates volumes via
     # their 'OID' identifier and publishes this ID in /sys/block
     # FIXME: find a way to shift this into the DDN plugin
     oid_path = os.path.join("/sys/block", device_name, 'oid')
@@ -178,6 +184,7 @@ def _parse_sys_block():
 
     return block_device_nodes, node_block_devices
 
+
 def device_scan(args = None):
     # Map of block devices major:minors to /dev/ path.
     block_device_nodes, node_block_devices = _parse_sys_block()
@@ -208,15 +215,12 @@ def device_scan(args = None):
     for line in dm_lines:
         tokens = line.split()
         name = tokens[0].strip(":")
-        num_sectors = int(tokens[2])
         dm_type = tokens[3]
-        node_class = None
 
         node_path = os.path.join("/dev/mapper", name)
         block_device = node_block_devices[node_path]
 
         if dm_type in ['linear', 'striped']:
-            obj_class = 'lv'
             # This is an LVM LV
             if dm_type == 'striped':
                 # List of striped devices
@@ -234,7 +238,7 @@ def device_scan(args = None):
 
             # Try to get information about LVs from this VG which we queried
             # earlier with _get_vg/_get_lv.  This can fail if the system is in an in-between
-            # state where it still has device nodes for some LVs which are 
+            # state where it still has device nodes for some LVs which are
             # no longer really there
             try:
                 vg_lv_info = lvs[vg_name]
@@ -291,3 +295,10 @@ def device_scan(args = None):
             bdev_to_local_fs[mm] = (mntpnt, fstype)
 
     return {"vgs": vgs, "lvs": lvs, "mpath": mpaths, "devs": block_device_nodes, "local_fs": bdev_to_local_fs}
+
+
+class DeviceScanPlugin(AgentPlugin):
+    def register_commands(self, parser):
+        p = parser.add_parser("device-scan",
+                              help="scan for devices, or something")
+        p.set_defaults(func=device_scan)

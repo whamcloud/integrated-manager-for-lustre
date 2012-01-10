@@ -1,9 +1,6 @@
-## Copyright 2011 Whamcloud, Inc.
-## Authors: John Spray <john@whamcloud.com>
-##          Michael MacDonald <mjmac@whamcloud.com>
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
 
-__version__ = '0.1.1'
-__version_info__ = tuple([ int(num) for num in __version__.split('.')])
-
-import audit
-import cmds
+__version__ = '0.2.0'
+__version_info__ = tuple([int(num) for num in __version__.split('.')])

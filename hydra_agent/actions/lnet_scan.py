@@ -1,6 +1,10 @@
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
 
-
+from hydra_agent.plugins import AgentPlugin
 import os
+
 
 def lnet_status():
     lnet_loaded = False
@@ -13,8 +17,9 @@ def lnet_status():
 
     return lnet_loaded, lnet_up
 
+
 def lnet_scan(args):
-    """Parse /proc for running LNet NIDs, and return a 2-tuple of 
+    """Parse /proc for running LNet NIDs, and return a 2-tuple of
        (whether lnet is up, list of NID strings)"""
 
     lnet_loaded, lnet_up = lnet_status()
@@ -39,3 +44,9 @@ def lnet_scan(args):
 
     return lnet_nids
 
+
+class LnetScanPlugin(AgentPlugin):
+    def register_commands(self, parser):
+        p = parser.add_parser("lnet-scan",
+                              help="scan for LNet details")
+        p.set_defaults(func=lnet_scan)

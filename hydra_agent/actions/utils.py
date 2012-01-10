@@ -1,4 +1,3 @@
-#
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
@@ -6,12 +5,14 @@
 import os
 import re
 
-def normalize_device(device):
-    """Try to convert device paths to their /dev/disk/by-id equivalent where possible,
-       so that the server can use this is the canonical identifier for devices (it has 
-       the best chance of being the same between hosts using shared storage"""
 
-    # Exceptions where we prefer a symlink to the real node, 
+def normalize_device(device):
+    """Try to convert device paths to their /dev/disk/by-id equivalent where
+        possible, so that the server can use this is the canonical identifier
+        for devices (it has the best chance of being the same between hosts
+        using shared storage"""
+
+    # Exceptions where we prefer a symlink to the real node,
     # to get more human-readable device nodes where possible
     allowed_paths = ["/dev/disk/by-id", "/dev/mapper"]
     if not hasattr(normalize_device, 'device_lookup'):
@@ -45,6 +46,7 @@ def normalize_device(device):
 
     return os.path.realpath(device)
 
+
 class Mounts(object):
     def __init__(self):
         # NB we must use /proc/mounts instead of `mount` because `mount` sometimes
@@ -53,10 +55,10 @@ class Mounts(object):
         self.mounts = []
         mount_text = open("/proc/mounts").read()
         for line in mount_text.split("\n"):
-            result = re.search("([^ ]+) ([^ ]+) ([^ ]+) ",line)
+            result = re.search("([^ ]+) ([^ ]+) ([^ ]+) ", line)
             if not result:
                 continue
-            device,mntpnt,fstype = result.groups()
+            device, mntpnt, fstype = result.groups()
 
             self.mounts.append((
                 device,
@@ -65,6 +67,7 @@ class Mounts(object):
 
     def all(self):
         return self.mounts
+
 
 class Fstab(object):
     def __init__(self):
