@@ -19,7 +19,7 @@ rpms: cleandist tarball
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/hydra-server-$(VERSION).tar.gz _topdir/SOURCES
-	cp hydra-storage-init.sh hydra-worker-init.sh hydra-server.conf hydra-welcome.conf _topdir/SOURCES
+	cp hydra-storage-init.sh hydra-worker-init.sh hydra-server.conf _topdir/SOURCES
 	cp hydra-server.spec _topdir/SPECS
 	rpmbuild -bb --define "_topdir $$(pwd)/_topdir" _topdir/SPECS/hydra-server.spec
 	mv _topdir/RPMS/noarch/hydra-server-$(VERSION)-$(RELEASE).noarch.rpm dist/

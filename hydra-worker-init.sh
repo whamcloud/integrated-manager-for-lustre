@@ -68,7 +68,29 @@ start() {
     # we don't need --pidfile here since hydra-host-discover.py is a daemon
     # and takes care of creating the pid file
     daemon /usr/bin/hydra-host-discover.py
+
+    # edit /etc/issue to tell where to point the browser
+    IPADDR=$(ifconfig | sed -n -e 's/:127\.0\.0\.1 //g' -e 's/ *inet addr:\([0-9.]\+\).*/\1/gp')
+
+    if ! grep "^Please point your browser at" /etc/issue; then
+        cat <<EOF >> /etc/issue
+Please point your browser at http://$IPADDR/dashboard/
+to administer this server.
+
+EOF
+    else
+        ed <<EOF /etc/issue
+/^Please point your browser at http:\/\//;/to administer this server\./c
+Please point your browser at http://$IPADDR/dashboard/
+to administer this server.
+.
+w
+q
+EOF
+    fi
+
     echo
+
 }
 
 restart() {
