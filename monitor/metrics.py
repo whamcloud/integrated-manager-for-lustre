@@ -256,6 +256,7 @@ class HostMetricStore(R3dMetricStore):
 
         return count
 
+
 class TargetMetricStore(R3dMetricStore):
     """
     Wrapper class for Lustre Target metrics.
@@ -323,6 +324,7 @@ class TargetMetricStore(R3dMetricStore):
             self.update_r3d({update_time: update})
 
         return count
+
 
 class FilesystemMetricStore(R3dMetricStore):
     """

@@ -4,22 +4,24 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-import dbus, gobject, avahi
+import dbus
+import gobject
+import avahi
 from dbus.mainloop.glib import DBusGMainLoop
-import daemon, daemon.pidlockfile
-import lockfile
-import sys
+import daemon
+import daemon.pidlockfile
 import urllib
 import json
 
 TYPE = "_hydra-agent._tcp"
 
+
 def service_resolved(interface, protocol, name, stype, domain, host,
                      aprotocol, address, port, txt, flags):
-    
+
     hostname = host[0:host.rfind(".")]
 
-    u = urllib.urlopen('http://localhost/api/add_host/', 
+    u = urllib.urlopen('http://localhost/api/add_host/',
                        data=urllib.urlencode({'hostname': hostname}))
     j = json.load(u)
 
@@ -27,8 +29,10 @@ def service_resolved(interface, protocol, name, stype, domain, host,
         # what, oh what to do, really?
         print "adding host %s failed %s" % (hostname, j['errors'])
 
+
 def print_error(err):
     print err
+
 
 def myhandler(interface, protocol, name, stype, domain, flags):
     if flags & avahi.LOOKUP_RESULT_LOCAL:
@@ -36,7 +40,7 @@ def myhandler(interface, protocol, name, stype, domain, flags):
         pass
 
     server.ResolveService(interface, protocol, name, stype, domain,
-                          avahi.PROTO_UNSPEC, dbus.UInt32(0), 
+                          avahi.PROTO_UNSPEC, dbus.UInt32(0),
                           reply_handler=service_resolved,
                           error_handler=print_error)
 
