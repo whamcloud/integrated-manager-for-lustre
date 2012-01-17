@@ -2,6 +2,7 @@ from django.utils import unittest
 import os
 from hydra_agent.audit.node import NodeAudit
 
+
 class TestNodeMetrics(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')

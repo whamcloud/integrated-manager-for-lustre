@@ -3,6 +3,7 @@ import dbus
 
 __all__ = ["ZeroconfService"]
 
+
 class ZeroconfService:
     """A simple class to publish a network service with zeroconf using
     avahi.
@@ -31,7 +32,7 @@ class ZeroconfService:
                                    server.EntryGroupNew()),
                     avahi.DBUS_INTERFACE_ENTRY_GROUP)
 
-        g.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,dbus.UInt32(0),
+        g.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
                      self.name, self.stype, self.domain, self.host,
                      dbus.UInt16(self.port), self.text)
 

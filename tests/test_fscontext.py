@@ -1,6 +1,7 @@
 from django.utils import unittest
 from hydra_agent.fscontext import FileSystemContext
 
+
 class TestDefaultFileSystemContext(unittest.TestCase):
     def setUp(self):
         self.fscontext = FileSystemContext()
@@ -13,6 +14,7 @@ class TestDefaultFileSystemContext(unittest.TestCase):
 
     def test_join(self):
         self.assertEqual(self.fscontext.join("foo", "bar"), "/foo/bar")
+
 
 class TestAlternateFileSystemContext(unittest.TestCase):
     def setUp(self):

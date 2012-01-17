@@ -8,8 +8,10 @@ from hydra_agent.actions.avahi_publish import ZeroconfService
 daemon_log = logging.getLogger('daemon')
 daemon_log.setLevel(logging.INFO)
 
+
 def run_main_loop(args):
     MainLoop().run(args.foreground)
+
 
 class MainLoop(object):
     PID_FILE = '/var/run/hydra-agent.pid'
@@ -33,7 +35,7 @@ class MainLoop(object):
                                       'fqdn': get_fqdn(),
                                       'token': server_token,
                                       'update_scan': update_scan,
-                                      'plugins': responses})) 
+                                      'plugins': responses}))
 
         response_data = None
         try:
@@ -50,7 +52,6 @@ class MainLoop(object):
             daemon_log.error("Malformed response body from %s: '%s'" % (url, e))
 
         return response_data
-        
 
     def _main_loop(self):
         # Before entering the loop, set up avahi
@@ -63,7 +64,7 @@ class MainLoop(object):
         # How often to report to a configured server
         report_interval = 10
 
-        # How often to re-read JSON to see if we 
+        # How often to re-read JSON to see if we
         # have a server configured
         config_interval = 10
         from hydra_agent.actions.update_scan import update_scan
@@ -102,7 +103,7 @@ class MainLoop(object):
                         response = self._send_update(server_conf['url'], server_conf['token'], None, responses)
                 while ((datetime.now() - reported_at) < timedelta(seconds = report_interval)):
                     time.sleep(1)
-                
+
             else:
                 time.sleep(config_interval)
                 server_conf = AgentStore.get_server_conf()
@@ -141,4 +142,3 @@ class MainLoop(object):
             # NB duplicating context.close between branches because
             # python 2.4 has no 'finally'
             context.close()
-

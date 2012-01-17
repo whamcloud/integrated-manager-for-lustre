@@ -6,6 +6,7 @@
 from hydra_agent.cmds import lustre
 from django.utils import unittest
 
+
 class TestLustreTunefsCommand(unittest.TestCase):
     def test_mdt_tunefs(self):
         cmd = lustre.tunefs(device='/dev/foo',
@@ -45,10 +46,12 @@ class TestLustreTunefsCommand(unittest.TestCase):
     def test_unknown_opt(self):
         try:
             cmd = lustre.tunefs(unknown='whatever')
+            assert cmd == "foo"  # should never be hit but keeps pyflakes quiet
         except TypeError:
             pass
         else:
-            fail("Expected TypeError")
+            raise RuntimeError("Expected TypeError")
+
 
 class TestLustreMkfsCommand(unittest.TestCase):
     def test_mdt_mkfs(self):
@@ -89,10 +92,12 @@ class TestLustreMkfsCommand(unittest.TestCase):
     def test_unknown_opt(self):
         try:
             cmd = lustre.mkfs(unknown='whatever')
+            assert cmd == "foo"  # should never be hit but keeps pyflakes quiet
         except TypeError:
             pass
         else:
-            fail("Expected TypeError")
+            raise RuntimeError("Expected TypeError")
+
 
 class TestLustreMountCommands(unittest.TestCase):
     def test_target_mount(self):
@@ -111,10 +116,11 @@ class TestLustreMountCommands(unittest.TestCase):
     def test_missing_args(self):
         try:
             cmd = lustre.mount(device='/foo/bar')
+            assert cmd == "foo"  # should never be hit but keeps pyflakes quiet
         except ValueError:
             pass
         else:
-            fail("Expected ValueError")
+            raise RuntimeError("Expected ValueError")
 
     def test_both_umount(self):
         cmd = lustre.umount(device='/dev/null',
@@ -124,6 +130,7 @@ class TestLustreMountCommands(unittest.TestCase):
     def test_all_unmount(self):
         cmd = lustre.umount()
         assert cmd == "umount -a -tlustre"
+
 
 class TestLustreLNetCommands(unittest.TestCase):
     def test_lnet_load(self):

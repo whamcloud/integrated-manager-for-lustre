@@ -22,6 +22,7 @@ class AgentStore(object):
                 raise e
 
     SERVER_CONF_FILE = "server_conf"
+
     @classmethod
     def get_server_conf(cls):
         try:
@@ -77,4 +78,3 @@ class AgentStore(object):
         file = open(cls._json_path(name), 'w')
         json.dump(info, file)
         file.close()
-    

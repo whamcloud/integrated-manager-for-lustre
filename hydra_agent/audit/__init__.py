@@ -4,6 +4,7 @@ def local_audit_classes(fscontext=None):
     classes.append(getattr(node, 'NodeAudit'))
     return classes
 
+
 class BaseAudit(object):
     """Base Audit class."""
     def __init__(self, **kwargs):
@@ -12,4 +13,5 @@ class BaseAudit(object):
     def metrics(self):
         raise NotImplementedError
 
-import mixins, lustre, node, local
+import lustre
+import node

@@ -1,13 +1,16 @@
-import re, os
+import re
+import os
 from hydra_agent.audit import BaseAudit
 from hydra_agent.audit.mixins import FileSystemMixin
 
+
 def local_audit_classes(fscontext=None):
     import hydra_agent.audit.lustre
-    return [cls for cls in 
+    return [cls for cls in
                 [getattr(hydra_agent.audit.lustre, name) for name in
                     dir(hydra_agent.audit.lustre) if name.endswith('Audit')]
             if hasattr(cls, 'is_available') and cls.is_available(fscontext)]
+
 
 class LustreAudit(BaseAudit, FileSystemMixin):
     """Parent class for LustreAudit entities.
@@ -79,7 +82,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         stats = {}
 
         # There is a potential race between the time that an OBD module
-        # is loaded and the stats entry is created (HYD-389).  If we read 
+        # is loaded and the stats entry is created (HYD-389).  If we read
         # during that window, the audit will crash.  I'm not crazy about
         # excepting IOErrors as a general rule, but I suppose this is
         # the least-worst solution.
@@ -125,7 +128,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
 
     def version_info(self):
         """Returns a tuple containing int components of the local Lustre version."""
-        return tuple([ int(num) for num in self.version().split('.') ])
+        return tuple([int(num) for num in self.version().split('.')])
 
     def health_check(self):
         """Returns a string containing Lustre's idea of its own health."""
@@ -146,7 +149,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
                     self.read_lines('/proc/fs/lustre/devices')]]
         except IOError:
             return []
-   
+
     def _gather_raw_metrics(self):
         raise NotImplementedError
 
@@ -154,6 +157,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         """Returns a hash of metric values."""
         self._gather_raw_metrics()
         return {"raw": self.raw_metrics}
+
 
 class TargetAudit(LustreAudit):
     def __init__(self, **kwargs):
@@ -187,7 +191,7 @@ class TargetAudit(LustreAudit):
         except TypeError:
             mapped_metric = os.path.join(target, self.int_metric_map[metric])
 
-        path = os.path.join(self.target_root,  mapped_metric)
+        path = os.path.join(self.target_root, mapped_metric)
         return self.read_int(path)
 
     def read_int_metrics(self, target):
@@ -204,9 +208,10 @@ class TargetAudit(LustreAudit):
 
         return metrics
 
+
 class MdsAudit(TargetAudit):
     """In Lustre < 2.x, the MDT stats were mis-named as MDS stats."""
-    def __init__(self,**kwargs):
+    def __init__(self, **kwargs):
         super(MdsAudit, self).__init__(**kwargs)
         self.target_root = '/proc/fs/lustre/mds'
 
@@ -215,8 +220,9 @@ class MdsAudit(TargetAudit):
             self.raw_metrics['lustre']['target'][mdt['name']] = self.read_int_metrics(mdt['name'])
             self.raw_metrics['lustre']['target'][mdt['name']]['stats'] = self.read_stats(mdt['name'])
 
+
 class MdtAudit(TargetAudit):
-    def __init__(self,**kwargs):
+    def __init__(self, **kwargs):
         super(MdtAudit, self).__init__(**kwargs)
         self.target_root = '/proc/fs/lustre'
         self.int_metric_map.update({
@@ -240,6 +246,7 @@ class MdtAudit(TargetAudit):
             self.raw_metrics['lustre']['target'][mdt['name']] = self.read_int_metrics(mdt['name'])
             self.raw_metrics['lustre']['target'][mdt['name']]['stats'] = self.read_stats(mdt['name'])
 
+
 class MgsAudit(TargetAudit):
     def __init__(self, **kwargs):
         super(MgsAudit, self).__init__(**kwargs)
@@ -255,10 +262,11 @@ class MgsAudit(TargetAudit):
         """Returns a dict containing MGS stats."""
         path = os.path.join(self.target_root, target, "mgs/stats")
         return self.stats_dict_from_file(path)
-        
+
     def _gather_raw_metrics(self):
         self.raw_metrics['lustre']['target']['MGS'] = self.read_int_metrics('MGS')
         self.raw_metrics['lustre']['target']['MGS']['stats'] = self.read_stats('MGS')
+
 
 class ObdfilterAudit(TargetAudit):
     def __init__(self, **kwargs):
@@ -283,7 +291,7 @@ class ObdfilterAudit(TargetAudit):
             'discontiguous blocks': 'discont_blocks',
             'disk fragmented I/Os': 'dio_frags',
             'disk I/Os in flight': 'rpc_hist',
-            'I/O time (1/1000s)': 'io_time', # 1000 == CFS_HZ (fingers crossed)
+            'I/O time (1/1000s)': 'io_time',  # 1000 == CFS_HZ (fingers crossed)
             'disk I/O size': 'disk_iosize'
         }
 
@@ -348,6 +356,7 @@ class ObdfilterAudit(TargetAudit):
             self.raw_metrics['lustre']['target'][ost['name']] = self.read_int_metrics(ost['name'])
             self.raw_metrics['lustre']['target'][ost['name']]['stats'] = self.read_stats(ost['name'])
             self.raw_metrics['lustre']['target'][ost['name']]['brw_stats'] = self.read_brw_stats(ost['name'])
+
 
 class LnetAudit(LustreAudit):
     def parse_lnet_stats(self):

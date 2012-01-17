@@ -5,16 +5,18 @@
 
 import subprocess
 
+
 def run(arg_list, shell = False):
     """Run a subprocess, and return a tuple of rc, stdout, stderr.
 
-    Note: we buffer all output, so do not run commands with large outputs 
+    Note: we buffer all output, so do not run commands with large outputs
     using this function.
     """
 
     import sys
     import pty
-    import fcntl, os
+    import fcntl
+    import os
     import select
 
     # Create a PTY in order to get libc in child processes
@@ -60,7 +62,7 @@ def run(arg_list, shell = False):
         # stdout and stderr.
         stdout_buf = ""
         stderr_buf = ""
-        
+
         # Support older pythons which don't define select.PIPE_BUF
         try:
             pipe_buf = select.PIPE_BUF
@@ -100,6 +102,7 @@ def run(arg_list, shell = False):
         raise
 
     return rc, stdout_buf, stderr_buf
+
 
 def try_run(arg_list, shell = False):
     """Run a subprocess, and raise an exception if it returns nonzero.  Return

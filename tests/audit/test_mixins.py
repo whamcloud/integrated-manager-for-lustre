@@ -1,8 +1,10 @@
 from django.utils import unittest
 import tempfile
-import os, shutil
+import os
+import shutil
 from hydra_agent.audit import BaseAudit
 from hydra_agent.audit.mixins import FileSystemMixin
+
 
 class TestFileSystemMixinWithDefaultContext(unittest.TestCase):
     def setUp(self):
@@ -23,6 +25,7 @@ class TestFileSystemMixinWithDefaultContext(unittest.TestCase):
         """Test that the mixin works without a context supplied."""
         filter = lambda line: line.startswith("root")
         assert "root" in self.audit.read_lines("/etc/passwd", filter)[0]
+
 
 class TestFileSystemMixinWithContextInConstructor(unittest.TestCase):
     def setUp(self):
@@ -50,6 +53,7 @@ class TestFileSystemMixinWithContextInConstructor(unittest.TestCase):
         self.set_later.context = self.test_root
         filter = lambda line: line.startswith("root")
         assert "root" in self.set_later.read_lines("/etc/passwd", filter)[0]
+
 
 class TestFileSystemMixin(unittest.TestCase):
     def setUp(self):

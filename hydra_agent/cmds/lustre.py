@@ -3,13 +3,14 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-"""Library of functions which return shell code suitable for local or 
+"""Library of functions which return shell code suitable for local or
 remote execution on Lustre servers.  Performs minimal sanity-checking
 in-library in favor of letting the shell commands themselves handle
 errors (in other words, make sure that the framework executing these
 commands captures stdout/stderr!)."""
 
 import re
+
 
 def __sanitize_arg(arg):
     """Private function to safely quote arguments containing whitespace."""
@@ -18,29 +19,34 @@ def __sanitize_arg(arg):
 
     return arg
 
+
 def lnet_load():
     """Returns shell code for loading LNet module(s)."""
     return "modprobe lnet"
+
 
 def lnet_unload():
     """Returns shell code for unloading LNet module(s)."""
     return "lustre_rmmod"
 
+
 def lnet_start():
     """Returns shell code for starting LNet."""
     return "lctl net up"
+
 
 # Works in a confusing way: lustre_rmmod will try to remove all
 # modules including lnet.  If lnet is not already down, and FS modules
 # are loaded, then we will:
 # * try to net down
 # * fail b/c FS modules are loaded
-# * call lustre_rmmod, which will fail because lnet is up, but 
+# * call lustre_rmmod, which will fail because lnet is up, but
 #   has the side effect of removing FS modules
 # * call net down which will succeed this time
 def lnet_stop():
     """Returns shell code for stopping LNet."""
     return "lctl net down || (lustre_rmmod; lctl net down)"
+
 
 def mount(device="", dir=""):
     """Returns shell code for mounting a Lustre target (device) at a
@@ -48,7 +54,8 @@ def mount(device="", dir=""):
     if len(device) > 0 and len(dir) > 0:
         return "mount -t lustre %s %s" % (device, dir)
     else:
-        raise ValueError, "mount() needs both device and dir"
+        raise ValueError("mount() needs both device and dir")
+
 
 def umount(device="", dir=""):
     """Returns shell code for detaching a Lustre target (device) from a
@@ -61,6 +68,7 @@ def umount(device="", dir=""):
         return "umount %s" % dir
     else:
         return "umount -a -tlustre"
+
 
 def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
            servicenode=(), param={}, index="", comment="", mountfsoptions="",
@@ -121,6 +129,7 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
 
     return ' '.join(cmd.split())
 
+
 def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
          servicenode=(), param={}, index="", comment="", mountfsoptions="",
          network=(), backfstype="", device_size="", mkfsoptions="",
@@ -150,7 +159,7 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
         else:
             if len(arg) > 0:
                 options.append("--%s=%s" % (name, ",".join(arg)))
-                
+
     flag_options = {
         'dryrun': '--dryrun',
         'reformat': '--reformat',

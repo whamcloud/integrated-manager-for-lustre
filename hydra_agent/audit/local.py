@@ -1,7 +1,7 @@
-import re
 import hydra_agent.audit
 from hydra_agent.audit import BaseAudit
 from hydra_agent.audit.mixins import FileSystemMixin
+
 
 class LocalAudit(BaseAudit, FileSystemMixin):
     def __init__(self, fscontext=None, **kwargs):
@@ -30,14 +30,14 @@ class LocalAudit(BaseAudit, FileSystemMixin):
                'c': {'gg': {'m': '3'},
                      'xx': '4'}}}
         """
-    
+
         keys = set(k for d in dicts for k in d)
-    
+
         def vals(key):
             """Returns all values for `key` in all `dicts`."""
-            withkey = (d for d in dicts if d.has_key(key))
+            withkey = (d for d in dicts if key in d)
             return [d[key] for d in withkey]
-    
+
         def recurse(*values):
             """Recurse if the values are dictionaries."""
             if isinstance(values[0], dict):
@@ -45,7 +45,7 @@ class LocalAudit(BaseAudit, FileSystemMixin):
             if len(values) == 1:
                 return values[0]
             raise TypeError("Multiple non-dictionary values for a key.")
-    
+
         return dict((key, recurse(*vals(key))) for key in keys)
 
     def metrics(self):

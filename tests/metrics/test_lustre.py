@@ -1,9 +1,10 @@
 from django.utils import unittest
 import tempfile
-import os, shutil
-import hydra_agent.audit.lustre
+import os
+import shutil
 from hydra_agent.audit.local import LocalAudit
-from hydra_agent.audit.lustre import *
+from hydra_agent.audit.lustre import LnetAudit, MdtAudit, MgsAudit, ObdfilterAudit
+
 
 class TestLocalLustreMetrics(unittest.TestCase):
     def setUp(self):
@@ -27,6 +28,7 @@ class TestLocalLustreMetrics(unittest.TestCase):
         metrics = audit.metrics()['raw']['lustre']
         self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 127575)
         self.assertEqual(metrics['lnet']['recv_count'], 547181)
+
 
 class TestPathologicalUseCases(unittest.TestCase):
     # AKA: The world will always build a better idiot! ;)
@@ -87,7 +89,6 @@ lnet 233888 3 ptlrpc,ksocklnd,obdclass, Live 0xffffffffa076e000
         audit.metrics()
 
         shutil.rmtree(self.test_root)
-
 
     def test_loaded_module_no_device(self):
         """Loaded module with no device entry should be skipped."""
@@ -167,6 +168,7 @@ dm_mod 75539 2 dm_mirror,dm_log, Live 0xffffffffa0000000
         except OSError:
             pass
 
+
 class TestMdtMetrics(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
@@ -198,6 +200,7 @@ class TestMdtMetrics(unittest.TestCase):
         """Test that mdt int metrics are sane."""
         self.assertEqual(self.metrics['lustre-MDT0000']['filesfree'], 511954)
 
+
 class TestLnetMetrics(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
@@ -208,6 +211,7 @@ class TestLnetMetrics(unittest.TestCase):
     def test_lnet_send_count(self):
         """Test that LNet metrics look sane."""
         self.assertEqual(self.metrics['raw']['lustre']['lnet']['send_count'], 218887)
+
 
 class TestMgsMetrics(unittest.TestCase):
     def setUp(self):
@@ -236,6 +240,7 @@ class TestMgsMetrics(unittest.TestCase):
     def test_mgs_threads_max(self):
         """Test that mgs int metrics are sane."""
         self.assertEqual(self.metrics['threads_max'], 32)
+
 
 class TestObdfilterMetrics(unittest.TestCase):
     def setUp(self):

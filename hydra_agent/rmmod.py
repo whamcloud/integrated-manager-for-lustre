@@ -4,7 +4,6 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-import os
 import sys
 
 from hydra_agent.log import agent_log
@@ -13,15 +12,16 @@ from hydra_agent import shell
 # Extra deps not expressed in lsmod's list of dependent modules
 extra_deps = {"lquota": set(["lov", "osc", "mgc", "mds", "mdc", "lmv"])}
 
+
 class Module:
     def __init__(self, lsmod_line):
         parts = lsmod_line.split()
         self.name = parts[0]
-        depcount = int(parts[2])
         try:
             self.dependents = set(parts[3].split(","))
         except IndexError:
             self.dependents = set([])
+
 
 def _load_lsmod():
     modules = {}
@@ -32,13 +32,14 @@ def _load_lsmod():
         m = Module(line.strip())
         modules[m.name] = m
 
-    for name,module in modules.items():
+    for name, module in modules.items():
         try:
             module.dependents |= (extra_deps[name] & set(modules.keys()))
         except KeyError:
             pass
 
     return modules
+
 
 def _remove_module(name, modules):
     try:
@@ -58,10 +59,10 @@ def _remove_module(name, modules):
         if name in m.dependents:
             m.dependents.remove(name)
 
+
 def rmmod(module_name):
     modules = _load_lsmod()
     _remove_module(module_name, modules)
 
 if __name__ == '__main__':
     rmmod(sys.argv[1])
-

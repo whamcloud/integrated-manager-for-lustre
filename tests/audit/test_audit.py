@@ -1,10 +1,10 @@
 from django.utils import unittest
-import tempfile
-import os, shutil
+import os
 import hydra_agent.audit
 from hydra_agent.audit.local import LocalAudit
 from hydra_agent.audit.node import NodeAudit
-from hydra_agent.audit.lustre import *
+from hydra_agent.audit.lustre import LnetAudit, MdsAudit, MdtAudit, MgsAudit
+
 
 class TestAuditScanner(unittest.TestCase):
     def setUp(self):
@@ -16,6 +16,7 @@ class TestAuditScanner(unittest.TestCase):
         list = [cls for cls in
                 hydra_agent.audit.local_audit_classes(self.test_root)]
         self.assertEqual(list, [LnetAudit, MdsAudit, MdtAudit, MgsAudit, NodeAudit])
+
 
 class TestLocalAudit(unittest.TestCase):
     def setUp(self):

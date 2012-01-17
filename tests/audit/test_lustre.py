@@ -1,8 +1,10 @@
 from django.utils import unittest
 import tempfile
-import os, shutil
+import os
+import shutil
 import hydra_agent.audit.lustre
-from hydra_agent.audit.lustre import *
+from hydra_agent.audit.lustre import LnetAudit, MdtAudit, MgsAudit, ObdfilterAudit, LustreAudit
+
 
 class TestLustreAuditClassMethods(unittest.TestCase):
     def setUp(self):
@@ -21,6 +23,7 @@ class TestLustreAuditClassMethods(unittest.TestCase):
         """Test that LustreAudit.is_available() works."""
         assert LnetAudit.is_available(self.test_root)
 
+
 class TestLustreAuditScanner(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
@@ -30,6 +33,7 @@ class TestLustreAuditScanner(unittest.TestCase):
         list = [cls.__name__ for cls in
                 hydra_agent.audit.lustre.local_audit_classes(self.test_root)]
         self.assertEqual(list, ['LnetAudit', 'MdsAudit', 'MdtAudit', 'MgsAudit'])
+
 
 class TestLustreAudit(unittest.TestCase):
     def setUp(self):
@@ -42,6 +46,7 @@ class TestLustreAudit(unittest.TestCase):
 
     def test_version_info(self):
         self.assertEqual(self.audit.version_info(), (2, 0, 66))
+
 
 class TestMissingLustreVersion(unittest.TestCase):
     """No idea how this might happen, but it shouldn't crash the audit."""
@@ -58,6 +63,7 @@ class TestMissingLustreVersion(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.test_root)
+
 
 class TestLustreAuditGoodHealth(unittest.TestCase):
     def setUp(self):
@@ -77,6 +83,7 @@ class TestLustreAuditGoodHealth(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_root)
 
+
 class TestLustreAuditBadHealth(unittest.TestCase):
     def setUp(self):
         self.test_root = tempfile.mkdtemp()
@@ -95,6 +102,7 @@ class TestLustreAuditBadHealth(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_root)
 
+
 class TestMdtAudit(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
@@ -104,6 +112,7 @@ class TestMdtAudit(unittest.TestCase):
     def test_audit_is_available(self):
         assert MdtAudit.is_available(self.test_root)
 
+
 class TestLnetAudit(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
@@ -112,6 +121,7 @@ class TestLnetAudit(unittest.TestCase):
 
     def test_audit_is_available(self):
         assert LnetAudit.is_available(self.test_root)
+
 
 class TestObdfilterAudit(unittest.TestCase):
     def setUp(self):
