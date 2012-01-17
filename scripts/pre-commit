@@ -121,6 +121,16 @@ def main(all_files):
     
     sys.exit(result)
 
+# python 2.4 doesn't have any()
+try:
+    any
+except NameError:
+    def any(iterable):
+        for element in iterable:
+            if element:
+                return True
+        return False
+
 
 if __name__ == '__main__':
     all_files = False
