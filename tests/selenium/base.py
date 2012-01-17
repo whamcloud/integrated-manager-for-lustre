@@ -2,17 +2,18 @@
 """
 
 # Import system modules
+# FIXME: import TestCase from django.test
 import unittest
 
 # Import third-party modules
 from selenium import webdriver
 
 from utils.constants import Constants
-from testparameters import CHROMA_URL
-from testparameters import TEST_BROWSER
+from test_parameters import CHROMA_URL
+from test_parameters import TEST_BROWSER
 
 
-class BaseClass(unittest.TestCase):
+class SeleniumBaseTestCase(unittest.TestCase):
     """This is the base class for the test classes.
     The setUp() method is called during the
     initialization process. The tearDown() method is called

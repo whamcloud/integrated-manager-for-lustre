@@ -8,6 +8,10 @@ class Constants:
 
     def __init__(self):
         # Wait times
+        self.static_text = {
+                'no_data_for_datable': 'No data available in table',
+        }
+
         self.wait_time = {
             'long': 60,
             'standard': 30,
@@ -19,3 +23,8 @@ class Constants:
         """ Returns the wait time
         """
         return self.wait_time[duration]
+
+    def get_static_text(self, text):
+        """ Returns the static text
+        """
+        return self.static_text[text]
