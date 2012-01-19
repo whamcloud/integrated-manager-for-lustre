@@ -1,11 +1,11 @@
-"""Page Object of Logs """
+"""Page Object of Alerts page """
 
 from utils.constants import Constants
 from time import sleep
 
 
 class Alerts:
-    """ Page Object for Logs
+    """ Page Object for Alerts Page
     """
     def __init__(self, driver):
         self.driver = driver

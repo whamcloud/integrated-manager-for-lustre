@@ -251,18 +251,23 @@ save_primary_failover_server = function (confirmation_markup, api_params)
    $('#transition_confirmation_dialog').html(confirmation_markup);
    $('#transition_confirmation_dialog').dialog('option', 'buttons', {
      'Cancel': function() {$(this).dialog('close');},
-     'Confirm': function() {
-       invoke_api_call(api_post, "set_volumes_usable/", api_params, 
-       success_callback = function(data)
-       {
-         jAlert("Update Successful");
-       },
-       error_callback = function(data)
-       {
-         jAlert(ERR_VOLUME_CONFIG, ALERT_TITLE);
-       });
-       $(this).dialog('close');
-      }
+     'Confirm': 
+     {
+         text: "Confirm",
+         id: "transition_confirm_button",
+         click: function(){
+           invoke_api_call(api_post, "set_volumes_usable/", api_params, 
+           success_callback = function(data)
+           {
+             jAlert("Update Successful");
+           },
+           error_callback = function(data)
+           {
+             jAlert(ERR_VOLUME_CONFIG, ALERT_TITLE);
+           });
+           $(this).dialog('close');
+         }
+     } 
    });
    $('#transition_confirmation_dialog').dialog('open');
 }

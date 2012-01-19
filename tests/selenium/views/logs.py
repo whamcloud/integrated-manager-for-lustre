@@ -1,4 +1,4 @@
-"""Page Object of Logs """
+"""Page Object of Logs Page"""
 
 from utils.constants import Constants
 from selenium.webdriver.support.ui import Select

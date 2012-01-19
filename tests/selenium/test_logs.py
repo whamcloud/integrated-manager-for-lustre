@@ -1,4 +1,4 @@
-""" Create user tests """
+""" Test Logs """
 
 from utils.navigation import Navigation
 from views.logs import Logs

@@ -1,4 +1,4 @@
-""" Create user tests """
+""" Test Alerts"""
 
 from utils.navigation import Navigation
 from views.alerts import Alerts

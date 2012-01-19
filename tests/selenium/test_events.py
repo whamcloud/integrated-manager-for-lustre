@@ -1,4 +1,4 @@
-""" Create user tests """
+""" Test Events """
 
 from utils.navigation import Navigation
 from views.events import Events

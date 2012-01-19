@@ -121,10 +121,15 @@
       position:"center",
       buttons: 
       {
-        "Ok": function() {
-      	  $(this).dialog("close");
-        } 
-      }
+	      "OK" : 
+		  {
+		      text: "OK",
+		      id: "error_ok_button",
+		      click: function(){
+	      		$(this).dialog("close");
+		      }
+          }   
+	  }
     });
 
     $('select[id *="_host"]').live('change', function ()

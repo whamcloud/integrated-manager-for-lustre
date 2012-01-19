@@ -1,11 +1,11 @@
-"""Page Object of Register User """
+"""Page Object of Events Page """
 
 from utils.constants import Constants
 from time import sleep
 
 
 class Events:
-    """ Page Object for User Registration
+    """ Page Object for Events Page
     """
     def __init__(self, driver):
         self.driver = driver
@@ -18,17 +18,6 @@ class Events:
         self.event_severity = self.driver.find_element_by_id('event_severity')
         self.event_type = self.driver.find_element_by_id('event_type')
         self.filter_btn = self.driver.find_element_by_id('filter_btn')
-
-    def enter_event_filter_data(self):
-        """ Enter data for events filter
-        """
-
-        # Start entering event filter data
-
-        #Load the country list to find the right index
-        self.event_severity_options = self.event_severity.find_elements_by_tag_name('option')
-        option_values = [option.get_attribute('value') for option in self.event_severity_options]
-        self.country_list[option_values(20)].click()
 
     def click_filter(self):
         #Click filter button
