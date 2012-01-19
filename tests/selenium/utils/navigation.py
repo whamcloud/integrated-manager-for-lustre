@@ -16,6 +16,8 @@ class Navigation:
             'Dashboard': 'dashboard_menu',
             # Links for Configuration
             'Configure': 'hydracm_menu',
+            # Links for volumes tab
+            'Volumes': 'volume_tab',
             # Link for Alerts
             'Alerts': 'alerts_menu',
             # Links for Events
