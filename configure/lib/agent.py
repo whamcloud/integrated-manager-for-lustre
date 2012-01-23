@@ -127,7 +127,7 @@ class Agent(object):
                 if data['success']:
                     return data['result']
                 else:
-                    exception = pickle.loads(data['exception'])
+                    exception = pickle.loads(str(data['exception']))
                     backtrace = data['backtrace']
                     self.log.error("Agent returned exception from host %s running '%s': %s" % (self.host, cmdline, backtrace))
                     raise AgentException(self.host.id, cmdline, exception, backtrace)
