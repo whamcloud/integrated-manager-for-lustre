@@ -2,7 +2,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-import json
+import simplejson as json
 from hydra_agent.shell import try_run
 from hydra_agent.plugins import AgentPlugin
 

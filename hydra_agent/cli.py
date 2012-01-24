@@ -3,7 +3,7 @@
 # ==============================
 
 import argparse
-import json
+import simplejson as json
 
 from hydra_agent import plugins
 from hydra_agent.store import AgentStore
