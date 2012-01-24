@@ -6,8 +6,8 @@ from hydra_agent.plugins import AgentPlugin
 
 
 def _validate_conf(server_conf):
-    from hydra_agent.main_loop import MainLoop
-    result = MainLoop()._send_update(server_conf['url'], server_conf['token'], None, {})
+    from hydra_agent.main_loop import send_update
+    result = send_update(server_conf['url'], server_conf['token'], None, {})
     if result == None:
         from socket import getfqdn
         raise RuntimeError("Cannot contact server URL %s from %s" % (server_conf['url'], getfqdn()))
