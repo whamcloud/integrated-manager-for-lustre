@@ -78,11 +78,7 @@ class StoragePluginManager(object):
                 storage_plugin = v.plugin_record,
                 class_name__in = v.scannable_resource_classes)))
 
-        result = []
-        for cr in class_records:
-            result.append({'plugin': cr.storage_plugin.module_name, 'resource_class': cr.class_name})
-
-        return result
+        return class_records
 
     @transaction.commit_on_success
     def create_root_resource(self, plugin_mod, resource_class_name, **kwargs):

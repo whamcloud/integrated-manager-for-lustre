@@ -40,11 +40,10 @@ from configureapi import (GetLuns,
 # Stuff related to storage plugins
 from configureapi import (GetResource,
                          GetResources,
-                         GetResourceClasses,
+                         ResourceClass,
                          SetResourceAlias,
                          GetTargetResourceGraph,
                          CreateStorageResource,
-                         CreatableStorageResourceClasses,
                          StorageResourceClassFields)
 
 from statsmetricapi import(GetFSTargetStats,
@@ -107,7 +106,8 @@ urlpatterns = patterns('',
     (r'^notifications/$', CsrfExemptResource(Notifications)),
     (r'^object_summary/$', CsrfExemptResource(configureapi.ObjectSummary)),
 
-    (r'^get_resource_classes/$', CsrfExemptResource(GetResourceClasses)),
+    (r'^resource_class/$', CsrfExemptResource(ResourceClass)),
+
     (r'^get_resources/$', CsrfExemptResource(GetResources)),
     (r'^get_resource/$', CsrfExemptResource(GetResource)),
     (r'^set_resource_alias/$', CsrfExemptResource(SetResourceAlias)),
@@ -116,7 +116,6 @@ urlpatterns = patterns('',
     (r'^delete_storage_resource/$', CsrfExemptResource(configureapi.DeleteStorageResource)),
     (r'^storage_resource/$', CsrfExemptResource(CreateStorageResource)),
     (r'^storage_resource_class_fields/$', CsrfExemptResource(StorageResourceClassFields)),
-    (r'^creatable_storage_resource_classes/$', CsrfExemptResource(CreatableStorageResourceClasses)),
 
     (r'^hosts/$', CsrfExemptResource(ManagedHostsHandler)),
 

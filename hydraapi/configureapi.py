@@ -95,33 +95,35 @@ class SetJobStatus(AnonymousRequestHandler):
         return {'transition_job_status': job.status, 'job_info': job.info, 'job_result': job.result}
 
 
-class GetResourceClasses(AnonymousRequestHandler):
-    def run(self, request):
+class ResourceClass(AnonymousRequestHandler):
+    def run(self, request, creatable = None):
         from configure.models import StorageResourceClass, StorageResourceRecord
 
-        # Pick the first resource with no parents, and use its class
-        try:
-            default_resource = StorageResourceRecord.objects.filter(parents = None).latest('pk').resource_class
-        except StorageResourceRecord.DoesNotExist:
+        if creatable:
+            from configure.lib.storage_plugin.manager import storage_plugin_manager
+            resource_classes = storage_plugin_manager.get_scannable_resource_classes()
+            if len(resource_classes):
+                default = resource_classes[0]
+            else:
+                default = None
+        else:
+            resource_classes = StorageResourceClass.objects.all()
+
+            # Pick the first resource with no parents, and use its class
             try:
-                default_resource = StorageResourceRecord.objects.all()[0]
-            except IndexError:
+                default = StorageResourceRecord.objects.filter(parents = None).latest('pk').resource_class
+            except StorageResourceRecord.DoesNotExist:
                 try:
-                    default_resource = StorageResourceClass.objects.all()[0]
+                    default = StorageResourceRecord.objects.all()[0].resource_class
                 except IndexError:
-                    raise RuntimeError('No storage resource classes')
-
-        def natural_id(src):
-            """Since resource classes are uniquely identified internally by module name
-            plus class name, we don't have to use the PK."""
-            return (src.storage_plugin.module_name, src.class_name)
-
-        def label(src):
-            return "%s-%s" % (src.storage_plugin.module_name, src.class_name)
+                    try:
+                        default = StorageResourceClass.objects.all()[0]
+                    except IndexError:
+                        default = None
 
         return {
-                'options': [(natural_id(src), label(src)) for src in StorageResourceClass.objects.all()],
-                'default': natural_id(default_resource)
+                'resource_classes': [resource_class.to_dict() for resource_class in resource_classes],
+                'default_hint': default.to_dict()
                 }
 
 
@@ -588,12 +590,6 @@ class DeleteStorageResource(AnonymousRequestHandler):
     def run(self, request, resource_id):
         from configure.lib.storage_plugin.daemon import StorageDaemon
         StorageDaemon.request_remove_resource(resource_id)
-
-
-class CreatableStorageResourceClasses(AnonymousRequestHandler):
-    def run(self, request):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
-        return storage_plugin_manager.get_scannable_resource_classes()
 
 
 class StorageResourceClassFields(AnonymousRequestHandler):

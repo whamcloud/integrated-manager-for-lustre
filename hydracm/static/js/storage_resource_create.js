@@ -82,12 +82,13 @@ function storage_resource_create() {
   console.log('opening');
   $('#storage_resource_create_dialog').dialog('open');
 
-  invoke_api_call(api_get, "creatable_storage_resource_classes", "", 
+  /* FIXME: this should be a GET but using POST because args are broken for GET (HYD-571) */
+  invoke_api_call(api_post, "resource_class/", {creatable: true}, 
   success_callback = function(data)  
   {
     var option_markup = ""
-    $.each(data.response, function(i, class_info) {
-      option_markup += "<option value='" + class_info.plugin + "," + class_info.resource_class + "'>" + class_info.plugin + "-" + class_info.resource_class + "</option>"
+    $.each(data.response.resource_classes, function(i, resource_class) {
+      option_markup += "<option value='" + resource_class.plugin_name + "," + resource_class.class_name + "'>" + resource_class.label + "</option>"
     });
     $('#storage_resource_create_classes').html(option_markup);
     storage_resource_create_load_fields();

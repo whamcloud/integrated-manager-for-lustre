@@ -53,23 +53,22 @@
             load_resource_table();
         });
         /* Initial population of dropdown of resource classes */
-        $.get('/api/get_resource_classes/').success(function(data, textStatus, jqXHR) {
-            if (data.success) {
-                var response = data.response;
-                options = ""
-                $.each(response.options, function(i, res_class_pair) {
-                    options += "<option value='" + res_class_pair[0] + "'>" + res_class_pair[1] + "</option>"
-                });
-                $('#resource_class_select').html(options);
+        invoke_api_call(api_get, "resource_class", {},
+          success_callback = function(data) {
+            var response = data.response
+            options = ""
+            $.each(response.resource_classes, function(i, resource_class) {
+                options += "<option value='" + resource_class.plugin_name + "," + resource_class.class_name + "'>" + resource_class.label + "</option>"
+            });
+            $('#resource_class_select').html(options);
 
-                /* Select the default resource class */
-                $('#resource_class_select option[value="' + response.default + '"]').attr('selected', 'selected');
+            /* Select the default resource class */
+            $('#resource_class_select option[value="' + response.default_hint.plugin_name + "," + response.default_hint.class_name + '"]').attr('selected', 'selected');
 
-                /* Initial population of table once we know our default-selected class */
-                load_resource_table();
-            }
-        });
-
+            /* Initial population of table once we know our default-selected class */
+            load_resource_table();
+          }
+        );
     });
 </script>
 

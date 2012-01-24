@@ -68,7 +68,8 @@ class TestLoad(TestCase):
     def test_scannables(self):
         """Test that the manager is correctly reporting ScannableResources"""
         scannable_classes = self.manager.get_scannable_resource_classes()
-        self.assertIn({'plugin': 'loadable_plugin', 'resource_class': 'TestScannableResource'}, scannable_classes)
+        scannable_classes = [sc.to_dict() for sc in scannable_classes]
+        self.assertIn({'plugin_name': 'loadable_plugin', 'class_name': 'TestScannableResource', 'label': "loadable_plugin-TestScannableResource"}, scannable_classes)
 
     def test_root_resource(self):
         """Test that the manager creates and returns a scannable resource"""

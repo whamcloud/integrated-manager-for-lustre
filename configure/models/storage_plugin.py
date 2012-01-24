@@ -37,6 +37,11 @@ class StorageResourceClass(models.Model):
         unique_together = ('storage_plugin', 'class_name')
         app_label = 'configure'
 
+    def to_dict(self):
+        return {'plugin_name': self.storage_plugin.module_name,
+                'class_name': self.class_name,
+                'label': "%s-%s" % (self.storage_plugin.module_name, self.class_name)}
+
 
 class StorageResourceRecord(models.Model):
     """Reference to an instance of a StorageResource"""
