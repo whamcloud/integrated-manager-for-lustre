@@ -80,27 +80,21 @@ class MainLoop(object):
                     # This is a kluge while 'linux' is the only plugin we understand:
                     # should be dispatching requests to plugins and gathering responses.
                     responses = {}
-                    try:
-                        linux_requests = response['plugins']['linux']
-                        daemon_log.info("Got requests: %d" % len(response))
-                    except KeyError:
-                        daemon_log.debug("No requests: %s" % (response))
-                        pass
-                    else:
-                        devices = None
-                        if len(linux_requests) > 0:
-                            daemon_log.info("Ran device scan")
-                            devices = device_scan()
-                        else:
-                            daemon_log.info("No requests for linux")
 
-                        responses['linux'] = {}
-                        for request in linux_requests:
-                            daemon_log.info("Fulfilled request %s" % (request['id']))
-                            responses['linux'][request['id']] = devices
+                    # Fulfil any requests for 'linux' storage plugin
+                    linux_requests = response['plugins']['linux']
+                    devices = None
+                    responses['linux'] = {}
+                    if len(linux_requests) > 0:
+                        devices = device_scan()
+
+                    for request in linux_requests:
+                        daemon_log.info("Fulfilled request %s" % (request['id']))
+                        responses['linux'][request['id']] = devices
 
                     if len(responses) > 0:
                         response = self._send_update(server_conf['url'], server_conf['token'], None, responses)
+
                 while ((datetime.now() - reported_at) < timedelta(seconds = report_interval)):
                     time.sleep(1)
 
