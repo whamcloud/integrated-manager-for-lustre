@@ -113,7 +113,7 @@ class Agent(object):
         if args:
             from re import escape
             args_str = "--args %s" % escape(json.dumps(args))
-        cmdline = "hydra-agent.py %s %s" % (cmd, args_str)
+        cmdline = "hydra-agent %s %s" % (cmd, args_str)
         code, out, err = self._ssh(cmdline)
 
         if code == 0:
