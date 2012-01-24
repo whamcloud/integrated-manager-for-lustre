@@ -11,8 +11,7 @@ setup_environ(settings)
 
 from django.contrib.contenttypes.models import ContentType
 
-from requesthandler import (AnonymousRequestHandler,
-                            extract_request_args)
+from requesthandler import AnonymousRequestHandler
 from configure.models import (ManagedFilesystem,
                             ManagedMdt,
                             ManagedMgs,
@@ -73,7 +72,6 @@ class ListFileSystems(AnonymousRequestHandler):
 
 
 class GetFileSystem(AnonymousRequestHandler):
-    @extract_request_args('filesystem_id')
     def run(self, request, filesystem_id):
         from django.shortcuts import get_object_or_404
         filesystem = get_object_or_404(ManagedFilesystem, pk = filesystem_id)
@@ -139,7 +137,6 @@ class GetMgtDetails(AnonymousRequestHandler):
 
 
 class GetFSVolumeDetails(AnonymousRequestHandler):
-    @extract_request_args('filesystem_id')
     def run(self, request, filesystem_id):
         from configure.models import ManagedTarget, ManagedFilesystem
         from configure.lib.state_manager import StateManager
@@ -157,7 +154,6 @@ class GetFSVolumeDetails(AnonymousRequestHandler):
 
 
 class GetTargets(AnonymousRequestHandler):
-    @extract_request_args('filesystem', 'kinds')
     def run(self, request, filesystem, kinds):
         kind_map = {"MGT": ManagedMgs,
                     "OST": ManagedOst,
@@ -190,7 +186,6 @@ class GetTargets(AnonymousRequestHandler):
 
 
 class GetFSTargets(AnonymousRequestHandler):
-    @extract_request_args('filesystem_id', 'host_id', 'kinds')
     def run(self, request, filesystem_id, host_id, kinds):
         kind_map = {"MGT": ManagedMgs,
                     "OST": ManagedOst,
@@ -237,7 +232,6 @@ class GetFSTargets(AnonymousRequestHandler):
         return result
 
 #class GetClients (AnonymousRequestHandler):
-#    @extract_request_args('filesystem')
 #    def run(self, request, filesystem):
 #        filesystem_name = filesystem
 #        if filesystem_name :
@@ -262,7 +256,6 @@ class GetFSTargets(AnonymousRequestHandler):
 
 
 class GetEventsByFilter(AnonymousRequestHandler):
-    @extract_request_args('host_id', 'severity', 'eventtype', 'page_id', 'page_size')
     def run(self, request, host_id, severity, eventtype, page_size, page_id):
         return geteventsbyfilter(host_id, severity, eventtype, page_id, page_size)
 
@@ -310,7 +303,6 @@ class GetLatestEvents(AnonymousRequestHandler):
 
 
 class GetAlerts(AnonymousRequestHandler):
-    @extract_request_args('active', 'page_id', 'page_size')
     def run(self, request, active, page_id, page_size):
         from monitor.models import AlertState
         if active:
@@ -326,7 +318,6 @@ class GetAlerts(AnonymousRequestHandler):
 
 
 class UpdateScan(AnonymousRequestHandler):
-    @extract_request_args('fqdn', 'token', 'update_scan', 'plugins')
     def run(self, request, fqdn, token, update_scan, plugins):
         from hydraapi import api_log
         api_log.debug("UpdateScan %s" % fqdn)
@@ -375,7 +366,6 @@ class GetJobs(AnonymousRequestHandler):
 
 
 class GetLogs(AnonymousRequestHandler):
-    @extract_request_args('host_id', 'start_time', 'end_time', 'lustre', 'page_id', 'page_size')
     def run(self, request, host_id, start_time, end_time, lustre, page_id, page_size):
         return get_logs(host_id, start_time, end_time, lustre, page_id, page_size)
 

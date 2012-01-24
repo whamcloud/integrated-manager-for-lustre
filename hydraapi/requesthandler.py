@@ -10,6 +10,59 @@ from django.views.decorators.csrf  import csrf_exempt
 from hydraapi import api_log
 
 
+def extract_request_args(f):
+    """Decorator to catch boto exceptions and convert them
+    to simple exceptions with slightly nicer error messages.
+    """
+    import functools
+
+    @functools.wraps(f)
+    def _extract_request_args(request):
+        # This will be rquired for session management
+        #if request.session:
+        #    request.session.set_expiry(request.user.get_inactivity_timeout())
+
+        import inspect
+        arg_spec = inspect.getargspec(f)
+
+        # First two arguments are 'self' and 'request', skip them
+        arg_names = arg_spec[0][2:]
+
+        # Build a map of any default values for arguments
+        defaults_list = arg_spec[3]
+        defaults = {}
+        if defaults_list:
+            for i in range(0, len(defaults_list)):
+                defaults[arg_names[-(i + 1)]] = defaults_list[i]
+
+        errors = {}
+        kwargs = {}
+        args = []
+        for arg_name in arg_names:
+            if arg_name in defaults:
+                # This is a keyword argument
+                try:
+                    kwargs[arg_name] = request.data[arg_name]
+                except KeyError:
+                    kwargs[arg_name] = defaults[arg_name]
+            else:
+                # This is a positional argument
+                try:
+                    args.append(request.data[arg_name])
+                except KeyError:
+                    errors[arg_name] = ["This field is required"]
+
+        if len(errors) > 0:
+            import urllib2
+            raise urllib2.URLError(errors)
+
+        #api_log.info("args = %s, kwargs = %s" % (args, kwargs))
+
+        return f(request, *args, **kwargs)
+
+    return _extract_request_args
+
+
 def extract_exception(f):
     """Decorator to catch boto exceptions and convert them
     to simple exceptions with slightly nicer error messages.
@@ -48,10 +101,10 @@ class RequestHandler(BaseHandler):
         if self.run is None:
             raise Exception("No function registered! Unable to process request.")
         request.data = request.GET
-        return self.run(request)
+        return extract_request_args(self.run)(request)
 
     def create(self, request):
-        return self.run(request)
+        return extract_request_args(self.run)(request)
 
 
 class AnonymousRequestHandler(RequestHandler):
@@ -99,61 +152,22 @@ class AnonymousRESTRequestHandler(BaseHandler):
     @extract_exception
     def read(self, request):
         request.data = request.GET
-        return self.get(request)
+        return extract_request_args(self.get)(request)
 
     @render_to_json()
     @extract_exception
     def create(self, request):
-        return self.post(request)
+        return extract_request_args(self.post)(request)
 
     @render_to_json()
     @extract_exception
     def update(self, request):
-        return self.put(request)
+        return extract_request_args(self.put)(request)
 
     @render_to_json()
     @extract_exception
     def delete(self, request):
-        return self.remove(request)
-
-
-class extract_request_args:
-    """Extracts specified keys from the request dictionary and calls the wrapped
-    function
-    """
-    def __init__(self, *args):
-        self.args = args
-
-    def __call__(self, f):
-        def wrapped_f(wrapped_self, request):
-            # This will be rquired for session management
-            #if request.session:
-            #    request.session.set_expiry(request.user.get_inactivity_timeout())
-            import urllib2
-            call_args = {}
-            data = request.data
-            errors = {}
-            #Fill in the callArgs with values from the request data
-            for value in self.args:
-                try:
-                    if value.__contains__('='):
-                        try:
-                            optional_value = value.split('=')[0]
-                            call_args[optional_value] = data[optional_value]
-                        except:
-                            # It's Okay to pass this exception as the value is optional
-                            call_args[optional_value] = value.split('=')[1]
-                            pass
-                    else:
-                        call_args[value] = data[value]
-                except:
-                    errors[value] = ["This field is required."]
-                    pass
-
-            if len(errors) > 0:
-                raise urllib2.URLError(errors)
-            return f(wrapped_self, request, **call_args)
-        return wrapped_f
+        return extract_request_args(self.remove)(request)
 
 
 class APIResponse:

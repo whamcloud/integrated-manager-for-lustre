@@ -9,14 +9,12 @@ from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
-from requesthandler import (AnonymousRequestHandler,
-                            extract_request_args)
+from requesthandler import AnonymousRequestHandler
 from configure.models import (ManagedFilesystem,
                             ManagedHost)
 
 
 class GetFSTargetStats_fake(AnonymousRequestHandler):
-    @extract_request_args('filesystem', 'starttime', 'endtime', 'datafunction', 'targetkind', 'fetchmetrics')
     def run(self, request, filesystem, starttime, endtime, datafunction, targetkind, fetchmetrics):
         assert targetkind in ['OST', 'MDT']
         from random import randrange, uniform
@@ -111,7 +109,6 @@ class GetFSTargetStats_fake(AnonymousRequestHandler):
 
 
 class GetFSServerStats_fake(AnonymousRequestHandler):
-    @extract_request_args('filesystem', 'starttime', 'endtime', 'datafunction', 'fetchmetrics')
     def run(self, request, filesystem, starttime, endtime, datafunction, fetchmetrics):
         from  random import randrange
         data_slice = []
@@ -155,7 +152,6 @@ class GetFSServerStats_fake(AnonymousRequestHandler):
 
 
 class GetServerStats_fake(AnonymousRequestHandler):
-    @extract_request_args('hostid', 'starttime', 'endtime', 'datafunction', 'fetchmetrics')
     def run(self, request, hostid, starttime, endtime, datafunction, fetchmetrics):
         from  random import randrange
         data_slice = []
@@ -179,7 +175,6 @@ class GetServerStats_fake(AnonymousRequestHandler):
 
 
 class GetTargetStats_fake(AnonymousRequestHandler):
-    @extract_request_args('target', 'starttime', 'endtime', 'datafunction', 'targetkind', 'fetchmetrics')
     def run(self, request, target, starttime, endtime, datafunction, targetkind, fetchmetrics):
         assert targetkind in ['OST', 'MDT']
         from random import randrange, uniform
@@ -221,7 +216,6 @@ class GetTargetStats_fake(AnonymousRequestHandler):
 
 
 class GetFSClientsStats_fake(AnonymousRequestHandler):
-    @extract_request_args('filesystem', 'starttime', 'endtime', 'datafunction', 'fetchmetrics')
     def run(self, request, filesystem, starttime, endtime, datafunction, fetchmetrics):
         from random import randrange
         current_slice = gettimeslice()
@@ -236,13 +230,11 @@ class GetFSClientsStats_fake(AnonymousRequestHandler):
 
 
 class GetFSMGSStats(AnonymousRequestHandler):
-    @extract_request_args('filesystem', 'starttime', 'endtime', 'datafunction', 'fetchmetrics')
     def run(self, request, filesystem, starttime, endtime, datafunction, fetchmetrics):
         return ''
 
 
 class GetFSOSTHeatMap(AnonymousRequestHandler):
-    @extract_request_args('filesystem', 'starttime', 'endtime', 'datafunction', 'fetchmetrics')
     def run(self, request, filesystem, starttime, endtime, datafunction, fetchmetrics):
         from random import randrange
         ost_data = []

@@ -12,13 +12,11 @@ setup_environ(settings)
 
 from configure.models import ManagedHost
 from configure.models import Command
-from requesthandler import (AnonymousRequestHandler,
-                            extract_request_args)
+from requesthandler import AnonymousRequestHandler
 from hydraapi.requesthandler import APIResponse
 
 
 class TestHost(AnonymousRequestHandler):
-    @extract_request_args('hostname')
     def run(self, request, hostname):
         from monitor.tasks import test_host_contact
         from configure.models import Monitor
@@ -30,14 +28,12 @@ class TestHost(AnonymousRequestHandler):
 
 
 class AddHost(AnonymousRequestHandler):
-    @extract_request_args('hostname')
     def run(self, request, hostname):
         host = ManagedHost.create_from_string(hostname)
         return {'host_id': host.id, 'host': host.address, 'status': 'added'}
 
 
 class RemoveHost(AnonymousRequestHandler):
-    @extract_request_args('hostid')
     def run(self, request, hostid):
         host = ManagedHost.objects.get(id = hostid)
         command = Command.set_state(host, 'removed')
@@ -45,7 +41,6 @@ class RemoveHost(AnonymousRequestHandler):
 
 
 class SetLNetStatus(AnonymousRequestHandler):
-    @extract_request_args('hostid', 'state')
     def run(self, request, hostid, state):
         host = ManagedHost.objects.get(id = hostid)
         command = Command.set_state(host, state)
@@ -53,7 +48,6 @@ class SetLNetStatus(AnonymousRequestHandler):
 
 
 class SetTargetMountStage(AnonymousRequestHandler):
-    @extract_request_args('target_id', 'state')
     def run(self, request, target_id, state):
         from configure.models import ManagedTarget
         target = ManagedTarget.objects.get(id=target_id)
@@ -62,7 +56,6 @@ class SetTargetMountStage(AnonymousRequestHandler):
 
 
 class RemoveFileSystem(AnonymousRequestHandler):
-    @extract_request_args('filesystemid')
     def run(self, request, filesystemid):
         from configure.models import ManagedFilesystem
         fs = ManagedFilesystem.objects.get(id = filesystemid)
@@ -71,7 +64,6 @@ class RemoveFileSystem(AnonymousRequestHandler):
 
 
 class RemoveClient(AnonymousRequestHandler):
-    @extract_request_args('clientid')
     def run(self, request, clientid):
         from configure.models import ManagedTargetMount
         mtm = ManagedTargetMount.objects.get(id = clientid)
@@ -80,7 +72,6 @@ class RemoveClient(AnonymousRequestHandler):
 
 
 class GetJobStatus(AnonymousRequestHandler):
-    @extract_request_args('job_id')
     def run(self, request, job_id):
         from django.shortcuts import get_object_or_404
         from configure.models import Job
@@ -90,7 +81,6 @@ class GetJobStatus(AnonymousRequestHandler):
 
 
 class SetJobStatus(AnonymousRequestHandler):
-    @extract_request_args('job_id', 'state')
     def run(self, request, job_id, state):
         assert state in ['pause', 'cancel', 'resume']
         from django.shortcuts import get_object_or_404
@@ -136,7 +126,6 @@ class GetResourceClasses(AnonymousRequestHandler):
 
 
 class GetResources(AnonymousRequestHandler):
-    @extract_request_args('module_name', 'class_name')
     def run(self, request, module_name, class_name):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(module_name, class_name)
@@ -174,7 +163,6 @@ class GetResources(AnonymousRequestHandler):
 # FIXME: this should be part of /storage_resource/
 # FIXME: should return a 204 status code
 class SetResourceAlias(AnonymousRequestHandler):
-    @extract_request_args('resource_id', 'alias')
     def run(cls, request, resource_id, alias):
         from configure.models import StorageResourceRecord
         from django.shortcuts import get_object_or_404
@@ -188,7 +176,6 @@ class SetResourceAlias(AnonymousRequestHandler):
 
 
 class GetResource(AnonymousRequestHandler):
-    @extract_request_args('resource_id')
     def run(cls, request, resource_id):
         from configure.models import StorageResourceRecord
         from django.shortcuts import get_object_or_404
@@ -221,7 +208,6 @@ class GetResource(AnonymousRequestHandler):
 
 
 class SetVolumePrimary(AnonymousRequestHandler):
-    @extract_request_args('lun_ids', 'primary_host_ids', 'secondary_host_ids')
     def run(cls, request, lun_ids, primary_host_ids, secondary_host_ids):
         from configure.models import Lun, LunNode
         from django.shortcuts import get_object_or_404
@@ -246,7 +232,6 @@ class SetVolumePrimary(AnonymousRequestHandler):
 
 
 class GetLuns(AnonymousRequestHandler):
-    @extract_request_args('category')
     def run(cls, request, category):
         assert category in ['unused', 'usable']
 
@@ -278,7 +263,6 @@ class GetLuns(AnonymousRequestHandler):
 
 
 class CreateNewFilesystem(AnonymousRequestHandler):
-    @extract_request_args('fsname', 'mgt_id', 'mgt_lun_id', 'mdt_lun_id', 'ost_lun_ids', 'conf_params')
     def run(self, request, fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, conf_params):
         # mgt_id and mgt_lun_id are mutually exclusive:
         # * mgt_id is a PK of an existing ManagedMgt to use
@@ -327,7 +311,6 @@ def create_fs(mgs_id, fsname, conf_params):
 
 
 class CreateMGT(AnonymousRequestHandler):
-    @extract_request_args('lun_id')
     def run(self, request, lun_id):
         from configure.models import ManagedMgs
         mgt = create_target(lun_id, ManagedMgs, name = "MGS")
@@ -361,7 +344,6 @@ def create_target(lun_id, target_klass, **kwargs):
 
 
 class CreateOSTs(AnonymousRequestHandler):
-    @extract_request_args('filesystem_id', 'ost_lun_ids')
     def run(self, request, filesystem_id, ost_lun_ids):
         from configure.models import ManagedFilesystem, ManagedOst
         from django.db import transaction
@@ -383,7 +365,6 @@ class CreateOSTs(AnonymousRequestHandler):
 
 
 class SetTargetConfParams(AnonymousRequestHandler):
-    @extract_request_args('target_id', 'conf_params', 'IsFS')
     def run(self, request, target_id, conf_params, IsFS):
         set_target_conf_param(target_id, conf_params, IsFS)
 
@@ -418,7 +399,6 @@ def set_target_conf_param(target_id, conf_params, IsFS):
 
 
 class GetTargetConfParams(AnonymousRequestHandler):
-    @extract_request_args('target_id', 'kinds')
     def run(self, request, target_id, kinds):
         from configure.lib.conf_param import (FilesystemClientConfParam,
                                               FilesystemGlobalConfParam,
@@ -483,7 +463,6 @@ class GetTargetConfParams(AnonymousRequestHandler):
 
 
 class Target(AnonymousRequestHandler):
-    @extract_request_args('id')
     def run(self, request, id):
         from configure.models import ManagedTarget
         from django.shortcuts import get_object_or_404
@@ -492,7 +471,6 @@ class Target(AnonymousRequestHandler):
 
 
 class GetTargetResourceGraph(AnonymousRequestHandler):
-    @extract_request_args('target_id')
     def run(self, request, target_id):
         from monitor.models import AlertState
         from configure.models import ManagedTarget
@@ -601,28 +579,24 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
 
 
 class CreateStorageResource(AnonymousRequestHandler):
-    @extract_request_args('plugin', 'resource_class', 'attributes')
     def run(self, request, plugin, resource_class, attributes):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         storage_plugin_manager.create_root_resource(plugin, resource_class, **attributes)
 
 
 class DeleteStorageResource(AnonymousRequestHandler):
-    @extract_request_args('resource_id')
     def run(self, request, resource_id):
         from configure.lib.storage_plugin.daemon import StorageDaemon
         StorageDaemon.request_remove_resource(resource_id)
 
 
 class CreatableStorageResourceClasses(AnonymousRequestHandler):
-    @extract_request_args()
     def run(self, request):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         return storage_plugin_manager.get_scannable_resource_classes()
 
 
 class StorageResourceClassFields(AnonymousRequestHandler):
-    @extract_request_args('plugin', 'resource_class')
     def run(self, request, plugin, resource_class):
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         resource_klass, resource_klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, resource_class)
@@ -637,7 +611,6 @@ class StorageResourceClassFields(AnonymousRequestHandler):
 
 
 class Notifications(AnonymousRequestHandler):
-    @extract_request_args('filter_opts')
     def run(self, request, filter_opts):
         since_time = filter_opts['since_time']
         initial = filter_opts['initial']
@@ -744,7 +717,6 @@ class Notifications(AnonymousRequestHandler):
 
 
 class TransitionConsequences(AnonymousRequestHandler):
-    @extract_request_args('id', 'content_type_id', 'new_state')
     def run(self, request, id, content_type_id, new_state):
         from configure.lib.state_manager import StateManager
         ct = ContentType.objects.get_for_id(content_type_id)
@@ -754,7 +726,6 @@ class TransitionConsequences(AnonymousRequestHandler):
 
 
 class Transition(AnonymousRequestHandler):
-    @extract_request_args('id', 'content_type_id', 'new_state')
     def run(self, request, id, content_type_id, new_state):
         klass = ContentType.objects.get_for_id(content_type_id).model_class()
         instance = klass.objects.get(pk = id)
@@ -765,7 +736,6 @@ class Transition(AnonymousRequestHandler):
 
 
 class ObjectSummary(AnonymousRequestHandler):
-    @extract_request_args('objects')
     def run(self, request, objects):
         result = []
         for o in objects:

@@ -11,12 +11,11 @@ setup_environ(settings)
 
 from configure.models import (ManagedHost, ManagedFilesystem)
 from configure.lib.state_manager import StateManager
-from requesthandler import (AnonymousRESTRequestHandler, extract_request_args)
+from requesthandler import AnonymousRESTRequestHandler
 from hydraapi.requesthandler import APIResponse
 
 
 class ManagedHostsHandler (AnonymousRESTRequestHandler):
-    @extract_request_args('host_id=', 'filesystem_id=')
     def get(self, request, host_id = None, filesystem_id = None):
         hosts = []
         if host_id:
@@ -34,7 +33,6 @@ class ManagedHostsHandler (AnonymousRESTRequestHandler):
             hosts_info.append(_host)
         return hosts_info
 
-    @extract_request_args('host_name')
     def post(self, request, host_name):
         host = ManagedHost.create_from_string(host_name)
         result = {'id': host.id, 'host': host.address}
@@ -46,7 +44,6 @@ class ManagedHostsHandler (AnonymousRESTRequestHandler):
 
 
 class TestHost(AnonymousRESTRequestHandler):
-    @extract_request_args('hostname')
     def get(self, request, hostname):
         from monitor.tasks import test_host_contact
         from configure.models import Monitor

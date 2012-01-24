@@ -9,8 +9,7 @@ from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
-from requesthandler import (AnonymousRequestHandler,
-                            extract_request_args)
+from requesthandler import AnonymousRequestHandler
 from configure.models import (ManagedFilesystem,
                             ManagedMdt,
                             ManagedOst,
@@ -19,7 +18,6 @@ from django.shortcuts import get_object_or_404
 
 
 class GetFSTargetStats(AnonymousRequestHandler):
-    @extract_request_args('filesystem_id', 'starttime', 'endtime', 'datafunction', 'targetkind', 'fetchmetrics')
     def run(self, request, filesystem_id, starttime, endtime, datafunction, targetkind, fetchmetrics):
         assert targetkind in ['OST', 'MDT', 'HOST']
         interval = ''
@@ -34,7 +32,6 @@ class GetFSTargetStats(AnonymousRequestHandler):
 
 
 class GetFSServerStats(AnonymousRequestHandler):
-    @extract_request_args('filesystem_id', 'starttime', 'endtime', 'datafunction', 'fetchmetrics')
     def run(self, request, filesystem_id, starttime, endtime, datafunction, fetchmetrics):
         interval = ''
         if filesystem_id:
@@ -48,7 +45,6 @@ class GetFSServerStats(AnonymousRequestHandler):
 
 
 class GetFSMGSStats(AnonymousRequestHandler):
-    @extract_request_args('filesystem_id', 'starttime', 'endtime', 'datafunction', 'fetchmetrics')
     def run(self, request, filesystem_id, starttime, endtime, datafunction, fetchmetrics):
         interval = ''
         if filesystem_id:
@@ -66,7 +62,6 @@ class GetFSMGSStats(AnonymousRequestHandler):
 
 
 class GetServerStats(AnonymousRequestHandler):
-    @extract_request_args('host_id', 'starttime', 'endtime', 'datafunction', 'fetchmetrics')
     def run(self, request, host_id, starttime, endtime, datafunction, fetchmetrics):
         interval = ''
         if host_id:
@@ -77,7 +72,6 @@ class GetServerStats(AnonymousRequestHandler):
 
 
 class GetTargetStats(AnonymousRequestHandler):
-    @extract_request_args('target_id', 'starttime', 'endtime', 'datafunction', 'targetkind', 'fetchmetrics')
     def run(self, request, target_id, starttime, endtime, datafunction, targetkind, fetchmetrics):
         assert targetkind in ['OST', 'MDT']
         interval = ''
@@ -90,7 +84,6 @@ class GetTargetStats(AnonymousRequestHandler):
 
 
 class GetFSClientsStats(AnonymousRequestHandler):
-    @extract_request_args('filesystem_id', 'starttime', 'endtime', 'datafunction', 'fetchmetrics')
     def run(self, request, filesystem_id, starttime, endtime, datafunction, fetchmetrics):
         interval = ''
         client_stats = []
@@ -104,7 +97,6 @@ class GetFSClientsStats(AnonymousRequestHandler):
 
 
 class GetHeatMapFSStats(AnonymousRequestHandler):
-    @extract_request_args('filesystem', 'starttime', 'endtime', 'datafunction', 'targetkind', 'fetchmetrics')
     def run(self, request, filesystem, starttime, endtime, datafunction, targetkind, fetchmetrics):
         assert targetkind in ['OST', 'MDT']
         interval = ''
