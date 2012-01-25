@@ -6,9 +6,16 @@ import errno
 
 class AgentStore(object):
     LIBDIR = "/var/lib/hydra"
+    server_conf_mtime = None
 
     @classmethod
     def _json_path(cls, name):
+        """Get a fully qualified filename for a configuration file,
+
+        >>> AgentStore._json_path('server_conf')
+        "/var/lib/hydra/server_conf"
+
+        """
         return os.path.join(cls.LIBDIR, name)
 
     @classmethod
@@ -29,17 +36,43 @@ class AgentStore(object):
             f = open(cls._json_path(cls.SERVER_CONF_FILE))
             j = json.load(f)
             f.close()
+            cls.server_conf_mtime = os.path.getmtime(cls._json_path(cls.SERVER_CONF_FILE))
         except IOError, e:
             if e.errno == errno.ENOENT:
                 # Return none if no server conf exists
+                cls.server_conf_mtime = None
                 return None
             else:
                 raise
+        except ValueError:
+            # Malformed JSON indicates a part-written file, behave as if it doesn't exist
+            # and don't set server_conf_mtime, so that caller will retry
+            return None
         return j
 
     @classmethod
+    def server_conf_changed(cls):
+        if bool(cls.server_conf_mtime) != os.path.exists(cls._json_path(cls.SERVER_CONF_FILE)):
+            # If it's come into or out of existence
+            return True
+
+        if cls.server_conf_mtime:
+            # If it existed last time we checked, is it modified?
+            try:
+                mtime = os.path.getmtime(cls._json_path(cls.SERVER_CONF_FILE))
+            except IOError, e:
+                # It ceased to exist during this function
+                if e.errno == errno.ENOENT:
+                    return True
+
+            if mtime != cls.server_conf_mtime:
+                return True
+            else:
+                return False
+
+    @classmethod
     def remove_server_conf(cls):
-        cls._unlink_if_exists(os.path.join(cls.LIBDIR, cls.SERVER_CONF_FILE))
+        cls._unlink_if_exists(cls._json_path(cls.SERVER_CONF_FILE))
 
     @classmethod
     def set_server_conf(cls, conf):

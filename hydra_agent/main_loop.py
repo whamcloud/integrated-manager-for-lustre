@@ -65,6 +65,9 @@ class PluginThread(threading.Thread):
 
         super(PluginThread, self).__init__(*args, **kwargs)
 
+    def set_server_conf(self, server_conf):
+        self._server_conf = server_conf
+
     def run(self):
         import Queue
 
@@ -120,10 +123,8 @@ class MainLoop(object):
     def _enqueue_request(self, server_conf, plugin_name, request):
         try:
             plugin_thread = self._plugin_threads[plugin_name]
-            daemon_log.info("existed")
         except KeyError:
             plugin_thread = PluginThread(server_conf, plugin_name)
-            daemon_log.info("Calling start")
             plugin_thread.start()
             self._plugin_threads[plugin_name] = plugin_thread
 
@@ -137,13 +138,17 @@ class MainLoop(object):
         for thread in self._plugin_threads.values():
             thread.join()
 
+        self._plugin_threads.clear()
+
     def _main_loop(self):
         # Before entering the loop, set up avahi
         self._publish_avahi()
 
-        # Try loading the server information (where to send audit info)
+        # Load server config (server URL etc)
         from hydra_agent.store import AgentStore
         server_conf = AgentStore.get_server_conf()
+        if server_conf:
+            daemon_log.info("Server configuration loaded (url: %s)" % server_conf['url'])
 
         # How often to report to a configured server
         report_interval = 10
@@ -153,7 +158,22 @@ class MainLoop(object):
         config_interval = 10
         from hydra_agent.actions.update_scan import update_scan
         while True:
-            if server_conf:
+            if AgentStore.server_conf_changed():
+                server_conf = AgentStore.get_server_conf()
+                if not server_conf:
+                    # If the server configuration has been removed then
+                    # stop all plugin threads (no longer possible to service
+                    # any requests)
+                    daemon_log.info("Server configuration cleared")
+                    self._join_plugin_threads()
+                else:
+                    daemon_log.info("Server configuration changed (url: %s)" % server_conf['url'])
+                    # If the server configuration has been changed
+                    # then update all plugin threads with the new configuration.
+                    for thread in self._plugin_threads.values():
+                        thread.set_server_conf(server_conf)
+                self._reload_config = False
+            elif server_conf:
                 from datetime import datetime, timedelta
                 reported_at = datetime.now()
                 response = send_update(server_conf['url'], server_conf['token'], update_scan(), {'linux': {}})
@@ -169,7 +189,6 @@ class MainLoop(object):
 
             else:
                 time.sleep(config_interval)
-                server_conf = AgentStore.get_server_conf()
 
     def run(self, foreground):
         """Daemonize and handle unexpected exceptions"""
