@@ -57,24 +57,37 @@
           success_callback = function(data) {
             var response = data.response
             options = ""
-            $.each(response.resource_classes, function(i, resource_class) {
-                options += "<option value='" + resource_class.plugin_name + "," + resource_class.class_name + "'>" + resource_class.label + "</option>"
-            });
-            $('#resource_class_select').html(options);
+            if (response.resource_classes.length == 0) {
+              $('div#plugins_available').hide();
+              /*$('div#plugins_unavailable').css('display', 'block')*/
+              $('div#plugins_unavailable').show();
+            } else {
+              $.each(response.resource_classes, function(i, resource_class) {
+                  options += "<option value='" + resource_class.plugin_name + "," + resource_class.class_name + "'>" + resource_class.label + "</option>"
+              });
+              $('#resource_class_select').html(options);
 
-            /* Select the default resource class */
-            $('#resource_class_select option[value="' + response.default_hint.plugin_name + "," + response.default_hint.class_name + '"]').attr('selected', 'selected');
+              /* Select the default resource class */
+              $('#resource_class_select option[value="' + response.default_hint.plugin_name + "," + response.default_hint.class_name + '"]').attr('selected', 'selected');
 
-            /* Initial population of table once we know our default-selected class */
-            load_resource_table();
+              /* Initial population of table once we know our default-selected class */
+              load_resource_table();
+            }
           }
         );
     });
 </script>
 
 
-<h2 class='section_header'>Storage resources</h2>
-<p><button class='add storage_resource_create_link'>Add storage device...</button></p>
-<p>Filter: <select id='resource_class_select'></select>&nbsp;</p>
-<table class='display tight_lines' id='resource_table' width="100%">
-</table>
+<div id="plugins_available">
+  <h2 class='section_header'>Storage resources</h2>
+  <p><button class='add storage_resource_create_link'>Add storage device...</button></p>
+  <p>Filter: <select id='resource_class_select'></select>&nbsp;</p>
+  <table class='display tight_lines' id='resource_table' width="100%">
+  </table>
+</div>
+<div id="plugins_unavailable" style="display:none;">
+  <h2 class='section_header'>No plugins found</h2>
+  <p>No storage plugins are currently installed.  When storage plugins are installed,
+  use this tab to configure and view storage resources such as controllers.</p>
+</div>

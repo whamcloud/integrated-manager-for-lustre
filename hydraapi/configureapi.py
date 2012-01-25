@@ -99,31 +99,31 @@ class ResourceClass(AnonymousRequestHandler):
     def run(self, request, creatable = None):
         from configure.models import StorageResourceClass, StorageResourceRecord
 
+        from configure.lib.storage_plugin.manager import storage_plugin_manager
         if creatable:
-            from configure.lib.storage_plugin.manager import storage_plugin_manager
-            resource_classes = storage_plugin_manager.get_scannable_resource_classes()
+            resource_classes = storage_plugin_manager.get_resource_classes(scannable_only = True)
             if len(resource_classes):
-                default = resource_classes[0]
+                default = resource_classes[0].to_dict()
             else:
                 default = None
         else:
-            resource_classes = StorageResourceClass.objects.all()
+            resource_classes = storage_plugin_manager.get_resource_classes()
 
             # Pick the first resource with no parents, and use its class
             try:
-                default = StorageResourceRecord.objects.filter(parents = None).latest('pk').resource_class
+                default = StorageResourceRecord.objects.filter(parents = None).latest('pk').resource_class.to_dict()
             except StorageResourceRecord.DoesNotExist:
                 try:
-                    default = StorageResourceRecord.objects.all()[0].resource_class
+                    default = StorageResourceRecord.objects.all()[0].resource_class.to_dict()
                 except IndexError:
                     try:
-                        default = StorageResourceClass.objects.all()[0]
+                        default = StorageResourceClass.objects.all()[0].to_dict()
                     except IndexError:
                         default = None
 
         return {
                 'resource_classes': [resource_class.to_dict() for resource_class in resource_classes],
-                'default_hint': default.to_dict()
+                'default_hint': default
                 }
 
 

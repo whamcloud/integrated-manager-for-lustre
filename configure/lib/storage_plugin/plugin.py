@@ -56,6 +56,9 @@ class ResourceIndex(object):
 
 
 class StoragePlugin(object):
+    #: Set to true for plugins which should not be shown in the user interface
+    internal = False
+
     def initial_scan(self, root_resource):
         """Mandatory.  Identify all resources
            present at this time and call register_resource on them.

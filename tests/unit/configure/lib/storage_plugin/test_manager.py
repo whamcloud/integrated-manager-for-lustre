@@ -65,9 +65,16 @@ class TestLoad(TestCase):
         with self.assertRaises(RuntimeError):
             self.manager.get_plugin_resource_class('noexist', 'TestResource')
 
-    def test_scannables(self):
-        """Test that the manager is correctly reporting ScannableResources"""
-        scannable_classes = self.manager.get_scannable_resource_classes()
+    def test_get_resource_classes(self):
+        """Test that the manager is correctly reporting classes and filtering ScannableResources"""
+
+        # All the resources
+        all_classes = self.manager.get_resource_classes()
+        self.assertEqual(len(all_classes), 2)
+
+        # Just the scannable resources
+        scannable_classes = self.manager.get_resource_classes(scannable_only = True)
+        self.assertEqual(len(scannable_classes), 1)
         scannable_classes = [sc.to_dict() for sc in scannable_classes]
         self.assertIn({'plugin_name': 'loadable_plugin', 'class_name': 'TestScannableResource', 'label': "loadable_plugin-TestScannableResource"}, scannable_classes)
 

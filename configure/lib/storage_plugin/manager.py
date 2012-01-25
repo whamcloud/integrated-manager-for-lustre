@@ -71,12 +71,23 @@ class StoragePluginManager(object):
                filter(parents = None).values('id')
         return [r['id'] for r in records]
 
-    def get_scannable_resource_classes(self):
+    def get_resource_classes(self, scannable_only = False, show_internal = False):
+        """Return a list of StorageResourceClass records
+
+           :param scannable_only: Only report ScannableResource subclasses
+           :param show_internal: Include plugins with the internal=True attribute (excluded by default)
+        """
         class_records = []
         for k, v in self.loaded_plugins.items():
-            class_records.extend(list(StorageResourceClass.objects.filter(
-                storage_plugin = v.plugin_record,
-                class_name__in = v.scannable_resource_classes)))
+            if not show_internal and v.plugin_class.internal:
+                continue
+
+            filter = {}
+            filter['storage_plugin'] = v.plugin_record
+            if scannable_only:
+                filter['class_name__in'] = v.scannable_resource_classes
+
+            class_records.extend(list(StorageResourceClass.objects.filter(**filter)))
 
         return class_records
 
