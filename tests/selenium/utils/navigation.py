@@ -16,8 +16,13 @@ class Navigation:
             'Dashboard': 'dashboard_menu',
             # Links for Configuration
             'Configure': 'hydracm_menu',
-            # Links for volumes tab
+            # Links under configuration
+            'Filesystems': 'filesystem_tab',
+            'MGTs': 'mgt_tab',
             'Volumes': 'volume_tab',
+            'Servers': 'server_tab',
+            'Storage': 'storage_tab',
+            'Create_new_filesystem': 'create_new_fs',
             # Link for Alerts
             'Alerts': 'alerts_menu',
             # Links for Events

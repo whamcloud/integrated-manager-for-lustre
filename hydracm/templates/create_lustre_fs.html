@@ -46,17 +46,17 @@
       {
         jAlert(ERR_FSNAME_EMPTY);
       }
-      else if(ost_lun_ids.length==0)
+      else if (!(mgt_id || mgt_lun_id))
       {
-        jAlert(ERR_OST_EMPTY);
+        jAlert("You must choose an MGT");
       }
       else if (!mdt_lun_id)
       {
         jAlert("You must choose an MDT");
       }
-      else if (!(mgt_id || mgt_lun_id))
+      else if(ost_lun_ids.length==0)
       {
-        jAlert("You must choose an MGT");
+        jAlert(ERR_OST_EMPTY);
       }
       else
       {
