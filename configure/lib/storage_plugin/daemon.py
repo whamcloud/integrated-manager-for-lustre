@@ -1,4 +1,5 @@
 
+import os
 import time
 import datetime
 import threading
@@ -181,12 +182,17 @@ class StorageDaemon(object):
         self._stop_sessions()
 
     def _stop_sessions(self):
+        JOIN_TIMEOUT = 5
+
         storage_plugin_log.info("StorageDaemon: stopping sessions")
         for scannable_id, session in self._all_sessions.items():
             session.stop()
         storage_plugin_log.info("StorageDaemon: joining sessions")
         for scannable_id, session in self._all_sessions.items():
-            session.join()
+            session.join(timeout = JOIN_TIMEOUT)
+            if session.isAlive():
+                storage_plugin_log.warning("StorageDaemon: session failed to return in %s seconds, forcing exit" % JOIN_TIMEOUT)
+                os._exit(-1)
 
     def stop(self):
         self.stopping = True

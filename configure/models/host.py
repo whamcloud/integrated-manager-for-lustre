@@ -3,12 +3,16 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import datetime
+
 from django.db import models
 from django.db import transaction
 
 from configure.models.jobs import StatefulObject, Job
 from configure.lib.job import StateChangeJob, DependOn, DependAll, Step
 from monitor.models import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass, DowncastMetaclass
+
+import settings
 
 
 class DeletableStatefulObject(StatefulObject):
@@ -67,6 +71,17 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                 pass
 
         super(ManagedHost, self).save(*args, **kwargs)
+
+    def is_available(self):
+        """Whether the Host is in contact"""
+        last_success = self.monitor.last_success
+        if not last_success:
+            # Never had contact
+            return False
+        else:
+            # Have we had contact within timeout?
+            time_since = datetime.datetime.now() - last_success
+            return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
     def to_dict(self):
         from django.contrib.contenttypes.models import ContentType
@@ -542,7 +557,6 @@ class ConfigureRsyslogStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        import settings
         if settings.LOG_SERVER_HOSTNAME:
             hostname = settings.LOG_SERVER_HOSTNAME
         else:

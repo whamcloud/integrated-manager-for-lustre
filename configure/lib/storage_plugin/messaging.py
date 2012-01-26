@@ -1,16 +1,94 @@
 
 # TODO connection caching
 from kombu import BrokerConnection, Exchange, Queue
+import socket
 import settings
 
 from configure.lib.storage_plugin.log import storage_plugin_log as log
 
 
+def _drain_all(connection, queue, handler, timeout = 0.1):
+    """Helper for draining all messages on a particular queue
+    (kombo's inbuild drain_events generally just gives you one)"""
+    with connection.Consumer([queue], callbacks=[handler]):
+        # Loop until we get a call to drain_events which
+        # does not result in a handler callback
+        while True:
+            exhausted = False
+            try:
+                connection.drain_events(timeout = timeout)
+            except socket.timeout:
+                exhausted = True
+                pass
+
+            if exhausted:
+                break
+
+
+def _amqp_connection():
+    return BrokerConnection("amqp://%s:%s@%s:%s/%s" % (
+        settings.BROKER_USER,
+        settings.BROKER_PASSWORD,
+        settings.BROKER_HOST,
+        settings.BROKER_PORT,
+        settings.BROKER_VHOST))
+
+
+def _wait_for_host(host, timeout):
+    #: How often to check the host to see if it has become available
+    UNAVAILABLE_POLL_INTERVAL = 10
+    unavailable_elapsed = 0
+    while not host.is_available():
+        # Polling delay
+        import time
+        time.sleep(UNAVAILABLE_POLL_INTERVAL)
+
+        # Apply the timeout if one is set
+        unavailable_elapsed += UNAVAILABLE_POLL_INTERVAL
+        if timeout and unavailable_elapsed >= timeout:
+            raise Timeout("Timed out waiting for host %s to become available" % (host))
+
+        # Reload the ManagedHost from the database
+        from django.db import transaction
+        from configure.models.host import ManagedHost
+        with transaction.commit_manually():
+            transaction.commit()
+            host = ManagedHost.objects.get(pk=host.id)
+            transaction.commit()
+
+
+def plugin_rpc(plugin_name, host, request, timeout = 0):
+    """
+    :param plugin_name: String name of plugin
+    :param host: ManagedHost instance
+    :param request: JSON-serializable dict
+    :param timeout: If None (default) then block until the Host is available for requests
+    """
+
+    # If the host is not available, don't submit a request until it is available
+    if not host.is_available():
+        log.info("Host %s is not available for plugin RPC, waiting" % host)
+        _wait_for_host(host, timeout)
+        log.info("Host %s is now available for plugin RPC" % host)
+
+    request_id = PluginRequest.send(plugin_name, host.fqdn, {})
+    try:
+        return PluginResponse.receive(plugin_name, host.fqdn, request_id)
+    except Timeout:
+        # Revoke the request, we will never handle a response from it
+        PluginRequest.revoke(plugin_name, host.fqdn, request_id)
+        raise
+
+
+class Timeout(Exception):
+    pass
+
+
 class PluginRequest(object):
     @classmethod
-    def send(cls, plugin_name, resource_tag, request_dict):
+    def send(cls, plugin_name, resource_tag, request_dict, timeout = None):
         request_id = None
-        with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:
+        with _amqp_connection() as conn:
             conn.connect()
 
             exchange = Exchange("plugin_data", "direct", durable = True)
@@ -36,7 +114,7 @@ class PluginRequest(object):
     @classmethod
     def receive_all(cls, plugin_name, resource_tag):
         exchange = Exchange("plugin_data", "direct", durable = True)
-        with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:
+        with _amqp_connection() as conn:
             conn.connect()
             # See if there are any requests for this agent plugin
             request_routing_key = "plugin_data_request_%s_%s" % (plugin_name, resource_tag)
@@ -50,6 +128,27 @@ class PluginRequest(object):
 
             request_queue = Queue(request_routing_key, exchange = exchange, routing_key = request_routing_key)
             request_queue(conn.channel()).declare()
+
+            _drain_all(conn, request_queue, handle_request)
+
+        return requests
+
+    @classmethod
+    def revoke(cls, plugin_name, resource_tag, request_id):
+        exchange = Exchange("plugin_data", "direct", durable = True)
+        with _amqp_connection() as conn:
+            conn.connect()
+            # See if there are any requests for this agent plugin
+            request_routing_key = "plugin_data_request_%s_%s" % (plugin_name, resource_tag)
+
+            requests = []
+
+            def handle_request(body, message):
+                if body['id'] == request_id:
+                    message.ack()
+
+            request_queue = Queue(request_routing_key, exchange = exchange, routing_key = request_routing_key)
+            request_queue(conn.channel()).declare()
             with conn.Consumer([request_queue], callbacks=[handle_request]):
                 from socket import timeout
                 try:
@@ -59,19 +158,23 @@ class PluginRequest(object):
         return requests
 
 
+# TODO: couple this timeout to the HTTP reporting interval
+DEFAULT_RESPONSE_TIMEOUT = 30
+
+
 class PluginResponse(object):
     @classmethod
     def send(cls, plugin_name, resource_tag, request_id, response_data):
         exchange = Exchange("plugin_data", "direct", durable = True)
-        with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:
+        with _amqp_connection() as conn:
             conn.connect()
             response_routing_key = "plugin_data_response_%s_%s" % (plugin_name, resource_tag)
             with conn.Producer(exchange = exchange, serializer = 'json', routing_key = response_routing_key) as producer:
                 producer.publish({'id': request_id, 'data': response_data})
 
     @classmethod
-    def receive(cls, plugin_name, resource_tag, request_id):
-        with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:
+    def receive(cls, plugin_name, resource_tag, request_id, timeout = DEFAULT_RESPONSE_TIMEOUT):
+        with _amqp_connection() as conn:
             conn.connect()
 
             exchange = Exchange("plugin_data", "direct", durable = True)
@@ -98,18 +201,9 @@ class PluginResponse(object):
                 finally:
                     message.ack()
 
-            # TODO: couple this timeout to the HTTP reporting interval
             RESPONSE_TIMEOUT = 30
-            with conn.Consumer([response_queue], callbacks=[handle_response]):
-                from socket import timeout
-                exhausted = False
-                while not exhausted:
-                    try:
-                        conn.drain_events(timeout = RESPONSE_TIMEOUT)
-                    except timeout, e:
-                        log.info("drain_events timeout %s" % e)
-                        exhausted = True
+            _drain_all(conn, response_queue, handle_response, timeout = RESPONSE_TIMEOUT)
             if len(response_data) > 0:
                 return response_data[0]
             else:
-                raise RuntimeError("Got no response for %s:%s:%s in %s seconds" % (plugin_name, resource_tag, request_id, RESPONSE_TIMEOUT))
+                raise Timeout("Got no response for %s:%s:%s in %s seconds" % (plugin_name, resource_tag, request_id, RESPONSE_TIMEOUT))

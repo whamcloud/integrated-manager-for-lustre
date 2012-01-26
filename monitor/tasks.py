@@ -53,14 +53,10 @@ def audit_all():
     import settings
     from configure.models import ManagedHost
     if settings.HTTP_AUDIT:
-        from datetime import datetime
-        for host in ManagedHost.objects.all().values('id', 'monitor__last_success'):
-            # Ignore hosts that have never had a success
-            if not host['monitor__last_success']:
-                continue
-
-            time_since = datetime.now() - host['monitor__last_success']
-            if time_since > timedelta(seconds=settings.AUDIT_PERIOD * 2):
+        for host in ManagedHost.objects.all():
+            # If host has ever had contact but is not available now
+            if not host.monitor.last_success and not host.is_available():
+                # Set the HostContactAlert high
                 from monitor.models import HostContactAlert
                 HostContactAlert.notify(ManagedHost.objects.get(pk = host['id']), True)
     else:

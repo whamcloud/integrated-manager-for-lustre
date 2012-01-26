@@ -10,6 +10,7 @@ from configure.lib.storage_plugin import attributes
 from configure.lib.storage_plugin import builtin_resources
 from configure.lib.storage_plugin import alert_conditions
 from configure.lib.storage_plugin import statistics
+from configure.lib.storage_plugin import messaging
 
 # This plugin is special, it uses Hydra's built-in infrastructure
 # in a way that third party plugins can't/shouldn't/mustn't
@@ -182,33 +183,15 @@ class Linux(StoragePlugin):
     def initial_scan(self, root_resource):
         host = ManagedHost.objects.get(pk=root_resource.host_id)
 
-        # FIXME: Kluge for dealing with the fact that hosts don't respond
-        # to requests for plugin data until they start auditing (after they
-        # are configured.) but storage_daemon will start calling us as soon
-        # as the host is created.
+        # FIXME: we'll get exceptions here during a period where the host
+        # isn't receptive to requests, and then when it comes back we'll
+        # end up waiting our backed-off retry interval.
         # - could delay creation of StorageResource until last part of configure
         #   Job
-        # - could let this function just throw a TryMeInNSeconds exception
-        #   so that it doesn't have to do its own timeout logic
+        # - more generally, could wait for a message indicating that the
+        #   host is available, rather than going into a retry loop.
 
-        UNCONFIGURED_TIMEOUT = 60
-        unconfigured_elapsed = 0
-        while host.state == 'unconfigured':
-            import time
-            time.sleep(1)
-            unconfigured_elapsed += 1
-            if unconfigured_elapsed >= UNCONFIGURED_TIMEOUT:
-                raise RuntimeError("Not yet ready to get device info for host %s (waited %s seconds)" % (host, UNCONFIGURED_TIMEOUT))
-            from django.db import transaction
-            with transaction.commit_manually():
-                transaction.commit()
-                host = ManagedHost.objects.get(pk=root_resource.host_id)
-                transaction.commit()
-
-        from configure.lib.storage_plugin.messaging import PluginRequest, PluginResponse
-
-        request_id = PluginRequest.send('linux', host.fqdn, {})
-        devices = PluginResponse.receive('linux', host.fqdn, request_id)
+        devices = messaging.plugin_rpc('linux', host, {})
 
         lv_block_devices = set()
         for vg, lv_list in devices['lvs'].items():
