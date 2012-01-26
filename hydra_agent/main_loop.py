@@ -2,6 +2,9 @@
 import os
 import time
 import logging
+import sys
+import traceback
+import datetime
 
 from hydra_agent.actions.avahi_publish import ZeroconfService
 
@@ -9,8 +12,104 @@ daemon_log = logging.getLogger('daemon')
 daemon_log.setLevel(logging.INFO)
 
 
+def retry_main_loop():
+    DEFAULT_BACKOFF = 10
+    MAX_BACKOFF = 120
+    backoff = DEFAULT_BACKOFF
+
+    while True:
+        started_at = datetime.datetime.now()
+        try:
+            daemon_log.info("Entering main loop")
+            loop = MainLoop()
+            loop.run()
+            # NB I would rather ensure cleanup by using 'with', but this
+            # is python 2.4-compatible code
+            loop._join_plugin_threads()
+        except Exception, e:
+            exc_info = sys.exc_info()
+            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            daemon_log.error("Unhandled exception: %s" % backtrace)
+            loop._join_plugin_threads()
+
+            duration = datetime.datetime.now() - started_at
+            daemon_log.error("(Ran main loop for %s)" % duration)
+            if duration > datetime.timedelta(seconds = DEFAULT_BACKOFF):
+                # This was a 'reasonably' long run, reset to the default backoff interval
+                # to avoid a historical error causing the backoff to stick at max forever.
+                backoff = DEFAULT_BACKOFF
+
+            # We now check for some cases on which we should terminate instead
+            # of retrying.
+            import socket
+            if isinstance(e, socket.error):
+                # This is a 'system call interrupted' exception which
+                # can result from a signal received during a system call --
+                # it's not an internal error, so pass the exception up
+                errno, message = e
+                if errno == 4:
+                    raise
+            elif isinstance(e, SystemExit):
+                # NB this is redundant in Python >= 2.5 (SystemExit no longer
+                # inherits from Exception) but is necessary for Python 2.4
+                raise
+            else:
+                daemon_log.error("Waiting %s seconds before retrying" % backoff)
+                time.sleep(backoff)
+                if backoff < MAX_BACKOFF:
+                    backoff *= 2
+
+
 def run_main_loop(args):
-    MainLoop().run(args.foreground)
+    """Daemonize and handle unexpected exceptions"""
+    if not args.foreground:
+        from daemon import DaemonContext
+        from daemon.pidlockfile import PIDLockFile
+
+        if os.path.exists(MainLoop.PID_FILE + ".lock") or os.path.exists(MainLoop.PID_FILE):
+            pid = int(open(MainLoop.PID_FILE).read())
+            try:
+                os.kill(pid, 0)
+            except OSError:
+                # Not running, delete stale PID file
+                os.remove(MainLoop.PID_FILE)
+                os.remove(MainLoop.PID_FILE + ".lock")
+                sys.stderr.write("Removing stale PID file\n")
+            else:
+                # Running, we should refuse to run
+                raise RuntimeError("Daemon is already running (PID %s)" % pid)
+
+        context = DaemonContext(pidfile = PIDLockFile(MainLoop.PID_FILE))
+        context.open()
+        # NB Have to set up logger after entering DaemonContext because it closes all files when
+        # it forks
+        handler = logging.FileHandler("/var/log/hydra-agent.log")
+        handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+        daemon_log.addHandler(handler)
+        daemon_log.info("Starting in the background")
+    else:
+        context = None
+        daemon_log.setLevel(logging.DEBUG)
+        daemon_log.addHandler(logging.StreamHandler())
+        daemon_log.info("Starting in the foreground")
+
+    # Before entering the main loop, advertize ourselves
+    # using Avahi (call this only once per process)
+    service = ZeroconfService(name="%s" % os.uname()[1], port=22)
+    service.publish()
+    # don't need to call service.unpublish() since the service
+    # will be unpublished when this daemon exits
+
+    try:
+        retry_main_loop()
+    except Exception:
+        # Swallow terminating exceptions (they were already logged in
+        # retry_main_loop) and proceed to teardown
+        pass
+
+    if context:
+        context.close()
+    daemon_log.info("Terminating")
 
 
 def send_update(server_url, server_token, update_scan, responses):
@@ -114,12 +213,6 @@ class MainLoop(object):
         # Map of plugin name to PluginThread
         self._plugin_threads = {}
 
-    def _publish_avahi(self):
-        service = ZeroconfService(name="%s" % os.uname()[1], port=22)
-        service.publish()
-        # don't need to call service.unpublish() since the service
-        # will be unpublished when this daemon exits
-
     def _enqueue_request(self, server_conf, plugin_name, request):
         try:
             plugin_thread = self._plugin_threads[plugin_name]
@@ -140,10 +233,7 @@ class MainLoop(object):
 
         self._plugin_threads.clear()
 
-    def _main_loop(self):
-        # Before entering the loop, set up avahi
-        self._publish_avahi()
-
+    def run(self):
         # Load server config (server URL etc)
         from hydra_agent.store import AgentStore
         server_conf = AgentStore.get_server_conf()
@@ -186,45 +276,5 @@ class MainLoop(object):
 
                 while ((datetime.now() - reported_at) < timedelta(seconds = report_interval)):
                     time.sleep(1)
-
             else:
                 time.sleep(config_interval)
-
-    def run(self, foreground):
-        """Daemonize and handle unexpected exceptions"""
-        if not foreground:
-            from daemon import DaemonContext
-            from daemon.pidlockfile import PIDLockFile
-
-            context = DaemonContext(pidfile = PIDLockFile(MainLoop.PID_FILE))
-            context.open()
-            # NB Have to set up logger after entering DaemonContext because it closes all files when
-            # it forks
-            handler = logging.FileHandler("/var/log/hydra-agent.log")
-            handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-            daemon_log.addHandler(handler)
-            daemon_log.info("Starting in the background")
-        else:
-            context = None
-            daemon_log.setLevel(logging.DEBUG)
-            daemon_log.addHandler(logging.StreamHandler())
-            daemon_log.info("Starting in the foreground")
-
-        try:
-            self._main_loop()
-            # NB duplicating context.close between branches because
-            # python 2.4 has no 'finally'
-            self._join_plugin_threads()
-            if context:
-                context.close()
-        except Exception:
-            import sys
-            import traceback
-            exc_info = sys.exc_info()
-            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-            daemon_log.error("Unhandled exception: %s" % backtrace)
-            # NB duplicating context.close between branches because
-            # python 2.4 has no 'finally'
-            self._join_plugin_threads()
-            if context:
-                context.close()
