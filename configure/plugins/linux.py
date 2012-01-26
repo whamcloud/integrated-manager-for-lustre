@@ -183,14 +183,6 @@ class Linux(StoragePlugin):
     def initial_scan(self, root_resource):
         host = ManagedHost.objects.get(pk=root_resource.host_id)
 
-        # FIXME: we'll get exceptions here during a period where the host
-        # isn't receptive to requests, and then when it comes back we'll
-        # end up waiting our backed-off retry interval.
-        # - could delay creation of StorageResource until last part of configure
-        #   Job
-        # - more generally, could wait for a message indicating that the
-        #   host is available, rather than going into a retry loop.
-
         devices = messaging.plugin_rpc('linux', host, {})
 
         lv_block_devices = set()
