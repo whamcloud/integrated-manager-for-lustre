@@ -25,7 +25,7 @@ target_dialog_open = function(target_id) {
   invoke_api_call(api_post, "target/", {id: target_id}, 
   success_callback = function(data)
   {
-    var target_info = data.response;
+    var target_info = data;
     console.log(target_info);
     $('#target_dialog').dialog('option', 'title', target_info.human_name);
 

@@ -74,6 +74,7 @@ class ResourceClass(AnonymousRequestHandler):
 
 class GetResources(AnonymousRequestHandler):
     def run(self, request, module_name, class_name):
+        print "run"
         from configure.lib.storage_plugin.manager import storage_plugin_manager
         resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(module_name, class_name)
         attr_columns = resource_class.get_columns()

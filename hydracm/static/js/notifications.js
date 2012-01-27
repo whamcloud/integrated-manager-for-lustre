@@ -338,12 +338,12 @@ notification_update_icons = function() {
 
 
 update_objects = function(data, silent) {
-  $.each(data.response.jobs, function(i, job_info) {
+  $.each(data.jobs, function(i, job_info) {
     existing = known_jobs[job_info.id]
     known_jobs[job_info.id] = job_info
 
-    if (data.response.last_modified) {
-      last_check = data.response.last_modified;
+    if (data.last_modified) {
+      last_check = data.last_modified;
     }
 
     function completion_jgrowl_args(info) {
@@ -406,7 +406,7 @@ update_objects = function(data, silent) {
     }
   });
 
-  $.each(data.response.alerts, function(i, alert_info) {
+  $.each(data.alerts, function(i, alert_info) {
     existing = known_alerts[alert_info.id]
     known_alerts[alert_info.id] = alert_info
 
@@ -487,7 +487,7 @@ poll_objects = function() {
   success_callback = function(data)
   {
     setTimeout(poll_objects, poll_period);
-    $.each(data.response, function(i, object_info) {
+    $.each(data, function(i, object_info) {
       /* TODO: only rewrite markup on change */
       $(".object_transitions_" + object_info.id + "_" + object_info.content_type_id).replaceWith(
         CreateActionLink(object_info.id, object_info.content_type_id, object_info.available_transitions, ""));

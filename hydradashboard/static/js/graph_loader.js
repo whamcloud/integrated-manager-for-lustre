@@ -537,10 +537,10 @@ db_Bar_SpaceUsage_Data = function(isZoom)
   invoke_api_call(api_post, db_Bar_SpaceUsage_Data_Api_Url, api_params, 
     success_callback = function(data)
     {
-      response = data.response;
+      response = data;
       var free=0,used=0;
       var freeData = [],usedData = [],categories = [],freeFilesData = [],totalFilesData = [];
-      var response = data.response;
+      var response = data;
       var totalDiskSpace=0,totalFreeSpace=0,totalFiles=0,totalFreeFiles=0;
       $.each(response, function(resKey, resValue) 
       {
@@ -604,7 +604,7 @@ db_Line_connectedClients_Data = function(isZoom)
       var count=0;
       var fileSystemName = "";
       
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue) 
       {
         if(resValue.filesystem != undefined)
@@ -666,7 +666,7 @@ db_LineBar_CpuMemoryUsage_Data = function(isZoom)
   invoke_api_call(api_post, db_LineBar_CpuMemoryUsage_Data_Api_Url, api_params,
     success_callback = function(data)
     {
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue) 
       {
           if (resValue.cpu_total != undefined && resValue.mem_MemTotal != undefined)
@@ -716,7 +716,7 @@ db_Area_ReadWrite_Data = function(isZoom)
     success_callback = function(data)
     {
       var hostName='';
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -780,7 +780,7 @@ db_Area_mdOps_Data = function(isZoom)
     success_callback = function(data)
     {
       var targetName='';
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -834,7 +834,7 @@ db_AreaSpline_ioOps_Data = function(isZoom)
     {
       var targetName='';
       var count=0;
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue)
       {
           if (targetName != resValue.targetname && targetName !='')
@@ -921,7 +921,7 @@ db_HeatMap_Data = function(fetchmetrics, isZoom)
   {   
     if(data.success)
     {
-      var response = data.response;
+      var response = data;
       var clientMountData = [];
       var valueArray = [];
       $.each(response, function(resKey, resValue) 
@@ -1010,7 +1010,7 @@ db_HeatMap_CPUData = function(fetchmetrics, isZoom)
   {
     if(data.success)
     {
-      var response = data.response;
+      var response = data;
       var values = [];
       $.each(response, function(resKey, resValue) 
       {
@@ -1067,7 +1067,7 @@ db_HeatMap_ReadWriteData = function(fetchmetrics, isZoom)
   {
     if(data.success)
     {
-      var response = data.response;
+      var response = data;
       var values = [];
       $.each(response, function(resKey, resValue) 
       {

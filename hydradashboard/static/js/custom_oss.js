@@ -53,7 +53,7 @@ oss_LineBar_CpuMemoryUsage_Data = function(hostId, sDate, endDate, dataFunction,
     success_callback = function(data)
     {
       var hostName='';
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue) 
       {
         if(resValue.host != undefined)
@@ -114,7 +114,7 @@ oss_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKin
     success_callback = function(data)
     {
       var hostName='';
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -193,7 +193,7 @@ loadOSSUsageSummary = function (file_systems_ids)
     invoke_api_call(api_post, "getfilesystem/", api_params, 
       success_callback = function(data)
       {
-        var response = data.response;
+        var response = data;
         var innerContent="";
         
         $.each(response, function(resKey, resValue) 

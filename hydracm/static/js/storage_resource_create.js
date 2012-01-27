@@ -62,7 +62,7 @@ function storage_resource_create_load_fields()
   {
     $('#storage_resource_create_fields tr.field').remove();
     var row_markup = "";
-    $.each(data.response, function(i, field_info)
+    $.each(data, function(i, field_info)
     {
       row_markup += "<tr class='field'><th>" + field_info.label + ":</th><td><input type='entry' id='storage_resource_create_field_" + field_info.name + "'></input></td>";
       if (field_info.optional) {
@@ -87,7 +87,7 @@ function storage_resource_create() {
   success_callback = function(data)  
   {
     var option_markup = ""
-    $.each(data.response.resource_classes, function(i, resource_class) {
+    $.each(data.resource_classes, function(i, resource_class) {
       option_markup += "<option value='" + resource_class.plugin_name + "," + resource_class.class_name + "'>" + resource_class.label + "</option>"
     });
     $('#storage_resource_create_classes').html(option_markup);

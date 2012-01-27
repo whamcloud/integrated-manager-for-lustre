@@ -76,7 +76,7 @@ $(document).ready(function() {
       invoke_api_call(api_get, "test_host/?hostname=" + $('#add_host_address').attr('value') + "&commit=false", "", 
       success_callback = function(data)
       {
-        task_id = data.response.task_id
+        task_id = data.task_id
         submit_poll(task_id);
       },
       error_callback = function(data)

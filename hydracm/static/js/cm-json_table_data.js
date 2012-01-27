@@ -27,7 +27,7 @@ function LoadFSList_FSList()
   invoke_api_call(api_get, "listfilesystems", "", 
   success_callback = function(data)
   {
-    var response = data.response;
+    var response = data;
     var fsName;
     $('#fs_list').dataTable().fnClearTable();
     $.each(response, function(resKey, resValue)
@@ -59,7 +59,7 @@ function LoadTargets_EditFS(fs_id)
     $('#mdt').dataTable().fnClearTable();
     $('#mgt_configuration_view').dataTable().fnClearTable();
 
-    var response = data.response;
+    var response = data;
     $.each(response, function(resKey, resValue)
     {
       row = [
@@ -96,7 +96,7 @@ function LoadUsableVolumeList(datatable_container, select_widget_fn)
   invoke_api_call(api_post, "get_luns/", api_params, 
   success_callback = function(data)
   {
-    $.each(data.response, function(resKey, volume_info)
+    $.each(data, function(resKey, volume_info)
     {
       var primaryHostname = "---"
       var failoverHostname = "---"
@@ -141,7 +141,7 @@ function LoadUnused_VolumeConf()
   {
     $('#volume_configuration').dataTable().fnClearTable();
     
-    $.each(data.response, function(resKey, resValue)
+    $.each(data, function(resKey, resValue)
     {
       var blank_option = "<option value='-1'>---</option>";
       var blank_select = "<select disabled='disabled'>" + blank_option + "</select>"
@@ -228,7 +228,7 @@ function LoadMGTConfiguration_MGTConf()
   invoke_api_call(api_get, "get_mgts/", "", 
   success_callback = function(data)
   {
-    var response = data.response;
+    var response = data;
     var fsnames;
     $('#mgt_configuration').dataTable().fnClearTable();
     $.each(response, function(resKey, resValue)
@@ -262,7 +262,7 @@ function LoadServerConf_ServerConfig()
   success_callback = function(data)
   {
     $('#server_configuration').dataTable().fnClearTable();
-    var response = data.response;
+    var response = data;
     $.each(response, function(resKey, resValue)
     {
       $('#server_configuration').dataTable().fnAddData ([
@@ -311,7 +311,7 @@ function LoadFSData_EditFS()
     invoke_api_call(api_post, "getfilesystem/", api_params, 
     success_callback = function(data)
     {
-      var response = data.response;
+      var response = data;
       var lnet_status_mesg;
       $.each(response, function(resKey, resValue)
       {

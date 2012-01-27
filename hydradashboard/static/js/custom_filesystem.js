@@ -37,7 +37,7 @@ fs_Bar_SpaceUsage_Data = function(fsId, sDate, endDate, dataFunction, targetKind
   invoke_api_call(api_post, fs_Bar_SpaceUsage_Data_Api_Url, api_params,
     success_callback = function(data)
     {
-	  var response = data.response;
+	  var response = data;
 	  var totalDiskSpace=0,totalFreeSpace=0,totalFiles=0,totalFreeFiles=0;
 	  $.each(response, function(resKey, resValue) 
 	  {
@@ -98,7 +98,7 @@ fs_Line_connectedClients_Data = function(fsId, sDate, endDate, dataFunction, fet
   invoke_api_call(api_post, fs_Line_connectedClients_Data_Api_Url, api_params,
     success_callback = function(data)
     {
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue) 
       {
         if(resValue.filesystem != undefined)
@@ -158,7 +158,7 @@ fs_LineBar_CpuMemoryUsage_Data = function(fsId, sDate, endDate, dataFunction, ta
     success_callback = function(data)
     {
       var hostName='';
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue) 
       {
         if (resValue.cpu_total != undefined && resValue.mem_MemTotal != undefined)
@@ -208,7 +208,7 @@ fs_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKind
     success_callback = function(data)
     {
       var hostName='';
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -271,7 +271,7 @@ fs_Area_mdOps_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fe
     success_callback = function(data)
     {
       var targetName='';
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -325,7 +325,7 @@ fs_AreaSpline_ioOps_Data = function(isZoom)
     {
       var targetName='';
       var count=0;
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue)
       {
         if (targetName != resValue.targetname && targetName !='')
@@ -411,7 +411,7 @@ fs_HeatMap_CPUData = function(fetchmetrics, isZoom)
   {
     if(data.success)
     {
-      var response = data.response;
+      var response = data;
       var values = [];
       $.each(response, function(resKey, resValue) 
       {
@@ -466,7 +466,7 @@ fs_HeatMap_ReadWriteData = function(fetchmetrics, isZoom)
   {
     if(data.success)
     {
-      var response = data.response;
+      var response = data;
       var values = [];
       $.each(response, function(resKey, resValue) 
       {
@@ -517,7 +517,7 @@ loadFileSystemSummary = function (fsId)
   invoke_api_call(api_post, "getfilesystem/", api_params, 
 	success_callback = function(data)
 	{
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue) 
       {
         innerContent = innerContent + 

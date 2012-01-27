@@ -107,7 +107,7 @@ ost_Pie_Space_Data = function(targetId, targetName, sDate, endDate, dataFunction
   invoke_api_call(api_post, ost_Pie_Space_Data_Api_Url, api_params,
     success_callback = function(data)
     {
-      var response = data.response;
+      var response = data;
       var totalDiskSpace=0,totalFreeSpace=0;
       $.each(response, function(resKey, resValue) 
       {
@@ -164,7 +164,7 @@ ost_Pie_Inode_Data = function(targetId, targetName, sDate, endDate, dataFunction
   invoke_api_call(api_post, ost_Pie_Inode_Data_Api_Url, api_params,
     success_callback = function(data)
     {
-      var response = data.response;
+      var response = data;
       var totalFiles=0,totalFreeFiles=0;
       $.each(response, function(resKey, resValue) 
       {
@@ -226,7 +226,7 @@ ost_Area_mgtOps_Data = function(targetId, isZoom)
     success_callback = function(data)
     {
       var targetName='';
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -279,7 +279,7 @@ ost_Area_ReadWrite_Data = function(targetId, targetName, sDate, endDate, dataFun
     success_callback = function(data)
     {
       var hostName='';
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue)
       {
         if(resValue.filesystem != undefined)
@@ -334,7 +334,7 @@ loadOSTSummary = function (fsId)
   invoke_api_call(api_post, "getfilesystem/", api_params, 
     success_callback = function(data)
     {
-      var response = data.response;
+      var response = data;
       $.each(response, function(resKey, resValue) 
       {
         innerContent = innerContent + 

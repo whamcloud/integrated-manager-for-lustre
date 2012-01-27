@@ -6,24 +6,24 @@
   var advanced_tab_clicked = false; 
   $(document).ready(function() {
     /* Populate existing MGT list */
-    $.ajax({type: 'POST', url: "/api/get_targets/", dataType: 'json', data: JSON.stringify({
+    invoke_api_call(api_post, "get_targets/", {
         "filesystem": null,
         "kinds": ["MGT"]
-    }), contentType:"application/json; charset=utf-8"})
-    .success(function(data, textStatus, jqXHR) {
-      var options_markup = "<option value=''></option>";
-      var count = 0;
-      $.each(data.response, function(i, target_info) {
-        options_markup += "<option value='" + target_info.id + "'>" + target_info.primary_server_name + "</option>"
-        count += 1;
-      });
-      if (count == 0) {
-        $('#existing_or_new_mgt_options').hide();
-      } else {
-        $('#mgt_existing_dropdown').html(options_markup);
+      },
+      success_callback = function(data) {
+        var options_markup = "<option value=''></option>";
+        var count = 0;
+        $.each(data, function(i, target_info) {
+          options_markup += "<option value='" + target_info.id + "'>" + target_info.primary_server_name + "</option>"
+          count += 1;
+        });
+        if (count == 0) {
+          $('#existing_or_new_mgt_options').hide();
+        } else {
+          $('#mgt_existing_dropdown').html(options_markup);
+        }
       }
-      
-    });
+    );
 
     fvc_button($('#mgt_chooser'), {change: function() {
         $('#mgt_existing_dropdown').val('');

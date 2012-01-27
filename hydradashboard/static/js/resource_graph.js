@@ -4,7 +4,7 @@ function load_resource_graph(container_name, target_id) {
     success_callback = function(data)
     {
      container = $("#" + container_name)
-     render_resource_graph(container, data.response.graph);
+     render_resource_graph(container, data.graph);
     });
 }
 

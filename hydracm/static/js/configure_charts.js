@@ -52,7 +52,7 @@ function LoadFSGraph_EditFS(fs_id)
   invoke_api_call(api_post, fs_Pie_Space_Data_Api_Url, api_params, 
   success_callback = function(data)
   {
-    var response = data.response;
+    var response = data;
     var totalDiskSpace=0,totalFreeSpace=0;
     $.each(response, function(resKey, resValue) 
     {
@@ -92,7 +92,7 @@ function LoadFSGraph_EditFS(fs_id)
   invoke_api_call(api_post, fs_Pie_Space_Data_Api_Url, api_params, 
   success_callback = function(data)
   {
-    var response = data.response;
+    var response = data;
     var totalFiles=0,totalFreeFiles=0;
     $.each(response, function(resKey, resValue) 
     {

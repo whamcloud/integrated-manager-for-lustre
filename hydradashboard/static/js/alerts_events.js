@@ -130,7 +130,7 @@ loadAlertContent = function(targetAlertDivName, status, maxCount)
   invoke_api_call(api_post, "getalerts/", api_params, 
   success_callback = function(data)
   {
-    $.each(data.response.aaData, function(resKey, resValue)
+    $.each(data.aaData, function(resKey, resValue)
     {
       pagecnt++;
       if(maxpagecnt > pagecnt || maxpagecnt < 0)
@@ -173,7 +173,7 @@ loadEventContent = function(targetEventDivName, maxCount)
   invoke_api_call(api_get, "getlatestevents", "",
     success_callback = function(data)
     {
-      $.each(data.response, function(resKey, resValue)
+      $.each(data, function(resKey, resValue)
       {
         pagecnt++;
         if(maxpagecnt > pagecnt || maxpagecnt < 0)
@@ -217,7 +217,7 @@ loadJobContent = function(targetJobDivName)
   invoke_api_call(api_get, "getjobs", "",
     success_callback = function(data)
     {
-      $.each(data.response, function(resKey, resValue)
+      $.each(data, function(resKey, resValue)
       {
         pagecnt++;
         var image_path = "";
@@ -303,7 +303,7 @@ loadHostList = function(filesystem_id, targetContainer)
   invoke_api_call(api_get, "host/", api_params,
   success_callback = function(data)
   {
-    $.each(data.response, function(resKey, resValue)
+    $.each(data, function(resKey, resValue)
     {
       hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
     });

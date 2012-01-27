@@ -29,8 +29,8 @@ Transition = function (id, ct, state)
     var requires_confirmation = false;
 
     var confirmation_markup = "<p>This action will have the following consequences:</p><ul>";
-    if (data.response.length > 1) {
-    $.each(data.response, function(i, consequence_info) {
+    if (data.length > 1) {
+    $.each(data, function(i, consequence_info) {
       confirmation_markup += "<li>" + consequence_info.description + "</li>";
       if (consequence_info.requires_confirmation) {
         requires_confirmation = true;
@@ -38,8 +38,8 @@ Transition = function (id, ct, state)
     });
     confirmation_markup += "</ul>"
     } else {
-      requires_confirmation = data.response[0].requires_confirmation;
-      confirmation_markup = "<p><strong>" + data.response[0].description + "</strong></p><p>Are you sure?</p>";
+      requires_confirmation = data[0].requires_confirmation;
+      confirmation_markup = "<p><strong>" + data[0].description + "</strong></p><p>Are you sure?</p>";
     }
 
     if (requires_confirmation) {
@@ -97,7 +97,7 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
   invoke_api_call(api_post, "create_new_fs/", api_params,
   success_callback = function(data)
   {
-    var fs_id = data.response.id;    
+    var fs_id = data.id;    
     if (success) {
       success(fs_id);
     }
@@ -149,7 +149,7 @@ function GetConfigurationParam(target_id, kinds, table_id)
   invoke_api_call(api_post, "get_conf_params/", api_params, 
   success_callback = function(data)
   {
-    CreateTable_FS_Config_Param(data.response, table_id);
+    CreateTable_FS_Config_Param(data, table_id);
   },
   error_callback = function(data)
   {

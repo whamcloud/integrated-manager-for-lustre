@@ -220,7 +220,7 @@ $(document).ready(function()
                       "bJQueryUI": true
                     }).fnClearTable();
         
-        $.each(data.response, function(resKey, resValue) 
+        $.each(data, function(resKey, resValue) 
         {
           filesystem_list_content = filesystem_list_content + 
           "<option value="+resValue.fsid+">"+resValue.fsname+"</option>";
@@ -302,7 +302,7 @@ $(document).ready(function()
       invoke_api_call(api_get, "host/", api_params, 
         success_callback = function(data)
         {
-          $.each(data.response, function(resKey, resValue)
+          $.each(data, function(resKey, resValue)
           {
             server_list_content += "<option value="+resValue.id+">" + resValue.pretty_name + "</option>";
           });
@@ -351,7 +351,7 @@ $(document).ready(function()
     invoke_api_call(api_post, "get_fs_targets/", api_params, 
       success_callback = function(data)
       {
-        var targets = data.response;
+        var targets = data;
         targets = targets.sort(function(a,b) {return a.label > b.label;})
   
         var count = 0;
@@ -451,7 +451,7 @@ $(document).ready(function()
     invoke_api_call(api_post, "get_fs_targets/", api_params, 
       success_callback = function(data)
       {
-        var targets = data.response;
+        var targets = data;
         targets = targets.sort(function(a,b) {return a.label > b.label;})
   
         var count = 0;

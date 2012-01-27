@@ -9,43 +9,43 @@
         var class_name = tokens[1]
 
         console.log("Loading resources...");
-        $.get("/api/get_resources/", {'module_name': module_name, 'class_name': class_name})
-         .success(function(data, textStatus, jqXHR) {
-            if (data.success) {
-                console.log("... done loading resources...");
-                if (resourceTable) {
-                    resourceTable.fnDestroy();
-                    resourceTable = null;
-                    $('#resource_table').html("")
-                } 
-                data.response.aoColumns.push({mDataProp: '_alert_markup', sWidth: "1%", bSortable: false})
-                for (var i=0, iLen=data.response.aaData.length; i<iLen; i++) {
-                  data.response.aaData[i]._alert_markup = alert_indicator_markup(
-                    data.response.aaData[i].id, data.response.aaData[i].content_type_id); 
-                }
-                resourceTable = $('#resource_table').dataTable({
-                    "bJQueryUI": true,
-                    "bPaginate": true,
-                    "bAutoWidth": false,
-                    "aaData": data.response['aaData'],
-                    "iDisplayLength":25,
-                    "aoColumns": data.response['aoColumns'],
-                    fnInitComplete: function(oSettings) {
-                      for (var i=0, iLen=oSettings.aoData.length; i<iLen; i++) {
-                        if (oSettings.aoData[i]._aData._alerts.length > 0) {
-                          oSettings.aoData[i].nTr.className += " resource_alert";
-                        }
-                      }
-                    }
-                }); 
-
-                $('#resource_table tbody tr').live('click', function() {
-                    var aPos = resourceTable.fnGetPosition(this);
-                    var data = resourceTable.fnGetData(aPos);
-                    var resource_record_id = data.id
-                });
+        invoke_api_call(api_post, "get_resources/", {'module_name': module_name, 'class_name': class_name},
+          success_callback = function(data) {
+            console.log("... done loading resources...");
+            if (resourceTable) {
+                resourceTable.fnDestroy();
+                resourceTable = null;
+                $('#resource_table').html("")
+            } 
+            data.aoColumns.push({mDataProp: '_alert_markup', sWidth: "1%", bSortable: false})
+            for (var i=0, iLen=data.aaData.length; i<iLen; i++) {
+              data.aaData[i]._alert_markup = alert_indicator_markup(
+                data.aaData[i].id, data.aaData[i].content_type_id); 
             }
-        });
+            resourceTable = $('#resource_table').dataTable({
+                "bJQueryUI": true,
+                "bPaginate": true,
+                "bAutoWidth": false,
+                "aaData": data['aaData'],
+                "iDisplayLength":25,
+                "aoColumns": data['aoColumns'],
+                fnInitComplete: function(oSettings) {
+                  for (var i=0, iLen=oSettings.aoData.length; i<iLen; i++) {
+                    if (oSettings.aoData[i]._aData._alerts.length > 0) {
+                      oSettings.aoData[i].nTr.className += " resource_alert";
+                    }
+                  }
+                }
+            }); 
+
+            $('#resource_table tbody tr').live('click', function() {
+                var aPos = resourceTable.fnGetPosition(this);
+                var data = resourceTable.fnGetData(aPos);
+                var resource_record_id = data.id
+            });
+          }
+      );
+      console.log("Ran invoke_api_call");
     }
 
     $(document).ready(function() {
@@ -53,22 +53,21 @@
             load_resource_table();
         });
         /* Initial population of dropdown of resource classes */
-        invoke_api_call(api_get, "resource_class", {},
+        invoke_api_call(api_get, "resource_class/", {},
           success_callback = function(data) {
-            var response = data.response
             options = ""
-            if (response.resource_classes.length == 0) {
+            if (data.resource_classes.length == 0) {
               $('div#plugins_available').hide();
               /*$('div#plugins_unavailable').css('display', 'block')*/
               $('div#plugins_unavailable').show();
             } else {
-              $.each(response.resource_classes, function(i, resource_class) {
+              $.each(data.resource_classes, function(i, resource_class) {
                   options += "<option value='" + resource_class.plugin_name + "," + resource_class.class_name + "'>" + resource_class.label + "</option>"
               });
               $('#resource_class_select').html(options);
 
               /* Select the default resource class */
-              $('#resource_class_select option[value="' + response.default_hint.plugin_name + "," + response.default_hint.class_name + '"]').attr('selected', 'selected');
+              $('#resource_class_select option[value="' + data.default_hint.plugin_name + "," + data.default_hint.class_name + '"]').attr('selected', 'selected');
 
               /* Initial population of table once we know our default-selected class */
               load_resource_table();

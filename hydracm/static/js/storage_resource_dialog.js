@@ -29,7 +29,7 @@ function popup_resource(id) {
   invoke_api_call(api_post, "get_resource/", {'resource_id': id}, 
   success_callback = function(data)
   {
-    load_resource(data.response);
+    load_resource(data);
     $('#storage_resource_dialog').dialog('open');
   });
 }
