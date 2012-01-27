@@ -6,7 +6,7 @@
 # Utils for JSON related operations# Utils for JSON related operations# Utils for JSON related operations
 from django.http import HttpResponse
 from functools import wraps
-from datetimeencoder import DjangoTimeJSONEncoder
+from django.core.serializers.json import DateTimeAwareJSONEncoder
 import urllib2
 
 
@@ -71,7 +71,7 @@ def construct_json_response(request, success, errors=None, response=None):
     response_dict['success'] = success
     response_dict['errors'] = errors
     response_dict['response'] = response
-    return DjangoTimeJSONEncoder().encode(request, response_dict)
+    return DateTimeAwareJSONEncoder().encode(response_dict)
 
 
 def get_http_response_with_status_code(exception=None):
