@@ -9,10 +9,11 @@
 . /etc/init.d/functions
 
 export PID_FILE=/var/run/hydra-agent.pid
+export AGENT_BIN=/usr/bin/hydra-agent
 
 start() {
     echo -n "Starting the Hydra Agent daemon: "
-    daemon --pidfile ${PID_FILE} '/usr/bin/hydra-agent.py daemon'
+    $AGENT_BIN daemon
     echo
 }
 
