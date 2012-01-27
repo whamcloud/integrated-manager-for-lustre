@@ -16,31 +16,39 @@ from hydraapi.requesthandler import APIResponse
 
 
 class ManagedHostsHandler (AnonymousRESTRequestHandler):
-    def get(self, request, host_id = None, filesystem_id = None):
+    def get(self, request, id = None, filesystem_id = None):
+
+        def host_dict_with_transitions(host):
+            _host = host.to_dict()
+            _host['available_transitions'] = StateManager.available_transitions(host)
+            return _host
+
         hosts = []
-        if host_id:
-            host = get_object_or_404(ManagedHost, pk = host_id)
-            hosts.append(host)
+        if id:
+            host = get_object_or_404(ManagedHost, pk = id)
+            return host_dict_with_transitions(host)
         elif filesystem_id:
             fs = get_object_or_404(ManagedFilesystem, pk = filesystem_id)
             hosts = fs.get_servers()
         else:
             hosts = ManagedHost.objects.all()
-        hosts_info = []
-        for h in hosts:
-            _host = h.to_dict()
-            _host['available_transitions'] = StateManager.available_transitions(h)
-            hosts_info.append(_host)
-        return hosts_info
+
+        return [host_dict_with_transitions(h) for h in hosts]
 
     def post(self, request, host_name):
         host = ManagedHost.create_from_string(host_name)
+        return APIResponse(host.to_dict(), 201)
+
         result = {'id': host.id, 'host': host.address}
         api_res = APIResponse(result, 201)
         return api_res
 
-    # Note: For Managed Host Remove/Delete and State transitions, we are using common
-    #       APIs. /api/transition/ and /api/transition_consequences/
+    def delete(self, request, id):
+        # NB This is equivalent to a call to /api/transition with matching content-type/id/state
+        from configure.models import Command
+        host = get_object_or_404(ManagedHost, pk = id)
+        command = Command.set_state(host, 'removed')
+        return APIResponse(command.to_dict(), 202)
 
 
 class TestHost(AnonymousRESTRequestHandler):

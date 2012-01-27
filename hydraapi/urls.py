@@ -113,7 +113,9 @@ urlpatterns = patterns('',
     (r'^storage_resource/$', CsrfExemptResource(CreateStorageResource)),
     (r'^storage_resource_class_fields/$', CsrfExemptResource(StorageResourceClassFields)),
 
-    (r'^hosts/$', CsrfExemptResource(ManagedHostsHandler)),
+    (r'^host/$', CsrfExemptResource(ManagedHostsHandler)),
+    (r'^host/(?P<id>\d+)/$', CsrfExemptResource(ManagedHostsHandler)),
+
     (r'^test_host/$', CsrfExemptResource(TestHost)),
 
     (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),

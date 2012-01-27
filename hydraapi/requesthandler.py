@@ -17,7 +17,7 @@ def extract_request_args(f):
     import functools
 
     @functools.wraps(f)
-    def _extract_request_args(request):
+    def _extract_request_args(request, *args, **kwargs):
         # This will be rquired for session management
         #if request.session:
         #    request.session.set_expiry(request.user.get_inactivity_timeout())
@@ -36,9 +36,13 @@ def extract_request_args(f):
                 defaults[arg_names[-(i + 1)]] = defaults_list[i]
 
         errors = {}
-        kwargs = {}
-        args = []
+        # Turn passed-through *args into a list so that we can append to it
+        args = list(args)
         for arg_name in arg_names:
+            if arg_name in kwargs:
+                # Already got a value of the argument from passed-through kwargs
+                continue
+
             if arg_name in defaults:
                 # This is a keyword argument
                 try:
@@ -150,24 +154,24 @@ class AnonymousRESTRequestHandler(BaseHandler):
 
     @render_to_json()
     @extract_exception
-    def read(self, request):
+    def read(self, request, *args, **kwargs):
         request.data = request.GET
-        return extract_request_args(self.get)(request)
+        return extract_request_args(self.get)(request, *args, **kwargs)
 
     @render_to_json()
     @extract_exception
-    def create(self, request):
-        return extract_request_args(self.post)(request)
+    def create(self, request, *args, **kwargs):
+        return extract_request_args(self.post)(request, *args, **kwargs)
 
     @render_to_json()
     @extract_exception
-    def update(self, request):
-        return extract_request_args(self.put)(request)
+    def update(self, request, *args, **kwargs):
+        return extract_request_args(self.put)(request, *args, **kwargs)
 
     @render_to_json()
     @extract_exception
-    def delete(self, request):
-        return extract_request_args(self.remove)(request)
+    def delete(self, request, *args, **kwargs):
+        return extract_request_args(self.remove)(request, *args, **kwargs)
 
 
 class APIResponse:
