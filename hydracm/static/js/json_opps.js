@@ -138,24 +138,6 @@ function CreateMGT(lun_id, callback)
   });
 }
 
-function SetTargetMountStage(target_id, state)
-{
-  invoke_api_call(api_post, "set_target_stage/", {"target_id": target_id, "state": state}, 
-  success_callback = function(data)
-  {
-    // Note: success here simply means that the operation
-    // was submitted, not that it necessarily completed (that
-    // happens asynchronously)
-  },
-  error_callback = function(data)
-  {
-    if(data.errors != undefined)
-    {
-      jAlert(ERR_COMMON_START_OST + data.errors, ALERT_TITLE);
-    }
-  });
-}
-
 function GetConfigurationParam(target_id, kinds, table_id)
 {
   $('#' + table_id).dataTable().fnClearTable();

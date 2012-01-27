@@ -16,61 +16,6 @@ from requesthandler import AnonymousRequestHandler
 from hydraapi.requesthandler import APIResponse
 
 
-class TestHost(AnonymousRequestHandler):
-    def run(self, request, hostname):
-        from monitor.tasks import test_host_contact
-        from configure.models import Monitor
-        host = ManagedHost(address = hostname)
-        host.monitor = Monitor(host = host)
-        job = test_host_contact.delay(host)
-
-        return {'task_id': job.task_id, 'status': job.status}
-
-
-class AddHost(AnonymousRequestHandler):
-    def run(self, request, hostname):
-        host = ManagedHost.create_from_string(hostname)
-        return {'host_id': host.id, 'host': host.address, 'status': 'added'}
-
-
-class RemoveHost(AnonymousRequestHandler):
-    def run(self, request, hostid):
-        host = ManagedHost.objects.get(id = hostid)
-        command = Command.set_state(host, 'removed')
-        return APIResponse(command.to_dict(), 202)
-
-
-class SetLNetStatus(AnonymousRequestHandler):
-    def run(self, request, hostid, state):
-        host = ManagedHost.objects.get(id = hostid)
-        command = Command.set_state(host, state)
-        return APIResponse(command.to_dict(), 202)
-
-
-class SetTargetMountStage(AnonymousRequestHandler):
-    def run(self, request, target_id, state):
-        from configure.models import ManagedTarget
-        target = ManagedTarget.objects.get(id=target_id)
-        command = Command.set_state(target.downcast(), state)
-        return APIResponse(command.to_dict(), 202)
-
-
-class RemoveFileSystem(AnonymousRequestHandler):
-    def run(self, request, filesystemid):
-        from configure.models import ManagedFilesystem
-        fs = ManagedFilesystem.objects.get(id = filesystemid)
-        command = Command.set_state(fs, 'removed')
-        return APIResponse(command.to_dict(), 202)
-
-
-class RemoveClient(AnonymousRequestHandler):
-    def run(self, request, clientid):
-        from configure.models import ManagedTargetMount
-        mtm = ManagedTargetMount.objects.get(id = clientid)
-        command = Command.set_state(mtm, 'removed')
-        return APIResponse(command.to_dict(), 202)
-
-
 class GetJobStatus(AnonymousRequestHandler):
     def run(self, request, job_id):
         from django.shortcuts import get_object_or_404
@@ -264,6 +209,17 @@ class GetLuns(AnonymousRequestHandler):
         return devices
 
 
+def create_fs(mgs_id, fsname, conf_params):
+        from configure.models import ManagedFilesystem, ManagedMgs
+        mgs = ManagedMgs.objects.get(id=mgs_id)
+        fs = ManagedFilesystem(mgs=mgs, name = fsname)
+        fs.save()
+
+        if conf_params:
+            set_target_conf_param(fs.id, conf_params, True)
+        return fs
+
+
 class CreateNewFilesystem(AnonymousRequestHandler):
     def run(self, request, fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, conf_params):
         # mgt_id and mgt_lun_id are mutually exclusive:
@@ -299,17 +255,6 @@ class CreateNewFilesystem(AnonymousRequestHandler):
         Command.set_state(fs, 'available', "Creating filesystem %s" % fsname)
 
         return APIResponse({'id': fs.id}, 201)
-
-
-def create_fs(mgs_id, fsname, conf_params):
-        from configure.models import ManagedFilesystem, ManagedMgs
-        mgs = ManagedMgs.objects.get(id=mgs_id)
-        fs = ManagedFilesystem(mgs=mgs, name = fsname)
-        fs.save()
-
-        if conf_params:
-            set_target_conf_param(fs.id, conf_params, True)
-        return fs
 
 
 class CreateMGT(AnonymousRequestHandler):
