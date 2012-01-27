@@ -52,7 +52,7 @@ from statsmetricapi import(GetFSTargetStats,
                            GetFSClientsStats,
                            GetHeatMapFSStats)
 
-from managedhostapi import (ManagedHostsHandler, TestHost)
+import hydraapi.host
 
 
 # Cross Site Referance related class
@@ -113,10 +113,10 @@ urlpatterns = patterns('',
     (r'^storage_resource/$', CsrfExemptResource(CreateStorageResource)),
     (r'^storage_resource_class_fields/$', CsrfExemptResource(StorageResourceClassFields)),
 
-    (r'^host/$', CsrfExemptResource(ManagedHostsHandler)),
-    (r'^host/(?P<id>\d+)/$', CsrfExemptResource(ManagedHostsHandler)),
-
-    (r'^test_host/$', CsrfExemptResource(TestHost)),
+    # hydraapi.host
+    (r'^host/$', CsrfExemptResource(hydraapi.host.ManagedHostsHandler)),
+    (r'^host/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.host.ManagedHostsHandler)),
+    (r'^test_host/$', CsrfExemptResource(hydraapi.host.TestHost)),
 
     (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),
 
