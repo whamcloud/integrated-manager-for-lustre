@@ -43,7 +43,7 @@ class ManagedHostsHandler (AnonymousRESTRequestHandler):
         api_res = APIResponse(result, 201)
         return api_res
 
-    def delete(self, request, id):
+    def remove(self, request, id):
         # NB This is equivalent to a call to /api/transition with matching content-type/id/state
         from configure.models import Command
         host = get_object_or_404(ManagedHost, pk = id)

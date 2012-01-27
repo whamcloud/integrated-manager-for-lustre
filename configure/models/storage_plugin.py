@@ -4,6 +4,8 @@
 # ==============================
 
 from django.db import models
+from django.contrib.contenttypes.models import ContentType
+
 from monitor.models import Event, AlertState, AlertEvent
 
 # Our limit on the length of python names where we put
@@ -70,6 +72,33 @@ class StorageResourceRecord(models.Model):
 
     def __str__(self):
         return self.alias_or_name()
+
+    def to_dict(self):
+        resource = self.to_resource()
+
+        from configure.lib.storage_plugin.query import ResourceQuery
+        alerts = [a.to_dict() for a in ResourceQuery().resource_get_alerts(resource)]
+        prop_alerts = [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(resource)]
+
+        from configure.models import StorageResourceStatistic
+        stats = {}
+        for s in StorageResourceStatistic.objects.filter(storage_resource = self):
+            stats[s.name] = s.to_dict()
+
+        from configure.lib.storage_plugin.resource import ScannableResource
+        scannable = isinstance(resource, ScannableResource)
+
+        return {'id': self.pk,
+                'content_type_id': ContentType.objects.get_for_model(self).id,
+                'class_name': resource.get_class_label(),
+                'scannable': scannable,
+                'alias': self.alias,
+                'default_alias': resource.get_label(),
+                'attributes': resource.get_attribute_items(),
+                'alerts': alerts,
+                'stats': stats,
+                'charts': resource.get_charts(),
+                'propagated_alerts': prop_alerts}
 
     @classmethod
     def get_or_create_root(cls, resource_class, resource_class_id, attrs):

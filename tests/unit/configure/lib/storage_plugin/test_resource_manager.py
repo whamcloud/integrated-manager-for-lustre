@@ -7,7 +7,8 @@ from tests.unit.configure.helper import JobTestCase
 class TestSessions(TestCase):
     def setUp(self):
         self.manager = load_plugins(['example_plugin'])
-        self.scannable_resource_id = self.manager.create_root_resource('example_plugin', 'Couplet', address_1 = "192.168.0.1", address_2 = "192.168.0.2")
+        record = self.manager.create_root_resource('example_plugin', 'Couplet', address_1 = "192.168.0.1", address_2 = "192.168.0.2")
+        self.scannable_resource_id = record.pk
 
         import configure.lib.storage_plugin.manager
         configure.lib.storage_plugin.manager.storage_plugin_manager = self.manager

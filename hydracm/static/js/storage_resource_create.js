@@ -41,9 +41,7 @@ function storage_resource_create_save()
     attrs[field_name] = field_value;
   });
 
-  console.log(attrs);
-
-  invoke_api_call(api_post, "storage_resource/", {'plugin': module_name, 'resource_class': class_name, 'attributes': attrs},
+  invoke_api_call(api_post, "storage_resource/" + module_name + "/" + class_name + "/", attrs,
   success_callback = function(data)
   {
     $('#storage_resource_create_dialog').dialog('close');

@@ -9,7 +9,7 @@
         var class_name = tokens[1]
 
         console.log("Loading resources...");
-        invoke_api_call(api_post, "get_resources/", {'module_name': module_name, 'class_name': class_name},
+        invoke_api_call(api_get, "storage_resource/" + module_name + "/" + class_name + "/", {},
           success_callback = function(data) {
             console.log("... done loading resources...");
             if (resourceTable) {
@@ -45,7 +45,6 @@
             });
           }
       );
-      console.log("Ran invoke_api_call");
     }
 
     $(document).ready(function() {

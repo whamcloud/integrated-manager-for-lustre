@@ -107,7 +107,7 @@ class StoragePluginManager(object):
         # StorageResource subclasses which are already present in running plugins.
 
         storage_plugin_log.debug("create_root_resource created %d" % (record.id))
-        return record.pk
+        return record
 
     def register_plugin(self, plugin_instance):
         """Register a particular instance of a StoragePlugin"""

@@ -26,7 +26,7 @@ $(document).ready(function() {
 });
 
 function popup_resource(id) {
-  invoke_api_call(api_post, "get_resource/", {'resource_id': id}, 
+  invoke_api_call(api_get, "storage_resource/" + id + "/", {}, 
   success_callback = function(data)
   {
     load_resource(data);
@@ -211,7 +211,7 @@ function load_resource(resource) {
 }
 
 function remove_resource(ev) {
-  invoke_api_call(api_post, "delete_storage_resource/", {resource_id: resource_id}, function() {}, function() {})
+  invoke_api_call(api_delete, "storage_resource/" + resource_id + "/");
   ev.preventDefault();
 }
 
@@ -221,7 +221,7 @@ function remove_resource(ev) {
         $("img#alias_spinner").show();
         $("input#alias_edit_entry").attr('disabled', 'disabled');
 
-        invoke_api_call(api_post, "set_resource_alias/", {'resource_id': resource_id,'alias': new_name}, success_callback = function() {});
+        invoke_api_call(api_put, "storage_resource/" + resource_id + "/", {'alias': new_name}, success_callback = function() {});
         
         $("a#alias_save_button").show()
         $("a#alias_reset_button").show();

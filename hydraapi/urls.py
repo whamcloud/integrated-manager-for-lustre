@@ -36,12 +36,9 @@ from configureapi import (GetLuns,
 # RequestHandler objects and get their url name from them.
 
 # Stuff related to storage plugins
-from configureapi import (GetResource,
-                         GetResources,
+from configureapi import (
                          ResourceClass,
-                         SetResourceAlias,
                          GetTargetResourceGraph,
-                         CreateStorageResource,
                          StorageResourceClassFields)
 
 from statsmetricapi import(GetFSTargetStats,
@@ -53,6 +50,7 @@ from statsmetricapi import(GetFSTargetStats,
                            GetHeatMapFSStats)
 
 import hydraapi.host
+import hydraapi.storage_resource
 
 
 # Cross Site Referance related class
@@ -104,14 +102,14 @@ urlpatterns = patterns('',
 
     (r'^resource_class/$', CsrfExemptResource(ResourceClass)),
 
-    (r'^get_resources/$', CsrfExemptResource(GetResources)),
-    (r'^get_resource/$', CsrfExemptResource(GetResource)),
-    (r'^set_resource_alias/$', CsrfExemptResource(SetResourceAlias)),
     (r'^get_target_resource_graph/$', CsrfExemptResource(GetTargetResourceGraph)),
 
-    (r'^delete_storage_resource/$', CsrfExemptResource(configureapi.DeleteStorageResource)),
-    (r'^storage_resource/$', CsrfExemptResource(CreateStorageResource)),
     (r'^storage_resource_class_fields/$', CsrfExemptResource(StorageResourceClassFields)),
+
+    # hydraapi.storage_resource
+    (r'^storage_resource/$', CsrfExemptResource(hydraapi.storage_resource.StorageResourceHandler)),
+    (r'^storage_resource/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.storage_resource.StorageResourceHandler)),
+    (r'^storage_resource/(?P<module_name>\w+)/(?P<class_name>\w+)/$', CsrfExemptResource(hydraapi.storage_resource.StorageResourceHandler)),
 
     # hydraapi.host
     (r'^host/$', CsrfExemptResource(hydraapi.host.ManagedHostsHandler)),

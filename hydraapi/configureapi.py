@@ -2,13 +2,11 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-#REST API Controller for Lustre File systems resource in configure namespace
-from django.core.management import setup_environ
+
 from django.contrib.contenttypes.models import ContentType
 
 # Hydra server imports
 import settings
-setup_environ(settings)
 
 from configure.models import ManagedHost
 from configure.models import Command
@@ -70,89 +68,6 @@ class ResourceClass(AnonymousRequestHandler):
                 'resource_classes': [resource_class.to_dict() for resource_class in resource_classes],
                 'default_hint': default
                 }
-
-
-class GetResources(AnonymousRequestHandler):
-    def run(self, request, module_name, class_name):
-        print "run"
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
-        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(module_name, class_name)
-        attr_columns = resource_class.get_columns()
-
-        rows = []
-        from django.utils.html import conditional_escape
-        from configure.lib.storage_plugin.query import ResourceQuery
-        for record in ResourceQuery().get_class_resources(resource_class_id):
-            resource = record.to_resource()
-            alias = conditional_escape(record.alias_or_name(resource))
-            alias_markup = "<a class='storage_resource' href='#%s'>%s</a>" % (record.pk, alias)
-
-            # NB What we output here is logically markup, not strings, so we escape.
-            # (underlying storage_plugin.attributes do their own escaping
-            row = {
-                    'id': record.pk,
-                    'content_type_id': ContentType.objects.get_for_model(record).id,
-                    '_alias': alias_markup,
-                    0: 'wtf'
-                    }
-            for c in attr_columns:
-                row[c['name']] = resource.format(c['name'])
-
-            row['_alerts'] = [a.to_dict() for a in ResourceQuery().resource_get_alerts(resource)]
-
-            rows.append(row)
-
-        columns = [{'mdataProp': 'id', 'bVisible': False}, {'mDataProp': '_alias', 'sTitle': 'Name'}]
-        for c in attr_columns:
-            columns.append({'sTitle': c['label'], 'mDataProp': c['name']})
-        return {'aaData': rows, 'aoColumns': columns}
-
-
-# FIXME: this should be part of /storage_resource/
-# FIXME: should return a 204 status code
-class SetResourceAlias(AnonymousRequestHandler):
-    def run(cls, request, resource_id, alias):
-        from configure.models import StorageResourceRecord
-        from django.shortcuts import get_object_or_404
-        record = get_object_or_404(StorageResourceRecord, id = resource_id)
-        if alias == "":
-            record.alias = None
-        else:
-            record.alias = alias
-        record.save()
-        return {}
-
-
-class GetResource(AnonymousRequestHandler):
-    def run(cls, request, resource_id):
-        from configure.models import StorageResourceRecord
-        from django.shortcuts import get_object_or_404
-        record = get_object_or_404(StorageResourceRecord, id = resource_id)
-        resource = record.to_resource()
-
-        from configure.lib.storage_plugin.query import ResourceQuery
-        alerts = [a.to_dict() for a in ResourceQuery().resource_get_alerts(resource)]
-        prop_alerts = [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(resource)]
-
-        from configure.models import StorageResourceStatistic
-        stats = {}
-        for s in StorageResourceStatistic.objects.filter(storage_resource = resource_id):
-            stats[s.name] = s.to_dict()
-
-        from configure.lib.storage_plugin.resource import ScannableResource
-        scannable = isinstance(resource, ScannableResource)
-
-        return {'id': record.pk,
-                'content_type_id': ContentType.objects.get_for_model(record).id,
-                'class_name': resource.get_class_label(),
-                'scannable': scannable,
-                'alias': record.alias,
-                'default_alias': record.to_resource().get_label(),
-                'attributes': resource.get_attribute_items(),
-                'alerts': alerts,
-                'stats': stats,
-                'charts': resource.get_charts(),
-                'propagated_alerts': prop_alerts}
 
 
 class SetVolumePrimary(AnonymousRequestHandler):
@@ -488,7 +403,6 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
         edges = [e for e in id_edges]
         nodes = []
         x = 0
-        from settings import STATIC_URL
         for i, items in rows.items():
             total_height = len(items) * box_height + (len(items) - 1) * ypad
             y = (height - total_height) / 2
@@ -503,7 +417,7 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
                     'left': x,
                     'top': y,
                     'title': record.alias_or_name(),
-                    'icon': "%simages/storage_plugin/%s.png" % (STATIC_URL, resource.icon),
+                    'icon': "%simages/storage_plugin/%s.png" % (settings.STATIC_URL, resource.icon),
                     'type': resource.get_class_label(),
                     'id': record.id,
                     'highlight': highlight
@@ -524,18 +438,6 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
             'storage_alerts': [a.to_dict() for a in storage_alerts],
             'lustre_alerts': [a.to_dict() for a in lustre_alerts],
             'graph': graph}
-
-
-class CreateStorageResource(AnonymousRequestHandler):
-    def run(self, request, plugin, resource_class, attributes):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
-        storage_plugin_manager.create_root_resource(plugin, resource_class, **attributes)
-
-
-class DeleteStorageResource(AnonymousRequestHandler):
-    def run(self, request, resource_id):
-        from configure.lib.storage_plugin.daemon import StorageDaemon
-        StorageDaemon.request_remove_resource(resource_id)
 
 
 class StorageResourceClassFields(AnonymousRequestHandler):
@@ -627,7 +529,6 @@ class Notifications(AnonymousRequestHandler):
             alert_dict['affected'] = []
             alert_dict['affected'].append([a.alert_item_id, a.alert_item_type_id])
             for ao in affected_objects:
-                from django.contrib.contenttypes.models import ContentType
                 ct = ContentType.objects.get_for_model(ao)
                 alert_dict['affected'].append([ao.pk, ct.pk])
 

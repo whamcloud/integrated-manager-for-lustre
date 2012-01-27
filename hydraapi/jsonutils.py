@@ -41,6 +41,7 @@ def render_to_json(**jsonargs):
                 return r
 
             r.write(DateTimeAwareJSONEncoder().encode(content))
+
             return r
         return inner_json
     return outer

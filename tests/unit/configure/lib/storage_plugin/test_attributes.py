@@ -82,7 +82,9 @@ class TestReferenceAttribute(TestCase):
         from helper import load_plugins
         mgr = load_plugins(['loadable_plugin'])
         configure.lib.storage_plugin.manager.storage_plugin_manager = mgr
-        self.record_pk = mgr.create_root_resource('loadable_plugin', 'TestScannableResource', name = 'foobar')
+
+        record = mgr.create_root_resource('loadable_plugin', 'TestScannableResource', name = 'foobar')
+        self.record_pk = record.pk
 
         self.manager = mgr
 

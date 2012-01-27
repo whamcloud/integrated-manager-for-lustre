@@ -80,5 +80,5 @@ class TestLoad(TestCase):
 
     def test_root_resource(self):
         """Test that the manager creates and returns a scannable resource"""
-        pk = self.manager.create_root_resource('loadable_plugin', 'TestScannableResource', name = 'foobar')
-        self.assertEqual(self.manager.get_scannable_resource_ids('loadable_plugin'), [pk])
+        record = self.manager.create_root_resource('loadable_plugin', 'TestScannableResource', name = 'foobar')
+        self.assertEqual(self.manager.get_scannable_resource_ids('loadable_plugin'), [record.pk])
