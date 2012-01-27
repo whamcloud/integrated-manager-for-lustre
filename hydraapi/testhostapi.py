@@ -62,7 +62,7 @@ def main(args):
         exit(-1)
     base_url = options.url.rstrip('/')
     # Test 1 :
-    api_url = base_url + '/api/hosts/'
+    api_url = base_url + '/api/host/'
     print 'api_url: %s' % api_url
     result = make_json_call_by_http_method('GET', api_url,
                                  host_id=1,
@@ -71,7 +71,7 @@ def main(args):
     print result
     print '\n\n'
     # Test 2 :
-    api_url = base_url + '/api/hosts/'
+    api_url = base_url + '/api/host/'
     print 'api_url: %s' % api_url
     result = make_json_call_by_http_method('GET', api_url,
                                  filesystem_id=1,
@@ -80,7 +80,7 @@ def main(args):
     print result
     print '\n\n'
     # Test 3 :
-    api_url = base_url + '/api/hosts/'
+    api_url = base_url + '/api/host/'
     print 'api_url: %s' % api_url
     result = make_json_call_by_http_method('GET', api_url,
                                 )
@@ -88,7 +88,7 @@ def main(args):
     print result
     print '\n\n'
     # Test 4 :
-    api_url = base_url + '/api/hosts/'
+    api_url = base_url + '/api/host/'
     print 'api_url: %s' % api_url
     result = make_json_call_by_http_method('POST', api_url,
                                  host_name=options.hostname,

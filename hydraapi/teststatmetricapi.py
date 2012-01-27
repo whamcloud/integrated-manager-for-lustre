@@ -11,7 +11,7 @@ import sys
 import settings
 setup_environ(settings)
 
-from jsonutils import make_json_call
+from testutils import make_json_call
 
 
 def main(args):
