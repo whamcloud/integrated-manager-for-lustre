@@ -21,9 +21,26 @@ var standard_error_msg = "An error occured: ";
 /********************************************************************************/
 function invoke_api_call(request_type, api_url, api_args, success_callback, error_callback)
 {
-  $.ajax({type: request_type, url: API_PREFIX + api_url, dataType: 'json', data: JSON.stringify(api_args),
-          contentType:"application/json; charset=utf-8"}
-  )
+  var ajax_args;
+  if (request_type == api_get) {
+    encoded_api_args = {}
+    $.each(api_args, function(k, v) {
+      encoded_api_args[k] = JSON.stringify(v)
+    });
+    ajax_args = {
+      type: request_type,
+      url: API_PREFIX + api_url,
+      data: encoded_api_args
+    }
+  } else {
+    ajax_args = {
+      type: request_type,
+      url: API_PREFIX + api_url,
+      dataType: 'json',
+      data: JSON.stringify(api_args),
+      contentType:"application/json; charset=utf-8"}
+    }
+  $.ajax(ajax_args)
   .success(function(data, textStatus, jqXHR)
   {
     if(typeof(success_callback) == "function")

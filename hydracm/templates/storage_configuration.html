@@ -52,7 +52,7 @@
             load_resource_table();
         });
         /* Initial population of dropdown of resource classes */
-        invoke_api_call(api_get, "resource_class/", {},
+        invoke_api_call(api_get, "storage_resource_class/", {},
           success_callback = function(data) {
             options = ""
             if (data.resource_classes.length == 0) {

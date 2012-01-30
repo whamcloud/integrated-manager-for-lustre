@@ -55,12 +55,12 @@ function storage_resource_create_load_fields()
   var module_name = tokens[0]
   var class_name = tokens[1]
 
-  invoke_api_call(api_post, "storage_resource_class_fields/", {'plugin': module_name, 'resource_class': class_name},  
-  success_callback = function(data)
+  invoke_api_call(api_get, "storage_resource_class/" + module_name + "/" + class_name + "/", {},  
+  success_callback = function(resource_class)
   {
     $('#storage_resource_create_fields tr.field').remove();
     var row_markup = "";
-    $.each(data, function(i, field_info)
+    $.each(resource_class.fields, function(i, field_info)
     {
       row_markup += "<tr class='field'><th>" + field_info.label + ":</th><td><input type='entry' id='storage_resource_create_field_" + field_info.name + "'></input></td>";
       if (field_info.optional) {
@@ -80,8 +80,7 @@ function storage_resource_create() {
   console.log('opening');
   $('#storage_resource_create_dialog').dialog('open');
 
-  /* FIXME: this should be a GET but using POST because args are broken for GET (HYD-571) */
-  invoke_api_call(api_post, "resource_class/", {creatable: true}, 
+  invoke_api_call(api_get, "storage_resource_class/", {creatable: true}, 
   success_callback = function(data)  
   {
     var option_markup = ""

@@ -38,38 +38,6 @@ class SetJobStatus(AnonymousRequestHandler):
         return {'transition_job_status': job.status, 'job_info': job.info, 'job_result': job.result}
 
 
-class ResourceClass(AnonymousRequestHandler):
-    def run(self, request, creatable = None):
-        from configure.models import StorageResourceClass, StorageResourceRecord
-
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
-        if creatable:
-            resource_classes = storage_plugin_manager.get_resource_classes(scannable_only = True)
-            if len(resource_classes):
-                default = resource_classes[0].to_dict()
-            else:
-                default = None
-        else:
-            resource_classes = storage_plugin_manager.get_resource_classes()
-
-            # Pick the first resource with no parents, and use its class
-            try:
-                default = StorageResourceRecord.objects.filter(parents = None).latest('pk').resource_class.to_dict()
-            except StorageResourceRecord.DoesNotExist:
-                try:
-                    default = StorageResourceRecord.objects.all()[0].resource_class.to_dict()
-                except IndexError:
-                    try:
-                        default = StorageResourceClass.objects.all()[0].to_dict()
-                    except IndexError:
-                        default = None
-
-        return {
-                'resource_classes': [resource_class.to_dict() for resource_class in resource_classes],
-                'default_hint': default
-                }
-
-
 class SetVolumePrimary(AnonymousRequestHandler):
     def run(cls, request, lun_ids, primary_host_ids, secondary_host_ids):
         from configure.models import Lun, LunNode
@@ -438,20 +406,6 @@ class GetTargetResourceGraph(AnonymousRequestHandler):
             'storage_alerts': [a.to_dict() for a in storage_alerts],
             'lustre_alerts': [a.to_dict() for a in lustre_alerts],
             'graph': graph}
-
-
-class StorageResourceClassFields(AnonymousRequestHandler):
-    def run(self, request, plugin, resource_class):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
-        resource_klass, resource_klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, resource_class)
-        result = []
-        for name, attr in resource_klass.get_all_attribute_properties():
-            result.append({
-                'label': attr.get_label(name),
-                'name': name,
-                'optional': attr.optional,
-                'class': attr.__class__.__name__})
-        return result
 
 
 class Notifications(AnonymousRequestHandler):

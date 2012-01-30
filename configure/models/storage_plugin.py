@@ -40,8 +40,19 @@ class StorageResourceClass(models.Model):
         app_label = 'configure'
 
     def to_dict(self):
+        resource_klass = self.get_class()
+
+        fields = []
+        for name, attr in resource_klass.get_all_attribute_properties():
+            fields.append({
+                'label': attr.get_label(name),
+                'name': name,
+                'optional': attr.optional,
+                'class': attr.__class__.__name__})
+
         return {'plugin_name': self.storage_plugin.module_name,
                 'class_name': self.class_name,
+                'fields': fields,
                 'label': "%s-%s" % (self.storage_plugin.module_name, self.class_name)}
 
 

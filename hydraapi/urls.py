@@ -37,9 +37,7 @@ from configureapi import (GetLuns,
 
 # Stuff related to storage plugins
 from configureapi import (
-                         ResourceClass,
-                         GetTargetResourceGraph,
-                         StorageResourceClassFields)
+                         GetTargetResourceGraph)
 
 from statsmetricapi import(GetFSTargetStats,
                            GetFSServerStats,
@@ -51,6 +49,7 @@ from statsmetricapi import(GetFSTargetStats,
 
 import hydraapi.host
 import hydraapi.storage_resource
+import hydraapi.storage_resource_class
 
 
 # Cross Site Referance related class
@@ -100,11 +99,12 @@ urlpatterns = patterns('',
     (r'^notifications/$', CsrfExemptResource(Notifications)),
     (r'^object_summary/$', CsrfExemptResource(configureapi.ObjectSummary)),
 
-    (r'^resource_class/$', CsrfExemptResource(ResourceClass)),
 
     (r'^get_target_resource_graph/$', CsrfExemptResource(GetTargetResourceGraph)),
 
-    (r'^storage_resource_class_fields/$', CsrfExemptResource(StorageResourceClassFields)),
+    # hydraapi.storage_resource_class
+    (r'^storage_resource_class/$', CsrfExemptResource(hydraapi.storage_resource_class.StorageResourceClassHandler)),
+    (r'^storage_resource_class/(?P<module_name>\w+)/(?P<class_name>\w+)/$', CsrfExemptResource(hydraapi.storage_resource_class.StorageResourceClassHandler)),
 
     # hydraapi.storage_resource
     (r'^storage_resource/$', CsrfExemptResource(hydraapi.storage_resource.StorageResourceHandler)),
