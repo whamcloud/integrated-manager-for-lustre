@@ -93,108 +93,6 @@ class GetLuns(AnonymousRequestHandler):
         return devices
 
 
-def create_fs(mgs_id, fsname, conf_params):
-        from configure.models import ManagedFilesystem, ManagedMgs
-        mgs = ManagedMgs.objects.get(id=mgs_id)
-        fs = ManagedFilesystem(mgs=mgs, name = fsname)
-        fs.save()
-
-        if conf_params:
-            set_target_conf_param(fs.id, conf_params, True)
-        return fs
-
-
-class CreateNewFilesystem(AnonymousRequestHandler):
-    def run(self, request, fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, conf_params):
-        # mgt_id and mgt_lun_id are mutually exclusive:
-        # * mgt_id is a PK of an existing ManagedMgt to use
-        # * mgt_lun_id is a PK of a Lun to use for a new ManagedMgt
-        assert bool(mgt_id) != bool(mgt_lun_id)
-
-        from configure.models import ManagedMgs, ManagedMdt, ManagedOst
-
-        if not mgt_id:
-            mgt = create_target(mgt_lun_id, ManagedMgs, name="MGS")
-            mgt_id = mgt.pk
-        else:
-            mgt_lun_id = ManagedMgs.objects.get(pk = mgt_id).get_lun()
-
-        # This is a brute safety measure, to be superceded by
-        # some appropriate validation that gives a helpful
-        # error to the user.
-        all_lun_ids = [mgt_lun_id] + [mdt_lun_id] + ost_lun_ids
-        # Test that all values in all_lun_ids are unique
-        assert len(set(all_lun_ids)) == len(all_lun_ids)
-
-        from django.db import transaction
-        with transaction.commit_on_success():
-            fs = create_fs(mgt_id, fsname, conf_params)
-            create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
-            osts = []
-            for lun_id in ost_lun_ids:
-                osts.append(create_target(lun_id, ManagedOst, filesystem = fs))
-        # Important that a commit happens here so that the targets
-        # land in DB before the set_state jobs act upon them.
-
-        Command.set_state(fs, 'available', "Creating filesystem %s" % fsname)
-
-        return APIResponse({'id': fs.id}, 201)
-
-
-class CreateMGT(AnonymousRequestHandler):
-    def run(self, request, lun_id):
-        from configure.models import ManagedMgs
-        mgt = create_target(lun_id, ManagedMgs, name = "MGS")
-
-        from django.db import transaction
-        transaction.commit()
-
-        from configure.models import Command
-        command = Command.set_state(mgt, 'mounted', "Creating MGT")
-        return APIResponse(command.to_dict(), 202)
-
-
-def create_target(lun_id, target_klass, **kwargs):
-    from configure.models import Lun, ManagedTargetMount
-
-    target = target_klass(**kwargs)
-    target.save()
-
-    lun = Lun.objects.get(pk = lun_id)
-    for node in lun.lunnode_set.all():
-        if node.use:
-            mount = ManagedTargetMount(
-                block_device = node,
-                target = target,
-                host = node.host,
-                mount_point = target.default_mount_path(node.host),
-                primary = node.primary)
-            mount.save()
-
-    return target
-
-
-class CreateOSTs(AnonymousRequestHandler):
-    def run(self, request, filesystem_id, ost_lun_ids):
-        from configure.models import ManagedFilesystem, ManagedOst
-        from django.db import transaction
-
-        fs = ManagedFilesystem.objects.get(id=filesystem_id)
-        osts = []
-        with transaction.commit_on_success():
-            for lun_id in ost_lun_ids:
-                osts.append(create_target(lun_id, ManagedOst, filesystem = fs))
-
-        from configure.lib.state_manager import StateManager
-        from configure.models import Command
-        with transaction.commit_on_success():
-            command = Command(message = "Creating OSTs")
-            command.save()
-        for target in osts:
-            StateManager.set_state(target, 'mounted', command.pk)
-        return APIResponse(command.to_dict(), 202)
-
-
 class SetTargetConfParams(AnonymousRequestHandler):
     def run(self, request, target_id, conf_params, IsFS):
         set_target_conf_param(target_id, conf_params, IsFS)
@@ -519,7 +417,6 @@ class Transition(AnonymousRequestHandler):
         klass = ContentType.objects.get_for_id(content_type_id).model_class()
         instance = klass.objects.get(pk = id)
 
-        from configure.models import Command
         command = Command.set_state(instance, new_state)
         return APIResponse(command.to_dict(), 202)
 

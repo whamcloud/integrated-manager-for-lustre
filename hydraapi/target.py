@@ -3,15 +3,17 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from django.core.management import setup_environ
 from django.shortcuts import get_object_or_404
-import settings
-setup_environ(settings)
+
+from django.db import transaction
 
 from configure.lib.state_manager import StateManager
 
-from configure.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget
-from requesthandler import AnonymousRESTRequestHandler
+from configure.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Lun
+from hydraapi.requesthandler import AnonymousRESTRequestHandler, APIResponse
+
+from configure.models import Command
+
 
 KIND_TO_KLASS = {"MGT": ManagedMgs,
             "OST": ManagedOst,
@@ -19,7 +21,65 @@ KIND_TO_KLASS = {"MGT": ManagedMgs,
 KLASS_TO_KIND = dict([(v, k) for k, v in KIND_TO_KLASS.items()])
 
 
+def create_target(lun_id, target_klass, **kwargs):
+    target = target_klass(**kwargs)
+    target.save()
+
+    lun = Lun.objects.get(pk = lun_id)
+    for node in lun.lunnode_set.all():
+        if node.use:
+            mount = ManagedTargetMount(
+                block_device = node,
+                target = target,
+                host = node.host,
+                mount_point = target.default_mount_path(node.host),
+                primary = node.primary)
+            mount.save()
+
+    return target
+
+
 class TargetHandler(AnonymousRESTRequestHandler):
+    def post(self, request, kind, filesystem_id = None, lun_ids = []):
+        if not kind in KIND_TO_KLASS:
+            return APIResponse(None, 400)
+
+        # TODO: define convention for API errors, and put some
+        # helpful messages in here
+        # Cannot specify a filesystem to which an MGT should belong
+        if kind == "MGT" and filesystem_id:
+            return APIResponse(None, 400)
+
+        # Cannot create MDTs with this call (it is done in filesystem creation)
+        if kind == "MDT":
+            return APIResponse(None, 400)
+
+        # Need at least one LUN
+        if len(lun_ids) < 1:
+            return APIResponse(None, 400)
+
+        if kind == "OST":
+            fs = ManagedFilesystem.objects.get(id=filesystem_id)
+            create_kwargs = {'filesystem': fs}
+        elif kind == "MGT":
+            create_kwargs = {'name': 'MGS'}
+
+        targets = []
+        with transaction.commit_on_success():
+            for lun_id in lun_ids:
+                targets.append(create_target(lun_id, KIND_TO_KLASS[kind], **create_kwargs))
+
+        message = "Creating %s" % kind
+        if len(lun_ids) > 1:
+            message += "s"
+
+        with transaction.commit_on_success():
+            command = Command(message = "Creating OSTs")
+            command.save()
+        for target in targets:
+            StateManager.set_state(target, 'mounted', command.pk)
+        return APIResponse(command.to_dict(), 202)
+
     def get(self, request, id = None, host_id = None, filesystem_id = None, kind = None):
         if id:
             target = get_object_or_404(ManagedTarget, pk = id).downcast()

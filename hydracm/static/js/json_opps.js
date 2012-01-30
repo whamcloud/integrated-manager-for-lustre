@@ -94,7 +94,7 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
       "conf_params": conf_params
   };
   
-  invoke_api_call(api_post, "create_new_fs/", api_params,
+  invoke_api_call(api_post, "filesystem/", api_params,
   success_callback = function(data)
   {
     var fs_id = data.id;    
@@ -109,12 +109,7 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
 
 function CreateOSTs(fs_id, ost_lun_ids)
 {
-  var api_params = {
-      "filesystem_id": fs_id,
-      "ost_lun_ids": ost_lun_ids
-  };
-  
-  invoke_api_call(api_post, "create_osts/", api_params,
+  invoke_api_call(api_post, "target/", {kind: 'OST', filesystem_id: fs_id, lun_ids: ost_lun_ids},
   success_callback = function(data)
   {
     //Reload table with latest ost's.
@@ -127,7 +122,7 @@ function CreateOSTs(fs_id, ost_lun_ids)
 
 function CreateMGT(lun_id, callback)
 {
-  invoke_api_call(api_post, "create_mgt/", {'lun_id': lun_id},
+  invoke_api_call(api_post, "target/", {kind: 'MGT', lun_ids: [lun_id]},
   success_callback = function(data)
   {
     callback();

@@ -11,13 +11,63 @@ setup_environ(settings)
 from django.contrib.contenttypes.models import ContentType
 from configure.lib.state_manager import StateManager
 
-from configure.models import ManagedOst, ManagedMdt, ManagedFilesystem, ManagedTargetMount, ManagedHost
-from requesthandler import AnonymousRESTRequestHandler
+from configure.models import ManagedOst, ManagedMdt, ManagedMgs
+from configure.models import ManagedFilesystem, ManagedTargetMount, ManagedHost
+from configure.models import Command
+from hydraapi.requesthandler import AnonymousRESTRequestHandler, APIResponse
 
 import monitor.lib.util
+import hydraapi.target
+import hydraapi.configureapi
+
+
+def create_fs(mgs_id, name, conf_params):
+        mgs = ManagedMgs.objects.get(id=mgs_id)
+        fs = ManagedFilesystem(mgs=mgs, name = name)
+        fs.save()
+
+        if conf_params:
+            hydraapi.configureapi.set_target_conf_param(fs.id, conf_params, True)
+        return fs
 
 
 class FilesystemHandler(AnonymousRESTRequestHandler):
+    def post(self, request, fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, conf_params):
+        # mgt_id and mgt_lun_id are mutually exclusive:
+        # * mgt_id is a PK of an existing ManagedMgt to use
+        # * mgt_lun_id is a PK of a Lun to use for a new ManagedMgt
+        assert bool(mgt_id) != bool(mgt_lun_id)
+
+        if not mgt_id:
+            mgt = hydraapi.target.create_target(mgt_lun_id, ManagedMgs, name="MGS")
+            mgt_id = mgt.pk
+        else:
+            mgt_lun_id = ManagedMgs.objects.get(pk = mgt_id).get_lun()
+
+        # This is a brute safety measure, to be superceded by
+        # some appropriate validation that gives a helpful
+        # error to the user.
+        all_lun_ids = [mgt_lun_id] + [mdt_lun_id] + ost_lun_ids
+        # Test that all values in all_lun_ids are unique
+        assert len(set(all_lun_ids)) == len(all_lun_ids)
+
+        from django.db import transaction
+        with transaction.commit_on_success():
+            fs = create_fs(mgt_id, fsname, conf_params)
+            hydraapi.target.create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
+            osts = []
+            for lun_id in ost_lun_ids:
+                osts.append(hydraapi.target.create_target(lun_id, ManagedOst, filesystem = fs))
+        # Important that a commit happens here so that the targets
+        # land in DB before the set_state jobs act upon them.
+
+        command = Command.set_state(fs, 'available', "Creating filesystem %s" % fsname)
+
+        return APIResponse({
+            'filesystem': {'id': fs.id},
+            'command': command.to_dict()
+            }, 201)
+
     def get(self, request, id = None):
         if id:
             filesystem = get_object_or_404(ManagedFilesystem, pk = id)

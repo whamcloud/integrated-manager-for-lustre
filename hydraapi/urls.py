@@ -14,7 +14,6 @@ from monitorapi import (GetEventsByFilter,
                         GetLogs)
 import configureapi
 from configureapi import (GetLuns,
-                          CreateNewFilesystem,
                           GetJobStatus,
                           SetJobStatus,
                           Notifications,
@@ -51,16 +50,6 @@ class CsrfExemptResource(Resource):
 # hydra api urls definitions.
 urlpatterns = patterns('',
     (r'^get_luns/$', CsrfExemptResource(GetLuns)),
-
-    (r'^create_new_fs/$', CsrfExemptResource(CreateNewFilesystem)),
-
-    # (r'^get_fs_targets/$', CsrfExemptResource(GetFSTargets)),
-    # (r'^get_targets/$', CsrfExemptResource(GetTargets)),
-    # (r'^get_mgts/$', CsrfExemptResource(GetMgtDetails)),
-    # (r'^target/$', CsrfExemptResource(configureapi.Target)),
-    # (r'^getvolumesdetails/$', CsrfExemptResource(GetFSVolumeDetails)),
-    (r'^create_mgt/$', CsrfExemptResource(configureapi.CreateMGT)),
-    (r'^create_osts/$', CsrfExemptResource(configureapi.CreateOSTs)),
 
     (r'^get_job_status/$', CsrfExemptResource(GetJobStatus)),
     (r'^set_job_status/$', CsrfExemptResource(SetJobStatus)),
