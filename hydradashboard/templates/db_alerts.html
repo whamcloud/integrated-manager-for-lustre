@@ -7,52 +7,42 @@
       // Menu Highlighter
       $('#alerts_menu').addClass('active');
       var oTable = $('#active_AlertContent').dataTable( {
-      "sAjaxDataProp": "response.aaData",
-      "bProcessing": true,
-      "iDisplayLength":50,
-      "bDeferRender": true,
-      "sAjaxSource": '/api/getalerts/',
-      "fnServerData": function ( sSource, aoData, fnCallback ) {
-      $.ajax({
-      "dataType": 'json', 
-      "type": "POST", 
-      "url": sSource, 
-      "data": ({"active":true,"page_id":"","page_size":""}),
-      "success": fnCallback,
-      })
-    },
-    "aoColumns": [
-      { "sClass": 'txtleft', "mDataProp":"begin" },
-      { "sClass": 'txtleft', "mDataProp":"alert_item" },
-      { "sClass": 'txtleft', "mDataProp":"message" }
-      ],
-      "oLanguage": {
-        "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
-      },
-      "bJQueryUI": true,
-    });
+        "bProcessing": true,
+        "iDisplayLength":25,
+        "bDeferRender": true,
+        "sAjaxSource": 'getalerts/',
+        "fnServerData": function (url, data, callback, settings) {
+          invoke_api_call(api_get, url, {active: true}, success_callback = function(data) {
+            callback(data);
+          });
+        },
+        "aoColumns": [
+          { "sClass": 'txtleft', "mDataProp":"begin" },
+          { "sClass": 'txtleft', "mDataProp":"alert_item" },
+          { "sClass": 'txtleft', "mDataProp":"message" }
+          ],
+          "oLanguage": {
+            "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
+          },
+          "bJQueryUI": true,
+      });
     //for alert history
     var oTable = $('#all_AlertContent').dataTable( {
-      "sAjaxDataProp": "response.aaData",
       "bProcessing": true,
-      "iDisplayLength":50,
+      "iDisplayLength":25,
       "bDeferRender": true,
-      "sAjaxSource": '/api/getalerts/',
-      "fnServerData": function ( sSource, aoData, fnCallback ) {
-      $.ajax({
-      "dataType": 'json', 
-      "type": "POST", 
-      "url": sSource, 
-      "data": ({"active":"","page_id":"","page_size":""}),
-      "success": fnCallback,
-      })
-    },
-    "aoColumns": [
-      { "sClass": 'txtleft', "mDataProp":"begin" },
-      { "sClass": 'txtleft', "mDataProp":"end" },
-      { "sClass": 'txtleft', "mDataProp":"alert_item" },
-      { "sClass": 'txtleft', "mDataProp":"message" }
-    ],
+      "sAjaxSource": 'getalerts/',
+      "fnServerData": function (url, data, callback, settings) {
+        invoke_api_call(api_get, url, {}, success_callback = function(data) {
+          callback(data);
+        });
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft', "mDataProp":"begin" },
+        { "sClass": 'txtleft', "mDataProp":"end" },
+        { "sClass": 'txtleft', "mDataProp":"alert_item" },
+        { "sClass": 'txtleft', "mDataProp":"message" }
+      ],
       "oLanguage": {
         "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
       },
