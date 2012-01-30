@@ -58,7 +58,7 @@ def audit_all():
             if not host.monitor.last_success and not host.is_available():
                 # Set the HostContactAlert high
                 from monitor.models import HostContactAlert
-                HostContactAlert.notify(ManagedHost.objects.get(pk = host['id']), True)
+                HostContactAlert.notify(host, True)
     else:
         for host in ManagedHost.objects.all():
             if host.monitor:
