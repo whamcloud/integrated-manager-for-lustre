@@ -32,8 +32,12 @@ def extract_request_args(f):
         defaults_list = arg_spec[3]
         defaults = {}
         if defaults_list:
+            #eg:
+            # fn prototype a, b=1, c=2
+            #  arg_names (a,b,c)
+            #  defaults_list (1,2)
             for i in range(0, len(defaults_list)):
-                defaults[arg_names[-(i + 1)]] = defaults_list[i]
+                defaults[arg_names[-len(defaults_list) + i]] = defaults_list[i]
 
         errors = {}
         # Turn passed-through *args into a list so that we can append to it
@@ -57,10 +61,10 @@ def extract_request_args(f):
                     errors[arg_name] = ["This field is required"]
 
         if len(errors) > 0:
+            # FIXME: random abuse of URLError -- should define an
+            # exception class that really means invalid request
             import urllib2
             raise urllib2.URLError(errors)
-
-        #api_log.info("args = %s, kwargs = %s" % (args, kwargs))
 
         return f(request, *args, **kwargs)
 
