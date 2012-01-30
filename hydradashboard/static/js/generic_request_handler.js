@@ -136,6 +136,7 @@ function invoke_api_call(request_type, api_url, api_args, success_callback, erro
 /********************************************************************************/
 function unexpected_error(textStatus, jqXHR)
 {
+  console.log("unexpected_error: " + textStatus);
   console.log(jqXHR);
   disable_api = true;
   var message = "We are sorry, but something has gone wrong.";
