@@ -199,7 +199,7 @@ $(document).ready(function()
     "<span class='fontStyle style2 style9'><b>Free Space</b></span></td>" +
     "</tr>";
 
-    invoke_api_call(api_get, "listfilesystems", "",
+    invoke_api_call(api_get, "filesystem", "",
       success_callback = function(data)
       {
         filesystem_list_content = "<option value=''>Select File System</option>";

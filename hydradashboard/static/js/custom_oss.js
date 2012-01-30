@@ -158,7 +158,7 @@ oss_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKin
  * Param - File System Id
  * Return - Returns the summary information of the selected file system
 *****************************************************************************/
-loadOSSUsageSummary = function (file_systems_ids)
+loadOSSUsageSummary = function (file_system_ids)
 {
   $('#serverSummaryTbl')
   .dataTable(
@@ -186,67 +186,60 @@ loadOSSUsageSummary = function (file_systems_ids)
   
   var innerContent = "";
 
-  for(var x=0; x<file_systems_ids.length; x++)
+  for(var x=0; x<file_system_ids.length; x++)
   {
-    var api_params = {filesystem_id: file_systems_ids[x]};
-    
-    invoke_api_call(api_post, "getfilesystem/", api_params, 
-      success_callback = function(data)
+    invoke_api_call(api_get, "filesystem/" + file_system_ids[x] + "/", {}, 
+      success_callback = function(filesystem)
       {
-        var response = data;
         var innerContent="";
-        
-        $.each(response, function(resKey, resValue) 
+        if(filesystem.status == "OK" || filesystem.status == "STARTED")
         {
-          if(resValue.status == "OK" || resValue.status == "STARTED")
-          {
-            innerContent = "<div class='tblContent status_ok'>"+resValue.status+"<div>";
-          }
-          else if(resValue.status == "WARNING" || resValue.status == "RECOVERY")
-          {
-            innerContent = "<div class='tblContent status_warning'>"+resValue.status+"</div>";
-          }
-          else if(resValue.status == "STOPPED" || resValue.status == "OFFLINE")
-          {
-            innerContent = "<div class='tblContent status_stopped'>"+resValue.status+"</div>";
-          }
-  
-          $('#serverSummaryTbl')
-          .dataTable(
-          {
-            "aoColumns": [
-              { "sClass": 'txtleft'},
-              { "sClass": 'txtleft'},
-              { "sClass": 'txtleft'},
-              { "sClass": 'txtright'},
-              { "sClass": 'txtright'},
-              { "sClass": 'txtright'},
-              { "sClass": 'txtright'},
-              { "sClass": 'txtright'},
-              { "sClass": 'txtright'},
-              { "sClass": 'txtleft'}
-            ],
-            "iDisplayLength":5,
-            "bRetrieve":true,
-            "bFilter":false,
-            "bLengthChange": false,
-            "bAutoWidth": true,
-            "bSort": false,
-            "bJQueryUI": true
-          })
-          .fnAddData([
-            resValue.fsname,
-            resValue.mgs_hostname,
-            resValue.mds_hostname,
-            resValue.bytes_total,
-            resValue.bytes_free,
-            resValue.inodes_total,
-            resValue.inodes_free,
-            "--",
-            resValue.noofost,
-            innerContent,
-          ]);
-        });
+          innerContent = "<div class='tblContent status_ok'>"+filesystem.status+"<div>";
+        }
+        else if(filesystem.status == "WARNING" || filesystem.status == "RECOVERY")
+        {
+          innerContent = "<div class='tblContent status_warning'>"+filesystem.status+"</div>";
+        }
+        else if(filesystem.status == "STOPPED" || filesystem.status == "OFFLINE")
+        {
+          innerContent = "<div class='tblContent status_stopped'>"+filesystem.status+"</div>";
+        }
+
+        $('#serverSummaryTbl')
+        .dataTable(
+        {
+          "aoColumns": [
+            { "sClass": 'txtleft'},
+            { "sClass": 'txtleft'},
+            { "sClass": 'txtleft'},
+            { "sClass": 'txtright'},
+            { "sClass": 'txtright'},
+            { "sClass": 'txtright'},
+            { "sClass": 'txtright'},
+            { "sClass": 'txtright'},
+            { "sClass": 'txtright'},
+            { "sClass": 'txtleft'}
+          ],
+          "iDisplayLength":5,
+          "bRetrieve":true,
+          "bFilter":false,
+          "bLengthChange": false,
+          "bAutoWidth": true,
+          "bSort": false,
+          "bJQueryUI": true
+        })
+        .fnAddData([
+          filesystem.fsname,
+          filesystem.mgs_hostname,
+          filesystem.mds_hostname,
+          filesystem.bytes_total,
+          filesystem.bytes_free,
+          filesystem.inodes_total,
+          filesystem.inodes_free,
+          "--",
+          filesystem.noofost,
+          innerContent,
+        ]);
       });
   }
 }

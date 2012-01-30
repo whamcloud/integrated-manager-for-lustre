@@ -512,76 +512,70 @@ loadFileSystemSummary = function (fsId)
   "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />" +
   "</td></tr>");
 
-  var api_params = {filesystem_id: fsId};
-
-  invoke_api_call(api_post, "getfilesystem/", api_params, 
-	success_callback = function(data)
+  invoke_api_call(api_get, "filesystem/" + fsId + "/", {}, 
+	success_callback = function(filesystem)
 	{
-      var response = data;
-      $.each(response, function(resKey, resValue) 
-      {
-        innerContent = innerContent + 
-        "<tr>" +
-        "<td class='greybgcol'>MGS :</td>" +
-        "<td class='tblContent greybgcol'>"+resValue.mgs_hostname+"</td>" +
-        "<td>&nbsp;</td>" +
-        "<td>&nbsp;</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>MDS:</td>" +
-        "<td class='tblContent greybgcol'>"+resValue.mds_hostname+"</td>" +
-        "<td class='greybgcol'>Failover:</td>" +
-        "<td class='tblContent txtleft'>NA</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Standby MDS:</td>" +
-        "<td class='tblContent greybgcol'>--</td>" +
-        "<td>&nbsp;</td>" +
-        "<td>&nbsp;</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Total OSSs: </td>" +
-        "<td class='tblContent greybgcol'>"+resValue.noofoss+" </td>" +
-        "<td class='greybgcol'>Total OSTs:</td>" +
-        "<td class='tblContent txtleft'>"+resValue.noofost+"</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Total Capacity: </td>" +
-        "<td class='tblContent greybgcol'>"+resValue.bytes_total+" </td>" +
-        "<td class='greybgcol'>Total Free:</td>" +
-        "<td class='tblContent txtleft'>"+resValue.bytes_free+"</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Files Total: </td>" +
-        "<td class='tblContent greybgcol'>"+resValue.inodes_total+" </td>" +
-        "<td class='greybgcol'>Files Free:</td>" +
-        "<td class='tblContent txtleft'>"+resValue.inodes_free+"</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Status:</td>";
+      innerContent = innerContent + 
+      "<tr>" +
+      "<td class='greybgcol'>MGS :</td>" +
+      "<td class='tblContent greybgcol'>"+filesystem.mgs_hostname+"</td>" +
+      "<td>&nbsp;</td>" +
+      "<td>&nbsp;</td>" +
+      "</tr>"+
+      "<tr>" +
+      "<td class='greybgcol'>MDS:</td>" +
+      "<td class='tblContent greybgcol'>"+filesystem.mds_hostname+"</td>" +
+      "<td class='greybgcol'>Failover:</td>" +
+      "<td class='tblContent txtleft'>NA</td>" +
+      "</tr>"+
+      "<tr>" +
+      "<td class='greybgcol'>Standby MDS:</td>" +
+      "<td class='tblContent greybgcol'>--</td>" +
+      "<td>&nbsp;</td>" +
+      "<td>&nbsp;</td>" +
+      "</tr>"+
+      "<tr>" +
+      "<td class='greybgcol'>Total OSSs: </td>" +
+      "<td class='tblContent greybgcol'>"+filesystem.noofoss+" </td>" +
+      "<td class='greybgcol'>Total OSTs:</td>" +
+      "<td class='tblContent txtleft'>"+filesystem.noofost+"</td>" +
+      "</tr>"+
+      "<tr>" +
+      "<td class='greybgcol'>Total Capacity: </td>" +
+      "<td class='tblContent greybgcol'>"+filesystem.bytes_total+" </td>" +
+      "<td class='greybgcol'>Total Free:</td>" +
+      "<td class='tblContent txtleft'>"+filesystem.bytes_free+"</td>" +
+      "</tr>"+
+      "<tr>" +
+      "<td class='greybgcol'>Files Total: </td>" +
+      "<td class='tblContent greybgcol'>"+filesystem.inodes_total+" </td>" +
+      "<td class='greybgcol'>Files Free:</td>" +
+      "<td class='tblContent txtleft'>"+filesystem.inodes_free+"</td>" +
+      "</tr>"+
+      "<tr>" +
+      "<td class='greybgcol'>Status:</td>";
 
-        if(resValue.status == "OK" || resValue.status == "STARTED")
-        {
-          innerContent = innerContent + "<td>" +
-          		"<div class='tblContent txtleft status_ok'>"+resValue.status+"<div></td><td>&nbsp;</td><td>&nbsp;" +
-          	  "</td>" +
-          	  "</tr>";
-        }
-        else if(resValue.status == "WARNING" || resValue.status == "RECOVERY")
-        {
-          innerContent = innerContent + "<td>" +
-          		"<div class='tblContent txtleft status_warning'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;" +
-          	  "</td>" +
-          	  "</tr>";
-        }
-        else if(resValue.status == "STOPPED" || resValue.status == "OFFLINE")
-        {
-          innerContent = innerContent + "<td>" +
-          		"<div class='tblContent txtleft status_stopped'>"+resValue.status+"</div></td><td>&nbsp;</td><td>&nbsp;" +
-          	  "</td>" +
-          	  "</tr>";
-        }
-      });
+      if(filesystem.status == "OK" || filesystem.status == "STARTED")
+      {
+        innerContent = innerContent + "<td>" +
+            "<div class='tblContent txtleft status_ok'>"+filesystem.status+"<div></td><td>&nbsp;</td><td>&nbsp;" +
+            "</td>" +
+            "</tr>";
+      }
+      else if(filesystem.status == "WARNING" || filesystem.status == "RECOVERY")
+      {
+        innerContent = innerContent + "<td>" +
+            "<div class='tblContent txtleft status_warning'>"+filesystem.status+"</div></td><td>&nbsp;</td><td>&nbsp;" +
+            "</td>" +
+            "</tr>";
+      }
+      else if(filesystem.status == "STOPPED" || filesystem.status == "OFFLINE")
+      {
+        innerContent = innerContent + "<td>" +
+            "<div class='tblContent txtleft status_stopped'>"+filesystem.status+"</div></td><td>&nbsp;</td><td>&nbsp;" +
+            "</td>" +
+            "</tr>";
+      }
 
       $('#fileSystemSummaryTbl').html(innerContent);
 	});

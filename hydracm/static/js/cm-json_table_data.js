@@ -24,7 +24,7 @@ target_dialog_link = function(target_id, target_name) {
 *******************************************************************/
 function LoadFSList_FSList()
 {
-  invoke_api_call(api_get, "listfilesystems", "", 
+  invoke_api_call(api_get, "filesystem", "", 
   success_callback = function(data)
   {
     var response = data;
@@ -306,27 +306,21 @@ function LoadFSData_EditFS()
   var fs_id = $('#fs_id').val();
   if(fsname!="none")
   {
-    var api_params = {"filesystem_id":fs_id};
-
-    invoke_api_call(api_post, "getfilesystem/", api_params, 
-    success_callback = function(data)
+    invoke_api_call(api_get, "filesystem/" + fs_id + "/", {}, 
+    success_callback = function(filesystem)
     {
-      var response = data;
       var lnet_status_mesg;
-      $.each(response, function(resKey, resValue)
-      {
-        $('#bytes_used').html(resValue.bytes_used);
-        $('#bytes_total').html(resValue.bytes_total);
-        $('#inodes_used').html(resValue.inodes_used);
-        $('#inodes_total').html(resValue.inodes_total);
-        $('#oss_count').html(resValue.noofoss);
-        $('#ost_count').html(resValue.noofost);
-        $('#mgs_name').html(resValue.mgs_hostname);
-        $('#mds_name').html(resValue.mds_hostname);
-        $('#fs_status').html(resValue.status);
-        $('#fs_alerts').html(alert_indicator_large_markup(resValue.id, resValue.content_type_id));
-        $('#fs_name').html(resValue.fsname);
-      });
+      $('#bytes_used').html(filesystem.bytes_used);
+      $('#bytes_total').html(filesystem.bytes_total);
+      $('#inodes_used').html(filesystem.inodes_used);
+      $('#inodes_total').html(filesystem.inodes_total);
+      $('#oss_count').html(filesystem.noofoss);
+      $('#ost_count').html(filesystem.noofost);
+      $('#mgs_name').html(filesystem.mgs_hostname);
+      $('#mds_name').html(filesystem.mds_hostname);
+      $('#fs_status').html(filesystem.status);
+      $('#fs_alerts').html(alert_indicator_large_markup(filesystem.id, filesystem.content_type_id));
+      $('#fs_name').html(filesystem.fsname);
     });
   }
 }

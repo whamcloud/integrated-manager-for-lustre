@@ -8,9 +8,7 @@ from piston.resource import Resource
 
 # Hydra server imports
 import monitorapi
-from monitorapi import (ListFileSystems,
-                        GetFileSystem,
-                        GetFSTargets,
+from monitorapi import (GetFSTargets,
                         GetTargets,
                         GetMgtDetails,
                         #GetClients,
@@ -48,6 +46,7 @@ from statsmetricapi import(GetFSTargetStats,
                            GetHeatMapFSStats)
 
 import hydraapi.host
+import hydraapi.filesystem
 import hydraapi.storage_resource
 import hydraapi.storage_resource_class
 
@@ -61,8 +60,6 @@ class CsrfExemptResource(Resource):
 
 # hydra api urls definitions.
 urlpatterns = patterns('',
-    (r'^listfilesystems/$', CsrfExemptResource(ListFileSystems)),
-    (r'^getfilesystem/$', CsrfExemptResource(GetFileSystem)),
     (r'^get_fs_targets/$', CsrfExemptResource(GetFSTargets)),
     (r'^get_targets/$', CsrfExemptResource(GetTargets)),
     (r'^get_mgts/$', CsrfExemptResource(GetMgtDetails)),
@@ -115,6 +112,10 @@ urlpatterns = patterns('',
     (r'^host/$', CsrfExemptResource(hydraapi.host.ManagedHostsHandler)),
     (r'^host/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.host.ManagedHostsHandler)),
     (r'^test_host/$', CsrfExemptResource(hydraapi.host.TestHost)),
+
+    # hydraapi.filesystem
+    (r'^filesystem/$', CsrfExemptResource(hydraapi.filesystem.FilesystemHandler)),
+    (r'^filesystem/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.filesystem.FilesystemHandler)),
 
     (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),
 

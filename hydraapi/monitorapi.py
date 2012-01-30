@@ -9,8 +9,6 @@ from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
-from django.contrib.contenttypes.models import ContentType
-
 from requesthandler import AnonymousRequestHandler
 from configure.models import (ManagedFilesystem,
                             ManagedMdt,
@@ -18,110 +16,6 @@ from configure.models import (ManagedFilesystem,
                             ManagedOst,
                             ManagedHost,
                             ManagedTargetMount)
-from monitor.lib.util import sizeof_fmt
-
-
-class ListFileSystems(AnonymousRequestHandler):
-    def run(self, request):
-        from configure.lib.state_manager import StateManager
-        filesystems = []
-        mds_hostname = ''
-        for filesystem in ManagedFilesystem.objects.all():
-            osts = ManagedOst.objects.filter(filesystem = filesystem)
-            no_of_ost = osts.count()
-            no_of_oss = len(set([tm.host for tm in ManagedTargetMount.objects.filter(target__in = osts)]))
-            no_of_oss = ManagedHost.objects.filter(managedtargetmount__target__in = osts).distinct().count()
-            # if FS is created but MDT is no created we still want to display fs in list
-            try:
-                mds_hostname = ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name()
-            except:
-                pass
-
-            fskbytesfree = 0
-            fskbytestotal = 0
-            #fsfilesfree  = 0
-            #fsfilestotal = 0
-            try:
-                #inodedata = filesystem.metrics.fetch_last(ManagedMdt, fetch_metrics=["filesfree", "filestotal"])
-                diskdata = filesystem.metrics.fetch_last(ManagedOst, fetch_metrics=["kbytesfree", "kbytestotal"])
-                if diskdata:
-                    fskbytesfree = diskdata[1]['kbytesfree']
-                    fskbytestotal = diskdata[1]['kbytestotal']
-                #if inodedata:
-                #    fsfilesfree  = inodedata[1]['filesfree']
-                #    fsfilestotal = inodedata[1]['filestotal']
-            except:
-                pass
-
-            # FIXME: fsid and fsname are bad names, they should be 'id' and 'name'
-            filesystems.append({'fsid': filesystem.id,
-                                'fsname': filesystem.name,
-                                'status': filesystem.status_string(),
-                                'available_transitions': StateManager.available_transitions(filesystem),
-                                'noofoss': no_of_oss,
-                                'noofost': no_of_ost,
-                                'mgs_hostname': filesystem.mgs.primary_server().pretty_name(),
-                                'mds_hostname': mds_hostname,
-                                # FIXME: the API should not be formatting these, leave it to the presentation layer
-                                'kbytesused': sizeof_fmt((fskbytestotal * 1024)),
-                                'kbytesfree': sizeof_fmt((fskbytesfree * 1024)),
-                                'id': filesystem.id,
-                                'content_type_id': ContentType.objects.get_for_model(filesystem).id})
-
-        return filesystems
-
-
-class GetFileSystem(AnonymousRequestHandler):
-    def run(self, request, filesystem_id):
-        from django.shortcuts import get_object_or_404
-        filesystem = get_object_or_404(ManagedFilesystem, pk = filesystem_id)
-        osts = ManagedOst.objects.filter(filesystem = filesystem)
-        no_of_ost = osts.count()
-        no_of_oss = len(set([tm.host for tm in ManagedTargetMount.objects.filter(target__in = osts)]))
-        no_of_oss = ManagedHost.objects.filter(managedtargetmount__target__in = osts).distinct().count()
-        mds_hostname = ''
-        mds_status = ''
-        # if FS is created but MDT is no created we still want to display fs in list
-        try:
-            mds_hostname = ManagedMdt.objects.get(filesystem = filesystem).primary_server().pretty_name()
-            mds_status = ManagedMdt.objects.get(filesystem = filesystem).primary_server().status_string()
-        except:
-            pass
-        try:
-            fskbytesfree = 0
-            fskbytestotal = 0
-            fsfilesfree = 0
-            fsfilestotal = 0
-            inodedata = filesystem.metrics.fetch_last(ManagedMdt, fetch_metrics=["filesfree", "filestotal"])
-            diskdata = filesystem.metrics.fetch_last(ManagedOst, fetch_metrics=["kbytesfree", "kbytestotal"])
-            if diskdata:
-                fskbytesfree = diskdata[1]['kbytesfree']
-                fskbytestotal = diskdata[1]['kbytestotal']
-            if inodedata:
-                fsfilesfree = inodedata[1]['filesfree']
-                fsfilestotal = inodedata[1]['filestotal']
-        except:
-                pass
-
-        # FIXME: why return a list of one?
-        fs_info = []
-        fs_info.append({'fsname': filesystem.name,
-                        'status': filesystem.status_string(),
-                        'noofoss': no_of_oss,
-                        'noofost': no_of_ost,
-                        'mgs_hostname': filesystem.mgs.primary_server().pretty_name(),
-                        'mds_hostname': mds_hostname,
-                        'mdsstatus': mds_status,
-                        # FIXME: the API should not be formatting these, leave it to the presentation layer
-                        'bytes_total': sizeof_fmt((fskbytestotal * 1024)),
-                        'bytes_free': sizeof_fmt((fskbytesfree * 1024)),
-                        'bytes_used': sizeof_fmt(((fskbytestotal - fskbytesfree) * 1024)),
-                        'inodes_free': fsfilesfree,
-                        'inodes_total': fsfilestotal,
-                        'inodes_used': (fsfilestotal - fsfilesfree),
-                        'id': filesystem.id,
-                        'content_type_id': ContentType.objects.get_for_model(filesystem).id})
-        return fs_info
 
 
 class GetMgtDetails(AnonymousRequestHandler):

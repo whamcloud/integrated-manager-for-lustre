@@ -63,6 +63,7 @@ class GetFSMGSStats(AnonymousRequestHandler):
 
 class GetServerStats(AnonymousRequestHandler):
     def run(self, request, host_id, starttime, endtime, datafunction, fetchmetrics):
+        print "request.data = %s" % request.data
         interval = ''
         if host_id:
             host = get_object_or_404(ManagedHost, pk = host_id)
