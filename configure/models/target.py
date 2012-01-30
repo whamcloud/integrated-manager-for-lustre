@@ -166,9 +166,11 @@ class ManagedTarget(StatefulObject):
         if isinstance(self, FilesystemMember):
             filesystem_id = self.filesystem.pk
             filesystem_name = self.filesystem.name
+            filesystems = None
         else:
             filesystem_id = None
             filesystem_name = None
+            filesystems = [{'id': fs.id, 'name': fs.name} for fs in self.managedfilesystem_set.all()]
 
         from django.contrib.contenttypes.models import ContentType
 
@@ -183,7 +185,8 @@ class ManagedTarget(StatefulObject):
                 'primary_server_name': self.primary_server().pretty_name(),
                 'failover_server_name': failover_server_name,
                 'filesystem_id': filesystem_id,
-                'filesystem_name': filesystem_name
+                'filesystem_name': filesystem_name,
+                'filesystems': filesystems
                 }
 
 
