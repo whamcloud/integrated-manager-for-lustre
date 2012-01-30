@@ -133,7 +133,7 @@ def send_update(server_url, server_token, update_scan, responses):
     try:
         response = urllib2.urlopen(req)
         # NB hydraapi returns {'errors':, 'response':}
-        response_data = json.loads(response.read())['response']
+        response_data = json.loads(response.read())
     except urllib2.HTTPError, e:
         daemon_log.error("Failed to post results to %s: %s" % (url, e))
     except urllib2.URLError, e:
