@@ -10,143 +10,7 @@ import settings
 setup_environ(settings)
 
 from requesthandler import AnonymousRequestHandler
-from configure.models import (ManagedFilesystem,
-                            ManagedMdt,
-                            ManagedMgs,
-                            ManagedOst,
-                            ManagedHost,
-                            ManagedTargetMount)
-
-
-class GetMgtDetails(AnonymousRequestHandler):
-    def run(self, request):
-        from configure.lib.state_manager import StateManager
-        all_mgt = []
-        for mgt in ManagedMgs.objects.all():
-            target_info = mgt.to_dict()
-            target_info['fs_names'] = [fs.name for fs in ManagedFilesystem.objects.filter(mgs=mgt)]
-            target_info['available_transitions'] = StateManager.available_transitions(mgt)
-            all_mgt.append(target_info)
-        return all_mgt
-
-
-class GetFSVolumeDetails(AnonymousRequestHandler):
-    def run(self, request, filesystem_id):
-        from configure.models import ManagedTarget, ManagedFilesystem
-        from configure.lib.state_manager import StateManager
-        if filesystem_id != None:
-            filesystem = ManagedFilesystem.objects.get(pk = filesystem_id)
-            targets = filesystem.get_targets()
-        else:
-            targets = ManagedTarget.objects.all()
-        targets_info = []
-        for t in targets:
-            _target = t.to_dict()
-            _target['available_transitions'] = StateManager.available_transitions(t)
-            targets_info.append(_target)
-        return targets_info
-
-
-class GetTargets(AnonymousRequestHandler):
-    def run(self, request, filesystem, kinds):
-        kind_map = {"MGT": ManagedMgs,
-                    "OST": ManagedOst,
-                    "MDT": ManagedMdt}
-
-        if kinds:
-            klasses = []
-            for kind in kinds:
-                try:
-                    klasses.append(kind_map[kind])
-                except KeyError:
-                    raise RuntimeError("Unknown target kind '%s' (kinds are %s)" % (kind, kind_map.keys()))
-        else:
-            # kinds = None, means all
-            klasses = kind_map.values()
-
-        klass_to_kind = dict([(v, k) for k, v in kind_map.items()])
-        result = []
-        for klass in klasses:
-            kind = klass_to_kind[klass]
-            targets = klass.objects.all()
-            for t in targets:
-                result.append({
-                    'id': t.id,
-                    'primary_server_name': t.primary_server().pretty_name(),
-                    'kind': kind,
-                    'label': "%s" % t.get_label()
-                    })
-        return result
-
-
-class GetFSTargets(AnonymousRequestHandler):
-    def run(self, request, filesystem_id, host_id, kinds):
-        kind_map = {"MGT": ManagedMgs,
-                    "OST": ManagedOst,
-                    "MDT": ManagedMdt}
-        if kinds:
-            klasses = []
-            for kind in kinds:
-                try:
-                    klasses.append(kind_map[kind])
-                except KeyError:
-                    raise RuntimeError("Unknown target kind '%s' (kinds are %s)" % (kind, kind_map.keys()))
-        else:
-            # kinds = None, means all
-            klasses = kind_map.values()
-        host_filter = None
-        if host_id:
-            host_filter = ManagedHost.objects.get(id=host_id)
-
-        klass_to_kind = dict([(v, k) for k, v in kind_map.items()])
-        result = []
-        for klass in klasses:
-            kind = klass_to_kind[klass]
-            if klass == ManagedMgs:
-                targets = klass.objects.all()
-            else:
-                if filesystem_id:
-                    fs = ManagedFilesystem.objects.get(id=filesystem_id)
-                    targets = klass.objects.filter(filesystem=fs)
-                else:
-                    targets = klass.objects.all()
-            for t in targets:
-                if host_filter:
-                    if ManagedTargetMount.objects.filter(target = t, host = host_filter).count() == 0:
-                        continue
-
-                result.append({
-                    'id': t.id,
-                    'primary_server_name': t.primary_server().pretty_name(),
-                    'kind': kind,
-                    'status': t.status_string(),
-                    'label': t.get_label(),
-                    'filesystem_id': t.filesystem_id if type(t) != ManagedMgs else None
-                    })
-        return result
-
-#class GetClients (AnonymousRequestHandler):
-#    def run(self, request, filesystem):
-#        filesystem_name = filesystem
-#        if filesystem_name :
-#            return self.__get_clients(filesystem_name)
-#        else:
-#            client_list = []
-#            for filesystem in ManagedFilesystem.objects.all():
-#                client_list.extend(self.__get_clients(filesystem.name))
-##        return client_list
-#
-#    def __get_clients(self, filesystem_name):
-#        fsname = ManagedFilesystem.objects.get(name = filesystem_name)
-#        return [
-#                {
-#                 'id' : client.id,
-#                 'host' : client.host.address,
-#                 'mount_point' : client.mount_point,
-#                  #'status' : self.__mountable_audit_status(client)
-#                }
-#                for client in Client.objects.filter(filesystem = fsname)
-#        ]
+from configure.models import ManagedHost
 
 
 class GetEventsByFilter(AnonymousRequestHandler):
@@ -197,7 +61,7 @@ class GetLatestEvents(AnonymousRequestHandler):
 
 
 class GetAlerts(AnonymousRequestHandler):
-    def run(self, request, active, page_id, page_size):
+    def run(self, request, active = None, page_id = None, page_size = None):
         from monitor.models import AlertState
         if active:
             active = True

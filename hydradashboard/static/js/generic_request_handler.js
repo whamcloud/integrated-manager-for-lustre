@@ -96,7 +96,7 @@ function invoke_api_call(request_type, api_url, api_args, success_callback, erro
           /* Caller gave us a lookup table of success callbacks
              but we got a response code that was successful but
              unhandled -- consider this a bug or error */ 
-          unexpected_error(data, textStatus, jqXHR);
+          api_unexpected_error(data, textStatus, jqXHR);
         }
       }
     }
@@ -106,22 +106,22 @@ function invoke_api_call(request_type, api_url, api_args, success_callback, erro
     if (error_callback) {
       if(typeof(error_callback) == "function") {
         /* Caller has provided a generic error handler */
-        error_callback(data);
+        error_callback(jqXHR.responseText);
       } else if(typeof(error_callback) == "object") {
         var status_code = jqXHR.status;
         if(error_callback[status_code] != undefined) {
           /* Caller has provided handler for this status */
-          error_callback[status_code](data);
+          error_callback[status_code](jqXHR.responseText);
         } else {
           /* Caller has provided some handlers, but not one for this
              status code, this is a bug or unhandled error */
-          unexpected_error(textStatus, jqXHR);
+          api_unexpected_error(textStatus, jqXHR);
         }
       }
     } else {
       /* Caller has provided no error handlers, this is a bug
          or unhandled error */
-      unexpected_error(textStatus, jqXHR);
+      api_unexpected_error(textStatus, jqXHR);
     }
   })
   .complete(function(event)
@@ -134,7 +134,7 @@ function invoke_api_call(request_type, api_url, api_args, success_callback, erro
 /********************************************************************************
 //Function to display generic error message 
 /********************************************************************************/
-function unexpected_error(textStatus, jqXHR)
+function api_unexpected_error(textStatus, jqXHR)
 {
   console.log("unexpected_error: " + textStatus);
   console.log(jqXHR);

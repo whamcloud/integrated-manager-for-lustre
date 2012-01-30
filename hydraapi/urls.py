@@ -6,32 +6,21 @@
 from django.conf.urls.defaults import patterns
 from piston.resource import Resource
 
-# Hydra server imports
 import monitorapi
-from monitorapi import (GetFSTargets,
-                        GetTargets,
-                        GetMgtDetails,
-                        #GetClients,
-                        GetEventsByFilter,
+from monitorapi import (GetEventsByFilter,
                         GetLatestEvents,
                         GetAlerts,
                         GetJobs,
-                        GetLogs,
-                        GetFSVolumeDetails)
+                        GetLogs)
 import configureapi
 from configureapi import (GetLuns,
                           CreateNewFilesystem,
-                          CreateMGT,
-                          CreateOSTs,
                           GetJobStatus,
                           SetJobStatus,
                           Notifications,
                           GetTargetConfParams,
                           SetTargetConfParams,
                           SetVolumePrimary)
-
-# FIXME: instead of doing this big list of imports, should introspect available
-# RequestHandler objects and get their url name from them.
 
 # Stuff related to storage plugins
 from configureapi import (
@@ -47,6 +36,7 @@ from statsmetricapi import(GetFSTargetStats,
 
 import hydraapi.host
 import hydraapi.filesystem
+import hydraapi.target
 import hydraapi.storage_resource
 import hydraapi.storage_resource_class
 
@@ -60,16 +50,17 @@ class CsrfExemptResource(Resource):
 
 # hydra api urls definitions.
 urlpatterns = patterns('',
-    (r'^get_fs_targets/$', CsrfExemptResource(GetFSTargets)),
-    (r'^get_targets/$', CsrfExemptResource(GetTargets)),
-    (r'^get_mgts/$', CsrfExemptResource(GetMgtDetails)),
-    (r'^getvolumesdetails/$', CsrfExemptResource(GetFSVolumeDetails)),
-    #(r'^getclients/$', CsrfExemptResource(GetClients)),
     (r'^get_luns/$', CsrfExemptResource(GetLuns)),
 
     (r'^create_new_fs/$', CsrfExemptResource(CreateNewFilesystem)),
-    (r'^create_mgt/$', CsrfExemptResource(CreateMGT)),
-    (r'^create_osts/$', CsrfExemptResource(CreateOSTs)),
+
+    # (r'^get_fs_targets/$', CsrfExemptResource(GetFSTargets)),
+    # (r'^get_targets/$', CsrfExemptResource(GetTargets)),
+    # (r'^get_mgts/$', CsrfExemptResource(GetMgtDetails)),
+    # (r'^target/$', CsrfExemptResource(configureapi.Target)),
+    # (r'^getvolumesdetails/$', CsrfExemptResource(GetFSVolumeDetails)),
+    (r'^create_mgt/$', CsrfExemptResource(configureapi.CreateMGT)),
+    (r'^create_osts/$', CsrfExemptResource(configureapi.CreateOSTs)),
 
     (r'^get_job_status/$', CsrfExemptResource(GetJobStatus)),
     (r'^set_job_status/$', CsrfExemptResource(SetJobStatus)),
@@ -84,7 +75,6 @@ urlpatterns = patterns('',
     (r'^get_fs_stats_for_client/$', CsrfExemptResource(GetFSClientsStats)),
     (r'^get_fs_stats_heatmap/$', CsrfExemptResource(GetHeatMapFSStats)),
 
-    (r'^target/$', CsrfExemptResource(configureapi.Target)),
     (r'^transition/$', CsrfExemptResource(configureapi.Transition)),
     (r'^transition_consequences/$', CsrfExemptResource(configureapi.TransitionConsequences)),
 
@@ -96,6 +86,10 @@ urlpatterns = patterns('',
     (r'^notifications/$', CsrfExemptResource(Notifications)),
     (r'^object_summary/$', CsrfExemptResource(configureapi.ObjectSummary)),
 
+
+    (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),
+
+    (r'^set_volumes_usable/$', CsrfExemptResource(SetVolumePrimary)),
 
     (r'^get_target_resource_graph/$', CsrfExemptResource(GetTargetResourceGraph)),
 
@@ -117,7 +111,7 @@ urlpatterns = patterns('',
     (r'^filesystem/$', CsrfExemptResource(hydraapi.filesystem.FilesystemHandler)),
     (r'^filesystem/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.filesystem.FilesystemHandler)),
 
-    (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),
-
-    (r'^set_volumes_usable/$', CsrfExemptResource(SetVolumePrimary)),
+    # hydraapi.target
+    (r'^target/$', CsrfExemptResource(hydraapi.target.TargetHandler)),
+    (r'^target/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.target.TargetHandler)),
 )

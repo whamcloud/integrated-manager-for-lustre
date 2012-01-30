@@ -293,14 +293,6 @@ class GetTargetConfParams(AnonymousRequestHandler):
         return result
 
 
-class Target(AnonymousRequestHandler):
-    def run(self, request, id):
-        from configure.models import ManagedTarget
-        from django.shortcuts import get_object_or_404
-        target = get_object_or_404(ManagedTarget, pk = id).downcast()
-        return target.to_dict()
-
-
 class GetTargetResourceGraph(AnonymousRequestHandler):
     def run(self, request, target_id):
         from monitor.models import AlertState

@@ -447,12 +447,7 @@ poll_jobs = function() {
 
     setTimeout(poll_jobs, poll_period);
   },
-  error_callback = function(data)
-  {
-    debug("Error calling jobs_since")
-    setTimeout(poll_jobs, error_retry_period);
-    common_error_handler(data);
-  },
+  error_callback = undefined,
   blocking = false);
 }
 
@@ -496,12 +491,7 @@ poll_objects = function() {
       $(".object_state_" + object_info.id + "_" + object_info.content_type_id).html(object_info.state)
     });
   },
-  error_callback = function(data)
-  {
-    debug("Error calling object_summary")
-    setTimeout(poll_objects, error_retry_period);
-    common_error_handler(data);
-  },
+  error_callback = undefined,
   blocking = false);
 }
 

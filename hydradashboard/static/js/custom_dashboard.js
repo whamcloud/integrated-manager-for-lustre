@@ -342,16 +342,11 @@ $(document).ready(function()
     "<select id='ostSelect'>"+
     "<option value=''>Select Target</option>";
 
-    var api_params = {
-        "filesystem_id": fsId,
-        "kinds": ["OST","MGT","MDT"],
-        "host_id": ""
-    }; 
+        
 
-    invoke_api_call(api_post, "get_fs_targets/", api_params, 
-      success_callback = function(data)
+    invoke_api_call(api_get, "target/", {"filesystem_id": fsId}, 
+      success_callback = function(targets)
       {
-        var targets = data;
         targets = targets.sort(function(a,b) {return a.label > b.label;})
   
         var count = 0;
@@ -439,19 +434,12 @@ $(document).ready(function()
     "<select id='ostSelect'>"+
     "<option value=''>Select Target</option>";
 
-    var api_params = {
-        "filesystem_id": "",
-        "kinds": ["OST","MGT","MDT"],
-        "host_id": ossId
-    }; 
-
     var file_systems_ids = new Array();
     var file_count = 0;
     
-    invoke_api_call(api_post, "get_fs_targets/", api_params, 
-      success_callback = function(data)
+    invoke_api_call(api_get, "target/", {"host_id": ossId}, 
+      success_callback = function(targets)
       {
-        var targets = data;
         targets = targets.sort(function(a,b) {return a.label > b.label;})
   
         var count = 0;

@@ -50,32 +50,29 @@ function LoadFSList_FSList()
 
 function LoadTargets_EditFS(fs_id)
 {
-  var api_params = {filesystem_id : fs_id};
-
-  invoke_api_call(api_post, "getvolumesdetails/", api_params, 
-  success_callback = function(data)
+  invoke_api_call(api_get, "target/", {filesystem_id : fs_id}, 
+  success_callback = function(targets)
   {  
     $('#ost').dataTable().fnClearTable();
     $('#mdt').dataTable().fnClearTable();
     $('#mgt_configuration_view').dataTable().fnClearTable();
 
-    var response = data;
-    $.each(response, function(resKey, resValue)
+    $.each(targets, function(i, target)
     {
       row = [
-              target_dialog_link(resValue.id, object_name_markup(resValue.id, resValue.content_type_id, resValue.label)),
-              resValue.lun_name,
-              resValue.primary_server_name,
-              resValue.failover_server_name,
-              resValue.active_host_name,
-              CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
-              notification_icons_markup(resValue.id, resValue.content_type_id)
+              target_dialog_link(target.id, object_name_markup(target.id, target.content_type_id, target.label)),
+              target.lun_name,
+              target.primary_server_name,
+              target.failover_server_name,
+              target.active_host_name,
+              CreateActionLink(target.id, target.content_type_id, target.available_transitions),
+              notification_icons_markup(target.id, target.content_type_id)
             ]
-      if (resValue.kind == "OST") {
+      if (target.kind == "OST") {
         $('#ost').dataTable().fnAddData (row);
-      } else if (resValue.kind == "MGT") {
+      } else if (target.kind == "MGT") {
         $('#mgt_configuration_view').dataTable().fnAddData (row);
-      } else if (resValue.kind == "MDT") {
+      } else if (target.kind == "MDT") {
         $('#mdt').dataTable().fnAddData (row);
       }
     });
@@ -225,26 +222,26 @@ function LoadUnused_VolumeConf()
 
 function LoadMGTConfiguration_MGTConf()
 {
-  invoke_api_call(api_get, "get_mgts/", "", 
-  success_callback = function(data)
+  invoke_api_call(api_get, "target/", {kind: 'MGT'}, 
+  success_callback = function(mgt_list)
   {
-    var response = data;
-    var fsnames;
     $('#mgt_configuration').dataTable().fnClearTable();
-    $.each(response, function(resKey, resValue)
+    $.each(mgt_list, function(i, mgt)
     {
-          fsnames = resValue.fs_names;
+          var fs_names = [];
+          $.each(mgt.filesystems, function(i, fs) {fs_names.push(fs.name);});
+
           $('#mgt_configuration').dataTable().fnAddData ([
-            fsnames.toString(),
-            resValue.lun_name,
-            target_dialog_link(resValue.id, resValue.primary_server_name),
-            resValue.failover_server_name,
-            resValue.active_host_name,
-            CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
-            notification_icons_markup(resValue.id, resValue.content_type_id)
+            fs_names.join(", "),
+            mgt.lun_name,
+            target_dialog_link(mgt.id, mgt.primary_server_name),
+            mgt.failover_server_name,
+            mgt.active_host_name,
+            CreateActionLink(mgt.id, mgt.content_type_id, mgt.available_transitions),
+            notification_icons_markup(mgt.id, mgt.content_type_id)
           ]);
     });
-  });
+  })
 }
 
 /******************************************************************/
