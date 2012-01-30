@@ -35,6 +35,14 @@ class TestLoad(TestCase):
         self.loadable_plugin = loadable_plugin
         self.manager = load_plugins(['loadable_plugin'])
 
+        import configure
+        self.old_manager = configure.lib.storage_plugin.manager.storage_plugin_manager
+        configure.lib.storage_plugin.manager.storage_plugin_manager = self.manager
+
+    def tearDown(self):
+        import configure
+        configure.lib.storage_plugin.manager.storage_plugin_manager = self.old_manager
+
     def test_load(self):
         """Test that the manager correctly loaded and introspected
         the compoments of 'loadable_plugin'"""
@@ -67,7 +75,6 @@ class TestLoad(TestCase):
 
     def test_get_resource_classes(self):
         """Test that the manager is correctly reporting classes and filtering ScannableResources"""
-
         # All the resources
         all_classes = self.manager.get_resource_classes()
         self.assertEqual(len(all_classes), 2)
@@ -76,7 +83,9 @@ class TestLoad(TestCase):
         scannable_classes = self.manager.get_resource_classes(scannable_only = True)
         self.assertEqual(len(scannable_classes), 1)
         scannable_classes = [sc.to_dict() for sc in scannable_classes]
-        self.assertIn({'plugin_name': 'loadable_plugin', 'class_name': 'TestScannableResource', 'label': "loadable_plugin-TestScannableResource"}, scannable_classes)
+        self.assertEqual(scannable_classes[0]['plugin_name'], 'loadable_plugin')
+        self.assertEqual(scannable_classes[0]['class_name'], 'TestScannableResource')
+        self.assertEqual(scannable_classes[0]['label'], 'loadable_plugin-TestScannableResource')
 
     def test_root_resource(self):
         """Test that the manager creates and returns a scannable resource"""

@@ -55,7 +55,8 @@ class TestFSTransitions(JobTestCaseWithHost):
     def setUp(self):
         super(TestFSTransitions, self).setUp()
 
-        from hydraapi.configureapi import create_fs, create_target
+        from hydraapi.filesystem import create_fs
+        from hydraapi.target import create_target
         from configure.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
         self.mgt = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
         self.fs = create_fs(self.mgt.pk, "testfs", {})
@@ -126,7 +127,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
     def setUp(self):
         super(TestTargetTransitions, self).setUp()
 
-        from hydraapi.configureapi import create_target
+        from hydraapi.target import create_target
         from configure.models import ManagedMgs
         from configure.lib.state_manager import StateManager
         self.mgt = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
@@ -180,7 +181,8 @@ class TestTargetTransitions(JobTestCaseWithHost):
 class TestStateManager(JobTestCaseWithHost):
     def test_opportunistic_execution(self):
         # Set up an MGS, leave it offline
-        from hydraapi.configureapi import create_fs, create_target
+        from hydraapi.filesystem import create_fs
+        from hydraapi.target import create_target
         from configure.models import ManagedMgs, ManagedMdt, ManagedOst
         mgt = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
         fs = create_fs(mgt.pk, "testfs", {})
