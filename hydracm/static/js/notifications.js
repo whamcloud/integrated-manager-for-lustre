@@ -439,7 +439,7 @@ update_objects = function(data, silent) {
 poll_jobs = function() {
   /* FIXME: using POST instead of GET because otherwise jQuery forces the JSON payload to
    * be urlencoded and django-piston doesn't get our args out properly */
-  invoke_api_call(api_post, "notifications/", {filter_opts: {since_time: last_check, initial: false}}, 
+  invoke_api_call(api_post, "notifications/", {filter_opts: {since_time: last_check, initial: false}},
   success_callback = function(data)
   {
     update_objects(data);
@@ -452,7 +452,8 @@ poll_jobs = function() {
     debug("Error calling jobs_since")
     setTimeout(poll_jobs, error_retry_period);
     common_error_handler(data);
-  });
+  },
+  blocking = false);
 }
 
 object_name_markup = function(id, ct, name) {
@@ -500,7 +501,8 @@ poll_objects = function() {
     debug("Error calling object_summary")
     setTimeout(poll_objects, error_retry_period);
     common_error_handler(data);
-  });
+  },
+  blocking = false);
 }
 
 $(document).ready(function() {
