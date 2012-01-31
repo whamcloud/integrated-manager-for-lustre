@@ -10,7 +10,7 @@ import settings
 
 from configure.models import ManagedHost
 from configure.models import Command
-from requesthandler import AnonymousRequestHandler
+from requesthandler import AnonymousRequestHandler, AnonymousRESTRequestHandler
 from hydraapi.requesthandler import APIResponse
 
 
@@ -36,6 +36,13 @@ class SetJobStatus(AnonymousRequestHandler):
         else:
             job.resume()
         return {'transition_job_status': job.status, 'job_info': job.info, 'job_result': job.result}
+
+
+class CommandHandler(AnonymousRESTRequestHandler):
+    def get(self, request, id):
+        from django.shortcuts import get_object_or_404
+        command = get_object_or_404(Command, id = id)
+        return APIResponse(command.to_dict(), 200)
 
 
 class SetVolumePrimary(AnonymousRequestHandler):
@@ -91,6 +98,12 @@ class GetLuns(AnonymousRequestHandler):
                              'status': lun.ha_status()
                            })
         return devices
+
+
+class LunNodeHandler(AnonymousRESTRequestHandler):
+    def get(cls, request):
+        from configure.models import LunNode
+        return APIResponse([l.to_dict() for l in LunNode.objects.all()], 200)
 
 
 class SetTargetConfParams(AnonymousRequestHandler):

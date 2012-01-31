@@ -1,0 +1,18 @@
+#!/bin/bash
+
+nosetests --verbosity=2 tests/integration/shared_storage_configuration/test_cluster_setup.py --tc-format=json --tc-file=tests/integration/shared_storage_configuration/sample_cluster_cfg.json 
+
+# If the cluster isn't set up properly, just exit and don't execute the tests.
+cluster_setup_status=$?
+if [ $cluster_setup_status -ne 0 ]; then
+    exit $cluster_status_setup
+fi
+
+if [ $# -gt 0 ]
+    then
+        echo "Running tests with custom cluster cfg file: $1."
+        nosetests --verbosity=2 tests/integration/shared_storage_configuration/ --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$1"
+    else
+        echo "Running tests with sample_cluster_cfg.json."
+        nosetests --verbosity=2 tests/integration/shared_storage_configuration/ --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file=tests/integration/shared_storage_configuration/sample_cluster_cfg.json
+fi

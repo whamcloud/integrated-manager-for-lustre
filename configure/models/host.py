@@ -415,6 +415,17 @@ class LunNode(models.Model):
 
         return "%s (%s)" % (short_name, human_size)
 
+    def to_dict(self):
+        from django.contrib.contenttypes.models import ContentType
+        return {
+            'id': self.id,
+            'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
+            'pretty_string': self.pretty_string(),
+            'lun_id': self.lun_id,
+            'host_id': self.host_id,
+            'path': self.path,
+        }
+
     @transaction.commit_on_success
     def set_usable_lun_nodes(self, secondary_lunnodes):
         def save_or_assert(lun_node, is_primary = True, is_use = True):

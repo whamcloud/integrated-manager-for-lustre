@@ -14,6 +14,8 @@ from monitorapi import (GetEventsByFilter,
                         GetLogs)
 import configureapi
 from configureapi import (GetLuns,
+                          LunNodeHandler,
+                          CommandHandler,
                           GetJobStatus,
                           SetJobStatus,
                           Notifications,
@@ -50,7 +52,9 @@ class CsrfExemptResource(Resource):
 # hydra api urls definitions.
 urlpatterns = patterns('',
     (r'^get_luns/$', CsrfExemptResource(GetLuns)),
+    (r'^lun_node/$', CsrfExemptResource(LunNodeHandler)),
 
+    (r'^command/(?P<id>\d+)/$', CsrfExemptResource(CommandHandler)),
     (r'^get_job_status/$', CsrfExemptResource(GetJobStatus)),
     (r'^set_job_status/$', CsrfExemptResource(SetJobStatus)),
     (r'^get_conf_params/$', CsrfExemptResource(GetTargetConfParams)),

@@ -1,0 +1,32 @@
+{
+    "hydra_servers": [
+        {
+            "server_http_url": "http://hydra:8000/"
+        }
+    ],
+    "lustre_servers": {
+        "lustre1": {
+            "device_paths": [
+                "/dev/sdb",
+                "/dev/sdc",
+                "/dev/sdd",
+                "/dev/sde",
+                "/dev/sdf",
+                "/dev/sdg"
+            ]
+        },
+        "lustre2": {
+            "device_paths": [
+                "/dev/sdb",
+                "/dev/sdc",
+                "/dev/sdd",
+                "/dev/sde",
+                "/dev/sdf",
+                "/dev/sdg"
+            ]
+        }
+    },
+    "lustre_clients": [
+        "dev"
+    ]
+}
