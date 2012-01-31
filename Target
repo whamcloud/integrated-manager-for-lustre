@@ -67,7 +67,7 @@ Target_start() {
     fi
 
     # start the target
-    if ! hydra-agent.py mount-target --uuid $TARGET; then
+    if ! hydra-agent mount-target --uuid $TARGET; then
         ocf_log err "Couldn't start target $TARGET"
         return $OCF_ERR_GENERIC
     fi
@@ -85,7 +85,7 @@ Target_stop() {
         # woo!  nothing to do.
         rc=$OCF_SUCCESS
     else
-        hydra-agent.py unmount-target --uuid $TARGET
+        hydra-agent unmount-target --uuid $TARGET
     fi
 
     return $rc
@@ -93,7 +93,7 @@ Target_stop() {
 
 Target_status() {
     # call the agent to see if it's running
-    if hydra-agent.py target-running --uuid $TARGET; then
+    if hydra-agent target-running --uuid $TARGET; then
         rc=$OCF_SUCCESS
         msg="$TARGET is started (running)"
     else
