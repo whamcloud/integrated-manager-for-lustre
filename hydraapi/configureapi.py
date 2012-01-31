@@ -13,30 +13,6 @@ from requesthandler import AnonymousRequestHandler
 from hydraapi.requesthandler import APIResponse
 
 
-class GetJobStatus(AnonymousRequestHandler):
-    def run(self, request, job_id):
-        from django.shortcuts import get_object_or_404
-        from configure.models import Job
-        job = get_object_or_404(Job, id = job_id)
-        job = job.downcast()
-        return {'job_status': job.status, 'job_info': job.info, 'job_result': job.result}
-
-
-class SetJobStatus(AnonymousRequestHandler):
-    def run(self, request, job_id, state):
-        assert state in ['pause', 'cancel', 'resume']
-        from django.shortcuts import get_object_or_404
-        from configure.models import Job
-        job = get_object_or_404(Job, id = job_id)
-        if state == 'pause':
-            job.pause()
-        elif state == 'cancel':
-            job.cancel()
-        else:
-            job.resume()
-        return {'transition_job_status': job.status, 'job_info': job.info, 'job_result': job.result}
-
-
 class SetTargetConfParams(AnonymousRequestHandler):
     def run(self, request, target_id, conf_params, IsFS):
         set_target_conf_param(target_id, conf_params, IsFS)

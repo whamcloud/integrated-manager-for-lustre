@@ -44,12 +44,3 @@ class UpdateScan(AnonymousRequestHandler):
             response['plugins'][plugin_name] = requests
 
         return response
-
-
-class GetJobs(AnonymousRequestHandler):
-    def run(self, request):
-        from configure.models import Job
-        from datetime import timedelta, datetime
-        from django.db.models import Q
-        jobs = Job.objects.filter(~Q(state = 'complete') | Q(created_at__gte=datetime.now() - timedelta(minutes=60)))
-        return [j.to_dict() for j in jobs]

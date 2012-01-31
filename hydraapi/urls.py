@@ -7,12 +7,9 @@ from django.conf.urls.defaults import patterns
 from piston.resource import Resource
 
 import monitorapi
-from monitorapi import (GetJobs)
 
 import configureapi
-from configureapi import (GetJobStatus,
-                          SetJobStatus,
-                          Notifications,
+from configureapi import (Notifications,
                           GetTargetConfParams,
                           SetTargetConfParams)
 
@@ -31,6 +28,7 @@ from statsmetricapi import(GetFSTargetStats,
 import hydraapi.alert
 import hydraapi.event
 import hydraapi.log
+import hydraapi.job
 
 import hydraapi.volume
 import hydraapi.storage_resource
@@ -48,8 +46,6 @@ class CsrfExemptResource(Resource):
         self.csrf_exempt = getattr(self.handler, 'csrf_exempt', True)
 
 urlpatterns = patterns('',
-    (r'^get_job_status/$', CsrfExemptResource(GetJobStatus)),
-    (r'^set_job_status/$', CsrfExemptResource(SetJobStatus)),
     (r'^get_conf_params/$', CsrfExemptResource(GetTargetConfParams)),
     (r'^set_conf_params/$', CsrfExemptResource(SetTargetConfParams)),
 
@@ -64,7 +60,6 @@ urlpatterns = patterns('',
     (r'^transition/$', CsrfExemptResource(configureapi.Transition)),
     (r'^transition_consequences/$', CsrfExemptResource(configureapi.TransitionConsequences)),
 
-    (r'^getjobs/$', CsrfExemptResource(GetJobs)),
     (r'^notifications/$', CsrfExemptResource(Notifications)),
     (r'^object_summary/$', CsrfExemptResource(configureapi.ObjectSummary)),
 
@@ -107,4 +102,8 @@ urlpatterns = patterns('',
 
     # hydraapi.log
     (r'^log/$', CsrfExemptResource(hydraapi.log.Handler)),
+
+    # hydraapi.job
+    (r'^job/$', CsrfExemptResource(hydraapi.job.Handler)),
+    (r'^job/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.job.Handler))
 )

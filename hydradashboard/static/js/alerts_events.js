@@ -213,7 +213,7 @@ loadJobContent = function(targetJobDivName)
   var pagecnt=0;
   progress_show(targetJobDivName);
   
-  invoke_api_call(api_get, "getjobs", "",
+  invoke_api_call(api_get, "job/", {recent: true},
     success_callback = function(data)
     {
       $.each(data, function(resKey, resValue)
@@ -281,12 +281,7 @@ createButtonForJob = function(job_id, status)
 
 job_action = function(job_id, state)
 {
-  var api_params = {
-      "job_id": job_id,
-      "state": state
-  };
-
-  invoke_api_call(api_post, "set_job_status/", api_params,
+  invoke_api_call(api_put, "job/" + job_id + "/", {'state': state},
   success_callback = function(data)
   {
     loadJobContent('job_content');
