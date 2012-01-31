@@ -35,10 +35,6 @@ class ManagedHostsHandler (AnonymousRESTRequestHandler):
         host = ManagedHost.create_from_string(host_name)
         return APIResponse(host.to_dict(), 201)
 
-        result = {'id': host.id, 'host': host.address}
-        api_res = APIResponse(result, 201)
-        return api_res
-
     def remove(self, request, id):
         # NB This is equivalent to a call to /api/transition with matching content-type/id/state
         from configure.models import Command
