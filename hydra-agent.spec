@@ -37,8 +37,6 @@ rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --root=%{buildroot}
 mkdir -p $RPM_BUILD_ROOT/etc/init.d/
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/hydra-agent
-# FIXME: get rid of this link after the server's been updated
-ln -s %{_bindir}/hydra-agent $RPM_BUILD_ROOT%{_bindir}/hydra-agent
 
 %clean
 rm -rf %{buildroot}
