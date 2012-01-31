@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from functools import wraps
 from django.core.serializers.json import DateTimeAwareJSONEncoder
 import urllib2
+import django.utils.cache
 
 
 def render_to_json(**jsonargs):
@@ -27,6 +28,8 @@ def render_to_json(**jsonargs):
                 result = f(wrapped_self, request, *args, **kwargs)
                 if isinstance(result, APIResponse):
                     r.status_code = result.status
+                    if result.cache == False:
+                        django.utils.cache.add_never_cache_headers(r)
                     content = result.content
                 else:
                     content = result

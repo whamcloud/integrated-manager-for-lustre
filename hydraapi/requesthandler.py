@@ -186,6 +186,7 @@ class AnonymousRESTRequestHandler(BaseHandler):
 
 
 class APIResponse:
-    def __init__(self, content, status):
+    def __init__(self, content, status, cache = True):
         self.content = content
         self.status = status
+        self.cache = cache

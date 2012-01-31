@@ -38,17 +38,17 @@
           iDisplayLength: 25,
           "bSorting":false,
           "bServerSide":true,
-          "sAjaxSource": '/dashboard/get_dt_logs/',
-          "fnServerData": function ( sSource, aoData, fnCallback ) {
+          "sAjaxSource": 'log/',
+          "fnServerData": function (url, aoData, callback, settings) {
             aoData.push({"name":"host_id", "value": $('#logs_hostList').val()});
             aoData.push({"name":"start_time", "value": $('#datetime_from').val()});
             aoData.push({"name":"end_time", "value": $('#datetime_to').val()});
             aoData.push({"name":"lustre", "value": $('#id_only_lustre').is(':checked')});
             
-              $.getJSON( sSource, aoData, function (json) {
-                fnCallback(json);
-              });
-            }, 
+            invoke_api_call(api_get, url, aoData, success_callback = function(data) {
+              callback(data);
+            });
+          }, 
            aaSorting: [[1, 'desc']],
 	         "aoColumns": [
                { "sClass": 'log_line', "mDataProp":"date", "bSortable":false},

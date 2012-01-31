@@ -7,11 +7,8 @@ from django.conf.urls.defaults import patterns
 from piston.resource import Resource
 
 import monitorapi
-from monitorapi import (GetEventsByFilter,
-                        GetLatestEvents,
-                        GetAlerts,
-                        GetJobs,
-                        GetLogs)
+from monitorapi import (GetJobs)
+
 import configureapi
 from configureapi import (GetJobStatus,
                           SetJobStatus,
@@ -31,22 +28,25 @@ from statsmetricapi import(GetFSTargetStats,
                            GetFSClientsStats,
                            GetHeatMapFSStats)
 
-import hydraapi.host
-import hydraapi.filesystem
+import hydraapi.alert
+import hydraapi.event
+import hydraapi.log
+
 import hydraapi.volume
-import hydraapi.target
 import hydraapi.storage_resource
 import hydraapi.storage_resource_class
 
+import hydraapi.host
+import hydraapi.filesystem
+import hydraapi.target
 
-# Cross Site Referance related class
+
 class CsrfExemptResource(Resource):
     """A Custom Resource that is csrf exempt"""
     def __init__(self, handler, authentication=None):
         super(CsrfExemptResource, self).__init__(handler, authentication)
         self.csrf_exempt = getattr(self.handler, 'csrf_exempt', True)
 
-# hydra api urls definitions.
 urlpatterns = patterns('',
     (r'^get_job_status/$', CsrfExemptResource(GetJobStatus)),
     (r'^set_job_status/$', CsrfExemptResource(SetJobStatus)),
@@ -64,11 +64,7 @@ urlpatterns = patterns('',
     (r'^transition/$', CsrfExemptResource(configureapi.Transition)),
     (r'^transition_consequences/$', CsrfExemptResource(configureapi.TransitionConsequences)),
 
-    (r'^geteventsbyfilter/$', CsrfExemptResource(GetEventsByFilter)),
-    (r'^getlatestevents/$', CsrfExemptResource(GetLatestEvents)),
-    (r'^getalerts/$', CsrfExemptResource(GetAlerts)),
     (r'^getjobs/$', CsrfExemptResource(GetJobs)),
-    (r'^getlogs/$', CsrfExemptResource(GetLogs)),
     (r'^notifications/$', CsrfExemptResource(Notifications)),
     (r'^object_summary/$', CsrfExemptResource(configureapi.ObjectSummary)),
 
@@ -102,4 +98,13 @@ urlpatterns = patterns('',
     # hydraapi.volume
     (r'^volume/$', CsrfExemptResource(hydraapi.volume.Handler)),
     (r'^volume/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.volume.Handler)),
+
+    # hydraapi.alert
+    (r'^alert/$', CsrfExemptResource(hydraapi.alert.Handler)),
+
+    # hydraapi.event
+    (r'^event/$', CsrfExemptResource(hydraapi.event.Handler)),
+
+    # hydraapi.log
+    (r'^log/$', CsrfExemptResource(hydraapi.log.Handler)),
 )

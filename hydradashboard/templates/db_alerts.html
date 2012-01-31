@@ -9,8 +9,9 @@
       var oTable = $('#active_AlertContent').dataTable( {
         "bProcessing": true,
         "iDisplayLength":25,
+        bServerSide: true,
         "bDeferRender": true,
-        "sAjaxSource": 'getalerts/',
+        "sAjaxSource": 'alert/',
         "fnServerData": function (url, data, callback, settings) {
           invoke_api_call(api_get, url, {active: true}, success_callback = function(data) {
             callback(data);
@@ -29,9 +30,10 @@
     //for alert history
     var oTable = $('#all_AlertContent').dataTable( {
       "bProcessing": true,
+      bServerSide: true,
       "iDisplayLength":25,
       "bDeferRender": true,
-      "sAjaxSource": 'getalerts/',
+      "sAjaxSource": 'alert/',
       "fnServerData": function (url, data, callback, settings) {
         invoke_api_call(api_get, url, {}, success_callback = function(data) {
           callback(data);

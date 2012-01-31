@@ -28,7 +28,7 @@ $(document).ready(function()
     toggleSliderDiv('alertsDiv');
     if($('#alertsDiv').css('display') == 'block')
     {
-      loadAlertContent('alert_content', 'True', 10);  // load only when target div visible
+      loadAlertContent('alert_content', 10);  // load only when target div visible
     }
   });
   
@@ -118,16 +118,14 @@ progress_show = function(divname)
 //******************************************************************************/
 // Function to load content for alerts
 /******************************************************************************/
-loadAlertContent = function(targetAlertDivName, status, maxCount)
+loadAlertContent = function(targetAlertDivName, maxCount)
 {
   var alertTabContent="";
   var pagecnt=0
   var maxpagecnt=maxCount;
   progress_show(targetAlertDivName);
 
-  var api_params = {"active": status,"page_id":"","page_size":""};
-  
-  invoke_api_call(api_post, "getalerts/", api_params, 
+  invoke_api_call(api_get, "alert/", {active: true, iDisplayStart: 0, iDisplayCount: maxCount}, 
   success_callback = function(data)
   {
     $.each(data.aaData, function(resKey, resValue)
@@ -170,30 +168,31 @@ loadEventContent = function(targetEventDivName, maxCount)
   var maxpagecnt=maxCount;
   progress_show(targetEventDivName);
   
-  invoke_api_call(api_get, "getlatestevents", "",
+  invoke_api_call(api_get, "event/", {iDisplayStart: 0, iDisplayLength: 10},
     success_callback = function(data)
     {
-      $.each(data, function(resKey, resValue)
+      var events = data['aaData'];
+      $.each(events, function(i, event_record)
       {
         pagecnt++;
         if(maxpagecnt > pagecnt || maxpagecnt < 0)
         {
-          var cssClassName = getCssClass(resValue.event_severity);
-          var imgName = getImage(resValue.event_severity);
+          var cssClassName = getCssClass(event_record.severity);
+          var imgName = getImage(event_record.severity);
           
           eventTabContent = eventTabContent +
                             "<tr class='" + cssClassName + "'>" +
           		              "<td width='20%' align='left' valign='top' class='border' style='font-weight:normal'>" +  
-          		              resValue.event_created_at + 
+          		              event_record.created_at + 
           		              "</td>" +
           		              "<td width='7%' align='left' valign='top' class='border' class='txtcenter'>" +
           		              "<img src='" + imgName + "' width='16' height='16' class='spacetop'/>" +
           		              "</td>" +
           		              "<td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + 
-          		              resValue.event_host +  "&nbsp;" +
+          		              event_record.host_name +  "&nbsp;" +
           		              "</td>" +
           		              "<td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + 
-          		              resValue.event_message + 
+          		              event_record.message + 
           		              "</td>" +
           		              "</tr>";
         }

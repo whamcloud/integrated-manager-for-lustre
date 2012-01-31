@@ -14,22 +14,22 @@
             "bProcessing": true,
             "bServerSide":true,
             "bFilter": false,
-            "sAjaxSource": "/dashboard/get_dt_events/",
-            "fnServerData": function ( sSource, aoData, fnCallback ) 
+            iDisplayLength: 25,
+            "sAjaxSource": "event/",
+            "fnServerData": function (url, aoData, callback, settings) 
             {
               aoData.push({"name":"host_id", "value": $('#db_events_hostList').val()});
               aoData.push({"name":"severity", "value": $('#event_severity').val()});
               aoData.push({"name":"event_type", "value": $('#event_type').val()});
-              $.getJSON( sSource, aoData, function (json) 
-              {
-                fnCallback(json);
+              invoke_api_call(api_get, url, aoData, success_callback = function(data){
+                callback(data);
               });
             }, 
             "aoColumns": [
-                { "sClass": 'txtleft',"mDataProp":"date", "asSorting": [ "desc" ],"bSortable":false},
-                { "sClass": 'txtcenter',"mDataProp":"event_severity", "bSortable":false},
-                { "sClass": 'txtleft',"mDataProp":"event_host", "bSortable":false},
-                { "sClass": 'txtleft',"mDataProp":"event_message","bSortable":false}
+                { "sClass": 'txtleft',"mDataProp":"created_at", "asSorting": [ "desc" ],"bSortable":false},
+                { "sClass": 'txtcenter',"mDataProp":"severity", "bSortable":false},
+                { "sClass": 'txtleft',"mDataProp":"host_name", "bSortable":false},
+                { "sClass": 'txtleft',"mDataProp":"message","bSortable":false}
              ], 
              "bJQueryUI": true
           });
