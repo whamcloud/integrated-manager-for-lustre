@@ -73,7 +73,7 @@ $(document).ready(function() {
   $('.add_host_submit_button').click(function(ev) {
       $('#add_host_tabs').tabs('select', '#add_host_loading');
 
-      invoke_api_call(api_get, "test_host/?hostname=" + $('#add_host_address').attr('value') + "&commit=false", "", 
+      invoke_api_call(api_get, "test_host/", {hostname: $('#add_host_address').attr('value')},
       success_callback = function(data)
       {
         task_id = data.task_id
