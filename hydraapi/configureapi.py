@@ -8,7 +8,6 @@ from django.contrib.contenttypes.models import ContentType
 # Hydra server imports
 import settings
 
-from configure.models import ManagedHost
 from configure.models import Command
 from requesthandler import AnonymousRequestHandler
 from hydraapi.requesthandler import APIResponse
@@ -36,61 +35,6 @@ class SetJobStatus(AnonymousRequestHandler):
         else:
             job.resume()
         return {'transition_job_status': job.status, 'job_info': job.info, 'job_result': job.result}
-
-
-class SetVolumePrimary(AnonymousRequestHandler):
-    def run(cls, request, lun_ids, primary_host_ids, secondary_host_ids):
-        from configure.models import Lun, LunNode
-        from django.shortcuts import get_object_or_404
-
-        def set_usable_luns(lun_id, primary_host_id, secondary_host_id):
-            if primary_host_id == secondary_host_id:
-                raise AssertionError('Primary host and Secondary host can not be same for a volume lun')
-            volume_lun = get_object_or_404(Lun, pk = lun_id)
-            from hydraapi import api_log
-            api_log.info("primary_host_id = %s" % primary_host_id)
-            primary_host = get_object_or_404(ManagedHost, pk = primary_host_id)
-            filter_kargs = {'lun': volume_lun, 'host': primary_host}
-            primary_lun_node = LunNode.objects.filter(**filter_kargs)
-            secondary_host = get_object_or_404(ManagedHost, pk = secondary_host_id)
-            filter_kargs = {'lun': volume_lun, 'host': secondary_host}
-            secondary_lun_nodes = LunNode.objects.filter(**filter_kargs)
-            for p_lun_node in primary_lun_node:
-                p_lun_node.set_usable_lun_nodes(secondary_lun_nodes)
-
-        for i in range(len(lun_ids)):
-            set_usable_luns(lun_ids.__getitem__(i), primary_host_ids.__getitem__(i), secondary_host_ids.__getitem__(i))
-
-
-class GetLuns(AnonymousRequestHandler):
-    def run(cls, request, category):
-        assert category in ['unused', 'usable']
-
-        from configure.models import Lun, LunNode
-        from monitor.lib.util import sizeof_fmt
-        devices = []
-        if category == 'unused':
-            luns = Lun.get_unused_luns()
-        elif category == 'usable':
-            luns = Lun.get_usable_luns()
-        else:
-            raise RuntimeError("Bad category '%s' in get_unused_luns" % category)
-
-        for lun in luns:
-            available_hosts = dict([(ln.host.id, {
-                'label': ln.host.__str__(),
-                'use': ln.use,
-                'primary': ln.primary
-                }) for ln in LunNode.objects.filter(lun = lun)])
-            devices.append({
-                             'id': lun.id,
-                             'name': lun.get_label(),
-                             'kind': lun.get_kind(),
-                             'available_hosts': available_hosts,
-                             'size': sizeof_fmt(lun.size),
-                             'status': lun.ha_status()
-                           })
-        return devices
 
 
 class SetTargetConfParams(AnonymousRequestHandler):

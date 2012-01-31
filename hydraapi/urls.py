@@ -13,13 +13,11 @@ from monitorapi import (GetEventsByFilter,
                         GetJobs,
                         GetLogs)
 import configureapi
-from configureapi import (GetLuns,
-                          GetJobStatus,
+from configureapi import (GetJobStatus,
                           SetJobStatus,
                           Notifications,
                           GetTargetConfParams,
-                          SetTargetConfParams,
-                          SetVolumePrimary)
+                          SetTargetConfParams)
 
 # Stuff related to storage plugins
 from configureapi import (
@@ -35,6 +33,7 @@ from statsmetricapi import(GetFSTargetStats,
 
 import hydraapi.host
 import hydraapi.filesystem
+import hydraapi.volume
 import hydraapi.target
 import hydraapi.storage_resource
 import hydraapi.storage_resource_class
@@ -49,8 +48,6 @@ class CsrfExemptResource(Resource):
 
 # hydra api urls definitions.
 urlpatterns = patterns('',
-    (r'^get_luns/$', CsrfExemptResource(GetLuns)),
-
     (r'^get_job_status/$', CsrfExemptResource(GetJobStatus)),
     (r'^set_job_status/$', CsrfExemptResource(SetJobStatus)),
     (r'^get_conf_params/$', CsrfExemptResource(GetTargetConfParams)),
@@ -78,8 +75,6 @@ urlpatterns = patterns('',
 
     (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),
 
-    (r'^set_volumes_usable/$', CsrfExemptResource(SetVolumePrimary)),
-
     (r'^get_target_resource_graph/$', CsrfExemptResource(GetTargetResourceGraph)),
 
     # hydraapi.storage_resource_class
@@ -103,4 +98,8 @@ urlpatterns = patterns('',
     # hydraapi.target
     (r'^target/$', CsrfExemptResource(hydraapi.target.TargetHandler)),
     (r'^target/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.target.TargetHandler)),
+
+    # hydraapi.volume
+    (r'^volume/$', CsrfExemptResource(hydraapi.volume.Handler)),
+    (r'^volume/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.volume.Handler)),
 )

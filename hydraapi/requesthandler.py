@@ -47,17 +47,24 @@ def extract_request_args(f):
                 # Already got a value of the argument from passed-through kwargs
                 continue
 
-            if arg_name in defaults:
-                # This is a keyword argument
-                try:
-                    kwargs[arg_name] = request.data[arg_name]
-                except KeyError:
-                    kwargs[arg_name] = defaults[arg_name]
+            if isinstance(request.data, dict):
+                if arg_name in defaults:
+                    # This is a keyword argument
+                    try:
+                        kwargs[arg_name] = request.data[arg_name]
+                    except KeyError:
+                        kwargs[arg_name] = defaults[arg_name]
+                else:
+                    # This is a positional argument
+                    try:
+                        args.append(request.data[arg_name])
+                    except KeyError:
+                        errors[arg_name] = ["This field is required"]
             else:
-                # This is a positional argument
-                try:
-                    args.append(request.data[arg_name])
-                except KeyError:
+                # Request.data is not a dict -- no arguments supplied
+                if arg_name in defaults:
+                    kwargs[arg_name] = defaults[arg_name]
+                else:
                     errors[arg_name] = ["This field is required"]
 
         if len(errors) > 0:

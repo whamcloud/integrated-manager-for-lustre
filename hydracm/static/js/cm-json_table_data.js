@@ -88,33 +88,31 @@ function LoadTargets_EditFS(fs_id)
 
 function LoadUsableVolumeList(datatable_container, select_widget_fn)
 {
-  var api_params = {'category': 'usable'};
-
-  invoke_api_call(api_post, "get_luns/", api_params, 
-  success_callback = function(data)
+  invoke_api_call(api_get, "volume/", {'category': 'usable'}, 
+  success_callback = function(volumes)
   {
-    $.each(data, function(resKey, volume_info)
+    $.each(volumes, function(i, volume)
     {
       var primaryHostname = "---"
       var failoverHostname = "---"
-      $.each(volume_info.available_hosts, function(host_id, host_info) 
+      $.each(volume.nodes, function(i, node) 
       {
-        if (host_info.primary) 
+        if (node.primary) 
         {
-          primaryHostname = host_info.label
+          primaryHostname = node.host_label
         }
-        else if (host_info.use) 
+        else if (node.use) 
         {
-          failoverHostname = host_info.label
+          failoverHostname = node.host_label
         }
       });
       datatable_container.dataTable().fnAddData ([
-        volume_info.id,
-        select_widget_fn(volume_info),
-        volume_info.name,
-        volume_info.size,
-        volume_info.kind,
-        volume_info.status,
+        volume.id,
+        select_widget_fn(volume),
+        volume.name,
+        volume.size,
+        volume.kind,
+        volume.status,
         primaryHostname,
         failoverHostname
       ]); 
@@ -131,38 +129,32 @@ function LoadUsableVolumeList(datatable_container, select_widget_fn)
 
 function LoadUnused_VolumeConf()
 {
-  var api_params = {'category': 'unused'};
-  
-  invoke_api_call(api_post, "get_luns/", api_params, 
-  success_callback = function(data)
+  invoke_api_call(api_get, "volume/", {'category': 'unused'}, 
+  success_callback = function(volumes)
   {
     $('#volume_configuration').dataTable().fnClearTable();
     
-    $.each(data, function(resKey, resValue)
+    $.each(volumes, function(i, volume)
     {
       var blank_option = "<option value='-1'>---</option>";
       var blank_select = "<select disabled='disabled'>" + blank_option + "</select>"
       var primarySelect;
       var failoverSelect;
-      var host_count = 0;
-      var original_mapped_host_ids = "";
-      var lun_id = 0, primary_host_id = 0, secondary_host_id = 0;
-      lun_id = resValue.id;
+      var original_mapped_node_ids = "";
+      var primary_node_id = 0;
+      var secondary_node_id = -1;
+      var lun_id = volume.id;
 
-      $.each(resValue.available_hosts, function(host_id, host_info) 
-      {
-        host_count += 1;
-      });
-      if (host_count == 0) 
+      if (volume.nodes.length == 0) 
       {
         primarySelect = blank_select
         failoverSelect = blank_select
       }
-      else if (host_count == 1) 
+      else if (volume.nodes.length == 1) 
       {
-        $.each(resValue.available_hosts, function(host_id, host_info) 
+        $.each(volume.nodes, function(i, node) 
         {
-          primarySelect = "<select id='primary_host_"+lun_id+"' disabled='disabled'><option value='" + host_id + "'>" + host_info.label + "</option></select>";
+          primarySelect = "<select id='primary_host_"+lun_id+"' disabled='disabled'><option value='" + node.id + "'>" + node.host_label + "</option></select>";
         });
         failoverSelect = blank_select
       } 
@@ -170,43 +162,41 @@ function LoadUnused_VolumeConf()
       {
         primarySelect = "<select id='primary_host_"+lun_id+"'>";
         failoverSelect = "<select id='secondary_host_"+lun_id+"'>";
-        primarySelect += blank_option
         failoverSelect += blank_option
-        $.each(resValue.available_hosts, function(host_id, host_info)
+        $.each(volume.nodes, function(i, node)
         {
-          if (host_info.primary) 
+          if (node.primary) 
           {
-            primarySelect += "<option value='" + host_id + "' selected='selected'>" + host_info.label + "</option>";
-            failoverSelect += "<option value='" + host_id + "'>" + host_info.label + "</option>";
-            primary_host_id = host_id;
+            primarySelect += "<option value='" + node.id + "' selected='selected'>" + node.host_label + "</option>";
+            failoverSelect += "<option value='" + node.id + "'>" + node.host_label + "</option>";
+            primary_node_id = node.id;
           }
-          else if (host_info.use) 
+          else if (node.use) 
           {
-            primarySelect += "<option value='" + host_id + "'>" + host_info.label + "</option>";
-            failoverSelect += "<option value='" + host_id + "' selected='selected'>" + host_info.label + "</option>";
-            secondary_host_id = host_id;
+            primarySelect += "<option value='" + node.id + "'>" + node.host_label + "</option>";
+            failoverSelect += "<option value='" + node.id + "' selected='selected'>" + node.host_label + "</option>";
+            secondary_node_id = node.id;
           } 
           else 
           {
-            primarySelect += "<option value='" + host_id + "'>" + host_info.label + "</option>";
-            failoverSelect += "<option value='" + host_id + "' selected='selected'>" + host_info.label + "</option>";
-            secondary_host_id = host_id;
+            primarySelect += "<option value='" + node.id + "'>" + node.host_label + "</option>";
+            failoverSelect += "<option value='" + node.id + "'>" + node.host_label + "</option>";
           }
         });
         failoverSelect += "</select>";
         primarySelect += "</select>";
       }
 
-      var original_mapped_host_ids = lun_id + "_" + primary_host_id + "_" + secondary_host_id;
-      var hiddenIds = original_mapped_host_ids;
+      var original_mapped_node_ids = lun_id + "_" + primary_node_id + "_" + secondary_node_id;
+      var hiddenIds = original_mapped_node_ids;
       
       $('#volume_configuration').dataTable().fnAddData ([
-        resValue.name,
+        volume.name,
         primarySelect,
         failoverSelect,
-        resValue.size,
-        resValue.status,
-        original_mapped_host_ids,
+        volume.size,
+        volume.status,
+        original_mapped_node_ids,
         hiddenIds
       ]); 
     });

@@ -223,7 +223,7 @@ function ApplyConfigParam(table_obj,target_id,target_dialog,isFS)
   }
 }
 
-save_primary_failover_server = function (confirmation_markup, api_params)
+save_primary_failover_server = function (confirmation_markup, volumes)
 {
    $('#transition_confirmation_dialog').html(confirmation_markup);
    $('#transition_confirmation_dialog').dialog('option', 'buttons', {
@@ -233,7 +233,7 @@ save_primary_failover_server = function (confirmation_markup, api_params)
          text: "Confirm",
          id: "transition_confirm_button",
          click: function(){
-           invoke_api_call(api_post, "set_volumes_usable/", api_params, 
+           invoke_api_call(api_put, "volume/", volumes, 
            success_callback = function(data)
            {
              jAlert("Update Successful");

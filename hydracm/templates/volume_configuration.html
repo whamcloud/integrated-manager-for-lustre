@@ -28,28 +28,21 @@
       var oSetting = $('#volume_configuration').dataTable().fnSettings();
       var confirmation_markup = "This action will have the following consequences: <br /><br />";
       var same_primary_secondary_error_markup = "<b>Volumes should have different primary and secondary servers</b><br /><br />"+
-      											"Following volumes are having same primary and secondary servers:<br /><br />";
-      var no_server_error_markup  = "<b>Please select valid Primary/Failover server for following volumes:</b><br /><br />";
-	  var same_server_error_flag = false;
-	  var no_server_error_flag = false;
-      var api_params = {};
+      											"The following volumes have the same primary and secondary servers:<br /><br />";
+	    var same_server_error_flag = false;
       var alun_ids = [];
-      var aprimary_host_ids = [];
-      var asecondary_host_ids = [];
+      var aprimary_node_ids = [];
+      var asecondary_node_ids = [];
       for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) 
       {
         if (oSetting.aoData[i]._aData[5] != oSetting.aoData[i]._aData[6])
         {
           params = oSetting.aoData[i]._aData[6].split("_") 
           alun_ids.push(parseInt(params[0]));
-          aprimary_host_ids.push(parseInt(params[1]));
-          asecondary_host_ids.push(parseInt(params[2]));
-          if(parseInt(params[1]) == -1 || parseInt(params[2]) == -1)
-          {
-            no_server_error_markup += "- "+oSetting.aoData[i]._aData[0]+"<br />";
-            no_server_error_flag = true;
-          }
-          else if(parseInt(params[1]) == parseInt(params[2]))
+          aprimary_node_ids.push(parseInt(params[1]));
+          asecondary_node_ids.push(parseInt(params[2]));
+
+          if(parseInt(params[1]) == parseInt(params[2]))
           {
             same_primary_secondary_error_markup += "- "+oSetting.aoData[i]._aData[0]+"<br />";
             same_server_error_flag = true;
@@ -61,19 +54,22 @@
         }
       }
       
-      if(alun_ids.length > 0 && !same_server_error_flag && !no_server_error_flag)
+      if(alun_ids.length > 0 && !same_server_error_flag)
       {
-        api_params = {'lun_ids': alun_ids, 'primary_host_ids': aprimary_host_ids, 'secondary_host_ids': asecondary_host_ids};
-      	save_primary_failover_server(confirmation_markup, api_params);
+        var volumes = [];
+        for (i = 0; i < alun_ids.length; i++) {
+          var nodes = [];
+          nodes.push({id: aprimary_node_ids[i], 'primary': true, 'use': true})
+          if (asecondary_node_ids[i] != -1) {
+            nodes.push({id: asecondary_node_ids[i], 'primary': false, 'use': true})
+          }
+          volumes.push({id: alun_ids[i], nodes: nodes})
+        }
+      	save_primary_failover_server(confirmation_markup, volumes);
       }
       else
       {
-        if(no_server_error_flag)
-        {
-          $('#volume_error_dialog').html(no_server_error_markup);
-          $('#volume_error_dialog').dialog('open');
-        }
-        else if(same_server_error_flag)
+        if(same_server_error_flag)
         {
           $('#volume_error_dialog').html(same_primary_secondary_error_markup);
           $('#volume_error_dialog').dialog('open');
@@ -141,25 +137,25 @@
       {
         var rowParams = oSetting.aoData[i]._aData[6].split("_");
         var row_lun_id = rowParams[0];
-        var old_primary_host_id = rowParams[1];
-        var old_secondary_host_id =  rowParams[2];
-        var new_primary_host_id;
-        var new_secondary_host_id;
+        var old_primary_node_id = rowParams[1];
+        var old_secondary_node_id =  rowParams[2];
+        var new_primary_node_id;
+        var new_secondary_node_id;
         if($(this).attr("id").indexOf("primary_host") == 0)
         {
-          new_primary_host_id  = $(this).val();
-          new_secondary_host_id = old_secondary_host_id;
+          new_primary_node_id  = $(this).val();
+          new_secondary_node_id = old_secondary_node_id;
         }
         else
         {
-          new_secondary_host_id = $(this).val();
-          new_primary_host_id = old_primary_host_id  
+          new_secondary_node_id = $(this).val();
+          new_primary_node_id = old_primary_node_id  
         }
-        if (Lun_id == row_lun_id && (old_primary_host_id != new_primary_host_id || old_secondary_host_id != new_secondary_host_id))
+        if (Lun_id == row_lun_id && (old_primary_node_id != new_primary_node_id || old_secondary_node_id != new_secondary_node_id))
         { 
           oSetting.aoData[i]._aData[6] = Lun_id + '_' + 
-                                         new_primary_host_id + '_' +
-                                         new_secondary_host_id;
+                                         new_primary_node_id + '_' +
+                                         new_secondary_node_id;
 
           config_change_flag = true;
         }

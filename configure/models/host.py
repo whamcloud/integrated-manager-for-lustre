@@ -326,6 +326,18 @@ class Lun(models.Model):
         else:
             return resource.get_label()
 
+    def to_dict(self):
+        from monitor.lib.util import sizeof_fmt
+        return {
+                 'id': self.id,
+                 'name': self.get_label(),
+                 'kind': self.get_kind(),
+                 'nodes': [n.to_dict() for n in self.lunnode_set.all()],
+                 # FIXME: should format this in the display layer
+                 'size': sizeof_fmt(self.size),
+                 'status': self.ha_status()
+               }
+
     def ha_status(self):
         """Tell the caller two things:
          * is the Lun configured enough for use as a target?
@@ -374,6 +386,15 @@ class LunNode(models.Model):
     def __str__(self):
         return "%s:%s" % (self.host, self.path)
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'host_id': self.host.id,
+            'host_label': self.host.__str__(),
+            'use': self.use,
+            'primary': self.primary
+        }
+
     def pretty_string(self):
         from monitor.lib.util import sizeof_fmt
         lun_name = self.lun.get_label()
@@ -414,29 +435,6 @@ class LunNode(models.Model):
             human_size = "[size unknown]"
 
         return "%s (%s)" % (short_name, human_size)
-
-    @transaction.commit_on_success
-    def set_usable_lun_nodes(self, secondary_lunnodes):
-        def save_or_assert(lun_node, is_primary = True, is_use = True):
-            try:
-                managed_target = lun_node.managedtargetmount_set.get()
-                raise AssertionError('LunNode is in use by ManagedTarget %s', managed_target.target.name)
-            except:
-                pass
-                lun_node.primary = is_primary
-                lun_node.use = is_use
-                lun_node.save()
-        # set primary LunNode
-        save_or_assert(self)
-        # set secondary LunNodes
-        for lunnode in secondary_lunnodes:
-            save_or_assert(lunnode, False)
-        # Reset non secondary/primary LunNodes for same Lun to primary=False and use=False
-        other_lunnodes = LunNode.objects.filter(lun = self.lun)
-        for o_lunnode in other_lunnodes:
-            if o_lunnode not in secondary_lunnodes:
-                if o_lunnode != self:
-                    save_or_assert(o_lunnode, False, False)
 
 
 class Monitor(models.Model):
