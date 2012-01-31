@@ -3,10 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from django.core.management import setup_environ
 from django.shortcuts import get_object_or_404
-import settings
-setup_environ(settings)
 
 from django.contrib.contenttypes.models import ContentType
 from configure.lib.state_manager import StateManager

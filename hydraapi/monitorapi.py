@@ -2,12 +2,6 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-# REST API Conrtoller for Lustre File systems resource monitor name space
-from django.core.management import setup_environ
-
-# Hydra server imports
-import settings
-setup_environ(settings)
 
 from requesthandler import AnonymousRequestHandler
 from configure.models import ManagedHost

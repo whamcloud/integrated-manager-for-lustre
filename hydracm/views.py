@@ -3,11 +3,6 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-# Create your views here.
-from django.core.management import setup_environ
-import settings
-setup_environ(settings)
-
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 

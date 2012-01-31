@@ -2,17 +2,13 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-#REST API Controller for Lustre File systems resource in configure namespace
-from django.core.management import setup_environ
-from django.shortcuts import get_object_or_404
-# Hydra server imports
-import settings
-setup_environ(settings)
 
 from configure.models import (ManagedHost, ManagedFilesystem)
 from configure.lib.state_manager import StateManager
 from requesthandler import AnonymousRESTRequestHandler
 from hydraapi.requesthandler import APIResponse
+
+from django.shortcuts import get_object_or_404
 
 
 class ManagedHostsHandler (AnonymousRESTRequestHandler):

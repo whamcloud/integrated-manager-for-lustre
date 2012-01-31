@@ -4,14 +4,10 @@
 # ==============================
 
 # Create your views here.
-from django.core.management import setup_environ
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponse
 from django.utils.cache import add_never_cache_headers
-
-import settings
-setup_environ(settings)
 
 
 def dashboard(request):
