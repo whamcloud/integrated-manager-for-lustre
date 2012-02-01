@@ -11,6 +11,7 @@ from configure.lib.state_manager import StateManager
 
 from configure.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Lun
 from hydraapi.requesthandler import AnonymousRESTRequestHandler, APIResponse
+import configure.lib.conf_param
 
 from configure.models import Command
 
@@ -40,6 +41,18 @@ def create_target(lun_id, target_klass, **kwargs):
 
 
 class TargetHandler(AnonymousRESTRequestHandler):
+    def put(self, request, id):
+        target = get_object_or_404(ManagedTarget, pk = id).downcast()
+        try:
+            conf_params = request.data['conf_params']
+        except KeyError:
+            return APIResponse(None, 400)
+
+        # TODO: validate the parameters before trying to set any of them
+
+        for k, v in conf_params.items():
+            configure.lib.conf_param.set_conf_param(target, k, v)
+
     def post(self, request, kind, filesystem_id = None, lun_ids = []):
         if not kind in KIND_TO_KLASS:
             return APIResponse(None, 400)

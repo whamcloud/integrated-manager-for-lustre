@@ -106,12 +106,18 @@ function invoke_api_call(request_type, api_url, api_args, success_callback, erro
     if (error_callback) {
       if(typeof(error_callback) == "function") {
         /* Caller has provided a generic error handler */
-        error_callback(jqXHR.responseText);
+        rc = error_callback(jqXHR.responseText);
+        if (rc == false) {
+          api_unexpected_error(textStatus, jqXHR);
+        }
       } else if(typeof(error_callback) == "object") {
         var status_code = jqXHR.status;
         if(error_callback[status_code] != undefined) {
           /* Caller has provided handler for this status */
-          error_callback[status_code](jqXHR.responseText);
+          rc = error_callback[status_code](jqXHR.responseText);
+          if (rc == false) {
+            api_unexpected_error(textStatus, jqXHR);
+          }
         } else {
           /* Caller has provided some handlers, but not one for this
              status code, this is a bug or unhandled error */

@@ -163,14 +163,18 @@ class ManagedTarget(StatefulObject):
         except ManagedTargetMount.DoesNotExist:
             failover_server_name = "---"
 
+        import configure.lib.conf_param
+
         if isinstance(self, FilesystemMember):
             filesystem_id = self.filesystem.pk
             filesystem_name = self.filesystem.name
             filesystems = None
+            conf_params = configure.lib.conf_param.get_conf_params(self)
         else:
             filesystem_id = None
             filesystem_name = None
             filesystems = [{'id': fs.id, 'name': fs.name} for fs in self.managedfilesystem_set.all()]
+            conf_params = None
 
         from django.contrib.contenttypes.models import ContentType
 
@@ -186,7 +190,8 @@ class ManagedTarget(StatefulObject):
                 'failover_server_name': failover_server_name,
                 'filesystem_id': filesystem_id,
                 'filesystem_name': filesystem_name,
-                'filesystems': filesystems
+                'filesystems': filesystems,
+                'conf_params': conf_params
                 }
 
 
@@ -202,10 +207,6 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
 
     def role(self):
         return "OST"
-
-    def get_conf_params(self):
-        from configure.models.conf_param import ConfParam
-        return ConfParam.get_latest_params(self.ostconfparam_set.all())
 
     def default_mount_path(self, host):
         from configure.models import ManagedTargetMount
@@ -234,10 +235,6 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
 
     def role(self):
         return "MDT"
-
-    def get_conf_params(self):
-        from configure.models.conf_param import ConfParam
-        return ConfParam.get_latest_params(self.mdtconfparam_set.all())
 
     def default_mount_path(self, host):
         return "/mnt/%s/mdt" % self.filesystem.name
@@ -304,10 +301,6 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
                 p.save()
 
         create_params()
-
-    def get_conf_params(self):
-        from configure.models.conf_param import ConfParam
-        return ConfParam.get_latest_params(self.confparam_set.all())
 
 
 class DeleteTargetStep(Step):

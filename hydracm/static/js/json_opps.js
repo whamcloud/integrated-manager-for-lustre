@@ -6,7 +6,7 @@ var ERR_COMMON_CREATE_OST = "Error in Creating OST";
 var ERR_COMMON_CREATE_MGT = "Error in Creating MGT";
 var ERR_COMMON_CREATE_MDT = "Error in Creating MDT: ";
 var ERR_COMMON_START_OST = "Error in Starting OST: ";
-var ERR_CONFIF_PARAM = "Error in setting Cofiguration Params: ";
+var ERR_CONFIG_PARAM = "Error in setting Cofiguration Params: ";
 var ERR_VOLUME_CONFIG = "Error in setting volume cofiguration ";
 
 var ALERT_TITLE = "Configuration Manager";
@@ -133,43 +133,42 @@ function CreateMGT(lun_id, callback)
   });
 }
 
-function GetConfigurationParam(target_id, kinds, table_id)
+
+function _populate_conf_param_table(data, table_id, help)
 {
   $('#' + table_id).dataTable().fnClearTable();
-  var api_params = {
-      "target_id": target_id,
-      "kinds": kinds
-  };
-  
-  invoke_api_call(api_post, "get_conf_params/", api_params, 
-  success_callback = function(data)
-  {
-    CreateTable_FS_Config_Param(data, table_id);
-  },
-  error_callback = function(data)
-  {
-    if(data.errors != undefined)
-    {
-      jAlert(ERR_COMMON_START_OST + data.errors, ALERT_TITLE);
+  var property_box="";
+  var text_index = 0;
+  $.each(data, function(key, value)
+  {   
+    if (value == null) {
+      /* TODO: represent nulls as a gray 'unset' state (and display default value)*/
+      value = "";
     }
+    property_box = "<input type=textbox value='" + value + "' id='" + text_index + 
+    "' title='" + help[key] + "' onblur='validateNumber("+text_index+")'/>"; 
+    text_index++;
+    $('#' + table_id).dataTable().fnAddData ([
+      key, 
+      property_box,
+      value
+    ]);
   });
 }
 
-function CreateTable_FS_Config_Param(data, table_id)
+function populate_conf_param_table(data, table_id, help)
 {
-  var property_box="";
-  var text_index = 0;
-  $.each(data, function(resKey, resValue)
-  {   
-    property_box = "<input type=textbox value='" + resValue.value + "' id='" + text_index + 
-    "' title='" + resValue.conf_param_help + "' onblur='validateNumber("+text_index+")'/>"; 
-    text_index++;
-    $('#' + table_id).dataTable().fnAddData ([
-      resValue.conf_param, 
-      property_box,
-      resValue.value
-    ]);
-  });
+  if (help) {
+    _populate_conf_param_table(data, table_id, help);
+  } else {
+    var keys = [];
+    for(var key in data) {
+      keys.push(key);
+    }
+    invoke_api_call(api_get, "help/conf_param/", {keys: keys.join(",")}, success_callback = function(loaded_help) {
+      _populate_conf_param_table(data, table_id, loaded_help);
+    });
+  }
 }
 
 function validateNumber(obj_id)
@@ -182,44 +181,46 @@ function validateNumber(obj_id)
     }
 }
 
-function ApplyConfigParam(table_obj,target_id,target_dialog,isFS)
+/* Read modified conf params out of datatable, PUT them to url, and close dialog_id */
+function apply_config_params(url, dialog_id, datatable)
 {
-  var change_flag = false;
-  var oSetting = table_obj.fnSettings();
-  var config_json = {}
+  var oSetting = datatable.fnSettings();
+  var changed_conf_params = {}
+  var dirty = false;
   for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
     if(oSetting.aoData[i]._aData[2] != $("input#"+i).val())
     {
-       config_json[oSetting.aoData[i]._aData[0]] = $("input#"+i).val();
-       change_flag = true;
+      dirty = true;
+      changed_conf_params[oSetting.aoData[i]._aData[0]] = $("input#"+i).val();
+      /* FIXME: we should set _aData[2] to the value after we submit so that it doesn't
+          look changed next time */
     }
   }
 
-  if(typeof(isFS) == "undefined")
-    isFS = "";
-
-  if(change_flag)
+  if(dirty)
   {
     var api_params = {
-        "target_id": target_id,
-        "conf_params": config_json,
-        "IsFS": isFS
+        "conf_params": changed_conf_params,
     };
+    console.log('PUTing changed conf params to ' + url + ':');
+    console.log(changed_conf_params);
 
-    invoke_api_call(api_post, "set_conf_params/", api_params, 
+    invoke_api_call(api_put, url, api_params, 
     success_callback = function(data)
     {
       jAlert("Update Successful");
     },
     error_callback = function(data)
     {
-      if(data.errors != undefined)
-      {
-        jAlert(ERR_CONFIF_PARAM + data.errors, ALERT_TITLE);
+      if(data.errors != undefined) {
+        jAlert(ERR_CONFIG_PARAM + data.errors, ALERT_TITLE);
+        return true;
+      } else {
+        return false;
       }
     });
 
-    $('#'+target_dialog).dialog('close'); 
+    $('#'+dialog_id).dialog('close'); 
   }
 }
 

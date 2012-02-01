@@ -12,6 +12,7 @@ from configure.models import ManagedOst, ManagedMdt, ManagedMgs
 from configure.models import ManagedFilesystem, ManagedTargetMount, ManagedHost
 from configure.models import Command
 from hydraapi.requesthandler import AnonymousRESTRequestHandler, APIResponse
+import configure.lib.conf_param
 
 import monitor.lib.util
 import hydraapi.target
@@ -29,6 +30,19 @@ def create_fs(mgs_id, name, conf_params):
 
 
 class FilesystemHandler(AnonymousRESTRequestHandler):
+    # TODO: common PUT code for handling conf params on targets and filesystems
+    def put(self, request, id):
+        filesystem = get_object_or_404(ManagedFilesystem, pk = id).downcast()
+        try:
+            conf_params = request.data['conf_params']
+        except KeyError:
+            return APIResponse(None, 400)
+
+        # TODO: validate the parameters before trying to set any of them
+
+        for k, v in conf_params.items():
+            configure.lib.conf_param.set_conf_param(filesystem, k, v)
+
     def post(self, request, fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, conf_params):
         # mgt_id and mgt_lun_id are mutually exclusive:
         # * mgt_id is a PK of an existing ManagedMgt to use
@@ -111,6 +125,7 @@ class FilesystemHandler(AnonymousRESTRequestHandler):
                     'inodes_free': fsfilesfree,
                     'inodes_total': fsfilestotal,
                     'inodes_used': (fsfilestotal - fsfilesfree),
+                    'conf_params': configure.lib.conf_param.get_conf_params(filesystem),
                     'id': filesystem.id,
                     'content_type_id': ContentType.objects.get_for_model(filesystem).id}
         else:
@@ -129,17 +144,17 @@ class FilesystemHandler(AnonymousRESTRequestHandler):
 
                 fskbytesfree = 0
                 fskbytestotal = 0
-                #fsfilesfree  = 0
-                #fsfilestotal = 0
+                fsfilesfree = 0
+                fsfilestotal = 0
                 try:
-                    #inodedata = filesystem.metrics.fetch_last(ManagedMdt, fetch_metrics=["filesfree", "filestotal"])
-                    diskdata = filesystem.metrics.fetch_last(ManagedOst, fetch_metrics=["kbytesfree", "kbytestotal"])
+                    inodedata = filesystem.metrics.fetch_last(ManagedMdt, fetch_metrics = ["filesfree", "filestotal"])
+                    diskdata = filesystem.metrics.fetch_last(ManagedOst, fetch_metrics = ["kbytesfree", "kbytestotal"])
                     if diskdata:
                         fskbytesfree = diskdata[1]['kbytesfree']
                         fskbytestotal = diskdata[1]['kbytestotal']
-                    #if inodedata:
-                    #    fsfilesfree  = inodedata[1]['filesfree']
-                    #    fsfilestotal = inodedata[1]['filestotal']
+                    if inodedata:
+                        fsfilesfree = inodedata[1]['filesfree']
+                        fsfilestotal = inodedata[1]['filestotal']
                 except:
                     pass
 
@@ -155,6 +170,7 @@ class FilesystemHandler(AnonymousRESTRequestHandler):
                                     # FIXME: the API should not be formatting these, leave it to the presentation layer
                                     'kbytesused': monitor.lib.util.sizeof_fmt((fskbytestotal * 1024)),
                                     'kbytesfree': monitor.lib.util.sizeof_fmt((fskbytesfree * 1024)),
+                                    'conf_params': configure.lib.conf_param.get_conf_params(filesystem),
                                     'id': filesystem.id,
                                     'content_type_id': ContentType.objects.get_for_model(filesystem).id})
 

@@ -1,9 +1,31 @@
 <script language="javascript">
   $(document).ready(function() {
-    // Loading the File system summary data in Table fs_summary_tbl 
-    // data is loaded in divs defined in table.    
-    LoadFSData_EditFS();
+    var fs_id = $('#fs_id').val();
+    invoke_api_call(api_get, "filesystem/" + fs_id + "/", {}, 
+    success_callback = function(filesystem)
+    {
+      /* FS summary fields */
+      $('#bytes_used').html(filesystem.bytes_used);
+      $('#bytes_total').html(filesystem.bytes_total);
+      $('#inodes_used').html(filesystem.inodes_used);
+      $('#inodes_total').html(filesystem.inodes_total);
+      $('#oss_count').html(filesystem.noofoss);
+      $('#ost_count').html(filesystem.noofost);
+      $('#mgs_name').html(filesystem.mgs_hostname);
+      $('#mds_name').html(filesystem.mds_hostname);
+      $('#fs_status').html(filesystem.status);
+      $('#fs_alerts').html(alert_indicator_large_markup(filesystem.id, filesystem.content_type_id));
+      $('#fs_name').html(filesystem.fsname);
 
+      // Config param dialog
+      populate_conf_param_table(filesystem.conf_params, "config_param_table");
+      $('#advance_opts').click(function()
+      {
+        $('#configParam').dialog('open');
+      });
+    });
+
+    /* Tables of targets */
     var target_table_elements = ['#mgt_configuration_view', '#ost', '#mdt'];
     $.each(target_table_elements, function(i, selector) {
       $(selector).dataTable( {
@@ -34,13 +56,8 @@
       $('#new_ost_dialog').dialog('open');
       $('#new_ost_dialog').find('table').width("100%");
     });
-    // Advance Options button click handler.
-    $('#advance_opts').click(function()
-    {
-      GetConfigurationParam($("#fs_id").val(),["FS" , "FSC"], "config_param_table");
-      $('#configParam').dialog('open');
-    });
-    //Load Pie Charts for a selected File system
+
+    // Free space pie charts
     LoadFSGraph_EditFS( $("#fs_id").val());
   });
    $(document).ajaxComplete(function() {

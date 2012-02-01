@@ -22,12 +22,10 @@ target_dialog_open = function(target_id) {
 
   load_resource_graph('target_dialog_devices', target_id);
   
-  invoke_api_call(api_post, "target/", {id: target_id}, 
-  success_callback = function(data)
+  invoke_api_call(api_get, "target/", {id: target_id}, 
+  success_callback = function(target)
   {
-    var target_info = data;
-    console.log(target_info);
-    $('#target_dialog').dialog('option', 'title', target_info.human_name);
+    $('#target_dialog').dialog('option', 'title', target.human_name);
 
     var row_counter = 0;
     var keyval_row = function(k,v) {
@@ -44,19 +42,24 @@ target_dialog_open = function(target_id) {
 
     var properties_markup = "";
     properties_markup += "<table>";
-    properties_markup += keyval_row("Name", target_info.human_name);
-    if (target_info.filesystem_name) {
-      properties_markup += keyval_row("Filesystem", target_info.filesystem_name);
+    properties_markup += keyval_row("Name", target.human_name);
+    if (target.filesystem_name) {
+      properties_markup += keyval_row("Filesystem", target.filesystem_name);
     }
-    properties_markup += keyval_row("Primary server", target_info.primary_server_name);
-    properties_markup += keyval_row("Failover server", target_info.failover_server_name);
-    properties_markup += keyval_row("Started on", target_info.active_host_name);
-    properties_markup += keyval_row("Alerts", alert_indicator_large_markup(target_info.id, target_info.content_type_id));
+    properties_markup += keyval_row("Primary server", target.primary_server_name);
+    properties_markup += keyval_row("Failover server", target.failover_server_name);
+    properties_markup += keyval_row("Started on", target.active_host_name);
+    properties_markup += keyval_row("Alerts", alert_indicator_large_markup(target.id, target.content_type_id));
     properties_markup += "</table>";
     $('#target_dialog_properties').html(properties_markup);
+    if (target.conf_params) {
+      $('#target_dialog_tabs').tabs('enable', 2);
+      populate_conf_param_table(target.conf_params, "target_config_param_table");
+    } else {
+      /* Disable the advanced tab */
+      $('#target_dialog_tabs').tabs('disable', 2);
+    }
   });
 
   $('#config_home_target_id').attr('value',target_id);
-  //load Config param in target dialog box.
-  GetConfigurationParam(target_id,"", "target_config_param_table");
 }

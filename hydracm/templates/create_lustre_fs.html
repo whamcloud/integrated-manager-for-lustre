@@ -77,12 +77,19 @@
     $('#advance_opts').click(function()
     {
    	  // If clicked first time then only fetch parameters else show already entered values
-      if(!advanced_tab_clicked)
-      {
-        GetConfigurationParam("",["FS","FSC"],"config_param_table");
-      	advanced_tab_clicked = true;
+      if(!advanced_tab_clicked) {
+        invoke_api_call(api_get, "help/conf_param/", {kind: 'FS'}, success_callback = function(help_dict) {
+          var data = {};
+          for(var key in help_dict) {
+            data[key] = null;
+          }
+          populate_conf_param_table(data, "config_param_table", help_dict);
+          advanced_tab_clicked = true;
+          $('#configParam').dialog('open'); 
+        })
+      } else {
+        $('#configParam').dialog('open'); 
       }
-      $('#configParam').dialog('open'); 
     });
   });
 

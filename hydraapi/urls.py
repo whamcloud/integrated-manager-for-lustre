@@ -9,13 +9,8 @@ from piston.resource import Resource
 import monitorapi
 
 import configureapi
-from configureapi import (Notifications,
-                          GetTargetConfParams,
-                          SetTargetConfParams)
-
-# Stuff related to storage plugins
-from configureapi import (
-                         GetTargetResourceGraph)
+from configureapi import (Notifications)
+from configureapi import (GetTargetResourceGraph)
 
 from statsmetricapi import(GetFSTargetStats,
                            GetFSServerStats,
@@ -29,6 +24,7 @@ import hydraapi.alert
 import hydraapi.event
 import hydraapi.log
 import hydraapi.job
+import hydraapi.help
 
 import hydraapi.volume
 import hydraapi.storage_resource
@@ -46,9 +42,6 @@ class CsrfExemptResource(Resource):
         self.csrf_exempt = getattr(self.handler, 'csrf_exempt', True)
 
 urlpatterns = patterns('',
-    (r'^get_conf_params/$', CsrfExemptResource(GetTargetConfParams)),
-    (r'^set_conf_params/$', CsrfExemptResource(SetTargetConfParams)),
-
     (r'^get_fs_stats_for_targets/$', CsrfExemptResource(GetFSTargetStats)),
     (r'^get_fs_stats_for_server/$', CsrfExemptResource(GetFSServerStats)),
     (r'^get_fs_stats_for_mgs/$', CsrfExemptResource(GetFSMGSStats)),
@@ -105,5 +98,8 @@ urlpatterns = patterns('',
 
     # hydraapi.job
     (r'^job/$', CsrfExemptResource(hydraapi.job.Handler)),
-    (r'^job/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.job.Handler))
+    (r'^job/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.job.Handler)),
+
+    # hydraapi.help
+    (r'^help/conf_param/$', CsrfExemptResource(hydraapi.help.ConfParamHandler)),
 )

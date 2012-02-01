@@ -239,7 +239,85 @@ for service in ['ost.OSS.ost', 'ost.OSS.ost_io', 'ost.OSS.ost_create']:
         all_params[service + "." + param] = (OstConfParam, IntegerParam(), "")
 
 
-def get_conf_params(klasses):
-    l = [k for k, v in all_params.items() if v[0] in klasses]
-    l.sort()
-    return l
+_conf_param_klasses = [FilesystemClientConfParam, FilesystemGlobalConfParam, MdtConfParam, OstConfParam]
+_possible_conf_params = {}
+
+_conf_param_help = dict([(k, v[2]) for k, v in all_params.items()])
+
+
+def get_conf_param_help(conf_param):
+    return _conf_param_help[conf_param]
+
+
+def get_possible_conf_params(klass):
+    """A map of conf param name to documentation string"""
+    from configure.models import ManagedOst, ManagedMdt, ManagedFilesystem
+
+    conf_param_klasses = {
+        ManagedOst: (OstConfParam,),
+        ManagedMdt: (MdtConfParam,),
+        ManagedFilesystem: (FilesystemClientConfParam, FilesystemGlobalConfParam)
+    }[klass]
+    try:
+        return _possible_conf_params[conf_param_klasses]
+    except KeyError:
+        result = dict([(k, v[2]) for k, v in all_params.items() if v[0] in conf_param_klasses])
+        _possible_conf_params[conf_param_klasses] = result
+        return result
+
+
+def get_conf_params(obj):
+    from configure.models import ManagedOst, ManagedMdt, ManagedFilesystem, ConfParam
+
+    if isinstance(obj, ManagedOst):
+        conf_params_query = obj.ostconfparam_set.all()
+    elif isinstance(obj, ManagedMdt):
+        conf_params_query = obj.mdtconfparam_set.all()
+    elif isinstance(obj, ManagedFilesystem):
+        import itertools
+        conf_params_query = itertools.chain(obj.filesystemclientconfparam_set.all(), obj.filesystemglobalconfparam_set.all())
+    else:
+        raise NotImplementedError()
+
+    # First get explicitly set conf params
+    set_conf_params = ConfParam.get_latest_params(conf_params_query)
+    result = dict([(conf_param.key, conf_param.value) for conf_param in set_conf_params])
+    # Then populate None for unset conf params
+    for unset_conf_param in set(get_possible_conf_params(obj.__class__).keys()) ^ set(result.keys()):
+        result[unset_conf_param] = None
+
+    return result
+
+
+def set_conf_param(obj, key, value):
+    from configure.models import ManagedFilesystem, ManagedMdt, ManagedOst, FilesystemMember
+    from configure.models import ApplyConfParams
+    from configure.lib.state_manager import StateManager
+
+    # TODO: check if the value is unchanged and return if so
+
+    # TODO: provide a way for callers to wrap up multiple conf param set
+    # operations into a Command for presentation
+
+    if isinstance(obj, ManagedFilesystem):
+        mgs = obj.mgs.downcast()
+    elif isinstance(obj, FilesystemMember):
+        mgs = obj.filesystem.mgs.downcast()
+    else:
+        raise NotImplementedError
+
+    if isinstance(obj, ManagedFilesystem):
+        kwargs = {'filesystem': obj}
+    elif isinstance(obj, ManagedMdt):
+        kwargs = {'mdt': obj}
+    elif isinstance(obj, ManagedOst):
+        kwargs = {'ost': obj}
+    else:
+        raise NotImplementedError
+
+    model_klass, param_value_obj, help_text = all_params[key]
+    p = model_klass(key = key,
+                    value = value,
+                    **kwargs)
+    mgs.set_conf_params([p])
+    StateManager().add_job(ApplyConfParams(mgs = mgs))

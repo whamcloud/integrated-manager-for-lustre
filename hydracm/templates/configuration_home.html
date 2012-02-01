@@ -212,7 +212,8 @@ $(document).ready(function() {
     
     $('#ConfigParam_Apply').click(function()
     {
-      ApplyConfigParam(oTargetFSConfigParam, $('#config_home_target_id').val(), 'target_dialog');
+      console.log('apply clicked');
+      apply_config_params("target/" + $('#config_home_target_id').val() + "/", 'target_dialog', oTargetFSConfigParam);
     });
     
     });
@@ -256,7 +257,7 @@ $(document).ready(function() {
   <table width="100%" border="0" cellspacing="0" cellpadding="0" id="config_param_table">
    <thead>
       <th>Property</th>
-      <th>value</th>
+      <th>Value</th>
       <th></th>
    </thead>
    <tbody></tbody>
@@ -312,7 +313,7 @@ $(document).ready(function() {
       <table border="0" cellspacing="0" cellpadding="0" id="target_config_param_table">
         <thead>
           <th>Property</th>
-          <th>value</th>
+          <th>Value</th>
           <th></th> 
         </thead> 
         <tbody></tbody>

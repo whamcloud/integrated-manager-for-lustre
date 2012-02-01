@@ -6,7 +6,6 @@ $(document).ready(function()
     autoOpen: false,
     width: 450,
     height:470,
-    show: "clip",
     modal: true,
     position:"center",
     buttons: 
@@ -18,8 +17,8 @@ $(document).ready(function()
         }
         else
         {
-          var fsConfigParam = $('#config_param_table').dataTable();
-          ApplyConfigParam(fsConfigParam, $('#fs_id').val(), 'configParam', true);
+          var datatable = $('#config_param_table').dataTable();
+          apply_config_params("filesystem/" + $('#fs_id').val() + "/", 'configParam', datatable);
         }
       },
       "Close": function() { 

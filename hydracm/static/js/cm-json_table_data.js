@@ -280,35 +280,4 @@ function CreateActionLink(id, ct, available_transitions)
   return action;
 }
 
-/******************************************************************/
-//Function name - LoadFSData_EditFS()
-//Param - none
-//Return - none
-//Used in - Edit FS (edit_fs.html)
-/******************************************************************/
-
-function LoadFSData_EditFS()
-{
-  var fsname = $('#fs').val();
-  var fs_id = $('#fs_id').val();
-  if(fsname!="none")
-  {
-    invoke_api_call(api_get, "filesystem/" + fs_id + "/", {}, 
-    success_callback = function(filesystem)
-    {
-      var lnet_status_mesg;
-      $('#bytes_used').html(filesystem.bytes_used);
-      $('#bytes_total').html(filesystem.bytes_total);
-      $('#inodes_used').html(filesystem.inodes_used);
-      $('#inodes_total').html(filesystem.inodes_total);
-      $('#oss_count').html(filesystem.noofoss);
-      $('#ost_count').html(filesystem.noofost);
-      $('#mgs_name').html(filesystem.mgs_hostname);
-      $('#mds_name').html(filesystem.mds_hostname);
-      $('#fs_status').html(filesystem.status);
-      $('#fs_alerts').html(alert_indicator_large_markup(filesystem.id, filesystem.content_type_id));
-      $('#fs_name').html(filesystem.fsname);
-    });
-  }
-}
 
