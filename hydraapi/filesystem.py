@@ -24,8 +24,9 @@ def create_fs(mgs_id, name, conf_params):
         fs = ManagedFilesystem(mgs=mgs, name = name)
         fs.save()
 
-        if conf_params:
-            hydraapi.configureapi.set_target_conf_param(fs.id, conf_params, True)
+        for key, value in conf_params:
+            configure.lib.conf_param.set_conf_param(fs, key, value)
+
         return fs
 
 

@@ -199,9 +199,8 @@ class TestStateManager(JobTestCaseWithHost):
             # Make it so that an MGS start operation will fail
             MockAgent.succeed = False
 
-            from hydraapi.configureapi import set_target_conf_param
-            params = {"llite.max_cached_mb": "32"}
-            set_target_conf_param(fs.pk, params, True)
+            import configure.lib.conf_param
+            configure.lib.conf_param.set_conf_param(fs, "llite.max_cached_mb", "32")
 
             self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 1)
             self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 0)
