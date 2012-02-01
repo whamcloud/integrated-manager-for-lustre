@@ -6,8 +6,21 @@
 from django.contrib.contenttypes.models import ContentType
 
 from configure.models import Command
-from requesthandler import AnonymousRequestHandler
+from requesthandler import AnonymousRequestHandler, AnonymousRESTRequestHandler
 from hydraapi.requesthandler import APIResponse
+
+
+class CommandHandler(AnonymousRESTRequestHandler):
+    def get(self, request, id):
+        from django.shortcuts import get_object_or_404
+        command = get_object_or_404(Command, id = id)
+        return APIResponse(command.to_dict(), 200)
+
+
+class LunNodeHandler(AnonymousRESTRequestHandler):
+    def get(cls, request):
+        from configure.models import LunNode
+        return APIResponse([l.to_dict() for l in LunNode.objects.all()], 200)
 
 
 class Notifications(AnonymousRequestHandler):

@@ -8,6 +8,7 @@ from piston.resource import Resource
 
 import monitorapi
 import configureapi
+from configureapi import LunNodeHandler, CommandHandler
 
 from statsmetricapi import(GetFSTargetStats,
                            GetFSServerStats,
@@ -61,6 +62,9 @@ urlpatterns = patterns('',
     (r'^notifications/$', CsrfExemptResource(configureapi.Notifications)),
     (r'^object_summary/$', CsrfExemptResource(configureapi.ObjectSummary)),
     # <<<
+
+    (r'^lun_node/$', CsrfExemptResource(LunNodeHandler)),
+    (r'^command/(?P<id>\d+)/$', CsrfExemptResource(CommandHandler)),
 
     (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),
 

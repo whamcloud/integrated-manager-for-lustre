@@ -387,12 +387,17 @@ class LunNode(models.Model):
         return "%s:%s" % (self.host, self.path)
 
     def to_dict(self):
+        from django.contrib.contenttypes.models import ContentType
         return {
             'id': self.id,
             'host_id': self.host.id,
             'host_label': self.host.__str__(),
             'use': self.use,
-            'primary': self.primary
+            'primary': self.primary,
+            'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
+            'pretty_string': self.pretty_string(),
+            'lun_id': self.lun_id,
+            'path': self.path
         }
 
     def pretty_string(self):
@@ -435,6 +440,8 @@ class LunNode(models.Model):
             human_size = "[size unknown]"
 
         return "%s (%s)" % (short_name, human_size)
+
+
 
 
 class Monitor(models.Model):

@@ -47,6 +47,7 @@ class Command(models.Model):
         if self.jobs_created:
             jobs = [j.id for j in self.jobs.all()],
         return {
+                "id": self.id,
                 "complete": self.complete,
                 "errored": self.errored,
                 "cancelled": self.cancelled,
