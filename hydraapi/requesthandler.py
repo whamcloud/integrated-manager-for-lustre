@@ -163,26 +163,37 @@ class AnonymousRESTRequestHandler(BaseHandler):
     def __init__(self, *args, **kwargs):
         BaseHandler.__init__(self)
 
+    def _call_wrapped(self, handler_fn_name, request, *args, **kwargs):
+        try:
+            handler_fn = getattr(self, handler_fn_name)
+        except AttributeError:
+            return APIResponse(None, 405)
+        return extract_request_args(handler_fn)(request, *args, **kwargs)
+
     @render_to_json()
     @extract_exception
     def read(self, request, *args, **kwargs):
         request.data = request.GET
-        return extract_request_args(self.get)(request, *args, **kwargs)
+        return self._call_wrapped('get', request, *args, **kwargs)
 
     @render_to_json()
     @extract_exception
     def create(self, request, *args, **kwargs):
-        return extract_request_args(self.post)(request, *args, **kwargs)
+        return self._call_wrapped('post', request, *args, **kwargs)
 
     @render_to_json()
     @extract_exception
     def update(self, request, *args, **kwargs):
-        return extract_request_args(self.put)(request, *args, **kwargs)
+        return self._call_wrapped('put', request, *args, **kwargs)
 
     @render_to_json()
     @extract_exception
     def delete(self, request, *args, **kwargs):
-        return extract_request_args(self.remove)(request, *args, **kwargs)
+        # FIXME: it's rather confusing to have 'remove' when
+        # all the other functions are named after their HTTP verbs (it is
+        # this way because django piston uses 'delete' here where it
+        # uses non-verb-named methods for the others.
+        return self._call_wrapped('remove', request, *args, **kwargs)
 
 
 class APIResponse:
