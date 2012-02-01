@@ -70,8 +70,8 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         running_time = 0
         usable_luns = []
         while running_time < TEST_TIMEOUT and len(usable_luns) < 4:
-            response = self.hydra_server.post(
-                '/api/get_luns/',
+            response = self.hydra_server.get(
+                '/api/volume/',
                 data = {'category': 'usable'}
             )
             self.assertTrue(response.successful, response.text)
