@@ -1,6 +1,6 @@
 
 function load_resource_graph(container_name, target_id) {
-    invoke_api_call(api_post, "get_target_resource_graph/", {target_id: target_id},
+    invoke_api_call(api_get, "target/" + target_id + "/resource_graph/", {},
     success_callback = function(data)
     {
      container = $("#" + container_name)

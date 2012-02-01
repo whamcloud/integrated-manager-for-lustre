@@ -7,10 +7,7 @@ from django.conf.urls.defaults import patterns
 from piston.resource import Resource
 
 import monitorapi
-
 import configureapi
-from configureapi import (Notifications)
-from configureapi import (GetTargetResourceGraph)
 
 from statsmetricapi import(GetFSTargetStats,
                            GetFSServerStats,
@@ -42,6 +39,8 @@ class CsrfExemptResource(Resource):
         self.csrf_exempt = getattr(self.handler, 'csrf_exempt', True)
 
 urlpatterns = patterns('',
+    # Un-RESTful URLs pending re-work of stats store and UI
+    # >>>
     (r'^get_fs_stats_for_targets/$', CsrfExemptResource(GetFSTargetStats)),
     (r'^get_fs_stats_for_server/$', CsrfExemptResource(GetFSServerStats)),
     (r'^get_fs_stats_for_mgs/$', CsrfExemptResource(GetFSMGSStats)),
@@ -49,17 +48,21 @@ urlpatterns = patterns('',
     (r'^get_stats_for_targets/$', CsrfExemptResource(GetTargetStats)),
     (r'^get_fs_stats_for_client/$', CsrfExemptResource(GetFSClientsStats)),
     (r'^get_fs_stats_heatmap/$', CsrfExemptResource(GetHeatMapFSStats)),
+    # <<<
 
+    # Un-RESTful URLs pending HYD-586
+    # >>>
     (r'^transition/$', CsrfExemptResource(configureapi.Transition)),
     (r'^transition_consequences/$', CsrfExemptResource(configureapi.TransitionConsequences)),
+    # <<<
 
-    (r'^notifications/$', CsrfExemptResource(Notifications)),
+    # Pending HYD-523 rework of these functions (merge?)
+    # >>>
+    (r'^notifications/$', CsrfExemptResource(configureapi.Notifications)),
     (r'^object_summary/$', CsrfExemptResource(configureapi.ObjectSummary)),
-
+    # <<<
 
     (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),
-
-    (r'^get_target_resource_graph/$', CsrfExemptResource(GetTargetResourceGraph)),
 
     # hydraapi.storage_resource_class
     (r'^storage_resource_class/$', CsrfExemptResource(hydraapi.storage_resource_class.StorageResourceClassHandler)),
@@ -82,6 +85,7 @@ urlpatterns = patterns('',
     # hydraapi.target
     (r'^target/$', CsrfExemptResource(hydraapi.target.TargetHandler)),
     (r'^target/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.target.TargetHandler)),
+    (r'^target/(?P<id>\d+)/resource_graph/$', CsrfExemptResource(hydraapi.target.TargetResourceGraphHandler)),
 
     # hydraapi.volume
     (r'^volume/$', CsrfExemptResource(hydraapi.volume.Handler)),
