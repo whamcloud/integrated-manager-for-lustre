@@ -8,7 +8,8 @@ import settings
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 
-from configure.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Lun, Command
+from configure.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Command
+from configure.models import Lun, LunNode
 from hydraapi.requesthandler import AnonymousRESTRequestHandler, APIResponse
 from configure.lib.state_manager import StateManager
 import configure.lib.conf_param
@@ -24,16 +25,26 @@ def create_target(lun_id, target_klass, **kwargs):
     target = target_klass(**kwargs)
     target.save()
 
+    def create_target_mount(lun_node):
+        mount = ManagedTargetMount(
+            block_device = lun_node,
+            target = target,
+            host = lun_node.host,
+            mount_point = target.default_mount_path(lun_node.host),
+            primary = lun_node.primary)
+        mount.save()
+
     lun = Lun.objects.get(pk = lun_id)
-    for node in lun.lunnode_set.all():
-        if node.use:
-            mount = ManagedTargetMount(
-                block_device = node,
-                target = target,
-                host = node.host,
-                mount_point = target.default_mount_path(node.host),
-                primary = node.primary)
-            mount.save()
+    try:
+        primary_lun_node = lun.lunnode_set.get(primary = True)
+        create_target_mount(primary_lun_node)
+    except LunNode.DoesNotExist:
+        raise RuntimeError("No primary lun_node exists for lun %s, cannot created target" % lun)
+    except LunNode.MultipleObjectsReturned:
+        raise RuntimeError("Multiple primary lun_nodes exist for lun %s, internal error")
+
+    for secondary_lun_node in lun.lunnode_set.filter(use = True, primary = False):
+        create_target_mount(secondary_lun_node)
 
     return target
 
