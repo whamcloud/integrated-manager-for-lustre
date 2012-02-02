@@ -410,12 +410,11 @@ class StateManager(object):
         Job.run_next()
 
     def emit_transition_deps(self, transition, transition_stack = {}):
-        job_log.debug("emit_transition_deps: %s" % (transition))
-
         if transition in self.deps:
+            job_log.debug("emit_transition_deps: %s already scheduled" % (transition))
             return transition
-
-        job_log.debug("emit_transition_deps: %s %s->%s" % (transition.stateful_object, transition.old_state, transition.new_state))
+        else:
+            job_log.debug("emit_transition_deps: %s" % (transition))
 
         # Update our worldview to record that any subsequent dependencies may
         # assume that we are in our new state
@@ -458,10 +457,9 @@ class StateManager(object):
 
         def get_mid_transition_expected_state(object):
             try:
-                old_state = transition_stack[object]
+                return transition_stack[object]
             except KeyError:
-                old_state = self.get_expected_state(object)
-            return old_state
+                return self.get_expected_state(object)
 
         # What will statically be required in our new state?
         stateful_deps = root_transition.stateful_object.get_deps(root_transition.new_state)
@@ -485,6 +483,9 @@ class StateManager(object):
         # What was depending on our old state?
         # Iterate over all objects which *might* depend on this one
         for dependent in root_transition.stateful_object.get_dependent_objects():
+            if hasattr(dependent, 'content_type'):
+                dependent = dependent.downcast()
+
             if dependent in transition_stack:
                 continue
             # What state do we expect the dependent to be in?
