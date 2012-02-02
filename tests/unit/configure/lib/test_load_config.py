@@ -23,7 +23,16 @@ class TestJsonImport(JobTestCase):
         str = save_filesystems(['egfs'])
         import json
         self.maxDiff = None
-        self.assertDictEqual(json.loads(str), json.loads(open(path, 'r').read()))
+
+        saved = json.loads(str)
+        saved['hosts'] = saved['hosts'].sort(key = lambda h: h['address'])
+
+        loaded = json.loads(open(path, 'r').read())
+        loaded['hosts'] = loaded['hosts'].sort(key = lambda h: h['address'])
+
+        # NB this comparison requires that where there are lists in the
+        # output they are put into deterministic order
+        self.assertDictEqual(saved, loaded)
 
     def test_import(self):
         import os
