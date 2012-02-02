@@ -8,7 +8,6 @@ from piston.resource import Resource
 
 import monitorapi
 import configureapi
-from configureapi import LunNodeHandler, CommandHandler
 
 from statsmetricapi import(GetFSTargetStats,
                            GetFSServerStats,
@@ -22,9 +21,11 @@ import hydraapi.alert
 import hydraapi.event
 import hydraapi.log
 import hydraapi.job
+import hydraapi.command
 import hydraapi.help
 
 import hydraapi.volume
+import hydraapi.volume_node
 import hydraapi.storage_resource
 import hydraapi.storage_resource_class
 
@@ -63,9 +64,6 @@ urlpatterns = patterns('',
     (r'^object_summary/$', CsrfExemptResource(configureapi.ObjectSummary)),
     # <<<
 
-    (r'^lun_node/$', CsrfExemptResource(LunNodeHandler)),
-    (r'^command/(?P<id>\d+)/$', CsrfExemptResource(CommandHandler)),
-
     (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),
 
     # hydraapi.storage_resource_class
@@ -95,6 +93,9 @@ urlpatterns = patterns('',
     (r'^volume/$', CsrfExemptResource(hydraapi.volume.Handler)),
     (r'^volume/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.volume.Handler)),
 
+    # hydraapi.volume_node
+    (r'^volume_node/$', CsrfExemptResource(hydraapi.volume_node.Handler)),
+
     # hydraapi.alert
     (r'^alert/$', CsrfExemptResource(hydraapi.alert.Handler)),
 
@@ -103,6 +104,9 @@ urlpatterns = patterns('',
 
     # hydraapi.log
     (r'^log/$', CsrfExemptResource(hydraapi.log.Handler)),
+
+    # hydraapi.command
+    (r'^command/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.command.Handler)),
 
     # hydraapi.job
     (r'^job/$', CsrfExemptResource(hydraapi.job.Handler)),

@@ -84,7 +84,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
         # Verify no extra devices not in the config visible.
         response = self.hydra_server.get(
-            '/api/lun_node/'
+            '/api/volume_node/'
         )
         self.assertTrue(response.successful, response.text)
         lun_nodes = response.json
@@ -99,7 +99,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         usable_luns_ids = [l['id'] for l in usable_luns]
 
         for lun_node in lun_nodes:
-            if lun_node['lun_id'] in usable_luns_ids:
+            if lun_node['volume_id'] in usable_luns_ids:
 
                 # Create a list of usable device paths for the host of the
                 # current lun node as listed in the config.

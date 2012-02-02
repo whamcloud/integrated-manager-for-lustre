@@ -396,7 +396,7 @@ class LunNode(models.Model):
             'primary': self.primary,
             'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
             'pretty_string': self.pretty_string(),
-            'lun_id': self.lun_id,
+            'volume_id': self.lun_id,
             'path': self.path
         }
 
@@ -440,8 +440,6 @@ class LunNode(models.Model):
             human_size = "[size unknown]"
 
         return "%s (%s)" % (short_name, human_size)
-
-
 
 
 class Monitor(models.Model):
