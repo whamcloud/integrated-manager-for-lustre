@@ -661,7 +661,7 @@ class Job(models.Model):
                 obj.save()
 
         job_log.info("Job %d completing (errored=%s, cancelled=%s)" %
-                (self.id, self.errored, self.cancelled))
+                (self.id, errored, cancelled))
         with transaction.commit_on_success():
             self.state = 'completing'
             self.errored = errored

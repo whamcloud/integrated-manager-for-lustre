@@ -41,9 +41,8 @@ class ManagedTarget(StatefulObject):
     def primary_server(self):
         return self.managedtargetmount_set.get(primary = True).host
 
-    def failover_servers(self):
-        for tm in self.managedtargetmount_set.filter(primary = False):
-            yield tm.host
+    def secondary_servers(self):
+        return [tm.host for tm in self.managedtargetmount_set.filter(primary = False)]
 
     def status_string(self, mount_statuses = None):
         if mount_statuses == None:
@@ -81,11 +80,12 @@ class ManagedTarget(StatefulObject):
 
     # unformatted: I exist in theory in the database
     # formatted: I've been mkfs'd
-    # unmounted: I've registered with the MGS, I'm not mounted
-    # mounted: I've registered with the MGS, I'm mounted
+    # registered: I've registered with the MGS, I'm not setup in HA yet
+    # unmounted: I'm set up in HA, ready to mount
+    # mounted: Im mounted
     # removed: this target no longer exists in real life
     # Additional states needed for 'deactivated'?
-    states = ['unformatted', 'formatted', 'unmounted', 'mounted', 'removed', 'autodetected']
+    states = ['unformatted', 'formatted', 'registered', 'unmounted', 'mounted', 'removed', 'autodetected']
     initial_state = 'unformatted'
     active_mount = models.ForeignKey('ManagedTargetMount', blank = True, null = True)
 
@@ -112,14 +112,10 @@ class ManagedTarget(StatefulObject):
 
         deps = []
         if state == 'mounted' and self.active_mount:
-            # Depend on the TargetMount which is currently active being
-            # in state 'configured' and its host being in state 'lnet_up'
-            # (in order to ensure that when lnet is stopped, this target will
-            # be stopped, and if a TM is unconfigured then we will be
-            # unmounted while it happens)
+            # Depend on the active mount's host having LNet up, so that if
+            # LNet is stopped on that host this target will be stopped first.
             target_mount = self.active_mount
             deps.append(DependOn(target_mount.host.downcast(), 'lnet_up', fix_state='unmounted'))
-            deps.append(DependOn(target_mount.downcast(), 'configured', fix_state='unmounted'))
 
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
@@ -128,6 +124,10 @@ class ManagedTarget(StatefulObject):
             # Make sure I'm removed if filesystem goes to 'removed'
             deps.append(DependOn(self.filesystem, 'available',
                 acceptable_states = self.filesystem.not_state('removed'), fix_state='removed'))
+
+        if state != 'removed':
+            for tm in self.managedtargetmount_set.all():
+                deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = tm.host.not_state('removed'), fix_state = 'removed'))
 
         return DependAll(deps)
 
@@ -307,11 +307,14 @@ class DeleteTargetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedTarget
+        from configure.models.target_mount import ManagedTargetMount
+
+        for tm in ManagedTargetMount.objects.filter(target__id = kwargs['target_id']):
+            ManagedTargetMount.delete(tm.id)
         ManagedTarget.delete(kwargs['target_id'])
 
 
-class RemoveRegisteredTargetJob(Job, StateChangeJob):
+class RemoveConfiguredTargetJob(Job, StateChangeJob):
     state_transition = (ManagedTarget, 'unmounted', 'removed')
     stateful_object = 'target'
     state_verb = "Remove"
@@ -325,14 +328,25 @@ class RemoveRegisteredTargetJob(Job, StateChangeJob):
     def description(self):
         return "Removing target %s from configuration" % (self.target.downcast())
 
+    def get_deps(self):
+        deps = []
+
+        return DependAll(deps)
+
     def get_steps(self):
         # TODO: actually do something with Lustre before deleting this from our DB
-        return [(DeleteTargetStep, {'target_id': self.target.id})]
+        steps = []
+        for target_mount in self.target.managedtargetmount_set.all().order_by('primary'):
+            steps.append((UnconfigurePacemakerStep, {'target_mount_id': target_mount.id}))
+        steps.append((DeleteTargetStep, {'target_id': self.target.id}))
+        return steps
 
 
 # FIXME: this is a pretty horrible way of generating job classes for
 # a number of originating states to the same end state
-for origin in ['unformatted', 'formatted']:
+# TODO: when transitioning from 'registered' to 'removed', do something to
+# remove this target from the MGS
+for origin in ['unformatted', 'formatted', 'registered']:
     def description(self):
         return "Removing target %s from configuration" % (self.target.downcast())
 
@@ -372,9 +386,81 @@ class RegisterTargetStep(Step):
         target.save()
 
 
+class ConfigurePacemakerStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedTargetMount
+        target_mount_id = kwargs['target_mount_id']
+        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
+
+        # target.name should have been populated by RegisterTarget
+        assert(target_mount.block_device != None and target_mount.target.name != None)
+
+        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --uuid %s --serial %s %s --mountpoint %s" % (
+                                    target_mount.block_device.path,
+                                    target_mount.target.name,
+                                    target_mount.target.uuid,
+                                    target_mount.target.pk,
+                                    target_mount.primary and "--primary" or "",
+                                    target_mount.mount_point))
+
+
+class UnconfigurePacemakerStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from configure.models import ManagedTargetMount
+        target_mount_id = kwargs['target_mount_id']
+        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
+
+        # we would never have succeeded configuring in the first place if target
+        # didn't have its name
+        assert(target_mount.target.name != None)
+
+        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s --uuid %s --serial %s %s" % (
+                                    target_mount.target.name,
+                                    target_mount.target.uuid,
+                                    target_mount.target.pk,
+                                    target_mount.primary and "--primary" or ""))
+
+
+class ConfigureTargetJob(Job, StateChangeJob):
+    state_transition = (ManagedTarget, 'registered', 'unmounted')
+    stateful_object = 'target'
+    state_verb = "Configure mount points"
+    target = models.ForeignKey(ManagedTarget)
+
+    class Meta:
+        app_label = 'configure'
+
+    def description(self):
+        target = self.target.downcast()
+        return "Configuring %s mount points" % target
+
+    def get_steps(self):
+        steps = []
+
+        for target_mount in self.target.managedtargetmount_set.all().order_by('-primary'):
+            steps.append((ConfigurePacemakerStep, {'target_mount_id': target_mount.id}))
+
+        return steps
+
+    def get_deps(self):
+        deps = []
+
+        deps.append(DependOn(self.target.downcast().managedtargetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
+
+        if isinstance(self.target, FilesystemMember):
+            mgs = self.target.filesystem.mgs.downcast()
+            deps.append(DependOn(mgs, "mounted"))
+
+        return DependAll(deps)
+
+
 class RegisterTargetJob(Job, StateChangeJob):
     # FIXME: this really isn't ManagedTarget, it's FilesystemMember+ManagedTarget
-    state_transition = (ManagedTarget, 'formatted', 'unmounted')
+    state_transition = (ManagedTarget, 'formatted', 'registered')
     stateful_object = 'target'
     state_verb = "Register"
     target = models.ForeignKey(ManagedTarget)
@@ -451,14 +537,11 @@ class StartTargetJob(Job, StateChangeJob):
         return "Starting target %s" % self.target.downcast()
 
     def get_deps(self):
-        config_deps = []
         lnet_deps = []
-        for tm in self.target.downcast().managedtargetmount_set.all():
-            config_deps.append(DependOn(tm.downcast(), 'configured', fix_state = 'unmounted'))
-            lnet_deps.append(DependOn(tm.host.downcast(), 'lnet_up', fix_state = 'unmounted'))
-        # Depend on all targetmounts being configured
         # Depend on at least one targetmount having lnet up
-        return DependAll([DependAny(lnet_deps), DependAll(config_deps)])
+        for tm in self.target.downcast().managedtargetmount_set.all():
+            lnet_deps.append(DependOn(tm.host.downcast(), 'lnet_up', fix_state = 'unmounted'))
+        return DependAny(lnet_deps)
 
     def get_steps(self):
         return [(MountStep, {"target_id": self.target.id})]
@@ -489,14 +572,6 @@ class StopTargetJob(Job, StateChangeJob):
 
     def description(self):
         return "Stopping target %s" % self.target.downcast()
-
-    def get_deps(self):
-        # Stopping a target requires all its targetmounts
-        # to be in a configured state.
-        deps = []
-        for tm in self.target.downcast().managedtargetmount_set.all():
-            deps.append(DependOn(tm.downcast(), 'configured'))
-        return DependAll(deps)
 
     def get_steps(self):
         return [(UnmountStep, {"target_id": self.target.id})]

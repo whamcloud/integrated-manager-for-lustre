@@ -125,6 +125,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
             for t in self.get_targets():
                 deps.append(DependOn(t,
                     'unmounted',
+                    acceptable_states = t.not_state('mounted'),
                     fix_state = 'unavailable'))
 
         return DependAll(deps)

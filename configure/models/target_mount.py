@@ -4,25 +4,19 @@
 # ==============================
 
 from django.db import models
-from configure.lib.job import StateChangeJob, DependOn, DependAll, Step
-from configure.models.jobs import Job
-from configure.models.host import DeletableStatefulObject
+from monitor.models import DeletableMetaclass
 
 
-class ManagedTargetMount(DeletableStatefulObject):
+class ManagedTargetMount(models.Model):
     """Associate a particular Lustre target with a device node on a host"""
+    __metaclass__ = DeletableMetaclass
+
     # FIXME: both LunNode and TargetMount refer to the host
     host = models.ForeignKey('ManagedHost')
     mount_point = models.CharField(max_length = 512, null = True, blank = True)
     block_device = models.ForeignKey('LunNode')
     primary = models.BooleanField()
     target = models.ForeignKey('ManagedTarget')
-
-    # unconfigured: I only exist in theory in the database
-    # mounted: I am in fstab on the host and mounted
-    # unmounted: I am in fstab on the host and unmounted
-    states = ['unconfigured', 'configured', 'removed', 'autodetected']
-    initial_state = 'unconfigured'
 
     def save(self, force_insert = False, force_update = False, using = None):
         # If primary is true, then target must be unique
@@ -95,150 +89,3 @@ class ManagedTargetMount(DeletableStatefulObject):
             kind_string = "failover"
 
         return "%s:%s:%s" % (self.host, kind_string, self.target)
-
-    def get_deps(self, state = None):
-        if not state:
-            state = self.state
-
-        deps = []
-
-        if state == 'configured':
-            # Depend on target in state unmounted OR mounted
-            # in order to get this unconfigured when the target is removed.
-            deps.append(DependOn(self.target.downcast(), 'unmounted', acceptable_states = ['mounted', 'unmounted'], fix_state = 'removed'))
-        elif state == 'unconfigured':
-            acceptable_target_states = set(self.target.downcast().states) - set(['removed'])
-            deps.append(DependOn(self.target.downcast(), 'unmounted', acceptable_states = acceptable_target_states, fix_state = 'removed'))
-
-        if state != 'removed':
-            # In all states but removed, depend on the host not being removed
-            acceptable_host_states = set(self.host.downcast().states) - set(['removed'])
-            # FIXME: the 'preferred' state is actually irrelevant in calls like this
-            # which only exist to get our fix_state set when the dependency leaves the set of
-            # acceptable states, it's noise.
-            deps.append(DependOn(self.host.downcast(), 'lnet_up', acceptable_states = acceptable_host_states, fix_state = 'removed'))
-
-        return DependAll(deps)
-
-    # Reverse dependencies are records of other classes which must check
-    # our get_deps when they change state.
-    # It tells them how, given an instance of the other class, to find
-    # instances of this class which may depend on it.
-    reverse_deps = {
-            # We depend on it being in a registered state
-            'ManagedTarget': (lambda mt: ManagedTargetMount.objects.filter(target = mt)),
-            'ManagedHost': (lambda mh: ManagedTargetMount.objects.filter(host = mh)),
-            }
-
-
-class DeleteTargetMountStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        from configure.models import ManagedTargetMount
-        ManagedTargetMount.delete(kwargs['target_mount_id'])
-
-
-class ConfigurePacemakerStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        from configure.models import ManagedTargetMount
-        target_mount_id = kwargs['target_mount_id']
-        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
-
-        # target.name should have been populated by RegisterTarget
-        assert(target_mount.block_device != None and target_mount.target.name != None)
-
-        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --uuid %s --serial %s %s --mountpoint %s" % (
-                                    target_mount.block_device.path,
-                                    target_mount.target.name,
-                                    target_mount.target.uuid,
-                                    target_mount.target.pk,
-                                    target_mount.primary and "--primary" or "",
-                                    target_mount.mount_point))
-
-
-class UnconfigurePacemakerStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        from configure.models import ManagedTargetMount
-        target_mount_id = kwargs['target_mount_id']
-        target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
-
-        # we would never have succeeded configuring in the first place if target
-        # didn't have its name
-        assert(target_mount.target.name != None)
-
-        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s --uuid %s --serial %s %s" % (
-                                    target_mount.target.name,
-                                    target_mount.target.uuid,
-                                    target_mount.target.pk,
-                                    target_mount.primary and "--primary" or ""))
-
-
-class RemoveTargetMountJob(Job, StateChangeJob):
-    state_transition = (ManagedTargetMount, 'configured', 'removed')
-    stateful_object = 'target_mount'
-    state_verb = "Remove"
-    target_mount = models.ForeignKey('ManagedTargetMount')
-
-    class Meta:
-        app_label = 'configure'
-
-    def description(self):
-        return "Removing target mount %s from configuration" % (self.target_mount.downcast())
-
-    def get_steps(self):
-        return [(UnconfigurePacemakerStep, {'target_mount_id': self.target_mount.id}),
-                (DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
-
-    def get_deps(self):
-        deps = []
-        deps.append(DependOn(self.target_mount.target.downcast(), 'unmounted'))
-        if self.target_mount.primary:
-            for tm in self.target_mount.target.managedtargetmount_set.filter(primary = False):
-                deps.append(DependOn(tm.downcast(), 'removed'))
-        return DependAll(deps)
-
-
-class RemoveUnconfiguredTargetMountJob(Job, StateChangeJob):
-    state_transition = (ManagedTargetMount, 'unconfigured', 'removed')
-    stateful_object = 'target_mount'
-    state_verb = "Remove"
-    target_mount = models.ForeignKey('ManagedTargetMount')
-
-    class Meta:
-        app_label = 'configure'
-
-    def description(self):
-        return "Removing target mount %s from configuration" % (self.target_mount.downcast())
-
-    def get_steps(self):
-        return [(DeleteTargetMountStep, {'target_mount_id': self.target_mount.id})]
-
-
-class ConfigureTargetMountJob(Job, StateChangeJob):
-    state_transition = (ManagedTargetMount, 'unconfigured', 'configured')
-    stateful_object = 'target_mount'
-    state_verb = "Configure"
-    target_mount = models.ForeignKey('ManagedTargetMount')
-
-    class Meta:
-        app_label = 'configure'
-
-    def description(self):
-        return "Configuring %s on %s" % (self.target_mount.target.downcast(), self.target_mount.host)
-
-    def get_steps(self):
-        return[(ConfigurePacemakerStep, {'target_mount_id': self.target_mount.id})]
-
-    def get_deps(self):
-        # To configure a TM for a target, required that it is in a
-        # registered state
-        deps = []
-        deps.append(DependOn(self.target_mount.target.downcast(), preferred_state = 'unmounted', acceptable_states = ['unmounted', 'mounted']))
-        if not self.target_mount.primary:
-            deps.append(DependOn(self.target_mount.target.managedtargetmount_set.get(primary=True).downcast(), 'configured'))
-        return DependAll(deps)
