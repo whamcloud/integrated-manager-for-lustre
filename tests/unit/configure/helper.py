@@ -24,8 +24,12 @@ class MockAgent(object):
             import uuid
             return {'uuid': uuid.uuid1().__str__()}
         elif cmdline.startswith('start-target'):
+            import re
+            from configure.models import ManagedTarget
+            target_id = re.search("--serial ([^\s]+)", cmdline).group(1)
+            target = ManagedTarget.objects.get(id = target_id)
             # FIXME: this will be nodename when HYD-455 is done
-            return {'location': self.host.fqdn}
+            return {'location': target.primary_server().fqdn}
         elif cmdline.startswith('register-target'):
             MockAgent.label_counter += 1
             return {'label': "foofs-TTT%04d" % self.label_counter}
@@ -34,8 +38,13 @@ class MockAgent(object):
 class JobTestCase(TestCase):
     def _test_lun(self, host):
         from configure.models import Lun, LunNode
+
         lun = Lun.objects.create(shareable = False)
-        LunNode.objects.create(lun = lun, host = host, path = "/fake/path/%s" % lun.id, primary = True)
+        primary = True
+        for host in self.hosts:
+            LunNode.objects.create(lun = lun, host = host, path = "/fake/path/%s" % lun.id, primary = primary)
+            primary = False
+
         return lun
 
     def setUp(self):
@@ -71,3 +80,23 @@ class JobTestCase(TestCase):
         from celery.app import app_or_default
         app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
         app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_eager_propagates_exceptions
+
+
+class JobTestCaseWithHost(JobTestCase):
+    mock_servers = {
+            'myaddress': {
+                'fqdn': 'myaddress.mycompany.com',
+                'nids': ["192.168.0.1@tcp"]
+            }
+    }
+
+    def setUp(self):
+        super(JobTestCaseWithHost, self).setUp()
+
+        from configure.models import ManagedHost
+        self.hosts = [ManagedHost.create_from_string(address) for address, info in self.mock_servers.items()]
+
+        # Handy if you're only using one
+        self.host = self.hosts[0]
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).lnetconfiguration.state, 'nids_known')
