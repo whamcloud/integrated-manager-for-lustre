@@ -14,8 +14,6 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
     def setUp(self):
         self.hydra_server = HttpRequests(server_http_url =
             config['hydra_servers'][0]['server_http_url'])
-
-    def tearDown(self):
         self.reset_cluster()
 
     def test_create_filesystem_with_failover(self):
