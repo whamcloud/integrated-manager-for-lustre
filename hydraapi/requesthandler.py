@@ -2,10 +2,9 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-# REST API request handler definitions and other decoratoins
+
 from piston.handler import BaseHandler
 from jsonutils import render_to_json
-from django.views.decorators.csrf  import csrf_exempt
 
 from hydraapi import api_log
 
@@ -150,7 +149,6 @@ class AuthorisedRequestHandler(RequestHandler):
     def read(self, request):
         return RequestHandler.read(self, request)
 
-    @csrf_exempt
     @render_to_json()
 #    @login_required # This will be required when we will need session management
     def create(self, request):
