@@ -32,8 +32,12 @@ class ManagedHostsHandler (AnonymousRESTRequestHandler):
         return [host_dict_with_transitions(h) for h in hosts]
 
     def post(self, request, host_name):
-        host = ManagedHost.create_from_string(host_name)
-        return APIResponse(host.to_dict(), 201)
+        from django.db import IntegrityError
+        try:
+            host = ManagedHost.create_from_string(host_name)
+            return APIResponse(host.to_dict(), 201)
+        except IntegrityError:
+            return APIResponse("Host with address '%s' already exists" % host_name, 400)
 
     def remove(self, request, id):
         # NB This is equivalent to a call to /api/transition with matching content-type/id/state

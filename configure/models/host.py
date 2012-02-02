@@ -7,6 +7,7 @@ import datetime
 
 from django.db import models
 from django.db import transaction
+from django.db import IntegrityError
 
 from configure.models.jobs import StatefulObject, Job
 from configure.lib.job import StateChangeJob, DependOn, DependAll, Step
@@ -64,7 +65,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         if self.fqdn:
             try:
                 from django.db.models import Q
-                from django.db import IntegrityError
                 ManagedHost.objects.get(~Q(pk = self.pk), fqdn = self.fqdn)
                 raise IntegrityError("FQDN %s in use" % self.fqdn)
             except ManagedHost.DoesNotExist:
@@ -102,6 +102,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         with transaction.commit_on_success():
             try:
                 host = ManagedHost.objects.get(address = address_string)
+                # It already existed
+                raise IntegrityError("Duplicate address %s" % address_string)
             except ManagedHost.DoesNotExist:
                 import uuid
                 # NB: this is NOT A CRYPTOGRAPHICALLY SECURE RANDOM NUMBER,
