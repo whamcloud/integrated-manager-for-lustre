@@ -69,13 +69,28 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         # Wait for device discovery
         running_time = 0
         usable_luns = []
-        while running_time < TEST_TIMEOUT and len(usable_luns) < 4:
+        ready_lun_count = 0
+        while running_time < TEST_TIMEOUT and ready_lun_count < 4:
             response = self.hydra_server.get(
                 '/api/volume/',
                 params = {'category': 'usable'}
             )
             self.assertTrue(response.successful, response.text)
             usable_luns = response.json
+
+            # FIXME: currently depending on settings.PRIMARY_LUN_HACK to
+            # set primary and secondary for us.
+            #  -> we could readily wait until the volume has two nodes, and then
+            #     use the API to set the primary and secondary from the test
+            # Count how many of the reported Luns are ready for our test
+            # (i.e. they have both a primary and a secondary node)
+            ready_lun_count = 0
+            for l in usable_luns:
+                has_primary = len([node for node in l['nodes'] if node['primary']]) == 1
+                has_two = len([node for node in l['nodes'] if node['use']]) >= 2
+                if has_primary and has_two:
+                    ready_lun_count += 1
+
             time.sleep(1)
             running_time += 1
 
