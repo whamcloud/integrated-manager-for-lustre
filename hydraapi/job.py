@@ -35,7 +35,7 @@ class Handler(AnonymousRESTRequestHandler):
         assert new_state in ['pause', 'cancel', 'resume']
         from django.shortcuts import get_object_or_404
         from configure.models import Job
-        job = get_object_or_404(Job, id = id)
+        job = get_object_or_404(Job, id = id).downcast()
         if new_state == 'pause':
             job.pause()
         elif new_state == 'cancel':
