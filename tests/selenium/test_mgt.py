@@ -5,7 +5,7 @@ from views.mgt import Mgt
 from base import SeleniumBaseTestCase
 
 
-class CreateFileSystem(SeleniumBaseTestCase):
+class CreateMgt(SeleniumBaseTestCase):
     def test_create_mgt(self):
         #Create a MGT
 

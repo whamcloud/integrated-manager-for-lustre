@@ -14,9 +14,21 @@ class Alerts:
         self.WAIT_TIME = constants.wait_time
 
         # Initialise all elements on that view.
-        self.alert_history_search_text = self.driver.find_element_by_xpath('/html/body/div[2]/div[3]/div/table/tbody/tr[3]/td/fieldset/div/div/div[2]/label/input')
+        self.active_alert_search_text = self.driver.find_element_by_xpath("id('active_AlertContent_filter')/label/input")
+        self.alert_history_search_text = self.driver.find_element_by_xpath("id('all_AlertContent_filter')/label/input")
 
-    def enter_search_data(self, data):
+    def enter_active_alert_search_data(self, data):
+        """ Register a new user
+        @param: user : an object of UserDetails, a custom dict
+        """
+
+        # Enter data in alert history search box
+        self.active_alert_search_text.clear()
+        self.active_alert_search_text.send_keys(data)
+        # FIXME: need to add a generic function to wait for an action
+        sleep(2)
+
+    def enter_alert_history_search_data(self, data):
         """ Register a new user
         @param: user : an object of UserDetails, a custom dict
         """

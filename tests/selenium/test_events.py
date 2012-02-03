@@ -6,7 +6,7 @@ from utils.constants import Constants
 from base import SeleniumBaseTestCase
 
 
-class Alertsdata(SeleniumBaseTestCase):
+class Eventsdata(SeleniumBaseTestCase):
 
     def test_events_filter(self):
 
