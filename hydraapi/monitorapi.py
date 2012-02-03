@@ -3,14 +3,14 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from requesthandler import AnonymousRequestHandler
+from requesthandler import AnonymousRESTRequestHandler
 
 from configure.models import ManagedHost
 from django.shortcuts import get_object_or_404
 
 
-class UpdateScan(AnonymousRequestHandler):
-    def run(self, request, fqdn, token, update_scan, plugins):
+class UpdateScan(AnonymousRESTRequestHandler):
+    def post(self, request, fqdn, token, update_scan, plugins):
         from hydraapi import api_log
         api_log.debug("UpdateScan %s" % fqdn)
 

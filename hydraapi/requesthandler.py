@@ -100,61 +100,6 @@ def extract_exception(f):
     return _extract_exception
 
 
-class RequestHandler(BaseHandler):
-    #allowed_methods = ('GET', 'POST')
-    allowed_methods = ('GET')
-
-    def __init__(self):
-        BaseHandler.__init__(self)
-
-    def read(self, request):
-        """Serve GET requests from the client. It calls the registered function with the GET parameters
-        :param request: A HTTP GET request
-        """
-
-        if self.run is None:
-            raise Exception("No function registered! Unable to process request.")
-        request.data = request.GET
-        return extract_request_args(self.run)(request)
-
-    def create(self, request):
-        return extract_request_args(self.run)(request)
-
-
-class AnonymousRequestHandler(RequestHandler):
-    allowed_methods = ('GET', 'POST')
-
-    def __init__(self, *args, **kwargs):
-        RequestHandler.__init__(self)
-
-    @render_to_json()
-    @extract_exception
-    def read(self, request):
-        return RequestHandler.read(self, request)
-
-    @render_to_json()
-    @extract_exception
-    def create(self, request):
-        return RequestHandler.create(self, request)
-
-
-class AuthorisedRequestHandler(RequestHandler):
-    allowed_methods = ('GET', 'POST')
-
-    def __init__(self, registered_function, *args, **kwargs):
-        RequestHandler.__init__(self, registered_function)
-
-    @render_to_json()
-#    @login_required # This will be rquired when we will need session management
-    def read(self, request):
-        return RequestHandler.read(self, request)
-
-    @render_to_json()
-#    @login_required # This will be required when we will need session management
-    def create(self, request):
-        return RequestHandler.create(self, request)
-
-
 class AnonymousRESTRequestHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT', 'POST', 'DELETE')
 
