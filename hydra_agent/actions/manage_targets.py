@@ -350,6 +350,23 @@ def target_running(args):
     _exit(1)
 
 
+def clear_targets(args):
+    for resource in list_ha_targets(args):
+        (label, serial) = resource.split("_")
+        print "%s\n%s" % (label, len(label) * "=")
+        try:
+            print "Stopping"
+            _stop_target(label, serial)
+        except Exception:
+            pass
+        try:
+            print "Unconfiguring"
+            _unconfigure_ha(False, label, serial)
+            _unconfigure_ha(True, label, serial)
+        except Exception:
+            pass
+
+
 class TargetsPlugin(AgentPlugin):
     def register_commands(self, parser):
         p = parser.add_parser('register-target', help='register a target')
@@ -416,3 +433,7 @@ class TargetsPlugin(AgentPlugin):
         p.add_argument('--uuid', required=True,
                        help='uuid of target to check')
         p.set_defaults(func=target_running)
+
+        p = parser.add_parser("clear-targets",
+                              help="clear targets from HA config")
+        p.set_defaults(func=clear_targets)

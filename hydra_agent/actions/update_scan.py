@@ -6,10 +6,22 @@ import os
 import glob
 
 from utils import Mounts, normalize_device
-from hydra_agent.actions.targets import get_resource_locations
 from hydra_agent.actions.lnet_scan import lnet_status
 from hydra_agent import shell
 from hydra_agent.plugins import AgentPlugin
+try:
+    from hydra_agent.actions.manage_targets import get_resource_locations
+    get_resource_locations  # workaround for pyflakes issue #13
+except ImportError:
+    # If we're monitor-only, we won't have manage_targets.  Stubbing
+    # this out to return None signals to the server that there aren't
+    # any ManagedTargetMounts here anyhow.
+    #
+    # FIXME: I guess this doesn't take into account a server with mixed
+    # targets (HYD-545), but I'm not ready to deal with that crazyness yet.
+    def _grl_stub():
+        return None
+    get_resource_locations = _grl_stub
 
 # FIXME: weird naming, 'LocalAudit' is the class that fetches stats
 from hydra_agent.audit.local import LocalAudit
