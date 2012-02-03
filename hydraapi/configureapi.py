@@ -6,11 +6,11 @@
 from django.contrib.contenttypes.models import ContentType
 
 from configure.models import Command
-from requesthandler import AnonymousRESTRequestHandler
+from hydraapi.requesthandler import RequestHandler
 from hydraapi.requesthandler import APIResponse
 
 
-class Notifications(AnonymousRESTRequestHandler):
+class Notifications(RequestHandler):
     def post(self, request, filter_opts):
         since_time = filter_opts['since_time']
         initial = filter_opts['initial']
@@ -115,7 +115,7 @@ class Notifications(AnonymousRESTRequestHandler):
                 }
 
 
-class TransitionConsequences(AnonymousRESTRequestHandler):
+class TransitionConsequences(RequestHandler):
     def post(self, request, id, content_type_id, new_state):
         from configure.lib.state_manager import StateManager
         ct = ContentType.objects.get_for_id(content_type_id)
@@ -124,7 +124,7 @@ class TransitionConsequences(AnonymousRESTRequestHandler):
         return StateManager().get_transition_consequences(instance, new_state)
 
 
-class Transition(AnonymousRESTRequestHandler):
+class Transition(RequestHandler):
     def post(self, request, id, content_type_id, new_state):
         klass = ContentType.objects.get_for_id(content_type_id).model_class()
         instance = klass.objects.get(pk = id)
@@ -133,7 +133,7 @@ class Transition(AnonymousRESTRequestHandler):
         return APIResponse(command.to_dict(), 202)
 
 
-class ObjectSummary(AnonymousRESTRequestHandler):
+class ObjectSummary(RequestHandler):
     def post(self, request, objects):
         result = []
         for o in objects:

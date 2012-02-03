@@ -100,7 +100,7 @@ def extract_exception(f):
     return _extract_exception
 
 
-class AnonymousRESTRequestHandler(BaseHandler):
+class RequestHandler(BaseHandler):
     allowed_methods = ('GET', 'PUT', 'POST', 'DELETE')
 
     def __init__(self, *args, **kwargs):

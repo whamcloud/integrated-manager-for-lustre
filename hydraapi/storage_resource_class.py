@@ -3,13 +3,13 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from requesthandler import AnonymousRESTRequestHandler
+from hydraapi.requesthandler import RequestHandler
 
 from configure.models import StorageResourceClass, StorageResourceRecord
 from configure.lib.storage_plugin.manager import storage_plugin_manager
 
 
-class StorageResourceClassHandler(AnonymousRESTRequestHandler):
+class StorageResourceClassHandler(RequestHandler):
     def get(self, request, module_name = None, class_name = None, creatable = None):
         if module_name and class_name:
             # Return a specific class

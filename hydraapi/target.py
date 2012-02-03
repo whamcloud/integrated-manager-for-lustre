@@ -10,7 +10,7 @@ from django.db import transaction
 
 from configure.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Command
 from configure.models import Lun, LunNode
-from hydraapi.requesthandler import AnonymousRESTRequestHandler, APIResponse
+from hydraapi.requesthandler import RequestHandler, APIResponse
 from configure.lib.state_manager import StateManager
 import configure.lib.conf_param
 
@@ -49,7 +49,7 @@ def create_target(lun_id, target_klass, **kwargs):
     return target
 
 
-class TargetHandler(AnonymousRESTRequestHandler):
+class TargetHandler(RequestHandler):
     def put(self, request, id):
         target = get_object_or_404(ManagedTarget, pk = id).downcast()
         try:
@@ -136,7 +136,7 @@ class TargetHandler(AnonymousRESTRequestHandler):
             return targets
 
 
-class TargetResourceGraphHandler(AnonymousRESTRequestHandler):
+class TargetResourceGraphHandler(RequestHandler):
     def get(self, request, id):
         from monitor.models import AlertState
         from configure.models import ManagedTarget

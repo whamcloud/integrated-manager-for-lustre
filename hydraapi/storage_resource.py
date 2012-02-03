@@ -5,7 +5,7 @@
 
 from django.contrib.contenttypes.models import ContentType
 
-from requesthandler import AnonymousRESTRequestHandler
+from hydraapi.requesthandler import RequestHandler
 from hydraapi.requesthandler import APIResponse
 
 from configure.models import StorageResourceRecord
@@ -13,7 +13,7 @@ from configure.lib.storage_plugin.manager import storage_plugin_manager
 from django.shortcuts import get_object_or_404
 
 
-class StorageResourceHandler(AnonymousRESTRequestHandler):
+class StorageResourceHandler(RequestHandler):
     def put(self, request, id):
         # request.data should be a dict representing updated
         # fields for the resource

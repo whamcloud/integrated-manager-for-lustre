@@ -5,13 +5,13 @@
 
 from configure.models import Lun, LunNode, ManagedTargetMount
 
-from requesthandler import AnonymousRESTRequestHandler
+from hydraapi.requesthandler import RequestHandler
 from hydraapi.requesthandler import APIResponse
 
 from django.shortcuts import get_object_or_404
 
 
-class Handler(AnonymousRESTRequestHandler):
+class Handler(RequestHandler):
     def get(self, request, id = None, category = None):
         if id:
             lun = get_object_or_404(Lun, id = id)

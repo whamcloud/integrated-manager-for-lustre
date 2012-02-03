@@ -3,10 +3,10 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from requesthandler import AnonymousRESTRequestHandler
+from hydraapi.requesthandler import RequestHandler
 
 
-class Handler(AnonymousRESTRequestHandler):
+class Handler(RequestHandler):
     def get(self, request, id = None, recent = False):
         """Return a list of dicts representing Jobs, or a single dict if 'id' is specified.
            If the 'recent' parameter is set, return jobs which are incomplete or which ran in the last hour"""

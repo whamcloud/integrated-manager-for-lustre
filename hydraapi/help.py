@@ -3,13 +3,13 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydraapi.requesthandler import AnonymousRESTRequestHandler, APIResponse
+from hydraapi.requesthandler import RequestHandler, APIResponse
 
 import configure.lib.conf_param
 from configure.models import ManagedOst, ManagedMdt, ManagedFilesystem
 
 
-class ConfParamHandler(AnonymousRESTRequestHandler):
+class ConfParamHandler(RequestHandler):
     def get(self, request, kind = None, keys = None):
         """
          One of 'kind' or 'keys' must be set

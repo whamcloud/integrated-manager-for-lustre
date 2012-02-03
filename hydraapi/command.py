@@ -4,11 +4,11 @@
 # ==============================
 
 from configure.models import Command
-from requesthandler import AnonymousRESTRequestHandler
+from hydraapi.requesthandler import RequestHandler
 from django.shortcuts import get_object_or_404
 
 
-class Handler(AnonymousRESTRequestHandler):
+class Handler(RequestHandler):
     def get(self, request, id = None):
         if id:
             command = get_object_or_404(Command, id = id)

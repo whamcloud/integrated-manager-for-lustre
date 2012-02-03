@@ -5,13 +5,13 @@
 
 from configure.models import (ManagedHost, ManagedFilesystem)
 from configure.lib.state_manager import StateManager
-from requesthandler import AnonymousRESTRequestHandler
+from hydraapi.requesthandler import RequestHandler
 from hydraapi.requesthandler import APIResponse
 
 from django.shortcuts import get_object_or_404
 
 
-class ManagedHostsHandler (AnonymousRESTRequestHandler):
+class ManagedHostsHandler (RequestHandler):
     def get(self, request, id = None, filesystem_id = None):
 
         def host_dict_with_transitions(host):
@@ -47,7 +47,7 @@ class ManagedHostsHandler (AnonymousRESTRequestHandler):
         return APIResponse(command.to_dict(), 202)
 
 
-class TestHost(AnonymousRESTRequestHandler):
+class TestHost(RequestHandler):
     def get(self, request, hostname):
         from monitor.tasks import test_host_contact
         from configure.models import Monitor

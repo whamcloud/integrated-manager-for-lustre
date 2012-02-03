@@ -6,12 +6,12 @@
 from configure.models import ManagedHost
 from monitor.models import Event
 
-from requesthandler import AnonymousRESTRequestHandler
+from hydraapi.requesthandler import RequestHandler
 
 from hydraapi.utils import paginate_result
 
 
-class Handler(AnonymousRESTRequestHandler):
+class Handler(RequestHandler):
     def get(self, request, host_id = None, severity = None, event_type = None, iDisplayStart = None, iDisplayLength = None, sEcho = None):
         filter_args = []
         filter_kwargs = {}

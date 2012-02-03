@@ -3,12 +3,12 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from requesthandler import AnonymousRESTRequestHandler
+from hydraapi.requesthandler import RequestHandler
 
 from hydraapi.utils import paginate_result
 
 
-class Handler(AnonymousRESTRequestHandler):
+class Handler(RequestHandler):
     def get(self, request, active = None, iDisplayStart = None, iDisplayLength = None, sEcho = None):
         from monitor.models import AlertState
         if active:

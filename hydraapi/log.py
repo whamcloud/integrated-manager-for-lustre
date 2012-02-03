@@ -6,14 +6,14 @@
 from configure.models import ManagedHost
 from monitor.models import Systemevents
 
-from requesthandler import AnonymousRESTRequestHandler
+from hydraapi.requesthandler import RequestHandler
 
 from hydraapi.utils import paginate_result
 
 import datetime
 
 
-class Handler(AnonymousRESTRequestHandler):
+class Handler(RequestHandler):
     def get(self, request, host_id = None, start_time = None, end_time = None,
         lustre = False, iDisplayStart = None, iDisplayLength = None, sSearch = None):
 

@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from requesthandler import AnonymousRESTRequestHandler
+from hydraapi.requesthandler import RequestHandler
 from configure.models import (ManagedFilesystem,
                             ManagedMdt,
                             ManagedOst,
@@ -11,7 +11,7 @@ from configure.models import (ManagedFilesystem,
 from django.shortcuts import get_object_or_404
 
 
-class GetFSTargetStats(AnonymousRESTRequestHandler):
+class GetFSTargetStats(RequestHandler):
     def post(self, request, filesystem_id, starttime, endtime, datafunction, targetkind, fetchmetrics):
         assert targetkind in ['OST', 'MDT', 'HOST']
         interval = ''
@@ -25,7 +25,7 @@ class GetFSTargetStats(AnonymousRESTRequestHandler):
             return all_fs_stats
 
 
-class GetFSServerStats(AnonymousRESTRequestHandler):
+class GetFSServerStats(RequestHandler):
     def post(self, request, filesystem_id, starttime, endtime, datafunction, fetchmetrics):
         interval = ''
         if filesystem_id:
@@ -38,7 +38,7 @@ class GetFSServerStats(AnonymousRESTRequestHandler):
             return all_fs_stats
 
 
-class GetFSMGSStats(AnonymousRESTRequestHandler):
+class GetFSMGSStats(RequestHandler):
     def post(self, request, filesystem_id, starttime, endtime, datafunction, fetchmetrics):
         interval = ''
         if filesystem_id:
@@ -55,7 +55,7 @@ class GetFSMGSStats(AnonymousRESTRequestHandler):
             return all_mgs_stats_metric
 
 
-class GetServerStats(AnonymousRESTRequestHandler):
+class GetServerStats(RequestHandler):
     def post(self, request, host_id, starttime, endtime, datafunction, fetchmetrics):
         print "request.data = %s" % request.data
         interval = ''
@@ -66,7 +66,7 @@ class GetServerStats(AnonymousRESTRequestHandler):
             raise Exception("Unable to find host with host_id=%s" % host_id)
 
 
-class GetTargetStats(AnonymousRESTRequestHandler):
+class GetTargetStats(RequestHandler):
     def post(self, request, target_id, starttime, endtime, datafunction, targetkind, fetchmetrics):
         assert targetkind in ['OST', 'MDT']
         interval = ''
@@ -78,7 +78,7 @@ class GetTargetStats(AnonymousRESTRequestHandler):
             return metrics_fetch(target, 'target', 'TARGET', fetchmetrics, starttime, endtime, interval)
 
 
-class GetFSClientsStats(AnonymousRESTRequestHandler):
+class GetFSClientsStats(RequestHandler):
     def post(self, request, filesystem_id, starttime, endtime, datafunction, fetchmetrics):
         interval = ''
         client_stats = []
@@ -91,7 +91,7 @@ class GetFSClientsStats(AnonymousRESTRequestHandler):
             return client_stats
 
 
-class GetHeatMapFSStats(AnonymousRESTRequestHandler):
+class GetHeatMapFSStats(RequestHandler):
     def post(self, request, filesystem, starttime, endtime, datafunction, targetkind, fetchmetrics):
         assert targetkind in ['OST', 'MDT']
         interval = ''

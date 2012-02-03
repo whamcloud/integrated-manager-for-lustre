@@ -11,7 +11,7 @@ from configure.lib.state_manager import StateManager
 from configure.models import ManagedOst, ManagedMdt, ManagedMgs
 from configure.models import ManagedFilesystem, ManagedTargetMount, ManagedHost
 from configure.models import Command
-from hydraapi.requesthandler import AnonymousRESTRequestHandler, APIResponse
+from hydraapi.requesthandler import RequestHandler, APIResponse
 import configure.lib.conf_param
 
 import monitor.lib.util
@@ -30,7 +30,7 @@ def create_fs(mgs_id, name, conf_params):
         return fs
 
 
-class FilesystemHandler(AnonymousRESTRequestHandler):
+class FilesystemHandler(RequestHandler):
     # TODO: common PUT code for handling conf params on targets and filesystems
     def put(self, request, id):
         filesystem = get_object_or_404(ManagedFilesystem, pk = id).downcast()
