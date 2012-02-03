@@ -31,6 +31,9 @@ class Handler(RequestHandler):
         import django.middleware.csrf
         django.middleware.csrf.get_token(request)
 
+        # Force a session Set-Cookie in the response
+        request.session.modified = True
+
         user = request.user
         if not user.is_authenticated():
             # Anonymous user
