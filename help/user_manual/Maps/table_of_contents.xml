@@ -3,6 +3,9 @@
   <topicref type="topic" id="409406459242709" build="ALL" modified="2012-02-01T11:18:21.448Z" icon="0" href="Introduction">
     <caption translate="true">Introduction</caption>
   </topicref>
+  <topicref type="topic" id="409422228606966" build="ALL" modified="2012-02-03T09:53:12.070Z" icon="0" href="Test_topic_to_check_in">
+    <caption translate="true">Test topic to check in</caption>
+  </topicref>
   <topicref type="topic" id="409404296320155" build="ALL" modified="2012-02-02T09:42:51.837Z" icon="0" href="Chapter_2">
     <caption translate="true">Lustre Overview</caption>
     <topicref type="topic" id="409403524722911" build="ALL" modified="2012-02-02T09:46:05.723Z" icon="0" href="Lustre_Comparison">
