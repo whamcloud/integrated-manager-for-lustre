@@ -24,6 +24,9 @@ import hydraapi.job
 import hydraapi.command
 import hydraapi.help
 
+import hydraapi.user
+import hydraapi.session
+
 import hydraapi.volume
 import hydraapi.volume_node
 import hydraapi.storage_resource
@@ -120,4 +123,7 @@ urlpatterns = patterns('',
 
     # hydraapi.help
     (r'^help/conf_param/$', CsrfResource(hydraapi.help.ConfParamHandler)),
+
+    # hydraapi.session
+    (r'^session/$', CsrfResource(hydraapi.session.Handler)),
 )

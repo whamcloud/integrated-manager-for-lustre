@@ -10,7 +10,6 @@ from tests.integration.core.testcases import ChromaIntegrationTestCase
 
 
 class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
-
     def setUp(self):
         self.hydra_server = HttpRequests(server_http_url =
             config['hydra_servers'][0]['server_http_url'])

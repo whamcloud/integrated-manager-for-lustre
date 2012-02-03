@@ -1,7 +1,10 @@
 {
     "hydra_servers": [
         {
-            "server_http_url": "http://hydra:8000/"
+            "server_http_url": "http://hydra:8000/",
+            "users": [
+                {"username": "admin", "super": true, "password": "password"}
+            ]
         }
     ],
     "lustre_servers": {

@@ -9,13 +9,27 @@ import requests
 from urlparse import urljoin
 
 
-class HttpRequests(object):
+class AuthorizedHttpRequests(object):
+    def __init__(self, username, password, *args, **kwargs):
+        super(self, AuthorizedHttpRequests).__init__(*args, **kwargs)
 
+        response = self.get("/api/session/", data = {'username': 'admin', 'password': 'password'})
+        self.assertEqual(response.successful, True)
+        self.session.headers['X-CSRFToken'] = response.cookies['csrftoken']
+        self.session.cookies['csrftoken'] = response.cookies['csrftoken']
+        self.session.cookies['sessionid'] = response.cookies['sessionid']
+
+        response = self.post("/api/session/", data = {'username': username, 'password': password})
+        self.assertEqual(response.successful, True)
+
+
+class HttpRequests(object):
     def __init__(self, server_http_url = '', *args, **kwargs):
         self.server_http_url = server_http_url
+        self.session = requests.session()
 
     def get(self, url, **kwargs):
-        response = requests.get(
+        response = self.session.get(
             urljoin(self.server_http_url, url),
             **kwargs
         )
@@ -23,7 +37,7 @@ class HttpRequests(object):
         return HttpResponse(response)
 
     def post(self, url, **kwargs):
-        response = requests.post(
+        response = self.session.post(
             urljoin(self.server_http_url, url),
             **kwargs
         )
@@ -31,7 +45,7 @@ class HttpRequests(object):
         return HttpResponse(response)
 
     def put(self, url, **kwargs):
-        response = requests.put(
+        response = self.session.put(
             urljoin(self.server_http_url, url),
             **kwargs
         )
@@ -39,7 +53,7 @@ class HttpRequests(object):
         return HttpResponse(response)
 
     def delete(self, url, **kwargs):
-        response = requests.delete(
+        response = self.session.delete(
             urljoin(self.server_http_url, url),
             **kwargs
         )
@@ -47,7 +61,7 @@ class HttpRequests(object):
         return HttpResponse(response)
 
     def request(self, method, url, **kwargs):
-        response = requests.request(
+        response = self.session.request(
             method,
             urljoin(self.server_http_url, url),
             **kwargs
@@ -57,7 +71,6 @@ class HttpRequests(object):
 
 
 class HttpResponse(requests.Response):
-
     def __init__(self, response, *args, **kwargs):
         super(HttpResponse, self).__init__(*args, **kwargs)
         self.__dict__.update(response.__dict__.copy())
@@ -72,4 +85,4 @@ class HttpResponse(requests.Response):
     @property
     def successful(self):
         # TODO: Make better
-        return 200 <= self.status_code < 300 and self.json is not None
+        return 200 <= self.status_code < 300
