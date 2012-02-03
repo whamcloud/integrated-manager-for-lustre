@@ -14,9 +14,9 @@ class Handler(RequestHandler):
         """Authenticate a session using username + password authentication"""
         user = auth.authenticate(username = username, password = password)
         if not user:
-            raise APIResponse("Login failed", 403)
+            return APIResponse("Login failed", 403)
         elif not user.is_active:
-            raise APIResponse("Account disabled", 403)
+            return APIResponse("Account disabled", 403)
 
         auth.login(request, user)
 

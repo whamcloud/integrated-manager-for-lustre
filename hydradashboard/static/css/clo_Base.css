@@ -780,3 +780,16 @@ table.chart_grid td table {
   height: 20px;
   font-size: 9px;
 }
+
+#login_dialog label {
+  font-size: 12px;
+}
+
+#login_dialog input {
+  font-size: 12px;
+}
+
+#login_dialog div#error {
+  font-size: 12px;
+  padding: 3px;
+}
