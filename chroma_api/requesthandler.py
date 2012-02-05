@@ -27,7 +27,6 @@ def render_to_json(**jsonargs):
             r = HttpResponse(mimetype='application/json')
             errors = None
             try:
-                from hydraapi.requesthandler import APIResponse
                 result = f(wrapped_self, request, *args, **kwargs)
                 if isinstance(result, APIResponse):
                     r.status_code = result.status

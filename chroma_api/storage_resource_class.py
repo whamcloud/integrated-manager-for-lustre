@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydraapi.requesthandler import RequestHandler
+from chroma_api.requesthandler import RequestHandler
 
 from chroma_core.models import StorageResourceClass, StorageResourceRecord
 from chroma_core.lib.storage_plugin.manager import storage_plugin_manager

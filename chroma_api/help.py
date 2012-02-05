@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydraapi.requesthandler import RequestHandler, APIResponse
+from chroma_api.requesthandler import RequestHandler, APIResponse
 
 import chroma_core.lib.conf_param
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem

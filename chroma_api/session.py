@@ -3,8 +3,8 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydraapi.requesthandler import RequestHandler
-from hydraapi.requesthandler import APIResponse
+from chroma_api.requesthandler import RequestHandler
+from chroma_api.requesthandler import APIResponse
 
 import django.contrib.auth as auth
 

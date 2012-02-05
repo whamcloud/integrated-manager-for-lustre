@@ -55,7 +55,7 @@ class HostTestResource(Resource):
         object_class = dict
 
     def obj_create(self, bundle, request = None, **kwargs):
-        from monitor.tasks import test_host_contact
+        from chroma_core.tasks import test_host_contact
         from chroma_core.models import Monitor
         host = ManagedHost(address = bundle.data['hostname'])
         host.monitor = Monitor(host = host)

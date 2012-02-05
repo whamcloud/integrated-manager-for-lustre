@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydraapi.requesthandler import RequestHandler
+from chroma_api.requesthandler import RequestHandler
 
 
 class Handler(RequestHandler):

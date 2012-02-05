@@ -6,7 +6,7 @@
 from chroma_core.models import ManagedHost
 from chroma_core.models import Event
 
-from hydraapi.requesthandler import RequestHandler
+from chroma_api.requesthandler import RequestHandler
 
 from chroma_api.utils import paginate_result
 

@@ -32,7 +32,7 @@ def paginate_result(page_id, page_size, result, format_fn, sEcho = None):
     return APIResponse(paginated_result, 200, cache = False)
 
 from django.contrib.contenttypes.models import ContentType
-from configure.lib.state_manager import StateManager
+from chroma_core.lib.state_manager import StateManager
 from tastypie.resources import ModelResource
 from tastypie import fields
 from tastypie import http
@@ -71,10 +71,10 @@ class StatefulModelResource(ModelResource):
         if dry_run:
             # FIXME: this should be a GET to something like /foo/transitions/from/to/
             #        to get information about that transition.
-            from configure.lib.state_manager import StateManager
+            from chroma_core.lib.state_manager import StateManager
             report = StateManager().get_transition_consequences(bundle.obj, new_state)
             raise custom_response(self, request, http.HttpResponse, report)
         else:
-            from configure.models import Command
+            from chroma_core.models import Command
             command = Command.set_state(bundle.obj, new_state)
             raise custom_response(self, request, http.HttpAccepted, command.to_dict())

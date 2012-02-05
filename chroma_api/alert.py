@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from monitor.models import AlertState
+from chroma_core.models.alert import AlertState
 
 from tastypie.resources import ModelResource
 from tastypie import fields

@@ -117,7 +117,7 @@ class Notifications(RequestHandler):
 
 class TransitionConsequences(RequestHandler):
     def post(self, request, id, content_type_id, new_state):
-        from configure.lib.state_manager import StateManager
+        from chroma_core.lib.state_manager import StateManager
         ct = ContentType.objects.get_for_id(content_type_id)
         klass = ct.model_class()
         instance = klass.objects.get(pk = id)
@@ -144,10 +144,10 @@ class ObjectSummary(RequestHandler):
             except klass.DoesNotExist:
                 continue
 
-            from configure.models import ManagedHost
+            from chroma_core.models import ManagedHost
             if isinstance(instance, ManagedHost):
-                import hydraapi.host
-                resource_uri = hydraapi.host.HostResource().get_resource_uri(instance)
+                import chroma_api.host
+                resource_uri = chroma_api.host.HostResource().get_resource_uri(instance)
             else:
                 resource_uri = "TODO"
 
