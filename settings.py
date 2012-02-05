@@ -98,7 +98,7 @@ TEMPLATE_LOADERS = (
 from django.conf import global_settings
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS +\
     ("django.core.context_processors.request",
-     "hydracm.context_processors.page_load_time")
+     "chroma_ui.context_processors.page_load_time")
 
 ROOT_URLCONF = 'urls'
 
@@ -135,10 +135,10 @@ INSTALLED_APPS = (
     'djcelery',
     'pagination',
     'monitor',
-    'configure',
-    'hydraapi',
+    'chroma_core',
+    'chroma_api',
     'hydradashboard',
-    'hydracm',
+    'chroma_ui',
     'benchmark'
     )
 
@@ -234,12 +234,12 @@ CELERY_ROUTES = (
         {"monitor.tasks.drain_flms_table": {"queue": "periodic"}},
         {"monitor.tasks.mail_alerts": {"queue": "periodic"}},
         {"monitor.tasks.parse_log_entries": {"queue": "parselog"}},
-        {"configure.tasks.janitor": {"queue": "periodic"}},
-        {"configure.tasks.set_state": {"queue": "serialize"}},
-        {"configure.tasks.notify_state": {"queue": "serialize"}},
-        {"configure.tasks.add_job": {"queue": "serialize"}},
-        {"configure.tasks.complete_job": {"queue": "serialize"}},
-        {"configure.tasks.run_job": {"queue": "jobs"}},
+        {"chroma_core.tasks.janitor": {"queue": "periodic"}},
+        {"chroma_core.tasks.set_state": {"queue": "serialize"}},
+        {"chroma_core.tasks.notify_state": {"queue": "serialize"}},
+        {"chroma_core.tasks.add_job": {"queue": "serialize"}},
+        {"chroma_core.tasks.complete_job": {"queue": "serialize"}},
+        {"chroma_core.tasks.run_job": {"queue": "jobs"}},
         {"monitor.tasks.test_host_contact": {"queue": "ssh"}},
         {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
         {"monitor.tasks.send_alerts_email": {"queue": "jobs"}},
@@ -276,10 +276,10 @@ def setup_log(log_name):
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
 EMAIL_SENDER = "chroma-server@whamcloud.com"
 
-_plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'configure', 'plugins')
+_plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'chroma_core', 'plugins')
 sys.path.append(_plugins_path)
 INSTALLED_STORAGE_PLUGINS = ["linux"]
-#: Whether to enable debug-level logging across configure.lib.storage_plugin
+#: Whether to enable debug-level logging across chroma_core.lib.storage_plugin
 STORAGE_PLUGIN_DEBUG = DEBUG
 #: List of plugins to enable debug-level logging for
 STORAGE_PLUGIN_DEBUG_PLUGINS = []
