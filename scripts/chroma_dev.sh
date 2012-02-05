@@ -11,7 +11,7 @@ echo "Starting..."
 
 python ${MANAGE_PY} celeryd_multi start ${WORKER_NAMES} -Q:serialize serialize -Q:periodic periodic -Q:ssh ssh -Q:jobs jobs -Q:parselog parselog -c:parselog 1 -B:periodic -c:periodic 1 -c:serialize 1 -c:ssh 1 -c:jobs 8 --pidfile=$PIDFILE --logfile=$LOGFILE
 
-configure/bin/storage_daemon 2>storage_daemon_err.log > storage_daemon_out.log &
+chroma_core/bin/storage_daemon 2>storage_daemon_err.log > storage_daemon_out.log &
 echo $! > storage_daemon.pid
 
 python manage.py runserver_plus --noreload 0.0.0.0:8000 2> runserver_err.log > runserver_out.log &

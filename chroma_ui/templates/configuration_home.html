@@ -1,0 +1,309 @@
+{% extends 'hydra_base.html' %}
+{% block css %}
+<link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
+<link href="{{STATIC_URL}}css/jquery.alerts.css" rel="stylesheet" type="text/css" />
+
+<link href="{{STATIC_URL}}css/storage_resource_create.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="{{STATIC_URL}}css/filesystem_configuration.css" type='text/css' />
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.address-1.4.min.js"></script>
+<script src="{{STATIC_URL}}js/jquery.hoverIntent.js" type="text/javascript"></script>
+<script src="{{STATIC_URL}}js/jquery.bgiframe.min.js" type="text/javascript"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.alerts.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_create.js"></script>
+<script type='text/javascript' src="{{STATIC_URL}}js/filesystem_configuration.js"></script>
+<script type="text/javascript">
+
+
+$(document).ajaxComplete(function() {
+  $('button.back_button:not(.ui-button)').each(function() {
+    $(this).html('Back');
+    $(this).click(function() {window.history.back();});
+    $(this).button({icons: {primary: 'ui-icon-arrowreturnthick-1-w'}});
+  });
+  $('a.button:not(.ui-button)').each(function() {
+    $(this).button();
+  });
+
+  $('a.address_link[address!=true]').each(function() {
+    $(this).address();
+  });
+});
+
+$(document).ready(function() {
+  $.address.change(function(ev) {
+    var path = ev.value;
+    console.log('address.change: ' + path);
+    var parts;
+    if (path == '/') {
+      parts = ['filesystems'];
+    } else {
+      parts = path.substr(1).split('_')
+    }
+    if (parts[1]) {
+      if (parts[0] == 'filesystems' && parts[1] == 'new') {
+        console.log('#' + parts[0]);
+        $("#tabs").tabs('select', '#' + parts[0]);
+        $('#filesystems').empty();
+        $('#filesystems').load('/ui/configure/filesystems_new/', function(){$(this).fadeIn(100)});
+      } else if (parts[0] == 'filesystems' && parts[1] == 'edit') {
+        var fs_id = parts[2];
+        $("#tabs").tabs('select', '#' + parts[0]);
+        $('#filesystems').empty();
+        $('#filesystems').load('/ui/configure/filesystems_edit/?fs_id=' + fs_id);
+      }
+    } else {
+      $("#tabs").tabs('select', '#' + parts[0]);
+      $('#filesystems').empty();
+      $('#' + parts[0]).load('/ui/configure/' + parts[0] + '_tab/')
+    }
+  });
+
+  $('#tabs ul:first a').address();
+});
+
+  //create new File system
+  var oNewMGT_RowData=[];
+  var mgt_node_id = "";
+  var oExistingMGT_RowData = [];
+  var mgs_id = "";
+  var oNewMDT_RowData=[];
+  var mdt_node_id = "";
+
+  $(function() {
+    // Menu Highlighter
+    $('#configure_menu').addClass('active');
+    $("#tabs").tabs({selected: -1});
+  });    
+  // Document Ready Handler for configuration_home.html   
+  $(document).ready(function() {
+    // Fix Me: move all this to a js and load in ready.
+    //--------------------------------------------------------------------//  
+    // Create new FS view -> click handler for "Create new MGT" 
+    $("#popup-new-mgt tbody").delegate("tr", "click", function() {
+      var radio = $("td:eq(0) input", this);
+      radio.attr('checked', true);
+      oNewMGT_RowData=[];
+      for(var i=1;i<7;i++)
+      {
+        oNewMGT_RowData[i]=$("td:eq("+i+")", this).text();
+      }
+      mgt_node_id =  radio.attr('id');
+    });
+    // Create new FS view -> JQuery Data Table initi for new MGT popup showing (usable luns) 
+    var oNewMgt = $('#popup-new-mgt').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "oLanguage": {
+          "sEmptyTable": "No MGT to display"
+      },
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtright'},
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' }
+      ]
+    } );
+    // Create new FS view -> click handler for "select existing MGT"  
+    $("#popup-existing-mgt").delegate("tr", "click", function() {
+      var radio = $("td:eq(0) input", this);
+      radio.attr('checked', true);
+      oExistingMGT_RowData=[];
+      for(var i=1;i<5;i++)
+      {
+        oExistingMGT_RowData[i]=$("td:eq("+i+")", this).text();
+      }
+      mgs_id = radio.attr('id');
+    });
+    // Create new FS view -> JQuery Data Table init for loading existing MGT and popup
+    var oMgt = $('#popup-existing-mgt').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bFilter": false,
+      "aoColumns": [
+        { "sClass": 'txtcenter' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' }
+      ]
+    } );  
+    
+    // Edit FS view -> JQuery Data Table initi for new MDT popup showing (usable luns)            
+    var oNewOst = $('#popup-new-ost').dataTable( {
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtright'},
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtleft' }
+      ]
+    });
+   
+    //Edit fs/Create new fs/ost view -> jquery data table init for Fs Configuration param
+    var oFSConfigParam = $('#config_param_table').dataTable( {
+      "iDisplayLength":30,
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bPaginate" : false,
+      "bSort": false,
+      "bFilter" : false,
+      "bAutoWidth":false,
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtcenter' },
+        { "bVisible": false } 
+      ]
+    });
+    var oTargetFSConfigParam = $('#target_config_param_table').dataTable( {
+      "iDisplayLength":30,
+      "bProcessing": true,
+      "bJQueryUI": true,
+      "bPaginate" : false,
+      "bSort": false,
+      "bFilter" : false,
+      "bAutoWidth":false,
+      "aoColumns": [
+        { "sClass": 'txtleft' },
+        { "sClass": 'txtcenter' },
+        { "bVisible": false }
+      ]
+    });
+    //--------------------------------------------------------------------//  
+    $('#ConfigParam_Cancel').click(function()
+    {
+      $('#target_dialog').dialog('close');
+    });
+    
+    $('#ConfigParam_Apply').click(function()
+    {
+      console.log('apply clicked');
+      apply_config_params("target/" + $('#config_home_target_id').val() + "/", 'target_dialog', oTargetFSConfigParam);
+    });
+    
+    });
+    //Fix Me:Need to find another weay to do thisto load the button + sign css.
+    $(document).ajaxComplete(function() {
+      var apply_button = function(selector, icon) {
+        $(selector).each(function() {
+          if (!$(this).hasClass('ui-button')) {
+            $(this).button({icons: {primary: icon}});
+          }
+        });
+      }
+      apply_button('button.add', 'ui-icon-plusthick');
+      apply_button('button.submit', 'ui-icon-check');
+      apply_button('button.advanced', 'ui-icon-gear');
+      
+      //for adding smoothness to all table buttons
+      $("button").button();
+    });
+</script>
+{% endblock %}
+{% block include_content %}{% endblock %}
+{% block content %}
+<input type=hidden id="config_home_target_id" value="" />
+<div id="tabs">
+  <ul>
+    <li><a id="filesystem_tab" href='#filesystems' title='filesystems'>Filesystems</a></li>
+    <li><a id="mgt_tab" href='#mgts' title='mgts'>MGTs</a></li>
+    <li><a id="volume_tab" href='#volumes' title='volumes'>Volumes</a></li>
+    <li><a id="server_tab" href='#servers' title='servers'>Servers</a></li>
+    <li><a id="storage_tab" href='#storage' title='storage'>Storage</a></li>
+  </ul>
+  <div id='filesystems'></div>
+  <div id='mgts'></div>
+  <div id='volumes'></div>
+  <div id='servers'></div>
+  <div id='storage'></div>
+</div>
+<!-- create new fs dialogs -->
+<div id="configParam" title="Configuration Parameters">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" id="config_param_table">
+   <thead>
+      <th>Property</th>
+      <th>Value</th>
+      <th></th>
+   </thead>
+   <tbody></tbody>
+  </table> 
+</div>
+
+<!-- new OST popup showing all usable luns-->
+<div id="new_ost_dialog" title="Create OST">
+  <button id='new_ost_chooser'></button>
+</div>
+
+<!-- Markup for storage_resource_dialog.js -->
+<div style="overflow-y: auto; max-height: 700px;" id="storage_resource_dialog">
+  <input style='display: none' id='alias_default_entry' value=''>
+  </input>
+  <div id='storage_attributes'>
+    <span class='resource_name'>Name:
+    <input type='entry' id='alias_edit_entry' value=''>
+    </input>
+    </span> <a id='alias_save_button' href='#'>save</a> <a id='alias_reset_button' href='#'>reset</a> <img id='alias_spinner' style='display: none;' src='{{STATIC_URL}}/images/ajax-loader.gif'/>
+    <table class="storage_attributes" id='storage_attributes'>
+    </table>
+    <a href='#' id='remove_resource_button'>Remove</a>
+  </div>
+  <div id='storage_alerts'>
+  </div>
+  <table class="storage_statistics" id='stats'>
+  </table>
+</div>
+<!-- End markup for storage_resource_dialog.js -->
+
+<!-- Markup for storage_resource_create.js -->
+<div style="overflow-y: auto; max-height: 700px;" id="storage_resource_create_dialog">
+  <table id='storage_resource_create_fields'>
+    <tr><th>Resource class:</th><td colspan=2><select style="width: 200px;" id='storage_resource_create_classes'></select></td></tr>
+  </table>
+</div>
+<!-- End markup for storage_resource_create.js -->
+
+<!-- Markup for target_dialog.js -->
+<div style="overflow-y: auto; max-height: 700px;" id="target_dialog">
+  <div id='target_dialog_tabs'>
+    <ul>
+      <li><a href='#target_dialog_properties' onfocus="this.blur()" tabindex="-1">Properties</a></li>
+      <li><a href='#target_dialog_devices_tab' onfocus="this.blur()" tabindex="-1">Devices</a></li>
+      <li><a href='#target_dialog_config_param_tab' onfocus="this.blur()" tabindex="-1">Advanced...</a></li>
+    </ul>
+    <div id='target_dialog_properties'></div>
+    <div id='target_dialog_devices_tab'>
+      <div id='target_dialog_devices' class='canvas resource_graph_canvas'></div>
+    </div>
+    <div id='target_dialog_config_param_tab'>
+      <table border="0" cellspacing="0" cellpadding="0" id="target_config_param_table">
+        <thead>
+          <th>Property</th>
+          <th>Value</th>
+          <th></th> 
+        </thead> 
+        <tbody></tbody>
+      </table>
+      <div align="right"><button id="ConfigParam_Apply">Apply</button> <button id="ConfigParam_Cancel">Cancel</button></div>
+    </div>
+  </div>
+</div>
+<!-- End markup for target_dialog.js -->
+
+<!-- Markup for transition confirmation dialog -->
+<div style="overflow-y: auto; max-height: 700px;" id="transition_confirmation_dialog">
+</div>
+<!-- End markup for transition confirmation dialog -->
+{% endblock %}

@@ -5,10 +5,6 @@ import sys
 
 print sys.argv[1]
 
-#if not os.path.exists('monitor/bin/hydra-monitor') and \
-#       os.path.exists('monitor/bin/hydra-monitor.py'):
-#    os.link('monitor/bin/hydra-monitor.py', 'monitor/bin/hydra-monitor')
-
 setup(name = 'hydra-server',
       license = 'Proprietary',
       version = '@VERSION@',
@@ -17,31 +13,25 @@ setup(name = 'hydra-server',
       description = 'The Whamcloud Lustre Monitoring and Adminisration Interface',
       long_description = 'This is the Whamcloud Monitoring and Adminstration Interface',
       url = 'http://www.whamcloud.com/',
-      packages = ['', 'monitor', 'monitor/lib',
-                  'configure', 'configure/lib', 'configure/models',
-                  'configure/lib/storage_plugin', 'configure/plugins',
-                  'polymorphic', 'hydraapi', 'hydradashboard', 'hydracm',
+      packages = ['',
+                  'chroma_core', 'chroma_core/lib', 'chroma_core/models',
+                  'chroma_core/lib/storage_plugin', 'chroma_core/plugins',
+                  'polymorphic', 'chroma_api', 'chroma_ui',
                   'benchmark', 'benchmark/management',
                   'benchmark/management/commands'],
-      scripts = ["configure/bin/storage_daemon", "hydra-host-discover.py"],
-      package_data={'monitor': ['monitor/migrations'],
-                    'configure': ['configure/migrations'],
-                    'hydraapi': [],
-                    'hydradashboard': ['templates/*.html',
-                                       'static/css/*.css',
-                                       'static/css/smoothness/*.css',
-                                       'static/css/smoothness/images/*.png',
-                                       'static/images/*',
-                                       'static/js/*',
-                                       'static/css/images/*'],
-                    'hydracm': ['templates/*.html',
+      scripts = ["chroma_core/bin/storage_daemon", "hydra-host-discover.py"],
+      package_data={'chroma_core': ['chroma_core/migrations/*.py'],
+                    'chroma_api': [],
+                    'chroma_ui': ['templates/*.html',
                                 'static/css/*.css',
+                                'static/css/images/*.gif',
+                                'static/css/smoothness/*.css',
+                                'static/css/smoothness/images/*.png',
                                 'static/images/*.png',
                                 'static/images/*.jpg',
-                                'static/js/*',
-                                'static/images/storage_plugin/*']
+                                'static/images/*.gif',
+                                'static/images/*.ico',
+                                'static/js/*.js',
+                                'static/images/storage_plugin/*.png']
                    }
       )
-
-#if os.path.exists('monitor/bin/hydra-monitor'):
-#    os.unlink('monitor/bin/hydra-monitor')
