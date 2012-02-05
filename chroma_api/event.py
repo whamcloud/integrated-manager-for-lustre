@@ -4,7 +4,7 @@
 # ==============================
 
 from chroma_core.models import ManagedHost
-from monitor.models import Event
+from chroma_core.models import Event
 
 from requesthandler import AnonymousRESTRequestHandler
 

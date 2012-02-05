@@ -8,7 +8,7 @@ from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from picklefield.fields import PickledObjectField
 
-from monitor.models import WorkaroundGenericForeignKey
+from chroma_core.models.utils import WorkaroundGenericForeignKey
 #from django.contrib.contenttypes.generic import GenericForeignKey
 
 from django.db.models import Q
@@ -360,7 +360,7 @@ class Job(models.Model):
     opportunistic_retry = False
 
     def to_dict(self):
-        from monitor.lib.util import time_str
+        from chroma_core.lib.util import time_str
         read_locks = []
         write_locks = []
         for lock in self.statelock_set.all():

@@ -6,7 +6,7 @@
 from django.db import models
 from chroma_core.lib.job import StateChangeJob, DependOn, DependAll, Step
 from chroma_core.models.jobs import StatefulObject, Job
-from monitor.models import DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 
 
 class ManagedFilesystem(StatefulObject, MeasuredEntity):

@@ -134,7 +134,6 @@ INSTALLED_APPS = (
     'r3d',
     'djcelery',
     'pagination',
-    'monitor',
     'chroma_core',
     'chroma_api',
     'hydradashboard',
@@ -229,20 +228,20 @@ SQL_RETRY_PERIOD = 10
 USE_FRONTLINE_METRICSTORE = True
 
 CELERY_ROUTES = (
-        {"monitor.tasks.audit_all": {"queue": "periodic"}},
-        {"monitor.tasks.purge_and_optimize_metrics": {"queue": "periodic"}},
-        {"monitor.tasks.drain_flms_table": {"queue": "periodic"}},
-        {"monitor.tasks.mail_alerts": {"queue": "periodic"}},
-        {"monitor.tasks.parse_log_entries": {"queue": "parselog"}},
+        {"chroma_core.tasks.audit_all": {"queue": "periodic"}},
+        {"chroma_core.tasks.purge_and_optimize_metrics": {"queue": "periodic"}},
+        {"chroma_core.tasks.drain_flms_table": {"queue": "periodic"}},
+        {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
+        {"chroma_core.tasks.parse_log_entries": {"queue": "parselog"}},
         {"chroma_core.tasks.janitor": {"queue": "periodic"}},
         {"chroma_core.tasks.set_state": {"queue": "serialize"}},
         {"chroma_core.tasks.notify_state": {"queue": "serialize"}},
         {"chroma_core.tasks.add_job": {"queue": "serialize"}},
         {"chroma_core.tasks.complete_job": {"queue": "serialize"}},
         {"chroma_core.tasks.run_job": {"queue": "jobs"}},
-        {"monitor.tasks.test_host_contact": {"queue": "ssh"}},
-        {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
-        {"monitor.tasks.send_alerts_email": {"queue": "jobs"}},
+        {"chroma_core.tasks.test_host_contact": {"queue": "ssh"}},
+        {"chroma_core.tasks.monitor_exec": {"queue": "ssh"}},
+        {"chroma_core.tasks.send_alerts_email": {"queue": "jobs"}},
         )
 
 CELERY_TRACK_STARTED = True

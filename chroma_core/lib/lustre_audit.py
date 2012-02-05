@@ -6,10 +6,12 @@
 
 import settings
 
-# Access to 'monitor' database
-from monitor.models import TargetRecoveryAlert, TargetRecoveryInfo, HostContactAlert, LNetOfflineAlert, LearnEvent
-from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, ManagedTargetMount, FilesystemMember
-from chroma_core.models import ManagedHost, Nid, LunNode, Lun, ManagedFilesystem
+from chroma_core.models.alert import TargetRecoveryAlert, HostContactAlert, LNetOfflineAlert
+from chroma_core.models.event import LearnEvent
+from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, FilesystemMember, TargetRecoveryInfo
+from chroma_core.models.target_mount import ManagedTargetMount
+from chroma_core.models.host import ManagedHost, Nid, LunNode, Lun
+from chroma_core.models.filesystem import ManagedFilesystem
 from django.db import transaction
 
 audit_log = settings.setup_log('audit')

@@ -36,7 +36,7 @@ class Notifications(AnonymousRequestHandler):
 
         from chroma_core.models import Job
         jobs = Job.objects.filter(*job_filter_args, **job_filter_kwargs).order_by('-modified_at')
-        from monitor.models import AlertState
+        from chroma_core.models import AlertState
         alerts = AlertState.objects.filter(*alert_filter_args, **alert_filter_kwargs).order_by('-end')
 
         # >> FIXME HYD-421 Hack: this info should be provided in a more generic way by
@@ -53,7 +53,7 @@ class Notifications(AnonymousRequestHandler):
             from chroma_core.models import Lun
             from chroma_core.models import ManagedTargetMount, ManagedMgs
             from chroma_core.models import FilesystemMember
-            from monitor.models import TargetOfflineAlert, TargetRecoveryAlert, TargetFailoverAlert, HostContactAlert
+            from chroma_core.models import TargetOfflineAlert, TargetRecoveryAlert, TargetFailoverAlert, HostContactAlert
 
             def affect_target(target):
                 target = target.downcast()
@@ -105,7 +105,7 @@ class Notifications(AnonymousRequestHandler):
             last_modified = None
 
         if last_modified:
-            from monitor.lib.util import time_str
+            from chroma_core.lib.util import time_str
             last_modified = time_str(last_modified)
 
         return {

@@ -2,6 +2,7 @@
 import math
 from django.contrib.contenttypes.models import ContentType
 from r3d.models import Average, Database
+from chroma_core.models import FrontLineMetricStore
 
 import settings
 metrics_log = settings.setup_log('metrics')
@@ -248,7 +249,6 @@ class HostMetricStore(R3dMetricStore):
 
         if (hasattr(settings, 'USE_FRONTLINE_METRICSTORE')
             and settings.USE_FRONTLINE_METRICSTORE):
-            from models import FrontLineMetricStore
             FrontLineMetricStore.store_update(self.ct, self.mo_id,
                                               update_time, update)
         else:
@@ -317,7 +317,6 @@ class TargetMetricStore(R3dMetricStore):
 
         if (hasattr(settings, 'USE_FRONTLINE_METRICSTORE')
             and settings.USE_FRONTLINE_METRICSTORE):
-            from models import FrontLineMetricStore
             FrontLineMetricStore.store_update(self.ct, self.mo_id,
                                               update_time, update)
         else:
@@ -488,11 +487,9 @@ class FlmsDrain(object):
         super(FlmsDrain, self).__init__(*args, **kwargs)
 
     def _update_groups(self):
-        from monitor.models import FrontLineMetricStore
         return FrontLineMetricStore.objects.filter(complete=True).order_by("insert_time")
 
     def _reconstitute_update(self, group):
-        from monitor.models import FrontLineMetricStore
         ids = []
         update = {}
         for row in FrontLineMetricStore.objects.filter(content_type=group.content_type_id,
@@ -515,7 +512,6 @@ class FlmsDrain(object):
     # Throw together a quicky locking framework to keep us from
     # stomping all over ourselves.
     def find_lock(self):
-        from monitor.models import FrontLineMetricStore
         try:
             return FrontLineMetricStore.objects.get(metric_type=DRAIN_LOCK_NAME)
         except FrontLineMetricStore.DoesNotExist:
@@ -536,7 +532,6 @@ class FlmsDrain(object):
             pass
 
     def lock(self, req_id, expire_time=DRAIN_LOCK_TIME):
-        from monitor.models import FrontLineMetricStore
         import datetime
         now = datetime.datetime.now()
 
@@ -573,7 +568,7 @@ class FlmsDrain(object):
         if len(drained_rows) > 0:
             cursor = connection.cursor()
             cursor.execute("DELETE FROM %s WHERE id IN (%s)" %
-                           ("monitor_frontlinemetricstore",
+                           ("chroma_core_frontlinemetricstore",
                             ",".join(["%d" % r for r in sorted(drained_rows)])))
 
         metrics_log.debug("Drained %d rows from FLMS" % len(drained_rows))

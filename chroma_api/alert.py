@@ -10,7 +10,7 @@ from chroma_api.utils import paginate_result
 
 class Handler(AnonymousRESTRequestHandler):
     def get(self, request, active = None, iDisplayStart = None, iDisplayLength = None, sEcho = None):
-        from monitor.models import AlertState
+        from chroma_core.models import AlertState
         if active:
             active = True
         else:

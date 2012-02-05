@@ -14,7 +14,7 @@ from chroma_core.models import Command
 from chroma_api.requesthandler import AnonymousRESTRequestHandler, APIResponse
 import chroma_core.lib.conf_param
 
-import monitor.lib.util
+import chroma_core.lib.util
 import chroma_api.target
 import chroma_api.configureapi
 
@@ -120,9 +120,9 @@ class FilesystemHandler(AnonymousRESTRequestHandler):
                     'mds_hostname': mds_hostname,
                     'mdsstatus': mds_status,
                     # FIXME: the API should not be formatting these, leave it to the presentation layer
-                    'bytes_total': monitor.lib.util.sizeof_fmt((fskbytestotal * 1024)),
-                    'bytes_free': monitor.lib.util.sizeof_fmt((fskbytesfree * 1024)),
-                    'bytes_used': monitor.lib.util.sizeof_fmt(((fskbytestotal - fskbytesfree) * 1024)),
+                    'bytes_total': chroma_core.lib.util.sizeof_fmt((fskbytestotal * 1024)),
+                    'bytes_free': chroma_core.lib.util.sizeof_fmt((fskbytesfree * 1024)),
+                    'bytes_used': chroma_core.lib.util.sizeof_fmt(((fskbytestotal - fskbytesfree) * 1024)),
                     'inodes_free': fsfilesfree,
                     'inodes_total': fsfilestotal,
                     'inodes_used': (fsfilestotal - fsfilesfree),
@@ -169,8 +169,8 @@ class FilesystemHandler(AnonymousRESTRequestHandler):
                                     'mgs_hostname': filesystem.mgs.primary_server().pretty_name(),
                                     'mds_hostname': mds_hostname,
                                     # FIXME: the API should not be formatting these, leave it to the presentation layer
-                                    'kbytesused': monitor.lib.util.sizeof_fmt((fskbytestotal * 1024)),
-                                    'kbytesfree': monitor.lib.util.sizeof_fmt((fskbytesfree * 1024)),
+                                    'kbytesused': chroma_core.lib.util.sizeof_fmt((fskbytestotal * 1024)),
+                                    'kbytesfree': chroma_core.lib.util.sizeof_fmt((fskbytesfree * 1024)),
                                     'conf_params': chroma_core.lib.conf_param.get_conf_params(filesystem),
                                     'id': filesystem.id,
                                     'content_type_id': ContentType.objects.get_for_model(filesystem).id})

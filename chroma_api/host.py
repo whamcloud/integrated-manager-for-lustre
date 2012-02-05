@@ -49,7 +49,7 @@ class ManagedHostsHandler (AnonymousRESTRequestHandler):
 
 class TestHost(AnonymousRESTRequestHandler):
     def get(self, request, hostname):
-        from monitor.tasks import test_host_contact
+        from chroma_core.tasks import test_host_contact
         from chroma_core.models import Monitor
         host = ManagedHost(address = hostname)
         host.monitor = Monitor(host = host)

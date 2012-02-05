@@ -58,7 +58,7 @@ class Bytes(BaseResourceAttribute):
     and rounding when presented to the user, and should be used in preference to
     storing values in kilobytes/megabytes etc whereever possible."""
     def to_markup(self, value):
-        from monitor.lib.util import sizeof_fmt
+        from chroma_core.lib.util import sizeof_fmt
         return sizeof_fmt(int(value))
 
 

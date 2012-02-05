@@ -4,7 +4,7 @@
 # ==============================
 
 from django.db import models
-from monitor.models import DeletableMetaclass
+from chroma_core.models.utils import DeletableMetaclass
 
 
 class ManagedTargetMount(models.Model):
@@ -43,7 +43,7 @@ class ManagedTargetMount(models.Model):
         return self.block_device.path
 
     def status_string(self):
-        from monitor.models import TargetRecoveryAlert
+        from chroma_core.models import TargetRecoveryAlert
         in_recovery = (TargetRecoveryAlert.filter_by_item(self.target).count() > 0)
         if self.target.active_mount == self:
             if in_recovery:

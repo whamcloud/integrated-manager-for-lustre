@@ -138,7 +138,7 @@ class TargetHandler(AnonymousRESTRequestHandler):
 
 class TargetResourceGraphHandler(AnonymousRESTRequestHandler):
     def get(self, request, id):
-        from monitor.models import AlertState
+        from chroma_core.models import AlertState
         from chroma_core.models import ManagedTarget
         from django.shortcuts import get_object_or_404
         target = get_object_or_404(ManagedTarget, pk = id).downcast()

@@ -14,13 +14,12 @@ from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
-from monitor.models import LearnEvent
 from chroma_core.models import ManagedHost, ManagedMdt, ManagedOst, ManagedMgs, ManagedFilesystem, Monitor
 
 from logging import getLogger, FileHandler, INFO
 file_log_name = __name__
 getLogger(file_log_name).setLevel(INFO)
-getLogger(file_log_name).addHandler(FileHandler("%s.log" % 'hydra'))
+getLogger(file_log_name).addHandler(FileHandler("%s.log" % 'debug'))
 
 
 def log():
@@ -143,16 +142,6 @@ class HydraDebug(cmd.Cmd, object):
         for host in ManagedHost.objects.all():
             table.add_row([host.id, host.address, host.status_string()])
         screen(table.draw())
-
-    def do_test_fake_events(self, line):
-        from random import randint
-        count = int(line)
-        hosts = list(ManagedHost.objects.all())
-        for i in range(0, count):
-            import logging
-            idx = randint(0, len(hosts) - 1)
-            host = hosts[idx]
-            LearnEvent(learned_item = host, severity = logging.INFO).save()
 
     def do_audit_list(self, line):
         for m in Monitor.objects.all():

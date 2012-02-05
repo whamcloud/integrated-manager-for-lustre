@@ -30,7 +30,7 @@ class BaseStatistic(object):
         if self.units == None:
             return value
         elif self.units == UNITS_BYTES:
-            from monitor.lib.util import sizeof_fmt_detailed
+            from chroma_core.lib.util import sizeof_fmt_detailed
             return sizeof_fmt_detailed(value)
         else:
             return "%s%s" % (value, self.units)

@@ -4,7 +4,7 @@
 # ==============================
 
 from chroma_core.models import ManagedHost
-from monitor.models import Systemevents
+from chroma_core.models import Systemevents
 
 from requesthandler import AnonymousRESTRequestHandler
 
@@ -66,7 +66,7 @@ def nid_finder(message):
     from chroma_api import api_log
 
     from chroma_core.models import ManagedHost, ManagedTarget
-    from monitor.lib.lustre_audit import normalize_nid
+    from chroma_core.lib.lustre_audit import normalize_nid
     import re
     # TODO: detect IB/other(cray?) as well as tcp
     nid_regex = re.compile("(\d{1,3}\.){3}\d{1,3}@tcp(_\d+)?")

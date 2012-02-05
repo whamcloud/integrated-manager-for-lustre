@@ -9,9 +9,11 @@ from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
 
+from polymorphic.models import DowncastMetaclass
+
 from chroma_core.models.jobs import StatefulObject, Job
 from chroma_core.lib.job import StateChangeJob, DependOn, DependAll, Step
-from monitor.models import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass, DowncastMetaclass
+from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
 
 import settings
 
@@ -187,7 +189,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
         tm_states = set(targetmount_statuses.values())
 
-        from monitor.models import AlertState, HostContactAlert, LNetOfflineAlert
+        from chroma_core.models import AlertState, HostContactAlert, LNetOfflineAlert
         alerts = AlertState.filter_by_item(self)
         alert_klasses = [a.__class__ for a in alerts]
         if HostContactAlert in alert_klasses:
@@ -329,7 +331,7 @@ class Lun(models.Model):
             return resource.get_label()
 
     def to_dict(self):
-        from monitor.lib.util import sizeof_fmt
+        from chroma_core.lib.util import sizeof_fmt
         return {
                  'id': self.id,
                  'name': self.get_label(),
@@ -403,7 +405,7 @@ class LunNode(models.Model):
         }
 
     def pretty_string(self):
-        from monitor.lib.util import sizeof_fmt
+        from chroma_core.lib.util import sizeof_fmt
         lun_name = self.lun.get_label()
         if lun_name:
             short_name = lun_name
@@ -466,8 +468,8 @@ class Monitor(models.Model):
 
     def try_schedule(self):
         """Return True if a run was scheduled, else False"""
-        from monitor.tasks import monitor_exec
-        from monitor.lib.lustre_audit import audit_log
+        from chroma_core.tasks import monitor_exec
+        from chroma_core.lib.lustre_audit import audit_log
 
         if self.state == 'tasking':
             audit_log.warn("Monitor %d found in state 'tasking' (crash recovery).  Going to idle." % self.id)
@@ -486,7 +488,7 @@ class Monitor(models.Model):
     def invoke(self, command, timeout = None):
         """Safe to call on an SshMonitor which has a host assigned, neither
         need to have been saved"""
-        from monitor.lib.lustre_audit import audit_log
+        from chroma_core.lib.lustre_audit import audit_log
         from chroma_core.lib.agent import Agent
         try:
             return Agent(self.host, log = audit_log, timeout = timeout).invoke(command)
@@ -530,7 +532,7 @@ class LearnNidsStep(Step):
 
     def run(self, kwargs):
         from chroma_core.models import ManagedHost, Nid
-        from monitor.lib.lustre_audit import normalize_nid
+        from chroma_core.lib.lustre_audit import normalize_nid
         host = ManagedHost.objects.get(pk = kwargs['host_id'])
         result = self.invoke_agent(host, "lnet-scan")
         for nid_string in result:
@@ -662,7 +664,7 @@ class DetectTargetsStep(Step):
 
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
-        from monitor.lib.lustre_audit import DetectScan
+        from chroma_core.lib.lustre_audit import DetectScan
 
         host_data = {}
         for host in ManagedHost.objects.all():

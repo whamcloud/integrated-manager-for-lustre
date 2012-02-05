@@ -5,8 +5,7 @@
 
 import settings
 
-# Access to 'monitor' database
-from monitor.models import SyslogEvent, ClientConnectEvent, Systemevents
+from chroma_core.models import SyslogEvent, ClientConnectEvent, Systemevents
 from django.db import transaction
 
 import logging
@@ -118,12 +117,12 @@ def client_eviction_handler(entry, h):
 
 class SystemEventsAudit:
     def get_last_id(self):
-        from monitor.models import LastSystemeventsProcessed
+        from chroma_core.models import LastSystemeventsProcessed
         l, c = LastSystemeventsProcessed.objects.get_or_create(id__gt = 0)
         return l.last
 
     def store_last_id(self, last):
-        from monitor.models import LastSystemeventsProcessed
+        from chroma_core.models import LastSystemeventsProcessed
         l = LastSystemeventsProcessed.objects.get()
         l.last = last
         l.save()

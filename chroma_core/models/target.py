@@ -3,10 +3,12 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from django.db import models
+import json
+
+from django.db import models, transaction
 from chroma_core.lib.job import StateChangeJob, DependOn, DependAny, DependAll, Step, NullStep, AnyTargetMountStep, job_log
 from chroma_core.models.jobs import StatefulObject, Job
-from monitor.models import DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 
 
 class FilesystemMember(models.Model):
@@ -98,7 +100,7 @@ class ManagedTarget(StatefulObject):
             self.active_mount = active_mount
             self.save()
 
-            from monitor.models import TargetFailoverAlert, TargetOfflineAlert
+            from chroma_core.models import TargetFailoverAlert, TargetOfflineAlert
             TargetOfflineAlert.notify(self, active_mount == None)
             for tm in self.managedtargetmount_set.filter(primary = False):
                 TargetFailoverAlert.notify(tm, active_mount == tm)
@@ -301,6 +303,38 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
                 p.save()
 
         create_params()
+
+
+class TargetRecoveryInfo(models.Model):
+    """Record of what we learn from /proc/fs/lustre/*/*/recovery_status
+       for a running target"""
+    #: JSON-encoded dict parsed from /proc
+    recovery_status = models.TextField()
+
+    target = models.ForeignKey('chroma_core.ManagedTarget')
+
+    @staticmethod
+    @transaction.commit_on_success
+    def update(target, recovery_status):
+        TargetRecoveryInfo.objects.filter(target = target).delete()
+        instance = TargetRecoveryInfo.objects.create(
+                target = target,
+                recovery_status = json.dumps(recovery_status))
+        return instance.is_recovering(recovery_status)
+
+    def is_recovering(self, data = None):
+        if not data:
+            data = json.loads(self.recovery_status)
+        return ("status" in data and data["status"] == "RECOVERING")
+
+    def recovery_status_str(self):
+        data = json.loads(self.recovery_status)
+        if 'status' in data and data["status"] == "RECOVERING":
+            return "%s %ss remaining" % (data["status"], data["time_remaining"])
+        elif 'status' in data:
+            return data["status"]
+        else:
+            return "N/A"
 
 
 class DeleteTargetStep(Step):

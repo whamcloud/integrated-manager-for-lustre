@@ -22,7 +22,7 @@ class UpdateScan(AnonymousRequestHandler):
             return APIResponse({}, 403)
 
         if update_scan:
-            from monitor.lib.lustre_audit import UpdateScan
+            from chroma_core.lib.lustre_audit import UpdateScan
             UpdateScan().run(host.pk, update_scan)
 
         # TODO: make sure UpdateScan is committing because we might fail out here

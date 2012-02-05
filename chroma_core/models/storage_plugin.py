@@ -6,7 +6,8 @@
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
 
-from monitor.models import Event, AlertState, AlertEvent
+from chroma_core.models.event import Event
+from chroma_core.models.alert import AlertState, AlertEvent
 
 # Our limit on the length of python names where we put
 # them in CharFields -- python doesn't impose a limit, so this
@@ -251,7 +252,7 @@ class StorageResourceStatistic(models.Model):
         super(StorageResourceStatistic, self).delete(*args, **kwargs)
 
     def __get_metrics(self):
-        from monitor.metrics import VendorMetricStore
+        from chroma_core.lib.metrics import VendorMetricStore
         if not hasattr(self, '_metrics'):
             self._metrics = VendorMetricStore(self, self.sample_period)
         return self._metrics
