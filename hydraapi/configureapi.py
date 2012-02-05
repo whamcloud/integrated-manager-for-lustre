@@ -144,8 +144,16 @@ class ObjectSummary(RequestHandler):
             except klass.DoesNotExist:
                 continue
 
+            from configure.models import ManagedHost
+            if isinstance(instance, ManagedHost):
+                import hydraapi.host
+                resource_uri = hydraapi.host.HostResource().get_resource_uri(instance)
+            else:
+                resource_uri = "TODO"
+
             result.append({'id': o['id'],
                            'content_type_id': o['content_type_id'],
+                           'resource_uri': resource_uri,
                            'label': instance.get_label(),
                            'state': instance.state,
                            'available_transitions': StateManager.available_transitions(instance)})

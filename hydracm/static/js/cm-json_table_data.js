@@ -234,50 +234,5 @@ function LoadMGTConfiguration_MGTConf()
   })
 }
 
-/******************************************************************/
-//Function name - LoadServerConf_ServerConfig()
-//Param - none
-//Return - none
-//Used in - Server Configuration (server_configuration.html)
-/******************************************************************/
-
-function LoadServerConf_ServerConfig()
-{
-  var api_params = {"filesystem_id": ""};
-
-  invoke_api_call(api_get, "host/", api_params, 
-  success_callback = function(data)
-  {
-    $('#server_configuration').dataTable().fnClearTable();
-    var response = data;
-    $.each(response, function(resKey, resValue)
-    {
-      $('#server_configuration').dataTable().fnAddData ([
-        object_name_markup(resValue.id, resValue.content_type_id, resValue.pretty_name),
-        object_state_markup(resValue.id, resValue.content_type_id, resValue.lnet_state),
-        CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
-        notification_icons_markup(resValue.id, resValue.content_type_id)
-      ]);
-    });
-  });
-}
-
-function CreateActionLink(id, ct, available_transitions)
-{
-  var ops_action="";
-  var action="<span class='transition_buttons object_transitions object_transitions_" + id + "_" + ct + "'>";
-  var function_name;
-  var button_class = "ui-state-default ui-corner-all";
-  $.each(available_transitions, function(i, transition)
-  {
-    function_name = "Transition(" + id + "," + ct + ",\"" + transition.state + "\")"
-    ops_action = "<button" +
-      " onclick='"+ function_name + "'>" + 
-      transition.verb + "</button>&nbsp;";
-    action += ops_action;
-  });
-  action += "</span>"
-  return action;
-}
 
 

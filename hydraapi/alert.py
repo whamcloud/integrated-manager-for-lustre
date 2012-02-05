@@ -3,26 +3,24 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydraapi.requesthandler import RequestHandler
+from monitor.models import AlertState
 
-from hydraapi.utils import paginate_result
+from tastypie.resources import ModelResource
+from tastypie import fields
 
 
-class Handler(RequestHandler):
-    def get(self, request, active = None, iDisplayStart = None, iDisplayLength = None, sEcho = None):
-        from monitor.models import AlertState
-        if active:
-            active = True
-        else:
-            active = None
-        alerts = AlertState.objects.filter(active = active).order_by('end')
+class AlertResource(ModelResource):
+    message = fields.CharField(readonly = True)
+    alert_item_str = fields.CharField(readonly = True)
 
-        def format_fn(alert):
-            return alert.to_dict()
+    class Meta:
+        queryset = AlertState.objects.all()
+        resource_name = 'alert'
+        fields = ['begin', 'end', 'message', 'active', 'alert_item']
+        filtering = {'active': ['exact']}
 
-        if iDisplayStart:
-            iDisplayStart = int(iDisplayStart)
-        if iDisplayLength:
-            iDisplayLength = int(iDisplayLength)
+    def dehydrate_message(self, bundle):
+        return bundle.obj.message()
 
-        return paginate_result(iDisplayStart, iDisplayLength, alerts, format_fn, sEcho)
+    def dehydrate_alert_item_str(self, bundle):
+        return str(bundle.obj.alert_item)

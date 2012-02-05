@@ -36,6 +36,8 @@ import hydraapi.host
 import hydraapi.filesystem
 import hydraapi.target
 
+from django.conf.urls.defaults import include
+
 
 class CsrfResource(Resource):
     """CSRF protection is disabled by default in django-piston, this
@@ -85,9 +87,11 @@ urlpatterns = patterns('',
     (r'^storage_resource/(?P<module_name>\w+)/(?P<class_name>\w+)/$', CsrfResource(hydraapi.storage_resource.StorageResourceHandler)),
 
     # hydraapi.host
-    (r'^host/$', CsrfResource(hydraapi.host.ManagedHostsHandler)),
-    (r'^host/(?P<id>\d+)/$', CsrfResource(hydraapi.host.ManagedHostsHandler)),
-    (r'^test_host/$', CsrfResource(hydraapi.host.TestHost)),
+    #(r'^host/$', CsrfResource(hydraapi.host.ManagedHostsHandler)),
+    #(r'^host/(?P<id>\d+)/$', CsrfResource(hydraapi.host.ManagedHostsHandler)),
+    #(r'^test_host/$', CsrfResource(hydraapi.host.TestHost)),
+    (r'^', include(hydraapi.host.HostResource().urls)),
+    (r'^', include(hydraapi.host.HostTestResource().urls)),
 
     # hydraapi.filesystem
     (r'^filesystem/$', CsrfResource(hydraapi.filesystem.FilesystemHandler)),
@@ -106,7 +110,8 @@ urlpatterns = patterns('',
     (r'^volume_node/$', CsrfResource(hydraapi.volume_node.Handler)),
 
     # hydraapi.alert
-    (r'^alert/$', CsrfResource(hydraapi.alert.Handler)),
+    #(r'^alert/$', CsrfResource(hydraapi.alert.Handler)),
+    (r'^', include(hydraapi.alert.AlertResource().urls)),
 
     # hydraapi.event
     (r'^event/$', CsrfResource(hydraapi.event.Handler)),

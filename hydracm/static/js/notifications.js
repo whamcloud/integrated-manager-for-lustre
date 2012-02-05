@@ -486,7 +486,7 @@ poll_objects = function() {
     $.each(data, function(i, object_info) {
       /* TODO: only rewrite markup on change */
       $(".object_transitions_" + object_info.id + "_" + object_info.content_type_id).replaceWith(
-        CreateActionLink(object_info.id, object_info.content_type_id, object_info.available_transitions, ""));
+        stateTransitionButtons(object_info));
       $(".object_name_" + object_info.id + "_" + object_info.content_type_id).html(object_info.human_name)
       $(".object_state_" + object_info.id + "_" + object_info.content_type_id).html(object_info.state)
     });

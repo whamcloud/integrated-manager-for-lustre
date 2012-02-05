@@ -13,13 +13,11 @@
         "bDeferRender": true,
         "sAjaxSource": 'alert/',
         "fnServerData": function (url, data, callback, settings) {
-          invoke_api_call(api_get, url, {active: true}, success_callback = function(data) {
-            callback(data);
-          });
+          datatables_api_call(url, data, callback, settings, {active: true});
         },
         "aoColumns": [
           { "sClass": 'txtleft', "mDataProp":"begin" },
-          { "sClass": 'txtleft', "mDataProp":"alert_item" },
+          { "sClass": 'txtleft', "mDataProp":"alert_item_str" },
           { "sClass": 'txtleft', "mDataProp":"message" }
           ],
           "oLanguage": {
@@ -35,14 +33,12 @@
       "bDeferRender": true,
       "sAjaxSource": 'alert/',
       "fnServerData": function (url, data, callback, settings) {
-        invoke_api_call(api_get, url, {}, success_callback = function(data) {
-          callback(data);
-        });
+        datatables_api_call(url, data, callback, settings, {});
       },
       "aoColumns": [
         { "sClass": 'txtleft', "mDataProp":"begin" },
         { "sClass": 'txtleft', "mDataProp":"end" },
-        { "sClass": 'txtleft', "mDataProp":"alert_item" },
+        { "sClass": 'txtleft', "mDataProp":"alert_item_str" },
         { "sClass": 'txtleft', "mDataProp":"message" }
       ],
       "oLanguage": {

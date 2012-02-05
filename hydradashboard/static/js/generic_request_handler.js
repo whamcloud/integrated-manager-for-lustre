@@ -47,10 +47,51 @@ function complete_blocking()
 
 var disable_api = false;
 
+/* Wrap API calls to tastypie paginated methods such that
+   jquery.Datatables understands the resulting format */
+function datatables_api_call(url, data, callback, settings, kwargs) {
+  var kwargs = kwargs;
+  if (kwargs == undefined) {
+    kwargs = {}
+  } else {
+    console.log('kwargs passed');
+    console.log(kwargs);
+  }
+    
+  /* Copy datatables args into our dict */
+  if (data) {
+    $.each(data, function(i, param) {
+      kwargs[param.name] = param.value
+    });
+  }
+
+  /* Rename from datatables to tastypie */
+  kwargs.limit = kwargs.iDisplayLength
+  kwargs.offset = kwargs.iDisplayStart
+
+  /*$.each(data, function(i, d) {console.log(d.name + " : " + d.value)})*/
+
+  console.log('datatables_api_call ' + url);
+  invoke_api_call(api_get, url, kwargs, success_callback = function(data) {
+    console.log('datatables_api_call success');
+    var datatables_data = {}
+    datatables_data.aaData = data.objects;
+    datatables_data.iTotalRecords = data.meta.total_count
+    datatables_data.iTotalDisplayRecords = data.meta.total_count
+    callback(datatables_data);
+  });
+}
+
 /********************************************************************************
 // Generic function that handles API requests 
 /********************************************************************************/
 function invoke_api_call(request_type, api_url, api_args, success_callback, error_callback, blocking)
+{
+  return invoke_api_url(request_type, API_PREFIX + api_url, api_args, success_callback, error_callback, blocking)
+}
+
+
+function invoke_api_url(request_type, url, api_args, success_callback, error_callback, blocking)
 {
   if (disable_api) {
     return;
@@ -60,21 +101,21 @@ function invoke_api_call(request_type, api_url, api_args, success_callback, erro
     blocking = true;
   }
 
-  var ajax_args;
+  var ajax_args = {
+      type: request_type,
+      url: url,
+      headers: {
+        Accept: "application/json"
+      }
+  };
+
   if (request_type == api_get) {
-    ajax_args = {
-      type: request_type,
-      url: API_PREFIX + api_url,
-      data: api_args
-    }
+    ajax_args.data = api_args
   } else {
-    ajax_args = {
-      type: request_type,
-      url: API_PREFIX + api_url,
-      dataType: 'json',
-      data: JSON.stringify(api_args),
-      contentType:"application/json; charset=utf-8"}
-    }
+    ajax_args.dataType = 'json'
+    ajax_args.data = JSON.stringify(api_args)
+    ajax_args.contentType ="application/json; charset=utf-8"
+  }
 
   if (blocking) {
     start_blocking();

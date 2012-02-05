@@ -3,55 +3,61 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.models import (ManagedHost, ManagedFilesystem)
-from configure.lib.state_manager import StateManager
-from hydraapi.requesthandler import RequestHandler
-from hydraapi.requesthandler import APIResponse
+from configure.models import ManagedHost
+from django.db import IntegrityError
 
-from django.shortcuts import get_object_or_404
+import tastypie.http as http
+from tastypie.exceptions import ImmediateHttpResponse
+from tastypie.resources import Resource
+from tastypie import fields
+from tastypie.authorization import Authorization
+from hydraapi.utils import custom_response, StatefulModelResource
 
 
-class ManagedHostsHandler (RequestHandler):
-    def get(self, request, id = None, filesystem_id = None):
+class HostResource(StatefulModelResource):
+    class Meta:
+        queryset = ManagedHost.objects.all()
+        resource_name = 'host'
+        excludes = ['not_deleted']
+        #authentication = Authentication()
+        authorization = Authorization()
 
-        def host_dict_with_transitions(host):
-            _host = host.to_dict()
-            _host['available_transitions'] = StateManager.available_transitions(host)
-            return _host
+        # So that we can return Commands for PUTs
+        always_return_data = True
 
-        hosts = []
-        if id:
-            host = get_object_or_404(ManagedHost, pk = id)
-            return host_dict_with_transitions(host)
-        elif filesystem_id:
-            fs = get_object_or_404(ManagedFilesystem, pk = filesystem_id)
-            hosts = fs.get_servers()
-        else:
-            hosts = ManagedHost.objects.all()
-
-        return [host_dict_with_transitions(h) for h in hosts]
-
-    def post(self, request, host_name):
-        from django.db import IntegrityError
+    def obj_create(self, bundle, request = None, **kwargs):
+        # FIXME: we implement this instead of letting it go
+        # straight through to the model because the model
+        # does some funny stuff in create_from_string.  Really
+        # ManagedHost should be refactored so that a simple save()
+        # does the job
         try:
-            host = ManagedHost.create_from_string(host_name)
-            return APIResponse(host.to_dict(), 201)
+            bundle.obj = ManagedHost.create_from_string(bundle.data['host_name'])
         except IntegrityError:
-            return APIResponse("Host with address '%s' already exists" % host_name, 400)
+            raise ImmediateHttpResponse(response = http.HttpBadRequest)
+        return bundle
 
-    def remove(self, request, id):
-        # NB This is equivalent to a call to /api/transition with matching content-type/id/state
+    def obj_delete(self, request = None, **kwargs):
+        host = self.obj_get(request, **kwargs)
         from configure.models import Command
-        host = get_object_or_404(ManagedHost, pk = id)
         command = Command.set_state(host, 'removed')
-        return APIResponse(command.to_dict(), 202)
+        raise custom_response(self, request, http.HttpAccepted, command.to_dict())
 
 
-class TestHost(RequestHandler):
-    def get(self, request, hostname):
+class HostTestResource(Resource):
+    hostname = fields.CharField()
+
+    class Meta:
+        list_allowed_methods = ['post']
+        detail_allowed_methods = []
+        resource_name = 'test_host'
+        authorization = Authorization()
+        object_class = dict
+
+    def obj_create(self, bundle, request = None, **kwargs):
         from monitor.tasks import test_host_contact
         from configure.models import Monitor
-        host = ManagedHost(address = hostname)
+        host = ManagedHost(address = bundle.data['hostname'])
         host.monitor = Monitor(host = host)
         job = test_host_contact.delay(host)
-        return {'task_id': job.task_id, 'status': job.status}
+        raise custom_response(self, request, http.HttpAccepted, {'task_id': job.task_id, 'status': job.status})

@@ -48,6 +48,17 @@ def create_target(lun_id, target_klass, **kwargs):
 
     return target
 
+    #def get_object_list(self, request):
+    #    base_objects = super(HostResource, self).get_object_list(request)
+#
+#        args = request.GET.copy()
+#        if 'filesystem_id' in args:
+#            filesystem_id = args['filesystem_id']
+#            fs = get_object_or_404(ManagedFilesystem, pk = filesystem_id)
+#            base_objects = base_objects.filter((Q(managedmdt__filesystem = fs) | Q(managedost__filesystem = fs)) | Q(id = fs.mgs.id))
+#
+#        return base_objects
+
 
 class TargetHandler(RequestHandler):
     def put(self, request, id):

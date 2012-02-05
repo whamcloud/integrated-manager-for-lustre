@@ -12,18 +12,18 @@ var ERR_VOLUME_CONFIG = "Error in setting volume cofiguration ";
 var ALERT_TITLE = "Configuration Manager";
 var CONFIRM_TITLE = "Configuration Manager";
 
-TransitionCommit = function(id, ct, state)
+stateTransitionCommit = function(url, state)
 {
-  invoke_api_call(api_post, "transition/", {id: id, content_type_id: ct, new_state: state}, function() {}, function() {});
+  invoke_api_url(api_put, url, {state: state}, success_callback = function(data) {console.log(data)})
 }
 
 $(document).ready(function() {
   $('#transition_confirmation_dialog').dialog({autoOpen: false, maxHeight: 400, maxWidth: 800, width: 'auto', height: 'auto'});
 });
 
-Transition = function (id, ct, state)
+stateTransition = function (url, state)
 {
-  invoke_api_call(api_post, "transition_consequences/", {id: id, content_type_id: ct, new_state: state}, 
+  invoke_api_url(api_put, url, {dry_run: true, state: state}, 
   success_callback = function(data)  
   {
     var requires_confirmation = false;
@@ -46,36 +46,35 @@ Transition = function (id, ct, state)
      $('#transition_confirmation_dialog').html(confirmation_markup);
      $('#transition_confirmation_dialog').dialog('option', 'buttons', {
        'Cancel': function() {$(this).dialog('close');},
-       'Confirm': function() {TransitionCommit(id, ct, state);$(this).dialog('close');}
+       'Confirm': function() {stateTransitionCommit(url, state);$(this).dialog('close');}
      });
      $('#transition_confirmation_dialog').dialog('open');
     } else {
-      TransitionCommit(id, ct, state);
+      stateTransitionCommit(url, state);
     }
   });
 }
 
-function Add_Host_Table(dialog_id)
+
+function stateTransitionButtons(stateful_object)
 {
-  //$('#host_status').remove();
-  $('#status_tab').empty();
-  $('#host_status').empty();
-  var oTable = "<table width='100%' border='0' cellspacing='0' cellpadding='0' id='hostdetails'><tr><td width='41%' align='right' valign='middle'>Host name:</td><td width='60%' align='left' valign='middle'><input type='text' name='txtHostName' id='txtHostName' /></td></tr></table>";
-  $("#" + dialog_id).dialog("option", "buttons", null);
-      
-  $("#" + dialog_id).dialog({ 
-    buttons: { 
-      "Close": function() { 
-            $(this).dialog("close");
-          },
-      "Continue": function() {
-        AddHost_ServerConfig($('#txtHostName').val(),dialog_id);
-      }
-    }
+  var id = stateful_object.id;
+  var ct = stateful_object.content_type_id;
+  var available_transitions = stateful_object.available_transitions;
+
+  var ops_action="";
+  var action="<span class='transition_buttons object_transitions object_transitions_" + id + "_" + ct + "'>";
+  var button_class = "ui-state-default ui-corner-all";
+  $.each(available_transitions, function(i, transition)
+  {
+    var function_name = "stateTransition(\"" + stateful_object.resource_uri + "\", \"" + transition.state + "\")"
+    ops_action = "<button" + " onclick='"+ function_name + "'>" + transition.verb + "</button>&nbsp;";
+    action += ops_action;
   });
-      
-  $('#hostdetails_container').html(oTable);
+  action += "</span>"
+  return action;
 }
+
 
 function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, config_json)
 {

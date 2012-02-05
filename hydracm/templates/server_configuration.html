@@ -3,20 +3,34 @@
 <script>
   $(document).ready(function() {
     //cm-json_table_data => load server list
-    LoadServerConf_ServerConfig();
     // Server JQuery Data table init()
-    var oServer_Configuration = $('#server_configuration').dataTable( {
+    $('#server_configuration').dataTable( {
+      bServerSide: true,
       "bProcessing": true,
       "bJQueryUI": true,
       "bAutoWidth":false,
+      sAjaxSource: 'host/',
+      fnServerData: function(url, data, callback, settings) {
+        datatables_api_call(url, data, function(data) {
+          console.log(data);
+          var processed_data = [];
+          $.each(data.aaData, function(i, row) {
+            row['label'] = object_name_markup(row.id, row.content_type_id, row.fqdn),
+            row['state'] = object_state_markup(row.id, row.content_type_id, row.state),
+            row['actions'] = stateTransitionButtons(row),
+            row['icons'] = notification_icons_markup(row.id, row.content_type_id)
+          });
+          callback(data);
+        }, settings);
+      },
       "oLanguage": {
           "sEmptyTable": "No Servers to display"
       },
       "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtcenter' },
-        { "sClass": 'txtcenter', bSortable: false},
-        { "sClass": 'txtcenter', bSortable: false},
+        { "sClass": 'txtleft', mDataProp: 'fqdn'},
+        { "sClass": 'txtcenter', mDataProp: 'state'},
+        { "sClass": 'txtcenter', bSortable: false, mDataProp: 'actions'},
+        { "sClass": 'txtcenter', bSortable: false, mDataProp: 'icons'}
       ]
     } );
     $('#btnAddNewHost').click(function()

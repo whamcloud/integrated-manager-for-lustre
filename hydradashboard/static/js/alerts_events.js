@@ -28,7 +28,7 @@ $(document).ready(function()
     toggleSliderDiv('alertsDiv');
     if($('#alertsDiv').css('display') == 'block')
     {
-      loadAlertContent('alert_content', 10);  // load only when target div visible
+      //loadAlertContent('alert_content', 10);  // load only when target div visible
     }
   });
   
