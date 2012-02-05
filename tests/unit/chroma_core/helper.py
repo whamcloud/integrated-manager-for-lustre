@@ -25,7 +25,7 @@ class MockAgent(object):
             return {'uuid': uuid.uuid1().__str__()}
         elif cmdline.startswith('start-target'):
             import re
-            from configure.models import ManagedTarget
+            from chroma_core.models import ManagedTarget
             target_id = re.search("--serial ([^\s]+)", cmdline).group(1)
             target = ManagedTarget.objects.get(id = target_id)
             # FIXME: this will be nodename when HYD-455 is done
@@ -37,7 +37,7 @@ class MockAgent(object):
 
 class JobTestCase(TestCase):
     def _test_lun(self, host):
-        from configure.models import Lun, LunNode
+        from chroma_core.models import Lun, LunNode
 
         lun = Lun.objects.create(shareable = False)
         primary = True
@@ -56,8 +56,8 @@ class JobTestCase(TestCase):
         # as part of the initial DB setup before any test is started
         # so that it's part of the baseline that's rolled back to
         # after each test.
-        import configure.lib.storage_plugin.manager
-        configure.lib.storage_plugin.manager.storage_plugin_manager = configure.lib.storage_plugin.manager.StoragePluginManager()
+        import chroma_core.lib.storage_plugin.manager
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
 
         # NB by this stage celery has already read in its settings, so we have to update
         # ALWAYS_EAGER inside celery instead of in settings.*
@@ -68,14 +68,14 @@ class JobTestCase(TestCase):
         app_or_default().conf.CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
 
         # Intercept attempts to call out to lustre servers
-        import configure.lib.agent
-        self.old_agent = configure.lib.agent.Agent
+        import chroma_core.lib.agent
+        self.old_agent = chroma_core.lib.agent.Agent
         MockAgent.mock_servers = self.mock_servers
-        configure.lib.agent.Agent = MockAgent
+        chroma_core.lib.agent.Agent = MockAgent
 
     def tearDown(self):
-        import configure.lib.agent
-        configure.lib.agent.Agent = self.old_agent
+        import chroma_core.lib.agent
+        chroma_core.lib.agent.Agent = self.old_agent
 
         from celery.app import app_or_default
         app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
@@ -93,7 +93,7 @@ class JobTestCaseWithHost(JobTestCase):
     def setUp(self):
         super(JobTestCaseWithHost, self).setUp()
 
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         self.hosts = [ManagedHost.create_from_string(address) for address, info in self.mock_servers.items()]
 
         # Handy if you're only using one

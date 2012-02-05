@@ -1,7 +1,7 @@
 
 from django.test import TestCase
-from configure.lib.storage_plugin.resource import StorageResource, GlobalId
-from configure.lib.storage_plugin import attributes
+from chroma_core.lib.storage_plugin.resource import StorageResource, GlobalId
+from chroma_core.lib.storage_plugin import attributes
 
 
 class TestDefaults1(StorageResource):

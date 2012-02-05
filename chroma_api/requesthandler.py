@@ -7,7 +7,7 @@ from piston.handler import BaseHandler
 from jsonutils import render_to_json
 from django.views.decorators.csrf  import csrf_exempt
 
-from hydraapi import api_log
+from chroma_api import api_log
 
 
 def extract_request_args(f):

@@ -3,18 +3,18 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.lib.storage_plugin.plugin import StoragePlugin
-from configure.lib.storage_plugin.resource import StorageResource, ScannableId, GlobalId, ScannableResource
+from chroma_core.lib.storage_plugin.plugin import StoragePlugin
+from chroma_core.lib.storage_plugin.resource import StorageResource, ScannableId, GlobalId, ScannableResource
 
-from configure.lib.storage_plugin import attributes
-from configure.lib.storage_plugin import builtin_resources
-from configure.lib.storage_plugin import alert_conditions
-from configure.lib.storage_plugin import statistics
-from configure.lib.storage_plugin import messaging
+from chroma_core.lib.storage_plugin import attributes
+from chroma_core.lib.storage_plugin import builtin_resources
+from chroma_core.lib.storage_plugin import alert_conditions
+from chroma_core.lib.storage_plugin import statistics
+from chroma_core.lib.storage_plugin import messaging
 
 # This plugin is special, it uses Hydra's built-in infrastructure
 # in a way that third party plugins can't/shouldn't/mustn't
-from configure.models import ManagedHost
+from chroma_core.models import ManagedHost
 
 
 class DeviceNode(StorageResource):

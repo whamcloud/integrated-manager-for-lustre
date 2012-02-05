@@ -8,11 +8,11 @@ import settings
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 
-from configure.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Command
-from configure.models import Lun, LunNode
-from hydraapi.requesthandler import AnonymousRESTRequestHandler, APIResponse
-from configure.lib.state_manager import StateManager
-import configure.lib.conf_param
+from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Command
+from chroma_core.models import Lun, LunNode
+from chroma_api.requesthandler import AnonymousRESTRequestHandler, APIResponse
+from chroma_core.lib.state_manager import StateManager
+import chroma_core.lib.conf_param
 
 
 KIND_TO_KLASS = {"MGT": ManagedMgs,
@@ -60,7 +60,7 @@ class TargetHandler(AnonymousRESTRequestHandler):
         # TODO: validate the parameters before trying to set any of them
 
         for k, v in conf_params.items():
-            configure.lib.conf_param.set_conf_param(target, k, v)
+            chroma_core.lib.conf_param.set_conf_param(target, k, v)
 
     def post(self, request, kind, filesystem_id = None, lun_ids = []):
         if not kind in KIND_TO_KLASS:
@@ -139,7 +139,7 @@ class TargetHandler(AnonymousRESTRequestHandler):
 class TargetResourceGraphHandler(AnonymousRESTRequestHandler):
     def get(self, request, id):
         from monitor.models import AlertState
-        from configure.models import ManagedTarget
+        from chroma_core.models import ManagedTarget
         from django.shortcuts import get_object_or_404
         target = get_object_or_404(ManagedTarget, pk = id).downcast()
 
@@ -155,7 +155,7 @@ class TargetResourceGraphHandler(AnonymousRESTRequestHandler):
             lun_node = tm.block_device
             if lun_node.storage_resource:
                 parent_record = lun_node.storage_resource
-                from configure.lib.storage_plugin.query import ResourceQuery
+                from chroma_core.lib.storage_plugin.query import ResourceQuery
 
                 parent_records.add(parent_record)
 

@@ -10,7 +10,7 @@ def load_plugins(mod_names):
     settings.INSTALLED_STORAGE_PLUGINS = mod_names
 
     try:
-        from configure.lib.storage_plugin.manager import StoragePluginManager
+        from chroma_core.lib.storage_plugin.manager import StoragePluginManager
         return StoragePluginManager()
     finally:
         sys.path = orig_path

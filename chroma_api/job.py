@@ -10,7 +10,7 @@ class Handler(AnonymousRESTRequestHandler):
     def get(self, request, id = None, recent = False):
         """Return a list of dicts representing Jobs, or a single dict if 'id' is specified.
            If the 'recent' parameter is set, return jobs which are incomplete or which ran in the last hour"""
-        from configure.models import Job
+        from chroma_core.models import Job
         from datetime import timedelta, datetime
         from django.db.models import Q
 
@@ -34,7 +34,7 @@ class Handler(AnonymousRESTRequestHandler):
 
         assert new_state in ['pause', 'cancel', 'resume']
         from django.shortcuts import get_object_or_404
-        from configure.models import Job
+        from chroma_core.models import Job
         job = get_object_or_404(Job, id = id).downcast()
         if new_state == 'pause':
             job.pause()

@@ -1,5 +1,5 @@
 
-from configure.lib.storage_plugin.plugin import StoragePlugin
+from chroma_core.lib.storage_plugin.plugin import StoragePlugin
 
 
 class TestPluginOne(StoragePlugin):

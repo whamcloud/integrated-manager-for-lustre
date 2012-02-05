@@ -7,11 +7,11 @@
 """This module defines StoragePluginManager which loads and provides
 access to StoragePlugins and their StorageResources"""
 
-from configure.lib.storage_plugin.resource import StorageResource, ScannableResource
-from configure.lib.storage_plugin.plugin import StoragePlugin
-from configure.lib.storage_plugin.log import storage_plugin_log
-from configure.models.storage_plugin import StoragePluginRecord, StorageResourceClassStatistic
-from configure.models.storage_plugin import StorageResourceRecord, StorageResourceClass
+from chroma_core.lib.storage_plugin.resource import StorageResource, ScannableResource
+from chroma_core.lib.storage_plugin.plugin import StoragePlugin
+from chroma_core.lib.storage_plugin.log import storage_plugin_log
+from chroma_core.models.storage_plugin import StoragePluginRecord, StorageResourceClassStatistic
+from chroma_core.models.storage_plugin import StorageResourceRecord, StorageResourceClass
 from django.db import transaction
 
 
@@ -149,7 +149,7 @@ class StoragePluginManager(object):
 
     def load_plugin(self, module):
         """Load a StoragePlugin class from a module given a
-           python path like 'configure.lib.lvm',
+           python path like chroma_core.lib.lvm',
            or simply return it if it was already loaded.  Note that the
            StoragePlugin within the module will not be instantiated when this
            returns, caller is responsible for instantiating it.

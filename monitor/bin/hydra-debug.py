@@ -15,7 +15,7 @@ import settings
 setup_environ(settings)
 
 from monitor.models import LearnEvent
-from configure.models import ManagedHost, ManagedMdt, ManagedOst, ManagedMgs, ManagedFilesystem, Monitor
+from chroma_core.models import ManagedHost, ManagedMdt, ManagedOst, ManagedMgs, ManagedFilesystem, Monitor
 
 from logging import getLogger, FileHandler, INFO
 file_log_name = __name__
@@ -183,7 +183,7 @@ class HydraDebug(cmd.Cmd, object):
 
     def do_host_stat(self, line):
         hostname, stat_name = line.split()
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(address = hostname)
         self._print_stat(host.metrics, stat_name)
 

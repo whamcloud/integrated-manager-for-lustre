@@ -1,9 +1,9 @@
 
-from configure.lib.storage_plugin.plugin import StoragePlugin
-from configure.lib.storage_plugin.resource import StorageResource
-from configure.lib.storage_plugin import attributes
-from configure.lib.storage_plugin import statistics
-from configure.lib.storage_plugin.resource import GlobalId, ScannableResource
+from chroma_core.lib.storage_plugin.plugin import StoragePlugin
+from chroma_core.lib.storage_plugin.resource import StorageResource
+from chroma_core.lib.storage_plugin import attributes
+from chroma_core.lib.storage_plugin import statistics
+from chroma_core.lib.storage_plugin.resource import GlobalId, ScannableResource
 
 
 class TestScannableResource(StorageResource, ScannableResource):

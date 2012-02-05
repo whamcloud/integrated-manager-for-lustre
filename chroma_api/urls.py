@@ -17,21 +17,21 @@ from statsmetricapi import(GetFSTargetStats,
                            GetFSClientsStats,
                            GetHeatMapFSStats)
 
-import hydraapi.alert
-import hydraapi.event
-import hydraapi.log
-import hydraapi.job
-import hydraapi.command
-import hydraapi.help
+import chroma_api.alert
+import chroma_api.event
+import chroma_api.log
+import chroma_api.job
+import chroma_api.command
+import chroma_api.help
 
-import hydraapi.volume
-import hydraapi.volume_node
-import hydraapi.storage_resource
-import hydraapi.storage_resource_class
+import chroma_api.volume
+import chroma_api.volume_node
+import chroma_api.storage_resource
+import chroma_api.storage_resource_class
 
-import hydraapi.host
-import hydraapi.filesystem
-import hydraapi.target
+import chroma_api.host
+import chroma_api.filesystem
+import chroma_api.target
 
 
 class CsrfExemptResource(Resource):
@@ -66,52 +66,52 @@ urlpatterns = patterns('',
 
     (r'^update_scan/$', CsrfExemptResource(monitorapi.UpdateScan)),
 
-    # hydraapi.storage_resource_class
-    (r'^storage_resource_class/$', CsrfExemptResource(hydraapi.storage_resource_class.StorageResourceClassHandler)),
-    (r'^storage_resource_class/(?P<module_name>\w+)/(?P<class_name>\w+)/$', CsrfExemptResource(hydraapi.storage_resource_class.StorageResourceClassHandler)),
+    # chroma_api.storage_resource_class
+    (r'^storage_resource_class/$', CsrfExemptResource(chroma_api.storage_resource_class.StorageResourceClassHandler)),
+    (r'^storage_resource_class/(?P<module_name>\w+)/(?P<class_name>\w+)/$', CsrfExemptResource(chroma_api.storage_resource_class.StorageResourceClassHandler)),
 
-    # hydraapi.storage_resource
-    (r'^storage_resource/$', CsrfExemptResource(hydraapi.storage_resource.StorageResourceHandler)),
-    (r'^storage_resource/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.storage_resource.StorageResourceHandler)),
-    (r'^storage_resource/(?P<module_name>\w+)/(?P<class_name>\w+)/$', CsrfExemptResource(hydraapi.storage_resource.StorageResourceHandler)),
+    # chroma_api.storage_resource
+    (r'^storage_resource/$', CsrfExemptResource(chroma_api.storage_resource.StorageResourceHandler)),
+    (r'^storage_resource/(?P<id>\d+)/$', CsrfExemptResource(chroma_api.storage_resource.StorageResourceHandler)),
+    (r'^storage_resource/(?P<module_name>\w+)/(?P<class_name>\w+)/$', CsrfExemptResource(chroma_api.storage_resource.StorageResourceHandler)),
 
-    # hydraapi.host
-    (r'^host/$', CsrfExemptResource(hydraapi.host.ManagedHostsHandler)),
-    (r'^host/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.host.ManagedHostsHandler)),
-    (r'^test_host/$', CsrfExemptResource(hydraapi.host.TestHost)),
+    # chroma_api.host
+    (r'^host/$', CsrfExemptResource(chroma_api.host.ManagedHostsHandler)),
+    (r'^host/(?P<id>\d+)/$', CsrfExemptResource(chroma_api.host.ManagedHostsHandler)),
+    (r'^test_host/$', CsrfExemptResource(chroma_api.host.TestHost)),
 
-    # hydraapi.filesystem
-    (r'^filesystem/$', CsrfExemptResource(hydraapi.filesystem.FilesystemHandler)),
-    (r'^filesystem/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.filesystem.FilesystemHandler)),
+    # chroma_api.filesystem
+    (r'^filesystem/$', CsrfExemptResource(chroma_api.filesystem.FilesystemHandler)),
+    (r'^filesystem/(?P<id>\d+)/$', CsrfExemptResource(chroma_api.filesystem.FilesystemHandler)),
 
-    # hydraapi.target
-    (r'^target/$', CsrfExemptResource(hydraapi.target.TargetHandler)),
-    (r'^target/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.target.TargetHandler)),
-    (r'^target/(?P<id>\d+)/resource_graph/$', CsrfExemptResource(hydraapi.target.TargetResourceGraphHandler)),
+    # chroma_api.target
+    (r'^target/$', CsrfExemptResource(chroma_api.target.TargetHandler)),
+    (r'^target/(?P<id>\d+)/$', CsrfExemptResource(chroma_api.target.TargetHandler)),
+    (r'^target/(?P<id>\d+)/resource_graph/$', CsrfExemptResource(chroma_api.target.TargetResourceGraphHandler)),
 
-    # hydraapi.volume
-    (r'^volume/$', CsrfExemptResource(hydraapi.volume.Handler)),
-    (r'^volume/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.volume.Handler)),
+    # chroma_api.volume
+    (r'^volume/$', CsrfExemptResource(chroma_api.volume.Handler)),
+    (r'^volume/(?P<id>\d+)/$', CsrfExemptResource(chroma_api.volume.Handler)),
 
-    # hydraapi.volume_node
-    (r'^volume_node/$', CsrfExemptResource(hydraapi.volume_node.Handler)),
+    # chroma_api.volume_node
+    (r'^volume_node/$', CsrfExemptResource(chroma_api.volume_node.Handler)),
 
-    # hydraapi.alert
-    (r'^alert/$', CsrfExemptResource(hydraapi.alert.Handler)),
+    # chroma_api.alert
+    (r'^alert/$', CsrfExemptResource(chroma_api.alert.Handler)),
 
-    # hydraapi.event
-    (r'^event/$', CsrfExemptResource(hydraapi.event.Handler)),
+    # chroma_api.event
+    (r'^event/$', CsrfExemptResource(chroma_api.event.Handler)),
 
-    # hydraapi.log
-    (r'^log/$', CsrfExemptResource(hydraapi.log.Handler)),
+    # chroma_api.log
+    (r'^log/$', CsrfExemptResource(chroma_api.log.Handler)),
 
-    # hydraapi.command
-    (r'^command/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.command.Handler)),
+    # chroma_api.command
+    (r'^command/(?P<id>\d+)/$', CsrfExemptResource(chroma_api.command.Handler)),
 
-    # hydraapi.job
-    (r'^job/$', CsrfExemptResource(hydraapi.job.Handler)),
-    (r'^job/(?P<id>\d+)/$', CsrfExemptResource(hydraapi.job.Handler)),
+    # chroma_api.job
+    (r'^job/$', CsrfExemptResource(chroma_api.job.Handler)),
+    (r'^job/(?P<id>\d+)/$', CsrfExemptResource(chroma_api.job.Handler)),
 
-    # hydraapi.help
-    (r'^help/conf_param/$', CsrfExemptResource(hydraapi.help.ConfParamHandler)),
+    # chroma_api.help
+    (r'^help/conf_param/$', CsrfExemptResource(chroma_api.help.ConfParamHandler)),
 )

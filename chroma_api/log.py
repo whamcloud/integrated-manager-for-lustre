@@ -3,12 +3,12 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.models import ManagedHost
+from chroma_core.models import ManagedHost
 from monitor.models import Systemevents
 
 from requesthandler import AnonymousRESTRequestHandler
 
-from hydraapi.utils import paginate_result
+from chroma_api.utils import paginate_result
 
 import datetime
 
@@ -63,9 +63,9 @@ class Handler(AnonymousRESTRequestHandler):
 
 
 def nid_finder(message):
-    from hydraapi import api_log
+    from chroma_api import api_log
 
-    from configure.models import ManagedHost, ManagedTarget
+    from chroma_core.models import ManagedHost, ManagedTarget
     from monitor.lib.lustre_audit import normalize_nid
     import re
     # TODO: detect IB/other(cray?) as well as tcp

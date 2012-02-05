@@ -5,7 +5,7 @@
 
 from requesthandler import AnonymousRESTRequestHandler
 
-from hydraapi.utils import paginate_result
+from chroma_api.utils import paginate_result
 
 
 class Handler(AnonymousRESTRequestHandler):

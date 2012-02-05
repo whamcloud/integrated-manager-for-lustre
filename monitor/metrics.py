@@ -169,7 +169,7 @@ class VendorMetricStore(R3dMetricStore):
         """stat_data is an iterable in time order of dicts, where each
            dict has a member 'timestamp' which is a timestamp int, and
            'value' whose type depends on the statistic"""
-        from configure.lib.storage_plugin import statistics
+        from chroma_core.lib.storage_plugin import statistics
         r3d_format = {}
 
         for datapoint in stat_data:
@@ -465,7 +465,7 @@ def get_instance_metrics(measured_object):
     Returns the wrapper for known object types, or raises NotImplementedError.
     """
 
-    from configure.models import ManagedHost, ManagedTarget, ManagedFilesystem
+    from chroma_core.models import ManagedHost, ManagedTarget, ManagedFilesystem
     if isinstance(measured_object, ManagedHost):
         return HostMetricStore(measured_object, settings.AUDIT_PERIOD)
     elif isinstance(measured_object, ManagedTarget):

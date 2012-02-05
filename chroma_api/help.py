@@ -3,10 +3,10 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydraapi.requesthandler import AnonymousRESTRequestHandler, APIResponse
+from chroma_api.requesthandler import AnonymousRESTRequestHandler, APIResponse
 
-import configure.lib.conf_param
-from configure.models import ManagedOst, ManagedMdt, ManagedFilesystem
+import chroma_core.lib.conf_param
+from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem
 
 
 class ConfParamHandler(AnonymousRESTRequestHandler):
@@ -23,9 +23,9 @@ class ConfParamHandler(AnonymousRESTRequestHandler):
                     "FS": ManagedFilesystem
                     }[kind]
 
-            return configure.lib.conf_param.get_possible_conf_params(klass)
+            return chroma_core.lib.conf_param.get_possible_conf_params(klass)
         elif keys:
             keys = keys.split(",")
-            return dict([(key, configure.lib.conf_param.get_conf_param_help(key)) for key in keys])
+            return dict([(key, chroma_core.lib.conf_param.get_conf_param_help(key)) for key in keys])
         else:
             return APIResponse(None, 400)

@@ -184,7 +184,7 @@ class Event(models.Model):
 
     created_at = models.DateTimeField(auto_now_add = True)
     severity = models.IntegerField()
-    host = models.ForeignKey('configure.ManagedHost', blank = True, null = True)
+    host = models.ForeignKey('chroma_core.ManagedHost', blank = True, null = True)
 
     @staticmethod
     def type_name():
@@ -212,7 +212,7 @@ class LearnEvent(Event):
         return "Autodetection"
 
     def message(self):
-        from configure.models import ManagedTargetMount, ManagedTarget, ManagedFilesystem
+        from chroma_core.models import ManagedTargetMount, ManagedTarget, ManagedFilesystem
         if isinstance(self.learned_item, ManagedTargetMount):
             return "Discovered mount point of %s on %s" % (self.learned_item, self.learned_item.host)
         elif isinstance(self.learned_item, ManagedTarget):
@@ -481,7 +481,7 @@ class LNetOfflineAlert(AlertState):
 
 
 class TargetParam(models.Model):
-    target = models.ForeignKey('configure.ManagedTarget')
+    target = models.ForeignKey('chroma_core.ManagedTarget')
     key = models.CharField(max_length=128)
     value = models.CharField(max_length=512)
 
@@ -510,7 +510,7 @@ class TargetRecoveryInfo(models.Model):
     # JSON-encoded dict parsed from /proc/fs/lustre/*/*/recovery_status
     recovery_status = models.TextField()
 
-    target = models.ForeignKey('configure.ManagedTarget')
+    target = models.ForeignKey('chroma_core.ManagedTarget')
 
     @staticmethod
     @transaction.commit_on_success

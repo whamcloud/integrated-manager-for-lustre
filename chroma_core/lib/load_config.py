@@ -7,7 +7,7 @@ from django.db import transaction
 
 
 def _validate_conf_params(conf_params):
-    from configure.lib.conf_param import all_params
+    from chroma_core.lib.conf_param import all_params
     for key, val in conf_params.items():
         try:
             model_klass, param_value_obj, help_text = all_params[key]
@@ -18,7 +18,7 @@ def _validate_conf_params(conf_params):
 
 
 def _find_or_create_target(klass, mounts, **kwargs):
-    from configure.models import ManagedHost, ManagedTargetMount
+    from chroma_core.models import ManagedHost, ManagedTargetMount
 
     target = None
     for m in mounts:
@@ -37,7 +37,7 @@ def _find_or_create_target(klass, mounts, **kwargs):
 
 
 def _create_mounts(target, mounts):
-    from configure.models import ManagedHost, Lun, LunNode, ManagedTargetMount
+    from chroma_core.models import ManagedHost, Lun, LunNode, ManagedTargetMount
     lun = None
     for m in mounts:
         host = ManagedHost.objects.get(address = m['host'])
@@ -81,7 +81,7 @@ def _create_mounts(target, mounts):
 # our canonical names for devices.  We must normalize them to avoid
 # the risk of double-using a LUN.
 def _load(text):
-    from configure.models import ManagedHost, ManagedMgs, ManagedFilesystem
+    from chroma_core.models import ManagedHost, ManagedMgs, ManagedFilesystem
     import json
     data = json.loads(text)
 
@@ -96,10 +96,10 @@ def _load(text):
 
     for filesystem_info in data['filesystems']:
         # We collect up ConfParams for all targets and set them at the end for each filesystem
-        from configure.lib.conf_param import all_params
+        from chroma_core.lib.conf_param import all_params
         conf_param_objects = []
 
-        from configure.models import ManagedMdt, MdtConfParam, FilesystemClientConfParam, ManagedOst, OstConfParam
+        from chroma_core.models import ManagedMdt, MdtConfParam, FilesystemClientConfParam, ManagedOst, OstConfParam
 
         # Look for the MGS that the user specified by hostname
         fs_mgs_host = ManagedHost.objects.get(address = filesystem_info['mgs'])
@@ -155,7 +155,7 @@ def load_file(path):
 
 
 def save_filesystems(filesystem_names = None):
-    from configure.models import ManagedFilesystem, ManagedMdt, ManagedOst
+    from chroma_core.models import ManagedFilesystem, ManagedMdt, ManagedOst
     filesystems = []
     if filesystem_names:
         filesystems = [ManagedFilesystem.objects.get(name = fsname) for fsname in filesystem_names]

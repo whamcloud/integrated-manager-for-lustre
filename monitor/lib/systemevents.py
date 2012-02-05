@@ -136,7 +136,7 @@ class SystemEventsAudit:
                 }
 
     def parse_log_entries(self):
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
 
         trans_size = 100
         with transaction.commit_on_success():

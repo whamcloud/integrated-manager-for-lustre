@@ -3,12 +3,12 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.models import ManagedHost
+from chroma_core.models import ManagedHost
 from monitor.models import Event
 
 from requesthandler import AnonymousRESTRequestHandler
 
-from hydraapi.utils import paginate_result
+from chroma_api.utils import paginate_result
 
 
 class Handler(AnonymousRESTRequestHandler):

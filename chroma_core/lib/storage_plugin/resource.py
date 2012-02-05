@@ -6,9 +6,9 @@
 """This modules defines the StorageResource class, which StoragePlugins subclass use
 to define their system elements"""
 
-from configure.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
-from configure.lib.storage_plugin.statistics import BaseStatistic
-from configure.lib.storage_plugin.alert_conditions import AlertCondition
+from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
+from chroma_core.lib.storage_plugin.statistics import BaseStatistic
+from chroma_core.lib.storage_plugin.alert_conditions import AlertCondition
 
 from collections import defaultdict
 import threading

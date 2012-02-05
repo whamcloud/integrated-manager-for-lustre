@@ -7,19 +7,19 @@ import json
 from re import escape
 
 from django.db import models
-from configure.lib.job import DependOn, Step
+from chroma_core.lib.job import DependOn, Step
 from polymorphic.models import DowncastMetaclass
 
-from configure.models.jobs import Job
-from configure.models.target import ManagedMgs, ManagedMdt, ManagedOst
-from configure.models.filesystem import ManagedFilesystem
+from chroma_core.models.jobs import Job
+from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst
+from chroma_core.models.filesystem import ManagedFilesystem
 
 
 class ConfParamStep(Step):
     idempotent = False
 
     def run(self, kwargs):
-        from configure.models import ConfParam
+        from chroma_core.models import ConfParam
         conf_param = ConfParam.objects.get(pk = kwargs['conf_param_id']).downcast()
 
         self.invoke_agent(conf_param.mgs.primary_server(),
@@ -31,7 +31,7 @@ class ConfParamVersionStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedMgs
+        from chroma_core.models import ManagedMgs
         ManagedMgs.objects.\
             filter(pk = kwargs['mgs_id']).\
             update(conf_param_version_applied = kwargs['version'])
@@ -43,14 +43,14 @@ class ApplyConfParams(Job):
     opportunistic_retry = True
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         return "Update conf_params on %s" % (self.mgs.primary_server())
 
     def get_steps(self):
-        from configure.models import ConfParam
-        from configure.lib.job import job_log
+        from chroma_core.models import ConfParam
+        from chroma_core.lib.job import job_log
         new_params = ConfParam.objects.filter(version__gt = self.mgs.conf_param_version_applied).order_by('version')
         steps = []
 
@@ -66,7 +66,7 @@ class ApplyConfParams(Job):
         else:
             # If we have no new params, no-op
             job_log.warning("ApplyConfParams %d, mgs %d has no params newer than %d" % (self.id, self.mgs.id, self.mgs.conf_param_version_applied))
-            from configure.lib.job import NullStep
+            from chroma_core.lib.job import NullStep
             steps.append((NullStep, {}))
 
         return steps
@@ -84,7 +84,7 @@ class ConfParam(models.Model):
     version = models.IntegerField()
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     @staticmethod
     def get_latest_params(queryset):
@@ -113,7 +113,7 @@ class FilesystemClientConfParam(ConfParam):
     filesystem = models.ForeignKey(ManagedFilesystem)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def __init__(self, *args, **kwargs):
         super(FilesystemClientConfParam, self).__init__(*args, **kwargs)
@@ -134,7 +134,7 @@ class FilesystemGlobalConfParam(ConfParam):
         return "%s.%s" % (self.filesystem.name, self.key)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class MdtConfParam(ConfParam):
@@ -150,7 +150,7 @@ class MdtConfParam(ConfParam):
         return "%s.%s" % (self.mdt.name, self.key)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class OstConfParam(ConfParam):
@@ -166,4 +166,4 @@ class OstConfParam(ConfParam):
         return "%s.%s" % (self.ost.name, self.key)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'

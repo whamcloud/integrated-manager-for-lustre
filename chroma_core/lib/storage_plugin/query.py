@@ -1,7 +1,7 @@
 
 
-from configure.models import StorageResourceRecord
-from configure.lib.storage_plugin.log import storage_plugin_log
+from chroma_core.models import StorageResourceRecord
+from chroma_core.lib.storage_plugin.log import storage_plugin_log
 
 from django.db import transaction
 
@@ -61,7 +61,7 @@ class ResourceQuery(object):
         if isinstance(record_id, StorageResourceRecord):
             record_id = record_id.pk
 
-        from configure.models import StorageResourceAlert, StorageAlertPropagated
+        from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
         alerts = set(StorageResourceAlert.filter_by_item_id(StorageResourceRecord, record_id))
         for sap in StorageAlertPropagated.objects.filter(storage_resource = record_id):
             alerts.add(sap.alert_state)
@@ -72,7 +72,7 @@ class ResourceQuery(object):
         # NB assumes resource is a out-of-plugin instance
         # which has _handle set to a DB PK
         assert(resource._handle != None)
-        from configure.models import StorageResourceAlert
+        from chroma_core.models import StorageResourceAlert
         resource_alerts = StorageResourceAlert.filter_by_item_id(
                 StorageResourceRecord, resource._handle)
 
@@ -81,14 +81,14 @@ class ResourceQuery(object):
     def resource_get_propagated_alerts(self, resource):
         # NB assumes resource is a out-of-plugin instance
         # which has _handle set to a DB PK
-        from configure.models import StorageAlertPropagated
+        from chroma_core.models import StorageAlertPropagated
         alerts = []
         for sap in StorageAlertPropagated.objects.filter(storage_resource = resource._handle):
             alerts.append(sap.alert_state)
         return alerts
 
     def record_alert_message(self, record_id, alert_class):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         # Get the StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk=record_id)
 
@@ -99,7 +99,7 @@ class ResourceQuery(object):
         return msg
 
     def record_class_and_instance_string(self, record):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         # Get the StorageResource class and have it translate the alert_class
         klass = storage_plugin_manager.get_resource_class_by_id(
             record.resource_class_id)
@@ -223,8 +223,8 @@ class ResourceQuery(object):
         return tree
 
     def get_record_by_attributes(self, plugin, klass, **attrs):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
-        from configure.models import StorageResourceRecord
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.models import StorageResourceRecord
         import json
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, klass)
         resource = klass(**attrs)
@@ -236,8 +236,8 @@ class ResourceQuery(object):
     def get_scannable_id_record_by_attributes(self, scope, plugin, klass, **attrs):
         # FIXME: horrendous function name indicating overcomplication
         # this is for getting a resource which uses a ScannableId identifier attribute
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
-        from configure.models import StorageResourceRecord
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.models import StorageResourceRecord
         import json
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, klass)
         resource = klass(**attrs)

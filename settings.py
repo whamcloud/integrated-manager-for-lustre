@@ -20,7 +20,7 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'hydra',                 # Or path to database file if using sqlite3.
+        'NAME': 'chroma',                 # Or path to database file if using sqlite3.
         'USER': 'root',                  # Not used with sqlite3.
         'PASSWORD': '',                  # Not used with sqlite3.
         'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
@@ -117,7 +117,7 @@ BROKER_USER = "hydra"
 BROKER_PASSWORD = "hydra123"
 BROKER_VHOST = "hydravhost"
 CELERY_RESULT_BACKEND = "database"
-CELERY_RESULT_DBURI = "mysql://root:@localhost/hydra"
+CELERY_RESULT_DBURI = "mysql://root:@localhost/chroma"
 
 # HYD-471: This must be set for unit tests to pass in general
 SOUTH_TESTS_MIGRATE = False
@@ -255,7 +255,7 @@ CELERY_ACKS_LATE = True
 if DEBUG:
     LOG_PATH = ""
 else:
-    LOG_PATH = "/var/log/hydra"
+    LOG_PATH = "/var/log/chroma"
 
 
 def setup_log(log_name):

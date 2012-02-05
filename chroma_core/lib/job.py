@@ -152,7 +152,7 @@ class Step(object):
             self.result.console = self.result.console + chunk
             self.result.save()
 
-        from configure.lib.agent import Agent
+        from chroma_core.lib.agent import Agent
         agent = Agent(host = host, log = job_log, console_callback = console_callback)
         return agent.invoke(command, args)
 
@@ -196,7 +196,7 @@ class AnyTargetMountStep(Step):
         # used to issue a command to start this resource.
 
         # Try and use each targetmount, the one with the most recent successful audit first
-        from configure.models import ManagedTargetMount
+        from chroma_core.models import ManagedTargetMount
         available_tms = ManagedTargetMount.objects.filter(target = target, host__state = 'lnet_up').order_by('-host__monitor__last_success')
         if available_tms.count() == 0:
             raise RuntimeError("No hosts are available for target %s" % target)

@@ -6,7 +6,7 @@ import threading
 
 from django.db import transaction
 
-from configure.lib.storage_plugin.log import storage_plugin_log
+from chroma_core.lib.storage_plugin.log import storage_plugin_log
 
 
 # Thread-per-session is just a convenient way of coding this.  The actual required
@@ -23,9 +23,9 @@ class PluginSession(threading.Thread):
         super(PluginSession, self).__init__(*args, **kwargs)
 
     def run(self):
-        from configure.lib.storage_plugin.query import ResourceQuery
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
-        from configure.models import StorageResourceRecord
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(id=self.root_resource_id)
         plugin_klass = storage_plugin_manager.get_plugin_class(
                           record.resource_class.storage_plugin.module_name)
@@ -114,7 +114,7 @@ class StorageDaemon(object):
         self._all_sessions = {}
         # Map of module name to map of root_resource_id to PluginSession
         self.plugins = {}
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         for p in storage_plugin_manager.loaded_plugins.keys():
             # Create sessions for all root resources
             sessions = {}
@@ -145,12 +145,12 @@ class StorageDaemon(object):
                 while(not kill_session.stopped):
                     sleep(1)
 
-            from configure.lib.storage_plugin.resource_manager import resource_manager
+            from chroma_core.lib.storage_plugin.resource_manager import resource_manager
             resource_manager.global_remove_resource(resource_id)
 
     def root_resource_ids(self, plugin):
         """Return the PK of all StorageResourceRecords for 'plugin' which have no parents"""
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         # We will be polling, to need to commit to see new data
         with transaction.commit_manually():
             transaction.commit()

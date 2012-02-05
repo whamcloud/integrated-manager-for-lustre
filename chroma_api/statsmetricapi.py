@@ -4,7 +4,7 @@
 # ==============================
 
 from requesthandler import AnonymousRequestHandler
-from configure.models import (ManagedFilesystem,
+from chroma_core.models import (ManagedFilesystem,
                             ManagedMdt,
                             ManagedOst,
                             ManagedHost)

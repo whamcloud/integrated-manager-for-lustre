@@ -1,9 +1,9 @@
 
 from django.test import TestCase
-from configure.lib.storage_plugin.plugin import StoragePlugin
-from configure.lib.storage_plugin.resource import StorageResource
-from configure.lib.storage_plugin import attributes
-from configure.lib.storage_plugin.resource import GlobalId, ScannableResource
+from chroma_core.lib.storage_plugin.plugin import StoragePlugin
+from chroma_core.lib.storage_plugin.resource import StorageResource
+from chroma_core.lib.storage_plugin import attributes
+from chroma_core.lib.storage_plugin.resource import GlobalId, ScannableResource
 
 import mock
 import types
@@ -57,30 +57,30 @@ class TestPlugin(StoragePlugin):
 class TestRegistration(TestCase):
     def test_registration(self):
         instance = TestPlugin()
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         self.assertEqual(storage_plugin_manager.plugin_sessions[instance._handle], instance)
 
 
 class TestCallbacks(TestCase):
     def setUp(self):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         storage_plugin_manager._load_plugin('test_mod', TestPlugin)
         storage_plugin_manager.create_root_resource('test_mod', 'TestResource', name = 'test1')
 
-        from configure.lib.storage_plugin.query import ResourceQuery
-        from configure.models import StorageResourceRecord
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
+        from chroma_core.models import StorageResourceRecord
         scannable_record = StorageResourceRecord.objects.get()
         self.scannable_resource = ResourceQuery().get_resource(scannable_record)
         self.scannable_global_id = scannable_record.pk
 
-        import configure.lib.storage_plugin.resource_manager
-        self.mrm = mock.Mock(spec_set=configure.lib.storage_plugin.resource_manager.ResourceManager)
-        self.orig_resource_manager = configure.lib.storage_plugin.resource_manager.resource_manager
-        configure.lib.storage_plugin.resource_manager.resource_manager = self.mrm
+        import chroma_core.lib.storage_plugin.resource_manager
+        self.mrm = mock.Mock(spec_set=chroma_core.lib.storage_plugin.resource_manager.ResourceManager)
+        self.orig_resource_manager = chroma_core.lib.storage_plugin.resource_manager.resource_manager
+        chroma_core.lib.storage_plugin.resource_manager.resource_manager = self.mrm
 
     def tearDown(self):
-        import configure.lib.storage_plugin.resource_manager
-        configure.lib.storage_plugin.resource_manager.resource_manager = self.orig_resource_manager
+        import chroma_core.lib.storage_plugin.resource_manager
+        chroma_core.lib.storage_plugin.resource_manager.resource_manager = self.orig_resource_manager
 
     def test_initial(self):
         instance = TestPlugin(self.scannable_global_id)
@@ -107,12 +107,12 @@ class TestCallbacks(TestCase):
 
 class TestAddRemove(TestCase):
     def setUp(self):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         storage_plugin_manager._load_plugin('test_mod', TestPlugin)
         storage_plugin_manager.create_root_resource('test_mod', 'TestResource', name = 'test1')
 
-        from configure.lib.storage_plugin.query import ResourceQuery
-        from configure.models import StorageResourceRecord
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
+        from chroma_core.models import StorageResourceRecord
         scannable_record = StorageResourceRecord.objects.get()
         self.scannable_resource = ResourceQuery().get_resource(scannable_record)
         self.scannable_global_id = scannable_record.pk
@@ -124,7 +124,7 @@ class TestAddRemove(TestCase):
         def report0(self, root_resource):
             pass
 
-        with mock.patch('configure.lib.storage_plugin.resource_manager.resource_manager') as rm:
+        with mock.patch('chroma_core.lib.storage_plugin.resource_manager.resource_manager') as rm:
             # First session for the scannable, 1 resource present
             instance = TestPlugin(self.scannable_global_id)
             instance.initial_scan = types.MethodType(report1, instance)
@@ -137,7 +137,7 @@ class TestAddRemove(TestCase):
                     [self.scannable_resource, instance.resource1],
                     instance.update_period)
 
-        with mock.patch('configure.lib.storage_plugin.resource_manager.resource_manager') as rm:
+        with mock.patch('chroma_core.lib.storage_plugin.resource_manager.resource_manager') as rm:
             # Session reporting 0 resource in initial_scan
             instance = TestPlugin(self.scannable_global_id)
             instance.initial_scan = types.MethodType(report0, instance)
@@ -151,7 +151,7 @@ class TestAddRemove(TestCase):
                     instance.update_period)
 
     def test_update_add(self):
-        with mock.patch('configure.lib.storage_plugin.resource_manager.resource_manager') as rm:
+        with mock.patch('chroma_core.lib.storage_plugin.resource_manager.resource_manager') as rm:
             instance = TestPlugin(self.scannable_global_id)
             instance.do_initial_scan(self.scannable_resource)
 
@@ -171,7 +171,7 @@ class TestAddRemove(TestCase):
             self.assertFalse(rm.session_add_resources.called)
 
     def test_update_remove(self):
-        with mock.patch('configure.lib.storage_plugin.resource_manager.resource_manager') as rm:
+        with mock.patch('chroma_core.lib.storage_plugin.resource_manager.resource_manager') as rm:
             instance = TestPlugin(self.scannable_global_id)
             instance.do_initial_scan(self.scannable_resource)
 
@@ -190,7 +190,7 @@ class TestAddRemove(TestCase):
             rm.session_remove_resources.assert_called_once_with(instance._scannable_id, [instance.resource1])
 
     def test_update_modify_parents(self):
-        with mock.patch('configure.lib.storage_plugin.resource_manager.resource_manager') as rm:
+        with mock.patch('chroma_core.lib.storage_plugin.resource_manager.resource_manager') as rm:
             instance = TestPlugin(self.scannable_global_id)
             instance.do_initial_scan(self.scannable_resource)
 
@@ -221,7 +221,7 @@ class TestAddRemove(TestCase):
                                                                       instance.resource2._handle)
 
     def test_update_modify_attributes(self):
-        with mock.patch('configure.lib.storage_plugin.resource_manager.resource_manager') as rm:
+        with mock.patch('chroma_core.lib.storage_plugin.resource_manager.resource_manager') as rm:
             instance = TestPlugin(self.scannable_global_id)
             instance.do_initial_scan(self.scannable_resource)
 

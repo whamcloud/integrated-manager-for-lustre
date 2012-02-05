@@ -1,9 +1,9 @@
 
-from tests.unit.configure.helper import JobTestCaseWithHost, MockAgent
+from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent
 
-from configure.models import ManagedTarget, ManagedTargetMount, ManagedMgs, ManagedHost
-from hydraapi.target import create_target
-from configure.lib.state_manager import StateManager
+from chroma_core.models import ManagedTarget, ManagedTargetMount, ManagedMgs, ManagedHost
+from chroma_api.target import create_target
+from chroma_core.lib.state_manager import StateManager
 
 
 class TestTargetTransitions(JobTestCaseWithHost):
@@ -16,16 +16,16 @@ class TestTargetTransitions(JobTestCaseWithHost):
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'mounted')
 
     def test_start_stop(self):
-        from configure.lib.state_manager import StateManager
-        from configure.models import ManagedMgs
+        from chroma_core.lib.state_manager import StateManager
+        from chroma_core.models import ManagedMgs
         StateManager.set_state(self.mgt, 'unmounted')
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unmounted')
         StateManager.set_state(self.mgt, 'mounted')
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'mounted')
 
     def test_removal(self):
-        from configure.lib.state_manager import StateManager
-        from configure.models import ManagedMgs
+        from chroma_core.lib.state_manager import StateManager
+        from chroma_core.models import ManagedMgs
         StateManager.set_state(self.mgt, 'removed')
         with self.assertRaises(ManagedMgs.DoesNotExist):
             ManagedMgs.objects.get(pk = self.mgt.pk)
@@ -34,8 +34,8 @@ class TestTargetTransitions(JobTestCaseWithHost):
     def test_removal_mount_dependency(self):
         """Test that when removing, if target mounts cannot be unconfigured,
         the target is not removed"""
-        from configure.lib.state_manager import StateManager
-        from configure.models import ManagedMgs
+        from chroma_core.lib.state_manager import StateManager
+        from chroma_core.models import ManagedMgs
 
         try:
             # Make it so that the mount unconfigure operations will fail

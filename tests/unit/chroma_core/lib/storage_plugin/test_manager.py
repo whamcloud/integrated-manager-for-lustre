@@ -35,13 +35,13 @@ class TestLoad(TestCase):
         self.loadable_plugin = loadable_plugin
         self.manager = load_plugins(['loadable_plugin'])
 
-        import configure
-        self.old_manager = configure.lib.storage_plugin.manager.storage_plugin_manager
-        configure.lib.storage_plugin.manager.storage_plugin_manager = self.manager
+        import chroma_core
+        self.old_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.manager
 
     def tearDown(self):
-        import configure
-        configure.lib.storage_plugin.manager.storage_plugin_manager = self.old_manager
+        import chroma_core
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.old_manager
 
     def test_load(self):
         """Test that the manager correctly loaded and introspected
@@ -59,7 +59,7 @@ class TestLoad(TestCase):
         self.assertSetEqual(set(all_resource_classes), set(['TestResource', 'TestScannableResource']))
 
         # Check we populated the database elements for plugin, resources, and statistics
-        from configure.models import StoragePluginRecord, StorageResourceClass, StorageResourceClassStatistic
+        from chroma_core.models import StoragePluginRecord, StorageResourceClass, StorageResourceClassStatistic
         plugin = StoragePluginRecord.objects.get(module_name = 'loadable_plugin')
         resource = StorageResourceClass.objects.get(storage_plugin = plugin, class_name = 'TestResource')
         self.assertEqual(self.manager.get_resource_class_by_id(resource.pk).__name__, 'TestResource')

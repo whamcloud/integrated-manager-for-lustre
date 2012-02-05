@@ -14,7 +14,7 @@ from monitor.models import WorkaroundGenericForeignKey
 from django.db.models import Q
 from collections import defaultdict
 from polymorphic.models import DowncastMetaclass
-from configure.lib.job import StateChangeJob, DependOn, DependAll
+from chroma_core.lib.job import StateChangeJob, DependOn, DependAll
 
 MAX_STATE_STRING = 32
 
@@ -64,7 +64,7 @@ class Command(models.Model):
             old_state = object.state
             new_state = state
             route = object.get_route(old_state, new_state)
-            from configure.lib.state_manager import Transition
+            from chroma_core.lib.state_manager import Transition
             job = Transition(object, route[-2], route[-1]).to_job()
             message = job.description()
 
@@ -74,13 +74,13 @@ class Command(models.Model):
         # FIXME: Troublesome: if we crash here, the Command will be
         # in the DB, but the jobs will never make it.
 
-        from configure.lib.state_manager import StateManager
+        from chroma_core.lib.state_manager import StateManager
         StateManager.set_state(object, state, command.pk)
 
         return command
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class OpportunisticJob(models.Model):
@@ -89,7 +89,7 @@ class OpportunisticJob(models.Model):
     run_at = models.DateTimeField(null = True, blank = True)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def get_job(self):
         job = self.job
@@ -103,7 +103,7 @@ class StatefulObject(models.Model):
     # Use of abstract base classes to avoid django bug #12002
     class Meta:
         abstract = True
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     state = models.CharField(max_length = MAX_STATE_STRING)
     states = None
@@ -260,10 +260,10 @@ class StatefulObject(models.Model):
             reverse_deps_map = defaultdict(list)
             for klass in _subclasses(StatefulObject):
                 for class_name, lookup_fn in klass.reverse_deps.items():
-                    import configure.models
+                    import chroma_core.models
                     #FIXME: looking up class this way eliminates our ability to move
                     # StatefulObject definitions out into other modules
-                    so_class = getattr(configure.models, class_name)
+                    so_class = getattr(chroma_core.models, class_name)
                     reverse_deps_map[so_class].append(lookup_fn)
             StatefulObject.reverse_deps_map = reverse_deps_map
 
@@ -294,7 +294,7 @@ class StateLock(models.Model):
                 'locked_item_content_type_id': self.locked_item_type_id}
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     @classmethod
     def filter_by_locked_item(cls, stateful_object):
@@ -309,7 +309,7 @@ class StateReadLock(StateLock):
     # to validate that write locks left it in the right state.
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def __str__(self):
         return "Job %d readlock on %s" % (self.job.id, self.locked_item)
@@ -320,7 +320,7 @@ class StateWriteLock(StateLock):
     end_state = models.CharField(max_length = MAX_STATE_STRING)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def __str__(self):
         return "Job %d writelock on %s %s->%s" % (self.job.id, self.locked_item, self.begin_state, self.end_state)
@@ -384,7 +384,7 @@ class Job(models.Model):
         }
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def task_state(self):
         from celery.result import AsyncResult
@@ -440,7 +440,7 @@ class Job(models.Model):
         self.save()
 
     def create_locks(self):
-        from configure.lib.job import StateChangeJob
+        from chroma_core.lib.job import StateChangeJob
         # Take read lock on everything from self.get_deps
         for dependency in self.get_deps().all():
             StateReadLock.objects.create(job = self, locked_item = dependency.stateful_object)
@@ -470,7 +470,7 @@ class Job(models.Model):
 
     @classmethod
     def run_next(cls):
-        from configure.lib.job import job_log
+        from chroma_core.lib.job import job_log
         from django.db.models import F
         runnable_jobs = Job.objects \
             .filter(wait_for_completions = F('wait_for_count')) \
@@ -490,7 +490,7 @@ class Job(models.Model):
         raise NotImplementedError()
 
     def cancel(self):
-        from configure.lib.job import job_log
+        from chroma_core.lib.job import job_log
         job_log.debug("Job %d: Job.cancel" % self.id)
 
         # Important: multiple connections are allowed to call run() on a job
@@ -515,7 +515,7 @@ class Job(models.Model):
         self.complete(cancelled = True)
 
     def pause(self):
-        from configure.lib.job import job_log
+        from chroma_core.lib.job import job_log
         job_log.debug("Job %d: Job.pause" % self.id)
 
         # Important: multiple connections are allowed to call run() on a job
@@ -530,7 +530,7 @@ class Job(models.Model):
             job_log.warning("Job %d: failed to pause, it had already left state 'pending'")
 
     def unpause(self):
-        from configure.lib.job import job_log
+        from chroma_core.lib.job import job_log
         job_log.debug("Job %d: Job.unpause" % self.id)
 
         # Important: multiple connections are allowed to call run() on a job
@@ -576,7 +576,7 @@ class Job(models.Model):
             return self.get_deps()
 
     def _deps_satisfied(self):
-        from configure.lib.job import job_log
+        from chroma_core.lib.job import job_log
 
         try:
             result = self.all_deps().satisfied()
@@ -593,7 +593,7 @@ class Job(models.Model):
         return result
 
     def run(self):
-        from configure.lib.job import job_log
+        from chroma_core.lib.job import job_log
         job_log.info("Job %d: Job.run %s" % (self.id, self.description()))
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
@@ -628,7 +628,7 @@ class Job(models.Model):
 
         # Generate a celery task
         # ======================
-        from configure.tasks import run_job
+        from chroma_core.tasks import run_job
         celery_job = run_job.delay(self.id)
 
         # Save the celery task ID
@@ -650,7 +650,7 @@ class Job(models.Model):
             return None
 
     def complete(self, errored = False, cancelled = False):
-        from configure.lib.job import job_log
+        from chroma_core.lib.job import job_log
         success = not (errored or cancelled)
         if success and isinstance(self, StateChangeJob):
             new_state = self.state_transition[2]
@@ -668,7 +668,7 @@ class Job(models.Model):
             self.cancelled = cancelled
             self.save()
 
-        from configure.lib.state_manager import StateManager
+        from chroma_core.lib.state_manager import StateManager
         StateManager.complete_job(self.pk)
 
     def description(self):
@@ -714,4 +714,4 @@ class StepResult(models.Model):
         return self.step_klass.describe(self.args)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'

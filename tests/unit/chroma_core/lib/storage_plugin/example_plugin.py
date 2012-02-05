@@ -1,8 +1,8 @@
 
-from configure.lib.storage_plugin.plugin import StoragePlugin
-from configure.lib.storage_plugin.resource import StorageResource, GlobalId, ScannableResource, ScannableId
-from configure.lib.storage_plugin import attributes, statistics
-from configure.lib.storage_plugin import builtin_resources
+from chroma_core.lib.storage_plugin.plugin import StoragePlugin
+from chroma_core.lib.storage_plugin.resource import StorageResource, GlobalId, ScannableResource, ScannableId
+from chroma_core.lib.storage_plugin import attributes, statistics
+from chroma_core.lib.storage_plugin import builtin_resources
 
 
 class Couplet(StorageResource, ScannableResource):

@@ -4,7 +4,7 @@ from kombu import BrokerConnection, Exchange, Queue
 import socket
 import settings
 
-from configure.lib.storage_plugin.log import storage_plugin_log as log
+from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 
 
 def _drain_all(connection, queue, handler, timeout = 0.1):
@@ -50,7 +50,7 @@ def _wait_for_host(host, timeout):
 
         # Reload the ManagedHost from the database
         from django.db import transaction
-        from configure.models.host import ManagedHost
+        from chroma_core.models.host import ManagedHost
         with transaction.commit_manually():
             transaction.commit()
             host = ManagedHost.objects.get(pk=host.id)

@@ -6,7 +6,7 @@
 
 from collections import defaultdict
 from django.db import transaction
-from configure.lib.job import job_log
+from chroma_core.lib.job import job_log
 
 
 class Transition(object):
@@ -43,7 +43,7 @@ class StateManager(object):
            locked by a Job"""
         # If the object is subject to an incomplete StateChangeJob
         # then don't offer any other transitions.
-        from configure.models import StateLock
+        from chroma_core.models import StateLock
         from django.db.models import Q
 
         # We don't advertise transitions for anything which is currently
@@ -73,7 +73,7 @@ class StateManager(object):
     def _run_opportunistic_jobs(cls, changed_stateful_object = None):
         """Call this when an object state changes, to see if anything
         in the queue of opportunistic jobs is now able to run"""
-        from configure.models import OpportunisticJob
+        from chroma_core.models import OpportunisticJob
         pending_opportunistic_jobs = OpportunisticJob.objects.filter(run = False)
         count = pending_opportunistic_jobs.count()
         if count > 0:
@@ -86,7 +86,7 @@ class StateManager(object):
 
             # Skip running a job if it's a state-change and the object
             # is already in the 'new' state.
-            from configure.lib.job import StateChangeJob
+            from chroma_core.lib.job import StateChangeJob
             if isinstance(job, StateChangeJob):
                 stateful_object = job.get_stateful_object()
                 new_state = job.state_transition[2]
@@ -117,12 +117,12 @@ class StateManager(object):
 
     @classmethod
     def complete_job(cls, job_id):
-        from configure.tasks import complete_job
+        from chroma_core.tasks import complete_job
         complete_job.delay(job_id)
 
     @classmethod
     def _complete_job(cls, job_id):
-        from configure.models import Job
+        from chroma_core.models import Job
 
         job = Job.objects.get(pk = job_id)
         if job.state == 'completing':
@@ -134,7 +134,7 @@ class StateManager(object):
         else:
             assert job.state == 'complete'
 
-        from configure.models import Command
+        from chroma_core.models import Command
         for command in Command.objects.filter(jobs = job):
             jobs = command.jobs.all().values('state', 'errored', 'cancelled')
             if set([j['state'] for j in jobs]) == set(['complete']):
@@ -153,7 +153,7 @@ class StateManager(object):
         # the user has explicitly cancelled something.
         job = job.downcast()
 
-        from configure.lib.job import StateChangeJob
+        from chroma_core.lib.job import StateChangeJob
         if isinstance(job, StateChangeJob):
             cls._run_opportunistic_jobs(job.get_stateful_object())
 
@@ -165,7 +165,7 @@ class StateManager(object):
             # Get all attributes which aren't in the base Job class
             future_job = job.__class__(**copy_args)
 
-            from configure.models.jobs import OpportunisticJob
+            from chroma_core.models.jobs import OpportunisticJob
             oj = OpportunisticJob(job = future_job)
             oj.save()
             job_log.warn("Job %s failed, transforming to OpportunisticJob %s" % (job.pk, oj.pk))
@@ -180,7 +180,7 @@ class StateManager(object):
            to 'unmounted' without risking incorrectly transitioning from 'unconfigured'"""
         if instance.state in from_states and instance.state != new_state:
             job_log.info("Enqueuing notify_state %s %s->%s" % (instance, instance.state, new_state))
-            from configure.tasks import notify_state
+            from chroma_core.tasks import notify_state
             notify_state.delay(
                 instance.content_type.natural_key(),
                 instance.id,
@@ -195,14 +195,14 @@ class StateManager(object):
         instance = model_klass.objects.get(pk = object_id).downcast()
 
         # Assert its class
-        from configure.models import StatefulObject
+        from chroma_core.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
 
         # If a state update is needed/possible
         if instance.state in from_states and instance.state != new_state:
             # Check that no incomplete jobs hold a lock on this object
             from django.db.models import Q
-            from configure.models import StateLock
+            from chroma_core.models import StateLock
             outstanding_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
             if outstanding_locks == 0:
                 # No jobs lock this object, go ahead and update its state
@@ -216,7 +216,7 @@ class StateManager(object):
 
     @classmethod
     def add_job(cls, job):
-        from configure.tasks import add_job
+        from chroma_core.tasks import add_job
         celery_task = add_job.delay(job)
         job_log.debug("add_job: celery task %s" % celery_task.task_id)
 
@@ -236,18 +236,18 @@ class StateManager(object):
             job.create_dependencies()
             job_log.info("_add_job: created %s (%s)" % (job.pk, job.description()))
 
-        from configure.models import Job
+        from chroma_core.models import Job
         Job.run_next()
 
     @classmethod
     def set_state(cls, instance, new_state, command_id = None):
         """Add a 0 or more Jobs to have 'instance' reach 'new_state'"""
-        import configure.tasks
+        import chroma_core.tasks
         from django.contrib.contenttypes.models import ContentType
         job_log.info("StateManager.set_state %s %s" % (instance, new_state))
         if new_state not in instance.states:
             raise RuntimeError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
-        return configure.tasks.set_state.delay(
+        return chroma_core.tasks.set_state.delay(
                 ContentType.objects.get_for_model(instance).natural_key(),
                 instance.id,
                 new_state,
@@ -265,7 +265,7 @@ class StateManager(object):
             * Don't bother sorting for execution order - output an
               unordered list.
         """
-        from configure.models import StatefulObject
+        from chroma_core.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
 
         self.expected_states = {}
@@ -285,7 +285,7 @@ class StateManager(object):
         depended_jobs = []
         for d in self.deps:
             job = d.to_job()
-            from configure.lib.job import StateChangeJob
+            from chroma_core.lib.job import StateChangeJob
             if isinstance(job, StateChangeJob):
                 from django.contrib.contenttypes.models import ContentType
                 so = getattr(job, job.stateful_object)
@@ -306,7 +306,7 @@ class StateManager(object):
     def _set_state(self, instance, new_state, command_id):
         """Return a Job or None if the object is already in new_state.
         command_id should refer to a command instance or be None."""
-        from configure.models import StatefulObject, Command
+        from chroma_core.models import StatefulObject, Command
         assert(isinstance(instance, StatefulObject))
         job_log.debug("_set_state %s %s" % (instance, new_state))
 
@@ -316,7 +316,7 @@ class StateManager(object):
         self.expected_states = {}
         # TODO: find out how to do a DB query that just gives us the latest WL for
         # each locked_item (same result for less iterations of this loop)
-        from configure.models import StateWriteLock
+        from chroma_core.models import StateWriteLock
         from django.db.models import Q
         for wl in StateWriteLock.objects.filter(~Q(job__state = 'complete')).order_by('id'):
             self.expected_states[wl.locked_item] = wl.end_state
@@ -406,7 +406,7 @@ class StateManager(object):
                 command.jobs_created = True
                 command.save()
 
-        from configure.models import Job
+        from chroma_core.models import Job
         Job.run_next()
 
     def emit_transition_deps(self, transition, transition_stack = {}):
@@ -444,7 +444,7 @@ class StateManager(object):
         # What is explicitly required for this state transition?
         transition_deps = root_transition.to_job().get_deps()
         for dependency in transition_deps.all():
-            from configure.lib.job import DependOn
+            from chroma_core.lib.job import DependOn
             assert(isinstance(dependency, DependOn))
             old_state = self.get_expected_state(dependency.stateful_object)
             job_log.debug("cd %s %s %s" % (dependency.stateful_object, old_state, dependency.acceptable_states))

@@ -7,7 +7,7 @@ from django.db import transaction
 
 import settings
 
-from configure.models import ManagedHost, ManagedOst, ManagedMdt, ManagedFilesystem, ManagedMgs, ManagedTargetMount, Lun, LunNode
+from chroma_core.models import ManagedHost, ManagedOst, ManagedMdt, ManagedFilesystem, ManagedMgs, ManagedTargetMount, Lun, LunNode
 from monitor.lib.lustre_audit import UpdateScan
 from benchmark.generic import GenericBenchmark
 

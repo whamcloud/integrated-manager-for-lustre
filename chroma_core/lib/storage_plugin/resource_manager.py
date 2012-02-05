@@ -22,8 +22,8 @@ WARNING:
     this module unless you're really going to use it.
 """
 
-from configure.lib.storage_plugin.log import storage_plugin_log as log
-from configure.lib.storage_plugin.resource import ScannableId, GlobalId
+from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
+from chroma_core.lib.storage_plugin.resource import ScannableId, GlobalId
 
 from django.db import transaction
 
@@ -75,7 +75,7 @@ class EdgeIndex(object):
         del self._parent_from_edge[node]
 
     def populate(self):
-        from configure.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceRecord
         from django.db.models import Q
         for srr in StorageResourceRecord.objects.filter(~Q(parents = None)).values('id', 'parents'):
             child = srr['id']
@@ -109,7 +109,7 @@ class SubscriberIndex(object):
 
     def add_resource(self, resource_id, resource = None):
         if not resource:
-            from configure.models import StorageResourceRecord
+            from chroma_core.models import StorageResourceRecord
             resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
 
         for field_name, key in resource._provides:
@@ -119,7 +119,7 @@ class SubscriberIndex(object):
 
     def remove_resource(self, resource_id, resource = None):
         if not resource:
-            from configure.models import StorageResourceRecord
+            from chroma_core.models import StorageResourceRecord
             resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
 
         for field_name, key in resource._provides:
@@ -128,8 +128,8 @@ class SubscriberIndex(object):
             self.remove_subscriber(resource_id, key, getattr(resource, field_name))
 
     def populate(self):
-        from configure.models import StorageResourceAttribute
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.models import StorageResourceAttribute
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         for resource_class_id, resource_class in storage_plugin_manager.get_all_resources():
 
             for p_attr, p_key in resource_class._provides:
@@ -190,7 +190,7 @@ class ResourceManager(object):
             # to Lun and LunNode objects to interface with the world of Lustre
             # TODO: don't just do this at creation, do updates too
             from linux import HydraHostProxy
-            from configure.lib.storage_plugin.query import ResourceQuery
+            from chroma_core.lib.storage_plugin.query import ResourceQuery
             scannable_resource = ResourceQuery().get_resource(scannable_id)
             if isinstance(scannable_resource, HydraHostProxy):
                 self._persist_lun_updates(scannable_id, scannable_resource)
@@ -216,16 +216,16 @@ class ResourceManager(object):
         # class of each resource)
         def get_session_resources_of_type(session, klass):
             for record_pk in session.local_id_to_global_id.values():
-                from configure.models import StorageResourceRecord
+                from chroma_core.models import StorageResourceRecord
                 record = StorageResourceRecord.objects.get(pk = record_pk)
                 resource = record.to_resource()
                 if isinstance(resource, klass):
                     yield (record, resource)
 
-        from configure.lib.storage_plugin import builtin_resources
+        from chroma_core.lib.storage_plugin import builtin_resources
         for record, resource in get_session_resources_of_type(session, builtin_resources.VirtualMachine):
             if not resource.host_id:
-                from configure.models import ManagedHost
+                from chroma_core.models import ManagedHost
                 log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
                 host = ManagedHost.create_from_string(
                         resource.address,
@@ -238,9 +238,9 @@ class ResourceManager(object):
 
     @transaction.commit_on_success
     def _persist_lun_updates(self, scannable_id, scannable_resource):
-        from configure.lib.storage_plugin.query import ResourceQuery
-        from configure.lib.storage_plugin import builtin_resources
-        from configure.models import Lun, LunNode, ManagedHost
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
+        from chroma_core.lib.storage_plugin import builtin_resources
+        from chroma_core.models import Lun, LunNode, ManagedHost
 
         def lun_get_or_create(resource_id):
             try:
@@ -259,7 +259,7 @@ class ResourceManager(object):
                         shareable = shareable)
                 return lun
 
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         # Update LunNode objects for DeviceNodes
         node_types = []
         # FIXME: mechanism to get subclasses of builtin_resources.DeviceNode
@@ -312,7 +312,7 @@ class ResourceManager(object):
                 # as we set up the VMs after scanning the controller for the first time, but
                 # it is not true in the general case.
 
-                from configure.models import StorageResourceRecord
+                from chroma_core.models import StorageResourceRecord
                 ancestor_virtual_disks = ResourceQuery().record_find_ancestors(
                         record.pk, builtin_resources.VirtualDisk)
                 # collect home controller information
@@ -397,7 +397,7 @@ class ResourceManager(object):
             log.debug("lun_node %s" % lun_node.pk)
             if not lun_node.pk in touched_lun_nodes:
                 lun = lun_node.lun
-                from configure.models import ManagedTargetMount
+                from chroma_core.models import ManagedTargetMount
                 if ManagedTargetMount.objects.filter(block_device = lun_node).count() == 0:
                     log.info("Removing LunNode %s" % lun_node)
                     LunNode.delete(lun.pk)
@@ -444,7 +444,7 @@ class ResourceManager(object):
 
     @transaction.autocommit
     def _persist_update_stats(self, record_pk, update_data):
-        from configure.models import StorageResourceRecord, StorageResourceStatistic
+        from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
         record = StorageResourceRecord.objects.get(pk = record_pk)
         for stat_name, stat_data in update_data.items():
             stat_properties = record.get_statistic_properties(stat_name)
@@ -469,7 +469,7 @@ class ResourceManager(object):
 
     @transaction.autocommit
     def _resource_modify_parent(self, record_pk, parent_pk, remove):
-        from configure.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = record_pk)
         if remove:
             record.parents.remove(parent_pk)
@@ -478,7 +478,7 @@ class ResourceManager(object):
 
     @transaction.autocommit
     def _resource_persist_update_attributes(self, record_pk, attrs):
-        from configure.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(record_pk)
         record.update_attributes(attrs)
 
@@ -526,7 +526,7 @@ class ResourceManager(object):
     # FIXME: the alert propagation and unpropagation should happen with the AlertState
     # raise/lower in a transaction.
     def _persist_alert_propagate(self, alert_state):
-        from configure.models import StorageAlertPropagated
+        from chroma_core.models import StorageAlertPropagated
         record_global_pk = alert_state.alert_item_id
         descendents = self._get_descendents(record_global_pk)
         for d in descendents:
@@ -535,7 +535,7 @@ class ResourceManager(object):
                     alert_state = alert_state)
 
     def _persist_alert_unpropagate(self, alert_state):
-        from configure.models import StorageAlertPropagated
+        from chroma_core.models import StorageAlertPropagated
         StorageAlertPropagated.objects.filter(alert_state = alert_state).delete()
 
     # FIXME: Couple of issues here:
@@ -547,8 +547,8 @@ class ResourceManager(object):
     #   remove the propagated alerts, and then finally mark inactive the alert itself.
     @transaction.autocommit
     def _persist_alert(self, record_pk, active, alert_class, attribute):
-        from configure.models import StorageResourceRecord
-        from configure.models import StorageResourceAlert
+        from chroma_core.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceAlert
         record = StorageResourceRecord.objects.get(pk = record_pk)
         alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute)
         return alert_state
@@ -560,7 +560,7 @@ class ResourceManager(object):
             if isinstance(r.identifier, ScannableId):
                 reported_global_ids.append(session.local_id_to_global_id[r._handle])
 
-        from configure.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceRecord
         from django.db.models import Q
         lost_resources = StorageResourceRecord.objects.filter(
                 ~Q(pk__in = reported_global_ids),
@@ -570,7 +570,7 @@ class ResourceManager(object):
 
     def _cull_resource(self, resource_record):
         log.info("Culling resource '%s'" % resource_record.pk)
-        from configure.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceRecord
 
         for dependent in StorageResourceRecord.objects.filter(
                 parents = resource_record):
@@ -583,7 +583,7 @@ class ResourceManager(object):
         # TODO: find where lustre target objects or host objects hold a reference
         # to this resource
 
-        from configure.models import Lun, LunNode
+        from chroma_core.models import Lun, LunNode
         for klass in [Lun, LunNode]:
             for instance in klass.objects.filter(storage_resource__id = resource_record.pk):
                 instance.storage_resource = None
@@ -595,7 +595,7 @@ class ResourceManager(object):
     def global_remove_resource(self, resource_id):
         with self._instance_lock:
             # Ensure that no open sessions are holding a reference to this ID
-            from configure.models import StorageResourceRecord
+            from chroma_core.models import StorageResourceRecord
             try:
                 record = StorageResourceRecord.objects.get(pk = resource_id)
             except StorageResourceRecord.DoesNotExist:
@@ -603,7 +603,7 @@ class ResourceManager(object):
                 return
 
             resource = record.to_resource()
-            from configure.lib.storage_plugin.resource import ScannableResource
+            from chroma_core.lib.storage_plugin.resource import ScannableResource
             if isinstance(resource, ScannableResource):
                 scoped_resources = StorageResourceRecord.objects.filter(
                     storage_id_scope = resource_id)
@@ -621,7 +621,7 @@ class ResourceManager(object):
             # a given GlobalId resource, and treat that like a reference count
 
     def _persist_new_resource(self, session, resource):
-        from configure.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceRecord
 
         if resource._handle_global:
             # Bit of a weird one: this covers the case where a plugin sessoin
@@ -639,7 +639,7 @@ class ResourceManager(object):
         else:
             raise NotImplementedError
 
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(
                 resource.__class__.__module__,
                 resource.__class__.__name__)
@@ -651,7 +651,7 @@ class ResourceManager(object):
             # object passed from the plugin won't have a global ID for the referenced
             # resource -- we have to do the lookup inside ResourceManager
             attribute_obj = resource_class.get_attribute_properties(key)
-            from configure.lib.storage_plugin import attributes
+            from chroma_core.lib.storage_plugin import attributes
             if isinstance(attribute_obj, attributes.ResourceReference):
                 if value:
                     referenced_resource = value
@@ -663,7 +663,7 @@ class ResourceManager(object):
         id_tuple = resource.id_tuple()
         cleaned_id_items = []
         for t in id_tuple:
-            from configure.lib.storage_plugin.resource import StorageResource
+            from chroma_core.lib.storage_plugin.resource import StorageResource
             if isinstance(t, StorageResource):
                 cleaned_id_items.append(session.local_id_to_global_id[t._handle])
             else:
@@ -676,7 +676,7 @@ class ResourceManager(object):
                 storage_id_str = id_str,
                 storage_id_scope_id = scope_id)
         if created:
-            from configure.models import StorageResourceLearnEvent
+            from chroma_core.models import StorageResourceLearnEvent
             import logging
             # Record a user-visible event
             StorageResourceLearnEvent(severity = logging.INFO, storage_resource = record).save()
@@ -737,14 +737,14 @@ class ResourceManager(object):
 
             # Update the database
             # FIXME: shouldn't need to SELECT the record to set up its relationships
-            from configure.models import StorageResourceRecord
+            from chroma_core.models import StorageResourceRecord
             record = StorageResourceRecord.objects.get(pk = resource_global_id)
             self._resource_persist_parents(r, session, record)
 
     @transaction.autocommit
     def _resource_persist_attributes(self, session, resource, record):
-        from configure.models import StorageResourceAttribute
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.models import StorageResourceAttribute
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         # TODO: remove existing attrs not in storage_dict
         resource_class = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
 
@@ -753,7 +753,7 @@ class ResourceManager(object):
             # object passed from the plugin won't have a global ID for the referenced
             # resource -- we have to do the lookup inside ResourceManager
             attribute_obj = resource_class.get_attribute_properties(key)
-            from configure.lib.storage_plugin import attributes
+            from chroma_core.lib.storage_plugin import attributes
             if isinstance(attribute_obj, attributes.ResourceReference):
                 if value and not value._handle_global:
                     value = session.local_id_to_global_id[value._handle]

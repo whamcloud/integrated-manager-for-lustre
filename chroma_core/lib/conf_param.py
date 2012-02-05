@@ -134,7 +134,7 @@ class PercentageParam(IntegerParam):
     def __init__(self):
         super(PercentageParam, self).__init__(min_val = 0, max_val = 100)
 
-from configure.models import FilesystemClientConfParam, FilesystemGlobalConfParam, MdtConfParam, OstConfParam
+from chroma_core.models import FilesystemClientConfParam, FilesystemGlobalConfParam, MdtConfParam, OstConfParam
 all_params = {
     'lov.stripesize': (MdtConfParam, BytesParam(), "Default stripe size"),
     'lov.stripecount': (MdtConfParam, IntegerParam(), "Default stripe count"),
@@ -251,7 +251,7 @@ def get_conf_param_help(conf_param):
 
 def get_possible_conf_params(klass):
     """A map of conf param name to documentation string"""
-    from configure.models import ManagedOst, ManagedMdt, ManagedFilesystem
+    from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem
 
     conf_param_klasses = {
         ManagedOst: (OstConfParam,),
@@ -267,7 +267,7 @@ def get_possible_conf_params(klass):
 
 
 def get_conf_params(obj):
-    from configure.models import ManagedOst, ManagedMdt, ManagedFilesystem, ConfParam
+    from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem, ConfParam
 
     if isinstance(obj, ManagedOst):
         conf_params_query = obj.ostconfparam_set.all()
@@ -290,9 +290,9 @@ def get_conf_params(obj):
 
 
 def set_conf_param(obj, key, value):
-    from configure.models import ManagedFilesystem, ManagedMdt, ManagedOst, FilesystemMember
-    from configure.models import ApplyConfParams
-    from configure.lib.state_manager import StateManager
+    from chroma_core.models import ManagedFilesystem, ManagedMdt, ManagedOst, FilesystemMember
+    from chroma_core.models import ApplyConfParams
+    from chroma_core.lib.state_manager import StateManager
 
     # TODO: check if the value is unchanged and return if so
 

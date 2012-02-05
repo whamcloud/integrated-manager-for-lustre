@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.models import Command
+from chroma_core.models import Command
 from requesthandler import AnonymousRESTRequestHandler
 from django.shortcuts import get_object_or_404
 

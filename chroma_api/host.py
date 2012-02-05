@@ -3,10 +3,10 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.models import (ManagedHost, ManagedFilesystem)
-from configure.lib.state_manager import StateManager
+from chroma_core.models import (ManagedHost, ManagedFilesystem)
+from chroma_core.lib.state_manager import StateManager
 from requesthandler import AnonymousRESTRequestHandler
-from hydraapi.requesthandler import APIResponse
+from chroma_api.requesthandler import APIResponse
 
 from django.shortcuts import get_object_or_404
 
@@ -41,7 +41,7 @@ class ManagedHostsHandler (AnonymousRESTRequestHandler):
 
     def remove(self, request, id):
         # NB This is equivalent to a call to /api/transition with matching content-type/id/state
-        from configure.models import Command
+        from chroma_core.models import Command
         host = get_object_or_404(ManagedHost, pk = id)
         command = Command.set_state(host, 'removed')
         return APIResponse(command.to_dict(), 202)
@@ -50,7 +50,7 @@ class ManagedHostsHandler (AnonymousRESTRequestHandler):
 class TestHost(AnonymousRESTRequestHandler):
     def get(self, request, hostname):
         from monitor.tasks import test_host_contact
-        from configure.models import Monitor
+        from chroma_core.models import Monitor
         host = ManagedHost(address = hostname)
         host.monitor = Monitor(host = host)
         job = test_host_contact.delay(host)

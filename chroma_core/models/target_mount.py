@@ -29,7 +29,7 @@ class ManagedTargetMount(models.Model):
 
         # If this is an MGS, there may not be another MGS on
         # this host
-        from configure.models.target import ManagedMgs
+        from chroma_core.models.target import ManagedMgs
         if isinstance(self.target.downcast(), ManagedMgs):
             from django.db.models import Q
             other_mgs_mountables_local = ManagedTargetMount.objects.filter(~Q(id = self.id), target__in = ManagedMgs.objects.all(), host = self.host).count()
@@ -78,7 +78,7 @@ class ManagedTargetMount(models.Model):
         return self.block_device
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def __str__(self):
         if self.primary:

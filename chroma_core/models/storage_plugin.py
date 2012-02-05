@@ -20,7 +20,7 @@ class StoragePluginRecord(models.Model):
 
     class Meta:
         unique_together = ('module_name',)
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class StorageResourceClass(models.Model):
@@ -32,12 +32,12 @@ class StorageResourceClass(models.Model):
         return "%s/%s" % (self.storage_plugin.module_name, self.class_name)
 
     def get_class(self):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         return storage_plugin_manager.get_resource_class_by_id(self.pk)
 
     class Meta:
         unique_together = ('storage_plugin', 'class_name')
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def to_dict(self):
         resource_klass = self.get_class()
@@ -60,7 +60,7 @@ class StorageResourceRecord(models.Model):
     """Reference to an instance of a StorageResource"""
     resource_class = models.ForeignKey(StorageResourceClass)
 
-    # Representing a configure.lib.storage_plugin.GlobalId or LocalId
+    # Representing a chroma_core.lib.storage_plugin.GlobalId or LocalId
     # TODO: put some checking for id_strs longer than this field: they
     # are considered 'unreasonable' and plugin authors should be
     # conservative in what they use for an ID
@@ -78,7 +78,7 @@ class StorageResourceRecord(models.Model):
     alias = models.CharField(max_length = 64, blank = True, null = True)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
         unique_together = ('storage_id_str', 'storage_id_scope', 'resource_class')
 
     def __str__(self):
@@ -87,16 +87,16 @@ class StorageResourceRecord(models.Model):
     def to_dict(self):
         resource = self.to_resource()
 
-        from configure.lib.storage_plugin.query import ResourceQuery
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
         alerts = [a.to_dict() for a in ResourceQuery().resource_get_alerts(resource)]
         prop_alerts = [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(resource)]
 
-        from configure.models import StorageResourceStatistic
+        from chroma_core.models import StorageResourceStatistic
         stats = {}
         for s in StorageResourceStatistic.objects.filter(storage_resource = self):
             stats[s.name] = s.to_dict()
 
-        from configure.lib.storage_plugin.resource import ScannableResource
+        from chroma_core.lib.storage_plugin.resource import ScannableResource
         scannable = isinstance(resource, ScannableResource)
 
         return {'id': self.pk,
@@ -114,7 +114,7 @@ class StorageResourceRecord(models.Model):
     @classmethod
     def get_or_create_root(cls, resource_class, resource_class_id, attrs):
         # Root resource do not have parents so they must be globally identified
-        from configure.lib.storage_plugin.resource import GlobalId
+        from chroma_core.lib.storage_plugin.resource import GlobalId
         if not isinstance(resource_class.identifier, GlobalId):
             raise RuntimeError("Cannot create root resource of class %s, it is not globally identified" % resource_class)
 
@@ -145,7 +145,7 @@ class StorageResourceRecord(models.Model):
         return record, True
 
     def update_attribute(self, key, val):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         resource_class = storage_plugin_manager.get_resource_class_by_id(self.resource_class_id)
 
         # Try to update an existing record
@@ -177,7 +177,7 @@ class StorageResourceRecord(models.Model):
             yield (i.key, i.value)
 
     def to_resource(self):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         klass = storage_plugin_manager.get_resource_class_by_id(self.resource_class_id)
         storage_dict = {}
         for attr in self.storageresourceattribute_set.all():
@@ -196,14 +196,14 @@ class StorageResourceRecord(models.Model):
             return resource.get_label()
 
     def to_resource_class(self):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class(
                 self.resource_class.storage_plugin.module_name,
                 self.resource_class.class_name)
         return klass
 
     def get_statistic_properties(self, stat_name):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class(
                 self.resource_class.storage_plugin.module_name,
                 self.resource_class.class_name)
@@ -217,7 +217,7 @@ class SimpleHistoStoreBin(models.Model):
     value = models.PositiveIntegerField()
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class SimpleHistoStoreTime(models.Model):
@@ -225,7 +225,7 @@ class SimpleHistoStoreTime(models.Model):
     time = models.PositiveIntegerField()
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class SimpleScalarStoreDatapoint(models.Model):
@@ -234,13 +234,13 @@ class SimpleScalarStoreDatapoint(models.Model):
     value = models.BigIntegerField()
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class StorageResourceStatistic(models.Model):
     class Meta:
         unique_together = ('storage_resource', 'name')
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     storage_resource = models.ForeignKey(StorageResourceRecord)
     sample_period = models.IntegerField()
@@ -258,7 +258,7 @@ class StorageResourceStatistic(models.Model):
     metrics = property(__get_metrics)
 
     def update(self, stat_name, stat_properties, stat_data):
-        from configure.lib.storage_plugin import statistics
+        from chroma_core.lib.storage_plugin import statistics
         if isinstance(stat_properties, statistics.BytesHistogram):
             for dp in stat_data:
                 ts = dp['timestamp']
@@ -284,7 +284,7 @@ class StorageResourceStatistic(models.Model):
         should be done in common with the lustre graphs."""
         from django.db import transaction
         stat_props = self.storage_resource.get_statistic_properties(self.name)
-        from configure.lib.storage_plugin import statistics
+        from chroma_core.lib.storage_plugin import statistics
         if isinstance(stat_props, statistics.BytesHistogram):
             with transaction.commit_manually():
                 transaction.commit()
@@ -350,7 +350,7 @@ class StorageResourceAttribute(models.Model):
 
     class Meta:
         unique_together = ('resource', 'key')
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class StorageResourceClassStatistic(models.Model):
@@ -359,7 +359,7 @@ class StorageResourceClassStatistic(models.Model):
 
     class Meta:
         unique_together = ('resource_class', 'name')
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class StorageResourceStatistic(models.Model):
@@ -370,11 +370,11 @@ class StorageResourceStatistic(models.Model):
     value = models.IntegerField()
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class StorageResourceAlert(AlertState):
-    """Used by configure.lib.storage_plugin"""
+    """Used by chroma_core.lib.storage_plugin"""
 
     # Within the plugin referenced by the alert_item, what kind
     # of alert is this?
@@ -385,7 +385,7 @@ class StorageResourceAlert(AlertState):
         return "<%s:%s %d>" % (self.alert_class, self.attribute, self.pk)
 
     def message(self):
-        from configure.lib.storage_plugin.query import ResourceQuery
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
         msg = ResourceQuery().record_alert_message(self.alert_item.pk, self.alert_class)
         return msg
 
@@ -404,7 +404,7 @@ class StorageResourceAlert(AlertState):
                 severity = logging.INFO)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class StorageAlertPropagated(models.Model):
@@ -413,7 +413,7 @@ class StorageAlertPropagated(models.Model):
 
     class Meta:
         unique_together = ('storage_resource', 'alert_state')
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class StorageResourceLearnEvent(Event):
@@ -424,9 +424,9 @@ class StorageResourceLearnEvent(Event):
         return "Storage resource detection"
 
     def message(self):
-        from configure.lib.storage_plugin.query import ResourceQuery
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
         class_name, instance_name = ResourceQuery().record_class_and_instance_string(self.storage_resource)
         return "Discovered %s '%s'" % (class_name, instance_name)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'

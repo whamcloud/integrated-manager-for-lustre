@@ -199,7 +199,7 @@ img.icon {
     }
 
     jobs_update = function() {
-        jobs_request = $.get("{% url hydracm.views.jobs_json %}")
+        jobs_request = $.get("{% url chroma_ui.views.jobs_json %}")
             .success(function(data, textStatus, jqXHR) {
                 setTimeout('jobs_update();', 1000);
                 load_json(data)

@@ -3,10 +3,10 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.models import Lun, LunNode, ManagedTargetMount
+from chroma_core.models import Lun, LunNode, ManagedTargetMount
 
 from requesthandler import AnonymousRESTRequestHandler
-from hydraapi.requesthandler import APIResponse
+from chroma_api.requesthandler import APIResponse
 
 from django.shortcuts import get_object_or_404
 

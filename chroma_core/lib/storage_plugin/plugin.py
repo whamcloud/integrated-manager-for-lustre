@@ -5,8 +5,8 @@
 
 import settings
 
-from configure.lib.storage_plugin.resource import StorageResource
-from configure.lib.storage_plugin.log import storage_plugin_log
+from chroma_core.lib.storage_plugin.resource import StorageResource
+from chroma_core.lib.storage_plugin.log import storage_plugin_log
 
 import threading
 
@@ -96,7 +96,7 @@ class StoragePlugin(object):
             return handle
 
     def __init__(self, scannable_id = None):
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         self._handle = storage_plugin_manager.register_plugin(self)
         self._initialized = False
 
@@ -122,7 +122,7 @@ class StoragePlugin(object):
             raise RuntimeError("Tried to initialize %s twice!" % self)
         self._initialized = True
 
-        from configure.lib.storage_plugin.resource_manager import resource_manager
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
 
         root_resource._handle = self.generate_handle()
         root_resource._handle_global = False
@@ -166,24 +166,24 @@ class StoragePlugin(object):
 
     def do_teardown(self):
         self.teardown()
-        from configure.lib.storage_plugin.resource_manager import resource_manager
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         resource_manager.session_close(self._scannable_id)
 
     def commit_resource_creates(self):
-        from configure.lib.storage_plugin.resource_manager import resource_manager
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         if len(self._delta_new_resources) > 0:
             resource_manager.session_add_resources(self._scannable_id, self._delta_new_resources)
         self._delta_new_resources = []
 
     def commit_resource_deletes(self):
-        from configure.lib.storage_plugin.resource_manager import resource_manager
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         # Resources deleted since last update
         if len(self._delta_delete_resources) > 0:
             resource_manager.session_remove_resources(self._scannable_id, self._delta_delete_resources)
         self._delta_delete_resources = []
 
     def commit_resource_updates(self):
-        from configure.lib.storage_plugin.resource_manager import resource_manager
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         # Resources with changed attributes
         for resource in self._index.all():
             deltas = resource.flush_deltas()
@@ -207,7 +207,7 @@ class StoragePlugin(object):
                                 parent_resource._handle)
 
     def commit_alerts(self):
-        from configure.lib.storage_plugin.resource_manager import resource_manager
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         with self._alerts_lock:
             for (resource, attribute, alert_class) in self._delta_alerts:
                 active = self._alerts[(resource, attribute, alert_class)]
@@ -222,7 +222,7 @@ class StoragePlugin(object):
         for resource in self._index.all():
             r_stats = resource.flush_stats()
             if len(r_stats) > 0:
-                from configure.lib.storage_plugin.resource_manager import resource_manager
+                from chroma_core.lib.storage_plugin.resource_manager import resource_manager
                 resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
                 sent_stats += len(r_stats)
         storage_plugin_log.debug("<< Plugin.commit_resource_statistics %s (%s sent)", self._scannable_id, sent_stats)

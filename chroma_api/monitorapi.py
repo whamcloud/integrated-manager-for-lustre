@@ -5,20 +5,20 @@
 
 from requesthandler import AnonymousRequestHandler
 
-from configure.models import ManagedHost
+from chroma_core.models import ManagedHost
 from django.shortcuts import get_object_or_404
 
 
 class UpdateScan(AnonymousRequestHandler):
     def run(self, request, fqdn, token, update_scan, plugins):
-        from hydraapi import api_log
+        from chroma_api import api_log
         api_log.debug("UpdateScan %s" % fqdn)
 
         host = get_object_or_404(ManagedHost, fqdn = fqdn)
 
         if token != host.agent_token:
             api_log.error("Invalid token for host %s: %s" % (fqdn, token))
-            from hydraapi.requesthandler import APIResponse
+            from chroma_api.requesthandler import APIResponse
             return APIResponse({}, 403)
 
         if update_scan:
@@ -31,7 +31,7 @@ class UpdateScan(AnonymousRequestHandler):
 
         response = {'plugins': {}}
         for plugin_name, response_dict in plugins.items():
-            from configure.lib.storage_plugin.messaging import PluginRequest, PluginResponse
+            from chroma_core.lib.storage_plugin.messaging import PluginRequest, PluginResponse
 
             # If the agent returned any responses for requests to the plugin, add
             # them to server queues

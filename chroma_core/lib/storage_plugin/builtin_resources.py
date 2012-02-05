@@ -3,8 +3,8 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from configure.lib.storage_plugin.resource import StorageResource
-from configure.lib.storage_plugin import attributes
+from chroma_core.lib.storage_plugin.resource import StorageResource
+from chroma_core.lib.storage_plugin import attributes
 
 
 class Host(StorageResource):

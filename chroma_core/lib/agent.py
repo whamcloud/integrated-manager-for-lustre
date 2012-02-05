@@ -17,7 +17,7 @@ class AgentException(Exception):
         self.agent_backtrace = agent_backtrace
 
     def __str__(self):
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         return """AgentException
 Host: %s
 Command: %s

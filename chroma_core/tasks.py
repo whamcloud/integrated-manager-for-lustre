@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 from celery.task import task, periodic_task, Task
 from django.db import transaction
 
-from configure.lib.agent import AgentException
-from configure.lib.job import job_log
+from chroma_core.lib.agent import AgentException
+from chroma_core.lib.job import job_log
 from monitor.lib.util import timeit
 
 
@@ -49,7 +49,7 @@ def _complete_orphan_jobs():
     # TODO: reconcile this vs. whatever timeout django.db is using to talk to MySQL
     grace_period = timedelta(seconds=60)
 
-    from configure.models import Job
+    from chroma_core.models import Job
     # These are jobs which failed between tasking and tasked
     orphans = Job.objects.filter(state = 'tasking') \
         .filter(modified_at__lt = datetime.now() - grace_period)
@@ -88,7 +88,7 @@ def _remove_old_jobs():
     except AttributeError:
         max_age = None
 
-    from configure.models import Job
+    from chroma_core.models import Job
     old_jobs = Job.objects.filter(created_at__lt = datetime.now() - timedelta(seconds = max_age))
     if old_jobs.count() > 0:
         job_log.info("Removing %d old Job objects" % old_jobs.count())
@@ -102,7 +102,7 @@ def _job_task_health():
        celery, or have 'complete' set.
        For debug only -- this isn't watertight, it's just to generate messages
        when something might have gone whacko."""
-    from configure.models import Job
+    from chroma_core.models import Job
     from django.db.models import Q
 
     from celery.task.control import inspect
@@ -145,7 +145,7 @@ def janitor():
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def notify_state(content_type, object_id, new_state, from_states):
-    from configure.lib.state_manager import StateManager
+    from chroma_core.lib.state_manager import StateManager
     StateManager._notify_state(content_type, object_id, new_state, from_states)
 
 
@@ -175,21 +175,21 @@ def set_state(content_type, object_id, new_state, command_id):
     model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
     instance = model_klass.objects.get(pk = object_id)
 
-    from configure.lib.state_manager import StateManager
+    from chroma_core.lib.state_manager import StateManager
     StateManager()._set_state(instance, new_state, command_id)
 
 
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def add_job(job):
-    from configure.lib.state_manager import StateManager
+    from chroma_core.lib.state_manager import StateManager
     StateManager()._add_job(job)
 
 
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def complete_job(job_id):
-    from configure.lib.state_manager import StateManager
+    from chroma_core.lib.state_manager import StateManager
     StateManager._complete_job(job_id)
 
 
@@ -198,7 +198,7 @@ def complete_job(job_id):
 def run_job(job_id):
     job_log.info("Job %d: run_job" % job_id)
 
-    from configure.models import Job, StepResult
+    from chroma_core.models import Job, StepResult
     job = Job.objects.get(pk = job_id)
 
     # This can happen if we lose power after calling .complete but before returning,

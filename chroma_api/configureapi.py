@@ -5,9 +5,9 @@
 
 from django.contrib.contenttypes.models import ContentType
 
-from configure.models import Command
+from chroma_core.models import Command
 from requesthandler import AnonymousRequestHandler
-from hydraapi.requesthandler import APIResponse
+from chroma_api.requesthandler import APIResponse
 
 
 class Notifications(AnonymousRequestHandler):
@@ -16,7 +16,7 @@ class Notifications(AnonymousRequestHandler):
         initial = filter_opts['initial']
         # last_check should be a string in the datetime.isoformat() format
         # TODO: use dateutils.parser to accept general ISO8601 (see
-        # note in hydracm.context_processors.page_load_time)
+        # note in chroma_ui.context_processors.page_load_time)
         assert (since_time or initial)
 
         alert_filter_args = []
@@ -34,7 +34,7 @@ class Notifications(AnonymousRequestHandler):
             job_filter_args.append(~Q(state = 'complete'))
             alert_filter_kwargs['active'] = True
 
-        from configure.models import Job
+        from chroma_core.models import Job
         jobs = Job.objects.filter(*job_filter_args, **job_filter_kwargs).order_by('-modified_at')
         from monitor.models import AlertState
         alerts = AlertState.objects.filter(*alert_filter_args, **alert_filter_kwargs).order_by('-end')
@@ -49,10 +49,10 @@ class Notifications(AnonymousRequestHandler):
 
             affected_objects = set()
 
-            from configure.models import StorageResourceAlert, StorageAlertPropagated
-            from configure.models import Lun
-            from configure.models import ManagedTargetMount, ManagedMgs
-            from configure.models import FilesystemMember
+            from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
+            from chroma_core.models import Lun
+            from chroma_core.models import ManagedTargetMount, ManagedMgs
+            from chroma_core.models import FilesystemMember
             from monitor.models import TargetOfflineAlert, TargetRecoveryAlert, TargetFailoverAlert, HostContactAlert
 
             def affect_target(target):
@@ -117,7 +117,7 @@ class Notifications(AnonymousRequestHandler):
 
 class TransitionConsequences(AnonymousRequestHandler):
     def run(self, request, id, content_type_id, new_state):
-        from configure.lib.state_manager import StateManager
+        from chroma_core.lib.state_manager import StateManager
         ct = ContentType.objects.get_for_id(content_type_id)
         klass = ct.model_class()
         instance = klass.objects.get(pk = id)
@@ -137,7 +137,7 @@ class ObjectSummary(AnonymousRequestHandler):
     def run(self, request, objects):
         result = []
         for o in objects:
-            from configure.lib.state_manager import StateManager
+            from chroma_core.lib.state_manager import StateManager
             klass = ContentType.objects.get_for_id(o['content_type_id']).model_class()
             try:
                 instance = klass.objects.get(pk = o['id'])

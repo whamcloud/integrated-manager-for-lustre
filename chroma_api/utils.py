@@ -1,5 +1,5 @@
 
-from hydraapi.requesthandler import APIResponse
+from chroma_api.requesthandler import APIResponse
 
 
 def paginate_result(page_id, page_size, result, format_fn, sEcho = None):

@@ -5,8 +5,8 @@
 
 from requesthandler import AnonymousRESTRequestHandler
 
-from configure.models import StorageResourceClass, StorageResourceRecord
-from configure.lib.storage_plugin.manager import storage_plugin_manager
+from chroma_core.models import StorageResourceClass, StorageResourceRecord
+from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
 
 class StorageResourceClassHandler(AnonymousRESTRequestHandler):

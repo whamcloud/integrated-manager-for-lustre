@@ -1,5 +1,5 @@
 
-from tests.unit.configure.helper import JobTestCase
+from tests.unit.chroma_core.helper import JobTestCase
 
 
 class TestJsonImport(JobTestCase):
@@ -17,7 +17,7 @@ class TestJsonImport(JobTestCase):
     def test_export(self):
         import os
         path = os.path.join(os.path.dirname(__file__), "../../../sample_data/example.json")
-        from configure.lib.load_config import load_file, save_filesystems
+        from chroma_core.lib.load_config import load_file, save_filesystems
         load_file(path)
 
         str = save_filesystems(['egfs'])
@@ -37,15 +37,15 @@ class TestJsonImport(JobTestCase):
     def test_import(self):
         import os
         path = os.path.join(os.path.dirname(__file__), "../../../sample_data/example.json")
-        from configure.lib.load_config import load_file
+        from chroma_core.lib.load_config import load_file
         load_file(path)
 
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         example01 = ManagedHost.objects.get(address = 'example01')
         example02 = ManagedHost.objects.get(address = 'example02')
 
-        from configure.models import ManagedFilesystem, ManagedMgs, ManagedMdt, ManagedOst
-        from configure.models import ManagedTargetMount
+        from chroma_core.models import ManagedFilesystem, ManagedMgs, ManagedMdt, ManagedOst
+        from chroma_core.models import ManagedTargetMount
 
         ManagedFilesystem.objects.get(name = 'egfs')
         mgs = ManagedMgs.objects.get()

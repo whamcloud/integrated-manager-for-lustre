@@ -16,7 +16,7 @@ import settings
 
 @task()
 def monitor_exec(monitor_id, counter):
-    from configure.models import Monitor
+    from chroma_core.models import Monitor
     monitor = Monitor.objects.get(pk = monitor_id)
 
     # Conditions indicating that we've restarted or that
@@ -51,7 +51,7 @@ def monitor_exec(monitor_id, counter):
 @periodic_task(run_every=timedelta(seconds=AUDIT_PERIOD))
 def audit_all():
     import settings
-    from configure.models import ManagedHost
+    from chroma_core.models import ManagedHost
     if settings.HTTP_AUDIT:
         for host in ManagedHost.objects.all():
             # If host has ever had contact but is not available now

@@ -4,8 +4,8 @@
 # ==============================
 
 from django.db import models
-from configure.lib.job import StateChangeJob, DependOn, DependAll, Step
-from configure.models.jobs import StatefulObject, Job
+from chroma_core.lib.job import StateChangeJob, DependOn, DependAll, Step
+from chroma_core.models.jobs import StatefulObject, Job
 from monitor.models import DeletableDowncastableMetaclass, MeasuredEntity
 
 
@@ -37,7 +37,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         return [self.mgs.downcast()] + self.get_filesystem_targets()
 
     def get_filesystem_targets(self):
-        from configure.models import ManagedOst, ManagedMdt
+        from chroma_core.models import ManagedOst, ManagedMdt
         osts = list(ManagedOst.objects.filter(filesystem = self).all())
         # NB using __str__ instead of name because name may not
         # be set in all cases
@@ -61,7 +61,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         if target_statuses == None:
             target_statuses = dict([(t, t.status_string()) for t in self.get_targets()])
 
-        from configure.models.target import ManagedMgs
+        from chroma_core.models.target import ManagedMgs
         filesystem_targets_statuses = [v for k, v in target_statuses.items() if not k.__class__ == ManagedMgs]
         all_statuses = target_statuses.values()
 
@@ -101,7 +101,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         return self.name
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def get_deps(self, state = None):
         if not state:
@@ -132,7 +132,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
     @classmethod
     def filter_by_target(self, target):
-        from configure.models import ManagedMgs
+        from chroma_core.models import ManagedMgs
         target = target.downcast()
         if isinstance(target, ManagedMgs):
             return ManagedFilesystem.objects.filter(mgs = target)
@@ -148,7 +148,7 @@ class DeleteFilesystemStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedFilesystem
+        from chroma_core.models import ManagedFilesystem
         ManagedFilesystem.delete(kwargs['filesystem_id'])
 
 
@@ -159,7 +159,7 @@ class RemoveFilesystemJob(Job, StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         return "Removing filesystem %s from configuration" % (self.filesystem.name)
@@ -172,10 +172,10 @@ class FilesystemJob():
     stateful_object = 'filesystem'
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def get_steps(self):
-        from configure.lib.job import NullStep
+        from chroma_core.lib.job import NullStep
         return [(NullStep, {})]
 
 

@@ -7,7 +7,7 @@
 """This module defines BaseResourceAttribute subclasses, which represent
 the datatypes that StorageResource objects may store as attributes"""
 
-from configure.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
+from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
 
 
 class String(BaseResourceAttribute):
@@ -135,7 +135,7 @@ class ResourceReference(BaseResourceAttribute):
         import json
         pk = json.loads(value)
         if pk:
-            from configure.models import StorageResourceRecord
+            from chroma_core.models import StorageResourceRecord
 
             record = StorageResourceRecord.objects.get(pk = pk)
             return record.to_resource()
@@ -143,7 +143,7 @@ class ResourceReference(BaseResourceAttribute):
             return None
 
     def to_markup(self, value):
-        from configure.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceRecord
         if value == None:
             return ""
 
@@ -160,7 +160,7 @@ class ResourceReference(BaseResourceAttribute):
         return mark_safe("<a class='storage_resource' href='#%s'>%s</a>" % (value._handle, name))
 
     def validate(self, value):
-        from configure.lib.storage_plugin.resource import StorageResource
+        from chroma_core.lib.storage_plugin.resource import StorageResource
         if value == None and self.optional:
             return
         elif value == None and not self.optional:

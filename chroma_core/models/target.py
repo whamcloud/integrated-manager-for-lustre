@@ -4,8 +4,8 @@
 # ==============================
 
 from django.db import models
-from configure.lib.job import StateChangeJob, DependOn, DependAny, DependAll, Step, NullStep, AnyTargetMountStep, job_log
-from configure.models.jobs import StatefulObject, Job
+from chroma_core.lib.job import StateChangeJob, DependOn, DependAny, DependAll, Step, NullStep, AnyTargetMountStep, job_log
+from chroma_core.models.jobs import StatefulObject, Job
 from monitor.models import DeletableDowncastableMetaclass, MeasuredEntity
 
 
@@ -66,7 +66,7 @@ class ManagedTarget(StatefulObject):
         return [(p.key, p.value) for p in self.targetparam_set.all()]
 
     def primary_host(self):
-        from configure.models.target_mount import ManagedTargetMount
+        from chroma_core.models.target_mount import ManagedTargetMount
         return ManagedTargetMount.objects.get(target = self, primary = True).host
 
     def get_label(self):
@@ -104,7 +104,7 @@ class ManagedTarget(StatefulObject):
                 TargetFailoverAlert.notify(tm, active_mount == tm)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def get_deps(self, state = None):
         if not state:
@@ -135,7 +135,7 @@ class ManagedTarget(StatefulObject):
         """Return iterable of all ManagedTargets which could potentially depend on the state
            of a managed host"""
         # Break this out into a function to avoid importing ManagedTargetMount at module scope
-        from configure.models.target_mount import ManagedTargetMount
+        from chroma_core.models.target_mount import ManagedTargetMount
         return set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)])
 
     reverse_deps = {
@@ -157,19 +157,19 @@ class ManagedTarget(StatefulObject):
         if self.active_mount:
             active_host_name = self.active_mount.host.pretty_name()
 
-        from configure.models import ManagedTargetMount
+        from chroma_core.models import ManagedTargetMount
         try:
             failover_server_name = self.managedtargetmount_set.get(primary = False).host.pretty_name()
         except ManagedTargetMount.DoesNotExist:
             failover_server_name = "---"
 
-        import configure.lib.conf_param
+        import chroma_core.lib.conf_param
 
         if isinstance(self, FilesystemMember):
             filesystem_id = self.filesystem.pk
             filesystem_name = self.filesystem.name
             filesystems = None
-            conf_params = configure.lib.conf_param.get_conf_params(self)
+            conf_params = chroma_core.lib.conf_param.get_conf_params(self)
         else:
             filesystem_id = None
             filesystem_name = None
@@ -197,7 +197,7 @@ class ManagedTarget(StatefulObject):
 
 class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def __str__(self):
         if not self.name:
@@ -209,7 +209,7 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
         return "OST"
 
     def default_mount_path(self, host):
-        from configure.models import ManagedTargetMount
+        from chroma_core.models import ManagedTargetMount
         counter = 0
         while True:
             candidate = "/mnt/%s/ost%d" % (self.filesystem.name, counter)
@@ -225,7 +225,7 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
     # we don't just use a OneToOneField is to use FilesystemMember to represent
     # MDTs and OSTs together in a convenient way
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def __str__(self):
         if not self.name:
@@ -252,7 +252,7 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
         return cls.objects.get(managedtargetmount__host = host)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def default_mount_path(self, host):
         return "/mnt/mgs"
@@ -307,7 +307,7 @@ class DeleteTargetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models.target_mount import ManagedTargetMount
+        from chroma_core.models.target_mount import ManagedTargetMount
 
         for tm in ManagedTargetMount.objects.filter(target__id = kwargs['target_id']):
             ManagedTargetMount.delete(tm.id)
@@ -323,7 +323,7 @@ class RemoveConfiguredTargetJob(Job, StateChangeJob):
     requires_confirmation = True
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         return "Removing target %s from configuration" % (self.target.downcast())
@@ -359,7 +359,7 @@ for origin in ['unformatted', 'formatted', 'registered']:
         'stateful_object': 'target',
         'state_verb': "Remove",
         'target': models.ForeignKey(ManagedTarget),
-        'Meta': type('Meta', (object,), {'app_label': 'configure'}),
+        'Meta': type('Meta', (object,), {'app_label': 'chroma_core'}),
         'description': description,
         'requires_confirmation': True,
         'get_steps': get_steps,
@@ -374,7 +374,7 @@ class RegisterTargetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedTargetMount
+        from chroma_core.models import ManagedTargetMount
         target_mount_id = kwargs['target_mount_id']
         target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
 
@@ -390,7 +390,7 @@ class ConfigurePacemakerStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedTargetMount
+        from chroma_core.models import ManagedTargetMount
         target_mount_id = kwargs['target_mount_id']
         target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
 
@@ -410,7 +410,7 @@ class UnconfigurePacemakerStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedTargetMount
+        from chroma_core.models import ManagedTargetMount
         target_mount_id = kwargs['target_mount_id']
         target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
 
@@ -432,7 +432,7 @@ class ConfigureTargetJob(Job, StateChangeJob):
     target = models.ForeignKey(ManagedTarget)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         target = self.target.downcast()
@@ -466,7 +466,7 @@ class RegisterTargetJob(Job, StateChangeJob):
     target = models.ForeignKey(ManagedTarget)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         target = self.target.downcast()
@@ -507,7 +507,7 @@ class MountStep(AnyTargetMountStep):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedTarget, ManagedHost, ManagedTargetMount
+        from chroma_core.models import ManagedTarget, ManagedHost, ManagedTargetMount
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id)
 
@@ -531,7 +531,7 @@ class StartTargetJob(Job, StateChangeJob):
     target = models.ForeignKey(ManagedTarget)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         return "Starting target %s" % self.target.downcast()
@@ -551,7 +551,7 @@ class UnmountStep(AnyTargetMountStep):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedTarget
+        from chroma_core.models import ManagedTarget
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id)
 
@@ -568,7 +568,7 @@ class StopTargetJob(Job, StateChangeJob):
     requires_confirmation = True
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         return "Stopping target %s" % self.target.downcast()
@@ -579,7 +579,7 @@ class StopTargetJob(Job, StateChangeJob):
 
 class MkfsStep(Step):
     def _mkfs_args(self, target):
-        from configure.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember
+        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember
         kwargs = {}
         primary_mount = target.managedtargetmount_set.get(primary = True)
 
@@ -610,14 +610,14 @@ class MkfsStep(Step):
 
     @classmethod
     def describe(cls, kwargs):
-        from configure.models import ManagedTarget
+        from chroma_core.models import ManagedTarget
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id).downcast()
         target_mount = target.managedtargetmount_set.get(primary = True)
         return "Format %s on %s" % (target, target_mount.host)
 
     def run(self, kwargs):
-        from configure.models import ManagedTarget
+        from chroma_core.models import ManagedTarget
 
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id).downcast()
@@ -640,7 +640,7 @@ class FormatTargetJob(Job, StateChangeJob):
     state_verb = 'Format'
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         target = self.target.downcast()

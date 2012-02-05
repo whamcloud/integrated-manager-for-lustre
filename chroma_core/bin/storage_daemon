@@ -18,7 +18,7 @@ import signal
 import os
 import threading
 
-from configure.lib.storage_plugin.log import storage_plugin_log
+from chroma_core.lib.storage_plugin.log import storage_plugin_log
 
 
 class MessageReceiver(threading.Thread):
@@ -83,7 +83,7 @@ class MessageReceiver(threading.Thread):
 
 
 if __name__ == '__main__':
-    from configure.lib.storage_plugin.daemon import StorageDaemon
+    from chroma_core.lib.storage_plugin.daemon import StorageDaemon
     daemon = StorageDaemon()
     message_receiver = MessageReceiver(daemon)
 

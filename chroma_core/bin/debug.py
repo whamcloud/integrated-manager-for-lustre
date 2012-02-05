@@ -14,9 +14,9 @@ from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
-from configure.models import ManagedFilesystem, ManagedHost, FilesystemClientConfParam, FilesystemGlobalConfParam
-from configure.models import ManagedMdt, ManagedOst, MdtConfParam, OstConfParam
-from configure.lib.state_manager import StateManager
+from chroma_core.models import ManagedFilesystem, ManagedHost, FilesystemClientConfParam, FilesystemGlobalConfParam
+from chroma_core.models import ManagedMdt, ManagedOst, MdtConfParam, OstConfParam
+from chroma_core.lib.state_manager import StateManager
 
 import cmd
 
@@ -30,14 +30,14 @@ class HydraDebug(cmd.Cmd, object):
         raise KeyboardInterrupt()
 
     def do_load_config(self, config_file):
-        from configure.lib.load_config import load_file
+        from chroma_core.lib.load_config import load_file
         load_file(config_file)
 
     def do_save_config(self, fs_names):
         fs_names = fs_names.split()
         if len(fs_names) == 0:
             fs_names = None
-        from configure.lib.load_config import save_filesystems
+        from chroma_core.lib.load_config import save_filesystems
         print save_filesystems(fs_names)
 
     def do_format_fs(self, fs_name):
@@ -76,17 +76,17 @@ class HydraDebug(cmd.Cmd, object):
             StateManager.set_state(host, 'lnet_unloaded')
 
     def do_poke_queue(self, args):
-        from configure.models import Job
+        from chroma_core.models import Job
         Job.run_next()
 
     def do_apply_conf_params(self, mgs_host_name):
         # Create an ApplyConfParams job for this MGS
-        from configure.models import ManagedMgs, ApplyConfParams
+        from chroma_core.models import ManagedMgs, ApplyConfParams
         mgs = ManagedMgs.objects.get(managedtargetmount__host__address = mgs_host_name)
         job = ApplyConfParams(mgs = mgs)
 
         # Submit the job
-        from configure.lib.state_manager import StateManager
+        from chroma_core.lib.state_manager import StateManager
         StateManager().add_job(job)
 
     def _conf_param_test_instance(self, key, val, klass):
@@ -112,7 +112,7 @@ class HydraDebug(cmd.Cmd, object):
             raise NotImplementedError()
 
     def do_test_conf_param(self, args):
-        from configure.lib.conf_param import all_params
+        from chroma_core.lib.conf_param import all_params
         from sys import stderr, stdout
         stdout.write("#!/bin/bash\n")
         stdout.write("set -e\n")
@@ -136,11 +136,11 @@ class HydraDebug(cmd.Cmd, object):
         for k in kwargs_list:
             tokens = k.split('=')
             kwargs[tokens[0]] = tokens[1]
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         storage_plugin_manager.create_root_resource(plugin, resource, **kwargs)
 
     def do_storage_graph(self, arg_string):
-        from configure.lib.storage_plugin.query import ResourceQuery
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
         if len(arg_string) == 0:
             resources = ResourceQuery().get_all_resources()
         else:
@@ -155,7 +155,7 @@ class HydraDebug(cmd.Cmd, object):
                 return res
 
             start_id = int(arg_string)
-            from configure.models import StorageResourceRecord
+            from chroma_core.models import StorageResourceRecord
             start_record = StorageResourceRecord.objects.get(pk = start_id)
             iterate(start_record)
         import pygraphviz as pgv
@@ -180,14 +180,14 @@ class HydraDebug(cmd.Cmd, object):
         print i.active()
 
     def do_detect_targets(self, arg_string):
-        from configure.models import DetectTargetsJob
+        from chroma_core.models import DetectTargetsJob
         job = DetectTargetsJob()
-        from configure.lib.state_manager import StateManager
+        from chroma_core.lib.state_manager import StateManager
         StateManager().add_job(job)
 
     def do_remove_resource(self, arg_string):
         resource_id = int(arg_string)
-        from configure.lib.storage_plugin.daemon import StorageDaemon
+        from chroma_core.lib.storage_plugin.daemon import StorageDaemon
         StorageDaemon.request_remove_resource(resource_id)
 
 if __name__ == '__main__':

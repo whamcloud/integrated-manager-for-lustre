@@ -1,7 +1,7 @@
 
 from django.test import TestCase
 from helper import load_plugins
-from tests.unit.configure.helper import JobTestCase
+from tests.unit.chroma_core.helper import JobTestCase
 
 
 class TestSessions(TestCase):
@@ -10,14 +10,14 @@ class TestSessions(TestCase):
         record = self.manager.create_root_resource('example_plugin', 'Couplet', address_1 = "192.168.0.1", address_2 = "192.168.0.2")
         self.scannable_resource_id = record.pk
 
-        import configure.lib.storage_plugin.manager
-        configure.lib.storage_plugin.manager.storage_plugin_manager = self.manager
+        import chroma_core.lib.storage_plugin.manager
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.manager
 
-        import configure.lib.storage_plugin.resource_manager
-        configure.lib.storage_plugin.resource_manager.resource_manager = configure.lib.storage_plugin.resource_manager.ResourceManager()
+        import chroma_core.lib.storage_plugin.resource_manager
+        chroma_core.lib.storage_plugin.resource_manager.resource_manager = chroma_core.lib.storage_plugin.resource_manager.ResourceManager()
 
     def test_open_close(self):
-        from configure.lib.storage_plugin.resource_manager import resource_manager
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         self.assertEqual(len(resource_manager._sessions), 0)
 
         # Pretend I'm a plugin, I'm going to assign a local ID to my scannable resource
@@ -45,8 +45,8 @@ class TestLuns(JobTestCase):
     }
 
     def setUp(self):
-        import configure.lib.storage_plugin.resource_manager
-        configure.lib.storage_plugin.resource_manager.resource_manager = configure.lib.storage_plugin.resource_manager.ResourceManager()
+        import chroma_core.lib.storage_plugin.resource_manager
+        chroma_core.lib.storage_plugin.resource_manager.resource_manager = chroma_core.lib.storage_plugin.resource_manager.ResourceManager()
 
         super(TestLuns, self).setUp()
 
@@ -56,10 +56,10 @@ class TestLuns(JobTestCase):
             return get_handle.handle_counter
         get_handle.handle_counter = 0
 
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         host = ManagedHost.create_from_string('myaddress')
 
-        from configure.lib.storage_plugin.query import ResourceQuery
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
         resource_record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = host.pk)
 
         # Simplest case: an UnsharedDevice
@@ -67,7 +67,7 @@ class TestLuns(JobTestCase):
         scannable_resource._handle = get_handle()
         scannable_resource._handle_global = False
 
-        from configure.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class('linux', 'UnsharedDevice')
         dev_resource = klass(path = "/dev/foo", size = 4096)
         dev_resource.validate()
@@ -80,12 +80,12 @@ class TestLuns(JobTestCase):
         node_resource._handle = get_handle()
         node_resource._handle_global = False
 
-        from configure.lib.storage_plugin.resource_manager import resource_manager
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         resource_manager.session_open(resource_record.pk, scannable_resource._handle, [dev_resource, node_resource], 60)
 
         # TODO: check that in a hierarchy Lun/LunNodes are only created for the leaves
 
-        from configure.models import Lun, LunNode
+        from chroma_core.models import Lun, LunNode
         # Check we got a Lun and a LunNode
         self.assertEqual(Lun.objects.count(), 1)
         self.assertEqual(LunNode.objects.count(), 1)
@@ -120,8 +120,8 @@ class TestVirtualMachines(JobTestCase):
     }
 
     def setUp(self):
-        import configure.lib.storage_plugin.resource_manager
-        configure.lib.storage_plugin.resource_manager.resource_manager = configure.lib.storage_plugin.resource_manager.ResourceManager()
+        import chroma_core.lib.storage_plugin.resource_manager
+        chroma_core.lib.storage_plugin.resource_manager.resource_manager = chroma_core.lib.storage_plugin.resource_manager.ResourceManager()
 
         super(TestVirtualMachines, self).setUp()
 

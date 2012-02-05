@@ -1,8 +1,8 @@
 
 from django.test import TestCase
 
-from configure.lib.storage_plugin import attributes
-from configure.lib.storage_plugin import base_resource_attribute
+from chroma_core.lib.storage_plugin import attributes
+from chroma_core.lib.storage_plugin import base_resource_attribute
 
 
 class TestAttributes(TestCase):
@@ -76,12 +76,12 @@ class TestAttributes(TestCase):
 
 class TestReferenceAttribute(TestCase):
     def setUp(self):
-        import configure.lib.storage_plugin.manager
-        self.original_mgr = configure.lib.storage_plugin.manager.storage_plugin_manager
+        import chroma_core.lib.storage_plugin.manager
+        self.original_mgr = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
 
         from helper import load_plugins
         mgr = load_plugins(['loadable_plugin'])
-        configure.lib.storage_plugin.manager.storage_plugin_manager = mgr
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = mgr
 
         record = mgr.create_root_resource('loadable_plugin', 'TestScannableResource', name = 'foobar')
         self.record_pk = record.pk
@@ -89,8 +89,8 @@ class TestReferenceAttribute(TestCase):
         self.manager = mgr
 
     def tearDown(self):
-        import configure.lib.storage_plugin.manager
-        configure.lib.storage_plugin.manager.storage_plugin_manager = self.original_mgr
+        import chroma_core.lib.storage_plugin.manager
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.original_mgr
 
     def test_decode(self):
         import json
@@ -98,7 +98,7 @@ class TestReferenceAttribute(TestCase):
         self.assertEqual(rr.decode(json.dumps(None)), None)
 
         resource = rr.decode(json.dumps(self.record_pk))
-        from configure.lib.storage_plugin.resource import StorageResource
+        from chroma_core.lib.storage_plugin.resource import StorageResource
         self.assertIsInstance(resource, StorageResource)
 
     def test_markup(self):
@@ -115,7 +115,7 @@ class TestReferenceAttribute(TestCase):
         markup = rr.to_markup(resource)
         self.assertEqual(markup, hyperlink_markup(self.record_pk, resource.get_label()))
 
-        from configure.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = self.record_pk)
         record.alias = 'test alias'
         record.save()

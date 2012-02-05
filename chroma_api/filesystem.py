@@ -6,17 +6,17 @@
 from django.shortcuts import get_object_or_404
 
 from django.contrib.contenttypes.models import ContentType
-from configure.lib.state_manager import StateManager
+from chroma_core.lib.state_manager import StateManager
 
-from configure.models import ManagedOst, ManagedMdt, ManagedMgs
-from configure.models import ManagedFilesystem, ManagedTargetMount, ManagedHost
-from configure.models import Command
-from hydraapi.requesthandler import AnonymousRESTRequestHandler, APIResponse
-import configure.lib.conf_param
+from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs
+from chroma_core.models import ManagedFilesystem, ManagedTargetMount, ManagedHost
+from chroma_core.models import Command
+from chroma_api.requesthandler import AnonymousRESTRequestHandler, APIResponse
+import chroma_core.lib.conf_param
 
 import monitor.lib.util
-import hydraapi.target
-import hydraapi.configureapi
+import chroma_api.target
+import chroma_api.configureapi
 
 
 def create_fs(mgs_id, name, conf_params):
@@ -25,7 +25,7 @@ def create_fs(mgs_id, name, conf_params):
         fs.save()
 
         for key, value in conf_params:
-            configure.lib.conf_param.set_conf_param(fs, key, value)
+            chroma_core.lib.conf_param.set_conf_param(fs, key, value)
 
         return fs
 
@@ -42,7 +42,7 @@ class FilesystemHandler(AnonymousRESTRequestHandler):
         # TODO: validate the parameters before trying to set any of them
 
         for k, v in conf_params.items():
-            configure.lib.conf_param.set_conf_param(filesystem, k, v)
+            chroma_core.lib.conf_param.set_conf_param(filesystem, k, v)
 
     def post(self, request, fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, conf_params):
         # mgt_id and mgt_lun_id are mutually exclusive:
@@ -51,7 +51,7 @@ class FilesystemHandler(AnonymousRESTRequestHandler):
         assert bool(mgt_id) != bool(mgt_lun_id)
 
         if not mgt_id:
-            mgt = hydraapi.target.create_target(mgt_lun_id, ManagedMgs, name="MGS")
+            mgt = chroma_api.target.create_target(mgt_lun_id, ManagedMgs, name="MGS")
             mgt_id = mgt.pk
         else:
             mgt_lun_id = ManagedMgs.objects.get(pk = mgt_id).get_lun()
@@ -66,10 +66,10 @@ class FilesystemHandler(AnonymousRESTRequestHandler):
         from django.db import transaction
         with transaction.commit_on_success():
             fs = create_fs(mgt_id, fsname, conf_params)
-            hydraapi.target.create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
+            chroma_api.target.create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
             osts = []
             for lun_id in ost_lun_ids:
-                osts.append(hydraapi.target.create_target(lun_id, ManagedOst, filesystem = fs))
+                osts.append(chroma_api.target.create_target(lun_id, ManagedOst, filesystem = fs))
         # Important that a commit happens here so that the targets
         # land in DB before the set_state jobs act upon them.
 
@@ -126,7 +126,7 @@ class FilesystemHandler(AnonymousRESTRequestHandler):
                     'inodes_free': fsfilesfree,
                     'inodes_total': fsfilestotal,
                     'inodes_used': (fsfilestotal - fsfilesfree),
-                    'conf_params': configure.lib.conf_param.get_conf_params(filesystem),
+                    'conf_params': chroma_core.lib.conf_param.get_conf_params(filesystem),
                     'id': filesystem.id,
                     'content_type_id': ContentType.objects.get_for_model(filesystem).id}
         else:
@@ -171,7 +171,7 @@ class FilesystemHandler(AnonymousRESTRequestHandler):
                                     # FIXME: the API should not be formatting these, leave it to the presentation layer
                                     'kbytesused': monitor.lib.util.sizeof_fmt((fskbytestotal * 1024)),
                                     'kbytesfree': monitor.lib.util.sizeof_fmt((fskbytesfree * 1024)),
-                                    'conf_params': configure.lib.conf_param.get_conf_params(filesystem),
+                                    'conf_params': chroma_core.lib.conf_param.get_conf_params(filesystem),
                                     'id': filesystem.id,
                                     'content_type_id': ContentType.objects.get_for_model(filesystem).id})
 

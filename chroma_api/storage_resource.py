@@ -6,10 +6,10 @@
 from django.contrib.contenttypes.models import ContentType
 
 from requesthandler import AnonymousRESTRequestHandler
-from hydraapi.requesthandler import APIResponse
+from chroma_api.requesthandler import APIResponse
 
-from configure.models import StorageResourceRecord
-from configure.lib.storage_plugin.manager import storage_plugin_manager
+from chroma_core.models import StorageResourceRecord
+from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 from django.shortcuts import get_object_or_404
 
 
@@ -39,7 +39,7 @@ class StorageResourceHandler(AnonymousRESTRequestHandler):
         return record.to_dict()
 
     def remove(self, request, id):
-        from configure.lib.storage_plugin.daemon import StorageDaemon
+        from chroma_core.lib.storage_plugin.daemon import StorageDaemon
         StorageDaemon.request_remove_resource(id)
         # TODO: make the request to remove the resource something that
         # we can track (right now it's a "hope for the best")
@@ -55,7 +55,7 @@ class StorageResourceHandler(AnonymousRESTRequestHandler):
 
             rows = []
             from django.utils.html import conditional_escape
-            from configure.lib.storage_plugin.query import ResourceQuery
+            from chroma_core.lib.storage_plugin.query import ResourceQuery
             for record in ResourceQuery().get_class_resources(resource_class_id):
                 resource = record.to_resource()
                 alias = conditional_escape(record.alias_or_name(resource))

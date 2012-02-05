@@ -1,6 +1,7 @@
 *.py[co]
 *.sw?
 *.log
+*bak
 local_settings.py
 production_version.py*
 database.db

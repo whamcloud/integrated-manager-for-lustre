@@ -44,7 +44,7 @@ def hydracmnewfstab(request):
 
 def hydracmeditfs(request):
     fs_id = request.GET.get("fs_id")
-    from configure.models import ManagedFilesystem
+    from chroma_core.models import ManagedFilesystem
     fs = ManagedFilesystem.objects.get(pk = fs_id)
     return render_to_response("edit_fs.html",
             RequestContext(request, {"fs_name": fs.name, "fs_id": fs_id}))
@@ -65,7 +65,7 @@ def set_state(request, content_type_id, stateful_object_id, new_state):
     stateful_object_klass = ContentType.objects.get(id = content_type_id).model_class()
     stateful_object = stateful_object_klass.objects.get(id = stateful_object_id)
 
-    from configure.lib.state_manager import StateManager
+    from chroma_core.lib.state_manager import StateManager
     StateManager.set_state(stateful_object, new_state)
 
     return HttpResponse(status = 201)
@@ -76,7 +76,7 @@ def _jobs_json():
     from django.core.urlresolvers import reverse
     from datetime import timedelta, datetime
     from django.db.models import Q
-    from configure.models import Job
+    from chroma_core.models import Job
 
     jobs = Job.objects.filter(~Q(state = 'complete') | Q(created_at__gte=datetime.now() - timedelta(minutes=60)))
     jobs_dicts = []
@@ -90,10 +90,10 @@ def _jobs_json():
             'description': job.description()
         })
 
-    from configure.lib.state_manager import StateManager
+    from chroma_core.lib.state_manager import StateManager
     state_manager = StateManager()
 
-    from configure.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedHost, ManagedTargetMount, ManagedFilesystem, LNetConfiguration, StatefulObject
+    from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedHost, ManagedTargetMount, ManagedFilesystem, LNetConfiguration, StatefulObject
 
     from itertools import chain
     stateful_objects = []
@@ -111,7 +111,7 @@ def _jobs_json():
                     actions.append({
                         "name": transition['state'],
                         "caption": transition['verb'],
-                        "url": reverse('hydracm.views.set_state', kwargs={
+                        "url": reverse('chroma_ui.views.set_state', kwargs={
                             "content_type_id": "%s" % ContentType.objects.get_for_model(i).id,
                             "stateful_object_id": "%s" % i.id,
                             "new_state": transition['state']
@@ -137,7 +137,7 @@ def _jobs_json():
 
 
 def job(request, job_id):
-    from configure.models import Job
+    from chroma_core.models import Job
     job = get_object_or_404(Job, id = job_id)
     job = job.downcast()
 

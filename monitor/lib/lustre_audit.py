@@ -8,8 +8,8 @@ import settings
 
 # Access to 'monitor' database
 from monitor.models import TargetRecoveryAlert, TargetRecoveryInfo, HostContactAlert, LNetOfflineAlert, LearnEvent
-from configure.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, ManagedTargetMount, FilesystemMember
-from configure.models import ManagedHost, Nid, LunNode, Lun, ManagedFilesystem
+from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, ManagedTargetMount, FilesystemMember
+from chroma_core.models import ManagedHost, Nid, LunNode, Lun, ManagedFilesystem
 from django.db import transaction
 
 audit_log = settings.setup_log('audit')
@@ -120,7 +120,7 @@ class UpdateScan(object):
 
     def update_lnet(self):
         # Update LNet status
-        from configure.lib.state_manager import StateManager
+        from chroma_core.lib.state_manager import StateManager
         state = {(False, False): 'lnet_unloaded',
                 (True, False): 'lnet_down',
                 (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'], self.host_data['lnet_up'])]
@@ -208,7 +208,7 @@ class UpdateScan(object):
                 target.set_active_mount(active_mount)
 
                 state = ['unmounted', 'mounted'][active_mount != None]
-                from configure.lib.state_manager import StateManager
+                from chroma_core.lib.state_manager import StateManager
                 StateManager.notify_state(target, state, ['mounted', 'unmounted'])
 
     def store_lustre_target_metrics(self, target_name, metrics):

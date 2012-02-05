@@ -9,8 +9,8 @@ from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
 
-from configure.models.jobs import StatefulObject, Job
-from configure.lib.job import StateChangeJob, DependOn, DependAll, Step
+from chroma_core.models.jobs import StatefulObject, Job
+from chroma_core.lib.job import StateChangeJob, DependOn, DependAll, Step
 from monitor.models import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass, DowncastMetaclass
 
 import settings
@@ -23,7 +23,7 @@ class DeletableStatefulObject(StatefulObject):
 
     class Meta:
         abstract = True
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class ManagedHost(DeletableStatefulObject, MeasuredEntity):
@@ -47,7 +47,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     DEFAULT_USERNAME = 'root'
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
         unique_together = ('address',)
 
     def __str__(self):
@@ -115,13 +115,13 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             monitor, created = Monitor.objects.get_or_create(host = host)
             lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
 
-            from configure.lib.storage_plugin.manager import storage_plugin_manager
+            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
             storage_plugin_manager.create_root_resource('linux',
                     'HydraHostProxy', host_id = host.pk,
                     virtual_machine = virtual_machine)
 
         # Attempt some initial setup jobs
-        from configure.lib.state_manager import StateManager
+        from chroma_core.lib.state_manager import StateManager
         StateManager.set_state(host, 'lnet_unloaded')
         StateManager.set_state(lnet_configuration, 'nids_known')
 
@@ -158,7 +158,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         return (len(self._role_strings()) == 0)
 
     def is_mgs(self):
-        from configure.models.target import ManagedMgs
+        from chroma_core.models.target import ManagedMgs
         try:
             ManagedMgs.objects.get(managedtargetmount__host = self)
             return True
@@ -167,7 +167,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def available_lun_nodes(self):
         from django.db.models import Q
-        from configure.models.target_mount import ManagedTargetMount
+        from chroma_core.models.target_mount import ManagedTargetMount
 
         used_luns = [i['block_device__lun'] for i in ManagedTargetMount.objects.all().values('block_device__lun')]
         return LunNode.objects.filter(
@@ -266,13 +266,13 @@ class Lun(models.Model):
 
     class Meta:
         unique_together = ('storage_resource',)
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     @classmethod
     def get_unused_luns(cls):
         """Get all Luns which are not used by Targets"""
         from django.db.models import Q
-        from configure.models import ManagedTargetMount
+        from chroma_core.models import ManagedTargetMount
         used_lun_ids = [i['block_device__lun'] for i in ManagedTargetMount.objects.all().values('block_device__lun')]
         return Lun.objects.filter(~Q(pk__in = used_lun_ids))
 
@@ -307,7 +307,7 @@ class Lun(models.Model):
         if not self.storage_resource_id:
             return "Unknown"
 
-        from configure.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
         resource_klass = record.to_resource_class()
         return resource_klass.get_class_label()
@@ -320,7 +320,7 @@ class Lun(models.Model):
         # TODO: this is a link to the local e.g. ScsiDevice resource: to get the
         # best possible name, we should follow back to VirtualDisk ancestors, and
         # if there is only one VirtualDisk in the ancestry then use its name
-        from configure.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
         resource = record.to_resource()
         if record.alias:
@@ -383,7 +383,7 @@ class LunNode(models.Model):
 
     class Meta:
         unique_together = ('host', 'path')
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def __str__(self):
         return "%s:%s" % (self.host, self.path)
@@ -450,7 +450,7 @@ class Monitor(models.Model):
     host = models.OneToOneField(ManagedHost)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     #idle, tasking, tasked, started,
     state = models.CharField(max_length = 32, default = 'idle')
@@ -487,7 +487,7 @@ class Monitor(models.Model):
         """Safe to call on an SshMonitor which has a host assigned, neither
         need to have been saved"""
         from monitor.lib.lustre_audit import audit_log
-        from configure.lib.agent import Agent
+        from chroma_core.lib.agent import Agent
         try:
             return Agent(self.host, log = audit_log, timeout = timeout).invoke(command)
         except Exception, e:
@@ -513,7 +513,7 @@ class LNetConfiguration(StatefulObject):
         return "%s LNet configuration" % (self.host)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class Nid(models.Model):
@@ -522,14 +522,14 @@ class Nid(models.Model):
     nid_string = models.CharField(max_length=128)
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class LearnNidsStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedHost, Nid
+        from chroma_core.models import ManagedHost, Nid
         from monitor.lib.lustre_audit import normalize_nid
         host = ManagedHost.objects.get(pk = kwargs['host_id'])
         result = self.invoke_agent(host, "lnet-scan")
@@ -555,7 +555,7 @@ class ConfigureLNetJob(Job, StateChangeJob):
         return DependOn(self.lnet_configuration.host, "lnet_up")
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class ConfigureRsyslogStep(Step):
@@ -568,7 +568,7 @@ class ConfigureRsyslogStep(Step):
             from os import uname
             hostname = uname()[1]
 
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "configure-rsyslog --node %s" % hostname)
 
@@ -577,7 +577,7 @@ class UnconfigureRsyslogStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "unconfigure-rsyslog")
 
@@ -586,9 +586,9 @@ class LearnHostnameStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.lib.job import job_log
+        from chroma_core.lib.job import job_log
 
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         fqdn = self.invoke_agent(host, "get-fqdn")
         assert fqdn != None
@@ -613,7 +613,7 @@ class SetServerConfStep(Step):
         if not settings.HTTP_AUDIT:
             return
 
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         import settings
         if settings.SERVER_HTTP_URL:
@@ -633,7 +633,7 @@ class RemoveServerConfStep(Step):
         if not settings.HTTP_AUDIT:
             return
 
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "remove-server-conf")
 
@@ -653,7 +653,7 @@ class SetupHostJob(Job, StateChangeJob):
                 (SetServerConfStep, {'host_id': self.managed_host.pk})]
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
 
 class DetectTargetsStep(Step):
@@ -661,7 +661,7 @@ class DetectTargetsStep(Step):
         return True
 
     def run(self, kwargs):
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         from monitor.lib.lustre_audit import DetectScan
 
         host_data = {}
@@ -684,7 +684,7 @@ class DetectTargetsStep(Step):
 
 class DetectTargetsJob(Job):
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         return "Scanning for Lustre targets"
@@ -693,7 +693,7 @@ class DetectTargetsJob(Job):
         return [(DetectTargetsStep, {})]
 
     def get_deps(self):
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         deps = []
         for host in ManagedHost.objects.all():
             deps.append(DependOn(host.lnetconfiguration, 'nids_known'))
@@ -705,7 +705,7 @@ class StartLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "start-lnet")
 
@@ -714,7 +714,7 @@ class StopLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "stop-lnet")
 
@@ -723,7 +723,7 @@ class LoadLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "load-lnet")
 
@@ -732,7 +732,7 @@ class UnloadLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "unload-lnet")
 
@@ -744,7 +744,7 @@ class LoadLNetJob(Job, StateChangeJob):
     state_verb = 'Load LNet'
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         return "Loading LNet module on %s" % self.host
@@ -760,7 +760,7 @@ class UnloadLNetJob(Job, StateChangeJob):
     state_verb = 'Unload LNet'
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         return "Unloading LNet module on %s" % self.host
@@ -776,7 +776,7 @@ class StartLNetJob(Job, StateChangeJob):
     state_verb = 'Start LNet'
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         return "Start LNet on %s" % self.host
@@ -792,7 +792,7 @@ class StopLNetJob(Job, StateChangeJob):
     state_verb = 'Stop LNet'
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         return "Stop LNet on %s" % self.host
@@ -805,21 +805,21 @@ class DeleteHostStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from configure.lib.storage_plugin.query import ResourceQuery
-        from configure.models import StorageResourceRecord
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
+        from chroma_core.models import StorageResourceRecord
         try:
             record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = kwargs['host_id'])
         except StorageResourceRecord.DoesNotExist:
             # This is allowed, to account for the case where we submit the request_remove_resource,
             # then crash, then get restarted.
             pass
-        from configure.lib.storage_plugin.daemon import StorageDaemon
+        from chroma_core.lib.storage_plugin.daemon import StorageDaemon
         StorageDaemon.request_remove_resource(record.pk)
 
         for ln in LunNode.objects.filter(host__id = kwargs['host_id']):
             LunNode.delete(ln.pk)
 
-        from configure.models import ManagedHost
+        from chroma_core.models import ManagedHost
         ManagedHost.delete(kwargs['host_id'])
 
 
@@ -832,7 +832,7 @@ class RemoveHostJob(Job, StateChangeJob):
     requires_confirmation = True
 
     class Meta:
-        app_label = 'configure'
+        app_label = 'chroma_core'
 
     def description(self):
         return "Remove host %s from configuration" % self.host
