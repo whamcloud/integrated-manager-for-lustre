@@ -90,7 +90,7 @@ def _make_deletable(metaclass, dct):
             instance.save()
 
         from monitor.lib.lustre_audit import audit_log
-        updated = AlertState.filter_by_item_id(klass, id).update(active = False)
+        updated = AlertState.filter_by_item_id(klass, id).update(active = None)
         audit_log.info("Lowered %d alerts while deleting %s %s" % (updated, klass, id))
 
     dct['objects'] = DeletableManager()
