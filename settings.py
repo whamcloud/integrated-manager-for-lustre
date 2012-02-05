@@ -136,7 +136,6 @@ INSTALLED_APPS = (
     'pagination',
     'chroma_core',
     'chroma_api',
-    'hydradashboard',
     'chroma_ui',
     'benchmark'
     )

@@ -20,27 +20,7 @@
 <script type='text/javascript' src="{{STATIC_URL}}js/filesystem_configuration.js"></script>
 <script type="text/javascript">
 
-/*
-$(document).ready(function() {
-  var History = window.History;
-  console.log(History.enabled);
-  History.Adapter.bind(window, 'statechange', function() {
-    var State = History.getState();
-    // location.hash scheme is tab_page_id
-    // e.g. initial load is just ''
-    var hash = State.url.split('#')[1]
-    console.log(hash)
-    if (!hash) {
-      History.pushState(null, null, '#filesystems');
-    } else {
-      var parts = hash.split('_')
-      $("#tabs").tabs('select', '#' + parts[0]);
-    }
-  });
-  History.pushState(null, null, "foo");
-});
-*/
- 
+
 $(document).ajaxComplete(function() {
   $('button.back_button:not(.ui-button)').each(function() {
     $(this).html('Back');
@@ -71,24 +51,23 @@ $(document).ready(function() {
         console.log('#' + parts[0]);
         $("#tabs").tabs('select', '#' + parts[0]);
         $('#filesystems').empty();
-        $('#filesystems').load('/hydracm/filesystems_new/', function(){$(this).fadeIn(100)});
+        $('#filesystems').load('/ui/configure/filesystems_new/', function(){$(this).fadeIn(100)});
       } else if (parts[0] == 'filesystems' && parts[1] == 'edit') {
         var fs_id = parts[2];
         $("#tabs").tabs('select', '#' + parts[0]);
         $('#filesystems').empty();
-        $('#filesystems').load('/hydracm/filesystems_edit/?fs_id=' + fs_id);
+        $('#filesystems').load('/ui/configure/filesystems_edit/?fs_id=' + fs_id);
       }
     } else {
       $("#tabs").tabs('select', '#' + parts[0]);
       $('#filesystems').empty();
-      $('#' + parts[0]).load('/hydracm/' + parts[0] + '_tab/')
+      $('#' + parts[0]).load('/ui/configure/' + parts[0] + '_tab/')
     }
   });
 
   $('#tabs ul:first a').address();
 });
 
-  //Global vars for hydracm UI
   //create new File system
   var oNewMGT_RowData=[];
   var mgt_node_id = "";
@@ -96,11 +75,10 @@ $(document).ready(function() {
   var mgs_id = "";
   var oNewMDT_RowData=[];
   var mdt_node_id = "";
-  // Function for hydracm Tab based view (File system/MGT/Volume/Server/Storage)
+
   $(function() {
-  
-  // Menu Highlighter
-  $('#hydracm_menu').addClass('active');
+    // Menu Highlighter
+    $('#configure_menu').addClass('active');
     $("#tabs").tabs({selected: -1});
   });    
   // Document Ready Handler for configuration_home.html   

@@ -7,27 +7,27 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 
-def hydracm(request):
+def configure(request):
     return render_to_response("configuration_home.html",
             RequestContext(request, {}))
 
 
-def hydracmfstab(request):
+def filesystem_tab(request):
     return render_to_response("lustre_fs_configuration.html",
             RequestContext(request, {}))
 
 
-def hydracmmgttab(request):
+def mgt_tab(request):
     return render_to_response("new_mgt.html",
             RequestContext(request, {}))
 
 
-def hydracmvolumetab(request):
+def volume_tab(request):
     return render_to_response("volume_configuration.html",
             RequestContext(request, {}))
 
 
-def hydracmservertab(request):
+def server_tab(request):
     return render_to_response("server_configuration.html",
             RequestContext(request, {}))
 
@@ -37,17 +37,37 @@ def storage_tab(request):
             RequestContext(request, {}))
 
 
-def hydracmnewfstab(request):
+def filesystem_create_tab(request):
     return render_to_response("create_lustre_fs.html",
             RequestContext(request, {}))
 
 
-def hydracmeditfs(request):
+def filesystem_edit_tab(request):
     fs_id = request.GET.get("fs_id")
     from chroma_core.models import ManagedFilesystem
     fs = ManagedFilesystem.objects.get(pk = fs_id)
     return render_to_response("edit_fs.html",
             RequestContext(request, {"fs_name": fs.name, "fs_id": fs_id}))
+
+
+def dashboard(request):
+    return render_to_response("index.html",
+            RequestContext(request, {}))
+
+
+def dbalerts(request):
+    return render_to_response("db_alerts.html",
+            RequestContext(request, {}))
+
+
+def dbevents(request):
+    return render_to_response("db_events.html",
+            RequestContext(request, {}))
+
+
+def dblogs(request):
+    return render_to_response("db_logs.html",
+            RequestContext(request, {}))
 
 
 def states(request):

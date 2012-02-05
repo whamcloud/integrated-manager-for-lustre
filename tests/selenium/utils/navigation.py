@@ -15,7 +15,7 @@ class Navigation:
             # Link for Dashboard
             'Dashboard': 'dashboard_menu',
             # Links for Configuration
-            'Configure': 'hydracm_menu',
+            'Configure': 'configure_menu',
             # Links under configuration
             'Filesystems': 'filesystem_tab',
             'MGTs': 'mgt_tab',

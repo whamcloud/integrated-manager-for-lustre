@@ -10,7 +10,7 @@ class Baselayout:
         # Initialise all elements on header and left panel
         self.logo_head = self.driver.find_element_by_class_name('logohead')
         self.dashboard_menu = self.driver.find_element_by_id('dashboard_menu')
-        self.hydracm_menu = self.driver.find_element_by_id('hydracm_menu')
+        self.configure_menu = self.driver.find_element_by_id('configure_menu')
         self.alerts_menu = self.driver.find_element_by_id('alerts_menu')
         self.events_menu = self.driver.find_element_by_id('events_menu')
         self.logs_menu = self.driver.find_element_by_id('logs_menu')
@@ -28,10 +28,10 @@ class Baselayout:
         """
         return self.dashboard_menu.is_displayed()
 
-    def hydracm_menu_displayed(self):
-        """Returns whether if hydracm_menu is displayed
+    def configure_menu_displayed(self):
+        """Returns whether if configure_menu is displayed
         """
-        return self.hydracm_menu.is_displayed()
+        return self.configure_menu.is_displayed()
 
     def alerts_menu_displayed(self):
         """Returns whether if alerts_menu is displayed

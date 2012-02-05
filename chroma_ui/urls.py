@@ -4,18 +4,24 @@
 # ==============================
 
 from django.conf.urls.defaults import patterns
-import views
+import chroma_ui.views as views
 
 urlpatterns = patterns('',
-    (r'^$', views.hydracm),
-    (r'^config/.*$', views.hydracm),
-    (r'^filesystems_tab/', views.hydracmfstab),
-    (r'^mgts_tab/', views.hydracmmgttab),
-    (r'^volumes_tab/', views.hydracmvolumetab),
-    (r'^servers_tab/', views.hydracmservertab),
-    (r'^storage_tab/', views.storage_tab),
-    (r'^filesystems_new/', views.hydracmnewfstab),
-    (r'^filesystems_edit/', views.hydracmeditfs),
+    (r'^$', views.dashboard),
+
+    (r'^configure/$', views.configure),
+    (r'^configure/filesystems_tab/', views.filesystem_tab),
+    (r'^configure/mgts_tab/', views.mgt_tab),
+    (r'^configure/volumes_tab/', views.volume_tab),
+    (r'^configure/servers_tab/', views.server_tab),
+    (r'^configure/storage_tab/', views.storage_tab),
+    (r'^configure/filesystems_new/', views.filesystem_create_tab),
+    (r'^configure/filesystems_edit/', views.filesystem_edit_tab),
+
+    (r'^dashboard/$', views.dashboard),
+    (r'^dashboard/dbalerts/', views.dbalerts),
+    (r'^dashboard/dbevents/', views.dbevents),
+    (r'^dashboard/dblogs/', views.dblogs),
 
     (r'^states/$', views.states),
     (r'^set_state/(?P<content_type_id>\d+)/(?P<stateful_object_id>\d+)/(?P<new_state>\w+)/$', views.set_state),

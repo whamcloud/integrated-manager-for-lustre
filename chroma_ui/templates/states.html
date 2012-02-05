@@ -143,7 +143,7 @@ img.icon {
 
     job_markup = function(container, job) {
         container.children('.description').html(
-            job['description'] + "<a href='/hydracm/job/" + job['id'] + "/'> [details]</a>"
+            job['description'] + "<a href='/ui/job/" + job['id'] + "/'> [details]</a>"
         );
 
         container.children('.time').html(job['created_at']);
