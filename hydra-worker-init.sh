@@ -37,10 +37,9 @@ start() {
     #fi
     if [ ! -d /var/lib/mysql/hydra ]; then
         # create the hydra database
-        echo "create database hydra" | mysql
+        echo "create database chroma" | mysql
         # and populate it
-        python $PYTHONPATH/manage.py syncdb --noinput
-        python $PYTHONPATH/manage.py migrate
+        python $PYTHONPATH/manage.py syncdb --noinput --migrate
         # reload rsyslog since it will have complained about the missing
         # table when it started
         service rsyslog reload
@@ -74,14 +73,14 @@ start() {
 
     if ! grep "^Please point your browser at" /etc/issue; then
         cat <<EOF >> /etc/issue
-Please point your browser at http://$IPADDR/dashboard/
+Please point your browser at http://$IPADDR/ui/
 to administer this server.
 
 EOF
-    else
+    ui
         ed <<EOF /etc/issue
 /^Please point your browser at http:\/\//;/to administer this server\./c
-Please point your browser at http://$IPADDR/dashboard/
+Please point your browser at http://$IPADDR/ui/
 to administer this server.
 .
 w
