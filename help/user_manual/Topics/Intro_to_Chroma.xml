@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="../helpproject.xsl" ?>
+<topic template="Default" lasteditedby="Linda Bebernes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../helpproject.xsd">
+  <title translate="true">Intro to Chroma</title>
+  <body>
+    <header>
+      <para styleclass="Heading1"><text styleclass="Heading1" translate="true">Intro to Chroma</text></para>
+    </header>
+    <para styleclass="Normal"><text styleclass="Normal" translate="true">Chroma...</text></para>
+    <para styleclass="Normal"></para>
+    <list id="0" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Normal" style="font-family:Symbol; font-size:10pt; color:#000000;">
+      <li styleclass="Normal"><text styleclass="Normal" translate="true">Is designed to simplify configuration and maintenance of a Lustre file system.</text></li>
+    </list>
+    <para styleclass="Normal"></para>
+    <list id="0" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Normal" style="font-family:Symbol; font-size:10pt; color:#000000;">
+      <li styleclass="Normal"><text styleclass="Normal" translate="true">Runs on a separate server from Lustre.</text></li>
+    </list>
+    <para styleclass="Normal"></para>
+    <list id="0" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Normal" style="font-family:Symbol; font-size:10pt; color:#000000;">
+      <li styleclass="Normal"><text styleclass="Normal" translate="true">Gathers information that would normally be gathered by hand such as detecting servers and discovering storage (physical disks) on network and identifying available logical volumes.</text></li>
+    </list>
+    <para styleclass="Normal"></para>
+    <list id="0" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Normal" style="font-family:Symbol; font-size:10pt; color:#000000;">
+      <li styleclass="Normal"><text styleclass="Normal" translate="true">Provides dialogs to lead admin through configuration process including setting up failover</text></li>
+    </list>
+    <para styleclass="Normal"></para>
+    <list id="0" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Normal" style="font-family:Symbol; font-size:10pt; color:#000000;">
+      <li styleclass="Normal"><text styleclass="Normal" translate="true">Provides monitoring and metrics – gathers statistics, maintains a database of those statistics and gives you a way to look at them.</text></li>
+    </list>
+    <para styleclass="Normal"></para>
+    <para styleclass="Normal"><text styleclass="Normal" translate="true">Describe what you can use Chroma for (e.g., commonly used aspects of the file system) and what you might have to do by hand. Point to sections of the Lustre OM for more details.</text></para>
+    <para styleclass="Normal"></para>
+    <para styleclass="Normal"></para>
+    <para styleclass="Normal"></para>
+  </body>
+</topic>
