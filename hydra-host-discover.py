@@ -19,7 +19,7 @@ sys.path.append(project_dir)
 from django.core.management import setup_environ
 import settings
 setup_environ(settings)
-from configure.models.host import ManagedHost
+from chroma_core.models.host import ManagedHost
 
 
 TYPE = "_hydra-agent._tcp"

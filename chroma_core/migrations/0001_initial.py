@@ -264,6 +264,14 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('chroma_core', ['ManagedMgs'])
 
+        # Adding model 'TargetRecoveryInfo'
+        db.create_table('chroma_core_targetrecoveryinfo', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('recovery_status', self.gf('django.db.models.fields.TextField')()),
+            ('target', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedTarget'])),
+        ))
+        db.send_create_signal('chroma_core', ['TargetRecoveryInfo'])
+
         # Adding model 'RemoveConfiguredTargetJob'
         db.create_table('chroma_core_removeconfiguredtargetjob', (
             ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
@@ -824,6 +832,9 @@ class Migration(SchemaMigration):
 
         # Deleting model 'ManagedMgs'
         db.delete_table('chroma_core_managedmgs')
+
+        # Deleting model 'TargetRecoveryInfo'
+        db.delete_table('chroma_core_targetrecoveryinfo')
 
         # Deleting model 'RemoveConfiguredTargetJob'
         db.delete_table('chroma_core_removeconfiguredtargetjob')
@@ -1465,6 +1476,12 @@ class Migration(SchemaMigration):
         'chroma_core.targetrecoveryalert': {
             'Meta': {'object_name': 'TargetRecoveryAlert', '_ormbases': ['chroma_core.AlertState']},
             'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.targetrecoveryinfo': {
+            'Meta': {'object_name': 'TargetRecoveryInfo'},
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'recovery_status': ('django.db.models.fields.TextField', [], {}),
+            'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.unloadlnetjob': {
             'Meta': {'object_name': 'UnloadLNetJob', '_ormbases': ['chroma_core.Job']},
