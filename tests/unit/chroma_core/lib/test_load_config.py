@@ -6,10 +6,12 @@ class TestJsonImport(JobTestCase):
     mock_servers = {
             'example01': {
                 'fqdn': 'example01.mycompany.com',
+                'nodename': 'test01.example01.mycompany.com',
                 'nids': ["192.168.0.1@tcp"]
             },
             'example02': {
                 'fqdn': 'example02.mycompany.com',
+                'nodename': 'test02.example02.mycompany.com',
                 'nids': ["192.168.0.2@tcp"]
             }
     }

@@ -62,10 +62,12 @@ class TestSharedTarget(JobTestCaseWithHost):
     mock_servers = {
             'pair1': {
                 'fqdn': 'pair1.mycompany.com',
+                'nodename': 'test01.pair1.mycompany.com',
                 'nids': ["192.168.0.1@tcp"]
             },
             'pair2': {
                 'fqdn': 'pair2.mycompany.com',
+                'nodename': 'test02.pair2.mycompany.com',
                 'nids': ["192.168.0.1@tcp"]
             }
     }
