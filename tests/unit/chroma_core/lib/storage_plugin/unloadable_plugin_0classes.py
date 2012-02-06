@@ -1,0 +1,16 @@
+
+from chroma_core.lib.storage_plugin.resource import StorageResource
+from chroma_core.lib.storage_plugin import attributes
+from chroma_core.lib.storage_plugin import statistics
+from chroma_core.lib.storage_plugin.resource import GlobalId, ScannableResource
+
+
+class TestScannableResource(StorageResource, ScannableResource):
+    name = attributes.String()
+    identifier = GlobalId('name')
+
+
+class TestResource(StorageResource):
+    name = attributes.String()
+    thing_count = statistics.Counter()
+    identifier = GlobalId('name')

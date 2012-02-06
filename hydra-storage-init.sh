@@ -9,7 +9,7 @@
 . /etc/init.d/functions
 
 export HYDRA_PATH=/usr/share/hydra-server 
-export DAEMON_PATH=${HYDRA_PATH}/configure/bin/storage_daemon
+export DAEMON_PATH=${HYDRA_PATH}/chroma_core/bin/storage_daemon
 export PID_FILE=/var/run/hydra-storage.pid
 if ! [ -f ${DAEMON_PATH} ]
 then

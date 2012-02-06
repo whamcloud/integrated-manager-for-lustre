@@ -7,8 +7,8 @@ from django.db import transaction
 
 import settings
 
-from configure.models import ManagedHost, ManagedOst, ManagedMdt, ManagedFilesystem, ManagedMgs, ManagedTargetMount, Lun, LunNode
-from monitor.lib.lustre_audit import UpdateScan
+from chroma_core.models import ManagedHost, ManagedOst, ManagedMdt, ManagedFilesystem, ManagedMgs, ManagedTargetMount, Lun, LunNode
+from chroma_core.lib.lustre_audit import UpdateScan
 from benchmark.generic import GenericBenchmark
 
 
@@ -161,8 +161,8 @@ class Benchmark(GenericBenchmark):
         # We need to finagle this by hand since we're not using migrations.
         if kwargs['use_flms'] and kwargs['use_flms_mem']:
             cursor = connection.cursor()
-            drop_constraints(cursor, 'monitor_frontlinemetricstore')
-            cursor.execute("ALTER TABLE monitor_frontlinemetricstore ENGINE = MEMORY")
+            drop_constraints(cursor, 'chroma_core_frontlinemetricstore')
+            cursor.execute("ALTER TABLE chroma_core_frontlinemetricstore ENGINE = MEMORY")
 
         if kwargs['use_r3d_myisam']:
             cursor = connection.cursor()

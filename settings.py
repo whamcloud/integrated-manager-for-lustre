@@ -20,7 +20,7 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'hydra',                 # Or path to database file if using sqlite3.
+        'NAME': 'chroma',                 # Or path to database file if using sqlite3.
         'USER': 'root',                  # Not used with sqlite3.
         'PASSWORD': '',                  # Not used with sqlite3.
         'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
@@ -98,7 +98,7 @@ TEMPLATE_LOADERS = (
 from django.conf import global_settings
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS +\
     ("django.core.context_processors.request",
-     "hydracm.context_processors.page_load_time")
+     "chroma_ui.context_processors.page_load_time")
 
 ROOT_URLCONF = 'urls'
 
@@ -117,7 +117,7 @@ BROKER_USER = "hydra"
 BROKER_PASSWORD = "hydra123"
 BROKER_VHOST = "hydravhost"
 CELERY_RESULT_BACKEND = "database"
-CELERY_RESULT_DBURI = "mysql://root:@localhost/hydra"
+CELERY_RESULT_DBURI = "mysql://root:@localhost/chroma"
 
 # HYD-471: This must be set for unit tests to pass in general
 SOUTH_TESTS_MIGRATE = False
@@ -134,11 +134,9 @@ INSTALLED_APPS = (
     'r3d',
     'djcelery',
     'pagination',
-    'monitor',
-    'configure',
-    'hydraapi',
-    'hydradashboard',
-    'hydracm',
+    'chroma_core',
+    'chroma_api',
+    'chroma_ui',
     'benchmark'
     )
 
@@ -229,20 +227,20 @@ SQL_RETRY_PERIOD = 10
 USE_FRONTLINE_METRICSTORE = True
 
 CELERY_ROUTES = (
-        {"monitor.tasks.audit_all": {"queue": "periodic"}},
-        {"monitor.tasks.purge_and_optimize_metrics": {"queue": "periodic"}},
-        {"monitor.tasks.drain_flms_table": {"queue": "periodic"}},
-        {"monitor.tasks.mail_alerts": {"queue": "periodic"}},
-        {"monitor.tasks.parse_log_entries": {"queue": "parselog"}},
-        {"configure.tasks.janitor": {"queue": "periodic"}},
-        {"configure.tasks.set_state": {"queue": "serialize"}},
-        {"configure.tasks.notify_state": {"queue": "serialize"}},
-        {"configure.tasks.add_job": {"queue": "serialize"}},
-        {"configure.tasks.complete_job": {"queue": "serialize"}},
-        {"configure.tasks.run_job": {"queue": "jobs"}},
-        {"monitor.tasks.test_host_contact": {"queue": "ssh"}},
-        {"monitor.tasks.monitor_exec": {"queue": "ssh"}},
-        {"monitor.tasks.send_alerts_email": {"queue": "jobs"}},
+        {"chroma_core.tasks.audit_all": {"queue": "periodic"}},
+        {"chroma_core.tasks.purge_and_optimize_metrics": {"queue": "periodic"}},
+        {"chroma_core.tasks.drain_flms_table": {"queue": "periodic"}},
+        {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
+        {"chroma_core.tasks.parse_log_entries": {"queue": "parselog"}},
+        {"chroma_core.tasks.janitor": {"queue": "periodic"}},
+        {"chroma_core.tasks.set_state": {"queue": "serialize"}},
+        {"chroma_core.tasks.notify_state": {"queue": "serialize"}},
+        {"chroma_core.tasks.add_job": {"queue": "serialize"}},
+        {"chroma_core.tasks.complete_job": {"queue": "serialize"}},
+        {"chroma_core.tasks.run_job": {"queue": "jobs"}},
+        {"chroma_core.tasks.test_host_contact": {"queue": "ssh"}},
+        {"chroma_core.tasks.monitor_exec": {"queue": "ssh"}},
+        {"chroma_core.tasks.send_alerts_email": {"queue": "jobs"}},
         )
 
 CELERY_TRACK_STARTED = True
@@ -255,7 +253,7 @@ CELERY_ACKS_LATE = True
 if DEBUG:
     LOG_PATH = ""
 else:
-    LOG_PATH = "/var/log/hydra"
+    LOG_PATH = "/var/log/chroma"
 
 
 def setup_log(log_name):
@@ -276,10 +274,10 @@ def setup_log(log_name):
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
 EMAIL_SENDER = "chroma-server@whamcloud.com"
 
-_plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'configure', 'plugins')
+_plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'chroma_core', 'plugins')
 sys.path.append(_plugins_path)
 INSTALLED_STORAGE_PLUGINS = ["linux"]
-#: Whether to enable debug-level logging across configure.lib.storage_plugin
+#: Whether to enable debug-level logging across chroma_core.lib.storage_plugin
 STORAGE_PLUGIN_DEBUG = DEBUG
 #: List of plugins to enable debug-level logging for
 STORAGE_PLUGIN_DEBUG_PLUGINS = []
