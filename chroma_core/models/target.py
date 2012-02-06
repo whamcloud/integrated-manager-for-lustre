@@ -154,47 +154,37 @@ class ManagedTarget(StatefulObject):
         # the same Lun (and make this function redundant)
         return self.managedtargetmount_set.get(primary = True).block_device.lun
 
-    def to_dict(self):
-        active_host_name = "---"
-        if self.active_mount:
-            active_host_name = self.active_mount.host.pretty_name()
+    @classmethod
+    def create_for_lun(cls, lun_id, **kwargs):
+        # Local imports to avoid inter-model import dependencies
+        from chroma_core.models.target_mount import ManagedTargetMount
+        from chroma_core.models.host import Lun, LunNode
 
-        from chroma_core.models import ManagedTargetMount
+        target = cls(**kwargs)
+        target.save()
+
+        def create_target_mount(lun_node):
+            mount = ManagedTargetMount(
+                block_device = lun_node,
+                target = target,
+                host = lun_node.host,
+                mount_point = target.default_mount_path(lun_node.host),
+                primary = lun_node.primary)
+            mount.save()
+
+        lun = Lun.objects.get(pk = lun_id)
         try:
-            failover_server_name = self.managedtargetmount_set.get(primary = False).host.pretty_name()
-        except ManagedTargetMount.DoesNotExist:
-            failover_server_name = "---"
+            primary_lun_node = lun.lunnode_set.get(primary = True)
+            create_target_mount(primary_lun_node)
+        except LunNode.DoesNotExist:
+            raise RuntimeError("No primary lun_node exists for lun %s, cannot created target" % lun)
+        except LunNode.MultipleObjectsReturned:
+            raise RuntimeError("Multiple primary lun_nodes exist for lun %s, internal error")
 
-        import chroma_core.lib.conf_param
+        for secondary_lun_node in lun.lunnode_set.filter(use = True, primary = False):
+            create_target_mount(secondary_lun_node)
 
-        if isinstance(self, FilesystemMember):
-            filesystem_id = self.filesystem.pk
-            filesystem_name = self.filesystem.name
-            filesystems = None
-            conf_params = chroma_core.lib.conf_param.get_conf_params(self)
-        else:
-            filesystem_id = None
-            filesystem_name = None
-            filesystems = [{'id': fs.id, 'name': fs.name} for fs in self.managedfilesystem_set.all()]
-            conf_params = None
-
-        from django.contrib.contenttypes.models import ContentType
-
-        return {'id': self.pk,
-                'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
-                'kind': self.role(),
-                'label': self.get_label(),
-                'lun_name': self.get_lun().get_label(),
-                'active_host_name': active_host_name,
-                'status': self.status_string(),
-                'state': self.state,
-                'primary_server_name': self.primary_server().pretty_name(),
-                'failover_server_name': failover_server_name,
-                'filesystem_id': filesystem_id,
-                'filesystem_name': filesystem_name,
-                'filesystems': filesystems,
-                'conf_params': conf_params
-                }
+        return target
 
 
 class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):

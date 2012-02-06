@@ -3,63 +3,53 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from chroma_core.models import ManagedHost
-from chroma_core.models import Systemevents
-
-from chroma_api.requesthandler import RequestHandler
-
-from chroma_api.utils import paginate_result
-
 import datetime
 
+from chroma_core.models.log import Systemevents
 
-class Handler(RequestHandler):
-    def get(self, request, host_id = None, start_time = None, end_time = None,
-        lustre = False, iDisplayStart = None, iDisplayLength = None, sSearch = None):
+from tastypie.resources import ModelResource
+from tastypie import fields
 
-        if sSearch:
-            sSearch = sSearch.encode('utf-8')
-        if iDisplayStart:
-            iDisplayStart = int(iDisplayStart)
-        if iDisplayLength:
-            iDisplayLength = int(iDisplayLength)
 
-        ui_time_format = "%m/%d/%Y %H:%M "
-        filter_kwargs = {}
-        if start_time:
-            start_date = datetime.datetime.strptime(str(start_time), ui_time_format)
-            filter_kwargs['devicereportedtime__gte'] = start_date
-        if end_time:
-            end_date = datetime.datetime.strptime(str(end_time), ui_time_format)
-            filter_kwargs['devicereportedtime__lte'] = end_date
+class LogResource(ModelResource):
+    host_name = fields.CharField()
+    service = fields.CharField()
+    date = fields.DateTimeField()
+
+    def dehydrate_message(self, bundle):
+        return nid_finder(bundle.obj.message)
+
+    class Meta:
+        queryset = Systemevents.objects.all()
+        exclude = ['syslogtag', 'devicereportedtime', 'fromhost']
+        filtering = {
+                'severity': ['exact'],
+                'fromhost': ['exact', 'startswith'],
+                'devicereportedtime': ['gte', 'lte'],
+                'message': ['icontains', 'startswith'],
+                }
+
+    def build_filters(self, filters = None):
+        # FIXME: get the UI to give us ISO8601 so that we
+        # can let tastypie use it without mangling
+        # TODO: document the expected time format in this call
+        UI_TIME_FORMAT = "%m/%d/%Y %H:%M "
+        start = filters.get('devicereportedtime_gte', None)
+        if start:
+            filters['devicereportedtime_gte'] = datetime.datetime.strptime(str(start), UI_TIME_FORMAT)
+        end = filters.get('devicereportedtime_lte', None)
+        if end:
+            filters['devicereportedtime_lte'] = datetime.datetime.strptime(str(end), UI_TIME_FORMAT)
+
+        # TODO: let the UI filter on nodename to avoid the need for this mangling
+        host_id = filters.get('host_id', None)
         if host_id:
+            del filters['host_id']
+            from chroma_core.models import ManagedHost
             host = ManagedHost.objects.get(id=host_id)
-            # FIXME: use nodename here once it's in
-            filter_kwargs['fromhost__startswith'] = host.pretty_name()
-        if lustre == 'true':
-            filter_kwargs['message__startswith'] = " Lustre"
-        if sSearch:
-            filter_kwargs['message__icontains'] = sSearch
+            filters['fromhost__startswith'] = host.pretty_name()
 
-        def log_class(log_entry):
-            if log_entry.message.find('LustreError') != -1:
-                return 'log_error'
-            else:
-                return 'log_info'
-
-        def format_fn(systemevent_record):
-            return {
-                    'id': systemevent_record.id,
-                    'message': nid_finder(systemevent_record.message),
-                    # Trim trailing colon from e.g. 'kernel:'
-                    'service': systemevent_record.syslogtag.rstrip(":"),
-                    'date': systemevent_record.devicereportedtime.strftime("%b %d %H:%M:%S"),
-                    'host': systemevent_record.fromhost,
-                    'DT_RowClass': log_class(systemevent_record)
-                       }
-
-        log_data = Systemevents.objects.filter(**filter_kwargs).order_by('-devicereportedtime')
-        return paginate_result(iDisplayStart, iDisplayLength, log_data, format_fn)
+        return super(LogResource, self).build_filters(filters)
 
 
 def nid_finder(message):

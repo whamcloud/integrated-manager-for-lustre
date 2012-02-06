@@ -344,9 +344,10 @@ $(document).ready(function()
 
         
 
-    invoke_api_call(api_get, "target/", {"filesystem_id": fsId}, 
-      success_callback = function(targets)
+    invoke_api_call(api_get, "target/", {"filesystem_id": fsId, limit: 0}, 
+      success_callback = function(data)
       {
+        var targets = data.objects;
         targets = targets.sort(function(a,b) {return a.label > b.label;})
   
         var count = 0;
@@ -437,9 +438,10 @@ $(document).ready(function()
     var file_systems_ids = new Array();
     var file_count = 0;
     
-    invoke_api_call(api_get, "target/", {"host_id": ossId}, 
-      success_callback = function(targets)
+    invoke_api_call(api_get, "target/", {"host_id": ossId, limit: 0}, 
+      success_callback = function(data)
       {
+        var targets = data.objects;
         targets = targets.sort(function(a,b) {return a.label > b.label;})
   
         var count = 0;

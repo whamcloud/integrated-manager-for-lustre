@@ -2,7 +2,6 @@
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent
 
 from chroma_core.models import ManagedTarget, ManagedTargetMount, ManagedMgs, ManagedHost
-from chroma_api.target import create_target
 from chroma_core.lib.state_manager import StateManager
 
 
@@ -10,7 +9,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
     def setUp(self):
         super(TestTargetTransitions, self).setUp()
 
-        self.mgt = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
+        self.mgt = ManagedMgs.create_for_lun(self._test_lun(self.host).id, name = "MGS")
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unformatted')
         StateManager.set_state(self.mgt, 'mounted')
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'mounted')
@@ -73,7 +72,7 @@ class TestSharedTarget(JobTestCaseWithHost):
     def setUp(self):
         super(TestSharedTarget, self).setUp()
 
-        self.target = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
+        self.target = ManagedMgs.create_for_lun(self._test_lun(self.host).id, name = "MGS")
         self.assertEqual(ManagedMgs.objects.get(pk = self.target.pk).state, 'unformatted')
 
     def test_clean_setup(self):
@@ -146,10 +145,3 @@ class TestSharedTarget(JobTestCaseWithHost):
         # Friendly user removes the primary host
         StateManager.set_state(self.hosts[0], 'removed')
         self.assertEqual(ManagedHost._base_manager.get(id=self.hosts[0].id).state, 'removed')
-
-
-# Create a target with P+S
-# Add an S to an existing target
-# Create a target with P, then add S
-# Remove a target (remove P + S)
-# Remove S (target stays)

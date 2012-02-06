@@ -7,7 +7,7 @@
           // Menu Highlighter
           $('#events_menu').addClass('active');
           //load host combo list
-          loadHostList('', 'db_events_hostList');
+          loadHostList('', 'event_host');
                 
           var oTable = $('#events_table').dataTable(
           {
@@ -16,14 +16,13 @@
             "bFilter": false,
             iDisplayLength: 25,
             "sAjaxSource": "event/",
-            "fnServerData": function (url, aoData, callback, settings) 
+            "fnServerData": function (url, data, callback, settings) 
             {
-              aoData.push({"name":"host_id", "value": $('#db_events_hostList').val()});
-              aoData.push({"name":"severity", "value": $('#event_severity').val()});
-              aoData.push({"name":"event_type", "value": $('#event_type').val()});
-              invoke_api_call(api_get, url, aoData, success_callback = function(data){
-                callback(data);
-              });
+              datatables_api_call(url, data, callback, settings, removeBlankAttributes({
+                "host__id": $('#event_host').val(),
+                "severity": $('#event_severity').val(),
+                "event_type": $('#event_type').val()
+              }))
             }, 
             "aoColumns": [
                 { "sClass": 'txtleft',"mDataProp":"created_at", "asSorting": [ "desc" ],"bSortable":false},
@@ -48,33 +47,19 @@
       <div id="dashboardDiv">
         <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
           <tr style="background-color:#cccccc;">
-            <td width="40%"><div class="breadCrumbHolder module">
-                <!--
-              <div id="breadCrumb0" class="breadCrumb module">
-                <ul style="float:left;">
-                  <li> <a href="/dashboard">All FileSystems</a> </li>
-                  <li>
-                    <select id="fsSelect">
-                      <option value="">Select File System</option>
-                    </select>
-                  </li>
-                </ul>
-              </div>
-              -->
-            </td>
             <td width="60%">
               <div class="timeint">
                 Host: &nbsp;
-                <select id="db_events_hostList">
+                <select id="event_host">
                 <option value="">All</option>
                 </select>
                   &nbsp;
                   Severity: &nbsp;
                 <select id="event_severity">
                   <option value="">Any</option>
-                  <option value="20">Info</option>
-                  <option value="30">Warning</option>
-                  <option value="40">Error</option>
+                  <option value="INFO">Info</option>
+                  <option value="WARNING">Warning</option>
+                  <option value="ERROR">Error</option>
                 </select>
                  &nbsp;Event type:&nbsp;
                 <select id="event_type">

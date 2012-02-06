@@ -19,17 +19,6 @@ import chroma_api.target
 import chroma_api.configureapi
 
 
-def create_fs(mgs_id, name, conf_params):
-        mgs = ManagedMgs.objects.get(id=mgs_id)
-        fs = ManagedFilesystem(mgs=mgs, name = name)
-        fs.save()
-
-        for key, value in conf_params:
-            chroma_core.lib.conf_param.set_conf_param(fs, key, value)
-
-        return fs
-
-
 class FilesystemHandler(RequestHandler):
     # TODO: common PUT code for handling conf params on targets and filesystems
     def put(self, request, id):
@@ -65,7 +54,13 @@ class FilesystemHandler(RequestHandler):
 
         from django.db import transaction
         with transaction.commit_on_success():
-            fs = create_fs(mgt_id, fsname, conf_params)
+            mgs = ManagedMgs.objects.get(id=mgt_id)
+            fs = ManagedFilesystem(mgs=mgs, name = fsname)
+            fs.save()
+
+            for key, value in conf_params:
+                chroma_core.lib.conf_param.set_conf_param(fs, key, value)
+
             chroma_api.target.create_target(mdt_lun_id, ManagedMdt, filesystem = fs)
             osts = []
             for lun_id in ost_lun_ids:

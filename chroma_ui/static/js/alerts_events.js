@@ -297,9 +297,9 @@ loadHostList = function(filesystem_id, targetContainer)
   invoke_api_call(api_get, "host/", api_params,
   success_callback = function(data)
   {
-    $.each(data, function(resKey, resValue)
+    $.each(data.objects, function(i, host)
     {
-      hostList  =  hostList + "<option value="+resValue.id+">"+resValue.pretty_name+"</option>";
+      hostList  =  hostList + "<option value="+host.id+">"+host.label+"</option>";
     });
     $('#'+targetContainer).html(hostList);
   });

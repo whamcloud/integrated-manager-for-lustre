@@ -15,8 +15,8 @@
           console.log(data);
           var processed_data = [];
           $.each(data.aaData, function(i, row) {
-            row['label'] = object_name_markup(row.id, row.content_type_id, row.fqdn),
-            row['state'] = object_state_markup(row.id, row.content_type_id, row.state),
+            row['label'] = object_name_markup(row),
+            row['state'] = object_state_markup(row),
             row['actions'] = stateTransitionButtons(row),
             row['icons'] = notification_icons_markup(row.id, row.content_type_id)
           });

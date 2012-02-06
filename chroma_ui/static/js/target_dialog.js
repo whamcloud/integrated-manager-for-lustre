@@ -8,23 +8,28 @@ $(document).ready(function() {
 
   $('a.target').live('click', function(event) {
     $.each($(this).attr('class').split(' '), function(i, class_name) {
-      if (class_name.indexOf('target_id_') == 0) {
-        var target_id = class_name.split('_')[2];
-        target_dialog_open(target_id);
+      if (class_name.indexOf('target_url_') == 0) {
+        var target_url = class_name.split('_')[2];
+        target_dialog_open(target_url);
       }
     });
     event.preventDefault();
   });
 });
 
-target_dialog_open = function(target_id) {
+target_dialog_link = function(target) {
+  return "<a href='#' class='target target_url_" + target.resource_uri + "'>" + object_name_markup(target) + "</a>"
+}
+
+target_dialog_open = function(target_url) {
   $('#target_dialog').dialog('open');
 
-  load_resource_graph('target_dialog_devices', target_id);
-  
-  invoke_api_call(api_get, "target/", {id: target_id}, 
+  invoke_api_url(api_get, target_url, {}, 
   success_callback = function(target)
   {
+    /* TODO: load resource graph by target URI */
+    load_resource_graph('target_dialog_devices', target.id);
+
     $('#target_dialog').dialog('option', 'title', target.human_name);
 
     var row_counter = 0;
@@ -59,7 +64,9 @@ target_dialog_open = function(target_id) {
       /* Disable the advanced tab */
       $('#target_dialog_tabs').tabs('disable', 2);
     }
+
+    /* FIXME: shoddy way of storing the ID of the currently displayed target */
+    $('#config_home_target_id').attr('value', target.id);
   });
 
-  $('#config_home_target_id').attr('value',target_id);
 }

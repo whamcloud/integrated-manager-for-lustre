@@ -7,12 +7,15 @@
   $(document).ready(function() {
     /* Populate existing MGT list */
     invoke_api_call(api_get, "target/", {
-        "kind": "MGT"
+        kind: "MGT",
+        limit: 0
       },
       success_callback = function(data) {
+        /* TODO: cope with possibility (unlikely) of pagination in the list of MGTs */
+        var targets = data.objects;
         var options_markup = "<option value=''></option>";
         var count = 0;
-        $.each(data, function(i, target_info) {
+        $.each(targets, function(i, target_info) {
           options_markup += "<option value='" + target_info.id + "'>" + target_info.primary_server_name + "</option>"
           count += 1;
         });

@@ -86,9 +86,6 @@ urlpatterns = patterns('',
     (r'^storage_resource/(?P<module_name>\w+)/(?P<class_name>\w+)/$', CsrfResource(chroma_api.storage_resource.StorageResourceHandler)),
 
     # chroma_api.host
-    #(r'^host/$', CsrfResource(chroma_api.host.ManagedHostsHandler)),
-    #(r'^host/(?P<id>\d+)/$', CsrfResource(chroma_api.host.ManagedHostsHandler)),
-    #(r'^test_host/$', CsrfResource(chroma_api.host.TestHost)),
     (r'^', include(chroma_api.host.HostResource().urls)),
     (r'^', include(chroma_api.host.HostTestResource().urls)),
 
@@ -97,9 +94,7 @@ urlpatterns = patterns('',
     (r'^filesystem/(?P<id>\d+)/$', CsrfResource(chroma_api.filesystem.FilesystemHandler)),
 
     # chroma_api.target
-    (r'^target/$', CsrfResource(chroma_api.target.TargetHandler)),
-    (r'^target/(?P<id>\d+)/$', CsrfResource(chroma_api.target.TargetHandler)),
-    (r'^target/(?P<id>\d+)/resource_graph/$', CsrfResource(chroma_api.target.TargetResourceGraphHandler)),
+    (r'^', include(chroma_api.target.TargetResource().urls)),
 
     # chroma_api.volume
     (r'^volume/$', CsrfResource(chroma_api.volume.Handler)),
@@ -113,10 +108,10 @@ urlpatterns = patterns('',
     (r'^', include(chroma_api.alert.AlertResource().urls)),
 
     # chroma_api.event
-    (r'^event/$', CsrfResource(chroma_api.event.Handler)),
+    (r'^', include(chroma_api.event.EventResource().urls)),
 
     # chroma_api.log
-    (r'^log/$', CsrfResource(chroma_api.log.Handler)),
+    (r'^', include(chroma_api.log.LogResource().urls)),
 
     # chroma_api.command
     (r'^command/(?P<id>\d+)/$', CsrfResource(chroma_api.command.Handler)),

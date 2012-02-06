@@ -11,10 +11,6 @@ var ERR_EDITFS_FSDATA_LOAD = "Error occured in loading File system data: ";
 var ost_index = 0;
 var filesystemId="";
 
-target_dialog_link = function(target_id, target_name) {
-  return "<a href='#' class='target target_id_" + target_id + "'>" + target_name + "</a>"
-}
-
 
 /******************************************************************
 * Function name - LoadFSList_FSList()
@@ -50,9 +46,10 @@ function LoadFSList_FSList()
 
 function LoadTargets_EditFS(fs_id)
 {
-  invoke_api_call(api_get, "target/", {filesystem_id : fs_id}, 
-  success_callback = function(targets)
+  invoke_api_call(api_get, "target/", {filesystem_id : fs_id, limit: 0}, 
+  success_callback = function(data)
   {  
+    var targets = data.objects;
     $('#ost').dataTable().fnClearTable();
     $('#mdt').dataTable().fnClearTable();
     $('#mgt_configuration_view').dataTable().fnClearTable();
@@ -60,12 +57,12 @@ function LoadTargets_EditFS(fs_id)
     $.each(targets, function(i, target)
     {
       row = [
-              target_dialog_link(target.id, object_name_markup(target.id, target.content_type_id, target.label)),
+              target_dialog_link(target),
               target.lun_name,
               target.primary_server_name,
               target.failover_server_name,
               target.active_host_name,
-              CreateActionLink(target.id, target.content_type_id, target.available_transitions),
+              stateTransitionButtons(target),
               notification_icons_markup(target.id, target.content_type_id)
             ]
       if (target.kind == "OST") {
@@ -212,9 +209,13 @@ function LoadUnused_VolumeConf()
 
 function LoadMGTConfiguration_MGTConf()
 {
-  invoke_api_call(api_get, "target/", {kind: 'MGT'}, 
-  success_callback = function(mgt_list)
+  invoke_api_call(api_get, "target/", {kind: 'MGT', limit: 0}, 
+  success_callback = function(data)
   {
+    console.log(data);
+    var mgt_list = data.objects
+    console.log(mgt_list);
+    console.log(mgt_list.length);
     $('#mgt_configuration').dataTable().fnClearTable();
     $.each(mgt_list, function(i, mgt)
     {
@@ -227,7 +228,7 @@ function LoadMGTConfiguration_MGTConf()
             target_dialog_link(mgt.id, mgt.primary_server_name),
             mgt.failover_server_name,
             mgt.active_host_name,
-            CreateActionLink(mgt.id, mgt.content_type_id, mgt.available_transitions),
+            stateTransitionButtons(mgt),
             notification_icons_markup(mgt.id, mgt.content_type_id)
           ]);
     });

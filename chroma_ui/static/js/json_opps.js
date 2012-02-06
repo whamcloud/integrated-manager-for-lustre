@@ -96,7 +96,7 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
   invoke_api_call(api_post, "filesystem/", api_params,
   success_callback = function(data)
   {
-    var fs_id = data.id;    
+    var fs_id = data.filesystem.id;
     if (success) {
       success(fs_id);
     }

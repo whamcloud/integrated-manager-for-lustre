@@ -25,6 +25,9 @@ class HostResource(StatefulModelResource):
         # So that we can return Commands for PUTs
         always_return_data = True
 
+        filtering = {'id': ['exact'],
+                     'fqdn': ['exact']}
+
     def obj_create(self, bundle, request = None, **kwargs):
         # FIXME: we implement this instead of letting it go
         # straight through to the model because the model

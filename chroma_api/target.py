@@ -7,91 +7,164 @@ import settings
 
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.db.models import Q
+from django.contrib.contenttypes.models import ContentType
 
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Command
-from chroma_core.models import Lun, LunNode
-from chroma_api.requesthandler import RequestHandler, APIResponse
+from chroma_core.models import FilesystemMember
 from chroma_core.lib.state_manager import StateManager
 import chroma_core.lib.conf_param
 
+import tastypie.http as http
+from tastypie import fields
+from tastypie.authorization import Authorization
+from chroma_api.utils import custom_response, StatefulModelResource
 
+
+# Some lookups for the three 'kind' letter strings used
+# by API consumers to refer to our target types
 KIND_TO_KLASS = {"MGT": ManagedMgs,
             "OST": ManagedOst,
             "MDT": ManagedMdt}
 KLASS_TO_KIND = dict([(v, k) for k, v in KIND_TO_KLASS.items()])
+CONTENT_TYPE_ID_TO_KIND = dict([(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()])
+KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.items()])
 
 
-def create_target(lun_id, target_klass, **kwargs):
-    target = target_klass(**kwargs)
-    target.save()
+class TargetResource(StatefulModelResource):
+    filesystems = fields.ListField()
+    filesystem_id = fields.IntegerField()
+    filesystem_name = fields.CharField()
+    kind = fields.CharField()
 
-    def create_target_mount(lun_node):
-        mount = ManagedTargetMount(
-            block_device = lun_node,
-            target = target,
-            host = lun_node.host,
-            mount_point = target.default_mount_path(lun_node.host),
-            primary = lun_node.primary)
-        mount.save()
+    lun_name = fields.CharField()
+    primary_server_name = fields.CharField()
+    failover_server_name = fields.CharField()
+    active_host_name = fields.CharField()
 
-    lun = Lun.objects.get(pk = lun_id)
-    try:
-        primary_lun_node = lun.lunnode_set.get(primary = True)
-        create_target_mount(primary_lun_node)
-    except LunNode.DoesNotExist:
-        raise RuntimeError("No primary lun_node exists for lun %s, cannot created target" % lun)
-    except LunNode.MultipleObjectsReturned:
-        raise RuntimeError("Multiple primary lun_nodes exist for lun %s, internal error")
+    conf_params = fields.DictField()
 
-    for secondary_lun_node in lun.lunnode_set.filter(use = True, primary = False):
-        create_target_mount(secondary_lun_node)
+    class Meta:
+        queryset = ManagedTarget.objects.all()
+        resource_name = 'target'
+        authorization = Authorization()
+        filtering = {'kind': ['exact'], 'filesystem_id': ['exact']}
 
-    return target
+    def override_urls(self):
+        from django.conf.urls.defaults import url
+        return [
+            url(r"^(?P<resource_name>%s)/(?P<pk>\d+)/resource_graph/$" % self._meta.resource_name, self.wrap_view('get_resource_graph'), name="api_get_resource_graph"),
+        ]
 
-    #def get_object_list(self, request):
-    #    base_objects = super(HostResource, self).get_object_list(request)
-#
-#        args = request.GET.copy()
-#        if 'filesystem_id' in args:
-#            filesystem_id = args['filesystem_id']
-#            fs = get_object_or_404(ManagedFilesystem, pk = filesystem_id)
-#            base_objects = base_objects.filter((Q(managedmdt__filesystem = fs) | Q(managedost__filesystem = fs)) | Q(id = fs.mgs.id))
-#
-#        return base_objects
+    def dehydrate_conf_params(self, bundle):
+        if isinstance(bundle.obj, FilesystemMember):
+            return chroma_core.lib.conf_param.get_conf_params(bundle.obj)
+        else:
+            return None
 
+    def dehydrate_filesystems(self, bundle):
+        if hasattr(bundle.obj, 'managedmgs'):
+            return [{'id': fs.id, 'name': fs.name} for fs in bundle.obj.managedmgs.managedfilesystem_set.all()]
+        else:
+            return None
 
-class TargetHandler(RequestHandler):
-    def put(self, request, id):
-        target = get_object_or_404(ManagedTarget, pk = id).downcast()
+    def dehydrate_kind(self, bundle):
+        return CONTENT_TYPE_ID_TO_KIND[bundle.obj.content_type_id]
+
+    def dehydrate_filesystem_id(self, bundle):
+        return getattr(bundle.obj, 'filesystem_id', None)
+
+    def dehydrate_filesystem_name(self, bundle):
         try:
-            conf_params = request.data['conf_params']
+            return bundle.obj.filesystem.name
+        except AttributeError:
+            return None
+
+    def dehydrate_lun_name(self, bundle):
+        return bundle.obj.get_lun().get_label()
+
+    def dehydrate_primary_server_name(self, bundle):
+        return bundle.obj.primary_server().pretty_name(),
+
+    def dehydrate_failover_server_name(self, bundle):
+        try:
+            return bundle.obj.managedtargetmount_set.get(primary = False).host.pretty_name()
+        except ManagedTargetMount.DoesNotExist:
+            return "---"
+
+    def dehydrate_active_host_name(self, bundle):
+        if bundle.obj.active_mount:
+            return bundle.obj.active_mount.host.pretty_name()
+        else:
+            return "---"
+
+    def build_filters(self, filters = None):
+        """Override this to convert a 'kind' argument into a DB field which exists"""
+        custom_filters = {}
+        for key, val in filters.items():
+            if key == 'kind':
+                del filters[key]
+                custom_filters['content_type__model'] = KIND_TO_MODEL_NAME[val]
+            elif key == 'host_id':
+                del filters[key]
+                custom_filters['managedtargetmount__host__id'] = val
+            elif key == 'filesystem_id':
+                # Remove filesystem_id as we
+                # do a custom query generation for it in apply_filters
+                del filters[key]
+
+        filters = super(TargetResource, self).build_filters(filters)
+        filters.update(custom_filters)
+        return filters
+
+    def apply_filters(self, request, filters = None):
+        """Override this to build a filesystem filter using Q expressions (not
+           possible from build_filters because it only deals with kwargs to filter())"""
+        objects = super(TargetResource, self).apply_filters(request, filters)
+        try:
+            fs = get_object_or_404(ManagedFilesystem, pk = request.GET['filesystem_id'])
+            objects = objects.filter((Q(managedmdt__filesystem = fs) | Q(managedost__filesystem = fs)) | Q(id = fs.mgs.id))
         except KeyError:
-            return APIResponse(None, 400)
+            # Not filtering on filesystem_id
+            pass
 
-        # TODO: validate the parameters before trying to set any of them
+        return objects
 
-        for k, v in conf_params.items():
-            chroma_core.lib.conf_param.set_conf_param(target, k, v)
+    def obj_update(self, bundle, request, **kwargs):
+        bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
+        if not 'conf_params' in bundle.data:
+            super(TargetResource, self).obj_update(bundle, request, **kwargs)
 
-    def post(self, request, kind, filesystem_id = None, lun_ids = []):
+        # TODO: validate all the conf_params before trying to set any of them
+        try:
+            conf_params = bundle.data['conf_params']
+            for k, v in conf_params.items():
+                chroma_core.lib.conf_param.set_conf_param(bundle.obj, k, v)
+        except KeyError:
+            # TODO: pass in whole objects every time so that I can legitimately
+            # validate the presence of this field
+            pass
+
+        return bundle
+
+    def obj_create(self, bundle, request = None, **kwargs):
+        kind = bundle.data['kind']
         if not kind in KIND_TO_KLASS:
-            return APIResponse(None, 400)
+            raise custom_response(self, request, http.HttpBadRequest, {})
 
-        # TODO: define convention for API errors, and put some
-        # helpful messages in here
-        # Cannot specify a filesystem to which an MGT should belong
-        if kind == "MGT" and filesystem_id:
-            return APIResponse(None, 400)
+        lun_ids = bundle.data['lun_ids']
+        filesystem_id = bundle.data.get('filesystem_id', None)
 
-        # Cannot create MDTs with this call (it is done in filesystem creation)
-        if kind == "MDT":
-            return APIResponse(None, 400)
+        # TODO: move validation into a proper tastypie Validation() object (thereby
+        # get proper response instead of 500s
+        if KIND_TO_KLASS[kind] == ManagedMgs and filesystem_id:
+            raise ValueError("Cannot specify filesystem_id creating MGTs")
+        elif KIND_TO_KLASS[kind] == ManagedMdt:
+            raise ValueError("Cannot create MDTs independently of filesystems")
+        elif len(lun_ids) < 1:
+            raise ValueError("Require at least one LUN to create a target")
 
-        # Need at least one LUN
-        if len(lun_ids) < 1:
-            return APIResponse(None, 400)
-
-        if kind == "OST":
+        if KIND_TO_KLASS[kind] == ManagedOst:
             fs = ManagedFilesystem.objects.get(id=filesystem_id)
             create_kwargs = {'filesystem': fs}
         elif kind == "MGT":
@@ -100,59 +173,25 @@ class TargetHandler(RequestHandler):
         targets = []
         with transaction.commit_on_success():
             for lun_id in lun_ids:
-                targets.append(create_target(lun_id, KIND_TO_KLASS[kind], **create_kwargs))
+                target_klass = KIND_TO_KLASS[kind]
+                target = target_klass.create_from_lun(lun_id, **create_kwargs)
+                targets.append(target)
 
         message = "Creating %s" % kind
         if len(lun_ids) > 1:
             message += "s"
 
         with transaction.commit_on_success():
-            command = Command(message = "Creating OSTs")
+            command = Command(message = "Creating %s%s" % (kind, "s" if len(lun_ids) > 1 else ""))
             command.save()
         for target in targets:
             StateManager.set_state(target, 'mounted', command.pk)
-        return APIResponse(command.to_dict(), 202)
+        raise custom_response(self, request, http.HttpAccepted, command.to_dict())
 
-    def get(self, request, id = None, host_id = None, filesystem_id = None, kind = None):
-        if id:
-            target = get_object_or_404(ManagedTarget, pk = id).downcast()
-            return target.to_dict()
-        else:
-            targets = []
+    def get_resource_graph(self, request, **kwargs):
+        target = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
 
-            # Apply kind filter
-            if kind:
-                klasses = [KIND_TO_KLASS[kind]]
-            else:
-                klasses = [ManagedMgs, ManagedMdt, ManagedOst]
-
-            for klass in klasses:
-                filter_kwargs = {}
-                if klass == ManagedMgs and filesystem_id:
-                    # For MGT, filesystem_id filters on the filesystem belonging to the MGT
-                    filter_kwargs['managedfilesystem__id'] = filesystem_id
-                elif klass != ManagedMgs and filesystem_id:
-                    # For non-MGT, filesystem_id filters on the target belonging to the filesystem
-                    filter_kwargs['filesystem__id'] = filesystem_id
-
-                for t in klass.objects.filter(**filter_kwargs):
-                    # Apply host filter
-                    # FIXME: this filter should be done with a query instead of in a loop
-                    if host_id and ManagedTargetMount.objects.filter(target = t, host__id = host_id).count() == 0:
-                        continue
-                    else:
-                        d = t.to_dict()
-                        d['available_transitions'] = StateManager.available_transitions(t)
-                        targets.append(d)
-            return targets
-
-
-class TargetResourceGraphHandler(RequestHandler):
-    def get(self, request, id):
         from chroma_core.models import AlertState
-        from chroma_core.models import ManagedTarget
-        from django.shortcuts import get_object_or_404
-        target = get_object_or_404(ManagedTarget, pk = id).downcast()
 
         ancestor_records = set()
         parent_records = set()
@@ -248,7 +287,7 @@ class TargetResourceGraphHandler(RequestHandler):
                 'height': height
                 }
 
-        return {
+        return self.create_response(request, {
             'storage_alerts': [a.to_dict() for a in storage_alerts],
             'lustre_alerts': [a.to_dict() for a in lustre_alerts],
-            'graph': graph}
+            'graph': graph})

@@ -37,13 +37,11 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
 class TestStateManager(JobTestCaseWithHost):
     def test_opportunistic_execution(self):
         # Set up an MGS, leave it offline
-        from chroma_api.filesystem import create_fs
-        from chroma_api.target import create_target
-        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst
-        mgt = create_target(self._test_lun(self.host).id, ManagedMgs, name = "MGS")
-        fs = create_fs(mgt.pk, "testfs", {})
-        create_target(self._test_lun(self.host).id, ManagedMdt, filesystem = fs)
-        create_target(self._test_lun(self.host).id, ManagedOst, filesystem = fs)
+        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
+        mgt = ManagedMgs.create_for_lun(self._test_lun(self.host).id, name = "MGS")
+        fs = ManagedFilesystem.objects.create(mgs = mgt, name = "testfs")
+        ManagedMdt.create_for_lun(self._test_lun(self.host).id, filesystem = fs)
+        ManagedOst.create_for_lun(self._test_lun(self.host).id, filesystem = fs)
 
         from chroma_core.lib.state_manager import StateManager
         StateManager.set_state(ManagedMgs.objects.get(pk = mgt.pk), 'unmounted')

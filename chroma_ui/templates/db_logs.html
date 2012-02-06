@@ -28,6 +28,7 @@
           maxDate: new Date()
         });
 
+        $.datepicker.setDefaults({dateFormat: 'yy-mm-dd'});
         $('#datetime_from').datetimepicker();
         $('#datetime_to').datetimepicker();
 
@@ -40,21 +41,45 @@
           "bServerSide":true,
           "sAjaxSource": 'log/',
           "fnServerData": function (url, aoData, callback, settings) {
-            aoData.push({"name":"host_id", "value": $('#logs_hostList').val()});
-            aoData.push({"name":"start_time", "value": $('#datetime_from').val()});
-            aoData.push({"name":"end_time", "value": $('#datetime_to').val()});
-            aoData.push({"name":"lustre", "value": $('#id_only_lustre').is(':checked')});
-            
-            invoke_api_call(api_get, url, aoData, success_callback = function(data) {
-              callback(data);
+            filter_args = {}
+            if ($('#id_only_lustre').is(':checked')) {
+              filter_args['message__startswith'] = " Lustre"
+            }
+            $.each(aoData, function(i, param) {
+              if (param.name == "sSearch") {
+                filter_args['message__icontains'] = param.value;
+              }
             });
+            filter_args['host_id'] = $('#logs_hostList').val()
+            // NB $.trim is used because datetimepicker seems to append a trailing space
+            filter_args['devicereportedtime__gte'] = $.trim($('#datetime_from').val())
+            filter_args['devicereportedtime__lte'] = $.trim($('#datetime_to').val())
+
+            datatables_api_call(url, aoData,
+              function(data) {
+                /* Annotate the rows with DT_RowClass */
+                $.each(data.aaData, function(i, row) {
+                  if (row.message.search("LustreError") != -1) {
+                    row.DT_RowClass = 'log_error';
+                  } else {
+                    row.DT_RowClass = 'log_info';
+                  }
+
+                  row.syslogtag = row.syslogtag.slice(0, -1);
+
+                  /* TODO: format 'devicereportedtime' */
+                });
+                callback(data);
+              },
+              settings,
+              removeBlankAttributes(filter_args));
           }, 
            aaSorting: [[1, 'desc']],
 	         "aoColumns": [
-               { "sClass": 'log_line', "mDataProp":"date", "bSortable":false},
-	           { "sClass": 'log_line', "mDataProp":"host", "bSortable":false},
-	           { "sClass": 'log_line', "mDataProp":"service", "bSortable":false},
-	           { "sClass": 'log_line', "mDataProp":"message","bSearchable":true, "bSortable":false}
+               { "sClass": 'log_line', "mDataProp":"devicereportedtime", "bSortable":false},
+               { "sClass": 'log_line', "mDataProp":"fromhost", "bSortable":false},
+               { "sClass": 'log_line', "mDataProp":"syslogtag", "bSortable":false},
+               { "sClass": 'log_line', "mDataProp":"message","bSearchable":true, "bSortable":false}
 	         ],
 	         "bJQueryUI": true, 
 	      });

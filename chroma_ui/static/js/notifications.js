@@ -451,12 +451,12 @@ poll_jobs = function() {
   blocking = false);
 }
 
-object_name_markup = function(id, ct, name) {
-  return "<span class='object_name object_name_" + id + "_" + ct + "'>" + name + "</span>";
+object_name_markup = function(obj) {
+  return "<span class='object_name object_name_" + obj.id + "_" + obj.content_type_id + "'>" + obj.label + "</span>";
 }
 
-object_state_markup = function(id, ct, state) {
-  return "<span class='object_state object_state_" + id + "_" + ct + "'>" + state + "</span>";
+object_state_markup = function(obj) {
+  return "<span class='object_state object_state_" + obj.id + "_" + obj.content_type_id + "'>" + obj.state + "</span>";
 }
 
 poll_objects = function() {

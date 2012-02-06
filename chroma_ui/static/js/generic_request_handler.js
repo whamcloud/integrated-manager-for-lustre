@@ -79,7 +79,7 @@ function datatables_api_call(url, data, callback, settings, kwargs) {
     datatables_data.iTotalRecords = data.meta.total_count
     datatables_data.iTotalDisplayRecords = data.meta.total_count
     callback(datatables_data);
-  });
+  }, error_callback = null, blocking = false);
 }
 
 /********************************************************************************
@@ -234,3 +234,12 @@ $(document).ajaxSend(function(event, xhr, settings) {
     }
 
 });
+
+function removeBlankAttributes(obj) {
+  $.each(obj, function(attr_name, attr_val) {
+    if (attr_val == "") {
+      delete obj[attr_name]
+    }
+  });
+  return obj;
+}

@@ -144,10 +144,13 @@ class ObjectSummary(RequestHandler):
             except klass.DoesNotExist:
                 continue
 
-            from chroma_core.models import ManagedHost
+            from chroma_core.models import ManagedHost, ManagedTarget
             if isinstance(instance, ManagedHost):
                 import chroma_api.host
                 resource_uri = chroma_api.host.HostResource().get_resource_uri(instance)
+            elif isinstance(instance, ManagedTarget):
+                import chroma_api.target
+                resource_uri = chroma_api.target.TargetResource().get_resource_uri(instance)
             else:
                 resource_uri = "TODO"
 
