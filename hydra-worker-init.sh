@@ -35,8 +35,8 @@ start() {
     #    # remove the test database and user from mysqld
     #    /usr/bin/mysql_secure_installation
     #fi
-    if [ ! -d /var/lib/mysql/hydra ]; then
-        # create the hydra database
+    if [ ! -d /var/lib/mysql/chroma ]; then
+        # create the chroma database
         echo "create database chroma" | mysql
         # and populate it
         python $PYTHONPATH/manage.py syncdb --noinput --migrate
