@@ -25,7 +25,7 @@ class Alertsdata(SeleniumBaseTestCase):
 
         if table_data != self.NO_DATATABLE_DATA:
             entity_data = alerts_page.get_active_entity_data()
-            alerts_page.enter_search_data(entity_data)
+            alerts_page.enter_active_alert_search_data(entity_data)
             filtered_entity_data = alerts_page.get_active_entity_data()
             self.assertEqual(entity_data, filtered_entity_data)
 
@@ -46,7 +46,7 @@ class Alertsdata(SeleniumBaseTestCase):
 
         if table_data != self.NO_DATATABLE_DATA:
             entity_data = alerts_page.get_history_entity_data()
-            alerts_page.enter_search_data(entity_data)
+            alerts_page.enter_alert_history_search_data(entity_data)
             filtered_entity_data = alerts_page.get_history_entity_data()
             self.assertEqual(entity_data, filtered_entity_data)
 

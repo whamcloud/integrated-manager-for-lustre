@@ -10,8 +10,17 @@ import avahi
 from dbus.mainloop.glib import DBusGMainLoop
 import daemon
 import daemon.pidlockfile
-import urllib
-import json
+import sys
+import os
+bin_dir = os.path.abspath(os.path.dirname(sys.modules['__main__'].__file__))
+project_dir = "/" + os.path.join(*(bin_dir.split(os.sep)[0:-2]))
+sys.path.append(project_dir)
+
+from django.core.management import setup_environ
+import settings
+setup_environ(settings)
+from chroma_core.models.host import ManagedHost
+
 
 TYPE = "_hydra-agent._tcp"
 
@@ -21,13 +30,11 @@ def service_resolved(interface, protocol, name, stype, domain, host,
 
     hostname = host[0:host.rfind(".")]
 
-    u = urllib.urlopen('http://localhost/api/add_host/',
-                       data=urllib.urlencode({'hostname': hostname}))
-    j = json.load(u)
-
-    if not j['success']:
+    try:
+        ManagedHost.create_from_string(hostname)
+    except:
         # what, oh what to do, really?
-        print "adding host %s failed %s" % (hostname, j['errors'])
+        print "adding host %s failed" % hostname
 
 
 def print_error(err):

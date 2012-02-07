@@ -252,7 +252,7 @@ CELERY_ACKS_LATE = True
 if DEBUG:
     LOG_PATH = ""
 else:
-    LOG_PATH = "/var/log/chroma"
+    LOG_PATH = "/var/log/hydra"
 
 
 def setup_log(log_name):

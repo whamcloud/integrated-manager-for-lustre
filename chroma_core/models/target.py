@@ -303,6 +303,9 @@ class TargetRecoveryInfo(models.Model):
 
     target = models.ForeignKey('chroma_core.ManagedTarget')
 
+    class Meta:
+        app_label = 'chroma_core'
+
     @staticmethod
     @transaction.commit_on_success
     def update(target, recovery_status):

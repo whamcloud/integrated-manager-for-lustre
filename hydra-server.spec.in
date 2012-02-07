@@ -98,7 +98,7 @@ $ModLoad ommysql
 $
 a
 # Added by hydra-server
-*.*       :ommysql:localhost,hydra,root
+*.*       :ommysql:localhost,chroma,root
 # Added by hydra-server
 .
 w
