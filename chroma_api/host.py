@@ -10,8 +10,11 @@ import tastypie.http as http
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.resources import Resource
 from tastypie import fields
-from tastypie.authorization import Authorization
 from chroma_api.utils import custom_response, StatefulModelResource
+
+from tastypie.authorization import DjangoAuthorization
+from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import PermissionAuthorization
 
 
 class HostResource(StatefulModelResource):
@@ -19,8 +22,8 @@ class HostResource(StatefulModelResource):
         queryset = ManagedHost.objects.all()
         resource_name = 'host'
         excludes = ['not_deleted']
-        #authentication = Authentication()
-        authorization = Authorization()
+        authentication = AnonymousAuthentication()
+        authorization = DjangoAuthorization()
 
         # So that we can return Commands for PUTs
         always_return_data = True
@@ -54,7 +57,8 @@ class HostTestResource(Resource):
         list_allowed_methods = ['post']
         detail_allowed_methods = []
         resource_name = 'test_host'
-        authorization = Authorization()
+        authentication = AnonymousAuthentication()
+        authorization = PermissionAuthorization('add_managedhost')
         object_class = dict
 
     def obj_create(self, bundle, request = None, **kwargs):

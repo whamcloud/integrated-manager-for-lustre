@@ -6,11 +6,13 @@
 from chroma_api.requesthandler import RequestHandler
 
 from chroma_core.models import StorageResourceClass, StorageResourceRecord
-from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
 
 class StorageResourceClassHandler(RequestHandler):
     def get(self, request, module_name = None, class_name = None, creatable = None):
+        # Note: not importing this at module scope so that this module can
+        # be imported without loading plugins (useful at installation)
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         if module_name and class_name:
             # Return a specific class
             resource_class = StorageResourceClass.objects.get(storage_plugin__module_name = module_name, class_name = class_name)

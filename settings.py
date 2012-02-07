@@ -133,7 +133,6 @@ INSTALLED_APPS = (
     'south',
     'r3d',
     'djcelery',
-    'pagination',
     'chroma_core',
     'chroma_api',
     'chroma_ui',
@@ -297,6 +296,10 @@ SERVER_HTTP_URL = None
 LOG_SERVER_HOSTNAME = None
 
 HTTP_AUDIT = True
+
+# Set to False to require logins even for read-only access
+# to chroma_api
+ALLOW_ANONYMOUS_READ = False
 
 try:
     from production_version import VERSION

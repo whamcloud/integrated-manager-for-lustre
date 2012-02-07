@@ -25,6 +25,8 @@ import chroma_api.command
 import chroma_api.help
 
 import chroma_api.session
+import chroma_api.user
+import chroma_api.group
 
 import chroma_api.volume
 import chroma_api.volume_node
@@ -124,5 +126,11 @@ urlpatterns = patterns('',
     (r'^help/conf_param/$', CsrfResource(chroma_api.help.ConfParamHandler)),
 
     # chroma_api.session
-    (r'^session/$', CsrfResource(chroma_api.session.Handler)),
+    (r'^', include(chroma_api.session.SessionResource().urls)),
+
+    # chroma_api.user
+    (r'^', include(chroma_api.user.UserResource().urls)),
+
+    # chroma_api.group
+    (r'^', include(chroma_api.group.GroupResource().urls)),
 )

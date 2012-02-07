@@ -12,7 +12,7 @@ sphinx
 werkzeug
 django-piston>=0.2.3
 MySQL-python
-django-pagination
 coverage
 python-daemon==1.5.2
 lockfile==0.8
+django-tastypie==0.9.11

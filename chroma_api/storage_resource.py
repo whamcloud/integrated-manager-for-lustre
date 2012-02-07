@@ -9,7 +9,6 @@ from chroma_api.requesthandler import RequestHandler
 from chroma_api.requesthandler import APIResponse
 
 from chroma_core.models import StorageResourceRecord
-from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 from django.shortcuts import get_object_or_404
 
 
@@ -35,6 +34,9 @@ class StorageResourceHandler(RequestHandler):
         # request.data should be a dict representing the resource attributes
         attributes = request.data
 
+        # Note: not importing this at module scope so that this module can
+        # be imported without loading plugins (useful at installation)
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         record = storage_plugin_manager.create_root_resource(module_name, class_name, **attributes)
         return record.to_dict()
 
@@ -50,6 +52,7 @@ class StorageResourceHandler(RequestHandler):
         # specific to datatables, it should either be respecting a
         # format flag or returning vanilla output for client side conversion
         if module_name and class_name:
+            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
             resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(module_name, class_name)
             attr_columns = resource_class.get_columns()
 

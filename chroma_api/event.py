@@ -8,6 +8,8 @@ import logging
 
 from tastypie.resources import ModelResource
 from tastypie import fields
+from tastypie.authorization import DjangoAuthorization
+from chroma_api.authentication import AnonymousAuthentication
 import tastypie.constants
 
 STR_TO_SEVERITY = dict([(logging.getLevelName(level), level) for level in [
@@ -26,6 +28,8 @@ class EventResource(ModelResource):
 
     class Meta:
         queryset = Event.objects.all()
+        authorization = DjangoAuthorization()
+        authentication = AnonymousAuthentication()
         filtering = {
                 'severity': ['exact'],
                 'host': tastypie.constants.ALL_WITH_RELATIONS,

@@ -16,7 +16,7 @@ $(document).ready(function() {
 
   $('#user_info #authenticated #logout').click(function(event) {
     invoke_api_call(api_delete, "session/", {}, success_callback = function() {
-      window.location.href = "/hydracm/";
+      window.location.href = "/ui/";
     });
     event.preventDefault();
   });
@@ -47,7 +47,7 @@ $(document).ready(function() {
     var password = $('#login_dialog input[name=password]').val()
     invoke_api_call(api_post, 'session/', {username: username, password: password},
       success_callback = function() {
-        window.location.href = "/hydracm/";
+        window.location.href = "/ui/";
       },
       error_callback = {403: function(status, jqXHR) {
         $('#login_dialog #error').show()

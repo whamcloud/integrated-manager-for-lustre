@@ -7,7 +7,9 @@ from django.conf.urls.defaults import patterns
 import chroma_ui.views as views
 
 urlpatterns = patterns('',
-    (r'^$', views.dashboard),
+    (r'^$', views.index),
+
+    (r'^installation/$', views.installation),
 
     (r'^configure/$', views.configure),
     (r'^configure/filesystems_tab/', views.filesystem_tab),

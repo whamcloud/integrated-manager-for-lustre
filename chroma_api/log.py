@@ -9,6 +9,8 @@ from chroma_core.models.log import Systemevents
 
 from tastypie.resources import ModelResource
 from tastypie import fields
+from tastypie.authorization import DjangoAuthorization
+from chroma_api.authentication import AnonymousAuthentication
 
 
 class LogResource(ModelResource):
@@ -28,6 +30,8 @@ class LogResource(ModelResource):
                 'devicereportedtime': ['gte', 'lte'],
                 'message': ['icontains', 'startswith'],
                 }
+        authorization = DjangoAuthorization()
+        authentication = AnonymousAuthentication()
 
     def build_filters(self, filters = None):
         # FIXME: get the UI to give us ISO8601 so that we

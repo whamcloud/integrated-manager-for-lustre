@@ -7,6 +7,134 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 
+# index
+# if you got no local_settings.py goto setup
+# if you got a db but no tables go to syncdb+create user
+# else goto dashboard
+
+LOCAL_SETTINGS_FILE = "local_settings.py"
+
+
+def _unconfigured():
+    """Return True if we cannot talk to a database"""
+    import settings
+    import os
+    project_dir = os.path.dirname(os.path.realpath(settings.__file__))
+    local_settings = os.path.join(project_dir, LOCAL_SETTINGS_FILE)
+    return not os.path.exists(local_settings)
+
+
+def _unpopulated():
+    """Return True if we can talk to a database but
+    our tables are absent or no Users exist"""
+    from django.db.utils import DatabaseError
+    try:
+        from django.contrib.auth.models import User
+        count = User.objects.count()
+        if count == 0:
+            return True
+        else:
+            return False
+    except DatabaseError:
+        # FIXME: SECURITY: if the attacker can somehow generate a
+        # DatabaseError, they can get at the setup page.
+        return True
+
+from django.core.urlresolvers import reverse
+from django.http import HttpResponseRedirect, HttpResponseForbidden
+import django.forms as forms
+import django.contrib.auth
+
+
+class DatabaseForm(forms.Form):
+    local = forms.BooleanField(label = "Use local MySQL server", required = False, initial = True)
+    address = forms.RegexField(label = "Address", required = False,
+            regex = "^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?$",
+            help_text = "MySQL server address (hostname or IP address)")
+    port = forms.IntegerField(required = False)
+    db_username = forms.CharField(label = "Username", required = False, max_length = 16)
+    db_password = forms.CharField(label = "Password", required = False, widget=forms.PasswordInput)
+
+    def clean(self):
+        cleaned_data = super(DatabaseForm, self).clean()
+        local = cleaned_data.get('local')
+        if local:
+            if cleaned_data['address'] or cleaned_data['port'] or cleaned_data['db_username'] or cleaned_data['db_password']:
+                raise forms.ValidationError("Cannot specify access information for local server")
+        else:
+            if not 'address' in cleaned_data:
+                raise forms.ValidationError("Address must be supplied for remote server")
+            if not 'username' in cleaned_data:
+                raise forms.ValidationError("Username must be supplied for remote server")
+        return cleaned_data
+
+
+class InstallationUserForm(django.contrib.auth.forms.UserCreationForm):
+    """A variant of UserCreationForm that skips uniqueness checks to
+    avoid touching the database (which might not exist yet)"""
+    def clean_username(self):
+        return self.cleaned_data["username"]
+
+    def validate_unique(self):
+        pass
+
+
+def index(request):
+    """Redirect to /setup/ on a new system, or /dashboard/
+    on a system that has already been set up"""
+    if _unconfigured():
+        return HttpResponseRedirect(reverse('chroma_ui.views.installation'))
+    else:
+        return HttpResponseRedirect(reverse('chroma_ui.views.dashboard'))
+
+
+def installation(request):
+    if not _unconfigured():
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        user_form = InstallationUserForm(request.POST)
+        #database_form = DatabaseForm(request.POST)
+        #user_form_valid = user_form.is_valid()
+        #database_form_valid = database_form.is_valid()
+        #if user_form_valid and database_form_valid:
+        if user_form.is_valid():
+            #if database_form.cleaned_data['local']:
+                # No extra configuration required, we ship with local
+                # MySQL server enabled
+            #    pass
+            #else:
+                #TODO
+                # Try contacting the remote server
+                # Generate a local_settings.py file for the server
+                # Set CELERY_RESULT_DBURI
+                # Monkey patch existing settings.DATABASES
+                # Then we can write out users and settings
+                # And finally we should get apache to restart, so that
+                # things like CELERY_RESULT_DBURI are picked up
+           #     raise NotImplementedError("Remote server configuration not implemented")
+
+            # TODO: Okay, now we have a database, we can invoke the equivalent of syncdb --migrate --noinput
+            from django.core.management import ManagementUtility
+            ManagementUtility(['', 'syncdb', '--noinput', '--migrate']).execute()
+
+            # TODO: now that we have syncdb'd, start up the services and mark
+            # them to start on boot
+
+            user_form.save()
+            # TODO: make the resulting user a superuser
+            return HttpResponseRedirect(reverse('chroma_ui.views.dashboard'))
+
+    elif request.method == "GET":
+        user_form = InstallationUserForm()
+        database_form = DatabaseForm()
+
+    return render_to_response("installation.html",
+            RequestContext(request, {
+                'user_form': user_form,
+                'database_form': database_form}))
+
+
 def configure(request):
     return render_to_response("configuration_home.html",
             RequestContext(request, {}))

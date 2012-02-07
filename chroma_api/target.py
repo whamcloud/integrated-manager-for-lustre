@@ -17,9 +17,9 @@ import chroma_core.lib.conf_param
 
 import tastypie.http as http
 from tastypie import fields
-from tastypie.authorization import Authorization
+from tastypie.authorization import DjangoAuthorization
+from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response, StatefulModelResource
-
 
 # Some lookups for the three 'kind' letter strings used
 # by API consumers to refer to our target types
@@ -27,7 +27,6 @@ KIND_TO_KLASS = {"MGT": ManagedMgs,
             "OST": ManagedOst,
             "MDT": ManagedMdt}
 KLASS_TO_KIND = dict([(v, k) for k, v in KIND_TO_KLASS.items()])
-CONTENT_TYPE_ID_TO_KIND = dict([(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()])
 KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.items()])
 
 
@@ -44,11 +43,18 @@ class TargetResource(StatefulModelResource):
 
     conf_params = fields.DictField()
 
+    def content_type_id_to_kind(self):
+        if not self.hasattr('CONTENT_TYPE_ID_TO_KIND'):
+            self.CONTENT_TYPE_ID_TO_KIND = dict([(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()])
+
+        return self.CONTENT_TYPE_ID_TO_KIND[id]
+
     class Meta:
         queryset = ManagedTarget.objects.all()
         resource_name = 'target'
-        authorization = Authorization()
         filtering = {'kind': ['exact'], 'filesystem_id': ['exact']}
+        authorization = DjangoAuthorization()
+        authentication = AnonymousAuthentication()
 
     def override_urls(self):
         from django.conf.urls.defaults import url
@@ -69,7 +75,7 @@ class TargetResource(StatefulModelResource):
             return None
 
     def dehydrate_kind(self, bundle):
-        return CONTENT_TYPE_ID_TO_KIND[bundle.obj.content_type_id]
+        return self.content_type_id_to_kind[bundle.obj.content_type_id]
 
     def dehydrate_filesystem_id(self, bundle):
         return getattr(bundle.obj, 'filesystem_id', None)
