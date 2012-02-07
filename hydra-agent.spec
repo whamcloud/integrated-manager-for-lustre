@@ -84,9 +84,9 @@ chkconfig corosync on
 
 %files -f base.files
 %defattr(-,root,root)
+%attr(0755,root,root)/etc/init.d/hydra-agent
 %{_bindir}/hydra-agent*
 %{python_sitelib}/hydra_agent-*.egg-info/*
 
 %files -f management.files management
 %defattr(-,root,root)
-%attr(0755,root,root)/etc/init.d/hydra-agent
