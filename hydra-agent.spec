@@ -68,8 +68,6 @@ for base_file in $(find $RPM_BUILD_ROOT -type f -name '*.py'); do
   echo ${install_file%.py*}.py* >> base.files
 done
 
-cat base.files
-
 %clean
 rm -rf %{buildroot}
 
