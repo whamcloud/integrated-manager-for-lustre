@@ -3,47 +3,42 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import json
+
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
+import settings
 
 # index
 # if you got no local_settings.py goto setup
 # if you got a db but no tables go to syncdb+create user
 # else goto dashboard
 
-LOCAL_SETTINGS_FILE = "local_settings.py"
-
 
 def _unconfigured():
     """Return True if we cannot talk to a database"""
-    import settings
     import os
     project_dir = os.path.dirname(os.path.realpath(settings.__file__))
-    local_settings = os.path.join(project_dir, LOCAL_SETTINGS_FILE)
+    local_settings = os.path.join(project_dir, settings.LOCAL_SETTINGS_FILE)
     return not os.path.exists(local_settings)
 
 
 def _unpopulated():
     """Return True if we can talk to a database but
-    our tables are absent or no Users exist"""
+    our tables are absent"""
     from django.db.utils import DatabaseError
     try:
-        from django.contrib.auth.models import User
-        count = User.objects.count()
-        if count == 0:
-            return True
-        else:
-            return False
+        from chroma_core.models.host import ManagedHost
+        ManagedHost.objects.count()
     except DatabaseError:
-        # FIXME: SECURITY: if the attacker can somehow generate a
-        # DatabaseError, they can get at the setup page.
         return True
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect, HttpResponseForbidden
 import django.forms as forms
 import django.contrib.auth
+import hashlib
 
 
 class DatabaseForm(forms.Form):
@@ -88,6 +83,35 @@ def index(request):
         return HttpResponseRedirect(reverse('chroma_ui.views.dashboard'))
 
 
+def _httpd_pid():
+    try:
+        pid_str = open("/var/run/httpd/httpd.pid").read()
+        m = hashlib.md5()
+        m.update(pid_str)
+        return m.hexdigest()
+    except IOError, e:
+        print "IOError %s" % e
+        return 0
+
+
+def installation_status(request):
+    httpd_pid = _httpd_pid()
+    if 'httpd_pid' in request.GET:
+        if httpd_pid != request.GET['httpd_pid']:
+            restarted = True
+        else:
+            restarted = False
+    else:
+        restarted = None
+
+    result = {
+            "populated": not _unpopulated(),
+            "restarted": restarted
+            }
+
+    return HttpResponse(json.dumps(result), mimetype = "application/json")
+
+
 def installation(request):
     if not _unconfigured():
         return HttpResponseForbidden()
@@ -99,9 +123,11 @@ def installation(request):
         #database_form_valid = database_form.is_valid()
         #if user_form_valid and database_form_valid:
         if user_form.is_valid():
+            databases = settings.DATABASES
             #if database_form.cleaned_data['local']:
                 # No extra configuration required, we ship with local
                 # MySQL server enabled
+                #databases = settings.DATABASES
             #    pass
             #else:
                 #TODO
@@ -114,16 +140,21 @@ def installation(request):
                 # things like CELERY_RESULT_DBURI are picked up
            #     raise NotImplementedError("Remote server configuration not implemented")
 
-            # TODO: Okay, now we have a database, we can invoke the equivalent of syncdb --migrate --noinput
-            from django.core.management import ManagementUtility
-            ManagementUtility(['', 'syncdb', '--noinput', '--migrate']).execute()
+            # Get an unsaved User object
+            user = super(django.contrib.auth.forms.UserCreationForm, user_form).save(commit = False)
+            user.is_superuser = True
 
-            # TODO: now that we have syncdb'd, start up the services and mark
-            # them to start on boot
+            # Perform post-syncdb setup of services (requires root, so have
+            # to go out to external script to make it happen)
+            from chroma_core.tasks import installation
+            pid = _httpd_pid()
+            installation.delay(databases, user)
 
-            user_form.save()
-            # TODO: make the resulting user a superuser
-            return HttpResponseRedirect(reverse('chroma_ui.views.dashboard'))
+            # That delayed task is going to restart apache (and the service worker)
+            # so we're going to return the user a waiting polling page.
+            return render_to_response("installation_wait.html", RequestContext(request, {
+                'httpd_pid': pid
+            }))
 
     elif request.method == "GET":
         user_form = InstallationUserForm()
@@ -220,7 +251,6 @@ def set_state(request, content_type_id, stateful_object_id, new_state):
 
 
 def _jobs_json():
-    import json
     from django.core.urlresolvers import reverse
     from datetime import timedelta, datetime
     from django.db.models import Q

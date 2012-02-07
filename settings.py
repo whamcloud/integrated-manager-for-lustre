@@ -116,8 +116,10 @@ BROKER_PORT = 5672
 BROKER_USER = "hydra"
 BROKER_PASSWORD = "hydra123"
 BROKER_VHOST = "hydravhost"
-CELERY_RESULT_BACKEND = "database"
-CELERY_RESULT_DBURI = "mysql://root:@localhost/chroma"
+
+# Run Celery DB-less by default for bootstrap before the DB is setup
+# (This will be overridden in local_settings.py)
+CELERY_RESULT_BACKEND = "amqp"
 
 # HYD-471: This must be set for unit tests to pass in general
 SOUTH_TESTS_MIGRATE = False
@@ -240,6 +242,7 @@ CELERY_ROUTES = (
         {"chroma_core.tasks.test_host_contact": {"queue": "ssh"}},
         {"chroma_core.tasks.monitor_exec": {"queue": "ssh"}},
         {"chroma_core.tasks.send_alerts_email": {"queue": "jobs"}},
+        {"chroma_core.tasks.installation": {"queue": "service"}},
         )
 
 CELERY_TRACK_STARTED = True
@@ -299,7 +302,9 @@ HTTP_AUDIT = True
 
 # Set to False to require logins even for read-only access
 # to chroma_api
-ALLOW_ANONYMOUS_READ = False
+ALLOW_ANONYMOUS_READ = True
+
+LOCAL_SETTINGS_FILE = "local_settings.py"
 
 try:
     from production_version import VERSION

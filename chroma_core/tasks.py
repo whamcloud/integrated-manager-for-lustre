@@ -513,3 +513,118 @@ def send_alerts_email(id):
 
         send_mail('New Chroma Server alerts', message, settings.EMAIL_SENDER,
                   [user.email])
+
+
+@task
+def installation(databases, user):
+    """Actions requiring greater privileges than the apache user has, to be performed
+    after the user has been prompted for database settings
+
+    :param databases: Value for settings.DATABASES
+    """
+
+    import subprocess
+    import logging
+    # NB not setting up a handler because in production
+    # celeryd will catch the output for us
+    log = logging.getLogger('installation')
+
+    class RsyslogConfig:
+        CONFIG_FILE = "/etc/rsyslog.conf"
+        SENTINEL = "# Added by hydra-server\n"
+
+        def __init__(self, config_file = None):
+            self.config_file = config_file or self.CONFIG_FILE
+
+        def remove(self):
+            """Remove our config section from the rsyslog config file, or do
+            nothing if our section is not there"""
+            rsyslog_lines = open(self.config_file).readlines()
+            try:
+                config_start = rsyslog_lines.index(self.SENTINEL)
+                rsyslog_lines.remove(self.SENTINEL)
+                config_end = rsyslog_lines.index(self.SENTINEL)
+                rsyslog_lines.remove(self.SENTINEL)
+                rsyslog_lines = rsyslog_lines[:config_start] + rsyslog_lines[config_end:]
+                open(self.config_file, 'w').write("".join(rsyslog_lines))
+            except ValueError:
+                # Missing start or end sentinel, cannot remove, ignore
+                pass
+
+        def add(self, database, server, user, port = None, password = None):
+            #:ommysql:database-server,database-name,database-userid,database-password
+            config_lines = []
+            config_lines.append(self.SENTINEL)
+            config_lines.extend([
+                        "$ModLoad imtcp.so\n",
+                        "$InputTCPServerRun 514\n",
+                        "$ModLoad ommysql\n"])
+            if port:
+                config_lines.append("$ActionOmmysqlServerPort %d\n" % port)
+
+            action_line = "*.*       :ommysql:%s,%s,%s" % (server, database, user)
+            if password:
+                action_line += ",%s" % password
+            action_line += "\n"
+            config_lines.append(action_line)
+            config_lines.append(self.SENTINEL)
+
+            rsyslog = open(self.config_file, 'a')
+            rsyslog.writelines(config_lines)
+
+    # Build a local_settings file
+    import os
+    project_dir = os.path.dirname(os.path.realpath(settings.__file__))
+    local_settings = os.path.join(project_dir, settings.LOCAL_SETTINGS_FILE)
+    local_settings_str = ""
+    local_settings_str += "CELERY_RESULT_BACKEND = \"database\"\n"
+    local_settings_str += "CELERY_RESULT_DBURI = \"mysql://%s:%s@%s%s/%s\"\n" % (
+            databases['default']['USER'],
+            databases['default']['PASSWORD'],
+            databases['default']['HOST'] or "localhost",
+            ":%d" % databases['default']['PORT'] if databases['default']['PORT'] else "",
+            databases['default']['NAME'])
+
+    # Usefully, a JSON dict looks a lot like python
+    import json
+    local_settings_str += "DATABASES = %s\n" % json.dumps(databases, indent=4).replace("null", "None")
+
+    # Dump local_settings_str to local_settings
+    open(local_settings, 'w').write(local_settings_str)
+
+    # TODO: support SERVER_HTTP_URL
+    # TODO: support LOG_SERVER_HOSTNAME
+
+    # Now we have our database, we can populate it
+    from django.core.management import ManagementUtility
+    ManagementUtility(['', 'syncdb', '--noinput', '--migrate']).execute()
+
+    # The database is populated, we can add our user
+    user.save()
+
+    log.info("Adding Chroma daemons")
+    subprocess.call(['chkconfig', '--add', 'hydra-worker'])
+    subprocess.call(['chkconfig', '--add', 'hydra-storage'])
+    log.info("Restarting rsyslogd")
+    subprocess.call(['service', 'rsyslogd', 'restart'])
+
+    log.info("Starting Chroma daemons")
+    subprocess.call(['service', 'hydra-worker', 'start'])
+    subprocess.call(['service', 'hydra-storage', 'start'])
+
+    log.info("Restarting Apache")
+    subprocess.call(['service', 'httpd', 'restart'])
+
+    # Finally, restart myself
+    # Run this in the background so that we can complete our
+    # task and allow celeryd to restart this worker
+    log.info("Restarting Chroma service daemon (this process)")
+    subprocess.Popen(['service', 'chroma-service', 'restart'])
+
+    rsyslog = RsyslogConfig()
+    rsyslog.remove()
+    rsyslog.add(databases['default']['NAME'],
+                databases['default']['HOST'] or 'localhost',
+                databases['default']['USER'],
+                databases['default']['PORT'] or None,
+                databases['default']['PASSWORD'] or None)

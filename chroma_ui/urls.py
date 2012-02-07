@@ -10,6 +10,7 @@ urlpatterns = patterns('',
     (r'^$', views.index),
 
     (r'^installation/$', views.installation),
+    (r'^installation_status/$', views.installation_status),
 
     (r'^configure/$', views.configure),
     (r'^configure/filesystems_tab/', views.filesystem_tab),

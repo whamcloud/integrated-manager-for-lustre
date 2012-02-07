@@ -30,66 +30,13 @@ run_celeryd() {
 }
 
 start() {
-    # only on first install...
-    #if [ -d /var/lib/mysql/test ]; then
-    #    # remove the test database and user from mysqld
-    #    /usr/bin/mysql_secure_installation
-    #fi
-    if [ ! -d /var/lib/mysql/chroma ]; then
-        # create the chroma database
-        echo "create database chroma" | mysql
-        # and populate it
-        python $PYTHONPATH/manage.py syncdb --noinput --migrate
-        # reload rsyslog since it will have complained about the missing
-        # table when it started
-        service rsyslog reload
-    fi
-
-    # RabbitMQ: Configure default hydra user if it's not already set up
-    # Note: this would naturally be in %post, but some some build
-    # environments run those in the wrong order, so it's here.
-    rabbitmqctl list_users | grep "^hydra\\s" > /dev/null || rabbitmqctl add_user hydra hydra123
-    rabbitmqctl list_vhosts | grep "^hydravhost$" > /dev/null || rabbitmqctl add_vhost hydravhost
-    rabbitmqctl set_permissions -p hydravhost hydra ".*" ".*" ".*"
-
-    # Django: Build the hydra-server project's /static directory
-    # Note: this would naturally be in %post, but some some build
-    # environments run those in the wrong order, so it's here.
-    # Note: we ideally would only run this once at install/upgrade
-    # time, but running in the worker env there's no easy way to
-    # tell if it's our first time, so we do it always (fairly 
-    # quick op anyway)
-    PYTHONPATH=/usr/share/hydra-server python /usr/share/hydra-server/manage.py collectstatic --noinput
-
     echo -n "Starting the Hydra worker daemon: "
     run_celeryd start
     echo -n "Starting the Hydra host discovery daemon: "
     # we don't need --pidfile here since hydra-host-discover.py is a daemon
     # and takes care of creating the pid file
     daemon /usr/bin/hydra-host-discover.py
-
-    # edit /etc/issue to tell where to point the browser
-    IPADDR=$(ifconfig | sed -n -e 's/:127\.0\.0\.1 //g' -e 's/ *inet addr:\([0-9.]\+\).*/\1/gp')
-
-    if ! grep "^Please point your browser at" /etc/issue; then
-        cat <<EOF >> /etc/issue
-Please point your browser at http://$IPADDR/ui/
-to administer this server.
-
-EOF
-    ui
-        ed <<EOF /etc/issue
-/^Please point your browser at http:\/\//;/to administer this server\./c
-Please point your browser at http://$IPADDR/ui/
-to administer this server.
-.
-w
-q
-EOF
-    fi
-
     echo
-
 }
 
 restart() {
