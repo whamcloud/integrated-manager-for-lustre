@@ -26,7 +26,7 @@
             ]
         }
     },
-    "lustre_clients": [
-        "dev"
-    ]
+    "lustre_clients": {
+        "dev": {}
+    }
 }

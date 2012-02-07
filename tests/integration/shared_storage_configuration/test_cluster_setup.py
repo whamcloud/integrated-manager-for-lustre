@@ -22,6 +22,8 @@ class TestClusterSetup(TestCase):
             device_paths = config['lustre_servers'][address]['device_paths']
             self.assertGreaterEqual(len(set(device_paths)), 4)
 
+        self.assertGreaterEqual(len(config['lustre_clients']), 1)
+
         # TODO(kelsey): I'd like to add a lot more validation of the cluster.
         #   - devices mounted properly
         #   - can ssh to the hosts

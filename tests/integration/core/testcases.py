@@ -119,7 +119,7 @@ class ChromaIntegrationTestCase(TestCase):
             hosts = response.json
             self.assertEqual(0, len(hosts))
 
-    def wait_for_command(self, hydra_server, command_id, timeout=TEST_TIMEOUT):
+    def wait_for_command(self, hydra_server, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
         # TODO: More elegant timeout?
         running_time = 0
         command_complete = False
@@ -128,12 +128,15 @@ class ChromaIntegrationTestCase(TestCase):
                 '/api/command/%s/' % command_id,
             )
             self.assertTrue(response.successful, response.text)
-            command_complete = response.json['complete']
+            command = response.json
+            command_complete = command['complete']
             if not command_complete:
                 time.sleep(1)
                 running_time += 1
 
-        self.assertTrue(command_complete)
+        self.assertTrue(command_complete, command)
+        if verify_successful:
+            self.assertFalse(command['errored'] or command['cancelled'], command)
 
     def wait_for_commands(self, hydra_server, command_ids, timeout=TEST_TIMEOUT):
         for command_id in command_ids:
