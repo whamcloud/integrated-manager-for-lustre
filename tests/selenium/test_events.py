@@ -12,7 +12,7 @@ class Eventsdata(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Events'])
+        page_navigation.click(page_navigation.links['Events'])
 
         # Calling base_layout
         alerts_page = Events(self.driver)
@@ -36,7 +36,7 @@ class Eventsdata(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Events'])
+        page_navigation.click(page_navigation.links['Events'])
 
         # Calling base_layout
         alerts_page = Events(self.driver)

@@ -14,7 +14,7 @@ class Layout(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Dashboard'])
+        page_navigation.click(page_navigation.links['Dashboard'])
 
         # Calling base_layout
         base_page_layout = Baselayout(self.driver)
@@ -29,7 +29,7 @@ class Layout(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Configure'])
+        page_navigation.click(page_navigation.links['Configure'])
 
         # FIXME: need to add a generic function to wait for an action
         import time
@@ -47,7 +47,7 @@ class Layout(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Alerts'])
+        page_navigation.click(page_navigation.links['Alerts'])
 
         # Calling base_layout
         base_page_layout = Baselayout(self.driver)
@@ -62,7 +62,7 @@ class Layout(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Events'])
+        page_navigation.click(page_navigation.links['Events'])
 
         # Calling base_layout
         base_page_layout = Baselayout(self.driver)
@@ -77,7 +77,7 @@ class Layout(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Logs'])
+        page_navigation.click(page_navigation.links['Logs'])
 
         # Calling base_layout
         base_page_layout = Baselayout(self.driver)

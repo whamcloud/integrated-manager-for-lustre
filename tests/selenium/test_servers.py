@@ -1,4 +1,4 @@
-""" Create mgt test cases"""
+""" Create server test cases"""
 
 from utils.navigation import Navigation
 from views.servers import Servers
@@ -6,13 +6,13 @@ from base import SeleniumBaseTestCase
 
 
 class CreateServer(SeleniumBaseTestCase):
-    def test_create_mgt(self):
+    def test_create_server(self):
         #Create a file_system : Positive Test
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Configure'])
-        page_navigation.click(page_navigation._links['Servers'])
+        page_navigation.click(page_navigation.links['Configure'])
+        page_navigation.click(page_navigation.links['Servers'])
 
         # Calling create_server
         create_server_page = Servers(self.driver)

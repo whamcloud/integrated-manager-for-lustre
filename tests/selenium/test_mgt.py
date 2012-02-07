@@ -11,8 +11,8 @@ class CreateMgt(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Configure'])
-        page_navigation.click(page_navigation._links['MGTs'])
+        page_navigation.click(page_navigation.links['Configure'])
+        page_navigation.click(page_navigation.links['MGTs'])
 
         # Calling create_mgt
         create_mgt_page = Mgt(self.driver)
@@ -32,8 +32,8 @@ class CreateMgt(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Configure'])
-        page_navigation.click(page_navigation._links['MGTs'])
+        page_navigation.click(page_navigation.links['Configure'])
+        page_navigation.click(page_navigation.links['MGTs'])
 
         # Calling create_mgt
         create_mgt_page = Mgt(self.driver)
