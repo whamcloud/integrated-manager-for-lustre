@@ -43,8 +43,8 @@ class TargetResource(StatefulModelResource):
 
     conf_params = fields.DictField()
 
-    def content_type_id_to_kind(self):
-        if not self.hasattr('CONTENT_TYPE_ID_TO_KIND'):
+    def content_type_id_to_kind(self, id):
+        if not hasattr(self, 'CONTENT_TYPE_ID_TO_KIND'):
             self.CONTENT_TYPE_ID_TO_KIND = dict([(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()])
 
         return self.CONTENT_TYPE_ID_TO_KIND[id]
@@ -75,7 +75,7 @@ class TargetResource(StatefulModelResource):
             return None
 
     def dehydrate_kind(self, bundle):
-        return self.content_type_id_to_kind[bundle.obj.content_type_id]
+        return self.content_type_id_to_kind(bundle.obj.content_type_id)
 
     def dehydrate_filesystem_id(self, bundle):
         return getattr(bundle.obj, 'filesystem_id', None)
