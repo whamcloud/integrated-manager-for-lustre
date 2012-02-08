@@ -3,6 +3,7 @@
 # ==============================
 
 from hydra_agent.plugins import AgentPlugin
+from os import uname
 
 
 def get_fqdn(args = None):
@@ -10,8 +11,16 @@ def get_fqdn(args = None):
     return getfqdn()
 
 
-class FqdnPlugin(AgentPlugin):
+def get_nodename(args = None):
+    return uname()[1]
+
+
+class HostScanPlugin(AgentPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("get-fqdn",
                               help="get the host's FQDN")
         p.set_defaults(func=get_fqdn)
+
+        p = parser.add_parser("get-nodename",
+                              help="get the host's nodename")
+        p.set_defaults(func=get_nodename)
