@@ -115,7 +115,7 @@ def run_main_loop(args):
 def send_update(server_url, server_token, update_scan, responses):
     """POST to the UpdateScan API method.
        Returns None on errors"""
-    from hydra_agent.actions.fqdn import get_fqdn
+    from hydra_agent.actions.fqdn_scan import get_fqdn
 
     from httplib import BadStatusLine
     import simplejson as json
