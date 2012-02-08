@@ -7,6 +7,9 @@ var Api = function() {
   var outstanding_requests = 0;
   var api_available = false
   var API_PREFIX = "/api/";
+  var UI_ROOT = "/ui/";
+  var lost_contact = false;
+  var calls_waiting = 0;
 
   var startBlocking = function()
   {
@@ -51,8 +54,15 @@ var Api = function() {
     message += "<dt>Response headers:</dt><dd>" + jqXHR.getAllResponseHeaders() + "</dd>";
     message += "<dt>Response body:</dt><dd>" + jqXHR.responseText + "</dd>";
     message += "</dl>";
-    message += "<a href='#' onclick='window.location.reload(false);'>Reload</a>"
-    $.blockUI({message: message});
+    message += "<p style='text-align: center'>"
+    message += "<a href='" + UI_ROOT + "'>Reload</a>"
+    message += "</p>"
+    /* NB: we 'reload' them back to the base URL because a malformed URL is a possible
+     * cause of errors (e.g. if the hash had a bad ID in it) */
+    $.blockUI({
+      message: message,
+      css: {padding: "6px", "font-size": "9pt", "text-align": "left"}
+    });
   }
 
   var get = function() {
@@ -103,6 +113,45 @@ var Api = function() {
     }, error_callback = null, blocking = false);
   }
 
+  var lost_contact = false;
+  var lost_contact_at;
+  var CONTACT_RETRY_INTERVAL = 5000;
+  function lostContact ()
+  {
+    if (lost_contact) {
+      return;
+    } else {
+      lost_contact = true;
+      lost_contact_at = Number(Date.now())
+      console.log("Api: Lost contact at " + Date.now());
+
+      $.blockUI({
+        message: "<img src='/static/images/ajax-loader.gif'/>&nbsp;Contact lost with " + window.location.hostname + ", retrying every " + CONTACT_RETRY_INTERVAL/1000 + " seconds...",
+        css: {padding: "6px", "font-size": "9pt"}
+      });
+
+      testContact();
+    }
+  }
+
+  function testContact ()
+  {
+    $.ajax({type: "GET", url: "/api/session/"}).complete(function(jqXHR) {
+      if (jqXHR.status != 0) {
+        lost_contact = false;
+        $.unblockUI();
+        console.log("Api: Regained contact at " + Number(Date.now()));
+        console.log("Api: Out for " + (Number(Date.now()) - lost_contact_at)/1000 + " seconds");
+        $('body').trigger('api_available');
+      } else {
+        console.log("Api: Still out of contact at " + Date.now());
+        console.log("Api: " + calls_waiting + " calls waiting");
+        console.log("Api: Out for " + (Number(Date.now()) - lost_contact_at)/1000 + " seconds");
+        setTimeout(testContact, CONTACT_RETRY_INTERVAL);
+      }
+    });
+  }
+
   var call = function(verb, url, api_args, success_callback, error_callback, blocking, force)
   {
     /* Allow user to pass either /filesystem or /api/filesystem */
@@ -123,8 +172,10 @@ var Api = function() {
     /* If .enable() hasn't been called yet (done after checking
      * user permissions), then defer this call until an event
      * is triggered */
-    if (!force && !api_available) {
+    if ((!force && !api_available) || lost_contact) {
+      calls_waiting += 1;
       $('body').bind('api_available', function() {
+        calls_waiting -= 1;
         call(verb, url, api_args, success_callback, error_callback, blocking);
       });
       return;
@@ -174,6 +225,30 @@ var Api = function() {
     })
     .error(function(jqXHR, textStatus)
     {
+      console.log("error " + jqXHR.status);
+      if (jqXHR.status == 0) {
+        /* This is a workaroud to deal with the fact that some POSTs
+         * are actually read-only (especially the /notifications/ and
+         * /object_summary).  Remove these training wheels before release.
+         * HYD-618
+         * */
+
+        var HACK_RETRY_ALL = true
+        if (verb == "GET" || verb == "PUT" || verb == "DELETE" || HACK_RETRY_ALL) {
+          // For idempotent HTTP verbs, we can retry once
+          // contact is reestablished
+          lostContact();
+          calls_waiting += 1;
+          $('body').bind('api_available', function() {
+            calls_waiting -= 1;
+            call(verb, url, api_args, success_callback, error_callback, blocking)
+          });
+          return;
+        }
+        // For non-idempotent operations fall through to 'something has
+        // gone wrong' to prompt the user to reload the UI as we can
+        // no longer be sure of the state.
+      }
       if (error_callback) {
         if(typeof(error_callback) == "function") {
           /* Caller has provided a generic error handler */
