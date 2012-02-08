@@ -273,10 +273,7 @@ class Lun(models.Model):
     @classmethod
     def get_unused_luns(cls):
         """Get all Luns which are not used by Targets"""
-        from django.db.models import Q
-        from chroma_core.models import ManagedTargetMount
-        used_lun_ids = [i['block_device__lun'] for i in ManagedTargetMount.objects.all().values('block_device__lun')]
-        return Lun.objects.filter(~Q(pk__in = used_lun_ids))
+        return cls.objects.filter(lunnode__managedtargetmount__target__not_deleted = None).distinct()
 
     @classmethod
     def get_usable_luns(cls):
@@ -285,23 +282,15 @@ class Lun(models.Model):
         # Our result will be a subset of unused_luns
         unused_luns = cls.get_unused_luns()
 
-        # Map of which luns have a primary to avoid doing a query per-lun
-        primary_lns = LunNode.objects.filter(primary = True).values('lun')
-        luns_with_primary = set()
-        for ln in primary_lns:
-            luns_with_primary.add(ln['lun'])
-
-        # TODO: avoid O(N) queries
-        for lun in unused_luns:
-            lunnode_count = LunNode.objects.filter(lun = lun).count()
-            if lunnode_count == 0:
-                # A lun is unusable if it has no LunNodes
-                continue
-            elif lunnode_count > 1 and not lun.pk in luns_with_primary:
-                # A lun is unusable if it has more than one LunNode, and none is identified as primary
-                continue
-            else:
-                yield lun
+        from django.db.models import Count, Max, Q
+        # Luns are usable if they have only one LunNode (i.e. no HA available but
+        # we can definitively say where it should be mounted) or if they have
+        # a primary LunNode (i.e. one or more LunNodes is available and we
+        # know at least where the primary mount should be)
+        return unused_luns.annotate(
+                has_primary = Max('lunnode__primary'),
+                num_lunnodes = Count('lunnode')
+                ).filter(Q(num_lunnodes = 1) | Q(has_primary = 1.0))
 
     def get_kind(self):
         """:return: A string or unicode string which is a human readable noun corresponding
