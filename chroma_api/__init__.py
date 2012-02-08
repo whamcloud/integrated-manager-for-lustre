@@ -4,4 +4,4 @@
 # ==============================
 
 import settings
-api_log = settings.setup_log('django.request.tastypie')
+api_log = settings.setup_log('django.request.tastypie', "api.log")

@@ -2,6 +2,7 @@
 
 import sys
 import os
+import logging
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 # We require python >= 2.6.5 for http://bugs.python.org/issue4978
@@ -258,11 +259,12 @@ else:
     LOG_PATH = "/var/log/hydra"
 
 
-def setup_log(log_name):
-    import logging
+def setup_log(log_name, filename = None):
+    if not filename:
+        filename = "%s.log" % log_name
+
     logger = logging.getLogger(log_name)
     logger.setLevel(logging.DEBUG)
-    filename = "%s.log" % log_name
     path = os.path.join(LOG_PATH, filename)
     handler = logging.FileHandler(path)
     handler.setFormatter(logging.Formatter('[%(asctime)s: %(levelname)s/%(name)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
