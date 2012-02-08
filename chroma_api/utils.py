@@ -38,8 +38,8 @@ class StatefulModelResource(ModelResource):
         new_state = bundle.data['state']
 
         if dry_run:
-            # FIXME: this should be a GET to something like /foo/transitions/from/to/
-            #        to get information about that transition.
+            # FIXME: should this be a GET to something like /foo/transitions/from/to/
+            #        to get information about that transition?
             report = StateManager().get_transition_consequences(bundle.obj, new_state)
             raise custom_response(self, request, http.HttpResponse, report)
         else:

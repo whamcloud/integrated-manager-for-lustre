@@ -48,6 +48,7 @@ class TargetResource(ConfParamResource):
     class Meta:
         queryset = ManagedTarget.objects.all()
         resource_name = 'target'
+        excludes = ['not_deleted']
         filtering = {'kind': ['exact'], 'filesystem_id': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
