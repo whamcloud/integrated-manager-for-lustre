@@ -29,10 +29,12 @@
 
     <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.dataTables.js"></script>
 
-    <!-- Generic API request handler  -->
+    <!-- Api module (depends on blockUI) -->
     <script type="text/javascript" src="{{STATIC_URL}}js/jquery.blockUI.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/generic_request_handler.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/api.js"></script>
 
+    <!-- Login module (depends on Api) -->
+    <script type="text/javascript" src="{{STATIC_URL}}js/login.js"></script>
 
     <!-- jAlerts -->
     <script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/jquery.alerts.js"></script>
@@ -57,8 +59,6 @@
     <script type='text/javascript' src="{{STATIC_URL}}js/target_dialog.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_dialog.js"></script>
 
-    <!-- Login dialog -->
-    <script type="text/javascript" src="{{STATIC_URL}}js/login_dialog.js"></script>
 
     <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
     {% block scripts %}{% endblock %}
