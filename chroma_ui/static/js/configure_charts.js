@@ -49,7 +49,7 @@ function LoadFSGraph_EditFS(fs_id)
       starttime: "", filesystem_id: fs_id, endtime: ""
   };
   
-  invoke_api_call(api_post, fs_Pie_Space_Data_Api_Url, api_params, 
+  Api.post(fs_Pie_Space_Data_Api_Url, api_params, 
   success_callback = function(data)
   {
     var response = data;
@@ -89,7 +89,7 @@ function LoadFSGraph_EditFS(fs_id)
       starttime: "", filesystem_id: fs_id, endtime: ""
   };
 
-  invoke_api_call(api_post, fs_Pie_Space_Data_Api_Url, api_params, 
+  Api.post(fs_Pie_Space_Data_Api_Url, api_params, 
   success_callback = function(data)
   {
     var response = data;

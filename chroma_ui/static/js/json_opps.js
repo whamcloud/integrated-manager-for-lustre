@@ -93,7 +93,7 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
       "conf_params": conf_params
   };
   
-  invoke_api_call(api_post, "filesystem/", api_params,
+  Api.post("filesystem/", api_params,
   success_callback = function(data)
   {
     var fs_id = data.filesystem.id;
@@ -108,7 +108,7 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
 
 function CreateOSTs(fs_id, ost_lun_ids)
 {
-  invoke_api_call(api_post, "target/", {kind: 'OST', filesystem_id: fs_id, lun_ids: ost_lun_ids},
+  Api.post("target/", {kind: 'OST', filesystem_id: fs_id, lun_ids: ost_lun_ids},
   success_callback = function(data)
   {
     //Reload table with latest ost's.
@@ -121,7 +121,7 @@ function CreateOSTs(fs_id, ost_lun_ids)
 
 function CreateMGT(lun_id, callback)
 {
-  invoke_api_call(api_post, "target/", {kind: 'MGT', lun_ids: [lun_id]},
+  Api.post("target/", {kind: 'MGT', lun_ids: [lun_id]},
   success_callback = function(data)
   {
     callback();
@@ -164,7 +164,7 @@ function populate_conf_param_table(data, table_id, help)
     for(var key in data) {
       keys.push(key);
     }
-    invoke_api_call(api_get, "help/conf_param/", {keys: keys.join(",")}, success_callback = function(loaded_help) {
+    Api.get("help/conf_param/", {keys: keys.join(",")}, success_callback = function(loaded_help) {
       _populate_conf_param_table(data, table_id, loaded_help);
     });
   }
@@ -204,7 +204,7 @@ function apply_config_params(url, dialog_id, datatable)
     console.log('PUTing changed conf params to ' + url + ':');
     console.log(changed_conf_params);
 
-    invoke_api_call(api_put, url, api_params, 
+    Api.put(url, api_params, 
     success_callback = function(data)
     {
       jAlert("Update Successful");
@@ -233,7 +233,7 @@ save_primary_failover_server = function (confirmation_markup, volumes)
          text: "Confirm",
          id: "transition_confirm_button",
          click: function(){
-           invoke_api_call(api_put, "volume/", volumes, 
+           Api.put("volume/", volumes, 
            success_callback = function(data)
            {
              jAlert("Update Successful");

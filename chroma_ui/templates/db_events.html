@@ -18,7 +18,7 @@
             "sAjaxSource": "event/",
             "fnServerData": function (url, data, callback, settings) 
             {
-              datatables_api_call(url, data, callback, settings, removeBlankAttributes({
+              Api.get_datatables(url, data, callback, settings, removeBlankAttributes({
                 "host__id": $('#event_host').val(),
                 "severity": $('#event_severity').val(),
                 "event_type": $('#event_type').val()

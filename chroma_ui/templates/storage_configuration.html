@@ -9,7 +9,7 @@
         var class_name = tokens[1]
 
         console.log("Loading resources...");
-        invoke_api_call(api_get, "storage_resource/" + module_name + "/" + class_name + "/", {},
+        Api.get("storage_resource/" + module_name + "/" + class_name + "/", {},
           success_callback = function(data) {
             console.log("... done loading resources...");
             if (resourceTable) {
@@ -52,7 +52,7 @@
             load_resource_table();
         });
         /* Initial population of dropdown of resource classes */
-        invoke_api_call(api_get, "storage_resource_class/", {},
+        Api.get("storage_resource_class/", {},
           success_callback = function(data) {
             options = ""
             if (data.resource_classes.length == 0) {

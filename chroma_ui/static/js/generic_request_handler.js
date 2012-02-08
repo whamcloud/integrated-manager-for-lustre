@@ -1,200 +1,224 @@
-/*******************************************************************************
- * File name: generic_request_handler.js
- * Description: Generic functions required for handling API requests.
- * ------------------ Data Loader functions--------------------------------------
- * 1) invoke_api_call(request_type, api_url, api_args, callback)
- * 2) unexpected_error(data)
-/*****************************************************************************
- * API Type Constants
-******************************************************************************/
-var api_get = "GET";
-var api_post = "POST";
-var api_put = "PUT";
-var api_delete = "DELETE";
-/********************************************************************************
-// Constants for generic API handling
-/********************************************************************************/
-var API_PREFIX = "/api/";
 
 
-var outstanding_requests = 0;
+/* The Api module wraps the global state used for 
+ * accessing the /api/ URL space */
+var Api = function() {
+  var errored = false;
+  var outstanding_requests = 0;
+  var api_available = false
+  var API_PREFIX = "/api/";
 
-function start_blocking()
-{
-  if (disable_api) {
-    return;
-  }
-
-  outstanding_requests += 1;
-  if (outstanding_requests == 1) {
-    $.blockUI({
-      message: ""
-    });
-  }
-}
-
-function complete_blocking()
-{
-  if (disable_api) {
-    return;
-  }
-
-  outstanding_requests -= 1;
-  if (outstanding_requests == 0) {
-    $.unblockUI();
-  }
-}
-
-var disable_api = false;
-
-/* Wrap API calls to tastypie paginated methods such that
-   jquery.Datatables understands the resulting format */
-function datatables_api_call(url, data, callback, settings, kwargs) {
-  var kwargs = kwargs;
-  if (kwargs == undefined) {
-    kwargs = {}
-  }
-    
-  /* Copy datatables args into our dict */
-  if (data) {
-    $.each(data, function(i, param) {
-      kwargs[param.name] = param.value
-    });
-  }
-
-  /* Rename pagination params from datatables to tastypie */
-  if (kwargs.iDisplayLength == -1) {
-    kwargs.limit = 0
-  } else {
-    kwargs.limit = kwargs.iDisplayLength
-  }
-  delete kwargs.iDisplayLength
-
-  kwargs.offset = kwargs.iDisplayStart
-  delete kwargs.iDisplayStart
-
-  invoke_api_call(api_get, url, kwargs, success_callback = function(data) {
-    var datatables_data = {}
-    datatables_data.aaData = data.objects;
-    datatables_data.iTotalRecords = data.meta.total_count
-    datatables_data.iTotalDisplayRecords = data.meta.total_count
-    callback(datatables_data);
-  }, error_callback = null, blocking = false);
-}
-
-/********************************************************************************
-// Generic function that handles API requests 
-/********************************************************************************/
-function invoke_api_call(request_type, api_url, api_args, success_callback, error_callback, blocking)
-{
-  return invoke_api_url(request_type, API_PREFIX + api_url, api_args, success_callback, error_callback, blocking)
-}
-
-
-function invoke_api_url(request_type, url, api_args, success_callback, error_callback, blocking)
-{
-  if (disable_api) {
-    return;
-  }
-
-  if (blocking == undefined) {
-    blocking = true;
-  }
-
-  var ajax_args = {
-      type: request_type,
-      url: url,
-      headers: {
-        Accept: "application/json"
-      }
-  };
-
-  if (request_type == api_get) {
-    ajax_args.data = api_args
-  } else {
-    ajax_args.dataType = 'json'
-    ajax_args.data = JSON.stringify(api_args)
-    ajax_args.contentType ="application/json; charset=utf-8"
-  }
-
-  if (blocking) {
-    start_blocking();
-  }
-  $.ajax(ajax_args)
-  .success(function(data, textStatus, jqXHR)
+  var startBlocking = function()
   {
-    if (success_callback) {
-      if(typeof(success_callback) == "function") {
-        /* If success_callback is a function, call it */
-        success_callback(data);
-      } else {
-        /* If success_callback is not a function, assume it
-           is a lookup object of response code to callback */
-        var status_code = jqXHR.status;
-        if(success_callback[status_code] != undefined) {
-          success_callback[status_code](data);
-        } else {
-          /* Caller gave us a lookup table of success callbacks
-             but we got a response code that was successful but
-             unhandled -- consider this a bug or error */ 
-          api_unexpected_error(data, textStatus, jqXHR);
-        }
-      }
+    if (errored) {
+      return;
     }
-  })
-  .error(function(jqXHR, textStatus)
+
+    outstanding_requests += 1;
+    if (outstanding_requests == 1) {
+      $.blockUI({
+        message: ""
+      });
+    }
+  }
+
+  var completeBlocking = function()
   {
-    if (error_callback) {
-      if(typeof(error_callback) == "function") {
-        /* Caller has provided a generic error handler */
-        rc = error_callback(jqXHR.responseText);
-        if (rc == false) {
-          api_unexpected_error(textStatus, jqXHR);
-        }
-      } else if(typeof(error_callback) == "object") {
-        var status_code = jqXHR.status;
-        if(error_callback[status_code] != undefined) {
-          /* Caller has provided handler for this status */
-          rc = error_callback[status_code](jqXHR.responseText);
-          if (rc == false) {
-            api_unexpected_error(textStatus, jqXHR);
-          }
-        } else {
-          /* Caller has provided some handlers, but not one for this
-             status code, this is a bug or unhandled error */
-          api_unexpected_error(textStatus, jqXHR);
-        }
-      }
+    if (errored) {
+      return;
+    }
+
+    outstanding_requests -= 1;
+    if (outstanding_requests == 0) {
+      $.unblockUI();
+    }
+  }
+
+  var enable = function()
+  {
+    api_available = true;
+    $('body').trigger('api_available');
+  }
+
+  var unexpectedError = function(textStatus, jqXHR)
+  {
+    console.log("unexpected_error: " + textStatus);
+    console.log(jqXHR);
+    errored = true;
+    var message = "We are sorry, but something has gone wrong.";
+    message += "<dl>";
+    message += "<dt>Status:</dt><dd>" + jqXHR.status + "(" + textStatus + ")" + "</dd>";
+    message += "<dt>Response headers:</dt><dd>" + jqXHR.getAllResponseHeaders() + "</dd>";
+    message += "<dt>Response body:</dt><dd>" + jqXHR.responseText + "</dd>";
+    message += "</dl>";
+    message += "<a href='#' onclick='window.location.reload(false);'>Reload</a>"
+    $.blockUI({message: message});
+  }
+
+  var get = function() {
+    call.apply(null, ["GET"].concat([].slice.apply(arguments)))
+  }
+  var post = function() {
+    call.apply(null, ["POST"].concat([].slice.apply(arguments)))
+  }
+  var put = function() {
+    call.apply(null, ["PUT"].concat([].slice.apply(arguments)))
+  }
+  var del = function() {
+    call.apply(null, ["DELETE"].concat([].slice.apply(arguments)))
+  }
+
+  /* Wrap API calls to tastypie paginated methods such that
+     jquery.Datatables understands the resulting format */
+  var get_datatables = function(url, data, callback, settings, kwargs) {
+    var kwargs = kwargs;
+    if (kwargs == undefined) {
+      kwargs = {}
+    }
+      
+    /* Copy datatables args into our dict */
+    if (data) {
+      $.each(data, function(i, param) {
+        kwargs[param.name] = param.value
+      });
+    }
+
+    /* Rename pagination params from datatables to tastypie */
+    if (kwargs.iDisplayLength == -1) {
+      kwargs.limit = 0
     } else {
-      /* Caller has provided no error handlers, this is a bug
-         or unhandled error */
-      api_unexpected_error(textStatus, jqXHR);
+      kwargs.limit = kwargs.iDisplayLength
     }
-  })
-  .complete(function(event)
+    delete kwargs.iDisplayLength
+
+    kwargs.offset = kwargs.iDisplayStart
+    delete kwargs.iDisplayStart
+
+    get(url, kwargs, success_callback = function(data) {
+      var datatables_data = {}
+      datatables_data.aaData = data.objects;
+      datatables_data.iTotalRecords = data.meta.total_count
+      datatables_data.iTotalDisplayRecords = data.meta.total_count
+      callback(datatables_data);
+    }, error_callback = null, blocking = false);
+  }
+
+  var call = function(verb, url, api_args, success_callback, error_callback, blocking, force)
   {
-    if (blocking) {
-      complete_blocking();
+    /* Allow user to pass either /filesystem or /api/filesystem */
+    if (!(url.indexOf(API_PREFIX) == 0)) {
+      url = API_PREFIX + url;
     }
-  });
-}
-/********************************************************************************
-//Function to display generic error message 
-/********************************************************************************/
-function api_unexpected_error(textStatus, jqXHR)
-{
-  console.log("unexpected_error: " + textStatus);
-  console.log(jqXHR);
-  disable_api = true;
-  var message = "We are sorry, but something has gone wrong.";
-  message += "<dl>";
-  message += "<dt>Status:</dt><dd>" + jqXHR.status + "(" + textStatus + ")" + "</dd>";
-  message += "<dt>Response headers:</dt><dd>" + jqXHR.getAllResponseHeaders() + "</dd>";
-  message += "<dt>Response body:</dt><dd>" + jqXHR.responseText + "</dd>";
-  message += "</dl>";
-  message += "<a href='#' onclick='window.location.reload(false);'>Reload</a>"
-  $.blockUI({message: message});
-}
+
+    /* Permanent failures, do nothing */
+    if (errored) {
+      return;
+    }
+
+    /* Default to blocking calls */
+    if (blocking == undefined) {
+      blocking = true;
+    }
+
+    /* If .enable() hasn't been called yet (done after checking
+     * user permissions), then defer this call until an event
+     * is triggered */
+    if (!force && !api_available) {
+      $('body').bind('api_available', function() {
+        call(verb, url, api_args, success_callback, error_callback, blocking);
+      });
+      return;
+    }
+
+    var ajax_args = {
+        type: verb,
+        url: url,
+        headers: {
+          Accept: "application/json"
+        }
+    };
+
+    if (verb == "GET") {
+      ajax_args.data = api_args
+    } else {
+      ajax_args.dataType = 'json'
+      ajax_args.data = JSON.stringify(api_args)
+      ajax_args.contentType ="application/json; charset=utf-8"
+    }
+
+    if (blocking) {
+      startBlocking();
+    }
+
+    $.ajax(ajax_args)
+    .success(function(data, textStatus, jqXHR)
+    {
+      if (success_callback) {
+        if(typeof(success_callback) == "function") {
+          /* If success_callback is a function, call it */
+          success_callback(data);
+        } else {
+          /* If success_callback is not a function, assume it
+             is a lookup object of response code to callback */
+          var status_code = jqXHR.status;
+          if(success_callback[status_code] != undefined) {
+            success_callback[status_code](data);
+          } else {
+            /* Caller gave us a lookup table of success callbacks
+               but we got a response code that was successful but
+               unhandled -- consider this a bug or error */ 
+            unexpectedError(data, textStatus, jqXHR);
+          }
+        }
+      }
+    })
+    .error(function(jqXHR, textStatus)
+    {
+      if (error_callback) {
+        if(typeof(error_callback) == "function") {
+          /* Caller has provided a generic error handler */
+          rc = error_callback(jqXHR.responseText);
+          if (rc == false) {
+            unexpectedError(textStatus, jqXHR);
+          }
+        } else if(typeof(error_callback) == "object") {
+          var status_code = jqXHR.status;
+          if(error_callback[status_code] != undefined) {
+            /* Caller has provided handler for this status */
+            rc = error_callback[status_code](jqXHR.responseText);
+            if (rc == false) {
+              unexpectedError(textStatus, jqXHR);
+            }
+          } else {
+            /* Caller has provided some handlers, but not one for this
+               status code, this is a bug or unhandled error */
+            unexpectedError(textStatus, jqXHR);
+          }
+        }
+      } else {
+        /* Caller has provided no error handlers, this is a bug
+           or unhandled error */
+        unexpectedError(textStatus, jqXHR);
+      }
+    })
+    .complete(function(event)
+    {
+      if (blocking) {
+        completeBlocking();
+      }
+    });
+  }
+
+  return {
+    enable: enable,
+    call : call,
+    get: get,
+    post: post,
+    put: put,
+    'delete': del,
+    get_datatables: get_datatables,
+  }
+}();
 
 /* https://docs.djangoproject.com/en/1.2/ref/contrib/csrf/#csrf-ajax */
 $(document).ajaxSend(function(event, xhr, settings) {

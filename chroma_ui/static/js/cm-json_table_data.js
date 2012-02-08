@@ -14,7 +14,7 @@ var filesystemId="";
 
 function LoadTargets_EditFS(fs_id)
 {
-  invoke_api_call(api_get, "target/", {filesystem_id : fs_id, limit: 0}, 
+  Api.get("target/", {filesystem_id : fs_id, limit: 0}, 
   success_callback = function(data)
   {  
     var targets = data.objects;
@@ -53,7 +53,7 @@ function LoadTargets_EditFS(fs_id)
 
 function LoadUsableVolumeList(datatable_container, select_widget_fn)
 {
-  invoke_api_call(api_get, "volume/", {'category': 'usable'}, 
+  Api.get("volume/", {'category': 'usable'}, 
   success_callback = function(volumes)
   {
     $.each(volumes, function(i, volume)
@@ -94,7 +94,7 @@ function LoadUsableVolumeList(datatable_container, select_widget_fn)
 
 function LoadUnused_VolumeConf()
 {
-  invoke_api_call(api_get, "volume/", {'category': 'unused'}, 
+  Api.get("volume/", {'category': 'unused'}, 
   success_callback = function(volumes)
   {
     $('#volume_configuration').dataTable().fnClearTable();

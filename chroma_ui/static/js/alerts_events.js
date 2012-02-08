@@ -125,7 +125,7 @@ loadAlertContent = function(targetAlertDivName, maxCount)
   var maxpagecnt=maxCount;
   progress_show(targetAlertDivName);
 
-  invoke_api_call(api_get, "alert/", {active: true, iDisplayStart: 0, iDisplayCount: maxCount}, 
+  Api.get("alert/", {active: true, iDisplayStart: 0, iDisplayCount: maxCount}, 
   success_callback = function(data)
   {
     $.each(data.aaData, function(resKey, resValue)
@@ -168,7 +168,7 @@ loadEventContent = function(targetEventDivName, maxCount)
   var maxpagecnt=maxCount;
   progress_show(targetEventDivName);
   
-  invoke_api_call(api_get, "event/", {iDisplayStart: 0, iDisplayLength: 10},
+  Api.get("event/", {iDisplayStart: 0, iDisplayLength: 10},
     success_callback = function(data)
     {
       var events = data['aaData'];
@@ -213,7 +213,7 @@ loadJobContent = function(targetJobDivName)
   var pagecnt=0;
   progress_show(targetJobDivName);
   
-  invoke_api_call(api_get, "job/", {recent: true},
+  Api.get("job/", {recent: true},
     success_callback = function(data)
     {
       $.each(data, function(resKey, resValue)
@@ -281,7 +281,7 @@ createButtonForJob = function(job_id, status)
 
 job_action = function(job_id, state)
 {
-  invoke_api_call(api_put, "job/" + job_id + "/", {'state': state},
+  Api.put("job/" + job_id + "/", {'state': state},
   success_callback = function(data)
   {
     loadJobContent('job_content');
@@ -294,7 +294,7 @@ loadHostList = function(filesystem_id, targetContainer)
   
   var api_params = {'filesystem_id':filesystem_id};
 
-  invoke_api_call(api_get, "host/", api_params,
+  Api.get("host/", api_params,
   success_callback = function(data)
   {
     $.each(data.objects, function(i, host)

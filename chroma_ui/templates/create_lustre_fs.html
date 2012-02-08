@@ -6,7 +6,7 @@
   var advanced_tab_clicked = false; 
   $(document).ready(function() {
     /* Populate existing MGT list */
-    invoke_api_call(api_get, "target/", {
+    Api.get("target/", {
         kind: "MGT",
         limit: 0
       },
@@ -81,7 +81,7 @@
     {
    	  // If clicked first time then only fetch parameters else show already entered values
       if(!advanced_tab_clicked) {
-        invoke_api_call(api_get, "help/conf_param/", {kind: 'FS'}, success_callback = function(help_dict) {
+        Api.get("help/conf_param/", {kind: 'FS'}, success_callback = function(help_dict) {
           var data = {};
           for(var key in help_dict) {
             data[key] = null;

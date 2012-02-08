@@ -200,7 +200,7 @@ $(document).ready(function()
 
 
 
-    invoke_api_call(api_get, "filesystem", {limit: 0},
+    Api.get("filesystem", {limit: 0},
       success_callback = function(data)
       {
         $('#allFileSystemSummaryTbl').dataTable({
@@ -279,7 +279,7 @@ $(document).ready(function()
     {
       server_list_content = "";
       server_list_content += "<option value=''>Select Server</option>";
-      invoke_api_call(api_get, "host/", {limit: 0}, 
+      Api.get("host/", {limit: 0}, 
         success_callback = function(data)
         {
           $.each(data.objects, function(i, host)
@@ -322,13 +322,13 @@ $(document).ready(function()
     "<select id='ostSelect'>"+
     "<option value=''>Select Target</option>";
 
-    invoke_api_call(api_get, "filesystem", {limit: 0},
+    Api.get("filesystem", {limit: 0},
       success_callback = function(data) {
         populateFsSelect(data.objects);
       }
     );
 
-    invoke_api_call(api_get, "target/", {"filesystem_id": fsId, limit: 0}, 
+    Api.get("target/", {"filesystem_id": fsId, limit: 0}, 
       success_callback = function(data)
       {
         var targets = data.objects;
@@ -422,7 +422,7 @@ $(document).ready(function()
     var file_systems_ids = new Array();
     var file_count = 0;
     
-    invoke_api_call(api_get, "target/", {"host_id": ossId, limit: 0}, 
+    Api.get("target/", {"host_id": ossId, limit: 0}, 
       success_callback = function(data)
       {
         var targets = data.objects;

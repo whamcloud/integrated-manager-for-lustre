@@ -534,7 +534,7 @@ db_Bar_SpaceUsage_Data = function(isZoom)
       starttime: "", filesystem_id: "", endtime: ""
   }; 
 
-  invoke_api_call(api_post, db_Bar_SpaceUsage_Data_Api_Url, api_params, 
+  Api.post(db_Bar_SpaceUsage_Data_Api_Url, api_params, 
     success_callback = function(data)
     {
       response = data;
@@ -597,7 +597,7 @@ db_Line_connectedClients_Data = function(isZoom)
       starttime: startTime, filesystem_id: ""
   };
   obj_db_Line_connectedClients_Data = JSON.parse(JSON.stringify(chartConfig_Line_clientConnected));
-  invoke_api_call(api_post, db_Line_connectedClients_Data_Api_Url, api_params,
+  Api.post(db_Line_connectedClients_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var clientMountData = [];
@@ -663,7 +663,7 @@ db_LineBar_CpuMemoryUsage_Data = function(isZoom)
   
   obj_db_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
   
-  invoke_api_call(api_post, db_LineBar_CpuMemoryUsage_Data_Api_Url, api_params,
+  Api.post(db_LineBar_CpuMemoryUsage_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var response = data;
@@ -712,7 +712,7 @@ db_Area_ReadWrite_Data = function(isZoom)
     values[stat_name] = [];
   });
   
-  invoke_api_call(api_post, db_Area_ReadWrite_Data_Api_Url, api_params,
+  Api.post(db_Area_ReadWrite_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var hostName='';
@@ -776,7 +776,7 @@ db_Area_mdOps_Data = function(isZoom)
   
   obj_db_Area_mdOps_Data = JSON.parse(JSON.stringify(chartConfig_Area_mdOps));
   
-  invoke_api_call(api_post, db_Area_mdOps_Data_Api_Url, api_params,
+  Api.post(db_Area_mdOps_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var targetName='';
@@ -829,7 +829,7 @@ db_AreaSpline_ioOps_Data = function(isZoom)
 
   obj_db_AreaSpline_ioOps_Data = JSON.parse(JSON.stringify(chartConfig_AreaSpline));
 
-  invoke_api_call(api_post, "get_fs_stats_heatmap/", api_params,
+  Api.post("get_fs_stats_heatmap/", api_params,
     success_callback = function(data)
     {
       var targetName='';

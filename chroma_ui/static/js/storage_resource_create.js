@@ -41,7 +41,7 @@ function storage_resource_create_save()
     attrs[field_name] = field_value;
   });
 
-  invoke_api_call(api_post, "storage_resource/" + module_name + "/" + class_name + "/", attrs,
+  Api.post("storage_resource/" + module_name + "/" + class_name + "/", attrs,
   success_callback = function(data)
   {
     $('#storage_resource_create_dialog').dialog('close');
@@ -55,7 +55,7 @@ function storage_resource_create_load_fields()
   var module_name = tokens[0]
   var class_name = tokens[1]
 
-  invoke_api_call(api_get, "storage_resource_class/" + module_name + "/" + class_name + "/", {},  
+  Api.get("storage_resource_class/" + module_name + "/" + class_name + "/", {},  
   success_callback = function(resource_class)
   {
     $('#storage_resource_create_fields tr.field').remove();
@@ -80,7 +80,7 @@ function storage_resource_create() {
   console.log('opening');
   $('#storage_resource_create_dialog').dialog('open');
 
-  invoke_api_call(api_get, "storage_resource_class/", {creatable: true}, 
+  Api.get("storage_resource_class/", {creatable: true}, 
   success_callback = function(data)  
   {
     var option_markup = ""

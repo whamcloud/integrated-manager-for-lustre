@@ -11,7 +11,7 @@
       "bAutoWidth":false,
       sAjaxSource: 'host/',
       fnServerData: function(url, data, callback, settings) {
-        datatables_api_call(url, data, function(data) {
+        Api.get_datatables(url, data, function(data) {
           console.log(data);
           var processed_data = [];
           $.each(data.aaData, function(i, row) {

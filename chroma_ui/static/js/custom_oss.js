@@ -49,7 +49,7 @@ oss_LineBar_CpuMemoryUsage_Data = function(hostId, sDate, endDate, dataFunction,
     datafunction: dataFunction, fetchmetrics: fetchMetrics, starttime: sDate, host_id: hostId, endtime: endDate
   };
   
-  invoke_api_call(api_post, oss_LineBar_CpuMemoryUsage_Data_Api_Url, api_params,
+  Api.post(oss_LineBar_CpuMemoryUsage_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var hostName='';
@@ -110,7 +110,7 @@ oss_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKin
     starttime: startTime, filesystem_id: fsId, endtime: endTime
   };
   
-  invoke_api_call(api_post, oss_Area_ReadWrite_Data_Api_Url, api_params,
+  Api.post(oss_Area_ReadWrite_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var hostName='';

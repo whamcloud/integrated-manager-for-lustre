@@ -13,7 +13,7 @@
         bFilter: false,
         bInfo: false,
         fnServerData: function(url, data, callback, settings) {
-          datatables_api_call(url, data, function(data) {
+          Api.get_datatables(url, data, function(data) {
             $.each(data.aaData, function(i, row) {
               if (row.mdts.length) {
                 mdt_hostname = row.mdts[0].primary_server_name

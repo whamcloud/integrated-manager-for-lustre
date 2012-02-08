@@ -3,6 +3,8 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import settings
+
 import django.contrib.auth as auth
 
 from chroma_api.authentication import CsrfAuthentication
@@ -13,11 +15,21 @@ from tastypie import http
 from tastypie.exceptions import ImmediateHttpResponse
 
 
+class Session:
+    def __init__(self, user = None):
+        self.user = user
+        if settings.ALLOW_ANONYMOUS_READ:
+            self.read_enabled = True
+        else:
+            self.read_enabled = (user != None)
+
+
 class SessionResource(Resource):
-    user = fields.DictField()
+    user = fields.ToOneField('chroma_api.user.UserResource', 'user', full = True, null = True)
+    read_enabled = fields.BooleanField(attribute = 'read_enabled')
 
     class Meta:
-        object_class = dict
+        object_class = Session
         # Use CsrfAuthentication instead of AnonymousAuthorization
         # because even un-logged-in users always need to access this
         # in order to be able to log in
@@ -69,7 +81,7 @@ class SessionResource(Resource):
         user = request.user
         if not user.is_authenticated():
             # Anonymous user
-            return self.create_response(request, {"user": None})
-        else:
-            # Authenticated user
-            return self.create_response(request, {"user": {"id": user.id, "username": user.username}})
+            user = None
+        bundle = self.build_bundle(obj = Session(user), request = request)
+        bundle = self.full_dehydrate(bundle)
+        return self.create_response(request, bundle)

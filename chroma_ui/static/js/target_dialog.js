@@ -24,7 +24,7 @@ target_dialog_link = function(target) {
 target_dialog_open = function(target_url) {
   $('#target_dialog').dialog('open');
 
-  invoke_api_url(api_get, target_url, {}, 
+  Api.get(target_url, {}, 
   success_callback = function(target)
   {
     /* TODO: load resource graph by target URI */

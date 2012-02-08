@@ -104,7 +104,7 @@ ost_Pie_Space_Data = function(targetId, targetName, sDate, endDate, dataFunction
       starttime: "", target_id: targetId, endtime: ""
   };
   
-  invoke_api_call(api_post, ost_Pie_Space_Data_Api_Url, api_params,
+  Api.post(ost_Pie_Space_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var response = data;
@@ -161,7 +161,7 @@ ost_Pie_Inode_Data = function(targetId, targetName, sDate, endDate, dataFunction
       starttime: "", target_id: targetId, endtime: ""
   };
   
-  invoke_api_call(api_post, ost_Pie_Inode_Data_Api_Url, api_params,
+  Api.post(ost_Pie_Inode_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var response = data;
@@ -222,7 +222,7 @@ ost_Area_mgtOps_Data = function(targetId, isZoom)
       starttime: startTime,  target_id: targetId, endtime: endTime
   };
   
-  invoke_api_call(api_post, ost_Area_ReadWrite_Data_Api_Url, api_params,
+  Api.post(ost_Area_ReadWrite_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var targetName='';
@@ -275,7 +275,7 @@ ost_Area_ReadWrite_Data = function(targetId, targetName, sDate, endDate, dataFun
       starttime: startTime, target_id: targetId, endtime: endTime
   };
   
-  invoke_api_call(api_post, ost_Area_ReadWrite_Data_Api_Url, api_params,
+  Api.post(ost_Area_ReadWrite_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var hostName='';
@@ -330,7 +330,7 @@ loadOSTSummary = function (fsId)
   $('#ostSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
       "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
 
-  invoke_api_call(api_get, "filesystem/" + fsId + "/", {}, 
+  Api.get("filesystem/" + fsId + "/", {}, 
     success_callback = function(filesystem)
     {
       innerContent = innerContent + 

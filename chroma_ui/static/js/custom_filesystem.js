@@ -34,7 +34,7 @@ fs_Bar_SpaceUsage_Data = function(fsId, sDate, endDate, dataFunction, targetKind
 
   var free=0,used=0;
   var freeData = [],usedData = [],categories = [],freeFilesData = [],totalFilesData = [];
-  invoke_api_call(api_post, fs_Bar_SpaceUsage_Data_Api_Url, api_params,
+  Api.post(fs_Bar_SpaceUsage_Data_Api_Url, api_params,
     success_callback = function(data)
     {
 	  var response = data;
@@ -95,7 +95,7 @@ fs_Line_connectedClients_Data = function(fsId, sDate, endDate, dataFunction, fet
   var count=0;
   var fileSystemName = "";
   
-  invoke_api_call(api_post, fs_Line_connectedClients_Data_Api_Url, api_params,
+  Api.post(fs_Line_connectedClients_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var response = data;
@@ -154,7 +154,7 @@ fs_LineBar_CpuMemoryUsage_Data = function(fsId, sDate, endDate, dataFunction, ta
   var cpuData = [], memoryData = [];
   obj_fs_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
   
-  invoke_api_call(api_post, fs_LineBar_CpuMemoryUsage_Data_Api_Url, api_params,
+  Api.post(fs_LineBar_CpuMemoryUsage_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var hostName='';
@@ -204,7 +204,7 @@ fs_Area_ReadWrite_Data = function(fsId, sDate, endDate, dataFunction, targetKind
 
   obj_db_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
 
-  invoke_api_call(api_post, fs_Area_ReadWrite_Data_Api_Url, api_params,
+  Api.post(fs_Area_ReadWrite_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var hostName='';
@@ -267,7 +267,7 @@ fs_Area_mdOps_Data = function(fsId, sDate, endDate, dataFunction, targetKind, fe
       starttime: startTime, filesystem_id: fsId, endtime: endTime
   };
   
-  invoke_api_call(api_post, fs_Area_mdOps_Data_Api_Url, api_params,
+  Api.post(fs_Area_mdOps_Data_Api_Url, api_params,
     success_callback = function(data)
     {
       var targetName='';
@@ -320,7 +320,7 @@ fs_AreaSpline_ioOps_Data = function(isZoom)
       starttime: startTime, filesystem: $("#ls_fsName").val(), targetkind:"OST"
   };
 
-  invoke_api_call(api_post, "get_fs_stats_heatmap/", api_params,
+  Api.post("get_fs_stats_heatmap/", api_params,
     success_callback = function(data)
     {
       var targetName='';
@@ -512,7 +512,7 @@ loadFileSystemSummary = function (fsId)
   "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />" +
   "</td></tr>");
 
-  invoke_api_call(api_get, "filesystem/" + fsId + "/", {}, 
+  Api.get("filesystem/" + fsId + "/", {}, 
 	success_callback = function(filesystem)
 	{
       innerContent = innerContent + 

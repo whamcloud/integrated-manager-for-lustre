@@ -8,7 +8,7 @@
       bInfo: false,
       sAjaxSource: 'target/',
       fnServerData: function(url, data, callback, settings) {
-        datatables_api_call(url, data, function(data) {
+        Api.get_datatables(url, data, function(data) {
           $.each(data.aaData, function(i, mgt) {
             var fs_names = [];
             $.each(mgt.filesystems, function(i, fs) {fs_names.push(fs.name);});

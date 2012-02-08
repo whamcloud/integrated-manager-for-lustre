@@ -13,7 +13,7 @@
         "bDeferRender": true,
         "sAjaxSource": 'alert/',
         "fnServerData": function (url, data, callback, settings) {
-          datatables_api_call(url, data, callback, settings, {active: true});
+          Api.get_datatables(url, data, callback, settings, {active: true});
         },
         "aoColumns": [
           { "sClass": 'txtleft', "mDataProp":"begin" },
@@ -33,7 +33,7 @@
       "bDeferRender": true,
       "sAjaxSource": 'alert/',
       "fnServerData": function (url, data, callback, settings) {
-        datatables_api_call(url, data, callback, settings, {});
+        Api.get_datatables(url, data, callback, settings, {});
       },
       "aoColumns": [
         { "sClass": 'txtleft', "mDataProp":"begin" },

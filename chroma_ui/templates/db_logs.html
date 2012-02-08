@@ -55,7 +55,7 @@
             filter_args['devicereportedtime__gte'] = $.trim($('#datetime_from').val())
             filter_args['devicereportedtime__lte'] = $.trim($('#datetime_to').val())
 
-            datatables_api_call(url, aoData,
+            Api.get_datatables(url, aoData,
               function(data) {
                 /* Annotate the rows with DT_RowClass */
                 $.each(data.aaData, function(i, row) {

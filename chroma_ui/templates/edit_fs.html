@@ -1,7 +1,7 @@
 <script language="javascript">
   $(document).ready(function() {
     var fs_id = $('#fs_id').val();
-    invoke_api_call(api_get, "filesystem/" + fs_id + "/", {}, 
+    Api.get("filesystem/" + fs_id + "/", {}, 
     success_callback = function(filesystem)
     {
       /* FS summary fields */
