@@ -268,6 +268,8 @@ def get_possible_conf_params(klass):
 
 def get_conf_params(obj):
     from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem, ConfParam
+    if hasattr(obj, 'content_type'):
+        obj = obj.downcast()
 
     if isinstance(obj, ManagedOst):
         conf_params_query = obj.ostconfparam_set.all()

@@ -325,6 +325,7 @@ ost_Area_ReadWrite_Data = function(targetId, targetName, sDate, endDate, dataFun
 *****************************************************************************/
 loadOSTSummary = function (fsId)
 {
+  console.log("loadOSTSummary");
   var innerContent = "";
   $('#ostSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
       "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
@@ -334,57 +335,36 @@ loadOSTSummary = function (fsId)
     {
       innerContent = innerContent + 
       "<tr>" +
-      "<td class='greybgcol'>MGS :</td><td class='tblContent greybgcol'>"+filesystem.mgs_hostname+"</td><td>&nbsp;</td><td>&nbsp;</td>" +
+      "<td class='greybgcol'>MGS :</td><td class='tblContent greybgcol'>"+filesystem.mgt.primary_server_name+"</td><td>&nbsp;</td><td>&nbsp;</td>" +
       "</tr>"+
       "<tr>" +
       "<td class='greybgcol'>MDS :</td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.mds_hostname+"</td>" +
+      "<td class='tblContent greybgcol'>"+filesystem.mdts[0].primary_server_name+"</td>" +
       "<td class='greybgcol'>Failover :</td><td class='tblContent greybgcol'>NA</td>" +
       "</tr>"+
       "<tr>" +
       "<td class='greybgcol'>File System :</td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.fsname+"</td>" +
+      "<td class='tblContent greybgcol'>"+filesystem.name+"</td>" +
       "<td>&nbsp;</td>" +
       "<td>&nbsp;</td>" +
       "</tr>"+
       "<tr>" +
-      "<td class='greybgcol'>Total Capacity: </td>" +
+      "<td class='greybgcol'>Size: </td>" +
       "<td class='tblContent greybgcol'>"+filesystem.bytes_total+" </td>" +
-      "<td class='greybgcol'>Total Free:</td>" +
+      "<td class='greybgcol'>Free space:</td>" +
       "<td class='tblContent greybgcol'>"+filesystem.bytes_free+"</td>" +
       "</tr>"+
       "<tr>" +
-      "<td class='greybgcol'>Files Total: </td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.inodes_total+" </td>" +
-      "<td class='greybgcol'>Files Free:</td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.inodes_free+"</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>Standby OST :</td>" +
-      "<td class='tblContent greybgcol'>--</td>" +
-      "<td>&nbsp;</td>" +
-      "<td>&nbsp;</td>" +
+      "<td class='greybgcol'>Max. files: </td>" +
+      "<td class='tblContent greybgcol'>"+filesystem.files_total+" </td>" +
+      "<td class='greybgcol'>Files:</td>" +
+      "<td class='tblContent greybgcol'>"+(filesystem.files_total - filesystem.files_free)+"</td>" +
       "</tr>"+
       "<tr>" +
       "<td class='greybgcol'>Total OSTs:</td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.noofost+" </td>" +
+      "<td class='tblContent greybgcol'>"+filesystem.osts.length+" </td>" +
       "<td>&nbsp;</td><td>&nbsp;</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>Status:</td>";
-
-      if(filesystem.status == "OK" || filesystem.status == "STARTED")
-      {
-        innerContent = innerContent +"<td><div class='tblContent txtleft status_ok'>"+filesystem.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
-      }
-      else if(filesystem.status == "WARNING" || filesystem.status == "RECOVERY")
-      {
-        innerContent = innerContent +"<td><div class='tblContent txtleft status_warning'>"+filesystem.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
-      }
-      else if(filesystem.status == "STOPPED" || filesystem.status == "OFFLINE")
-      {
-        innerContent = innerContent +"<td><div class='tblContent txtleft status_stopped'>"+filesystem.status+"</div></td><td>&nbsp;</td><td>&nbsp;</td></tr>";
-      }
+      "</tr>"
 
       $('#ostSummaryTbl').html(innerContent);
     });

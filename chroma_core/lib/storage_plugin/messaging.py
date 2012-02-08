@@ -195,7 +195,7 @@ class PluginResponse(object):
                 else:
                     if id == request_id:
                         response_data.append(body['data'])
-                        log.warning("Got response for request %s" % request_id)
+                        log.info("Got response for request %s" % request_id)
                     else:
                         log.warning("Dropping unexpected response %s on %s" % (id, response_routing_key))
                 finally:

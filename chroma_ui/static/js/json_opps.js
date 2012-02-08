@@ -85,7 +85,7 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
     conf_params = config_json;
 
   var api_params = {
-      "fsname":fsname,
+      "name":fsname,
       "mgt_id":mgt_id,
       "mgt_lun_id":mgt_lun_id,
       "mdt_lun_id":mdt_lun_id,

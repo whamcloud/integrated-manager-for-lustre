@@ -5,17 +5,15 @@
     success_callback = function(filesystem)
     {
       /* FS summary fields */
-      $('#bytes_used').html(filesystem.bytes_used);
+      $('#bytes_used').html(filesystem.bytes_total - filesystem.bytes_free);
       $('#bytes_total').html(filesystem.bytes_total);
-      $('#inodes_used').html(filesystem.inodes_used);
-      $('#inodes_total').html(filesystem.inodes_total);
-      $('#oss_count').html(filesystem.noofoss);
-      $('#ost_count').html(filesystem.noofost);
-      $('#mgs_name').html(filesystem.mgs_hostname);
-      $('#mds_name').html(filesystem.mds_hostname);
-      $('#fs_status').html(filesystem.status);
+      $('#inodes_used').html(filesystem.files_total - filesystem.files_free);
+      $('#inodes_total').html(filesystem.files_total);
+      $('#ost_count').html(filesystem.osts.length);
+      $('#mgs_name').html(filesystem.mgt.primary_server_name);
+      $('#mds_name').html(filesystem.mdts[0].primary_server_name);
       $('#fs_alerts').html(alert_indicator_large_markup(filesystem.id, filesystem.content_type_id));
-      $('#fs_name').html(filesystem.fsname);
+      $('#fs_name').html(filesystem.name);
 
       // Config param dialog
       populate_conf_param_table(filesystem.conf_params, "config_param_table");
@@ -72,9 +70,6 @@
 <div style='float:left;'>
   <table class='fs'>
     <tr>
-      <th>Status:</th><td id='fs_status'></td>
-    </tr>
-    <tr>
       <th>MGS:</th><td id='mgs_name'></td>
     </tr>
     <tr>
@@ -82,9 +77,6 @@
     </tr>
     <tr>
       <th>No. OST:</th><td id='ost_count'></td>
-    </tr>
-    <tr>
-      <th>No. OSS:</th><td id='oss_count'></td>
     </tr>
     <tr>
       <th></th><td id='fs_alerts'></td>

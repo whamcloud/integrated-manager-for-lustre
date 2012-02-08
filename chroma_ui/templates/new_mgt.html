@@ -1,27 +1,39 @@
 <script>
   $(document).ready(function() {
-    //cm-json_table_data => load existing MGT list. 
-    LoadMGTConfiguration_MGTConf();
-
     // List Existing MGT JQuery Table init()
     var oMgtConfiguration = $('#mgt_configuration').dataTable( {
+      bServerSide: true,
       bPaginate: false,
       bFilter: false,
       bInfo: false,
-      "bProcessing": true,
+      sAjaxSource: 'target/',
+      fnServerData: function(url, data, callback, settings) {
+        datatables_api_call(url, data, function(data) {
+          $.each(data.aaData, function(i, mgt) {
+            var fs_names = [];
+            $.each(mgt.filesystems, function(i, fs) {fs_names.push(fs.name);});
+            mgt.fs_names = fs_names.join(", ")
+            mgt.primary_server_name = target_dialog_link(mgt)
+            mgt.state_transitions = stateTransitionButtons(mgt)
+            mgt.notification_icons = notification_icons_markup(mgt.id, mgt.content_type_id)
+          });
+          callback(data);
+        }, settings, {kind: 'MGT'});
+      },
+      bProcessing: true,
       "bJQueryUI": true,
       "bDestory": true,
       "oLanguage": {
           "sEmptyTable": "No MGT to display"
       },
       "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtcenter', bSortable: false},
-        { "sClass": 'txtleft', bSortable: false}
+        { "sClass": 'txtleft', mDataProp: 'fs_names'},
+        { "sClass": 'txtleft', mDataProp: 'lun_name' },
+        { "sClass": 'txtleft', mDataProp: 'primary_server_name'},
+        { "sClass": 'txtleft', mDataProp: 'failover_server_name'},
+        { "sClass": 'txtleft', mDataProp: 'active_host_name'},
+        { "sClass": 'txtcenter', bSortable: false, mDataProp: 'state_transitions'},
+        { "sClass": 'txtleft', bSortable: false, mDataProp: 'notification_icons'}
       ]
     } );
 
@@ -37,7 +49,7 @@
       CreateMGT(fvc_get_value($('#new_mgt_chooser')), function() {
         console.log('callback');
         fvc_clear($('#new_mgt_chooser'));
-        LoadMGTConfiguration_MGTConf();
+        $('#mgt_configuration').dataTable().fnDraw();
       })
     });
     

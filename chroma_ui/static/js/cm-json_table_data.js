@@ -12,38 +12,6 @@ var ost_index = 0;
 var filesystemId="";
 
 
-/******************************************************************
-* Function name - LoadFSList_FSList()
-* Param - none
-* Return - none
-* Used in - File System list (lustre_fs_configuration.html)
-*******************************************************************/
-function LoadFSList_FSList()
-{
-  invoke_api_call(api_get, "filesystem", "", 
-  success_callback = function(data)
-  {
-    var response = data;
-    var fsName;
-    $('#fs_list').dataTable().fnClearTable();
-    $.each(response, function(resKey, resValue)
-    {
-      fsName = "<a href='#filesystems_edit_" + resValue.fsid +"' class='address_link'>" + resValue.fsname + "</a>";
-      $('#fs_list').dataTable().fnAddData ([
-        fsName,
-        resValue.mgs_hostname,
-        resValue.mds_hostname,
-        resValue.noofoss,
-        resValue.noofost,
-        resValue.kbytesused,
-        resValue.kbytesfree,
-        CreateActionLink(resValue.id, resValue.content_type_id, resValue.available_transitions),
-        notification_icons_markup(resValue.id, resValue.content_type_id)
-        ]);
-    });
-  });
-}
-
 function LoadTargets_EditFS(fs_id)
 {
   invoke_api_call(api_get, "target/", {filesystem_id : fs_id, limit: 0}, 
@@ -199,41 +167,4 @@ function LoadUnused_VolumeConf()
     });
   });
 }
-
-/******************************************************************/
-//Function name - LoadMGTConfiguration_MGTConf()
-//Param - none
-//Return - none
-//Used in - MGT Configuration (new_mgt.html)
-/******************************************************************/
-
-function LoadMGTConfiguration_MGTConf()
-{
-  invoke_api_call(api_get, "target/", {kind: 'MGT', limit: 0}, 
-  success_callback = function(data)
-  {
-    console.log(data);
-    var mgt_list = data.objects
-    console.log(mgt_list);
-    console.log(mgt_list.length);
-    $('#mgt_configuration').dataTable().fnClearTable();
-    $.each(mgt_list, function(i, mgt)
-    {
-          var fs_names = [];
-          $.each(mgt.filesystems, function(i, fs) {fs_names.push(fs.name);});
-
-          $('#mgt_configuration').dataTable().fnAddData ([
-            fs_names.join(", "),
-            mgt.lun_name,
-            target_dialog_link(mgt.id, mgt.primary_server_name),
-            mgt.failover_server_name,
-            mgt.active_host_name,
-            stateTransitionButtons(mgt),
-            notification_icons_markup(mgt.id, mgt.content_type_id)
-          ]);
-    });
-  })
-}
-
-
 

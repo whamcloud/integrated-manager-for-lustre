@@ -144,15 +144,16 @@ class ObjectSummary(RequestHandler):
             except klass.DoesNotExist:
                 continue
 
-            from chroma_core.models import ManagedHost, ManagedTarget
+            from chroma_core.models import ManagedHost, ManagedTarget, ManagedFilesystem
             if isinstance(instance, ManagedHost):
                 import chroma_api.host
                 resource_uri = chroma_api.host.HostResource().get_resource_uri(instance)
             elif isinstance(instance, ManagedTarget):
                 import chroma_api.target
                 resource_uri = chroma_api.target.TargetResource().get_resource_uri(instance)
-            else:
-                resource_uri = "TODO"
+            elif isinstance(instance, ManagedFilesystem):
+                import chroma_api.filesystem
+                resource_uri = chroma_api.filesystem.FilesystemResource().get_resource_uri(instance)
 
             result.append({'id': o['id'],
                            'content_type_id': o['content_type_id'],

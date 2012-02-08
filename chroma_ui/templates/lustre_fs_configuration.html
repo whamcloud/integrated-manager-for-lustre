@@ -1,11 +1,8 @@
 <script type='text/javascript'>
   $(document).ready(function() {
-    //cm-json_table_data => load existing file system list
-    LoadFSList_FSList();
-    
-    $('#name').keyup( function() { oTable.fnDraw(); } );
-    // List File system JQuery Data Table init()
       var oTable = $('#fs_list').dataTable( {
+        bServerSide: true,
+        sAjaxSource: 'filesystem/',
         "bProcessing": true,
         "bJQueryUI": true,
         "bAutoWidth":false,
@@ -15,19 +12,36 @@
         bPaginate: false,
         bFilter: false,
         bInfo: false,
+        fnServerData: function(url, data, callback, settings) {
+          datatables_api_call(url, data, function(data) {
+            $.each(data.aaData, function(i, row) {
+              if (row.mdts.length) {
+                mdt_hostname = row.mdts[0].primary_server_name
+              }
+              row.name = "<a href='#filesystems_edit_" + row.id +"' class='address_link'>" + row.name + "</a>";
+              row.mgs_hostname = row.mgt.primary_server_name
+              row.mds_hostname = 
+              row.ost_count = row.osts.length
+              row.bytes_total = formatBytes(row.bytes_total)
+              row.bytes_free = formatBytes(row.bytes_free)
+              row.state_transitions = stateTransitionButtons(row)
+              row.notification_icons = notification_icons_markup(row)
+            });
+            callback(data);
+          }, settings, {});
+        },
         "aoColumns": [
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtright' },
-          { "sClass": 'txtright' },
-          { "sClass": 'txtright' },
-          { "sClass": 'txtright' },
-          { "sClass": 'txtcenter', bSortable: false},
-          { "sClass": 'txtleft', bSortable: false}
+          { "sClass": 'txtleft', mDataProp: 'name'},
+          { "sClass": 'txtleft', mDataProp: 'mgs_hostname', bSortable: false},
+          { "sClass": 'txtleft', mDataProp: 'mds_hostname', bSortable: false},
+          { "sClass": 'txtright', mDataProp: 'ost_count', bSortable: false},
+          { "sClass": 'txtright', mDataProp: 'bytes_total', bSortable: false},
+          { "sClass": 'txtright', mDataProp: 'bytes_free', bSortable: false},
+          { "sClass": 'txtright', mDataProp: 'state_transitions', bSortable: false},
+          { "sClass": 'txtleft', mDataProp: 'notification_icons', bSortable: false}
         ]
       });
-    //Create New FS button click handler      
+
     $('#create_new_fs').button();
   });
 </script>
@@ -43,14 +57,12 @@
       <th width="10%">Management server</th>
       <th width="10%">Metadata server</th>
       <th width="9%">No. OSS</th>
-      <th width="9%">No. OST</th>
-      <th width="5%">Total</th>
+      <th width="5%">Size</th>
       <th width="5%">Free</th>
       <th width="1%"></th>
       <th width="1%"></th>
     </tr>
   </thead>
-  <tbody id="example_content">
-    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  <tbody>
   </tbody>
 </table>

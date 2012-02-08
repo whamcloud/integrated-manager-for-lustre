@@ -53,9 +53,6 @@ function datatables_api_call(url, data, callback, settings, kwargs) {
   var kwargs = kwargs;
   if (kwargs == undefined) {
     kwargs = {}
-  } else {
-    console.log('kwargs passed');
-    console.log(kwargs);
   }
     
   /* Copy datatables args into our dict */
@@ -65,15 +62,18 @@ function datatables_api_call(url, data, callback, settings, kwargs) {
     });
   }
 
-  /* Rename from datatables to tastypie */
-  kwargs.limit = kwargs.iDisplayLength
+  /* Rename pagination params from datatables to tastypie */
+  if (kwargs.iDisplayLength == -1) {
+    kwargs.limit = 0
+  } else {
+    kwargs.limit = kwargs.iDisplayLength
+  }
+  delete kwargs.iDisplayLength
+
   kwargs.offset = kwargs.iDisplayStart
+  delete kwargs.iDisplayStart
 
-  /*$.each(data, function(i, d) {console.log(d.name + " : " + d.value)})*/
-
-  console.log('datatables_api_call ' + url);
   invoke_api_call(api_get, url, kwargs, success_callback = function(data) {
-    console.log('datatables_api_call success');
     var datatables_data = {}
     datatables_data.aaData = data.objects;
     datatables_data.iTotalRecords = data.meta.total_count
@@ -242,4 +242,47 @@ function removeBlankAttributes(obj) {
     }
   });
   return obj;
+}
+
+
+/* http://snipplr.com/view/5945/ */
+function formatNumber(number, decimals, dec_point, thousands_sep) {
+    // http://kevin.vanzonneveld.net
+    // +   original by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
+    // +   improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+    // +     bugfix by: Michael White (http://crestidg.com)
+    // +     bugfix by: Benjamin Lupton
+    // +     bugfix by: Allan Jensen (http://www.winternet.no)
+    // +    revised by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)    
+    // *     example 1: number_format(1234.5678, 2, '.', '');
+    // *     returns 1: 1234.57     
+ 
+    var n = number, c = isNaN(decimals = Math.abs(decimals)) ? 2 : decimals;
+    var d = dec_point == undefined ? "," : dec_point;
+    var t = thousands_sep == undefined ? "." : thousands_sep, s = n < 0 ? "-" : "";
+    var i = parseInt(n = Math.abs(+n || 0).toFixed(c)) + "", j = (j = i.length) > 3 ? j % 3 : 0;
+ 
+    return s + (j ? i.substr(0, j) + t : "") + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) + (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "");
+}
+
+/* http://snipplr.com/view/5949/ */
+function formatBytes(bytes) {
+  if (bytes == null || bytes == undefined) {
+    return bytes;
+  }
+
+	if (bytes >= 1073741824) {
+	     bytes = formatNumber(bytes / 1073741824, 2, '.', '') + 'GB';
+	} else { 
+		if (bytes >= 1048576) {
+     		bytes = formatNumber(bytes / 1048576, 2, '.', '') + 'MB';
+   	} else { 
+			if (bytes >= 1024) {
+    		bytes = formatNumber(bytes / 1024, 0) + 'KB';
+  		} else {
+    		bytes = formatNumber(bytes, 0) + 'b';
+			};
+ 		};
+	};
+  return bytes;
 }

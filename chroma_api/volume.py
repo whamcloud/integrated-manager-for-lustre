@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from chroma_core.models import Lun, LunNode, ManagedTargetMount
+from chroma_core.models import Lun, LunNode
 
 from requesthandler import RequestHandler
 from chroma_api.requesthandler import APIResponse
@@ -39,20 +39,22 @@ class Handler(RequestHandler):
             # Multiple resource -- list of volumes
             volumes = request.data
 
-        def assert_lunnode_unused(lun_node):
+        def assert_lun_unused(lun_id):
             try:
-                tm = lun_node.managedtargetmount_set.get()
-                raise AssertionError("Volume %s, Node %s is in use by target %s" % (lun.id, lun_node.id, tm.target))
-            except ManagedTargetMount.DoesNotExist:
-                pass
+                Lun.get_unused_luns().get(id = lun.id)
+            except Lun.DoesNotExist:
+                raise AssertionError("Volume %s is in use!")
 
         for volume in volumes:
+            # Check that we're not trying to modify a Lun that is in
+            # used by a target
+            assert_lun_unused(volume['id'])
+
             # Apply use,primary values from the request
             for lun_node_params in volume['nodes']:
                 primary, use = (lun_node_params['primary'], lun_node_params['use'])
 
                 lun_node = get_object_or_404(LunNode, id = lun_node_params['id'])
-                assert_lunnode_unused(lun_node)
                 lun_node.primary = primary
                 lun_node.use = use
                 lun_node.save()
@@ -61,7 +63,6 @@ class Handler(RequestHandler):
             from django.db.models import Q
             lun = get_object_or_404(Lun, id = volume['id'])
             for lun_node in lun.lunnode_set.filter(~Q(id__in = [n['id'] for n in volume['nodes']])):
-                assert_lunnode_unused(lun_node)
                 lun_node.primary = False
                 lun_node.use = False
                 lun_node.save()

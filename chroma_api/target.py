@@ -11,15 +11,13 @@ from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Command
-from chroma_core.models import FilesystemMember
 from chroma_core.lib.state_manager import StateManager
-import chroma_core.lib.conf_param
 
 import tastypie.http as http
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_api.utils import custom_response, StatefulModelResource
+from chroma_api.utils import custom_response, ConfParamResource
 
 # Some lookups for the three 'kind' letter strings used
 # by API consumers to refer to our target types
@@ -30,7 +28,7 @@ KLASS_TO_KIND = dict([(v, k) for k, v in KIND_TO_KLASS.items()])
 KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.items()])
 
 
-class TargetResource(StatefulModelResource):
+class TargetResource(ConfParamResource):
     filesystems = fields.ListField()
     filesystem_id = fields.IntegerField()
     filesystem_name = fields.CharField()
@@ -40,8 +38,6 @@ class TargetResource(StatefulModelResource):
     primary_server_name = fields.CharField()
     failover_server_name = fields.CharField()
     active_host_name = fields.CharField()
-
-    conf_params = fields.DictField()
 
     def content_type_id_to_kind(self, id):
         if not hasattr(self, 'CONTENT_TYPE_ID_TO_KIND'):
@@ -61,12 +57,6 @@ class TargetResource(StatefulModelResource):
         return [
             url(r"^(?P<resource_name>%s)/(?P<pk>\d+)/resource_graph/$" % self._meta.resource_name, self.wrap_view('get_resource_graph'), name="api_get_resource_graph"),
         ]
-
-    def dehydrate_conf_params(self, bundle):
-        if isinstance(bundle.obj, FilesystemMember):
-            return chroma_core.lib.conf_param.get_conf_params(bundle.obj)
-        else:
-            return None
 
     def dehydrate_filesystems(self, bundle):
         if hasattr(bundle.obj, 'managedmgs'):
@@ -90,7 +80,7 @@ class TargetResource(StatefulModelResource):
         return bundle.obj.get_lun().get_label()
 
     def dehydrate_primary_server_name(self, bundle):
-        return bundle.obj.primary_server().pretty_name(),
+        return bundle.obj.primary_server().pretty_name()
 
     def dehydrate_failover_server_name(self, bundle):
         try:
@@ -136,23 +126,6 @@ class TargetResource(StatefulModelResource):
 
         return objects
 
-    def obj_update(self, bundle, request, **kwargs):
-        bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
-        if not 'conf_params' in bundle.data:
-            super(TargetResource, self).obj_update(bundle, request, **kwargs)
-
-        # TODO: validate all the conf_params before trying to set any of them
-        try:
-            conf_params = bundle.data['conf_params']
-            for k, v in conf_params.items():
-                chroma_core.lib.conf_param.set_conf_param(bundle.obj, k, v)
-        except KeyError:
-            # TODO: pass in whole objects every time so that I can legitimately
-            # validate the presence of this field
-            pass
-
-        return bundle
-
     def obj_create(self, bundle, request = None, **kwargs):
         kind = bundle.data['kind']
         if not kind in KIND_TO_KLASS:
@@ -180,7 +153,7 @@ class TargetResource(StatefulModelResource):
         with transaction.commit_on_success():
             for lun_id in lun_ids:
                 target_klass = KIND_TO_KLASS[kind]
-                target = target_klass.create_from_lun(lun_id, **create_kwargs)
+                target = target_klass.create_for_lun(lun_id, **create_kwargs)
                 targets.append(target)
 
         message = "Creating %s" % kind

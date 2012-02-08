@@ -92,8 +92,7 @@ urlpatterns = patterns('',
     (r'^', include(chroma_api.host.HostTestResource().urls)),
 
     # chroma_api.filesystem
-    (r'^filesystem/$', CsrfResource(chroma_api.filesystem.FilesystemHandler)),
-    (r'^filesystem/(?P<id>\d+)/$', CsrfResource(chroma_api.filesystem.FilesystemHandler)),
+    (r'^', include(chroma_api.filesystem.FilesystemResource().urls)),
 
     # chroma_api.target
     (r'^', include(chroma_api.target.TargetResource().urls)),

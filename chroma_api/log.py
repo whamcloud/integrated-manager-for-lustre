@@ -8,22 +8,16 @@ import datetime
 from chroma_core.models.log import Systemevents
 
 from tastypie.resources import ModelResource
-from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 
 
 class LogResource(ModelResource):
-    host_name = fields.CharField()
-    service = fields.CharField()
-    date = fields.DateTimeField()
-
     def dehydrate_message(self, bundle):
         return nid_finder(bundle.obj.message)
 
     class Meta:
         queryset = Systemevents.objects.all()
-        exclude = ['syslogtag', 'devicereportedtime', 'fromhost']
         filtering = {
                 'severity': ['exact'],
                 'fromhost': ['exact', 'startswith'],
