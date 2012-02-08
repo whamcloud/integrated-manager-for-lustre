@@ -97,8 +97,9 @@ class ManagedTarget(StatefulObject):
 
         from django.db import transaction
         with transaction.commit_on_success():
-            self.active_mount = active_mount
-            self.save()
+            # Doing an .update instead of .save() to avoid potentially
+            # writing stale 'state' attribute (fixing HYD-619)
+            ManagedTarget.objects.filter(pk = self.pk).update(active_mount = active_mount)
 
             from chroma_core.models import TargetFailoverAlert, TargetOfflineAlert
             TargetOfflineAlert.notify(self, active_mount == None)
