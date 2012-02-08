@@ -6,6 +6,18 @@ import os
 import re
 
 
+def list_capabilities():
+    """Emit a list of actions this agent installation is capable of
+       performing.  Determined at runtime based on the plugins it finds."""
+    capabilities = []
+
+    from hydra_agent.plugins import find_plugins
+    for plugin in find_plugins():
+        capabilities.extend(plugin.capabilities())
+
+    return capabilities
+
+
 def normalize_device(device):
     """Try to convert device paths to their /dev/disk/by-id equivalent where
         possible, so that the server can use this is the canonical identifier

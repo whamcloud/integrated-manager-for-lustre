@@ -21,7 +21,12 @@ _instances = {}
 
 
 class AgentPlugin(object):
-    pass
+    def capabilities(self):
+        """Returns a list of capabilities advertised by this plugin."""
+        # As a ridiculous hack, the default here is to simply return
+        # the parent module name (e.g. manage_targets).  This can
+        # be overridden by subclasses if the default is nonsensical.
+        return [self.__class__.__module__.split('.')[-1]]
 
 
 def scan_plugins(paths=()):

@@ -5,9 +5,9 @@
 import os
 import glob
 
-from utils import Mounts, normalize_device
+from utils import Mounts, normalize_device, list_capabilities
 from hydra_agent.actions.lnet_scan import lnet_status
-from hydra_agent import shell
+from hydra_agent import shell, version
 from hydra_agent.plugins import AgentPlugin
 try:
     from hydra_agent.actions.manage_targets import get_resource_locations
@@ -67,6 +67,8 @@ def update_scan(args = None):
     lnet_loaded, lnet_up = lnet_status()
 
     return {
+            "agent_version": version(),
+            "capabilities": list_capabilities(),
             "metrics": metrics,
             "lnet_loaded": lnet_loaded,
             "lnet_up": lnet_up,
