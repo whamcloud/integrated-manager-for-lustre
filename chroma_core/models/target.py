@@ -334,10 +334,6 @@ class DeleteTargetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models.target_mount import ManagedTargetMount
-
-        for tm in ManagedTargetMount.objects.filter(target__id = kwargs['target_id']):
-            ManagedTargetMount.delete(tm.id)
         ManagedTarget.delete(kwargs['target_id'])
 
 
