@@ -65,7 +65,7 @@ for base_file in $(find $RPM_BUILD_ROOT -type f -name '*.py'); do
       continue 2
     fi
   done
-  echo ${install_file%.py*}.py* >> base.files
+  echo "${install_file%.py*}.py*" >> base.files
 done
 
 %clean
