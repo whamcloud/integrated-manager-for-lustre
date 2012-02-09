@@ -133,7 +133,6 @@ INSTALLED_APPS = (
     'south',
     'r3d',
     'djcelery',
-    'pagination',
     'chroma_core',
     'chroma_api',
     'chroma_ui',
@@ -159,7 +158,6 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.transaction.TransactionMiddleware',
-    'pagination.middleware.PaginationMiddleware',
     'middleware.ExceptionPrinterMiddleware',
 )
 if 'debug_toolbar' in INSTALLED_APPS:
