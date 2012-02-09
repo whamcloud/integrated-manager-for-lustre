@@ -25,7 +25,7 @@ class Logs:
         #Click filter button
         self.log_filter_btn.click()
         # FIXME: need to add a generic function to wait for an action
-        sleep(2)
+        sleep(5)
 
     def click_log_host_list(self, index):
         #Click severity select dropdown option
@@ -35,10 +35,10 @@ class Logs:
         sleep(2)
 
     def get_table_data(self):
-        """Returns text of first <td> tag of events table
+        """Returns text of first <td> tag of logs table
         """
 
-        td = self.driver.find_element_by_xpath("/html/body/div[2]/div[3]/div/table/tbody/tr[2]/td/fieldset/div/table/tbody/tr/td")
+        td = self.driver.find_element_by_xpath("id('all_log_content')/tbody/tr/td")
         return td.text
 
     def get_host_list_length(self):
@@ -62,5 +62,5 @@ class Logs:
         """Returns host name on first row from log table
         """
 
-        host_name = self.driver.find_element_by_xpath("/html/body/div[2]/div[3]/div/table/tbody/tr[2]/td/fieldset/div/table/tbody/tr/td[2]")
+        host_name = self.driver.find_element_by_xpath("id('all_log_content')/tbody/tr/td[2]")
         return host_name.text

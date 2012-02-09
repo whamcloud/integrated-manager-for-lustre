@@ -12,7 +12,7 @@ class Logsdata(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Logs'])
+        page_navigation.click(page_navigation.links['Logs'])
 
         # Calling base_layout
         logs_page = Logs(self.driver)
@@ -27,8 +27,6 @@ class Logsdata(SeleniumBaseTestCase):
 
             host_name_from_dropdown = logs_page.get_host_value_from_dropdown()
 
-            host_name_from_table = logs_page.get_host_value_from_table_data()
-
             # Initialise the constants class
             constants = Constants()
             self.NO_DATATABLE_DATA = constants.get_static_text('no_data_for_datable')
@@ -36,6 +34,7 @@ class Logsdata(SeleniumBaseTestCase):
             if table_data == self.NO_DATATABLE_DATA:
                 self.assertEqual(table_data, self.NO_DATATABLE_DATA)
             else:
+                host_name_from_table = logs_page.get_host_value_from_table_data()
                 self.assertEqual(host_name_from_dropdown, host_name_from_table)
 
 import unittest

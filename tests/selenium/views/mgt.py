@@ -22,7 +22,7 @@ class Mgt:
         mgtchooser = self.fvc_selected.__getitem__(0)
         mgtchooser.click()
         sleep(2)
-        mgt_rows = self.driver.find_elements_by_xpath("/html/body/div[2]/div[3]/div/div[2]/div[2]/div[2]/div/table/tbody/tr/td")
+        mgt_rows = self.driver.find_elements_by_xpath("id('new_mgt_chooser_table')/tbody/tr/td")
         tr = mgt_rows.__getitem__(0)
         tr.click()
 

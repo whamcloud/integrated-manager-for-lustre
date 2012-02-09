@@ -15,7 +15,7 @@ class Volumes:
         self.WAIT_TIME = constants.wait_time
 
         # Initialise all elements on volumes tab view
-        self.volume_rows = self.driver.find_elements_by_xpath("/html/body/div[2]/div[3]/div/div[3]/div/table/tbody/tr")
+        self.volume_rows = self.driver.find_elements_by_xpath("id('volume_configuration_content')/tr")
         self.volume_error_dialog = self.driver.find_element_by_id('volume_error_dialog')
         self.error_ok_button = self.driver.find_element_by_id('error_ok_button')
 

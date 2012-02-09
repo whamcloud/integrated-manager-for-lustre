@@ -1,6 +1,6 @@
 # This file containts global parameters for the test
 
-CHROMA_URL = 'http://115.113.226.194:9501/dashboard/'
+CHROMA_URL = 'http://115.113.226.194:9501/ui/'
 #TEST_BROWSER = 'Firefox'
 
 TEST_BROWSER = 'Chrome'

@@ -51,7 +51,7 @@ class FileSystem:
         """Select an MGT"""
         mgtchooser = self.fvc_selected.__getitem__(0)
         mgtchooser.click()
-        mgt_rows = self.driver.find_elements_by_xpath("/html/body/div[2]/div[3]/div/div/table/tbody/tr[2]/td/div[2]/div/div[2]/div/table/tbody/tr")
+        mgt_rows = self.driver.find_elements_by_xpath("id('mgt_chooser_table')/tbody/tr")
         tr = mgt_rows.__getitem__(0)
         tr.click()
 
@@ -59,13 +59,13 @@ class FileSystem:
         """Select an MDT"""
         mdtchooser = self.fvc_selected.__getitem__(1)
         mdtchooser.click()
-        mdt_rows = self.driver.find_elements_by_xpath("/html/body/div[2]/div[3]/div/div/table/tbody/tr[3]/td/div[2]/div/div[2]/div/table/tbody/tr")
+        mdt_rows = self.driver.find_elements_by_xpath("id('mdt_chooser_table')/tbody/tr")
         tr = mdt_rows.__getitem__(0)
         tr.click()
 
     def select_ost(self):
         """Select an OST"""
-        ost_rows = self.driver.find_elements_by_xpath("/html/body/div[2]/div[3]/div/div/table/tbody/tr[4]/td/div[2]/div/div[2]/div/table/tbody/tr")
+        ost_rows = self.driver.find_elements_by_xpath("id='ost_chooser_table']/tbody/tr")
         tr = ost_rows.__getitem__(0)
         tr.click()
 
@@ -76,11 +76,11 @@ class FileSystem:
 
     def new_file_system_name_displayed(self):
         """Returns whether newly created file system is listed or not"""
-        fs_list = self.driver.find_elements_by_xpath("/html/body/div[2]/div[3]/div/div/div/table/tbody/tr/td/a")
+        fs_list = self.driver.find_elements_by_xpath("id('example_content')/tr/td/a")
         fs_name = ''
         if len(fs_list) > 0:
             for i in range(len(fs_list)):
-                if fs_list.__getitem__(i).text == 'testfs01':
+                if fs_list.__getitem__(i).text == 'indifs01':
                     fs_name = fs_list.__getitem__(i).text
 
         return fs_name

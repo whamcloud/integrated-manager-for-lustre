@@ -32,18 +32,16 @@ class Events:
         # FIXME: need to add a generic function to wait for an action
         sleep(2)
 
-    #TODO: Handle negative tests, error messages
-
     def get_table_data(self):
         """Returns text of first <td> tag of events table
         """
 
-        td = self.driver.find_element_by_xpath("/html/body/div[2]/div[3]/div/table/tbody/tr[2]/td/form/fieldset/div/table/tbody/tr/td")
+        td = self.driver.find_element_by_xpath("id('events_table')/tbody/tr/td")
         return td.text
 
     def get_severity_value(self):
         """Returns text of first severity value from list in events table
         """
 
-        td = self.driver.find_element_by_xpath("/html/body/div[2]/div[3]/div/table/tbody/tr[2]/td/form/fieldset/div/table/tbody/tr/td[2]")
+        td = self.driver.find_element_by_xpath("id('events_table')/tbody/tr/td[2]")
         return td.text

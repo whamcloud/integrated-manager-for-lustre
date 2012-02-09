@@ -12,7 +12,7 @@ class Alertsdata(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Alerts'])
+        page_navigation.click(page_navigation.links['Alerts'])
 
         # Calling Alerts
         alerts_page = Alerts(self.driver)
@@ -33,7 +33,7 @@ class Alertsdata(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Alerts'])
+        page_navigation.click(page_navigation.links['Alerts'])
 
         # Calling Alerts
         alerts_page = Alerts(self.driver)

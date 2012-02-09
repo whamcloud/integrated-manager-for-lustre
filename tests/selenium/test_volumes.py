@@ -12,9 +12,9 @@ class Volumesdata(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Configure'])
+        page_navigation.click(page_navigation.links['Configure'])
 
-        page_navigation.click(page_navigation._links['Volumes'])
+        page_navigation.click(page_navigation.links['Volumes'])
         sleep(2)
 
         # Calling volumes
@@ -27,9 +27,9 @@ class Volumesdata(SeleniumBaseTestCase):
 
         # Calling navigation
         page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation._links['Configure'])
+        page_navigation.click(page_navigation.links['Configure'])
 
-        page_navigation.click(page_navigation._links['Volumes'])
+        page_navigation.click(page_navigation.links['Volumes'])
         sleep(2)
 
         # Calling volumes
