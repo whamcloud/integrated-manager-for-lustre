@@ -3,7 +3,7 @@ import os
 import hydra_agent.audit
 from hydra_agent.audit.local import LocalAudit
 from hydra_agent.audit.node import NodeAudit
-from hydra_agent.audit.lustre import LnetAudit, MdsAudit, MdtAudit, MgsAudit
+from hydra_agent.audit.lustre import LnetAudit, MdtAudit, MgsAudit
 
 
 class TestAuditScanner(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestAuditScanner(unittest.TestCase):
         """hydra_agent.audit.local_audit_classes() should return a list of classes."""
         list = [cls for cls in
                 hydra_agent.audit.local_audit_classes(self.test_root)]
-        self.assertEqual(list, [LnetAudit, MdsAudit, MdtAudit, MgsAudit, NodeAudit])
+        self.assertEqual(list, [LnetAudit, MdtAudit, MgsAudit, NodeAudit])
 
 
 class TestLocalAudit(unittest.TestCase):
@@ -26,4 +26,4 @@ class TestLocalAudit(unittest.TestCase):
 
     def test_localaudit_audit_classes(self):
         """LocalAudit.audit_classes() should return a list of classes."""
-        self.assertEqual(self.audit.audit_classes(), [LnetAudit, MdsAudit, MdtAudit, MgsAudit, NodeAudit])
+        self.assertEqual(self.audit.audit_classes(), [LnetAudit, MdtAudit, MgsAudit, NodeAudit])

@@ -1,0 +1,4 @@
+fsname: lustre
+flags: 0x0     gen: 8
+lustre-MDT0000
+lustre-OST0000

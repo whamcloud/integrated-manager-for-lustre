@@ -1,0 +1,11 @@
+LDLM pool state (ldlm-pool-mds-lustre-MDT0000_UUID-1):
+  SLV: 1842228000
+  CLV: 0
+  LVF: 1
+  GSP: 1%
+  GP:  512
+  GR:  0
+  CR:  0
+  GS:  0
+  G:   1
+  L:   51173

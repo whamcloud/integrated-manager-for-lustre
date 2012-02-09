@@ -1,0 +1,3 @@
+nid                      status alive refs peer  rtr   max    tx   min
+0@lo                         up     0    3    0    0     0     0     0
+10.10.4.208@tcp              up    -1    1    8    0   256   256   256
