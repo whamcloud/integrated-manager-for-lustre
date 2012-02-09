@@ -6,7 +6,6 @@
 
 {% block scripts %}
 
-<script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_create.js"></script>
@@ -50,7 +49,9 @@ $(document).ready(function() {
         var fs_id = parts[2];
         $("#tabs").tabs('select', '#' + parts[0]);
         $('#filesystems').empty();
-        $('#filesystems').load('/ui/configure/filesystems_edit/?fs_id=' + fs_id);
+        $('#filesystems').load('/ui/configure/filesystems_edit/', function() {
+          loadFilesystem(fs_id);
+        });
       }
     } else {
       $("#tabs").tabs('select', '#' + parts[0]);

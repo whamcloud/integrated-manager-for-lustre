@@ -4,14 +4,11 @@
       <link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
       {% endblock %}  
       {% block scripts %}
-      <script type="text/javascript" src="{{STATIC_URL}}js/custom_dashboard.js"></script>
-      <script type="text/javascript" src="{{STATIC_URL}}js/custom_filesystem.js"></script>
-      <script type="text/javascript" src="{{STATIC_URL}}js/custom_oss.js"></script>
-      <script type="text/javascript" src="{{STATIC_URL}}js/custom_ost.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/dashboard.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/dashboard_filesystem.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/dashboard_oss.js"></script>
+      <script type="text/javascript" src="{{STATIC_URL}}js/dashboard_ost.js"></script>
       <script type="text/javascript" src="{{STATIC_URL}}js/graph_loader.js"></script>
-      <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
-      <!-- exporting.js added for exporting graphs -->
-      <!--<script type="text/javascript" language="javascript" src="{{STATIC_URL}}js/exporting.js"></script> -->
       <script id="source" language="javascript" type="text/javascript">
       $(document).ready(function() {
         $('#dashboard_menu').addClass('active');

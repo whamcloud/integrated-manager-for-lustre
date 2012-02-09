@@ -167,65 +167,62 @@ def installation(request):
 
 
 def configure(request):
-    return render_to_response("configuration_home.html",
+    return render_to_response("configuration.html",
             RequestContext(request, {}))
 
 
 def filesystem_tab(request):
-    return render_to_response("lustre_fs_configuration.html",
+    return render_to_response("filesystem_list.html",
             RequestContext(request, {}))
 
 
 def mgt_tab(request):
-    return render_to_response("new_mgt.html",
+    return render_to_response("mgt_tab.html",
             RequestContext(request, {}))
 
 
 def volume_tab(request):
-    return render_to_response("volume_configuration.html",
+    return render_to_response("volume_tab.html",
             RequestContext(request, {}))
 
 
 def server_tab(request):
-    return render_to_response("server_configuration.html",
+    return render_to_response("server_tab.html",
             RequestContext(request, {}))
 
 
 def storage_tab(request):
-    return render_to_response("storage_configuration.html",
+    return render_to_response("storage_tab.html",
             RequestContext(request, {}))
 
 
 def filesystem_create_tab(request):
-    return render_to_response("create_lustre_fs.html",
+    return render_to_response("filesystem_create.html",
             RequestContext(request, {}))
 
 
 def filesystem_edit_tab(request):
-    fs_id = request.GET.get("fs_id")
-    from chroma_core.models import ManagedFilesystem
-    fs = ManagedFilesystem.objects.get(pk = fs_id)
-    return render_to_response("edit_fs.html",
-            RequestContext(request, {"fs_name": fs.name, "fs_id": fs_id}))
+    return render_to_response("filesystem_detail.html",
+            RequestContext(request, {}))
 
 
 def dashboard(request):
-    return render_to_response("index.html",
+    return render_to_response("dashboard.html",
             RequestContext(request, {}))
 
 
 def dbalerts(request):
-    return render_to_response("db_alerts.html",
+    return render_to_response("alerts.html",
             RequestContext(request, {}))
 
 
 def dbevents(request):
-    return render_to_response("db_events.html",
+    return render_to_response("events.html",
             RequestContext(request, {}))
 
 
 def dblogs(request):
-    return render_to_response("db_logs.html",
+    return render_to_response("logs.html",
             RequestContext(request, {}))
 
 
