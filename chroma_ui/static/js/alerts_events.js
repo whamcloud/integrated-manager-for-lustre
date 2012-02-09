@@ -1,25 +1,3 @@
-/*******************************************************************************************************************************************************
- * File name: alerts_events.js
- * 
- * Description: 
- * 1) Bind events for Alerts, Events and Jobs
- * 2) Contains seperate methods for loading only content for each type
- * 
- * // Functions:
- * 1) loadAlertContent
- * 2) loadEventContent
- * 3) loadJobContent
- * 
- *******************************************************************************************************************************************************/
-var ERROR_PNG = "/static/images/dialog-error.png";
-var CORRECT_GIF = "/static/images/dialog_correct.png";
-var WARNING_PNG = "/static/images/dialog-warning.png";
-var INFO_PNG = "/static/images/dialog-information.png";
-var PAUSE_PNG = "/static/images/gtk-media-pause.png";
-var CANCEL_PNG = "/static/images/gtk-cancel.png";
-var RUNNING_GIF = "/static/images/loading.gif";
-
-var job_action_buttons = ['Pause', 'Resume', 'Cancel', 'Complete'];
 
 $(document).ready(function() 
 {
@@ -28,7 +6,7 @@ $(document).ready(function()
     toggleSliderDiv('alertsDiv');
     if($('#alertsDiv').css('display') == 'block')
     {
-      //loadAlertContent('alert_content', 10);  // load only when target div visible
+      $('div.leftpanel table#alerts').dataTable().fnDraw();
     }
   });
   
@@ -37,7 +15,7 @@ $(document).ready(function()
     toggleSliderDiv('eventsDiv')
     if($('#eventsDiv').css('display') == 'block')
     {
-      loadEventContent('event_content' , 10);
+      $('div.leftpanel table#events').dataTable().fnDraw();
     }
   });
   
@@ -46,7 +24,7 @@ $(document).ready(function()
     toggleSliderDiv('jobsDiv');
     if($('#jobsDiv').css('display') == 'block')
     {
-      loadJobContent('job_content');
+      $('div.leftpanel table#jobs').dataTable().fnDraw();
     }
   });
   
@@ -58,30 +36,26 @@ $(document).ready(function()
   });
 });
 
-getCssClass = function(severity_value)
+eventStyle = function(ev)
 {
   var cssClassName = "";
-  if(severity_value == 'alert') //red
+  if(ev.severity == 'ERROR') //red
     cssClassName='palered';
-  else if(severity_value == 'info') //normal
+  else if(ev.severity == 'INFO') //normal
     cssClassName='';
-  else if(severity_value == 'warning') //yellow
+  else if(ev.severity == 'WARNING') //yellow
     cssClassName='brightyellow';
   
   return cssClassName;
 }
 
-getImage = function(severity_value)
+eventIcon = function(e)
 {
-  var imgName="";
-  if(severity_value == 'alert') //red
-    imgName = ERROR_PNG;
-  else if(severity_value == 'info') //normal
-    imgName = INFO_PNG;
-  else if(severity_value == 'warning') //yellow
-    imgName = WARNING_PNG;
-  
-  return imgName;
+  return "/static/images/" + {
+    INFO: 'dialog-information.png',
+    ERROR: 'dialog-error.png',
+    WARNING: 'dialog-warning.png',
+  }[e.severity]
 }
 
 toggleSliderDiv = function(divname)
@@ -107,187 +81,39 @@ toggleSliderDiv = function(divname)
   }
 }
 
-progress_show = function(divname)
+function jobIcon(job)
 {
-  $('#'+ divname).html('<tr>' +
-                       '<td width="100%" align="center">' +
-                       '<img src="/static/images/loading.gif" style="margin-top:10px;margin-bottom:10px" width="16" height="16" />' +
-                       '</td></tr>');
-}
-
-//******************************************************************************/
-// Function to load content for alerts
-/******************************************************************************/
-loadAlertContent = function(targetAlertDivName, maxCount)
-{
-  var alertTabContent="";
-  var pagecnt=0
-  var maxpagecnt=maxCount;
-  progress_show(targetAlertDivName);
-
-  Api.get("alert/", {active: true, iDisplayStart: 0, iDisplayCount: maxCount}, 
-  success_callback = function(data)
-  {
-    $.each(data.aaData, function(resKey, resValue)
-    {
-      pagecnt++;
-      if(maxpagecnt > pagecnt || maxpagecnt < 0)
-      {
-        var imgName = getImage(resValue.alert_severity);
-
-        alertTabContent = alertTabContent + 
-                          "<tr>" +
-                          "<td width='20%' align='left' class='border' valign='top'>" +  
-                            resValue.alert_created_at + 
-                          "</td>" +
-                          "<td width='7%' align='left' class='border' valign='top'>" +
-                          "<img src='" + imgName + "' width='16' height='16' class='spacetop' />" +
-                          "</td>" +
-                          "<td width='30%' align='left' class='border' valign='top'>" + 
-                            resValue.alert_item +  
-                          "</td>" + 
-                          "<td width='38%' align='left' class='border' valign='top'>" + 
-                            resValue.alert_message + 
-                          "</td>" + 
-                          "</tr>";
-      }
-    });
-
-    if(pagecnt == 0)
-    {
-      alertTabContent = alertTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Alerts</td></tr>";
+  var prefix = "/static/images/";
+  if(job.state == 'complete') {
+    if (job.errored) {
+      return prefix + "dialog-error.png"
+    } else if (job.cancelled) {
+      return prefix + "gtk-cancel.png"
+    } else {
+      return prefix + "dialog_correct.png"
     }
-    $("#"+targetAlertDivName).html(alertTabContent);
-  });
+  } else if (job.state == 'paused') {
+    return prefix + "gtk-media-pause.png"
+  } else {
+    return prefix + "ajax-loader.gif"
+  }
 }
 
-loadEventContent = function(targetEventDivName, maxCount)
+function alertIcon(a)
 {
-  var eventTabContent='';
-  var pagecnt=0
-  var maxpagecnt=maxCount;
-  progress_show(targetEventDivName);
-  
-  Api.get("event/", {iDisplayStart: 0, iDisplayLength: 10},
-    success_callback = function(data)
-    {
-      var events = data['aaData'];
-      $.each(events, function(i, event_record)
-      {
-        pagecnt++;
-        if(maxpagecnt > pagecnt || maxpagecnt < 0)
-        {
-          var cssClassName = getCssClass(event_record.severity);
-          var imgName = getImage(event_record.severity);
-          
-          eventTabContent = eventTabContent +
-                            "<tr class='" + cssClassName + "'>" +
-          		              "<td width='20%' align='left' valign='top' class='border' style='font-weight:normal'>" +  
-          		              event_record.created_at + 
-          		              "</td>" +
-          		              "<td width='7%' align='left' valign='top' class='border' class='txtcenter'>" +
-          		              "<img src='" + imgName + "' width='16' height='16' class='spacetop'/>" +
-          		              "</td>" +
-          		              "<td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + 
-          		              event_record.host_name +  "&nbsp;" +
-          		              "</td>" +
-          		              "<td width='30%' align='left' valign='top' class='border' style='font-weight:normal'>" + 
-          		              event_record.message + 
-          		              "</td>" +
-          		              "</tr>";
-        }
-      });
-
-      if(pagecnt == 0)
-      {
-        eventTabContent = eventTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Events</td></tr>";
-      }
-      $("#"+targetEventDivName).html(eventTabContent);
-    });
+  return "/static/images/dialog-warning.png";
 }
 
-loadJobContent = function(targetJobDivName)
-{
-  var jobTabContent="";
-  var maxpagecnt=10;
-  var pagecnt=0;
-  progress_show(targetJobDivName);
-  
-  Api.get("job/", {recent: true},
-    success_callback = function(data)
-    {
-      $.each(data, function(resKey, resValue)
-      {
-        pagecnt++;
-        var image_path = "";
-        
-        if(resValue.state == job_action_buttons[0].toLowerCase())
-          image_path = PAUSE_PNG;
-        else if(resValue.state == job_action_buttons[2].toLowerCase() || resValue.cancelled)
-          image_path = CANCEL_PNG;
-        else if(resValue.errored)
-          image_path = ERROR_PNG;
-        else if(resValue.state == job_action_buttons[3].toLowerCase())
-          image_path = CORRECT_GIF;
-        else if(resValue.state != job_action_buttons[3].toLowerCase() && resValue.state != job_action_buttons[0].toLowerCase())
-          image_path = RUNNING_GIF;
-                
-        jobTabContent = jobTabContent +
-                        "<tr>" +
-                        "<td width='35%' align='left' valign='top' class='border' style='font-weight:normal'>" +
-                        "<img src="+image_path+ " />" +
-                        resValue.description + 
-                        "</td>" + 
-                        "<td width='40%' align='left' valign='top' class='border'>&nbsp;";
-
-                        if(resValue.state != job_action_buttons[3].toLowerCase()
-                            && resValue.state != job_action_buttons[0].toLowerCase())       // for adding pause button
-                        {
-                          jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[0]);
-                        }
-                        
-                        if(resValue.state == job_action_buttons[0].toLowerCase())           // for adding resume button
-                        {
-                          jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[1]);
-                        }
-                        
-                        if(resValue.state != job_action_buttons[3].toLowerCase())           // for adding cancel button
-                        {
-                          jobTabContent = jobTabContent + "&nbsp;" + createButtonForJob(resValue.id, job_action_buttons[2]);
-                        }
-
-                        jobTabContent = jobTabContent +
-                        "</td>" +
-                        "<td width='25%' align='left' valign='top' class='border' style='font-weight:normal'>" + 
-                        resValue.created_at +
-                        "</td>" +
-                        "</tr>";
-      });
-
-      if(pagecnt == 0)
-      {
-        jobTabContent = jobTabContent + "<tr> <td colspan='5' align='center' class='no_notification'>No Jobs</td></tr>";
-      }
-      $("#"+targetJobDivName).html(jobTabContent);
-    });
-}
-
-createButtonForJob = function(job_id, status)
-{
-  var button = "<input type='button' class='ui-button ui-state-default ui-corner-all ui-button-text-only notification_job_buttons' " +
-              "onclick=job_action("+job_id+",'"+status.toLowerCase()+"') value="+status+" />";
-  return button;
-}
-
-job_action = function(job_id, state)
+setJobState = function(job_id, state)
 {
   Api.put("job/" + job_id + "/", {'state': state},
   success_callback = function(data)
   {
-    loadJobContent('job_content');
+    $('div.leftpanel table#jobs').dataTable().fnDraw();
   });
 }
 
+/* FIXME: move this somewhere sensible */
 loadHostList = function(filesystem_id, targetContainer)
 {
   var hostList = '<option value="">All</option>';
@@ -308,3 +134,80 @@ loadHostList = function(filesystem_id, targetContainer)
 setActiveMenu = function(menu_element){
   $('#'+menu_element).addClass('active');
 }
+
+$(document).ready(function() {
+  smallTable($('div.leftpanel table#jobs'), 'job/',
+    {},
+    function(job) {
+      job.icon = "<img src='" + jobIcon(job) + "'/>"
+      job.buttons = ""
+      $.each(job.available_transitions, function(i, transition) {
+        /* TODO: use job URL */
+        /* FIXME: relying on global function */
+        job.buttons += "<input type='button' class='ui-button ui-state-default ui-corner-all ui-button-text-only notification_job_buttons' onclick=setJobState("+job.id+",'"+transition.state+"') value="+transition.label+" />";
+      });
+    },
+    [
+      { "sClass": 'txtleft', "mDataProp":"icon" },
+      { "sClass": 'txtleft', "mDataProp":"description" },
+      { "sClass": 'txtleft', "mDataProp":"buttons" },
+      { "sClass": 'txtleft', "mDataProp":"created_at" }
+    ]
+  );
+
+  smallTable($('div.leftpanel table#alerts'), 'alert/',
+    {active: true},
+    function(a) {
+      a.icon = "<img src='" + alertIcon(a) + "'/>"
+    },
+    [
+      { "sClass": 'txtleft', "mDataProp":"icon" },
+      { "sClass": 'txtleft', "mDataProp":"message" },
+      { "sClass": 'txtleft', "mDataProp":"begin" },
+    ]
+  );
+
+  smallTable($('div.leftpanel table#events'), 'event/',
+    {},
+    function(e) {
+      e.icon = "<img src='" + eventIcon(e) + "'/>"
+      if (!e.host) {
+        e.host_name = "";
+      }
+      e.DT_RowClass = eventStyle(e)
+    },
+    [
+      { "sClass": 'txtleft', "mDataProp": "icon" },
+      { "sClass": 'txtleft', "mDataProp": "host_name" },
+      { "sClass": 'txtleft', "mDataProp": "message" },
+      { "sClass": 'txtleft', "mDataProp": "created_at" },
+    ]
+  );
+
+  function smallTable(element, url, kwargs, row_fn, columns) {
+    element.dataTable({
+        bProcessing: true,
+        bServerSide: true,
+        iDisplayLength:10,
+        bDeferRender: true,
+        sAjaxSource: url,
+        fnServerData: function (url, data, callback, settings) {
+          Api.get_datatables(url, data, function(data){
+            $.each(data.aaData, function(i, row) {
+              row_fn(row);
+            });
+            callback(data);
+          }, settings, kwargs);
+        },
+        aoColumns: columns,
+        oLanguage: {
+          "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
+        },
+        bJQueryUI: true,
+        bFilter: false
+      });
+    // Hide the header
+    element.prev().hide();
+    element.find('thead').hide();
+  }
+});

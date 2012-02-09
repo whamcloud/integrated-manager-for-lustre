@@ -3,44 +3,69 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from chroma_api.requesthandler import RequestHandler
+from tastypie.resources import ModelResource
+from tastypie import fields
+from tastypie.authorization import DjangoAuthorization
+from chroma_api.authentication import AnonymousAuthentication
+
+from chroma_core.models import Job, StateLock, StateReadLock, StateWriteLock
 
 
-class Handler(RequestHandler):
-    def get(self, request, id = None, recent = False):
-        """Return a list of dicts representing Jobs, or a single dict if 'id' is specified.
-           If the 'recent' parameter is set, return jobs which are incomplete or which ran in the last hour"""
-        from chroma_core.models import Job
-        from datetime import timedelta, datetime
-        from django.db.models import Q
+class StateLockResource(ModelResource):
+    class Meta:
+        queryset = StateLock.objects.all()
+        resource_name = 'state_lock'
+        authorization = DjangoAuthorization()
+        authentication = AnonymousAuthentication()
 
-        # TODO: paginated version of this call will be needed
-        filter_args = []
-        filter_kwargs = {}
-        if recent:
-            # FIXME: 'recent' is a hack for the benefit of dumb UI sidebar code
-            filter_args.append(~Q(state = 'complete') | Q(created_at__gte=datetime.now() - timedelta(hours=24)))
 
-        jobs = Job.objects.filter(*filter_args, **filter_kwargs).order_by('-created_at')
-        return [j.to_dict() for j in jobs]
+class JobResource(ModelResource):
+    description = fields.CharField()
+    wait_for = fields.ToManyField('chroma_api.job.JobResource', 'wait_for', null = True)
+    read_locks = fields.ToManyField(StateLockResource,
+            lambda bundle: StateReadLock.objects.filter(job = bundle.obj), full = True, null = True)
+    write_locks = fields.ToManyField(StateLockResource,
+            lambda bundle: StateWriteLock.objects.filter(job = bundle.obj), full = True, null = True)
+    #command = fields.ToManyField('chroma_api.command.CommandResource',
+    #        lambda bundle: bundle.obj.commands.all(), full = True, null = True)
 
-    def put(self, request, id):
+    available_transitions = fields.DictField()
+
+    def dehydrate_available_transitions(self, bundle):
+        job = bundle.obj
+        if job.state in ['complete', 'completing', 'cancelling']:
+            return []
+        elif job.state == 'paused':
+            return [{'state': 'resume', 'label': "Resume"}]
+        elif job.state in ['pending', 'tasked']:
+            return [{'state': 'pause', 'label': 'Pause'},
+                    {'state': 'cancel', 'label': 'Cancel'}]
+        else:
+            raise NotImplementedError
+
+    def dehydrate_description(self, bundle):
+        return bundle.obj.description()
+
+    class Meta:
+        queryset = Job.objects.all()
+        resource_name = 'job'
+        authorization = DjangoAuthorization()
+        authentication = AnonymousAuthentication()
+        excludes = ['wait_for_completions', 'wait_for_count']
+
+    def obj_update(self, bundle, request, **kwargs):
         """Modify a Job (setting 'state' field to 'pause', 'cancel', or 'resume' is the
         only allowed input e.g. {'state': 'pause'}"""
-        # FIXME: 'resume' isn't actually a state that job will ever have,
+        # FIXME: 'cancel' and 'resume' aren't actually a state that job will ever have,
         # it causes a paused job to bounce back into a state like 'pending' or 'tasked'
         # - there should be a better way of representing this operation
-        new_state = request.data['state']
+        new_state = bundle.data['state']
 
         assert new_state in ['pause', 'cancel', 'resume']
-        from django.shortcuts import get_object_or_404
-        from chroma_core.models import Job
-        job = get_object_or_404(Job, id = id).downcast()
         if new_state == 'pause':
-            job.pause()
+            bundle.obj.pause()
         elif new_state == 'cancel':
-            job.cancel()
+            bundle.obj.cancel()
         else:
-            job.resume()
-
-        return job.to_dict()
+            bundle.obj.resume()
+        return bundle
