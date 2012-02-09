@@ -10,6 +10,23 @@ var Api = function() {
   var UI_ROOT = "/ui/";
   var lost_contact = false;
   var calls_waiting = 0;
+  var enable_overlay = true;
+
+  function testMode(enable)
+  {
+    if (enable == undefined) {
+      return !enable_overlay
+    }
+    if (enable) {
+      enable_overlay = false;
+      jQuery.fx.off = true;
+      $.unblockUI();
+    } else {
+      enable_overlay = true;
+    }
+
+    return "rhubarb"
+  }
 
   var startBlocking = function()
   {
@@ -18,7 +35,7 @@ var Api = function() {
     }
 
     outstanding_requests += 1;
-    if (outstanding_requests == 1) {
+    if (outstanding_requests == 1 && enable_overlay) {
       $.blockUI({
         message: ""
       });
@@ -32,7 +49,7 @@ var Api = function() {
     }
 
     outstanding_requests -= 1;
-    if (outstanding_requests == 0) {
+    if (outstanding_requests == 0 && enable_overlay) {
       $.unblockUI();
     }
   }
@@ -284,12 +301,19 @@ var Api = function() {
     });
   }
 
+  function busy()
+  {
+    return (outstanding_requests > 0)
+  }
+
   return {
     enable: enable,
     call : call,
     get: get,
     post: post,
     put: put,
+    busy: busy, 
+    testMode: testMode,
     'delete': del,
     get_datatables: get_datatables,
   }

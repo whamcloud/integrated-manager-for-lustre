@@ -82,6 +82,8 @@ var Login = function() {
         'Login': submit
       }
     });
+    $('#login_dialog + div button:first').attr('id', 'cancel');
+    $('#login_dialog + div button:last').attr('id', 'submit');
   }
 
   function init() {
