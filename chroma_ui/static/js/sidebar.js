@@ -1,23 +1,5 @@
 
 
-$(document).ready(function() 
-{
-  Sidebar.init();
-
-  $("#sidebar_open").click(function()
-  {
-    Sidebar.open();
-    return false;
-  });
-
-  $("#sidebar_close").button({icons:{primary:'ui-icon-close'}});
-  $("#sidebar_close").click(function()
-  {
-    Sidebar.close();
-    return false;
-  });
-}
-
 
 var Sidebar = function(){
   function eventStyle(ev)
@@ -97,50 +79,69 @@ var Sidebar = function(){
     }
   }
 
-  smallTable($('div.leftpanel table#jobs'), 'job/',
-    {order_by: "-created_at"},
-    function(job) {
-      job.icon = "<img src='" + jobIcon(job) + "'/>"
-      job.buttons = ""
-      $.each(job.available_transitions, function(i, transition) {
-        /* TODO: use job URL */
-        /* FIXME: relying on global function */
-        job.buttons += "<input type='button' class='ui-button ui-state-default ui-corner-all ui-button-text-only notification_job_buttons' onclick=setJobState("+job.id+",'"+transition.state+"') value="+transition.label+" />";
-      });
-      job.text = ellipsize(job.description) + "<br>" + shortLocalTime(job.created_at)
-    },
-    [
-      { "sClass": 'icon_column', "mDataProp":"icon" },
-      { "sClass": 'txtleft', "mDataProp":"text" },
-      { "sClass": 'txtleft', "mDataProp":"buttons" },
-    ]
-  );
+  function init() {
+    $("div#sidebar div#accordion").accordion({
+      fillSpace: true,
+      collapsible: true,
+      changestart: function (event, ui) {
+        var active = $('div#sidebar div#accordion').accordion("option", "active");
+        if (active == 0) {
+          $('div.leftpanel table#alerts').dataTable().fnDraw();
+        } else if (active == 1) {
+          $('div.leftpanel table#events').dataTable().fnDraw();
+        } else if (active == 2) {
+          $('div.leftpanel table#jobs').dataTable().fnDraw();
+        } else {
+          throw "Unknown accordion index " + active
+        }
+      }
+    });
 
-  smallTable($('div.leftpanel table#alerts'), 'alert/',
-    {active: true, order_by: "-begin"},
-    function(a) {
-      a.text = ellipsize(a.message) + "<br>" + shortLocalTime(a.begin)
-      a.icon = "<img src='" + alertIcon(a) + "'/>"
-    },
-    [
-      { "sClass": 'icon_column', "mDataProp":"icon" },
-      { "sClass": 'txtleft', "mDataProp":"text" },
-    ],
-    "<img src='/static/images/dialog_correct.png'/>&nbsp;No alerts active"
-  );
+    smallTable($('div.leftpanel table#jobs'), 'job/',
+      {order_by: "-created_at"},
+      function(job) {
+        job.icon = "<img src='" + jobIcon(job) + "'/>"
+        job.buttons = ""
+        $.each(job.available_transitions, function(i, transition) {
+          /* TODO: use job URL */
+          /* FIXME: relying on global function */
+          job.buttons += "<input type='button' class='ui-button ui-state-default ui-corner-all ui-button-text-only notification_job_buttons' onclick=setJobState("+job.id+",'"+transition.state+"') value="+transition.label+" />";
+        });
+        job.text = ellipsize(job.description) + "<br>" + shortLocalTime(job.created_at)
+      },
+      [
+        { "sClass": 'icon_column', "mDataProp":"icon" },
+        { "sClass": 'txtleft', "mDataProp":"text" },
+        { "sClass": 'txtleft', "mDataProp":"buttons" },
+      ]
+    );
 
-  smallTable($('div.leftpanel table#events'), 'event/',
-    {order_by: "-created_at"},
-    function(e) {
-      e.icon = "<img src='" + eventIcon(e) + "'/>"
-      e.DT_RowClass = eventStyle(e)
-      e.text = ellipsize(e.message) + "<br>" + shortLocalTime(e.created_at)
-    },
-    [
-      { "sClass": 'icon_column', "mDataProp": "icon" },
-      { "sClass": 'txtleft', "mDataProp": "text" },
-    ]
-  );
+    smallTable($('div.leftpanel table#alerts'), 'alert/',
+      {active: true, order_by: "-begin"},
+      function(a) {
+        a.text = ellipsize(a.message) + "<br>" + shortLocalTime(a.begin)
+        a.icon = "<img src='" + alertIcon(a) + "'/>"
+      },
+      [
+        { "sClass": 'icon_column', "mDataProp":"icon" },
+        { "sClass": 'txtleft', "mDataProp":"text" },
+      ],
+      "<img src='/static/images/dialog_correct.png'/>&nbsp;No alerts active"
+    );
+
+    smallTable($('div.leftpanel table#events'), 'event/',
+      {order_by: "-created_at"},
+      function(e) {
+        e.icon = "<img src='" + eventIcon(e) + "'/>"
+        e.DT_RowClass = eventStyle(e)
+        e.text = ellipsize(e.message) + "<br>" + shortLocalTime(e.created_at)
+      },
+      [
+        { "sClass": 'icon_column', "mDataProp": "icon" },
+        { "sClass": 'txtleft', "mDataProp": "text" },
+      ]
+    );
+  }
 
   function smallTable(element, url, kwargs, row_fn, columns, emptyText) {
     element.dataTable({
@@ -182,25 +183,6 @@ var Sidebar = function(){
     $("#sidebar").hide({effect: 'slide'});
   }
 
-  function init() {
-    $("div#sidebar div#accordion").accordion({
-      fillSpace: true,
-      collapsible: true,
-      changestart: function (event, ui) {
-        var active = $('div#sidebar div#accordion').accordion("option", "active");
-        if (active == 0) {
-          $('div.leftpanel table#alerts').dataTable().fnDraw();
-        } else if (active == 1) {
-          $('div.leftpanel table#events').dataTable().fnDraw();
-        } else if (active == 2) {
-          $('div.leftpanel table#jobs').dataTable().fnDraw();
-        } else {
-          throw "Unknown accordion index " + active
-        }
-      }
-    });
-  }
-
   return {
     init: init,
     open: open,
@@ -235,4 +217,24 @@ loadHostList = function(filesystem_id, targetContainer)
     $('#'+targetContainer).html(hostList);
   });
 }
+
+
+$(document).ready(function() 
+{
+  Sidebar.init();
+
+  $("#sidebar_open").click(function()
+  {
+    Sidebar.open();
+    return false;
+  });
+
+  $("#sidebar_close").button({icons:{primary:'ui-icon-close'}});
+  $("#sidebar_close").click(function()
+  {
+    Sidebar.close();
+    return false;
+  });
+});
+
 
