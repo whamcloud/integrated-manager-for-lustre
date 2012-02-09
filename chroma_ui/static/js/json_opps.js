@@ -14,7 +14,7 @@ var CONFIRM_TITLE = "Configuration Manager";
 
 stateTransitionCommit = function(url, state)
 {
-  Api.put(url, {state: state}, success_callback = function(data) {//console.log(data)})
+  Api.put(url, {state: state})
 }
 
 $(document).ready(function() {
@@ -223,28 +223,4 @@ function apply_config_params(url, dialog_id, datatable)
   }
 }
 
-save_primary_failover_server = function (confirmation_markup, volumes)
-{
-   $('#transition_confirmation_dialog').html(confirmation_markup);
-   $('#transition_confirmation_dialog').dialog('option', 'buttons', {
-     'Cancel': function() {$(this).dialog('close');},
-     'Confirm': 
-     {
-         text: "Confirm",
-         id: "transition_confirm_button",
-         click: function(){
-           Api.put("volume/", volumes, 
-           success_callback = function(data)
-           {
-             jAlert("Update Successful");
-           },
-           error_callback = function(data)
-           {
-             jAlert(ERR_VOLUME_CONFIG, ALERT_TITLE);
-           });
-           $(this).dialog('close');
-         }
-     } 
-   });
-   $('#transition_confirmation_dialog').dialog('open');
-}
+

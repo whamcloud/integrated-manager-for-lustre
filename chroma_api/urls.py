@@ -98,11 +98,13 @@ urlpatterns = patterns('',
     (r'^', include(chroma_api.target.TargetResource().urls)),
 
     # chroma_api.volume
-    (r'^volume/$', CsrfResource(chroma_api.volume.Handler)),
-    (r'^volume/(?P<id>\d+)/$', CsrfResource(chroma_api.volume.Handler)),
+    #(r'^volume/$', CsrfResource(chroma_api.volume.Handler)),
+    #(r'^volume/(?P<id>\d+)/$', CsrfResource(chroma_api.volume.Handler)),
+    (r'^', include(chroma_api.volume.VolumeResource().urls)),
 
     # chroma_api.volume_node
-    (r'^volume_node/$', CsrfResource(chroma_api.volume_node.Handler)),
+    #(r'^volume_node/$', CsrfResource(chroma_api.volume_node.Handler)),
+    (r'^', include(chroma_api.volume_node.VolumeNodeResource().urls)),
 
     # chroma_api.alert
     #(r'^alert/$', CsrfResource(chroma_api.alert.Handler)),
@@ -124,7 +126,8 @@ urlpatterns = patterns('',
     #(r'^job/(?P<id>\d+)/$', CsrfResource(chroma_api.job.Handler)),
 
     # chroma_api.help
-    (r'^help/conf_param/$', CsrfResource(chroma_api.help.ConfParamHandler)),
+    #(r'^help/conf_param/$', CsrfResource(chroma_api.help.ConfParamHandler)),
+    (r'^', include(chroma_api.help.HelpResource().urls)),
 
     # chroma_api.session
     (r'^', include(chroma_api.session.SessionResource().urls)),

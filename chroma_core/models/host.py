@@ -271,16 +271,22 @@ class Lun(models.Model):
         app_label = 'chroma_core'
 
     @classmethod
-    def get_unused_luns(cls):
+    def get_unused_luns(cls, queryset = None):
         """Get all Luns which are not used by Targets"""
-        return cls.objects.filter(lunnode__managedtargetmount__target__not_deleted = None).distinct()
+        if not queryset:
+            queryset = cls.objects.all()
+
+        return queryset.filter(lunnode__managedtargetmount__target__not_deleted = None).distinct()
 
     @classmethod
-    def get_usable_luns(cls):
+    def get_usable_luns(cls, queryset = None):
         """Get all Luns which are not used by Targets and have enough LunNode configuration
         to be used as a Target (i.e. have only one node or at least have a primary node set)"""
+        if not queryset:
+            queryset = cls.objects.all()
+
         # Our result will be a subset of unused_luns
-        unused_luns = cls.get_unused_luns()
+        unused_luns = cls.get_unused_luns(queryset)
 
         from django.db.models import Count, Max, Q
         # Luns are usable if they have only one LunNode (i.e. no HA available but

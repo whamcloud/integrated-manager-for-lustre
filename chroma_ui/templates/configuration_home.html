@@ -11,7 +11,6 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.address-1.4.min.js"></script>
 <script src="{{STATIC_URL}}js/jquery.hoverIntent.js" type="text/javascript"></script>
 <script src="{{STATIC_URL}}js/jquery.bgiframe.min.js" type="text/javascript"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/cm-json_table_data.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.alerts.js"></script>
@@ -34,6 +33,7 @@ $(document).ajaxComplete(function() {
   $('a.address_link[address!=true]').each(function() {
     $(this).address();
   });
+
 });
 
 $(document).ready(function() {
@@ -207,6 +207,7 @@ $(document).ready(function() {
       apply_button('button.add', 'ui-icon-plusthick');
       apply_button('button.submit', 'ui-icon-check');
       apply_button('button.advanced', 'ui-icon-gear');
+      apply_button('button.close', 'ui-icon-closethick');
       
       //for adding smoothness to all table buttons
       $("button").button();

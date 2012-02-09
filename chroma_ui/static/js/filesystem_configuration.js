@@ -86,33 +86,53 @@ fvc_button = function(element, opts) {
    "   </table>"
       );
 
+  var select_widget_fn;
+  if (!opts.multi_select) { 
+    select_widget_fn = function() {return ""};
+  } else {
+    select_widget_fn = function(vol_info){return "<input type='checkbox' name='" + vol_info.id + "'/>";}
+  }
+
   var table_element = expander_div.children('table')
   var volumeTable = table_element.dataTable({
+    bServerSide: true,
+    sAjaxSource: "volume/",
     bJQueryUI: true,
     bPaginate: false,
     bInfo: false,
     bProcessing: true,
+    fnServerData: function(url, data, callback, settings) {
+      Api.get_datatables(url, data, function(data){
+        $.each(data.aaData, function(i, volume) {
+          volume.primary_host_name = "---"
+          volume.secondary_host_name = "---"
+          $.each(volume.volume_nodes, function(i, node) {
+            if (node.primary) {
+              volume.primary_host_name = node.host_label
+            } else if (node.use) {
+              volume.secondary_host_name = node.host_label
+            }
+          });
+          volume.select_widget = select_widget_fn(volume);
+        });
+        callback(data);
+      }, settings, {category: 'usable'});
+    },
     aoColumns: [
-      {sWidth: "1%"},
-      {sWidth: "1%"},
-      {sWidth: "5%"},
-      {sWidth: "1%"},
-      {sWidth: "5%"},
-      {sWidth: "5%"},
-      {sWidth: "5%"},
-      {sWidth: "5%"}
+      {sWidth: "1%", mDataProp: 'id'},
+      {sWidth: "1%", mDataProp: 'select_widget'},
+      {sWidth: "5%", mDataProp: 'label'},
+      {sWidth: "1%", mDataProp: 'size'},
+      {sWidth: "5%", mDataProp: 'kind'},
+      {sWidth: "5%", mDataProp: 'status'},
+      {sWidth: "5%", mDataProp: 'primary_host_name'},
+      {sWidth: "5%", mDataProp: 'secondary_host_name'}
     ]
   });
 
   volumeTable.fnSetColumnVis(0, false);
   if (!opts.multi_select) {
     volumeTable.fnSetColumnVis(1, false);
-  }
-
-  if (!opts.multi_select) { 
-    LoadUsableVolumeList(table_element, function() {return ""});
-  } else {
-    LoadUsableVolumeList(table_element, function(vol_info){return "<input type='checkbox' name='" + vol_info.id + "'/>";});
   }
 
   table_element.delegate("td", "mouseenter", function() {

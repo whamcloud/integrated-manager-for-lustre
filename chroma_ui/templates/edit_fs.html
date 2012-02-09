@@ -1,6 +1,12 @@
 <script language="javascript">
+
+
   $(document).ready(function() {
     var fs_id = $('#fs_id').val();
+    loadFilesystem(fs_id);
+  }
+
+  function loadFilesystem(fs_id)
     Api.get("filesystem/" + fs_id + "/", {}, 
     success_callback = function(filesystem)
     {
@@ -47,7 +53,8 @@
       });
     });
 
-    LoadTargets_EditFS($('#fs_id').val());
+    loadFilesystemTargets(fs_id);
+
     // Create new OST button click handler. 
     fvc_button($("#new_ost_chooser"), {multi_select: true});
     $('#btnNewOST').click(function() {
@@ -58,9 +65,39 @@
     // Free space pie charts
     LoadFSGraph_EditFS( $("#fs_id").val());
   });
-   $(document).ajaxComplete(function() {
-      $('button.close').button({icons: {primary: 'ui-icon-closethick'}});
+
+
+  function loadFilesystemTargets(fs_id)
+  {
+    Api.get("target/", {filesystem_id : fs_id, limit: 0}, 
+    success_callback = function(data)
+    {  
+      var targets = data.objects;
+      $('#ost').dataTable().fnClearTable();
+      $('#mdt').dataTable().fnClearTable();
+      $('#mgt_configuration_view').dataTable().fnClearTable();
+
+      $.each(targets, function(i, target)
+      {
+        row = [
+                target_dialog_link(target),
+                target.lun_name,
+                target.primary_server_name,
+                target.failover_server_name,
+                target.active_host_name,
+                stateTransitionButtons(target),
+                notification_icons_markup(target.id, target.content_type_id)
+              ]
+        if (target.kind == "OST") {
+          $('#ost').dataTable().fnAddData (row);
+        } else if (target.kind == "MGT") {
+          $('#mgt_configuration_view').dataTable().fnAddData (row);
+        } else if (target.kind == "MDT") {
+          $('#mdt').dataTable().fnAddData (row);
+        }
+      });
     });
+  }
 </script>
 <input type="hidden" id="fs" value="{{fs_name}}"/>
 <input type="hidden" id="fs_id" value="{{fs_id}}"/>
