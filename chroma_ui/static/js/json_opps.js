@@ -1,16 +1,4 @@
-var ERR_COMMON_DELETE_HOST = "Error in deleting host: ";
-var ERR_COMMON_LNET_STATUS = "Error in setting lnet status: ";
-var ERR_COMMON_ADD_HOST = "Error in Adding host: ";
-var ERR_COMMON_FS = "Error in creating File System";
-var ERR_COMMON_CREATE_OST = "Error in Creating OST";
-var ERR_COMMON_CREATE_MGT = "Error in Creating MGT";
-var ERR_COMMON_CREATE_MDT = "Error in Creating MDT: ";
-var ERR_COMMON_START_OST = "Error in Starting OST: ";
-var ERR_CONFIG_PARAM = "Error in setting Cofiguration Params: ";
-var ERR_VOLUME_CONFIG = "Error in setting volume cofiguration ";
 
-var ALERT_TITLE = "Configuration Manager";
-var CONFIRM_TITLE = "Configuration Manager";
 
 stateTransitionCommit = function(url, state)
 {
@@ -100,9 +88,6 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
     if (success) {
       success(fs_id);
     }
-  },
-  error_callback = function(data){
-    jAlert(ERR_COMMON_FS, ALERT_TITLE);
   });
 }
 
@@ -113,9 +98,6 @@ function CreateOSTs(fs_id, ost_lun_ids)
   {
     //Reload table with latest ost's.
     LoadTargets_EditFS(fs_id);
-  },
-  error_callback = function(data){
-    jAlert(ERR_COMMON_CREATE_OST, ALERT_TITLE);
   });
 }
 
@@ -125,10 +107,6 @@ function CreateMGT(lun_id, callback)
   success_callback = function(data)
   {
     callback();
-  },
-  error_callback = function(data)
-  {
-    jAlert(ERR_COMMON_CREATE_MGT, ALERT_TITLE);
   });
 }
 
@@ -212,7 +190,7 @@ function apply_config_params(url, dialog_id, datatable)
     error_callback = function(data)
     {
       if(data.errors != undefined) {
-        jAlert(ERR_CONFIG_PARAM + data.errors, ALERT_TITLE);
+        jAlert("Error setting Cofiguration Params: " + data.errors);
         return true;
       } else {
         return false;
