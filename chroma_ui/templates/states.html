@@ -125,7 +125,7 @@ img.icon {
                         action_request = $.get(url)
                             .error(function(event) {
                                 setTimeout('jobs_update();', 1000);
-                                console.log(event);
+                                //console.log(event);
                             });
                     });
                 }
@@ -162,8 +162,8 @@ img.icon {
         } else if (job['state'] == 'paused') {
             container.children('.icon').attr('src', "{{STATIC_URL}}/images/gtk-media-pause.png");
         } else {
-            console.log('no icon for job:');
-            console.log(job);
+            //console.log('no icon for job:');
+            //console.log(job);
         }
     }
 
@@ -207,7 +207,7 @@ img.icon {
             })
             .error(function(event) {
                 setTimeout('jobs_update();', 1000);
-                console.log(event);
+                //console.log(event);
             });
     }
 

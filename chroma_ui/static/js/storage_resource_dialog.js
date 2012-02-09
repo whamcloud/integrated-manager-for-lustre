@@ -162,7 +162,7 @@ function load_resource(resource) {
 
     var attr_markup = "";
     var rowclass = "odd";
-    console.log(resource);
+    //console.log(resource);
     $.each(resource.attributes, function(i,j) {
       name = j[0]
       attr_info = j[1]

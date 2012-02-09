@@ -32,8 +32,8 @@
           // Couldn't get through, it's restarting
           $('#wait_status').html("Restarting Apache...");
         } else {
-          console.log('unexpected status ' + jqXHR.status);
-          console.log('unexpected statusText ' + jqXHR.statusText);
+          //console.log('unexpected status ' + jqXHR.status);
+          //console.log('unexpected statusText ' + jqXHR.statusText);
         }
         if (!complete) {
           setTimeout(pollStatus, 5000);

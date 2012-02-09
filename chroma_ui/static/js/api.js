@@ -45,8 +45,8 @@ var Api = function() {
 
   var unexpectedError = function(textStatus, jqXHR)
   {
-    console.log("unexpected_error: " + textStatus);
-    console.log(jqXHR);
+    //console.log("unexpected_error: " + textStatus);
+    //console.log(jqXHR);
     errored = true;
     var message = "We are sorry, but something has gone wrong.";
     message += "<dl>";
@@ -123,7 +123,7 @@ var Api = function() {
     } else {
       lost_contact = true;
       lost_contact_at = Number(Date.now())
-      console.log("Api: Lost contact at " + Date.now());
+      //console.log("Api: Lost contact at " + Date.now());
 
       $.blockUI({
         message: "<img src='/static/images/ajax-loader.gif'/>&nbsp;Contact lost with " + window.location.hostname + ", retrying every " + CONTACT_RETRY_INTERVAL/1000 + " seconds...",
@@ -140,13 +140,13 @@ var Api = function() {
       if (jqXHR.status != 0) {
         lost_contact = false;
         $.unblockUI();
-        console.log("Api: Regained contact at " + Number(Date.now()));
-        console.log("Api: Out for " + (Number(Date.now()) - lost_contact_at)/1000 + " seconds");
+        //console.log("Api: Regained contact at " + Number(Date.now()));
+        //console.log("Api: Out for " + (Number(Date.now()) - lost_contact_at)/1000 + " seconds");
         $('body').trigger('api_available');
       } else {
-        console.log("Api: Still out of contact at " + Date.now());
-        console.log("Api: " + calls_waiting + " calls waiting");
-        console.log("Api: Out for " + (Number(Date.now()) - lost_contact_at)/1000 + " seconds");
+        //console.log("Api: Still out of contact at " + Date.now());
+        //console.log("Api: " + calls_waiting + " calls waiting");
+        //console.log("Api: Out for " + (Number(Date.now()) - lost_contact_at)/1000 + " seconds");
         setTimeout(testContact, CONTACT_RETRY_INTERVAL);
       }
     });
@@ -225,7 +225,7 @@ var Api = function() {
     })
     .error(function(jqXHR, textStatus)
     {
-      console.log("error " + jqXHR.status);
+      //console.log("error " + jqXHR.status);
       if (jqXHR.status == 0) {
         /* This is a workaroud to deal with the fact that some POSTs
          * are actually read-only (especially the /notifications/ and

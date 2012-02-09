@@ -76,11 +76,11 @@ var Login = function() {
       modal: true,
       title: "Login",
       draggable: false,
-      resizable: false});
-
-    $('#login_dialog').dialog('option', 'buttons', {
-      'Cancel': function() {$(this).dialog('close')},
-      'Login': submit
+      resizable: false,
+      buttons: {
+        'Cancel': function() {$('#login_dialog').dialog('close')},
+        'Login': submit
+      }
     });
   }
 

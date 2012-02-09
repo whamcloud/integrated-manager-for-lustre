@@ -28,7 +28,7 @@ fvc_clear = function(element) {
 
 fvc_get_value = function(element) {
   opts = fvc_instances[element.attr('id')]
-  console.log(opts);
+  //console.log(opts);
   if (opts.multi_select) {
     return opts.selected_lun_ids
   } else {
@@ -147,7 +147,7 @@ fvc_button = function(element, opts) {
     var aPos = volumeTable.fnGetPosition(this);
     var data = volumeTable.fnGetData(aPos);
     if (!opts.multi_select) {
-      console.log("single select");
+      //console.log("single select");
       name = data[2];
       capacity = data[3];
       primary_server = data[6];
@@ -162,7 +162,7 @@ fvc_button = function(element, opts) {
       header_div.show();
       expander_div.slideUp();
     } else {
-      console.log("multi select");
+      //console.log("multi select");
       var checked = $(this).find('input').attr('checked')
       $(this).find('input').attr('checked', !checked);
 

@@ -14,7 +14,7 @@ var CONFIRM_TITLE = "Configuration Manager";
 
 stateTransitionCommit = function(url, state)
 {
-  Api.put(url, {state: state}, success_callback = function(data) {console.log(data)})
+  Api.put(url, {state: state}, success_callback = function(data) {//console.log(data)})
 }
 
 $(document).ready(function() {
@@ -201,8 +201,8 @@ function apply_config_params(url, dialog_id, datatable)
     var api_params = {
         "conf_params": changed_conf_params,
     };
-    console.log('PUTing changed conf params to ' + url + ':');
-    console.log(changed_conf_params);
+    //console.log('PUTing changed conf params to ' + url + ':');
+    //console.log(changed_conf_params);
 
     Api.put(url, api_params, 
     success_callback = function(data)

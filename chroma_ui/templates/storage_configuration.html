@@ -8,10 +8,10 @@
         var module_name = tokens[0]
         var class_name = tokens[1]
 
-        console.log("Loading resources...");
+        //console.log("Loading resources...");
         Api.get("storage_resource/" + module_name + "/" + class_name + "/", {},
           success_callback = function(data) {
-            console.log("... done loading resources...");
+            //console.log("... done loading resources...");
             if (resourceTable) {
                 resourceTable.fnDestroy();
                 resourceTable = null;

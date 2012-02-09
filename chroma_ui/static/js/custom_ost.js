@@ -325,7 +325,7 @@ ost_Area_ReadWrite_Data = function(targetId, targetName, sDate, endDate, dataFun
 *****************************************************************************/
 loadOSTSummary = function (fsId)
 {
-  console.log("loadOSTSummary");
+  //console.log("loadOSTSummary");
   var innerContent = "";
   $('#ostSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
       "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");

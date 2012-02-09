@@ -30,7 +30,7 @@ $(document).ready(function() {
       }
   });
   function submit_complete(result) {
-      console.log('submit_complete: ' + result);
+      //console.log('submit_complete: ' + result);
       $('#add_host_tabs').tabs('select', '#add_host_confirm');
       $('.add_host_confirm_button').focus();
 
@@ -52,12 +52,12 @@ $(document).ready(function() {
       $.get('/djcelery/' + task_id + '/status/')
           .success(function(data, textStatus, jqXHR) {
               task_status = data['task']['status']
-              console.log(task_status)
+              //console.log(task_status)
               if (task_status == 'SUCCESS') {
-                  console.log(data);
+                  //console.log(data);
                   submit_complete(data['task']['result']);
               } else if (task_status == 'FAILURE') {
-                  console.log(event.responseText);
+                  //console.log(event.responseText);
                   add_host_error("Internal error.");
               } else {
                   /* Incomplete, schedule re-check */
@@ -65,7 +65,7 @@ $(document).ready(function() {
               }
               })
           .error(function(event) {
-                  console.log(event.responseText);
+                  //console.log(event.responseText);
                   add_host_error("Failed to get status for task " + task_id + ".");
               });
   }
@@ -81,7 +81,7 @@ $(document).ready(function() {
       },
       error_callback = function(data)
       {
-        console.log(event.responseText);
+        //console.log(event.responseText);
         data = $.parseJSON(event.responseText);
         add_host_error(data['error']);
       });
@@ -99,7 +99,7 @@ $(document).ready(function() {
     },
     error_callback = function(data)
     {
-      console.log(event.responseText);
+      //console.log(event.responseText);
       add_host_error(data['errors']);
     });
     

@@ -77,7 +77,7 @@ function storage_resource_create_load_fields()
 
 function storage_resource_create() {
   $('#storage_resource_create_save').attr('disabled', true);
-  console.log('opening');
+  //console.log('opening');
   $('#storage_resource_create_dialog').dialog('open');
 
   Api.get("storage_resource_class/", {creatable: true}, 

@@ -47,7 +47,7 @@
 
     $('#btnNewMGT').click(function(){
       CreateMGT(fvc_get_value($('#new_mgt_chooser')), function() {
-        console.log('callback');
+        //console.log('callback');
         fvc_clear($('#new_mgt_chooser'));
         $('#mgt_configuration').dataTable().fnDraw();
       })

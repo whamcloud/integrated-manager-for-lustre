@@ -65,7 +65,7 @@ function for_class_starting(element, prefix, callback) {
 }
 
 function debug(msg) {
-  //console.log(msg);
+  ////console.log(msg);
 }
 
 cluetip_tooltip_format = function(element, title, objects, attr)
@@ -160,7 +160,7 @@ update_sidebar_icons = function() {
 }
 
 activate_alert = function(alert_info) {
-  console.log("Alert " + alert_info.id + " activated");
+  //console.log("Alert " + alert_info.id + " activated");
   if (active_alerts[alert_info.id]) {
     throw "Alert " + alert_info.id + " activated twice"
   }
@@ -180,7 +180,7 @@ activate_alert = function(alert_info) {
 }
 
 deactivate_alert = function(alert_info) {
-  console.log("Alert " + alert_info.id + " finished");
+  //console.log("Alert " + alert_info.id + " finished");
   if (active_alerts[alert_info.id] == null) {
     throw "Alert " + alert_info.id + " finished but not in active_alerts"
   }

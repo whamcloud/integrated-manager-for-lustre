@@ -39,7 +39,7 @@ $(document).ajaxComplete(function() {
 $(document).ready(function() {
   $.address.change(function(ev) {
     var path = ev.value;
-    console.log('address.change: ' + path);
+    //console.log('address.change: ' + path);
     var parts;
     if (path == '/') {
       parts = ['filesystems'];
@@ -48,7 +48,7 @@ $(document).ready(function() {
     }
     if (parts[1]) {
       if (parts[0] == 'filesystems' && parts[1] == 'new') {
-        console.log('#' + parts[0]);
+        //console.log('#' + parts[0]);
         $("#tabs").tabs('select', '#' + parts[0]);
         $('#filesystems').empty();
         $('#filesystems').load('/ui/configure/filesystems_new/', function(){$(this).fadeIn(100)});
@@ -190,7 +190,7 @@ $(document).ready(function() {
     
     $('#ConfigParam_Apply').click(function()
     {
-      console.log('apply clicked');
+      //console.log('apply clicked');
       apply_config_params("target/" + $('#config_home_target_id').val() + "/", 'target_dialog', oTargetFSConfigParam);
     });
     
