@@ -20,6 +20,7 @@ class AlertResource(ModelResource):
         resource_name = 'alert'
         fields = ['begin', 'end', 'message', 'active', 'alert_item']
         filtering = {'active': ['exact']}
+        ordering = ['begin', 'end', 'active']
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
 

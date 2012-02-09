@@ -1,57 +1,38 @@
 <div class="leftpanel">
-  <div id="signbtn">
+  <div>
     <img id='notification_icon_jobs' class='notification_icon' src="{{STATIC_URL}}images/ajax-loader.gif"/>
     <span class='tooltip-text'>
     </span>
     <img id='notification_icon_alerts' class='notification_icon' src="{{STATIC_URL}}images/dialog-warning.png"/>
     <span class='tooltip-text'>
     </span>
-    <a href="#" class="btnsignin">
+    <a href="#" id="sidebar_open">
       <div class='vertical'>Notifications</div>
     </a>
   </div>
-  <div id="frmsignin">
-    <!--<div style="border: 2px solid #848484; background-color:#cccccc; min-height:600px;">-->
-    <div>
-      <div class="round-slider"  style="display: block;width: 350px;">
-        <div style="float: right">
-          <a href="#" id="minusImg" style="text-decoration: none;">
-            <div class='horizontal'> << Notifications</div>
-          </a>
-        </div>
-        <br/><br/>
-        <!-- Alerts anchor and alert div -->
-        <div>
-          <div class="slider_content" id="alertAnchor">Alerts</div>
-        </div>
-        <div id="alertsDiv" class="notification_table">
-          <div class="border"></div>
-          <table id="alerts" style="padding-top:5px" width="100%" border="0" cellpadding="0" cellspacing="0" >
+
+  <div id="sidebar">
+    <div id="sidebar_header">
+      <h2>Notifications</h2>
+      <button id="sidebar_close"></button>
+    </div>
+    <div id="accordion">
+      <h3><a href='#'>Alerts</a></h3>
+      <div>
+          <table id="alerts">
           </table>
-        </div>
-        <br/>
-        <div class="border"></div>
-        <!-- Events anchor and events div -->
-        <div>
-          <div class="slider_content" id="eventsAnchor">Events</div>
-        </div>
-        <div id="eventsDiv" class="notification_table">
-          <div class="border"></div>
-          <table id="events"  width="100%" border="0" cellpadding="0" cellspacing="0">
+      </div>
+      <h3><a href='#'>Events</a></h3>
+      <div>
+          <table id="events">
           </table>
-        </div>
-        <br/>
-        <div class="border"></div>
-        <!-- Jobs anchor and jobs div -->
-        <div>
-          <div class="slider_content" id="jobsAnchor">Jobs</div>
-        </div>
-        <div id="jobsDiv" class="notification_table">
-          <div class="border"></div>
-          <table id="jobs"  width="100%" border="0" cellpadding="0" cellspacing="0">
+      </div>
+      <h3><a href='#'>Jobs</a></h3>
+      <div>
+          <table id="jobs">
           </table>
-        </div>
       </div>
     </div>
+
   </div>
 </div>

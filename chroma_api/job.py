@@ -52,6 +52,7 @@ class JobResource(ModelResource):
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         excludes = ['wait_for_completions', 'wait_for_count']
+        ordering = ['created_at']
 
     def obj_update(self, bundle, request, **kwargs):
         """Modify a Job (setting 'state' field to 'pause', 'cancel', or 'resume' is the

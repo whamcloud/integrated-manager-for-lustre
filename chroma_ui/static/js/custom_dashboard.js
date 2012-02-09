@@ -244,7 +244,7 @@ $(document).ready(function()
       db_Area_mdOps_Data('false');
       db_AreaSpline_ioOps_Data('false');
   
-      setActiveMenu('dashboard_menu');
+      $('#dashboard_menu').addClass('active');
   }
   
   $("#selectView").live('change', function ()

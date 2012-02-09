@@ -1,109 +1,214 @@
 
+
 $(document).ready(function() 
 {
-  $("#alertAnchor").click(function()
-  {
-    toggleSliderDiv('alertsDiv');
-    if($('#alertsDiv').css('display') == 'block')
-    {
-      $('div.leftpanel table#alerts').dataTable().fnDraw();
-    }
-  });
-  
-  $("#eventsAnchor").click(function()
-  {
-    toggleSliderDiv('eventsDiv')
-    if($('#eventsDiv').css('display') == 'block')
-    {
-      $('div.leftpanel table#events').dataTable().fnDraw();
-    }
-  });
-  
-  $("#jobsAnchor").click(function()
-  {
-    toggleSliderDiv('jobsDiv');
-    if($('#jobsDiv').css('display') == 'block')
-    {
-      $('div.leftpanel table#jobs').dataTable().fnDraw();
-    }
-  });
-  
-  $("#minusImg").click(function()
-  {
-   $("#frmsignin").toggle("slow");
-   $("#signbtn").toggle("slow");
-   return false;
-  });
-});
+  Sidebar.init();
 
-eventStyle = function(ev)
-{
-  var cssClassName = "";
-  if(ev.severity == 'ERROR') //red
-    cssClassName='palered';
-  else if(ev.severity == 'INFO') //normal
-    cssClassName='';
-  else if(ev.severity == 'WARNING') //yellow
-    cssClassName='brightyellow';
-  
-  return cssClassName;
+  $("#sidebar_open").click(function()
+  {
+    Sidebar.open();
+    return false;
+  });
+
+  $("#sidebar_close").button({icons:{primary:'ui-icon-close'}});
+  $("#sidebar_close").click(function()
+  {
+    Sidebar.close();
+    return false;
+  });
 }
 
-eventIcon = function(e)
-{
-  return "/static/images/" + {
-    INFO: 'dialog-information.png',
-    ERROR: 'dialog-error.png',
-    WARNING: 'dialog-warning.png',
-  }[e.severity]
-}
 
-toggleSliderDiv = function(divname)
-{
-  var slider_divs =['alertsDiv','eventsDiv','jobsDiv'];
-  for (var i = 0 ;i < slider_divs.length ; i++)
-  { 
-    if (slider_divs[i] == divname)
-    {
-      if($("#"+divname).css("display") == "none")
-      {
-        $("#"+divname).css("display","block");
+var Sidebar = function(){
+  function eventStyle(ev)
+  {
+    var cssClassName = "";
+    if(ev.severity == 'ERROR') //red
+      cssClassName='palered';
+    else if(ev.severity == 'INFO') //normal
+      cssClassName='';
+    else if(ev.severity == 'WARNING') //yellow
+      cssClassName='brightyellow';
+    
+    return cssClassName;
+  }
+
+  function eventIcon(e)
+  {
+    return "/static/images/" + {
+      INFO: 'dialog-information.png',
+      ERROR: 'dialog-error.png',
+      WARNING: 'dialog-warning.png',
+    }[e.severity]
+  }
+
+  function jobIcon(job)
+  {
+    var prefix = "/static/images/";
+    if(job.state == 'complete') {
+      if (job.errored) {
+        return prefix + "dialog-error.png"
+      } else if (job.cancelled) {
+        return prefix + "gtk-cancel.png"
+      } else {
+        return prefix + "dialog_correct.png"
       }
-      else
-      {
-        $("#"+divname).css("display","none");
-      }    
-    }
-    else
-    {
-      $("#"+slider_divs[i]).hide();
-    }
-  }
-}
-
-function jobIcon(job)
-{
-  var prefix = "/static/images/";
-  if(job.state == 'complete') {
-    if (job.errored) {
-      return prefix + "dialog-error.png"
-    } else if (job.cancelled) {
-      return prefix + "gtk-cancel.png"
+    } else if (job.state == 'paused') {
+      return prefix + "gtk-media-pause.png"
     } else {
-      return prefix + "dialog_correct.png"
+      return prefix + "ajax-loader.gif"
     }
-  } else if (job.state == 'paused') {
-    return prefix + "gtk-media-pause.png"
-  } else {
-    return prefix + "ajax-loader.gif"
   }
-}
 
-function alertIcon(a)
-{
-  return "/static/images/dialog-warning.png";
-}
+  function alertIcon(a)
+  {
+    return "/static/images/dialog-warning.png";
+  }
 
+  function ellipsize(str)
+  {
+    /* FIXME: find or implement real ellipsization by element size
+     * rather than arbitrary string length limit */
+    var length = 40;
+    if (str.length > (length - 3)) {
+      return str.substr(0, length) + "..."
+    } else {
+      return str
+    }
+  }
+
+  function shortLocalTime(str)
+  {
+    function pad(n) {
+      if (n < 10) {
+        return "0" + n
+      } else {
+        return n
+      }
+    }
+    var date = new Date(str)
+    var days_elapsed = ((new Date()) - date) / (3600 * 24 * 1000)
+    var localTime = pad(date.getHours()) + ":" + pad(date.getMinutes())
+    var localDate = date.getFullYear() + "/" + pad(date.getMonth()) + "/" + pad(date.getDate())
+    if (days_elapsed < 1.0) {
+      return localTime
+    } else {
+      return  localDate + "&nbsp;" + localTime
+    }
+  }
+
+  smallTable($('div.leftpanel table#jobs'), 'job/',
+    {order_by: "-created_at"},
+    function(job) {
+      job.icon = "<img src='" + jobIcon(job) + "'/>"
+      job.buttons = ""
+      $.each(job.available_transitions, function(i, transition) {
+        /* TODO: use job URL */
+        /* FIXME: relying on global function */
+        job.buttons += "<input type='button' class='ui-button ui-state-default ui-corner-all ui-button-text-only notification_job_buttons' onclick=setJobState("+job.id+",'"+transition.state+"') value="+transition.label+" />";
+      });
+      job.text = ellipsize(job.description) + "<br>" + shortLocalTime(job.created_at)
+    },
+    [
+      { "sClass": 'icon_column', "mDataProp":"icon" },
+      { "sClass": 'txtleft', "mDataProp":"text" },
+      { "sClass": 'txtleft', "mDataProp":"buttons" },
+    ]
+  );
+
+  smallTable($('div.leftpanel table#alerts'), 'alert/',
+    {active: true, order_by: "-begin"},
+    function(a) {
+      a.text = ellipsize(a.message) + "<br>" + shortLocalTime(a.begin)
+      a.icon = "<img src='" + alertIcon(a) + "'/>"
+    },
+    [
+      { "sClass": 'icon_column', "mDataProp":"icon" },
+      { "sClass": 'txtleft', "mDataProp":"text" },
+    ],
+    "<img src='/static/images/dialog_correct.png'/>&nbsp;No alerts active"
+  );
+
+  smallTable($('div.leftpanel table#events'), 'event/',
+    {order_by: "-created_at"},
+    function(e) {
+      e.icon = "<img src='" + eventIcon(e) + "'/>"
+      e.DT_RowClass = eventStyle(e)
+      e.text = ellipsize(e.message) + "<br>" + shortLocalTime(e.created_at)
+    },
+    [
+      { "sClass": 'icon_column', "mDataProp": "icon" },
+      { "sClass": 'txtleft', "mDataProp": "text" },
+    ]
+  );
+
+  function smallTable(element, url, kwargs, row_fn, columns, emptyText) {
+    element.dataTable({
+        bProcessing: true,
+        bServerSide: true,
+        iDisplayLength:10,
+        bDeferRender: true,
+        sAjaxSource: url,
+        fnServerData: function (url, data, callback, settings) {
+          Api.get_datatables(url, data, function(data){
+            $.each(data.aaData, function(i, row) {
+              row_fn(row);
+            });
+            callback(data);
+          }, settings, kwargs);
+        },
+        aoColumns: columns,
+        oLanguage: {
+          "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />",
+          sZeroRecords: emptyText
+        },
+        bJQueryUI: true,
+        bFilter: false
+      });
+    // Hide the header
+    element.prev().hide();
+    element.find('thead').hide();
+
+    // Hide the "x of y" text from the footer
+    element.next().find('.dataTables_info').hide();
+  }
+
+  function open() {
+    $("div#sidebar div#accordion").change();
+    $("#sidebar").show({effect: 'slide'});
+  }
+
+  function close() {
+    $("#sidebar").hide({effect: 'slide'});
+  }
+
+  function init() {
+    $("div#sidebar div#accordion").accordion({
+      fillSpace: true,
+      collapsible: true,
+      changestart: function (event, ui) {
+        var active = $('div#sidebar div#accordion').accordion("option", "active");
+        if (active == 0) {
+          $('div.leftpanel table#alerts').dataTable().fnDraw();
+        } else if (active == 1) {
+          $('div.leftpanel table#events').dataTable().fnDraw();
+        } else if (active == 2) {
+          $('div.leftpanel table#jobs').dataTable().fnDraw();
+        } else {
+          throw "Unknown accordion index " + active
+        }
+      }
+    });
+  }
+
+  return {
+    init: init,
+    open: open,
+    close: close
+  }
+}();
+
+/* FIXME: global function because of the way it's called from an onclick */
 setJobState = function(job_id, state)
 {
   Api.put("job/" + job_id + "/", {'state': state},
@@ -131,83 +236,3 @@ loadHostList = function(filesystem_id, targetContainer)
   });
 }
 
-setActiveMenu = function(menu_element){
-  $('#'+menu_element).addClass('active');
-}
-
-$(document).ready(function() {
-  smallTable($('div.leftpanel table#jobs'), 'job/',
-    {},
-    function(job) {
-      job.icon = "<img src='" + jobIcon(job) + "'/>"
-      job.buttons = ""
-      $.each(job.available_transitions, function(i, transition) {
-        /* TODO: use job URL */
-        /* FIXME: relying on global function */
-        job.buttons += "<input type='button' class='ui-button ui-state-default ui-corner-all ui-button-text-only notification_job_buttons' onclick=setJobState("+job.id+",'"+transition.state+"') value="+transition.label+" />";
-      });
-    },
-    [
-      { "sClass": 'txtleft', "mDataProp":"icon" },
-      { "sClass": 'txtleft', "mDataProp":"description" },
-      { "sClass": 'txtleft', "mDataProp":"buttons" },
-      { "sClass": 'txtleft', "mDataProp":"created_at" }
-    ]
-  );
-
-  smallTable($('div.leftpanel table#alerts'), 'alert/',
-    {active: true},
-    function(a) {
-      a.icon = "<img src='" + alertIcon(a) + "'/>"
-    },
-    [
-      { "sClass": 'txtleft', "mDataProp":"icon" },
-      { "sClass": 'txtleft', "mDataProp":"message" },
-      { "sClass": 'txtleft', "mDataProp":"begin" },
-    ]
-  );
-
-  smallTable($('div.leftpanel table#events'), 'event/',
-    {},
-    function(e) {
-      e.icon = "<img src='" + eventIcon(e) + "'/>"
-      if (!e.host) {
-        e.host_name = "";
-      }
-      e.DT_RowClass = eventStyle(e)
-    },
-    [
-      { "sClass": 'txtleft', "mDataProp": "icon" },
-      { "sClass": 'txtleft', "mDataProp": "host_name" },
-      { "sClass": 'txtleft', "mDataProp": "message" },
-      { "sClass": 'txtleft', "mDataProp": "created_at" },
-    ]
-  );
-
-  function smallTable(element, url, kwargs, row_fn, columns) {
-    element.dataTable({
-        bProcessing: true,
-        bServerSide: true,
-        iDisplayLength:10,
-        bDeferRender: true,
-        sAjaxSource: url,
-        fnServerData: function (url, data, callback, settings) {
-          Api.get_datatables(url, data, function(data){
-            $.each(data.aaData, function(i, row) {
-              row_fn(row);
-            });
-            callback(data);
-          }, settings, kwargs);
-        },
-        aoColumns: columns,
-        oLanguage: {
-          "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
-        },
-        bJQueryUI: true,
-        bFilter: false
-      });
-    // Hide the header
-    element.prev().hide();
-    element.find('thead').hide();
-  }
-});

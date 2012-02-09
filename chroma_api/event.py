@@ -30,6 +30,7 @@ class EventResource(ModelResource):
         queryset = Event.objects.all()
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
+        ordering = ['created_at', 'host']
         filtering = {
                 'severity': ['exact'],
                 'host': tastypie.constants.ALL_WITH_RELATIONS,

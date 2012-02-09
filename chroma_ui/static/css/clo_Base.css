@@ -403,9 +403,7 @@ cursor:pointer;
     padding-left: 23px;
 }
 
-a.btnsignin, a.btnsignout {
-	
-	/*padding:5px 8px;*/
+a#sidebar_open {
 	color:#fff;
 	text-decoration:none;
 	font-weight:bold;
@@ -413,19 +411,54 @@ a.btnsignin, a.btnsignout {
 	-moz-border-radius:4px;
 	border-radius:4px;
 }
-a.btnsignin:hover, a.btnsignout:hover {
-	
-}
-a.btnsigninon {
-	/*background:#ccc!important;*/
+
+a#sidebar_open {
 	color:#666!important;
 	outline:none;
 }
-#frmsignin {
+
+div#sidebar_header {
+    height: 28px;
+}
+
+button#sidebar_close {
+    float:right;
+    width: auto;
+    width: 16px;
+    height: 16px;
+}
+
+button#sidebar_close {
+    padding: 0px;
+    width: 24px;
+    height: 24px;
+	display:block;
+    margin-top: 2px;
+}
+
+button#sidebar_close .ui-icon{
+    margin-left: -3px;
+}
+
+
+#sidebar h2 {
+    font-size: 10pt;
+    font-weight: bold;
+    margin-left: 7px;
+    margin-top: 7px;
+    margin-bottom: 7px;
+    color: black;
+    float: left;
+    display: block;
+}
+
+#sidebar {
 	display:none;
 	position:absolute;
-	top: 73px;
-	width:355px;
+	top: 0px;
+    left: 0px;
+	width:400px;
+    height: 400px;
 	padding:2px;
 	*margin-top: 5px;
 	font-size:11px;
@@ -435,10 +468,11 @@ a.btnsigninon {
 	-webkit-border-top-left-radius:0;
 	border-radius:5px;
 	border-top-left-radius:0;
-	z-index:100;
+	z-index:1000;
+    background-color: #bbb;
 	
 }
-#frmsignin input[type=text], #frmsignin input[type=password] {
+#sidebar input[type=text], #sidebar input[type=password] {
 	display:block;
 	-moz-border-radius:4px;
 	-webkit-border-radius:4px;
@@ -448,12 +482,17 @@ a.btnsigninon {
 	padding:5px;
 	width:203px;
 }
-#frmsignin p {
+#sidebar p {
 	margin:0;
 }
-#frmsignin label {
+#sidebar label {
 	font-weight:normal;
 }
+
+#sidebar .ui-accordion-content {
+    padding: 6px;
+}
+
 #submitbtn {
 	-moz-border-radius:4px;
 	-webkit-border-radius:4px;
@@ -786,4 +825,11 @@ table.chart_grid td table {
 
 .fsadmin_only {
   display: none;
+}
+
+
+.icon_column{
+	padding:2px;
+    width: 20px;
+    background-color: transparent;
 }
