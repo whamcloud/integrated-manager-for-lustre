@@ -8,8 +8,36 @@ from django.utils.unittest import TestCase
 from selenium import webdriver
 
 from utils.constants import Constants
-from test_parameters import CHROMA_URL
-from test_parameters import TEST_BROWSER
+import test_parameters
+
+from views.login import Login
+
+import time
+from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import NoSuchElementException
+
+
+def wait_for_css_selector_visible(driver, selector, timeout):
+    for i in xrange(timeout):
+        try:
+            element = driver.find_element_by_css_selector(selector)
+            try:
+                if element.is_displayed():
+                    return
+            except StaleElementReferenceException:
+                pass
+        except NoSuchElementException:
+            pass
+        time.sleep(1)
+    raise RuntimeError('Timeout')
+
+
+def quiesce_api(driver, timeout):
+    for i in xrange(timeout):
+        busy = driver.execute_script('Api.busy();')
+        if not busy:
+            return
+    raise RuntimeError('Timeout')
 
 
 class SeleniumBaseTestCase(TestCase):
@@ -20,17 +48,27 @@ class SeleniumBaseTestCase(TestCase):
     """
     driver = None
 
-    def setUp(cls):
-        if not cls.driver:
-            if TEST_BROWSER == "Chrome":
-                cls.driver = webdriver.Chrome()
-            elif TEST_BROWSER == "Firefox":
-                cls.driver = webdriver.Firefox()
+    def setUp(self):
+
+        if test_parameters.HEADLESS:
+            from pyvirtualdisplay import Display
+            display = Display(visible = 0, size = (1280, 1024))
+            display.start()
+
+        if not self.driver:
+            self.driver = getattr(webdriver, test_parameters.BROWSER)()
 
         constants = Constants()
-        cls.wait_time = constants.get_wait_time('standard')
-        cls.long_wait_time = constants.get_wait_time('long')
-        cls.driver.get(CHROMA_URL)
+        self.wait_time = constants.get_wait_time('standard')
+        self.long_wait_time = constants.get_wait_time('long')
+        if not test_parameters.CHROMA_URL:
+            raise RuntimeError("Please set test_parameters.CHROMA_URL")
+        self.driver.get(test_parameters.CHROMA_URL)
 
-    def tearDown(cls):
-        cls.driver.close()
+        wait_for_css_selector_visible(self.driver, '#login_dialog', 10)
+        Login(self.driver).login_superuser()
+        wait_for_css_selector_visible(self.driver, '#user_info #authenticated', 10)
+        self.driver.execute_script('Api.testMode(true);')
+
+    def tearDown(self):
+        self.driver.close()

@@ -35,6 +35,12 @@ class CreateMgt(SeleniumBaseTestCase):
         page_navigation.click(page_navigation.links['Configure'])
         page_navigation.click(page_navigation.links['MGTs'])
 
+        # FIXME: Navigation should know what to wait for when going
+        # to a new page (in the case of dynamically loaded tabs you
+        # have to poll for this)
+        from base import wait_for_css_selector_visible
+        wait_for_css_selector_visible(self.driver, '#btnNewMGT', 10)
+
         # Calling create_mgt
         create_mgt_page = Mgt(self.driver)
 

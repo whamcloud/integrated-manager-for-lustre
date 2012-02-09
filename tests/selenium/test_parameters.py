@@ -1,8 +1,14 @@
-# This file containts global parameters for the test
 
-CHROMA_URL = 'http://115.113.226.194:9501/ui/'
-#TEST_BROWSER = 'Firefox'
+# Selenium test settings (see http://wiki.whamcloud.com/display/HYD/Running+Selenium+tests)
 
-TEST_BROWSER = 'Chrome'
-# If you want to use Chrome as the test browser, make sure you download and
-# copy the chromedriver to the driver folder.
+#: The URL to your Chroma server e.g. http://localhost:8000/ui/
+CHROMA_URL = ""
+
+#: Choice of browser (Chrome or Firefox)
+BROWSER = 'Chrome'
+
+#: User credentials for login to Chroma server
+USERS = [{'username': 'admin', 'password': 'password', 'is_superuser': True}]
+
+#: Run the tests using a virtual display instead of opening a window
+HEADLESS = True
