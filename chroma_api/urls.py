@@ -115,7 +115,8 @@ urlpatterns = patterns('',
     (r'^', include(chroma_api.log.LogResource().urls)),
 
     # chroma_api.command
-    (r'^command/(?P<id>\d+)/$', CsrfResource(chroma_api.command.Handler)),
+    #(r'^command/(?P<id>\d+)/$', CsrfResource(chroma_api.command.Handler)),
+    (r'^', include(chroma_api.command.CommandResource().urls)),
 
     # chroma_api.job
     (r'^', include(chroma_api.job.JobResource().urls)),

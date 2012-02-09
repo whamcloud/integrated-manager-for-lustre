@@ -43,12 +43,6 @@ class HostResource(StatefulModelResource):
             raise ImmediateHttpResponse(response = http.HttpBadRequest)
         return bundle
 
-    def obj_delete(self, request = None, **kwargs):
-        host = self.obj_get(request, **kwargs)
-        from chroma_core.models import Command
-        command = Command.set_state(host, 'removed')
-        raise custom_response(self, request, http.HttpAccepted, command.to_dict())
-
 
 class HostTestResource(Resource):
     hostname = fields.CharField()
@@ -66,5 +60,5 @@ class HostTestResource(Resource):
         from chroma_core.models import Monitor
         host = ManagedHost(address = bundle.data['hostname'])
         host.monitor = Monitor(host = host)
-        job = test_host_contact.delay(host)
-        raise custom_response(self, request, http.HttpAccepted, {'task_id': job.task_id, 'status': job.status})
+        task = test_host_contact.delay(host)
+        raise custom_response(self, request, http.HttpAccepted, {'task_id': task.task_id, 'status': task.status})

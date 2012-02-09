@@ -26,8 +26,8 @@ class JobResource(ModelResource):
             lambda bundle: StateReadLock.objects.filter(job = bundle.obj), full = True, null = True)
     write_locks = fields.ToManyField(StateLockResource,
             lambda bundle: StateWriteLock.objects.filter(job = bundle.obj), full = True, null = True)
-    #command = fields.ToManyField('chroma_api.command.CommandResource',
-    #        lambda bundle: bundle.obj.commands.all(), full = True, null = True)
+    commands = fields.ToManyField('chroma_api.command.CommandResource',
+            lambda bundle: bundle.obj.command_set.all(), null = True)
 
     available_transitions = fields.DictField()
 

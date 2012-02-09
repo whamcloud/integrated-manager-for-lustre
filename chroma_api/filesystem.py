@@ -16,7 +16,7 @@ import tastypie.http as http
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_api.utils import custom_response, ConfParamResource
+from chroma_api.utils import custom_response, ConfParamResource, dehydrate_command
 
 
 class FilesystemResource(ConfParamResource):
@@ -102,6 +102,8 @@ class FilesystemResource(ConfParamResource):
 
         command = Command.set_state(fs, 'available', "Creating filesystem %s" % fsname)
 
+        filesystem_data = self.full_dehydrate(self.build_bundle(obj = fs)).data
+
         raise custom_response(self, request, http.HttpAccepted,
-                {'command': command.to_dict(),
-                 'filesystem': self.full_dehydrate(self.build_bundle(obj = fs)).data})
+                {'command': dehydrate_command(command),
+                 'filesystem': filesystem_data})

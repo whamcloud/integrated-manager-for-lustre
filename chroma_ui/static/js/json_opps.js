@@ -14,7 +14,7 @@ var CONFIRM_TITLE = "Configuration Manager";
 
 stateTransitionCommit = function(url, state)
 {
-  invoke_api_url(api_put, url, {state: state}, success_callback = function(data) {console.log(data)})
+  Api.put(url, {state: state}, success_callback = function(data) {console.log(data)})
 }
 
 $(document).ready(function() {
@@ -23,7 +23,7 @@ $(document).ready(function() {
 
 stateTransition = function (url, state)
 {
-  invoke_api_url(api_put, url, {dry_run: true, state: state}, 
+  Api.put(url, {dry_run: true, state: state}, 
   success_callback = function(data)  
   {
     var requires_confirmation = false;

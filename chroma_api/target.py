@@ -17,7 +17,7 @@ import tastypie.http as http
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_api.utils import custom_response, ConfParamResource
+from chroma_api.utils import custom_response, ConfParamResource, dehydrate_command
 
 # Some lookups for the three 'kind' letter strings used
 # by API consumers to refer to our target types
@@ -166,7 +166,7 @@ class TargetResource(ConfParamResource):
             command.save()
         for target in targets:
             StateManager.set_state(target, 'mounted', command.pk)
-        raise custom_response(self, request, http.HttpAccepted, command.to_dict())
+        raise custom_response(self, request, http.HttpAccepted, dehydrate_command(command))
 
     def get_resource_graph(self, request, **kwargs):
         target = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))

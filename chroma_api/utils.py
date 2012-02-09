@@ -17,6 +17,14 @@ def custom_response(resource, request, response_klass, response_data):
     return ImmediateHttpResponse(response = response)
 
 
+def dehydrate_command(command):
+    """There are a few places where we invoke CommandResource from other resources
+    to build a dict of a Command in 202 responses, so wrap the process here."""
+    from chroma_api.command import CommandResource
+    cr = CommandResource()
+    return cr.full_dehydrate(cr.build_bundle(obj = command)).data
+
+
 class StatefulModelResource(ModelResource):
     content_type_id = fields.IntegerField()
     available_transitions = fields.ListField()
@@ -45,7 +53,14 @@ class StatefulModelResource(ModelResource):
         else:
             from chroma_core.models import Command
             command = Command.set_state(bundle.obj, new_state)
-            raise custom_response(self, request, http.HttpAccepted, command.to_dict())
+            raise custom_response(self, request, http.HttpAccepted,
+                    {'command': dehydrate_command(command)})
+
+    def obj_delete(self, request = None, **kwargs):
+        obj = self.obj_get(request, **kwargs)
+        from chroma_core.models import Command
+        command = Command.set_state(obj, 'removed')
+        raise custom_response(self, request, http.HttpAccepted, dehydrate_command(command))
 
 
 class ConfParamResource(StatefulModelResource):
