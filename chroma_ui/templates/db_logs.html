@@ -1,10 +1,8 @@
-    {% extends 'hydra_base.html' %}
+    {% extends 'base.html' %}
     {% block css%}
     {% endblock %}
     {% block scripts%}
-    <!-- Added for datetime picker -->
-    <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-timepicker-addon.js"></script>
-    <!-------------------------------->
+    <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery-ui-timepicker-addon.js"></script>
     <script language="javascript" type="text/javascript">
       $(document).ready(function() 
       {

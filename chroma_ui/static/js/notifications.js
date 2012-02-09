@@ -65,7 +65,7 @@ function for_class_starting(element, prefix, callback) {
 }
 
 function debug(msg) {
-  ////console.log(msg);
+  //console.log(msg);
 }
 
 cluetip_tooltip_format = function(element, title, objects, attr)
@@ -249,12 +249,10 @@ finish_running = function(job_info) {
 
   debug('finish_running: ' + job_info.id);
 
-  debug("ALPHA: leaving running_jobs state:");
   debug(running_jobs);
 
   delete running_jobs[job_info.id]
 
-  debug("ZULU: leaving running_jobs state:");
   debug(running_jobs);
 
   running_job_count -= 1;
@@ -496,6 +494,7 @@ poll_objects = function() {
 }
 
 $(document).ready(function() {
+  return
   Api.post("notifications/", {filter_opts: {since_time: "", initial: true}}, 
   success_callback = function(data)
   {

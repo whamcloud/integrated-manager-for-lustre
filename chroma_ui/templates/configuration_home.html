@@ -1,19 +1,13 @@
-{% extends 'hydra_base.html' %}
+{% extends 'base.html' %}
 {% block css %}
-<link href="{{STATIC_URL}}css/tabs.css" rel="stylesheet" type="text/css" />
-<link href="{{STATIC_URL}}css/jquery.alerts.css" rel="stylesheet" type="text/css" />
-
 <link href="{{STATIC_URL}}css/storage_resource_create.css" rel="stylesheet" type="text/css" />
 <link rel="stylesheet" href="{{STATIC_URL}}css/filesystem_configuration.css" type='text/css' />
 {% endblock %}
 
 {% block scripts %}
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.address-1.4.min.js"></script>
-<script src="{{STATIC_URL}}js/jquery.hoverIntent.js" type="text/javascript"></script>
-<script src="{{STATIC_URL}}js/jquery.bgiframe.min.js" type="text/javascript"></script>
+
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_dialog.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/jquery.alerts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_create.js"></script>
 <script type='text/javascript' src="{{STATIC_URL}}js/filesystem_configuration.js"></script>

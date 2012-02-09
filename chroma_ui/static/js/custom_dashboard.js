@@ -17,7 +17,6 @@
  * 13) loadOSSContent(fsId, fsName, ossId, ossName);
  * 14) $("#ostSelect").live('change');
  * 15) loadOSTContent(fsId, fsName, ossName, ostId, ostName);
- * 16) $("ul.tabs li").click();
  * 17) $("#heatmap_parameter_select").change();
  * 18) reloadHeatMap(fetchmetric);
 /*****************************************************************************/
@@ -546,24 +545,7 @@ $(document).ready(function()
     /* HYD-375: ostSelect value is a name instead of an ID */
     load_resource_graph("ost_resource_graph_canvas", ostId);
   }
-/******************************************************************************
- * Function for controlling tabs on oss dashboard
-******************************************************************************/				
-  $(".tab_content").hide(); //Hide all content
-  $("ul.tabs li:first").addClass("active").show(); //Activate first tab
-  $(".tab_content:first").show(); //Show first tab content
 
-  //On Click Event
-  $("ul.tabs li").click(function() 
-  {
-    $("ul.tabs li").removeClass("active"); //Remove any "active" class
-    $(this).addClass("active"); //Add "active" class to selected tab
-    $(".tab_content").hide(); //Hide all tab content
-
-    var activeTab = $(this).find("a").attr("href"); //Find the href attribute value to identify the active tab + content
-    $(activeTab).fadeIn(); //Fade in the active ID content
-    return false;
-  });
 /*****************************************************************************
  * Function to reload heap map on dashboard landing page
 *****************************************************************************/

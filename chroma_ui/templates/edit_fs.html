@@ -4,9 +4,9 @@
   $(document).ready(function() {
     var fs_id = $('#fs_id').val();
     loadFilesystem(fs_id);
-  }
+  });
 
-  function loadFilesystem(fs_id)
+  function loadFilesystem(fs_id) {
     Api.get("filesystem/" + fs_id + "/", {}, 
     success_callback = function(filesystem)
     {
@@ -64,7 +64,7 @@
 
     // Free space pie charts
     LoadFSGraph_EditFS( $("#fs_id").val());
-  });
+  }
 
 
   function loadFilesystemTargets(fs_id)
