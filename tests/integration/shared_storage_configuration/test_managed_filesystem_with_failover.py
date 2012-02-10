@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import subprocess
+=======
+import json
+>>>>>>> HYD-596, HYD-597 - Separate clients from test runner, shared fns for system calls.
 import time
 
 from testconfig import config
@@ -160,6 +164,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         self.assertTrue(response.successful, response.text)
         mount_command = response.json['mount_command']
 
+<<<<<<< HEAD
         process = subprocess.call(
             'mkdir -p /mnt/testfs',
             shell=True
@@ -182,3 +187,8 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
         # TODO: Verify file now on testfs filesystem. Possibly reuse
         # some existing Lustre tests here to exercise the fs?
+=======
+        client = config['lustre_clients'].keys()[0]
+        self.mount_filesystem(client, "testfs", mgs_hostname)
+        self.exercise_filesystem(client, "testfs")
+>>>>>>> HYD-596, HYD-597 - Separate clients from test runner, shared fns for system calls.
