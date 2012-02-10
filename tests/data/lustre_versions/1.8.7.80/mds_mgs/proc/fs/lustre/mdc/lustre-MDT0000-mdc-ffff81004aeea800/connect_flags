@@ -1,0 +1,11 @@
+flags=0x18340f020
+version
+inode_bit_locks
+join_file
+getattr_by_fid
+no_oh_for_devices
+early_lock_cancel
+adaptive_timeouts
+lru_resize
+version_recovery
+pools

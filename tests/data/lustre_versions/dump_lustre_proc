@@ -1,0 +1,118 @@
+#!/usr/bin/env ruby
+
+require 'ftools'
+require 'socket'
+
+def dump_file(path)
+  File.open(path) do |f|
+    if block_given?
+      yield f
+    else
+      f.readlines
+    end
+  end
+end
+
+def dump_directory(path, &block)
+  Dir.foreach(path) do |entry|
+    next if entry =~ /^\.\.?$/
+
+    full_path = path + "/#{entry}"
+
+    if File.directory?(full_path)
+      dump_directory(full_path, &block)
+    elsif File.readable?(full_path)
+      if block_given?
+        yield full_path
+      else
+        puts full_path
+      end
+    end
+  end
+end
+
+def lustre_version
+  @lustre_version ||= dump_file(PROC_LUSTRE_ROOT + '/version')[0].split(/\s+/)[1]
+end
+
+def cat_file(infile, outfile)
+  dump_file(infile) do |i|
+    File.open(outfile, "w+") do |o|
+      i.readlines.each do |line|
+        o.puts line
+      end
+    end
+  end
+end
+
+def dump_entry(entry, dump_path, overwrite=true)
+  dump_parent = dump_path + File.dirname(entry)
+  File.makedirs(dump_parent)
+  
+  return if File.exist?(dump_path + entry) and !overwrite
+  # workaround File.readable? being buggy on older ruby
+  #return unless File.readable?(entry)
+  return if File.stat(entry).mode & 0700 == 128
+
+  cat_file(entry, "#{dump_parent}/" + File.basename(entry))
+end
+
+def test_entry?(entry)
+  lustre_1_8 = %w{
+    /proc/sys/lnet/routes
+    /proc/sys/lnet/stats
+    /proc/fs/lustre/version
+    /proc/fs/lustre/ldlm/namespaces/filter-.*/lock_count
+    /proc/fs/lustre/ldlm/namespaces/filter-.*/pool/(cancel|grant)_rate
+    /proc/fs/lustre/mds/\w+-MDT\d+/(files(free|total)|kbytes(free|total)|recovery_status|stats|uuid|num_exports)
+    /proc/fs/lustre/obdfilter/\w+-OST\d+/(brw_stats|files(free|total)|kbytes(free|total)|num_exports|recovery_status|stats|uuid)
+    /proc/fs/lustre/osc/\w+-OST\d+-osc/ost_server_uuid
+  }
+
+  lustre_2_0 = %w{
+    /proc/fs/lustre/mdt/\w+-MDT\d+/(recovery_status|uuid)
+    /proc/fs/lustre/mdt/\w+-MDT\d+/md_stats
+    /proc/fs/lustre/mdt/\w+-MDT\d+/exports/.*/(ldlm_)*stats
+    /proc/fs/lustre/osd-ldiskfs/\w+-MDT\d+/(files(free|total)|kbytes(free|total))
+    /proc/fs/lustre/osc/\w+-OST\d+-osc-MDT\w+/ost_server_uuid
+  }
+
+  lustre_2_1 = %w{
+
+  }
+
+  lustre_zfs = %w{
+    /proc/fs/lustre/osd-zfs/[\w\-]+/.*
+  }
+
+  [lustre_zfs, lustre_2_1, lustre_2_0, lustre_1_8].flatten.each do |raw|
+    regex = Regexp.new(raw)
+    if regex.match(entry)
+      return true
+    end
+  end
+
+  return false
+end
+
+PROC_LUSTRE_ROOT = '/proc/fs/lustre'
+PROC_LNET_ROOT = '/proc/sys/lnet'
+
+dump_path = "./#{lustre_version}/#{Socket::gethostname}"
+test_path = "./#{lustre_version}"
+
+puts "Dumping full /proc to: #{dump_path}"
+puts "Merging with /proc testdata in: #{lustre_version}/proc"
+
+%w{/proc/cpuinfo /proc/stat /proc/meminfo /proc/modules}.each do |entry|
+  dump_entry(entry, dump_path)
+  dump_entry(entry, test_path, false)
+end
+
+[PROC_LUSTRE_ROOT, PROC_LNET_ROOT].each do |root|
+  dump_directory(root) do |entry|
+    dump_entry(entry, dump_path)
+    dump_entry(entry, test_path, false) if test_entry?(entry)
+  end
+end
+

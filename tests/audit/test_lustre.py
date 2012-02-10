@@ -3,7 +3,7 @@ import tempfile
 import os
 import shutil
 import hydra_agent.audit.lustre
-from hydra_agent.audit.lustre import LnetAudit, MdtAudit, MgsAudit, ObdfilterAudit, LustreAudit
+from hydra_agent.audit.lustre import LnetAudit, MdtAudit, MdsAudit, MgsAudit, ObdfilterAudit, LustreAudit
 
 
 class TestLustreAuditClassMethods(unittest.TestCase):
@@ -25,14 +25,19 @@ class TestLustreAuditClassMethods(unittest.TestCase):
 
 
 class TestLustreAuditScanner(unittest.TestCase):
-    def setUp(self):
+    def test_2x_audit_scanner(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-
-    def test_audit_scanner(self):
+        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
         list = [cls.__name__ for cls in
-                hydra_agent.audit.lustre.local_audit_classes(self.test_root)]
-        self.assertEqual(list, ['LnetAudit', 'MdsAudit', 'MdtAudit', 'MgsAudit'])
+                hydra_agent.audit.lustre.local_audit_classes(test_root)]
+        self.assertEqual(list, ['LnetAudit', 'MdtAudit', 'MgsAudit'])
+
+    def test_18x_audit_scanner(self):
+        tests = os.path.join(os.path.dirname(__file__), '..')
+        test_root = os.path.join(tests, "data/lustre_versions/1.8.7.80/mds_mgs")
+        list = [cls.__name__ for cls in
+                hydra_agent.audit.lustre.local_audit_classes(test_root)]
+        self.assertEqual(list, ['LnetAudit', 'MdsAudit', 'MgsAudit'])
 
 
 class TestLustreAudit(unittest.TestCase):
@@ -111,6 +116,21 @@ class TestMdtAudit(unittest.TestCase):
 
     def test_audit_is_available(self):
         assert MdtAudit.is_available(self.test_root)
+
+
+class TestMdsAudit(unittest.TestCase):
+    """Test MDS audit for 1.8.x filesystems; unused on 2.x filesystems"""
+    def test_audit_is_available(self):
+        """Test that MDS audits happen for 1.8.x audits."""
+        tests = os.path.join(os.path.dirname(__file__), '..')
+        self.test_root = os.path.join(tests, "data/lustre_versions/1.8.7.80/mds_mgs")
+        self.assertTrue(MdsAudit.is_available(self.test_root))
+
+    def test_mdd_obd_skipped(self):
+        """Test that the mdd_obd device is skipped for 2.x audits (HYD-437)"""
+        tests = os.path.join(os.path.dirname(__file__), '..')
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        self.assertFalse(MdsAudit.is_available(self.test_root))
 
 
 class TestLnetAudit(unittest.TestCase):

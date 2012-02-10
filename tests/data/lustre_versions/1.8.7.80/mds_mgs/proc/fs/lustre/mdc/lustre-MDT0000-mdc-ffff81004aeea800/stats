@@ -1,0 +1,10 @@
+snapshot_time             1328809138.209220 secs.usecs
+req_waittime              18 samples [usec] 42 2759 5410 8898668
+req_active                18 samples [reqs] 1 1 18 18
+mds_getattr               1 samples [usec] 2759 2759 2759 7612081
+mds_close                 2 samples [usec] 78 94 172 14920
+mds_readpage              1 samples [usec] 122 122 122 14884
+mds_connect               1 samples [usec] 140 140 140 19600
+mds_getstatus             1 samples [usec] 42 42 42 1764
+mds_statfs                3 samples [usec] 43 63 165 9299
+obd_ping                  5 samples [usec] 84 150 525 57917

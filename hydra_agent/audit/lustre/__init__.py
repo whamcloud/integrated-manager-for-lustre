@@ -211,6 +211,14 @@ class TargetAudit(LustreAudit):
 
 class MdsAudit(TargetAudit):
     """In Lustre < 2.x, the MDT stats were mis-named as MDS stats."""
+    @classmethod
+    def is_available(cls, fscontext=None):
+        """Stupid override to prevent this being used on 2.x+ filesystems."""
+        if MdsAudit(fscontext=fscontext).version_info()[0] < 2:
+            return super(MdsAudit, cls).is_available(fscontext)
+        else:
+            return False
+
     def __init__(self, **kwargs):
         super(MdsAudit, self).__init__(**kwargs)
         self.target_root = '/proc/fs/lustre/mds'
