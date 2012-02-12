@@ -537,7 +537,7 @@ class MountStep(AnyTargetMountStep):
 
         result = self._run_agent_command(target, "start-target --label %s --serial %s" % (target.name, target.pk))
         try:
-            started_on = ManagedHost.objects.get(fqdn = result['location'])
+            started_on = ManagedHost.objects.get(nodename = result['location'])
         except ManagedHost.DoesNotExist:
             job_log.error("Target %s (%s) found on host %s, which is not a ManagedHost" % (target, target_id, result['location']))
             raise

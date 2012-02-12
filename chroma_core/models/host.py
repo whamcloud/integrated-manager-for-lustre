@@ -39,6 +39,9 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # A fully qualified domain name like flint02.testnet
     fqdn = models.CharField(max_length = 255, blank = True, null = True)
 
+    # a nodename to match against fqdn in corosync output
+    nodename = models.CharField(max_length = 255)
+
     # A basic authentication mechanism
     agent_token = models.CharField(max_length = 64)
 
@@ -588,11 +591,14 @@ class LearnHostnameStep(Step):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         fqdn = self.invoke_agent(host, "get-fqdn")
+        nodename = self.invoke_agent(host, "get-nodename")
         assert fqdn != None
+        assert nodename != None
 
         from django.db import IntegrityError
         try:
             host.fqdn = fqdn
+            host.nodename = nodename
             host.save()
             job_log.info("Learned FQDN '%s' for host %s (%s)" % (fqdn, host.pk, host.address))
         except IntegrityError:

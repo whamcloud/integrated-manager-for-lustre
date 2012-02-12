@@ -40,6 +40,7 @@ class TestLuns(JobTestCase):
     mock_servers = {
             'myaddress': {
                 'fqdn': 'myaddress.mycompany.com',
+                'nodename': 'test01.myaddress.mycompany.com',
                 'nids': ["192.168.0.1@tcp"]
             }
     }
@@ -115,6 +116,7 @@ class TestVirtualMachines(JobTestCase):
     mock_servers = {
             'myaddress': {
                 'fqdn': 'myaddress.mycompany.com',
+                'nodename': 'test01.myaddress.mycompany.com',
                 'nids': ["192.168.0.1@tcp"]
             }
     }

@@ -18,6 +18,8 @@ class MockAgent(object):
         print "invoke_agent %s %s %s" % (self.host, cmdline, args)
         if cmdline == "get-fqdn":
             return self.mock_servers[self.host.address]['fqdn']
+        if cmdline == "get-nodename":
+            return self.mock_servers[self.host.address]['nodename']
         elif cmdline == "lnet-scan":
             return self.mock_servers[self.host.address]['nids']
         elif cmdline.startswith("format-target"):
@@ -28,8 +30,7 @@ class MockAgent(object):
             from chroma_core.models import ManagedTarget
             target_id = re.search("--serial ([^\s]+)", cmdline).group(1)
             target = ManagedTarget.objects.get(id = target_id)
-            # FIXME: this will be nodename when HYD-455 is done
-            return {'location': target.primary_server().fqdn}
+            return {'location': target.primary_server().nodename}
         elif cmdline.startswith('register-target'):
             MockAgent.label_counter += 1
             return {'label': "foofs-TTT%04d" % self.label_counter}
@@ -86,6 +87,7 @@ class JobTestCaseWithHost(JobTestCase):
     mock_servers = {
             'myaddress': {
                 'fqdn': 'myaddress.mycompany.com',
+                'nodename': 'test01.myaddress.mycompany.com',
                 'nids': ["192.168.0.1@tcp"]
             }
     }
