@@ -317,61 +317,15 @@ def run_job(job_id):
     return None
 
 
-@task()
-def monitor_exec(monitor_id, counter):
-    from chroma_core.models import Monitor
-    monitor = Monitor.objects.get(pk = monitor_id)
-
-    # Conditions indicating that we've restarted or that
-    if not (monitor.state in ['tasked', 'tasking']):
-        audit_log.warn("Host %s monitor %s (audit %s) found unfinished (crash recovery).  Ending task." % (monitor.host, monitor.id, monitor.counter))
-        monitor.update(state = 'idle', task_id = None)
-        return
-    elif monitor.counter != counter:
-        audit_log.warn("Host %s monitor found bad counter %s != %s.  Ending task." % (monitor.host, monitor.counter, counter))
-        monitor.update(state = 'idle', task_id = None)
-        return
-
-    monitor.update(state = 'started')
-    audit_log.debug("Monitor %s started" % monitor.host)
-    try:
-        from monitor.lib.lustre_audit import UpdateScan
-        raw_data = monitor.invoke('update-scan',
-                settings.AUDIT_PERIOD * 2)
-        UpdateScan().run(monitor.host.pk, raw_data)
-    except Exception:
-        audit_log.error("Exception auditing host %s" % monitor.host)
-        import sys
-        import traceback
-        exc_info = sys.exc_info()
-        audit_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
-
-    monitor.update(state = 'idle', task_id = None)
-    audit_log.debug("Monitor %s completed" % monitor.host)
-    return None
-
-
 @periodic_task(run_every=timedelta(seconds=settings.AUDIT_PERIOD))
 def audit_all():
-    import settings
     from chroma_core.models import ManagedHost
-    if settings.HTTP_AUDIT:
-        for host in ManagedHost.objects.all():
-            # If host has ever had contact but is not available now
-            if not host.monitor.last_success and not host.is_available():
-                # Set the HostContactAlert high
-                from chroma_core.models.alert import HostContactAlert
-                HostContactAlert.notify(host, True)
-    else:
-        for host in ManagedHost.objects.all():
-            if host.monitor:
-                monitor = host.monitor
-            else:
-                continue
-
-            tasked = monitor.try_schedule()
-            if not tasked:
-                audit_log.info("audit_all: host %s audit (%d) still in progress" % (monitor.host, monitor.counter))
+    for host in ManagedHost.objects.all():
+        # If host has ever had contact but is not available now
+        if host.last_contact and not host.is_available():
+            # Set the HostContactAlert high
+            from chroma_core.models.alert import HostContactAlert
+            HostContactAlert.notify(host, True)
 
 
 @periodic_task(run_every=timedelta(seconds=settings.AUDIT_PERIOD))
@@ -459,16 +413,17 @@ def test_host_contact(host):
         from subprocess import call
         ping = (0 == call(['ping', '-c 1', resolved_address]))
 
+    from chroma_core.lib.agent import Agent
     # Don't depend on ping to try invoking agent, could well have
     # SSH but no ping
     agent = False
     if resolve:
-        result = host.monitor.invoke('update-scan', timeout = settings.AUDIT_PERIOD * 2)
-        if isinstance(result, Exception):
-            audit_log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, result))
-            agent = False
-        else:
+        try:
+            Agent(host).invoke('get-fqdn', timeout = settings.AUDIT_PERIOD * 2)
             agent = True
+        except Exception, e:
+            audit_log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
+            agent = False
 
     return {
             'address': host.address,

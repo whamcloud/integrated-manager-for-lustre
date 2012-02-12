@@ -57,8 +57,6 @@ class HostTestResource(Resource):
 
     def obj_create(self, bundle, request = None, **kwargs):
         from chroma_core.tasks import test_host_contact
-        from chroma_core.models import Monitor
         host = ManagedHost(address = bundle.data['hostname'])
-        host.monitor = Monitor(host = host)
         task = test_host_contact.delay(host)
         raise custom_response(self, request, http.HttpAccepted, {'task_id': task.task_id, 'status': task.status})

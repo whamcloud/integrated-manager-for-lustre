@@ -197,7 +197,7 @@ class AnyTargetMountStep(Step):
 
         # Try and use each targetmount, the one with the most recent successful audit first
         from chroma_core.models import ManagedTargetMount
-        available_tms = ManagedTargetMount.objects.filter(target = target, host__state = 'lnet_up').order_by('-host__monitor__last_success')
+        available_tms = ManagedTargetMount.objects.filter(target = target, host__state = 'lnet_up').order_by('-host__last_contact')
         if available_tms.count() == 0:
             raise RuntimeError("No hosts are available for target %s" % target)
         available_tms = list(available_tms)

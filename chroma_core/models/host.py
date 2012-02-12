@@ -9,8 +9,6 @@ from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
 
-from polymorphic.models import DowncastMetaclass
-
 from chroma_core.models.jobs import StatefulObject, Job
 from chroma_core.lib.job import StateChangeJob, DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
@@ -40,7 +38,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     fqdn = models.CharField(max_length = 255, blank = True, null = True)
 
     # a nodename to match against fqdn in corosync output
-    nodename = models.CharField(max_length = 255)
+    nodename = models.CharField(max_length = 255, blank = True, null = True)
 
     # A basic authentication mechanism
     agent_token = models.CharField(max_length = 64)
@@ -48,6 +46,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # TODO: separate the LNET state [unloaded, down, up] from the host state [created, removed]
     states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
+
+    last_contact = models.DateTimeField(blank = True, null = True)
 
     DEFAULT_USERNAME = 'root'
 
@@ -79,13 +79,12 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def is_available(self):
         """Whether the Host is in contact"""
-        last_success = self.monitor.last_success
-        if not last_success:
+        if not self.last_contact:
             # Never had contact
             return False
         else:
             # Have we had contact within timeout?
-            time_since = datetime.datetime.now() - last_success
+            time_since = datetime.datetime.now() - self.last_contact
             return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
     def to_dict(self):
@@ -117,7 +116,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                 token = uuid.uuid4().__str__()
                 host = ManagedHost.objects.create(address = address_string, agent_token = token)
 
-            monitor, created = Monitor.objects.get_or_create(host = host)
             lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
 
             from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
@@ -444,61 +442,6 @@ class LunNode(models.Model):
         return "%s (%s)" % (short_name, human_size)
 
 
-class Monitor(models.Model):
-    __metaclass__ = DowncastMetaclass
-
-    host = models.OneToOneField(ManagedHost)
-
-    class Meta:
-        app_label = 'chroma_core'
-
-    #idle, tasking, tasked, started,
-    state = models.CharField(max_length = 32, default = 'idle')
-    task_id = models.CharField(max_length=36, blank = True, null = True, default = None)
-    counter = models.IntegerField(default = 0)
-    last_success = models.DateTimeField(blank = True, null = True)
-
-    @transaction.commit_on_success
-    def update(self, **kwargs):
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-        self.save()
-
-    def try_schedule(self):
-        """Return True if a run was scheduled, else False"""
-        from chroma_core.tasks import monitor_exec
-        from chroma_core.lib.lustre_audit import audit_log
-
-        if self.state == 'tasking':
-            audit_log.warn("Monitor %d found in state 'tasking' (crash recovery).  Going to idle." % self.id)
-            self.update(state = 'idle')
-
-        if self.state == 'idle':
-            self.update(state = 'tasking', counter = self.counter + 1)
-            celery_task = monitor_exec.delay(self.id, self.counter)
-            Monitor.objects.filter(pk = self.pk).update(task_id = celery_task.task_id)
-            Monitor.objects.filter(state = 'tasking', pk = self.pk).update(state = 'tasked')
-
-            return True
-        else:
-            return False
-
-    def invoke(self, command, timeout = None):
-        """Safe to call on an SshMonitor which has a host assigned, neither
-        need to have been saved"""
-        from chroma_core.lib.lustre_audit import audit_log
-        from chroma_core.lib.agent import Agent
-        try:
-            return Agent(self.host, log = audit_log, timeout = timeout).invoke(command)
-        except Exception, e:
-            import sys
-            import traceback
-            exc_info = sys.exc_info()
-            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-            audit_log.error(backtrace)
-            return e
-
-
 class LNetConfiguration(StatefulObject):
     states = ['nids_unknown', 'nids_known']
     initial_state = 'nids_unknown'
@@ -613,12 +556,9 @@ class SetServerConfStep(Step):
 
     def run(self, kwargs):
         import settings
-        if not settings.HTTP_AUDIT:
-            return
 
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        import settings
         if settings.SERVER_HTTP_URL:
             url = settings.SERVER_HTTP_URL
         else:
@@ -632,10 +572,6 @@ class RemoveServerConfStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        import settings
-        if not settings.HTTP_AUDIT:
-            return
-
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         self.invoke_agent(host, "remove-server-conf")
@@ -669,7 +605,7 @@ class DetectTargetsStep(Step):
 
         host_data = {}
         for host in ManagedHost.objects.all():
-            data = host.monitor.downcast().invoke('detect-scan')
+            data = self.invoke_agent(host, 'detect-scan')
             host_data[host] = data
 
         # Stage one: detect MGSs

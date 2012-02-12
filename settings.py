@@ -237,8 +237,7 @@ CELERY_ROUTES = (
         {"chroma_core.tasks.add_job": {"queue": "serialize"}},
         {"chroma_core.tasks.complete_job": {"queue": "serialize"}},
         {"chroma_core.tasks.run_job": {"queue": "jobs"}},
-        {"chroma_core.tasks.test_host_contact": {"queue": "ssh"}},
-        {"chroma_core.tasks.monitor_exec": {"queue": "ssh"}},
+        {"chroma_core.tasks.test_host_contact": {"queue": "jobs"}},
         {"chroma_core.tasks.send_alerts_email": {"queue": "jobs"}},
         {"chroma_core.tasks.installation": {"queue": "service"}},
         )
@@ -296,8 +295,6 @@ SERVER_HTTP_URL = None
 # If your log server isn't running on this host's FQDN
 # LOG_SERVER_HOSTNAME = "mylogserver.mydoman"
 LOG_SERVER_HOSTNAME = None
-
-HTTP_AUDIT = True
 
 # Set to False to require logins even for read-only access
 # to chroma_api

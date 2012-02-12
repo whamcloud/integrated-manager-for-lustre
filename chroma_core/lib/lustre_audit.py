@@ -116,7 +116,7 @@ class UpdateScan(object):
 
         if contact:
             from datetime import datetime
-            self.host.monitor.update(last_success = datetime.now())
+            ManagedHost.objects.filter(pk = self.host.pk).update(last_contact = datetime.now())
 
         return contact
 

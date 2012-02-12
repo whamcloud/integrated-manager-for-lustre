@@ -7,14 +7,31 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        
+        # Deleting model 'Monitor'
+        db.delete_table('chroma_core_monitor')
 
-        # Adding field 'ManagedHost.nodename'
-        db.add_column('chroma_core_managedhost', 'nodename', self.gf('django.db.models.fields.CharField')(max_length=255, null=True, blank=True), keep_default=False)
+        # Adding field 'ManagedHost.last_contact'
+        db.add_column('chroma_core_managedhost', 'last_contact', self.gf('django.db.models.fields.DateTimeField')(null=True, blank=True), keep_default=False)
+
 
     def backwards(self, orm):
+        
+        # Adding model 'Monitor'
+        db.create_table('chroma_core_monitor', (
+            ('host', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.ManagedHost'], unique=True)),
+            ('last_success', self.gf('django.db.models.fields.DateTimeField')(null=True, blank=True)),
+            ('task_id', self.gf('django.db.models.fields.CharField')(default=None, max_length=36, null=True, blank=True)),
+            ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], null=True)),
+            ('state', self.gf('django.db.models.fields.CharField')(default='idle', max_length=32)),
+            ('counter', self.gf('django.db.models.fields.IntegerField')(default=0)),
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+        ))
+        db.send_create_signal('chroma_core', ['Monitor'])
 
-        # Deleting field 'ManagedHost.nodename'
-        db.delete_column('chroma_core_managedhost', 'nodename')
+        # Deleting field 'ManagedHost.last_contact'
+        db.delete_column('chroma_core_managedhost', 'last_contact')
+
 
     models = {
         'chroma_core.alertemail': {
@@ -200,8 +217,9 @@ class Migration(SchemaMigration):
             'agent_token': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'fqdn': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
-            'nodename': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'last_contact': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
+            'nodename': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
@@ -245,16 +263,6 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'MdtConfParam', '_ormbases': ['chroma_core.ConfParam']},
             'confparam_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ConfParam']", 'unique': 'True', 'primary_key': 'True'}),
             'mdt': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedMdt']"})
-        },
-        'chroma_core.monitor': {
-            'Meta': {'object_name': 'Monitor'},
-            'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
-            'counter': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
-            'host': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ManagedHost']", 'unique': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'last_success': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
-            'state': ('django.db.models.fields.CharField', [], {'default': "'idle'", 'max_length': '32'}),
-            'task_id': ('django.db.models.fields.CharField', [], {'default': 'None', 'max_length': '36', 'null': 'True', 'blank': 'True'})
         },
         'chroma_core.nid': {
             'Meta': {'object_name': 'Nid'},
