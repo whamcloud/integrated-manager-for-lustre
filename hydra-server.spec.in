@@ -74,6 +74,7 @@ service hydra-worker stop
 service hydra-storage stop
 # remove the /static/ dir of files that was created by Django's collectstatic
 rm -rf /usr/share/hydra-server/static
+find /usr/share/hydra-server/ -name "*.pyc" -exec rm -f {} \;
 
 %postun
 # remove rsyslog entries if this the last version being removed.
