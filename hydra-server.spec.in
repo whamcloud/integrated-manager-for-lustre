@@ -11,7 +11,6 @@ Source0: %{name}-%{unmangled_version}.tar.gz
 Source1: hydra-server.conf
 Source2: hydra-worker-init.sh
 Source3: hydra-storage-init.sh
-Source4: chroma-service-init.sh
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -38,7 +37,6 @@ mkdir -p $RPM_BUILD_ROOT/etc/{init,httpd/conf}.d
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d/hydra-server.conf
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/hydra-worker
 cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/hydra-storage
-cp %{SOURCE4} $RPM_BUILD_ROOT/etc/init.d/chroma-service
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -49,8 +47,11 @@ ed /etc/httpd/conf.d/wsgi.conf <<EOF 2>/dev/null
 w
 q
 EOF
-# make sure apache sees our changes
-service httpd reload
+
+# Start apache which should present a helpful setup
+# page if the user visits it before configuring Chroma fully
+chkconfig httpd on
+service httpd restart
 
 # Pre-create log files to set permissions
 mkdir -p /var/log/hydra
@@ -65,49 +66,10 @@ chown -R apache:apache /var/log/hydra
 # httpd and rabbitmq-server
 setsebool -P httpd_can_network_connect 1 2>/dev/null
 
-
-# RabbitMQ: Configure default hydra user if it's not already set up
-rabbitmqctl list_users | grep "^hydra\\s" > /dev/null || rabbitmqctl add_user hydra hydra123
-rabbitmqctl list_vhosts | grep "^hydravhost$" > /dev/null || rabbitmqctl add_vhost hydravhost
-rabbitmqctl set_permissions -p hydravhost hydra ".*" ".*" ".*"
-service rabbitmq-server restart
-
-# Configure default (local) mysql service
-# Depending on what the user selects during
-# configuration, this may or may not be used,
-# but it is needed for the bootstrap process
-chkconfig mysqld on
-service mysqld restart
-DATABASE_NAME="chroma"
-if [ ! -d /var/lib/mysql/${DATABASE_NAME} ]; then
-    # TODO: invoke /usr/bin/mysql_server_installation or
-    # something similar (leaving a local-only MySQL instance
-    # with a default password known to chroma)
-    echo "create database ${DATABASE_NAME}" | mysql
-fi
-
-# Set rsyslog to start on boot (it won't do anything
-# until chroma sets up and restarts it though)
-chkconfig rsyslog on
-
-# Before starting apache, build the /static directory
-# Requires MySQL to be up (Django ticket #17656)
-PYTHONPATH=/usr/share/hydra-server python /usr/share/hydra-server/manage.py collectstatic --noinput
-
-# Start apache which present the UI
-# for the bootstrap process
-chkconfig httpd on
-service httpd restart
-
-# Start the chroma-service daemon which
-# is used to bootstrap the other services
-chkconfig --add chroma-service
-service chroma-service restart
-
-
+echo "Thank you for installing Chroma.  To complete your installation, please"
+echo "run chroma-config"
 
 %preun
-service chroma-service stop
 service hydra-worker stop
 service hydra-storage stop
 # remove the /static/ dir of files that was created by Django's collectstatic
@@ -129,9 +91,9 @@ fi
 %files
 %defattr(-,root,root)
 %{_bindir}/hydra-host-discover.py*
+%{_bindir}/chroma-config
 %dir %attr(0755,apache,apache)/usr/share/hydra-server
 /usr/share/hydra-server/*
 /etc/httpd/conf.d/hydra-server.conf
 %attr(0755,root,root)/etc/init.d/hydra-worker
 %attr(0755,root,root)/etc/init.d/hydra-storage
-%attr(0755,root,root)/etc/init.d/chroma-service

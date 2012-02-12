@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# hydra-worker      Starts the hydra monitoring daemon
+# hydra-worker      Chroma job execution service
 #
 # chkconfig: 345 87 13
 # description: starts the Hydra worker daemon (celeryd) 
@@ -9,6 +9,7 @@
 # Source function library.
 . /etc/init.d/functions
 
+export SERVICE_NAME=hydra-worker
 export PROJECT_PATH=/usr/share/hydra-server 
 export MANAGE_PY=${PROJECT_PATH}/manage.py
 export PIDFILE=/var/run/hydra-worker_%n.pid
@@ -30,7 +31,7 @@ run_celeryd() {
 }
 
 start() {
-    echo -n "Starting the Hydra worker daemon: "
+    echo -n "Starting ${SERVICE_NAME}: "
     run_celeryd start
     echo -n "Starting the Hydra host discovery daemon: "
     # we don't need --pidfile here since hydra-host-discover.py is a daemon
@@ -40,7 +41,7 @@ start() {
 }
 
 restart() {
-    echo -n "Restarting the Hydra worker daemon: "
+    echo -n "Restarting ${SERVICE_NAME}: "
     run_celeryd restart
     echo -n "Restarting the Hydra host discovery daemon: "
     kill $(cat /var/run/hydra-host-discover.pid)
@@ -51,19 +52,26 @@ restart() {
 }
 
 stop() {
-    echo -n "Stopping the Hydra host discovery daemon: "
+    echo -n "Stopping hydra-host-discover: "
     kill $(cat /var/run/hydra-host-discover.pid)
-    echo -n "Stopping the Hydra worker daemon: "
-    python /usr/share/hydra-server/manage.py celeryd_multi stop ${WORKER_NAMES} --pidfile=$PIDFILE --logfile=$LOGFILE
+
+    action "Stopping ${SERVICE_NAME}: "python /usr/share/hydra-server/manage.py celeryd_multi stop ${WORKER_NAMES} --pidfile=$PIDFILE --logfile=$LOGFILE
     echo
 }
 
 case "$1" in
     start)
         start
+        exit $?
         ;;
     stop)
         stop
+        exit $?
+        ;;
+    status)
+        # FIXME: check that ALL the pids are running
+        status -p /var/run/hydra-worker_serial.pid ${SERVICE_NAME}
+        exit $?
         ;;
 
     restart|force-reload)

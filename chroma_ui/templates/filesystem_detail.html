@@ -24,32 +24,6 @@
       });
     });
 
-    $('#configParam').dialog
-    ({
-      autoOpen: false,
-      width: 450,
-      height:470,
-      modal: true,
-      position:"center",
-      buttons: 
-      {
-        "Apply": function() {
-          if($('#fs_id').val() == undefined)
-          {
-            $(this).dialog("close");
-          }
-          else
-          {
-            var datatable = $('#config_param_table').dataTable();
-            apply_config_params("filesystem/" + $('#fs_id').val() + "/", 'configParam', datatable);
-          }
-        },
-        "Close": function() { 
-          $(this).dialog("close");
-        }, 
-      }
-    });
-
     $('#new_ost_dialog').dialog
     ({
       autoOpen: false,

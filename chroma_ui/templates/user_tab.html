@@ -1,0 +1,221 @@
+<script>
+  var UserTab = function() {
+    function init() {
+      $('#user_list').dataTable( {
+        bServerSide: true,
+        bProcessing: true,
+        bJQueryUI: true,
+        bAutoWidth: false,
+        sAjaxSource: 'user/',
+        fnServerData: function(url, data, callback, settings) {
+          Api.get_datatables(url, data, function(data) {
+            $.each(data.aaData, function(i, row) {
+              // Stash a copy of the true object
+              row.user = jQuery.extend(true, {}, row);
+
+              var group_names = [];
+              $.each(row.groups, function(i, group) {
+                group_names.push(group.name);
+              });
+              if (row.is_superuser) {
+                group_names.push('superusers')
+              }
+              row.groups = group_names.join(",");
+              row.buttons = "";
+            });
+            callback(data);
+          }, settings);
+        },
+        fnRowCallback: function(nRow, row, iDisplayIndex, iDisplayIndexFull) {
+          var buttons = []
+          if (row.id != Login.getUser().id) {
+            buttons.push($("<button>Delete</button>").click(function(){
+              deleteUser(row.user);
+            }))
+          }
+          buttons.push($("<button>Edit</button>").click(function() {
+            editUser(row.user);
+          }));
+          $.each(buttons, function(i, button) {
+            $('td:eq(4)', nRow).prepend(button);
+          });
+          return nRow;
+        },
+        aoColumns: [
+          {mDataProp: 'username'},
+          {mDataProp: 'full_name'},
+          {mDataProp: 'email'},
+          {mDataProp: 'groups'},
+          {mDataProp: 'buttons'}
+        ]
+      });
+
+      $('#create_user_dialog').dialog({
+        resizable: false,
+        draggable: false,
+        autoOpen: false,
+        width: 'auto',
+        modal: true,
+        title: 'Create user',
+        buttons: {
+          "Cancel": function(){$(this).dialog('close');},
+          "Create": function() {
+            var dialog = $(this);
+            var user = {}
+            user.groups = [{pk: $('#create_user_dialog select[name=group]').val()}]
+
+            saveForm(dialog, Api.post, "user/", user, function ()
+            {
+              dialog.dialog('close');
+              reloadTable();
+            });
+          }
+        }
+      });
+
+      Api.get("group/", {limit: 0}, success_callback = function(data) {
+        $.each(data.objects, function(i, group) {
+          var option = "<option value='" + group.id + "'>"+ group.name + "</option>";
+          $('#create_user_dialog select[name=group]').prepend(option)
+        });
+      });
+    }
+
+    function createUser()
+    {
+      $('#create_user_dialog span.error').remove();
+      $('#create_user_dialog input').removeClass('error');
+      $('#create_user_dialog input').val("");
+      $('#create_user_dialog').dialog('open');
+    }
+
+    function editUser(user) {
+      var form_markup = ""
+      form_markup += "<table class='validated_form'>"
+      form_markup += "<tr><th>Username:</th><td><input name='username' type='text' readonly='readonly' value='" + user.username + "'/></td></tr>"
+      form_markup += "<tr><th>Password:</th><td><input name='password1' type='password'/></td></tr>"
+      form_markup += "<tr><th>Confirm password:</th><td><input name='password2' type='password'/></td></tr>"
+      $("<div>" + form_markup + "</div>").dialog({
+        resizable: false,
+        width: 'auto',
+        buttons: {
+          "Cancel": function() {$(this).dialog('close')},
+          "Save": function() {
+            var dialog = $(this);
+            saveForm($(this), Api.put, "user/" + user.id + "/", user, function() {
+              dialog.dialog('close');
+              reloadTable();
+            });
+
+          }
+        }
+      })
+    }
+
+    function saveForm(element, api_fn, url, obj, complete) {
+      element.find('input').each(function() {
+        obj[$(this).attr('name')] = $(this).val()
+      });
+      api_fn(url, obj,
+        success_callback = function(data) {
+          complete();
+        },
+        error_callback = {
+          400: function(jqXHR) {
+            var errors = JSON.parse(jqXHR.responseText);
+            element.find('span.error').remove();
+            element.find('input').removeClass('error');
+            $.each(errors, function(attr_name, error_list) {
+              $.each(error_list, function(i, error) {
+                element.find('input[name=' + attr_name + ']').before("<span class='error'>" + error + "</span>")
+                element.find('input[name=' + attr_name + ']').addClass('error');
+              });
+            });
+          }
+        }
+      );
+    }
+
+    function deleteUser(user) {
+      $("<div>Delete user '" + user.username + "'?</div>").dialog({
+        resizable: false,
+        width: 'auto',
+        buttons: {
+          "Cancel": function() {$(this).dialog('close')},
+          "Delete": function() {
+            var dialog = $(this);
+            Api.delete('user/' + user.id + '/', {}, success_callback = function() {
+              dialog.dialog('close');
+              reloadTable();
+            });
+          }
+        }
+      });
+    }
+
+    function reloadTable() {
+      $('#user_list').dataTable().fnDraw();
+    }
+
+    return {
+      init: init,
+      create: createUser,
+      refresh: reloadTable
+    }
+  }();
+
+  $(document).ready(function() {
+    UserTab.init()
+
+    $('#create_user').click(function() {
+      UserTab.create()
+    });
+  });
+</script>
+
+<h2 class='section_header'>User administration</h2>
+<div class="buttonspacer">
+  <span class="first-child">
+  <button class='add' type="button" id="create_user">Create user</button>
+  </span></span>
+</div>
+
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="user_list" width="100%">
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Group</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+
+<div id="create_user_dialog">
+  <table class='validated_form'>
+    <tr>
+      <th>Group:</th><td><select name='group'></select></td>
+    </tr>
+    <tr>
+      <th>Username:</th><td><input type='entry' name='username' width=16/></td>
+    </tr>
+    <tr>
+      <th>First name:</th><td><input type='entry' name='first_name'/></td>
+    </tr>
+    <tr>
+      <th>Last name:</th><td><input type='entry' name='last_name'/></td>
+    </tr>
+    <tr>
+      <th>Email:</th><td><input type='entry' name='email'/></td>
+    </tr>
+    <tr>
+      <th>Password:</th><td><input type='password' name='password1'/></td>
+    </tr>
+    <tr>
+      <th>Confirm password:</th><td><input type='password' name='password2'/></td>
+    </tr>
+  </table>
+</div>

@@ -1,56 +1,11 @@
 
 <html>
   <head>
-    <link rel="stylesheet" href="{{STATIC_URL}}css/clo_Base.css" type="text/css" />
-    <link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css"  rel="stylesheet" type="text/css" />
-    <script type="text/javascript" src="{{STATIC_URL}}js/jquery-1.6.4.min.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/jquery-ui-1.8.16.custom.min.js"></script>
-    <title>Chroma server installation</title>
-
-    <script type="text/javascript">
-      $(document).ready(function() {
-        updateSensitivity = function() {
-          var local = $("input[name=local]").is(":checked");
-          $("input[name=address]").prop('disabled', local);
-          $("input[name=port]").prop('disabled', local);
-          $("input[name=db_username]").prop('disabled', local);
-          $("input[name=db_password]").prop('disabled', local);
-        }
-        $("input[name=local]").change(function(ev) {
-          updateSensitivity();
-        });
-        updateSensitivity();
-        $("input[type=submit]").click(function(ev) {
-          var local = $("input[name=local]").is(":checked")
-          if (local) {
-            $("input[name=address]").val("");
-            $("input[name=port]").val("");
-            $("input[name=db_username]").val("");
-            $("input[name=db_password]").val("");
-          }
-        });
-      });
-    </script>
+    <title>Chroma server</title>
   </head>
   <body>
-    <h2>Welcome to Chroma server</h2>
-    <p>Before Chroma server can finish starting for the first time, some 
-    additional information is required.</p>
-    <form method='post'>
-      {% csrf_token %}
-      <h3>Create a user</h3>
-        <div class='help' id='installation_user_help'>
-        </div>
-        <table>
-          {{ user_form.as_table }}
-        </table>
-        <!--
-      <h3>Select a database</h3>
-        <table>
-          {{ database_form.as_table }}
-        </table>
-      -->
-      <input type='submit' value='Continue'/>
-    </form>
+    <h2>Chroma server</h2>
+    <p>Installation is not yet complete.  Please login using SSH and run
+    the <tt>chroma-config</tt> utility.</p>
   </body>
 </html>

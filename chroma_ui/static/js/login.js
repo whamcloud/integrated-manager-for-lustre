@@ -4,19 +4,21 @@ $(document).ready(function() {
 });
 
 var Login = function() {
-  function userHasGroup(user, group_name) {
+  var user = null;
+
+  function userHasGroup(required_group) {
     if (!user) {
       return false;
-    } else if (user.is_superuser) {
-      return true;
     } else {
-      $.each(user.groups, function(i, group) {
-        if (group_name == group_name) {
+      var match = false;
+      for(var i = 0; i < user.groups.length; i++) {
+        group = user.groups[i];
+        if ((group.name == required_group) || (group.name == "superusers")) {
           return true;
         }
-      });
+      }
+      return false;
     }
-    return false;
   }
 
   function open() {
@@ -93,7 +95,7 @@ var Login = function() {
      * so that we can put the user interface in the right state and 
      * enable API calls */
     Api.get("/api/session/", {}, success_callback = function(session) {
-      var user = session.user
+      user = session.user
       $('.read_enabled_only').toggle(session.read_enabled);
 
       if (!session.read_enabled) {
@@ -112,12 +114,18 @@ var Login = function() {
 
         Api.enable();
 
-        $('.fsadmin_only').toggle(userHasGroup(user, 'filesystem_administrator'));
+        $('.fsadmin_only').toggle(userHasGroup('filesystem_administrators'));
+        $('.superuser_only').toggle(userHasGroup(user, 'superusers'));
       }
     }, undefined, false, true);
   }
 
+  function getUser(){
+    return user;
+  }
+
   return {
-    init: init
+    init: init,
+    getUser: getUser
   }
 }();

@@ -60,20 +60,54 @@ var Api = function() {
     $('body').trigger('api_available');
   }
 
-  var unexpectedError = function(textStatus, jqXHR)
+  function unexpectedError (jqXHR)
   {
-    //console.log("unexpected_error: " + textStatus);
-    //console.log(jqXHR);
+      /* Caller has provided no error handlers, this is a bug
+         or unhandled error */
+      try {
+        var response_content = JSON.parse(jqXHR.responseText)
+      } catch(e) {
+        blockingError({
+          Status: jqXHR.status + "(" + jqXHR.statusText + ")",
+          'Response headers': jqXHR.getAllResponseHeaders(),
+          'Response body': jqXHR.responseText
+        });
+      }
+      if (response_content.error_message && response_content.traceback) {
+        // An API exception
+        blockingError({
+          'Status': jqXHR.status,
+          'Exception': response_content.error_message,
+          'Backtrace': response_content.traceback
+        })
+      } else if (jqXHR.status == 400) {
+        // A validation error
+        validationError(response_content)
+      } else {
+        blockingError({
+          'Status': jqXHR.status + "(" + jqXHR.statusText + ")",
+          'Response headers': jqXHR.getAllResponseHeaders(),
+          'Response body': response_content
+        });
+      }
+  }
+
+  /* An unknown error which may have left the UI in an
+   * inconsistent state: block the UI, disable further
+   * API calls until the page is reloaded */
+  function blockingError(kwargs)
+  {
     errored = true;
     var message = "We are sorry, but something has gone wrong.";
     message += "<dl>";
-    message += "<dt>Status:</dt><dd>" + jqXHR.status + "(" + textStatus + ")" + "</dd>";
-    message += "<dt>Response headers:</dt><dd>" + jqXHR.getAllResponseHeaders() + "</dd>";
-    message += "<dt>Response body:</dt><dd>" + jqXHR.responseText + "</dd>";
+    $.each(kwargs, function(key, value) {
+      message += "<dt>" + key + ":</dt><dd>" + value + "</dd>";
+    });
     message += "</dl>";
     message += "<p style='text-align: center'>"
     message += "<a href='" + UI_ROOT + "'>Reload</a>"
     message += "</p>"
+
     /* NB: we 'reload' them back to the base URL because a malformed URL is a possible
      * cause of errors (e.g. if the hash had a bad ID in it) */
     $.blockUI({
@@ -81,6 +115,28 @@ var Api = function() {
       css: {padding: "6px", "font-size": "9pt", "text-align": "left"}
     });
   }
+
+  /* A rejected request (400) -- assume that this was
+   * a recoverable validation error and provide a generic
+   * notification which will not block the UI */
+  function validationError(field_errors)
+  {
+    var list_markup = "<dl>";
+    $.each(field_errors, function(field, errors) {
+      $.each(errors, function(i, error) {
+        list_markup += "<dt>" + field + "</dt><dd>" + error + "</dd>";
+      });
+    });
+    list_markup += "</dl>";
+
+    $("<div><h2>Validation errors</h2>" + list_markup + "</div>").dialog({
+        buttons: {
+          "Dismiss": function(){$(this).dialog('close');}
+        }
+    })
+  }
+
+
 
   var get = function() {
     call.apply(null, ["GET"].concat([].slice.apply(arguments)))
@@ -235,7 +291,7 @@ var Api = function() {
             /* Caller gave us a lookup table of success callbacks
                but we got a response code that was successful but
                unhandled -- consider this a bug or error */ 
-            unexpectedError(data, textStatus, jqXHR);
+            unexpectedError(jqXHR);
           }
         }
       }
@@ -271,26 +327,25 @@ var Api = function() {
           /* Caller has provided a generic error handler */
           rc = error_callback(jqXHR.responseText);
           if (rc == false) {
-            unexpectedError(textStatus, jqXHR);
+            unexpectedError(jqXHR);
           }
         } else if(typeof(error_callback) == "object") {
           var status_code = jqXHR.status;
           if(error_callback[status_code] != undefined) {
             /* Caller has provided handler for this status */
-            rc = error_callback[status_code](jqXHR.responseText);
+            rc = error_callback[status_code](jqXHR);
             if (rc == false) {
-              unexpectedError(textStatus, jqXHR);
+              unexpectedError(jqXHR);
             }
           } else {
             /* Caller has provided some handlers, but not one for this
                status code, this is a bug or unhandled error */
-            unexpectedError(textStatus, jqXHR);
+            unexpectedError(jqXHR);
           }
         }
       } else {
-        /* Caller has provided no error handlers, this is a bug
-           or unhandled error */
-        unexpectedError(textStatus, jqXHR);
+        unexpectedError(jqXHR);
+
       }
     })
     .complete(function(event)

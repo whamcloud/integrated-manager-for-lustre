@@ -10,7 +10,6 @@ urlpatterns = patterns('',
     (r'^$', views.index),
 
     (r'^installation/$', views.installation),
-    (r'^installation_status/$', views.installation_status),
 
     (r'^configure/$', views.configure),
     (r'^configure/filesystems_tab/', views.filesystem_tab),
@@ -18,6 +17,7 @@ urlpatterns = patterns('',
     (r'^configure/volumes_tab/', views.volume_tab),
     (r'^configure/servers_tab/', views.server_tab),
     (r'^configure/storage_tab/', views.storage_tab),
+    (r'^configure/users_tab/', views.user_tab),
     (r'^configure/filesystems_new/', views.filesystem_create_tab),
     (r'^configure/filesystems_edit/', views.filesystem_edit_tab),
 

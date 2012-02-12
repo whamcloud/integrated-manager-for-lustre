@@ -33,60 +33,6 @@ html, body
 }
 
 
-h1
-{
-	font-weight: bold;
-	color: #007ac3;
-	font-size: 2em;
-	line-height: 1em;
-	margin: 1.25em 0 .75em 0;
-}
-
-h2
-{
-	color: #1371aa;
-	font-weight: bold;
-	font-size: 1.6666em;
-	line-height: 1em;
-	margin: 1.25em 0 .75em 0;
-}
-
-h3
-{
-	color: #1371aa;
-	font-size: 1.41667em;
-	line-height: 1em;
-	font-weight: bold;
-	margin: 1.25em 0 .75em 0;
-}
-
-h4
-{
-	color: #000;
-	font-size: 1.1667em;
-	line-height: 1em;
-	font-weight: bold;
-	margin: 1.25em 0 .5em 0;
-}
-
-h5
-{
-	color: #000;
-	font-size: 1em;
-	line-height: 1em;
-	font-weight: bold;
-	margin: 1.25em 0 .5em 0;
-}
-
-h6
-{
-	color: #000;
-	font-size: 1em;
-	line-height: 1em;
-	font-weight: bold;
-	margin: 1.25em 0 .5em 0;
-}
-
 strong
 {
 	font-weight: bold;
@@ -819,11 +765,18 @@ table.chart_grid td table {
   padding: 3px;
 }
 
+/* Only visible for users who can read from the API */
 .read_enabled_only {
   display: none;
 }
 
+/* Only visible for users in the filesystem administration group */
 .fsadmin_only {
+  display: none;
+}
+
+/* Only visible for superusers */
+.superuser_only {
   display: none;
 }
 
@@ -832,4 +785,25 @@ table.chart_grid td table {
 	padding:2px;
     width: 20px;
     background-color: transparent;
+}
+
+table.validated_form th {
+    font-size: 10pt;
+    white-space: nowrap;
+    font-weight: normal;
+    text-align: left;
+}
+
+table.validated_form td {
+    font-size: 10pt;
+}
+
+table.validated_form span.error {
+    color: red;
+    font-style: italic;
+    display: block;
+}
+
+table.validated_form input.error {
+    border: 1px solid red;
 }

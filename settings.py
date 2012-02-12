@@ -118,9 +118,7 @@ BROKER_USER = "hydra"
 BROKER_PASSWORD = "hydra123"
 BROKER_VHOST = "hydravhost"
 
-# Run Celery DB-less by default for bootstrap before the DB is setup
-# (This will be overridden in local_settings.py)
-CELERY_RESULT_BACKEND = "amqp"
+CELERY_RESULT_BACKEND = "database"
 
 # HYD-471: This must be set for unit tests to pass in general
 SOUTH_TESTS_MIGRATE = False

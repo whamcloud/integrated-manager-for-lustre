@@ -61,93 +61,41 @@ $(document).ready(function() {
   });
 
   $('#tabs ul:first a').address();
-});
 
-  //create new File system
-  var oNewMGT_RowData=[];
-  var mgt_node_id = "";
-  var oExistingMGT_RowData = [];
-  var mgs_id = "";
-  var oNewMDT_RowData=[];
-  var mdt_node_id = "";
+  $('#configParam').dialog
+  ({
+    autoOpen: false,
+    width: 450,
+    height:470,
+    modal: true,
+    position:"center",
+    buttons: 
+    {
+      "Apply": function() {
+        if($('#fs_id').val() == undefined)
+        {
+          $(this).dialog("close");
+        }
+        else
+        {
+          var datatable = $('#config_param_table').dataTable();
+          apply_config_params("filesystem/" + $('#fs_id').val() + "/", 'configParam', datatable);
+        }
+      },
+      "Close": function() { 
+        $(this).dialog("close");
+      }, 
+    }
+  });
+});
 
   $(function() {
     // Menu Highlighter
     $('#configure_menu').addClass('active');
     $("#tabs").tabs({selected: -1});
   });    
-  // Document Ready Handler for configuration_home.html   
+
   $(document).ready(function() {
-    // Fix Me: move all this to a js and load in ready.
-    //--------------------------------------------------------------------//  
-    // Create new FS view -> click handler for "Create new MGT" 
-    $("#popup-new-mgt tbody").delegate("tr", "click", function() {
-      var radio = $("td:eq(0) input", this);
-      radio.attr('checked', true);
-      oNewMGT_RowData=[];
-      for(var i=1;i<7;i++)
-      {
-        oNewMGT_RowData[i]=$("td:eq("+i+")", this).text();
-      }
-      mgt_node_id =  radio.attr('id');
-    });
-    // Create new FS view -> JQuery Data Table initi for new MGT popup showing (usable luns) 
-    var oNewMgt = $('#popup-new-mgt').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "oLanguage": {
-          "sEmptyTable": "No MGT to display"
-      },
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtright'},
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' }
-      ]
-    } );
-    // Create new FS view -> click handler for "select existing MGT"  
-    $("#popup-existing-mgt").delegate("tr", "click", function() {
-      var radio = $("td:eq(0) input", this);
-      radio.attr('checked', true);
-      oExistingMGT_RowData=[];
-      for(var i=1;i<5;i++)
-      {
-        oExistingMGT_RowData[i]=$("td:eq("+i+")", this).text();
-      }
-      mgs_id = radio.attr('id');
-    });
-    // Create new FS view -> JQuery Data Table init for loading existing MGT and popup
-    var oMgt = $('#popup-existing-mgt').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "bFilter": false,
-      "aoColumns": [
-        { "sClass": 'txtcenter' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' }
-      ]
-    } );  
-    
-    // Edit FS view -> JQuery Data Table initi for new MDT popup showing (usable luns)            
-    var oNewOst = $('#popup-new-ost').dataTable( {
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtright'},
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtleft' }
-      ]
-    });
-   
     //Edit fs/Create new fs/ost view -> jquery data table init for Fs Configuration param
     var oFSConfigParam = $('#config_param_table').dataTable( {
       "iDisplayLength":30,
@@ -185,7 +133,6 @@ $(document).ready(function() {
     
     $('#ConfigParam_Apply').click(function()
     {
-      //console.log('apply clicked');
       apply_config_params("target/" + $('#config_home_target_id').val() + "/", 'target_dialog', oTargetFSConfigParam);
     });
     
@@ -219,12 +166,14 @@ $(document).ready(function() {
     <li><a id="volume_tab" href='#volumes' title='volumes'>Volumes</a></li>
     <li><a id="server_tab" href='#servers' title='servers'>Servers</a></li>
     <li><a id="storage_tab" href='#storage' title='storage'>Storage</a></li>
+    <li><a id="user_tab" class="superuser_only" href='#users' title='users'>Users</a></li>
   </ul>
   <div id='filesystems'></div>
   <div id='mgts'></div>
   <div id='volumes'></div>
   <div id='servers'></div>
   <div id='storage'></div>
+  <div id='users'></div>
 </div>
 <!-- create new fs dialogs -->
 <div id="configParam" title="Configuration Parameters">
