@@ -99,11 +99,7 @@ class TestSharedTarget(JobTestCaseWithHost):
         StateManager.set_state(self.target, 'mounted')
         StateManager.set_state(self.target.primary_server(), 'removed')
 
-        # Removing the primary server removes the target entirely
-        with self.assertRaises(ManagedTargetMount.DoesNotExist):
-            ManagedTargetMount.objects.get(target = self.target, primary = True)
-        with self.assertRaises(ManagedTargetMount.DoesNotExist):
-            ManagedTargetMount.objects.get(target = self.target, primary = False)
+        # Removing the primary server removes the target
         with self.assertRaises(ManagedTarget.DoesNotExist):
             ManagedTarget.objects.get(pk = self.target.pk)
 
@@ -111,11 +107,7 @@ class TestSharedTarget(JobTestCaseWithHost):
         StateManager.set_state(self.target, 'mounted')
         StateManager.set_state(self.target.secondary_servers()[0], 'removed')
 
-        # Removing the secondary server removes the target entirely
-        with self.assertRaises(ManagedTargetMount.DoesNotExist):
-            ManagedTargetMount.objects.get(target = self.target, primary = True)
-        with self.assertRaises(ManagedTargetMount.DoesNotExist):
-            ManagedTargetMount.objects.get(target = self.target, primary = False)
+        # Removing the secondary server removes the target
         with self.assertRaises(ManagedTarget.DoesNotExist):
             ManagedTarget.objects.get(pk = self.target.pk)
 
@@ -135,10 +127,6 @@ class TestSharedTarget(JobTestCaseWithHost):
         StateManager.set_state(self.target, 'removed')
         with self.assertRaises(ManagedTarget.DoesNotExist):
             ManagedTarget.objects.get(pk = self.target.pk)
-        with self.assertRaises(ManagedTargetMount.DoesNotExist):
-            ManagedTargetMount.objects.get(target = self.target, primary = False)
-        with self.assertRaises(ManagedTargetMount.DoesNotExist):
-            ManagedTargetMount.objects.get(target = self.target, primary = True)
 
         # Friendly user removes the secondary host
         StateManager.set_state(self.hosts[1], 'removed')
