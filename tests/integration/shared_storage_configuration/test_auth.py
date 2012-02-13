@@ -4,6 +4,8 @@ from testconfig import config
 from tests.utils.http_requests import HttpRequests
 from tests.integration.core.testcases import ChromaIntegrationTestCase
 
+import json
+
 
 class TestAuthentication(ChromaIntegrationTestCase):
     def setUp(self):
@@ -29,7 +31,8 @@ class TestAuthentication(ChromaIntegrationTestCase):
 
         response = self.hydra_server.post(
                 "/api/session/",
-                data = {'username': user['username'], 'password': user['password']})
+                data = json.dumps({'username': user['username'], 'password': user['password']}),
+                headers = {"content-type": "application/json"})
         self.assertEqual(response.successful, True)
 
         response = self.hydra_server.get("/api/session/")

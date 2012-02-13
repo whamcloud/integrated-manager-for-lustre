@@ -16,6 +16,8 @@ from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PermissionAuthorization
 
+from chroma_api import api_log
+
 
 class HostResource(StatefulModelResource):
     class Meta:
@@ -40,8 +42,9 @@ class HostResource(StatefulModelResource):
         # does the job
         try:
             bundle.obj = ManagedHost.create_from_string(bundle.data['host_name'])
-        except IntegrityError:
-            raise ImmediateHttpResponse(response = http.HttpBadRequest)
+        except IntegrityError, e:
+            api_log.error(e)
+            raise ImmediateHttpResponse(response = http.HttpBadRequest())
         return bundle
 
 

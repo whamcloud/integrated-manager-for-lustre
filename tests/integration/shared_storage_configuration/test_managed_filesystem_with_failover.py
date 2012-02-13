@@ -1,32 +1,32 @@
-import json
 import subprocess
 import time
 
 from testconfig import config
 
-from tests.utils.http_requests import HttpRequests
+from tests.utils.http_requests import AuthorizedHttpRequests
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.testcases import ChromaIntegrationTestCase
 
 
 class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
     def setUp(self):
-        self.hydra_server = HttpRequests(server_http_url =
-            config['hydra_servers'][0]['server_http_url'])
-        self.reset_cluster()
+        user = config['hydra_servers'][0]['users'][0]
+        self.hydra_server = AuthorizedHttpRequests(user['username'], user['password'],
+                server_http_url = config['hydra_servers'][0]['server_http_url'])
+        self.reset_cluster(self.hydra_server)
 
     def test_create_filesystem_with_failover(self):
         # Add two hosts as managed hosts
         for host_address in config['lustre_servers'].keys()[:2]:
-            response = self.hydra_server.get(
+            response = self.hydra_server.post(
                 '/api/test_host/',
-                params = {'hostname': host_address}
+                body = {'hostname': host_address}
             )
             self.assertTrue(response.successful, response.text)
 
             response = self.hydra_server.post(
                 '/api/host/',
-                data = {'host_name': host_address}
+                body = {'host_name': host_address}
             )
             self.assertTrue(response.successful, response.text)
             host_id = response.json['id']
@@ -44,24 +44,28 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             '/api/host/',
         )
         self.assertTrue(response.successful, response.text)
-        hosts = response.json
+        hosts = response.json['objects']
         self.assertEqual(2, len(hosts))
 
         # Wait and verify host configuration and lnet start
         running_time = 0
         servers_configured = False
         while running_time < TEST_TIMEOUT and not servers_configured:
-            response = self.hydra_server.post(
-                '/api/object_summary/',
-                headers = {'content-type': 'application/json'},
-                data = json.dumps({'objects': hosts})
-            )
-            self.assertTrue(response.successful, response.text)
-            if response.json[0]['state'] == 'lnet_up' and \
-               response.json[1]['state'] == 'lnet_up':
+            if (hosts[0]['state'] == 'lnet_up' and hosts[1]['state'] == 'lnet_up'):
                 servers_configured = True
+                break
+
+            for h in hosts:
+                if h['state'] != 'lnet_up':
+                    response = self.hydra_server.get('/api/host/' + h['id'] + "/")
+                    self.assertTrue(response.successful, response.text)
+                    h['state'] = response.json['state']
+
             time.sleep(1)
             running_time += 1
+
+        if not servers_configured:
+            raise RuntimeError('Timed out setting up hosts')
 
         # Wait for device discovery
         running_time = 0
@@ -73,7 +77,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
                 params = {'category': 'usable'}
             )
             self.assertTrue(response.successful, response.text)
-            usable_luns = response.json
+            usable_luns = response.json['objects']
 
             # FIXME: currently depending on settings.PRIMARY_LUN_HACK to
             # set primary and secondary for us.
@@ -83,8 +87,8 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             # (i.e. they have both a primary and a secondary node)
             ready_lun_count = 0
             for l in usable_luns:
-                has_primary = len([node for node in l['nodes'] if node['primary']]) == 1
-                has_two = len([node for node in l['nodes'] if node['use']]) >= 2
+                has_primary = len([node for node in l['volume_nodes'] if node['primary']]) == 1
+                has_two = len([node for node in l['volume_nodes'] if node['use']]) >= 2
                 if has_primary and has_two:
                     ready_lun_count += 1
 
@@ -96,16 +100,18 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
         # Verify no extra devices not in the config visible.
         response = self.hydra_server.get(
-            '/api/volume_node/'
+            '/api/volume_node/',
+            params = {'limit': 0}
         )
         self.assertTrue(response.successful, response.text)
-        lun_nodes = response.json
+        lun_nodes = response.json['objects']
 
         response = self.hydra_server.get(
             '/api/host/',
+            params = {'limit': 0}
         )
         self.assertTrue(response.successful, response.text)
-        hosts = response.json
+        hosts = response.json['objects']
 
         host_id_to_address = dict((h['id'], h['address']) for h in hosts)
         usable_luns_ids = [l['id'] for l in usable_luns]
@@ -128,15 +134,14 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         # Create new filesystem
         response = self.hydra_server.post(
             '/api/filesystem/',
-            headers = {'content-type': 'application/json'},
-            data = json.dumps({
-                'fsname': 'testfs',
+            body = {
+                'name': 'testfs',
                 'mgt_id': '',
                 'mgt_lun_id': usable_luns[0]['id'],
                 'mdt_lun_id': usable_luns[1]['id'],
                 'ost_lun_ids': [str(usable_luns[2]['id']), str(usable_luns[3]['id'])],
-                'conf_params': '',
-            })
+                'conf_params': {},
+            }
         )
         self.assertTrue(response.successful, response.text)
         command_id = response.json['command']['id']
@@ -150,7 +155,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             '/api/filesystem/%s/' % filesystem_id,
         )
         self.assertTrue(response.successful, response.text)
-        mgs_hostname = response.json['mgs_hostname']
+        mount_command = response.json['mount_command']
 
         process = subprocess.call(
             'mkdir -p /mnt/testfs',
@@ -158,8 +163,8 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         )
 
         process = subprocess.Popen(
-            "mount -t lustre %s:/testfs /mnt/testfs" % mgs_hostname,
-            shell=True,
+            mount_command,
+            shell=True
         )
         process.communicate()
         self.assertEqual(0, process.returncode)

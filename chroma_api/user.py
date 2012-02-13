@@ -78,7 +78,7 @@ class UserResource(ModelResource):
             group_ids = [int(group['pk']) for group in bundle.data['groups']]
             user_group_ids = [group.pk for group in bundle.request.user.groups.all()]
             if not set(group_ids) == set(user_group_ids):
-                raise ImmediateHttpResponse(HttpForbidden)
+                raise ImmediateHttpResponse(HttpForbidden())
         return bundle
 
     def hydrate_password1(self, bundle):

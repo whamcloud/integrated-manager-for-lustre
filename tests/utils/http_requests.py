@@ -9,24 +9,10 @@ import requests
 from urlparse import urljoin
 
 
-class AuthorizedHttpRequests(object):
-    def __init__(self, username, password, *args, **kwargs):
-        super(self, AuthorizedHttpRequests).__init__(*args, **kwargs)
-
-        response = self.get("/api/session/", data = {'username': 'admin', 'password': 'password'})
-        self.assertEqual(response.successful, True)
-        self.session.headers['X-CSRFToken'] = response.cookies['csrftoken']
-        self.session.cookies['csrftoken'] = response.cookies['csrftoken']
-        self.session.cookies['sessionid'] = response.cookies['sessionid']
-
-        response = self.post("/api/session/", data = {'username': username, 'password': password})
-        self.assertEqual(response.successful, True)
-
-
 class HttpRequests(object):
     def __init__(self, server_http_url = '', *args, **kwargs):
         self.server_http_url = server_http_url
-        self.session = requests.session()
+        self.session = requests.session(headers = {"Accept": "application/json", "Content-type": "application/json"})
 
     def get(self, url, **kwargs):
         response = self.session.get(
@@ -36,7 +22,10 @@ class HttpRequests(object):
 
         return HttpResponse(response)
 
-    def post(self, url, **kwargs):
+    def post(self, url, body = None, **kwargs):
+        if body and 'data' not in kwargs:
+            kwargs['data'] = json.dumps(body)
+
         response = self.session.post(
             urljoin(self.server_http_url, url),
             **kwargs
@@ -86,3 +75,19 @@ class HttpResponse(requests.Response):
     def successful(self):
         # TODO: Make better
         return 200 <= self.status_code < 300
+
+
+class AuthorizedHttpRequests(HttpRequests):
+    def __init__(self, username, password, *args, **kwargs):
+        super(AuthorizedHttpRequests, self).__init__(*args, **kwargs)
+
+        response = self.get("/api/session/", data = {'username': 'admin', 'password': 'password'})
+        if not response.successful:
+            raise RuntimeError("Failed to open session")
+        self.session.headers['X-CSRFToken'] = response.cookies['csrftoken']
+        self.session.cookies['csrftoken'] = response.cookies['csrftoken']
+        self.session.cookies['sessionid'] = response.cookies['sessionid']
+
+        response = self.post("/api/session/", data = json.dumps({'username': username, 'password': password}))
+        if not response.successful:
+            raise RuntimeError("Failed to authenticate")

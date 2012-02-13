@@ -18,12 +18,17 @@ from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response, ConfParamResource, dehydrate_command
 
+from tastypie.exceptions import ImmediateHttpResponse
+from tastypie.http import HttpBadRequest
+
 
 class FilesystemResource(ConfParamResource):
     bytes_free = fields.IntegerField()
     bytes_total = fields.IntegerField()
     files_free = fields.IntegerField()
     files_total = fields.IntegerField()
+
+    mount_command = fields.CharField(null = True)
 
     osts = fields.ToManyField('chroma_api.target.TargetResource', null = True,
             attribute = lambda bundle: ManagedOst.objects.filter(filesystem = bundle.obj))
@@ -38,6 +43,9 @@ class FilesystemResource(ConfParamResource):
             return bundle.obj.metrics.fetch_last(ManagedMdt, fetch_metrics=[stat_name])[1][stat_name] * 1024
         except (KeyError, IndexError):
             return None
+
+    def dehydrate_mount_command(self, bundle):
+        return bundle.obj.mount_command()
 
     def dehydrate_bytes_free(self, bundle):
         return self._get_stat_simple(bundle, 'kbytesfree', 1024)
@@ -60,12 +68,15 @@ class FilesystemResource(ConfParamResource):
         ordering = ['name']
 
     def obj_create(self, bundle, request = None, **kwargs):
-        fsname = bundle.data['name']
-        mgt_id = bundle.data['mgt_id']
-        mgt_lun_id = bundle.data['mgt_lun_id']
-        mdt_lun_id = bundle.data['mdt_lun_id']
-        ost_lun_ids = bundle.data['ost_lun_ids']
-        conf_params = bundle.data['conf_params']
+        try:
+            fsname = bundle.data['name']
+            mgt_id = bundle.data['mgt_id']
+            mgt_lun_id = bundle.data['mgt_lun_id']
+            mdt_lun_id = bundle.data['mdt_lun_id']
+            ost_lun_ids = bundle.data['ost_lun_ids']
+            conf_params = bundle.data['conf_params']
+        except KeyError:
+            raise ImmediateHttpResponse(HttpBadRequest())
 
         # mgt_id and mgt_lun_id are mutually exclusive:
         # * mgt_id is a PK of an existing ManagedMgt to use

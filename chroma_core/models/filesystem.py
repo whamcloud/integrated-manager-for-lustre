@@ -91,11 +91,11 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
         return ":".join(nid_specs)
 
-    def mount_example(self):
+    def mount_command(self):
         try:
-            return "mount -t lustre %s:/%s /mnt/client" % (self.mgs_spec(), self.name)
-        except ValueError, e:
-            return "Not ready to mount: %s" % e
+            return "mount -t lustre %s:/%s /mnt/%s" % (self.mgs_spec(), self.name, self.name)
+        except ValueError:
+            return None
 
     def __str__(self):
         return self.name
