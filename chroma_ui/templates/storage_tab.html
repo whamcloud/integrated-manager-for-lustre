@@ -8,43 +8,59 @@
         var module_name = tokens[0]
         var class_name = tokens[1]
 
-        //console.log("Loading resources...");
-        Api.get("storage_resource/" + module_name + "/" + class_name + "/", {},
-          success_callback = function(data) {
-            //console.log("... done loading resources...");
-            if (resourceTable) {
-                resourceTable.fnDestroy();
-                resourceTable = null;
-                $('#resource_table').html("")
-            } 
-            data.aoColumns.push({mDataProp: '_alert_markup', sWidth: "1%", bSortable: false})
-            for (var i=0, iLen=data.aaData.length; i<iLen; i++) {
-              data.aaData[i]._alert_markup = alert_indicator_markup(
-                data.aaData[i].id, data.aaData[i].content_type_id); 
-            }
-            resourceTable = $('#resource_table').dataTable({
-                "bJQueryUI": true,
-                "bPaginate": true,
-                "bAutoWidth": false,
-                "aaData": data['aaData'],
-                "iDisplayLength":25,
-                "aoColumns": data['aoColumns'],
-                fnInitComplete: function(oSettings) {
-                  for (var i=0, iLen=oSettings.aoData.length; i<iLen; i++) {
-                    if (oSettings.aoData[i]._aData._alerts.length > 0) {
-                      oSettings.aoData[i].nTr.className += " resource_alert";
-                    }
-                  }
-                }
-            }); 
+        Api.get("storage_resource_class/" + module_name + "/" + class_name + "/", {},
+            success_callback = function(resource_class) {
+              var columns = resource_class.columns;
+              var aoColumns = [
+                {'mdataProp': 'id', 'bVisible': false, bSortable: false},
+                {'mDataProp': 'alias', 'sTitle': 'Name', bSortable: false}];
+              $.each(columns, function(i, c) {
+                aoColumns.push({
+                  bSortable: false, sClass: 'txtleft', sTitle: c['label'], mDataProp: "attr_" + c['name']
+                })
+              });
+              aoColumns.push({mDataProp: '_alert_markup', sWidth: "1%", bSortable: false})
 
-            $('#resource_table tbody tr').live('click', function() {
-                var aPos = resourceTable.fnGetPosition(this);
-                var data = resourceTable.fnGetData(aPos);
-                var resource_record_id = data.id
-            });
-          }
-      );
+              if (resourceTable) {
+                  resourceTable.fnDestroy();
+                  resourceTable = null;
+                  $('#resource_table').html("")
+              } 
+
+              resourceTable = $('#resource_table').dataTable({
+                  bServerSide: true,
+                  sAjaxSource: "storage_resource/" + module_name + "/" + class_name + "/",
+                  fnServerData: function(url, data, callback, settings) {
+                    Api.get_datatables(url, data, function(data){
+                      $.each(data.aaData, function(i, row) {
+                        row._alert_markup = alert_indicator_markup(
+                          row.id, row.content_type_id); 
+                        if (row.alerts.length > 0) {
+                          row.DT_RowClass = "resource_alert";
+                        }
+                        $.each(row.attributes, function(attr_name, attr_val) {
+                          row["attr_" + attr_name] = attr_val['markup'];
+                        });
+                        row.alias = "<a class='storage_resource' href='#" + row.id + "'>" + row.alias + "</a>"
+                        row['0'] = ""
+                        console.log(row);
+                      });
+                      callback(data);
+                    }, settings);
+                  },
+                  bJQueryUI: true,
+                  bPaginate: true,
+                  bAutoWidth: false,
+                  iDisplayLength:25,
+                  aoColumns: aoColumns
+              }); 
+
+              $('#resource_table tbody tr').live('click', function() {
+                  var aPos = resourceTable.fnGetPosition(this);
+                  var data = resourceTable.fnGetData(aPos);
+                  var resource_record_id = data.id
+              });
+          });
     }
 
     $(document).ready(function() {
@@ -55,18 +71,26 @@
         Api.get("storage_resource_class/", {},
           success_callback = function(data) {
             options = ""
-            if (data.resource_classes.length == 0) {
+            if (data.objects.length == 0) {
               $('div#plugins_available').hide();
               /*$('div#plugins_unavailable').css('display', 'block')*/
               $('div#plugins_unavailable').show();
             } else {
-              $.each(data.resource_classes, function(i, resource_class) {
-                  options += "<option value='" + resource_class.plugin_name + "," + resource_class.class_name + "'>" + resource_class.label + "</option>"
+              var default_hint = null;
+              $.each(data.objects, function(i, resource_class) {
+                if (resource_class.user_creatable) {
+                  /* Simple default selection: pick a creatable resource class
+                     if we see one */
+                  default_hint = resource_class.plugin_name + "," + resource_class.class_name;
+                }
+                options += "<option value='" + resource_class.plugin_name + "," + resource_class.class_name + "'>" + resource_class.label + "</option>"
               });
               $('#resource_class_select').html(options);
 
               /* Select the default resource class */
-              $('#resource_class_select option[value="' + data.default_hint.plugin_name + "," + data.default_hint.class_name + '"]').attr('selected', 'selected');
+              if (default_hint) {
+                $('#resource_class_select option[value="' + default_hint + '"]').attr('selected', 'selected');
+              }
 
               /* Initial population of table once we know our default-selected class */
               load_resource_table();
@@ -82,6 +106,10 @@
   <p><button class='add storage_resource_create_link'>Add storage device...</button></p>
   <p>Filter: <select id='resource_class_select'></select>&nbsp;</p>
   <table class='display tight_lines' id='resource_table' width="100%">
+    <thead>
+    </thead>
+    <tbody>
+    </tbody>
   </table>
 </div>
 <div id="plugins_unavailable" style="display:none;">

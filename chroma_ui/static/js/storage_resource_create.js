@@ -41,7 +41,10 @@ function storage_resource_create_save()
     attrs[field_name] = field_value;
   });
 
-  Api.post("storage_resource/" + module_name + "/" + class_name + "/", attrs,
+  Api.post("storage_resource/",
+      {attrs: attrs,
+       plugin_name: module_name,
+       class_name: class_name},
   success_callback = function(data)
   {
     $('#storage_resource_create_dialog').dialog('close');
@@ -80,11 +83,11 @@ function storage_resource_create() {
   //console.log('opening');
   $('#storage_resource_create_dialog').dialog('open');
 
-  Api.get("storage_resource_class/", {creatable: true}, 
+  Api.get("storage_resource_class/", {user_creatable: true, internal: false}, 
   success_callback = function(data)  
   {
     var option_markup = ""
-    $.each(data.resource_classes, function(i, resource_class) {
+    $.each(data.objects, function(i, resource_class) {
       option_markup += "<option value='" + resource_class.plugin_name + "," + resource_class.class_name + "'>" + resource_class.label + "</option>"
     });
     $('#storage_resource_create_classes').html(option_markup);

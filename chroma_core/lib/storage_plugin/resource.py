@@ -93,15 +93,15 @@ class StorageResource(object):
             yield k, self.format(k)
 
     def get_attribute_items(self):
+        result = {}
         attr_props = self.get_all_attribute_properties()
-        result = []
         for name, props in attr_props:
             val = getattr(self, name)
             if isinstance(val, StorageResource):
                 raw = val._handle
             else:
                 raw = val
-            result.append((name, {'raw': raw, 'markup': props.to_markup(val), 'label': props.get_label(name)}))
+            result[name] = {'raw': raw, 'markup': props.to_markup(val), 'label': props.get_label(name)}
         return result
 
     @classmethod

@@ -172,6 +172,7 @@ var Api = function() {
 
     if (!kwargs.order_by && kwargs.iSortCol_0 != undefined) {
       if (kwargs['bSortable_' + kwargs.iSortCol_0]) {
+        console.log(settings.aoColumns)
         var order_by = settings.aoColumns[kwargs.iSortCol_0].mDataProp
         if (kwargs.sSortDir_0 == 'desc') {
           kwargs.order_by = "-" + order_by

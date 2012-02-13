@@ -31,6 +31,10 @@ class LoadedPlugin(object):
         self.resource_classes = {}
         self.plugin_class = plugin_class
         self.plugin_record, created = StoragePluginRecord.objects.get_or_create(module_name = module)
+        if created:
+            self.plugin_record.internal = plugin_class.internal
+            self.plugin_record.save()
+
         self.scannable_resource_classes = []
 
         for cls in plugin_class._resource_classes:
@@ -38,6 +42,9 @@ class LoadedPlugin(object):
             vrc, created = StorageResourceClass.objects.get_or_create(
                     storage_plugin = self.plugin_record,
                     class_name = cls.__name__)
+            if created:
+                vrc.user_creatable = issubclass(cls, ScannableResource)
+                vrc.save()
             for name, stat_obj in cls._storage_statistics.items():
                 class_stat, created = StorageResourceClassStatistic.objects.get_or_create(
                         resource_class = vrc,

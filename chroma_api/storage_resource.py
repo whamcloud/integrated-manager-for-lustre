@@ -5,84 +5,113 @@
 
 from django.contrib.contenttypes.models import ContentType
 
-from chroma_api.requesthandler import RequestHandler
-from chroma_api.requesthandler import APIResponse
+from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 
-from chroma_core.models import StorageResourceRecord
-from django.shortcuts import get_object_or_404
+from tastypie.authorization import DjangoAuthorization
+from chroma_api.authentication import AnonymousAuthentication
+from tastypie.resources import ModelResource
+from tastypie import fields
+from chroma_core.lib.storage_plugin.query import ResourceQuery
+
+from tastypie.exceptions import NotFound, ImmediateHttpResponse
+from tastypie import http
+from django.core.exceptions import ObjectDoesNotExist
+from chroma_core.lib.storage_plugin.daemon import StorageDaemon
 
 
-class StorageResourceHandler(RequestHandler):
-    def put(self, request, id):
-        # request.data should be a dict representing updated
-        # fields for the resource
+class StorageResourceResource(ModelResource):
+    content_type_id = fields.IntegerField()
+    attributes = fields.DictField()
+    alias = fields.CharField()
 
+    alerts = fields.ListField()
+    stats = fields.DictField()
+    charts = fields.ListField()
+    propagated_alerts = fields.ListField()
+
+    default_alias = fields.CharField()
+
+    plugin_name = fields.CharField(attribute='resource_class__storage_plugin__module_name')
+    class_name = fields.CharField(attribute='resource_class__class_name')
+
+    deletable = fields.BooleanField()
+
+    def dehydrate_propagated_alerts(self, bundle):
+        return [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(bundle.obj.to_resource())]
+
+    def dehydrate_stats(self, bundle):
+        stats = {}
+        for s in StorageResourceStatistic.objects.filter(storage_resource = bundle.obj):
+            stats[s.name] = s.to_dict()
+        return stats
+
+    def dehydrate_charts(self, bundle):
+        return bundle.obj.to_resource().get_charts()
+
+    def dehydrate_deletable(self, bundle):
+        return bundle.obj.resource_class.user_creatable
+
+    def dehydrate_default_alias(self, bundle):
+        return bundle.obj.to_resource().get_label()
+
+    def dehydrate_alias(self, bundle):
+        resource = bundle.obj.to_resource()
+        return bundle.obj.alias_or_name(resource)
+
+    def dehydrate_alerts(self, bundle):
+        return [a.to_dict() for a in ResourceQuery().resource_get_alerts(bundle.obj.to_resource())]
+
+    def dehydrate_content_type_id(self, bundle):
+        return ContentType.objects.get_for_model(bundle.obj.__class__).pk
+
+    def dehydrate_attributes(self, bundle):
+        return bundle.obj.to_resource().get_attribute_items()
+
+    class Meta:
+        queryset = StorageResourceRecord.objects.all()
+        resource_name = 'storage_resource'
+        #filtering = {'storage_plugin__module_name': ['exact'], 'class_name': ['exact']}
+        filtering = {'class_name': ['exact'], 'plugin_name': ['exact']}
+        authorization = DjangoAuthorization()
+        authentication = AnonymousAuthentication()
+        #ordering = ['lun_name']
+
+    def obj_delete(self, request = None, **kwargs):
+        try:
+            obj = self.obj_get(request, **kwargs)
+        except ObjectDoesNotExist:
+            raise NotFound("A model instance matching the provided arguments could not be found.")
+        StorageDaemon.request_remove_resource(obj.id)
+        raise ImmediateHttpResponse(http.HttpAccepted())
+
+    def obj_create(self, bundle, request = None, **kwargs):
+        # Note: not importing this at module scope so that this module can
+        # be imported without loading plugins (useful at installation)
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        record = storage_plugin_manager.create_root_resource(bundle.data['plugin_name'], bundle.data['class_name'], **bundle.data['attrs'])
+        bundle.obj = record
+
+        return bundle
+
+    def obj_update(self, bundle, request = None, **kwargs):
+        bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
         # We only support updating the 'alias' field
-        assert 'alias' in request.data
-        alias = request.data['alias']
+        if not 'alias' in bundle.data:
+            raise ImmediateHttpResponse(http.HttpBadRequest())
 
-        record = get_object_or_404(StorageResourceRecord, id = id)
+        # FIXME: sanitize input for alias (it gets echoed back as markup)
+        alias = bundle.data['alias']
+        record = bundle.obj
         if alias == "":
             record.alias = None
         else:
             record.alias = alias
         record.save()
 
-        return APIResponse(None, 204)
+        return bundle
 
-    def post(self, request, module_name, class_name):
-        # request.data should be a dict representing the resource attributes
-        attributes = request.data
-
-        # Note: not importing this at module scope so that this module can
-        # be imported without loading plugins (useful at installation)
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        record = storage_plugin_manager.create_root_resource(module_name, class_name, **attributes)
-        return record.to_dict()
-
-    def remove(self, request, id):
-        from chroma_core.lib.storage_plugin.daemon import StorageDaemon
-        StorageDaemon.request_remove_resource(id)
-        # TODO: make the request to remove the resource something that
-        # we can track (right now it's a "hope for the best")
-        return APIResponse(None, 202)
-
-    def get(self, request, id = None, module_name = None, class_name = None):
-        # FIXME: the plural version is returning a form which is
-        # specific to datatables, it should either be respecting a
-        # format flag or returning vanilla output for client side conversion
-        if module_name and class_name:
-            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-            resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(module_name, class_name)
-            attr_columns = resource_class.get_columns()
-
-            rows = []
-            from django.utils.html import conditional_escape
-            from chroma_core.lib.storage_plugin.query import ResourceQuery
-            for record in ResourceQuery().get_class_resources(resource_class_id):
-                resource = record.to_resource()
-                alias = conditional_escape(record.alias_or_name(resource))
-                alias_markup = "<a class='storage_resource' href='#%s'>%s</a>" % (record.pk, alias)
-
-                # NB What we output here is logically markup, not strings, so we escape.
-                # (underlying storage_plugin.attributes do their own escaping
-                row = {
-                        'id': record.pk,
-                        'content_type_id': ContentType.objects.get_for_model(record).id,
-                        '_alias': alias_markup,
-                        0: 'wtf'
-                        }
-                for c in attr_columns:
-                    row[c['name']] = resource.format(c['name'])
-
-                row['_alerts'] = [a.to_dict() for a in ResourceQuery().resource_get_alerts(resource)]
-
-                rows.append(row)
-
-            columns = [{'mdataProp': 'id', 'bVisible': False}, {'mDataProp': '_alias', 'sTitle': 'Name'}]
-            for c in attr_columns:
-                columns.append({'sTitle': c['label'], 'mDataProp': c['name']})
-            return {'aaData': rows, 'aoColumns': columns}
-        elif id:
-            record = get_object_or_404(StorageResourceRecord, id = id)
-            return record.to_dict()
+    def override_urls(self):
+        from django.conf.urls.defaults import url
+        return [
+            url(r"^(?P<resource_name>%s)/(?P<plugin_name>\w+)/(?P<class_name>\w+)/$" % self._meta.resource_name, self.wrap_view('dispatch_list'), name="dispatch_list"),
+]

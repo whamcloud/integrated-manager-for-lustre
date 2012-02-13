@@ -4,7 +4,6 @@
 # ==============================
 
 from django.db import models
-from django.contrib.contenttypes.models import ContentType
 
 from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState, AlertEvent
@@ -18,6 +17,7 @@ MAX_NAME_LENGTH = 128
 class StoragePluginRecord(models.Model):
     """Reference to a module defining a StoragePlugin subclass"""
     module_name = models.CharField(max_length = MAX_NAME_LENGTH)
+    internal = models.BooleanField()
 
     class Meta:
         unique_together = ('module_name',)
@@ -28,6 +28,7 @@ class StorageResourceClass(models.Model):
     """Reference to a StorageResource subclass"""
     storage_plugin = models.ForeignKey(StoragePluginRecord)
     class_name = models.CharField(max_length = MAX_NAME_LENGTH)
+    user_creatable = models.BooleanField()
 
     def __str__(self):
         return "%s/%s" % (self.storage_plugin.module_name, self.class_name)
@@ -39,22 +40,6 @@ class StorageResourceClass(models.Model):
     class Meta:
         unique_together = ('storage_plugin', 'class_name')
         app_label = 'chroma_core'
-
-    def to_dict(self):
-        resource_klass = self.get_class()
-
-        fields = []
-        for name, attr in resource_klass.get_all_attribute_properties():
-            fields.append({
-                'label': attr.get_label(name),
-                'name': name,
-                'optional': attr.optional,
-                'class': attr.__class__.__name__})
-
-        return {'plugin_name': self.storage_plugin.module_name,
-                'class_name': self.class_name,
-                'fields': fields,
-                'label': "%s-%s" % (self.storage_plugin.module_name, self.class_name)}
 
 
 class StorageResourceRecord(models.Model):
@@ -84,33 +69,6 @@ class StorageResourceRecord(models.Model):
 
     def __str__(self):
         return self.alias_or_name()
-
-    def to_dict(self):
-        resource = self.to_resource()
-
-        from chroma_core.lib.storage_plugin.query import ResourceQuery
-        alerts = [a.to_dict() for a in ResourceQuery().resource_get_alerts(resource)]
-        prop_alerts = [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(resource)]
-
-        from chroma_core.models import StorageResourceStatistic
-        stats = {}
-        for s in StorageResourceStatistic.objects.filter(storage_resource = self):
-            stats[s.name] = s.to_dict()
-
-        from chroma_core.lib.storage_plugin.resource import ScannableResource
-        scannable = isinstance(resource, ScannableResource)
-
-        return {'id': self.pk,
-                'content_type_id': ContentType.objects.get_for_model(self).id,
-                'class_name': resource.get_class_label(),
-                'scannable': scannable,
-                'alias': self.alias,
-                'default_alias': resource.get_label(),
-                'attributes': resource.get_attribute_items(),
-                'alerts': alerts,
-                'stats': stats,
-                'charts': resource.get_charts(),
-                'propagated_alerts': prop_alerts}
 
     @classmethod
     def get_or_create_root(cls, resource_class, resource_class_id, attrs):

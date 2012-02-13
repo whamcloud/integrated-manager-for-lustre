@@ -82,10 +82,8 @@ class TestLoad(TestCase):
         # Just the scannable resources
         scannable_classes = self.manager.get_resource_classes(scannable_only = True)
         self.assertEqual(len(scannable_classes), 1)
-        scannable_classes = [sc.to_dict() for sc in scannable_classes]
-        self.assertEqual(scannable_classes[0]['plugin_name'], 'loadable_plugin')
-        self.assertEqual(scannable_classes[0]['class_name'], 'TestScannableResource')
-        self.assertEqual(scannable_classes[0]['label'], 'loadable_plugin-TestScannableResource')
+        self.assertEqual(scannable_classes[0].storage_plugin.module_name, 'loadable_plugin')
+        self.assertEqual(scannable_classes[0].class_name, 'TestScannableResource')
 
     def test_root_resource(self):
         """Test that the manager creates and returns a scannable resource"""

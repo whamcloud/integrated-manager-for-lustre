@@ -162,10 +162,8 @@ function load_resource(resource) {
 
     var attr_markup = "";
     var rowclass = "odd";
-    //console.log(resource);
-    $.each(resource.attributes, function(i,j) {
-      name = j[0]
-      attr_info = j[1]
+    console.log(resource);
+    $.each(resource.attributes, function(name, attr_info) {
       if (rowclass == "odd") {
         rowclass = "even";
       } else {

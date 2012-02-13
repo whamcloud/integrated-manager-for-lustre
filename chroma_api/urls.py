@@ -18,10 +18,6 @@ from statsmetricapi import(GetFSTargetStats,
                            GetHeatMapFSStats)
 
 
-import chroma_api.storage_resource
-import chroma_api.storage_resource_class
-
-
 class CsrfResource(Resource):
     """CSRF protection is disabled by default in django-piston, this
        class turns it back on.
@@ -59,13 +55,4 @@ urlpatterns = patterns('',
 
     # Note: Agent API is not subject to CSRF because it is not accessed from a web browser
     (r'^update_scan/$', Resource(monitorapi.UpdateScan)),
-
-    # chroma_api.storage_resource_class
-    (r'^storage_resource_class/$', CsrfResource(chroma_api.storage_resource_class.StorageResourceClassHandler)),
-    (r'^storage_resource_class/(?P<module_name>\w+)/(?P<class_name>\w+)/$', CsrfResource(chroma_api.storage_resource_class.StorageResourceClassHandler)),
-
-    # chroma_api.storage_resource
-    (r'^storage_resource/$', CsrfResource(chroma_api.storage_resource.StorageResourceHandler)),
-    (r'^storage_resource/(?P<id>\d+)/$', CsrfResource(chroma_api.storage_resource.StorageResourceHandler)),
-    (r'^storage_resource/(?P<module_name>\w+)/(?P<class_name>\w+)/$', CsrfResource(chroma_api.storage_resource.StorageResourceHandler)),
 )

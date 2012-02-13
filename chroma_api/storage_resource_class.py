@@ -3,44 +3,52 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from chroma_api.requesthandler import RequestHandler
+from chroma_core.models import StorageResourceClass
 
-from chroma_core.models import StorageResourceClass, StorageResourceRecord
+from tastypie import fields
+from tastypie.authorization import DjangoAuthorization
+from chroma_api.authentication import AnonymousAuthentication
+from tastypie.resources import ModelResource
 
 
-class StorageResourceClassHandler(RequestHandler):
-    def get(self, request, module_name = None, class_name = None, creatable = None):
-        # Note: not importing this at module scope so that this module can
-        # be imported without loading plugins (useful at installation)
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        if module_name and class_name:
-            # Return a specific class
-            resource_class = StorageResourceClass.objects.get(storage_plugin__module_name = module_name, class_name = class_name)
-            return resource_class.to_dict()
-        else:
-            # Return a list of classes, optionally filtered on 'creatable'
-            if creatable:
-                resource_classes = storage_plugin_manager.get_resource_classes(scannable_only = True)
-                if len(resource_classes):
-                    default = resource_classes[0].to_dict()
-                else:
-                    default = None
-            else:
-                resource_classes = storage_plugin_manager.get_resource_classes()
+class StorageResourceClassResource(ModelResource):
+    plugin_name = fields.CharField(attribute='storage_plugin__module_name')
+    columns = fields.ListField()
+    label = fields.CharField()
+    fields = fields.DictField()
 
-                # Pick the first resource with no parents, and use its class
-                try:
-                    default = StorageResourceRecord.objects.filter(parents = None).latest('pk').resource_class.to_dict()
-                except StorageResourceRecord.DoesNotExist:
-                    try:
-                        default = StorageResourceRecord.objects.all()[0].resource_class.to_dict()
-                    except IndexError:
-                        try:
-                            default = StorageResourceClass.objects.all()[0].to_dict()
-                        except IndexError:
-                            default = None
+    def dehydrate_columns(self, bundle):
+        return bundle.obj.get_class().get_columns()
+        #columns = [{'mdataProp': 'id', 'bVisible': False}, {'mDataProp': '_alias', 'sTitle': 'Name'}]
+        #for c in attr_columns:
+        #    columns.append({'sTitle': c['label'], 'mDataProp': c['name']})
+        #return columns
 
-            return {
-                    'resource_classes': [resource_class.to_dict() for resource_class in resource_classes],
-                    'default_hint': default
-                    }
+    def dehydrate_fields(self, bundle):
+        resource_klass = bundle.obj.get_class()
+
+        fields = []
+        for name, attr in resource_klass.get_all_attribute_properties():
+            fields.append({
+                'label': attr.get_label(name),
+                'name': name,
+                'optional': attr.optional,
+                'class': attr.__class__.__name__})
+        return fields
+
+    def dehydrate_label(self, bundle):
+        return "%s-%s" % (bundle.obj.storage_plugin.module_name, bundle.obj.class_name)
+
+    class Meta:
+        queryset = StorageResourceClass.objects.all()
+        resource_name = 'storage_resource_class'
+        filtering = {'plugin_name': ['exact'], 'class_name': ['exact'], 'user_creatable': ['exact']}
+        authorization = DjangoAuthorization()
+        authentication = AnonymousAuthentication()
+        ordering = ['class_name']
+
+    def override_urls(self):
+        from django.conf.urls.defaults import url
+        return [
+            url(r"^(?P<resource_name>%s)/(?P<storage_plugin__module_name>\w+)/(?P<class_name>\w+)/$" % self._meta.resource_name, self.wrap_view('dispatch_detail'), name="dispatch_detail"),
+]
