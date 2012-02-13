@@ -2,6 +2,8 @@
 
 from utils.constants import Constants
 from time import sleep
+from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import NoSuchElementException
 
 
 class Servers:
@@ -34,10 +36,10 @@ class Servers:
         # FIXME: need to add a generic function to wait for an action
         sleep(2)
 
-    def enter_hostname(self):
+    def enter_hostname(self, host_name):
         """Enter hostname"""
         self.host_address_text.clear()
-        self.host_address_text.send_keys('clo-pune-linv17')
+        self.host_address_text.send_keys(host_name)
 
     def click_continue_button(self):
         #Click continue button
@@ -47,7 +49,7 @@ class Servers:
         loading_div = self.driver.find_element_by_class_name('loading_placeholder')
         for i in xrange(self.WAIT_TIME):
             if self.loading_dialog_div.is_displayed() and loading_div.text == 'Checking connectivity...':
-                print "Checking connectivity..."
+                print "Checking connectivity"
                 sleep(2)
             else:
                 break
@@ -66,6 +68,7 @@ class Servers:
         self.add_host_confirm_button.click()
         # FIXME: need to add a generic function to wait for an action
         sleep(5)
+        self.test_loading_image()
 
     def complete_div_displayed(self):
         """Returns whether complete div is displayed or not"""
@@ -75,3 +78,54 @@ class Servers:
         #Click close button
         self.add_host_close_button.click()
         sleep(2)
+
+    def verify_added_server(self, host_name):
+        """Returns whether newly created server is listed or not"""
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        if len(server_list) > 0:
+            for i in range(len(server_list)):
+                if server_list.__getitem__(i).text == host_name:
+                    return True
+
+        return False
+
+    def stop_lnet(self, host_name):
+        """Stops LNet on the server"""
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        if len(server_list) > 0:
+            for i in range(len(server_list)):
+                if server_list.__getitem__(i).text == host_name:
+                    stop_lnet_button = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr[i+1]/td[3]/span/button[3]")
+                    stop_lnet_button.click()
+
+        return False
+
+    def get_lnet_state(self, host_name):
+        """Stops LNet on the server"""
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        lnet_state_text = ''
+        if len(server_list) > 0:
+            for i in range(len(server_list)):
+                if server_list.__getitem__(i).text == host_name:
+                    lnet_state = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr[i+1]/td[2]/span")
+                    lnet_state_text = lnet_state.text
+
+        return lnet_state_text
+
+    def test_loading_image(self):
+        from time import sleep
+        for i in xrange(10):
+            print "Retrying" + str(i)
+            try:
+                loading_div = self.driver.find_element_by_css_selector("span.notification_object_icon.busy_icon")
+                try:
+                    if loading_div.is_displayed():
+                        print "Waiting for process to get complete"
+                        sleep(2)
+                        continue
+                except StaleElementReferenceException:
+                    sleep(2)
+                    return
+            except NoSuchElementException:
+                sleep(2)
+                return
