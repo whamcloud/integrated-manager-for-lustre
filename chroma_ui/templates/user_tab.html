@@ -34,7 +34,7 @@
             }))
           }
           buttons.push($("<button>Edit</button>").click(function() {
-            editUser(row.user);
+            UserDialog.edit(row.user, function() {reloadTable();});
           }));
           $.each(buttons, function(i, button) {
             $('td:eq(4)', nRow).prepend(button);
@@ -64,7 +64,7 @@
             var user = {}
             user.groups = [{pk: $('#create_user_dialog select[name=group]').val()}]
 
-            saveForm(dialog, Api.post, "user/", user, function ()
+            ValidatedForm.save(dialog, Api.post, "user/", user, function ()
             {
               dialog.dialog('close');
               reloadTable();
@@ -83,57 +83,8 @@
 
     function createUser()
     {
-      $('#create_user_dialog span.error').remove();
-      $('#create_user_dialog input').removeClass('error');
-      $('#create_user_dialog input').val("");
+      ValidatedForm.clear($('#create_user_dialog input'))
       $('#create_user_dialog').dialog('open');
-    }
-
-    function editUser(user) {
-      var form_markup = ""
-      form_markup += "<table class='validated_form'>"
-      form_markup += "<tr><th>Username:</th><td><input name='username' type='text' readonly='readonly' value='" + user.username + "'/></td></tr>"
-      form_markup += "<tr><th>Password:</th><td><input name='password1' type='password'/></td></tr>"
-      form_markup += "<tr><th>Confirm password:</th><td><input name='password2' type='password'/></td></tr>"
-      $("<div>" + form_markup + "</div>").dialog({
-        resizable: false,
-        width: 'auto',
-        buttons: {
-          "Cancel": function() {$(this).dialog('close')},
-          "Save": function() {
-            var dialog = $(this);
-            saveForm($(this), Api.put, "user/" + user.id + "/", user, function() {
-              dialog.dialog('close');
-              reloadTable();
-            });
-
-          }
-        }
-      })
-    }
-
-    function saveForm(element, api_fn, url, obj, complete) {
-      element.find('input').each(function() {
-        obj[$(this).attr('name')] = $(this).val()
-      });
-      api_fn(url, obj,
-        success_callback = function(data) {
-          complete();
-        },
-        error_callback = {
-          400: function(jqXHR) {
-            var errors = JSON.parse(jqXHR.responseText);
-            element.find('span.error').remove();
-            element.find('input').removeClass('error');
-            $.each(errors, function(attr_name, error_list) {
-              $.each(error_list, function(i, error) {
-                element.find('input[name=' + attr_name + ']').before("<span class='error'>" + error + "</span>")
-                element.find('input[name=' + attr_name + ']').addClass('error');
-              });
-            });
-          }
-        }
-      );
     }
 
     function deleteUser(user) {

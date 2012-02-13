@@ -101,7 +101,11 @@ var Api = function() {
     var message = "We are sorry, but something has gone wrong.";
     message += "<dl>";
     $.each(kwargs, function(key, value) {
-      message += "<dt>" + key + ":</dt><dd>" + value + "</dd>";
+      var s = String(value);
+      if (s.length > 160) {
+        s = "<textarea rows='8' cols='40'>" + s + "</textarea>"
+      }
+      message += "<dt>" + key + ":</dt><dd>" + s + "</dd>";
     });
     message += "</dl>";
     message += "<p style='text-align: center'>"
@@ -167,7 +171,6 @@ var Api = function() {
     }
 
     if (!kwargs.order_by && kwargs.iSortCol_0 != undefined) {
-      console.log(kwargs);
       if (kwargs['bSortable_' + kwargs.iSortCol_0]) {
         var order_by = settings.aoColumns[kwargs.iSortCol_0].mDataProp
         if (kwargs.sSortDir_0 == 'desc') {

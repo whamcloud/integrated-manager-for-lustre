@@ -86,6 +86,12 @@ var Login = function() {
     });
     $('#login_dialog + div button:first').attr('id', 'cancel');
     $('#login_dialog + div button:last').attr('id', 'submit');
+
+    $('#user_info #authenticated #username').parent('a').click(function(ev)
+    {
+      UserDialog.edit(Login.getUser());
+      ev.preventDefault();
+    })
   }
 
   function init() {
@@ -128,4 +134,72 @@ var Login = function() {
     init: init,
     getUser: getUser
   }
+}();
+
+var UserDialog = function() {
+  function edit(user, callback) {
+    $.each(user.groups, function(i, group) {
+      delete group.resource_uri
+    });
+    var form_markup = ""
+    form_markup += "<table class='validated_form'>"
+    form_markup += "<tr><th>Username:</th><td><input name='username' type='text' readonly='readonly' value='" + user.username + "'/></td></tr>"
+    form_markup += "<tr><th>Password:</th><td><input name='password1' type='password'/></td></tr>"
+    form_markup += "<tr><th>Confirm password:</th><td><input name='password2' type='password'/></td></tr>"
+    $("<div>" + form_markup + "</div>").dialog({
+      resizable: false,
+      width: 'auto',
+      buttons: {
+        "Cancel": function() {$(this).dialog('close')},
+        "Save": function() {
+          var dialog = $(this);
+          ValidatedForm.save($(this), Api.put, "user/" + user.id + "/", user, function() {
+            dialog.dialog('close');
+            if (callback) {
+              callback();
+            }
+          });
+
+        }
+      }
+    })
+  }
+
+  return {edit: edit}
+}();
+
+var ValidatedForm = function() {
+  function save(element, api_fn, url, obj, complete) {
+    element.find('input').each(function() {
+      obj[$(this).attr('name')] = $(this).val()
+    });
+    api_fn(url, obj,
+      success_callback = function(data) {
+        complete();
+      },
+      error_callback = {
+        400: function(jqXHR) {
+          var errors = JSON.parse(jqXHR.responseText);
+          element.find('span.error').remove();
+          element.find('input').removeClass('error');
+          $.each(errors, function(attr_name, error_list) {
+            $.each(error_list, function(i, error) {
+              element.find('input[name=' + attr_name + ']').before("<span class='error'>" + error + "</span>")
+              element.find('input[name=' + attr_name + ']').addClass('error');
+            });
+          });
+        }
+      }
+    );
+  }
+
+  function clear(element) {
+    element.find('span.error').remove();
+    element.find('input').removeClass('error');
+    element.find('input').val("");
+  }
+
+  return {
+    save: save,
+    clear: clear}
 }();
