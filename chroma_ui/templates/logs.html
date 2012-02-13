@@ -52,6 +52,7 @@
             // NB $.trim is used because datetimepicker seems to append a trailing space
             filter_args['devicereportedtime__gte'] = $.trim($('#datetime_from').val())
             filter_args['devicereportedtime__lte'] = $.trim($('#datetime_to').val())
+            //filter_args['order_by'] = '-devicereportedtime'
 
             Api.get_datatables(url, aoData,
               function(data) {
@@ -63,26 +64,23 @@
                     row.DT_RowClass = 'log_info';
                   }
 
+                  row.devicereportedtime = shortLocalTime(row.devicereportedtime)
                   row.syslogtag = row.syslogtag.slice(0, -1);
-
-                  /* TODO: format 'devicereportedtime' */
                 });
                 callback(data);
               },
               settings,
               removeBlankAttributes(filter_args));
           }, 
-           aaSorting: [[1, 'desc']],
+           aaSorting: [[0, 'desc']],
 	         "aoColumns": [
-               { "sClass": 'log_line', "mDataProp":"devicereportedtime", "bSortable":false},
-               { "sClass": 'log_line', "mDataProp":"fromhost", "bSortable":false},
+               { "sClass": 'log_line', "mDataProp":"devicereportedtime", "bSortable":true},
+               { "sClass": 'log_line', "mDataProp":"fromhost", "bSortable":true},
                { "sClass": 'log_line', "mDataProp":"syslogtag", "bSortable":false},
                { "sClass": 'log_line', "mDataProp":"message","bSearchable":true, "bSortable":false}
 	         ],
 	         "bJQueryUI": true, 
 	      });
-      //clear default table info
-      $("#alertAnchor").click();
       //click handler for filter
       $('#log_filter_btn').click(function()
       {

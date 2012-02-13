@@ -26,9 +26,10 @@
       "oLanguage": {
           "sEmptyTable": "No Servers to display"
       },
+      aaSort: [[0, 'asc']],
       "aoColumns": [
-        { "sClass": 'txtleft', mDataProp: 'fqdn'},
-        { "sClass": 'txtcenter', mDataProp: 'state'},
+        { "sClass": 'txtleft', mDataProp: 'fqdn', bSortable: true},
+        { "sClass": 'txtcenter', mDataProp: 'state', bSortable: false},
         { "sClass": 'txtcenter', bSortable: false, mDataProp: 'actions'},
         { "sClass": 'txtcenter', bSortable: false, mDataProp: 'icons'}
       ]

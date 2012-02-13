@@ -59,26 +59,6 @@ var Sidebar = function(){
     }
   }
 
-  function shortLocalTime(str)
-  {
-    function pad(n) {
-      if (n < 10) {
-        return "0" + n
-      } else {
-        return n
-      }
-    }
-    var date = new Date(str)
-    var days_elapsed = ((new Date()) - date) / (3600 * 24 * 1000)
-    var localTime = pad(date.getHours()) + ":" + pad(date.getMinutes())
-    var localDate = date.getFullYear() + "/" + pad(date.getMonth()) + "/" + pad(date.getDate())
-    if (days_elapsed < 1.0) {
-      return localTime
-    } else {
-      return  localDate + "&nbsp;" + localTime
-    }
-  }
-
   function init() {
     $("div#sidebar div#accordion").accordion({
       fillSpace: true,
@@ -110,9 +90,9 @@ var Sidebar = function(){
         job.text = ellipsize(job.description) + "<br>" + shortLocalTime(job.created_at)
       },
       [
-        { "sClass": 'icon_column', "mDataProp":"icon" },
-        { "sClass": 'txtleft', "mDataProp":"text" },
-        { "sClass": 'txtleft', "mDataProp":"buttons" },
+        { "sClass": 'icon_column', "mDataProp":"icon", bSortable: false },
+        { "sClass": 'txtleft', "mDataProp":"text", bSortable: false },
+        { "sClass": 'txtleft', "mDataProp":"buttons", bSortable: false },
       ]
     );
 
@@ -123,8 +103,8 @@ var Sidebar = function(){
         a.icon = "<img src='" + alertIcon(a) + "'/>"
       },
       [
-        { "sClass": 'icon_column', "mDataProp":"icon" },
-        { "sClass": 'txtleft', "mDataProp":"text" },
+        { "sClass": 'icon_column', "mDataProp":"icon", bSortable: false },
+        { "sClass": 'txtleft', "mDataProp":"text", bSortable: false },
       ],
       "<img src='/static/images/dialog_correct.png'/>&nbsp;No alerts active"
     );
@@ -137,8 +117,8 @@ var Sidebar = function(){
         e.text = ellipsize(e.message) + "<br>" + shortLocalTime(e.created_at)
       },
       [
-        { "sClass": 'icon_column', "mDataProp": "icon" },
-        { "sClass": 'txtleft', "mDataProp": "text" },
+        { "sClass": 'icon_column', "mDataProp": "icon", bSortable: false },
+        { "sClass": 'txtleft', "mDataProp": "text", bSortable: false },
       ]
     );
   }

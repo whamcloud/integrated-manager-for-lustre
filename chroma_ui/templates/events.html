@@ -18,16 +18,23 @@
             "sAjaxSource": "event/",
             "fnServerData": function (url, data, callback, settings) 
             {
-              Api.get_datatables(url, data, callback, settings, removeBlankAttributes({
+              function formatRows(data) {
+                $.each(data.aaData, function(i, row) {
+                  row.created_at = shortLocalTime(row.created_at);
+                });
+                callback(data);
+              }
+              Api.get_datatables(url, data, formatRows, settings, removeBlankAttributes({
                 "host__id": $('#event_host').val(),
                 "severity": $('#event_severity').val(),
                 "event_type": $('#event_type').val()
               }))
             }, 
+            aaSorting: [[0, 'desc']],
             "aoColumns": [
-                { "sClass": 'txtleft',"mDataProp":"created_at", "asSorting": [ "desc" ],"bSortable":false},
+                { "sClass": 'txtleft',"mDataProp":"created_at", "bSortable":true},
                 { "sClass": 'txtcenter',"mDataProp":"severity", "bSortable":false},
-                { "sClass": 'txtleft',"mDataProp":"host_name", "bSortable":false},
+                { "sClass": 'txtleft',"mDataProp":"host_name", "bSortable":true},
                 { "sClass": 'txtleft',"mDataProp":"message","bSortable":false}
              ], 
              "bJQueryUI": true

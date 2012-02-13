@@ -57,6 +57,7 @@ class FilesystemResource(ConfParamResource):
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         excludes = ['not_deleted']
+        ordering = ['name']
 
     def obj_create(self, bundle, request = None, **kwargs):
         fsname = bundle.data['name']
@@ -75,7 +76,7 @@ class FilesystemResource(ConfParamResource):
             mgt = ManagedMgs.create_for_lun(mgt_lun_id, name="MGS")
             mgt_id = mgt.pk
         else:
-            mgt_lun_id = ManagedMgs.objects.get(pk = mgt_id).get_lun()
+            mgt_lun_id = ManagedMgs.objects.get(pk = mgt_id).lun.id
 
         # This is a brute safety measure, to be superceded by
         # some appropriate validation that gives a helpful

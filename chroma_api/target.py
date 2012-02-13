@@ -34,7 +34,7 @@ class TargetResource(ConfParamResource):
     filesystem_name = fields.CharField()
     kind = fields.CharField()
 
-    lun_name = fields.CharField()
+    lun_name = fields.CharField(attribute = 'lun__label')
     primary_server_name = fields.CharField()
     failover_server_name = fields.CharField()
     active_host_name = fields.CharField()
@@ -52,6 +52,7 @@ class TargetResource(ConfParamResource):
         filtering = {'kind': ['exact'], 'filesystem_id': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
+        ordering = ['lun_name']
 
     def override_urls(self):
         from django.conf.urls.defaults import url
@@ -77,8 +78,8 @@ class TargetResource(ConfParamResource):
         except AttributeError:
             return None
 
-    def dehydrate_lun_name(self, bundle):
-        return bundle.obj.get_lun().get_label()
+    #def dehydrate_lun_name(self, bundle):
+    #    return bundle.obj.lun.label
 
     def dehydrate_primary_server_name(self, bundle):
         return bundle.obj.primary_server().pretty_name()

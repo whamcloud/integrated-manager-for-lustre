@@ -30,6 +30,8 @@ class ManagedTarget(StatefulObject):
     # Nullable because it is not known until the target is formatted
     uuid = models.CharField(max_length = 64, null = True, blank = True)
 
+    lun = models.ForeignKey('Lun')
+
     def name_no_fs(self):
         """Something like OST0001 rather than testfs1-OST0001"""
         if self.name:
@@ -147,21 +149,16 @@ class ManagedTarget(StatefulObject):
             'ManagedFilesystem': lambda mfs: [t.downcast() for t in mfs.get_filesystem_targets()]
             }
 
-    def get_lun(self):
-        # FIXME: next time I'm breaking the schema, should make
-        # lun an attribute of the ManagedTarget so that it
-        # can be a OneToOne relation and thereby have a
-        # contraint to ensure that two targets can't possibly use
-        # the same Lun (and make this function redundant)
-        return self.managedtargetmount_set.get(primary = True).block_device.lun
-
     @classmethod
     def create_for_lun(cls, lun_id, **kwargs):
         # Local imports to avoid inter-model import dependencies
         from chroma_core.models.target_mount import ManagedTargetMount
         from chroma_core.models.host import Lun, LunNode
 
+        lun = Lun.objects.get(pk = lun_id)
+
         target = cls(**kwargs)
+        target.lun = lun
         target.save()
 
         def create_target_mount(lun_node):
@@ -173,7 +170,6 @@ class ManagedTarget(StatefulObject):
                 primary = lun_node.primary)
             mount.save()
 
-        lun = Lun.objects.get(pk = lun_id)
         try:
             primary_lun_node = lun.lunnode_set.get(primary = True)
             create_target_mount(primary_lun_node)

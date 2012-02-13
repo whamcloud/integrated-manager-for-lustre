@@ -265,6 +265,8 @@ class Lun(models.Model):
     # for shared storage to not provide a serial number.
     shareable = models.BooleanField()
 
+    label = models.CharField(max_length = 128)
+
     __metaclass__ = DeletableMetaclass
 
     class Meta:
@@ -310,10 +312,13 @@ class Lun(models.Model):
         resource_klass = record.to_resource_class()
         return resource_klass.get_class_label()
 
-    def get_label(self):
+    def _get_label(self):
         if not self.storage_resource_id:
-            lunnode = self.lunnode_set.all()[0]
-            return "%s:%s" % (lunnode.host, lunnode.path)
+            if self.lunnode_set.count():
+                lunnode = self.lunnode_set.all()[0]
+                return "%s:%s" % (lunnode.host, lunnode.path)
+            else:
+                return ""
 
         # TODO: this is a link to the local e.g. ScsiDevice resource: to get the
         # best possible name, we should follow back to VirtualDisk ancestors, and
@@ -325,6 +330,10 @@ class Lun(models.Model):
             return record.alias
         else:
             return resource.get_label()
+
+    def save(self, *args, **kwargs):
+        self.label = self._get_label()
+        super(Lun, self,).save(*args, **kwargs)
 
     def to_dict(self):
         from chroma_core.lib.util import sizeof_fmt

@@ -18,12 +18,8 @@ from django.shortcuts import get_object_or_404
 
 class VolumeResource(ModelResource):
     status = fields.CharField()
-    label = fields.CharField()
     kind = fields.CharField()
     volume_nodes = fields.ToManyField("chroma_api.volume_node.VolumeNodeResource", 'lunnode_set', null = True, full = True)
-
-    def dehydrate_label(self, bundle):
-        return bundle.obj.get_label()
 
     def dehydrate_kind(self, bundle):
         return bundle.obj.get_kind()
@@ -37,6 +33,7 @@ class VolumeResource(ModelResource):
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         excludes = ['not_deleted']
+        ordering = ['label']
 
     def apply_filters(self, request, filters = None):
         """Override this to build a filesystem filter using Q expressions (not

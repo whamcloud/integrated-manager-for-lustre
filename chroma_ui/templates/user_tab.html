@@ -42,11 +42,11 @@
           return nRow;
         },
         aoColumns: [
-          {mDataProp: 'username'},
-          {mDataProp: 'full_name'},
-          {mDataProp: 'email'},
-          {mDataProp: 'groups'},
-          {mDataProp: 'buttons'}
+          {mDataProp: 'username', bSortable: true},
+          {mDataProp: 'full_name', bSortable: false},
+          {mDataProp: 'email', bSortable: true},
+          {mDataProp: 'groups', bSortable: false},
+          {mDataProp: 'buttons', bSortable: false}
         ]
       });
 

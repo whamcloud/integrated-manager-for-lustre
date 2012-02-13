@@ -153,7 +153,7 @@ var Api = function() {
 
   /* Wrap API calls to tastypie paginated methods such that
      jquery.Datatables understands the resulting format */
-  var get_datatables = function(url, data, callback, settings, kwargs) {
+  var get_datatables = function(url, data, callback, settings, kwargs, datatable) {
     var kwargs = kwargs;
     if (kwargs == undefined) {
       kwargs = {}
@@ -164,6 +164,18 @@ var Api = function() {
       $.each(data, function(i, param) {
         kwargs[param.name] = param.value
       });
+    }
+
+    if (!kwargs.order_by && kwargs.iSortCol_0 != undefined) {
+      console.log(kwargs);
+      if (kwargs['bSortable_' + kwargs.iSortCol_0]) {
+        var order_by = settings.aoColumns[kwargs.iSortCol_0].mDataProp
+        if (kwargs.sSortDir_0 == 'desc') {
+          kwargs.order_by = "-" + order_by
+        } else if (kwargs.sSortDir_0 == 'asc') {
+          kwargs.order_by = order_by;
+        }
+      }
     }
 
     /* Rename pagination params from datatables to tastypie */
@@ -464,3 +476,25 @@ function formatBytes(bytes) {
 	};
   return bytes;
 }
+
+function shortLocalTime(str)
+{
+  function pad(n) {
+    if (n < 10) {
+      return "0" + n
+    } else {
+      return n
+    }
+  }
+  var date = new Date(str)
+  var days_elapsed = ((new Date()) - date) / (3600 * 24 * 1000)
+  var localTime = pad(date.getHours()) + ":" + pad(date.getMinutes())
+  var localDate = date.getFullYear() + "/" + pad(date.getMonth()) + "/" + pad(date.getDate())
+  if (days_elapsed < 1.0) {
+    return localTime
+  } else {
+    return  localDate + "&nbsp;" + localTime
+  }
+}
+
+

@@ -24,6 +24,7 @@ class HostResource(StatefulModelResource):
         excludes = ['not_deleted']
         authentication = AnonymousAuthentication()
         authorization = DjangoAuthorization()
+        ordering = ['fqdn']
 
         # So that we can return Commands for PUTs
         always_return_data = True

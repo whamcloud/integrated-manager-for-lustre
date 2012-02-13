@@ -22,7 +22,7 @@ STR_TO_SEVERITY = dict([(logging.getLevelName(level), level) for level in [
 
 
 class EventResource(ModelResource):
-    host_name = fields.CharField()
+    host_name = fields.CharField(attribute = 'host', blank = True, null = True)
     host = fields.ToOneField('chroma_api.host.HostResource', 'host', null = True)
     message = fields.CharField()
 
@@ -30,7 +30,7 @@ class EventResource(ModelResource):
         queryset = Event.objects.all()
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        ordering = ['created_at', 'host']
+        ordering = ['created_at', 'host', 'host_name']
         filtering = {
                 'severity': ['exact'],
                 'host': tastypie.constants.ALL_WITH_RELATIONS,

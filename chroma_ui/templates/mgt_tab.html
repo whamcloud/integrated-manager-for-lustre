@@ -26,14 +26,15 @@
       "oLanguage": {
           "sEmptyTable": "No MGT to display"
       },
+      aaSort: [[1, 'asc']],
       "aoColumns": [
-        { "sClass": 'txtleft', mDataProp: 'fs_names'},
-        { "sClass": 'txtleft', mDataProp: 'lun_name' },
-        { "sClass": 'txtleft', mDataProp: 'primary_server_name'},
-        { "sClass": 'txtleft', mDataProp: 'failover_server_name'},
-        { "sClass": 'txtleft', mDataProp: 'active_host_name'},
-        { "sClass": 'txtcenter', bSortable: false, mDataProp: 'state_transitions'},
-        { "sClass": 'txtleft', bSortable: false, mDataProp: 'notification_icons'}
+        { "sClass": 'txtleft', mDataProp: 'fs_names', bSortable: false},
+        { "sClass": 'txtleft', mDataProp: 'lun_name', bSortable: true },
+        { "sClass": 'txtleft', mDataProp: 'primary_server_name', bSortable: false},
+        { "sClass": 'txtleft', mDataProp: 'failover_server_name', bSortable: false},
+        { "sClass": 'txtleft', mDataProp: 'active_host_name', bSortable: false},
+        { "sClass": 'txtcenter', bSortable: false, mDataProp: 'state_transitions', bSortable: false},
+        { "sClass": 'txtleft', bSortable: false, mDataProp: 'notification_icons', bSortable: false}
       ]
     } );
 

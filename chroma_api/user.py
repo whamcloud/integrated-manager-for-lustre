@@ -100,3 +100,4 @@ class UserResource(ModelResource):
         queryset = User.objects.all()
         validation = UserValidation()
         fields = ['date_joined', 'first_name', 'full_name', 'groups', 'id', 'last_login', 'last_name', 'password1', 'password2', 'resource_uri', 'username', 'email']
+        ordering = ['username', 'email']

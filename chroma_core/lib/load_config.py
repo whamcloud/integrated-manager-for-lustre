@@ -18,26 +18,9 @@ def _validate_conf_params(conf_params):
 
 
 def _find_or_create_target(klass, mounts, **kwargs):
-    from chroma_core.models import ManagedHost, ManagedTargetMount
-
-    target = None
-    for m in mounts:
-        host = ManagedHost.objects.get(address = m['host'])
-        try:
-            mount = ManagedTargetMount.objects.get(host = host, block_device__path = m['device_node'])
-            target = mount.target.downcast()
-        except ManagedTargetMount.DoesNotExist:
-            pass
-
-    if not target:
-        target = klass.objects.create(**kwargs)
-
-    _create_mounts(target, mounts)
-    return target
-
-
-def _create_mounts(target, mounts):
     from chroma_core.models import ManagedHost, Lun, LunNode, ManagedTargetMount
+
+    # Setup Lun/LunNode
     lun = None
     for m in mounts:
         host = ManagedHost.objects.get(address = m['host'])
@@ -51,12 +34,33 @@ def _create_mounts(target, mounts):
     if not lun:
         lun = Lun.objects.create(shareable = (len(mounts) > 1))
 
+    # Find existing Target if there is one
+    target = None
+    for m in mounts:
+        host = ManagedHost.objects.get(address = m['host'])
+        try:
+            mount = ManagedTargetMount.objects.get(host = host, block_device__path = m['device_node'])
+            target = mount.target.downcast()
+        except ManagedTargetMount.DoesNotExist:
+            pass
+
+    # Create target if not found
+    if not target:
+        target = klass.objects.create(lun = lun, **kwargs)
+
+    # Find or create TargetMounts
+    _create_mounts(target, mounts)
+    return target
+
+
+def _create_mounts(target, mounts):
+    from chroma_core.models import ManagedHost, LunNode, ManagedTargetMount
     for m in mounts:
         host = ManagedHost.objects.get(address = m['host'])
         try:
             lun_node = LunNode.objects.get(host = host, path = m['device_node'])
         except LunNode.DoesNotExist:
-            lun_node = LunNode.objects.create(host = host, path = m['device_node'], lun = lun)
+            lun_node = LunNode.objects.create(host = host, path = m['device_node'], lun = target.lun)
         if len(mounts) > 1:
             primary = m['primary']
         else:

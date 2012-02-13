@@ -118,15 +118,16 @@ fvc_button = function(element, opts) {
         callback(data);
       }, settings, {category: 'usable'});
     },
+    aoSort: [[2, 'asc']],
     aoColumns: [
-      {sWidth: "1%", mDataProp: 'id'},
-      {sWidth: "1%", mDataProp: 'select_widget'},
-      {sWidth: "5%", mDataProp: 'label'},
-      {sWidth: "1%", mDataProp: 'size'},
-      {sWidth: "5%", mDataProp: 'kind'},
-      {sWidth: "5%", mDataProp: 'status'},
-      {sWidth: "5%", mDataProp: 'primary_host_name'},
-      {sWidth: "5%", mDataProp: 'secondary_host_name'}
+      {sWidth: "1%", mDataProp: 'id', bSortable: false},
+      {sWidth: "1%", mDataProp: 'select_widget', bSortable: false},
+      {sWidth: "5%", mDataProp: 'label', bSortable: true},
+      {sWidth: "1%", mDataProp: 'size', bSortable: false},
+      {sWidth: "5%", mDataProp: 'kind', bSortable: false},
+      {sWidth: "5%", mDataProp: 'status', bSortable: false},
+      {sWidth: "5%", mDataProp: 'primary_host_name', bSortable: false},
+      {sWidth: "5%", mDataProp: 'secondary_host_name', bSortable: false}
     ]
   });
 

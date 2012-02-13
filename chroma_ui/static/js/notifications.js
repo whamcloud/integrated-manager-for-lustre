@@ -494,7 +494,6 @@ poll_objects = function() {
 }
 
 $(document).ready(function() {
-  return
   Api.post("notifications/", {filter_opts: {since_time: "", initial: true}}, 
   success_callback = function(data)
   {

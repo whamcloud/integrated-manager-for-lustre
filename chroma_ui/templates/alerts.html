@@ -13,40 +13,53 @@
         "bDeferRender": true,
         "sAjaxSource": 'alert/',
         "fnServerData": function (url, data, callback, settings) {
-          Api.get_datatables(url, data, callback, settings, {active: true});
+          function formatRows(data) {
+            $.each(data.aaData, function(i, row) {
+              row.begin = shortLocalTime(row.begin);
+            });
+            callback(data);
+          }
+          Api.get_datatables(url, data, formatRows, settings, {active: true});
         },
+        aaSorting: [[0, 'desc']],
         "aoColumns": [
-          { "sClass": 'txtleft', "mDataProp":"begin" },
-          { "sClass": 'txtleft', "mDataProp":"alert_item_str" },
-          { "sClass": 'txtleft', "mDataProp":"message" }
+          { "sClass": 'txtleft', "mDataProp":"begin", bSortable: true },
+          { "sClass": 'txtleft', "mDataProp":"alert_item_str", bSortable: false },
+          { "sClass": 'txtleft', "mDataProp":"message", bSortable: false }
           ],
           "oLanguage": {
             "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
           },
           "bJQueryUI": true,
       });
-    //for alert history
-    var oTable = $('#all_AlertContent').dataTable( {
-      "bProcessing": true,
-      bServerSide: true,
-      "iDisplayLength":25,
-      "bDeferRender": true,
-      "sAjaxSource": 'alert/',
-      "fnServerData": function (url, data, callback, settings) {
-        Api.get_datatables(url, data, callback, settings, {});
-      },
-      "aoColumns": [
-        { "sClass": 'txtleft', "mDataProp":"begin" },
-        { "sClass": 'txtleft', "mDataProp":"end" },
-        { "sClass": 'txtleft', "mDataProp":"alert_item_str" },
-        { "sClass": 'txtleft', "mDataProp":"message" }
-      ],
-      "oLanguage": {
-        "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
-      },
-      "bJQueryUI": true,
-    });
-    $("#alertAnchor").click();
+      //for alert history
+      var oTable = $('#all_AlertContent').dataTable( {
+        "bProcessing": true,
+        bServerSide: true,
+        "iDisplayLength":25,
+        "bDeferRender": true,
+        "sAjaxSource": 'alert/',
+        "fnServerData": function (url, data, callback, settings) {
+          function formatRows(data) {
+            $.each(data.aaData, function(i, row) {
+              row.begin = shortLocalTime(row.begin);
+            });
+            callback(data);
+          }
+          Api.get_datatables(url, data, formatRows, settings, {});
+        },
+        aaSorting: [[0, 'desc']],
+        "aoColumns": [
+          { "sClass": 'txtleft', "mDataProp":"begin", bSortable: true},
+          { "sClass": 'txtleft', "mDataProp":"end", bSortable: false },
+          { "sClass": 'txtleft', "mDataProp":"alert_item_str", bSortable: false },
+          { "sClass": 'txtleft', "mDataProp":"message", bSortable: false }
+        ],
+        "oLanguage": {
+          "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
+        },
+        "bJQueryUI": true,
+      });
     });
     </script>
     {% endblock %}

@@ -26,6 +26,7 @@ class LogResource(ModelResource):
                 }
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
+        ordering = ['devicereportedtime', 'fromhost']
 
     def build_filters(self, filters = None):
         # FIXME: get the UI to give us ISO8601 so that we
