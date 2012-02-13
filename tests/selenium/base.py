@@ -17,17 +17,33 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import NoSuchElementException
 
 
-def wait_for_css_selector_visible(driver, selector, timeout):
-    for i in xrange(timeout):
+def element_visible(driver, selector):
+    try:
+        element = driver.find_element_by_css_selector(selector)
         try:
-            element = driver.find_element_by_css_selector(selector)
-            try:
-                if element.is_displayed():
-                    return
-            except StaleElementReferenceException:
-                pass
-        except NoSuchElementException:
-            pass
+            if element.is_displayed():
+                return True
+        except StaleElementReferenceException:
+            return False
+    except NoSuchElementException:
+        return False
+
+
+def wait_for_element(driver, selector, timeout):
+    for i in xrange(timeout):
+        if element_visible(driver, selector):
+            return
+
+        time.sleep(1)
+    raise RuntimeError('Timeout')
+
+
+def wait_for_any_element(driver, selectors, timeout):
+    for i in xrange(timeout):
+        for s in selectors:
+            if element_visible(driver, s):
+                return
+
         time.sleep(1)
     raise RuntimeError('Timeout')
 
@@ -65,9 +81,12 @@ class SeleniumBaseTestCase(TestCase):
             raise RuntimeError("Please set test_parameters.CHROMA_URL")
         self.driver.get(test_parameters.CHROMA_URL)
 
-        wait_for_css_selector_visible(self.driver, '#login_dialog', 10)
-        Login(self.driver).login_superuser()
-        wait_for_css_selector_visible(self.driver, '#user_info #authenticated', 10)
+        wait_for_any_element(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
+        login_view = Login(self.driver)
+        if not element_visible(self.driver, '#login_dialog'):
+            login_view.open_login_dialog()
+        login_view.login_superuser()
+        wait_for_element(self.driver, '#user_info #authenticated', 10)
         self.driver.execute_script('Api.testMode(true);')
 
     def tearDown(self):

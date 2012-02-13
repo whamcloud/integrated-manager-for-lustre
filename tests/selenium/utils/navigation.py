@@ -47,9 +47,9 @@ class Navigation:
         @param: element_id : Specify the ID of the element to be clicked as seen on the UI
         """
 
-        from base import wait_for_css_selector_visible
+        from base import wait_for_element
 
         link_handle = self._driver.find_element_by_id(element_id)
         link_handle.click()
         self._driver.execute_script('Api.testMode(true);')
-        wait_for_css_selector_visible(self._driver, '#user_info #authenticated', 10)
+        wait_for_element(self._driver, '#user_info #authenticated', 10)
