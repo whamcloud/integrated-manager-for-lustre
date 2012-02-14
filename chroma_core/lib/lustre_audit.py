@@ -174,7 +174,7 @@ class UpdateScan(object):
             # system.  But if there are non-autodetected mounts
             # then this is a problem.
             from django.db.models import Q
-            if ManagedTargetMount.objects.filter(~Q(state = 'autodetected'), host = self.host).count() > 0:
+            if ManagedTargetMount.objects.filter(~Q(target__state = 'autodetected'), host = self.host).count() > 0:
                 audit_log.error("Got no resource_locations from host %s, but there are hydra-configured mounts on that server!" % self.host)
             return
 
