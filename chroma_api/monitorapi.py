@@ -11,7 +11,6 @@ from django.shortcuts import get_object_or_404
 from chroma_api import api_log
 
 
-
 class UpdateScan(RequestHandler):
     def post(self, request, fqdn, token, update_scan, plugins):
         api_log.debug("UpdateScan %s" % fqdn)
