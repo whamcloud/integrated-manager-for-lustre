@@ -1,12 +1,18 @@
 
+import datetime
+import dateutil.parser
+import bisect
+
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.lib.state_manager import StateManager
+import settings
 import chroma_core.lib.conf_param
+
 from tastypie.resources import ModelResource
 from tastypie import fields
 from tastypie import http
-
-import settings
+from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
+from chroma_core.lib.metrics import R3dMetricStore
 
 
 def custom_response(resource, request, response_klass, response_data):
@@ -97,26 +103,31 @@ class MetricResource:
     def override_urls(self):
         from django.conf.urls.defaults import url
         return [
-            url(r"^(?P<resource_name>%s)/metric/$" % self._meta.resource_name, self.wrap_view('get_metric_list'), name="get_metric_list"),
-            url(r"^(?P<resource_name>%s)/(?P<pk>\d+)/metric/$" % self._meta.resource_name, self.wrap_view('get_metric_detail'), name="get_metric_detail"),
+            url(r"^(?P<resource_name>%s)/metric/$" % self._meta.resource_name, self.wrap_view('metric_dispatch'), name="metric_dispatch"),
+            url(r"^(?P<resource_name>%s)/(?P<pk>\d+)/metric/$" % self._meta.resource_name, self.wrap_view('metric_dispatch'), name="metric_dispatch"),
         ]
 
-    def _format_timestamp(self, ts):
-        import datetime
-        return datetime.datetime.fromtimestamp(ts).isoformat() + "Z"
-
-    def get_metric_detail(self, request, **kwargs):
+    def metric_dispatch(self, request, **kwargs):
         """
         GET parameters:
         :metrics: Comma separated list of strings (e.g. kbytesfree,kbytestotal)
-        :begin: Time string, e.g. '2008-09-03T20:56:35.450686Z'
-        :end: Time string, e.g. '2008-09-03T20:56:35.450686Z'
+                  If a datapoint for a particular object does not have ALL of the
+                  requested metrics, that datapoint is discarded.
+        :begin: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'
+        :end: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'
+        :update: boolean -- if true, then begin,end specifies the region you've already presented
+                 and you're asking for values *since* end.
+        :reduce_fn: one of 'average', 'sum'
+        :group_by: an attribute name of the object you're fetching.  For example, to get
+                   the total OST stats for a filesystem, when requesting from
+                   the target resource, use reduce_fn=sum, group_by=filesystem.
+                   If the group_by attribute is absent from a record in the results,
+                   that record is discarded.
         """
-        from chroma_core.lib.metrics import R3dMetricStore
-        from tastypie.http import HttpBadRequest
-        import dateutil.parser
-        import datetime
         errors = {}
+
+        if request.method != 'GET':
+            return self.create_response(request, "", response_class = HttpMethodNotAllowed)
 
         try:
             metrics = request.GET['metrics'].split(",")
@@ -142,6 +153,17 @@ class MetricResource:
         if errors:
             return self.create_response(request, errors, response_class = HttpBadRequest)
 
+        if 'pk' in kwargs:
+            return self.get_metric_detail(request, metrics, begin, end, **kwargs)
+        else:
+            return self.get_metric_list(request, metrics, begin, end, **kwargs)
+
+    def _format_timestamp(self, ts):
+        return datetime.datetime.fromtimestamp(ts).isoformat() + "Z"
+
+    def get_metric_detail(self, request, metrics, begin, end, **kwargs):
+        """
+        """
         obj = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
         stats = R3dMetricStore(obj, settings.AUDIT_PERIOD).fetch("Average",
                 fetch_metrics = metrics, start_time = begin, end_time = end)
@@ -154,12 +176,11 @@ class MetricResource:
                 continue
             if None in data.values():
                 continue
-            result.append([timestamp, data])
+            result.append({'ts': timestamp, 'data': data})
 
         return self.create_response(request, result)
 
     def _reduce(self, metrics, results, reduce_fn):
-        import bisect
         # Want an overall reduction into one series
         all_timestamps = set()
         series_timestamps = {}
@@ -168,9 +189,9 @@ class MetricResource:
             series_timestamps[obj_id] = []
             series_datapoints[obj_id] = {}
             for datapoint in datapoints:
-                series_timestamps[obj_id].append(datapoint[0])
-                series_datapoints[obj_id][datapoint[0]] = datapoint[1]
-                all_timestamps.add(datapoint[0])
+                series_timestamps[obj_id].append(datapoint['ts'])
+                series_datapoints[obj_id][datapoint['ts']] = datapoint['data']
+                all_timestamps.add(datapoint['ts'])
         all_timestamps = list(all_timestamps)
         all_timestamps.sort()
 
@@ -206,50 +227,35 @@ class MetricResource:
                 for value in values:
                     for m, v in value.items():
                         accum[m] += v
-                reduced_result.append((self._format_timestamp(timestamp), accum))
+                reduced_result.append({'ts': self._format_timestamp(timestamp), 'data': accum})
             elif reduce_fn == 'average':
                 accum = dict([(m, 0) for m in metrics])
                 for value in values:
                     for m, v in value.items():
                         accum[m] += v
                 means = dict([(k, v / len(values)) for (k, v) in accum.items()])
-                reduced_result.append((self._format_timestamp(timestamp), means))
+                reduced_result.append({'ts': self._format_timestamp(timestamp), 'data': means})
             else:
                 raise NotImplementedError
 
         return reduced_result
 
-    def get_metric_list(self, request, **kwargs):
-        from chroma_core.lib.metrics import R3dMetricStore
-        from tastypie.http import HttpBadRequest
-        import dateutil.parser
+    def get_metric_list(self, request, metrics, begin, end, **kwargs):
         errors = {}
-
-        try:
-            metrics = request.GET['metrics'].split(",")
-            if len(metrics) == 0:
-                errors['metrics'] = "Metrics must be a comma separated list of 1 or more strings"
-        except KeyError:
-            errors['metrics'] = "This field is mandatory"
-
-        try:
-            begin = dateutil.parser.parse(request.GET['begin'])
-        except KeyError:
-            errors['begin'] = "This field is mandatory"
-        except ValueError:
-            errors['begin'] = "Malformed time string"
-
-        try:
-            end = dateutil.parser.parse(request.GET['end'])
-        except KeyError:
-            errors['end'] = "This field is mandatory"
-        except ValueError:
-            errors['end'] = "Malformed time string"
 
         reduce_fn = request.GET.get('reduce_fn', None)
         group_by = request.GET.get('group_by', None)
         if not reduce_fn and group_by:
             errors['reduce_fn'] = "This field is mandatory if 'group_by' is specified"
+
+        update = request.GET.get('update', False)
+        if update:
+            update = (update.lower() == 'true' or update == '1')
+
+        if update:
+            begin = end
+            end = datetime.datetime.now()
+            # TODO: logic for dealing with incomplete values during update
 
         if errors:
             return self.create_response(request, errors, response_class = HttpBadRequest)
@@ -272,7 +278,7 @@ class MetricResource:
                     # Discard, incomplete sample
                     continue
 
-                result[obj.id].append([timestamp, data])
+                result[obj.id].append({'ts': timestamp, 'data': data})
 
         if reduce_fn and not group_by:
             reduced_result = self._reduce(metrics, result, reduce_fn)
@@ -301,5 +307,5 @@ class MetricResource:
             # Return individual series for each object
             for obj_id, datapoints in result.items():
                 for datapoint in datapoints:
-                    datapoint[0] = self._format_timestamp(datapoint[0])
+                    datapoint['ts'] = self._format_timestamp(datapoint['ts'])
             return self.create_response(request, result)

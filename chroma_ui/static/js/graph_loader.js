@@ -654,42 +654,40 @@ db_Line_connectedClients_Data = function(isZoom)
 *****************************************************************************/
 db_LineBar_CpuMemoryUsage_Data = function(isZoom)
 {
-  var api_params = {
-      targetkind: 'HOST',fetchmetrics: cpuMemoryFetchMatric, endtime: endTime, datafunction: "Average", 
-      starttime: startTime, filesystem_id: ""
-  };
-  var count = 0;
-  var cpuData = [],categories = [], memoryData = [];
-  
-  obj_db_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
-  
-  Api.post(db_LineBar_CpuMemoryUsage_Data_Api_Url, api_params,
-    success_callback = function(data)
-    {
-      var response = data;
-      $.each(response, function(resKey, resValue) 
-      {
-          if (resValue.cpu_total != undefined && resValue.mem_MemTotal != undefined)
-          {
-            ts = resValue.timestamp * 1000
-            var sum_cpu = resValue.cpu_user + resValue.cpu_system + resValue.cpu_iowait;
-            var pct_cpu = ((100 * sum_cpu + (resValue.cpu_total / 2)) / resValue.cpu_total);
-            cpuData.push([ts,(pct_cpu)]);
-            var used_mem = resValue.mem_MemTotal - resValue.mem_MemFree
-            var pct_mem = 100 * (used_mem / resValue.mem_MemTotal)
-            memoryData.push([ts,(pct_mem)]);
-           }
-      });
+  /* Hardcoding endTime and startTime to demo API, no idea
+   * what is going on with the global endTime and startTime (startTime is 5, wtf?)
+   */
+  var endTime = new Date()
+  var startTime = new Date(endTime - 60 * 60000)
 
-      obj_db_LineBar_CpuMemoryUsage_Data.chart.renderTo = "avgCPUDiv";
-      if(isZoom == 'true')
-      {
-        renderZoomDialog(obj_db_LineBar_CpuMemoryUsage_Data);
-      } 
-      obj_db_LineBar_CpuMemoryUsage_Data.series[0].data = cpuData;
-      obj_db_LineBar_CpuMemoryUsage_Data.series[1].data = memoryData;
-      chart = new Highcharts.Chart(obj_db_LineBar_CpuMemoryUsage_Data);
+  var metrics = ["cpu_total", "cpu_user", "cpu_system", "cpu_iowait", "mem_MemFree", "mem_MemTotal"]
+  Api.get("/api/host/metric", {begin: startTime.toISOString(), end: endTime.toISOString(), reduce_fn: 'average', metrics: metrics.join(",")}, success_callback = function(data) {
+    var cpuData = [];
+    var memoryData = [];
+    $.each(data, function(i, datapoint) 
+    {
+      var timestamp = datapoint.ts;
+      var series_values = datapoint.data;
+
+      ts = new Date(timestamp).getTime()
+      var sum_cpu = series_values.cpu_user + series_values.cpu_system + series_values.cpu_iowait;
+      var pct_cpu = ((100 * sum_cpu) / series_values.cpu_total);
+      cpuData.push([ts,(pct_cpu)]);
+      var used_mem = series_values.mem_MemTotal - series_values.mem_MemFree
+      var pct_mem = 100 * (used_mem / series_values.mem_MemTotal)
+      memoryData.push([ts,(pct_mem)]);
     });
+
+    var obj_db_LineBar_CpuMemoryUsage_Data = JSON.parse(JSON.stringify(chartConfig_LineBar_CPUMemoryUsage));
+    obj_db_LineBar_CpuMemoryUsage_Data.chart.renderTo = "avgCPUDiv";
+    if(isZoom == 'true')
+    {
+      renderZoomDialog(obj_db_LineBar_CpuMemoryUsage_Data);
+    } 
+    obj_db_LineBar_CpuMemoryUsage_Data.series[0].data = cpuData;
+    obj_db_LineBar_CpuMemoryUsage_Data.series[1].data = memoryData;
+    chart = new Highcharts.Chart(obj_db_LineBar_CpuMemoryUsage_Data);
+  });
 }
 /*****************************************************************************
  * Function for disk read and write - Area Chart
