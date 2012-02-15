@@ -10,7 +10,7 @@ import tastypie.http as http
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.resources import Resource
 from tastypie import fields
-from chroma_api.utils import custom_response, StatefulModelResource
+from chroma_api.utils import custom_response, StatefulModelResource, MetricResource
 
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
@@ -19,7 +19,7 @@ from chroma_api.authentication import PermissionAuthorization
 from chroma_api import api_log
 
 
-class HostResource(StatefulModelResource):
+class HostResource(MetricResource, StatefulModelResource):
     class Meta:
         queryset = ManagedHost.objects.all()
         resource_name = 'host'

@@ -16,13 +16,13 @@ import tastypie.http as http
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_api.utils import custom_response, ConfParamResource, dehydrate_command
+from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
 
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.http import HttpBadRequest
 
 
-class FilesystemResource(ConfParamResource):
+class FilesystemResource(MetricResource, ConfParamResource):
     bytes_free = fields.IntegerField()
     bytes_total = fields.IntegerField()
     files_free = fields.IntegerField()

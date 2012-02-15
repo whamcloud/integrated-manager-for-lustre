@@ -17,7 +17,7 @@ import tastypie.http as http
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_api.utils import custom_response, ConfParamResource, dehydrate_command
+from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
 
 # Some lookups for the three 'kind' letter strings used
 # by API consumers to refer to our target types
@@ -28,7 +28,7 @@ KLASS_TO_KIND = dict([(v, k) for k, v in KIND_TO_KLASS.items()])
 KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.items()])
 
 
-class TargetResource(ConfParamResource):
+class TargetResource(MetricResource, ConfParamResource):
     filesystems = fields.ListField()
     filesystem_id = fields.IntegerField()
     filesystem_name = fields.CharField()
@@ -55,10 +55,14 @@ class TargetResource(ConfParamResource):
         ordering = ['lun_name']
 
     def override_urls(self):
+        urls = super(TargetResource, self).override_urls()
         from django.conf.urls.defaults import url
-        return [
+        urls.extend([
             url(r"^(?P<resource_name>%s)/(?P<pk>\d+)/resource_graph/$" % self._meta.resource_name, self.wrap_view('get_resource_graph'), name="api_get_resource_graph"),
-        ]
+            #url(r"^(?P<resource_name>%s)/metric/$" % self._meta.resource_name, self.wrap_view('get_metric_list'), name="get_metric_list"),
+            #url(r"^(?P<resource_name>%s)/(?P<pk>\d+)/metric/$" % self._meta.resource_name, self.wrap_view('get_metric_detail'), name="get_metric_detail"),
+        ])
+        return urls
 
     def dehydrate_filesystems(self, bundle):
         if hasattr(bundle.obj, 'managedmgs'):
