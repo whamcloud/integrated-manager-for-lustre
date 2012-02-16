@@ -30,15 +30,13 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # FIXME: either need to make address non-unique, or need to
     # associate objects with a child object, because there
     # can be multiple servers on one hostname, eg ddn10ke
-
-    # A URI like ssh://user@flint02:22/
-    address = models.CharField(max_length = 255)
+    address = models.CharField(max_length = 255, help_text = "A URI like 'user@myhost.net:22'")
 
     # A fully qualified domain name like flint02.testnet
-    fqdn = models.CharField(max_length = 255, blank = True, null = True)
+    fqdn = models.CharField(max_length = 255, blank = True, null = True, help_text = "Unicode string, fully qualified domain name")
 
     # a nodename to match against fqdn in corosync output
-    nodename = models.CharField(max_length = 255, blank = True, null = True)
+    nodename = models.CharField(max_length = 255, blank = True, null = True, help_text = "Unicode string, node name")
 
     # A basic authentication mechanism
     agent_token = models.CharField(max_length = 64)
@@ -47,7 +45,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
 
-    last_contact = models.DateTimeField(blank = True, null = True)
+    last_contact = models.DateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
 
     DEFAULT_USERNAME = 'root'
 
@@ -257,13 +255,20 @@ class Lun(models.Model):
 
     # Size may be null for LunNodes created when setting up
     # from a JSON file which just tells us a path.
-    size = models.BigIntegerField(blank = True, null = True)
+    size = models.BigIntegerField(blank = True, null = True,
+            help_text = "Integer number of bytes.  Can be null if this device \
+                    was manually created, rather than detected.")
 
     # Whether the originating StorageResource can be shared between hosts
     # Note: this is ultimately a hint, as it's always possible for a virtual
     # environment to trick us by showing the same IDE device to two hosts, or
     # for shared storage to not provide a serial number.
-    shareable = models.BooleanField()
+    shareable = models.BooleanField("Whether the device can potentially be \
+            shared between hosts (irrespective of whether it has been \
+            seen on multiple hosts).  This is a hint, based on whether Chroma \
+            can detect sharing on this device -- it is possible that the device \
+            is shared but Chroma can't detect the sharing (e.g. some virtualization \
+            environments)")
 
     label = models.CharField(max_length = 128)
 
@@ -353,10 +358,13 @@ class Lun(models.Model):
          * is the configuration (if present) HA?
          by returning one of 'unconfigured', 'configured-ha', 'configured-noha'
         """
+        lunnode_count = self.lunnode_set.count()
         if not self.shareable:
-            return 'configured-noha'
+            if lunnode_count > 0:
+                return 'configured-noha'
+            else:
+                return 'unconfigured'
         else:
-            lunnode_count = self.lunnode_set.count()
             primary_count = self.lunnode_set.filter(primary = True).count()
             failover_count = self.lunnode_set.filter(primary = False, use = True).count()
             if lunnode_count == 1 and primary_count == 0:
@@ -375,18 +383,18 @@ class Lun(models.Model):
 class LunNode(models.Model):
     lun = models.ForeignKey(Lun)
     host = models.ForeignKey(ManagedHost)
-    path = models.CharField(max_length = 512)
+    path = models.CharField(max_length = 512, help_text = "Device node path, e.g. '/dev/sda/'")
 
     __metaclass__ = DeletableMetaclass
 
     storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
 
-    # Whether this LunNode should be used as the primary mount point
-    # for targets created on this Lun
-    primary = models.BooleanField(default = False)
-    # Whether this LunNode should be used at all for targets created
-    # on this Lun
-    use = models.BooleanField(default = True)
+    primary = models.BooleanField(default = False, help_text = "Whether this node should\
+            be used for the primary Lustre server when creating a target")
+
+    use = models.BooleanField(default = True, help_text = "Whether this node should \
+            be used as a Lustre server when creating a target (if primary is not set,\
+            this node will be used as a secondary server")
 
     class Meta:
         unique_together = ('host', 'path')

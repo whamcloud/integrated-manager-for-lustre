@@ -20,8 +20,10 @@ class AlertState(models.Model):
     # of this when the alert_item is deleted -- do it manually
     alert_item = WorkaroundGenericForeignKey('alert_item_type', 'alert_item_id')
 
-    begin = models.DateTimeField()
-    end = models.DateTimeField()
+    begin = models.DateTimeField(help_text = "Time at which the alert started")
+    end = models.DateTimeField(help_text = "Time at which the alert was resolved\
+            if active is false, else time that the alert was last checked (e.g.\
+            time when we last checked an offline target was still not offline)")
 
     # Note: use True and None instead of True and False so that
     # unique-together constraint only applied to active alerts

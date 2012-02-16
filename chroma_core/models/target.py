@@ -23,12 +23,12 @@ class FilesystemMember(models.Model):
 
 class ManagedTarget(StatefulObject):
     __metaclass__ = DeletableDowncastableMetaclass
-    # Like testfs-OST0001
-    # Nullable because when manager creates a Target it doesn't know the name
-    # until it's formatted+started+audited
-    name = models.CharField(max_length = 64, null = True, blank = True)
-    # Nullable because it is not known until the target is formatted
-    uuid = models.CharField(max_length = 64, null = True, blank = True)
+    name = models.CharField(max_length = 64, null = True, blank = True,
+            help_text = "Lustre target name, e.g. 'testfs-OST0001'.  May be null\
+            if the target has not yet been registered.")
+    uuid = models.CharField(max_length = 64, null = True, blank = True,
+            help_text = "UUID of the target's internal filesystem.  May be null\
+                    if the target has not yet been formatted")
 
     lun = models.ForeignKey('Lun')
 

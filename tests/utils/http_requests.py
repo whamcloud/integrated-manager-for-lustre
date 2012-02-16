@@ -69,7 +69,11 @@ class HttpResponse(requests.Response):
         if self.text == '[]':
             return []
         else:
-            return json.loads(self.text)
+            try:
+                return json.loads(self.text)
+            except ValueError:
+                print "Bad JSON: %s" % self.text
+                raise
 
     @property
     def successful(self):

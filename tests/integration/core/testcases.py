@@ -22,20 +22,13 @@ class ChromaIntegrationTestCase(TestCase):
                 # TODO: Adjust to do for every client in the cluster, not
                 # just the one running the tests.
                 process = subprocess.Popen(
-                    'umount /mnt/%s' % filesystem['fsname'],
+                    'umount /mnt/%s' % filesystem['name'],
                     shell=True,
                 )
                 process.communicate()
 
-                response = hydra_server.post(
-                    '/api/transition/',
-                    data = {
-                        'id': filesystem['fsid'],
-                        'content_type_id': filesystem['content_type_id'],
-                        'new_state': 'removed',
-                    }
-                )
-                command_id = response.json['id']
+                response = hydra_server.delete(filesystem['resource_uri'])
+                command_id = response.json['command']['id']
                 self.assertTrue(command_id)
                 remove_filesystem_command_ids.append(command_id)
 
@@ -59,15 +52,8 @@ class ChromaIntegrationTestCase(TestCase):
         if len(mgts) > 0:
             remove_mgt_command_ids = []
             for mgt in mgts:
-                response = hydra_server.post(
-                    '/api/transition/',
-                    data = {
-                        'id': mgt['id'],
-                        'content_type_id': mgt['content_type_id'],
-                        'new_state': 'removed',
-                    }
-                )
-                command_id = response.json['id']
+                response = hydra_server.delete(mgt['resource_uri'])
+                command_id = response.json['command']['id']
                 self.assertTrue(command_id)
                 remove_mgt_command_ids.append(command_id)
 
@@ -92,16 +78,9 @@ class ChromaIntegrationTestCase(TestCase):
         if len(hosts) > 0:
             remove_host_command_ids = []
             for host in hosts:
-                response = hydra_server.post(
-                    '/api/transition/',
-                    body = {
-                        'id': host['id'],
-                        'content_type_id': host['content_type_id'],
-                        'new_state': 'removed',
-                    }
-                )
+                response = hydra_server.delete(host['resource_uri'])
                 self.assertTrue(response.successful, response.text)
-                command_id = response.json['id']
+                command_id = response.json['command']['id']
                 self.assertTrue(command_id)
                 remove_host_command_ids.append(command_id)
 

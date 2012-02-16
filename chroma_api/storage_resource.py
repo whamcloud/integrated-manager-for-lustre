@@ -20,6 +20,16 @@ from chroma_core.lib.storage_plugin.daemon import StorageDaemon
 
 
 class StorageResourceResource(ModelResource):
+    """
+    Storage resources are objects within Chroma's storage plugin
+    framework.  Note: the term 'resource' is overloaded, used
+    both in the API and in the storage plugin framework.
+
+    A storage resource is of a class defined by the
+    ``storage_resource_class`` resource.
+    """
+    #FIXME: document this fully when the storage plugin API freezes
+
     content_type_id = fields.IntegerField()
     attributes = fields.DictField()
     alias = fields.CharField()

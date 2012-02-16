@@ -17,9 +17,34 @@ from django.shortcuts import get_object_or_404
 
 
 class VolumeResource(ModelResource):
-    status = fields.CharField()
-    kind = fields.CharField()
-    volume_nodes = fields.ToManyField("chroma_api.volume_node.VolumeNodeResource", 'lunnode_set', null = True, full = True)
+    """
+    A volume represents a unit of storage suitable for use as a Lustre target.  This
+    typically corresponds to a SCSI LUN.  Since volumes are frequently accessible from
+    multiple hosts via different device nodes, the device node information is represented
+    in the volume_node_ resource.  A list of volume nodes is provided
+    with each volume in the ``volume_nodes`` list attribute.
+
+    Depending on available volume nodes, the ``status`` attribute may be set to one of:
+
+    :configured-ha: We can build a highly available lustre target on this volume.
+    :configured-noha: We can build a Lustre target on this volume but it will
+                      only be accessed by a single server so won't be highly
+                      available.
+    :unconfigured: We do not have enough information to build a Lustre target on
+                   this volume.  Either it has no nodes, or none of the nodes is
+                   marked for use as the primary server.
+
+    PUT to a volume with the volume_nodes attribute populated to update the
+    ``use`` and ``primary`` attributes of the nodes (i.e. to configure the high
+    availability for this volume before creating a Lustre target).  You may
+    only identify one node as primary.
+    """
+
+    status = fields.CharField(help_text = "A string representing the high-availability \
+            configuration status of the volume.")
+    kind = fields.CharField(help_text = "A human readable noun representing the \
+            type of storage, e.g. 'Linux partition', 'LVM LV', 'iSCSI LUN'")
+    volume_nodes = fields.ToManyField("chroma_api.volume_node.VolumeNodeResource", 'lunnode_set', null = True, full = True, help_text = "Device nodes which point to this volume")
 
     def dehydrate_kind(self, bundle):
         return bundle.obj.get_kind()
@@ -34,6 +59,8 @@ class VolumeResource(ModelResource):
         authentication = AnonymousAuthentication()
         excludes = ['not_deleted']
         ordering = ['label']
+        list_allowed_methods = ['get']
+        detail_allowed_methods = ['get', 'put']
 
     def apply_filters(self, request, filters = None):
         """Override this to build a filesystem filter using Q expressions (not
