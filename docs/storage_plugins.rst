@@ -70,8 +70,8 @@ virtual machine.
 
 .. code-block:: python
 
-   from configure.lib.storage_plugin.resource import StorageResource, GlobalId
-   from configure.lib.storage_plugin import attributes, statistics
+   from chroma_core.lib.storage_plugin.resource import StorageResource, GlobalId
+   from chroma_core.lib.storage_plugin import attributes, statistics
 
    class HardDrive(StorageResource):
        serial_number = attributes.String()
@@ -121,13 +121,13 @@ which declares which attributes are to be used to uniquely identify the resource
 
 If a resource has a universally unique name and may be reported from more than one
 place (for example, a physical disk which might be reported from more than one 
-controller), use ``configure.lib.storage_plugin.resource.GlobalId``.  This is the
+controller), use ``chroma_core.lib.storage_plugin.resource.GlobalId``.  This is the
 case for the example ``HardDrive`` class above, which has a factory-assigned ID 
 for the drive.
 
 If a resource has an identifier which is scoped to a *scannable* storage resource or
 it always belongs to a particular scannable storage resource, then use
-``configure.lib.storage_plugin.resource.ScannableId``.
+``chroma_core.lib.storage_plugin.resource.ScannableId``.
 
 Either of the above classes is initialized with a list of attributes which
 in combination are a unique identifier.  For example, if a true hard drive 
@@ -158,7 +158,7 @@ Alert conditions
 ~~~~~~~~~~~~~~~~
 
 Bad values of attributes may be declared using class attributes 
-of the types from ``configure.lib.storage_plugin.alert_conditions``,
+of the types from ``chroma_core.lib.storage_plugin.alert_conditions``,
 see :ref:`storage_plugin_alert_conditions`
 
 .. _scannable_storage_resources:
@@ -176,7 +176,7 @@ storage controllers.
 
 ::
 
-   from configure.lib.storage_plugin.resource import ScannableStorageResource, GlobalId
+   from chroma_core.lib.storage_plugin.resource import ScannableStorageResource, GlobalId
 
    class StorageController(StorageResource):
        address_1 = attributes.Hostname()
@@ -194,31 +194,31 @@ reported by the plugin, and what properties they will have.  The plugin module
 must also contain a subclass of *StoragePlugin* which implements at least the
 ``initial_scan`` function:
 
-.. automethod:: configure.lib.storage_plugin.plugin.StoragePlugin.initial_scan
+.. automethod:: chroma_core.lib.storage_plugin.plugin.StoragePlugin.initial_scan
 
 Within ``initial_scan``, plugins use the ``update_or_create`` function to 
 report resources.
 
-.. automethod:: configure.lib.storage_plugin.plugin.StoragePlugin.update_or_create
+.. automethod:: chroma_core.lib.storage_plugin.plugin.StoragePlugin.update_or_create
 
 If any resources are allocated in ``initial_scan``, such as threads or 
 sockets, they may be freed in the ``teardown`` function:
 
-.. automethod:: configure.lib.storage_plugin.plugin.StoragePlugin.teardown
+.. automethod:: chroma_core.lib.storage_plugin.plugin.StoragePlugin.teardown
 
 After initialization, the ``update_scan`` function will be called periodically.
 You can set the delay between ``update_scan`` calls by assigning to
 ``self.update_period`` before leaving in ``initial_scan``.  Assignments to
 ``update_period`` after ``initial_scan`` will have no effect.
 
-.. automethod:: configure.lib.storage_plugin.plugin.StoragePlugin.update_scan
+.. automethod:: chroma_core.lib.storage_plugin.plugin.StoragePlugin.update_scan
 
 If a resource has changed, you can either use ``update_or_create`` to modify 
 attributes or parent relationships, or you can directly assign to the resource's 
 attributes, or use its add_parent and remove_parent functions.  If a resource has 
 gone away, use ``remove`` to notify Chroma:
 
-.. automethod:: configure.lib.storage_plugin.plugin.StoragePlugin.remove
+.. automethod:: chroma_core.lib.storage_plugin.plugin.StoragePlugin.remove
 
 Although resources must be reported synchronously during ``initial_scan``, this
 is not the case for updates.  For example, if a storage device provides asynchronous
@@ -324,7 +324,7 @@ Advanced: reporting virtual machines
 
 Most of the built-in resource types are purely for identification of 
 common types of resource for presentation purposes.  However, the
-``hydra-server.configure.lib.storage_plugin.builtin_resources.VirtualMachine``
+``chroma_core.lib.storage_plugin.builtin_resources.VirtualMachine``
 class is treated specially by Chroma.  When a resource of this class is
 reported by a plugin, Chroma uses the ``address`` attribute of the 
 resource to set up a Lustre server as if it had been added using the 
@@ -362,21 +362,21 @@ The 'magic' here is the 'scsi_serial' name -- this is the identifier that
 Chroma knows can be used for matching up with SCSI IDs on Linux hosts.
 
 Example plugin
-==============
+--------------
 
-.. literalinclude:: /../tests/configure/lib/storage_plugin/example_plugin.py
+.. literalinclude:: /../tests/unit/chroma_core/lib/storage_plugin/example_plugin.py
    :language: python
    :linenos:
 
 Reference
-=========
+---------
 
 .. _storage_plugin_attribute_classes:
 
 Attribute classes
 ----------------------------
 
-.. automodule:: configure.lib.storage_plugin.attributes
+.. automodule:: chroma_core.lib.storage_plugin.attributes
    :members:
 
 .. _storage_plugin_statistic_classes:
@@ -384,7 +384,7 @@ Attribute classes
 Statistic classes
 ----------------------------
 
-.. automodule:: configure.lib.storage_plugin.statistics
+.. automodule:: chroma_core.lib.storage_plugin.statistics
    :members:
 
 .. _storage_plugin_builtin_resource_classes:
@@ -392,7 +392,7 @@ Statistic classes
 Built-in resource classes
 ------------------------------------
 
-.. automodule:: configure.lib.storage_plugin.builtin_resources
+.. automodule:: chroma_core.lib.storage_plugin.builtin_resources
    :members:
 
 .. _storage_plugin_alert_conditions:
@@ -400,5 +400,5 @@ Built-in resource classes
 Alert conditions
 ----------------
 
-.. automodule:: configure.lib.storage_plugin.alert_conditions
+.. automodule:: chroma_core.lib.storage_plugin.alert_conditions
     :members:

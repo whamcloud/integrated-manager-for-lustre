@@ -12,7 +12,8 @@ from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEnt
 class ManagedFilesystem(StatefulObject, MeasuredEntity):
     __metaclass__ = DeletableDowncastableMetaclass
 
-    name = models.CharField(max_length=8)
+    name = models.CharField(max_length=8, help_text="Lustre filesystem name, up to 8\
+            characters")
     mgs = models.ForeignKey('ManagedMgs')
 
     states = ['unavailable', 'stopped', 'available', 'removed']

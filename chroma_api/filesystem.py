@@ -23,20 +23,32 @@ from tastypie.http import HttpBadRequest
 
 
 class FilesystemResource(ConfParamResource):
+    """
+    A Lustre filesystem, consisting of one or mode MDTs, and one or more OSTs.
+
+    Note: Lustre filesystems are owned by an MGT, and the ``name`` of a filesystem
+    is unique within that MGT.  Do not use ``name`` as a globally unique identifier
+    for filesystems in your application.
+    """
     bytes_free = fields.IntegerField()
     bytes_total = fields.IntegerField()
     files_free = fields.IntegerField()
     files_total = fields.IntegerField()
 
-    mount_command = fields.CharField(null = True)
+    mount_command = fields.CharField(null = True, help_text = "Example command for\
+            mounting this filesystem as a Lustre client, e.g. \"mount -t lustre 192.168.0.1:/testfs /mnt/testfs\"")
 
     osts = fields.ToManyField('chroma_api.target.TargetResource', null = True,
-            attribute = lambda bundle: ManagedOst.objects.filter(filesystem = bundle.obj))
+            attribute = lambda bundle: ManagedOst.objects.filter(filesystem = bundle.obj),
+            help_text = "List of OSTs which belong to this filesystem")
     # NB a filesystem must always report an MDT, although it may be deleted just before
     # the filesystem is deleted, so use _base_manager
     mdts = fields.ToManyField('chroma_api.target.TargetResource',
-            attribute = lambda bundle: ManagedMdt._base_manager.filter(filesystem = bundle.obj), full = True)
-    mgt = fields.ToOneField('chroma_api.target.TargetResource', attribute = 'mgs', full = True)
+            attribute = lambda bundle: ManagedMdt._base_manager.filter(filesystem = bundle.obj), full = True,
+            help_text = "List of MDTs in this filesystem, should be at least 1 unless the filesystem\
+            is in the process of being deleted")
+    mgt = fields.ToOneField('chroma_api.target.TargetResource', attribute = 'mgs', full = True,
+            help_text = "The MGT on which this filesystem is registered")
 
     def _get_stat_simple(self, bundle, stat_name, factor = 1):
         try:
@@ -66,6 +78,8 @@ class FilesystemResource(ConfParamResource):
         authentication = AnonymousAuthentication()
         excludes = ['not_deleted']
         ordering = ['name']
+        list_allowed_methods = ['get', 'post']
+        detail_allowed_methods = ['get', 'delete', 'put']
 
     def obj_create(self, bundle, request = None, **kwargs):
         try:

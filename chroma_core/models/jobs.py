@@ -31,16 +31,25 @@ def _subclasses(obj):
 
 
 class Command(models.Model):
-    """A command is something a user gives, like "Start this filesystem".  Commands
-    may be composed of multiple jobs.  The jobs for a command may be created after
-    the command is created."""
-    jobs_created = models.BooleanField(default = False)
+    jobs_created = models.BooleanField(default = False,
+        help_text = "True if the jobs for this command have been scheduled.\
+                Commands start with this False, as scheduling the jobs for a\
+                command is an asynchronous process.")
     jobs = models.ManyToManyField('Job')
 
-    complete = models.BooleanField(default = False)
-    errored = models.BooleanField(default = False)
-    cancelled = models.BooleanField(default = False)
-    message = models.CharField(max_length = 512)
+    complete = models.BooleanField(default = False,
+        help_text = "True if all jobs have completed, or no jobs were needed to \
+                     satisfy the command")
+    errored = models.BooleanField(default = False,
+        help_text = "True if one or more of the command's jobs failed, or if \
+        there was an error scheduling jobs for this command")
+    cancelled = models.BooleanField(default = False,
+            help_text = "True if one or more of the command's jobs completed\
+            with its cancelled attribute set to True, or if this command\
+            was cancelled by the user")
+    message = models.CharField(max_length = 512,
+            help_text = "Human readable string about one sentence long describing\
+            the action being done by the command")
 
     def to_dict(self):
         jobs = None
@@ -327,15 +336,19 @@ class StateWriteLock(StateLock):
 
 
 class Job(models.Model):
-    """A job is an operation on a particular object, for example starting a filesystem target."""
     __metaclass__ = DowncastMetaclass
 
     states = ('pending', 'tasked', 'complete', 'completing', 'cancelling', 'paused')
-    state = models.CharField(max_length = 16, default = 'pending')
+    state = models.CharField(max_length = 16, default = 'pending',
+                             help_text = "One of %s" % (states,))
 
-    errored = models.BooleanField(default = False)
-    paused = models.BooleanField(default = False)
-    cancelled = models.BooleanField(default = False)
+    errored = models.BooleanField(default = False, help_text = "True if the job has completed\
+            with an error")
+    paused = models.BooleanField(default = False, help_text = "True if the job is currently\
+            in a paused state")
+    cancelled = models.BooleanField(default = False, help_text = "True if the job has completed\
+            by a user cancelling it, or if it never started because of a failed\
+            dependency")
 
     modified_at = models.DateTimeField(auto_now = True)
     created_at = models.DateTimeField(auto_now_add = True)
@@ -347,9 +360,12 @@ class Job(models.Model):
     task_id = models.CharField(max_length=36, blank = True, null = True)
 
     # Set to a step index before that step starts running
-    started_step = models.PositiveIntegerField(default = None, blank = True, null = True)
+    started_step = models.PositiveIntegerField(default = None, blank = True, null = True,
+            help_text = "Step which has been started within the Job")
     # Set to a step index when that step has finished and its result is committed
-    finished_step = models.PositiveIntegerField(default = None, blank = True, null = True)
+    finished_step = models.PositiveIntegerField(default = None, blank = True, null = True,
+            help_text = "Step which has been finished within the job, if not equal\
+                    to started_step then a step is in progress.")
 
     # Job classes declare whether presentation layer should
     # request user confirmation (e.g. removals, stops)

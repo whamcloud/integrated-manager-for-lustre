@@ -20,13 +20,16 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         for host_address in config['lustre_servers'].keys()[:2]:
             response = self.hydra_server.post(
                 '/api/test_host/',
-                body = {'hostname': host_address}
+                body = {'address': host_address}
             )
             self.assertTrue(response.successful, response.text)
+            # FIXME: test_host here isn't serving a purpose as we
+            # don't check on its result (it's asynchronous but
+            # annoyingly returns a celery task instead of a Command)
 
             response = self.hydra_server.post(
                 '/api/host/',
-                body = {'host_name': host_address}
+                body = {'address': host_address}
             )
             self.assertTrue(response.successful, response.text)
             host_id = response.json['id']

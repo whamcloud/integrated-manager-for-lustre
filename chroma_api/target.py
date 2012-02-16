@@ -29,15 +29,32 @@ KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.ite
 
 
 class TargetResource(ConfParamResource):
-    filesystems = fields.ListField()
-    filesystem_id = fields.IntegerField()
-    filesystem_name = fields.CharField()
-    kind = fields.CharField()
+    """
+    Lustre targets: MGTs, OSTs and MDTs.
 
-    lun_name = fields.CharField(attribute = 'lun__label')
-    primary_server_name = fields.CharField()
-    failover_server_name = fields.CharField()
-    active_host_name = fields.CharField()
+    Typically used for retrieving targets for a particular filesystem (filter on
+    filesystem_id) and/or of a particular type (filter on kind).
+    """
+    filesystems = fields.ListField(null = True, help_text = "For MGTs, the list of filesystems\
+            belonging to this MGT.  Null for other targets.")
+    filesystem_id = fields.IntegerField(help_text = "For OSTs and MDTs, the ``id`` attribute of\
+            the owning filesystem.  Null for MGTs.")
+    filesystem_name = fields.CharField(help_text = "For OSTs and MDTs, the ``name`` attribute \
+            of the owning filesystem.  Null for MGTs.")
+
+    kind = fields.CharField(help_text = "Type of target, one of %s" % KIND_TO_KLASS.keys())
+
+    lun_name = fields.CharField(attribute = 'lun__label',
+            help_text = "The ``label`` attribute of the Volume on which this target exists")
+    primary_server_name = fields.CharField(help_text = "Presentation convenience.  Human\
+            readable label for the primary server for this target")
+    # FIXME: return a list (shift the 'one secondary' assumption into the UI
+    failover_server_name = fields.CharField(help_text = "Presentation convenience.  Human\
+            readable label for the secondary server for this target")
+    active_host_name = fields.CharField(help_text = "Human readable label for the host\
+            on which this target is currently started")
+    active_host_uri = fields.CharField(null = True, help_text = "URI to the host on which\
+            this target is currently started")
 
     def content_type_id_to_kind(self, id):
         if not hasattr(self, 'CONTENT_TYPE_ID_TO_KIND'):
@@ -49,10 +66,12 @@ class TargetResource(ConfParamResource):
         queryset = ManagedTarget.objects.all()
         resource_name = 'target'
         excludes = ['not_deleted']
-        filtering = {'kind': ['exact'], 'filesystem_id': ['exact']}
+        filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'id': ['exact', 'in']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        ordering = ['lun_name']
+        ordering = ['lun_name', 'name']
+        list_allowed_methods = ['get', 'post']
+        detail_allowed_methods = ['get', 'put', 'delete']
 
     def override_urls(self):
         from django.conf.urls.defaults import url
@@ -95,6 +114,13 @@ class TargetResource(ConfParamResource):
             return bundle.obj.active_mount.host.pretty_name()
         else:
             return "---"
+
+    def dehydrate_active_host_uri(self, bundle):
+        if bundle.obj.active_mount:
+            from chroma_api.host import HostResource
+            return HostResource().get_resource_uri(bundle.obj.active_mount.host)
+        else:
+            return None
 
     def build_filters(self, filters = None):
         """Override this to convert a 'kind' argument into a DB field which exists"""

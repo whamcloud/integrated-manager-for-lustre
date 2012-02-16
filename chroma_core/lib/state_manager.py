@@ -329,7 +329,7 @@ class StateManager(object):
                 command.save()
                 if instance.state != new_state:
                     # This is a no-op because of an in-progress Job:
-                    job = StateWriteLock.filter_by_locked_item.filter(~Q(job__state = 'complete')).latest('id').job
+                    job = StateWriteLock.filter_by_locked_item().filter(~Q(job__state = 'complete')).latest('id').job
                     command.jobs.add(job)
 
             # Pick out whichever job made it so, and attach that to the Command
