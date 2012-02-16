@@ -69,7 +69,11 @@ class HttpResponse(requests.Response):
         if self.text == '[]':
             return []
         else:
-            return json.loads(self.text)
+            try:
+                return json.loads(self.text)
+            except ValueError:
+                print "Bad JSON: %s" % self.text
+                raise
 
     @property
     def successful(self):
@@ -81,7 +85,7 @@ class AuthorizedHttpRequests(HttpRequests):
     def __init__(self, username, password, *args, **kwargs):
         super(AuthorizedHttpRequests, self).__init__(*args, **kwargs)
 
-        response = self.get("/api/session/", data = {'username': 'admin', 'password': 'password'})
+        response = self.get("/api/session/")
         if not response.successful:
             raise RuntimeError("Failed to open session")
         self.session.headers['X-CSRFToken'] = response.cookies['csrftoken']

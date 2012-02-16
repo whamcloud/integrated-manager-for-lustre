@@ -9,7 +9,11 @@ Welcome to chroma-server's documentation!
 Contents:
 
 .. toctree::
-    storage_plugins
+   :maxdepth: 1
+
+   api
+   storage_plugins
+   chroma_internals
 
 
 Indices and tables

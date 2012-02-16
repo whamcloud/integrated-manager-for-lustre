@@ -60,7 +60,8 @@ class StatefulModelResource(ModelResource):
         obj = self.obj_get(request, **kwargs)
         from chroma_core.models import Command
         command = Command.set_state(obj, 'removed')
-        raise custom_response(self, request, http.HttpAccepted, dehydrate_command(command))
+        raise custom_response(self, request, http.HttpAccepted,
+                {'command': dehydrate_command(command)})
 
 
 class ConfParamResource(StatefulModelResource):
