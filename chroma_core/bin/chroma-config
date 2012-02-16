@@ -10,11 +10,19 @@ bin_dir = os.path.abspath(os.path.dirname(sys.modules['__main__'].__file__))
 project_dir = "/usr/share/hydra-server"
 sys.path.append(project_dir)
 
-from django.core.management import setup_environ
-import settings
-setup_environ(settings)
+try:
+    from django.core.management import setup_environ
+    import settings
+    setup_environ(settings)
 
-from chroma_core.lib.service_config import log, ServiceConfig
+    from chroma_core.lib.service_config import log, ServiceConfig
+except ImportError, e:
+    print """%s
+    
+Import failed.  Note: this script is only for
+use in production mode, not development, requires root
+and assumes systemwide installation paths.""" % e
+    sys.exit(-1)
 
 if __name__ == '__main__':
     cc = ServiceConfig()
