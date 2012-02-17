@@ -1,5 +1,4 @@
 """Page Object for Volumes tab """
-
 from utils.constants import Constants
 from time import sleep
 from selenium.webdriver.support.ui import Select
@@ -20,7 +19,6 @@ class Volumes:
         self.error_ok_button = self.driver.find_element_by_id('error_ok_button')
 
     def get_volume_config_error_message(self):
-
         # Iterating through the rows of volume configuration table
         for i in range(len(self.volume_rows)):
             tr = self.volume_rows.__getitem__(i)
@@ -62,7 +60,6 @@ class Volumes:
                     return self.volume_error_dialog.is_displayed()
 
     def get_volume_change_message(self):
-
         # Iterating through the rows of volume configuration table
         for i in range(len(self.volume_rows)):
             tr = self.volume_rows.__getitem__(i)
@@ -105,11 +102,9 @@ class Volumes:
                 # Click Apply button
                 self.driver.find_element_by_id("btnApplyConfig").click()
                 sleep(5)
-
                 # Get new text values for primary and failover dropdowns
                 primary_text = Select(self.driver.find_element_by_id(primary_select_id)).first_selected_option.text
                 secondary_text = Select(self.driver.find_element_by_id(secondary_select_id)).first_selected_option.text
-
                 # If texts are different then volume configuration setting should be successful and returns a success message
                 if primary_text == secondary_text:
                     self.error_ok_button.click()
@@ -121,3 +116,25 @@ class Volumes:
                     self.driver.find_element_by_id('transition_confirm_button').click()
                     sleep(6)
                     return self.driver.find_element_by_id('popup_message').text
+
+    def get_volumes_for_added_server(self, server_name):
+        # Iterating through the rows of volume configuration table
+        for i in range(len(self.volume_rows)):
+            tr = self.volume_rows.__getitem__(i)
+            select_tags = tr.find_elements_by_tag_name("select")
+            primary_select = select_tags.__getitem__(0)
+            failover_select = select_tags.__getitem__(1)
+            # Get primary and failover 'select' webelements
+            original_primary_value = Select(self.driver.find_element_by_id(primary_select.get_attribute("id"))).first_selected_option.text
+            original_secondary_value = ''
+            if failover_select.get_attribute("id") != '':
+                original_secondary_value = Select(self.driver.find_element_by_id(failover_select.get_attribute("id"))).first_selected_option.text
+            if original_primary_value == server_name or original_secondary_value == server_name:
+                return True
+            else:
+                primary_options = primary_select.find_elements_by_tag_name('option')
+                primary_option_names = [option.text for option in primary_options]
+                # Check whether the server is listed in primary server list for current volume
+                for x in primary_option_names:
+                    if x == server_name:
+                        return True

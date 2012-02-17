@@ -5,11 +5,11 @@
 class Constants:
     """ An object that will have constants that will be used for the tests
     """
-
     def __init__(self):
         # Wait times
         self.static_text = {
                 'no_data_for_datable': 'No data available in table',
+                'warning': 'WARNING'
         }
 
         self.wait_time = {

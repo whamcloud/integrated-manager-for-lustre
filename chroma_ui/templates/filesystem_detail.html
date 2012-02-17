@@ -34,13 +34,16 @@
       modal: true,
       buttons: 
       {
-        "Ok": function() {
-         var fs_id = $('#fs_id').val();       
-         var ost_lun_ids = fvc_get_value($('#new_ost_chooser'));
-
-          CreateOSTs(fs_id, ost_lun_ids);
-
-          $(this).dialog("close");
+        "Ok": 
+        {
+          text: "Ok",
+          id: "ost_ok_button",
+          click: function(){
+            var fs_id = $('#fs_id').val();       
+            var ost_lun_ids = fvc_get_value($('#new_ost_chooser'));
+            CreateOSTs(fs_id, ost_lun_ids);
+            $(this).dialog("close");
+          }
         },
         "Cancel": function() { 
           $(this).dialog("close");

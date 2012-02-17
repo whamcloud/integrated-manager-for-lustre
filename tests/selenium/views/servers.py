@@ -1,5 +1,4 @@
 """Page Object of mgt creation"""
-
 from utils.constants import Constants
 from time import sleep
 from selenium.common.exceptions import StaleElementReferenceException
@@ -14,7 +13,6 @@ class Servers:
         #Initialise the constants class
         constants = Constants()
         self.WAIT_TIME = constants.wait_time['standard']
-
         # Initialise all elements on that view.
         self.new_add_server_button = self.driver.find_element_by_id('btnAddNewHost')
         self.host_continue_button = self.driver.find_element_by_class_name('add_host_submit_button')
@@ -86,7 +84,6 @@ class Servers:
             for i in range(len(server_list)):
                 if server_list.__getitem__(i).text == host_name:
                     return True
-
         return False
 
     def stop_lnet(self, host_name):
@@ -95,19 +92,60 @@ class Servers:
         if len(server_list) > 0:
             for i in range(len(server_list)):
                 if server_list.__getitem__(i).text == host_name:
-                    stop_lnet_button = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr[i+1]/td[3]/span/button[3]")
+                    stop_lnet_button = self.driver.find_element_by_xpath("id('server_configuration_content')/tr[" + str(i + 1) + "]/td[3]/span/button[3]")
                     stop_lnet_button.click()
+                    self.test_loading_image()
 
-        return False
+    def start_lnet(self, host_name):
+        """Stops LNet on the server"""
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        if len(server_list) > 0:
+            for i in range(len(server_list)):
+                if server_list.__getitem__(i).text == host_name:
+                    start_lnet_button = self.driver.find_element_by_xpath("id('server_configuration_content')/tr[" + str(i + 1) + "]/td[3]/span/button[1]")
+                    start_lnet_button.click()
+                    self.test_loading_image()
+
+    def unload_lnet(self, host_name):
+        """Unloads LNet on the server"""
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        if len(server_list) > 0:
+            for i in range(len(server_list)):
+                if server_list.__getitem__(i).text == host_name:
+                    unload_lnet_button = self.driver.find_element_by_xpath("id('server_configuration_content')/tr[" + str(i + 1) + "]/td[3]/span/button[2]")
+                    unload_lnet_button.click()
+                    self.test_loading_image()
+
+    def load_lnet(self, host_name):
+        """Loads LNet on the server"""
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        if len(server_list) > 0:
+            for i in range(len(server_list)):
+                if server_list.__getitem__(i).text == host_name:
+                    load_lnet_button = self.driver.find_element_by_xpath("id('server_configuration_content')/tr[" + str(i + 1) + "]/td[3]/span/button[3]")
+                    load_lnet_button.click()
+                    self.test_loading_image()
+
+    def remove_lnet(self, host_name):
+        """Removes server"""
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        if len(server_list) > 0:
+            for i in range(len(server_list)):
+                if server_list.__getitem__(i).text == host_name:
+                    remove_lnet_button = self.driver.find_element_by_xpath("id('server_configuration_content')/tr[" + str(i + 1) + "]/td[3]/span/button[2]")
+                    remove_lnet_button.click()
+                    sleep(5)
+                    self.driver.find_element_by_id('transition_confirm_button').click()
+                    self.test_loading_image()
 
     def get_lnet_state(self, host_name):
-        """Stops LNet on the server"""
+        """Returns LNet state"""
         server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
         lnet_state_text = ''
         if len(server_list) > 0:
             for i in range(len(server_list)):
                 if server_list.__getitem__(i).text == host_name:
-                    lnet_state = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr[i+1]/td[2]/span")
+                    lnet_state = self.driver.find_element_by_xpath("id('server_configuration_content')/tr[" + str(i + 1) + "]/td[2]/span")
                     lnet_state_text = lnet_state.text
 
         return lnet_state_text
@@ -115,7 +153,7 @@ class Servers:
     def test_loading_image(self):
         from time import sleep
         for i in xrange(10):
-            print "Retrying" + str(i)
+            print "Retrying attempt: " + str(i)
             try:
                 loading_div = self.driver.find_element_by_css_selector("span.notification_object_icon.busy_icon")
                 try:
