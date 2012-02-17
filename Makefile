@@ -1,6 +1,6 @@
 VERSION := $(shell python -c 'from hydra_agent import __version__; print __version__')
 ifeq ($(origin RELEASE), undefined)
-  RELEASE := $(shell echo `date +%Y%m%d`_`git rev-parse --short HEAD`)
+  RELEASE := $(shell echo `date +%Y%m%d%H%M`_`git rev-parse --short HEAD`)
 endif
 
 
