@@ -661,8 +661,15 @@ class DetectScan(object):
         if not mgs:
             return
 
-        # Create Filesystem objects for all those in this MGS
+        forgotten_fs_names = [f.name for f in ManagedFilesystem._base_manager.filter(state = 'forgotten')]
+
+        # Create Filesystem objects for all those in this MGS which aren't
+        # being ignored.
         for fs_name, targets in self.host_data['mgs_targets'].items():
+            if fs_name in forgotten_fs_names:
+                audit_log.debug("Ignoring forgotten fs on DetectScan: %s" % fs_name)
+                continue
+
             (fs, created) = ManagedFilesystem.objects.get_or_create(name = fs_name, mgs = mgs)
             if created:
                 fs.immutable_state = True
