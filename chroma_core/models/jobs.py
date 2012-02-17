@@ -247,7 +247,9 @@ class StatefulObject(models.Model):
         if not hasattr(self, 'transition_map'):
             self.__class__._build_maps()
 
-        return self.transition_map[begin_state]
+        # Conversely, 'forgotten' is never an available destination state
+        # for manageable objects.  They can be removed, but not forgotten.
+        return list(set(self.transition_map[begin_state]) - set(['forgotten']))
 
     @classmethod
     def get_verb(cls, begin_state, end_state):
