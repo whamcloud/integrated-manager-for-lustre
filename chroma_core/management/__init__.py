@@ -9,9 +9,6 @@ from chroma_core.models import Job, Command, Lun, LunNode
 
 
 def setup_groups(sender, **kwargs):
-    auth.models.Group.objects.all().delete()
-    auth.models.User.objects.all().delete()
-
     if auth.models.Group.objects.count() == 0:
         print "Creating groups..."
         auth.models.Group.objects.create(name = "superusers")
