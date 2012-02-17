@@ -4,6 +4,8 @@ import time
 
 from django.utils.unittest import TestCase
 
+from testconfig import config
+
 from tests.integration.core.constants import TEST_TIMEOUT
 
 
@@ -133,7 +135,7 @@ class ChromaIntegrationTestCase(TestCase):
             self.assertEqual(exit_status, expected_return_code, stderr.read())
         return stdin, stdout, stderr
 
-    def mount_filesystem(self, client, filesystem_name, mgs_hostname, expected_return_code=0):
+    def mount_filesystem(self, client, filesystem_name, mount_command, expected_return_code=0):
         self.execute_command_on_client(
             client,
             "mkdir -p /mnt/%s" % filesystem_name,
@@ -142,8 +144,7 @@ class ChromaIntegrationTestCase(TestCase):
 
         self.execute_command_on_client(
             client,
-            "mount -t lustre %s:/%s /mnt/%s" % (
-                mgs_hostname, filesystem_name, filesystem_name),
+            mount_command
         )
 
         stdin, stdout, stderr = self.execute_command_on_client(
