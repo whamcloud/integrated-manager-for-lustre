@@ -1,4 +1,3 @@
-import subprocess
 import time
 
 from testconfig import config
@@ -160,25 +159,6 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         self.assertTrue(response.successful, response.text)
         mount_command = response.json['mount_command']
 
-        process = subprocess.call(
-            'mkdir -p /mnt/testfs',
-            shell=True
-        )
-
-        process = subprocess.Popen(
-            mount_command,
-            shell=True
-        )
-        process.communicate()
-        self.assertEqual(0, process.returncode)
-
-        # TODO: Probably replace this with just writing a file in Python.
-        process = subprocess.Popen(
-            'dd if=/dev/zero of=/mnt/testfs/test.dat bs=1K count=500K',
-            shell=True,
-        )
-        process.communicate()
-        self.assertEqual(0, process.returncode)
-
-        # TODO: Verify file now on testfs filesystem. Possibly reuse
-        # some existing Lustre tests here to exercise the fs?
+        client = config['lustre_clients'].keys()[0]
+        self.mount_filesystem(client, "testfs", mount_command)
+        self.exercise_filesystem(client, "testfs")

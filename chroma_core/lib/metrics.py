@@ -555,14 +555,19 @@ class FlmsDrain(object):
         """Call this to drain entries from the FrontLineMetricStorage
         table.  Takes no arguments, returns nothing."""
         from django.db import connection
+        from django.core.exceptions import ObjectDoesNotExist
 
         # FIXME: Should there be an upper limit to how many drained rows
         # we deal with at a time?
         drained_rows = []
         for group in self._update_groups():
             ids, update = self._reconstitute_update(group)
-            entity = self._find_measured_entity(group)
-            entity.metrics.update_r3d({group.insert_time: update})
+            try:
+                entity = self._find_measured_entity(group)
+                entity.metrics.update_r3d({group.insert_time: update})
+            except ObjectDoesNotExist:
+                metrics_log.warn("FLMS: Discarding metrics for missing entity (deleted/forgotten?)")
+
             drained_rows.extend(ids)
 
         if len(drained_rows) > 0:
