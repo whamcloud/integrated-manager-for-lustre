@@ -24,8 +24,21 @@ class AlertResource(ModelResource):
     message = fields.CharField(readonly = True, help_text = "Human readable description\
             of the alert, about one sentence")
     alert_item_content_type_id = fields.IntegerField()
-    active = fields.BooleanField(help_text = "True if the alert is a current issue, false\
+    active = fields.BooleanField(attribute = 'active', null = True,
+            help_text = "True if the alert is a current issue, false\
             if it is historical")
+
+    def build_filters(self, filters = None):
+        # Map False to None for ``active`` field
+        filters = super(AlertResource, self).build_filters(filters)
+        if 'active__exact' in filters:
+            if not filters['active__exact']:
+                filters['active__exact'] = None
+        return filters
+
+    def dehydrate_active(self, bundle):
+        # Map False to None for ``active`` field
+        return bool(bundle.obj.active)
 
     def dehydrate_alert_item_content_type_id(self, bundle):
         return bundle.obj.alert_item_type.id

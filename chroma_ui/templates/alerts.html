@@ -46,7 +46,7 @@
             });
             callback(data);
           }
-          Api.get_datatables(url, data, formatRows, settings, {});
+          Api.get_datatables(url, data, formatRows, settings, {active: false});
         },
         aaSorting: [[0, 'desc']],
         "aoColumns": [
