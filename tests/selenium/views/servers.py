@@ -86,6 +86,11 @@ class Servers:
                     return True
         return False
 
+    def get_server_list_length(self):
+        """Returns whether newly created server is listed or not"""
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]")
+        return len(server_list)
+
     def stop_lnet(self, host_name):
         """Stops LNet on the server"""
         server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")

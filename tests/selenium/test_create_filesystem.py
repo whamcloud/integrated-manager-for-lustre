@@ -1,31 +1,31 @@
 """ Create file system test cases"""
 
 from utils.navigation import Navigation
-from views.create_filesystem import Filesystem
+from views.create_filesystem import CreateFilesystem
 from base import SeleniumBaseTestCase
 from utils.messages_text import Messages
 from uitls.sample_data import Testdata
 
 
-class CreateFileSystem(SeleniumBaseTestCase):
+class TestCreateFileSystem(SeleniumBaseTestCase):
 
     def setUp(self):
-        super(CreateFileSystem, self).setUp()
+        super(TestCreateFileSystem, self).setUp()
         self.test_data = Testdata()
         self.fs_test_data = self.fs_test_data.get_test_data_for_filesystem_configuration()
 
-        self.file_system_name = self.fs_test_data['name']
-        self.mgt_name = self.fs_test_data['mgs']
-        self.mdt_host_name = self.fs_test_data['mdt']['mounts']['host']
-        self.mdt_device_node = self.fs_test_data['mdt']['mounts']['device_node']
-        self.ost_host_name = self.fs_test_data['ost']['mounts']['host']
-        self.ost_device_node = self.fs_test_data['ost']['mounts']['device_node']
+        self.file_system_name = self.fs_test_data[0]['name']
+        self.mgt_name = self.fs_test_data[0]['mgs']
+        self.mdt_host_name = self.fs_test_data[0]['mdt']['mounts'][0]['host']
+        self.mdt_device_node = self.fs_test_data[0]['mdt']['mounts'][0]['device_node']
+        self.ost_host_name = self.fs_test_data[0]['osts'][0]['mounts'][0]['host']
+        self.ost_device_node = self.fs_test_data[0]['osts'][0]['mounts'][0]['device_node']
 
         self.page_navigation = Navigation(self.driver)
         self.page_navigation.click(self.page_navigation.links['Configure'])
         self.page_navigation.click(self.page_navigation.links['Create_new_filesystem'])
         self.message_text = Messages()
-        self.create_filesystem_page = Filesystem(self.driver)
+        self.create_filesystem_page = CreateFilesystem(self.driver)
 
     def test_create_file_system(self):
         self.create_filesystem_page.enter_filesystem_name(self.file_system_name)

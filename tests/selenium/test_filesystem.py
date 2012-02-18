@@ -36,8 +36,8 @@ class TestFilesystem(SeleniumBaseTestCase):
     def test_add_ost(self):
         for fs in self.fs_list:
             self.fs_page.edit_fs_action(fs['name'])
-            ost_host_name = fs['ost']['mounts']['host']
-            ost_device_node = fs['ost']['mounts']['device_node']
+            ost_host_name = fs['osts'][0]['mounts'][0]['host']
+            ost_device_node = fs['osts'][0]['mounts'][0]['device_node']
             self.fs_page.select_ost(ost_host_name, ost_device_node)
 
 import unittest

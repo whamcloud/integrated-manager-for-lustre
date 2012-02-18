@@ -6,7 +6,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import NoSuchElementException
 
 
-class TestFilesystem:
+class Filesystem:
     """ Page Object for mgt creation
     """
     def __init__(self, driver):
@@ -77,6 +77,11 @@ class TestFilesystem:
                 tr.click()
         ok_button = self.driver.find_element_by_id('ost_ok_button')
         ok_button.click()
+
+    def get_file_system_list_length(self):
+        """Returns length of file system list"""
+        fs_list = self.driver.find_elements_by_xpath("id('fs_list')/tbody/tr/td[1]/a")
+        return len(fs_list)
 
     def test_loading_image(self):
         from time import sleep

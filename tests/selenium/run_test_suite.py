@@ -4,8 +4,7 @@ from test_base_layout import Layout
 from test_alerts import TestAlerts
 from test_events import TestEvents
 from test_logs import TestLogs
-from test_mgt import TestMgt
-from test_create_filesystem import CreateFileSystem
+from test_bread_crumb import TestBreadCrumb
 
 
 def suite():
@@ -15,16 +14,14 @@ def suite():
     test_Events = unittest.TestLoader().loadTestsFromTestCase(TestEvents)
     test_Logs = unittest.TestLoader().loadTestsFromTestCase(TestLogs)
 
-    test_Mgt = unittest.TestLoader().loadTestFromTestCase(TestMgt)
-    test_create_filesystem = unittest.TestLoader().loadTestsFromTestCase(CreateFileSystem)
+    test_Breadcrumb = unittest.TestLoader().loadTestsFromTestCase(TestBreadCrumb)
 
     alltests = unittest.TestSuite([
                             ui_layout,
                             test_Alerts,
                             test_Events,
                             test_Logs,
-                            test_Mgt,
-                            test_create_filesystem
+                            test_Breadcrumb,
                             ])
     return alltests
 

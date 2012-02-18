@@ -4,7 +4,7 @@ from time import sleep
 from selenium.webdriver.support.ui import Select
 
 
-class Filesystem:
+class CreateFilesystem:
     """ Page Object for file system creation
     """
     def __init__(self, driver):
@@ -34,8 +34,7 @@ class Filesystem:
 
     def select_mgt(self, mgt_name):
         """Select an MGT"""
-        mgt_selection = self.driver.find_element_by_id("mgt_existing_dropdown")
-        mgt_list = Select(mgt_selection)
+        mgt_list = Select(self.mgt_existing_dropdown)
         mgt_list.select_by_visible_text(mgt_name)
 
     def select_mdt(self, host_name, device_node):
@@ -49,7 +48,7 @@ class Filesystem:
 
     def select_ost(self, host_name, device_node):
         """Select an OST"""
-        ost_rows = self.driver.find_elements_by_xpath("id='ost_chooser_table']/tbody/tr")
+        ost_rows = self.driver.find_elements_by_xpath("id('ost_chooser_table')/tbody/tr")
         for tr in ost_rows:
             if tr.find_element_by_xpath("td[5]").text == host_name and tr.find_element_by_xpath("td[1]").text == device_node:
                 tr.click()
@@ -59,13 +58,13 @@ class Filesystem:
         self.fs_list = self.driver.find_element_by_id('fs_list')
         return self.fs_list.is_displayed()
 
-    def new_file_system_name_displayed(self):
+    def new_file_system_name_displayed(self, filesystem_name):
         """Returns whether newly created file system is listed or not"""
-        fs_list = self.driver.find_elements_by_xpath("id('example_content')/tr/td/a")
+        fs_list = self.driver.find_elements_by_xpath("id('fs_list')/tbody/tr/td/a")
         fs_name = ''
         if len(fs_list) > 0:
             for i in range(len(fs_list)):
-                if fs_list.__getitem__(i).text == 'indifs01':
+                if fs_list.__getitem__(i).text == filesystem_name:
                     fs_name = fs_list.__getitem__(i).text
         return fs_name
 
