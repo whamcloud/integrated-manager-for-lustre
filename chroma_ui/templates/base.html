@@ -5,14 +5,14 @@
     <link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css"  rel="stylesheet" type="text/css" />
     <link href="{{STATIC_URL}}css/clo_BreadCrumb.css" rel="stylesheet" type="text/css" />
 
-    <link rel="stylesheet" href="{{STATIC_URL}}css/jquery.cluetip/jquery.cluetip.css" type="text/css" />
     <link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="{{STATIC_URL}}css/target_dialog.css" type='text/css' />
     <link href="{{STATIC_URL}}css/js-graph-it.css" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="{{STATIC_URL}}css/jquery.jgrowl.css" type='text/css' />
-    <link rel="stylesheet" href="{{STATIC_URL}}css/notifications.css" type='text/css' />
     <link href="{{STATIC_URL}}css/storage_resource_dialog.css" rel="stylesheet" type="text/css" />
     <link href="{{STATIC_URL}}css/jquery.alerts.css" rel="stylesheet" type="text/css" />
+
+    <link rel="stylesheet" href="{{STATIC_URL}}css/notifications.css" type='text/css' />
+    <link rel="stylesheet" href="{{STATIC_URL}}css/jquery.qtip.min.css" type='text/css' />
 
     {% block css %}{% endblock %}
     <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
@@ -27,13 +27,10 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.jBreadCrumb.1.1.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.blockUI.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.alerts.js"></script>
-    <script type='text/javascript' src="{{STATIC_URL}}js/lib/jquery.jgrowl_minimized.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/js-graph-it.js" ></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.hoverIntent.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.bgiframe.min.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.cluetip.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.dataTables.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.address-1.4.min.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.qtip.min.js"></script>
 
     <!-- Application (toplevel) -->
     <script type="text/javascript" src="{{STATIC_URL}}js/api.js"></script>

@@ -173,7 +173,7 @@ function load_resource(resource) {
     }); 
     $('table#storage_attributes').html(attr_markup);
 
-    $('div#storage_alerts').html(alert_indicator_list_markup(resource.id, resource.content_type_id));
+    $('div#storage_alerts').html(LiveObject.alertList(resource));
 
     var row = 0;
     var col = 0;

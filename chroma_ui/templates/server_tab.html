@@ -2,8 +2,6 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/server_configuration.js"/>
 <script>
   $(document).ready(function() {
-    //cm-json_table_data => load server list
-    // Server JQuery Data table init()
     $('#server_configuration').dataTable( {
       bServerSide: true,
       "bProcessing": true,
@@ -15,10 +13,10 @@
           //console.log(data);
           var processed_data = [];
           $.each(data.aaData, function(i, row) {
-            row['label'] = object_name_markup(row),
-            row['state'] = object_state_markup(row),
+            row['label'] = LiveObject.label(row),
+            row['state'] = LiveObject.state(row),
             row['actions'] = stateTransitionButtons(row),
-            row['icons'] = notification_icons_markup(row.id, row.content_type_id)
+            row['icons'] = LiveObject.icons(row)
           });
           callback(data);
         }, settings);

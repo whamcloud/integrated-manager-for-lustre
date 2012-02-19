@@ -25,7 +25,7 @@
               row.bytes_total = formatBytes(row.bytes_total)
               row.bytes_free = formatBytes(row.bytes_free)
               row.state_transitions = stateTransitionButtons(row)
-              row.notification_icons = notification_icons_markup(row)
+              row.notification_icons = LiveObject.icons(row)
             });
             callback(data);
           }, settings, {});

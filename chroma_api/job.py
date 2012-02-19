@@ -14,12 +14,25 @@ from chroma_core.models import Job, StateLock, StateReadLock, StateWriteLock
 class StateLockResource(ModelResource):
     locked_item_id = fields.IntegerField()
     locked_item_content_type_id = fields.IntegerField()
+    locked_item_uri = fields.CharField()
 
     def dehydrate_locked_item_id(self, bundle):
         return bundle.obj.locked_item_id
 
     def dehydrate_locked_item_content_type_id(self, bundle):
-        return bundle.obj.locked_item_type.id
+        locked_item = bundle.obj.locked_item
+        if hasattr(locked_item, 'content_type'):
+            return locked_item.content_type.id
+        else:
+            return bundle.obj.locked_item_type.id
+
+    def dehydrate_locked_item_uri(self, bundle):
+        from chroma_api.urls import api
+        locked_item = bundle.obj.locked_item
+        if hasattr(locked_item, 'content_type'):
+            locked_item = locked_item.downcast()
+
+        return api.get_resource_uri(locked_item)
 
     class Meta:
         queryset = StateLock.objects.all()
@@ -99,6 +112,7 @@ class JobResource(ModelResource):
         ordering = ['created_at']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'put']
+        filtering = {'id': ['exact', 'in']}
 
     def obj_update(self, bundle, request, **kwargs):
         """Modify a Job (setting 'state' field to 'pause', 'cancel', or 'resume' is the

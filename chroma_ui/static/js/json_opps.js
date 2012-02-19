@@ -2,7 +2,10 @@
 
 stateTransitionCommit = function(url, state)
 {
-  Api.put(url, {state: state})
+  Api.put(url, {state: state}, success_callback = function(data) {
+    var command = data['command']
+    CommandNotification.begin(command)
+  })
 }
 
 $(document).ready(function() {
@@ -17,14 +20,17 @@ stateTransition = function (url, state)
     var requires_confirmation = false;
 
     var confirmation_markup = "<p>This action will have the following consequences:</p><ul>";
-    if (data.length > 1) {
-    $.each(data, function(i, consequence_info) {
-      confirmation_markup += "<li>" + consequence_info.description + "</li>";
-      if (consequence_info.requires_confirmation) {
-        requires_confirmation = true;
-      }
-    });
-    confirmation_markup += "</ul>"
+    if (data.length == 0) {
+      // A no-op
+      return;
+    } else if (data.length > 1) {
+      $.each(data, function(i, consequence_info) {
+        confirmation_markup += "<li>" + consequence_info.description + "</li>";
+        if (consequence_info.requires_confirmation) {
+          requires_confirmation = true;
+        }
+      });
+      confirmation_markup += "</ul>"
     } else {
       requires_confirmation = data[0].requires_confirmation;
       confirmation_markup = "<p><strong>" + data[0].description + "</strong></p><p>Are you sure?</p>";
@@ -51,7 +57,7 @@ function stateTransitionButtons(stateful_object)
   var available_transitions = stateful_object.available_transitions;
 
   var ops_action="";
-  var action="<span class='transition_buttons object_transitions object_transitions_" + id + "_" + ct + "'>";
+  var action="<span class='transition_buttons' data-resource_uri='" + stateful_object.resource_uri + "'>";
   var button_class = "ui-state-default ui-corner-all";
   $.each(available_transitions, function(i, transition)
   {
@@ -179,9 +185,6 @@ function apply_config_params(url, dialog_id, datatable)
     var api_params = {
         "conf_params": changed_conf_params,
     };
-    //console.log('PUTing changed conf params to ' + url + ':');
-    //console.log(changed_conf_params);
-
     Api.put(url, api_params, 
     success_callback = function(data)
     {

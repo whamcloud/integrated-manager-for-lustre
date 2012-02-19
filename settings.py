@@ -98,8 +98,7 @@ TEMPLATE_LOADERS = (
 
 from django.conf import global_settings
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS +\
-    ("django.core.context_processors.request",
-     "chroma_ui.context_processors.page_load_time")
+    ("django.core.context_processors.request",)
 
 ROOT_URLCONF = 'urls'
 

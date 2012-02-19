@@ -179,7 +179,7 @@ def set_state(content_type, object_id, new_state, command_id):
     instance = model_klass.objects.get(pk = object_id)
 
     from chroma_core.lib.state_manager import StateManager
-    StateManager()._set_state(instance, new_state, command_id)
+    return StateManager()._set_state(instance, new_state, command_id)
 
 
 @task(base = RetryOnSqlErrorTask)

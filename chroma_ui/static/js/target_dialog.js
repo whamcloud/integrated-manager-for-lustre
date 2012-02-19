@@ -18,7 +18,7 @@ $(document).ready(function() {
 });
 
 target_dialog_link = function(target) {
-  return "<a href='#' class='target target_url_" + target.resource_uri + "'>" + object_name_markup(target) + "</a>"
+  return "<a href='#' class='target target_url_" + target.resource_uri + "'>" + LiveObject.label(target) + "</a>"
 }
 
 target_dialog_open = function(target_url) {
@@ -54,7 +54,7 @@ target_dialog_open = function(target_url) {
     properties_markup += keyval_row("Primary server", target.primary_server_name);
     properties_markup += keyval_row("Failover server", target.failover_server_name);
     properties_markup += keyval_row("Started on", target.active_host_name);
-    properties_markup += keyval_row("Alerts", alert_indicator_large_markup(target.id, target.content_type_id));
+    properties_markup += keyval_row("Alerts", LiveObject.alertLabel(target));
     properties_markup += "</table>";
     $('#target_dialog_properties').html(properties_markup);
     if (target.conf_params) {

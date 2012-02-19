@@ -67,7 +67,7 @@ class Command(models.Model):
     @classmethod
     def set_state(cls, object, state, message = None):
         if object.state == state:
-            raise RuntimeError("%s is already in state %s" % (object, state))
+            return None
 
         if not message:
             old_state = object.state
@@ -84,7 +84,18 @@ class Command(models.Model):
         # in the DB, but the jobs will never make it.
 
         from chroma_core.lib.state_manager import StateManager
-        StateManager.set_state(object, state, command.pk)
+        async_result = StateManager.set_state(object, state, command.pk)
+
+        # Rely on server to time out the request if this takes too
+        # long for some reason
+        complete = False
+        while not complete:
+            with transaction.commit_manually():
+                transaction.commit()
+                if async_result.ready():
+                    complete = True
+                transaction.commit()
+        command = Command.objects.get(pk = command.pk)
 
         return command
 

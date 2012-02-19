@@ -20,9 +20,12 @@ def custom_response(resource, request, response_klass, response_data):
 def dehydrate_command(command):
     """There are a few places where we invoke CommandResource from other resources
     to build a dict of a Command in 202 responses, so wrap the process here."""
-    from chroma_api.command import CommandResource
-    cr = CommandResource()
-    return cr.full_dehydrate(cr.build_bundle(obj = command)).data
+    if command:
+        from chroma_api.command import CommandResource
+        cr = CommandResource()
+        return cr.full_dehydrate(cr.build_bundle(obj = command)).data
+    else:
+        return None
 
 
 class StatefulModelResource(ModelResource):
@@ -34,7 +37,10 @@ class StatefulModelResource(ModelResource):
         return StateManager.available_transitions(bundle.obj)
 
     def dehydrate_content_type_id(self, bundle):
-        return ContentType.objects.get_for_model(bundle.obj.__class__).pk
+        if hasattr(bundle.obj, 'content_type'):
+            return bundle.obj.content_type.pk
+        else:
+            return ContentType.objects.get_for_model(bundle.obj.__class__).pk
 
     def dehydrate_label(self, bundle):
         return bundle.obj.get_label()
@@ -48,7 +54,10 @@ class StatefulModelResource(ModelResource):
         if dry_run:
             # FIXME: should this be a GET to something like /foo/transitions/from/to/
             #        to get information about that transition?
-            report = StateManager().get_transition_consequences(bundle.obj, new_state)
+            if bundle.obj.state == new_state:
+                report = []
+            else:
+                report = StateManager().get_transition_consequences(bundle.obj, new_state)
             raise custom_response(self, request, http.HttpResponse, report)
         else:
             from chroma_core.models import Command

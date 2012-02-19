@@ -13,7 +13,7 @@
       $('#ost_count').html(filesystem.osts.length);
       $('#mgs_name').html(filesystem.mgt.primary_server_name);
       $('#mds_name').html(filesystem.mdts[0].primary_server_name);
-      $('#fs_alerts').html(alert_indicator_large_markup(filesystem.id, filesystem.content_type_id));
+      $('#fs_alerts').html(LiveObject.alertLabel(filesystem));
       $('#fs_name').html(filesystem.name);
 
       // Config param dialog
@@ -105,7 +105,7 @@
                 target.failover_server_name,
                 target.active_host_name,
                 stateTransitionButtons(target),
-                notification_icons_markup(target.id, target.content_type_id)
+                LiveObject.icons(target)
               ]
         if (target.kind == "OST") {
           $('#ost').dataTable().fnAddData (row);

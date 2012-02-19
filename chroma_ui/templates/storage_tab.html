@@ -33,8 +33,7 @@
                   fnServerData: function(url, data, callback, settings) {
                     Api.get_datatables(url, data, function(data){
                       $.each(data.aaData, function(i, row) {
-                        row._alert_markup = alert_indicator_markup(
-                          row.id, row.content_type_id); 
+                        row._alert_markup = LiveObject.alertIcon(row);
                         if (row.alerts.length > 0) {
                           row.DT_RowClass = "resource_alert";
                         }

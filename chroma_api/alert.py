@@ -3,6 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+from django.contrib.contenttypes.models import ContentType
 from chroma_core.models.alert import AlertState
 
 from tastypie.resources import ModelResource
@@ -28,6 +29,67 @@ class AlertResource(ModelResource):
             help_text = "True if the alert is a current issue, false\
             if it is historical")
 
+    affected = fields.ListField(null = True, help_text = "List of objects which\
+            are affected by the alert (e.g. a target alert also affects the\
+            filesystem to which the target belongs)")
+
+    def dehydrate_affected(self, bundle):
+        from chroma_api.urls import api
+
+        # FIXME: really don't want to call this every time someone gets a list of alerts
+        # >> FIXME HYD-421 Hack: this info should be provided in a more generic way by
+        #    AlertState subclasses
+        # NB adding a 'what_do_i_affect' method to
+        a = bundle.obj.downcast()
+
+        affected_objects = set()
+
+        from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
+        from chroma_core.models import Lun
+        from chroma_core.models import ManagedTargetMount, ManagedMgs
+        from chroma_core.models import FilesystemMember
+        from chroma_core.models import TargetOfflineAlert, TargetRecoveryAlert, TargetFailoverAlert, HostContactAlert
+
+        def affect_target(target):
+            target = target.downcast()
+            affected_objects.add(target)
+            if isinstance(target, FilesystemMember):
+                affected_objects.add(target.filesystem)
+            elif isinstance(target, ManagedMgs):
+                for fs in target.managedfilesystem_set.all():
+                    affected_objects.add(fs)
+
+        if isinstance(a, StorageResourceAlert):
+            affected_srrs = [sap['storage_resource_id'] for sap in StorageAlertPropagated.objects.filter(alert_state = a).values('storage_resource_id')]
+            affected_srrs.append(a.alert_item_id)
+            luns = Lun.objects.filter(storage_resource__in = affected_srrs)
+            for l in luns:
+                for ln in l.lunnode_set.all():
+                    tms = ManagedTargetMount.objects.filter(block_device = ln)
+                    for tm in tms:
+                        affect_target(tm.target)
+        elif isinstance(a, TargetFailoverAlert):
+            affect_target(a.alert_item.target)
+        elif isinstance(a, TargetOfflineAlert) or isinstance(a, TargetRecoveryAlert):
+            affect_target(a.alert_item)
+        elif isinstance(a, HostContactAlert):
+            tms = ManagedTargetMount.objects.filter(host = a.alert_item)
+            for tm in tms:
+                affect_target(tm.target)
+
+        result = []
+        result.append([a.alert_item_id, a.alert_item_type_id])
+        for ao in affected_objects:
+            ct = ContentType.objects.get_for_model(ao)
+            result.append({
+                "id": ao.pk,
+                "content_type_id": ct.pk,
+                "resource_uri": api.get_resource_uri(ao)
+                })
+
+        return result
+        # <<
+
     def build_filters(self, filters = None):
         # Map False to None for ``active`` field
         filters = super(AlertResource, self).build_filters(filters)
@@ -50,7 +112,7 @@ class AlertResource(ModelResource):
     class Meta:
         queryset = AlertState.objects.all()
         resource_name = 'alert'
-        fields = ['begin', 'end', 'message', 'active', 'alert_item_id', 'alert_item_content_type_id']
+        fields = ['begin', 'end', 'message', 'active', 'alert_item_id', 'alert_item_content_type_id', 'id']
         filtering = {'active': ['exact']}
         ordering = ['begin', 'end', 'active']
         authorization = DjangoAuthorization()

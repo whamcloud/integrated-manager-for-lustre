@@ -172,7 +172,6 @@ var Api = function() {
 
     if (!kwargs.order_by && kwargs.iSortCol_0 != undefined) {
       if (kwargs['bSortable_' + kwargs.iSortCol_0]) {
-        console.log(settings.aoColumns)
         var order_by = settings.aoColumns[kwargs.iSortCol_0].mDataProp
         if (kwargs.sSortDir_0 == 'desc') {
           kwargs.order_by = "-" + order_by
@@ -280,7 +279,7 @@ var Api = function() {
     };
 
     if (verb == "GET") {
-      ajax_args.data = api_args
+      ajax_args.data = $.param(api_args, true)
     } else {
       ajax_args.dataType = 'json'
       ajax_args.data = JSON.stringify(api_args)
