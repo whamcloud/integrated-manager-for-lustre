@@ -6,10 +6,10 @@
     success_callback = function(filesystem)
     {
       /* FS summary fields */
-      $('#bytes_used').html(filesystem.bytes_total - filesystem.bytes_free);
-      $('#bytes_total').html(filesystem.bytes_total);
-      $('#inodes_used').html(filesystem.files_total - filesystem.files_free);
-      $('#inodes_total').html(filesystem.files_total);
+      $('#bytes_used').html(formatBytes(filesystem.bytes_total - filesystem.bytes_free));
+      $('#bytes_total').html(formatBytes(filesystem.bytes_total));
+      $('#inodes_used').html(formatBigNumber(filesystem.files_total - filesystem.files_free));
+      $('#inodes_total').html(formatBigNumber(filesystem.files_total));
       $('#ost_count').html(filesystem.osts.length);
       $('#mgs_name').html(filesystem.mgt.primary_server_name);
       $('#mds_name').html(filesystem.mdts[0].primary_server_name);
