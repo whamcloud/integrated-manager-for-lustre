@@ -807,3 +807,23 @@ table.validated_form span.error {
 table.validated_form input.error {
     border: 1px solid red;
 }
+
+
+div.command_job_list {
+  font-size: 9pt;
+}
+div.command_job_list ul {
+  list-style-type: none;
+  padding-left: 12px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+div.command_job_list img {
+  margin-bottom: -3px;
+}
+
+div.command_job_list span.job_description {
+  height: 100%;
+  padding-left: 2px;
+}

@@ -32,6 +32,33 @@ $(document).ajaxComplete(function() {
 $(document).ready(function() {
   $.address.change(function(ev) {
     var path = ev.value;
+
+    if (path.indexOf("/api/") == 0) {
+      var parts = path.split("/");
+
+      var resource_uri = path;
+      var resource_name = parts[2]
+      var resource_id = parts[3]
+
+      if (resource_name == 'command') {
+        var c = new Command({id: resource_id});
+        c.fetch({success: function(model, response) {
+          var mydiv = $("<div></div>")
+          mydiv.dialog({
+            buttons: [{text: "Close", class: "close", click: function(){}}],
+            width: 400
+          })
+          var cd = new CommandDetail({model: c, el: mydiv.parent()});
+          cd.render();
+          console.log(cd.el);
+        }})
+
+        return;
+      }
+
+
+    }
+
     //console.log('address.change: ' + path);
     var parts;
     if (path == '/') {

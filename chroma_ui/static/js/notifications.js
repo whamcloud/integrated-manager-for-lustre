@@ -92,7 +92,11 @@ var Tooltip = function()
 
   function message(title, body, persist, classes)
   {
-    $('#notification_icon_jobs').qtip({
+    if (!body) {
+      throw "fuckoff"
+    }
+    /* FIXME: hacky selector */
+    $('div.vertical').qtip({
       content: {
         text: body,
         title: {
@@ -279,7 +283,7 @@ var CommandNotification = function() {
       return;
     }
 
-    Api.get("/api/job/", {id__in: query_jobs}, success_callback = function(data) {
+    Api.get("/api/job/", {id__in: query_jobs, limit: 0}, success_callback = function(data) {
       var jobs = data['objects']
       $.each(jobs, function(i, job) {
         startJob(job);
@@ -416,11 +420,11 @@ var AlertNotification = function() {
     if (initialized) {
       return;
     }
-    update();
+    update(true);
     initialized = true;
   }
 
-  function update()
+  function update(initial_load)
   {
     Api.get("/api/alert/", {active: true, limit: 0}, success_callback = function(data) {
       var seen_alerts = {}
@@ -442,18 +446,20 @@ var AlertNotification = function() {
         }
       });
 
-      if (new_alerts.length == 1 && resolved_alerts.length == 0) {
-        Tooltip.message("New alert", new_alerts[0].message, false, 'ui-tooltip-red');
-      } else if (new_alerts.length == 0 && resolved_alerts.length == 1) {
-        Tooltip.message("Alert cleared", resolved_alerts[0].message, false, 'ui-tooltip-green');
-      } else if (new_alerts.length > 0 && resolved_alerts.length == 0) {
-        Tooltip.message(new_alerts.length + " new alerts", "", false, 'ui-tooltip-red');
-      } else if (new_alerts.length == 0 && resolved_alerts.length > 0) {
-        Tooltip.message(resolved_alerts.length + " alerts resolved", "", false, 'ui-tooltip-green');
-      } else if (new_alerts.length > 0 && resolved_alerts.length > 0) {
-        Tooltip.message("Alerts",
-            new_alerts.length + " new alerts, " + resolved_alerts.length + " alerts resolved",
-            false, 'ui-tooltip-red');
+      if (!initial_load) {
+        if (new_alerts.length == 1 && resolved_alerts.length == 0) {
+          Tooltip.message("New alert", new_alerts[0].message, false, 'ui-tooltip-red');
+        } else if (new_alerts.length == 0 && resolved_alerts.length == 1) {
+          Tooltip.message("Alert cleared", resolved_alerts[0].message, false, 'ui-tooltip-green');
+        } else if (new_alerts.length > 0 && resolved_alerts.length == 0) {
+          Tooltip.message(new_alerts.length + " alerts active", " ", false, 'ui-tooltip-red');
+        } else if (new_alerts.length == 0 && resolved_alerts.length > 0) {
+          Tooltip.message(resolved_alerts.length + " alerts resolved", " ", false, 'ui-tooltip-green');
+        } else if (new_alerts.length > 0 && resolved_alerts.length > 0) {
+          Tooltip.message("Alerts",
+              new_alerts.length + " new alerts, " + resolved_alerts.length + " alerts resolved",
+              false, 'ui-tooltip-red');
+        }
       }
 
       setTimeout(update, slow_poll_interval);
