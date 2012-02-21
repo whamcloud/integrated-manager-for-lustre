@@ -48,7 +48,7 @@ class ChromaApi(Api):
                 self._cache[obj.__class__] = resource
                 return resource.get_resource_uri(obj)
 
-        raise RuntimeError("Cannot find resource for %s (%s)" % (obj, obj.klass))
+        return "%s-%s" % (obj.__class__, obj.id)
 
 api = ChromaApi(api_name = 'api')
 
