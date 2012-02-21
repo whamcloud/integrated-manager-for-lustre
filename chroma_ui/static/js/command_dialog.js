@@ -19,6 +19,7 @@ Backbone.sync = function(method, model, options) {
 
 var ChromaRouter = Backbone.Router.extend({
   routes: {
+    "ui/": "dashboard",
     "ui/dashboard/": "dashboard",
     "ui/configure/": "configureIndex",
     "ui/configure/:tab/": "configure",

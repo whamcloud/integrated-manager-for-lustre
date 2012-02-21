@@ -57,8 +57,7 @@ var server_list_content = "";
 /******************************************************************************
  * Function for showing time interval units
 ******************************************************************************/
-$(document).ready(function()
-{
+$(document).ready(function(){
   $("select[id=intervalSelect]").change(function()
   {
     var intervalValue = $(this).val();
@@ -89,6 +88,55 @@ $(document).ready(function()
     }
     $("select[id=unitSelect]").html(unitSelectOptions);
   });
+
+  $("select[id=unitSelect]").change(function(){
+    setStartEndTime($(this).prev('font').prev('select').find('option:selected').val(), $(this).find('option:selected').val(), "");
+  });
+  
+  $("input[id *= polling_element]").click(function()
+  {
+    if($(this).is(":checked"))
+    {
+      isPollingFlag = true;
+      initiatePolling();
+    }
+    else
+    {
+      isPollingFlag = false;
+      clearAllIntervals();
+    }
+  });
+
+  $("#db_heatmap_parameter_select").change(function()
+  {
+    reloadHeatMap("dashboard", $(this).val(), 'false');
+  });
+  $("#fs_heatmap_parameter_select").change(function()
+  {
+    reloadHeatMap("filesystem", $(this).val(), 'false');
+  });
+
+  /******************************************************************************
+   * Function to show zoom popup dialog
+  ******************************************************************************/  
+  $('#zoomDialog').dialog
+  ({
+    autoOpen: false,
+    width: 800,
+    height:490,
+    show: "clip",
+    modal: true,
+    position:"center",
+    buttons: 
+    {
+      "Close": function() { 
+        $(this).dialog("close");
+      },
+    }
+  });
+
+
+});
 		
   function getUnitSelectOptions(countNumber)
   {
@@ -113,24 +161,7 @@ $(document).ready(function()
 /*******************************************************************************
  * Function to show unit options on selection of time interval
 ********************************************************************************/
-  $("select[id=unitSelect]").change(function(){
-    setStartEndTime($(this).prev('font').prev('select').find('option:selected').val(), $(this).find('option:selected').val(), "");
-  });
-  
-  $("input[id *= polling_element]").click(function()
-  {
-    if($(this).is(":checked"))
-    {
-      isPollingFlag = true;
-      initiatePolling();
-    }
-    else
-    {
-      isPollingFlag = false;
-      clearAllIntervals();
-    }
-  });
-		
+
   setStartEndTime = function(timeFactor, startTimeValue, endTimeValue)
   {
     endTime = endTimeValue;
@@ -538,14 +569,7 @@ $(document).ready(function()
 /*****************************************************************************
  * Function to reload heap map on dashboard landing page
 *****************************************************************************/
-  $("#db_heatmap_parameter_select").change(function()
-  {
-    reloadHeatMap("dashboard", $(this).val(), 'false');
-  });
-  $("#fs_heatmap_parameter_select").change(function()
-  {
-    reloadHeatMap("filesystem", $(this).val(), 'false');
-  });
+
 		  
   reloadHeatMap = function(type, value, isZoom)
   {
@@ -640,26 +664,6 @@ $(document).ready(function()
     server_list_markup += "</select>";
     return server_list_markup;
   }
-/******************************************************************************
- * Function to show zoom popup dialog
-******************************************************************************/  
-  $('#zoomDialog').dialog
-  ({
-    autoOpen: false,
-    width: 800,
-    height:490,
-    show: "clip",
-    modal: true,
-    position:"center",
-    buttons: 
-    {
-      "Close": function() { 
-        $(this).dialog("close");
-      },
-    }
-  });
-});			// End Of document.ready funtion
-
 
 function populateFsSelect(filesystems)
 {
