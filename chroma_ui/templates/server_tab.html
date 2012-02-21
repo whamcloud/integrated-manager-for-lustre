@@ -1,7 +1,8 @@
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/server_configuration.css"/>
-<script type="text/javascript" src="{{STATIC_URL}}js/server_configuration.js"/>
-<script>
+<script type="text/javascript" src="{{STATIC_URL}}js/server_configuration.js"></script>
+<script type='text/javascript'>
   $(document).ready(function() {
+    console.log('setup');
     $('#server_configuration').dataTable( {
       bServerSide: true,
       "bProcessing": true,
@@ -37,8 +38,7 @@
       add_host_dialog();
     });
   } );  
-  </script>
-</head>
+</script>
 
 <h2 class='section_header'>Server configuration</h2>
 <div class="buttonspacer"><span class="first-child">

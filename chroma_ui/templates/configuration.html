@@ -1,10 +1,5 @@
-{% extends 'base.html' %}
-{% block css %}
 <link href="{{STATIC_URL}}css/storage_resource_create.css" rel="stylesheet" type="text/css" />
 <link rel="stylesheet" href="{{STATIC_URL}}css/filesystem_configuration.css" type='text/css' />
-{% endblock %}
-
-{% block scripts %}
 
 <script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
@@ -30,6 +25,7 @@ $(document).ajaxComplete(function() {
 });
 
 $(document).ready(function() {
+    /*
   $.address.change(function(ev) {
     var path = ev.value;
 
@@ -55,8 +51,6 @@ $(document).ready(function() {
 
         return;
       }
-
-
     }
 
     //console.log('address.change: ' + path);
@@ -88,6 +82,7 @@ $(document).ready(function() {
   });
 
   $('#tabs ul:first a').address();
+  */
 
   $('#configParam').dialog
   ({
@@ -118,8 +113,16 @@ $(document).ready(function() {
 
   $(function() {
     // Menu Highlighter
-    $('#configure_menu').addClass('active');
-    $("#tabs").tabs({selected: -1});
+    $("#tabs").tabs({
+      selected: -1,
+      select: function (event, ui) {
+        var tab = ui.panel.id.split("-")[0];
+        Backbone.history.navigate("ui/configure/" + tab + "/", {trigger: true});
+      }
+    });
+
+    new ChromaRouter();
+    Backbone.history.start({pushState: true})
   });    
 
   $(document).ready(function() {
@@ -182,25 +185,44 @@ $(document).ready(function() {
       $("button").button();
     });
 </script>
-{% endblock %}
-{% block include_content %}{% endblock %}
-{% block content %}
+
 <input type=hidden id="config_home_target_id" value="" />
+
 <div id="tabs">
   <ul>
-    <li><a id="filesystem_tab" href='#filesystems' title='filesystems'>Filesystems</a></li>
-    <li><a id="mgt_tab" href='#mgts' title='mgts'>MGTs</a></li>
-    <li><a id="volume_tab" href='#volumes' title='volumes'>Volumes</a></li>
-    <li><a id="server_tab" href='#servers' title='servers'>Servers</a></li>
-    <li><a id="storage_tab" href='#storage' title='storage'>Storage</a></li>
-    <li><a id="user_tab" class="superuser_only" href='#users' title='users'>Users</a></li>
+    <li><a href='#filesystem-tab' title='filesystems'>Filesystems</a></li>
+    <li><a href='#mgt-tab' title='mgts'>MGTs</a></li>
+    <li><a href='#volume-tab' title='volumes'>Volumes</a></li>
+    <li><a href='#server-tab' title='servers'>Servers</a></li>
+    <li><a href='#storage-tab' title='storage'>Storage</a></li>
+    <li><a class="superuser_only" href='#user-tab' title='users'>Users</a></li>
   </ul>
-  <div id='filesystems'></div>
-  <div id='mgts'></div>
-  <div id='volumes'></div>
-  <div id='servers'></div>
-  <div id='storage'></div>
-  <div id='users'></div>
+  <div id='filesystem-tab'>
+    <div id='filesystem-tab-list' style="display: none">
+      {% include "filesystem_list.html" %}
+    </div>
+    <div id='filesystem-tab-create' style="display: none">
+      {% include "filesystem_create.html" %}
+    </div>
+    <div id='filesystem-tab-detail' style="display: none">
+      {% include "filesystem_detail.html" %}
+    </div>
+  </div>
+  <div id='mgt-tab'>
+    {% include "mgt_tab.html" %}
+  </div>
+  <div id='volume-tab'>
+    {% include "volume_tab.html" %}
+  </div>
+  <div id='server-tab'>
+    {% include "server_tab.html" %}
+  </div>
+  <div id='storage-tab'>
+    {% include "storage_tab.html" %}
+  </div>
+  <div id='user-tab'>
+    {% include "user_tab.html" %}
+  </div>
 </div>
 <!-- create new fs dialogs -->
 <div id="configParam" title="Configuration Parameters">
@@ -251,4 +273,3 @@ $(document).ready(function() {
 <div style="overflow-y: auto; max-height: 700px;" id="transition_confirmation_dialog">
 </div>
 <!-- End markup for transition confirmation dialog -->
-{% endblock %}

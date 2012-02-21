@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
   <head>
   <script type="text/template" id="job_list_template">
@@ -10,7 +11,7 @@
           <% } %>
         </li>
       <% }); %>
-    </ul>
+    </ul
   </script>
   <script type="text/template" id="command_detail_template">
     <div style='position: relative; font-size: 10pt;'>
@@ -83,6 +84,21 @@
       <div style="clear:both"></div>
       {% include 'notification_slider.html' %} 
       <div class='rightpanel'>
+        <div class="toplevel" id='toplevel-configure' style="display: none;">
+          {% include 'configuration.html' %}
+        </div>
+        <div class="toplevel" id='toplevel-dashboard' style="display: none;">
+          {% include 'dashboard.html' %}
+        </div>
+        <div class="toplevel" id='toplevel-alert' style="display: none;">
+          {% include 'alerts.html' %}
+        </div>
+        <div class="toplevel" id='toplevel-event' style="display: none;">
+          {% include 'events.html' %}
+        </div>
+        <div class="toplevel" id='toplevel-log' style="display: none;">
+          {% include 'logs.html' %}
+        </div>
       {% block include_content %}{% endblock %}
       {% block content %}{% endblock %}
       <div>

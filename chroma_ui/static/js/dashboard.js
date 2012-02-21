@@ -4,7 +4,6 @@
  * ------------------ Data Loader functions--------------------------------------
  * 1) loadView(key)
  * 2) load_breadcrumbs
- * 3) $("#plusImg").click();
  * 4) $("select[id=intervalSelect]").change();
  * 5) getUnitSelectOptions(countNumber)
  * 6) resetTimeInterval
@@ -22,8 +21,6 @@
 /*****************************************************************************/
 var server_list_content = "";
 
-$(document).ready(function()
-{
 /********************************************************************************
 // Function to populate landing page 
 /********************************************************************************/
@@ -58,18 +55,10 @@ $(document).ready(function()
     $("#serverSelect").attr("value", $("#ls_ossId").val());
   }
 /******************************************************************************
- * Events for controlling left panel
-/******************************************************************************/
-  $("#plusImg").click(function()
-  {
-    $(".panel").toggle("slow");
-    $("#plusImg").hide();$("#minusImg").show();
-    $(this).toggleClass("active");
-    return false;
-  });
-/******************************************************************************
  * Function for showing time interval units
 ******************************************************************************/
+$(document).ready(function()
+{
   $("select[id=intervalSelect]").change(function()
   {
     var intervalValue = $(this).val();

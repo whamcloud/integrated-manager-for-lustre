@@ -17,6 +17,71 @@ Backbone.sync = function(method, model, options) {
   Backbone.base_sync.apply(this, [method, model, options])
 }
 
+var ChromaRouter = Backbone.Router.extend({
+  routes: {
+    "ui/dashboard/": "dashboard",
+    "ui/configure/": "configureIndex",
+    "ui/configure/:tab/": "configure",
+    "ui/configure/filesystem/:action/": "configureFilesystem",
+    "ui/alert/": "alert",
+    "ui/event/": "event",
+    "ui/log/": "log",
+  },
+  alert: function()
+  {
+    this.toplevel('alert');
+  },
+  event: function()
+  {
+    this.toplevel('event');
+  },
+  log: function()
+  {
+    this.toplevel('log');
+  },
+  configureIndex: function()
+  {
+    this.configureFilesystem('list')
+  },
+  toplevel: function(name)
+  {
+    $('div.toplevel').hide();
+    $("#toplevel-" + name).show();
+
+    $('a.navigation').removeClass('active');
+    $("#" + name + "_menu").addClass('active');
+
+    window.title = name + " - Chroma Server"
+  },
+  configureTab: function(tab)
+  {
+    this.toplevel('configure');
+    $("#tabs").tabs('select', '#' + tab + "-tab");
+  },
+  configure: function(tab) {
+    console.log('configure ' + tab);
+    this.configureTab(tab)
+    if (tab == 'filesystem') {
+      this.configureFilesystem('list')
+    }
+  },
+  configureFilesystem: function(action) {
+    this.configureTab('filesystem')
+    console.log('configureFilesystem');
+    $('#filesystem-tab-list').hide()
+    $('#filesystem-tab-create').hide()
+    $('#filesystem-tab-detail').hide()
+    console.log($('#filesystem-tab-' + action).show())
+  },
+  dashboard: function() {
+    this.toplevel('dashboard');
+
+    loadView(window.location.hash);
+    $('#fsSelect').attr("value","");
+    $('#intervalSelect').attr("value","");
+  }
+})
+
 var Job = Backbone.Model.extend({
   urlRoot: "/api/job/",
   fetch: function(options) {

@@ -8,9 +8,6 @@ import json
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
-from django.http import HttpResponseRedirect
-from django.core.urlresolvers import reverse
-
 
 def index(request):
     """Redirect to /installation/ on a new system, or /dashboard/
@@ -18,79 +15,11 @@ def index(request):
 
     from chroma_core.lib.service_config import ServiceConfig
     if not ServiceConfig().configured():
-        return HttpResponseRedirect(reverse('chroma_ui.views.installation'))
+        return render_to_response("installation.html",
+                RequestContext(request, {}))
     else:
-        return HttpResponseRedirect(reverse('chroma_ui.views.dashboard'))
-
-
-def installation(request):
-    return render_to_response("installation.html",
-            RequestContext(request, {}))
-
-
-def configure(request):
-    return render_to_response("configuration.html",
-            RequestContext(request, {}))
-
-
-def filesystem_tab(request):
-    return render_to_response("filesystem_list.html",
-            RequestContext(request, {}))
-
-
-def mgt_tab(request):
-    return render_to_response("mgt_tab.html",
-            RequestContext(request, {}))
-
-
-def volume_tab(request):
-    return render_to_response("volume_tab.html",
-            RequestContext(request, {}))
-
-
-def server_tab(request):
-    return render_to_response("server_tab.html",
-            RequestContext(request, {}))
-
-
-def storage_tab(request):
-    return render_to_response("storage_tab.html",
-            RequestContext(request, {}))
-
-
-def user_tab(request):
-    return render_to_response("user_tab.html",
-            RequestContext(request, {}))
-
-
-def filesystem_create_tab(request):
-    return render_to_response("filesystem_create.html",
-            RequestContext(request, {}))
-
-
-def filesystem_edit_tab(request):
-    return render_to_response("filesystem_detail.html",
-            RequestContext(request, {}))
-
-
-def dashboard(request):
-    return render_to_response("dashboard.html",
-            RequestContext(request, {}))
-
-
-def dbalerts(request):
-    return render_to_response("alerts.html",
-            RequestContext(request, {}))
-
-
-def dbevents(request):
-    return render_to_response("events.html",
-            RequestContext(request, {}))
-
-
-def dblogs(request):
-    return render_to_response("logs.html",
-            RequestContext(request, {}))
+        return render_to_response("base.html",
+                RequestContext(request, {}))
 
 
 def states(request):

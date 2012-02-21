@@ -5,6 +5,7 @@ admin.autodiscover()
 
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
+
 urlpatterns = patterns('',
     (r'^djcelery/', include('djcelery.urls')),
     (r'^admin/', include(admin.site.urls)),

@@ -1,11 +1,11 @@
 <div class="logohead">
   <div class="logo"></div>
   <div class="top_links read_enabled_only">
-    <a id="dashboard_menu" href="/ui/dashboard/">Dashboard</a> |
-    <a id="configure_menu" class="fsadmin_only" href="/ui/configure/">Configure</a> |
-    <a id="alerts_menu"  href="/ui/dashboard/dbalerts/">Alerts</a>|
-    <a id="events_menu" href="/ui/dashboard/dbevents/">Events</a> |
-    <a id="logs_menu" href="/ui/dashboard/dblogs/">Log</a>
+    <a id="dashboard_menu" class="navigation" href="ui/dashboard/">Dashboard</a> |
+    <a id="configure_menu" class="navigation fsadmin_only" href="ui/configure/">Configure</a> |
+    <a id="alert_menu" class="navigation" href="ui/alert/">Alerts</a>|
+    <a id="event_menu" class="navigation" href="ui/event/">Events</a> |
+    <a id="log_menu" class="navigation" href="ui/log/">Log</a>
     <span id="user_info" style="float:right; padding-right:10px;">
       <span id="authenticated">
         <a href='#'><span id="username"></span></a>
@@ -18,6 +18,15 @@
     <span style="float:right; padding-right:10px;">Version: {{ APP_VERSION }}</span>
   </div>
 </div>
+
+<script type='text/javascript'>
+  $(function() {
+      $("a.navigation").click(function(ev) {
+        Backbone.history.navigate($(this).attr('href'), {trigger: true});
+        ev.preventDefault();
+      });
+  });
+</script>
 
 <div id='login_dialog'>
   <div id='error' class="ui-state-error ui-corner-all"> 
