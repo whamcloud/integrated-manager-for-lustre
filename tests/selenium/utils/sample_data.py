@@ -3,11 +3,11 @@ import json
 
 
 class Testdata:
-    """Class contains all links to navigate in the UI
+    """This class reads and returns data from config file that is used by the test cases
     """
 
     def __init__(self):
-        """ Data used used by the tests should be mentioned here
+        """ Loads data from config file
         """
 
         self.json_data = open('../sample_data/example.json')
