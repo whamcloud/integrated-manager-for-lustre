@@ -37,7 +37,8 @@ class EventResource(ModelResource):
                     is not specific to a single host")
     message = fields.CharField()
 
-    severity = fields.CharField(help_text = "String indicating the severity of the\
+    severity = fields.CharField(attribute='severity',
+            help_text = "String indicating the severity of the\
             event, one of %s" % STR_TO_SEVERITY.keys())
 
     class Meta:

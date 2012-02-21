@@ -14,7 +14,8 @@ class Baselayout:
         self.alerts_menu = self.driver.find_element_by_id('alerts_menu')
         self.events_menu = self.driver.find_element_by_id('events_menu')
         self.logs_menu = self.driver.find_element_by_id('logs_menu')
-        self.signbtn = self.driver.find_element_by_id('signbtn')
+        self.sidebar_open = self.driver.find_element_by_css_selector("div.vertical")
+        self.sidebar = self.driver.find_element_by_id('sidebar')
 
     #Check whether elements are present on UI
 
@@ -48,7 +49,12 @@ class Baselayout:
         """
         return self.logs_menu.is_displayed()
 
-    def signbtn_displayed(self):
+    def open_sidebar(self):
         """Returns whether if signbtn is displayed
         """
-        return self.signbtn.is_displayed()
+        return self.sidebar_open.click()
+
+    def sidebar_displayed(self):
+        """Returns whether if signbtn is displayed
+        """
+        return self.sidebar.is_displayed()

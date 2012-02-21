@@ -1,22 +1,39 @@
 # encoding: utf-8
 import datetime
 from south.db import db
-from south.v2 import DataMigration
+from south.v2 import SchemaMigration
 from django.db import models
 
-class Migration(DataMigration):
+class Migration(SchemaMigration):
+
     def forwards(self, orm):
-        "Write your forwards methods here."
-        from chroma_core.models import ManagedTarget
-        try:
-            for target in ManagedTarget._base_manager.all():
-                target.lun = target.managedtargetmount_set.get(primary = True).block_device.lun
-                target.save()
-        except Exception, e:
-            print "  WARNING: This migration raised an exception which we're ignoring.\nThis probably happened because a later migration introduced\na new field which isn't available to this migration.\nThis situation is OK in the case of a new DB without any\ndata to migrate.  The exception was: \n%s" % e
+
+        # Adding field 'ManagedFilesystem.immutable_state'
+        db.add_column('chroma_core_managedfilesystem', 'immutable_state', self.gf('django.db.models.fields.BooleanField')(default=False), keep_default=False)
+
+        # Adding field 'LNetConfiguration.immutable_state'
+        db.add_column('chroma_core_lnetconfiguration', 'immutable_state', self.gf('django.db.models.fields.BooleanField')(default=False), keep_default=False)
+
+        # Adding field 'ManagedHost.immutable_state'
+        db.add_column('chroma_core_managedhost', 'immutable_state', self.gf('django.db.models.fields.BooleanField')(default=False), keep_default=False)
+
+        # Adding field 'ManagedTarget.immutable_state'
+        db.add_column('chroma_core_managedtarget', 'immutable_state', self.gf('django.db.models.fields.BooleanField')(default=False), keep_default=False)
+
 
     def backwards(self, orm):
-        "Write your backwards methods here."
+
+        # Deleting field 'ManagedFilesystem.immutable_state'
+        db.delete_column('chroma_core_managedfilesystem', 'immutable_state')
+
+        # Deleting field 'LNetConfiguration.immutable_state'
+        db.delete_column('chroma_core_lnetconfiguration', 'immutable_state')
+
+        # Deleting field 'ManagedHost.immutable_state'
+        db.delete_column('chroma_core_managedhost', 'immutable_state')
+
+        # Deleting field 'ManagedTarget.immutable_state'
+        db.delete_column('chroma_core_managedtarget', 'immutable_state')
 
 
     models = {
@@ -153,6 +170,7 @@ class Migration(DataMigration):
             'Meta': {'object_name': 'LNetConfiguration'},
             'host': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ManagedHost']", 'unique': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.lnetofflinealert': {
@@ -193,6 +211,7 @@ class Migration(DataMigration):
             'Meta': {'object_name': 'ManagedFilesystem'},
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'mgs': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedMgs']"}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '8'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
@@ -205,6 +224,7 @@ class Migration(DataMigration):
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'fqdn': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'last_contact': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
             'nodename': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
@@ -231,7 +251,8 @@ class Migration(DataMigration):
             'active_mount': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTargetMount']", 'null': 'True', 'blank': 'True'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'lun': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.Lun']", 'null': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'lun': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.Lun']"}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '64', 'null': 'True', 'blank': 'True'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
@@ -407,6 +428,7 @@ class Migration(DataMigration):
         'chroma_core.storagepluginrecord': {
             'Meta': {'unique_together': "(('module_name',),)", 'object_name': 'StoragePluginRecord'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'internal': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'module_name': ('django.db.models.fields.CharField', [], {'max_length': '128'})
         },
         'chroma_core.storageresourcealert': {
@@ -426,7 +448,8 @@ class Migration(DataMigration):
             'Meta': {'unique_together': "(('storage_plugin', 'class_name'),)", 'object_name': 'StorageResourceClass'},
             'class_name': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'storage_plugin': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StoragePluginRecord']"})
+            'storage_plugin': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StoragePluginRecord']"}),
+            'user_creatable': ('django.db.models.fields.BooleanField', [], {'default': 'False'})
         },
         'chroma_core.storageresourceclassstatistic': {
             'Meta': {'unique_together': "(('resource_class', 'name'),)", 'object_name': 'StorageResourceClassStatistic'},

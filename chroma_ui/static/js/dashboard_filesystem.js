@@ -536,15 +536,15 @@ loadFileSystemSummary = function (fsId)
       "</tr>"+
       "<tr>" +
       "<td class='greybgcol'>Total Capacity: </td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.bytes_total+" </td>" +
+      "<td class='tblContent greybgcol'>"+formatBytes(filesystem.bytes_total)+" </td>" +
       "<td class='greybgcol'>Total Free:</td>" +
-      "<td class='tblContent txtleft'>"+filesystem.bytes_free+"</td>" +
+      "<td class='tblContent txtleft'>"+formatBytes(filesystem.bytes_free)+"</td>" +
       "</tr>"+
       "<tr>" +
       "<td class='greybgcol'>Files Total: </td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.files_total+" </td>" +
+      "<td class='tblContent greybgcol'>"+formatBigNumber(filesystem.files_total)+" </td>" +
       "<td class='greybgcol'>Files Free:</td>" +
-      "<td class='tblContent txtleft'>"+filesystem.files_free+"</td>" +
+      "<td class='tblContent txtleft'>"+formatBigNumber(filesystem.files_free)+"</td>" +
       "</tr>"+
       "<tr>" +
       "<td class='greybgcol'>Status:</td>";

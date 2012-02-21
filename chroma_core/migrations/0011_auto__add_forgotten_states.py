@@ -1,22 +1,105 @@
 # encoding: utf-8
 import datetime
 from south.db import db
-from south.v2 import DataMigration
+from south.v2 import SchemaMigration
 from django.db import models
 
-class Migration(DataMigration):
+class Migration(SchemaMigration):
+
     def forwards(self, orm):
-        "Write your forwards methods here."
-        from chroma_core.models import ManagedTarget
-        try:
-            for target in ManagedTarget._base_manager.all():
-                target.lun = target.managedtargetmount_set.get(primary = True).block_device.lun
-                target.save()
-        except Exception, e:
-            print "  WARNING: This migration raised an exception which we're ignoring.\nThis probably happened because a later migration introduced\na new field which isn't available to this migration.\nThis situation is OK in the case of a new DB without any\ndata to migrate.  The exception was: \n%s" % e
+
+        # Adding model 'ForgetHostJob_unconfigured'
+        db.create_table('chroma_core_forgethostjob_unconfigured', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('host', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedHost'])),
+        ))
+        db.send_create_signal('chroma_core', ['ForgetHostJob_unconfigured'])
+
+        # Adding model 'ForgetFilesystemJob_available'
+        db.create_table('chroma_core_forgetfilesystemjob_available', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('filesystem', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedFilesystem'])),
+        ))
+        db.send_create_signal('chroma_core', ['ForgetFilesystemJob_available'])
+
+        # Adding model 'ForgetFilesystemJob_stopped'
+        db.create_table('chroma_core_forgetfilesystemjob_stopped', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('filesystem', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedFilesystem'])),
+        ))
+        db.send_create_signal('chroma_core', ['ForgetFilesystemJob_stopped'])
+
+        # Adding model 'ForgetHostJob_lnet_unloaded'
+        db.create_table('chroma_core_forgethostjob_lnet_unloaded', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('host', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedHost'])),
+        ))
+        db.send_create_signal('chroma_core', ['ForgetHostJob_lnet_unloaded'])
+
+        # Adding model 'ForgetHostJob_lnet_down'
+        db.create_table('chroma_core_forgethostjob_lnet_down', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('host', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedHost'])),
+        ))
+        db.send_create_signal('chroma_core', ['ForgetHostJob_lnet_down'])
+
+        # Adding model 'ForgetHostJob_lnet_up'
+        db.create_table('chroma_core_forgethostjob_lnet_up', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('host', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedHost'])),
+        ))
+        db.send_create_signal('chroma_core', ['ForgetHostJob_lnet_up'])
+
+        # Adding model 'ForgetTargetJob_unmounted'
+        db.create_table('chroma_core_forgettargetjob_unmounted', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('target', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedTarget'])),
+        ))
+        db.send_create_signal('chroma_core', ['ForgetTargetJob_unmounted'])
+
+        # Adding model 'ForgetFilesystemJob_unavailable'
+        db.create_table('chroma_core_forgetfilesystemjob_unavailable', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('filesystem', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedFilesystem'])),
+        ))
+        db.send_create_signal('chroma_core', ['ForgetFilesystemJob_unavailable'])
+
+        # Adding model 'ForgetTargetJob_mounted'
+        db.create_table('chroma_core_forgettargetjob_mounted', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('target', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedTarget'])),
+        ))
+        db.send_create_signal('chroma_core', ['ForgetTargetJob_mounted'])
+
 
     def backwards(self, orm):
-        "Write your backwards methods here."
+
+        # Deleting model 'ForgetHostJob_unconfigured'
+        db.delete_table('chroma_core_forgethostjob_unconfigured')
+
+        # Deleting model 'ForgetFilesystemJob_available'
+        db.delete_table('chroma_core_forgetfilesystemjob_available')
+
+        # Deleting model 'ForgetFilesystemJob_stopped'
+        db.delete_table('chroma_core_forgetfilesystemjob_stopped')
+
+        # Deleting model 'ForgetHostJob_lnet_unloaded'
+        db.delete_table('chroma_core_forgethostjob_lnet_unloaded')
+
+        # Deleting model 'ForgetHostJob_lnet_down'
+        db.delete_table('chroma_core_forgethostjob_lnet_down')
+
+        # Deleting model 'ForgetHostJob_lnet_up'
+        db.delete_table('chroma_core_forgethostjob_lnet_up')
+
+        # Deleting model 'ForgetTargetJob_unmounted'
+        db.delete_table('chroma_core_forgettargetjob_unmounted')
+
+        # Deleting model 'ForgetFilesystemJob_unavailable'
+        db.delete_table('chroma_core_forgetfilesystemjob_unavailable')
+
+        # Deleting model 'ForgetTargetJob_mounted'
+        db.delete_table('chroma_core_forgettargetjob_mounted')
 
 
     models = {
@@ -101,6 +184,51 @@ class Migration(DataMigration):
             'confparam_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ConfParam']", 'unique': 'True', 'primary_key': 'True'}),
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"})
         },
+        'chroma_core.forgetfilesystemjob_available': {
+            'Meta': {'object_name': 'ForgetFilesystemJob_available', '_ormbases': ['chroma_core.Job']},
+            'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgetfilesystemjob_stopped': {
+            'Meta': {'object_name': 'ForgetFilesystemJob_stopped', '_ormbases': ['chroma_core.Job']},
+            'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgetfilesystemjob_unavailable': {
+            'Meta': {'object_name': 'ForgetFilesystemJob_unavailable', '_ormbases': ['chroma_core.Job']},
+            'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgethostjob_lnet_down': {
+            'Meta': {'object_name': 'ForgetHostJob_lnet_down', '_ormbases': ['chroma_core.Job']},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgethostjob_lnet_unloaded': {
+            'Meta': {'object_name': 'ForgetHostJob_lnet_unloaded', '_ormbases': ['chroma_core.Job']},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgethostjob_lnet_up': {
+            'Meta': {'object_name': 'ForgetHostJob_lnet_up', '_ormbases': ['chroma_core.Job']},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgethostjob_unconfigured': {
+            'Meta': {'object_name': 'ForgetHostJob_unconfigured', '_ormbases': ['chroma_core.Job']},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgettargetjob_mounted': {
+            'Meta': {'object_name': 'ForgetTargetJob_mounted', '_ormbases': ['chroma_core.Job']},
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
+            'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
+        },
+        'chroma_core.forgettargetjob_unmounted': {
+            'Meta': {'object_name': 'ForgetTargetJob_unmounted', '_ormbases': ['chroma_core.Job']},
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
+            'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
+        },
         'chroma_core.formattargetjob': {
             'Meta': {'object_name': 'FormatTargetJob', '_ormbases': ['chroma_core.Job']},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
@@ -153,6 +281,7 @@ class Migration(DataMigration):
             'Meta': {'object_name': 'LNetConfiguration'},
             'host': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ManagedHost']", 'unique': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.lnetofflinealert': {
@@ -193,6 +322,7 @@ class Migration(DataMigration):
             'Meta': {'object_name': 'ManagedFilesystem'},
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'mgs': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedMgs']"}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '8'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
@@ -205,6 +335,7 @@ class Migration(DataMigration):
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'fqdn': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'last_contact': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
             'nodename': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
@@ -231,7 +362,8 @@ class Migration(DataMigration):
             'active_mount': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTargetMount']", 'null': 'True', 'blank': 'True'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'lun': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.Lun']", 'null': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'lun': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.Lun']"}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '64', 'null': 'True', 'blank': 'True'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
@@ -407,6 +539,7 @@ class Migration(DataMigration):
         'chroma_core.storagepluginrecord': {
             'Meta': {'unique_together': "(('module_name',),)", 'object_name': 'StoragePluginRecord'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'internal': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'module_name': ('django.db.models.fields.CharField', [], {'max_length': '128'})
         },
         'chroma_core.storageresourcealert': {
@@ -426,7 +559,8 @@ class Migration(DataMigration):
             'Meta': {'unique_together': "(('storage_plugin', 'class_name'),)", 'object_name': 'StorageResourceClass'},
             'class_name': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'storage_plugin': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StoragePluginRecord']"})
+            'storage_plugin': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StoragePluginRecord']"}),
+            'user_creatable': ('django.db.models.fields.BooleanField', [], {'default': 'False'})
         },
         'chroma_core.storageresourceclassstatistic': {
             'Meta': {'unique_together': "(('resource_class', 'name'),)", 'object_name': 'StorageResourceClassStatistic'},

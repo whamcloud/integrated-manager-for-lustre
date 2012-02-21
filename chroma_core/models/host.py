@@ -42,7 +42,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     agent_token = models.CharField(max_length = 64)
 
     # TODO: separate the LNET state [unloaded, down, up] from the host state [created, removed]
-    states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
+    states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed', 'forgotten']
     initial_state = 'unconfigured'
 
     last_contact = models.DateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
@@ -530,7 +530,16 @@ class ConfigureRsyslogStep(Step):
 
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "configure-rsyslog --node %s" % hostname)
+        try:
+            self.invoke_agent(host, "configure-rsyslog --node %s" % hostname)
+        except RuntimeError, e:
+            # FIXME: Would be smarter to detect capabilities before
+            # trying to run things which may break.  Don't want to do it
+            # every time, though, because it adds an extra round trip for
+            # every step.  Maybe we should serialize the audited
+            # capabilities in a new ManagedHost field? (HYD-638)
+            from chroma_core.lib.job import job_log
+            job_log.error("Failed to configure rsyslog on %s: %s" % (host, e))
 
 
 class UnconfigureRsyslogStep(Step):
@@ -796,3 +805,30 @@ class RemoveHostJob(Job, StateChangeJob):
     def get_steps(self):
         return [(RemoveServerConfStep, {'host_id': self.host.id}),
                 (DeleteHostStep, {'host_id': self.host.id})]
+
+
+# Generate boilerplate classes for various origin->forgotten jobs.
+# This may go away as a result of work tracked in HYD-627.
+for origin in ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up']:
+    def forget_description(self):
+        return "Removing unmanaged host %s" % (self.host.downcast())
+
+    def forget_get_steps(self):
+        return [(RemoveServerConfStep, {'host_id': self.host.id}),
+                (DeleteHostStep, {'host_id': self.host.id})]
+
+    name = "ForgetHostJob_%s" % origin
+    cls = type(name, (Job, StateChangeJob), {
+        'state_transition': (ManagedHost, origin, 'forgotten'),
+        'stateful_object': 'host',
+        'state_verb': "Remove",
+        'host': models.ForeignKey(ManagedHost),
+        'Meta': type('Meta', (object,), {'app_label': 'chroma_core'}),
+        'description': forget_description,
+        'requires_confirmation': True,
+        'get_steps': forget_get_steps,
+        '__module__': __name__,
+    })
+    import sys
+    this_module = sys.modules[__name__]
+    setattr(this_module, name, cls)

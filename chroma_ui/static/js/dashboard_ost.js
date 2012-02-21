@@ -350,15 +350,15 @@ loadOSTSummary = function (fsId)
       "</tr>"+
       "<tr>" +
       "<td class='greybgcol'>Size: </td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.bytes_total+" </td>" +
+      "<td class='tblContent greybgcol'>"+formatBytes(filesystem.bytes_total)+" </td>" +
       "<td class='greybgcol'>Free space:</td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.bytes_free+"</td>" +
+      "<td class='tblContent greybgcol'>"+formatBytes(filesystem.bytes_free)+"</td>" +
       "</tr>"+
       "<tr>" +
       "<td class='greybgcol'>Max. files: </td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.files_total+" </td>" +
+      "<td class='tblContent greybgcol'>"+formatBigNumber(filesystem.files_total)+" </td>" +
       "<td class='greybgcol'>Files:</td>" +
-      "<td class='tblContent greybgcol'>"+(filesystem.files_total - filesystem.files_free)+"</td>" +
+      "<td class='tblContent greybgcol'>"+formatBigNumber(filesystem.files_total - filesystem.files_free)+"</td>" +
       "</tr>"+
       "<tr>" +
       "<td class='greybgcol'>Total OSTs:</td>" +

@@ -244,14 +244,12 @@ $(document).ready(function(){
           $('#allFileSystemSummaryTbl').dataTable().fnAddData([
             resValue.name,
             resValue.osts.length,
-            resValue.bytes_total,
-            resValue.bytes_free,
+            formatBytes(resValue.bytes_total),
+            formatBytes(resValue.bytes_free),
           ]);
         });
 
         populateFsSelect(data.objects)
-
-
         
         load_breadcrumbs();
       });

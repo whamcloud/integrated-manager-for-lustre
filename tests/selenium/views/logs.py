@@ -1,5 +1,4 @@
 """Page Object of Logs Page"""
-
 from utils.constants import Constants
 from selenium.webdriver.support.ui import Select
 from time import sleep
@@ -37,14 +36,12 @@ class Logs:
     def get_table_data(self):
         """Returns text of first <td> tag of logs table
         """
-
         td = self.driver.find_element_by_xpath("id('all_log_content')/tbody/tr/td")
         return td.text
 
     def get_host_list_length(self):
         """Returns length of host dropdown list
         """
-
         self.log_host_options = self.log_host_list.find_elements_by_tag_name('option')
         option_values = [option.get_attribute('value') for option in self.log_host_options]
         return len(option_values)
@@ -52,7 +49,6 @@ class Logs:
     def get_host_value_from_dropdown(self):
         """Returns text of selected value from list from host dropdown
         """
-
         host_list = Select(self.log_host_list)
         for opt in host_list.options:
             if opt.is_selected():
@@ -61,6 +57,5 @@ class Logs:
     def get_host_value_from_table_data(self):
         """Returns host name on first row from log table
         """
-
         host_name = self.driver.find_element_by_xpath("id('all_log_content')/tbody/tr/td[2]")
         return host_name.text
