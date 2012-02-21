@@ -4,98 +4,124 @@
   var ERR_FSNAME_EMPTY = "Please enter valid File system name";
   var ERR_OST_EMPTY = "Please select at least one device for OST creation";
   var advanced_tab_clicked = false; 
-  $(document).ready(function() {
-    /* Populate existing MGT list */
-    Api.get("target/", {
-        kind: "MGT",
-        limit: 0
-      },
-      success_callback = function(data) {
-        /* TODO: cope with possibility (unlikely) of pagination in the list of MGTs */
-        var targets = data.objects;
-        var options_markup = "<option value=''></option>";
-        var count = 0;
-        $.each(targets, function(i, target_info) {
-          options_markup += "<option value='" + target_info.id + "'>" + target_info.primary_server_name + "</option>"
-          count += 1;
-        });
-        if (count == 0) {
-          $('#existing_or_new_mgt_options').hide();
-        } else {
-          $('#mgt_existing_dropdown').html(options_markup);
-        }
-      }
-    );
 
-    fvc_button($('#mgt_chooser'), {change: function() {
-        $('#mgt_existing_dropdown').val('');
-    }})
-    $('#mgt_existing_dropdown').change(function() {
-      if ($('#mgt_existing_dropdown option:selected').val()) {
-        fvc_clear($('#mgt_chooser'));
-      }
-    });
-
-    //  Create FS Handler for create new FS 
-    $('#btnCreateFS').click(function()
-    {
-      var fs_name = $('#txtfsnameid').val();
-      var mgt_lun_id = fvc_get_value($('#mgt_chooser'))
-      var mgt_id = $('#mgt_existing_dropdown').val()
-      var mdt_lun_id = fvc_get_value($('#mdt_chooser'))
-      var ost_lun_ids = fvc_get_value($('#ost_chooser'))
-      if(fs_name=="")
-      {
-        jAlert(ERR_FSNAME_EMPTY);
-      }
-      else if (!(mgt_id || mgt_lun_id))
-      {
-        jAlert("You must choose an MGT");
-      }
-      else if (!mdt_lun_id)
-      {
-        jAlert("You must choose an MDT");
-      }
-      else if(ost_lun_ids.length==0)
-      {
-        jAlert(ERR_OST_EMPTY);
-      }
-      else
-      {
-        var config_json = {};
-        var oSetting = $('#config_param_table').dataTable().fnSettings();
-        for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
-          if(oSetting.aoData[i]._aData[2] != $("input#"+i).val())
-          {
-             config_json[oSetting.aoData[i]._aData[0]] = $("input#"+i).val();
-          }
-        }
-
-        CreateFS(fs_name, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, function(fs_id) {
-          $.address.value('filesystems_edit_' + fs_id);
-        }, config_json);
-      }
-    }); 
-    //Advance Options button click handler.
-    $('#advance_opts').click(function()
-    {
-   	  // If clicked first time then only fetch parameters else show already entered values
-      if(!advanced_tab_clicked) {
-        Api.get("help/conf_param/", {kind: 'FS'}, success_callback = function(help_dict) {
-          var data = {};
-          for(var key in help_dict) {
-            data[key] = null;
-          }
-          populate_conf_param_table(data, "config_param_table", help_dict);
-          advanced_tab_clicked = true;
-          $('#configParam').dialog('open'); 
-        })
+  var FilesystemCreateView = function() {
+    var initialized = false;
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
       } else {
-        $('#configParam').dialog('open'); 
+        // TODO: reload choosers
+        //fvc_clear($('#mdt_chooser'))
+        //fvc_clear($('#ost_chooser'), {multi_select: true})
+        $('#mgt_chooser').volumeChooser('clear');
+        $('#mdt_chooser').volumeChooser('clear');
+        $('#ost_chooser').volumeChooser('clear');
       }
-    });
-  });
+    }
 
+    function init() 
+    {
+      $('#mdt_chooser').volumeChooser();
+      $('#ost_chooser').volumeChooser({multi_select: true});
+
+      /* Populate existing MGT list */
+      Api.get("target/", {
+          kind: "MGT",
+          limit: 0
+        },
+        success_callback = function(data) {
+          /* TODO: cope with possibility (unlikely) of pagination in the list of MGTs */
+          var targets = data.objects;
+          var options_markup = "<option value=''></option>";
+          var count = 0;
+          $.each(targets, function(i, target_info) {
+            options_markup += "<option value='" + target_info.id + "'>" + target_info.primary_server_name + "</option>"
+            count += 1;
+          });
+          if (count == 0) {
+            $('#existing_or_new_mgt_options').hide();
+          } else {
+            $('#mgt_existing_dropdown').html(options_markup);
+          }
+        }
+      );
+
+      $('#mgt_chooser').volumeChooser({
+        change: function() {
+          $('#mgt_existing_dropdown').val('');
+        }
+      });
+
+      $('#mgt_existing_dropdown').change(function() {
+        if ($('#mgt_existing_dropdown option:selected').val()) {
+          $('#mgt_chooser').volumeChooser('clear');
+        }
+      });
+
+      //  Create FS Handler for create new FS 
+      $('#btnCreateFS').click(function()
+      {
+        var fs_name = $('#txtfsnameid').val();
+          
+        var mgt_lun_id = $('#mgt_chooser').volumeChooser('val'); 
+        var mgt_id = $('#mgt_existing_dropdown').val()
+        var mdt_lun_id = $('#mdt_chooser').volumeChooser('val'); 
+        var ost_lun_ids = $('#ost_chooser').volumeChooser('val'); 
+        if(fs_name=="")
+        {
+          jAlert(ERR_FSNAME_EMPTY);
+        }
+        else if (!(mgt_id || mgt_lun_id))
+        {
+          jAlert("You must choose an MGT");
+        }
+        else if (!mdt_lun_id)
+        {
+          jAlert("You must choose an MDT");
+        }
+        else if(ost_lun_ids.length==0)
+        {
+          jAlert(ERR_OST_EMPTY);
+        }
+        else
+        {
+          var config_json = {};
+          var oSetting = $('#config_param_table').dataTable().fnSettings();
+          for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
+            if(oSetting.aoData[i]._aData[2] != $("input#"+i).val())
+            {
+               config_json[oSetting.aoData[i]._aData[0]] = $("input#"+i).val();
+            }
+          }
+
+          CreateFS(fs_name, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, function(fs_id) {
+            Backbone.history.navigate("ui/configure/filesystem/detail/" + fs_id + "/");
+          }, config_json);
+        }
+      }); 
+      //Advance Options button click handler.
+      $('#advance_opts').click(function()
+      {
+        // If clicked first time then only fetch parameters else show already entered values
+        if(!advanced_tab_clicked) {
+          Api.get("help/conf_param/", {kind: 'FS'}, success_callback = function(help_dict) {
+            var data = {};
+            for(var key in help_dict) {
+              data[key] = null;
+            }
+            populate_conf_param_table(data, "config_param_table", help_dict);
+            advanced_tab_clicked = true;
+            $('#configParam').dialog('open'); 
+          })
+        } else {
+          $('#configParam').dialog('open'); 
+        }
+      });
+    }
+    return {draw:draw}
+  }();
 </script>
 <table style="font-size:12px; padding-top:15px;">
   <tr>
@@ -108,29 +134,6 @@
               <button class='advanced' type="button" id="advance_opts">Advanced...</button>
       </div>
     </td>
-    <!--
-    <td width="70%" align="left" valign="top">
-      <table width="51%" border="0" cellspacing="1" cellpadding="0" bgcolor="#848484" class="fs">
-        <tr class="greybgcol">
-          <td width="25%" align="right" class="spaceright"><strong>File Used:</strong></td>
-          <td class="spaceleft" width="17%" align="left"><div id="mdt_file"></div></td>
-          <td width="32%" align="right" class="spaceright"><strong>Total Capacity:</strong></td>
-          <td class="spaceleft" width="26%" align="left"><div id="total_capacity"></div></td>
-        </tr>
-        <tr class="greybgcol">
-          <td class="spaceright" align="right"><div id="mdt_file"><strong>Inodes:</strong></div></td>
-          <td class="spaceleft" align="left"><div id="inodes"></div></td>
-          <td class="spaceright" align="right"><div id="total_capacity"><strong>Total no OSS:</strong></div></td>
-          <td class="spaceleft" align="left"><div id="total_oss"></div></td>
-        </tr>
-        <tr class="greybgcol">
-          <td class="spaceright" align="right">&nbsp;</td>
-          <td class="spaceleft" align="left">&nbsp;</td>
-          <td align="right" class="spaceright"><strong>Total no OST:</strong></td>
-          <td class="spaceleft" align="left"><div id="total_ost"></div></td>
-        </tr>
-      </table>
-    </td>-->
   </tr>
   <tr>
     <td colspan="2" align="left" valign="top">
@@ -158,7 +161,6 @@
       </div>
       <div class='step_body'>
         <button id='mdt_chooser'></button>
-        <script type='text/javascript'>$(document).ready(function(){fvc_button($('#mdt_chooser'))});</script>
       </div>
     </td>
   </tr>
@@ -169,7 +171,6 @@
       </div>
       <div class='step_body'>
         <button id='ost_chooser'></button>
-        <script type='text/javascript'>$(document).ready(function(){fvc_button($('#ost_chooser'), {multi_select: true})});</script>
       </div>
     </td>
   </tr>

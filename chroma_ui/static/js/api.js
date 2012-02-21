@@ -1,4 +1,26 @@
 
+/* So that Backbone.sync will pass GET list parameters
+ * in the way that tastypie requires them */
+jQuery.ajaxSetup({traditional: true})
+
+/* Override backbone.sync to deal with {meta:, objects:}
+ * output from API calls */
+Backbone.base_sync = Backbone.sync
+Backbone.sync = function(method, model, options) {
+  var outer_success = options.success;
+  var outer_this = this;
+  options.success = function() {
+    var data = arguments[0]
+    if (data.meta != undefined && data.objects != undefined) {
+      arguments[0] = data.objects;
+    }
+    outer_success.apply(outer_this, arguments);
+  }
+
+  Backbone.base_sync.apply(this, [method, model, options])
+}
+
+
 
 /* The Api module wraps the global state used for 
  * accessing the /api/ URL space */

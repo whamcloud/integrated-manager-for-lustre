@@ -2,6 +2,8 @@
 
 
 var Sidebar = function(){
+  var initialized = false;
+
   function eventStyle(ev)
   {
     var cssClassName = "";
@@ -60,6 +62,7 @@ var Sidebar = function(){
   }
 
   function init() {
+    console.log('init');
     $("div#sidebar div#accordion").accordion({
       fillSpace: true,
       collapsible: true,
@@ -121,6 +124,8 @@ var Sidebar = function(){
         { "sClass": 'txtleft', "mDataProp": "text", bSortable: false },
       ]
     );
+
+    intialized = true;
   }
 
   function smallTable(element, url, kwargs, row_fn, columns, emptyText) {
@@ -155,6 +160,9 @@ var Sidebar = function(){
   }
 
   function open() {
+    if (!initialized) {
+      init();
+    }
     $("div#sidebar div#accordion").change();
     $("#sidebar").show({effect: 'slide'});
   }
@@ -164,7 +172,6 @@ var Sidebar = function(){
   }
 
   return {
-    init: init,
     open: open,
     close: close
   }
@@ -201,8 +208,6 @@ loadHostList = function(filesystem_id, targetContainer)
 
 $(document).ready(function() 
 {
-  Sidebar.init();
-
   $("#sidebar_open").click(function()
   {
     Sidebar.open();

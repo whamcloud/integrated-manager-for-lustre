@@ -1,95 +1,9 @@
 
-/* So that Backbone.sync will pass GET list parameters
- * in the way that tastypie requires them */
-jQuery.ajaxSetup({traditional: true})
-Backbone.base_sync = Backbone.sync
-Backbone.sync = function(method, model, options) {
-  var outer_success = options.success;
-  var outer_this = this;
-  options.success = function() {
-    var data = arguments[0]
-    if (data.meta != undefined && data.objects != undefined) {
-      arguments[0] = data.objects;
-    }
-    outer_success.apply(outer_this, arguments);
-  }
-
-  Backbone.base_sync.apply(this, [method, model, options])
-}
-
-var ChromaRouter = Backbone.Router.extend({
-  routes: {
-    "ui/": "dashboard",
-    "ui/dashboard/": "dashboard",
-    "ui/configure/": "configureIndex",
-    "ui/configure/:tab/": "configure",
-    "ui/configure/filesystem/:action/": "configureFilesystem",
-    "ui/alert/": "alert",
-    "ui/event/": "event",
-    "ui/log/": "log",
-  },
-  alert: function()
-  {
-    this.toplevel('alert');
-  },
-  event: function()
-  {
-    this.toplevel('event');
-  },
-  log: function()
-  {
-    this.toplevel('log');
-  },
-  configureIndex: function()
-  {
-    this.configureFilesystem('list')
-  },
-  toplevel: function(name)
-  {
-    $('div.toplevel').hide();
-    $("#toplevel-" + name).show();
-
-    $('a.navigation').removeClass('active');
-    $("#" + name + "_menu").addClass('active');
-
-    window.title = name + " - Chroma Server"
-  },
-  configureTab: function(tab)
-  {
-    this.toplevel('configure');
-    $("#tabs").tabs('select', '#' + tab + "-tab");
-  },
-  configure: function(tab) {
-    console.log('configure ' + tab);
-    this.configureTab(tab)
-    if (tab == 'filesystem') {
-      this.configureFilesystem('list')
-    }
-  },
-  configureFilesystem: function(action) {
-    this.configureTab('filesystem')
-    console.log('configureFilesystem');
-    $('#filesystem-tab-list').hide()
-    $('#filesystem-tab-create').hide()
-    $('#filesystem-tab-detail').hide()
-    console.log($('#filesystem-tab-' + action).show())
-  },
-  dashboard: function() {
-    this.toplevel('dashboard');
-
-    loadView(window.location.hash);
-    $('#fsSelect').attr("value","");
-    $('#intervalSelect').attr("value","");
-  }
-})
-
 var Job = Backbone.Model.extend({
   urlRoot: "/api/job/",
   fetch: function(options) {
     var outer_success = options.success;
     options.success = function(model, response) {
-
-    
       if (outer_success) {
         outer_success(model, repsonse)
       }

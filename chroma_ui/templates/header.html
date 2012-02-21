@@ -20,11 +20,15 @@
 </div>
 
 <script type='text/javascript'>
-  $(function() {
-      $("a.navigation").click(function(ev) {
-        Backbone.history.navigate($(this).attr('href'), {trigger: true});
-        ev.preventDefault();
-      });
+  $(document).ready(function() {
+    console.log($('a.navigation'))
+    $("a.navigation").live('click', function(ev) {
+      /*
+      console.log('navigation ' + $(this).attr('href'));
+      */
+      Backbone.history.navigate($(this).attr('href'), {trigger: true});
+      ev.preventDefault();
+    });
   });
 </script>
 

@@ -112,7 +112,8 @@ var Tooltip = function()
         my: "top left",
         at: "bottom-right",
         /* FIXME: hacky selector */
-        target: $('div.vertical')
+        target: $('div.vertical'),
+        viewport: $('body')
       },
       hide: {
         fixed: true,
@@ -230,7 +231,7 @@ var CommandNotification = function() {
       persist = false;
     }
 
-    Tooltip.message(header, command.message, persist, theme)
+    Tooltip.message("<a class='navigation' href='ui/command/" + command.id + "/'>" + header + "</a>", command.message, persist, theme)
   }
 
   function update()

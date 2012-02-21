@@ -1,10 +1,42 @@
 
+
+(function( $ ) {
+  var methods = {
+    init: function(options) {
+      var defaults = $.extend({
+        multi_select: false,
+        selected_lun_id: null,
+        selected_lun_ids: []
+      }, options)
+
+      return this.each(function() {
+        fvc_button($(this), options);
+      });
+    },
+    clear: function() {
+      return this.each(function() {
+        fvc_clear($(this));
+      });
+    },
+    val: function() {
+      return fvc_get_value($(this));
+    }
+  }
+  $.fn.volumeChooser = function(method) {
+    if ( methods[method] ) {
+      return methods[ method ].apply( this, Array.prototype.slice.call( arguments, 1 ));
+    } else if ( typeof method === 'object' || ! method ) {
+      return methods.init.apply( this, arguments );
+    } else {
+      $.error( 'Method ' +  method + ' does not exist' );
+    }
+  };
+})( jQuery );
+
 /* fvc: Filesystem Volume Chooser */
 
-var fvc_instances = []
-
 fvc_clear = function(element) {
-  opts = fvc_instances[element.attr('id')]
+  opts = element.data('volumeChooser')
   element = $('#' + element.attr('id'));
 
   var changed;
@@ -21,14 +53,14 @@ fvc_clear = function(element) {
     opts['selected_lun_id'] = null
     element.parents('.fvc_background').find('.fvc_selected').html("Select storage...")
   }
+  
   if (changed && opts.change) {
     opts.change();
   }
 }
 
 fvc_get_value = function(element) {
-  opts = fvc_instances[element.attr('id')]
-  //console.log(opts);
+  opts = element.data('volumeChooser')
   if (opts.multi_select) {
     return opts.selected_lun_ids
   } else {
@@ -38,10 +70,8 @@ fvc_get_value = function(element) {
 
 fvc_button = function(element, opts) {
   if (!opts) {
-    opts = []
+    opts = {}
   }
-
-  fvc_instances[element.attr('id')] = opts
 
   element.wrap("<div class='fvc_background'/>")
   element.hide()
@@ -94,6 +124,8 @@ fvc_button = function(element, opts) {
   }
 
   var table_element = expander_div.children('table')
+  console.log('table_element = ' + table_element);
+  console.log(table_element);
   var volumeTable = table_element.dataTable({
     bServerSide: true,
     sAjaxSource: "volume/",
@@ -147,15 +179,17 @@ fvc_button = function(element, opts) {
     });
   });
 
-  update_multi_select_value = function() {
+  var update_multi_select_value = function() {
     var selected = [];
-    var checkboxes = table_element.find('input').each(function() {
+    console.log(table_element);
+    console.log(table_element.find('input'))
+    table_element.find('input').each(function() {
       if ($(this).attr('checked')) {
         selected.push ($(this).attr('name'));
       }
     });
 
-    fvc_instances[element.attr('id')].selected_lun_ids = selected
+    opts.selected_lun_ids = selected
   }
 
   table_element.delegate("input", "click", function(event) {
@@ -165,6 +199,8 @@ fvc_button = function(element, opts) {
   });
 
   table_element.delegate("tr", "click", function(event) {
+    console.log('delegate');
+    console.log(this);
     var aPos = volumeTable.fnGetPosition(this);
     var data = volumeTable.fnGetData(aPos);
     if (!opts.multi_select) {
@@ -175,13 +211,12 @@ fvc_button = function(element, opts) {
       var selected_label = header_div.find('.fvc_selected')
       selected_label.html(name + " (" + capacity + ") on " + primary_server);
 
-      fvc_instances[element.attr('id')].selected_lun_id = data.id
+      opts.selected_lun_id = data.id
 
       // TODO: a close button or something for when there are no volumes (so no 'tr')
       header_div.show();
       expander_div.slideUp();
     } else {
-      //console.log("multi select");
       var checked = $(this).find('input').attr('checked')
       $(this).find('input').attr('checked', !checked);
 
@@ -197,11 +232,10 @@ fvc_button = function(element, opts) {
     header_div.hide();
     table_element.width("100%");
     
-    expander_div.slideDown(null, function() {
-    });
-    
+    expander_div.slideDown(null, function() {});
   });
 
-  fvc_clear(element);
+  $('#' + element.attr('id')).data('volumeChooser', opts)
+  fvc_clear($('#' + element.attr('id')));
 }
 

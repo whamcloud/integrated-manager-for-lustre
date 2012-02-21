@@ -1,5 +1,6 @@
 <script>
-  var UserTab = function() {
+  var UserView = function() {
+    var initialized = false;
     function init() {
       $('#user_list').dataTable( {
         bServerSide: true,
@@ -79,6 +80,10 @@
           $('#create_user_dialog select[name=group]').prepend(option)
         });
       });
+
+      $('#create_user').click(function() {
+        UserTab.create()
+      });
     }
 
     function createUser()
@@ -108,20 +113,21 @@
       $('#user_list').dataTable().fnDraw();
     }
 
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+        reloadTable();
+      }
+    }
+
     return {
-      init: init,
+      draw: draw,
       create: createUser,
       refresh: reloadTable
     }
   }();
-
-  $(document).ready(function() {
-    UserTab.init()
-
-    $('#create_user').click(function() {
-      UserTab.create()
-    });
-  });
 </script>
 
 <h2 class='section_header'>User administration</h2>

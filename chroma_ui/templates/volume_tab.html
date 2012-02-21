@@ -1,248 +1,261 @@
 
 <script type="text/javascript">
-  $(document).ready(function() {
-    $('#btnApplyConfig').button();
-    $('#btnCancelConfig').button();
-    $('#btnApplyConfig').button('disable');
-    $('#btnCancelConfig').button('disable');
-
-    function sendUpdates(volumes, completion) {
-      if (volumes.length == 0) {
-        /* Great, I'm through sending */
-        jAlert("Update Successful");
-        $('#btnApplyConfig').button('disable');
-        $('#btnCancelConfig').button('disable');
-        /* Strictly speaking, this shouldn't change anything,
-         * but let's be certain that the display is up to date */
+  var VolumeView = function() {
+    var initialized = false;
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
         $('#volume_configuration').dataTable().fnDraw();
-        completion();
-      } else {
-        var volume = volumes[0];
-        Api.put("volume/" + volume.id + "/", volume,
-          success_callback = function(data) {
-            sendUpdates(volumes.slice(1), completion);
-          }
-        );
       }
     }
 
-    function updateVolume(confirmation_markup, volumes) {
-       $('#transition_confirmation_dialog').html(confirmation_markup);
-       $('#transition_confirmation_dialog').dialog('option', 'buttons', {
-         'Cancel': function() {$(this).dialog('close');},
-         'Confirm': 
-         {
-             text: "Confirm",
-             id: "transition_confirm_button",
-             click: function(){
-               var dialog = $(this)
-               sendUpdates(volumes, function() {dialog.dialog('close')});
-             }
-         } 
-       });
-       $('#transition_confirmation_dialog').dialog('open');
-    }
-
-    function decorateVolumeRow(volume) {
-      var blank_option = "<option value='-1'>---</option>";
-      var blank_select = "<select disabled='disabled'>" + blank_option + "</select>";
-      var primary_node_id = 0;
-      var secondary_node_id = -1;
-
-      if (volume.volume_nodes.length == 0) {
-        volume.primary_select = blank_select
-        volume.secondary_select = blank_select
-      } else if (volume.volume_nodes.length == 1) {
-        $.each(volume.volume_nodes, function(i, node) {
-          volume.primary_select = "<select id='primary_host_"+volume.id+"' disabled='disabled'><option value='" + node.id + "'>" + node.host_label + "</option></select>";
-        });
-        volume.secondary_select = blank_select
-      } else {
-        volume.primary_select = "<select id='primary_host_"+volume.id+"'>";
-        volume.secondary_select = "<select id='secondary_host_"+volume.id+"'>";
-        volume.secondary_select += blank_option
-        $.each(volume.volume_nodes, function(i, node) {
-          if (node.primary) {
-            volume.primary_select += "<option value='" + node.id + "' selected='selected'>" + node.host_label + "</option>";
-            volume.secondary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";
-            primary_node_id = node.id;
-          } else if (node.use) {
-            volume.primary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";
-            volume.secondary_select += "<option value='" + node.id + "' selected='selected'>" + node.host_label + "</option>";
-            secondary_node_id = node.id;
-          } else {
-            volume.primary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";
-            volume.secondary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";
-          }
-        });
-        volume.secondary_select += "</select>";
-        volume.primary_select += "</select>";
-      }
-
-      volume.original_ids = volume.id + "_" + primary_node_id + "_" + secondary_node_id;
-      volume.dirty_ids = volume.original_ids;
-
-      return volume;
-    }
-
-    var oVolumeConfiguration = $('#volume_configuration').dataTable( {
-      bServerSide: true,
-      sAjaxSource: 'volume/',
-      fnServerData: function (url, data, callback, settings) {
-        Api.get_datatables(url, data, function(data){
-          $.each(data.aaData, function(i, volume) {
-            volume = decorateVolumeRow(volume);
-          });
-          callback(data);
-        }, settings, {category: 'unused'});
-      },
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "iDisplayLength": 25,
-      "bAutoWidth":false,
-      "oLanguage": {
-        "sEmptyTable": "No Volumes to display"
-      },
-      "aoColumns": [
-        { "sClass": 'txtleft', mDataProp: 'label'},
-        { "sClass": 'txtleft', mDataProp: 'primary_select'},
-        { "sClass": 'txtleft', mDataProp: 'secondary_select'},
-        { "sClass": 'txtright', mDataProp: 'size'},
-        { "sClass": 'txtright', mDataProp: 'status'},
-        { "bVisible": false, mDataProp: 'original_ids'},
-        { "bVisible": false, mDataProp: 'dirty_ids'},
-      ]
-    });
-
-    $("#btnApplyConfig").click(function ()
+    function init() 
     {
-      var oSetting = $('#volume_configuration').dataTable().fnSettings();
-
-      /* FIXME: instead of letting the user set this and complaining, we should
-         prevent the user selecting this by checking in the handler for <select> changes
-         (if they select the same one then swap the values) */
-      var same_primary_secondary_error_markup = "<b>Volumes must have different primary and secondary servers</b><br /><br />"+
-      											"The following volumes have the same primary and secondary servers:<br /><br />";
-	    var same_server_error_flag = false;
-      var dirty_luns = [];
-
-      var confirmation_markup = "The following volumes will be modified:<ul>";
-      for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) 
-      {
-        var volume = oSetting.aoData[i]._aData;
-        if (volume.original_ids != volume.dirty_ids)
-        {
-          var params = volume.dirty_ids.split("_") 
-
-          // Parse out modified row
-          var id = parseInt(params[0])
-          var primary_node_id = parseInt(params[1])
-          var secondary_node_id = parseInt(params[2])
-
-          if (primary_node_id == secondary_node_id) {
-            same_primary_secondary_error_markup += "- "+volume.label+"<br />";
-            same_server_error_flag = true;
-          } else {
-            // Compose an updated volume record
-            var nodes = []
-            if (secondary_node_id != -1) {
-              nodes.push({id: secondary_node_id, 'primary': false, 'use': true})
-            }
-            nodes.push({id: primary_node_id, 'primary': true, 'use': true})
-            dirty_luns.push({
-              id: id,
-              nodes: nodes
-            })
-            confirmation_markup += "<li>"+volume.label+"</li>";
-          }
-        }
-      }
-      confirmation_markup += "</ul>"
-
-      if(same_server_error_flag) {
-        $('#volume_error_dialog').html(same_primary_secondary_error_markup);
-        $('#volume_error_dialog').dialog('open');
-      } else {
-        if(dirty_luns.length > 0) {
-          updateVolume(confirmation_markup, dirty_luns);
-        } else {
-          $('#btnApplyConfig').button('disable');
-          $('#btnCancelConfig').button('disable');
-          $('#volume_configuration').dataTable().fnDraw();
-        }
-      }
-    });
-
-    $("#btnCancelConfig").click(function ()
-    {
+      $('#btnApplyConfig').button();
+      $('#btnCancelConfig').button();
       $('#btnApplyConfig').button('disable');
       $('#btnCancelConfig').button('disable');
-      $('#volume_configuration').dataTable().fnDraw();
-    });
 
-    $('#volume_error_dialog').dialog
-    ({
-      autoOpen: false,
-      width: 500,
-      height:200,
-      show: "clip",
-      modal: true,
-      position:"center",
-      buttons: 
-      {
-	      "OK" : 
-		  {
-		      text: "OK",
-		      id: "error_ok_button",
-		      click: function(){
-	      		$(this).dialog("close");
-		      }
-          }   
-	  }
-    });
-
-    /* FIXME this selector should be more specific */
-    $('select[id *="_host"]').live('change', function ()
-    {
-      var oSetting = $('#volume_configuration').dataTable().fnSettings();
-      //Note : lun_id i storage as part of select control id E.g. primary_host_<Lun_id>
-      var lun_id = $(this).attr("id").split("_")[2];
-      for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++)
-      {
-        var volume = oSetting.aoData[i]._aData;
-        var rowParams = volume.dirty_ids.split("_");
-        var row_lun_id = rowParams[0];
-        var old_primary_node_id = rowParams[1];
-        var old_secondary_node_id =  rowParams[2];
-
-
-        if (row_lun_id != lun_id) {
-          continue;
-        }
-
-        var new_primary_node_id;
-        var new_secondary_node_id;
-        if($(this).attr("id").indexOf("primary_host") == 0)
-        {
-          new_primary_node_id  = $(this).val();
-          new_secondary_node_id = old_secondary_node_id;
-        }
-        else
-        {
-          new_secondary_node_id = $(this).val();
-          new_primary_node_id = old_primary_node_id  
-        }
-
-        volume.dirty_ids = lun_id + '_' + new_primary_node_id + '_' + new_secondary_node_id;
-        if (volume.dirty_ids != volume.original_ids) {
-          $('#btnApplyConfig').button('enable');
-          $('#btnCancelConfig').button('enable');
+      function sendUpdates(volumes, completion) {
+        if (volumes.length == 0) {
+          /* Great, I'm through sending */
+          jAlert("Update Successful");
+          $('#btnApplyConfig').button('disable');
+          $('#btnCancelConfig').button('disable');
+          /* Strictly speaking, this shouldn't change anything,
+           * but let's be certain that the display is up to date */
+          $('#volume_configuration').dataTable().fnDraw();
+          completion();
+        } else {
+          var volume = volumes[0];
+          Api.put("volume/" + volume.id + "/", volume,
+            success_callback = function(data) {
+              sendUpdates(volumes.slice(1), completion);
+            }
+          );
         }
       }
-    });
-  });
+
+      function updateVolume(confirmation_markup, volumes) {
+         $('#transition_confirmation_dialog').html(confirmation_markup);
+         $('#transition_confirmation_dialog').dialog('option', 'buttons', {
+           'Cancel': function() {$(this).dialog('close');},
+           'Confirm': 
+           {
+               text: "Confirm",
+               id: "transition_confirm_button",
+               click: function(){
+                 var dialog = $(this)
+                 sendUpdates(volumes, function() {dialog.dialog('close')});
+               }
+           } 
+         });
+         $('#transition_confirmation_dialog').dialog('open');
+      }
+
+      function decorateVolumeRow(volume) {
+        var blank_option = "<option value='-1'>---</option>";
+        var blank_select = "<select disabled='disabled'>" + blank_option + "</select>";
+        var primary_node_id = 0;
+        var secondary_node_id = -1;
+
+        if (volume.volume_nodes.length == 0) {
+          volume.primary_select = blank_select
+          volume.secondary_select = blank_select
+        } else if (volume.volume_nodes.length == 1) {
+          $.each(volume.volume_nodes, function(i, node) {
+            volume.primary_select = "<select id='primary_host_"+volume.id+"' disabled='disabled'><option value='" + node.id + "'>" + node.host_label + "</option></select>";
+          });
+          volume.secondary_select = blank_select
+        } else {
+          volume.primary_select = "<select id='primary_host_"+volume.id+"'>";
+          volume.secondary_select = "<select id='secondary_host_"+volume.id+"'>";
+          volume.secondary_select += blank_option
+          $.each(volume.volume_nodes, function(i, node) {
+            if (node.primary) {
+              volume.primary_select += "<option value='" + node.id + "' selected='selected'>" + node.host_label + "</option>";
+              volume.secondary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";
+              primary_node_id = node.id;
+            } else if (node.use) {
+              volume.primary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";
+              volume.secondary_select += "<option value='" + node.id + "' selected='selected'>" + node.host_label + "</option>";
+              secondary_node_id = node.id;
+            } else {
+              volume.primary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";
+              volume.secondary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";
+            }
+          });
+          volume.secondary_select += "</select>";
+          volume.primary_select += "</select>";
+        }
+
+        volume.original_ids = volume.id + "_" + primary_node_id + "_" + secondary_node_id;
+        volume.dirty_ids = volume.original_ids;
+
+        return volume;
+      }
+
+      var oVolumeConfiguration = $('#volume_configuration').dataTable( {
+        bServerSide: true,
+        sAjaxSource: 'volume/',
+        fnServerData: function (url, data, callback, settings) {
+          Api.get_datatables(url, data, function(data){
+            $.each(data.aaData, function(i, volume) {
+              volume = decorateVolumeRow(volume);
+            });
+            callback(data);
+          }, settings, {category: 'unused'});
+        },
+        "bProcessing": true,
+        "bJQueryUI": true,
+        "iDisplayLength": 25,
+        "bAutoWidth":false,
+        "oLanguage": {
+          "sEmptyTable": "No Volumes to display"
+        },
+        "aoColumns": [
+          { "sClass": 'txtleft', mDataProp: 'label'},
+          { "sClass": 'txtleft', mDataProp: 'primary_select'},
+          { "sClass": 'txtleft', mDataProp: 'secondary_select'},
+          { "sClass": 'txtright', mDataProp: 'size'},
+          { "sClass": 'txtright', mDataProp: 'status'},
+          { "bVisible": false, mDataProp: 'original_ids'},
+          { "bVisible": false, mDataProp: 'dirty_ids'},
+        ]
+      });
+
+      $("#btnApplyConfig").click(function ()
+      {
+        var oSetting = $('#volume_configuration').dataTable().fnSettings();
+
+        /* FIXME: instead of letting the user set this and complaining, we should
+           prevent the user selecting this by checking in the handler for <select> changes
+           (if they select the same one then swap the values) */
+        var same_primary_secondary_error_markup = "<b>Volumes must have different primary and secondary servers</b><br /><br />"+
+                              "The following volumes have the same primary and secondary servers:<br /><br />";
+        var same_server_error_flag = false;
+        var dirty_luns = [];
+
+        var confirmation_markup = "The following volumes will be modified:<ul>";
+        for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) 
+        {
+          var volume = oSetting.aoData[i]._aData;
+          if (volume.original_ids != volume.dirty_ids)
+          {
+            var params = volume.dirty_ids.split("_") 
+
+            // Parse out modified row
+            var id = parseInt(params[0])
+            var primary_node_id = parseInt(params[1])
+            var secondary_node_id = parseInt(params[2])
+
+            if (primary_node_id == secondary_node_id) {
+              same_primary_secondary_error_markup += "- "+volume.label+"<br />";
+              same_server_error_flag = true;
+            } else {
+              // Compose an updated volume record
+              var nodes = []
+              if (secondary_node_id != -1) {
+                nodes.push({id: secondary_node_id, 'primary': false, 'use': true})
+              }
+              nodes.push({id: primary_node_id, 'primary': true, 'use': true})
+              dirty_luns.push({
+                id: id,
+                nodes: nodes
+              })
+              confirmation_markup += "<li>"+volume.label+"</li>";
+            }
+          }
+        }
+        confirmation_markup += "</ul>"
+
+        if(same_server_error_flag) {
+          $('#volume_error_dialog').html(same_primary_secondary_error_markup);
+          $('#volume_error_dialog').dialog('open');
+        } else {
+          if(dirty_luns.length > 0) {
+            updateVolume(confirmation_markup, dirty_luns);
+          } else {
+            $('#btnApplyConfig').button('disable');
+            $('#btnCancelConfig').button('disable');
+            $('#volume_configuration').dataTable().fnDraw();
+          }
+        }
+      });
+
+      $("#btnCancelConfig").click(function ()
+      {
+        $('#btnApplyConfig').button('disable');
+        $('#btnCancelConfig').button('disable');
+        $('#volume_configuration').dataTable().fnDraw();
+      });
+
+      $('#volume_error_dialog').dialog
+      ({
+        autoOpen: false,
+        width: 500,
+        height:200,
+        show: "clip",
+        modal: true,
+        position:"center",
+        buttons: 
+        {
+          "OK" : 
+        {
+            text: "OK",
+            id: "error_ok_button",
+            click: function(){
+              $(this).dialog("close");
+            }
+            }   
+      }
+      });
+
+      /* FIXME this selector should be more specific */
+      $('select[id *="_host"]').live('change', function ()
+      {
+        var oSetting = $('#volume_configuration').dataTable().fnSettings();
+        //Note : lun_id i storage as part of select control id E.g. primary_host_<Lun_id>
+        var lun_id = $(this).attr("id").split("_")[2];
+        for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++)
+        {
+          var volume = oSetting.aoData[i]._aData;
+          var rowParams = volume.dirty_ids.split("_");
+          var row_lun_id = rowParams[0];
+          var old_primary_node_id = rowParams[1];
+          var old_secondary_node_id =  rowParams[2];
+
+
+          if (row_lun_id != lun_id) {
+            continue;
+          }
+
+          var new_primary_node_id;
+          var new_secondary_node_id;
+          if($(this).attr("id").indexOf("primary_host") == 0)
+          {
+            new_primary_node_id  = $(this).val();
+            new_secondary_node_id = old_secondary_node_id;
+          }
+          else
+          {
+            new_secondary_node_id = $(this).val();
+            new_primary_node_id = old_primary_node_id  
+          }
+
+          volume.dirty_ids = lun_id + '_' + new_primary_node_id + '_' + new_secondary_node_id;
+          if (volume.dirty_ids != volume.original_ids) {
+            $('#btnApplyConfig').button('enable');
+            $('#btnCancelConfig').button('enable');
+          }
+        }
+      });
+    }
+    return {draw:draw}
+  }();
 </script>
-</head>
 <h2 class='section_header'>Volume configuration</h2>
 <table class="display tight_lines" id="volume_configuration" width="100%">
   <thead>

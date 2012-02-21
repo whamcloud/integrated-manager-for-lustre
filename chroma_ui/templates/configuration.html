@@ -17,11 +17,6 @@ $(document).ajaxComplete(function() {
   $('a.button:not(.ui-button)').each(function() {
     $(this).button();
   });
-
-  $('a.address_link[address!=true]').each(function() {
-    $(this).address();
-  });
-
 });
 
 $(document).ready(function() {
@@ -36,21 +31,7 @@ $(document).ready(function() {
       var resource_name = parts[2]
       var resource_id = parts[3]
 
-      if (resource_name == 'command') {
-        var c = new Command({id: resource_id});
-        c.fetch({success: function(model, response) {
-          var mydiv = $("<div></div>")
-          mydiv.dialog({
-            buttons: [{text: "Close", class: "close", click: function(){}}],
-            width: 400
-          })
-          var cd = new CommandDetail({model: c, el: mydiv.parent()});
-          cd.render();
-          console.log(cd.el);
-        }})
 
-        return;
-      }
     }
 
     //console.log('address.change: ' + path);
@@ -111,13 +92,15 @@ $(document).ready(function() {
   });
 });
 
-  $(function() {
-    // Menu Highlighter
+  $(document).ready(function() {
     $("#tabs").tabs({
       selected: -1,
       select: function (event, ui) {
         var tab = ui.panel.id.split("-")[0];
-        Backbone.history.navigate("ui/configure/" + tab + "/", {trigger: true});
+        var path = "ui/configure/" + tab + "/";
+        if (window.location.pathname.indexOf(path) != 1) {
+          Backbone.history.navigate(path, {trigger: true});
+        }
       }
     });
 

@@ -1,4 +1,26 @@
 <script language="javascript">
+  var FilesystemDetailView = function() {
+    var initialized = false;
+    function draw(fs_id) {
+      loadFilesystem(fs_id)
+      /*
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+        $('#active_AlertContent').dataTable().fnDraw();
+      }
+      */
+    }
+
+    /*
+    function init() 
+    {
+    }
+    */
+    return {draw:draw}
+  }();
+
   function loadFilesystem(fs_id) {
     Api.get("filesystem/" + fs_id + "/", {}, 
     success_callback = function(filesystem)
