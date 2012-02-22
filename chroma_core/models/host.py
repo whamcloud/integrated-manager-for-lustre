@@ -284,7 +284,9 @@ class Lun(models.Model):
         if not queryset:
             queryset = cls.objects.all()
 
-        return queryset.filter(lunnode__managedtargetmount__target__not_deleted = None).distinct()
+        from django.db.models import Max
+        queryset = queryset.annotate(any_targets = Max('lunnode__managedtargetmount__target__not_deleted'))
+        return queryset.filter(any_targets = None)
 
     @classmethod
     def get_usable_luns(cls, queryset = None):
