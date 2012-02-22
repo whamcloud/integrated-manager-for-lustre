@@ -62,8 +62,9 @@ class CommandError(Exception):
 
 
 class ServiceConfig:
-    def try_shell(self, cmdline):
-        rc, out, err = self.shell(cmdline)
+    def try_shell(self, cmdline, mystdout = subprocess.PIPE,
+                  mystderr = subprocess.PIPE):
+        rc, out, err = self.shell(cmdline, mystdout, mystderr)
 
         if rc != 0:
             log.error("Command failed: %s" % cmdline)
@@ -74,8 +75,9 @@ class ServiceConfig:
         else:
             return rc, out, err
 
-    def shell(self, cmdline):
-        p = subprocess.Popen(cmdline, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    def shell(self, cmdline, mystdout = subprocess.PIPE,
+              mystderr = subprocess.PIPE):
+        p = subprocess.Popen(cmdline, stdout = mystdout, stderr = mystderr)
         out, err = p.communicate()
         rc = p.wait()
         return rc, out, err
@@ -153,7 +155,12 @@ class ServiceConfig:
 
         log.info("Starting RabbitMQ...")
         self.try_shell(["chkconfig", "rabbitmq-server", "on"])
-        self.try_shell(["service", "rabbitmq-server", "restart"])
+        # FIXME: there's really no sane reason to have to set the stderr and
+        #        stdout to None here except that subprocess.PIPE ends up
+        #        blocking subprocess.communicate().
+        #        we need to figure out why
+        self.try_shell(["service", "rabbitmq-server", "restart"],
+                       mystderr = None, mystdout = None)
 
         rc, out, err = self.try_shell(["rabbitmqctl", "-q", "list_users"])
         users = [line.split()[0] for line in out.split("\n") if len(line)]
