@@ -32,7 +32,11 @@
               }
               row.name = "<a class='navigation' href='ui/configure/filesystem/detail/" + row.id +"/'>" + row.name + "</a>";
               row.mgs_hostname = row.mgt.primary_server_name
-              row.mds_hostname = 
+              if (row.mdts.length > 0) {
+                row.mds_hostname = row.mdts[0].primary_server_name
+              } else {
+                row.mds_hostname = "";
+              }
               row.ost_count = row.osts.length
               row.bytes_total = formatBytes(row.bytes_total)
               row.bytes_free = formatBytes(row.bytes_free)
