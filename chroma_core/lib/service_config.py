@@ -180,16 +180,19 @@ class ServiceConfig:
         log.info("Enabling Chroma daemons")
         self.try_shell(['chkconfig', '--add', 'hydra-worker'])
         self.try_shell(['chkconfig', '--add', 'hydra-storage'])
+        self.try_shell(['chkconfig', '--add', 'hydra-host-discover'])
 
     def _start_services(self):
         log.info("Starting Chroma daemons")
         self.try_shell(['service', 'hydra-worker', 'start'])
         self.try_shell(['service', 'hydra-storage', 'start'])
+        self.try_shell(['service', 'hydra-host-discover', 'start'])
 
     def _stop_services(self):
         log.info("Stopping Chroma daemons")
         self.try_shell(['service', 'hydra-worker', 'stop'])
         self.try_shell(['service', 'hydra-storage', 'stop'])
+        self.try_shell(['service', 'hydra-host-discover', 'stop'])
 
     def _setup_mysql(self, database):
         log.info("Setting up MySQL daemon...")
@@ -298,7 +301,7 @@ class ServiceConfig:
         elif not self._users_exist():
             errors.append("No user accounts exist")
 
-        interesting_services = ['hydra-worker', 'hydra-storage', 'mysqld', 'rsyslog', 'rabbitmq-server']
+        interesting_services = ['hydra-worker', 'hydra-storage', 'hydra-host-discover', 'mysqld', 'rsyslog', 'rabbitmq-server']
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
             try:
