@@ -295,18 +295,16 @@ class Lun(models.Model):
         if not queryset:
             queryset = cls.objects.all()
 
-        # Our result will be a subset of unused_luns
-        unused_luns = cls.get_unused_luns(queryset)
-
         from django.db.models import Count, Max, Q
         # Luns are usable if they have only one LunNode (i.e. no HA available but
         # we can definitively say where it should be mounted) or if they have
         # a primary LunNode (i.e. one or more LunNodes is available and we
         # know at least where the primary mount should be)
-        return unused_luns.annotate(
+        return queryset.annotate(
+                any_targets = Max('lunnode__managedtargetmount__target__not_deleted'),
                 has_primary = Max('lunnode__primary'),
                 num_lunnodes = Count('lunnode')
-                ).filter(Q(num_lunnodes = 1) | Q(has_primary = 1.0))
+                ).filter((Q(num_lunnodes = 1) | Q(has_primary = 1.0)) & Q(any_targets = None))
 
     def get_kind(self):
         """:return: A string or unicode string which is a human readable noun corresponding
