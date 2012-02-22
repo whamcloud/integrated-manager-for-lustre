@@ -14,14 +14,16 @@
 import sys
 import os
 
-bin_dir = os.path.abspath(os.path.dirname(sys.modules['__main__'].__file__))
-project_dir = "/" + os.path.join(*(bin_dir.split(os.sep)[0:-1])) + "/hydra-server/"
-print project_dir
+project_dir = "/" + os.path.join(*(os.environ['PWD'].split(os.sep)[0:-1]))
 sys.path.append(project_dir)
 
-from django.core.management import setup_environ
-import settings
-setup_environ(settings)
+try:
+    from django.core.management import setup_environ
+    import settings
+    setup_environ(settings)
+except ImportError:
+    print "Cannot import settings from '%s', are you running from the docs/ folder?" % project_dir
+    raise
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
