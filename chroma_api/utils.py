@@ -76,6 +76,11 @@ class ConfParamResource(StatefulModelResource):
     # PUT handler for accepting {'conf_params': {}}
     def obj_update(self, bundle, request, **kwargs):
         bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
+        if hasattr(bundle.obj, 'content_type'):
+            obj = bundle.obj.downcast()
+        else:
+            obj = bundle.obj
+
         if not 'conf_params' in bundle.data:
             super(ConfParamResource, self).obj_update(bundle, request, **kwargs)
 
@@ -83,7 +88,7 @@ class ConfParamResource(StatefulModelResource):
         try:
             conf_params = bundle.data['conf_params']
             for k, v in conf_params.items():
-                chroma_core.lib.conf_param.set_conf_param(bundle.obj, k, v)
+                chroma_core.lib.conf_param.set_conf_param(obj, k, v)
         except KeyError:
             # TODO: pass in whole objects every time so that I can legitimately
             # validate the presence of this field
