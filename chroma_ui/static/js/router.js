@@ -87,7 +87,7 @@ var ChromaRouter = Backbone.Router.extend({
     $('#filesystem-tab-list').hide()
     $('#filesystem-tab-create').hide()
     $('#filesystem-tab-detail').hide()
-    console.log($('#filesystem-tab-' + page).show())
+    $('#filesystem-tab-' + page).show()
   },
   filesystemList: function() {
     this.filesystemPage('list');

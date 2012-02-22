@@ -1,4 +1,87 @@
 
+var ConfParamDialog = function(options) {
+  var el = $("<div><table width='100%' border='0' cellspacing='0' cellpadding='0'><thead><th>Property</th><th>Value</th><th></th></thead><tbody></tbody></table></div>");
+  var _options = $.extend({}, options)
+
+  el.find('table').dataTable( {
+    "iDisplayLength":30,
+    "bProcessing": true,
+    "bJQueryUI": true,
+    "bPaginate" : false,
+    "bSort": false,
+    "bFilter" : false,
+    "bAutoWidth":false,
+    "aoColumns": [
+      { "sClass": 'txtleft' },
+      { "sClass": 'txtcenter' },
+      { "bVisible": false } 
+    ]
+  });
+  el.dialog
+  ({
+    autoOpen: false,
+    width: 450,
+    height:470,
+    modal: true,
+    position:"center",
+    buttons: 
+    {
+      "Apply": function() {
+        var datatable = $(this).find('table').dataTable();
+        if (_options.url) {
+          apply_config_params(_options.url, $(this), datatable);
+        }
+      },
+      "Close": function() { 
+        $(this).dialog("close");
+      }
+    }
+  });
+
+  function open() {
+    el.dialog('open');
+  }
+
+  function set(params) {
+    populate_conf_param_table(params, el.find('table'))
+  }
+
+  function setHelp(help) {
+    var blank_data = {};
+    $.each(help, function(name, help) {
+      blank_data[name] = null;
+    });
+    populate_conf_param_table(blank_data, el.find('table'), help)
+  }
+
+  function get() {
+    var oSetting = el.find('table').dataTable().fnSettings();
+    var result = {};
+    for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
+      if(oSetting.aoData[i]._aData[2] != $("input#"+i).val()) {
+         result[oSetting.aoData[i]._aData[0]] = $("input#"+i).val();
+      }
+    }
+    return result
+  }
+
+  function clear() {
+    var oSetting = el.find('table').dataTable().fnSettings();
+    for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
+      if(oSetting.aoData[i]._aData[2] != $("input#"+i).val()) {
+         $("input#"+i).val('');
+      }
+    }
+  }
+
+  return {
+    open: open,
+    set: set,
+    setHelp: setHelp,
+    get: get,
+    clear: clear
+  }
+}
 
 stateTransitionCommit = function(url, state)
 {
@@ -117,9 +200,9 @@ function CreateMGT(lun_id, callback)
 }
 
 
-function _populate_conf_param_table(data, table_id, help)
+function _populate_conf_param_table(data, table, help)
 {
-  $('#' + table_id).dataTable().fnClearTable();
+  table.dataTable().fnClearTable();
   var property_box="";
   var text_index = 0;
   $.each(data, function(key, value)
@@ -131,7 +214,7 @@ function _populate_conf_param_table(data, table_id, help)
     property_box = "<input type=textbox value='" + value + "' id='" + text_index + 
     "' title='" + help[key] + "' onblur='validateNumber("+text_index+")'/>"; 
     text_index++;
-    $('#' + table_id).dataTable().fnAddData ([
+    table.dataTable().fnAddData ([
       key, 
       property_box,
       value
@@ -139,17 +222,17 @@ function _populate_conf_param_table(data, table_id, help)
   });
 }
 
-function populate_conf_param_table(data, table_id, help)
+function populate_conf_param_table(data, table, help)
 {
   if (help) {
-    _populate_conf_param_table(data, table_id, help);
+    _populate_conf_param_table(data, table, help);
   } else {
     var keys = [];
     for(var key in data) {
       keys.push(key);
     }
     Api.get("help/conf_param/", {keys: keys.join(",")}, success_callback = function(loaded_help) {
-      _populate_conf_param_table(data, table_id, loaded_help);
+      _populate_conf_param_table(data, table, loaded_help);
     });
   }
 }
@@ -165,7 +248,7 @@ function validateNumber(obj_id)
 }
 
 /* Read modified conf params out of datatable, PUT them to url, and close dialog_id */
-function apply_config_params(url, dialog_id, datatable)
+function apply_config_params(url, dialog, datatable)
 {
   var oSetting = datatable.fnSettings();
   var changed_conf_params = {}
@@ -200,7 +283,7 @@ function apply_config_params(url, dialog_id, datatable)
       }
     });
 
-    $('#'+dialog_id).dialog('close'); 
+    dialog.dialog('close'); 
   }
 }
 

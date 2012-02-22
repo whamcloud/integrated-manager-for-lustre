@@ -3,21 +3,23 @@
   // Globals for Create new fs Page.
   var ERR_FSNAME_EMPTY = "Please enter valid File system name";
   var ERR_OST_EMPTY = "Please select at least one device for OST creation";
-  var advanced_tab_clicked = false; 
 
   var FilesystemCreateView = function() {
     var initialized = false;
+    var advanced_tab_clicked = false; 
+    var conf_param_dialog;
+
     function draw() {
       if (!initialized) {
         init();
         initialized = true;
       } else {
-        // TODO: reload choosers
-        //fvc_clear($('#mdt_chooser'))
-        //fvc_clear($('#ost_chooser'), {multi_select: true})
+        // TODO: reload lists of volumes
         $('#mgt_chooser').volumeChooser('clear');
         $('#mdt_chooser').volumeChooser('clear');
         $('#ost_chooser').volumeChooser('clear');
+        conf_param_dialog.clear()
+        advanced_tab_clicked = false;
       }
     }
 
@@ -25,6 +27,8 @@
     {
       $('#mdt_chooser').volumeChooser();
       $('#ost_chooser').volumeChooser({multi_select: true});
+
+      conf_param_dialog = ConfParamDialog();
 
       /* Populate existing MGT list */
       Api.get("target/", {
@@ -87,22 +91,13 @@
         }
         else
         {
-          var config_json = {};
-          var oSetting = $('#config_param_table').dataTable().fnSettings();
-          for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
-            if(oSetting.aoData[i]._aData[2] != $("input#"+i).val())
-            {
-               config_json[oSetting.aoData[i]._aData[0]] = $("input#"+i).val();
-            }
-          }
-
           CreateFS(fs_name, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, function(fs_id) {
-            Backbone.history.navigate("ui/configure/filesystem/detail/" + fs_id + "/");
-          }, config_json);
+            Backbone.history.navigate("ui/configure/filesystem/detail/" + fs_id + "/", {trigger: true});
+          }, conf_param_dialog.get());
         }
       }); 
       //Advance Options button click handler.
-      $('#advance_opts').click(function()
+      $('div#filesystem_create_form button.advanced').click(function()
       {
         // If clicked first time then only fetch parameters else show already entered values
         if(!advanced_tab_clicked) {
@@ -111,18 +106,19 @@
             for(var key in help_dict) {
               data[key] = null;
             }
-            populate_conf_param_table(data, "config_param_table", help_dict);
             advanced_tab_clicked = true;
-            $('#configParam').dialog('open'); 
+            conf_param_dialog.setHelp(help_dict)
+            conf_param_dialog.open()
           })
         } else {
-          $('#configParam').dialog('open'); 
+          conf_param_dialog.open()
         }
       });
     }
     return {draw:draw}
   }();
 </script>
+<div id='filesystem_create_form'>
 <table style="font-size:12px; padding-top:15px;">
   <tr>
     <td width="30%" align="left" valign="top">
@@ -131,7 +127,7 @@
       </div>
       <div class='step_body'>
         <label>Filesystem name:</label> <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" maxlength="8"/>
-              <button class='advanced' type="button" id="advance_opts">Advanced...</button>
+        <button class='advanced' type="button">Advanced...</button>
       </div>
     </td>
   </tr>
@@ -186,4 +182,5 @@
     </td>
   </tr>
 </table>
+</div>
 

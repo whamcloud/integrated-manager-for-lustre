@@ -124,8 +124,6 @@ fvc_button = function(element, opts) {
   }
 
   var table_element = expander_div.children('table')
-  console.log('table_element = ' + table_element);
-  console.log(table_element);
   var volumeTable = table_element.dataTable({
     bServerSide: true,
     sAjaxSource: "volume/",
