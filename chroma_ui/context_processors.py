@@ -3,6 +3,8 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import settings
+
 
 def page_load_time(request):
     import time
@@ -13,3 +15,7 @@ def page_load_time(request):
     # I don't want to bring in the extra dependency.
     #from datetime import datetime
     #return {'page_load_time': datetime.now().isoformat()}
+
+
+def app_version(request):
+    return {'app_version': settings.VERSION}
