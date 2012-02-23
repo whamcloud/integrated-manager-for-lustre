@@ -142,7 +142,7 @@ class ChromaIntegrationTestCase(TestCase):
     def remote_command(self, server, command, expected_return_code=0):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(server)
+        ssh.connect(server, **{'username': 'root'})
         transport = ssh.get_transport()
         transport.set_keepalive(20)
         channel = transport.open_session()
@@ -284,6 +284,7 @@ class ChromaIntegrationTestCase(TestCase):
 
     def exercise_filesystem(self, client, filesystem_name):
         # TODO: Expand on this. Perhaps use existing lustre client tests.
+        # TODO: read back the size of the filesystem first and don't exceed its size
         self.remote_command(
             client,
             "dd if=/dev/zero of=/mnt/%s/test.dat bs=1K count=500K" % filesystem_name

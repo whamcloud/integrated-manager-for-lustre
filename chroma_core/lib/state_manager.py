@@ -94,7 +94,7 @@ class StateManager(object):
                     job_log.info("Opportunistic job %s: skipping (%s already in state %s)" % (
                         oj.pk, stateful_object, new_state))
                     oj.run = True
-                    oj.run_at = datetime.datetime.now()
+                    oj.run_at = datetime.datetime.utcnow()
                     oj.save()
                     continue
 
@@ -106,7 +106,7 @@ class StateManager(object):
                 job_log.info("Opportunistic job %s (%s) ready to run" % (oj.pk, job.description()))
                 StateManager()._add_job(job)
                 oj.run = True
-                oj.run_at = datetime.datetime.now()
+                oj.run_at = datetime.datetime.utcnow()
                 oj.save()
 
     def get_expected_state(self, stateful_object_instance):

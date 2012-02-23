@@ -9,6 +9,7 @@ from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
 
+from chroma_core.models.utils import WorkaroundDateTimeField
 from chroma_core.models.jobs import StatefulObject, Job
 from chroma_core.lib.job import StateChangeJob, DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
@@ -45,7 +46,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed', 'forgotten']
     initial_state = 'unconfigured'
 
-    last_contact = models.DateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
+    last_contact = WorkaroundDateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
 
     DEFAULT_USERNAME = 'root'
 
@@ -82,7 +83,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return False
         else:
             # Have we had contact within timeout?
-            time_since = datetime.datetime.now() - self.last_contact
+            time_since = datetime.datetime.utcnow() - self.last_contact
             return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
     def to_dict(self):
@@ -295,18 +296,16 @@ class Lun(models.Model):
         if not queryset:
             queryset = cls.objects.all()
 
-        # Our result will be a subset of unused_luns
-        unused_luns = cls.get_unused_luns(queryset)
-
         from django.db.models import Count, Max, Q
         # Luns are usable if they have only one LunNode (i.e. no HA available but
         # we can definitively say where it should be mounted) or if they have
         # a primary LunNode (i.e. one or more LunNodes is available and we
         # know at least where the primary mount should be)
-        return unused_luns.annotate(
+        return queryset.annotate(
+                any_targets = Max('lunnode__managedtargetmount__target__not_deleted'),
                 has_primary = Max('lunnode__primary'),
                 num_lunnodes = Count('lunnode')
-                ).filter(Q(num_lunnodes = 1) | Q(has_primary = 1.0))
+                ).filter((Q(num_lunnodes = 1) | Q(has_primary = 1.0)) & Q(any_targets = None))
 
     def get_kind(self):
         """:return: A string or unicode string which is a human readable noun corresponding

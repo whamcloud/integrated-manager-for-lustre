@@ -37,7 +37,7 @@ DATABASES = {
 # timezone as the operating system.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-TIME_ZONE = None
+TIME_ZONE = "UTC"
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -98,7 +98,8 @@ TEMPLATE_LOADERS = (
 
 from django.conf import global_settings
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS +\
-    ("django.core.context_processors.request",)
+    ("django.core.context_processors.request",
+     "chroma_ui.context_processors.app_version")
 
 ROOT_URLCONF = 'urls'
 

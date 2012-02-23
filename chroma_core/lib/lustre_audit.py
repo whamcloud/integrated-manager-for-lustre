@@ -72,7 +72,6 @@ class UpdateScan(object):
         self.audited_mountables = {}
         self.host = None
         self.host_data = None
-        self.update_time = None
 
     def is_valid(self):
         try:
@@ -124,7 +123,7 @@ class UpdateScan(object):
 
         if contact:
             from datetime import datetime
-            ManagedHost.objects.filter(pk = self.host.pk).update(last_contact = datetime.now())
+            ManagedHost.objects.filter(pk = self.host.pk).update(last_contact = datetime.utcnow())
 
         return contact
 
@@ -298,10 +297,10 @@ class UpdateScan(object):
         if target.state == 'forgotten':
             return 0
         else:
-            return target.downcast().metrics.update(metrics, self.update_time)
+            return target.downcast().metrics.update(metrics)
 
     def store_node_metrics(self, metrics):
-        return self.host.downcast().metrics.update(metrics, self.update_time)
+        return self.host.downcast().metrics.update(metrics)
 
     def store_metrics(self):
         """

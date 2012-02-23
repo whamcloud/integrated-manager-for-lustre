@@ -8,7 +8,7 @@ from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from picklefield.fields import PickledObjectField
 
-from chroma_core.models.utils import WorkaroundGenericForeignKey
+from chroma_core.models.utils import WorkaroundGenericForeignKey, WorkaroundDateTimeField
 #from django.contrib.contenttypes.generic import GenericForeignKey
 
 from django.db.models import Q
@@ -106,7 +106,7 @@ class Command(models.Model):
 class OpportunisticJob(models.Model):
     job = PickledObjectField()
     run = models.BooleanField(default = False)
-    run_at = models.DateTimeField(null = True, blank = True)
+    run_at = WorkaroundDateTimeField(null = True, blank = True)
 
     class Meta:
         app_label = 'chroma_core'
@@ -371,8 +371,8 @@ class Job(models.Model):
             by a user cancelling it, or if it never started because of a failed\
             dependency")
 
-    modified_at = models.DateTimeField(auto_now = True)
-    created_at = models.DateTimeField(auto_now_add = True)
+    modified_at = WorkaroundDateTimeField(auto_now = True)
+    created_at = WorkaroundDateTimeField(auto_now_add = True)
 
     wait_for_count = models.PositiveIntegerField(default = 0)
     wait_for_completions = models.PositiveIntegerField(default = 0)
@@ -736,8 +736,8 @@ class StepResult(models.Model):
 
     state = models.CharField(max_length = 32, default='incomplete')
 
-    modified_at = models.DateTimeField(auto_now = True)
-    created_at = models.DateTimeField(auto_now_add = True)
+    modified_at = WorkaroundDateTimeField(auto_now = True)
+    created_at = WorkaroundDateTimeField(auto_now_add = True)
 
     def step_number(self):
         """Template helper"""

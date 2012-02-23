@@ -33,7 +33,7 @@ from docutils.core import publish_doctree
 from django.template import Context, Template
 from sphinx.util.compat import Directive
 import os
-import simplejson
+import json
 
 
 def setup(app):
@@ -58,7 +58,7 @@ class TastyDirective(Directive):
         #publisher = Publisher()
         request = HttpRequest()
         top_level_response = api.top_level(request, None)
-        top_level_doc = simplejson.loads(top_level_response.content)
+        top_level_doc = json.loads(top_level_response.content)
 
         for name in sorted(api._registry.keys()):
             resource_dict = top_level_doc[name]

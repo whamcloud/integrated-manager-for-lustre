@@ -1,4 +1,4 @@
-"""Page Object of mgt creation"""
+"""Page Object for server operations"""
 from utils.constants import Constants
 from time import sleep
 from selenium.common.exceptions import StaleElementReferenceException
@@ -6,7 +6,7 @@ from selenium.common.exceptions import NoSuchElementException
 
 
 class Servers:
-    """ Page Object for mgt creation
+    """ Page Object for server operations
     """
     def __init__(self, driver):
         self.driver = driver
@@ -79,7 +79,7 @@ class Servers:
 
     def verify_added_server(self, host_name):
         """Returns whether newly created server is listed or not"""
-        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]")
         if len(server_list) > 0:
             for i in range(len(server_list)):
                 if server_list.__getitem__(i).text == host_name:
@@ -93,7 +93,7 @@ class Servers:
 
     def stop_lnet(self, host_name):
         """Stops LNet on the server"""
-        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]")
         if len(server_list) > 0:
             for i in range(len(server_list)):
                 if server_list.__getitem__(i).text == host_name:
@@ -103,7 +103,7 @@ class Servers:
 
     def start_lnet(self, host_name):
         """Stops LNet on the server"""
-        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]")
         if len(server_list) > 0:
             for i in range(len(server_list)):
                 if server_list.__getitem__(i).text == host_name:
@@ -113,7 +113,7 @@ class Servers:
 
     def unload_lnet(self, host_name):
         """Unloads LNet on the server"""
-        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]")
         if len(server_list) > 0:
             for i in range(len(server_list)):
                 if server_list.__getitem__(i).text == host_name:
@@ -123,7 +123,7 @@ class Servers:
 
     def load_lnet(self, host_name):
         """Loads LNet on the server"""
-        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]")
         if len(server_list) > 0:
             for i in range(len(server_list)):
                 if server_list.__getitem__(i).text == host_name:
@@ -133,7 +133,7 @@ class Servers:
 
     def remove_lnet(self, host_name):
         """Removes server"""
-        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]")
         if len(server_list) > 0:
             for i in range(len(server_list)):
                 if server_list.__getitem__(i).text == host_name:
@@ -145,7 +145,7 @@ class Servers:
 
     def get_lnet_state(self, host_name):
         """Returns LNet state"""
-        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]/span")
+        server_list = self.driver.find_elements_by_xpath("id('server_configuration_content')/tr/td[1]")
         lnet_state_text = ''
         if len(server_list) > 0:
             for i in range(len(server_list)):

@@ -4,7 +4,7 @@ from polymorphic.models import DowncastMetaclass
 from django.contrib.contenttypes.models import ContentType
 
 from chroma_core.models.event import AlertEvent
-from chroma_core.models.utils import WorkaroundGenericForeignKey
+from chroma_core.models.utils import WorkaroundGenericForeignKey, WorkaroundDateTimeField
 
 from logging import INFO, WARNING
 
@@ -20,8 +20,8 @@ class AlertState(models.Model):
     # of this when the alert_item is deleted -- do it manually
     alert_item = WorkaroundGenericForeignKey('alert_item_type', 'alert_item_id')
 
-    begin = models.DateTimeField(help_text = "Time at which the alert started")
-    end = models.DateTimeField(help_text = "Time at which the alert was resolved\
+    begin = WorkaroundDateTimeField(help_text = "Time at which the alert started")
+    end = WorkaroundDateTimeField(help_text = "Time at which the alert was resolved\
             if active is false, else time that the alert was last checked (e.g.\
             time when we last checked an offline target was still not offline)")
 
@@ -103,7 +103,7 @@ class AlertState(models.Model):
     def high(alert_klass, alert_item, **kwargs):
         import datetime
         from django.db import IntegrityError
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         try:
             alert_state = alert_klass.filter_by_item(alert_item).get(**kwargs)
             alert_state.end = now
@@ -128,7 +128,7 @@ class AlertState(models.Model):
     @classmethod
     def low(alert_klass, alert_item, **kwargs):
         import datetime
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         try:
             alert_state = alert_klass.filter_by_item(alert_item).get(**kwargs)
             alert_state.end = now
