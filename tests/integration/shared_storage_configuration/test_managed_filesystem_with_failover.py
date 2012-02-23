@@ -16,7 +16,8 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
     def test_create_filesystem_with_failover(self):
         # Add two hosts as managed hosts
-        for host_address in config['lustre_servers'].keys()[:2]:
+        for host_config in config['lustre_servers'][:2]:
+            host_address = host_config['address']
             response = self.hydra_server.post(
                 '/api/test_host/',
                 body = {'address': host_address}

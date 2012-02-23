@@ -35,14 +35,6 @@ class ChromaIntegrationTestCase(TestCase):
 
             self.wait_for_commands(hydra_server, remove_filesystem_command_ids)
 
-        # Verify there are now zero filesystems
-        response = hydra_server.get(
-            '/api/filesystem/',
-            params = {'limit': 0}
-        )
-        filesystems = response.json['objects']
-        self.assertEqual(0, len(filesystems))
-
         # Remove MGT
         response = hydra_server.get(
             '/api/target/',
@@ -60,14 +52,7 @@ class ChromaIntegrationTestCase(TestCase):
 
             self.wait_for_commands(hydra_server, remove_mgt_command_ids)
 
-        # Verify there are now zero mgts
-        response = hydra_server.get(
-            '/api/target/',
-            params = {'kind': 'MGT'}
-        )
-        mgts = response.json['objects']
-        self.assertEqual(0, len(mgts))
-
+        # Remove hosts
         response = hydra_server.get(
             '/api/host/',
             params = {'limit': 0}
@@ -76,28 +61,6 @@ class ChromaIntegrationTestCase(TestCase):
         hosts = response.json['objects']
 
         if len(hosts) > 0:
-            # Verify mgs and fs targets not in pacemaker config for hosts
-            for host in hosts:
-                for filesystem in filesystems:
-                    stdin, stdout, stderr = self.remote_command(
-                        host['address'],
-                        'crm configure show'
-                    )
-                    configuration = stdout.read()
-                    self.assertNotRegexpMatches(
-                        configuration,
-                        "location [^\n]* %s\n" % host['nodename']
-                    )
-                    self.assertNotRegexpMatches(
-                        configuration,
-                        "primitive %s-" % filesystem['name']
-                    )
-                    self.assertNotRegexpMatches(
-                        configuration,
-                        "id=\"%s-" % filesystem['name']
-                    )
-
-            # Remove hosts
             remove_host_command_ids = []
             for host in hosts:
                 response = hydra_server.delete(host['resource_uri'])
@@ -108,6 +71,31 @@ class ChromaIntegrationTestCase(TestCase):
 
             self.wait_for_commands(hydra_server, remove_host_command_ids)
 
+        self.verify_cluster_not_configured(hydra_server, hosts)
+
+    def verify_cluster_not_configured(self, hydra_server, lustre_servers):
+        """
+        Checks that the database and the hosts specified in the config
+        do not have (unremoved) targets for the filesystems specified.
+        """
+        # Verify there are zero filesystems
+        response = hydra_server.get(
+            '/api/filesystem/',
+            params = {'limit': 0}
+        )
+        self.assertTrue(response.successful, response.text)
+        filesystems = response.json['objects']
+        self.assertEqual(0, len(filesystems))
+
+        # Verify there are zero mgts
+        response = hydra_server.get(
+            '/api/target/',
+            params = {'kind': 'MGT'}
+        )
+        self.assertTrue(response.successful, response.text)
+        mgts = response.json['objects']
+        self.assertEqual(0, len(mgts))
+
         # Verify there are now zero hosts in the database.
         response = hydra_server.get(
             '/api/host/',
@@ -115,6 +103,20 @@ class ChromaIntegrationTestCase(TestCase):
         self.assertTrue(response.successful, response.text)
         hosts = response.json['objects']
         self.assertEqual(0, len(hosts))
+
+        for host in lustre_servers:
+            # Verify mgs and fs targets not in pacemaker config for hosts
+            # TODO: sort out host address and host nodename
+            stdin, stdout, stderr = self.remote_command(
+                host['address'],
+                'crm configure show'
+            )
+            configuration = stdout.read()
+            print configuration
+            self.assertNotRegexpMatches(
+                configuration,
+                "location [^\n]* %s\n" % host['nodename']
+            )
 
     def wait_for_command(self, hydra_server, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
         # TODO: More elegant timeout?
@@ -184,7 +186,10 @@ class ChromaIntegrationTestCase(TestCase):
                 # current lun node as listed in the config.
                 host_id = lun_node['host_id']
                 host_address = host_id_to_address[host_id]
-                config_device_paths = config['lustre_servers'][host_address]['device_paths']
+                host_config = [l for l in config['lustre_servers'] if l['address'] == host_address]
+                self.assertEqual(1, len(host_config))
+                host_config = host_config[0]
+                config_device_paths = host_config['device_paths']
                 config_paths = [str(p) for p in config_device_paths]
 
                 self.assertTrue(lun_node['path'] in config_paths,
