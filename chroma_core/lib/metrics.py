@@ -533,7 +533,7 @@ class FlmsDrain(object):
 
     def lock(self, req_id, expire_time=DRAIN_LOCK_TIME):
         import datetime
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
 
         lock = self.find_lock()
         if lock:
@@ -556,6 +556,7 @@ class FlmsDrain(object):
         table.  Takes no arguments, returns nothing."""
         from django.db import connection
         from django.core.exceptions import ObjectDoesNotExist
+        from r3d.exceptions import BadUpdateTime
 
         # FIXME: Should there be an upper limit to how many drained rows
         # we deal with at a time?
@@ -567,6 +568,8 @@ class FlmsDrain(object):
                 entity.metrics.update_r3d({group.insert_time: update})
             except ObjectDoesNotExist:
                 metrics_log.warn("FLMS: Discarding metrics for missing entity (deleted/forgotten?)")
+            except BadUpdateTime:
+                pass
 
             drained_rows.extend(ids)
 

@@ -9,6 +9,7 @@ from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
 
+from chroma_core.models.utils import WorkaroundDateTimeField
 from chroma_core.models.jobs import StatefulObject, Job
 from chroma_core.lib.job import StateChangeJob, DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
@@ -45,7 +46,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed', 'forgotten']
     initial_state = 'unconfigured'
 
-    last_contact = models.DateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
+    last_contact = WorkaroundDateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
 
     DEFAULT_USERNAME = 'root'
 
@@ -82,7 +83,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return False
         else:
             # Have we had contact within timeout?
-            time_since = datetime.datetime.now() - self.last_contact
+            time_since = datetime.datetime.utcnow() - self.last_contact
             return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
     def to_dict(self):

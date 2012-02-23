@@ -85,7 +85,7 @@ class JobResource(ModelResource):
             return [{'state': 'pause', 'label': 'Pause'},
                     {'state': 'cancel', 'label': 'Cancel'}]
         else:
-            raise NotImplementedError
+            raise NotImplementedError("Unknown job state %s" % job.state)
 
     def dehydrate_description(self, bundle):
         return bundle.obj.description()

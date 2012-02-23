@@ -55,7 +55,7 @@ def _complete_orphan_jobs():
     from chroma_core.models import Job
     # These are jobs which failed between tasking and tasked
     orphans = Job.objects.filter(state = 'tasking') \
-        .filter(modified_at__lt = datetime.now() - grace_period)
+        .filter(modified_at__lt = datetime.utcnow() - grace_period)
     for job in orphans:
         job_log.error("Job %d found by janitor (tasking since %s), marking errored" % (job.id, job.modified_at))
         job.complete(errored = True)
@@ -64,7 +64,7 @@ def _complete_orphan_jobs():
     # of ones that we call .cancel on, which could die after revoking their tasks in 'cancelling'
     # before they get to 'completing'
     orphans = Job.objects.filter(state = 'cancelling') \
-        .filter(modified_at__lt = datetime.now() - grace_period)
+        .filter(modified_at__lt = datetime.utcnow() - grace_period)
     for job in orphans:
         job_log.error("Job %d found by janitor (cancelling since %s), resuming" % (job.id, job.modified_at))
         job.cancel()
@@ -76,7 +76,7 @@ def _complete_orphan_jobs():
     # None when it goes cancelling->completing.
     orphans = Job.objects.filter(state = 'completing') \
         .filter(task_id = None) \
-        .filter(modified_at__lt = datetime.now() - grace_period)
+        .filter(modified_at__lt = datetime.utcnow() - grace_period)
     for job in orphans:
         job_log.error("Job %d found by janitor (completing since %s), resuming" % (job.id, job.modified_at))
         job.complete(errored = job.errored, cancelled = job.cancelled)
@@ -92,7 +92,7 @@ def _remove_old_jobs():
         max_age = None
 
     from chroma_core.models import Job
-    old_jobs = Job.objects.filter(created_at__lt = datetime.now() - timedelta(seconds = max_age))
+    old_jobs = Job.objects.filter(created_at__lt = datetime.utcnow() - timedelta(seconds = max_age))
     if old_jobs.count() > 0:
         job_log.info("Removing %d old Job objects" % old_jobs.count())
         # Jobs cannot be deleted in one go because of intra-job foreign keys

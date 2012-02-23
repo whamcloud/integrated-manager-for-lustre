@@ -7,6 +7,7 @@ from django.db import models
 
 from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState, AlertEvent
+from chroma_core.models.utils import WorkaroundDateTimeField
 
 # Our limit on the length of python names where we put
 # them in CharFields -- python doesn't impose a limit, so this
@@ -325,7 +326,7 @@ class StorageResourceStatistic(models.Model):
     resource = models.ForeignKey(StorageResourceRecord)
     resource_class_statistic = models.ForeignKey(StorageResourceClassStatistic)
 
-    timestamp = models.DateTimeField()
+    timestamp = WorkaroundDateTimeField()
     value = models.IntegerField()
 
     class Meta:

@@ -57,7 +57,6 @@ class GetFSMGSStats(RequestHandler):
 
 class GetServerStats(RequestHandler):
     def post(self, request, host_id, starttime, endtime, datafunction, fetchmetrics):
-        print "request.data = %s" % request.data
         interval = ''
         if host_id:
             host = get_object_or_404(ManagedHost, pk = host_id)
@@ -160,7 +159,7 @@ def metrics_fetch(target, target_name, target_kind, fetch_metrics, start_time, e
 
 def getstartdate(start_time):
     import datetime
-    now = lambda: datetime.datetime.now()
+    now = lambda: datetime.datetime.utcnow()
     minutes = datetime.timedelta(minutes=1)
     startdatetime = (now() - minutes * int(start_time)).isoformat()
     return _str2dt(startdatetime)
