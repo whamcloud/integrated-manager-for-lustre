@@ -100,10 +100,13 @@ def check_files(files, check):
     return result
 
 
-def main(all_files):
+def main(all_files, exclude = []):
     files = []
     if all_files:
         for root, dirs, file_names in os.walk('.'):
+            for ex in exclude:
+                if ex in dirs:
+                    dirs.remove(ex)
             for file_name in file_names:
                 files.append(os.path.join(root, file_name))
     else:
@@ -143,6 +146,16 @@ except NameError:
 
 if __name__ == '__main__':
     all_files = False
-    if len(sys.argv) > 1 and sys.argv[1] == '--all-files':
-        all_files = True
-    main(all_files)
+    exclude = ['.git']
+    print "%s %s" % (len(sys.argv), sys.argv)
+    n = 1
+    while n < len(sys.argv):
+        if sys.argv[n] == '--all-files':
+            all_files = True
+            n = n + 1
+        if sys.argv[n] == '--exclude':
+            exclude.append(sys.argv[n + 1])
+            n = n + 2
+
+    print "exclude %s" % exclude
+    main(all_files, exclude)
