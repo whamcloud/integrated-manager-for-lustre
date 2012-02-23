@@ -2,7 +2,7 @@
 # Selenium test settings (see http://wiki.whamcloud.com/display/HYD/Running+Selenium+tests)
 
 #: The URL to your Chroma server e.g. http://localhost:8000/ui/
-CHROMA_URL = None
+CHROMA_URL = 'http://115.113.226.194:9501/ui'
 
 #: Choice of browser (Chrome or Firefox)
 BROWSER = 'Chrome'

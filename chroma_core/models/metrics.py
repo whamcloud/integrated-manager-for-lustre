@@ -3,7 +3,7 @@
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
 
-from chroma_core.models.utils import WorkaroundGenericForeignKey
+from chroma_core.models.utils import WorkaroundGenericForeignKey, WorkaroundDateTimeField
 
 
 class FrontLineMetricStore(models.Model):
@@ -11,7 +11,7 @@ class FrontLineMetricStore(models.Model):
     content_type = models.ForeignKey(ContentType, null=True)
     object_id = models.PositiveIntegerField(null=True)
     content_object = WorkaroundGenericForeignKey('content_type', 'object_id')
-    insert_time = models.DateTimeField()
+    insert_time = WorkaroundDateTimeField()
     metric_name = models.CharField(max_length=255)
     metric_type = models.CharField(max_length=64)
     value = models.FloatField()

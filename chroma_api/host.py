@@ -20,13 +20,18 @@ from chroma_api import api_log
 
 
 class HostResource(MetricResource, StatefulModelResource):
+    """
+    Represents a Lustre server which Chroma server is monitoring or managing.  When PUTing, requires the ``state`` field.  When POSTing, requires the ``address`` field.
+    """
     class Meta:
         queryset = ManagedHost.objects.all()
         resource_name = 'host'
-        excludes = ['not_deleted']
+        excludes = ['not_deleted', 'agent_token']
         authentication = AnonymousAuthentication()
         authorization = DjangoAuthorization()
         ordering = ['fqdn']
+        list_allowed_methods = ['get', 'post']
+        detail_allowed_methods = ['get', 'put', 'delete']
 
         # So that we can return Commands for PUTs
         always_return_data = True
@@ -41,7 +46,7 @@ class HostResource(MetricResource, StatefulModelResource):
         # ManagedHost should be refactored so that a simple save()
         # does the job
         try:
-            bundle.obj = ManagedHost.create_from_string(bundle.data['host_name'])
+            bundle.obj = ManagedHost.create_from_string(bundle.data['address'])
         except IntegrityError, e:
             api_log.error(e)
             raise ImmediateHttpResponse(response = http.HttpBadRequest())
@@ -49,7 +54,11 @@ class HostResource(MetricResource, StatefulModelResource):
 
 
 class HostTestResource(Resource):
-    hostname = fields.CharField()
+    """
+    A request to test a potential host address for accessibility, typically
+    used prior to creating the host.  Only supports POST with the 'address' field.
+    """
+    address = fields.CharField(help_text = "Same as ``address`` field on host resource.")
 
     class Meta:
         list_allowed_methods = ['post']
@@ -61,6 +70,6 @@ class HostTestResource(Resource):
 
     def obj_create(self, bundle, request = None, **kwargs):
         from chroma_core.tasks import test_host_contact
-        host = ManagedHost(address = bundle.data['hostname'])
+        host = ManagedHost(address = bundle.data['address'])
         task = test_host_contact.delay(host)
         raise custom_response(self, request, http.HttpAccepted, {'task_id': task.task_id, 'status': task.status})

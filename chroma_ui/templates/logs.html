@@ -26,7 +26,11 @@
           maxDate: new Date()
         });
 
-        $.datepicker.setDefaults({dateFormat: 'yy-mm-dd'});
+        /*
+        $.datepicker.setDefaults({
+dateFormat: 'yy-mm-dd',
+timezoneIso8609: true
+});*/
         $('#datetime_from').datetimepicker();
         $('#datetime_to').datetimepicker();
 
@@ -49,9 +53,21 @@
               }
             });
             filter_args['host_id'] = $('#logs_hostList').val()
-            // NB $.trim is used because datetimepicker seems to append a trailing space
-            filter_args['devicereportedtime__gte'] = $.trim($('#datetime_from').val())
-            filter_args['devicereportedtime__lte'] = $.trim($('#datetime_to').val())
+
+            function timepicker_iso(element) {
+              /* Get a timezone-aware Date and then ISO-8601 format it */
+              // NB $.trim is used because datetimepicker seems to append a trailing space
+              var val_str = $.trim(element.val())
+              if (val_str) {
+                var val = new Date(val_str);
+                return val.toISOString();
+              } else {
+                return val_str;
+              }
+            }
+
+            filter_args['devicereportedtime__gte'] = timepicker_iso($('#datetime_from'))
+            filter_args['devicereportedtime__lte'] = timepicker_iso($('#datetime_to'))
             //filter_args['order_by'] = '-devicereportedtime'
 
             Api.get_datatables(url, aoData,

@@ -12,6 +12,19 @@ from tastypie.resources import ModelResource
 
 
 class StorageResourceClassResource(ModelResource):
+    """
+    A type of ``storage_resource`` which may be created.
+
+    Storage resource classes belong to a particular plugin (``plugin_name``)
+    attribute.  The name (``class_name``) is unique within that plugin
+    They provide the ``columns`` attribute to suggest which
+    resource attributes should be displayed in a tabular view, and the
+    ``fields`` attribute to describe the resource class's attributes in
+    enough to detail to present an input form.
+
+    The ``label`` attribute is a presentation helper which gives
+    a plugin-qualified name like "TestPlugin-ResourceOne".
+    """
     plugin_name = fields.CharField(attribute='storage_plugin__module_name')
     columns = fields.ListField()
     label = fields.CharField()

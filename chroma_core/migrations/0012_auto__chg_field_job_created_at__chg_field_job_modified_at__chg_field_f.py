@@ -1,22 +1,87 @@
 # encoding: utf-8
 import datetime
 from south.db import db
-from south.v2 import DataMigration
+from south.v2 import SchemaMigration
 from django.db import models
 
-class Migration(DataMigration):
+class Migration(SchemaMigration):
+
     def forwards(self, orm):
-        "Write your forwards methods here."
-        from chroma_core.models import ManagedTarget
-        try:
-            for target in ManagedTarget._base_manager.all():
-                target.lun = target.managedtargetmount_set.get(primary = True).block_device.lun
-                target.save()
-        except Exception, e:
-            print "  WARNING: This migration raised an exception which we're ignoring.\nThis probably happened because a later migration introduced\na new field which isn't available to this migration.\nThis situation is OK in the case of a new DB without any\ndata to migrate.  The exception was: \n%s" % e
+        
+        # Changing field 'Job.created_at'
+        db.alter_column('chroma_core_job', 'created_at', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')(auto_now_add=True))
+
+        # Changing field 'Job.modified_at'
+        db.alter_column('chroma_core_job', 'modified_at', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')(auto_now=True))
+
+        # Changing field 'FrontLineMetricStore.insert_time'
+        db.alter_column('chroma_core_frontlinemetricstore', 'insert_time', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')())
+
+        # Changing field 'AlertState.begin'
+        db.alter_column('chroma_core_alertstate', 'begin', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')())
+
+        # Changing field 'AlertState.end'
+        db.alter_column('chroma_core_alertstate', 'end', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')())
+
+        # Changing field 'ManagedHost.last_contact'
+        db.alter_column('chroma_core_managedhost', 'last_contact', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')(null=True))
+
+        # Changing field 'Event.created_at'
+        db.alter_column('chroma_core_event', 'created_at', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')(auto_now_add=True))
+
+        # Changing field 'OpportunisticJob.run_at'
+        db.alter_column('chroma_core_opportunisticjob', 'run_at', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')(null=True))
+
+        # Changing field 'Systemevents.receivedat'
+        db.alter_column(u'SystemEvents', 'ReceivedAt', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')(null=True, db_column='ReceivedAt'))
+
+        # Changing field 'Systemevents.devicereportedtime'
+        db.alter_column(u'SystemEvents', 'DeviceReportedTime', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')(null=True, db_column='DeviceReportedTime'))
+
+        # Changing field 'StepResult.created_at'
+        db.alter_column('chroma_core_stepresult', 'created_at', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')(auto_now_add=True))
+
+        # Changing field 'StepResult.modified_at'
+        db.alter_column('chroma_core_stepresult', 'modified_at', self.gf('chroma_core.models.utils.WorkaroundDateTimeField')(auto_now=True))
+
 
     def backwards(self, orm):
-        "Write your backwards methods here."
+        
+        # Changing field 'Job.created_at'
+        db.alter_column('chroma_core_job', 'created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True))
+
+        # Changing field 'Job.modified_at'
+        db.alter_column('chroma_core_job', 'modified_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True))
+
+        # Changing field 'FrontLineMetricStore.insert_time'
+        db.alter_column('chroma_core_frontlinemetricstore', 'insert_time', self.gf('django.db.models.fields.DateTimeField')())
+
+        # Changing field 'AlertState.begin'
+        db.alter_column('chroma_core_alertstate', 'begin', self.gf('django.db.models.fields.DateTimeField')())
+
+        # Changing field 'AlertState.end'
+        db.alter_column('chroma_core_alertstate', 'end', self.gf('django.db.models.fields.DateTimeField')())
+
+        # Changing field 'ManagedHost.last_contact'
+        db.alter_column('chroma_core_managedhost', 'last_contact', self.gf('django.db.models.fields.DateTimeField')(null=True))
+
+        # Changing field 'Event.created_at'
+        db.alter_column('chroma_core_event', 'created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True))
+
+        # Changing field 'OpportunisticJob.run_at'
+        db.alter_column('chroma_core_opportunisticjob', 'run_at', self.gf('django.db.models.fields.DateTimeField')(null=True))
+
+        # Changing field 'Systemevents.receivedat'
+        db.alter_column(u'SystemEvents', 'ReceivedAt', self.gf('django.db.models.fields.DateTimeField')(null=True, db_column='ReceivedAt'))
+
+        # Changing field 'Systemevents.devicereportedtime'
+        db.alter_column(u'SystemEvents', 'DeviceReportedTime', self.gf('django.db.models.fields.DateTimeField')(null=True, db_column='DeviceReportedTime'))
+
+        # Changing field 'StepResult.created_at'
+        db.alter_column('chroma_core_stepresult', 'created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True))
+
+        # Changing field 'StepResult.modified_at'
+        db.alter_column('chroma_core_stepresult', 'modified_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True))
 
 
     models = {
@@ -36,9 +101,9 @@ class Migration(DataMigration):
             'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
             'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
             'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'alertstate_alert_item_type'", 'to': "orm['contenttypes.ContentType']"}),
-            'begin': ('django.db.models.fields.DateTimeField', [], {}),
+            'begin': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
-            'end': ('django.db.models.fields.DateTimeField', [], {}),
+            'end': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
         },
         'chroma_core.applyconfparams': {
@@ -86,7 +151,7 @@ class Migration(DataMigration):
         'chroma_core.event': {
             'Meta': {'object_name': 'Event'},
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
-            'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'created_at': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']", 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'severity': ('django.db.models.fields.IntegerField', [], {})
@@ -101,6 +166,51 @@ class Migration(DataMigration):
             'confparam_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ConfParam']", 'unique': 'True', 'primary_key': 'True'}),
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"})
         },
+        'chroma_core.forgetfilesystemjob_available': {
+            'Meta': {'object_name': 'ForgetFilesystemJob_available', '_ormbases': ['chroma_core.Job']},
+            'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgetfilesystemjob_stopped': {
+            'Meta': {'object_name': 'ForgetFilesystemJob_stopped', '_ormbases': ['chroma_core.Job']},
+            'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgetfilesystemjob_unavailable': {
+            'Meta': {'object_name': 'ForgetFilesystemJob_unavailable', '_ormbases': ['chroma_core.Job']},
+            'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgethostjob_lnet_down': {
+            'Meta': {'object_name': 'ForgetHostJob_lnet_down', '_ormbases': ['chroma_core.Job']},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgethostjob_lnet_unloaded': {
+            'Meta': {'object_name': 'ForgetHostJob_lnet_unloaded', '_ormbases': ['chroma_core.Job']},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgethostjob_lnet_up': {
+            'Meta': {'object_name': 'ForgetHostJob_lnet_up', '_ormbases': ['chroma_core.Job']},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgethostjob_unconfigured': {
+            'Meta': {'object_name': 'ForgetHostJob_unconfigured', '_ormbases': ['chroma_core.Job']},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.forgettargetjob_mounted': {
+            'Meta': {'object_name': 'ForgetTargetJob_mounted', '_ormbases': ['chroma_core.Job']},
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
+            'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
+        },
+        'chroma_core.forgettargetjob_unmounted': {
+            'Meta': {'object_name': 'ForgetTargetJob_unmounted', '_ormbases': ['chroma_core.Job']},
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
+            'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
+        },
         'chroma_core.formattargetjob': {
             'Meta': {'object_name': 'FormatTargetJob', '_ormbases': ['chroma_core.Job']},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
@@ -111,7 +221,7 @@ class Migration(DataMigration):
             'complete': ('django.db.models.fields.BooleanField', [], {'default': 'False', 'db_index': 'True'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'insert_time': ('django.db.models.fields.DateTimeField', [], {}),
+            'insert_time': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {}),
             'metric_name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'metric_type': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
             'object_id': ('django.db.models.fields.PositiveIntegerField', [], {'null': 'True'}),
@@ -125,11 +235,11 @@ class Migration(DataMigration):
             'Meta': {'object_name': 'Job'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
-            'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'created_at': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
             'errored': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'finished_step': ('django.db.models.fields.PositiveIntegerField', [], {'default': 'None', 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'modified_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'modified_at': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'paused': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'started_step': ('django.db.models.fields.PositiveIntegerField', [], {'default': 'None', 'null': 'True', 'blank': 'True'}),
             'state': ('django.db.models.fields.CharField', [], {'default': "'pending'", 'max_length': '16'}),
@@ -153,6 +263,7 @@ class Migration(DataMigration):
             'Meta': {'object_name': 'LNetConfiguration'},
             'host': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ManagedHost']", 'unique': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.lnetofflinealert': {
@@ -193,6 +304,7 @@ class Migration(DataMigration):
             'Meta': {'object_name': 'ManagedFilesystem'},
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'mgs': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedMgs']"}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '8'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
@@ -205,7 +317,8 @@ class Migration(DataMigration):
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'fqdn': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'last_contact': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'last_contact': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {'null': 'True', 'blank': 'True'}),
             'nodename': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
@@ -231,7 +344,8 @@ class Migration(DataMigration):
             'active_mount': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTargetMount']", 'null': 'True', 'blank': 'True'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'lun': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.Lun']", 'null': 'True'}),
+            'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'lun': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.Lun']"}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '64', 'null': 'True', 'blank': 'True'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
@@ -263,7 +377,7 @@ class Migration(DataMigration):
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'job': ('picklefield.fields.PickledObjectField', [], {}),
             'run': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'run_at': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'})
+            'run_at': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {'null': 'True', 'blank': 'True'})
         },
         'chroma_core.ostconfparam': {
             'Meta': {'object_name': 'OstConfParam', '_ormbases': ['chroma_core.ConfParam']},
@@ -373,11 +487,11 @@ class Migration(DataMigration):
             'args': ('picklefield.fields.PickledObjectField', [], {}),
             'backtrace': ('django.db.models.fields.TextField', [], {}),
             'console': ('django.db.models.fields.TextField', [], {}),
-            'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'created_at': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
             'exception': ('picklefield.fields.PickledObjectField', [], {'default': 'None', 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'job': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.Job']"}),
-            'modified_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'modified_at': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'state': ('django.db.models.fields.CharField', [], {'default': "'incomplete'", 'max_length': '32'}),
             'step_count': ('django.db.models.fields.IntegerField', [], {}),
             'step_index': ('django.db.models.fields.IntegerField', [], {}),
@@ -407,6 +521,7 @@ class Migration(DataMigration):
         'chroma_core.storagepluginrecord': {
             'Meta': {'unique_together': "(('module_name',),)", 'object_name': 'StoragePluginRecord'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'internal': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'module_name': ('django.db.models.fields.CharField', [], {'max_length': '128'})
         },
         'chroma_core.storageresourcealert': {
@@ -426,7 +541,8 @@ class Migration(DataMigration):
             'Meta': {'unique_together': "(('storage_plugin', 'class_name'),)", 'object_name': 'StorageResourceClass'},
             'class_name': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'storage_plugin': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StoragePluginRecord']"})
+            'storage_plugin': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StoragePluginRecord']"}),
+            'user_creatable': ('django.db.models.fields.BooleanField', [], {'default': 'False'})
         },
         'chroma_core.storageresourceclassstatistic': {
             'Meta': {'unique_together': "(('resource_class', 'name'),)", 'object_name': 'StorageResourceClassStatistic'},
@@ -465,7 +581,7 @@ class Migration(DataMigration):
             'Meta': {'object_name': 'Systemevents', 'db_table': "u'SystemEvents'"},
             'currusage': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'db_column': "'CurrUsage'", 'blank': 'True'}),
             'customerid': ('django.db.models.fields.BigIntegerField', [], {'null': 'True', 'db_column': "'CustomerID'", 'blank': 'True'}),
-            'devicereportedtime': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'db_column': "'DeviceReportedTime'", 'blank': 'True'}),
+            'devicereportedtime': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {'null': 'True', 'db_column': "'DeviceReportedTime'", 'blank': 'True'}),
             'eventbinarydata': ('django.db.models.fields.TextField', [], {'db_column': "'EventBinaryData'", 'blank': 'True'}),
             'eventcategory': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'db_column': "'EventCategory'", 'blank': 'True'}),
             'eventid': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'db_column': "'EventID'", 'blank': 'True'}),
@@ -484,7 +600,7 @@ class Migration(DataMigration):
             'minusage': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'db_column': "'MinUsage'", 'blank': 'True'}),
             'ntseverity': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'db_column': "'NTSeverity'", 'blank': 'True'}),
             'priority': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'db_column': "'Priority'", 'blank': 'True'}),
-            'receivedat': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'db_column': "'ReceivedAt'", 'blank': 'True'}),
+            'receivedat': ('chroma_core.models.utils.WorkaroundDateTimeField', [], {'null': 'True', 'db_column': "'ReceivedAt'", 'blank': 'True'}),
             'syslogtag': ('django.db.models.fields.CharField', [], {'max_length': '60', 'db_column': "'SysLogTag'", 'blank': 'True'}),
             'systemid': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'db_column': "'SystemID'", 'blank': 'True'})
         },

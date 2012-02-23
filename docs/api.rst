@@ -12,8 +12,13 @@ the system for alert conditions and downloading performance metrics.  All functi
 provided in the standard Chroma web interface is based on this API, so anything that
 the web interface can do is also possible for third party applications.
 
+The API is based on the `REST <http://en.wikipedia.org/wiki/Representational_state_transfer>`_
+style, and uses `JSON <http://en.wikipedia.org/wiki/JSON>`_ serialization.  Some of the
+resources exposed in the API correspond to things within the Lustre filesystem, while
+others refer to Chroma-specific functionality.
+
 This document consists of a series of sections explaining how to use the API, followed
-by an `Example client`_, and a detailed `API reference`_ of all
+by an `Example client`_, and a detailed `API Reference`_ describing all
 available functionality.
 
 Prerequisites
@@ -26,11 +31,60 @@ Prerequisites
   API client, and the libraries used with your language for HTTP network
   operations and JSON serialization.
 
+Overview of Lustre filesystems in the API
+-----------------------------------------
+
+Terminology
+~~~~~~~~~~~
+
+We avoid some of the redundant terminology from manual Lustre 
+adminitration.  Especially, we avoid referring to hosts as 
+OSS, MDS or MGS -- this terminology is ambiguous as a host can
+serve targets of different types.  The Lustre specific terminology
+used in the API is:
+
+:OST: a block device formatted as an object store target
+:MDT: a block device formatted as a metadata target
+:MGT: a block device formatted as a management target
+:Filesystem: a collection of MGT, MDTs and OSTs
+
+Objects and relationships
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following objects are required for a running filesystem:
+MGT, MDT, OST (`Targets <#target>`_), `Filesystem <#filesystem>`_,
+`Volume <#volume>`_, `Volume node <#volume_node>`_, `Host <#host>`_.
+
+The order of construction permitted for API consumers is:
+
+1. Hosts
+2. Volumes and volume nodes (these are detected from hosts)
+3. MGTs (these may also be created during filesystem creation)
+4. Filesystem (includes creating an MDT and one or most OSTs)
+5. Any additional OSTs (added to an existing filesystem)
+
+The following cardinality rules are observed:
+
+* An MGT has zero or more filesystems, each filesystem belongs to one MGT.
+* A filesystem has one or more MDTs, each MDT belongs to one filesystem.
+  *(exception: a filesystem which is in the process of being deleted passes
+  through a stage where it has zero MDTs)*
+* A filesystem has one or most OSTs, each OST belongs to one filesystem.
+  *(exception: a filesystem which is in the process of being deleted passes
+  through a stage where it has zero OSTs)*
+* MDTs, MGTs and OSTs are Targets.  Targets are associated with one or more
+  primary Volume nodes, and zero or more secondary volume nodes.  Targets
+  are associated with exactly one Volume, and each volume is associated with
+  zero or one targets.
+* Volume nodes are associated with zero or one targets, exactly one volume,
+  and exactly one host.
+
+
 Fetching objects
 ----------------
 
 Access to objects such as servers, targets and filesystems is provided via meaningful URLs, for
-example access a filesystem with ID 1, we would use /api/filesystem/1/.  To read its attributes
+example access a filesystem with ID 1, we would use ``/api/filesystem/1/``.  To read its attributes
 we would use an HTTP GET operation, while to modify them we would send back a modified copy
 of the object using an HTTP PUT operation to the same URL.  The PUT verb tells the server
 that you want to modify something, the URL tells the server which object you want to modify,
@@ -38,38 +92,76 @@ and the payload contains the updated fields.  Operations using a URL for a speci
 are referred to in this document as _detail_ operations.  These operations usually
 return a single serialized object in the response.
 
-To see all the filesystems, we simply leave the /1/ off the URL and do a "GET /api/filesystem/".
+To see all the filesystems, we simply leave the /1/ off the URL and do a ``GET /api/filesystem/``.
 This type of operation is referred to in this document as a _list_ operation. 
+
+Filtering and ordering
+~~~~~~~~~~~~~~~~~~~~~~
+
+To filter on an attribute value, pass it as an argument to a GET request.  For example,
+to get targets belonging to a filesystem with ID 1, ``GET /api/target/?filesystem_id=1``
+
+Ordering of results is done using the ``order_by`` URL parameter, set to the name
+of the attribute to order by, prefixed with ``-`` to reverse the order.  For example, 
+to get all targets in reverse name order, the URL would be ``/api/target/?order_by=-name``.
+
+More advanced filtering is also possible (Note: Chroma server uses the Django framework
+to access its database, and these are `'django style' queries <https://docs.djangoproject.com/en/dev/ref/models/querysets/#field-lookups>`_).  These use double-underscore
+suffixes to field names to indicate the type of filtering, some of the commonly used filters
+are in the following list:
+
+:__in: Has one of the values in a list
+:__lt: Less than
+:__gt: Greater than
+:__lte: Less than or equal to
+:__gte: Greater than or equal to
+:__contains: Contains the string (case sensitive)
+:__icontains: Contains the string (case insensitive)
+:__startswith: Starts with the string
+:__endswith: Ends with the string
+
+For example, if an object supports ``id__in`` filtering,
+this represents an "If its ID is in this list" query.  Note that passing lists as URL 
+parameters is done by repeating the argument, so to get a list of targets 1 and 2, the
+URL would be ``/api/target/?id__in=1&id__in=2``.  
+
+See the `API Reference` for details of which attributes are permitted for ordering and
+filtering on a resource-by-resource basis.
+
 
 Encoding
 ~~~~~~~~
 
-We recommend that clients use JSON when dealing with the API.  XML can be used instead,
-but it provides no additional meaning compared with JSON, and is harder to read and debug.
-
 The API will respect the ``Accept`` header in your request.  Set this to ``application/json``
 to receive JSON responses.
 
+JSON does not define an encoding for dates and times: the Chroma API uses the `ISO8601 <http://www.w3.org/TR/NOTE-datetime>`_ format for dates and times, with the caveat that the timezone must
+be specified in values, or behaviour is undefined.
+
 You may find it useful to browse the API using a web browser.  To do this on a running
 system, first log into the Chroma web interface, and then point your browser at
-http://my-chroma-server/api/host/?format=json.  The resulting output is best browsed
-using a plugin like ``JSONView`` for Google Chrome.
-
+``http://my-chroma-server/api/host/?format=json``.  The resulting output is best browsed
+using a plugin like ``JSONView`` for Google Chrome.  Note that using ``format=json`` is
+only necessary when using a browser: your own client will set the ``Accept`` header instead.
 
 Detail responses
 ~~~~~~~~~~~~~~~~
 
-All detail methods (e.g. GET /api/host/1/) return a dict representing a single object.
+Detail GET requests (e.g. ``GET /api/host/1/``) return a dict representing a single object.
 
-Most serialized objects have at least ``resource_uri`` and ``id`` field.
+Most serialized objects have at least ``resource_uri`` and ``id`` field.  Where an object 
+has a 'human' name that is useful for presentation, this is called ``label``.
 
-Where an object has a 'human' name that is useful for presentation, this is called ``label``.
+Note that in some cases it may be necessary to manually compose the URL for an object
+based on its type and integer ID, usually when an object is provided by the server it
+is accompanied by a ``resource_uri`` attribute which should be used for subsequent
+access to the object instead of building the URL on the client.
 
 
 List responses
 ~~~~~~~~~~~~~~
 
-All list methods (e.g. GET /api/host) return a dict with 'meta' and 'objects' keys.  The
+All list methods (e.g. ``GET /api/host``) return a dict with 'meta' and 'objects' keys.  The
 'meta' key contains information about the set of objects returned, which is useful for
 pagination.
 
@@ -100,6 +192,11 @@ If you wish to obtain all objects, pass ``limit=0`` as a parameter to the reques
 
 Creating, modifying and deleting objects
 ----------------------------------------
+
+Objects are created using the POST method.  The attributes provided at creation
+time are sent as a JSON-encoded dict in the body of the POST (*not* as URL
+parameters).  If an object is successfully created, its identifier will
+be included in the response.
 
 Some resources support the PUT method to modify them.  In some cases, this
 may be a literal immediate modification of an attribute (such as altering
@@ -209,7 +306,7 @@ Sessions
 Only applies when authenticating by username and password.
 
 Before authenticating you must establish a session.  Do this by sending
-a GET to /api/session/, and including the returned ``sessionid`` cookie
+a GET to ``/api/session/``, and including the returned ``sessionid`` cookie
 in subsequent responses.
 
 CSRF
@@ -221,7 +318,7 @@ Because the API is accessed directly from a web browser, it requires CSRF
 protection.  If you do not know what CSRF is, then don't worry.  The 
 effect on API consumers is that when authenticating by username+password,
 you must accept and maintain the ``csrftoken`` cookie, which is returned
-from the same /api/session/ resource used to establish a session, and additionally
+from the same ``/api/session/`` resource used to establish a session, and additionally
 set the X-CSRFToken request header to the value of that cookie.
 
 Note that an absent or incorrect CSRF token only causes an error on POST requests.
@@ -230,19 +327,15 @@ Note that an absent or incorrect CSRF token only causes an error on POST request
 Authentication
 ~~~~~~~~~~~~~~
 
-By username and password
-________________________
+**By username and password**
+  Once a session is established, you may authenticate by POSTing to ``/api/session``
+  (see `session <#session-api-session>`_).
 
-Once a session is established, you may authenticate by POSTing to ``/api/session``
-(see api-session_).
-
-By key
-______
-
-Currently, API consumers must log in using the same username/password credentials
-used in the web interface.  This will be augmented with optional public key authentication
-in future versions.  API consumers authenticating using a key will be exempt from the 
-need to maintain a session and handle CSRF tokens.
+**By key**
+  *Currently, API consumers must log in using the same username/password credentials
+  used in the web interface.  This will be augmented with optional public key authentication
+  in future versions.  API consumers authenticating using a key will be exempt from the 
+  need to maintain a session and handle CSRF tokens.*
 
 
 
@@ -300,5 +393,10 @@ and retrieve a list of hosts.
 
 API Reference
 -------------
+
+Note: in addition to the information in this document, you may inspect the 
+available API resources and their fields on a running Chroma server.  Enumerate 
+available resources by GETing ``/api/``.  The resulting list includes links to 
+individual resource schemas like ``/api/host/schema``.
 
 .. tastydoc:: urls.api

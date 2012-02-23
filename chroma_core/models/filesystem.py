@@ -12,10 +12,11 @@ from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEnt
 class ManagedFilesystem(StatefulObject, MeasuredEntity):
     __metaclass__ = DeletableDowncastableMetaclass
 
-    name = models.CharField(max_length=8)
+    name = models.CharField(max_length=8, help_text="Lustre filesystem name, up to 8\
+            characters")
     mgs = models.ForeignKey('ManagedMgs')
 
-    states = ['unavailable', 'stopped', 'available', 'removed']
+    states = ['unavailable', 'stopped', 'available', 'removed', 'forgotten']
     initial_state = 'unavailable'
 
     def get_label(self):
@@ -220,3 +221,29 @@ class MakeAvailableFilesystemUnavailable(FilesystemJob, Job, StateChangeJob):
 
     def description(self):
         return "Make filesystem %s unavailable" % (self.filesystem.name)
+
+
+# Generate boilerplate classes for various origin->forgotten jobs.
+# This may go away as a result of work tracked in HYD-627.
+for origin in ['unavailable', 'stopped', 'available']:
+    def forget_description(self):
+        return "Removing unmanaged filesystem %s" % (self.filesystem.name)
+
+    def forget_get_steps(self):
+        return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
+
+    name = "ForgetFilesystemJob_%s" % origin
+    cls = type(name, (Job, StateChangeJob), {
+        'state_transition': (ManagedFilesystem, origin, 'forgotten'),
+        'stateful_object': 'filesystem',
+        'state_verb': "Remove",
+        'filesystem': models.ForeignKey(ManagedFilesystem),
+        'Meta': type('Meta', (object,), {'app_label': 'chroma_core'}),
+        'description': forget_description,
+        'requires_confirmation': True,
+        'get_steps': forget_get_steps,
+        '__module__': __name__,
+    })
+    import sys
+    this_module = sys.modules[__name__]
+    setattr(this_module, name, cls)

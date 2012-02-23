@@ -66,11 +66,17 @@ from tastypie.http import HttpForbidden
 
 
 class UserResource(ModelResource):
-    groups = fields.ToManyField('chroma_api.group.GroupResource', attribute = 'groups', full = True, null = True)
-    full_name = fields.CharField()
+    """
+    A user account
+    """
+    groups = fields.ToManyField('chroma_api.group.GroupResource', attribute = 'groups',
+        full = True, null = True, help_text = "List of groups that this user is a member \
+                of.  May only be modified by superusers")
+    full_name = fields.CharField(help_text = "Human readable form derived from ``first_name`` and ``last_name``")
 
-    password1 = fields.CharField()
-    password2 = fields.CharField()
+    password1 = fields.CharField(help_text = "Used for modifying password (request must be\
+            made by the same user or by a superuser")
+    password2 = fields.CharField(help_text = "Password confirmation, must match ``password1``")
 
     def hydrate_group(self, bundle):
         # Prevent non-superusers from modifying their groups
@@ -101,3 +107,5 @@ class UserResource(ModelResource):
         validation = UserValidation()
         fields = ['date_joined', 'first_name', 'full_name', 'groups', 'id', 'last_login', 'last_name', 'password1', 'password2', 'resource_uri', 'username', 'email']
         ordering = ['username', 'email']
+        list_allowed_methods = ['get', 'post']
+        detail_allowed_methods = ['get', 'put', 'delete']

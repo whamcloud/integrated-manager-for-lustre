@@ -8,7 +8,7 @@ mock
 paramiko
 pep8
 pyflakes
-south
+south==0.7.3
 sphinx
 werkzeug
 django-piston>=0.2.3

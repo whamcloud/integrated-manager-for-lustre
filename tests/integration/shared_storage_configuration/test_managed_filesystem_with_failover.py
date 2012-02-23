@@ -1,4 +1,3 @@
-import subprocess
 import time
 
 from testconfig import config
@@ -20,13 +19,16 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         for host_address in config['lustre_servers'].keys()[:2]:
             response = self.hydra_server.post(
                 '/api/test_host/',
-                body = {'hostname': host_address}
+                body = {'address': host_address}
             )
             self.assertTrue(response.successful, response.text)
+            # FIXME: test_host here isn't serving a purpose as we
+            # don't check on its result (it's asynchronous but
+            # annoyingly returns a celery task instead of a Command)
 
             response = self.hydra_server.post(
                 '/api/host/',
-                body = {'host_name': host_address}
+                body = {'address': host_address}
             )
             self.assertTrue(response.successful, response.text)
             host_id = response.json['id']
@@ -95,60 +97,14 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             time.sleep(1)
             running_time += 1
 
-        # Assert meets the minimum number of devices needed for this test.
-        self.assertGreaterEqual(len(usable_luns), 4)
-
-        # Verify no extra devices not in the config visible.
-        response = self.hydra_server.get(
-            '/api/volume_node/',
-            params = {'limit': 0}
-        )
-        self.assertTrue(response.successful, response.text)
-        lun_nodes = response.json['objects']
-
-        response = self.hydra_server.get(
-            '/api/host/',
-            params = {'limit': 0}
-        )
-        self.assertTrue(response.successful, response.text)
-        hosts = response.json['objects']
-
-        host_id_to_address = dict((h['id'], h['address']) for h in hosts)
-        usable_luns_ids = [l['id'] for l in usable_luns]
-
-        for lun_node in lun_nodes:
-            if lun_node['volume_id'] in usable_luns_ids:
-
-                # Create a list of usable device paths for the host of the
-                # current lun node as listed in the config.
-                host_id = lun_node['host_id']
-                host_address = host_id_to_address[host_id]
-                config_device_paths = config['lustre_servers'][host_address]['device_paths']
-                config_paths = [str(p) for p in config_device_paths]
-
-                self.assertTrue(lun_node['path'] in config_paths,
-                    "Path: %s Config Paths: %s" % (
-                        lun_node['path'], config_device_paths)
-                )
-
         # Create new filesystem
-        response = self.hydra_server.post(
-            '/api/filesystem/',
-            body = {
-                'name': 'testfs',
-                'mgt_id': '',
-                'mgt_lun_id': usable_luns[0]['id'],
-                'mdt_lun_id': usable_luns[1]['id'],
-                'ost_lun_ids': [str(usable_luns[2]['id']), str(usable_luns[3]['id'])],
-                'conf_params': {},
-            }
+        self.verify_usable_luns_valid(usable_luns, 4)
+        filesystem_id = self.create_filesystem(
+            name = 'testfs',
+            mgt_lun_id = usable_luns[0]['id'],
+            mdt_lun_id = usable_luns[1]['id'],
+            ost_lun_ids = [str(usable_luns[2]['id']), str(usable_luns[3]['id'])]
         )
-        self.assertTrue(response.successful, response.text)
-        command_id = response.json['command']['id']
-        filesystem_id = response.json['filesystem']['id']
-
-        # Wait for filesystem setup
-        self.wait_for_command(self.hydra_server, command_id)
 
         # Mount the filesystem
         response = self.hydra_server.get(
@@ -157,25 +113,6 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         self.assertTrue(response.successful, response.text)
         mount_command = response.json['mount_command']
 
-        process = subprocess.call(
-            'mkdir -p /mnt/testfs',
-            shell=True
-        )
-
-        process = subprocess.Popen(
-            mount_command,
-            shell=True
-        )
-        process.communicate()
-        self.assertEqual(0, process.returncode)
-
-        # TODO: Probably replace this with just writing a file in Python.
-        process = subprocess.Popen(
-            'dd if=/dev/zero of=/mnt/testfs/test.dat bs=1K count=500K',
-            shell=True,
-        )
-        process.communicate()
-        self.assertEqual(0, process.returncode)
-
-        # TODO: Verify file now on testfs filesystem. Possibly reuse
-        # some existing Lustre tests here to exercise the fs?
+        client = config['lustre_clients'].keys()[0]
+        self.mount_filesystem(client, "testfs", mount_command)
+        self.exercise_filesystem(client, "testfs")

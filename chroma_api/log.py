@@ -13,6 +13,15 @@ from chroma_api.authentication import AnonymousAuthentication
 
 
 class LogResource(ModelResource):
+    """
+    syslog messages collected by Chroma server.  The fields in this table
+    correspond to the default ``rsyslog`` MySQL output.
+
+    You are probably mainly interested in ``fromhost``, ``devicereportedtime`` and
+    ``message``.  Note that ``fromhost`` is a hostname rather than a reference to
+    the ``host`` resource -- it is not guaranteed that a host mentioned in the
+    syslog is configured as a host in Chroma server.
+    """
     def dehydrate_message(self, bundle):
         return nid_finder(bundle.obj.message)
 
@@ -27,6 +36,8 @@ class LogResource(ModelResource):
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         ordering = ['devicereportedtime', 'fromhost']
+        list_allowed_methods = ['get']
+        detail_allowed_methods = ['get']
 
     def build_filters(self, filters = None):
         # FIXME: get the UI to give us ISO8601 so that we

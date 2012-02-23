@@ -22,7 +22,8 @@ class Layout(SeleniumBaseTestCase):
         self.assertTrue(base_page_layout.logo_head_displayed())
         Log.info('Menu header present on dashboard page')
 
-        self.assertTrue(base_page_layout.signbtn_displayed())
+        base_page_layout.open_sidebar()
+        self.assertTrue(base_page_layout.sidebar_displayed())
         Log.info('Notification panel present on dashboard  page')
 
     def test_configure_header_and_notification(self):
@@ -40,7 +41,8 @@ class Layout(SeleniumBaseTestCase):
         self.assertTrue(base_page_layout.logo_head_displayed())
         Log.info('Menu header present on configure page')
 
-        self.assertTrue(base_page_layout.signbtn_displayed())
+        base_page_layout.open_sidebar()
+        self.assertTrue(base_page_layout.sidebar_displayed())
         Log.info('Notification panel present on configure page')
 
     def test_alerts_header_and_notification(self):
@@ -55,7 +57,8 @@ class Layout(SeleniumBaseTestCase):
         self.assertTrue(base_page_layout.logo_head_displayed())
         Log.info('Menu header present on alerts page')
 
-        self.assertTrue(base_page_layout.signbtn_displayed())
+        base_page_layout.open_sidebar()
+        self.assertTrue(base_page_layout.sidebar_displayed())
         Log.info('Notification panel present on alerts page')
 
     def test_events_header_and_notification(self):
@@ -70,7 +73,8 @@ class Layout(SeleniumBaseTestCase):
         self.assertTrue(base_page_layout.logo_head_displayed())
         Log.info('Menu header present on events page')
 
-        self.assertTrue(base_page_layout.signbtn_displayed())
+        base_page_layout.open_sidebar()
+        self.assertTrue(base_page_layout.sidebar_displayed())
         Log.info('Notification panel present on events page')
 
     def test_logs_header_and_notification(self):
@@ -85,7 +89,8 @@ class Layout(SeleniumBaseTestCase):
         self.assertTrue(base_page_layout.logo_head_displayed())
         Log.info('Menu header present on logs page')
 
-        self.assertTrue(base_page_layout.signbtn_displayed())
+        base_page_layout.open_sidebar()
+        self.assertTrue(base_page_layout.sidebar_displayed())
         Log.info('Notification panel present on logs page')
 
 import unittest

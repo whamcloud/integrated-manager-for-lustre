@@ -168,16 +168,14 @@ fvc_button = function(element, opts) {
     var aPos = volumeTable.fnGetPosition(this);
     var data = volumeTable.fnGetData(aPos);
     if (!opts.multi_select) {
-      //console.log("single select");
-      name = data[2];
-      capacity = data[3];
-      primary_server = data[6];
-      failover_server = data[7];
+      name = data.label;
+      capacity = data.size;
+      primary_server = data.primary_host_name;
 
       var selected_label = header_div.find('.fvc_selected')
       selected_label.html(name + " (" + capacity + ") on " + primary_server);
 
-      fvc_instances[element.attr('id')].selected_lun_id = data[0]
+      fvc_instances[element.attr('id')].selected_lun_id = data.id
 
       // TODO: a close button or something for when there are no volumes (so no 'tr')
       header_div.show();

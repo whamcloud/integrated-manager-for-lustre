@@ -9,6 +9,7 @@ from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
 
+from chroma_core.models.utils import WorkaroundDateTimeField
 from chroma_core.models.jobs import StatefulObject, Job
 from chroma_core.lib.job import StateChangeJob, DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
@@ -30,24 +31,22 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # FIXME: either need to make address non-unique, or need to
     # associate objects with a child object, because there
     # can be multiple servers on one hostname, eg ddn10ke
-
-    # A URI like ssh://user@flint02:22/
-    address = models.CharField(max_length = 255)
+    address = models.CharField(max_length = 255, help_text = "A URI like 'user@myhost.net:22'")
 
     # A fully qualified domain name like flint02.testnet
-    fqdn = models.CharField(max_length = 255, blank = True, null = True)
+    fqdn = models.CharField(max_length = 255, blank = True, null = True, help_text = "Unicode string, fully qualified domain name")
 
     # a nodename to match against fqdn in corosync output
-    nodename = models.CharField(max_length = 255, blank = True, null = True)
+    nodename = models.CharField(max_length = 255, blank = True, null = True, help_text = "Unicode string, node name")
 
     # A basic authentication mechanism
     agent_token = models.CharField(max_length = 64)
 
     # TODO: separate the LNET state [unloaded, down, up] from the host state [created, removed]
-    states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
+    states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed', 'forgotten']
     initial_state = 'unconfigured'
 
-    last_contact = models.DateTimeField(blank = True, null = True)
+    last_contact = WorkaroundDateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
 
     DEFAULT_USERNAME = 'root'
 
@@ -84,7 +83,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return False
         else:
             # Have we had contact within timeout?
-            time_since = datetime.datetime.now() - self.last_contact
+            time_since = datetime.datetime.utcnow() - self.last_contact
             return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
     def to_dict(self):
@@ -257,13 +256,20 @@ class Lun(models.Model):
 
     # Size may be null for LunNodes created when setting up
     # from a JSON file which just tells us a path.
-    size = models.BigIntegerField(blank = True, null = True)
+    size = models.BigIntegerField(blank = True, null = True,
+            help_text = "Integer number of bytes.  Can be null if this device \
+                    was manually created, rather than detected.")
 
     # Whether the originating StorageResource can be shared between hosts
     # Note: this is ultimately a hint, as it's always possible for a virtual
     # environment to trick us by showing the same IDE device to two hosts, or
     # for shared storage to not provide a serial number.
-    shareable = models.BooleanField()
+    shareable = models.BooleanField("Whether the device can potentially be \
+            shared between hosts (irrespective of whether it has been \
+            seen on multiple hosts).  This is a hint, based on whether Chroma \
+            can detect sharing on this device -- it is possible that the device \
+            is shared but Chroma can't detect the sharing (e.g. some virtualization \
+            environments)")
 
     label = models.CharField(max_length = 128)
 
@@ -279,7 +285,9 @@ class Lun(models.Model):
         if not queryset:
             queryset = cls.objects.all()
 
-        return queryset.filter(lunnode__managedtargetmount__target__not_deleted = None).distinct()
+        from django.db.models import Max
+        queryset = queryset.annotate(any_targets = Max('lunnode__managedtargetmount__target__not_deleted'))
+        return queryset.filter(any_targets = None)
 
     @classmethod
     def get_usable_luns(cls, queryset = None):
@@ -288,18 +296,16 @@ class Lun(models.Model):
         if not queryset:
             queryset = cls.objects.all()
 
-        # Our result will be a subset of unused_luns
-        unused_luns = cls.get_unused_luns(queryset)
-
         from django.db.models import Count, Max, Q
         # Luns are usable if they have only one LunNode (i.e. no HA available but
         # we can definitively say where it should be mounted) or if they have
         # a primary LunNode (i.e. one or more LunNodes is available and we
         # know at least where the primary mount should be)
-        return unused_luns.annotate(
+        return queryset.annotate(
+                any_targets = Max('lunnode__managedtargetmount__target__not_deleted'),
                 has_primary = Max('lunnode__primary'),
                 num_lunnodes = Count('lunnode')
-                ).filter(Q(num_lunnodes = 1) | Q(has_primary = 1.0))
+                ).filter((Q(num_lunnodes = 1) | Q(has_primary = 1.0)) & Q(any_targets = None))
 
     def get_kind(self):
         """:return: A string or unicode string which is a human readable noun corresponding
@@ -353,10 +359,13 @@ class Lun(models.Model):
          * is the configuration (if present) HA?
          by returning one of 'unconfigured', 'configured-ha', 'configured-noha'
         """
+        lunnode_count = self.lunnode_set.count()
         if not self.shareable:
-            return 'configured-noha'
+            if lunnode_count > 0:
+                return 'configured-noha'
+            else:
+                return 'unconfigured'
         else:
-            lunnode_count = self.lunnode_set.count()
             primary_count = self.lunnode_set.filter(primary = True).count()
             failover_count = self.lunnode_set.filter(primary = False, use = True).count()
             if lunnode_count == 1 and primary_count == 0:
@@ -375,18 +384,18 @@ class Lun(models.Model):
 class LunNode(models.Model):
     lun = models.ForeignKey(Lun)
     host = models.ForeignKey(ManagedHost)
-    path = models.CharField(max_length = 512)
+    path = models.CharField(max_length = 512, help_text = "Device node path, e.g. '/dev/sda/'")
 
     __metaclass__ = DeletableMetaclass
 
     storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
 
-    # Whether this LunNode should be used as the primary mount point
-    # for targets created on this Lun
-    primary = models.BooleanField(default = False)
-    # Whether this LunNode should be used at all for targets created
-    # on this Lun
-    use = models.BooleanField(default = True)
+    primary = models.BooleanField(default = False, help_text = "Whether this node should\
+            be used for the primary Lustre server when creating a target")
+
+    use = models.BooleanField(default = True, help_text = "Whether this node should \
+            be used as a Lustre server when creating a target (if primary is not set,\
+            this node will be used as a secondary server")
 
     class Meta:
         unique_together = ('host', 'path')
@@ -522,7 +531,16 @@ class ConfigureRsyslogStep(Step):
 
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "configure-rsyslog --node %s" % hostname)
+        try:
+            self.invoke_agent(host, "configure-rsyslog --node %s" % hostname)
+        except RuntimeError, e:
+            # FIXME: Would be smarter to detect capabilities before
+            # trying to run things which may break.  Don't want to do it
+            # every time, though, because it adds an extra round trip for
+            # every step.  Maybe we should serialize the audited
+            # capabilities in a new ManagedHost field? (HYD-638)
+            from chroma_core.lib.job import job_log
+            job_log.error("Failed to configure rsyslog on %s: %s" % (host, e))
 
 
 class UnconfigureRsyslogStep(Step):
@@ -788,3 +806,30 @@ class RemoveHostJob(Job, StateChangeJob):
     def get_steps(self):
         return [(RemoveServerConfStep, {'host_id': self.host.id}),
                 (DeleteHostStep, {'host_id': self.host.id})]
+
+
+# Generate boilerplate classes for various origin->forgotten jobs.
+# This may go away as a result of work tracked in HYD-627.
+for origin in ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up']:
+    def forget_description(self):
+        return "Removing unmanaged host %s" % (self.host.downcast())
+
+    def forget_get_steps(self):
+        return [(RemoveServerConfStep, {'host_id': self.host.id}),
+                (DeleteHostStep, {'host_id': self.host.id})]
+
+    name = "ForgetHostJob_%s" % origin
+    cls = type(name, (Job, StateChangeJob), {
+        'state_transition': (ManagedHost, origin, 'forgotten'),
+        'stateful_object': 'host',
+        'state_verb': "Remove",
+        'host': models.ForeignKey(ManagedHost),
+        'Meta': type('Meta', (object,), {'app_label': 'chroma_core'}),
+        'description': forget_description,
+        'requires_confirmation': True,
+        'get_steps': forget_get_steps,
+        '__module__': __name__,
+    })
+    import sys
+    this_module = sys.modules[__name__]
+    setattr(this_module, name, cls)

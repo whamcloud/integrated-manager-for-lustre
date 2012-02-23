@@ -34,7 +34,14 @@ stateTransition = function (url, state)
      $('#transition_confirmation_dialog').html(confirmation_markup);
      $('#transition_confirmation_dialog').dialog('option', 'buttons', {
        'Cancel': function() {$(this).dialog('close');},
-       'Confirm': function() {stateTransitionCommit(url, state);$(this).dialog('close');}
+       'Confirm': 
+       {
+           text: "Confirm",
+           id: "transition_confirm_button",
+           click: function(){
+               stateTransitionCommit(url, state);$(this).dialog('close');
+           }
+       }
      });
      $('#transition_confirmation_dialog').dialog('open');
     } else {

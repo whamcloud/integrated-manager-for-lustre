@@ -94,7 +94,7 @@ class StateManager(object):
                     job_log.info("Opportunistic job %s: skipping (%s already in state %s)" % (
                         oj.pk, stateful_object, new_state))
                     oj.run = True
-                    oj.run_at = datetime.datetime.now()
+                    oj.run_at = datetime.datetime.utcnow()
                     oj.save()
                     continue
 
@@ -106,7 +106,7 @@ class StateManager(object):
                 job_log.info("Opportunistic job %s (%s) ready to run" % (oj.pk, job.description()))
                 StateManager()._add_job(job)
                 oj.run = True
-                oj.run_at = datetime.datetime.now()
+                oj.run_at = datetime.datetime.utcnow()
                 oj.save()
 
     def get_expected_state(self, stateful_object_instance):
@@ -329,7 +329,7 @@ class StateManager(object):
                 command.save()
                 if instance.state != new_state:
                     # This is a no-op because of an in-progress Job:
-                    job = StateWriteLock.filter_by_locked_item.filter(~Q(job__state = 'complete')).latest('id').job
+                    job = StateWriteLock.filter_by_locked_item().filter(~Q(job__state = 'complete')).latest('id').job
                     command.jobs.add(job)
 
             # Pick out whichever job made it so, and attach that to the Command

@@ -13,9 +13,23 @@ from tastypie import fields
 
 
 class VolumeNodeResource(ModelResource):
-    volume_id = fields.IntegerField(attribute = 'lun_id')
-    host_id = fields.IntegerField()
-    host_label = fields.CharField()
+    """
+    Represents a device node on a particular host, which
+    accesses a particular volume.  Usually accessed
+    as an attribute of a volume rather than on its own.
+
+    This resource cannot be written to directly.  To update
+    ``use`` and ``primary``, PUT to the volume that the
+    node belongs to.
+    """
+
+    volume_id = fields.IntegerField(attribute = 'lun_id',
+            help_text = "id of the volume that this node belongs to")
+    host_id = fields.IntegerField(help_text = "id if the host that this\
+            device node is on")
+    host_label = fields.CharField(help_text = "label attribute of the \
+            host that this device node is on, as a convenience \
+            for presentation")
 
     def dehydrate_host_id(self, bundle):
         return bundle.obj.host.id
@@ -29,3 +43,5 @@ class VolumeNodeResource(ModelResource):
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         excludes = ['not_deleted', 'lun_id']
+        list_allowed_methods = ['get']
+        detail_allowed_methods = ['get']
