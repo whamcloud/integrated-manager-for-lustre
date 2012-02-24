@@ -48,20 +48,26 @@ class StatefulModelResource(ModelResource):
     # PUT handler for accepting {'state': 'foo', 'dry_run': <true|false>}
     def obj_update(self, bundle, request, **kwargs):
         bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
+
+        if hasattr(bundle.obj, 'content_type'):
+            stateful_object = bundle.obj.downcast()
+        else:
+            stateful_object = bundle.obj
+
         dry_run = bundle.data.get('dry_run', False)
         new_state = bundle.data['state']
 
         if dry_run:
             # FIXME: should this be a GET to something like /foo/transitions/from/to/
             #        to get information about that transition?
-            if bundle.obj.state == new_state:
+            if stateful_object.state == new_state:
                 report = []
             else:
-                report = StateManager().get_transition_consequences(bundle.obj, new_state)
+                report = StateManager().get_transition_consequences(stateful_object, new_state)
             raise custom_response(self, request, http.HttpResponse, report)
         else:
             from chroma_core.models import Command
-            command = Command.set_state(bundle.obj, new_state)
+            command = Command.set_state(stateful_object, new_state)
             raise custom_response(self, request, http.HttpAccepted,
                     {'command': dehydrate_command(command)})
 
