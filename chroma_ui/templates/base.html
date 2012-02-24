@@ -111,7 +111,7 @@
           <div>
             <h4>Arguments</h4>
 <pre class='console'>
-<%= step.args %>
+<%= JSON.stringify(step.args) %>
 </pre>
             <h4>Console</h4>
 <pre class='console'>
@@ -123,7 +123,7 @@
 </pre>
             <h4>Backtrace</h4>
 <pre class='console'>
-<%= step.bactrace %>
+<%= step.backtrace %>
 </pre>
           </div>
           <% }); %>
