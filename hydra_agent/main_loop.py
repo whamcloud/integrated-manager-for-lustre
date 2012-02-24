@@ -7,6 +7,7 @@ import traceback
 import datetime
 
 from hydra_agent.actions.avahi_publish import ZeroconfService
+from hydra_agent.actions.avahi_publish import ZeroconfServiceException
 
 daemon_log = logging.getLogger('daemon')
 daemon_log.setLevel(logging.INFO)
@@ -93,12 +94,26 @@ def run_main_loop(args):
         daemon_log.addHandler(logging.StreamHandler())
         daemon_log.info("Starting in the foreground")
 
-    # Before entering the main loop, advertize ourselves
-    # using Avahi (call this only once per process)
-    service = ZeroconfService(name="%s" % os.uname()[1], port=22)
-    service.publish()
-    # don't need to call service.unpublish() since the service
-    # will be unpublished when this daemon exits
+    if args.publish_zconf:
+        # Before entering the main loop, advertize ourselves
+        # using Avahi (call this only once per process)
+        service = ZeroconfService(name="%s" % os.uname()[1], port=22)
+        try:
+            service.publish()
+        except ZeroconfServiceException, e:
+            daemon_log.error("Could not publish the host with Zeroconf: Avahi is not running.  Exiting.")
+            if context:
+                context.close()
+            sys.exit(-1)
+        except Exception, e:
+            exc_info = sys.exc_info()
+            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            msg = "Error creating Zeroconf publisher: %s\n\n%s" % (e, backtrace)
+            daemon_log.error(msg)
+            raise RuntimeError(msg)
+
+        # don't need to call service.unpublish() since the service
+        # will be unpublished when this daemon exits
 
     try:
         retry_main_loop()

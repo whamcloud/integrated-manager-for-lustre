@@ -26,6 +26,7 @@ def main():
     p = subparsers.add_parser("daemon",
                               help="start daemon (publish with Avahi)")
     p.add_argument("--foreground", action="store_true")
+    p.add_argument("--publish-zconf", action="store_true")
     p.set_defaults(func=hydra_agent.main_loop.run_main_loop)
 
     try:
