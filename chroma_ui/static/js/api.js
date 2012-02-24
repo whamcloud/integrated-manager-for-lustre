@@ -17,7 +17,20 @@ Backbone.sync = function(method, model, options) {
     outer_success.apply(outer_this, arguments);
   }
 
-  Backbone.base_sync.apply(this, [method, model, options])
+  var getValue = function(object, prop) {
+    if (!(object && object[prop])) return null;
+    return _.isFunction(object[prop]) ? object[prop]() : object[prop];
+  };
+  var url = options.url || getValue(model, 'url') || urlError();
+  var data = options.data || JSON.stringify(model.toJSON());
+  var type = {
+    'create': 'POST',
+    'update': 'PUT',
+    'delete': 'DELETE',
+    'read':   'GET'
+  }[method]
+
+  Api.call(type, url, data, success_callback = options.success);
 }
 
 

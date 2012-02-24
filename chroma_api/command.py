@@ -25,4 +25,5 @@ class CommandResource(ModelResource):
         queryset = Command.objects.all()
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get']
+        ordering = ['created_at']
         filtering = {'complete': ['exact'], 'id': ['exact', 'in']}

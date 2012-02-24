@@ -56,6 +56,7 @@ import chroma_api.alert
 import chroma_api.event
 import chroma_api.log
 import chroma_api.job
+import chroma_api.step
 import chroma_api.command
 import chroma_api.help
 
@@ -85,6 +86,7 @@ api.register(chroma_api.group.GroupResource())
 api.register(chroma_api.alert.AlertResource())
 api.register(chroma_api.event.EventResource())
 api.register(chroma_api.job.JobResource())
+api.register(chroma_api.step.StepResource())
 api.register(chroma_api.log.LogResource())
 api.register(chroma_api.command.CommandResource())
 api.register(chroma_api.help.HelpResource())

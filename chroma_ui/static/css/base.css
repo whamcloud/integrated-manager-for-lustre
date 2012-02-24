@@ -812,7 +812,8 @@ table.validated_form input.error {
 div.command_job_list {
   font-size: 9pt;
 }
-div.command_job_list ul {
+
+ul.job {
   list-style-type: none;
   padding-left: 12px;
   margin-top: 0px;
@@ -828,3 +829,28 @@ div.command_job_list span.job_description {
   padding-left: 2px;
 }
 
+div.dialog_tabs {
+    /*height: 100%;*/
+}
+
+div.job_step_list h3 a {
+  text-decoration: none;
+  font-size: 11pt;
+}
+
+div.job_step_list h3 img {
+  margin-right: 6px;
+}
+
+span.job_row img {
+  margin-right: 6px;
+}
+
+div.job_summary {
+  margin-bottom: 12px;
+}
+
+div.job_summary ul {
+  list-style-type: none;
+  padding-left: 6px;
+}

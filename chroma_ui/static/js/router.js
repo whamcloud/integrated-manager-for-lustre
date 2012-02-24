@@ -7,23 +7,40 @@ var ChromaRouter = Backbone.Router.extend({
     "ui/configure/:tab/": "configure",
     "ui/configure/": "configureIndex",
     "ui/dashboard/": "dashboard",
-    "ui/command/:id/": 'command',
+    "ui/command/:id/": 'command_detail',
+    "ui/job/:id/": 'job_detail',
     "ui/": "dashboard",
     "ui/alert/": "alert",
     "ui/event/": "event",
     "ui/log/": "log",
   },
-  command: function(id) 
+  command_detail: function(id) 
   {
     var c = new Command({id: id});
     c.fetch({success: function(model, response) {
       var mydiv = $("<div></div>")
       mydiv.dialog({
         buttons: [{text: "Close", class: "close", click: function(){}}],
-        width: 400
+        width: 400,
+        modal: true
       })
       var cd = new CommandDetail({model: c, el: mydiv.parent()});
       cd.render();
+    }})
+  },
+  job_detail: function(id) 
+  {
+    var j = new Job({id: id});
+    j.fetch({success: function(model, response) {
+      var dialog = $("<div></div>")
+      dialog.dialog({
+        buttons: [{text: "Close", class: "close", click: function(){}}],
+        width: 600,
+        height: 600,
+        modal: true
+      })
+      var view = new JobDetail({model: j, el: dialog.parent()})
+      view.render();
     }})
   },
   alert: function()
@@ -66,7 +83,6 @@ var ChromaRouter = Backbone.Router.extend({
     $("#tabs").tabs('select', '#' + tab + "-tab");
   },
   configure: function(tab) {
-    console.log('configure ' + tab);
     this.configureTab(tab)
     if (tab == 'filesystem') {
       this.filesystemList();
@@ -98,7 +114,6 @@ var ChromaRouter = Backbone.Router.extend({
     FilesystemDetailView.draw(id)
   },
   filesystemCreate: function() {
-    console.log('create');
     this.filesystemPage('create');
     FilesystemCreateView.draw()
   },

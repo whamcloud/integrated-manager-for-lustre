@@ -50,6 +50,7 @@ class Command(models.Model):
     message = models.CharField(max_length = 512,
             help_text = "Human readable string about one sentence long describing\
             the action being done by the command")
+    created_at = WorkaroundDateTimeField(auto_now_add = True)
 
     def to_dict(self):
         jobs = None
@@ -725,16 +726,23 @@ class Job(models.Model):
 class StepResult(models.Model):
     job = models.ForeignKey(Job)
     step_klass = PickledObjectField()
-    args = PickledObjectField()
+    args = PickledObjectField(help_text = 'Dictionary of arguments to this step')
 
-    step_index = models.IntegerField()
-    step_count = models.IntegerField()
+    step_index = models.IntegerField(help_text = "Zero-based index of this step within the steps of\
+            a job.  If a step is retried, then two steps can have the same index for the same job.")
+    step_count = models.IntegerField(help_text = "Number of steps in this job")
 
-    console = models.TextField()
+    console = models.TextField(help_text = "For debugging: combined standard out and standard error from all\
+            subprocesses run while completing this step.  This includes output from successful\
+            as well as unsuccessful commands, and may be very verbose.")
     exception = PickledObjectField(blank = True, null = True, default = None)
-    backtrace = models.TextField()
+    backtrace = models.TextField(help_text = "Backtrace of an exception, if the exception occurred\
+            locally on the server.  Exceptions which occur remotely include the backtrace in the\
+            ``exception`` field")
 
-    state = models.CharField(max_length = 32, default='incomplete')
+    # FIXME: we should have a 'cancelled' state for when a step
+    # is running while its job is cancelled
+    state = models.CharField(max_length = 32, default='incomplete', help_text = 'One of incomplete, failed, success')
 
     modified_at = WorkaroundDateTimeField(auto_now = True)
     created_at = WorkaroundDateTimeField(auto_now_add = True)

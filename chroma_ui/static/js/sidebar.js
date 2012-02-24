@@ -44,6 +44,20 @@ var Sidebar = function(){
     }
   }
 
+  function commandIcon(command)
+  {
+    var prefix = "/static/images/";
+    if(!command.complete) {
+      return prefix + "ajax-loader.gif"
+    } else if (command.errored) {
+        return prefix + "dialog-error.png"
+    } else if (command.cancelled) {
+        return prefix + "gtk-cancel.png"
+    } else {
+        return prefix + "dialog_correct.png"
+    }
+  }
+
   function alertIcon(a)
   {
     return "/static/images/dialog-warning.png";
@@ -62,7 +76,6 @@ var Sidebar = function(){
   }
 
   function init() {
-    console.log('init');
     $("div#sidebar div#accordion").accordion({
       fillSpace: true,
       collapsible: true,
@@ -73,29 +86,25 @@ var Sidebar = function(){
         } else if (active == 1) {
           $('div.leftpanel table#events').dataTable().fnDraw();
         } else if (active == 2) {
-          $('div.leftpanel table#jobs').dataTable().fnDraw();
+          $('div.leftpanel table.commands').dataTable().fnDraw();
         } else {
           throw "Unknown accordion index " + active
         }
       }
     });
 
-    smallTable($('div.leftpanel table#jobs'), 'job/',
+    smallTable($('div.leftpanel table.commands'), 'command/',
       {order_by: "-created_at"},
-      function(job) {
-        job.icon = "<img src='" + jobIcon(job) + "'/>"
-        job.buttons = ""
-        $.each(job.available_transitions, function(i, transition) {
-          /* TODO: use job URL */
-          /* FIXME: relying on global function */
-          job.buttons += "<input type='button' class='ui-button ui-state-default ui-corner-all ui-button-text-only notification_job_buttons' onclick=setJobState("+job.id+",'"+transition.state+"') value="+transition.label+" />";
-        });
-        job.text = ellipsize(job.description) + "<br>" + shortLocalTime(job.created_at)
+      function(command) {
+        command.icon = "<img src='" + commandIcon(command) + "'/>"
+        // TODO: cancelling jobs within commands (and commands themselves?)
+        command.text = ellipsize(command.message) + "<br>" + shortLocalTime(command.created_at)
+        command.buttons = "<a class='navigation' href='/ui/command/" + command.id + "/'>Open</a>";
       },
       [
         { "sClass": 'icon_column', "mDataProp":"icon", bSortable: false },
         { "sClass": 'txtleft', "mDataProp":"text", bSortable: false },
-        { "sClass": 'txtleft', "mDataProp":"buttons", bSortable: false },
+        { "sClass": 'txtleft', 'mDataProp': 'buttons', bSortable: false },
       ]
     );
 
@@ -125,7 +134,7 @@ var Sidebar = function(){
       ]
     );
 
-    intialized = true;
+    initialized = true;
   }
 
   function smallTable(element, url, kwargs, row_fn, columns, emptyText) {

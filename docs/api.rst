@@ -399,4 +399,4 @@ available API resources and their fields on a running Chroma server.  Enumerate
 available resources by GETing ``/api/``.  The resulting list includes links to 
 individual resource schemas like ``/api/host/schema``.
 
-.. tastydoc:: urls.api
+.. tastydoc:: chroma_api.urls.api

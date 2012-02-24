@@ -85,6 +85,9 @@ class JobResource(ModelResource):
             lambda bundle: bundle.obj.command_set.all(), null = True,
             help_text = "Commands which require this job to complete\
             sucessfully in order to succeed themselves")
+    steps = fields.ToManyField('chroma_api.step.StepResource',
+            lambda bundle: bundle.obj.stepresult_set.all(), null = True,
+            help_text = "Steps executed within this job")
 
     available_transitions = fields.DictField()
 

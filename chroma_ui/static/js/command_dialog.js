@@ -1,40 +1,42 @@
 
-var Job = Backbone.Model.extend({
-  urlRoot: "/api/job/",
-  fetch: function(options) {
-    var outer_success = options.success;
-    options.success = function(model, response) {
-      if (outer_success) {
-        outer_success(model, repsonse)
-      }
-    }
-
-    Backbone.Model.prototype.fetch.apply(this, [options])
-  },
-
-  initialize: function(attributes) {
-    var icon;
-    if (attributes.state == 'pending') {
-      icon = "/static/images/icon_hourglass.png"
-    } else if (attributes.state == 'complete') {
-      if (attributes.cancelled) {
-        icon = "/static/images/gtk-cancel.png"
-      } else if (attributes.errored) {
-        icon = "/static/images/dialog-error.png"
-      } else {
-        icon = "/static/images/icon_tick.png"
-      }
+/* Subclass of Backbone.Collection which provides
+ * methods for working with URIs instead of IDs */
+var UriCollection = Backbone.Collection.extend({
+  fetch_uris: function(uris, success) {
+    var ids = [];
+    $.each(uris, function(i, uri) {
+      var tokens = uri.split("/")
+      var id = tokens[tokens.length - 2]
+      ids.push(id);
+    });
+    if (ids.length) {
+      this.fetch({data: {limit: 0, id__in: ids}, success: success})
     } else {
-      icon = "/static/images/ajax-loader.gif"
+      success()
     }
-    this.set('icon', icon)
   }
 });
 
-var JobCollection = Backbone.Collection.extend({
+var Job = Backbone.Model.extend({
+  urlRoot: "/api/job/"
+});
+
+var JobCollection = UriCollection.extend({
   model: Job,
-  url: "/api/job/"
+  url: "/api/job/",
+
 })
+
+var Step = Backbone.Model.extend({
+  urlRoot: "/api/step/",
+});
+
+var StepCollection = UriCollection.extend({
+  model: Step,
+  url: "/api/step/"
+})
+
+
 
 var Command = Backbone.Model.extend({
   jobTree: function(jobs) {
@@ -153,6 +155,13 @@ var CommandDetail = Backbone.View.extend({
   },
   template: _.template($('#command_detail_template').html()),
   render: function() {
+    if (this.model.attributes.jobs.length == 1) {
+      // Special case for single-job commands, jump straight to
+      // the details for that job
+      var job_id = this.model.attributes.jobs[0].split("/")[3]
+      Backbone.history.navigate("ui/job/" + job_id + "/", {trigger: true})
+      this.remove();
+    }
     var rendered = this.template(this.model.toJSON());
     $(this.el).find('.ui-dialog-content').html(rendered)
     return this;
@@ -161,3 +170,46 @@ var CommandDetail = Backbone.View.extend({
     this.remove();
   }
 });
+
+
+var JobDetail = Backbone.View.extend({
+  className: 'job_dialog',
+  events: {
+    "click button.close": "close"
+  },
+  template: _.template($('#job_detail_template').html()),
+  render: function() {
+    var el = $(this.el)
+    var model = this.model;
+    var template = this.template
+
+    var steps = new StepCollection();
+    steps.fetch_uris(model.attributes.steps, function() {
+      var job = model.toJSON();
+      job.steps = steps.toJSON();
+      var wait_for = new JobCollection();
+
+      wait_for.fetch_uris(model.attributes.wait_for, function() {
+        job.wait_for = wait_for.toJSON();
+
+        var rendered = template({job: job});
+        el.find('.ui-dialog-content').html(rendered)
+        el.find('.dialog_tabs').tabs();
+        if (job.wait_for.length == 0) {
+          el.find('.dialog_tabs').tabs('disable', 'dependencies');
+        }
+        if (job.steps.length > 1) {
+          el.find('.job_step_list').accordion({collapsible: true});
+        }
+      });
+    });
+
+    return this;
+  },
+  close: function() {
+    this.remove();
+  }
+});
+
+var JobCache = new JobCollection();
+
