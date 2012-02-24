@@ -550,7 +550,7 @@ class MountStep(AnyTargetMountStep):
             target.set_active_mount(target.managedtargetmount_set.get(host = started_on))
         except ManagedTargetMount.DoesNotExist:
             job_log.error("Target %s (%s) found on host %s (%s), which has no ManagedTargetMount for this target" % (target, target_id, started_on, started_on.pk))
-            raise
+            raise RuntimeError("Target %s reported as running on %s, but it is not configured there" % (target, started_on))
 
 
 class StartTargetJob(Job, StateChangeJob):
