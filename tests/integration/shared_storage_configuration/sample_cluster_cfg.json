@@ -7,8 +7,10 @@
             ]
         }
     ],
-    "lustre_servers": {
-        "lustre1": {
+    "lustre_servers": [
+        {
+            "address": "lustre1",
+            "nodename": "lustre1",
             "device_paths": [
                 "/dev/sdb",
                 "/dev/sdc",
@@ -18,7 +20,9 @@
                 "/dev/sdg"
             ]
         },
-        "lustre2": {
+        {
+            "address": "lustre2",
+            "nodename": "lustre2",
             "device_paths": [
                 "/dev/sdb",
                 "/dev/sdc",
@@ -28,7 +32,7 @@
                 "/dev/sdg"
             ]
         }
-    },
+    ],
     "lustre_clients": {
         "dev": {}
     }

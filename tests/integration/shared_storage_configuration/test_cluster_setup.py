@@ -18,8 +18,8 @@ class TestClusterSetup(TestCase):
         self.assertGreaterEqual(len(config['lustre_servers']), 2)
 
         # Verify we have at least 4 device nodes on each host.
-        for address in config['lustre_servers'].iterkeys():
-            device_paths = config['lustre_servers'][address]['device_paths']
+        for host_config in config['lustre_servers']:
+            device_paths = host_config['device_paths']
             self.assertGreaterEqual(len(set(device_paths)), 4)
 
         self.assertGreaterEqual(len(config['lustre_clients']), 1)

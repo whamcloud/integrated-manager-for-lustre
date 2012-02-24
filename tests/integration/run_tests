@@ -1,0 +1,64 @@
+#!/bin/bash
+
+export FORCED=false
+export CONFIG_FILE=tests/integration/shared_storage_configuration/sample_cluster_cfg.json
+while getopts "tc:f" opt
+do
+    case $opt in
+        f)
+            export FORCED=true
+            ;;
+        c)
+            export CONFIG_FILE="$OPTARG"
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+done
+shift $(( OPTIND -1 ))
+
+if [ $# -eq 1 ];
+    then
+        export TEST_DIR=$@
+    else
+        echo "Please specify which cluster configuration you want to run tests for."
+        exit 1
+fi
+
+echo "----------------------------------------------------------------------"
+echo "Checking cluster configuration with config file: $CONFIG_FILE"
+echo "----------------------------------------------------------------------"
+
+if [ -e "$TEST_DIR/test_cluster_setup.py" ]
+    then
+        nosetests --verbosity=2 "$TEST_DIR/test_cluster_setup.py" --tc-format=json --tc-file="$CONFIG_FILE"
+
+        # If the cluster isn't set up properly, just exit and don't execute the tests.
+        cluster_setup_status=$?
+        if [ "$cluster_setup_status" -ne "0" ]; then
+            exit $cluster_status_status
+        fi
+    else
+        echo "No test_cluster_setup.* found, continuing..."
+fi
+
+if ! $FORCED
+    then
+        echo "----------------------------------------------------------------------"
+        echo "Checking that cluster is not already configured..."
+        echo "----------------------------------------------------------------------"
+        nosetests tests/integration/core/verify_cluster_not_configured.py --tc-format=json --tc-file="$CONFIG_FILE" #2> /dev/null
+        if [ "$?" -ne "0" ]
+        then
+            echo ""
+            read -p "*****YOUR CLUSTER IS NOT EMPTY! Running integration tests may wipe all hosts and/or targets for the hydra-server specified in your config file for this cluster. Press [Enter] to continue on with the tests..."
+        fi
+fi
+
+echo "----------------------------------------------------------------------"
+echo "Running tests in $TEST_DIR"
+echo "----------------------------------------------------------------------"
+
+nosetests --verbosity=2 $TEST_DIR --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE"
