@@ -231,7 +231,7 @@ var CommandNotification = function() {
       persist = false;
     }
 
-    Tooltip.message("<a class='navigation' href='ui/command/" + command.id + "/'>" + header + "</a>", command.message, persist, theme)
+    Tooltip.message("<a class='navigation' href='command/" + command.id + "/'>" + header + "</a>", command.message, persist, theme)
   }
 
   function update()

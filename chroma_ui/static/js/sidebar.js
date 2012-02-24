@@ -99,7 +99,7 @@ var Sidebar = function(){
         command.icon = "<img src='" + commandIcon(command) + "'/>"
         // TODO: cancelling jobs within commands (and commands themselves?)
         command.text = ellipsize(command.message) + "<br>" + shortLocalTime(command.created_at)
-        command.buttons = "<a class='navigation' href='/ui/command/" + command.id + "/'>Open</a>";
+        command.buttons = "<a class='navigation' href='/command/" + command.id + "/'>Open</a>";
       },
       [
         { "sClass": 'icon_column', "mDataProp":"icon", bSortable: false },

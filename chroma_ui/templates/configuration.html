@@ -22,7 +22,7 @@
       selected: -1,
       select: function (event, ui) {
         var tab = ui.panel.id.split("-")[0];
-        var path = "ui/configure/" + tab + "/";
+        var path = "configure/" + tab + "/";
         if (window.location.pathname.indexOf(path) != 1) {
           Backbone.history.navigate(path, {trigger: true});
         }
@@ -30,7 +30,7 @@
     });
 
     new ChromaRouter();
-    Backbone.history.start({pushState: true})
+    Backbone.history.start({root: "/ui/", pushState: true})
   });    
 
 

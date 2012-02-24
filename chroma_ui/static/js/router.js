@@ -8,18 +8,18 @@
  */
 var ChromaRouter = Backbone.Router.extend({
   routes: {
-    "ui/configure/filesystem/detail/:id/": "filesystemDetail",
-    "ui/configure/filesystem/list/": "filesystemList",
-    "ui/configure/filesystem/create/": "filesystemCreate",
-    "ui/configure/:tab/": "configure",
-    "ui/configure/": "configureIndex",
-    "ui/dashboard/": "dashboard",
-    "ui/command/:id/": 'command_detail',
-    "ui/job/:id/": 'job_detail',
-    "ui/": "dashboard",
-    "ui/alert/": "alert",
-    "ui/event/": "event",
-    "ui/log/": "log",
+    "configure/filesystem/detail/:id/": "filesystemDetail",
+    "configure/filesystem/list/": "filesystemList",
+    "configure/filesystem/create/": "filesystemCreate",
+    "configure/:tab/": "configure",
+    "configure/": "configureIndex",
+    "dashboard/": "dashboard",
+    "command/:id/": 'command_detail',
+    "job/:id/": 'job_detail',
+    "": "dashboard",
+    "alert/": "alert",
+    "event/": "event",
+    "log/": "log",
   },
   command_detail: function(id) 
   {

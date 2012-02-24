@@ -159,7 +159,7 @@ var CommandDetail = Backbone.View.extend({
       // Special case for single-job commands, jump straight to
       // the details for that job
       var job_id = this.model.attributes.jobs[0].split("/")[3]
-      Backbone.history.navigate("ui/job/" + job_id + "/", {trigger: true})
+      Backbone.history.navigate("job/" + job_id + "/", {trigger: true})
       this.remove();
     }
     var rendered = this.template(this.model.toJSON());

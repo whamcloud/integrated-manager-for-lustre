@@ -98,7 +98,7 @@
         else
         {
           CreateFS(fs_name, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, function(fs_id) {
-            Backbone.history.navigate("ui/configure/filesystem/detail/" + fs_id + "/", {trigger: true});
+            Backbone.history.navigate("configure/filesystem/detail/" + fs_id + "/", {trigger: true});
           }, conf_param_dialog.get());
         }
       }); 
