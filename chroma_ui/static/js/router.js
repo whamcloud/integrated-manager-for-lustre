@@ -1,4 +1,11 @@
 
+
+/* FIXME: if router callbacks throw an exception when called
+ * as a result of Backbone.history.navigate({trigger:true}),
+ * the exception isn't visible at the console, and the URL
+ * just gets appended to window.location.href.  Is this a
+ * backbone bug?  Should we override History to fix this?
+ */
 var ChromaRouter = Backbone.Router.extend({
   routes: {
     "ui/configure/filesystem/detail/:id/": "filesystemDetail",

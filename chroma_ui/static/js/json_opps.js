@@ -187,16 +187,6 @@ function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, 
   });
 }
 
-function CreateOSTs(fs_id, ost_lun_ids)
-{
-  Api.post("target/", {kind: 'OST', filesystem_id: fs_id, lun_ids: ost_lun_ids},
-  success_callback = function(data)
-  {
-    //Reload table with latest ost's.
-    LoadTargets_EditFS(fs_id);
-  });
-}
-
 function CreateMGT(lun_id, callback)
 {
   Api.post("target/", {kind: 'MGT', lun_ids: [lun_id]},

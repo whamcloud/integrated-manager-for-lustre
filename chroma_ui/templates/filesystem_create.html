@@ -8,6 +8,7 @@
     var initialized = false;
     var advanced_tab_clicked = false; 
     var conf_param_dialog;
+    var volume_chooser_store;
 
     function draw() {
       if (!initialized) {
@@ -25,8 +26,17 @@
 
     function init() 
     {
-      $('#mdt_chooser').volumeChooser();
-      $('#ost_chooser').volumeChooser({multi_select: true});
+      volume_chooser_store = VolumeChooserStore();
+      volume_chooser_store.load(function() {
+        $('#mdt_chooser').volumeChooser({store: volume_chooser_store});
+        $('#ost_chooser').volumeChooser({store: volume_chooser_store, multi_select: true});
+        $('#mgt_chooser').volumeChooser({
+          store: volume_chooser_store,
+          change: function() {
+            $('#mgt_existing_dropdown').val('');
+          }
+        });
+      });
 
       conf_param_dialog = ConfParamDialog();
 
@@ -52,11 +62,7 @@
         }
       );
 
-      $('#mgt_chooser').volumeChooser({
-        change: function() {
-          $('#mgt_existing_dropdown').val('');
-        }
-      });
+
 
       $('#mgt_existing_dropdown').change(function() {
         if ($('#mgt_existing_dropdown option:selected').val()) {

@@ -1,6 +1,7 @@
 <script>
   var MgtView = function() {
     var initialized = false;
+    var volume_chooser_store;
     function draw() {
       if (!initialized) {
         init();
@@ -51,17 +52,21 @@
       } );
 
       $('#btnNewMGT').attr('disabled', true);
-      fvc_button($('#new_mgt_chooser'), {
-        change: function() {
-          var val = fvc_get_value($('#new_mgt_chooser'));
-          $('#btnNewMGT').button('option', 'disabled', val == null);
-        }
+      volume_chooser_store = VolumeChooserStore();
+      volume_chooser_store.load(function() {
+        $('#new_mgt_chooser').volumeChooser({
+          store: volume_chooser_store,
+          change: function() {
+            var val = $('#new_mgt_chooser').volumeChooser('val');
+            $('#btnNewMGT').button('option', 'disabled', val == null);
+          }
+        });
       });
 
       $('#btnNewMGT').click(function(){
-        CreateMGT(fvc_get_value($('#new_mgt_chooser')), function() {
-          //console.log('callback');
-          fvc_clear($('#new_mgt_chooser'));
+        var volume_id = $('#new_mgt_chooser').volumeChooser('val');
+        CreateMGT(volume_id, function() {
+          $('#new_mgt_chooser').volumeChooser('clear');
           $('#mgt_configuration').dataTable().fnDraw();
         })
       });

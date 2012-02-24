@@ -3,18 +3,20 @@
     var initialized = false;
     var fs_id;
     var conf_param_dialog;
+    var volume_chooser_store;
 
     function draw(id) {
       if (!initialized) {
         init();
         initialized = true;
+      } else{
+        $('#new_ost_chooser').volumeChooser('clear');
+        $('#ost').dataTable().fnClearTable();
+        $('#mdt').dataTable().fnClearTable();
+        $('#mgt_configuration_view').dataTable().fnClearTable();
       }
 
       fs_id = id;
-      $('#new_ost_chooser').volumeChooser('clear');
-      $('#ost').dataTable().fnClearTable();
-      $('#mdt').dataTable().fnClearTable();
-      $('#mgt_configuration_view').dataTable().fnClearTable();
       loadFilesystem();
     }
 
@@ -25,7 +27,10 @@
       });
 
       // Create new OST button click handler. 
-      $('#new_ost_chooser').volumeChooser({multi_select: true});
+      volume_chooser_store = VolumeChooserStore();
+      volume_chooser_store.load(function() {
+        $('#new_ost_chooser').volumeChooser({multi_select: true, store: volume_chooser_store});
+      });
       $('#btnNewOST').click(function() {
         $('#new_ost_dialog').dialog('open');
         $('#new_ost_dialog').find('table').width("100%");
@@ -46,8 +51,17 @@
             id: "ost_ok_button",
             click: function(){
               var ost_lun_ids = $('#new_ost_chooser').volumeChooser('val');
-              CreateOSTs(fs_id, ost_lun_ids);
-              $(this).dialog("close");
+              var dialog = $(this)
+              Api.post("target/", {kind: 'OST', filesystem_id: fs_id, lun_ids: ost_lun_ids},
+                success_callback = function(data)
+                {
+                  //Reload table with latest ost's.
+                  $('#ost').dataTable().fnClearTable();
+                  $('#mdt').dataTable().fnClearTable();
+                  $('#mgt_configuration_view').dataTable().fnClearTable();
+                  loadFilesystemTargets();
+                  dialog.dialog("close");
+                });
             }
           },
           "Cancel": function() { 
@@ -172,11 +186,11 @@
 
 <div style='float:left; margin-left: 12px;'>
   <div id="editfs_space_usage"></div>
-  <p align=center><span id="bytes_used"/>/<span id="bytes_total"/></p>
+  <p align=center><span id="bytes_used"></span>/<span id="bytes_total"></span></p>
 </div>
 <div style='float:left; margin-left: 12px;'>
   <div id="editfs_inode_usage"></div>
-  <p align=center><span id="inodes_used"/>/<span id="inodes_total"/>&nbsp;inodes</p>
+  <p align=center><span id="inodes_used"></span>/<span id="inodes_total"></span>&nbsp;inodes</p>
 </div>
 
 <div style='clear:both;'></div>
