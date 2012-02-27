@@ -42,22 +42,6 @@ class ManagedTargetMount(models.Model):
     def device(self):
         return self.block_device.path
 
-    def status_string(self):
-        from chroma_core.models import TargetRecoveryAlert
-        in_recovery = (TargetRecoveryAlert.filter_by_item(self.target).count() > 0)
-        if self.target.active_mount == self:
-            if in_recovery:
-                return "RECOVERY"
-            elif self.primary:
-                return "STARTED"
-            else:
-                return "FAILOVER"
-        else:
-            if self.primary:
-                return "OFFLINE"
-            else:
-                return "SPARE"
-
     def pretty_block_device(self):
         # Truncate to iSCSI iqn if possible
         parts = self.block_device.path.split("-iscsi-")

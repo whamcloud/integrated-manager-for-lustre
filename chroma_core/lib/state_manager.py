@@ -289,7 +289,7 @@ class StateManager(object):
             })
         return depended_jobs
 
-    def set_state(self, instance, new_state, command_id):
+    def set_state(self, instance, new_state, command_id = None):
         """Return a Job or None if the object is already in new_state.
         command_id should refer to a command instance or be None."""
         from chroma_core.models import StatefulObject, Command

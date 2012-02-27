@@ -48,20 +48,6 @@ class ManagedTarget(StatefulObject):
     def secondary_servers(self):
         return [tm.host for tm in self.managedtargetmount_set.filter(primary = False)]
 
-    def status_string(self, mount_statuses = None):
-        if mount_statuses == None:
-            mount_statuses = dict([(m, m.status_string()) for m in self.managedtargetmount_set.all()])
-
-        if "STARTED" in mount_statuses.values():
-            return "STARTED"
-        elif "RECOVERY" in mount_statuses.values():
-            return "RECOVERY"
-        elif "FAILOVER" in mount_statuses.values():
-            return "FAILOVER"
-        else:
-            return "STOPPED"
-        # TODO: give statuses that reflect primary/secondaryness for FAILOVER
-
     def get_param(self, key):
         params = self.targetparam_set.filter(key = key)
         return [p.value for p in params]

@@ -86,16 +86,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             time_since = datetime.datetime.utcnow() - self.last_contact
             return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
-    def to_dict(self):
-        from django.contrib.contenttypes.models import ContentType
-        return {'id': self.id,
-                'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
-                'pretty_name': self.pretty_name(),
-                'address': self.address,
-                'kind': self.role(),
-                'lnet_state': self.state,
-                'status': self.status_string()}
-
     @classmethod
     def create_from_string(cls, address_string, virtual_machine = None):
         # Single transaction for creating Host and related database objects
@@ -181,22 +171,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return "Unused"
         else:
             return "/".join(roles)
-
-    def status_string(self, targetmount_statuses = None):
-        if targetmount_statuses == None:
-            targetmount_statuses = dict([(tm, tm.status_string()) for tm in self.managedtargetmount_set.all()])
-
-        tm_states = set(targetmount_statuses.values())
-
-        from chroma_core.models import AlertState, HostContactAlert, LNetOfflineAlert
-        alerts = AlertState.filter_by_item(self)
-        alert_klasses = [a.__class__ for a in alerts]
-        if HostContactAlert in alert_klasses:
-            return "OFFLINE"
-        elif LNetOfflineAlert in alert_klasses or not (set(["STARTED", "SPARE"]) >= tm_states):
-            return "WARNING"
-        else:
-            return "OK"
 
     def ssh_params(self):
         if self.address.find("@") != -1:
@@ -340,18 +314,6 @@ class Lun(models.Model):
         self.label = self._get_label()
         super(Lun, self,).save(*args, **kwargs)
 
-    def to_dict(self):
-        from chroma_core.lib.util import sizeof_fmt
-        return {
-                 'id': self.id,
-                 'name': self.get_label(),
-                 'kind': self.get_kind(),
-                 'nodes': [n.to_dict() for n in self.lunnode_set.all()],
-                 # FIXME: should format this in the display layer
-                 'size': sizeof_fmt(self.size),
-                 'status': self.ha_status()
-               }
-
     def ha_status(self):
         """Tell the caller two things:
          * is the Lun configured enough for use as a target?
@@ -402,20 +364,6 @@ class LunNode(models.Model):
 
     def __str__(self):
         return "%s:%s" % (self.host, self.path)
-
-    def to_dict(self):
-        from django.contrib.contenttypes.models import ContentType
-        return {
-            'id': self.id,
-            'host_id': self.host.id,
-            'host_label': self.host.__str__(),
-            'use': self.use,
-            'primary': self.primary,
-            'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
-            'pretty_string': self.pretty_string(),
-            'volume_id': self.lun_id,
-            'path': self.path
-        }
 
     def pretty_string(self):
         from chroma_core.lib.util import sizeof_fmt

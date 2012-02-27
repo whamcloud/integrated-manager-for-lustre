@@ -52,19 +52,6 @@ class Command(models.Model):
             the action being done by the command")
     created_at = WorkaroundDateTimeField(auto_now_add = True)
 
-    def to_dict(self):
-        jobs = None
-        if self.jobs_created:
-            jobs = [j.id for j in self.jobs.all()],
-        return {
-                "id": self.id,
-                "complete": self.complete,
-                "errored": self.errored,
-                "cancelled": self.cancelled,
-                "jobs": jobs,
-                "message": self.message
-               }
-
     @classmethod
     def set_state(cls, objects, message = None):
         """The states argument must be a collection of 2-tuples
@@ -107,7 +94,8 @@ class Command(models.Model):
                     if async_result.ready():
                         complete = True
                     transaction.commit()
-            command_id = async_result.get()
+
+        command_id = async_result.get()
 
         return Command.objects.get(pk = command_id)
 
@@ -330,11 +318,6 @@ class StateLock(models.Model):
     locked_item_id = models.PositiveIntegerField()
     locked_item = WorkaroundGenericForeignKey('locked_item_type', 'locked_item_id')
 
-    def to_dict(self):
-        return {'id': self.id,
-                'locked_item_id': self.locked_item_id,
-                'locked_item_content_type_id': self.locked_item_type_id}
-
     class Meta:
         app_label = 'chroma_core'
 
@@ -407,30 +390,6 @@ class Job(models.Model):
     #: Whether the job should be added to opportunistic Job queue if it doesn't run
     #  successfully.
     opportunistic_retry = False
-
-    def to_dict(self):
-        from chroma_core.lib.util import time_str
-        read_locks = []
-        write_locks = []
-        for lock in self.statelock_set.all():
-            if lock.content_type == ContentType.objects.get_for_model(StateReadLock):
-                read_locks.append(lock.to_dict())
-            elif lock.content_type == ContentType.objects.get_for_model(StateWriteLock):
-                write_locks.append(lock.to_dict())
-            else:
-                raise NotImplementedError
-
-        return {
-         'id': self.id,
-         'state': self.state,
-         'errored': self.errored,
-         'cancelled': self.cancelled,
-         'created_at': time_str(self.created_at),
-         'modified_at': time_str(self.modified_at),
-         'description': self.description(),
-         'read_locks': read_locks,
-         'write_locks': write_locks
-        }
 
     class Meta:
         app_label = 'chroma_core'
