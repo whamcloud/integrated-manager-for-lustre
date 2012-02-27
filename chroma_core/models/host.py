@@ -123,9 +123,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                     virtual_machine = virtual_machine)
 
         # Attempt some initial setup jobs
-        from chroma_core.lib.state_manager import StateManager
-        StateManager.set_state(host, 'lnet_unloaded')
-        StateManager.set_state(lnet_configuration, 'nids_known')
+        from chroma_core.models.jobs import Command
+        Command.set_state([(host, 'lnet_unloaded'), (lnet_configuration, 'nids_known')], "Setting up host %s" % address_string)
 
         return host
 

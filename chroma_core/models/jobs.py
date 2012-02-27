@@ -66,8 +66,15 @@ class Command(models.Model):
                }
 
     @classmethod
-    def set_state(cls, object, state, message = None):
-        if object.state == state:
+    def set_state(cls, objects, message = None):
+        """The states argument must be a collection of 2-tuples
+        of (<StatefulObject instance>, state)"""
+        dirty = False
+        for object, state in objects:
+            if object.state != state:
+                dirty = True
+                break
+        if not dirty:
             return None
 
         if not message:
@@ -78,27 +85,31 @@ class Command(models.Model):
             job = Transition(object, route[-2], route[-1]).to_job()
             message = job.description()
 
-        with transaction.commit_on_success():
-            command = Command.objects.create(message = message)
+        object_ids = [(ContentType.objects.get_for_model(object).natural_key(), object.id, state) for object, state in objects]
 
-        # FIXME: Troublesome: if we crash here, the Command will be
-        # in the DB, but the jobs will never make it.
+        from chroma_core.tasks import command_set_state
+        async_result = command_set_state.delay(
+                object_ids,
+                message)
 
-        from chroma_core.lib.state_manager import StateManager
-        async_result = StateManager.set_state(object, state, command.pk)
+        from celery.result import EagerResult
+        if isinstance(async_result, EagerResult):
+            # Allow eager execution for testing
+            from chroma_core.lib.job import job_log
+            job_log.debug("Command.set_state running eagerly '%s'", message)
+        else:
+            # Rely on server to time out the request if this takes too
+            # long for some reason
+            complete = False
+            while not complete:
+                with transaction.commit_manually():
+                    transaction.commit()
+                    if async_result.ready():
+                        complete = True
+                    transaction.commit()
+            command_id = async_result.get()
 
-        # Rely on server to time out the request if this takes too
-        # long for some reason
-        complete = False
-        while not complete:
-            with transaction.commit_manually():
-                transaction.commit()
-                if async_result.ready():
-                    complete = True
-                transaction.commit()
-        command = Command.objects.get(pk = command.pk)
-
-        return command
+        return Command.objects.get(pk = command_id)
 
     class Meta:
         app_label = 'chroma_core'

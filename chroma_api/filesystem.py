@@ -126,7 +126,7 @@ class FilesystemResource(ConfParamResource):
         # Important that a commit happens here so that the targets
         # land in DB before the set_state jobs act upon them.
 
-        command = Command.set_state(fs, 'available', "Creating filesystem %s" % fsname)
+        command = Command.set_state([(fs, 'available')], "Creating filesystem %s" % fsname)
 
         filesystem_data = self.full_dehydrate(self.build_bundle(obj = fs)).data
 

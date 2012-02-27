@@ -225,7 +225,7 @@ class StateManager(object):
         for dependency in job.get_deps().all():
             if not dependency.satisfied():
                 job_log.info("_add_job: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
-                self._set_state(dependency.get_stateful_object(), dependency.preferred_state, None)
+                self.set_state(dependency.get_stateful_object(), dependency.preferred_state, None)
 
         job_log.info("_add_job: done checking dependencies")
         # Important: the Job must not be committed until all
@@ -238,20 +238,6 @@ class StateManager(object):
 
         from chroma_core.models import Job
         Job.run_next()
-
-    @classmethod
-    def set_state(cls, instance, new_state, command_id = None):
-        """Add a 0 or more Jobs to have 'instance' reach 'new_state'"""
-        import chroma_core.tasks
-        from django.contrib.contenttypes.models import ContentType
-        job_log.info("StateManager.set_state %s %s" % (instance, new_state))
-        if new_state not in instance.states:
-            raise RuntimeError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
-        return chroma_core.tasks.set_state.delay(
-                ContentType.objects.get_for_model(instance).natural_key(),
-                instance.id,
-                new_state,
-                command_id)
 
     def get_transition_consequences(self, instance, new_state):
         """For use in the UI, for warning the user when an
@@ -303,12 +289,12 @@ class StateManager(object):
             })
         return depended_jobs
 
-    def _set_state(self, instance, new_state, command_id):
+    def set_state(self, instance, new_state, command_id):
         """Return a Job or None if the object is already in new_state.
         command_id should refer to a command instance or be None."""
         from chroma_core.models import StatefulObject, Command
         assert(isinstance(instance, StatefulObject))
-        job_log.debug("_set_state %s %s" % (instance, new_state))
+        job_log.debug("set_state %s %s" % (instance, new_state))
 
         # Work out the eventual states (and which writelock'ing job to depend on to
         # ensure that state) from all non-'complete' jobs in the queue
@@ -329,7 +315,7 @@ class StateManager(object):
                 command.save()
                 if instance.state != new_state:
                     # This is a no-op because of an in-progress Job:
-                    job = StateWriteLock.filter_by_locked_item().filter(~Q(job__state = 'complete')).latest('id').job
+                    job = StateWriteLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).latest('id').job
                     command.jobs.add(job)
 
             # Pick out whichever job made it so, and attach that to the Command

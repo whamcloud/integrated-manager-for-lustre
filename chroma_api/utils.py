@@ -67,14 +67,14 @@ class StatefulModelResource(ModelResource):
             raise custom_response(self, request, http.HttpResponse, report)
         else:
             from chroma_core.models import Command
-            command = Command.set_state(stateful_object, new_state)
+            command = Command.set_state([(stateful_object, new_state)])
             raise custom_response(self, request, http.HttpAccepted,
                     {'command': dehydrate_command(command)})
 
     def obj_delete(self, request = None, **kwargs):
         obj = self.obj_get(request, **kwargs)
         from chroma_core.models import Command
-        command = Command.set_state(obj, 'removed')
+        command = Command.set_state([(obj, 'removed')])
         raise custom_response(self, request, http.HttpAccepted,
                 {'command': dehydrate_command(command)})
 

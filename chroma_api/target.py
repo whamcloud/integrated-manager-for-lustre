@@ -11,7 +11,6 @@ from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Command
-from chroma_core.lib.state_manager import StateManager
 
 import tastypie.http as http
 from tastypie import fields
@@ -188,11 +187,7 @@ class TargetResource(ConfParamResource):
         if len(lun_ids) > 1:
             message += "s"
 
-        with transaction.commit_on_success():
-            command = Command(message = "Creating %s%s" % (kind, "s" if len(lun_ids) > 1 else ""))
-            command.save()
-        for target in targets:
-            StateManager.set_state(target, 'mounted', command.pk)
+        command = Command.set_state([(t, 'mounted') for t in targets], "Creating %s%s" % (kind, "s" if len(lun_ids) > 1 else ""))
         raise custom_response(self, request, http.HttpAccepted, dehydrate_command(command))
 
     def get_resource_graph(self, request, **kwargs):
