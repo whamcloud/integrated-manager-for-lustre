@@ -1,6 +1,5 @@
 """ Test Alerts"""
 
-from utils.navigation import Navigation
 from views.alerts import Alerts
 from utils.constants import Constants
 from base import SeleniumBaseTestCase
@@ -9,9 +8,9 @@ from base import SeleniumBaseTestCase
 class TestAlerts(SeleniumBaseTestCase):
     def setUp(self):
         super(TestAlerts, self).setUp()
-        # Calling navigation
-        page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation.links['Alerts'])
+
+        self.navigation.go('Alerts')
+
         # Calling Alerts
         self.alerts_page = Alerts(self.driver)
         self.active_alert_data = self.alerts_page.get_active_alerts_table_data()

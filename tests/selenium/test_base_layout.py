@@ -2,7 +2,6 @@
 
 import logging
 
-from utils.navigation import Navigation
 from views.base_layout import Baselayout
 from base import SeleniumBaseTestCase
 
@@ -11,10 +10,7 @@ Log = logging.getLogger(__name__)
 
 class Layout(SeleniumBaseTestCase):
     def test_dashboard_header_and_notification(self):
-
-        # Calling navigation
-        page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation.links['Dashboard'])
+        self.navigation.go("Dashboard")
 
         # Calling base_layout
         base_page_layout = Baselayout(self.driver)
@@ -27,10 +23,7 @@ class Layout(SeleniumBaseTestCase):
         Log.info('Notification panel present on dashboard  page')
 
     def test_configure_header_and_notification(self):
-
-        # Calling navigation
-        page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation.links['Configure'])
+        self.navigation.go("Configure")
 
         # FIXME: need to add a generic function to wait for an action
         import time
@@ -46,10 +39,7 @@ class Layout(SeleniumBaseTestCase):
         Log.info('Notification panel present on configure page')
 
     def test_alerts_header_and_notification(self):
-
-        # Calling navigation
-        page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation.links['Alerts'])
+        self.navigation.go("Alerts")
 
         # Calling base_layout
         base_page_layout = Baselayout(self.driver)
@@ -62,10 +52,7 @@ class Layout(SeleniumBaseTestCase):
         Log.info('Notification panel present on alerts page')
 
     def test_events_header_and_notification(self):
-
-        # Calling navigation
-        page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation.links['Events'])
+        self.navigation.go("Events")
 
         # Calling base_layout
         base_page_layout = Baselayout(self.driver)
@@ -78,10 +65,7 @@ class Layout(SeleniumBaseTestCase):
         Log.info('Notification panel present on events page')
 
     def test_logs_header_and_notification(self):
-
-        # Calling navigation
-        page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation.links['Logs'])
+        self.navigation.go("Logs")
 
         # Calling base_layout
         base_page_layout = Baselayout(self.driver)

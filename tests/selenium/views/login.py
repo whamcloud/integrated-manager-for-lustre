@@ -2,19 +2,21 @@
 import test_parameters
 from selenium.common.exceptions import WebDriverException
 from time import sleep
+from base import wait_for_element
 
 
 class Login:
     def __init__(self, driver):
         self.driver = driver
         self.open_dialog_button = self.driver.find_element_by_css_selector("#user_info #anonymous #login")
-        self.username = self.driver.find_element_by_css_selector("input[name=username]")
-        self.password = self.driver.find_element_by_css_selector("input[name=password]")
+        self.username = self.driver.find_element_by_css_selector("#login_dialog input[name=username]")
+        self.password = self.driver.find_element_by_css_selector("#login_dialog input[name=password]")
         self.login_button = self.driver.find_element_by_css_selector("#login_dialog + div #submit")
 
     def open_login_dialog(self):
         try:
             self.open_dialog_button.click()
+            wait_for_element(self.driver, '#login_dialog input[name=username]', 1000)
         except WebDriverException:
             # open_dialog_button is not clickable so wait for jGrowl notifications to complete
             jGrowl_notifications = self.driver.find_element_by_id("jGrowl")

@@ -1,19 +1,18 @@
 """ Test Logs """
 
-from utils.navigation import Navigation
 from views.logs import Logs
 from utils.constants import Constants
 from base import SeleniumBaseTestCase
+
+from base import wait_for_datatable
 
 
 class TestLogs(SeleniumBaseTestCase):
     def setUp(self):
         super(TestLogs, self).setUp()
-        # Calling navigation
-        self.page_navigation = Navigation(self.driver)
-        self.fpage_navigation.click(self.page_navigation.links['Logs'])
-        # Calling base_layout
+        self.navigation.go('Logs')
         self.logs_page = Logs(self.driver)
+        wait_for_datatable(self.driver, '#all_log_content')
         self.table_data = self.logs_page.get_table_data()
 
     def test_logs_filter(self):

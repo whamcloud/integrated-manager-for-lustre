@@ -11,9 +11,9 @@ class Baselayout:
         self.logo_head = self.driver.find_element_by_class_name('logohead')
         self.dashboard_menu = self.driver.find_element_by_id('dashboard_menu')
         self.configure_menu = self.driver.find_element_by_id('configure_menu')
-        self.alerts_menu = self.driver.find_element_by_id('alerts_menu')
-        self.events_menu = self.driver.find_element_by_id('events_menu')
-        self.logs_menu = self.driver.find_element_by_id('logs_menu')
+        self.alerts_menu = self.driver.find_element_by_id('alert_menu')
+        self.events_menu = self.driver.find_element_by_id('event_menu')
+        self.logs_menu = self.driver.find_element_by_id('log_menu')
         self.sidebar_open = self.driver.find_element_by_css_selector("div.vertical")
         self.sidebar = self.driver.find_element_by_id('sidebar')
 

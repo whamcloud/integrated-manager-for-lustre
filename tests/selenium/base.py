@@ -10,11 +10,11 @@ from selenium import webdriver
 from utils.constants import Constants
 import test_parameters
 
-from views.login import Login
-
 import time
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import NoSuchElementException
+
+from utils.navigation import Navigation
 
 
 def element_visible(driver, selector):
@@ -48,6 +48,12 @@ def wait_for_any_element(driver, selectors, timeout):
     raise RuntimeError('Timeout')
 
 
+def wait_for_datatable(driver, selector, timeout = 10):
+    # A loaded datatable always has at least one tr, either
+    # a real record or a "no data found" row
+    wait_for_element(driver, selector + " tbody tr", timeout)
+
+
 def quiesce_api(driver, timeout):
     for i in xrange(timeout):
         busy = driver.execute_script('Api.busy();')
@@ -65,6 +71,7 @@ class SeleniumBaseTestCase(TestCase):
     driver = None
 
     def setUp(self):
+        from views.login import Login
 
         if test_parameters.HEADLESS:
             from pyvirtualdisplay import Display
@@ -87,7 +94,9 @@ class SeleniumBaseTestCase(TestCase):
             login_view.open_login_dialog()
         login_view.login_superuser()
         wait_for_element(self.driver, '#user_info #authenticated', 10)
+        wait_for_element(self.driver, '#dashboard_menu', 10)
         self.driver.execute_script('Api.testMode(true);')
+        self.navigation = Navigation(self.driver)
 
     def tearDown(self):
         self.driver.close()
