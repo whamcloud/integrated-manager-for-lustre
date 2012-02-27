@@ -35,7 +35,7 @@ var Login = function() {
     var password = $('#login_dialog input[name=password]').val()
     Api.post('session/', {username: username, password: password},
       success_callback = function() {
-        window.location.href = "/";
+        window.location.href = Api.UI_ROOT;
       },
       error_callback = {403: function(status, jqXHR) {
         $('#login_dialog #error').show()
@@ -51,7 +51,7 @@ var Login = function() {
 
     $('#user_info #authenticated #logout').click(function(event) {
       Api.delete("session/", {}, success_callback = function() {
-        window.location.href = "/";
+        window.location.href = Api.UI_ROOT;
       });
       event.preventDefault();
     });

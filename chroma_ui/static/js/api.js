@@ -328,7 +328,7 @@ var Api = function() {
     $.ajax(ajax_args)
     .success(function(data, textStatus, jqXHR)
     {
-      if (data.command) {
+      if (data && data.command) {
         CommandNotification.begin(data.command)
       }
 
@@ -426,6 +426,7 @@ var Api = function() {
     testMode: testMode,
     'delete': del,
     get_datatables: get_datatables,
+    UI_ROOT: UI_ROOT
   }
 }();
 
