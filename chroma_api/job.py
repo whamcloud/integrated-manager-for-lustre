@@ -97,7 +97,7 @@ class JobResource(ModelResource):
             return []
         elif job.state == 'paused':
             return [{'state': 'resume', 'label': "Resume"}]
-        elif job.state in ['pending', 'tasked']:
+        elif job.state in ['pending', 'tasked', 'tasking']:
             return [{'state': 'pause', 'label': 'Pause'},
                     {'state': 'cancel', 'label': 'Cancel'}]
         else:
