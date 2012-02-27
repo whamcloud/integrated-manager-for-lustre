@@ -103,7 +103,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
                     'mounted',
                     fix_state = 'unavailable'))
         elif state == 'stopped':
-            for t in self.get_targets():
+            for t in self.get_filesystem_targets():
                 deps.append(DependOn(t,
                     'unmounted',
                     acceptable_states = t.not_state('mounted'),

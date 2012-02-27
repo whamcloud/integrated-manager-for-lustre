@@ -58,9 +58,15 @@ class Command(models.Model):
         of (<StatefulObject instance>, state)"""
         dirty = False
         for object, state in objects:
+            # Check if the state is modified
             if object.state != state:
                 dirty = True
                 break
+
+            # Check if the new state is valid
+            if state not in object.states:
+                raise RuntimeError("'%s' is an invalid state for %s, valid states are %s" % (state, object, object.states))
+
         if not dirty:
             return None
 

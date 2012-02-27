@@ -2,6 +2,15 @@
 from django.test import TestCase
 
 
+def freshen(obj):
+    return obj.__class__.objects.get(pk=obj.pk)
+
+
+def set_state(obj, state):
+    from chroma_core.lib.state_manager import StateManager
+    return StateManager().set_state(freshen(obj), state)
+
+
 class MockAgent(object):
     label_counter = 0
     mock_servers = {}

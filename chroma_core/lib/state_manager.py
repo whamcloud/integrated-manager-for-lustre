@@ -295,11 +295,13 @@ class StateManager(object):
         from chroma_core.models import StatefulObject, Command
         assert(isinstance(instance, StatefulObject))
         job_log.debug("set_state %s %s" % (instance, new_state))
+        if new_state not in instance.states:
+            raise RuntimeError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
 
         # Work out the eventual states (and which writelock'ing job to depend on to
         # ensure that state) from all non-'complete' jobs in the queue
-
         self.expected_states = {}
+
         # TODO: find out how to do a DB query that just gives us the latest WL for
         # each locked_item (same result for less iterations of this loop)
         from chroma_core.models import StateWriteLock
