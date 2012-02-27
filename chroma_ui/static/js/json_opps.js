@@ -85,10 +85,6 @@ var ConfParamDialog = function(options) {
 
 stateTransitionCommit = function(url, state)
 {
-  Api.put(url, {state: state}, success_callback = function(data) {
-    var command = data['command']
-    CommandNotification.begin(command)
-  })
 }
 
 $(document).ready(function() {
@@ -128,13 +124,16 @@ stateTransition = function (url, state)
            text: "Confirm",
            id: "transition_confirm_button",
            click: function(){
-               stateTransitionCommit(url, state);$(this).dialog('close');
+             var dialog = $(this);
+             Api.put(url, {state: state}, success_callback = function() {
+               dialog.dialog('close');
+             })
            }
        }
      });
      $('#transition_confirmation_dialog').dialog('open');
     } else {
-      stateTransitionCommit(url, state);
+      Api.put(url, {state: state})
     }
   });
 }

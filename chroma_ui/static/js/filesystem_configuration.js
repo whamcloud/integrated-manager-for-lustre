@@ -13,7 +13,6 @@ var VolumeChooserStore = function ()
     if (!opts.multi_select) {
       select_widget_fn = function() {return ""};
     } else {
-      console.log("checkbox element " + element.attr('id'));
       select_widget_fn = function(vol_info){return "<input type='checkbox' name='" + vol_info.id + "'/>";}
     }
 
@@ -62,7 +61,6 @@ var VolumeChooserStore = function ()
 
     var old_selected = state.selected;
     if (_.isArray(selected)) {
-      console.log('a');
       state.selected = selected;
     } else if (!selected) {
       state.selected = [];
@@ -279,8 +277,6 @@ fvc_button = function(element, opts) {
 
   var update_multi_select_value = function() {
     var selected = [];
-    console.log(table_element);
-    console.log(table_element.find('input'))
     table_element.find('input').each(function() {
       if ($(this).attr('checked')) {
         selected.push ($(this).attr('name'));
@@ -298,8 +294,6 @@ fvc_button = function(element, opts) {
   });
 
   table_element.delegate("tr", "click", function(event) {
-    console.log('delegate');
-    console.log(this);
     var aPos = volumeTable.fnGetPosition(this);
     var data = volumeTable.fnGetData(aPos);
     if (!opts.multi_select) {

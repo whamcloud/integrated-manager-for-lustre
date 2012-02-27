@@ -328,6 +328,10 @@ var Api = function() {
     $.ajax(ajax_args)
     .success(function(data, textStatus, jqXHR)
     {
+      if (data.command) {
+        CommandNotification.begin(data.command)
+      }
+
       if (success_callback) {
         if(typeof(success_callback) == "function") {
           /* If success_callback is a function, call it */
