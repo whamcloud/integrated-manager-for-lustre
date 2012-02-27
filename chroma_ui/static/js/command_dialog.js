@@ -155,15 +155,28 @@ var CommandDetail = Backbone.View.extend({
   },
   template: _.template($('#command_detail_template').html()),
   render: function() {
-    if (this.model.attributes.jobs.length == 1) {
-      // Special case for single-job commands, jump straight to
-      // the details for that job
-      var job_id = this.model.attributes.jobs[0].split("/")[3]
-      Backbone.history.navigate("job/" + job_id + "/", {trigger: true})
-      this.remove();
-    }
+    var command_detail_view = this;
     var rendered = this.template(this.model.toJSON());
     $(this.el).find('.ui-dialog-content').html(rendered)
+    $(this.el).find('.job_state_transition').each(function() {
+      var link = $(this);
+      link.button();
+      link.click(function(ev) {
+        var uri = link.data('job_uri');
+        var state = link.data('state');
+        console.log(uri);
+        console.log(state);
+        Api.put(uri, {'state': state},
+          success_callback = function(data) {
+            command_detail_view.model.fetch({success:function(){
+              command_detail_view.render();
+            }});
+            // TODO: reload the command and its job, and redraw the UI
+          }
+        );
+        ev.preventDefault();
+      });
+    });
     return this;
   },
   close: function() {

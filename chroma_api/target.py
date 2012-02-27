@@ -289,7 +289,4 @@ class TargetResource(ConfParamResource):
                 'height': height
                 }
 
-        return self.create_response(request, {
-            'storage_alerts': [a.to_dict() for a in storage_alerts],
-            'lustre_alerts': [a.to_dict() for a in lustre_alerts],
-            'graph': graph})
+        return self.create_response(request, {'graph': graph})

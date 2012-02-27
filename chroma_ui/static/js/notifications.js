@@ -8,6 +8,9 @@ $(document).ready(function() {
 $(document).ajaxComplete(function(){AlertNotification.updateIcons()})
 $(document).ajaxComplete(function(){CommandNotification.updateIcons()})
 
+
+
+
 var LiveObject = function()
 {
   function spanMarkup(obj, classes, content) {
@@ -61,40 +64,42 @@ var LiveObject = function()
 
 var Tooltip = function()
 {
-  function list(element, title, objects, attr)
+  function detailList(options)
   {
     var tooltip = "";
     tooltip += "<ul>"
-    $.each(objects, function(i, obj) {
-      tooltip += "<li>" + obj[attr] + "</li>";
+    $.each(options.objects, function(i, obj) {
+      tooltip += "<li>" + obj[options.attr] + "</li>";
     });
     tooltip += "</ul>"
 
-    element.qtip({
+    var classes = options.class || "";
+
+    options.element.qtip({
         content: {
           text: tooltip,
           title: {
-            text: title
+            text: options.title
           }
         },
         style: {
-          classes: 'ui-tooltip-rounded ui-tooltip-shadow ui-tooltip-dark',
-          tip: 'top center'
+          classes: 'ui-tooltip-rounded ui-tooltip-shadow ' + classes
         },
         position: {
-          viewport: $("body"),
+          viewport: $("div.rightpanel"),
+      /*
+          my: "top left",
+          at: "bottom right",
           adjust: {
             method: "flip"
           }
+          */
         }
     });
   }
 
-  function message(title, body, persist, classes)
+  function sidebarMessage(title, body, persist, classes)
   {
-    if (!body) {
-      throw "fuckoff"
-    }
     /* FIXME: hacky selector */
     $('div.vertical').qtip({
       content: {
@@ -109,11 +114,12 @@ var Tooltip = function()
         ready: true
       },
       position: {
-        my: "top left",
-        at: "bottom-right",
+        my: "center left",
+        at: "center right",
         /* FIXME: hacky selector */
         target: $('div.vertical'),
-        viewport: $('body')
+        viewport: $('div.rightpanel'),
+        adjust: {y: 40}
       },
       hide: {
         fixed: true,
@@ -142,11 +148,107 @@ var Tooltip = function()
       element.qtip('api').destroy();
     }
   }
+
+  function createGrowl(title, body_markup, persistent) {
+		// Use the last visible jGrowl qtip as our positioning target
+    var base_target = $('div.rightpanel');
+		var target = $('.qtip.jgrowl:visible:last');
+
+		// Create your jGrowl qTip...
+		$(document.body).qtip({
+			// Any content config you want here really.... go wild!
+			content: {
+				text: body_markup,
+				title: {
+					text: title,
+					button: true
+				}
+			},
+			position: {
+				my: 'top right', // Not really important...
+				at: (target.length ? 'bottom' : 'top') + ' right', // If target is window use 'top right' instead of 'bottom right'
+				target: target.length ? target : base_target, // Use our target declared above
+				adjust: { y: 5 } // Add some vertical spacing
+			},
+			show: {
+				event: false, // Don't show it on a regular event
+				ready: true, // Show it when ready (rendered)
+				effect: function() { $(this).stop(0,1).fadeIn(400); }, // Matches the hide effect
+				delay: 0, // Needed to prevent positioning issues
+				
+				// Custom option for use with the .get()/.set() API, awesome!
+				persistent: persistent
+			},
+			hide: {
+				event: false, // Don't hide it on a regular event
+				effect: function(api) { 
+					// Do a regular fadeOut, but add some spice!
+					$(this).stop(0,1).fadeOut(400).queue(function() {
+						// Destroy this tooltip after fading out
+						api.destroy();
+
+						// Update positions
+						updateGrowls();
+					})
+				}
+			},
+			style: {
+				classes: 'jgrowl ui-tooltip-red ui-tooltip-rounded', // Some nice visual classes
+				tip: false // No tips for this one (optional ofcourse)
+			},
+			events: {
+				render: function(event, api) {
+					// Trigger the timer (below) on render
+					timer.call(api.elements.tooltip, event);
+				}
+			}
+		})
+		.removeData('qtip');
+	};
+
+	function updateGrowls() {
+		// Loop over each jGrowl qTip
+		var each = $('.qtip.jgrowl:not(:animated)');
+		each.each(function(i) {
+			var api = $(this).data('qtip');
+
+			// Set the target option directly to prevent reposition() from being called twice.
+			api.options.position.target = !i ? $(document.body) : each.eq(i - 1);
+			api.set('position.at', (!i ? 'top' : 'bottom') + ' right');
+		});
+	};
+
+	// Setup our timer function
+	function timer(event) {
+		var api = $(this).data('qtip'),
+			lifespan = 5000; // 5 second lifespan
+		
+		// If persistent is set to true, don't do anything.
+		if(api.get('show.persistent') === true) { return; }
+
+		// Otherwise, start/clear the timer depending on event type
+		clearTimeout(api.timer);
+		if(event.type !== 'mouseover') {
+			api.timer = setTimeout(api.hide, lifespan);
+		}
+	}
+
+  function hide(event) {
+		var api = $(this).data('qtip');
+    api.hide();
+  }
+
+
+
+	// Utilise delegate so we don't have to rebind for every qTip!
+	$(document).delegate('.qtip.jgrowl', 'mouseover mouseout', timer);
+	$(document).delegate('.qtip.jgrowl', 'click', hide);
   
   return {
-    message: message,
-    list: list,
-    clear: clear
+    sidebarMessage: sidebarMessage,
+    detailList: detailList,
+    clear: clear,
+    createGrowl: createGrowl
   }
 }();
 
@@ -164,15 +266,15 @@ var CommandNotification = function() {
       command_ids.push(command.id);
     });
     if (command_ids.length == 0) {
-      $('#notification_icon_jobs').hide()
+      $('#notification_icon_jobs').slideUp()
       return false;
     } else {
       if (command_ids.length == 1) {
         setTimeout(update, fast_update_interval);
       }
-      Tooltip.list($('#notification_icon_jobs'),
-          command_ids.length + " commands running:", incomplete_commands, 'message');
-      $('#notification_icon_jobs').show()
+      Tooltip.detailList({element: $('#notification_icon_jobs'),
+          title: command_ids.length + " commands running:", objects: incomplete_commands, attr: 'message'});
+      $('#notification_icon_jobs').slideDown()
       return true;
     }
   }
@@ -193,7 +295,7 @@ var CommandNotification = function() {
     if (command.complete) {
       // If something finished before it started, no need to track
       // its state
-      complete(command);
+      notify(command);
       return;
     }
     if (incomplete_commands[command.id]) {
@@ -218,20 +320,25 @@ var CommandNotification = function() {
       persist = false;*/
       return
     } else if (command.cancelled) {
+      /*
       header = "Command cancelled";
       theme = '';
       persist = true;
+      Tooltip.message("<a class='navigation' href='command/" + command.id + "/'>" + header + "</a>", command.message, persist, theme)
+      */
     } else if (command.errored) {
-      header = "Command failed";
-      theme = 'ui-tooltip-red';
-      persist = true;
+      var body = command.message;
+      body += "&nbsp;<a class='navigation' href='command/" + command.id + "/'>Details...</a>";
+      Tooltip.createGrowl("Command failed", body, true);
     } else {
+      /*
       header = "Command complete";
       theme = 'ui-tooltip-green';
       persist = false;
+      Tooltip.message("<a class='navigation' href='command/" + command.id + "/'>" + header + "</a>", command.message, persist, theme)
+      */
     }
 
-    Tooltip.message("<a class='navigation' href='command/" + command.id + "/'>" + header + "</a>", command.message, persist, theme)
   }
 
   function update()
@@ -302,7 +409,8 @@ var CommandNotification = function() {
       $.each(obj_write_locks, function(job_id, x) {
         jobs[job_id] = incomplete_jobs[job_id]
       });
-      Tooltip.list(element, "Ongoing operations: ", jobs, 'description');
+      Tooltip.detailList(
+          {element: element, title: "Ongoing operations: ", objects: jobs, attr: 'description'});
     } else if (obj_read_locks && objectLength(obj_read_locks) > 0) {
       element.show();
       element.addClass('locked_icon');
@@ -310,7 +418,8 @@ var CommandNotification = function() {
       $.each(obj_read_locks, function(job_id, x) {
         jobs[job_id] = incomplete_jobs[job_id]
       });
-      Tooltip.list(element, "Locked by pending operations: ", jobs, 'description');
+      Tooltip.detailList(
+          {element: element, title: "Locked by pending operations: ", objects: jobs, attr: 'description'});
     } else {
       element.removeClass('locked_icon');
       element.removeClass('busy_icon');
@@ -465,15 +574,19 @@ var AlertNotification = function() {
 
       if (!initial_load) {
         if (new_alerts.length == 1 && resolved_alerts.length == 0) {
-          Tooltip.message("New alert", new_alerts[0].message, false, 'ui-tooltip-red');
+          Tooltip.sidebarMessage("New alert", new_alerts[0].message, false, 'ui-tooltip-red');
         } else if (new_alerts.length == 0 && resolved_alerts.length == 1) {
+          /*
           Tooltip.message("Alert cleared", resolved_alerts[0].message, false, 'ui-tooltip-green');
+          */
         } else if (new_alerts.length > 0 && resolved_alerts.length == 0) {
           Tooltip.message(new_alerts.length + " alerts active", " ", false, 'ui-tooltip-red');
         } else if (new_alerts.length == 0 && resolved_alerts.length > 0) {
+          /*
           Tooltip.message(resolved_alerts.length + " alerts resolved", " ", false, 'ui-tooltip-green');
+          */
         } else if (new_alerts.length > 0 && resolved_alerts.length > 0) {
-          Tooltip.message("Alerts",
+          Tooltip.sidebarMessage("Alerts",
               new_alerts.length + " new alerts, " + resolved_alerts.length + " alerts resolved",
               false, 'ui-tooltip-red');
         }
@@ -487,11 +600,12 @@ var AlertNotification = function() {
   {
     var active_alert_count = objectLength(active_alerts);
     if (active_alert_count == 0) {
-      $('#notification_icon_alerts').hide()
+      $('#notification_icon_alerts').slideUp()
     } else {
-      $('#notification_icon_alerts').show()
-      Tooltip.list($('#notification_icon_alerts'),
-          active_alert_count + " alerts active:", active_alerts, 'message');
+      $('#notification_icon_alerts').slideDown()
+      $('#notification_icon_alerts').effect('pulsate', {times: 3})
+      Tooltip.detailList({element: $('#notification_icon_alerts'),
+          title: active_alert_count + " alerts active:", objects: active_alerts, attr: 'message', class: 'ui-tooltip-red'});
     }
   }
 
@@ -570,7 +684,7 @@ var AlertNotification = function() {
         $.each(effects, function(alert_id, x) {
           alerts[alert_id] = active_alerts[alert_id]
         });
-        Tooltip.list(element, "Alerts", alerts, 'message');
+        Tooltip.detailList({element: element, title: "Alerts", objects: alerts, attr: 'message', class: 'ui-tooltip-red'});
       } else {
         if (element.hasClass('alert_indicator_large')) {
           element.html('No alerts')

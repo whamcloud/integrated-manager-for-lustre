@@ -545,11 +545,8 @@ class Job(models.Model):
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
-        @transaction.commit_on_success()
-        def mark_cancelling():
-            return Job.objects.filter(~Q(state = 'complete'), pk = self.id).update(state = 'cancelling')
-
-        updated = mark_cancelling()
+        with transaction.commit_on_success():
+            updated = Job.objects.filter(~Q(state = 'complete'), pk = self.id).update(state = 'cancelling')
         if updated == 0:
             # Someone else already started this job, bug out
             job_log.debug("job %d already completed, not cancelling" % self.id)

@@ -78,7 +78,7 @@ class AlertResource(ModelResource):
                 affect_target(tm.target)
 
         result = []
-        result.append([a.alert_item_id, a.alert_item_type_id])
+        affected_objects.add(a.alert_item)
         for ao in affected_objects:
             ct = ContentType.objects.get_for_model(ao)
             result.append({

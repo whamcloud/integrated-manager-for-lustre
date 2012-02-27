@@ -42,7 +42,7 @@ var Api = function() {
   var outstanding_requests = 0;
   var api_available = false
   var API_PREFIX = "/api/";
-  var UI_ROOT = "/";
+  var UI_ROOT = "/ui/";
   var lost_contact = false;
   var calls_waiting = 0;
   var enable_overlay = true;
@@ -545,8 +545,6 @@ function shortLocalTime(str)
     }
   }
   var date = new Date(str)
-  console.log(str);
-  console.log(date);
   var days_elapsed = ((new Date()) - date) / (3600 * 24 * 1000)
   var localTime = pad(date.getHours()) + ":" + pad(date.getMinutes())
   var localDate = date.getFullYear() + "/" + pad(date.getMonth()) + "/" + pad(date.getDate())

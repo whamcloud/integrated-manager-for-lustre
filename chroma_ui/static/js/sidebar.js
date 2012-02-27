@@ -186,15 +186,6 @@ var Sidebar = function(){
   }
 }();
 
-/* FIXME: global function because of the way it's called from an onclick */
-setJobState = function(job_id, state)
-{
-  Api.put("job/" + job_id + "/", {'state': state},
-  success_callback = function(data)
-  {
-    $('div.leftpanel table#jobs').dataTable().fnDraw();
-  });
-}
 
 /* FIXME: move this somewhere sensible */
 loadHostList = function(filesystem_id, targetContainer)

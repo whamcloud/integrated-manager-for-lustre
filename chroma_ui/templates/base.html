@@ -12,6 +12,12 @@
    <a href="job/<%=job.id%>/" class="navigation">open</a>
   </script>
 
+  <script type="text/template" id="job_buttons_template">
+    <% _.each(job.available_transitions, function(transition) { %>
+      <a class='job_state_transition' data-job_uri='<%=job.resource_uri%>' data-state='<%=transition.state%>'><%=transition.label%></a>
+    <% }); %>
+  </script>
+
   <script type="text/template" id="job_icon_template">
     <% 
       function job_icon(job) {
@@ -60,6 +66,7 @@
         <li>
         <%= _.template($('#job_row_template').html(), {job: job}) %>
         <%= _.template($('#job_link_template').html(), {job: job}) %>
+        <%= _.template($('#job_buttons_template').html(), {job: job}) %>
           <% if (job.children.length) { %>
             <%= _.template($('#job_list_template').html(), {jobs: job.children}) %>
           <% } %>
