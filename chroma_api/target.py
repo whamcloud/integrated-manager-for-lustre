@@ -188,7 +188,9 @@ class TargetResource(ConfParamResource):
             message += "s"
 
         command = Command.set_state([(t, 'mounted') for t in targets], "Creating %s%s" % (kind, "s" if len(lun_ids) > 1 else ""))
-        raise custom_response(self, request, http.HttpAccepted, dehydrate_command(command))
+        raise custom_response(self, request, http.HttpAccepted,
+                {'command': dehydrate_command(command),
+                 'targets': [self.full_dehydrate(self.build_bundle(obj = t)).data for t in targets]})
 
     def get_resource_graph(self, request, **kwargs):
         target = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
