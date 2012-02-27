@@ -123,13 +123,14 @@ class JobResource(ModelResource):
         # FIXME: 'cancel' and 'resume' aren't actually a state that job will ever have,
         # it causes a paused job to bounce back into a state like 'pending' or 'tasked'
         # - there should be a better way of representing this operation
+        job = Job.objects.get(pk = kwargs['pk'])
         new_state = bundle.data['state']
 
         assert new_state in ['pause', 'cancel', 'resume']
         if new_state == 'pause':
-            bundle.obj.pause()
+            job.pause()
         elif new_state == 'cancel':
-            bundle.obj.cancel()
+            job.cancel()
         else:
-            bundle.obj.resume()
+            job.resume()
         return bundle
