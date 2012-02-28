@@ -580,7 +580,7 @@ var AlertNotification = function() {
           Tooltip.message("Alert cleared", resolved_alerts[0].message, false, 'ui-tooltip-green');
           */
         } else if (new_alerts.length > 0 && resolved_alerts.length == 0) {
-          Tooltip.message(new_alerts.length + " alerts active", " ", false, 'ui-tooltip-red');
+          Tooltip.sidebarMessage(new_alerts.length + " alerts active", " ", false, 'ui-tooltip-red');
         } else if (new_alerts.length == 0 && resolved_alerts.length > 0) {
           /*
           Tooltip.message(resolved_alerts.length + " alerts resolved", " ", false, 'ui-tooltip-green');
