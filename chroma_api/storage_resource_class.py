@@ -10,6 +10,8 @@ from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from tastypie.resources import ModelResource
 
+from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
 
 class StorageResourceClassResource(ModelResource):
     """
@@ -32,10 +34,6 @@ class StorageResourceClassResource(ModelResource):
 
     def dehydrate_columns(self, bundle):
         return bundle.obj.get_class().get_columns()
-        #columns = [{'mdataProp': 'id', 'bVisible': False}, {'mDataProp': '_alias', 'sTitle': 'Name'}]
-        #for c in attr_columns:
-        #    columns.append({'sTitle': c['label'], 'mDataProp': c['name']})
-        #return columns
 
     def dehydrate_fields(self, bundle):
         resource_klass = bundle.obj.get_class()
@@ -53,7 +51,10 @@ class StorageResourceClassResource(ModelResource):
         return "%s-%s" % (bundle.obj.storage_plugin.module_name, bundle.obj.class_name)
 
     class Meta:
-        queryset = StorageResourceClass.objects.all()
+        queryset = StorageResourceClass.objects.filter(
+                id__in = storage_plugin_manager.resource_class_id_to_class.keys(),
+                storage_plugin__internal = False
+                )
         resource_name = 'storage_resource_class'
         filtering = {'plugin_name': ['exact'], 'class_name': ['exact'], 'user_creatable': ['exact']}
         authorization = DjangoAuthorization()

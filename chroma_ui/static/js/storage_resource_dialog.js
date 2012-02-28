@@ -204,7 +204,12 @@ function load_resource(resource) {
       $.each(chart_info.series, function(j, stat_name) {
         stat_infos.push(resource.stats[stat_name]);
       });
-      populate_graph(chart_element_id[i], chart_info, stat_infos);
+      if (_.include(stat_infos, undefined)) {
+        // One or more of the required statistics was not available
+        // TODO: handle this case (waiting revising this code for HYD-642)
+      } else {
+        populate_graph(chart_element_id[i], chart_info, stat_infos);
+      }
     });
 }
 

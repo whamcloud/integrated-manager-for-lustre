@@ -18,6 +18,8 @@ from tastypie import http
 from django.core.exceptions import ObjectDoesNotExist
 from chroma_core.lib.storage_plugin.daemon import StorageDaemon
 
+from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
 
 class StorageResourceResource(ModelResource):
     """
@@ -78,7 +80,10 @@ class StorageResourceResource(ModelResource):
         return bundle.obj.to_resource().get_attribute_items()
 
     class Meta:
-        queryset = StorageResourceRecord.objects.all()
+        queryset = StorageResourceRecord.objects.filter(
+                resource_class__id__in = storage_plugin_manager.resource_class_id_to_class.keys(),
+                resource_class__storage_plugin__internal = False
+                )
         resource_name = 'storage_resource'
         #filtering = {'storage_plugin__module_name': ['exact'], 'class_name': ['exact']}
         filtering = {'class_name': ['exact'], 'plugin_name': ['exact']}

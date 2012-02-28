@@ -14,6 +14,9 @@ from chroma_core.models.storage_plugin import StoragePluginRecord, StorageResour
 from chroma_core.models.storage_plugin import StorageResourceRecord, StorageResourceClass
 from django.db import transaction
 
+class PluginNotFound(Exception):
+    pass
+
 
 class LoadedResourceClass(object):
     """Convenience store of introspected information about StorageResource
@@ -68,7 +71,10 @@ class StoragePluginManager(object):
             self.load_plugin(plugin)
 
     def get_resource_class_by_id(self, id):
-        return self.resource_class_id_to_class[id]
+        try:
+            return self.resource_class_id_to_class[id]
+        except KeyError:
+            raise PluginNotFound()
 
     def get_scannable_resource_ids(self, plugin):
         loaded_plugin = self.loaded_plugins[plugin]
