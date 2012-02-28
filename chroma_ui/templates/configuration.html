@@ -18,6 +18,12 @@
   });
 
   $(document).ready(function() {
+    function updateSizes() {
+      $('div.rightpanel').width($(window).width() - $('div.leftpanel').width())
+    }
+    updateSizes();
+    $(window).resize(updateSizes);
+
     $("#tabs").tabs({
       selected: -1,
       select: function (event, ui) {
@@ -32,7 +38,6 @@
     new ChromaRouter();
     Backbone.history.start({root: "/ui/", pushState: true})
   });    
-
 
   //Fix Me:Need to find another weay to do thisto load the button + sign css.
   $(document).ajaxComplete(function() {

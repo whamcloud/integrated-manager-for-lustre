@@ -854,3 +854,8 @@ div.job_summary ul {
   list-style-type: none;
   padding-left: 6px;
 }
+
+html {
+    overflow-y: scroll;
+    overflow: -moz-scrollbars-vertical;
+}
