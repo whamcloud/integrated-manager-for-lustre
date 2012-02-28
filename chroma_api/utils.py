@@ -2,7 +2,7 @@
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.lib.state_manager import StateManager
 import chroma_core.lib.conf_param
-from tastypie.resources import ModelResource
+from tastypie.resources import ModelDeclarativeMetaclass, Resource, ModelResource, ResourceOptions
 from tastypie import fields
 from tastypie import http
 
@@ -27,11 +27,80 @@ def dehydrate_command(command):
     else:
         return None
 
+# monkey-patch ResourceOptions to have a default-empty readonly list
+setattr(ResourceOptions, 'readonly', [])
 
-class StatefulModelResource(ModelResource):
+
+class CustomModelDeclarativeMetaclass(ModelDeclarativeMetaclass):
+    """
+    Customizations at the metaclass level.
+    """
+    def __new__(cls, name, bases, attrs):
+        new_class = super(CustomModelDeclarativeMetaclass, cls).__new__(cls,
+                                                                      name,
+                                                                      bases,
+                                                                      attrs)
+        # At the moment, the only reason for this class' existence is
+        # to allow us to define a list of readonly fields in the
+        # Resources' Meta classes.  It's kind of a hack, but it works
+        # the same way as other resource configuration.  The only
+        # wrinkle is that this hacking works best in a metaclass,
+        # and there's no way to monkey-patch the __metaclass__ for a
+        # class, so we have to either declare this as the __metaclass__
+        # for all of our classes which need this functionality or
+        # else just have them inherit from a single class which uses
+        # this one as its metaclass.  The latter seems cleanest.
+        #
+        # Why do this instead of setting readonly=True on the various
+        # Resource fields?  Because when we explicitly declare a field
+        # in a Resource class we lose the ORM-level attributes like
+        # help_text.  Plus, in many cases we'd declare fields in the
+        # Resources for the sole purpose of marking them readonly,
+        # and that adds clutter.
+        #
+        # TODO: Explore feasibility of getting this readonly fieldlist
+        # feature pushed upstream.  Alternatively, fix
+        # ModelResource.get_fields() to preserve the underlying
+        # ORM field attributes unless they're overridden.
+
+        parent_readonly = []
+        # Merge readonly lists from parents into the new class' list.
+        try:
+            parents = [b for b in bases if issubclass(b, Resource)]
+            parents.reverse()
+
+            for p in parents:
+                parent_readonly.extend(p._meta.readonly)
+
+        except NameError:
+            pass
+
+        # stupid de-dupe tricks
+        new_class._meta.readonly = list(set(new_class._meta.readonly +
+                                            parent_readonly))
+        try:
+            for field in new_class._meta.readonly:
+                new_class.base_fields[field].readonly = True
+        except KeyError:
+            pass
+
+        return new_class
+
+
+class CustomModelResource(ModelResource):
+    """
+    Container for local customizations to tastypie's ModelResource class.
+    """
+    __metaclass__ = CustomModelDeclarativeMetaclass
+
+
+class StatefulModelResource(CustomModelResource):
     content_type_id = fields.IntegerField()
     available_transitions = fields.ListField()
     label = fields.CharField()
+
+    class Meta:
+        readonly = ['state', 'content_type_id', 'available_transitions', 'label']
 
     def dehydrate_available_transitions(self, bundle):
         return StateManager.available_transitions(bundle.obj)

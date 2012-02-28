@@ -115,7 +115,7 @@ class JobResource(ModelResource):
         ordering = ['created_at']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'put']
-        filtering = {'id': ['exact', 'in']}
+        filtering = {'id': ['exact', 'in'], 'state': ['exact']}
 
     def obj_update(self, bundle, request, **kwargs):
         """Modify a Job (setting 'state' field to 'pause', 'cancel', or 'resume' is the

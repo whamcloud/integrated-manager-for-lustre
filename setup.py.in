@@ -18,5 +18,10 @@ setup(
     description = 'The Whamcloud Lustre Monitoring and Adminisration Interface',
     long_description = open('README.txt').read(),
     packages = find_packages(exclude=excludes) + [''],
-    scripts = ["chroma_core/bin/storage_daemon", "chroma_core/bin/chroma-config", "hydra-host-discover"]
+    scripts = ["chroma_core/bin/storage_daemon", "chroma_core/bin/chroma-config", "hydra-host-discover"],
+    entry_points = {
+        'console_scripts': [
+            'chroma = chroma_api.client.cli:main',
+        ]
+    }
 )

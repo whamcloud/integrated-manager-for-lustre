@@ -32,6 +32,7 @@ class HostResource(StatefulModelResource):
         ordering = ['fqdn']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
+        readonly = ['nodename', 'fqdn']
 
         # So that we can return Commands for PUTs
         always_return_data = True
@@ -47,7 +48,7 @@ class HostResource(StatefulModelResource):
                      'host': self.full_dehydrate(self.build_bundle(obj = host)).data})
         except IntegrityError, e:
             api_log.error(e)
-            raise ImmediateHttpResponse(response = http.HttpBadRequest())
+            raise ImmediateHttpResponse(response = http.HttpBadRequest({'address': "%s" % e}))
 
 
 class HostTestResource(Resource):

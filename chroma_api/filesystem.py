@@ -3,23 +3,37 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+from collections import defaultdict
 
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs
 from chroma_core.models import ManagedFilesystem
 from chroma_core.models import Command
 import chroma_core.lib.conf_param
-
 import chroma_core.lib.util
-
 
 import tastypie.http as http
 from tastypie import fields
+from tastypie.validation import Validation
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response, ConfParamResource, dehydrate_command
+from chroma_api import api_log
+from chroma_api.fuzzy_lookups import FuzzyLookupFailed, FuzzyLookupException, mgt_vol_id, mdt_vol_id, ost_vol_id
 
-from tastypie.exceptions import ImmediateHttpResponse
-from tastypie.http import HttpBadRequest
+
+class FilesystemValidation(Validation):
+    def is_valid(self, bundle, request=None):
+        errors = {}
+
+        try:
+            # Merge errors found during other phases (e.g. hydration)
+            errors.update(bundle.data_errors)
+        except AttributeError:
+            pass
+
+        # TODO: Conf params validation
+
+        return errors
 
 
 class FilesystemResource(ConfParamResource):
@@ -71,6 +85,75 @@ class FilesystemResource(ConfParamResource):
     def dehydrate_files_total(self, bundle):
         return self._get_stat_simple(bundle, 'filestotal')
 
+    def hydrate_mgt_lun_id(self, bundle):
+        if 'mgt_lun_id' in bundle.data:
+            return bundle
+
+        if 'mgt' in bundle.data:
+            fuzzy_id = bundle.data['mgt'][0]
+            try:
+                bundle.data['mgt_lun_id'] = mgt_vol_id(fuzzy_id)
+                bundle.data['mgt_id'] = None
+            except (FuzzyLookupFailed, FuzzyLookupException), e:
+                bundle.data_errors['mgt'].append(str(e))
+
+        return bundle
+
+    def hydrate_mdt_lun_id(self, bundle):
+        if 'mdt_lun_id' in bundle.data:
+            return bundle
+
+        if 'mdts' in bundle.data:
+            # This will need to be updated if/when we support > 1 MDT.
+            fuzzy_id = bundle.data['mdts'][0]
+            try:
+                bundle.data['mdt_lun_id'] = mdt_vol_id(fuzzy_id)
+            except (FuzzyLookupFailed, FuzzyLookupException), e:
+                bundle.data_errors['mdts'].append(str(e))
+
+        return bundle
+
+    def hydrate_ost_lun_ids(self, bundle):
+        if 'ost_lun_ids' in bundle.data:
+            return bundle
+
+        if 'osts' in bundle.data:
+            ost_lun_ids = []
+            for fuzzy_id in bundle.data['osts']:
+                try:
+                    ost_lun_ids.append(ost_vol_id(fuzzy_id))
+                except (FuzzyLookupFailed, FuzzyLookupException), e:
+                    bundle.data_errors['osts'].append(str(e))
+            bundle.data['ost_lun_ids'] = ost_lun_ids
+
+        return bundle
+
+    def hydrate_conf_params(self, bundle):
+        import re
+
+        # don't mess with conf_params if it's already a dict
+        if ('conf_params' in bundle.data
+                and hasattr('items', bundle.data['conf_params'])):
+            return bundle
+
+        if ('conf_params' in bundle.data
+                and len(bundle.data['conf_params']) > 0):
+            conf_params = {}
+            # This is very simpleminded.  I'd originally thought that
+            # we could ask the resource's deserializer to parse the
+            # YAML, but we can't count on YAML being available.
+            for keyval in re.split('\s*,\s*', bundle.data['conf_params']):
+                try:
+                    key, val = re.split('\s*:\s*', keyval)
+                    conf_params[key] = val
+                except ValueError:
+                    bundle.data_errors['conf_params'].append("Invalid param format '%s' (try key: val, key: val)" % keyval)
+            bundle.data['conf_params'] = conf_params
+        else:
+            bundle.data['conf_params'] = {}
+
+        return bundle
+
     class Meta:
         queryset = ManagedFilesystem.objects.all()
         resource_name = 'filesystem'
@@ -80,8 +163,33 @@ class FilesystemResource(ConfParamResource):
         ordering = ['name']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'delete', 'put']
+        readonly = ['bytes_free', 'bytes_total', 'files_free', 'files_total', 'mount_command']
+        validation = FilesystemValidation()
 
     def obj_create(self, bundle, request = None, **kwargs):
+        # Set up an errors dict in the bundle to allow us to carry
+        # hydration errors through to validation.
+        setattr(bundle, 'data_errors', defaultdict(list))
+
+        # It would be nice to use the stock full_hydrate(), but it
+        # kind of falls apart with our custom obj_create().  We
+        # /could/ go through the contortions of getting the various
+        # related resources hydrated via incoming LUN ids, but I'm
+        # not convinced it buys us anything except more code to maintain.
+        # Instead, we'll go through the motions of calling hydrate_FIELD
+        # methods by hand to hammer the incoming request into a shape
+        # this obj_create() understands.  Calling them hydrate_FIELD
+        # is just an adherence to convention rather than an invocation
+        # of magic.  In fact, it's really kind of a bad name for what's
+        # happening, since there isn't actually any deserialization
+        # going on.  There aren't any other hook name conventions for
+        # "mangle incoming bundle data on a per-field basis" though.
+        for field in ['mgt_lun_id', 'mdt_lun_id', 'ost_lun_ids', 'conf_params']:
+            method = getattr(self, "hydrate_%s" % field, None)
+
+            if method:
+                bundle = method(bundle)
+
         try:
             fsname = bundle.data['name']
             mgt_id = bundle.data['mgt_id']
@@ -89,8 +197,10 @@ class FilesystemResource(ConfParamResource):
             mdt_lun_id = bundle.data['mdt_lun_id']
             ost_lun_ids = bundle.data['ost_lun_ids']
             conf_params = bundle.data['conf_params']
-        except KeyError:
-            raise ImmediateHttpResponse(HttpBadRequest())
+        except KeyError, e:
+            bundle.data_errors[str(e)].append("Required field")
+
+        self.is_valid(bundle, request)
 
         # mgt_id and mgt_lun_id are mutually exclusive:
         # * mgt_id is a PK of an existing ManagedMgt to use
@@ -102,6 +212,13 @@ class FilesystemResource(ConfParamResource):
             mgt_id = mgt.pk
         else:
             mgt_lun_id = ManagedMgs.objects.get(pk = mgt_id).lun.id
+
+        api_log.debug("fsname: %s" % fsname)
+        api_log.debug("MGS: %s" % mgt_id)
+        api_log.debug("MGT LUN: %s" % mgt_lun_id)
+        api_log.debug("MDT LUN: %s" % mdt_lun_id)
+        api_log.debug("OST LUNs: %s" % ost_lun_ids)
+        api_log.debug("conf_params: %s" % conf_params)
 
         # This is a brute safety measure, to be superceded by
         # some appropriate validation that gives a helpful
@@ -116,7 +233,7 @@ class FilesystemResource(ConfParamResource):
             fs = ManagedFilesystem(mgs=mgs, name = fsname)
             fs.save()
 
-            for key, value in conf_params:
+            for key, value in conf_params.items():
                 chroma_core.lib.conf_param.set_conf_param(fs, key, value)
 
             ManagedMdt.create_for_lun(mdt_lun_id, filesystem = fs)

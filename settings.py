@@ -135,6 +135,7 @@ INSTALLED_APPS = (
     'south',
     'r3d',
     'djcelery',
+    'tastypie',
     'chroma_core',
     'chroma_api',
     'chroma_ui',
