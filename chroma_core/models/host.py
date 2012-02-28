@@ -753,6 +753,24 @@ class RemoveHostJob(Job, StateChangeJob):
                 (DeleteHostStep, {'host_id': self.host.id})]
 
 
+class RemoveUnconfiguredHostJob(Job, StateChangeJob):
+    state_transition = (ManagedHost, 'unconfigured', 'removed')
+    stateful_object = 'host'
+    host = models.ForeignKey(ManagedHost)
+    state_verb = 'Remove'
+
+    requires_confirmation = True
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def description(self):
+        return "Remove host %s from configuration" % self.host
+
+    def get_steps(self):
+        return [(DeleteHostStep, {'host_id': self.host.id})]
+
+
 # Generate boilerplate classes for various origin->forgotten jobs.
 # This may go away as a result of work tracked in HYD-627.
 for origin in ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up']:
