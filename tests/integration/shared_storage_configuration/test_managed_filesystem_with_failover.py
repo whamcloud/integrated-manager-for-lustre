@@ -72,9 +72,8 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
         # Wait for device discovery
         running_time = 0
-        usable_luns = []
-        ready_lun_count = 0
-        while running_time < TEST_TIMEOUT and ready_lun_count < 4:
+        ha_luns = []
+        while running_time < TEST_TIMEOUT and len(ha_luns) < 4:
             response = self.hydra_server.get(
                 '/api/volume/',
                 params = {'category': 'usable'}
@@ -88,23 +87,23 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             #     use the API to set the primary and secondary from the test
             # Count how many of the reported Luns are ready for our test
             # (i.e. they have both a primary and a secondary node)
-            ready_lun_count = 0
+            ha_luns = []
             for l in usable_luns:
                 has_primary = len([node for node in l['volume_nodes'] if node['primary']]) == 1
                 has_two = len([node for node in l['volume_nodes'] if node['use']]) >= 2
                 if has_primary and has_two:
-                    ready_lun_count += 1
+                    ha_luns.append(l)
 
             time.sleep(1)
             running_time += 1
 
         # Create new filesystem
-        self.verify_usable_luns_valid(usable_luns, 4)
+        self.verify_usable_luns_valid(ha_luns, 4)
         filesystem_id = self.create_filesystem(
             name = 'testfs',
-            mgt_lun_id = usable_luns[0]['id'],
-            mdt_lun_id = usable_luns[1]['id'],
-            ost_lun_ids = [str(usable_luns[2]['id']), str(usable_luns[3]['id'])]
+            mgt_lun_id = ha_luns[0]['id'],
+            mdt_lun_id = ha_luns[1]['id'],
+            ost_lun_ids = [str(ha_luns[2]['id']), str(ha_luns[3]['id'])]
         )
 
         # Mount the filesystem
