@@ -16,7 +16,7 @@
               {'mDataProp': 'alias', 'sTitle': 'Name', bSortable: false}];
             $.each(columns, function(i, c) {
               aoColumns.push({
-                bSortable: false, sClass: 'txtleft', sTitle: c['label'], mDataProp: "attr_" + c['name']
+                bSortable: true, sClass: 'txtleft', sTitle: c['label'], mDataProp: "attr_" + c['name']
               })
             });
             aoColumns.push({mDataProp: '_alert_markup', sWidth: "1%", bSortable: false})

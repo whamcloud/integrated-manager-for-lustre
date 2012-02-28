@@ -48,6 +48,24 @@ class StorageResourceResource(ModelResource):
 
     deletable = fields.BooleanField()
 
+    def apply_sorting(self, obj_list, options = None):
+        options = options or {}
+        order_by = options.get('order_by', None)
+        if not order_by:
+            return obj_list
+
+        if order_by.find('attr_') == 0:
+            attr_name = order_by[5:]
+            invert = False
+        elif order_by.find('attr_') == 1:
+            attr_name = order_by[6:]
+            invert = True
+        else:
+            raise RuntimeError("Can't sort on %s" % order_by)
+
+        print order_by
+        return obj_list.filter(storageresourceattribute__key = attr_name).order_by(("-" if invert else "") + 'storageresourceattribute__value')
+
     def dehydrate_propagated_alerts(self, bundle):
         return [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(bundle.obj.to_resource())]
 
