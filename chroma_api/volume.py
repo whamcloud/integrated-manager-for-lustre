@@ -44,7 +44,9 @@ class VolumeResource(ModelResource):
             configuration status of the volume.")
     kind = fields.CharField(help_text = "A human readable noun representing the \
             type of storage, e.g. 'Linux partition', 'LVM LV', 'iSCSI LUN'")
-    volume_nodes = fields.ToManyField("chroma_api.volume_node.VolumeNodeResource", 'lunnode_set', null = True, full = True, help_text = "Device nodes which point to this volume")
+    volume_nodes = fields.ToManyField("chroma_api.volume_node.VolumeNodeResource",
+            lambda bundle: bundle.obj.lunnode_set.filter(host__not_deleted = True),
+            null = True, full = True, help_text = "Device nodes which point to this volume")
 
     def dehydrate_kind(self, bundle):
         return bundle.obj.get_kind()

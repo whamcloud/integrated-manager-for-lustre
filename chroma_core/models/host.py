@@ -274,10 +274,11 @@ class Lun(models.Model):
         # we can definitively say where it should be mounted) or if they have
         # a primary LunNode (i.e. one or more LunNodes is available and we
         # know at least where the primary mount should be)
-        return queryset.annotate(
-                any_targets = Max('lunnode__managedtargetmount__target__not_deleted'),
-                has_primary = Max('lunnode__primary'),
-                num_lunnodes = Count('lunnode')
+        return queryset.filter(lunnode__host__not_deleted = True).\
+                annotate(
+                    any_targets = Max('lunnode__managedtargetmount__target__not_deleted'),
+                    has_primary = Max('lunnode__primary'),
+                    num_lunnodes = Count('lunnode')
                 ).filter((Q(num_lunnodes = 1) | Q(has_primary = 1.0)) & Q(any_targets = None))
 
     def get_kind(self):
@@ -728,9 +729,6 @@ class DeleteHostStep(Step):
             pass
         from chroma_core.lib.storage_plugin.daemon import StorageDaemon
         StorageDaemon.request_remove_resource(record.pk)
-
-        for ln in LunNode.objects.filter(host__id = kwargs['host_id']):
-            LunNode.delete(ln.pk)
 
         from chroma_core.models import ManagedHost
         ManagedHost.delete(kwargs['host_id'])

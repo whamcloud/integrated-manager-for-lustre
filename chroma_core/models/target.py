@@ -166,14 +166,14 @@ class ManagedTarget(StatefulObject):
             mount.save()
 
         try:
-            primary_lun_node = lun.lunnode_set.get(primary = True)
+            primary_lun_node = lun.lunnode_set.get(primary = True, host__not_deleted = True)
             create_target_mount(primary_lun_node)
         except LunNode.DoesNotExist:
             raise RuntimeError("No primary lun_node exists for lun %s, cannot created target" % lun)
         except LunNode.MultipleObjectsReturned:
             raise RuntimeError("Multiple primary lun_nodes exist for lun %s, internal error")
 
-        for secondary_lun_node in lun.lunnode_set.filter(use = True, primary = False):
+        for secondary_lun_node in lun.lunnode_set.filter(use = True, primary = False, host__not_deleted = True):
             create_target_mount(secondary_lun_node)
 
         return target
@@ -627,7 +627,7 @@ class MkfsStep(Step):
     def describe(cls, kwargs):
         from chroma_core.models import ManagedTarget
         target_id = kwargs['target_id']
-        target = ManagedTarget.objects.get(id = target_id).downcast()
+        target = ManagedTarget._base_manager.get(id = target_id).downcast()
         target_mount = target.managedtargetmount_set.get(primary = True)
         return "Format %s on %s" % (target, target_mount.host)
 

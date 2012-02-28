@@ -353,12 +353,12 @@ class ResourceManager(object):
                     # A hack to provide some arbitrary primary/secondary assignments
                     import settings
                     if settings.PRIMARY_LUN_HACK:
-                        if lun.lunnode_set.count() == 0:
+                        if lun.lunnode_set.filter(host__not_deleted = True).count() == 0:
                             primary = True
                             use = True
                         else:
                             primary = False
-                            if lun.lunnode_set.filter(use = True).count() > 1:
+                            if lun.lunnode_set.filter(use = True, host__not_deleted = True).count() > 1:
                                 use = False
                             else:
                                 use = True
