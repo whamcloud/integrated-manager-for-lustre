@@ -61,6 +61,8 @@
         var primary_node_id = 0;
         var secondary_node_id = -1;
 
+        volume.size = formatBytes(volume.size);
+
         if (volume.volume_nodes.length == 0) {
           volume.primary_select = blank_select
           volume.secondary_select = blank_select
