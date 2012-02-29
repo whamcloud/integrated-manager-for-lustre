@@ -8,9 +8,6 @@ $(document).ready(function() {
 $(document).ajaxComplete(function(){AlertNotification.updateIcons()})
 $(document).ajaxComplete(function(){CommandNotification.updateIcons()})
 
-
-
-
 var LiveObject = function()
 {
   function spanMarkup(obj, classes, content) {
@@ -442,20 +439,24 @@ var CommandNotification = function() {
     var uris = {};
     $.each(job.read_locks, function(i, lock) {
       var uri = lock.locked_item_uri;
-      if (!read_locks[uri]) {
-        read_locks[uri] = {}
-      }
-      read_locks[uri][job.id] = 1
+      if (uri) {
+        if (!read_locks[uri]) {
+          read_locks[uri] = {}
+        }
+        read_locks[uri][job.id] = 1
 
-      uris[uri] = 0;
+        uris[uri] = 0;
+      }
     });
     $.each(job.write_locks, function(i, lock) {
       var uri = lock.locked_item_uri;
-      if (!write_locks[uri]) {
-        write_locks[uri] = {}
+      if (uri) {
+        if (!write_locks[uri]) {
+          write_locks[uri] = {}
+        }
+        write_locks[uri][job.id] = 1
+        uris[uri] = 0;
       }
-      write_locks[uri][job.id] = 1
-      uris[uri] = 0;
     });
 
     $.each(uris, function(uri, x) {
@@ -470,6 +471,7 @@ var CommandNotification = function() {
 
   function updateObject(uri)
   {
+    console.log('updateObject ' + uri);
     Api.get(uri, {},
       success_callback = function(obj) {
       $(".object_label[data-resource_uri='" + uri + "']").each(function() {
@@ -506,15 +508,17 @@ var CommandNotification = function() {
     var uris = {};
     $.each(job.read_locks, function(i, lock) {
       var uri = lock.locked_item_uri;
-      delete read_locks[uri][job.id]
-
-      uris[uri] = true;
+      if (uri) {
+        delete read_locks[uri][job.id]
+        uris[uri] = true;
+      }
     });
     $.each(job.write_locks, function(i, lock) {
       var uri = lock.locked_item_uri;
-      delete write_locks[uri][job.id]
-
-      uris[uri] = true;
+      if (uri) {
+        delete write_locks[uri][job.id]
+        uris[uri] = true;
+      }
     });
 
     $.each(uris, function(uri, x) {

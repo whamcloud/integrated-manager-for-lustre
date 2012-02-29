@@ -48,7 +48,7 @@ class ChromaApi(Api):
                 self._cache[obj.__class__] = resource
                 return resource.get_resource_uri(obj)
 
-        return "%s-%s" % (obj.__class__, obj.id)
+        return None
 
 api = ChromaApi(api_name = 'api')
 
