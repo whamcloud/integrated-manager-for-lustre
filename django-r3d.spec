@@ -15,7 +15,8 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
-Requires: Django-south >= 0.7.2
+BuildRequires: python-setuptools
+Requires: Django-south >= 0.7.2 python-setuptools
 
 %description
 R3D provides round-robin databases for time-series data implemented via
