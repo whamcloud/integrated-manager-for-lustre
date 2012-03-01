@@ -1,5 +1,5 @@
 
-VERSION := $(shell echo 0.3.`date +%Y%m%d%H%M`_`git rev-parse --short HEAD`)
+VERSION := $(shell echo 0.3.`date -u +%Y%m%d%H%M`.`git rev-parse --short HEAD`)
 
 RELEASE := 1
 
@@ -11,7 +11,9 @@ tarball:
 	rm -f MANIFEST
 	echo 'VERSION = "$(VERSION)"' > production_version.py
 	for file in hydra-server.spec setup.py; do \
-		sed -e 's/@VERSION@/$(VERSION)/g' < $$file.in > $$file; \
+		sed -e 's/@VERSION@/$(VERSION)/g' \
+		    -e 's/@RELEASE@/$(RELEASE)/g' \
+		< $$file.in > $$file; \
 	done
 	python setup.py sdist
 
