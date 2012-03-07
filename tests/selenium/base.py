@@ -1,6 +1,3 @@
-"""Unit Testing code for the chroma UI
-"""
-
 # Import system modules
 from django.utils.unittest import TestCase
 
