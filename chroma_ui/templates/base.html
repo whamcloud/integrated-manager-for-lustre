@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <script type='text/javascript'>
+      // Take a javascript copy of the STATIC_URL variable
+      // so that we can access it from static .js code
+      var STATIC_URL = '{{STATIC_URL}}';
+    </script>
+
   <script type="text/template" id="job_row_template">
     <span id='job_row'>
       <%= _.template($('#job_icon_template').html(), {job: job}) %>
@@ -189,6 +195,7 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/sidebar.js"></script>  
     <script type="text/javascript" src="{{STATIC_URL}}js/notifications.js" ></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/highcharts_theme.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/help.js"></script>
 
     <!-- Application (individual panes) -->
     <script type='text/javascript' src="{{STATIC_URL}}js/resource_graph.js"></script>
