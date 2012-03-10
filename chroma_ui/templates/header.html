@@ -5,12 +5,14 @@
   <div class="top_links read_enabled_only">
     <ul class="navigation">
       <li><a id="dashboard_menu" class="navigation" href="dashboard/">Dashboard</a></li>
-      <li><a id="configure_menu" class="navigation fsadmin_only" href="configure/">Configure</a></li>
+      <li class='fsadmin_only'><a id="configure_menu" class="navigation" href="configure/">Configure</a></li>
       <li><a id="alert_menu" class="navigation" href="alert/">Alerts</a></li>
       <li><a id="event_menu" class="navigation" href="event/">Events</a></li>
       <li><a id="log_menu" class="navigation" href="log/">Log</a></li>
-      <li><a href='{{STATIC_URL}}webhelp/index.html'>Help</a></li>
     </ul>
+    <span class='fsadmin_only' style="float:right; padding-right:10px;">
+      <a href='{{STATIC_URL}}webhelp/help_wrapper.html'><img src='{{STATIC_URL}}images/help-browser.png'></a>
+    </span>
     <span id="user_info" style="float:right; padding-right:10px;">
       <span id="authenticated">
         <a href='#'><span id="username"></span></a>
@@ -20,7 +22,10 @@
         <a href="#" id='login'>Login</a>
       </span>
     </span>
-    <span style="float:right; padding-right:10px;">Version: {{app_version}}</span>
+    <span style="float:right; padding-right:10px;">
+      Version: {{app_version}}
+    </span>
+    
   </div>
 </div>
 
