@@ -78,7 +78,7 @@ class UserResource(ModelResource):
             made by the same user or by a superuser")
     password2 = fields.CharField(help_text = "Password confirmation, must match ``password1``")
 
-    def hydrate_group(self, bundle):
+    def hydrate_groups(self, bundle):
         # Prevent non-superusers from modifying their groups
         if not bundle.request.user.is_superuser:
             group_ids = [int(group['pk']) for group in bundle.data['groups']]
@@ -89,6 +89,17 @@ class UserResource(ModelResource):
 
     def hydrate_password1(self, bundle):
         bundle.obj.set_password(bundle.data['password1'])
+        return bundle
+
+    def obj_create(self, bundle, request = None, **kwargs):
+        bundle = super(UserResource, self).obj_create(bundle, request, **kwargs)
+        from django.contrib.auth.models import Group
+        superuser_group = Group.objects.get(name = 'superusers')
+        for g in bundle.obj.groups.all():
+            if g == superuser_group:
+                bundle.obj.is_superuser = True
+                bundle.obj.save()
+
         return bundle
 
     def dehydrate_full_name(self, bundle):

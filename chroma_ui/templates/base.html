@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html>
   <head>
+
+    <div style="display:none">
+      {% include 'login_dialog.html' %}
+      {% include 'target_dialog.html' %}
+      {% include 'command_dialog.html' %}
+    </div>
     <script type='text/javascript'>
       // Take a javascript copy of the STATIC_URL variable
       // so that we can access it from static .js code
@@ -89,10 +95,5 @@
     </div>
   </body>
 
-  <div style="display:none">
-    {% include 'login_dialog.html' %}
-    {% include 'target_dialog.html' %}
-    {% include 'command_dialog.html' %}
-  </div>
 
 </html>

@@ -18,9 +18,11 @@
               $.each(row.groups, function(i, group) {
                 group_names.push(group.name);
               });
+              /*
               if (row.is_superuser) {
                 group_names.push('superusers')
               }
+              */
               row.groups = group_names.join(",");
               row.buttons = "";
             });
@@ -63,7 +65,8 @@
           "Create": function() {
             var dialog = $(this);
             var user = {}
-            user.groups = [{pk: $('#create_user_dialog select[name=group]').val()}]
+            //user.groups = [{pk: $('#create_user_dialog select[name=group]').val()}]
+            user.groups = [$('#create_user_dialog select[name=group]').val()]
 
             ValidatedForm.save(dialog, Api.post, "user/", user, function ()
             {
@@ -76,7 +79,7 @@
 
       Api.get("group/", {limit: 0}, success_callback = function(data) {
         $.each(data.objects, function(i, group) {
-          var option = "<option value='" + group.id + "'>"+ group.name + "</option>";
+          var option = "<option value='" + group.resource_uri + "'>"+ group.name + "</option>";
           $('#create_user_dialog select[name=group]').prepend(option)
         });
       });
@@ -88,7 +91,7 @@
 
     function createUser()
     {
-      ValidatedForm.clear($('#create_user_dialog input'))
+      ValidatedForm.clear($('#create_user_dialog'))
       $('#create_user_dialog').dialog('open');
     }
 
