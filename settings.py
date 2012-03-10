@@ -137,6 +137,7 @@ INSTALLED_APPS = (
     'chroma_core',
     'chroma_api',
     'chroma_ui',
+    'chroma_help',
     'benchmark'
     )
 
