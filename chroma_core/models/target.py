@@ -593,6 +593,8 @@ class StopTargetJob(Job, StateChangeJob):
 
 
 class MkfsStep(Step):
+    timeout = 3600
+
     def _mkfs_args(self, target):
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember
         kwargs = {}
