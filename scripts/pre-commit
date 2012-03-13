@@ -62,7 +62,7 @@ CHECKS = [
         'match_files': ['.*\.py$', '.*setup.py.in'],
         # NB excluding chroma_core/models/__init__.py because imports things
         # but don't use them
-        'ignore_files': ['.*settings/.*', '.*manage.py', '.*migrations.*', '.*/terrain/.*', '.*chroma_core/models/__init__.py', '.*settings.py'],
+        'ignore_files': ['.*settings/.*', '.*manage.py', '.*migrations.*', '.*/terrain/.*', '.*chroma_core/models/__init__.py', '.*settings.py', 'example_storage_plugin_package/example_storage_plugin/__init__.py'],
         'print_filename': False,
     },
     {

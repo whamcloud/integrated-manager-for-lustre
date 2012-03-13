@@ -1,82 +1,45 @@
 """ Test Base Layout """
 
-import logging
+import django.utils.unittest
 
 from views.base_layout import Baselayout
 from base import SeleniumBaseTestCase
+from base import wait_for_element
 
-Log = logging.getLogger(__name__)
 
+class TestBaseLayout(SeleniumBaseTestCase):
 
-class Layout(SeleniumBaseTestCase):
-    def test_dashboard_header_and_notification(self):
-        self.navigation.go("Dashboard")
+    base_page_layout = None
+    vertical_side_bar = None
+    pages = None
+    sidebar_close = None
 
-        # Calling base_layout
-        base_page_layout = Baselayout(self.driver)
+    def setUp(self):
+        super(TestBaseLayout, self).setUp()
+        self.base_page_layout = Baselayout(self.driver)
+        self.vertical_side_bar = self.base_page_layout.vertical_sidebar_css
+        self.pages = self.base_page_layout.navigation_pages
+        self.sidebar_close = self.base_page_layout.sidebar_close
 
-        self.assertTrue(base_page_layout.logo_head_displayed())
-        Log.info('Menu header present on dashboard page')
+    def test_all_pages(self):
+        for page in self.pages:
+            self.check_base_page_layout(page)
 
-        base_page_layout.open_sidebar()
-        self.assertTrue(base_page_layout.sidebar_displayed())
-        Log.info('Notification panel present on dashboard  page')
+    def check_base_page_layout(self, page):
+        self.test_logger.info('Testing Page:' + page)
+        self.navigation.go(page)
+        for menu_selector in self.base_page_layout.menu_element_ids:
+            self.assertTrue(wait_for_element(self.driver, menu_selector, 10), 'Menu with element id:' + menu_selector + ' is missing on page: ' + page)
 
-    def test_configure_header_and_notification(self):
-        self.navigation.go("Configure")
+        for image_selector in self.base_page_layout.image_element_css:
+            self.assertTrue(wait_for_element(self.driver, image_selector, 10), 'Image with element id:' + image_selector + ' is missing on page: ' + page)
 
-        # FIXME: need to add a generic function to wait for an action
-        import time
-        time.sleep(5)
-        # Calling base_layout
-        base_page_layout = Baselayout(self.driver)
+        self.open_slider_check(page)
 
-        self.assertTrue(base_page_layout.logo_head_displayed())
-        Log.info('Menu header present on configure page')
+    def open_slider_check(self, page):
+        self.vertical_side_bar.click()
+        self.assertTrue(wait_for_element(self.driver, self.base_page_layout.sidebar_id, 10), 'Unable to open Notification side bar with id:' + self.base_page_layout.sidebar_id + ' on page:' + page)
+        self.sidebar_close.click()
 
-        base_page_layout.open_sidebar()
-        self.assertTrue(base_page_layout.sidebar_displayed())
-        Log.info('Notification panel present on configure page')
-
-    def test_alerts_header_and_notification(self):
-        self.navigation.go("Alerts")
-
-        # Calling base_layout
-        base_page_layout = Baselayout(self.driver)
-
-        self.assertTrue(base_page_layout.logo_head_displayed())
-        Log.info('Menu header present on alerts page')
-
-        base_page_layout.open_sidebar()
-        self.assertTrue(base_page_layout.sidebar_displayed())
-        Log.info('Notification panel present on alerts page')
-
-    def test_events_header_and_notification(self):
-        self.navigation.go("Events")
-
-        # Calling base_layout
-        base_page_layout = Baselayout(self.driver)
-
-        self.assertTrue(base_page_layout.logo_head_displayed())
-        Log.info('Menu header present on events page')
-
-        base_page_layout.open_sidebar()
-        self.assertTrue(base_page_layout.sidebar_displayed())
-        Log.info('Notification panel present on events page')
-
-    def test_logs_header_and_notification(self):
-        self.navigation.go("Logs")
-
-        # Calling base_layout
-        base_page_layout = Baselayout(self.driver)
-
-        self.assertTrue(base_page_layout.logo_head_displayed())
-        Log.info('Menu header present on logs page')
-
-        base_page_layout.open_sidebar()
-        self.assertTrue(base_page_layout.sidebar_displayed())
-        Log.info('Notification panel present on logs page')
-
-import unittest
 if __name__ == '__main__':
-    unittest.main()
+    django.utils.unittest.main()
