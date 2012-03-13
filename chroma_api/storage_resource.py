@@ -63,7 +63,6 @@ class StorageResourceResource(ModelResource):
         else:
             raise RuntimeError("Can't sort on %s" % order_by)
 
-        print order_by
         return obj_list.filter(storageresourceattribute__key = attr_name).order_by(("-" if invert else "") + 'storageresourceattribute__value')
 
     def dehydrate_propagated_alerts(self, bundle):

@@ -3,6 +3,7 @@
 from kombu import BrokerConnection, Exchange, Queue
 import socket
 import settings
+import datetime
 
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 
@@ -10,18 +11,24 @@ from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 def _drain_all(connection, queue, handler, timeout = 0.1):
     """Helper for draining all messages on a particular queue
     (kombo's inbuild drain_events generally just gives you one)"""
+
+    got_any = False
+    latency = 0.5
+    started = datetime.datetime.now()
     with connection.Consumer([queue], callbacks=[handler]):
         # Loop until we get a call to drain_events which
         # does not result in a handler callback
         while True:
             exhausted = False
             try:
-                connection.drain_events(timeout = timeout)
+                connection.drain_events(timeout = latency)
+                got_any = True
             except socket.timeout:
                 exhausted = True
                 pass
 
-            if exhausted:
+            elapsed = datetime.datetime.now() - started
+            if (exhausted and got_any) or (exhausted and elapsed > datetime.timedelta(seconds = timeout)):
                 break
 
 
@@ -80,6 +87,23 @@ def plugin_rpc(plugin_name, host, request, timeout = 0):
         raise
 
 
+def control_rpc(kwargs):
+    """
+    :param method: String
+    :param args: Dict
+    """
+    plugin_name = '_control'
+    tag = "daemon"
+
+    request_id = PluginRequest.send(plugin_name, tag, kwargs)
+    try:
+        return PluginResponse.receive(plugin_name, tag, request_id)
+    except Timeout:
+        # Revoke the request, we will never handle a response from it
+        PluginRequest.revoke(plugin_name, tag, request_id)
+        raise
+
+
 class Timeout(Exception):
     pass
 
@@ -113,25 +137,34 @@ class PluginRequest(object):
 
     @classmethod
     def receive_all(cls, plugin_name, resource_tag):
+        """Ack all waiting requests and return them in a list"""
+        requests = []
+
+        def handler(body):
+            log.info("UpdateScan %s: Passing on request %s" % (resource_tag, body['id']))
+            requests.append(body)
+
+        cls.handle_all(plugin_name, resource_tag, handler)
+
+        return requests
+
+    @classmethod
+    def handle_all(cls, plugin_name, resource_tag, handler):
+        """Invoke `handler` for each request before acking it"""
         exchange = Exchange("plugin_data", "direct", durable = True)
         with _amqp_connection() as conn:
             conn.connect()
             # See if there are any requests for this agent plugin
             request_routing_key = "plugin_data_request_%s_%s" % (plugin_name, resource_tag)
 
-            requests = []
-
             def handle_request(body, message):
-                log.info("UpdateScan %s: Passing on request %s" % (resource_tag, body['id']))
-                requests.append(body)
+                handler(body)
                 message.ack()
 
             request_queue = Queue(request_routing_key, exchange = exchange, routing_key = request_routing_key)
             request_queue(conn.channel()).declare()
 
             _drain_all(conn, request_queue, handle_request)
-
-        return requests
 
     @classmethod
     def revoke(cls, plugin_name, resource_tag, request_id):
@@ -174,6 +207,7 @@ class PluginResponse(object):
 
     @classmethod
     def receive(cls, plugin_name, resource_tag, request_id, timeout = DEFAULT_RESPONSE_TIMEOUT):
+        """request_id may be None to marge any response"""
         with _amqp_connection() as conn:
             conn.connect()
 
@@ -201,9 +235,8 @@ class PluginResponse(object):
                 finally:
                     message.ack()
 
-            RESPONSE_TIMEOUT = 30
-            _drain_all(conn, response_queue, handle_response, timeout = RESPONSE_TIMEOUT)
+            _drain_all(conn, response_queue, handle_response, timeout = timeout)
             if len(response_data) > 0:
                 return response_data[0]
             else:
-                raise Timeout("Got no response for %s:%s:%s in %s seconds" % (plugin_name, resource_tag, request_id, RESPONSE_TIMEOUT))
+                raise Timeout("Got no response for %s:%s:%s in %s seconds" % (plugin_name, resource_tag, request_id, timeout))

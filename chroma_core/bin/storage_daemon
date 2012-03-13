@@ -20,78 +20,30 @@ import threading
 
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
 
-
-class MessageReceiver(threading.Thread):
-    def __init__(self, daemon, *args, **kwargs):
-        super(MessageReceiver, self).__init__(*args, **kwargs)
-        self.stopping = False
-        self.daemon = daemon
-
-    def _run_consumer(self):
-        from kombu import BrokerConnection, Exchange, Queue
-        import settings
-
-        storage_plugin_exchange = Exchange("plugin_control", "direct", durable = True)
-        removal_queue = Queue("removals", exchange = storage_plugin_exchange, routing_key = "removals")
-
-        def handle_recv(body, message):
-            try:
-                resource_id = int(body['resource_id'])
-            except (KeyError, ValueError):
-                storage_plugin_log.error("Invalid command body '%s'" % body)
-                message.ack()
-                return
-            self.daemon.remove_resource(resource_id)
-            message.ack()
-
-        with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:
-            conn.connect()
-            removal_queue(conn.channel()).declare()
-            with conn.Consumer([removal_queue], callbacks=[handle_recv]):
-                while not self.stopping:
-                    conn.drain_events()
-            return True
+class RpcThread(threading.Thread):
+    def __init__(self, daemon):
+        super(RpcThread, self).__init__()
+        self.daemon_rpc = DaemonRpc(daemon)
 
     def run(self):
-        retry_period = 10
-        max_retry_period = 60
-
-        storage_plugin_log.info("Starting MessageReceiver main loop")
-        while not self.stopping:
-            try:
-                self._run_consumer()
-            except Exception:
-                import sys
-                import traceback
-                exc_info = sys.exc_info()
-                backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-
-                storage_plugin_log.error("Exception running AMQP consumer: %s" % backtrace)
-                storage_plugin_log.error("Retrying in %d seconds" % retry_period)
-
-                from time import sleep
-                i = 0
-                while i < retry_period and not self.stopping:
-                    sleep(1)
-                    i += 1
-                if retry_period < max_retry_period:
-                    retry_period *= 2
-        storage_plugin_log.info("Finished MessageReceiver main loop")
+        self.daemon_rpc.main_loop()
 
     def stop(self):
-        self.stopping = True
-
+        self.daemon_rpc.stop()
+        self.join()
 
 if __name__ == '__main__':
-    from chroma_core.lib.storage_plugin.daemon import StorageDaemon
+    from chroma_core.lib.storage_plugin.daemon import StorageDaemon, DaemonRpc
     daemon = StorageDaemon()
-    message_receiver = MessageReceiver(daemon)
 
-    message_receiver.start()
+    # Start a thread for handling RPCs
+    rpc_thread = RpcThread(daemon)
+    rpc_thread.start()
 
     # Respond to Ctrl+C
     def signal_handler(signal, frame):
         storage_plugin_log.info("__main__: Stopping...")
+        rpc_thread.stop()
         daemon.stop()
     signal.signal(signal.SIGINT, signal_handler)
 

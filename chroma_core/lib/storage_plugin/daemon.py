@@ -3,10 +3,12 @@ import os
 import time
 import datetime
 import threading
+import pickle
 
 from django.db import transaction
 
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
+from chroma_core.lib.storage_plugin.messaging import Timeout
 
 
 # Thread-per-session is just a convenient way of coding this.  The actual required
@@ -19,6 +21,7 @@ class PluginSession(threading.Thread):
         self.stopping = False
         self.stopped = False
         self.root_resource_id = root_resource_id
+        self.initialized = False
 
         super(PluginSession, self).__init__(*args, **kwargs)
 
@@ -74,6 +77,7 @@ class PluginSession(threading.Thread):
         try:
             storage_plugin_log.debug("Session %s: >>initial_scan" % root_resource._handle)
             instance.do_initial_scan(root_resource)
+            self.initialized = True
             storage_plugin_log.debug("Session %s: <<initial_scan" % root_resource._handle)
             while not self.stopping:
                 storage_plugin_log.debug("Session %s: >>periodic_update" % root_resource._handle)
@@ -86,26 +90,97 @@ class PluginSession(threading.Thread):
         except Exception:
             raise
         finally:
+            self.initialized = False
             instance.do_teardown()
 
     def stop(self):
         self.stopping = True
 
 
-class StorageDaemon(object):
+class DaemonRpc(object):
+    methods = ['remove_resource', 'start_session']
+
+    def __init__(self, wrapped = None):
+        self._stopping = False
+        self.wrapped = wrapped
+
+        if wrapped:
+            # Raise an exception if any of the declared methods don't exist
+            # on the wrapped object
+            for method in self.methods:
+                getattr(wrapped, method)
+
+    def __getattr__(self, name):
+        if name in self.methods:
+            return lambda *args, **kwargs: DaemonRpc._call(name, *args, **kwargs)
+        else:
+            raise AttributeError(name)
+
     @classmethod
-    def request_remove_resource(cls, resource_id):
-        from kombu import BrokerConnection, Exchange, Queue
-        import settings
+    def _call(cls, fn_name, *args, **kwargs):
+        from chroma_core.lib.storage_plugin.messaging import control_rpc
+        storage_plugin_log.info("Started rpc '%s'" % fn_name)
+        result = control_rpc({
+            'method': fn_name,
+            'args': args,
+            'kwargs': kwargs})
 
-        storage_plugin_exchange = Exchange("plugin_control", "direct", durable = True)
-        removal_queue = Queue("removals", exchange = storage_plugin_exchange, routing_key = "removals")
+        if isinstance(result, str):
+            exception = pickle.loads(str)
+            raise exception
 
-        with BrokerConnection("amqp://%s:%s@%s:%s/%s" % (settings.BROKER_USER, settings.BROKER_PASSWORD, settings.BROKER_HOST, settings.BROKER_PORT, settings.BROKER_VHOST)) as conn:
-            removal_queue(conn.channel()).declare()
-            with conn.Producer(exchange = storage_plugin_exchange, serializer = 'json', routing_key = 'removals') as producer:
-                producer.publish({'resource_id': resource_id})
+        storage_plugin_log.info("Completed rpc '%s' (result=%s)" % (fn_name, result))
 
+    def _local_call(self, fn_name, *args, **kwargs):
+        assert (fn_name in self.methods)
+        fn = getattr(self.wrapped, fn_name)
+        return fn(*args, **kwargs)
+
+    def main_loop(self):
+        from chroma_core.lib.storage_plugin.messaging import PluginRequest, PluginResponse
+
+        # Declare the action that we will perform for each request
+        plugin_name, resource_tag = ("_control", "daemon")
+
+        def handler(body):
+            storage_plugin_log.info("DaemonRpc %s %s %s %s" % (body['id'], body['method'], body['args'], body['kwargs']))
+            request_id = body['id']
+            try:
+                result = self._local_call(body['method'], *body['args'], **body['kwargs'])
+            except Exception, e:
+                result = pickle.dumps(e)
+            PluginResponse.send(plugin_name, resource_tag, request_id, result)
+
+        # Enter a loop to service requests until self.stopping is set
+        storage_plugin_log.info("Starting DaemonRpc main loop")
+        retry_period = 1
+        max_retry_period = 60
+        while not self._stopping:
+            try:
+                PluginRequest.handle_all(plugin_name, resource_tag, handler)
+                time.sleep(1)
+            except Exception:
+                import sys
+                import traceback
+                exc_info = sys.exc_info()
+                backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+
+                storage_plugin_log.error("Exception running AMQP consumer: %s" % backtrace)
+                storage_plugin_log.error("Retrying in %d seconds" % retry_period)
+
+                i = 0
+                while i < retry_period and not self._stopping:
+                    time.sleep(1)
+                    i += 1
+                if retry_period < max_retry_period:
+                    retry_period *= 2
+        storage_plugin_log.info("Finished DaemonRpc main loop")
+
+    def stop(self):
+        self._stopping = True
+
+
+class StorageDaemon(object):
     def __init__(self):
         self.stopping = False
 
@@ -147,6 +222,21 @@ class StorageDaemon(object):
 
             from chroma_core.lib.storage_plugin.resource_manager import resource_manager
             resource_manager.global_remove_resource(resource_id)
+
+    def start_session(self, resource_id):
+        started = False
+        timeout = 30
+        start_time = datetime.datetime.now()
+        while not started:
+            with self._session_lock:
+                try:
+                    session = self._all_sessions[resource_id]
+                    started = session.initialized
+                except KeyError:
+                    started = False
+
+            if datetime.datetime.now() - start_time > datetime.timedelta(seconds = timeout):
+                raise Timeout("Timed out after %s seconds waiting for session to start")
 
     def root_resource_ids(self, plugin):
         """Return the PK of all StorageResourceRecords for 'plugin' which have no parents"""

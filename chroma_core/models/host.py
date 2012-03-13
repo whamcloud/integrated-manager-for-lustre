@@ -552,6 +552,16 @@ class RemoveServerConfStep(Step):
         self.invoke_agent(host, "remove-server-conf")
 
 
+class LearnDevicesStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from chroma_core.lib.storage_plugin.daemon import DaemonRpc
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
+        record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = kwargs['host_id'])
+        DaemonRpc().start_session(record.pk)
+
+
 class SetupHostJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'unconfigured', 'lnet_unloaded')
     stateful_object = 'managed_host'
@@ -564,7 +574,8 @@ class SetupHostJob(Job, StateChangeJob):
     def get_steps(self):
         return [(LearnHostnameStep, {'host_id': self.managed_host.pk}),
                 (ConfigureRsyslogStep, {'host_id': self.managed_host.pk}),
-                (SetServerConfStep, {'host_id': self.managed_host.pk})]
+                (SetServerConfStep, {'host_id': self.managed_host.pk}),
+                (LearnDevicesStep, {'host_id': self.managed_host.pk})]
 
     class Meta:
         app_label = 'chroma_core'
@@ -723,12 +734,12 @@ class DeleteHostStep(Step):
         from chroma_core.models import StorageResourceRecord
         try:
             record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = kwargs['host_id'])
+            from chroma_core.lib.storage_plugin.daemon import DaemonRpc
+            DaemonRpc().remove_resource(record.pk)
         except StorageResourceRecord.DoesNotExist:
             # This is allowed, to account for the case where we submit the request_remove_resource,
             # then crash, then get restarted.
             pass
-        from chroma_core.lib.storage_plugin.daemon import StorageDaemon
-        StorageDaemon.request_remove_resource(record.pk)
 
         from chroma_core.models import ManagedHost
         ManagedHost.delete(kwargs['host_id'])
