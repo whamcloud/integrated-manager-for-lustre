@@ -62,7 +62,7 @@ CHECKS = [
         'match_files': ['.*\.py$', '.*setup.py.in'],
         # NB excluding chroma_core/models/__init__.py because imports things
         # but don't use them
-        'ignore_files': ['.*settings/.*', '.*manage.py', '.*migrations.*', '.*/terrain/.*', '.*chroma_core/models/__init__.py', '.*settings.py', 'example_storage_plugin_package/example_storage_plugin/__init__.py'],
+        'ignore_files': ['.*settings/.*', '.*manage.py', '.*migrations.*', '.*/terrain/.*', '.*chroma_core/models/__init__.py', '.*settings.py', '.*example_storage_plugin_package/example_storage_plugin/__init__.py'],
         'print_filename': False,
     },
     {
@@ -152,10 +152,10 @@ if __name__ == '__main__':
     while n < len(sys.argv):
         if sys.argv[n] == '--all-files':
             all_files = True
-            n = n + 1
-        if sys.argv[n] == '--exclude':
+        elif sys.argv[n] == '--exclude':
             exclude.append(sys.argv[n + 1])
-            n = n + 2
+            n = n + 1
+        n = n + 1
 
     print "exclude %s" % exclude
     main(all_files, exclude)
