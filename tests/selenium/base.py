@@ -10,8 +10,10 @@ import test_parameters
 import time
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support.ui import Select
 
 from utils.navigation import Navigation
+import logging
 
 
 def element_visible(driver, selector):
@@ -29,7 +31,7 @@ def element_visible(driver, selector):
 def wait_for_element(driver, selector, timeout):
     for i in xrange(timeout):
         if element_visible(driver, selector):
-            return
+            return True
 
         time.sleep(1)
     raise RuntimeError('Timeout')
@@ -39,10 +41,50 @@ def wait_for_any_element(driver, selectors, timeout):
     for i in xrange(timeout):
         for s in selectors:
             if element_visible(driver, s):
-                return
+                return True
 
         time.sleep(1)
     raise RuntimeError('Timeout')
+
+
+def wait_for_transition(driver, timeout):
+    for timer in xrange(timeout):
+        # Wait while the transition is in progress
+        try:
+            element = driver.find_element_by_css_selector("span.notification_object_icon.busy_icon")
+            try:
+                if element.is_displayed():
+                    time.sleep(2)
+                    continue
+            except StaleElementReferenceException:
+                return
+        except NoSuchElementException:
+            return
+
+    raise RuntimeError('Timeout while waiting for transition')
+
+
+def enter_text_for_element(driver, selector, text_value):
+    element = driver.find_element_by_css_selector(selector)
+    element.clear()
+    element.send_keys(text_value)
+
+
+def click_element_and_wait(driver, xpath_selector, timeout):
+    element = driver.find_element_by_xpath(xpath_selector)
+    element.click()
+    wait_for_transition(driver, timeout)
+
+
+def select_element_option(driver, selector, index):
+    element = driver.find_element_by_css_selector(selector)
+    element_options = element.find_elements_by_tag_name('option')
+    element_options[index].click()
+
+
+def get_selected_option_text(driver, dropdown_element_selector):
+    selectbox_element = Select(driver.find_element_by_css_selector(dropdown_element_selector))
+    return selectbox_element.first_selected_option.text
 
 
 def wait_for_datatable(driver, selector, timeout = 10):
@@ -66,6 +108,10 @@ class SeleniumBaseTestCase(TestCase):
     irrespective of the status of the application.
     """
     driver = None
+
+    test_logger = logging.getLogger(__name__)
+    test_logger.addHandler(logging.StreamHandler())
+    test_logger.setLevel(logging.INFO)
 
     def setUp(self):
         from views.login import Login
