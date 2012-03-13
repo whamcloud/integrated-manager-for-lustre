@@ -1,0 +1,20 @@
+[chroma]
+name=Chroma Base
+baseurl=https://mirror.whamcloud.com/whamos/6/os/$basearch/
+enabled=1
+gpgcheck=0
+sslcacert=/root/keys/chroma_ca-cacert.pem
+sslverify=1
+sslclientcert=/root/keys/test-ami-cert.pem
+sslclientkey=/root/keys/privkey-nopass.pem
+
+[chroma-updates]
+name=Chroma Updates
+baseurl=https://mirror.whamcloud.com/whamos/6/updates/$basearch/
+enabled=1
+gpgcheck=0
+sslcacert=/root/keys/chroma_ca-cacert.pem
+sslverify=1
+sslclientcert=/root/keys/test-ami-cert.pem
+sslclientkey=/root/keys/privkey-nopass.pem
+

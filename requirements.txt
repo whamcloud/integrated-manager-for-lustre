@@ -1,0 +1,7 @@
+fabric
+boto
+requests
+south
+django
+pep8
+pyflakes
