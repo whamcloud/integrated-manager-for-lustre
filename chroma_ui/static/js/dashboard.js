@@ -234,9 +234,10 @@ $(document).ready(function()
         load_breadcrumbs();
       });
 
+      chart_manager_dashboard();
       db_Bar_SpaceUsage_Data('false');
       db_Line_connectedClients_Data('false');
-      db_LineBar_CpuMemoryUsage_Data('false');
+      //db_LineBar_CpuMemoryUsage_Data('false');
       db_Area_ReadWrite_Data('false');
       db_Area_mdOps_Data('false');
       db_AreaSpline_ioOps_Data('false');

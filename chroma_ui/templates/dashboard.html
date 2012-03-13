@@ -4,6 +4,7 @@
       <link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
       {% endblock %}  
       {% block scripts %}
+      <script type="text/javascript" src="{{STATIC_URL}}js/chart_manager.js"></script>
       <script type="text/javascript" src="{{STATIC_URL}}js/dashboard.js"></script>
       <script type="text/javascript" src="{{STATIC_URL}}js/dashboard_filesystem.js"></script>
       <script type="text/javascript" src="{{STATIC_URL}}js/dashboard_oss.js"></script>
@@ -25,6 +26,9 @@
         });
 
         $('.magbutton').button({icons: {primary: 'ui-icon-zoomin'}});
+		
+		// Zooming
+		
       });
       </script>
       {% endblock %}
@@ -280,7 +284,7 @@
             </table>
           </div>
           <!-- FileSystem Targets Div - End -->
-
+				<input type='hidden' id='zoomed_graph_id' name='zoomed_graph_id' value='' />
 			    <div id="zoomDialog" title="All File System CPU Usage">
 			      <div id="dialog_avgCPUDiv"></div>
 			    </div>
