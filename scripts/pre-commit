@@ -147,13 +147,12 @@ except NameError:
 if __name__ == '__main__':
     all_files = False
     exclude = ['.git']
-    print "%s %s" % (len(sys.argv), sys.argv)
     n = 1
     while n < len(sys.argv):
         if sys.argv[n] == '--all-files':
             all_files = True
             n = n + 1
-        if sys.argv[n] == '--exclude':
+        elif sys.argv[n] == '--exclude':
             exclude.append(sys.argv[n + 1])
             n = n + 2
 
