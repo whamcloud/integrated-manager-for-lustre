@@ -200,16 +200,14 @@ function _populate_conf_param_table(data, table, help)
 {
   table.dataTable().fnClearTable();
   var property_box="";
-  var text_index = 0;
   $.each(data, function(key, value)
   {   
     if (value == null) {
       /* TODO: represent nulls as a gray 'unset' state (and display default value)*/
       value = "";
     }
-    property_box = "<input type=textbox value='" + value + "' id='" + text_index + 
-    "' title='" + help[key] + "' onblur='validateNumber("+text_index+")'/>"; 
-    text_index++;
+    property_box = "<input type=textbox value='" + value + "' id='conf_param_" + key + 
+    "' title='" + help[key] + "' onblur='validateNumber($(this))'/>"; 
     table.dataTable().fnAddData ([
       key, 
       property_box,
@@ -233,14 +231,14 @@ function populate_conf_param_table(data, table, help)
   }
 }
 
-function validateNumber(obj_id)
+function validateNumber(el)
 {
-    if (isNaN($("#"+obj_id).val()))
-    {
-        jAlert("Please enter numeric value");
-        $("#"+obj_id).attr("value","");
-        $("#"+obj_id).focus();
-    }
+  if (isNaN(el.val()))
+  {
+      jAlert("Please enter numeric value");
+      el.attr("value","");
+      el.focus();
+  }
 }
 
 /* Read modified conf params out of datatable, PUT them to url, and close dialog_id */
@@ -250,10 +248,12 @@ function apply_config_params(url, dialog, datatable)
   var changed_conf_params = {}
   var dirty = false;
   for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
-    if(oSetting.aoData[i]._aData[2] != $("input#"+i).val())
+    var conf_param_name = oSetting.aoData[i]._aData[0];
+    var input_val = $("input[id='conf_param_" + conf_param_name + "']").val();
+    if(oSetting.aoData[i]._aData[2] != input_val)
     {
       dirty = true;
-      changed_conf_params[oSetting.aoData[i]._aData[0]] = $("input#"+i).val();
+      changed_conf_params[conf_param_name] = input_val;
       /* FIXME: we should set _aData[2] to the value after we submit so that it doesn't
           look changed next time */
     }
