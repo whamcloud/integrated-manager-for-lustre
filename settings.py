@@ -154,7 +154,7 @@ CHROMA_MANAGER = {
         'security_group': 'chroma-manager'}
 
 CHROMA_APPLIANCE = {
-        'ami': 'ami-ca8a56a3',
+        'ami': 'ami-762af61f',
         'instance_type': 't1.micro',
         'username': 'root',
         'security_group': 'chroma-appliance'}
