@@ -45,6 +45,14 @@ class MockAgent(object):
             return {'label': "foofs-TTT%04d" % self.label_counter}
 
 
+class MockDaemonRpc():
+    def start_session(self, resource_id):
+        return
+
+    def remove_resource(self, resource_id):
+        return
+
+
 class JobTestCase(TestCase):
     def _test_lun(self, host):
         from chroma_core.models import Lun, LunNode
@@ -83,6 +91,11 @@ class JobTestCase(TestCase):
         MockAgent.mock_servers = self.mock_servers
         chroma_core.lib.agent.Agent = MockAgent
 
+        # Override DaemonRPC
+        import chroma_core.lib.storage_plugin.daemon
+        self.old_daemon_rpc = chroma_core.lib.storage_plugin.daemon.DaemonRpc
+        chroma_core.lib.storage_plugin.daemon.DaemonRpc = MockDaemonRpc
+
     def tearDown(self):
         import chroma_core.lib.agent
         chroma_core.lib.agent.Agent = self.old_agent
@@ -90,6 +103,9 @@ class JobTestCase(TestCase):
         from celery.app import app_or_default
         app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
         app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_eager_propagates_exceptions
+
+        import chroma_core.lib.storage_plugin.daemon
+        chroma_core.lib.storage_plugin.daemon.DaemonRpc = self.old_daemon_rpc
 
 
 class JobTestCaseWithHost(JobTestCase):
