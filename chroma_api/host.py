@@ -44,7 +44,7 @@ class HostResource(StatefulModelResource):
             host, command = ManagedHost.create_from_string(bundle.data['address'])
             raise custom_response(self, request, http.HttpAccepted,
                     {'command': dehydrate_command(command),
-                     'host': host})
+                     'host': self.full_dehydrate(self.build_bundle(obj = host)).data})
         except IntegrityError, e:
             api_log.error(e)
             raise ImmediateHttpResponse(response = http.HttpBadRequest())

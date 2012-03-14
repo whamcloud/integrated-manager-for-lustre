@@ -1,9 +1,7 @@
-import time
 
 from testconfig import config
 
 from tests.utils.http_requests import AuthorizedHttpRequests
-from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.testcases import ChromaIntegrationTestCase
 
 
@@ -16,6 +14,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
     def test_create_filesystem_with_failover(self):
         # Add two hosts as managed hosts
+        host_create_command_ids = []
         for host_config in config['lustre_servers'][:2]:
             host_address = host_config['address']
             response = self.hydra_server.post(
@@ -32,7 +31,9 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
                 body = {'address': host_address}
             )
             self.assertTrue(response.successful, response.text)
-            host_id = response.json['id']
+            print response.json
+            host_id = response.json['host']['id']
+            host_create_command_ids.append(response.json['command']['id'])
             self.assertTrue(host_id)
 
             response = self.hydra_server.get(
@@ -42,6 +43,9 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             host = response.json
             self.assertEqual(host['address'], host_address)
 
+        # Wait for the host setup and device discovery to complete
+        self.wait_for_commands(self.hydra_server, host_create_command_ids)
+
         # Verify there are now two hosts in the database.
         response = self.hydra_server.get(
             '/api/host/',
@@ -49,53 +53,30 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         self.assertTrue(response.successful, response.text)
         hosts = response.json['objects']
         self.assertEqual(2, len(hosts))
-
-        # Wait and verify host configuration and lnet start
-        running_time = 0
-        servers_configured = False
-        while running_time < TEST_TIMEOUT and not servers_configured:
-            if (hosts[0]['state'] == 'lnet_up' and hosts[1]['state'] == 'lnet_up'):
-                servers_configured = True
-                break
-
-            for h in hosts:
-                if h['state'] != 'lnet_up':
-                    response = self.hydra_server.get('/api/host/' + h['id'] + "/")
-                    self.assertTrue(response.successful, response.text)
-                    h['state'] = response.json['state']
-
-            time.sleep(1)
-            running_time += 1
-
-        if not servers_configured:
-            raise RuntimeError('Timed out setting up hosts')
+        self.assertEqual(hosts[0]['state'], 'lnet_up')
+        self.assertEqual(hosts[1]['state'], 'lnet_up')
 
         # Wait for device discovery
-        running_time = 0
         ha_luns = []
-        while running_time < TEST_TIMEOUT and len(ha_luns) < 4:
-            response = self.hydra_server.get(
-                '/api/volume/',
-                params = {'category': 'usable'}
-            )
-            self.assertTrue(response.successful, response.text)
-            usable_luns = response.json['objects']
+        response = self.hydra_server.get(
+            '/api/volume/',
+            params = {'category': 'usable'}
+        )
+        self.assertTrue(response.successful, response.text)
 
-            # FIXME: currently depending on settings.PRIMARY_LUN_HACK to
-            # set primary and secondary for us.
-            #  -> we could readily wait until the volume has two nodes, and then
-            #     use the API to set the primary and secondary from the test
-            # Count how many of the reported Luns are ready for our test
-            # (i.e. they have both a primary and a secondary node)
-            ha_luns = []
-            for l in usable_luns:
-                has_primary = len([node for node in l['volume_nodes'] if node['primary']]) == 1
-                has_two = len([node for node in l['volume_nodes'] if node['use']]) >= 2
-                if has_primary and has_two:
-                    ha_luns.append(l)
-
-            time.sleep(1)
-            running_time += 1
+        # FIXME: currently depending on settings.PRIMARY_LUN_HACK to
+        # set primary and secondary for us.
+        #  -> we could readily wait until the volume has two nodes, and then
+        #     use the API to set the primary and secondary from the test
+        # Count how many of the reported Luns are ready for our test
+        # (i.e. they have both a primary and a secondary node)
+        ha_luns = []
+        for l in response.json['objects']:
+            has_primary = len([node for node in l['volume_nodes'] if node['primary']]) == 1
+            has_two = len([node for node in l['volume_nodes'] if node['use']]) >= 2
+            if has_primary and has_two:
+                ha_luns.append(l)
+        self.assertGreaterEqual(len(ha_luns), 4)
 
         # Create new filesystem
         self.verify_usable_luns_valid(ha_luns, 4)
