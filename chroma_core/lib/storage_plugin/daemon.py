@@ -219,9 +219,11 @@ class StorageDaemon(object):
                 from time import sleep
                 while(not kill_session.stopped):
                     sleep(1)
+                storage_plugin_log.info("StorageDaemon: stopped.")
 
             from chroma_core.lib.storage_plugin.resource_manager import resource_manager
             resource_manager.global_remove_resource(resource_id)
+        storage_plugin_log.info("StorageDaemon: finished removing %s" % resource_id)
 
     def start_session(self, resource_id):
         started = False
