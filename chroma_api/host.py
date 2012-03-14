@@ -10,7 +10,7 @@ import tastypie.http as http
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.resources import Resource
 from tastypie import fields
-from chroma_api.utils import custom_response, StatefulModelResource
+from chroma_api.utils import custom_response, StatefulModelResource, dehydrate_command
 
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
@@ -40,17 +40,14 @@ class HostResource(StatefulModelResource):
                      'fqdn': ['exact']}
 
     def obj_create(self, bundle, request = None, **kwargs):
-        # FIXME: we implement this instead of letting it go
-        # straight through to the model because the model
-        # does some funny stuff in create_from_string.  Really
-        # ManagedHost should be refactored so that a simple save()
-        # does the job
         try:
-            bundle.obj = ManagedHost.create_from_string(bundle.data['address'])
+            host, command = ManagedHost.create_from_string(bundle.data['address'])
+            raise custom_response(self, request, http.HttpAccepted,
+                    {'command': dehydrate_command(command),
+                     'host': host})
         except IntegrityError, e:
             api_log.error(e)
             raise ImmediateHttpResponse(response = http.HttpBadRequest())
-        return bundle
 
 
 class HostTestResource(Resource):

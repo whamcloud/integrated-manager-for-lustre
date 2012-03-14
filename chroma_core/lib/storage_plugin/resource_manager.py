@@ -227,7 +227,7 @@ class ResourceManager(object):
             if not resource.host_id:
                 from chroma_core.models import ManagedHost
                 log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
-                host = ManagedHost.create_from_string(
+                host, command = ManagedHost.create_from_string(
                         resource.address,
                         virtual_machine = record.pk)
                 record.update_attribute('host_id', host.pk)

@@ -105,7 +105,7 @@ class JobTestCaseWithHost(JobTestCase):
         super(JobTestCaseWithHost, self).setUp()
 
         from chroma_core.models import ManagedHost
-        self.hosts = [ManagedHost.create_from_string(address) for address, info in self.mock_servers.items()]
+        self.hosts = [ManagedHost.create_from_string(address)[0] for address, info in self.mock_servers.items()]
 
         # Handy if you're only using one
         self.host = self.hosts[0]

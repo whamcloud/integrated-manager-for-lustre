@@ -109,9 +109,9 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
         # Attempt some initial setup jobs
         from chroma_core.models.jobs import Command
-        Command.set_state([(host, 'lnet_unloaded'), (lnet_configuration, 'nids_known')], "Setting up host %s" % address_string)
+        command = Command.set_state([(host, 'lnet_unloaded'), (lnet_configuration, 'nids_known')], "Setting up host %s" % address_string)
 
-        return host
+        return host, command
 
     def pretty_name(self):
         # Take FQDN if we have it, or fall back to address

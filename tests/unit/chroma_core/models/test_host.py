@@ -25,7 +25,7 @@ class TestHostAddRemove(JobTestCase):
         self.assertEqual(ManagedHost.objects.count(), 1)
 
     def test_removal(self):
-        host = ManagedHost.create_from_string('myaddress')
+        host, command = ManagedHost.create_from_string('myaddress')
 
         self._test_lun(host)
         self.assertEqual(Lun.objects.count(), 1)
