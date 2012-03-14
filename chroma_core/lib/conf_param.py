@@ -231,11 +231,13 @@ If you see multiple early replies for the same RPC asking for multiple 30-second
 # "Setting MDS and OSS Thread Counts"
 # ===================================
 for service in ['mdt.MDS.mds', 'mdt.MDS.mds_readpage', 'mdt.MDS.mds_setattr']:
-    for param in ['thread_min', 'thread_max', 'thread_started']:
+    # NB: there is also a 'thread_started' param here which is read only
+    for param in ['thread_min', 'thread_max']:
         all_params[service + "." + param] = (MdtConfParam, IntegerParam(), "")
 
 for service in ['ost.OSS.ost', 'ost.OSS.ost_io', 'ost.OSS.ost_create']:
-    for param in ['thread_min', 'thread_max', 'thread_started']:
+    # NB: there is also a 'thread_started' param here which is read only
+    for param in ['thread_min', 'thread_max']:
         all_params[service + "." + param] = (OstConfParam, IntegerParam(), "")
 
 
