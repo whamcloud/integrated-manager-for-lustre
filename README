@@ -12,7 +12,7 @@ run ./manage.py syncdb --migrate --noinput
 
 make sure you have the required two security groups in your AWS account:
 chroma-manager (ports 22, 80, 514)
-chroma-appliance  (port 22)
+chroma-appliance  (port 22, 988)
 
 ./manage.py create_fs
  (create one manager, one appliance, and add the appliance to the manager)
