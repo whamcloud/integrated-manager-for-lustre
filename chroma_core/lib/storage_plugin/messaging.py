@@ -10,9 +10,23 @@ from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 
 def _drain_all(connection, queue, handler, timeout = 0.1):
     """Helper for draining all messages on a particular queue
-    (kombo's inbuild drain_events generally just gives you one)"""
+    (kombo's inbuilt drain_events generally just gives you one)
 
-    got_any = False
+    Waits either for timeout, or until at least one message has been
+    accepted and the queue is empty.
+
+    handler: return True if you got something valid/expected, return False
+    otherwise (used for returning soon if the queue goes empty and something
+    valid has been received).
+    """
+    # NB using a list instead of just a boolean in order to get
+    # a reference into the handler function
+    any_accepted = []
+
+    def local_handler(body, message):
+        if handler(body, message):
+            any_accepted.push(True)
+
     latency = 0.5
     started = datetime.datetime.now()
     with connection.Consumer([queue], callbacks=[handler]):
@@ -22,13 +36,12 @@ def _drain_all(connection, queue, handler, timeout = 0.1):
             exhausted = False
             try:
                 connection.drain_events(timeout = latency)
-                got_any = True
             except socket.timeout:
                 exhausted = True
                 pass
 
             elapsed = datetime.datetime.now() - started
-            if (exhausted and got_any) or (exhausted and elapsed > datetime.timedelta(seconds = timeout)):
+            if (exhausted and any_accepted) or (exhausted and elapsed > datetime.timedelta(seconds = timeout)):
                 break
 
 
@@ -168,8 +181,9 @@ class PluginRequest(object):
             request_routing_key = "plugin_data_request_%s_%s" % (plugin_name, resource_tag)
 
             def handle_request(body, message):
-                handler(body)
+                result = handler(body)
                 message.ack()
+                return result
 
             request_queue = Queue(request_routing_key, exchange = exchange, routing_key = request_routing_key)
             request_queue(conn.channel()).declare()
@@ -231,6 +245,7 @@ class PluginResponse(object):
             response_data = []
 
             def handle_response(body, message):
+                accepted = False
                 try:
                     id = body['id']
                 except KeyError:
@@ -240,10 +255,13 @@ class PluginResponse(object):
                     if id == request_id:
                         response_data.append(body['data'])
                         log.info("Got response for request %s" % request_id)
+                        accepted = True
                     else:
                         log.warning("Dropping unexpected response %s on %s" % (id, response_routing_key))
                 finally:
                     message.ack()
+
+                return accepted
 
             _drain_all(conn, response_queue, handle_response, timeout = timeout)
             if len(response_data) > 0:
