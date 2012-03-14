@@ -594,7 +594,7 @@ class Job(models.Model):
         except Exception, e:
             # Catchall exception handler to ensure progression even if Job
             # subclasses have bugs in their get_deps etc.
-            job_log.error("Job %d: internal error %s" % (self.id, e))
+            job_log.error("Job %s: internal error %s" % (self.id, e))
             result = False
 
         job_log.debug("Job %s: deps satisfied=%s" % (self.id, result))
