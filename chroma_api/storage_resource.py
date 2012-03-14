@@ -18,7 +18,7 @@ from tastypie import http
 from django.core.exceptions import ObjectDoesNotExist
 from chroma_core.lib.storage_plugin.daemon import StorageDaemon
 
-from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+from chroma_api.storage_resource_class import filter_class_ids
 
 
 class StorageResourceResource(ModelResource):
@@ -98,7 +98,7 @@ class StorageResourceResource(ModelResource):
 
     class Meta:
         queryset = StorageResourceRecord.objects.filter(
-                resource_class__id__in = storage_plugin_manager.resource_class_id_to_class.keys(),
+                resource_class__id__in = filter_class_ids(),
                 resource_class__storage_plugin__internal = False
                 )
         resource_name = 'storage_resource'

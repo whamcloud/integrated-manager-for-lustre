@@ -10,7 +10,21 @@ from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from tastypie.resources import ModelResource
 
-from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
+def filter_class_ids():
+    """Wrapper to avoid importing storage_plugin_manager at module scope (it
+    requires DB to construct itself) so that this module can be imported
+    for e.g. building docs without a database.
+
+    Return a list of storage resource class IDs which are valid for display (i.e.
+    those for which we have a plugin available in this process)
+    """
+    from MySQLdb import OperationalError
+    try:
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        return storage_plugin_manager.resource_class_id_to_class.keys()
+    except OperationalError:
+        return []
 
 
 class StorageResourceClassResource(ModelResource):
@@ -52,7 +66,7 @@ class StorageResourceClassResource(ModelResource):
 
     class Meta:
         queryset = StorageResourceClass.objects.filter(
-                id__in = storage_plugin_manager.resource_class_id_to_class.keys(),
+                id__in = filter_class_ids(),
                 storage_plugin__internal = False
                 )
         resource_name = 'storage_resource_class'
