@@ -2,6 +2,7 @@
 import settings
 
 import fabric
+import fabric.api
 from fabric.operations import sudo, run, put, get
 from fabric.exceptions import NetworkError
 import StringIO

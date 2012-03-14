@@ -6,7 +6,7 @@ AWS_SECRET='' # From your 'security credentials -> access keys' page
 AWS_SSH_KEY = 'jcs-aws-key' # An AWS keypair name
 AWS_SSH_PRIVATE_KEY = '/Users/jcspray/ec2/jcs-aws-key.pem' # a local path
 
-create a virtualenv and do a pip -r requirements.txt
+create a virtualenv and do a pip install -r requirements.txt
 
 run ./manage.py syncdb --migrate --noinput
 
