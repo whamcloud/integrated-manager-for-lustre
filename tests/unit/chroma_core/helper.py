@@ -1,5 +1,6 @@
 
 from django.test import TestCase
+import mock
 
 
 def freshen(obj):
@@ -96,6 +97,13 @@ class JobTestCase(TestCase):
         self.old_daemon_rpc = chroma_core.lib.storage_plugin.daemon.DaemonRpc
         chroma_core.lib.storage_plugin.daemon.DaemonRpc = MockDaemonRpc
 
+        # Override PluginRequest/PluginResponse
+        import chroma_core.lib.storage_plugin.messaging
+        self.old_plugin_request = chroma_core.lib.storage_plugin.messaging.PluginRequest
+        self.old_plugin_response = chroma_core.lib.storage_plugin.messaging.PluginResponse
+        chroma_core.lib.storage_plugin.messaging.PluginRequest = mock.Mock()
+        chroma_core.lib.storage_plugin.messaging.PluginResponse = mock.Mock()
+
     def tearDown(self):
         import chroma_core.lib.agent
         chroma_core.lib.agent.Agent = self.old_agent
@@ -106,6 +114,10 @@ class JobTestCase(TestCase):
 
         import chroma_core.lib.storage_plugin.daemon
         chroma_core.lib.storage_plugin.daemon.DaemonRpc = self.old_daemon_rpc
+
+        import chroma_core.lib.storage_plugin.messaging
+        chroma_core.lib.storage_plugin.messaging.PluginRequest = self.old_plugin_request
+        chroma_core.lib.storage_plugin.messaging.PluginResponse = self.old_plugin_response
 
 
 class JobTestCaseWithHost(JobTestCase):
