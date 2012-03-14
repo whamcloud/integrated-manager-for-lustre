@@ -107,11 +107,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
             lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
 
-            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-            storage_plugin_manager.create_root_resource('linux',
-                    'HydraHostProxy', host_id = host.pk,
-                    virtual_machine = virtual_machine)
-
         # Attempt some initial setup jobs
         from chroma_core.models.jobs import Command
         Command.set_state([(host, 'lnet_unloaded'), (lnet_configuration, 'nids_known')], "Setting up host %s" % address_string)
@@ -556,6 +551,23 @@ class LearnDevicesStep(Step):
     idempotent = True
 
     def run(self, kwargs):
+        # Get the device-scan output
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        device_info = self.invoke_agent(host, "device-scan")
+
+        # Insert it as a request_id=None response
+        from chroma_core.lib.storage_plugin.messaging import PluginResponse
+        PluginResponse.send('linux', host.fqdn, None, device_info)
+
+        # Create a HydraHostProxy for the storage plugin framework to use
+        # FIXME: reinstate virtual_machine (it's passed into create_from_string)
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        storage_plugin_manager.create_root_resource('linux',
+                'HydraHostProxy', host_id = host.pk,
+                virtual_machine = None)
+
+        # Now wait for the storage daemon to pick up the resource and do its thing
         from chroma_core.lib.storage_plugin.daemon import DaemonRpc
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = kwargs['host_id'])

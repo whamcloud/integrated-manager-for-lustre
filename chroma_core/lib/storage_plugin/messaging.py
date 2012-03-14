@@ -72,12 +72,22 @@ def plugin_rpc(plugin_name, host, request, timeout = 0):
     :param timeout: If None (default) then block until the Host is available for requests
     """
 
+    # See if there are any request_id=None responses enqueued: these are used
+    # when we want to pre-populate some data for a plugin (e.g. 'linux' and device detection)
+    try:
+        result = PluginResponse.receive(plugin_name, host.fqdn, None, timeout = 0.1)
+        return result
+    except Timeout:
+        pass
+
     # If the host is not available, don't submit a request until it is available
     if not host.is_available():
         log.info("Host %s is not available for plugin RPC, waiting" % host)
         _wait_for_host(host, timeout)
         log.info("Host %s is now available for plugin RPC" % host)
 
+    # The host is available and there were no out-of-band responses to
+    # use, so we will send a request.
     request_id = PluginRequest.send(plugin_name, host.fqdn, {})
     try:
         return PluginResponse.receive(plugin_name, host.fqdn, request_id)
