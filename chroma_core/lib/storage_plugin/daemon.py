@@ -32,7 +32,6 @@ class PluginSession(threading.Thread):
         record = StorageResourceRecord.objects.get(id=self.root_resource_id)
         plugin_klass = storage_plugin_manager.get_plugin_class(
                           record.resource_class.storage_plugin.module_name)
-        root_resource = ResourceQuery().get_resource(record)
 
         RETRY_DELAY_MIN = 1
         RETRY_DELAY_MAX = 256
@@ -40,6 +39,9 @@ class PluginSession(threading.Thread):
         while not self.stopping:
             last_retry = datetime.datetime.now()
             try:
+                # Note: get a fresh root_resource each time as the Plugin
+                # instance will modify it.
+                root_resource = ResourceQuery().get_resource(record)
                 self._scan_loop(plugin_klass, root_resource)
             except Exception:
                 run_duration = datetime.datetime.now() - last_retry
@@ -63,7 +65,6 @@ class PluginSession(threading.Thread):
                         break
                     else:
                         time.sleep(1)
-
             else:
                 storage_plugin_log.info("Session %s: out of scan loop cleanly" % self.root_resource_id)
 
@@ -71,22 +72,23 @@ class PluginSession(threading.Thread):
         self.stopped = True
 
     def _scan_loop(self, plugin_klass, root_resource):
-        storage_plugin_log.debug("Session %s: starting scan loop" % root_resource._handle)
+        storage_plugin_log.debug("Session %s: starting scan loop" % self.root_resource_id)
         instance = plugin_klass(self.root_resource_id)
         # TODO: impose timeouts on plugin calls (especially teardown)
         try:
-            storage_plugin_log.debug("Session %s: >>initial_scan" % root_resource._handle)
+            storage_plugin_log.debug("Session %s: >>initial_scan" % self.root_resource_id)
             instance.do_initial_scan(root_resource)
             self.initialized = True
-            storage_plugin_log.debug("Session %s: <<initial_scan" % root_resource._handle)
+            storage_plugin_log.debug("Session %s: <<initial_scan" % self.root_resource_id)
             while not self.stopping:
-                storage_plugin_log.debug("Session %s: >>periodic_update" % root_resource._handle)
+                storage_plugin_log.debug("Session %s: >>periodic_update (%s)" % (self.root_resource_id, instance.update_period))
                 instance.do_periodic_update(root_resource)
-                storage_plugin_log.debug("Session %s: <<periodic_update" % root_resource._handle)
+                storage_plugin_log.debug("Session %s: <<periodic_update" % self.root_resource_id)
 
                 i = 0
                 while i < instance.update_period and not self.stopping:
                     time.sleep(1)
+                    i = i + 1
         except Exception:
             raise
         finally:

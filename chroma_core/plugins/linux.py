@@ -8,8 +8,6 @@ from chroma_core.lib.storage_plugin.resource import StorageResource, ScannableId
 
 from chroma_core.lib.storage_plugin import attributes
 from chroma_core.lib.storage_plugin import builtin_resources
-from chroma_core.lib.storage_plugin import alert_conditions
-from chroma_core.lib.storage_plugin import statistics
 from chroma_core.lib.storage_plugin import messaging
 
 # This plugin is special, it uses Hydra's built-in infrastructure
@@ -53,18 +51,6 @@ class HydraHostProxy(StorageResource, ScannableResource):
         host = ManagedHost._base_manager.get(pk=self.host_id)
         return "%s" % host
 
-# Things to offer the user when formatting
-# all of the below must NOT be offered if they have an LVM VG descendent
-# or a NonLustreFilesystem descendent
-# * ScsiDevice (i.e. shared LUNs like DDN VDs) IF it has no LV descendents
-# * UnsharedDeviceNode (i.e. IDE or virtio devices)
-# * LvmVolume
-#
-# For any of the above, we must also work out their leaf device nodes, which
-# should be just the leaf resources.
-
-HACK_TEST_STATS = False
-
 
 class ScsiDevice(builtin_resources.LogicalDrive):
     identifier = GlobalId('serial')
@@ -73,18 +59,8 @@ class ScsiDevice(builtin_resources.LogicalDrive):
 
     class_label = "SCSI device"
 
-    if HACK_TEST_STATS:
-        test_stat = statistics.Gauge()
-        test_hist = statistics.BytesHistogram(bins = [(0, 256), (257, 512), (513, 2048), (2049, 8192)])
-        beef_alert = alert_conditions.AttrValAlertCondition('serial', warn_states = ['SQEMU    QEMU HARDDISK  WD-deadbeef0'], message = "Beef alert in sector 2!")
-
     def get_label(self, ancestors = []):
-        qemu_strip_hack = "SQEMU    QEMU HARDDISK  "
-
-        if self.serial.startswith(qemu_strip_hack):
-            # FIXME: this is a hack that I'm doing for demos because we're not getting SCSI serials in parts yet
-            return self.serial[len(qemu_strip_hack):]
-        elif self.serial[0] == 'S':
+        if self.serial[0] == 'S':
             return self.serial[1:]
         else:
             return self.serial
@@ -331,12 +307,7 @@ class Linux(StoragePlugin):
                     fstype = fstype)
 
     def update_scan(self, scannable_resource):
-        if HACK_TEST_STATS:
-            for scsi_dev in list(self._scsi_devices):
-                import random
-                num = random.randint(10, 20)
-                scsi_dev.test_stat = num
-                scsi_dev.test_hist = [random.randint(50, 100) for r in range(0, 4)]
+        pass
 
 
 class LvmGroup(builtin_resources.StoragePool):

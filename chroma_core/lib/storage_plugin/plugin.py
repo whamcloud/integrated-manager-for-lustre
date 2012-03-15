@@ -115,6 +115,8 @@ class StoragePlugin(object):
         self._delta_alerts = set()
         self._alerts = {}
 
+        self._session_open = False
+
         self.update_period = settings.PLUGIN_DEFAULT_UPDATE_PERIOD
 
     def do_initial_scan(self, root_resource):
@@ -136,6 +138,7 @@ class StoragePlugin(object):
                 root_resource._handle,
                 self._index.all(),
                 self.update_period)
+        self._session_open = True
         self._delta_new_resources = []
 
         # Creates, deletes, attrs, parents are all handled in session_open
@@ -167,7 +170,9 @@ class StoragePlugin(object):
     def do_teardown(self):
         self.teardown()
         from chroma_core.lib.storage_plugin.resource_manager import resource_manager
-        resource_manager.session_close(self._scannable_id)
+        if self._session_open:
+            resource_manager.session_close(self._scannable_id)
+            self._session_open = False
 
     def commit_resource_creates(self):
         from chroma_core.lib.storage_plugin.resource_manager import resource_manager
