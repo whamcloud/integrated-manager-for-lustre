@@ -335,8 +335,9 @@ def audit_all():
 @periodic_task(run_every=timedelta(seconds=settings.AUDIT_PERIOD))
 def parse_log_entries():
     from chroma_core.lib.systemevents import SystemEventsAudit
-    audit_log.info("parse_log_entries: running")
-    SystemEventsAudit().parse_log_entries()
+    parsed_count = SystemEventsAudit().parse_log_entries()
+    if parsed_count:
+        audit_log.debug("parse_log_entries: parsed %d lines" % parsed_count)
 
 
 @periodic_task(run_every=timedelta(seconds=settings.AUDIT_PERIOD))
