@@ -93,6 +93,7 @@ var Api = function() {
   {
     api_available = true;
     $('body').trigger('api_available');
+    $('body').unbind('api_available');
   }
 
   function unexpectedError (jqXHR)
@@ -267,6 +268,7 @@ var Api = function() {
         //console.log("Api: Regained contact at " + Number(Date.now()));
         //console.log("Api: Out for " + (Number(Date.now()) - lost_contact_at)/1000 + " seconds");
         $('body').trigger('api_available');
+        $('body').unbind('api_available');
       } else {
         //console.log("Api: Still out of contact at " + Date.now());
         //console.log("Api: " + calls_waiting + " calls waiting");
