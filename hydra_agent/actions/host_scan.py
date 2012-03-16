@@ -2,7 +2,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 from os import uname
 
 
@@ -15,7 +15,7 @@ def get_nodename(args = None):
     return uname()[1]
 
 
-class HostScanPlugin(AgentPlugin):
+class HostScanPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("get-fqdn",
                               help="get the host's FQDN")

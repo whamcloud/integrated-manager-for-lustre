@@ -26,12 +26,10 @@ def retry_main_loop():
             loop.run()
             # NB I would rather ensure cleanup by using 'with', but this
             # is python 2.4-compatible code
-            loop._join_plugin_threads()
         except Exception, e:
             exc_info = sys.exc_info()
             backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
             daemon_log.error("Unhandled exception: %s" % backtrace)
-            loop._join_plugin_threads()
 
             duration = datetime.datetime.now() - started_at
             daemon_log.error("(Ran main loop for %s)" % duration)
@@ -127,7 +125,7 @@ def run_main_loop(args):
     daemon_log.info("Terminating")
 
 
-def send_update(server_url, server_token, update_scan, responses):
+def send_update(server_url, server_token, session, updates):
     """POST to the UpdateScan API method.
        Returns None on errors"""
     from hydra_agent.actions.host_scan import get_fqdn
@@ -135,22 +133,26 @@ def send_update(server_url, server_token, update_scan, responses):
     from httplib import BadStatusLine
     import simplejson as json
     import urllib2
-    url = server_url + "api/update_scan/"
+    url = server_url + "api/agent/"
     req = urllib2.Request(url,
                           headers = {"Content-Type": "application/json"},
                           data = json.dumps({
+                                  'session': session,
                                   'fqdn': get_fqdn(),
                                   'token': server_token,
-                                  'update_scan': update_scan,
-                                  'plugins': responses}))
+                                  'updates': updates}))
 
     response_data = None
     try:
         response = urllib2.urlopen(req)
-        # NB hydraapi returns {'errors':, 'response':}
         response_data = json.loads(response.read())
     except urllib2.HTTPError, e:
         daemon_log.error("Failed to post results to %s: %s" % (url, e))
+        try:
+            content = json.loads(e.read())
+            daemon_log.error("Exception: %s" % content['traceback'])
+        except ValueError:
+            daemon_log.error("Unreadable payload")
     except urllib2.URLError, e:
         daemon_log.error("Failed to open %s: %s" % (url, e))
     except BadStatusLine, e:
@@ -160,93 +162,9 @@ def send_update(server_url, server_token, update_scan, responses):
 
     return response_data
 
-import threading
-
-
-class PluginThread(threading.Thread):
-    """A thread for processing requests for a particular plugin (one per plugin)"""
-    def __init__(self, server_conf, plugin_name, *args, **kwargs):
-        import Queue
-
-        self.queue = Queue.Queue()
-        self.finished = False
-        self.plugin_name = plugin_name
-
-        self._server_conf = server_conf
-
-        # TODO: look up a request handler from plugin_name (currently
-        # just hardcoded to do the stuff for the 'linux' plugin)
-
-        super(PluginThread, self).__init__(*args, **kwargs)
-
-    def set_server_conf(self, server_conf):
-        self._server_conf = server_conf
-
-    def run(self):
-        import Queue
-
-        # Service requests from self.queue
-        daemon_log.info("Starting thread for plugin %s" % self.plugin_name)
-        while not self.finished:
-            try:
-                request = self.queue.get(block = True, timeout = 1)
-            except Queue.Empty:
-                # Timeout and poll rather than blocking forever, in
-                # order to handle self.finished in the outer loop
-                continue
-
-            # Fulfil any requests for 'linux' storage plugin
-            responses = {}
-            responses[self.plugin_name] = {}
-
-            # TODO: This is a kluge while 'linux' is the only plugin we understand:
-            # should be dispatching requests to plugins and gathering responses.
-            from hydra_agent.actions.device_scan import device_scan
-            responses[self.plugin_name][request['id']] = device_scan()
-
-            # NB if we fail to send results we will consume the request and drop
-            # the result.
-            result = send_update(self._server_conf['url'], self._server_conf['token'], None, responses)
-            if result == None:
-                daemon_log.error("Failed to send back result for request %s:%s" % (self.plugin_name, request['id']))
-            else:
-                daemon_log.info("Fulfilled request %s:%s" % (self.plugin_name, request['id']))
-        daemon_log.info("Finished thread for plugin %s" % self.plugin_thread)
-
-    def join(self, *args, **kwargs):
-        self.finished = True
-        super(PluginThread, self).join(*args, **kwargs)
-
-    def stop(self):
-        self.finished = True
-
 
 class MainLoop(object):
     PID_FILE = '/var/run/hydra-agent.pid'
-
-    def __init__(self):
-        # Map of plugin name to PluginThread
-        self._plugin_threads = {}
-
-    def _enqueue_request(self, server_conf, plugin_name, request):
-        try:
-            plugin_thread = self._plugin_threads[plugin_name]
-        except KeyError:
-            plugin_thread = PluginThread(server_conf, plugin_name)
-            plugin_thread.start()
-            self._plugin_threads[plugin_name] = plugin_thread
-
-        daemon_log.info("Enqueuing request %s:%s" % (plugin_name, request['id']))
-        plugin_thread.queue.put(request)
-
-    def _join_plugin_threads(self):
-        for thread in self._plugin_threads.values():
-            thread.stop()
-
-        for thread in self._plugin_threads.values():
-            thread.join()
-
-        self._plugin_threads.clear()
 
     def run(self):
         # Load server config (server URL etc)
@@ -262,34 +180,59 @@ class MainLoop(object):
         # have a server configured
         config_interval = 10
         from hydra_agent.actions.update_scan import update_scan
+        session_id = None
+        session_started = False
+        session_counter = None
         while True:
             if AgentStore.server_conf_changed():
                 server_conf = AgentStore.get_server_conf()
                 if not server_conf:
-                    # If the server configuration has been removed then
-                    # stop all plugin threads (no longer possible to service
-                    # any requests)
                     daemon_log.info("Server configuration cleared")
-                    self._join_plugin_threads()
                 else:
                     daemon_log.info("Server configuration changed (url: %s)" % server_conf['url'])
-                    # If the server configuration has been changed
-                    # then update all plugin threads with the new configuration.
-                    for thread in self._plugin_threads.values():
-                        thread.set_server_conf(server_conf)
                 self._reload_config = False
             elif server_conf:
                 from datetime import datetime, timedelta
                 reported_at = datetime.now()
-                response = send_update(server_conf['url'], server_conf['token'], update_scan(), {'linux': {}})
 
-                if response:
-                    daemon_log.debug("Update success")
-                    for plugin_name, plugin_requests in response['plugins'].items():
-                        for request in plugin_requests:
-                            self._enqueue_request(server_conf, plugin_name, request)
+                updates = {}
+                updates['lustre'] = update_scan()
 
-                while ((datetime.now() - reported_at) < timedelta(seconds = report_interval)):
-                    time.sleep(1)
+                if session_id and not session_started:
+                    daemon_log.info("New session, sending full information")
+                    from hydra_agent.actions.device_scan import device_scan
+                    updates['linux'] = device_scan()
+                elif session_id:
+                    daemon_log.debug("Continue session, sending update information")
+                else:
+                    daemon_log.debug("No session")
+                    pass
+
+                session = {
+                        'id': session_id,
+                        'counter': session_counter
+                        }
+                response_data = send_update(server_conf['url'], server_conf['token'], session, updates)
+                quick_retry = False
+                if response_data:
+                    if session_id and response_data['session_id'] != session_id:
+                        daemon_log.info("Session %s evicted" % (session_id))
+                        session_id = response_data['session_id']
+                        session_counter = 0
+                        session_started = False
+                        quick_retry = True
+                    elif not session_id:
+                        session_id = response_data['session_id']
+                        session_counter = 0
+                        session_started = False
+                        daemon_log.info("Session %s began" % (session_id))
+                        quick_retry = True
+                    elif session_id and response_data['session_id'] == session_id:
+                        session_started = True
+                        session_counter += 1
+
+                if not quick_retry:
+                    while ((datetime.now() - reported_at) < timedelta(seconds = report_interval)):
+                        time.sleep(1)
             else:
                 time.sleep(config_interval)

@@ -5,7 +5,7 @@
 """Rsyslog actions."""
 
 from hydra_agent import shell
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 
 import os
 
@@ -46,7 +46,7 @@ def configure_rsyslog(args):
     f.close()
 
 
-class RsyslogPlugin(AgentPlugin):
+class RsyslogPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("configure-rsyslog",
                               help="configure rsyslog forwarding")

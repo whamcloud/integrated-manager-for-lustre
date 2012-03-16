@@ -4,7 +4,7 @@
 
 """
 Simple plugin framework with minimal boilerplate required.  Uses introspection
-to find subclasses of AgentPlugin and registers them as CLI subcommands.
+to find subclasses of ActionPlugin and registers them as CLI subcommands.
 """
 
 import os
@@ -20,7 +20,58 @@ EXCLUDED_PLUGINS = []
 _instances = {}
 
 
-class AgentPlugin(object):
+class DevicePlugin(object):
+    def annotate_block_device(info):
+        return info
+
+    def initial_scan(self):
+        raise NotImplementedError()
+
+    def update_scan(self):
+        raise NotImplementedError()
+
+# The 'linux' plugin scans block devices
+# It can give you some per-plugin additional information
+# for each one.
+# This additional information is passed to the plugin's server
+# side component.
+# The server side component receives this information and synthesizes
+# resources which link the block device to the controller
+
+#class DdnDevicePlugin(object):
+#    def annotate_block_device(info):
+#        # Special case for DDN 10KE which correlates volumes via
+#        # their 'OID' identifier and publishes this ID in /sys/block
+#        # FIXME: find a way to shift this into the DDN plugin
+#        oid_path = os.path.join("/sys/block", device_name, 'oid')
+#        if os.path.exists(oid_path):
+#            serial = open(oid_path, 'r').read().strip()
+
+
+#class LinuxDevicePlugin(object):
+#   def start_session(self, request, session):
+#       from hydra_agent.actions.device_scan import device_scan
+#       return device_scan()
+#
+#   def update_session(self, request, session):
+#       return None
+
+#
+#class DevicePluginManager(object):
+#   @classmethod
+#    def annotate_block_device(info):
+#        """For plugins which just need to help Chroma correlate
+#        block devices between controllers and servers, it may be
+#        sufficient to receive a callback for each block device,
+#        and insert additional information such as a proprietary
+#        device identifier"""
+#
+#    @classmethod
+#    def request_handler(self, plugin_name, request, session):
+#        LinuxDevicePlugin().request_handler(request, session)
+#
+
+class ActionPlugin(object):
     def capabilities(self):
         """Returns a list of capabilities advertised by this plugin."""
         # As a ridiculous hack, the default here is to simply return
@@ -86,7 +137,7 @@ def find_plugins():
 
     load_plugins(scan_plugins())
     plugins = []
-    for cls in AgentPlugin.__subclasses__():
+    for cls in ActionPlugin.__subclasses__():
         # We only want one instance per plugin class.
         if cls not in _instances:
             _instances[cls] = cls()

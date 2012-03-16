@@ -2,7 +2,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 
 
 def _validate_conf(server_conf):
@@ -28,7 +28,7 @@ def remove_server_conf(args = None):
     AgentStore.remove_server_conf()
 
 
-class ServerConfPlugin(AgentPlugin):
+class ServerConfPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("set-server-conf",
                               help="set server config params")

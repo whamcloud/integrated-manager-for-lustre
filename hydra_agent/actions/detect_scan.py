@@ -8,7 +8,7 @@ import subprocess
 
 from utils import normalize_device, Mounts
 from hydra_agent import shell
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 
 
 def get_local_targets():
@@ -207,7 +207,7 @@ def detect_scan(args):
         "mgs_conf_params": mgs_conf_params}
 
 
-class DetectScanPlugin(AgentPlugin):
+class DetectScanPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("detect-scan",
                               help="scan for existing Lustre config")

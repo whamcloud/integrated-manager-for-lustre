@@ -1,5 +1,5 @@
 
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 from hydra_agent.store import AgentStore
 from hydra_agent import shell
 import simplejson as json
@@ -367,7 +367,7 @@ def clear_targets(args):
             pass
 
 
-class TargetsPlugin(AgentPlugin):
+class TargetsPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser('register-target', help='register a target')
         p.add_argument('--device', required=True, help='device for target')

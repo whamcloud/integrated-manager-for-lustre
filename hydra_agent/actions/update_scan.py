@@ -8,7 +8,7 @@ import glob
 from utils import Mounts, normalize_device, list_capabilities
 from hydra_agent.actions.lnet_scan import lnet_status
 from hydra_agent import shell, version
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 try:
     from hydra_agent.actions.manage_targets import get_resource_locations
     get_resource_locations  # workaround for pyflakes issue #13
@@ -77,7 +77,7 @@ def update_scan(args = None):
             }
 
 
-class UpdateScanPlugin(AgentPlugin):
+class UpdateScanPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("update-scan",
                               help="scan for updates to monitored filesystems")

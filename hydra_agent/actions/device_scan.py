@@ -4,7 +4,9 @@
 
 from hydra_agent.log import agent_log
 from hydra_agent import shell
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
+
+#from hydra_agent.plugins import DevicePluginManager
 
 import os
 import glob
@@ -103,18 +105,15 @@ def _device_node(device_name, major_minor, path, size, parent):
     # FIXME: different controllers may want to use different identifiers,
     # should separate these out so that can pick from e.g. 0x80 vs. 0x83
 
-    # Special case for DDN 10KE which correlates volumes via
-    # their 'OID' identifier and publishes this ID in /sys/block
-    # FIXME: find a way to shift this into the DDN plugin
-    oid_path = os.path.join("/sys/block", device_name, 'oid')
-    if os.path.exists(oid_path):
-        serial = open(oid_path, 'r').read().strip()
-
-    return {'major_minor': major_minor,
+    info = {'major_minor': major_minor,
             'path': path,
             'serial': serial,
             'size': size,
             'parent': parent}
+
+    #info = DevicePluginManager.annotate_block_device(info)
+
+    return info
 
 
 def _parse_sys_block():
@@ -297,7 +296,7 @@ def device_scan(args = None):
     return {"vgs": vgs, "lvs": lvs, "mpath": mpaths, "devs": block_device_nodes, "local_fs": bdev_to_local_fs}
 
 
-class DeviceScanPlugin(AgentPlugin):
+class DeviceScanPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("device-scan",
                               help="scan for devices, or something")
