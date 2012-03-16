@@ -402,3 +402,48 @@ Alert conditions
 
 .. automodule:: chroma_core.lib.storage_plugin.alert_conditions
     :members:
+
+
+
+Advanced: using custom block device identifiers
+-----------------------------------------------
+
+If storage devices from your controllers do not appear on Linux servers with a globally unique
+ID as the SCSI identifier, then you need some additional code to collect this information from
+Lustre servers.
+
+A stripped down agent-side component of plugins can be written.  When this is installed on 
+Lustre servers, your plugin running on the Chroma manager will receive callbacks 
+
+Advanced: reporting hosts
+-------------------------
+
+Your storage hardware may be able to provide Chroma with knowledge of server addresses, for example
+if the storage hardware hosts virtual machines which act as Lustre servers.
+
+Advanced: specifying access paths
+---------------------------------
+
+If you are using custom block device identifiers, you may not want the relationship to
+be directly from the Lun on the controller to the block device on the server.  For example,
+you may wish to report this relationship via network ports so that Chroma knows which
+ports are related to which devices for performance analysis.
+
+To do this, your plugin must somehow know the relationship between these ports and devices.
+Assuming this knowledge exists, you can report the relationship from a device node to a server port, then to
+a controller port, then to a LUN.  This chain of relationships would allow Chroma Manager to provide
+for example a chart superimposing the bandwidth of each component in the chain from the device node to 
+the storage target.
+
+Advanced: specifying homing information
+---------------------------------------
+
+A given device node (i.e. presentation of a LUN) may be a more or less preferable means
+of access to a storage device.  For example:
+ * if a single LUN is presented on two controller ports then a device node on a host connected to one port may be preferable to a device node on a host connected to the other port.
+ * if a LUN is accessible via two device nodes on a single server, then one may be preferable to the other
+
+This type of information allows Chroma Manager to make intelligent selection of primary/secondary Lustre servers.
+
+To express this information, create a HomingPreference resource which is a parent of the device node, and has as its
+parent the LUN.

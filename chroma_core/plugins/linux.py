@@ -4,11 +4,10 @@
 # ==============================
 
 from chroma_core.lib.storage_plugin.plugin import StoragePlugin
-from chroma_core.lib.storage_plugin.resource import StorageResource, ScannableId, GlobalId, ScannableResource
+from chroma_core.lib.storage_plugin.resource import StorageResource, ScannableId, GlobalId
 
 from chroma_core.lib.storage_plugin import attributes
 from chroma_core.lib.storage_plugin import builtin_resources
-from chroma_core.lib.storage_plugin import messaging
 
 # This plugin is special, it uses Hydra's built-in infrastructure
 # in a way that third party plugins can't/shouldn't/mustn't
@@ -35,7 +34,13 @@ class DeviceNode(StorageResource):
         return "%s:%s" % (self.host.get_label(), path)
 
 
-class HydraHostProxy(StorageResource, ScannableResource):
+class PluginAgentResources(StorageResource):
+    identifier = GlobalId('host_id', 'plugin_name')
+    host_id = attributes.Integer()
+    plugin_name = attributes.String()
+
+
+class HydraHostProxy(StorageResource):
     # FIXME using address here is troublesome for hosts whose
     # addresses might change.  However it is useful for doing
     # an update_or_create on VMs discovered on controllers.  Hmm.
@@ -152,14 +157,8 @@ class Linux(StoragePlugin):
     def teardown(self):
         self.log.debug("Linux.teardown")
 
-    # TODO: need to document that initial_scan may not kick off async operations, because
-    # the caller looks at overall resource state at exit of function.  If they eg
-    # want to kick off an async update thread they should do it at the first
-    # call to update_scan, or maybe we could give them a separate function for that.
-    def initial_scan(self, root_resource):
-        host = ManagedHost.objects.get(pk=root_resource.host_id)
-
-        devices = messaging.plugin_rpc('linux', host, {})
+    def agent_session_start(self, host_resource, data):
+        devices = data
 
         lv_block_devices = set()
         for vg, lv_list in devices['lvs'].items():
@@ -210,7 +209,7 @@ class Linux(StoragePlugin):
                 lun_resource = res_by_serial[bdev['serial']]
                 res, created = self.update_or_create(ScsiDeviceNode,
                                     parents = [lun_resource],
-                                    host = root_resource,
+                                    host = host_resource,
                                     path = bdev['path'])
             else:
                 res, created = self.update_or_create(UnsharedDevice,
@@ -218,7 +217,7 @@ class Linux(StoragePlugin):
                         size = bdev['size'])
                 res, created = self.update_or_create(UnsharedDeviceNode,
                         parents = [res],
-                        host = root_resource,
+                        host = host_resource,
                         path = bdev['path'])
             bdev_to_resource[bdev['major_minor']] = res
 
@@ -228,15 +227,15 @@ class Linux(StoragePlugin):
         for bdev in devices['devs'].values():
             if bdev['major_minor'] in lv_block_devices:
                 res, created = self.update_or_create(LvmDeviceNode,
-                                    host = root_resource,
+                                    host = host_resource,
                                     path = bdev['path'])
             elif bdev['major_minor'] in mpath_block_devices:
                 res, created = self.update_or_create(MultipathDeviceNode,
-                                    host = root_resource,
+                                    host = host_resource,
                                     path = bdev['path'])
             elif bdev['parent']:
                 res, created = self.update_or_create(PartitionDeviceNode,
-                        host = root_resource,
+                        host = host_resource,
                         path = bdev['path'])
             else:
                 continue

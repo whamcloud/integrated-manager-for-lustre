@@ -54,6 +54,24 @@ def _amqp_connection():
         settings.BROKER_VHOST))
 
 
+def simple_send(name, body):
+    with _amqp_connection() as conn:
+        q = conn.SimpleQueue(name, serializer = 'json')
+        q.put(body)
+
+
+def simple_receive(name):
+    with _amqp_connection() as conn:
+        q = conn.SimpleQueue(name, serializer = 'json')
+        from Queue import Empty
+        try:
+            message = q.get(block = False)
+            message.ack()
+            return message.decode()
+        except Empty:
+            return None
+
+
 def _wait_for_host(host, timeout):
     #: How often to check the host to see if it has become available
     UNAVAILABLE_POLL_INTERVAL = 10

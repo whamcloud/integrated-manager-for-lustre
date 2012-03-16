@@ -7,8 +7,10 @@ import pickle
 
 from django.db import transaction
 
+from chroma_core.lib.storage_plugin import messaging
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
 from chroma_core.lib.storage_plugin.messaging import Timeout
+from chroma_core.models import AgentSession, ManagedHost
 
 
 # Thread-per-session is just a convenient way of coding this.  The actual required
@@ -77,12 +79,12 @@ class PluginSession(threading.Thread):
         # TODO: impose timeouts on plugin calls (especially teardown)
         try:
             storage_plugin_log.debug("Session %s: >>initial_scan" % self.root_resource_id)
-            instance.do_initial_scan(root_resource)
+            instance.do_initial_scan()
             self.initialized = True
             storage_plugin_log.debug("Session %s: <<initial_scan" % self.root_resource_id)
             while not self.stopping:
                 storage_plugin_log.debug("Session %s: >>periodic_update (%s)" % (self.root_resource_id, instance.update_period))
-                instance.do_periodic_update(root_resource)
+                instance.do_periodic_update()
                 storage_plugin_log.debug("Session %s: <<periodic_update" % self.root_resource_id)
 
                 i = 0
@@ -180,6 +182,106 @@ class DaemonRpc(object):
 
     def stop(self):
         self._stopping = True
+
+
+class AgentSessionState(object):
+    def __init__(self):
+        self.plugin_instances = {}
+
+
+class AgentPluginDaemon(object):
+    """Sibling of StorageDaemon.  Rather than actively creating sessions
+    and spinning of threads, this class handles incoming information from
+    the agents and manages sessions in an event-driven way as messages arrive."""
+    def __init__(self):
+        self._session_state = {}
+        self._stopping = False
+
+    def stop(self):
+        self._stopping = True
+
+    def main_loop(self):
+        # Evict any existing sessions
+        AgentSession.objects.all().delete()
+        storage_plugin_log.info("AgentPluginDaemon listening")
+        while(not self._stopping):
+            message = messaging.simple_receive('agent')
+            if message:
+                self.handle_incoming(message)
+            else:
+                time.sleep(1)
+
+    @transaction.commit_on_success
+    def handle_incoming(self, message):
+        host_id = message['host_id']
+        session_id = message['session_id']
+        updates = message['updates']
+        try:
+            host = ManagedHost.objects.get(id = host_id)
+        except ManagedHost.DoesNotExist:
+            storage_plugin_log.error("Received agent message for non-existent host %s" % host_id)
+            return
+
+        storage_plugin_log.debug("Received agent message for %s" % host)
+
+        try:
+            session = AgentSession.objects.get(host = host, session_id = session_id)
+        except AgentSession.DoesNotExist:
+            storage_plugin_log.error("Received agent message for non-existent session %s" % session_id)
+            return
+
+        try:
+            host_state = self._session_state[host.id]
+            if len(host_state) and set(host_state.keys()) != set([session_id]):
+                # An old session is in the state for this host, flush it out
+                storage_plugin_log.info("Old sessions %s for host %s, removing" % (set(host_state.keys()), host))
+                raise KeyError
+                # TODO: tear down plugin instances (or document that there is no teardown for agent plugins)
+
+        except KeyError:
+            host_state = {}
+            self._session_state[host.id] = host_state
+
+        try:
+            session_state = host_state[session.session_id]
+            initial = False
+        except KeyError:
+            session_state = AgentSessionState()
+            host_state[session.session_id] = session_state
+            initial = True
+
+        # TODO: validate plugin_name
+        for plugin_name, plugin_data in updates.items():
+            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+            from chroma_core.lib.storage_plugin.query import ResourceQuery
+            from chroma_core.models import StorageResourceRecord
+            try:
+                record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources', plugin_name = plugin_name)
+            except StorageResourceRecord.DoesNotExist:
+                record = storage_plugin_manager.create_root_resource('linux', 'PluginAgentResources', plugin_name = plugin_name)
+
+            klass = storage_plugin_manager.get_plugin_class(plugin_name)
+            instance = klass(record.id)
+            if initial:
+                instance = klass(record.id)
+                session_state.plugin_instances[plugin_name] = instance
+            else:
+                instance = session_state.plugin_instances[plugin_name]
+
+            try:
+                if initial:
+                    storage_plugin_log.info("Started session for %s on %s" % (plugin_name, host))
+                    instance.do_agent_session_start(plugin_data)
+                else:
+                    instance.do_agent_session_continue(plugin_data)
+            except Exception:
+                import sys
+                import traceback
+                exc_info = sys.exc_info()
+                backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+                storage_plugin_log.error("Exception starting agent session for %s from %s: %s" % (
+                    plugin_name, host, backtrace))
+                storage_plugin_log.error("Data: %s" % plugin_data)
 
 
 class StorageDaemon(object):

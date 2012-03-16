@@ -3,7 +3,7 @@ from chroma_core.lib.storage_plugin.plugin import StoragePlugin
 from chroma_core.lib.storage_plugin.resource import StorageResource
 from chroma_core.lib.storage_plugin import attributes
 from chroma_core.lib.storage_plugin import statistics
-from chroma_core.lib.storage_plugin.resource import GlobalId, ScannableResource
+from chroma_core.lib.storage_plugin.resource import GlobalId, ScannableResource, ScannableId
 
 import random
 
@@ -16,7 +16,7 @@ class Controller(StorageResource, ScannableResource):
 
 
 class DiskDrive(StorageResource):
-    identifier = GlobalId('serial')
+    identifier = ScannableId('serial')
     serial = attributes.String()
     read_bytes_sec = statistics.Gauge(units = "B/s", label = "Read bandwidth")
     write_bytes_sec = statistics.Counter(units = "B/s", label = "Write bandwidth")

@@ -16,7 +16,7 @@ class ResourceNotFound(Exception):
 
 
 class ResourceIndex(object):
-    def __init__(self, scannable_id):
+    def __init__(self):
         # Map (local_id) to resource
         self._local_id_to_resource = {}
 
@@ -59,6 +59,10 @@ class StoragePlugin(object):
     #: Set to true for plugins which should not be shown in the user interface
     internal = False
 
+    # TODO: need to document that initial_scan may not kick off async operations, because
+    # the caller looks at overall resource state at exit of function.  If they eg
+    # want to kick off an async update thread they should do it at the first
+    # call to update_scan, or maybe we could give them a separate function for that.
     def initial_scan(self, root_resource):
         """Mandatory.  Identify all resources
            present at this time and call register_resource on them.
@@ -104,7 +108,7 @@ class StoragePlugin(object):
         self._instance_lock = threading.Lock()
         self._handle_counter = 0
 
-        self._index = ResourceIndex(scannable_id)
+        self._index = ResourceIndex()
         self._scannable_id = scannable_id
 
         self._resource_lock = threading.Lock()
@@ -119,23 +123,38 @@ class StoragePlugin(object):
 
         self.update_period = settings.PLUGIN_DEFAULT_UPDATE_PERIOD
 
-    def do_initial_scan(self, root_resource):
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
+        root_resource = ResourceQuery().get_resource(scannable_id)
+        root_resource._handle = self.generate_handle()
+        root_resource._handle_global = False
+        self._root_resource = root_resource
+
+    def do_agent_session_start(self, data):
+        self._initial_populate(self.agent_session_start, self._root_resource, data)
+
+    def do_agent_session_continue(self, data):
+        self._update(self.agent_session_continue, self._root_resource, data)
+
+    def do_initial_scan(self):
+        self._initial_populate(self.initial_scan, self._root_resource)
+
+    def do_periodic_update(self):
+        self._update(self.update_scan, self._root_resource)
+
+    def _initial_populate(self, fn, *args):
         if self._initialized:
             raise RuntimeError("Tried to initialize %s twice!" % self)
         self._initialized = True
 
         from chroma_core.lib.storage_plugin.resource_manager import resource_manager
 
-        root_resource._handle = self.generate_handle()
-        root_resource._handle_global = False
+        self._index.add(self._root_resource)
 
-        self._index.add(root_resource)
-
-        self.initial_scan(root_resource)
+        fn(*args)
 
         resource_manager.session_open(
                 self._scannable_id,
-                root_resource._handle,
+                self._root_resource._handle,
                 self._index.all(),
                 self.update_period)
         self._session_open = True
@@ -147,16 +166,8 @@ class StoragePlugin(object):
         self.check_alert_conditions()
         self.commit_alerts()
 
-    def check_alert_conditions(self):
-        for resource in self._index.all():
-            # Check if any AlertConditions are matched
-            for name, ac in resource._alert_conditions.items():
-                alert_list = ac.test(resource)
-                for name, attribute, active in alert_list:
-                    self.notify_alert(active, resource, name, attribute)
-
-    def do_periodic_update(self, root_resource):
-        self.update_scan(root_resource)
+    def _update(self, fn, *args):
+        fn(*args)
 
         # Resources created since last update
         with self._resource_lock:
@@ -166,6 +177,14 @@ class StoragePlugin(object):
             self.commit_resource_statistics()
             self.check_alert_conditions()
             self.commit_alerts()
+
+    def check_alert_conditions(self):
+        for resource in self._index.all():
+            # Check if any AlertConditions are matched
+            for name, ac in resource._alert_conditions.items():
+                alert_list = ac.test(resource)
+                for name, attribute, active in alert_list:
+                    self.notify_alert(active, resource, name, attribute)
 
     def do_teardown(self):
         self.teardown()

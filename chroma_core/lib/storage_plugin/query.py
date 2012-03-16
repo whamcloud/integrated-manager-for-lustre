@@ -227,6 +227,7 @@ class ResourceQuery(object):
         from chroma_core.models import StorageResourceRecord
         import json
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, klass)
+        # FIXME: validate that attrs.keys() are all part of the resource's GlobalId
         resource = klass(**attrs)
         return StorageResourceRecord.objects.get(
                 resource_class__id = klass_id,
