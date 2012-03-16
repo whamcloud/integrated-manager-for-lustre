@@ -1,8 +1,8 @@
 
-import test_parameters
 from selenium.common.exceptions import WebDriverException
 from time import sleep
 from base import wait_for_element
+from testconfig import config
 
 
 class Login:
@@ -29,10 +29,10 @@ class Login:
                     continue
 
     def login_superuser(self):
-        for user in test_parameters.USERS:
+        for user in config['hydra_servers']['users']:
             if user['is_superuser']:
                 self.username.send_keys(user['username'])
                 self.password.send_keys(user['password'])
                 self.login_button.click()
                 return
-        raise RuntimeError("No superuser in test_parameters.USERS")
+        raise RuntimeError("No superuser in config file")
