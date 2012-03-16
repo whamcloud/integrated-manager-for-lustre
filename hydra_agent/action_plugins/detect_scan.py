@@ -6,7 +6,7 @@ import os
 import re
 import subprocess
 
-from utils import normalize_device, Mounts
+from hydra_agent.utils import normalize_device, Mounts
 from hydra_agent import shell
 from hydra_agent.plugins import ActionPlugin
 

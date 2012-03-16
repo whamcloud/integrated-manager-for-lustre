@@ -5,20 +5,15 @@
 import argparse
 import simplejson as json
 
-from hydra_agent import plugins
-from hydra_agent.store import AgentStore
+from hydra_agent.plugins import ActionPluginManager
 
 
 def main():
-    # FIXME: Move this into per-plugin init so that only plugins which
-    # need it try to use it.
-    AgentStore.setup()
-
-    parser = argparse.ArgumentParser(description="The Whamcloud Hydra Agent")
+    parser = argparse.ArgumentParser(description="Whamcloud Chroma Agent")
     subparsers = parser.add_subparsers()
 
-    for plugin in plugins.find_plugins():
-        plugin.register_commands(subparsers)
+    for plugin_name, plugin_class in ActionPluginManager.get_plugins().items():
+        plugin_class().register_commands(subparsers)
 
     # FIXME: This really ought to be split out into a separate
     # hydra-daemon script.

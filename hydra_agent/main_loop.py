@@ -6,8 +6,8 @@ import sys
 import traceback
 import datetime
 
-from hydra_agent.actions.avahi_publish import ZeroconfService
-from hydra_agent.actions.avahi_publish import ZeroconfServiceException
+from hydra_agent.avahi_publish import ZeroconfService
+from hydra_agent.avahi_publish import ZeroconfServiceException
 
 daemon_log = logging.getLogger('daemon')
 daemon_log.setLevel(logging.INFO)
@@ -128,7 +128,7 @@ def run_main_loop(args):
 def send_update(server_url, server_token, session, updates):
     """POST to the UpdateScan API method.
        Returns None on errors"""
-    from hydra_agent.actions.host_scan import get_fqdn
+    from hydra_agent.action_plugins.host_scan import get_fqdn
 
     from httplib import BadStatusLine
     import simplejson as json
@@ -179,10 +179,10 @@ class MainLoop(object):
         # How often to re-read JSON to see if we
         # have a server configured
         config_interval = 10
-        from hydra_agent.actions.update_scan import update_scan
         session_id = None
         session_started = False
         session_counter = None
+        session_state = None
         while True:
             if AgentStore.server_conf_changed():
                 server_conf = AgentStore.get_server_conf()
@@ -196,14 +196,18 @@ class MainLoop(object):
                 reported_at = datetime.now()
 
                 updates = {}
-                updates['lustre'] = update_scan()
-
+                from hydra_agent.plugins import DevicePluginManager
                 if session_id and not session_started:
                     daemon_log.info("New session, sending full information")
-                    from hydra_agent.actions.device_scan import device_scan
-                    updates['linux'] = device_scan()
+                    for plugin_name, plugin in DevicePluginManager.get_plugins().items():
+                        instance = plugin()
+                        session_state[plugin_name] = instance
+                        updates[plugin_name] = instance.start_session()
                 elif session_id:
                     daemon_log.debug("Continue session, sending update information")
+                    for plugin_name, plugin in DevicePluginManager.get_plugins().items():
+                        instance = session_state[plugin_name]
+                        updates[plugin_name] = instance.update_session()
                 else:
                     daemon_log.debug("No session")
                     pass
@@ -220,11 +224,13 @@ class MainLoop(object):
                         session_id = response_data['session_id']
                         session_counter = 0
                         session_started = False
+                        session_state = {}
                         quick_retry = True
                     elif not session_id:
                         session_id = response_data['session_id']
                         session_counter = 0
                         session_started = False
+                        session_state = {}
                         daemon_log.info("Session %s began" % (session_id))
                         quick_retry = True
                     elif session_id and response_data['session_id'] == session_id:

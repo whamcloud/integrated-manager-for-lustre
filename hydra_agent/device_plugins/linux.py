@@ -2,6 +2,9 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+
+from hydra_agent.plugins import DevicePlugin
+
 from hydra_agent.log import agent_log
 from hydra_agent import shell
 from hydra_agent.plugins import ActionPlugin
@@ -11,6 +14,14 @@ from hydra_agent.plugins import ActionPlugin
 import os
 import glob
 import re
+
+
+class LinuxDevicePlugin(DevicePlugin):
+    def start_session(self):
+        return device_scan()
+
+    def update_session(self):
+        pass
 
 
 def _dev_major_minor(path):
@@ -283,7 +294,7 @@ def device_scan(args = None):
             continue
 
     # Anything in fstab or that is mounted
-    from utils import Fstab, Mounts
+    from hydra_agent.utils import Fstab, Mounts
     fstab = Fstab()
     mounts = Mounts()
     from itertools import chain

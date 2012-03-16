@@ -11,9 +11,9 @@ def list_capabilities():
        performing.  Determined at runtime based on the plugins it finds."""
     capabilities = []
 
-    from hydra_agent.plugins import find_plugins
-    for plugin in find_plugins():
-        capabilities.extend(plugin.capabilities())
+    from hydra_agent.plugins import ActionPluginManager
+    for plugin_name, plugin_class in ActionPluginManager.get_plugins().items():
+        capabilities.extend(plugin_class().capabilities())
 
     return capabilities
 

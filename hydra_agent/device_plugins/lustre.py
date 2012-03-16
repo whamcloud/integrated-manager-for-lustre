@@ -5,12 +5,12 @@
 import os
 import glob
 
-from utils import Mounts, normalize_device, list_capabilities
-from hydra_agent.actions.lnet_scan import lnet_status
+from hydra_agent.utils import Mounts, normalize_device, list_capabilities
+from hydra_agent.action_plugins.lnet_scan import lnet_status
 from hydra_agent import shell, version
-from hydra_agent.plugins import ActionPlugin
+from hydra_agent.plugins import DevicePlugin
 try:
-    from hydra_agent.actions.manage_targets import get_resource_locations
+    from hydra_agent.action_plugins.manage_targets import get_resource_locations
     get_resource_locations  # workaround for pyflakes issue #13
 except ImportError:
     # If we're monitor-only, we won't have manage_targets.  Stubbing
@@ -77,8 +77,9 @@ def update_scan(args = None):
             }
 
 
-class UpdateScanPlugin(ActionPlugin):
-    def register_commands(self, parser):
-        p = parser.add_parser("update-scan",
-                              help="scan for updates to monitored filesystems")
-        p.set_defaults(func=update_scan)
+class UpdateScanPlugin(DevicePlugin):
+    def start_session(self):
+        return update_scan()
+
+    def update_session(self):
+        return update_scan()
