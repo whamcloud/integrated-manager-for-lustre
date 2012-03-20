@@ -27,9 +27,9 @@ class StorageResourceMetaclass(type):
         dct['_alert_conditions'] = {}
         dct['_alert_classes'] = {}
 
-        # Lists of attribute names
-        dct['_provides'] = []
-        dct['_subscribes'] = []
+        # FIXME: a pretty way of letting the user specify subscriptions (in a Meta?)
+        if not '_relations' in dct:
+            dct['_relations'] = []
 
         for base in bases:
             if hasattr(base, '_storage_attributes'):
@@ -38,15 +38,13 @@ class StorageResourceMetaclass(type):
                 dct['_storage_statistics'].update(base._storage_statistics)
             if hasattr(base, '_alert_conditions'):
                 dct['_alert_conditions'].update(base._alert_conditions)
+            if hasattr(base, '_relations'):
+                dct['_relations'].extend(base._relations)
 
         for field_name, field_obj in dct.items():
             if isinstance(field_obj, BaseResourceAttribute):
                 dct['_storage_attributes'][field_name] = field_obj
                 del dct[field_name]
-                if field_obj.provide:
-                    dct['_provides'].append((field_name, field_obj.provide))
-                if field_obj.subscribe:
-                    dct['_subscribes'].append((field_name, field_obj.subscribe))
             elif isinstance(field_obj, BaseStatistic):
                 dct['_storage_statistics'][field_name] = field_obj
                 del dct[field_name]
@@ -258,6 +256,9 @@ class StorageResource(object):
         """Serialized ID for use in StorageResourceRecord.storage_id_str"""
         identifier_val = []
         for f in cls.identifier.id_fields:
+            if not f in cls._storage_attributes:
+                raise RuntimeError("Invalid attribute %s named in identifier for %s" % (f, cls))
+
             if f in attrs:
                 identifier_val.append(attrs[f])
             else:

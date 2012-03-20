@@ -73,7 +73,7 @@ class AgentResource(Resource):
                 session.save()
 
                 updates = bundle.data['updates']
-                api_log.debug("Received updates for %s for session %s from %s" % (len(updates), session.session_id, host))
+                api_log.debug("Received %d updates for session %s from %s" % (len(updates), session.session_id, host))
 
                 # Special case for 'lustre' update, do not
                 # pass it along to the storage plugin framework

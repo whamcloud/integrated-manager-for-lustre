@@ -16,7 +16,7 @@ from chroma_core.lib.storage_plugin.query import ResourceQuery
 from tastypie.exceptions import NotFound, ImmediateHttpResponse
 from tastypie import http
 from django.core.exceptions import ObjectDoesNotExist
-from chroma_core.lib.storage_plugin.daemon import DaemonRpc
+from chroma_core.lib.storage_plugin.daemon import ScanDaemonRpc
 
 from chroma_api.storage_resource_class import filter_class_ids
 
@@ -114,7 +114,7 @@ class StorageResourceResource(ModelResource):
         except ObjectDoesNotExist:
             raise NotFound("A model instance matching the provided arguments could not be found.")
 
-        DaemonRpc().remove_resource(obj.id)
+        ScanDaemonRpc().remove_resource(obj.id)
         raise ImmediateHttpResponse(http.HttpAccepted())
 
     def obj_create(self, bundle, request = None, **kwargs):

@@ -25,7 +25,6 @@ class ServiceThread(threading.Thread):
     def __init__(self, service):
         super(ServiceThread, self).__init__()
         self.service = service
-        self.daemon_rpc = DaemonRpc(daemon)
 
     def run(self):
         try:
@@ -43,14 +42,18 @@ class ServiceThread(threading.Thread):
 
 
 if __name__ == '__main__':
-    from chroma_core.lib.storage_plugin.daemon import StorageDaemon, DaemonRpc, AgentPluginDaemon
-    daemon = StorageDaemon()
+    from chroma_core.lib.storage_plugin.daemon import ScanDaemon, ScanDaemonRpc
+    from chroma_core.lib.storage_plugin.daemon import AgentDaemon, AgentDaemonRpc
 
-    storage_daemon = StorageDaemon()
-    storage_daemon_thread = ServiceThread(storage_daemon)
-    rpc_thread = ServiceThread(DaemonRpc(storage_daemon))
-    agent_daemon_thread = ServiceThread(AgentPluginDaemon())
-    threads = [storage_daemon_thread, agent_daemon_thread, rpc_thread]
+    scan_daemon = ScanDaemon()
+    agent_daemon = AgentDaemon()
+
+    scan_daemon_thread = ServiceThread(scan_daemon)
+    scan_rpc_thread = ServiceThread(ScanDaemonRpc(scan_daemon))
+    agent_rpc_thread = ServiceThread(AgentDaemonRpc(agent_daemon))
+    agent_daemon_thread = ServiceThread(agent_daemon)
+
+    threads = [scan_daemon_thread, agent_daemon_thread, scan_rpc_thread, agent_rpc_thread]
     for thread in threads:
         thread.start()
 

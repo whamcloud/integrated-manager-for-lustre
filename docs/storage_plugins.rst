@@ -408,12 +408,39 @@ Alert conditions
 Advanced: using custom block device identifiers
 -----------------------------------------------
 
-If storage devices from your controllers do not appear on Linux servers with a globally unique
-ID as the SCSI identifier, then you need some additional code to collect this information from
-Lustre servers.
+Chroma makes a best effort to extract standard SCSI identifiers from block devices which
+it encounters on Lustre servers.  However, in some cases:
+ * The SCSI identifier may be missing
+ * The storage controller may not provide the SCSI identifier
 
-A stripped down agent-side component of plugins can be written.  When this is installed on 
-Lustre servers, your plugin running on the Chroma manager will receive callbacks 
+Storage plugins may provide additional code to run on Lustre servers which extracts additional
+information from block devices.
+
+Plugin code running within the Chroma agent has a much simpler interface:
+::
+    from hydra_agent.plugins import DevicePlugin
+
+
+    class FakeControllerDevicePlugin(DevicePlugin):
+        def _read_config(self):
+            import simplejson as json
+            return json.loads(open("/root/fake_controller.json").read())
+
+        def start_session(self):
+            # return all available information
+
+        def update_session(self):
+            # return information needed to update state
+
+
+Implementing `update_session` is optional: plugins which do not implement this function will only send
+information to the server once when the agent begins its connection to the server.
+
+The agent guarantees that the instance of your plugin class is persistent within the process
+between the initial call to start_session and subsequent calls to update_session, and that
+start_session will only ever be called once for a particular instance of your class.  This allows
+you to store information in start_session that is used for calculating deltas of the system
+information to send in update_session.
 
 Advanced: reporting hosts
 -------------------------

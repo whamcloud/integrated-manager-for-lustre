@@ -130,10 +130,10 @@ class StoragePlugin(object):
         self._root_resource = root_resource
 
     def do_agent_session_start(self, data):
-        self._initial_populate(self.agent_session_start, self._root_resource, data)
+        self._initial_populate(self.agent_session_start, self._root_resource.host_id, data)
 
     def do_agent_session_continue(self, data):
-        self._update(self.agent_session_continue, self._root_resource, data)
+        self._update(self.agent_session_continue, self._root_resource.host_id, data)
 
     def do_initial_scan(self):
         self._initial_populate(self.initial_scan, self._root_resource)

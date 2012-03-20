@@ -14,43 +14,10 @@ from chroma_core.lib.storage_plugin import builtin_resources
 from chroma_core.models import ManagedHost
 
 
-class DeviceNode(StorageResource):
-    # NB ideally we would get this from exploring the graph rather than
-    # tagging it onto each one, but this is simpler for now - jcs
-    host = attributes.ResourceReference()
-    path = attributes.PosixPath()
-    class_label = 'Device node'
-
-    def get_label(self):
-        path = self.path
-        strip_strings = ["/dev/",
-                         "/dev/mapper/",
-                         "/dev/disk/by-id/",
-                         "/dev/disk/by-path/"]
-        strip_strings.sort(lambda a, b: cmp(len(b), len(a)))
-        for s in strip_strings:
-            if path.startswith(s):
-                path = path[len(s):]
-        return "%s:%s" % (self.host.get_label(), path)
-
-
 class PluginAgentResources(StorageResource):
     identifier = GlobalId('host_id', 'plugin_name')
     host_id = attributes.Integer()
     plugin_name = attributes.String()
-
-
-class HydraHostProxy(StorageResource):
-    # FIXME using address here is troublesome for hosts whose
-    # addresses might change.  However it is useful for doing
-    # an update_or_create on VMs discovered on controllers.  Hmm.
-    # I wonder if what I really want is a HostResource base and then
-    # subclasses for on-controller hosts (identified by controller+index)
-    # and separately for general hosts (identified by ManagedHost.pk)
-    identifier = GlobalId('host_id')
-
-    host_id = attributes.Integer()
-    virtual_machine = attributes.ResourceReference(optional = True)
 
     def get_label(self, parent = None):
         host = ManagedHost._base_manager.get(pk=self.host_id)
@@ -71,7 +38,7 @@ class ScsiDevice(builtin_resources.LogicalDrive):
             return self.serial
 
 
-class UnsharedDeviceNode(DeviceNode):
+class UnsharedDeviceNode(builtin_resources.DeviceNode):
     """A device node whose underlying device has no SCSI ID
     and is therefore assumed to be unshared"""
     identifier = ScannableId('path')
@@ -95,27 +62,21 @@ class UnsharedDevice(builtin_resources.LogicalDrive):
         return self.path
 
 
-class ScsiDeviceNode(DeviceNode):
+class ScsiDeviceNode(builtin_resources.DeviceNode):
     """SCSI in this context is a catch-all to refer to
     block devices which look like real disks to the host OS"""
     identifier = ScannableId('path')
     #class_label = "SCSI device node"
-    host = attributes.ResourceReference()
 
 
-class MultipathDeviceNode(DeviceNode):
+class MultipathDeviceNode(builtin_resources.DeviceNode):
     identifier = ScannableId('path')
     class_label = "Multipath device node"
 
 
-class LvmDeviceNode(DeviceNode):
+class LvmDeviceNode(builtin_resources.DeviceNode):
     identifier = ScannableId('path')
     class_label = "LVM device node"
-
-    def get_label(self):
-        # LVM devices are only presented once per host,
-        # so just need to say which host this device node is for
-        return "%s" % (self.host.get_label())
 
 
 # FIXME: partitions should really be GlobalIds (they can be seen from more than
@@ -131,7 +92,7 @@ class Partition(builtin_resources.LogicalDrive):
         return self.path
 
 
-class PartitionDeviceNode(DeviceNode):
+class PartitionDeviceNode(builtin_resources.DeviceNode):
     identifier = ScannableId('path')
     class_label = "Linux partition"
 
@@ -146,6 +107,41 @@ class LocalMount(StorageResource):
     mount_point = attributes.String()
 
 
+class LvmGroup(builtin_resources.StoragePool):
+    identifier = GlobalId('uuid')
+
+    uuid = attributes.Uuid()
+    name = attributes.String()
+    size = attributes.Bytes()
+
+    icon = 'lvm_vg'
+    class_label = 'Volume group'
+
+    def get_label(self, parent = None):
+        return self.name
+
+
+class LvmVolume(builtin_resources.LogicalDrive):
+    # Q: Why is this identified by LV UUID and VG UUID rather than just
+    #    LV UUID?  Isn't the LV UUID unique enough?
+    # A: We're matching LVM2's behaviour.  If you e.g. image a machine that
+    #    has some VGs and LVs, then if you want to disambiguate them you run
+    #    'vgchange -u' to get a new VG UUID.  However, there is no equivalent
+    #    command to reset LV uuid, because LVM finds two LVs with the same UUID
+    #    in VGs with different UUIDs to be unique enough.
+    identifier = GlobalId('uuid', 'vg')
+
+    vg = attributes.ResourceReference()
+    uuid = attributes.Uuid()
+    name = attributes.String()
+
+    icon = 'lvm_lv'
+    class_label = 'Logical volume'
+
+    def get_label(self, ancestors = []):
+        return "%s-%s" % (self.vg.name, self.name)
+
+
 class Linux(StoragePlugin):
     internal = True
 
@@ -157,7 +153,10 @@ class Linux(StoragePlugin):
     def teardown(self):
         self.log.debug("Linux.teardown")
 
-    def agent_session_start(self, host_resource, data):
+    def agent_session_continue(self, host_id, data):
+        pass
+
+    def agent_session_start(self, host_id, data):
         devices = data
 
         lv_block_devices = set()
@@ -209,7 +208,7 @@ class Linux(StoragePlugin):
                 lun_resource = res_by_serial[bdev['serial']]
                 res, created = self.update_or_create(ScsiDeviceNode,
                                     parents = [lun_resource],
-                                    host = host_resource,
+                                    host_id = host_id,
                                     path = bdev['path'])
             else:
                 res, created = self.update_or_create(UnsharedDevice,
@@ -217,7 +216,7 @@ class Linux(StoragePlugin):
                         size = bdev['size'])
                 res, created = self.update_or_create(UnsharedDeviceNode,
                         parents = [res],
-                        host = host_resource,
+                        host_id = host_id,
                         path = bdev['path'])
             bdev_to_resource[bdev['major_minor']] = res
 
@@ -227,15 +226,15 @@ class Linux(StoragePlugin):
         for bdev in devices['devs'].values():
             if bdev['major_minor'] in lv_block_devices:
                 res, created = self.update_or_create(LvmDeviceNode,
-                                    host = host_resource,
+                                    host_id = host_id,
                                     path = bdev['path'])
             elif bdev['major_minor'] in mpath_block_devices:
                 res, created = self.update_or_create(MultipathDeviceNode,
-                                    host = host_resource,
+                                    host_id = host_id,
                                     path = bdev['path'])
             elif bdev['parent']:
                 res, created = self.update_or_create(PartitionDeviceNode,
-                        host = host_resource,
+                        host_id = host_id,
                         path = bdev['path'])
             else:
                 continue
@@ -307,38 +306,3 @@ class Linux(StoragePlugin):
 
     def update_scan(self, scannable_resource):
         pass
-
-
-class LvmGroup(builtin_resources.StoragePool):
-    identifier = GlobalId('uuid')
-
-    uuid = attributes.Uuid()
-    name = attributes.String()
-    size = attributes.Bytes()
-
-    icon = 'lvm_vg'
-    class_label = 'Volume group'
-
-    def get_label(self, parent = None):
-        return self.name
-
-
-class LvmVolume(builtin_resources.LogicalDrive):
-    # Q: Why is this identified by LV UUID and VG UUID rather than just
-    #    LV UUID?  Isn't the LV UUID unique enough?
-    # A: We're matching LVM2's behaviour.  If you e.g. image a machine that
-    #    has some VGs and LVs, then if you want to disambiguate them you run
-    #    'vgchange -u' to get a new VG UUID.  However, there is no equivalent
-    #    command to reset LV uuid, because LVM finds two LVs with the same UUID
-    #    in VGs with different UUIDs to be unique enough.
-    identifier = GlobalId('uuid', 'vg')
-
-    vg = attributes.ResourceReference()
-    uuid = attributes.Uuid()
-    name = attributes.String()
-
-    icon = 'lvm_lv'
-    class_label = 'Logical volume'
-
-    def get_label(self, ancestors = []):
-        return "%s-%s" % (self.vg.name, self.name)

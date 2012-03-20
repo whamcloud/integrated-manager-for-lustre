@@ -102,8 +102,6 @@ class PluginSession(threading.Thread):
 
 
 class DaemonRpc(object):
-    methods = ['remove_resource', 'start_session']
-
     def __init__(self, wrapped = None):
         self._stopping = False
         self.wrapped = wrapped
@@ -116,52 +114,60 @@ class DaemonRpc(object):
 
     def __getattr__(self, name):
         if name in self.methods:
-            return lambda *args, **kwargs: DaemonRpc._call(name, *args, **kwargs)
+            return lambda *args, **kwargs: self.__class__._call(name, *args, **kwargs)
         else:
             raise AttributeError(name)
 
     @classmethod
     def _call(cls, fn_name, *args, **kwargs):
-        from chroma_core.lib.storage_plugin.messaging import control_rpc
         storage_plugin_log.info("Started rpc '%s'" % fn_name)
-        result = control_rpc({
+        queue_name = cls.__name__
+        result = messaging.rpc(queue_name, {
             'method': fn_name,
             'args': args,
             'kwargs': kwargs})
 
-        if isinstance(result, str):
-            exception = pickle.loads(str)
+        if 'exception' in result:
+            exception = pickle.loads(str(result['exception']))
+            storage_plugin_log.error("DaemonRpc._call: exception: %s" % result['backtrace'])
             raise exception
 
         storage_plugin_log.info("Completed rpc '%s' (result=%s)" % (fn_name, result))
 
     def _local_call(self, fn_name, *args, **kwargs):
+        storage_plugin_log.debug("_local_call: %s" % fn_name)
         assert (fn_name in self.methods)
         fn = getattr(self.wrapped, fn_name)
         return fn(*args, **kwargs)
 
     def main_loop(self):
+        queue_name = self.__class__.__name__
         from chroma_core.lib.storage_plugin.messaging import PluginRequest, PluginResponse
-
-        # Declare the action that we will perform for each request
-        plugin_name, resource_tag = ("_control", "daemon")
 
         def handler(body):
             storage_plugin_log.info("DaemonRpc %s %s %s %s" % (body['id'], body['method'], body['args'], body['kwargs']))
             request_id = body['id']
             try:
-                result = self._local_call(body['method'], *body['args'], **body['kwargs'])
+                result = {'result': self._local_call(body['method'], *body['args'], **body['kwargs'])}
             except Exception, e:
-                result = pickle.dumps(e)
-            PluginResponse.send(plugin_name, resource_tag, request_id, result)
+                import sys
+                import traceback
+                exc_info = sys.exc_info()
+                backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+                result = {
+                        'exception': pickle.dumps(e),
+                        'backtrace': backtrace
+                        }
+                storage_plugin_log.error("DaemonRpc: exception calling %s" % body['method'])
+            PluginResponse.send(queue_name, "", request_id, result)
 
         # Enter a loop to service requests until self.stopping is set
-        storage_plugin_log.info("Starting DaemonRpc main loop")
+        storage_plugin_log.info("Starting DaemonRpc main loop (%s)" % queue_name)
         retry_period = 1
         max_retry_period = 60
         while not self._stopping:
             try:
-                PluginRequest.handle_all(plugin_name, resource_tag, handler)
+                PluginRequest.handle_all(queue_name, "", handler)
                 time.sleep(1)
             except Exception:
                 import sys
@@ -184,18 +190,27 @@ class DaemonRpc(object):
         self._stopping = True
 
 
+class AgentDaemonRpc(DaemonRpc):
+    methods = ['await_session', 'remove_host_resources']
+
+
+class ScanDaemonRpc(DaemonRpc):
+    methods = ['remove_resource']
+
+
 class AgentSessionState(object):
     def __init__(self):
         self.plugin_instances = {}
 
 
-class AgentPluginDaemon(object):
-    """Sibling of StorageDaemon.  Rather than actively creating sessions
+class AgentDaemon(object):
+    """Sibling of ScanDaemon.  Rather than actively creating sessions
     and spinning of threads, this class handles incoming information from
     the agents and manages sessions in an event-driven way as messages arrive."""
     def __init__(self):
         self._session_state = {}
         self._stopping = False
+        self._processing_lock = threading.Lock()
 
     def stop(self):
         self._stopping = True
@@ -203,13 +218,51 @@ class AgentPluginDaemon(object):
     def main_loop(self):
         # Evict any existing sessions
         AgentSession.objects.all().delete()
-        storage_plugin_log.info("AgentPluginDaemon listening")
+        storage_plugin_log.info("AgentDaemon listening")
         while(not self._stopping):
             message = messaging.simple_receive('agent')
             if message:
-                self.handle_incoming(message)
+                with self._processing_lock:
+                    self.handle_incoming(message)
             else:
                 time.sleep(1)
+
+    def remove_host_resources(self, host_id):
+        storage_plugin_log.info("AgentDaemon: removing resources for host %s" % host_id)
+        with self._processing_lock:
+            try:
+                del self._session_state[host_id]
+            except KeyError:
+                storage_plugin_log.warning("remove_host_resources: No sessions for host %s" % host_id)
+
+            from chroma_core.lib.storage_plugin.query import ResourceQuery
+            from chroma_core.lib.storage_plugin.resource_manager import resource_manager
+            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+            from chroma_core.models import StorageResourceRecord
+            for plugin_name in storage_plugin_manager.loaded_plugins.keys():
+                try:
+                    record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
+                            host_id = host_id, plugin_name = plugin_name)
+                except StorageResourceRecord.DoesNotExist:
+                    pass
+                else:
+                    resource_manager.global_remove_resource(record.id)
+
+        storage_plugin_log.info("AgentDaemon: finished removing resources for host %s" % host_id)
+        # FIXME: race: I return from here having removed the resources, then something is
+        # in the queue of agent updates, causes the resources to be created again before
+        # the caller has actually deleted the host record.
+
+    def await_session(self, host_id):
+        started = False
+        timeout = 30
+        start_time = datetime.datetime.now()
+        while not started:
+            with self._processing_lock:
+                started = host_id in self._session_state
+
+            if datetime.datetime.now() - start_time > datetime.timedelta(seconds = timeout):
+                raise Timeout("Timed out after %s seconds waiting for session to start")
 
     @transaction.commit_on_success
     def handle_incoming(self, message):
@@ -256,12 +309,13 @@ class AgentPluginDaemon(object):
             from chroma_core.lib.storage_plugin.query import ResourceQuery
             from chroma_core.models import StorageResourceRecord
             try:
-                record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources', plugin_name = plugin_name)
+                record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
+                        plugin_name = plugin_name, host_id = host.id)
             except StorageResourceRecord.DoesNotExist:
-                record = storage_plugin_manager.create_root_resource('linux', 'PluginAgentResources', plugin_name = plugin_name)
+                record = storage_plugin_manager.create_root_resource('linux', 'PluginAgentResources',
+                        plugin_name = plugin_name, host_id = host.id)
 
             klass = storage_plugin_manager.get_plugin_class(plugin_name)
-            instance = klass(record.id)
             if initial:
                 instance = klass(record.id)
                 session_state.plugin_instances[plugin_name] = instance
@@ -279,12 +333,18 @@ class AgentPluginDaemon(object):
                 import traceback
                 exc_info = sys.exc_info()
                 backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-                storage_plugin_log.error("Exception starting agent session for %s from %s: %s" % (
+                storage_plugin_log.error("Exception in agent session for %s from %s: %s" % (
                     plugin_name, host, backtrace))
                 storage_plugin_log.error("Data: %s" % plugin_data)
 
+                # Tear down the session as we are no longer coherent, information could have
+                # been lost.
+                session.delete()
+                del self._session_state[host.id]
+                break
 
-class StorageDaemon(object):
+
+class ScanDaemon(object):
     def __init__(self):
         self.stopping = False
 
@@ -305,12 +365,12 @@ class StorageDaemon(object):
             self.plugins[p] = sessions
 
         session_count = reduce(lambda x, y: x + y, [len(s) for s in self.plugins.values()])
-        storage_plugin_log.info("StorageDaemon: Loaded %s plugins, %s sessions" % (len(self.plugins), session_count))
+        storage_plugin_log.info("ScanDaemon: Loaded %s plugins, %s sessions" % (len(self.plugins), session_count))
 
     def remove_resource(self, resource_id):
         # Is there a session to kill?
         kill_session = None
-        storage_plugin_log.info("StorageDaemon: removing %s" % resource_id)
+        storage_plugin_log.info("ScanDaemon: removing %s" % resource_id)
         with self._session_lock:
             try:
                 kill_session = self._all_sessions[resource_id]
@@ -319,30 +379,15 @@ class StorageDaemon(object):
 
             if kill_session != None:
                 kill_session.stop()
-                storage_plugin_log.info("StorageDaemon: waiting for session to stop")
+                storage_plugin_log.info("ScanDaemon: waiting for session to stop")
                 from time import sleep
                 while(not kill_session.stopped):
                     sleep(1)
-                storage_plugin_log.info("StorageDaemon: stopped.")
+                storage_plugin_log.info("ScanDaemon: stopped.")
 
             from chroma_core.lib.storage_plugin.resource_manager import resource_manager
             resource_manager.global_remove_resource(resource_id)
-        storage_plugin_log.info("StorageDaemon: finished removing %s" % resource_id)
-
-    def start_session(self, resource_id):
-        started = False
-        timeout = 30
-        start_time = datetime.datetime.now()
-        while not started:
-            with self._session_lock:
-                try:
-                    session = self._all_sessions[resource_id]
-                    started = session.initialized
-                except KeyError:
-                    started = False
-
-            if datetime.datetime.now() - start_time > datetime.timedelta(seconds = timeout):
-                raise Timeout("Timed out after %s seconds waiting for session to start")
+        storage_plugin_log.info("ScanDaemon: finished removing %s" % resource_id)
 
     def root_resource_ids(self, plugin):
         """Return the PK of all StorageResourceRecords for 'plugin' which have no parents"""
@@ -355,7 +400,7 @@ class StorageDaemon(object):
         return ids
 
     def main_loop(self):
-        storage_plugin_log.info("StorageDaemon: entering main loop")
+        storage_plugin_log.info("ScanDaemon: entering main loop")
         for scannable_id, session in self._all_sessions.items():
             session.start()
 
@@ -367,27 +412,27 @@ class StorageDaemon(object):
                 for plugin, sessions in self.plugins.items():
                     for rrid in self.root_resource_ids(plugin):
                         if not rrid in sessions:
-                            storage_plugin_log.info("StorageDaemon: new session for resource %s" % rrid)
+                            storage_plugin_log.info("ScanDaemon: new session for resource %s" % rrid)
                             s = PluginSession(rrid)
                             sessions[rrid] = s
                             self._all_sessions[rrid] = s
                             s.start()
 
-        storage_plugin_log.info("StorageDaemon: leaving main loop")
+        storage_plugin_log.info("ScanDaemon: leaving main loop")
 
         self._stop_sessions()
 
     def _stop_sessions(self):
         JOIN_TIMEOUT = 5
 
-        storage_plugin_log.info("StorageDaemon: stopping sessions")
+        storage_plugin_log.info("ScanDaemon: stopping sessions")
         for scannable_id, session in self._all_sessions.items():
             session.stop()
-        storage_plugin_log.info("StorageDaemon: joining sessions")
+        storage_plugin_log.info("ScanDaemon: joining sessions")
         for scannable_id, session in self._all_sessions.items():
             session.join(timeout = JOIN_TIMEOUT)
             if session.isAlive():
-                storage_plugin_log.warning("StorageDaemon: session failed to return in %s seconds, forcing exit" % JOIN_TIMEOUT)
+                storage_plugin_log.warning("ScanDaemon: session failed to return in %s seconds, forcing exit" % JOIN_TIMEOUT)
                 os._exit(-1)
 
     def stop(self):

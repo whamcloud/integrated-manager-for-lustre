@@ -25,11 +25,11 @@ def _drain_all(connection, queue, handler, timeout = 0.1):
 
     def local_handler(body, message):
         if handler(body, message):
-            any_accepted.push(True)
+            any_accepted.append(True)
 
     latency = 0.5
     started = datetime.datetime.now()
-    with connection.Consumer([queue], callbacks=[handler]):
+    with connection.Consumer([queue], callbacks=[local_handler]):
         # Loop until we get a call to drain_events which
         # does not result in a handler callback
         while True:
@@ -128,20 +128,13 @@ def plugin_rpc(plugin_name, host, request, timeout = 0):
         raise
 
 
-def control_rpc(kwargs):
-    """
-    :param method: String
-    :param args: Dict
-    """
-    plugin_name = '_control'
-    tag = "daemon"
-
-    request_id = PluginRequest.send(plugin_name, tag, kwargs)
+def rpc(queue_name, kwargs):
+    request_id = PluginRequest.send(queue_name, "", kwargs)
     try:
-        return PluginResponse.receive(plugin_name, tag, request_id)
+        return PluginResponse.receive(queue_name, "", request_id)
     except Timeout:
         # Revoke the request, we will never handle a response from it
-        PluginRequest.revoke(plugin_name, tag, request_id)
+        PluginRequest.revoke(queue_name, "", request_id)
         raise
 
 
