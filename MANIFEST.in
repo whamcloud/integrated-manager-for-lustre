@@ -9,3 +9,4 @@ include chroma_ui/templates/*
 graft polymorphic
 graft chroma_ui/static
 global-exclude .*.swp
+global-exclude local_settings.py*
