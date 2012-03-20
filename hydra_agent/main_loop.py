@@ -207,7 +207,10 @@ class MainLoop(object):
                     daemon_log.debug("Continue session, sending update information")
                     for plugin_name, plugin in DevicePluginManager.get_plugins().items():
                         instance = session_state[plugin_name]
-                        updates[plugin_name] = instance.update_session()
+                        try:
+                            updates[plugin_name] = instance.update_session()
+                        except NotImplementedError:
+                            pass
                 else:
                     daemon_log.debug("No session")
                     pass
