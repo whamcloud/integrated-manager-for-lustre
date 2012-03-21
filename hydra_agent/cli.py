@@ -28,6 +28,8 @@ def main():
         args = parser.parse_args()
         result = args.func(args)
         print json.dumps({'success': True, 'result': result}, indent = 2)
+    except SystemExit:
+        raise
     except Exception, e:
         import sys
         import traceback
