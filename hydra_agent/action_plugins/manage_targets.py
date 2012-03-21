@@ -12,9 +12,9 @@ import re
 def __sanitize_arg(arg):
     """Private function to safely quote arguments containing whitespace."""
     if re.search(r'\s', arg):
-        arg = '"%s"' % arg 
+        arg = '"%s"' % arg
 
-    return arg 
+    return arg
 
 
 def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
@@ -75,7 +75,6 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
     cmd = "tunefs.lustre %s %s %s" % (" ".join(types), " ".join(options), device)
 
     return ' '.join(cmd.split())
-
 
 
 def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
@@ -218,10 +217,8 @@ def cibadmin(command_args):
 
 
 def format_target(args):
-    from hydra_agent.cmds import lustre
-
     kwargs = json.loads(args.args)
-    cmdline = lustre.mkfs(**kwargs)
+    cmdline = mkfs(**kwargs)
 
     shell.try_run(shlex.split(cmdline))
 
