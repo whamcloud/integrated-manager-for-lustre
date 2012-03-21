@@ -56,15 +56,11 @@ def get_local_targets():
             })
         if flags & 0x0005 == 0x0005:
             # For combined MGS/MDT volumes, synthesise an 'MGS'
-            # FIXME: Not sure what primary_nid should be here,
-            # just ginning something up to make pyflakes happy.
-            primary_nid = "0@lo"
             lustre_devices.append({
                 "name": "MGS",
                 "uuid": uuid,
                 "params": params,
                 "device": dev,
-                "primary_nid": primary_nid,
                 "mounted": mounted
                 })
 
