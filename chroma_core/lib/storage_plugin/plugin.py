@@ -241,7 +241,6 @@ class StoragePlugin(object):
             self._delta_alerts.clear()
 
     def commit_resource_statistics(self):
-        storage_plugin_log.debug(">> Plugin.commit_resource_statistics %s", self._scannable_id)
         sent_stats = 0
         for resource in self._index.all():
             r_stats = resource.flush_stats()
@@ -249,7 +248,8 @@ class StoragePlugin(object):
                 from chroma_core.lib.storage_plugin.resource_manager import resource_manager
                 resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
                 sent_stats += len(r_stats)
-        storage_plugin_log.debug("<< Plugin.commit_resource_statistics %s (%s sent)", self._scannable_id, sent_stats)
+        if sent_stats > 0:
+            storage_plugin_log.debug("commit_resource_statistics %s (%s sent)", self._scannable_id, sent_stats)
 
     def update_or_create(self, klass, parents = [], **attrs):
         """Report a storage resource.  If it already exists then

@@ -45,13 +45,15 @@ class LogicalDrive(StorageResource):
     icon = 'virtual_disk'
 
 
+class PathWeight(StorageResource):
+    weight = attributes.Integer()
+
+
 class VirtualMachine(StorageResource):
     """A linux host provided by a plugin.  This resource has a special behaviour when
     created: Chroma will add this (by the ``address`` attribute) as a Lustre server and
     attempt to invoke the Chroma agent on it.  The ``host_id`` attribute is used internally
-    by Chroma and must not be assigned to by plugins.  The ``home_controller`` attribute is
-    used to indicate a storage controller whose LUNs are best accessed via this virtual
-    machine -- see the ``VirtualDisk.home_controller``."""
+    by Chroma and must not be assigned to by plugins."""
     # NB address is used to cue the creation of a ManagedHost, once that is set up
     # this address is not used.
     address = attributes.String()

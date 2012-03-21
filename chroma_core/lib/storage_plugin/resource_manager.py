@@ -24,6 +24,10 @@ WARNING:
 
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 from chroma_core.lib.storage_plugin.resource import ScannableId, GlobalId
+from chroma_core.lib.util import all_subclasses
+
+from chroma_core.models import ManagedHost, ManagedTarget, ManagedTargetMount
+from chroma_core.models import Lun, LunNode
 
 from django.db import transaction
 
@@ -102,7 +106,7 @@ class SubscriberIndex(object):
                 if isinstance(relation, relations.Provide):
                     subscription = relations.Subscribe(klass, relation.attributes)
                     relation.provide_to._relations.append(subscription)
-                    for sc in relation.provide_to.__subclasses__():
+                    for sc in all_subclasses(relation.provide_to):
                         sc._relations.append(subscription)
 
         for id, klass in storage_plugin_manager.resource_class_id_to_class.items():
@@ -163,10 +167,10 @@ class SubscriberIndex(object):
 
         for subscription in self._all_subscriptions:
             if isinstance(resource, subscription.subscribe_to):
-                log.debug("SubscriberIndex.remove provider %s" % subscription.key())
+                log.debug("SubscriberIndex.remove provider %s" % subscription.key)
                 self.remove_provider(resource_id, subscription.key, subscription.val(resource))
         for subscription in resource._subscriptions:
-            log.debug("SubscriberIndex.remove subscriber %s" % subscription.key())
+            log.debug("SubscriberIndex.remove subscriber %s" % subscription.key)
             self.remove_subscriber(resource_id, subscription.key, subscription.val(resource))
 
     def populate(self):
@@ -225,13 +229,7 @@ class ResourceManager(object):
             # Special case for agent-reported resources: update Lun and LunNode
             # objects to interface with the world of Lustre
             # TODO: don't just do this at creation, do updates too
-
-            from chroma_core.lib.storage_plugin.query import ResourceQuery
-            scannable_resource = ResourceQuery().get_resource(scannable_id)
-            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-            klass, klass_id = storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')
-            if isinstance(scannable_resource, klass):
-                self._persist_lun_updates(scannable_id, scannable_resource)
+            self._persist_lun_updates(scannable_id)
 
             # Plugins are allowed to create VirtualMachine objects, indicating that
             # we should created a ManagedHost to go with it (e.g. discovering VMs)
@@ -263,7 +261,6 @@ class ResourceManager(object):
         from chroma_core.lib.storage_plugin import builtin_resources
         for record, resource in get_session_resources_of_type(session, builtin_resources.VirtualMachine):
             if not resource.host_id:
-                from chroma_core.models import ManagedHost
                 try:
                     host = ManagedHost.objects.get(address = resource.address)
                     log.info("Associated existing host with VirtualMachine resource: %s" % resource.address)
@@ -278,19 +275,19 @@ class ResourceManager(object):
                 # fine, they have no right to know.
 
     @transaction.commit_on_success
-    def _persist_lun_updates(self, scannable_id, scannable_resource):
-        return
+    def _persist_lun_updates(self, scannable_id):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         from chroma_core.lib.storage_plugin import builtin_resources
-        from chroma_core.models import Lun, LunNode, ManagedHost
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
-        # XXX
-        # I need a mechanism for 'stealing' LunNodes -- when a new LogicalDrive
-        # comes into existence with some LunNode descendents that are also descendents
-        # of another logicaldrive which is not an ancestor or descendent of the new
-        # logicaldrive, the new device should create a new Lun and reassign the
-        # lun reference of the nodes to this Lun.
-        #
+        scannable_resource = ResourceQuery().get_resource(scannable_id)
+
+        log.debug("%s %s %s" % (scannable_resource, storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')[0], isinstance(scannable_resource, storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')[0])))
+        if not isinstance(scannable_resource, storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')[0]):
+            return
+        else:
+            log.debug("_persist_lun_updates for scope record %s" % scannable_id)
+            host = ManagedHost.objects.get(pk = scannable_resource.host_id)
 
         def lun_get_or_create(resource_id):
             try:
@@ -303,101 +300,187 @@ class ResourceManager(object):
                 lun = Lun.objects.create(
                         size = r.size,
                         storage_resource_id = r._handle)
+                log.info("Created Lun %s for LogicalDrive %s" % (lun.pk, resource_id))
                 return lun
 
-        # Update LunNode objects for DeviceNodes
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        klass_ids = []
-        for klass in builtin_resources.DeviceNode.__subclasses__():
-            klass_ids.append(storage_plugin_manager.get_resource_class_id(klass))
-        node_resources = ResourceQuery().get_class_resources(klass_ids, storage_id_scope = scannable_id)
-        host = ManagedHost.objects.get(pk = scannable_resource.host_id)
-        touched_luns = set()
-        touched_lun_nodes = set()
-        for record in node_resources:
-            log.debug("lunnode record %s" % record.pk)
-            r = record.to_resource()
-            # A node which has children is already in use
-            # (it might contain partitions, be an LVM PV, be in
-            #  use by a local filesystem, or as swap)
-            if ResourceQuery().record_has_children(r._handle):
-                continue
+        # Get all DeviceNodes within this scope
+        node_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
+                for klass in all_subclasses(builtin_resources.DeviceNode)]
+        node_resources = ResourceQuery().get_class_resources(node_klass_ids, storage_id_scope = scannable_id)
 
-            device = ResourceQuery().record_find_ancestor(record.pk, builtin_resources.LogicalDrive)
-            if device == None:
-                log.error("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
-                continue
-                #raise RuntimeError("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
+        # DeviceNodes elegible for use as a LunNode (leaves)
+        usable_node_resources = [nr for nr in node_resources if not ResourceQuery().record_has_children(nr.id)]
 
-            lun = lun_get_or_create(device)
-            try:
-                lun_node = LunNode.objects.get(
-                        host = host,
-                        path = r.path)
+        # DeviceNodes which are usable but don't have LunNode
+        assigned_resource_ids = [ln['storage_resource_id'] for ln in LunNode.objects.filter(storage_resource__in = [n.id for n in node_resources]).values("id", "storage_resource_id")]
+        unassigned_node_resources = [nr for nr in usable_node_resources if nr.id not in assigned_resource_ids]
+
+        # LunNodes whose storage resource is within this scope
+        scope_lun_nodes = LunNode.objects.filter(storage_resource__storage_id_scope = scannable_id)
+
+        log.debug("%s %s %s %s" % (tuple([len(l) for l in [node_resources, usable_node_resources, unassigned_node_resources, scope_lun_nodes]])))
+
+        def affinity_weights(lun):
+            lun_nodes = LunNode.objects.filter(lun = lun)
+            if lun_nodes.count() == 0:
+                log.info("affinity_weights: Lun %d has no LunNodes" % lun.id)
+                return False
+
+            if ManagedTarget.objects.filter(lun = lun).count() > 0:
+                log.info("affinity_weights: Lun %d in use" % lun.id)
+                return False
+
+            weights = {}
+            for lun_node in lun_nodes:
                 if not lun_node.storage_resource:
-                    lun_node.storage_resource_id = record.pk
+                    log.info("affinity_weights: no storage_resource for LunNode %s" % lun_node.id)
+                    return False
+
+                weight_resource_ids = ResourceQuery().record_find_ancestors(lun_node.storage_resource, builtin_resources.PathWeight)
+                if len(weight_resource_ids) == 0:
+                    log.info("affinity_weights: no PathWeights for LunNode %s" % lun_node.id)
+                    return False
+
+                from chroma_core.models import StorageResourceAttribute
+                import json
+                ancestor_weights = [json.loads(w['value']) for w in StorageResourceAttribute.objects.filter(
+                    resource__in = weight_resource_ids, key = 'weight').values('value')]
+                weight = reduce(lambda x, y: x + y, ancestor_weights)
+                weights[lun_node] = weight
+
+            log.info("affinity_weights: %s" % weights)
+
+            sorted_lun_nodes = [lun_node for lun_node, weight in sorted(weights.items(), lambda x, y: cmp(x[1], y[1]))]
+            sorted_lun_nodes.reverse()
+            primary = sorted_lun_nodes[0]
+            primary.primary = True
+            primary.use = True
+            primary.save()
+            if len(sorted_lun_nodes) > 1:
+                secondary = sorted_lun_nodes[1]
+                secondary.use = True
+                secondary.primary = False
+                secondary.save()
+            for lun_node in sorted_lun_nodes[2:]:
+                lun_node.use = False
+                lun_node.primary = False
+                lun_node.save()
+
+            return True
+
+        def affinity_balance(lun):
+            lun_nodes = LunNode.objects.filter(lun = lun)
+            host_to_lun_nodes = defaultdict(list)
+            for ln in lun_nodes:
+                host_to_lun_nodes[ln.host].append(ln)
+
+            host_to_primary_count = dict([(h, LunNode.objects.filter(host = h, primary = True).count()) for h in host_to_lun_nodes.keys()])
+
+            fewest_primaries = [host for host, count in sorted(host_to_primary_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
+            primary_lun_node = host_to_lun_nodes[fewest_primaries][0]
+            primary_lun_node.primary = True
+            primary_lun_node.use = True
+            primary_lun_node.save()
+            log.info("affinity_balance: picked %s for %s primary" % (primary_lun_node.host, lun))
+            log.info("htpc: %s" % host_to_primary_count)
+
+            # Remove the primary host from consideration for the secondary mount
+            del host_to_lun_nodes[primary_lun_node.host]
+
+            if len(host_to_lun_nodes) > 0:
+                host_to_lun_node_count = dict([(h, LunNode.objects.filter(host = h, use = True).count()) for h in host_to_lun_nodes.keys()])
+                log.info("htlnc: %s" % host_to_lun_node_count)
+                fewest_lun_nodes = [host for host, count in sorted(host_to_lun_node_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
+                secondary_lun_node = host_to_lun_nodes[fewest_lun_nodes][0]
+                secondary_lun_node.primary = False
+                secondary_lun_node.use = True
+                secondary_lun_node.save()
+                log.info("affinity_balance: picked %s for %s secondary" % (secondary_lun_node.host, lun))
+            else:
+                secondary_lun_node = None
+
+            for lun_node in lun_nodes:
+                if not lun_node in (primary_lun_node, secondary_lun_node):
+                    lun_node.use = False
+                    lun_node.primary = False
                     lun_node.save()
 
-            except LunNode.DoesNotExist:
-                primary = False
-                use = False
+        # For all unattached DeviceNode resources, find or create LunNodes
+        for node_record in unassigned_node_resources:
+            logicaldrive_id = ResourceQuery().record_find_ancestor(node_record.pk, builtin_resources.LogicalDrive)
+            if logicaldrive_id == None:
+                # This is not an error: a plugin may report a device node from
+                # an agent plugin before reporting the LogicalDrive from the controller.
+                log.info("DeviceNode %s has no LogicalDrive ancestor" % node_record.pk)
+                continue
+            else:
+                log.info("Setting up DeviceNode %s" % node_record.pk)
+                node_resource = node_record.to_resource()
 
-                # A hack to provide some arbitrary primary/secondary assignments
-                import settings
-                if settings.PRIMARY_LUN_HACK:
-                    if lun.lunnode_set.filter(host__not_deleted = True).count() == 0:
-                        primary = True
-                        use = True
-                    else:
-                        primary = False
-                        if lun.lunnode_set.filter(use = True, host__not_deleted = True).count() > 1:
-                            use = False
-                        else:
-                            use = True
-                else:
-                    use = False
-                    primary = False
+                lun = lun_get_or_create(logicaldrive_id)
+                try:
+                    lun_node = LunNode.objects.get(
+                            host = host,
+                            path = node_resource.path)
+                except LunNode.DoesNotExist:
+                    lun_node = LunNode.objects.create(
+                        lun = lun,
+                        host = host,
+                        path = node_resource.path,
+                        storage_resource_id = node_record.pk,
+                        primary = False,
+                        use = False)
+                    log.info("Created LunNode %s for resource %s" % (lun_node.id, node_record.pk))
+                    got_weights = affinity_weights(lun_node.lun)
+                    if not got_weights:
+                        affinity_balance(lun_node.lun)
 
-                lun_node = LunNode.objects.create(
-                    lun = lun,
-                    host = host,
-                    path = r.path,
-                    storage_resource_id = record.pk,
-                    primary = primary,
-                    use = use)
+        # For all LunNodes, if its storage resource was in this scope, and it
+        # was not included in the set of usable DeviceNode resources, remove
+        # the LunNode
+        for lun_node in scope_lun_nodes:
+            if not lun_node.storage_resource_id in [nr.id for nr in usable_node_resources]:
+                self._try_removing_lun_node(lun_node)
 
-            touched_luns.add(lun_node.pk)
-            touched_lun_nodes.add(lun_node.pk)
-            # BUG: when mjmac set up on IU, it saw mpath devices fine as
-            # LunNodes.  But when he created some CLVM LVs on multipath
-            # devices, the multipath devices stayed (see TODO below) AND
-            # the new LV devices didn't appear.  Why didn't they get promoted
-            # to LunNodes?  they were in hydra-agent output
-            # TODO: cope with CLVM where device nodes appear and disappear
-            # - simplest thing would be to have the agent lie and claim
-            # that the device node is always there (based on LV presence
-            # in 'lvs' output.  But that's a hack.  And appearing in 'lvs'
-            # just means the PVs are on shared storage that the host has
-            # access to, not necessarily that the host is in the pacemaker
-            # group that will access the LVs.
+        # TODO: Lun Stealing: there may be an existing Lun/LunNode setup for some ScsiDeviceNodes and ScsiVolumes
+        # detected by Chroma, and a storage plugin adds in extra links to the device nodes that follow back
+        # to a LogicalDrive provided by the plugin.  In this case there are two LogicalDrive ancestors of the
+        # device nodes and we would like to have the Lun refer to the plugin-provided one rather than
+        # the auto-generated one (to get the right name etc).
+        # LogicalDrives within this scope
+        #logical_drive_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
+        #        for klass in all_subclasses(builtin_resources.LogicalDrive)]
+        #logical_drive_resources = ResourceQuery().get_class_resources(logical_drive_klass_ids, storage_id_scope = scannable_id)
 
-        log.debug("touched lun nodes %s" % touched_lun_nodes)
-        log.debug("LunNode count %s" % LunNode.objects.count())
+    def _try_removing_lun(self, lun):
+        targets = ManagedTarget.objects.filter(lun = lun)
+        nodes = LunNode.objects.filter(lun = lun)
+        if targets.count() == 0 and nodes.count() == 0:
+            log.warn("Removing Lun %s" % lun.id)
+            lun.storage_resource = None
+            lun.save()
+            Lun.delete(lun.id)
+            return True
+        elif targets.count():
+            log.warn("Leaving Lun %s, used by Target %s" % (lun.id, targets[0]))
+        elif nodes.count():
+            log.warn("Leaving Lun %s, used by %s nodes" % (lun.id, nodes.count()))
 
-        # TODO: do this checking on create/remove/link operations too
-        for lun_node in LunNode.objects.filter(host = host):
-            log.debug("lun_node %s" % lun_node.pk)
-            if not lun_node.pk in touched_lun_nodes:
-                lun = lun_node.lun
-                from chroma_core.models import ManagedTargetMount
-                if ManagedTargetMount.objects.filter(block_device = lun_node).count() == 0:
-                    log.info("Removing LunNode %s" % lun_node)
-                    LunNode.delete(lun.pk)
-                    if LunNode.objects.filter(lun = lun).count() == 0:
-                        log.info("Removing Lun %s" % lun_node)
-                        Lun.delete(lun.pk)
-                    else:
-                        log.info("Keeping Lun %s, reffed by another LunNode" % lun_node)
+        return False
+
+    def _try_removing_lun_node(self, lun_node):
+        target_mounts = ManagedTargetMount.objects.filter(block_device = lun_node)
+        if lun_node.managedtargetmount_set.count() == 0:
+            log.warn("Removing LunNode %s" % lun_node.id)
+            lun_node.storage_resource = None
+            lun_node.save()
+            LunNode.delete(lun_node.id)
+            self._try_removing_lun(lun_node.lun)
+            return True
+        else:
+            log.warn("Leaving LunNode %s, used by TargetMount %s" % (lun_node.id, target_mounts[0]))
+
+        return False
 
     def session_update_resource(self, scannable_id, local_resource_id, attrs):
         #with self._instance_lock:
@@ -568,18 +651,29 @@ class ResourceManager(object):
                 parents = resource_record):
             dependent.parents.remove(resource_record)
 
+        for dependent in StorageResourceRecord.objects.filter(storage_id_scope = resource_record):
+            self._cull_resource(dependent)
+
         # TODO: find ResourceReference attributes on other objects
         # that refer to this one and unhook them or if they're non-optional
         # then delete that resource
+        lun_nodes = LunNode.objects.filter(storage_resource = resource_record.pk)
+        log.debug("%s lun_nodes depend on %s" % (lun_nodes.count(), resource_record.pk))
+        for lun_node in lun_nodes:
+            removed = self._try_removing_lun_node(lun_node)
+            if not removed:
+                log.warning("Could not remove LunNode %s, disconnecting from resource %s" % (lun_node.id, resource_record.id))
+                lun_node.storage_resource = None
+                lun_node.save()
 
-        # TODO: find where lustre target objects or host objects hold a reference
-        # to this resource
-
-        from chroma_core.models import Lun, LunNode
-        for klass in [Lun, LunNode]:
-            for instance in klass.objects.filter(storage_resource__id = resource_record.pk):
-                instance.storage_resource = None
-                instance.save()
+        luns = Lun.objects.filter(storage_resource = resource_record.pk)
+        log.debug("%s luns depend on %s" % (luns.count(), resource_record.pk))
+        for lun in luns:
+            removed = self._try_removing_lun(lun)
+            if not removed:
+                log.warning("Could not remove Lun %s, disconnecting from resource %s" % (lun.id, resource_record.id))
+                lun.storage_resource = None
+                lun.save()
 
         self._subscriber_index.remove_resource(resource_record.pk)
         resource_record.delete()

@@ -278,11 +278,14 @@ class Lun(models.Model):
 
     def _get_label(self):
         if not self.storage_resource_id:
-            if self.lunnode_set.count():
-                lunnode = self.lunnode_set.all()[0]
-                return "%s:%s" % (lunnode.host, lunnode.path)
+            if self.label:
+                return self.label
             else:
-                return ""
+                if self.lunnode_set.count():
+                    lunnode = self.lunnode_set.all()[0]
+                    return "%s:%s" % (lunnode.host, lunnode.path)
+                else:
+                    return ""
 
         # TODO: this is a link to the local e.g. ScsiDevice resource: to get the
         # best possible name, we should follow back to VirtualDisk ancestors, and

@@ -15,19 +15,9 @@ from django.db.models import Q
 from collections import defaultdict
 from polymorphic.models import DowncastMetaclass
 from chroma_core.lib.job import StateChangeJob, DependOn, DependAll
+from chroma_core.lib.util import all_subclasses
 
 MAX_STATE_STRING = 32
-
-
-def _subclasses(obj):
-    """Used to introspect all descendents of a class.  Used because metaclasses
-       are a PITA when doing multiple inheritance"""
-    sc_recr = []
-    for sc_obj in obj.__subclasses__():
-        sc_recr.append(sc_obj)
-        for sc in _subclasses(sc_obj):
-            sc_recr.append(sc)
-    return sc_recr
 
 
 class Command(models.Model):
@@ -178,7 +168,7 @@ class StatefulObject(models.Model):
            twice or concurrently."""
         cls = StatefulObject.so_child(cls)
 
-        transition_classes = [s for s in _subclasses(StateChangeJob) if s.state_transition[0] == cls]
+        transition_classes = [s for s in all_subclasses(StateChangeJob) if s.state_transition[0] == cls]
         transition_options = defaultdict(list)
         job_class_map = {}
         for c in transition_classes:
@@ -294,7 +284,7 @@ class StatefulObject(models.Model):
         # dependents of an instance of that class.
         if not hasattr(StatefulObject, 'reverse_deps_map'):
             reverse_deps_map = defaultdict(list)
-            for klass in _subclasses(StatefulObject):
+            for klass in all_subclasses(StatefulObject):
                 for class_name, lookup_fn in klass.reverse_deps.items():
                     import chroma_core.models
                     #FIXME: looking up class this way eliminates our ability to move

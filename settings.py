@@ -283,9 +283,6 @@ STORAGE_PLUGIN_DEBUG = DEBUG
 #: List of plugins to enable debug-level logging for
 STORAGE_PLUGIN_DEBUG_PLUGINS = []
 
-# Enable discovery-order assignment of LunNodes as 1st primary=true, 2nd use=true, subsequent use=false
-PRIMARY_LUN_HACK = False
-
 # For django_coverage
 COVERAGE_REPORT_HTML_OUTPUT_DIR = '/tmp/test_html'
 
