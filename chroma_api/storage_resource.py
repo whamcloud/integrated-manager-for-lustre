@@ -94,7 +94,7 @@ class StorageResourceResource(ModelResource):
         return ContentType.objects.get_for_model(bundle.obj.__class__).pk
 
     def dehydrate_attributes(self, bundle):
-        return bundle.obj.to_resource().get_attribute_items()
+        return bundle.obj.to_resource().get_attributes()
 
     class Meta:
         queryset = StorageResourceRecord.objects.filter(

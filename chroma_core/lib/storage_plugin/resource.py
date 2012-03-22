@@ -14,13 +14,33 @@ from collections import defaultdict
 import threading
 
 
-class Statistic(object):
+class ResourceIdentifier(object):
+    def __init__(self, *args):
+        args = list(args)
+        assert(len(args) > 0)
+        self.id_fields = args
+
+
+class GlobalId(ResourceIdentifier):
+    """An Id which is globally unique"""
+    pass
+
+
+class AutoId(GlobalId):
     def __init__(self):
-        pass
+        super(AutoId, self).__init__('_auto_id')
+    """An ID generated on resource creation by Chroma"""
+    pass
+
+
+class ScannableId(ResourceIdentifier):
+    """An Id which is unique within a scannable resource"""
+    pass
 
 
 class StorageResourceMetaclass(type):
     def __new__(cls, name, bases, dct):
+        from chroma_core.lib.storage_plugin import attributes
         # Maps of attribute name to object
         dct['_storage_attributes'] = {}
         dct['_storage_statistics'] = {}
@@ -58,6 +78,8 @@ class StorageResourceMetaclass(type):
                     dct['_alert_classes'][alert_class] = field_obj
 
                 del dct[field_name]
+            elif isinstance(field_obj, AutoId):
+                dct['_storage_attributes']['_auto_id'] = attributes.Integer(hidden = True)
 
         return super(StorageResourceMetaclass, cls).__new__(cls, name, bases, dct)
 
@@ -94,7 +116,8 @@ class StorageResource(object):
         for k in self._storage_dict.keys():
             yield k, self.format(k)
 
-    def get_attribute_items(self):
+    def get_attributes(self):
+        """Returns a list of dicts, one for each attribute.  Excludes hidden attributes."""
         result = {}
         attr_props = self.get_all_attribute_properties()
         for name, props in attr_props:
@@ -108,9 +131,10 @@ class StorageResource(object):
 
     @classmethod
     def get_all_attribute_properties(cls):
+        """Returns a list of (name, BaseAttribute), one for each attribute.  Excludes hidden attributes."""
         attr_name_pairs = cls._storage_attributes.items()
         attr_name_pairs.sort(lambda a, b: cmp(a[1].creation_counter, b[1].creation_counter))
-        return attr_name_pairs
+        return [pair for pair in attr_name_pairs if not pair[1].hidden]
 
     @classmethod
     def get_charts(cls):
@@ -169,10 +193,6 @@ class StorageResource(object):
 
         # Blackhawk down!
         return deltas
-
-    @classmethod
-    def get_columns(cls):
-        return [{'name': name, 'label': props.get_label(name)} for (name, props) in cls._storage_attributes.items()]
 
     def to_json(self, stack = []):
         dct = {}
@@ -322,23 +342,6 @@ class StorageResource(object):
             return cls.class_label
         else:
             return cls.__name__
-
-
-class ResourceIdentifier(object):
-    def __init__(self, *args):
-        args = list(args)
-        assert(len(args) > 0)
-        self.id_fields = args
-
-
-class GlobalId(ResourceIdentifier):
-    """An Id which is globally unique"""
-    pass
-
-
-class ScannableId(ResourceIdentifier):
-    """An Id which is unique within a scannable resource"""
-    pass
 
 
 class ScannableResource(object):

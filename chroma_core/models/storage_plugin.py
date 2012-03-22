@@ -79,14 +79,18 @@ class StorageResourceRecord(models.Model):
     @classmethod
     def get_or_create_root(cls, resource_class, resource_class_id, attrs):
         # Root resource do not have parents so they must be globally identified
-        from chroma_core.lib.storage_plugin.resource import GlobalId
-        if not isinstance(resource_class.identifier, GlobalId):
-            raise RuntimeError("Cannot create root resource of class %s, it is not globally identified" % resource_class)
+        from chroma_core.lib.storage_plugin.resource import ScannableId, AutoId
+        if isinstance(resource_class.identifier, ScannableId):
+            raise RuntimeError("Cannot create root resource of class %s, it requires a scope" % resource_class)
+
+        if isinstance(resource_class.identifier, AutoId):
+            import uuid
+            attrs['_auto_id'] = uuid.uuid4().__str__()
+        id_str = json.dumps(resource_class.attrs_to_id_tuple(attrs))
 
         # NB assumes that none of the items in ID tuple are ResourceReferences: this
         # would raise an exception from json encoding.
         # FIXME: weird separate code path for creating resources (cf resourcemanager)
-        id_str = json.dumps(resource_class.attrs_to_id_tuple(attrs))
         try:
             # See if you're trying to create something which already exists
             existing_record = StorageResourceRecord.objects.get(
@@ -102,6 +106,7 @@ class StorageResourceRecord(models.Model):
                 resource_class_id = resource_class_id,
                 storage_id_str = id_str)
         record.save()
+
         for name, value in attrs.items():
             attr_model_class = resource_class.attr_model_class(name)
             attr_model_class.objects.create(resource = record,

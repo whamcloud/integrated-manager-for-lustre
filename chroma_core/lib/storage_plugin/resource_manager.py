@@ -716,7 +716,6 @@ class ResourceManager(object):
     def global_remove_resource(self, resource_id):
         with self._instance_lock:
             log.debug("global_remove_resource: %s" % resource_id)
-            # Ensure that no open sessions are holding a reference to this ID
             from chroma_core.models import StorageResourceRecord
             try:
                 record = StorageResourceRecord.objects.get(pk = resource_id)

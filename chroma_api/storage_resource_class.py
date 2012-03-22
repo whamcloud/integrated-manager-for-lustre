@@ -47,7 +47,8 @@ class StorageResourceClassResource(ModelResource):
     fields = fields.DictField()
 
     def dehydrate_columns(self, bundle):
-        return bundle.obj.get_class().get_columns()
+        properties = bundle.obj.get_class().get_all_attribute_properties()
+        return [{'name': name, 'label': props.get_label(name)} for (name, props) in properties]
 
     def dehydrate_fields(self, bundle):
         resource_klass = bundle.obj.get_class()

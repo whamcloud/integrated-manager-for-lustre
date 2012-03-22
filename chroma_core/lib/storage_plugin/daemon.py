@@ -10,7 +10,7 @@ from django.db import transaction
 from chroma_core.lib.storage_plugin import messaging
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
 from chroma_core.lib.storage_plugin.messaging import Timeout
-from chroma_core.models import AgentSession, ManagedHost
+from chroma_core.models import AgentSession, ManagedHost, StorageResourceRecord
 
 
 # Thread-per-session is just a convenient way of coding this.  The actual required
@@ -30,7 +30,6 @@ class PluginSession(threading.Thread):
     def run(self):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        from chroma_core.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(id=self.root_resource_id)
         plugin_klass = storage_plugin_manager.get_plugin_class(
                           record.resource_class.storage_plugin.module_name)
@@ -195,7 +194,7 @@ class AgentDaemonRpc(DaemonRpc):
 
 
 class ScanDaemonRpc(DaemonRpc):
-    methods = ['remove_resource']
+    methods = ['remove_resource', 'modify_resource']
 
 
 class AgentSessionState(object):
@@ -238,7 +237,6 @@ class AgentDaemon(object):
             from chroma_core.lib.storage_plugin.query import ResourceQuery
             from chroma_core.lib.storage_plugin.resource_manager import resource_manager
             from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-            from chroma_core.models import StorageResourceRecord
             for plugin_name in storage_plugin_manager.loaded_plugins.keys():
                 try:
                     record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
@@ -309,7 +307,6 @@ class AgentDaemon(object):
         for plugin_name, plugin_data in updates.items():
             from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
             from chroma_core.lib.storage_plugin.query import ResourceQuery
-            from chroma_core.models import StorageResourceRecord
             try:
                 record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
                         plugin_name = plugin_name, host_id = host.id)
@@ -369,17 +366,40 @@ class ScanDaemon(object):
         session_count = reduce(lambda x, y: x + y, [len(s) for s in self.plugins.values()])
         storage_plugin_log.info("ScanDaemon: Loaded %s plugins, %s sessions" % (len(self.plugins), session_count))
 
-    def remove_resource(self, resource_id):
-        # Is there a session to kill?
-        kill_session = None
+    def modify_resource(self, resource_id, attrs):
         storage_plugin_log.info("ScanDaemon: removing %s" % resource_id)
         with self._session_lock:
             try:
                 kill_session = self._all_sessions[resource_id]
             except KeyError:
                 pass
+            else:
+                kill_session.stop()
+                storage_plugin_log.info("ScanDaemon: waiting for session to stop")
+                from time import sleep
+                while(not kill_session.stopped):
+                    sleep(1)
+                storage_plugin_log.info("ScanDaemon: stopped.")
+                for plugin, sessions in self.plugins.items():
+                    if resource_id in sessions:
+                        del sessions[resource_id]
+                del self._all_sessions[resource_id]
 
-            if kill_session != None:
+            record = StorageResourceRecord.objects.get(pk = resource_id)
+            record.update_attributes(attrs)
+            record.save()
+
+        storage_plugin_log.info("ScanDaemon: finished removing %s" % resource_id)
+
+    def remove_resource(self, resource_id):
+        # Is there a session to kill?
+        storage_plugin_log.info("ScanDaemon: removing %s" % resource_id)
+        with self._session_lock:
+            try:
+                kill_session = self._all_sessions[resource_id]
+            except KeyError:
+                pass
+            else:
                 kill_session.stop()
                 storage_plugin_log.info("ScanDaemon: waiting for session to stop")
                 from time import sleep

@@ -13,11 +13,12 @@ class BaseResourceAttribute(object):
 
     model_class = StorageResourceAttributeSerialized
 
-    def __init__(self, subscribe = None, provide = None, optional = False, label = None):
+    def __init__(self, subscribe = None, provide = None, optional = False, label = None, hidden = False):
         self.optional = optional
         self.subscribe = subscribe
         self.provide = provide
         self.label = label
+        self.hidden = hidden
 
         self.creation_counter = BaseResourceAttribute.creation_counter
         BaseResourceAttribute.creation_counter += 1
