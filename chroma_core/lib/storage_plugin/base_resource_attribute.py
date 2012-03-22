@@ -1,4 +1,6 @@
 
+from chroma_core.models import StorageResourceAttributeSerialized
+
 
 class BaseResourceAttribute(object):
     """Base class for declared attributes of StorageResource.  This is
@@ -8,6 +10,8 @@ class BaseResourceAttribute(object):
     # that I can sort the StorageResource attribute dict for presentation in the same order
     # as the plugin author declared the attributes.
     creation_counter = 0
+
+    model_class = StorageResourceAttributeSerialized
 
     def __init__(self, subscribe = None, provide = None, optional = False, label = None):
         self.optional = optional
@@ -37,12 +41,10 @@ class BaseResourceAttribute(object):
         return value
 
     def encode(self, value):
-        import json
-        return json.dumps(value)
+        return value
 
     def decode(self, value):
-        import json
-        return json.loads(value)
+        return value
 
     def to_markup(self, value):
         from django.utils.html import conditional_escape

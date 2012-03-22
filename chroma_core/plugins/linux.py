@@ -13,6 +13,8 @@ from chroma_core.lib.storage_plugin import builtin_resources
 # in a way that third party plugins can't/shouldn't/mustn't
 from chroma_core.models import ManagedHost
 
+import re
+
 
 class PluginAgentResources(StorageResource):
     identifier = GlobalId('host_id', 'plugin_name')
@@ -62,39 +64,17 @@ class UnsharedDevice(builtin_resources.LogicalDrive):
         return self.path
 
 
-class ScsiDeviceNode(builtin_resources.DeviceNode):
-    """SCSI in this context is a catch-all to refer to
-    block devices which look like real disks to the host OS"""
+class LinuxDeviceNode(builtin_resources.DeviceNode):
     identifier = ScannableId('path')
-    #class_label = "SCSI device node"
 
 
-class MultipathDeviceNode(builtin_resources.DeviceNode):
-    identifier = ScannableId('path')
-    class_label = "Multipath device node"
-
-
-class LvmDeviceNode(builtin_resources.DeviceNode):
-    identifier = ScannableId('path')
-    class_label = "LVM device node"
-
-
-# FIXME: partitions should really be GlobalIds (they can be seen from more than
-# one host) where the ID is their number plus the a foreign key to the parent
-# ScsiDevice or UnsharedDevice(HYD-272)
-# TODO: include containng object get_label in partition get_label
 class Partition(builtin_resources.LogicalDrive):
-    identifier = ScannableId('path')
-    class_label = "Linux partition"
-    path = attributes.PosixPath()
+    identifier = GlobalId('container', 'number')
+    number = attributes.Integer()
+    container = attributes.ResourceReference()
 
     def get_label(self):
-        return self.path
-
-
-class PartitionDeviceNode(builtin_resources.DeviceNode):
-    identifier = ScannableId('path')
-    class_label = "Linux partition"
+        return "%s-%s" % (self.container.get_label(), self.number)
 
 
 class LocalMount(StorageResource):
@@ -206,7 +186,7 @@ class Linux(StoragePlugin):
 
             if bdev['serial'] != None:
                 lun_resource = res_by_serial[bdev['serial']]
-                res, created = self.update_or_create(ScsiDeviceNode,
+                res, created = self.update_or_create(LinuxDeviceNode,
                                     parents = [lun_resource],
                                     host_id = host_id,
                                     path = bdev['path'])
@@ -214,7 +194,7 @@ class Linux(StoragePlugin):
                 res, created = self.update_or_create(UnsharedDevice,
                         path = bdev['path'],
                         size = bdev['size'])
-                res, created = self.update_or_create(UnsharedDeviceNode,
+                res, created = self.update_or_create(LinuxDeviceNode,
                         parents = [res],
                         host_id = host_id,
                         path = bdev['path'])
@@ -225,15 +205,15 @@ class Linux(StoragePlugin):
         # So we have to build a graph and then traverse it to populate our resources.
         for bdev in devices['devs'].values():
             if bdev['major_minor'] in lv_block_devices:
-                res, created = self.update_or_create(LvmDeviceNode,
+                res, created = self.update_or_create(LinuxDeviceNode,
                                     host_id = host_id,
                                     path = bdev['path'])
             elif bdev['major_minor'] in mpath_block_devices:
-                res, created = self.update_or_create(MultipathDeviceNode,
+                res, created = self.update_or_create(LinuxDeviceNode,
                                     host_id = host_id,
                                     path = bdev['path'])
             elif bdev['parent']:
-                res, created = self.update_or_create(PartitionDeviceNode,
+                res, created = self.update_or_create(LinuxDeviceNode,
                         host_id = host_id,
                         path = bdev['path'])
             else:
@@ -247,11 +227,13 @@ class Linux(StoragePlugin):
 
             this_node = bdev_to_resource[bdev['major_minor']]
             parent_resource = bdev_to_resource[bdev['parent']]
+            number = int(re.search("(\d+)$", bdev['path']).group(1))
 
             partition, created = self.update_or_create(Partition,
                     parents = [parent_resource],
-                    size = bdev['size'],
-                    path = bdev['path'])
+                    container = parent_resource,
+                    number = number,
+                    size = bdev['size'])
 
             this_node.add_parent(partition)
 

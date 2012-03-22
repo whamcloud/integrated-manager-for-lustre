@@ -338,9 +338,11 @@ class ResourceManager(object):
                     log.info("affinity_weights: no PathWeights for LunNode %s" % lun_node.id)
                     return False
 
-                from chroma_core.models import StorageResourceAttribute
+                from chroma_core.models import StorageResourceRecord
+                attr_model_class = StorageResourceRecord.objects.get(id = weight_resource_ids[0]).resource_class.get_class().attr_model_class('weight')
+
                 import json
-                ancestor_weights = [json.loads(w['value']) for w in StorageResourceAttribute.objects.filter(
+                ancestor_weights = [json.loads(w['value']) for w in attr_model_class.objects.filter(
                     resource__in = weight_resource_ids, key = 'weight').values('value')]
                 weight = reduce(lambda x, y: x + y, ancestor_weights)
                 weights[lun_node] = weight
@@ -643,18 +645,22 @@ class ResourceManager(object):
 
     def _cull_resource(self, resource_record):
         log.info("Culling resource '%s'" % resource_record.pk)
-        from chroma_core.models import StorageResourceRecord
+        from chroma_core.models import StorageResourceRecord, StorageResourceAttributeReference
 
+        # Find resources which have a parent link to this resource
         for dependent in StorageResourceRecord.objects.filter(
                 parents = resource_record):
             dependent.parents.remove(resource_record)
 
+        # Find resources scoped to this resource
         for dependent in StorageResourceRecord.objects.filter(storage_id_scope = resource_record):
             self._cull_resource(dependent)
 
-        # TODO: find ResourceReference attributes on other objects
-        # that refer to this one and unhook them or if they're non-optional
-        # then delete that resource
+        # Find ResourceReference attributes on other objects
+        # that refer to this one
+        for attr in StorageResourceAttributeReference.objects.filter(value = resource_record):
+            self._cull_resource(attr.resource)
+
         lun_nodes = LunNode.objects.filter(storage_resource = resource_record.pk)
         log.debug("%s lun_nodes depend on %s" % (lun_nodes.count(), resource_record.pk))
         for lun_node in lun_nodes:
@@ -826,33 +832,27 @@ class ResourceManager(object):
 
     @transaction.autocommit
     def _resource_persist_attributes(self, session, resource, record):
-        from chroma_core.models import StorageResourceAttribute
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        # TODO: remove existing attrs not in storage_dict
         resource_class = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
 
+        attrs = {}
+        # Special case for ResourceReference attributes, because the resource
+        # object passed from the plugin won't have a global ID for the referenced
+        # resource -- we have to do the lookup inside ResourceManager
         for key, value in resource._storage_dict.items():
-            # Special case for ResourceReference attributes, because the resource
-            # object passed from the plugin won't have a global ID for the referenced
-            # resource -- we have to do the lookup inside ResourceManager
             attribute_obj = resource_class.get_attribute_properties(key)
             from chroma_core.lib.storage_plugin import attributes
             if isinstance(attribute_obj, attributes.ResourceReference):
                 if value and not value._handle_global:
-                    value = session.local_id_to_global_id[value._handle]
+                    attrs[key] = session.local_id_to_global_id[value._handle]
                 elif value and value._handle_global:
-                    value = value._handle
-            try:
-                existing = StorageResourceAttribute.objects.get(resource = record, key = key)
-                encoded_val = resource_class.encode(key, value)
-                if existing.value != encoded_val:
-                    existing.value = encoded_val
-                    existing.save()
-            except StorageResourceAttribute.DoesNotExist:
-                attr = StorageResourceAttribute(
-                        resource = record, key = key,
-                        value = resource_class.encode(key, value))
-                attr.save()
+                    attrs[key] = value._handle
+                else:
+                    attrs[key] = value
+            else:
+                attrs[key] = value
+
+        record.update_attributes(attrs)
 
     @transaction.autocommit
     def _resource_persist_parents(self, resource, session, record):

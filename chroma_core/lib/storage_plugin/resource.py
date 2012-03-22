@@ -76,6 +76,10 @@ class StorageResource(object):
         return cls._storage_attributes[attr].encode(value)
 
     @classmethod
+    def attr_model_class(cls, attr):
+        return cls._storage_attributes[attr].model_class
+
+    @classmethod
     def decode(cls, attr, value):
         return cls._storage_attributes[attr].decode(value)
 

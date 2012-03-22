@@ -9,6 +9,9 @@ from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState, AlertEvent
 from chroma_core.models.utils import WorkaroundDateTimeField
 
+from collections import defaultdict
+import json
+
 # Our limit on the length of python names where we put
 # them in CharFields -- python doesn't impose a limit, so this
 # is pretty arbitrary
@@ -81,7 +84,6 @@ class StorageResourceRecord(models.Model):
         # NB assumes that none of the items in ID tuple are ResourceReferences: this
         # would raise an exception from json encoding.
         # FIXME: weird separate code path for creating resources (cf resourcemanager)
-        import json
         id_str = json.dumps(resource_class.attrs_to_id_tuple(attrs))
         try:
             # See if you're trying to create something which already exists
@@ -99,37 +101,46 @@ class StorageResourceRecord(models.Model):
                 storage_id_str = id_str)
         record.save()
         for name, value in attrs.items():
-            StorageResourceAttribute.objects.create(resource = record,
-                    key = name, value = resource_class.encode(name, value))
+            attr_model_class = resource_class.attr_model_class(name)
+            attr_model_class.objects.create(resource = record,
+                    key = name, value = attr_model_class.encode(value))
 
         return record, True
+
+    def update_attributes(self, attributes):
+        for key, val in attributes.items():
+            self.update_attribute(key, val)
 
     def update_attribute(self, key, val):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         resource_class = storage_plugin_manager.get_resource_class_by_id(self.resource_class_id)
 
         # Try to update an existing record
-        updated = StorageResourceAttribute.objects.filter(
+        attr_model_class = resource_class.attr_model_class(key)
+        updated = attr_model_class.objects.filter(
                     resource = self,
-                    key = key).update(value = resource_class.encode(key, val))
+                    key = key).update(value = attr_model_class.encode(val))
         # If there was no existing record, create one
         if updated == 0:
             from django.db import IntegrityError
             try:
-                StorageResourceAttribute.objects.create(
+                attr_model_class.objects.create(
                         resource = self,
                         key = key,
-                        value = resource_class.encode(key, val))
+                        value = attr_model_class.encode(val))
             except IntegrityError:
                 # Collided with another update, order undefined so let him win
                 pass
 
     def delete_attribute(self, attr_name):
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        resource_class = storage_plugin_manager.get_resource_class_by_id(self.resource_class_id)
+        model_class = resource_class.attr_model_class(attr_name)
         try:
-            StorageResourceAttribute.objects.get(
+            model_class.objects.get(
                     resource = self,
                     key = attr_name).delete()
-        except StorageResourceAttribute.DoesNotExist:
+        except model_class.DoesNotExist:
             pass
 
     def items(self):
@@ -139,9 +150,14 @@ class StorageResourceRecord(models.Model):
     def to_resource(self):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         klass = storage_plugin_manager.get_resource_class_by_id(self.resource_class_id)
+        attr_model_to_keys = defaultdict(list)
+        for attr, attr_props in klass._storage_attributes.items():
+            attr_model_to_keys[attr_props.model_class].append(attr)
         storage_dict = {}
-        for attr in self.storageresourceattribute_set.all():
-            storage_dict[attr.key] = klass.decode(attr.key, attr.value)
+        for attr_model, keys in attr_model_to_keys.items():
+            for attr in attr_model.objects.filter(resource = self, key__in = keys):
+                storage_dict[attr.key] = attr_model.decode(attr.value)
+
         resource = klass(**storage_dict)
         resource._handle = self.id
         resource._handle_global = True
@@ -302,15 +318,67 @@ class StorageResourceAttribute(models.Model):
     and only allow explicitly declared fields, then we would normalize
     out the attribute names.
     """
+    @classmethod
+    def encode(cls, value):
+        return value
+
+    @classmethod
+    def decode(cls, value):
+        return value
+
     resource = models.ForeignKey(StorageResourceRecord)
-    # TODO: specialized attribute tables for common types like
-    # short strings, integers
-    value = models.TextField()
+    # TODO: normalize this field (store a list of attributes
+    # with StorageResourceClass, that list would also be useful
+    # for comparing against at plugin load time to e.g. complain
+    # about new fields and/or mung existing records
     key = models.CharField(max_length = 64)
 
     class Meta:
+        abstract = True
         unique_together = ('resource', 'key')
         app_label = 'chroma_core'
+
+
+class StorageResourceAttributeSerialized(StorageResourceAttribute):
+    class Meta:
+        app_label = 'chroma_core'
+
+    value = models.TextField()
+
+    @classmethod
+    def encode(cls, value):
+        return json.dumps(value)
+
+    @classmethod
+    def decode(cls, value):
+        return json.loads(value)
+
+
+class StorageResourceAttributeReference(StorageResourceAttribute):
+    class Meta:
+        app_label = 'chroma_core'
+
+    value = models.ForeignKey(StorageResourceRecord, blank = True, null = True, related_name = 'value_resource')
+
+    # NB no 'encode' impl here because it has to be a special case to
+    # resolve a local resource to a global ID
+
+    def __setattr__(self, k, v):
+        if k == 'value' and isinstance(v, int):
+            return super(StorageResourceAttributeReference, self).__setattr__('value_id', v)
+        else:
+            return super(StorageResourceAttributeReference, self).__setattr__(k, v)
+
+    @classmethod
+    def encode(cls, value):
+        return StorageResourceRecord.objects.get(pk = value)
+
+    @classmethod
+    def decode(cls, value):
+        if value:
+            return value.to_resource()
+        else:
+            return None
 
 
 class StorageResourceClassStatistic(models.Model):
