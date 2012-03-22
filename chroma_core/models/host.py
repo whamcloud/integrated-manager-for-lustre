@@ -537,20 +537,26 @@ class LearnDevicesStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        # FIXME: reinstate
-        return
-
         # Get the device-scan output
-        from chroma_core.models import ManagedHost
+        from chroma_core.models import ManagedHost, AgentSession
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        device_info = self.invoke_agent(host, "device-scan")
+        updates = self.invoke_agent(host, "device-plugin")
+        try:
+            del updates['lustre']
+        except KeyError:
+            pass
 
-        # Insert it as a request_id=None response
-        from chroma_core.lib.storage_plugin.messaging import PluginResponse
-        PluginResponse.send('linux', host.fqdn, None, device_info)
+        # Fake a session as if the agent had reported in
+        from chroma_core.lib.storage_plugin import messaging
+        session, created = AgentSession.objects.get_or_create(host = host)
+        messaging.simple_send('agent', {
+                    "session_id": session.session_id,
+                    "host_id": host.id,
+                    "updates": updates
+            })
 
         from chroma_core.lib.storage_plugin.daemon import AgentDaemonRpc
-        AgentDaemonRpc().await_agent_session(kwargs['host_id'])
+        AgentDaemonRpc().await_session(kwargs['host_id'])
 
 
 class SetupHostJob(Job, StateChangeJob):

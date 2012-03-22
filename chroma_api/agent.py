@@ -40,7 +40,7 @@ class AgentResource(Resource):
         try:
             host = ManagedHost.objects.get(fqdn = bundle.data['fqdn'])
         except ManagedHost.DoesNotExist:
-            api_log.error("Request from unknown host %s" % host)
+            api_log.error("Request from unknown host %s" % bundle.data['fqdn'])
             raise ImmediateHttpResponse(response=http.HttpNotFound())
 
         if bundle.data['token'] != host.agent_token:

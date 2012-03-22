@@ -257,12 +257,14 @@ class AgentDaemon(object):
         started = False
         timeout = 30
         start_time = datetime.datetime.now()
+        storage_plugin_log.debug("AgentDaemon: starting await_session")
         while not started:
             with self._processing_lock:
                 started = host_id in self._session_state
 
             if datetime.datetime.now() - start_time > datetime.timedelta(seconds = timeout):
                 raise Timeout("Timed out after %s seconds waiting for session to start")
+        storage_plugin_log.debug("AgentDaemon: finished await_session")
 
     @transaction.commit_on_success
     def handle_incoming(self, message):
