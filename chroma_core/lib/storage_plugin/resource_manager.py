@@ -26,7 +26,7 @@ from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 from chroma_core.lib.storage_plugin.resource import ScannableId, GlobalId
 from chroma_core.lib.util import all_subclasses
 
-from chroma_core.models import ManagedHost, ManagedTarget, ManagedTargetMount
+from chroma_core.models import ManagedHost, ManagedTarget
 from chroma_core.models import Lun, LunNode
 
 from django.db import transaction
@@ -122,7 +122,6 @@ class SubscriberIndex(object):
         """What provides things that this resource subscribes to?"""
         result = set()
         for subscription in resource._subscriptions:
-            log.debug("what_provides: %s %s" % (resource, subscription.key))
             result |= self._provide_value_to_id[(subscription.key, subscription.val(resource))]
         return result
 
@@ -130,9 +129,7 @@ class SubscriberIndex(object):
         """What subscribes to this resources?"""
         result = set()
         for subscription in self._all_subscriptions:
-            log.debug("ws: %s %s %s" % (resource, subscription.subscribe_to, isinstance(resource, subscription.subscribe_to)))
             if isinstance(resource, subscription.subscribe_to):
-                log.debug("what_subscribes: %s %s" % (resource, subscription.key))
                 result |= self._subscribe_value_to_id[(subscription.key, subscription.val(resource))]
         return result
 
@@ -439,6 +436,7 @@ class ResourceManager(object):
         # was not included in the set of usable DeviceNode resources, remove
         # the LunNode
         for lun_node in scope_lun_nodes:
+            log.debug("lun node %s (%s) usable %s" % (lun_node.id, lun_node.storage_resource_id, lun_node.storage_resource_id in [nr.id for nr in usable_node_resources]))
             if not lun_node.storage_resource_id in [nr.id for nr in usable_node_resources]:
                 self._try_removing_lun_node(lun_node)
 
@@ -469,8 +467,8 @@ class ResourceManager(object):
         return False
 
     def _try_removing_lun_node(self, lun_node):
-        target_mounts = ManagedTargetMount.objects.filter(block_device = lun_node)
-        if lun_node.managedtargetmount_set.count() == 0:
+        targets = ManagedTarget.objects.filter(managedtargetmount__block_device = lun_node)
+        if targets.count() == 0:
             log.warn("Removing LunNode %s" % lun_node.id)
             lun_node.storage_resource = None
             lun_node.save()
@@ -478,7 +476,7 @@ class ResourceManager(object):
             self._try_removing_lun(lun_node.lun)
             return True
         else:
-            log.warn("Leaving LunNode %s, used by TargetMount %s" % (lun_node.id, target_mounts[0]))
+            log.warn("Leaving LunNode %s, used by Target %s" % (lun_node.id, targets[0]))
 
         return False
 
