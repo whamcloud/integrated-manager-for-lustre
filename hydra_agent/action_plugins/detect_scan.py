@@ -14,7 +14,12 @@ from hydra_agent.plugins import ActionPlugin
 def get_local_targets():
     blkid_lines = shell.try_run(['blkid', '-s', 'UUID']).split("\n")
 
-    lustre_devices = []
+    # Working set: accumulate device paths for each (uuid, name).  This is
+    # necessary because in multipathed environments we will see the same
+    # lustre target on more than one block device.  The reason we use name
+    # as well as UUID is that two logical targets can have the same UUID
+    # when we see a combined MGS+MDT
+    uuid_name_to_target = {}
 
     for line in [l for l in blkid_lines if len(l)]:
         dev, uuid = re.search("(.*): UUID=\"(.*)\"", line).groups()
@@ -47,24 +52,25 @@ def get_local_targets():
 
         mounted = dev in set([normalize_device(m[0]) for m in Mounts().all()])
 
-        lustre_devices.append({
-            "name": name,
-            "uuid": uuid,
-            "params": params,
-            "device": dev,
-            "mounted": mounted
-            })
         if flags & 0x0005 == 0x0005:
             # For combined MGS/MDT volumes, synthesise an 'MGS'
-            lustre_devices.append({
-                "name": "MGS",
-                "uuid": uuid,
-                "params": params,
-                "device": dev,
-                "mounted": mounted
-                })
+            names = ["MGS", name]
+        else:
+            names = [name]
 
-    return lustre_devices
+        for name in names:
+            try:
+                target_dict = uuid_name_to_target[(uuid, name)]
+                target_dict['devices'].append(dev)
+            except KeyError:
+                target_dict = {"name": name,
+                               "uuid": uuid,
+                               "params": params,
+                               "devices": [dev],
+                               "mounted": mounted}
+                uuid_name_to_target[(uuid, name)] = target_dict
+
+    return uuid_name_to_target.values()
 
 
 def get_mgs_targets(local_targets):
@@ -80,7 +86,7 @@ def get_mgs_targets(local_targets):
 
     conf_params = {}
     mgs_targets = {}
-    dev = mgs_target["device"]
+    dev = mgs_target["devices"][0]
     ls = shell.try_run(["debugfs", "-c", "-R", "ls -l CONFIGS/", dev])
     filesystems = []
     targets = []
