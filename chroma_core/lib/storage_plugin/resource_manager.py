@@ -160,7 +160,11 @@ class SubscriberIndex(object):
         log.debug("SubscriberIndex.remove_resource %s" % resource_id)
         if not resource:
             from chroma_core.models import StorageResourceRecord
-            resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
+            try:
+                resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
+            except StorageResourceRecord.DoesNotExist:
+                log.warning("SubscriberIndex.remove_resource: %s not found" % resource_id)
+                return
 
         for subscription in self._all_subscriptions:
             if isinstance(resource, subscription.subscribe_to):
@@ -250,7 +254,11 @@ class ResourceManager(object):
         def get_session_resources_of_type(session, klass):
             for record_pk in session.local_id_to_global_id.values():
                 from chroma_core.models import StorageResourceRecord
-                record = StorageResourceRecord.objects.get(pk = record_pk)
+                try:
+                    record = StorageResourceRecord.objects.get(pk = record_pk)
+                except StorageResourceRecord.DoesNotExist:
+                    log.error("Record %d is in the local session but does not exist" % (record.id))
+                    pass
                 resource = record.to_resource()
                 if isinstance(resource, klass):
                     yield (record, resource)
@@ -381,7 +389,6 @@ class ResourceManager(object):
             primary_lun_node.use = True
             primary_lun_node.save()
             log.info("affinity_balance: picked %s for %s primary" % (primary_lun_node.host, lun))
-            log.info("htpc: %s" % host_to_primary_count)
 
             # Remove the primary host from consideration for the secondary mount
             del host_to_lun_nodes[primary_lun_node.host]
@@ -504,7 +511,6 @@ class ResourceManager(object):
             parent_pk = session.local_id_to_global_id[local_parent_id]
             self._edges.remove_parent(record_pk, parent_pk)
             self._resource_modify_parent(record_pk, parent_pk, True)
-            # TODO: potentially orphaning resources, find and cull them
 
     def session_update_stats(self, scannable_id, local_resource_id, update_data):
         """Get global ID for a resource, look up the StoreageResourceStatistic for
@@ -630,22 +636,40 @@ class ResourceManager(object):
 
     @transaction.autocommit
     def _cull_lost_resources(self, session, reported_resources):
-        reported_global_ids = []
+        reported_scoped_resources = []
+        reported_global_resources = []
         for r in reported_resources:
             if isinstance(r.identifier, ScannableId):
-                reported_global_ids.append(session.local_id_to_global_id[r._handle])
+                reported_scoped_resources.append(session.local_id_to_global_id[r._handle])
+            else:
+                reported_global_resources.append(session.local_id_to_global_id[r._handle])
 
         from chroma_core.models import StorageResourceRecord
         from django.db.models import Q
         lost_resources = StorageResourceRecord.objects.filter(
-                ~Q(pk__in = reported_global_ids),
+                ~Q(pk__in = reported_scoped_resources),
                 storage_id_scope = session.scannable_id)
         for r in lost_resources:
             self._cull_resource(r)
 
+        # Look for globalid resources which were at some point reported by
+        # this scannable_id, but are missing this time around
+        forgotten_global_resources = StorageResourceRecord.objects.filter(
+                ~Q(pk__in = reported_global_resources),
+                reported_by = session.scannable_id)
+        for reportee in forgotten_global_resources:
+            reportee.reported_by.remove(session.scannable_id)
+            if reportee.reported_by.count() == 0:
+                self._cull_resource(reportee)
+
     def _cull_resource(self, resource_record):
-        log.info("Culling resource '%s'" % resource_record.pk)
         from chroma_core.models import StorageResourceRecord, StorageResourceAttributeReference
+
+        log.info("Culling resource '%s'" % resource_record.pk)
+        try:
+            resource_record = StorageResourceRecord.objects.get(pk = resource_record.pk)
+        except StorageResourceRecord.DoesNotExist:
+            return
 
         # Find resources which have a parent link to this resource
         for dependent in StorageResourceRecord.objects.filter(
@@ -660,6 +684,13 @@ class ResourceManager(object):
         # that refer to this one
         for attr in StorageResourceAttributeReference.objects.filter(value = resource_record):
             self._cull_resource(attr.resource)
+
+        # Find GlobalId resources which were reported by this resource
+        # XXX efficieny: could only do this for ScannableResources and AgentPluginResources
+        for reportee in StorageResourceRecord.objects.filter(reported_by = resource_record):
+            reportee.reported_by.remove(resource_record)
+            if reportee.reported_by.count() == 0:
+                self._cull_resource(reportee)
 
         lun_nodes = LunNode.objects.filter(storage_resource = resource_record.pk)
         log.debug("%s lun_nodes depend on %s" % (lun_nodes.count(), resource_record.pk))
@@ -693,23 +724,7 @@ class ResourceManager(object):
                 log.error("ResourceManager received invalid request to remove non-existent resource %s" % resource_id)
                 return
 
-            resource = record.to_resource()
-            from chroma_core.lib.storage_plugin.resource import ScannableResource
-            if isinstance(resource, ScannableResource):
-                scoped_resources = StorageResourceRecord.objects.filter(
-                    storage_id_scope = resource_id)
-                for r in scoped_resources:
-                    self._cull_resource(r)
-
             self._cull_resource(record)
-
-            # TODO: deal with GlobalId resources that get left behind, like SCSI IDs,
-            # LVM VGs and LVs.  Could look for islands of GlobalId resources with no
-            # relationships to ScannableResources, but that could falsely remove some
-            # things still existing: e.g. what if a host was just only reporting LVM
-            # things?  they wouldn't have any parents.  Probably the more robust way to
-            # do this is to track which scannables have had sessions which reported
-            # a given GlobalId resource, and treat that like a reference count
 
     def _persist_new_resource(self, session, resource):
         from chroma_core.models import StorageResourceRecord
@@ -797,6 +812,13 @@ class ResourceManager(object):
             # Add the new record to the index so that future records and resolve their
             # provide/subscribe relationships with respect to it
             self._subscriber_index.add_resource(record.pk, resource)
+
+        if isinstance(resource.identifier, GlobalId) and session.scannable_id != record.id:
+            try:
+                record.reported_by.get(pk = session.scannable_id)
+            except StorageResourceRecord.DoesNotExist:
+                log.debug("saw GlobalId resource %s from scope %s for the first time" % (record.id, session.scannable_id))
+                record.reported_by.add(session.scannable_id)
 
         session.local_id_to_global_id[resource._handle] = record.pk
         self._resource_persist_attributes(session, resource, record)

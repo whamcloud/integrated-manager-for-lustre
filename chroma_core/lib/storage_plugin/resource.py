@@ -324,15 +324,19 @@ class StorageResource(object):
             return cls.__name__
 
 
-class GlobalId(object):
-    """An Id which is globally unique"""
+class ResourceIdentifier(object):
     def __init__(self, *args):
         args = list(args)
         assert(len(args) > 0)
         self.id_fields = args
 
 
-class ScannableId(GlobalId):
+class GlobalId(ResourceIdentifier):
+    """An Id which is globally unique"""
+    pass
+
+
+class ScannableId(ResourceIdentifier):
     """An Id which is unique within a scannable resource"""
     pass
 

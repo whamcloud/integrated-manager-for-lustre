@@ -30,7 +30,7 @@ class StoragePluginRecord(models.Model):
 
 class StorageResourceClass(models.Model):
     """Reference to a StorageResource subclass"""
-    storage_plugin = models.ForeignKey(StoragePluginRecord)
+    storage_plugin = models.ForeignKey(StoragePluginRecord, on_delete = models.PROTECT)
     class_name = models.CharField(max_length = MAX_NAME_LENGTH)
     user_creatable = models.BooleanField()
 
@@ -48,7 +48,7 @@ class StorageResourceClass(models.Model):
 
 class StorageResourceRecord(models.Model):
     """Reference to an instance of a StorageResource"""
-    resource_class = models.ForeignKey(StorageResourceClass)
+    resource_class = models.ForeignKey(StorageResourceClass, on_delete = models.PROTECT)
 
     # Representing a chroma_core.lib.storage_plugin.GlobalId or LocalId
     # TODO: put some checking for id_strs longer than this field: they
@@ -56,7 +56,7 @@ class StorageResourceRecord(models.Model):
     # conservative in what they use for an ID
     storage_id_str = models.CharField(max_length = 256)
     storage_id_scope = models.ForeignKey('StorageResourceRecord',
-            blank = True, null = True)
+            blank = True, null = True, on_delete = models.PROTECT)
 
     # XXX aargh when the id_scope is nullable a unique_together across it
     # doesn't enforce uniqueness for GlobalID resources
@@ -66,6 +66,8 @@ class StorageResourceRecord(models.Model):
             related_name = 'resource_parent')
 
     alias = models.CharField(max_length = 64, blank = True, null = True)
+
+    reported_by = models.ManyToManyField('StorageResourceRecord', related_name = 'resource_reported_by')
 
     class Meta:
         app_label = 'chroma_core'
@@ -218,7 +220,7 @@ class StorageResourceStatistic(models.Model):
         unique_together = ('storage_resource', 'name')
         app_label = 'chroma_core'
 
-    storage_resource = models.ForeignKey(StorageResourceRecord)
+    storage_resource = models.ForeignKey(StorageResourceRecord, on_delete = models.PROTECT)
     sample_period = models.IntegerField()
     name = models.CharField(max_length = 64)
 
@@ -358,7 +360,7 @@ class StorageResourceAttributeReference(StorageResourceAttribute):
     class Meta:
         app_label = 'chroma_core'
 
-    value = models.ForeignKey(StorageResourceRecord, blank = True, null = True, related_name = 'value_resource')
+    value = models.ForeignKey(StorageResourceRecord, blank = True, null = True, related_name = 'value_resource', on_delete = models.PROTECT)
 
     # NB no 'encode' impl here because it has to be a special case to
     # resolve a local resource to a global ID
