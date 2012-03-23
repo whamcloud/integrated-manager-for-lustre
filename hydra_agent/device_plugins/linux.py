@@ -91,38 +91,35 @@ def _device_node(device_name, major_minor, path, size, parent):
     # gets us the serial number for QEMU devices if the user
     # has set one, whereas that doesn't show up in 0x83.
 
+    def scsi_id_command(cmd):
+        rc, out, err = shell.run(cmd)
+        if rc != 0:
+            return None
+        else:
+            return out.strip()
+
     if old_udev:
         # Old scsi_id, operates on a /sys reference
-        rc, out, err = shell.run(["scsi_id", "-g", "-p", "0x80", "-s", "/block/%s" % device_name])
-        if rc != 0:
-            serial = None
-        else:
-            serial = out.strip()
+        serial_80 = scsi_id_command(["scsi_id", "-g", "-p", "0x80", "-s", "/block/%s" % device_name])
+        serial_83 = scsi_id_command(["scsi_id", "-g", "-p", "0x83", "-s", "/block/%s" % device_name])
     else:
         # New scsi_id, always operates directly on a device
-        rc, out, err = shell.run(["scsi_id", "-g", "-p", "0x80", path])
-        if rc != 0:
-            serial = None
-        else:
-            serial = out.strip()
+        serial_80 = scsi_id_command(["scsi_id", "-g", "-p", "0x80", path])
+        serial_83 = scsi_id_command(["scsi_id", "-g", "-p", "0x83", path])
 
     # The downside to using -p 0x80 is that if the user hasn't manually
     # set serials for their scsi devices, multiple different devices on
     # the same host return the same string, so we need an explicit
     # exclusion for that
-    if serial == "SQEMU    QEMU HARDDISK  0":
-        serial = None
-
-    # FIXME: different controllers may want to use different identifiers,
-    # should separate these out so that can pick from e.g. 0x80 vs. 0x83
+    if serial_80 == "SQEMU    QEMU HARDDISK  0":
+        serial_80 = None
 
     info = {'major_minor': major_minor,
             'path': path,
-            'serial': serial,
+            'serial_80': serial_80,
+            'serial_83': serial_83,
             'size': size,
             'parent': parent}
-
-    #info = DevicePluginManager.annotate_block_device(info)
 
     return info
 
@@ -193,6 +190,30 @@ def _parse_sys_block():
             parse_block_dir(os.path.split(p)[0], parent = major_minor)
 
     return block_device_nodes, node_block_devices
+
+
+def _get_md():
+    try:
+        matches = re.finditer("^(md\d+) :", open('/proc/mdstat', 'r').read().strip(), flags = re.MULTILINE)
+        devs = []
+        for match in matches:
+            # e.g. md0
+            device_name = match.group(1)
+            device_path = "/dev/%s" % device_name
+            detail = shell.try_run(['mdadm', '--brief', '--detail', '--verbose', device_path])
+            device_uuid = re.search("UUID=(.*)[ \\n]", detail.strip(), flags = re.MULTILINE).group(1)
+            print detail.strip()
+            device_list_csv = re.search("^   devices=(.*)$", detail.strip(), flags = re.MULTILINE).group(1)
+            device_list = device_list_csv.split(",")
+
+            devs.append({
+                "uuid": device_uuid,
+                "path": device_path,
+                "device_paths": device_list
+                })
+        return devs
+    except IOError:
+        return []
 
 
 def device_scan(args = None):
@@ -267,7 +288,7 @@ def device_scan(args = None):
                 if not parent_lv_name in lvs[vg_name]:
                     agent_log.error("Cannot parse LVM device name %s" % name)
                 else:
-                    # FIXME: compose path in a way that copes with hyphens
+                    # HYD-744: FIXME: compose path in a way that copes with hyphens
                     parent_block_device = node_block_devices["/dev/mapper/%s-%s" % (vg_name, parent_lv_name)]
                     block_device_nodes[block_device]['parent'] = parent_block_device
 
@@ -293,6 +314,14 @@ def device_scan(args = None):
         else:
             continue
 
+    mds = {}
+    for md in _get_md():
+        path = md['path']
+        uuid = md['uuid']
+        device_paths = md['device_paths']
+        drives = [_dev_major_minor(dp) for dp in device_paths]
+        mds[uuid] = {'path': path, 'drives': drives}
+
     # Anything in fstab or that is mounted
     from hydra_agent.utils import Fstab, Mounts
     fstab = Fstab()
@@ -304,7 +333,12 @@ def device_scan(args = None):
         if mm and fstype != 'lustre' and mm in block_device_nodes:
             bdev_to_local_fs[mm] = (mntpnt, fstype)
 
-    return {"vgs": vgs, "lvs": lvs, "mpath": mpaths, "devs": block_device_nodes, "local_fs": bdev_to_local_fs}
+    return {"vgs": vgs,
+            "lvs": lvs,
+            "mpath": mpaths,
+            "devs": block_device_nodes,
+            "local_fs": bdev_to_local_fs,
+            'mds': mds}
 
 
 class DeviceScanPlugin(ActionPlugin):
