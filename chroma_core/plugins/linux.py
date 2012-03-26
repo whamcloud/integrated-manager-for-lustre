@@ -27,31 +27,24 @@ class PluginAgentResources(StorageResource):
 
 
 class ScsiDevice(builtin_resources.LogicalDrive):
-    identifier = GlobalId('serial')
+    identifier = GlobalId('serial_80', 'serial_83')
 
-    serial = attributes.String(subscribe = 'scsi_serial')
+    serial_80 = attributes.String()
+    serial_83 = attributes.String()
 
     class_label = "SCSI device"
 
     def get_label(self, ancestors = []):
-        if self.serial[0] == 'S':
-            return self.serial[1:]
-        else:
-            return self.serial
-
-
-class UnsharedDeviceNode(builtin_resources.DeviceNode):
-    """A device node whose underlying device has no SCSI ID
-    and is therefore assumed to be unshared"""
-    identifier = ScannableId('path')
-
-    class_label = "Local disk"
-
-    def get_label(self, ancestors = []):
-        if self.path.startswith("/dev/"):
-            return self.path[5:]
-        else:
-            return self.path
+        if self.serial_80:
+            QEMU_PREFIX = "SQEMU    QEMU HARDDISK  "
+            if self.serial_80.find(QEMU_PREFIX) == 0:
+                return self.serial_80[len(QEMU_PREFIX):]
+            elif self.serial_80[0] == 'S':
+                return self.serial_80[1:]
+            else:
+                return self.serial_80
+        elif self.serial_83:
+            return self.serial_83
 
 
 class UnsharedDevice(builtin_resources.LogicalDrive):
@@ -75,6 +68,11 @@ class Partition(builtin_resources.LogicalDrive):
 
     def get_label(self):
         return "%s-%s" % (self.container.get_label(), self.number)
+
+
+class MdRaid(builtin_resources.LogicalDrive):
+    identifier = GlobalId('uuid')
+    uuid = attributes.String()
 
 
 class LocalMount(StorageResource):
@@ -128,8 +126,6 @@ class Linux(StoragePlugin):
     def __init__(self, *args, **kwargs):
         super(Linux, self).__init__(*args, **kwargs)
 
-        self._scsi_devices = set()
-
     def teardown(self):
         self.log.debug("Linux.teardown")
 
@@ -151,28 +147,33 @@ class Linux(StoragePlugin):
         for mp_name, mp in devices['mpath'].items():
             mpath_block_devices.add(mp['block_device'])
 
-        dm_block_devices = lv_block_devices | mpath_block_devices
+        special_block_devices = lv_block_devices | mpath_block_devices
+        for uuid, md_info in devices['mds'].items():
+            special_block_devices.add(md_info['block_device'])
 
-        # List of BDs with serial numbers that aren't devicemapper BDs
-        devs_by_serial = {}
+        def preferred_serial(bdev):
+            if bdev['serial_80']:
+                return bdev['serial_80']
+            elif bdev['serial_83']:
+                return bdev['serial_83']
+            else:
+                return None
+
+        # Create ScsiDevices
+        res_by_serial = {}
         for bdev in devices['devs'].values():
-            serial = bdev['serial']
-            if not bdev['major_minor'] in dm_block_devices:
-                if serial != None and not serial in devs_by_serial:
+            serial = preferred_serial(bdev)
+            if not bdev['major_minor'] in special_block_devices:
+                if serial != None and not serial in res_by_serial:
                     # NB it's okay to have multiple block devices with the same
                     # serial (multipath): we just store the serial+size once
-                    devs_by_serial[serial] = {
-                            'serial': serial,
-                            'size': bdev['size']
-                            }
+                    res, created = self.update_or_create(ScsiDevice,
+                            serial_80 = bdev['serial_80'],
+                            serial_83 = bdev['serial_83'],
+                            size = bdev['size'])
+                    res_by_serial[serial] = res
 
-        # Resources for devices with serial numbers
-        res_by_serial = {}
-        for dev in devs_by_serial.values():
-            res, created = self.update_or_create(ScsiDevice, serial = dev['serial'], size = dev['size'])
-            self._scsi_devices.add(res)
-            res_by_serial[dev['serial']] = res
-
+        # Create DeviceNodes for ScsiDevices and UnsharedDevices
         bdev_to_resource = {}
         for bdev in devices['devs'].values():
             # Partitions: we will do these in a second pass once their
@@ -180,12 +181,13 @@ class Linux(StoragePlugin):
             if bdev['parent'] != None:
                 continue
 
-            # DM devices: we will do these later
-            if bdev['major_minor'] in dm_block_devices:
+            # Don't create ScsiDevices for devicemapper, mdraid
+            if bdev['major_minor'] in special_block_devices:
                 continue
 
-            if bdev['serial'] != None:
-                lun_resource = res_by_serial[bdev['serial']]
+            serial = preferred_serial(bdev)
+            if serial != None:
+                lun_resource = res_by_serial[serial]
                 res, created = self.update_or_create(LinuxDeviceNode,
                                     parents = [lun_resource],
                                     host_id = host_id,
@@ -278,6 +280,19 @@ class Linux(StoragePlugin):
             mpath_parents = [bdev_to_resource[n['major_minor']] for n in mpath['nodes']]
             for p in mpath_parents:
                 mpath_bdev.add_parent(p)
+
+        for uuid, md_info in devices['mds'].items():
+            md_res, created = self.update_or_create(MdRaid,
+                    size = devices['devs'][md_info['block_device']]['size'],
+                    uuid = uuid)
+            node_res, created = self.update_or_create(LinuxDeviceNode,
+                    parents = [md_res],
+                    host_id = host_id,
+                    path = md_info['path'])
+            for drive_bd in md_info['drives']:
+                drive_res = bdev_to_resource[drive_bd]
+                md_res.add_parent(drive_res)
+            bdev_to_resource[md_info['block_device']] = node_res
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             bdev_resource = bdev_to_resource[bdev]
