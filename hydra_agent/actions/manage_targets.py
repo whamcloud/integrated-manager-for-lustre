@@ -7,6 +7,7 @@ import errno
 import os
 import shlex
 import re
+import libxml2
 
 LIBDIR = "/var/lib/hydra"
 
@@ -233,12 +234,23 @@ def configure_ha(args):
     AgentStore.set_target_info(args.uuid, {"bdev": args.device, "mntpt": args.mountpoint})
 
 
-def list_ha_targets(args):
-    targets = []
-    for line in shell.try_run(['crm_resource', '--list']).split("\n"):
-        match = re.match(r"^\s*([^\s]+).+hydra:Target", line)
-        if match:
-            targets.append(match.groups()[0])
+def query_ha_targets(args):
+    targets = {}
+
+    for target in shell.try_run(['crm_resource', '-l']).split("\n"):
+        if len(target) < 1:
+            continue
+
+        label, serial = target.split("_")
+        targets[target] = {'label': label, 'serial': serial}
+
+        raw_xml = "\n".join(shell.try_run(['crm_resource', '-r', target, '-q']).split("\n")[2:])
+        try:
+            doc = libxml2.parseDoc(raw_xml)
+            node = doc.xpathEval('//instance_attributes/nvpair[@name="target"]')[0]
+            targets[target]['uuid'] = node.prop('value')
+        except (ValueError, libxml2.parserError):
+            continue
 
     return targets
 
@@ -351,20 +363,11 @@ def target_running(args):
 
 
 def clear_targets(args):
-    for resource in list_ha_targets(args):
-        (label, serial) = resource.split("_")
-        print "%s\n%s" % (label, len(label) * "=")
-        try:
-            print "Stopping"
-            _stop_target(label, serial)
-        except Exception:
-            pass
-        try:
-            print "Unconfiguring"
-            _unconfigure_ha(False, label, serial)
-            _unconfigure_ha(True, label, serial)
-        except Exception:
-            pass
+    for resource, attrs in query_ha_targets(args).items():
+        print "Stopping %s" % resource
+        _stop_target(attrs['label'], attrs['serial'])
+        print "Unconfiguring %s" % resource
+        _unconfigure_ha(True, attrs['label'], attrs['uuid'], attrs['serial'])
 
 
 class TargetsPlugin(AgentPlugin):

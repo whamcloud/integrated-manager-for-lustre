@@ -17,7 +17,7 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
-Requires: python-simplejson python-argparse avahi-python python-daemon python-setuptools
+Requires: python-simplejson python-argparse avahi-python python-daemon python-setuptools libxml2-python
 %if 0%{?rhel} > 5
 Requires: avahi-dnsconfd
 %endif
