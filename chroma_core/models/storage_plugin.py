@@ -411,6 +411,28 @@ class StorageResourceStatistic(models.Model):
         app_label = 'chroma_core'
 
 
+class StorageResourceOffline(AlertState):
+    def message(self):
+        return "%s not contactable" % self.alert_item.alias_or_name()
+
+    def begin_event(self):
+        import logging
+        return AlertEvent(
+                message_str = "Lost contact with %s" % self.alert_item.alias_or_name(),
+                alert = self,
+                severity = logging.WARNING)
+
+    def end_event(self):
+        import logging
+        return AlertEvent(
+                message_str = "Re-established contact with %s" % self.alert_item.alias_or_name(),
+                alert = self,
+                severity = logging.INFO)
+
+    class Meta:
+        app_label = 'chroma_core'
+
+
 class StorageResourceAlert(AlertState):
     """Used by chroma_core.lib.storage_plugin"""
 

@@ -10,7 +10,7 @@ from django.db import transaction
 from chroma_core.lib.storage_plugin import messaging
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
 from chroma_core.lib.storage_plugin.messaging import Timeout
-from chroma_core.models import AgentSession, ManagedHost, StorageResourceRecord
+from chroma_core.models import AgentSession, ManagedHost, StorageResourceRecord, StorageResourceOffline
 
 
 # Thread-per-session is just a convenient way of coding this.  The actual required
@@ -28,7 +28,6 @@ class PluginSession(threading.Thread):
         super(PluginSession, self).__init__(*args, **kwargs)
 
     def run(self):
-        from chroma_core.lib.storage_plugin.query import ResourceQuery
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         record = StorageResourceRecord.objects.get(id=self.root_resource_id)
         plugin_klass = storage_plugin_manager.get_plugin_class(
@@ -42,8 +41,7 @@ class PluginSession(threading.Thread):
             try:
                 # Note: get a fresh root_resource each time as the Plugin
                 # instance will modify it.
-                root_resource = ResourceQuery().get_resource(record)
-                self._scan_loop(plugin_klass, root_resource)
+                self._scan_loop(plugin_klass, record)
             except Exception:
                 run_duration = datetime.datetime.now() - last_retry
                 if last_retry and run_duration > datetime.timedelta(seconds = RETRY_DELAY_MAX):
@@ -72,7 +70,7 @@ class PluginSession(threading.Thread):
         storage_plugin_log.info("Session %s: Dropped out of retry loop" % self.root_resource_id)
         self.stopped = True
 
-    def _scan_loop(self, plugin_klass, root_resource):
+    def _scan_loop(self, plugin_klass, record):
         storage_plugin_log.debug("Session %s: starting scan loop" % self.root_resource_id)
         instance = plugin_klass(self.root_resource_id)
         # TODO: impose timeouts on plugin calls (especially teardown)
@@ -80,6 +78,7 @@ class PluginSession(threading.Thread):
             storage_plugin_log.debug("Session %s: >>initial_scan" % self.root_resource_id)
             instance.do_initial_scan()
             self.initialized = True
+            StorageResourceOffline.notify(record, False)
             storage_plugin_log.debug("Session %s: <<initial_scan" % self.root_resource_id)
             while not self.stopping:
                 storage_plugin_log.debug("Session %s: >>periodic_update (%s)" % (self.root_resource_id, instance.update_period))
@@ -93,6 +92,7 @@ class PluginSession(threading.Thread):
         except Exception:
             raise
         finally:
+            StorageResourceOffline.notify(record, True)
             self.initialized = False
             instance.do_teardown()
 

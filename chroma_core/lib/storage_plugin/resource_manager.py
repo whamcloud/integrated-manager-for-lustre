@@ -28,6 +28,8 @@ from chroma_core.lib.util import all_subclasses
 
 from chroma_core.models import ManagedHost, ManagedTarget
 from chroma_core.models import Lun, LunNode
+from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
+from chroma_core.models import StorageResourceAlert, StorageResourceOffline
 
 from django.db import transaction
 
@@ -79,7 +81,6 @@ class EdgeIndex(object):
         del self._parent_from_edge[node]
 
     def populate(self):
-        from chroma_core.models import StorageResourceRecord
         from django.db.models import Q
         for srr in StorageResourceRecord.objects.filter(~Q(parents = None)).values('id', 'parents'):
             child = srr['id']
@@ -147,7 +148,6 @@ class SubscriberIndex(object):
 
     def add_resource(self, resource_id, resource = None):
         if not resource:
-            from chroma_core.models import StorageResourceRecord
             resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
 
         for subscription in self._all_subscriptions:
@@ -159,7 +159,6 @@ class SubscriberIndex(object):
     def remove_resource(self, resource_id, resource = None):
         log.debug("SubscriberIndex.remove_resource %s" % resource_id)
         if not resource:
-            from chroma_core.models import StorageResourceRecord
             try:
                 resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
             except StorageResourceRecord.DoesNotExist:
@@ -175,7 +174,6 @@ class SubscriberIndex(object):
             self.remove_subscriber(resource_id, subscription.key, subscription.val(resource))
 
     def populate(self):
-        from chroma_core.models import StorageResourceRecord
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         for resource_class_id, resource_class in storage_plugin_manager.get_all_resources():
             for subscription in self._all_subscriptions:
@@ -253,7 +251,6 @@ class ResourceManager(object):
         # class of each resource)
         def get_session_resources_of_type(session, klass):
             for record_pk in session.local_id_to_global_id.values():
-                from chroma_core.models import StorageResourceRecord
                 try:
                     record = StorageResourceRecord.objects.get(pk = record_pk)
                 except StorageResourceRecord.DoesNotExist:
@@ -346,7 +343,6 @@ class ResourceManager(object):
                     log.info("affinity_weights: no PathWeights for LunNode %s" % lun_node.id)
                     return False
 
-                from chroma_core.models import StorageResourceRecord
                 attr_model_class = StorageResourceRecord.objects.get(id = weight_resource_ids[0]).resource_class.get_class().attr_model_class('weight')
 
                 import json
@@ -525,7 +521,6 @@ class ResourceManager(object):
 
     @transaction.autocommit
     def _persist_update_stats(self, record_pk, update_data):
-        from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
         record = StorageResourceRecord.objects.get(pk = record_pk)
         for stat_name, stat_data in update_data.items():
             stat_properties = record.get_statistic_properties(stat_name)
@@ -628,8 +623,6 @@ class ResourceManager(object):
     #   remove the propagated alerts, and then finally mark inactive the alert itself.
     @transaction.autocommit
     def _persist_alert(self, record_pk, active, alert_class, attribute):
-        from chroma_core.models import StorageResourceRecord
-        from chroma_core.models import StorageResourceAlert
         record = StorageResourceRecord.objects.get(pk = record_pk)
         alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute)
         return alert_state
@@ -644,7 +637,6 @@ class ResourceManager(object):
             else:
                 reported_global_resources.append(session.local_id_to_global_id[r._handle])
 
-        from chroma_core.models import StorageResourceRecord
         from django.db.models import Q
         lost_resources = StorageResourceRecord.objects.filter(
                 ~Q(pk__in = reported_scoped_resources),
@@ -663,7 +655,7 @@ class ResourceManager(object):
                 self._cull_resource(reportee)
 
     def _cull_resource(self, resource_record):
-        from chroma_core.models import StorageResourceRecord, StorageResourceAttributeReference
+        from chroma_core.models import StorageResourceAttributeReference
 
         log.info("Culling resource '%s'" % resource_record.pk)
         try:
@@ -711,6 +703,14 @@ class ResourceManager(object):
                 lun.save()
 
         self._subscriber_index.remove_resource(resource_record.pk)
+
+        for alert_state in StorageResourceAlert.filter_by_item(resource_record):
+            self._persist_alert_unpropagate(alert_state)
+            alert_state.delete()
+
+        for alert_state in StorageResourceOffline.filter_by_item(resource_record):
+            alert_state.delete()
+
         resource_record.delete()
 
     def global_remove_resource(self, resource_id):
@@ -726,8 +726,6 @@ class ResourceManager(object):
             self._cull_resource(record)
 
     def _persist_new_resource(self, session, resource):
-        from chroma_core.models import StorageResourceRecord
-
         if resource._handle_global:
             # Bit of a weird one: this covers the case where a plugin sessoin
             # was given a root resource that had some ResourceReference attributes
@@ -847,7 +845,6 @@ class ResourceManager(object):
 
             # Update the database
             # FIXME: shouldn't need to SELECT the record to set up its relationships
-            from chroma_core.models import StorageResourceRecord
             record = StorageResourceRecord.objects.get(pk = resource_global_id)
             self._resource_persist_parents(r, session, record)
 
