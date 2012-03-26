@@ -23,6 +23,26 @@ class String(BaseResourceAttribute):
             raise ValueError("Value '%s' too long (max %s)" % (value, self.max_length))
 
 
+class Password(String):
+    """A password.  Plugins must provide their own obfuscation function.
+    The encryption function will be called by Chroma when processing user input (e.g.
+    when a resource is added in the UI).  The obfuscated text will be seen by
+    the plugin when the resource is retreived.
+
+    ::
+
+        def encrypt_fn(password):
+            return rot13(password)
+
+        Password(encrypt_fn)"""
+    def __init__(self, encrypt_fn, *args, **kwargs):
+        self.encrypt_fn = encrypt_fn
+        super(Password, self).__init__(*args, **kwargs)
+
+    def encrypt(self, value):
+        return self.encrypt_fn(value)
+
+
 class Boolean(BaseResourceAttribute):
     """A True/False value.  Any truthy value may be assigned to this, but it will be
     stored as True or False."""

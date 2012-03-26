@@ -8,6 +8,7 @@ from django.db import models
 from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState, AlertEvent
 from chroma_core.models.utils import WorkaroundDateTimeField
+from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 
 from collections import defaultdict
 import json
@@ -85,7 +86,7 @@ class StorageResourceRecord(models.Model):
 
         if isinstance(resource_class.identifier, AutoId):
             import uuid
-            attrs['_auto_id'] = uuid.uuid4().__str__()
+            attrs['chroma_auto_id'] = uuid.uuid4().__str__()
         id_str = json.dumps(resource_class.attrs_to_id_tuple(attrs))
 
         # NB assumes that none of the items in ID tuple are ResourceReferences: this
@@ -106,6 +107,8 @@ class StorageResourceRecord(models.Model):
                 resource_class_id = resource_class_id,
                 storage_id_str = id_str)
         record.save()
+
+        log.info("StorageResourceRecord created %d" % (record.id))
 
         for name, value in attrs.items():
             attr_model_class = resource_class.attr_model_class(name)

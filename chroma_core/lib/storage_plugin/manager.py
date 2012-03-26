@@ -12,7 +12,6 @@ from chroma_core.lib.storage_plugin.plugin import StoragePlugin
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
 from chroma_core.models.storage_plugin import StoragePluginRecord, StorageResourceClassStatistic
 from chroma_core.models.storage_plugin import StorageResourceRecord, StorageResourceClass
-from django.db import transaction
 
 
 class PluginNotFound(Exception):
@@ -38,7 +37,6 @@ class LoadedPlugin(object):
             plugin_class._resource_classes = []
             for name, cls in inspect.getmembers(module):
                 if inspect.isclass(cls) and issubclass(cls, StorageResource) and cls != StorageResource:
-                    print cls
                     plugin_class._resource_classes.append(cls)
 
         # Map of name string to class
@@ -122,26 +120,6 @@ class StoragePluginManager(object):
             class_records.extend(list(StorageResourceClass.objects.filter(**filter)))
 
         return class_records
-
-    @transaction.commit_on_success
-    def create_root_resource(self, plugin_mod, resource_class_name, **kwargs):
-        storage_plugin_log.debug("create_root_resource %s %s %s" % (plugin_mod, resource_class_name, kwargs))
-        # Try to find the resource class in the plugin module
-        resource_class, resource_class_id = self.get_plugin_resource_class(plugin_mod, resource_class_name)
-
-        # Construct a record
-        record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, kwargs)
-
-        # XXX should we let people modify root records?  e.g. change the IP
-        # address of a controller rather than deleting it, creating a new
-        # one and letting the pplugin repopulate us with 'new' resources?
-        # This will present the challenge of what to do with instances of
-        # StorageResource subclasses which are already present in running plugins.
-
-        if created:
-            storage_plugin_log.debug("create_root_resource created %d" % (record.id))
-
-        return record
 
     def register_plugin(self, plugin_instance):
         """Register a particular instance of a StoragePlugin"""

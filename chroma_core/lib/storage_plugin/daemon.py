@@ -311,8 +311,8 @@ class AgentDaemon(object):
                 record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
                         plugin_name = plugin_name, host_id = host.id)
             except StorageResourceRecord.DoesNotExist:
-                record = storage_plugin_manager.create_root_resource('linux', 'PluginAgentResources',
-                        plugin_name = plugin_name, host_id = host.id)
+                resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')
+                record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'plugin_name': plugin_name, 'host_id': host.id})
 
             klass = storage_plugin_manager.get_plugin_class(plugin_name)
             if initial:

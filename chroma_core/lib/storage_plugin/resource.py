@@ -10,6 +10,8 @@ from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceA
 from chroma_core.lib.storage_plugin.statistics import BaseStatistic
 from chroma_core.lib.storage_plugin.alert_conditions import AlertCondition
 
+from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
+
 from collections import defaultdict
 import threading
 
@@ -28,7 +30,7 @@ class GlobalId(ResourceIdentifier):
 
 class AutoId(GlobalId):
     def __init__(self):
-        super(AutoId, self).__init__('_auto_id')
+        super(AutoId, self).__init__('chroma_auto_id')
     """An ID generated on resource creation by Chroma"""
     pass
 
@@ -79,7 +81,10 @@ class StorageResourceMetaclass(type):
 
                 del dct[field_name]
             elif isinstance(field_obj, AutoId):
-                dct['_storage_attributes']['_auto_id'] = attributes.Integer(hidden = True)
+                field_obj = attributes.String(hidden = True)
+                dct['_storage_attributes']['chroma_auto_id'] = field_obj
+
+        log.debug("%s: %s" % (name, dct['_storage_attributes']))
 
         return super(StorageResourceMetaclass, cls).__new__(cls, name, bases, dct)
 
@@ -115,19 +120,6 @@ class StorageResource(object):
            values for all resource attributes (i.e. _storage_dict)"""
         for k in self._storage_dict.keys():
             yield k, self.format(k)
-
-    def get_attributes(self):
-        """Returns a list of dicts, one for each attribute.  Excludes hidden attributes."""
-        result = {}
-        attr_props = self.get_all_attribute_properties()
-        for name, props in attr_props:
-            val = getattr(self, name)
-            if isinstance(val, StorageResource):
-                raw = val._handle
-            else:
-                raw = val
-            result[name] = {'raw': raw, 'markup': props.to_markup(val), 'label': props.get_label(name)}
-        return result
 
     @classmethod
     def get_all_attribute_properties(cls):
@@ -273,11 +265,13 @@ class StorageResource(object):
                 if attr.optional:
                     return None
                 else:
+                    log.error("Missing attribute %s, %s" % (key, self._storage_dict))
                     raise AttributeError("attribute %s not found" % key)
 
     @classmethod
     def attrs_to_id_tuple(cls, attrs):
         """Serialized ID for use in StorageResourceRecord.storage_id_str"""
+        log.debug("attrs_to_id_tuple %s" % attrs)
         identifier_val = []
         for f in cls.identifier.id_fields:
             if not f in cls._storage_attributes:
@@ -286,7 +280,10 @@ class StorageResource(object):
             if f in attrs:
                 identifier_val.append(attrs[f])
             else:
-                identifier_val.append(None)
+                if cls._storage_attributes[f].optional:
+                    identifier_val.append(None)
+                else:
+                    raise RuntimeError("Missing ID attribute '%s'" % f)
         return tuple(identifier_val)
 
     def id_tuple(self):
