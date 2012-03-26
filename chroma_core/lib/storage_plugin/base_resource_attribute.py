@@ -1,4 +1,6 @@
 
+from chroma_core.models import StorageResourceAttributeSerialized
+
 
 class BaseResourceAttribute(object):
     """Base class for declared attributes of StorageResource.  This is
@@ -9,11 +11,14 @@ class BaseResourceAttribute(object):
     # as the plugin author declared the attributes.
     creation_counter = 0
 
-    def __init__(self, subscribe = None, provide = None, optional = False, label = None):
+    model_class = StorageResourceAttributeSerialized
+
+    def __init__(self, subscribe = None, provide = None, optional = False, label = None, hidden = False):
         self.optional = optional
         self.subscribe = subscribe
         self.provide = provide
         self.label = label
+        self.hidden = hidden
 
         self.creation_counter = BaseResourceAttribute.creation_counter
         BaseResourceAttribute.creation_counter += 1
@@ -37,12 +42,10 @@ class BaseResourceAttribute(object):
         return value
 
     def encode(self, value):
-        import json
-        return json.dumps(value)
+        return value
 
     def decode(self, value):
-        import json
-        return json.loads(value)
+        return value
 
     def to_markup(self, value):
         from django.utils.html import conditional_escape

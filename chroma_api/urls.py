@@ -6,8 +6,6 @@ from django.conf.urls.defaults import patterns, include
 from piston.resource import Resource
 from tastypie.api import Api
 
-import monitorapi
-
 from statsmetricapi import(GetFSTargetStats,
                            GetFSServerStats,
                            GetFSMGSStats,
@@ -59,6 +57,7 @@ import chroma_api.job
 import chroma_api.step
 import chroma_api.command
 import chroma_api.help
+import chroma_api.agent
 
 import chroma_api.session
 import chroma_api.user
@@ -90,6 +89,7 @@ api.register(chroma_api.step.StepResource())
 api.register(chroma_api.log.LogResource())
 api.register(chroma_api.command.CommandResource())
 api.register(chroma_api.help.HelpResource())
+api.register(chroma_api.agent.AgentResource())
 
 urlpatterns = patterns('',
     # Un-RESTful URLs pending re-work of stats store and UI
@@ -102,9 +102,6 @@ urlpatterns = patterns('',
     (r'^api/get_fs_stats_for_client/$', CsrfResource(GetFSClientsStats)),
     (r'^api/get_fs_stats_heatmap/$', CsrfResource(GetHeatMapFSStats)),
     # <<<
-
-    # Note: Agent API is not subject to CSRF because it is not accessed from a web browser
-    (r'^api/update_scan/$', Resource(monitorapi.UpdateScan)),
 
     (r'^', include(api.urls)),
 )

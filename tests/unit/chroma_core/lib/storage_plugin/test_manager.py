@@ -29,6 +29,12 @@ class TestExample(TestCase):
         load_plugins(['example_plugin'])
 
 
+class TestThousandDrives(TestCase):
+    def test_load(self):
+        """Test that the thousand_drives plugin used for stats load testing loads"""
+        load_plugins(['thousand_drives'])
+
+
 class TestLoad(TestCase):
     def setUp(self):
         import loadable_plugin

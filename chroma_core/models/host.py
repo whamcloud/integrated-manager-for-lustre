@@ -228,17 +228,6 @@ class Lun(models.Model):
             help_text = "Integer number of bytes.  Can be null if this device \
                     was manually created, rather than detected.")
 
-    # Whether the originating StorageResource can be shared between hosts
-    # Note: this is ultimately a hint, as it's always possible for a virtual
-    # environment to trick us by showing the same IDE device to two hosts, or
-    # for shared storage to not provide a serial number.
-    shareable = models.BooleanField("Whether the device can potentially be \
-            shared between hosts (irrespective of whether it has been \
-            seen on multiple hosts).  This is a hint, based on whether Chroma \
-            can detect sharing on this device -- it is possible that the device \
-            is shared but Chroma can't detect the sharing (e.g. some virtualization \
-            environments)")
-
     label = models.CharField(max_length = 128)
 
     __metaclass__ = DeletableMetaclass
@@ -289,11 +278,14 @@ class Lun(models.Model):
 
     def _get_label(self):
         if not self.storage_resource_id:
-            if self.lunnode_set.count():
-                lunnode = self.lunnode_set.all()[0]
-                return "%s:%s" % (lunnode.host, lunnode.path)
+            if self.label:
+                return self.label
             else:
-                return ""
+                if self.lunnode_set.count():
+                    lunnode = self.lunnode_set.all()[0]
+                    return "%s:%s" % (lunnode.host, lunnode.path)
+                else:
+                    return ""
 
         # TODO: this is a link to the local e.g. ScsiDevice resource: to get the
         # best possible name, we should follow back to VirtualDisk ancestors, and
@@ -317,25 +309,19 @@ class Lun(models.Model):
          by returning one of 'unconfigured', 'configured-ha', 'configured-noha'
         """
         lunnode_count = self.lunnode_set.count()
-        if not self.shareable:
-            if lunnode_count > 0:
-                return 'configured-noha'
-            else:
-                return 'unconfigured'
+        primary_count = self.lunnode_set.filter(primary = True).count()
+        failover_count = self.lunnode_set.filter(primary = False, use = True).count()
+        if lunnode_count == 1 and primary_count == 0:
+            return 'configured-noha'
+        elif lunnode_count == 1 and primary_count > 0:
+            return 'configured-noha'
+        elif primary_count > 0 and failover_count == 0:
+            return 'configured-noha'
+        elif primary_count > 0 and failover_count > 0:
+            return 'configured-ha'
         else:
-            primary_count = self.lunnode_set.filter(primary = True).count()
-            failover_count = self.lunnode_set.filter(primary = False, use = True).count()
-            if lunnode_count == 1 and primary_count == 0:
-                return 'configured-noha'
-            elif lunnode_count == 1 and primary_count > 0:
-                return 'configured-noha'
-            elif primary_count > 0 and failover_count == 0:
-                return 'configured-noha'
-            elif primary_count > 0 and failover_count > 0:
-                return 'configured-ha'
-            else:
-                # Has no LunNodes, or has >1 but no primary
-                return 'unconfigured'
+            # Has no LunNodes, or has >1 but no primary
+            return 'unconfigured'
 
 
 class LunNode(models.Model):
@@ -552,26 +538,25 @@ class LearnDevicesStep(Step):
 
     def run(self, kwargs):
         # Get the device-scan output
-        from chroma_core.models import ManagedHost
+        from chroma_core.models import ManagedHost, AgentSession
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        device_info = self.invoke_agent(host, "device-scan")
+        updates = self.invoke_agent(host, "device-plugin")
+        try:
+            del updates['lustre']
+        except KeyError:
+            pass
 
-        # Insert it as a request_id=None response
-        from chroma_core.lib.storage_plugin.messaging import PluginResponse
-        PluginResponse.send('linux', host.fqdn, None, device_info)
+        # Fake a session as if the agent had reported in
+        from chroma_core.lib.storage_plugin import messaging
+        session, created = AgentSession.objects.get_or_create(host = host)
+        messaging.simple_send('agent', {
+                    "session_id": session.session_id,
+                    "host_id": host.id,
+                    "updates": updates
+            })
 
-        # Create a HydraHostProxy for the storage plugin framework to use
-        # FIXME: reinstate virtual_machine (it's passed into create_from_string)
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        storage_plugin_manager.create_root_resource('linux',
-                'HydraHostProxy', host_id = host.pk,
-                virtual_machine = None)
-
-        # Now wait for the storage daemon to pick up the resource and do its thing
-        from chroma_core.lib.storage_plugin.daemon import DaemonRpc
-        from chroma_core.lib.storage_plugin.query import ResourceQuery
-        record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = kwargs['host_id'])
-        DaemonRpc().start_session(record.pk)
+        from chroma_core.lib.storage_plugin.daemon import AgentDaemonRpc
+        AgentDaemonRpc().await_session(kwargs['host_id'])
 
 
 class SetupHostJob(Job, StateChangeJob):
@@ -742,12 +727,10 @@ class DeleteHostStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.lib.storage_plugin.query import ResourceQuery
         from chroma_core.models import StorageResourceRecord
+        from chroma_core.lib.storage_plugin.daemon import AgentDaemonRpc
         try:
-            record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = kwargs['host_id'])
-            from chroma_core.lib.storage_plugin.daemon import DaemonRpc
-            DaemonRpc().remove_resource(record.pk)
+            AgentDaemonRpc().remove_host_resources(kwargs['host_id'])
         except StorageResourceRecord.DoesNotExist:
             # This is allowed, to account for the case where we submit the request_remove_resource,
             # then crash, then get restarted.

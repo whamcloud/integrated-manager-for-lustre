@@ -65,7 +65,11 @@ function storage_resource_create_load_fields()
     var row_markup = "";
     $.each(resource_class.fields, function(i, field_info)
     {
-      row_markup += "<tr class='field'><th>" + field_info.label + ":</th><td><input type='entry' id='storage_resource_create_field_" + field_info.name + "'></input></td>";
+      if (field_info.class == 'Password') {
+        row_markup += "<tr class='field'><th>" + field_info.label + ":</th><td><input type='password' id='storage_resource_create_field_" + field_info.name + "'></input></td>";
+      } else {
+        row_markup += "<tr class='field'><th>" + field_info.label + ":</th><td><input type='entry' id='storage_resource_create_field_" + field_info.name + "'></input></td>";
+      }
       if (field_info.optional) {
         row_markup += "<td class='field_info'>Optional</td>"
       } else {

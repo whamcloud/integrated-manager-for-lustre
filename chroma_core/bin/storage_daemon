@@ -17,44 +17,59 @@ setup_environ(settings)
 import signal
 import os
 import threading
+import time
 
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
 
-class RpcThread(threading.Thread):
-    def __init__(self, daemon):
-        super(RpcThread, self).__init__()
-        self.daemon_rpc = DaemonRpc(daemon)
+class ServiceThread(threading.Thread):
+    def __init__(self, service):
+        super(ServiceThread, self).__init__()
+        self.service = service
 
     def run(self):
-        self.daemon_rpc.main_loop()
+        try:
+            self.service.main_loop()
+        except Exception:
+            import sys
+            import traceback
+            exc_info = sys.exc_info()
+            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            storage_plugin_log.warning("Exception in main loop.  backtrace: %s" % backtrace)
+            os._exit(-1)
 
     def stop(self):
-        self.daemon_rpc.stop()
-        self.join()
+        self.service.stop()
+
 
 if __name__ == '__main__':
-    from chroma_core.lib.storage_plugin.daemon import StorageDaemon, DaemonRpc
-    daemon = StorageDaemon()
+    from chroma_core.lib.storage_plugin.daemon import ScanDaemon, ScanDaemonRpc
+    from chroma_core.lib.storage_plugin.daemon import AgentDaemon, AgentDaemonRpc
 
-    # Start a thread for handling RPCs
-    rpc_thread = RpcThread(daemon)
-    rpc_thread.start()
+    scan_daemon = ScanDaemon()
+    agent_daemon = AgentDaemon()
+
+    scan_daemon_thread = ServiceThread(scan_daemon)
+    scan_rpc_thread = ServiceThread(ScanDaemonRpc(scan_daemon))
+    agent_rpc_thread = ServiceThread(AgentDaemonRpc(agent_daemon))
+    agent_daemon_thread = ServiceThread(agent_daemon)
+
+    threads = [scan_daemon_thread, agent_daemon_thread, scan_rpc_thread, agent_rpc_thread]
+    for thread in threads:
+        thread.start()
+
+    stopping = []
 
     # Respond to Ctrl+C
     def signal_handler(signal, frame):
         storage_plugin_log.info("__main__: Stopping...")
-        rpc_thread.stop()
-        daemon.stop()
+        for thread in threads:
+            thread.stop()
+        storage_plugin_log.info("__main__: Joining...")
+        for thread in threads:
+            thread.join()
+        storage_plugin_log.info("__main__: Done.")
+        stopping.append(True)
     signal.signal(signal.SIGINT, signal_handler)
 
-    try:
-        daemon.main_loop()
-    except Exception, e:
-        import sys
-        import traceback
-        exc_info = sys.exc_info()
-        backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-        storage_plugin_log.warning("Exception in main loop.  backtrace: %s" % backtrace)
-        os._exit(-1)
-
-
+    while len(stopping) == 0:
+        time.sleep(1)

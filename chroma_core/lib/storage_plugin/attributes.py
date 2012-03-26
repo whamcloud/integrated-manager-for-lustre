@@ -8,6 +8,7 @@
 the datatypes that StorageResource objects may store as attributes"""
 
 from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
+from chroma_core.models import StorageResourceAttributeReference
 
 
 class String(BaseResourceAttribute):
@@ -22,16 +23,30 @@ class String(BaseResourceAttribute):
             raise ValueError("Value '%s' too long (max %s)" % (value, self.max_length))
 
 
+class Password(String):
+    """A password.  Plugins must provide their own obfuscation function.
+    The encryption function will be called by Chroma when processing user input (e.g.
+    when a resource is added in the UI).  The obfuscated text will be seen by
+    the plugin when the resource is retreived.
+
+    ::
+
+        def encrypt_fn(password):
+            return rot13(password)
+
+        Password(encrypt_fn)"""
+    def __init__(self, encrypt_fn, *args, **kwargs):
+        self.encrypt_fn = encrypt_fn
+        super(Password, self).__init__(*args, **kwargs)
+
+    def encrypt(self, value):
+        return self.encrypt_fn(value)
+
+
 class Boolean(BaseResourceAttribute):
     """A True/False value.  Any truthy value may be assigned to this, but it will be
     stored as True or False."""
-    def encode(self, value):
-        # Use an explicit 'encode' so that if someone sets the attribute to something
-        # truthy but big (like a string) we don't end up storing that
-        return bool(value)
-
-    def decode(self, value):
-        return value
+    pass
 
 
 class Integer(BaseResourceAttribute):
@@ -128,19 +143,8 @@ class ResourceReference(BaseResourceAttribute):
        this attribute has undefined (most likely fatal) behaviour.
 
     """
-    # NB no 'encode' impl here because it has to be a special case to
-    # resolve a local resource to a global ID
 
-    def decode(self, value):
-        import json
-        pk = json.loads(value)
-        if pk:
-            from chroma_core.models import StorageResourceRecord
-
-            record = StorageResourceRecord.objects.get(pk = pk)
-            return record.to_resource()
-        else:
-            return None
+    model_class = StorageResourceAttributeReference
 
     def to_markup(self, value):
         from chroma_core.models import StorageResourceRecord

@@ -18,15 +18,6 @@ class PhysicalDisk(StorageResource):
     icon = 'physical_disk'
 
 
-class VirtualDisk(StorageResource):
-    """A storage device which will be presented to Linux servers.  Optionally set the ``home_controller``
-    attribute to a resource representing a controller (half of a couplet) so that Chroma can infer
-    which paths are the best for this device."""
-    class_label = 'Virtual disk'
-    icon = 'virtual_disk'
-    home_controller = attributes.ResourceReference(optional = True)
-
-
 class StoragePool(StorageResource):
     """An aggregation of physical drives"""
     class_label = 'Storage pool'
@@ -49,23 +40,40 @@ class Enclosure(StorageResource):
 
 
 class LogicalDrive(StorageResource):
-    """A storage device with a fixed size that could be used for installing Lustre -- note that
-    it is not typically necessary to use this class for LUNs on a storage controller as they are
-    only treated as LogicalDrives once detected on a Linux server by Chroma"""
+    """A storage device with a fixed size that could be used for installing Lustre"""
     size = attributes.Bytes()
     icon = 'virtual_disk'
+
+
+class PathWeight(StorageResource):
+    weight = attributes.Integer()
 
 
 class VirtualMachine(StorageResource):
     """A linux host provided by a plugin.  This resource has a special behaviour when
     created: Chroma will add this (by the ``address`` attribute) as a Lustre server and
     attempt to invoke the Chroma agent on it.  The ``host_id`` attribute is used internally
-    by Chroma and must not be assigned to by plugins.  The ``home_controller`` attribute is
-    used to indicate a storage controller whose LUNs are best accessed via this virtual
-    machine -- see the ``VirtualDisk.home_controller``."""
+    by Chroma and must not be assigned to by plugins."""
     # NB address is used to cue the creation of a ManagedHost, once that is set up
     # this address is not used.
     address = attributes.String()
 
-    home_controller = attributes.ResourceReference()
     host_id = attributes.Integer(optional = True)
+
+
+class DeviceNode(StorageResource):
+    host_id = attributes.Integer()
+    path = attributes.PosixPath()
+    class_label = 'Device node'
+
+    def get_label(self):
+        path = self.path
+        strip_strings = ["/dev/",
+                         "/dev/mapper/",
+                         "/dev/disk/by-id/",
+                         "/dev/disk/by-path/"]
+        strip_strings.sort(lambda a, b: cmp(len(b), len(a)))
+        for s in strip_strings:
+            if path.startswith(s):
+                path = path[len(s):]
+        return "%s:%s" % (self.host_id, path)
