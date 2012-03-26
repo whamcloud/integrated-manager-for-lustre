@@ -82,7 +82,7 @@ def _device_node(device_name, major_minor, path, size, parent):
         rc, out, err = shell.run([SCSI_ID_PATH, '--version'])
         old_udev = (rc != 0)
 
-    # Note: we use -p 0x80 with scsi_id in order to get
+    # Note: the -p 0x80 scsi_id is good for getting
     # a textual id along the lines of:
     # * SQEMU    QEMU HARDDISK  WD-deadbeef0
     # * SOPNFILERVIRTUAL-DISK   9iI2mH-4Ddf-k3Ov
@@ -113,6 +113,8 @@ def _device_node(device_name, major_minor, path, size, parent):
     # exclusion for that
     if serial_80 == "SQEMU    QEMU HARDDISK  0":
         serial_80 = None
+    if serial_83 and serial_83.find("0QEMU    QEMU HARDDISK") == 0:
+        serial_83 = None
 
     info = {'major_minor': major_minor,
             'path': path,
@@ -202,7 +204,6 @@ def _get_md():
             device_path = "/dev/%s" % device_name
             detail = shell.try_run(['mdadm', '--brief', '--detail', '--verbose', device_path])
             device_uuid = re.search("UUID=(.*)[ \\n]", detail.strip(), flags = re.MULTILINE).group(1)
-            print detail.strip()
             device_list_csv = re.search("^   devices=(.*)$", detail.strip(), flags = re.MULTILINE).group(1)
             device_list = device_list_csv.split(",")
 
@@ -317,10 +318,11 @@ def device_scan(args = None):
     mds = {}
     for md in _get_md():
         path = md['path']
+        block_device = node_block_devices[md['path']]
         uuid = md['uuid']
         device_paths = md['device_paths']
         drives = [_dev_major_minor(dp) for dp in device_paths]
-        mds[uuid] = {'path': path, 'drives': drives}
+        mds[uuid] = {'path': path, 'block_device': block_device, 'drives': drives}
 
     # Anything in fstab or that is mounted
     from hydra_agent.utils import Fstab, Mounts
