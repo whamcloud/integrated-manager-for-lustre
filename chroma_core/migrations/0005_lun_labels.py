@@ -8,7 +8,7 @@ class Migration(DataMigration):
         for lun in orm.Lun._base_manager.filter(label = 'MIGRATE_ME'):
             try:
                 lun.label = lun._get_label()
-            except OperationalError:
+            except (OperationalError, AttributeError):
                 try:
                     lun.label = orm.LunNode.objects.filter(lun = lun)[0].path
                 except IndexError:
