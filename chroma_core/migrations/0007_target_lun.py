@@ -1,19 +1,12 @@
 # encoding: utf-8
-import datetime
-from south.db import db
 from south.v2 import DataMigration
-from django.db import models
 
 class Migration(DataMigration):
     def forwards(self, orm):
         "Write your forwards methods here."
-        from chroma_core.models import ManagedTarget
-        try:
-            for target in ManagedTarget._base_manager.all():
-                target.lun = target.managedtargetmount_set.get(primary = True).block_device.lun
-                target.save()
-        except Exception, e:
-            print "  WARNING: This migration raised an exception which we're ignoring.\nThis probably happened because a later migration introduced\na new field which isn't available to this migration.\nThis situation is OK in the case of a new DB without any\ndata to migrate.  The exception was: \n%s" % e
+        for target in orm.ManagedTarget._base_manager.all():
+            target.lun = orm.ManagedTargetMount.objects.get(primary = True, target = target).block_device.lun
+            target.save()
 
     def backwards(self, orm):
         "Write your backwards methods here."

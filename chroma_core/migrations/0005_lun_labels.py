@@ -4,10 +4,17 @@ from south.v2 import DataMigration
 class Migration(DataMigration):
     def forwards(self, orm):
         "Write your forwards methods here."
-        from chroma_core.models import Lun
-        for lun in Lun._base_manager.filter(label = 'MIGRATE_ME'):
-            lun.label = lun._get_label()
+        from MySQLdb import OperationalError
+        for lun in orm.Lun._base_manager.filter(label = 'MIGRATE_ME'):
+            try:
+                lun.label = lun._get_label()
+            except OperationalError:
+                try:
+                    lun.label = orm.LunNode.objects.filter(lun = lun)[0].path
+                except IndexError:
+                    lun.label = ""
             lun.save()
+
 
     def backwards(self, orm):
         "Write your backwards methods here."
