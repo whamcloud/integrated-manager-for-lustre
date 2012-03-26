@@ -103,3 +103,4 @@ fi
 %attr(0755,root,root)/etc/init.d/hydra-worker
 %attr(0755,root,root)/etc/init.d/hydra-storage
 %attr(0755,root,root)/etc/init.d/hydra-host-discover
+%attr(0644,root,root)/etc/logrotate.d/hydra-server

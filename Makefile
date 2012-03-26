@@ -33,3 +33,5 @@ install:
 	install -d -m 755 $(DESTDIR)/usr/bin
 	install -m 755 hydra-host-discover $(DESTDIR)/usr/bin
 	install -m 755 chroma_core/bin/chroma-config $(DESTDIR)/usr/bin
+	install -d -m 755 $(DESTDIR)/etc/logrotate.d
+	install -m 644 logrotate.cfg $(DESTDIR)/etc/logrotate.d/hydra-server
