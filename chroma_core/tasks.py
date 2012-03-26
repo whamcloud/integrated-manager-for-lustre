@@ -416,7 +416,7 @@ def test_host_contact(host):
     ping = False
     if resolve:
         from subprocess import call
-        ping = (0 == call(['ping', '-t 5 -c 1', resolved_address]))
+        ping = (0 == call(['ping', '-c 1', resolved_address]))
 
     from chroma_core.lib.agent import Agent
     # Don't depend on ping to try invoking agent, could well have

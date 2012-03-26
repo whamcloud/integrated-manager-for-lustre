@@ -5,7 +5,7 @@ from django.utils.unittest import TestCase
 from selenium import webdriver
 
 from utils.constants import Constants
-import test_parameters
+from testconfig import config
 
 import time
 from selenium.common.exceptions import StaleElementReferenceException
@@ -116,20 +116,20 @@ class SeleniumBaseTestCase(TestCase):
     def setUp(self):
         from views.login import Login
 
-        if test_parameters.HEADLESS:
+        if config['hydra_servers']['headless']:
             from pyvirtualdisplay import Display
             display = Display(visible = 0, size = (1280, 1024))
             display.start()
 
         if not self.driver:
-            self.driver = getattr(webdriver, test_parameters.BROWSER)()
+            self.driver = getattr(webdriver, config['hydra_servers']['browser'])()
 
         constants = Constants()
         self.wait_time = constants.get_wait_time('standard')
         self.long_wait_time = constants.get_wait_time('long')
-        if not test_parameters.CHROMA_URL:
-            raise RuntimeError("Please set test_parameters.CHROMA_URL")
-        self.driver.get(test_parameters.CHROMA_URL)
+        if not config['hydra_servers']['server_http_url']:
+            raise RuntimeError("Please set server_http_url in config file")
+        self.driver.get(config['hydra_servers']['server_http_url'])
 
         wait_for_any_element(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
         login_view = Login(self.driver)
