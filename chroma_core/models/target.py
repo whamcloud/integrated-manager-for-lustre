@@ -48,20 +48,6 @@ class ManagedTarget(StatefulObject):
     def secondary_servers(self):
         return [tm.host for tm in self.managedtargetmount_set.filter(primary = False)]
 
-    def status_string(self, mount_statuses = None):
-        if mount_statuses == None:
-            mount_statuses = dict([(m, m.status_string()) for m in self.managedtargetmount_set.all()])
-
-        if "STARTED" in mount_statuses.values():
-            return "STARTED"
-        elif "RECOVERY" in mount_statuses.values():
-            return "RECOVERY"
-        elif "FAILOVER" in mount_statuses.values():
-            return "FAILOVER"
-        else:
-            return "STOPPED"
-        # TODO: give statuses that reflect primary/secondaryness for FAILOVER
-
     def get_param(self, key):
         params = self.targetparam_set.filter(key = key)
         return [p.value for p in params]
@@ -180,14 +166,14 @@ class ManagedTarget(StatefulObject):
             mount.save()
 
         try:
-            primary_lun_node = lun.lunnode_set.get(primary = True)
+            primary_lun_node = lun.lunnode_set.get(primary = True, host__not_deleted = True)
             create_target_mount(primary_lun_node)
         except LunNode.DoesNotExist:
             raise RuntimeError("No primary lun_node exists for lun %s, cannot created target" % lun)
         except LunNode.MultipleObjectsReturned:
             raise RuntimeError("Multiple primary lun_nodes exist for lun %s, internal error")
 
-        for secondary_lun_node in lun.lunnode_set.filter(use = True, primary = False):
+        for secondary_lun_node in lun.lunnode_set.filter(use = True, primary = False, host__not_deleted = True):
             create_target_mount(secondary_lun_node)
 
         return target
@@ -550,7 +536,7 @@ class MountStep(AnyTargetMountStep):
             target.set_active_mount(target.managedtargetmount_set.get(host = started_on))
         except ManagedTargetMount.DoesNotExist:
             job_log.error("Target %s (%s) found on host %s (%s), which has no ManagedTargetMount for this target" % (target, target_id, started_on, started_on.pk))
-            raise
+            raise RuntimeError("Target %s reported as running on %s, but it is not configured there" % (target, started_on))
 
 
 class StartTargetJob(Job, StateChangeJob):
@@ -607,6 +593,8 @@ class StopTargetJob(Job, StateChangeJob):
 
 
 class MkfsStep(Step):
+    timeout = 3600
+
     def _mkfs_args(self, target):
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember
         kwargs = {}
@@ -641,7 +629,7 @@ class MkfsStep(Step):
     def describe(cls, kwargs):
         from chroma_core.models import ManagedTarget
         target_id = kwargs['target_id']
-        target = ManagedTarget.objects.get(id = target_id).downcast()
+        target = ManagedTarget._base_manager.get(id = target_id).downcast()
         target_mount = target.managedtargetmount_set.get(primary = True)
         return "Format %s on %s" % (target, target_mount.host)
 

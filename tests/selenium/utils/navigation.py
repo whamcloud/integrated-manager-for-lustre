@@ -13,27 +13,20 @@ class Navigation:
             @param: driver : Instance of the webdriver
         """
         self._driver = driver
-        #Initialise the constants class
-        constants = Constants()
-        self.WAIT_TIME = constants.wait_time['standard']
+        self.WAIT_TIME = Constants().wait_time['standard']
         self.links = {
-            # Link for Dashboard
-            'Dashboard': 'dashboard_menu',
-            # Links for Configuration
-            'Configure': 'configure_menu',
+            'Dashboard': '#dashboard_menu',
+            'Configure': '#configure_menu',
+            'Alerts': '#alert_menu',
+            'Events': '#event_menu',
+            'Logs': '#log_menu',
             # Links under configuration
-            'Filesystems': 'filesystem_tab',
-            'MGTs': 'mgt_tab',
-            'Volumes': 'volume_tab',
-            'Servers': 'server_tab',
-            'Storage': 'storage_tab',
+            'Filesystems': "a[href='#filesystem-tab']",
+            'MGTs': "a[href='#mgt-tab']",
+            'Volumes': "a[href='#volume-tab']",
+            'Servers': "a[href='#server-tab']",
+            'Storage': "a[href='#storage-tab']",
             'Create_new_filesystem': 'create_new_fs',
-            # Link for Alerts
-            'Alerts': 'alerts_menu',
-            # Links for Events
-            'Events': 'events_menu',
-            # Link for Logs
-            'Logs': 'logs_menu',
             # Links under Notifications
             'Notifications': 'signbtn',
             'Notify_alerts': 'alertAnchor',
@@ -41,7 +34,11 @@ class Navigation:
             'Notify_jobs': 'jobsAnchor',
         }
 
-    def click(self, element_id):
+    def go(self, *args):
+        for page in args:
+            self.click(self.links[page])
+
+    def click(self, selector):
         """ A generic function to click a link from the main navigation bar
         @param: element_id : Specify the ID of the element to be clicked as seen on the UI
         Added wait for blockoverlay and jGrowl notifications pop-ups
@@ -55,7 +52,7 @@ class Navigation:
                 print "Waiting for UI to load BEFORE clicking target element"
                 sleep(2)
             else:
-                link_handle = self._driver.find_element_by_id(element_id)
+                link_handle = self._driver.find_element_by_css_selector(selector)
                 link_handle.click()
                 for wait_after_count in xrange(self.WAIT_TIME):
                     is_overlay = self.wait_for_loading_page(block_overlay_classname)

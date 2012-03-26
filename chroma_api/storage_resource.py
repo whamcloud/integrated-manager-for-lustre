@@ -18,6 +18,8 @@ from tastypie import http
 from django.core.exceptions import ObjectDoesNotExist
 from chroma_core.lib.storage_plugin.daemon import StorageDaemon
 
+from chroma_api.storage_resource_class import filter_class_ids
+
 
 class StorageResourceResource(ModelResource):
     """
@@ -45,6 +47,23 @@ class StorageResourceResource(ModelResource):
     class_name = fields.CharField(attribute='resource_class__class_name')
 
     deletable = fields.BooleanField()
+
+    def apply_sorting(self, obj_list, options = None):
+        options = options or {}
+        order_by = options.get('order_by', None)
+        if not order_by:
+            return obj_list
+
+        if order_by.find('attr_') == 0:
+            attr_name = order_by[5:]
+            invert = False
+        elif order_by.find('attr_') == 1:
+            attr_name = order_by[6:]
+            invert = True
+        else:
+            raise RuntimeError("Can't sort on %s" % order_by)
+
+        return obj_list.filter(storageresourceattribute__key = attr_name).order_by(("-" if invert else "") + 'storageresourceattribute__value')
 
     def dehydrate_propagated_alerts(self, bundle):
         return [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(bundle.obj.to_resource())]
@@ -78,7 +97,10 @@ class StorageResourceResource(ModelResource):
         return bundle.obj.to_resource().get_attribute_items()
 
     class Meta:
-        queryset = StorageResourceRecord.objects.all()
+        queryset = StorageResourceRecord.objects.filter(
+                resource_class__id__in = filter_class_ids(),
+                resource_class__storage_plugin__internal = False
+                )
         resource_name = 'storage_resource'
         #filtering = {'storage_plugin__module_name': ['exact'], 'class_name': ['exact']}
         filtering = {'class_name': ['exact'], 'plugin_name': ['exact']}

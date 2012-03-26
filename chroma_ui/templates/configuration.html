@@ -1,195 +1,100 @@
-{% extends 'base.html' %}
-{% block css %}
 <link href="{{STATIC_URL}}css/storage_resource_create.css" rel="stylesheet" type="text/css" />
 <link rel="stylesheet" href="{{STATIC_URL}}css/filesystem_configuration.css" type='text/css' />
-{% endblock %}
-
-{% block scripts %}
 
 <script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_create.js"></script>
 <script type='text/javascript' src="{{STATIC_URL}}js/filesystem_configuration.js"></script>
 <script type="text/javascript">
-
-
-$(document).ajaxComplete(function() {
-  $('button.back_button:not(.ui-button)').each(function() {
-    $(this).html('Back');
-    $(this).click(function() {window.history.back();});
-    $(this).button({icons: {primary: 'ui-icon-arrowreturnthick-1-w'}});
+  $(document).ajaxComplete(function() {
+    $('button.back_button:not(.ui-button)').each(function() {
+      $(this).html('Back');
+      $(this).click(function() {window.history.back();});
+      $(this).button({icons: {primary: 'ui-icon-arrowreturnthick-1-w'}});
+    });
+    $('a.button:not(.ui-button)').each(function() {
+      $(this).button();
+    });
   });
-  $('a.button:not(.ui-button)').each(function() {
-    $(this).button();
-  });
-
-  $('a.address_link[address!=true]').each(function() {
-    $(this).address();
-  });
-
-});
-
-$(document).ready(function() {
-  $.address.change(function(ev) {
-    var path = ev.value;
-    //console.log('address.change: ' + path);
-    var parts;
-    if (path == '/') {
-      parts = ['filesystems'];
-    } else {
-      parts = path.substr(1).split('_')
-    }
-    if (parts[1]) {
-      if (parts[0] == 'filesystems' && parts[1] == 'new') {
-        //console.log('#' + parts[0]);
-        $("#tabs").tabs('select', '#' + parts[0]);
-        $('#filesystems').empty();
-        $('#filesystems').load('/ui/configure/filesystems_new/', function(){$(this).fadeIn(100)});
-      } else if (parts[0] == 'filesystems' && parts[1] == 'edit') {
-        var fs_id = parts[2];
-        $("#tabs").tabs('select', '#' + parts[0]);
-        $('#filesystems').empty();
-        $('#filesystems').load('/ui/configure/filesystems_edit/', function() {
-          loadFilesystem(fs_id);
-        });
-      }
-    } else {
-      $("#tabs").tabs('select', '#' + parts[0]);
-      $('#filesystems').empty();
-      $('#' + parts[0]).load('/ui/configure/' + parts[0] + '_tab/')
-    }
-  });
-
-  $('#tabs ul:first a').address();
-
-  $('#configParam').dialog
-  ({
-    autoOpen: false,
-    width: 450,
-    height:470,
-    modal: true,
-    position:"center",
-    buttons: 
-    {
-      "Apply": function() {
-        if($('#fs_id').val() == undefined)
-        {
-          $(this).dialog("close");
-        }
-        else
-        {
-          var datatable = $('#config_param_table').dataTable();
-          apply_config_params("filesystem/" + $('#fs_id').val() + "/", 'configParam', datatable);
-        }
-      },
-      "Close": function() { 
-        $(this).dialog("close");
-      }, 
-    }
-  });
-});
-
-  $(function() {
-    // Menu Highlighter
-    $('#configure_menu').addClass('active');
-    $("#tabs").tabs({selected: -1});
-  });    
 
   $(document).ready(function() {
-    //Edit fs/Create new fs/ost view -> jquery data table init for Fs Configuration param
-    var oFSConfigParam = $('#config_param_table').dataTable( {
-      "iDisplayLength":30,
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "bPaginate" : false,
-      "bSort": false,
-      "bFilter" : false,
-      "bAutoWidth":false,
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtcenter' },
-        { "bVisible": false } 
-      ]
-    });
-    var oTargetFSConfigParam = $('#target_config_param_table').dataTable( {
-      "iDisplayLength":30,
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "bPaginate" : false,
-      "bSort": false,
-      "bFilter" : false,
-      "bAutoWidth":false,
-      "aoColumns": [
-        { "sClass": 'txtleft' },
-        { "sClass": 'txtcenter' },
-        { "bVisible": false }
-      ]
-    });
-    //--------------------------------------------------------------------//  
-    $('#ConfigParam_Cancel').click(function()
-    {
-      $('#target_dialog').dialog('close');
-    });
-    
-    $('#ConfigParam_Apply').click(function()
-    {
-      apply_config_params("target/" + $('#config_home_target_id').val() + "/", 'target_dialog', oTargetFSConfigParam);
-    });
-    
-    });
-    //Fix Me:Need to find another weay to do thisto load the button + sign css.
-    $(document).ajaxComplete(function() {
-      var apply_button = function(selector, icon) {
-        $(selector).each(function() {
-          if (!$(this).hasClass('ui-button')) {
-            $(this).button({icons: {primary: icon}});
-          }
-        });
+    function updateSizes() {
+      $('div.rightpanel').width($(window).width() - $('div.leftpanel').width())
+    }
+    updateSizes();
+    $(window).resize(updateSizes);
+
+    $("#tabs").tabs({
+      selected: -1,
+      select: function (event, ui) {
+        var tab = ui.panel.id.split("-")[0];
+        var path = "configure/" + tab + "/";
+        if (window.location.pathname.indexOf(path) != 1) {
+          Backbone.history.navigate(path, {trigger: true});
+        }
       }
-      apply_button('button.add', 'ui-icon-plusthick');
-      apply_button('button.submit', 'ui-icon-check');
-      apply_button('button.advanced', 'ui-icon-gear');
-      apply_button('button.close', 'ui-icon-closethick');
-      
-      //for adding smoothness to all table buttons
-      $("button").button();
     });
+
+    new ChromaRouter();
+    Backbone.history.start({root: "/ui/", pushState: true})
+  });    
+
+  //Fix Me:Need to find another weay to do thisto load the button + sign css.
+  $(document).ajaxComplete(function() {
+    var apply_button = function(selector, icon) {
+      $(selector).each(function() {
+        if (!$(this).hasClass('ui-button')) {
+          $(this).button({icons: {primary: icon}});
+        }
+      });
+    }
+    apply_button('button.add', 'ui-icon-plusthick');
+    apply_button('button.submit', 'ui-icon-check');
+    apply_button('button.advanced', 'ui-icon-gear');
+    apply_button('button.close', 'ui-icon-closethick');
+    
+    //for adding smoothness to all table buttons
+    $("button").button();
+  });
 </script>
-{% endblock %}
-{% block include_content %}{% endblock %}
-{% block content %}
+
 <input type=hidden id="config_home_target_id" value="" />
+
 <div id="tabs">
   <ul>
-    <li><a id="filesystem_tab" href='#filesystems' title='filesystems'>Filesystems</a></li>
-    <li><a id="mgt_tab" href='#mgts' title='mgts'>MGTs</a></li>
-    <li><a id="volume_tab" href='#volumes' title='volumes'>Volumes</a></li>
-    <li><a id="server_tab" href='#servers' title='servers'>Servers</a></li>
-    <li><a id="storage_tab" href='#storage' title='storage'>Storage</a></li>
-    <li><a id="user_tab" class="superuser_only" href='#users' title='users'>Users</a></li>
+    <li><a href='#filesystem-tab' title='filesystems'>Filesystems</a></li>
+    <li><a href='#mgt-tab' title='mgts'>MGTs</a></li>
+    <li><a href='#volume-tab' title='volumes'>Volumes</a></li>
+    <li><a href='#server-tab' title='servers'>Servers</a></li>
+    <li><a href='#storage-tab' title='storage'>Storage</a></li>
+    <li><a class="superuser_only" href='#user-tab' title='users'>Users</a></li>
   </ul>
-  <div id='filesystems'></div>
-  <div id='mgts'></div>
-  <div id='volumes'></div>
-  <div id='servers'></div>
-  <div id='storage'></div>
-  <div id='users'></div>
-</div>
-<!-- create new fs dialogs -->
-<div id="configParam" title="Configuration Parameters">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" id="config_param_table">
-   <thead>
-      <th>Property</th>
-      <th>Value</th>
-      <th></th>
-   </thead>
-   <tbody></tbody>
-  </table> 
-</div>
-
-<!-- new OST popup showing all usable luns-->
-<div id="new_ost_dialog" title="Create OST">
-  <button id='new_ost_chooser'></button>
+  <div id='filesystem-tab'>
+    <div id='filesystem-tab-list' style="display: none">
+      {% include "filesystem_list.html" %}
+    </div>
+    <div id='filesystem-tab-create' style="display: none">
+      {% include "filesystem_create.html" %}
+    </div>
+    <div id='filesystem-tab-detail' style="display: none">
+      {% include "filesystem_detail.html" %}
+    </div>
+  </div>
+  <div id='mgt-tab'>
+    {% include "mgt_tab.html" %}
+  </div>
+  <div id='volume-tab'>
+    {% include "volume_tab.html" %}
+  </div>
+  <div id='server-tab'>
+    {% include "server_tab.html" %}
+  </div>
+  <div id='storage-tab'>
+    {% include "storage_tab.html" %}
+  </div>
+  <div id='user-tab'>
+    {% include "user_tab.html" %}
+  </div>
 </div>
 
 <!-- Markup for storage_resource_dialog.js -->
@@ -224,4 +129,3 @@ $(document).ready(function() {
 <div style="overflow-y: auto; max-height: 700px;" id="transition_confirmation_dialog">
 </div>
 <!-- End markup for transition confirmation dialog -->
-{% endblock %}

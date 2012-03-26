@@ -137,6 +137,8 @@ class SystemEventsAudit:
     def parse_log_entries(self):
         from chroma_core.models import ManagedHost
 
+        total_entries = 0
+
         trans_size = 100
         with transaction.commit_on_success():
             def get_host_from_entry(entry):
@@ -191,10 +193,15 @@ class SystemEventsAudit:
                     #                    host = ManagedHost.objects.get(address = h),
                     #                    message_str = msg).save()
 
-                if new_entries.count() > 0:
+                entry_count = new_entries.count()
+                total_entries += entry_count
+
+                if entry_count > 0:
                     self.store_last_id(new_entries[new_entries.count() - 1].id)
 
                 # less than trans_size records returned means we got the
                 # last bunch
-                if new_entries.count() < trans_size:
+                if entry_count < trans_size:
                     break
+
+        return entry_count

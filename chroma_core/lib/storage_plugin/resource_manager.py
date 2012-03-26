@@ -227,7 +227,7 @@ class ResourceManager(object):
             if not resource.host_id:
                 from chroma_core.models import ManagedHost
                 log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
-                host = ManagedHost.create_from_string(
+                host, command = ManagedHost.create_from_string(
                         resource.address,
                         virtual_machine = record.pk)
                 record.update_attribute('host_id', host.pk)
@@ -353,12 +353,12 @@ class ResourceManager(object):
                     # A hack to provide some arbitrary primary/secondary assignments
                     import settings
                     if settings.PRIMARY_LUN_HACK:
-                        if lun.lunnode_set.count() == 0:
+                        if lun.lunnode_set.filter(host__not_deleted = True).count() == 0:
                             primary = True
                             use = True
                         else:
                             primary = False
-                            if lun.lunnode_set.filter(use = True).count() > 1:
+                            if lun.lunnode_set.filter(use = True, host__not_deleted = True).count() > 1:
                                 use = False
                             else:
                                 use = True

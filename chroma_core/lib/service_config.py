@@ -202,7 +202,25 @@ class ServiceConfig:
         log.info("Creating database '%s'...\n" % database['NAME'])
         self.try_shell(["mysql", "-e", "create database %s;" % database['NAME']])
 
-    def _setup_database(self):
+    def _user_account_prompt(self):
+        log.info("Chroma will now create an initial administrative user using the" +
+                 "credentials which you provide.")
+
+        valid = False
+        while not valid:
+            username = raw_input("Username:")
+            email = raw_input("Email:")
+            password1 = getpass.getpass("Password:")
+            password2 = getpass.getpass("Confirm password:")
+
+            # TODO: validate all fields
+            if password1 != password2:
+                log.error("Passwords do not match!")
+            else:
+                valid = True
+        return username, email, password1
+
+    def _setup_database(self, username = None, password = None):
         if not self._db_accessible():
             # For the moment use the builtin configuration
             # TODO: this is where we would establish DB name and credentials
@@ -221,22 +239,11 @@ class ServiceConfig:
             log.info("Database tables already OK")
 
         if not self._users_exist():
-            log.info("Chroma will now create an initial administrative user using the" +
-                     "credentials which you provide.")
-
-            valid = False
-            while not valid:
-                username = raw_input("Username:")
-                email = raw_input("Email:")
-                password1 = getpass.getpass("Password:")
-                password2 = getpass.getpass("Confirm password:")
-
-                # TODO: validate all fields
-                if password1 != password2:
-                    log.error("Passwords do not match!")
-                else:
-                    valid = True
-            user = User.objects.create_superuser(username, email, password1)
+            if not username:
+                username, email, password = self._user_account_prompt()
+            else:
+                email = ""
+            user = User.objects.create_superuser(username, email, password)
             user.groups.add(Group.objects.get(name='superusers'))
             log.info("User '%s' successfully created." % username)
         else:
@@ -248,8 +255,8 @@ class ServiceConfig:
         log.info("Building static directory...")
         ManagementUtility(['', 'collectstatic', '--noinput']).execute()
 
-    def setup(self):
-        self._setup_database()
+    def setup(self, username = None, password = None):
+        self._setup_database(username, password)
         self._setup_rabbitmq()
         self._enable_services()
 

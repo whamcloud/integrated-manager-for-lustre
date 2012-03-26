@@ -99,7 +99,6 @@ TEMPLATE_LOADERS = (
 from django.conf import global_settings
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS +\
     ("django.core.context_processors.request",
-     "chroma_ui.context_processors.page_load_time",
      "chroma_ui.context_processors.app_version")
 
 ROOT_URLCONF = 'urls'
@@ -138,6 +137,7 @@ INSTALLED_APPS = (
     'chroma_core',
     'chroma_api',
     'chroma_ui',
+    'chroma_help',
     'benchmark'
     )
 
@@ -233,7 +233,7 @@ CELERY_ROUTES = (
         {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
         {"chroma_core.tasks.parse_log_entries": {"queue": "parselog"}},
         {"chroma_core.tasks.janitor": {"queue": "periodic"}},
-        {"chroma_core.tasks.set_state": {"queue": "serialize"}},
+        {"chroma_core.tasks.command_set_state": {"queue": "serialize"}},
         {"chroma_core.tasks.notify_state": {"queue": "serialize"}},
         {"chroma_core.tasks.add_job": {"queue": "serialize"}},
         {"chroma_core.tasks.complete_job": {"queue": "serialize"}},

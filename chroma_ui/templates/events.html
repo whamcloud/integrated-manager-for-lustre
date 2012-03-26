@@ -1,103 +1,103 @@
-      {% extends 'base.html' %}
-      {% block css %}{% endblock %} 
-      {% block scripts %}
-      <script language="javascript" type="text/javascript">
-        $(document).ready(function() 
-        { 
-          // Menu Highlighter
-          $('#events_menu').addClass('active');
-          //load host combo list
-          loadHostList('', 'event_host');
-                
-          var oTable = $('#events_table').dataTable(
-          {
-            "bProcessing": true,
-            "bServerSide":true,
-            "bFilter": false,
-            iDisplayLength: 25,
-            "sAjaxSource": "event/",
-            "fnServerData": function (url, data, callback, settings) 
-            {
-              function formatRows(data) {
-                $.each(data.aaData, function(i, row) {
-                  row.created_at = shortLocalTime(row.created_at);
-                });
-                callback(data);
-              }
-              Api.get_datatables(url, data, formatRows, settings, removeBlankAttributes({
-                "host__id": $('#event_host').val(),
-                "severity": $('#event_severity').val(),
-                "event_type": $('#event_type').val()
-              }))
-            }, 
-            aaSorting: [[0, 'desc']],
-            "aoColumns": [
-                { "sClass": 'txtleft',"mDataProp":"created_at", "bSortable":true},
-                { "sClass": 'txtcenter',"mDataProp":"severity", "bSortable":false},
-                { "sClass": 'txtleft',"mDataProp":"host_name", "bSortable":true},
-                { "sClass": 'txtleft',"mDataProp":"message","bSortable":false}
-             ], 
-             "bJQueryUI": true
-          });
-          
-          //click handler for filter button
-          $('#filter_btn').click(function()
-          {
-            oTable.fnDraw();
-          });
-        });
-      </script>
-      {% endblock %}
-      {% block include_content %}{% endblock %}
-      {% block content %}
-      <!-- Dashboard Div - Start -->
-      <div id="dashboardDiv">
-        <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
-          <tr style="background-color:#cccccc;">
-            <td width="60%">
-              <div class="timeint">
-                Host: &nbsp;
-                <select id="event_host">
-                <option value="">All</option>
-                </select>
-                  &nbsp;
-                  Severity: &nbsp;
-                <select id="event_severity">
-                  <option value="">Any</option>
-                  <option value="INFO">Info</option>
-                  <option value="WARNING">Warning</option>
-                  <option value="ERROR">Error</option>
-                </select>
-                 &nbsp;Event type:&nbsp;
-                <select id="event_type">
-                  <option value="">Any</option>
-                  <option value="LearnEvent">Autodetection</option>
-                  <option value="AlertEvent">Alert</option>
-                  <option value="SyslogEvent">Syslog</option>
-                  <option value="StorageResourceLearnEvent">Storage resource detection</option>
-                </select>
-                <input value="Filter" id="filter_btn" type="button"></input>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="3"><form>
-              <fieldset>
-                <table cellpadding="0" cellspacing="0" border="0" class="display" id="events_table">
-                  <thead>
-                    <tr>
-                      <th width="5%">Event Created At</th>
-                      <th width="10%">Status</th>
-                      <th width="10%">Host</th>
-                      <th width="75%">Message</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </fieldset>
-            </td>
-          </tr>
+<script language="javascript" type="text/javascript">
+  var EventView = function() {
+    var initialized = false;
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+        $('#events_table').dataTable().fnDraw();
+        // TODO: refresh host list too
+      }
+    }
+
+    function init() 
+    { 
+      //load host combo list
+      loadHostList('', 'event_host');
+            
+      var oTable = $('#events_table').dataTable(
+      {
+        "bProcessing": true,
+        "bServerSide":true,
+        "bFilter": false,
+        iDisplayLength: 25,
+        "sAjaxSource": "event/",
+        "fnServerData": function (url, data, callback, settings) 
+        {
+          function formatRows(data) {
+            $.each(data.aaData, function(i, row) {
+              row.created_at = shortLocalTime(row.created_at);
+            });
+            callback(data);
+          }
+          Api.get_datatables(url, data, formatRows, settings, removeBlankAttributes({
+            "host__id": $('#event_host').val(),
+            "severity": $('#event_severity').val(),
+            "event_type": $('#event_type').val()
+          }))
+        }, 
+        aaSorting: [[0, 'desc']],
+        "aoColumns": [
+            { "sClass": 'txtleft',"mDataProp":"created_at", "bSortable":true},
+            { "sClass": 'txtcenter',"mDataProp":"severity", "bSortable":false},
+            { "sClass": 'txtleft',"mDataProp":"host_name", "bSortable":true},
+            { "sClass": 'txtleft',"mDataProp":"message","bSortable":false}
+         ], 
+         "bJQueryUI": true
+      });
+      
+      //click handler for filter button
+      $('#filter_btn').click(function()
+      {
+        oTable.fnDraw();
+      });
+    }
+    return {draw:draw}
+  }();
+</script>
+<table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
+  <tr style="background-color:#cccccc;">
+    <td width="60%">
+      <div class="timeint">
+        Host: &nbsp;
+        <select id="event_host">
+        <option value="">All</option>
+        </select>
+          &nbsp;
+          Severity: &nbsp;
+        <select id="event_severity">
+          <option value="">Any</option>
+          <option value="INFO">Info</option>
+          <option value="WARNING">Warning</option>
+          <option value="ERROR">Error</option>
+        </select>
+         &nbsp;Event type:&nbsp;
+        <select id="event_type">
+          <option value="">Any</option>
+          <option value="LearnEvent">Autodetection</option>
+          <option value="AlertEvent">Alert</option>
+          <option value="SyslogEvent">Syslog</option>
+          <option value="StorageResourceLearnEvent">Storage resource detection</option>
+        </select>
+        <input value="Filter" id="filter_btn" type="button"></input>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3"><form>
+      <div class='content'>
+        <table cellpadding="0" cellspacing="0" border="0" class="display" id="events_table">
+          <thead>
+            <tr>
+              <th width="5%">Event Created At</th>
+              <th width="10%">Status</th>
+              <th width="10%">Host</th>
+              <th width="75%">Message</th>
+            </tr>
+          </thead>
         </table>
       </div>
-      <!-- Dashboard Div - End -->
-      {% endblock %}
+    </td>
+  </tr>
+</table>

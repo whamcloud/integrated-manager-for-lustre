@@ -28,9 +28,12 @@ def custom_response(resource, request, response_klass, response_data):
 def dehydrate_command(command):
     """There are a few places where we invoke CommandResource from other resources
     to build a dict of a Command in 202 responses, so wrap the process here."""
-    from chroma_api.command import CommandResource
-    cr = CommandResource()
-    return cr.full_dehydrate(cr.build_bundle(obj = command)).data
+    if command:
+        from chroma_api.command import CommandResource
+        cr = CommandResource()
+        return cr.full_dehydrate(cr.build_bundle(obj = command)).data
+    else:
+        return None
 
 
 class StatefulModelResource(ModelResource):
@@ -42,7 +45,10 @@ class StatefulModelResource(ModelResource):
         return StateManager.available_transitions(bundle.obj)
 
     def dehydrate_content_type_id(self, bundle):
-        return ContentType.objects.get_for_model(bundle.obj.__class__).pk
+        if hasattr(bundle.obj, 'content_type'):
+            return bundle.obj.content_type.pk
+        else:
+            return ContentType.objects.get_for_model(bundle.obj.__class__).pk
 
     def dehydrate_label(self, bundle):
         return bundle.obj.get_label()
@@ -50,24 +56,33 @@ class StatefulModelResource(ModelResource):
     # PUT handler for accepting {'state': 'foo', 'dry_run': <true|false>}
     def obj_update(self, bundle, request, **kwargs):
         bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
+
+        if hasattr(bundle.obj, 'content_type'):
+            stateful_object = bundle.obj.downcast()
+        else:
+            stateful_object = bundle.obj
+
         dry_run = bundle.data.get('dry_run', False)
         new_state = bundle.data['state']
 
         if dry_run:
             # FIXME: should this be a GET to something like /foo/transitions/from/to/
             #        to get information about that transition?
-            report = StateManager().get_transition_consequences(bundle.obj, new_state)
+            if stateful_object.state == new_state:
+                report = []
+            else:
+                report = StateManager().get_transition_consequences(stateful_object, new_state)
             raise custom_response(self, request, http.HttpResponse, report)
         else:
             from chroma_core.models import Command
-            command = Command.set_state(bundle.obj, new_state)
+            command = Command.set_state([(stateful_object, new_state)])
             raise custom_response(self, request, http.HttpAccepted,
                     {'command': dehydrate_command(command)})
 
     def obj_delete(self, request = None, **kwargs):
         obj = self.obj_get(request, **kwargs)
         from chroma_core.models import Command
-        command = Command.set_state(obj, 'removed')
+        command = Command.set_state([(obj, 'removed')])
         raise custom_response(self, request, http.HttpAccepted,
                 {'command': dehydrate_command(command)})
 

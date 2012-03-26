@@ -1,9 +1,5 @@
-      {% extends 'base.html' %}
-      {% block css %}
       <link href="{{STATIC_URL}}css/js-graph-it.css" rel="stylesheet" type="text/css" />
       <link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
-      {% endblock %}  
-      {% block scripts %}
       <script type="text/javascript" src="{{STATIC_URL}}js/chart_manager.js"></script>
       <script type="text/javascript" src="{{STATIC_URL}}js/dashboard.js"></script>
       <script type="text/javascript" src="{{STATIC_URL}}js/dashboard_filesystem.js"></script>
@@ -11,13 +7,8 @@
       <script type="text/javascript" src="{{STATIC_URL}}js/dashboard_ost.js"></script>
       <script type="text/javascript" src="{{STATIC_URL}}js/graph_loader.js"></script>
       <script id="source" language="javascript" type="text/javascript">
+
       $(document).ready(function() {
-        $('#dashboard_menu').addClass('active');
-        setTimeout(function() {
-          loadView(window.location.hash);
-        }, 1);
-        $('#fsSelect').attr("value","");
-        $('#intervalSelect').attr("value","");
         // This will show the chart time based on client timezone
         Highcharts.setOptions({
           global:{
@@ -31,9 +22,6 @@
 		
       });
       </script>
-      {% endblock %}
-      {% block include_content %}{% endblock %}
-      {% block content %}
       <input type="hidden" id="ls_fsName" />
       <input type="hidden" id="ls_fsId" />
       <input type="hidden" id="ls_ossName" />
@@ -288,4 +276,3 @@
 			    <div id="zoomDialog" title="All File System CPU Usage">
 			      <div id="dialog_avgCPUDiv"></div>
 			    </div>
-          {% endblock %}

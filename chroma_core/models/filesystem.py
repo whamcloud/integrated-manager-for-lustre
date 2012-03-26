@@ -58,26 +58,6 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         # (http://stackoverflow.com/questions/4764110/django-template-cant-loop-defaultdict)
         return dict(servers)
 
-    def status_string(self, target_statuses = None):
-        if target_statuses == None:
-            target_statuses = dict([(t, t.status_string()) for t in self.get_targets()])
-
-        from chroma_core.models.target import ManagedMgs
-        filesystem_targets_statuses = [v for k, v in target_statuses.items() if not k.__class__ == ManagedMgs]
-        all_statuses = target_statuses.values()
-
-        good_status = set(["STARTED", "FAILOVER"])
-        # If all my targets are down, I'm red, even if my MGS is up
-        if not good_status & set(filesystem_targets_statuses):
-            return "OFFLINE"
-
-        # If all my targets are up including the MGS, then I'm green
-        if set(all_statuses) <= set(["STARTED"]):
-            return "OK"
-
-        # Else I'm orange
-        return "WARNING"
-
     def mgs_spec(self):
         """Return a string which is foo in <foo>:/lustre for client mounts"""
         mgs = self.mgs
@@ -123,7 +103,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
                     'mounted',
                     fix_state = 'unavailable'))
         elif state == 'stopped':
-            for t in self.get_targets():
+            for t in self.get_filesystem_targets():
                 deps.append(DependOn(t,
                     'unmounted',
                     acceptable_states = t.not_state('mounted'),

@@ -86,16 +86,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             time_since = datetime.datetime.utcnow() - self.last_contact
             return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
-    def to_dict(self):
-        from django.contrib.contenttypes.models import ContentType
-        return {'id': self.id,
-                'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
-                'pretty_name': self.pretty_name(),
-                'address': self.address,
-                'kind': self.role(),
-                'lnet_state': self.state,
-                'status': self.status_string()}
-
     @classmethod
     def create_from_string(cls, address_string, virtual_machine = None):
         # Single transaction for creating Host and related database objects
@@ -117,17 +107,11 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
             lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
 
-            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-            storage_plugin_manager.create_root_resource('linux',
-                    'HydraHostProxy', host_id = host.pk,
-                    virtual_machine = virtual_machine)
-
         # Attempt some initial setup jobs
-        from chroma_core.lib.state_manager import StateManager
-        StateManager.set_state(host, 'lnet_unloaded')
-        StateManager.set_state(lnet_configuration, 'nids_known')
+        from chroma_core.models.jobs import Command
+        command = Command.set_state([(host, 'lnet_unloaded'), (lnet_configuration, 'nids_known')], "Setting up host %s" % address_string)
 
-        return host
+        return host, command
 
     def pretty_name(self):
         # Take FQDN if we have it, or fall back to address
@@ -182,22 +166,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return "Unused"
         else:
             return "/".join(roles)
-
-    def status_string(self, targetmount_statuses = None):
-        if targetmount_statuses == None:
-            targetmount_statuses = dict([(tm, tm.status_string()) for tm in self.managedtargetmount_set.all()])
-
-        tm_states = set(targetmount_statuses.values())
-
-        from chroma_core.models import AlertState, HostContactAlert, LNetOfflineAlert
-        alerts = AlertState.filter_by_item(self)
-        alert_klasses = [a.__class__ for a in alerts]
-        if HostContactAlert in alert_klasses:
-            return "OFFLINE"
-        elif LNetOfflineAlert in alert_klasses or not (set(["STARTED", "SPARE"]) >= tm_states):
-            return "WARNING"
-        else:
-            return "OK"
 
     def ssh_params(self):
         if self.address.find("@") != -1:
@@ -301,10 +269,11 @@ class Lun(models.Model):
         # we can definitively say where it should be mounted) or if they have
         # a primary LunNode (i.e. one or more LunNodes is available and we
         # know at least where the primary mount should be)
-        return queryset.annotate(
-                any_targets = Max('lunnode__managedtargetmount__target__not_deleted'),
-                has_primary = Max('lunnode__primary'),
-                num_lunnodes = Count('lunnode')
+        return queryset.filter(lunnode__host__not_deleted = True).\
+                annotate(
+                    any_targets = Max('lunnode__managedtargetmount__target__not_deleted'),
+                    has_primary = Max('lunnode__primary'),
+                    num_lunnodes = Count('lunnode')
                 ).filter((Q(num_lunnodes = 1) | Q(has_primary = 1.0)) & Q(any_targets = None))
 
     def get_kind(self):
@@ -340,18 +309,6 @@ class Lun(models.Model):
     def save(self, *args, **kwargs):
         self.label = self._get_label()
         super(Lun, self,).save(*args, **kwargs)
-
-    def to_dict(self):
-        from chroma_core.lib.util import sizeof_fmt
-        return {
-                 'id': self.id,
-                 'name': self.get_label(),
-                 'kind': self.get_kind(),
-                 'nodes': [n.to_dict() for n in self.lunnode_set.all()],
-                 # FIXME: should format this in the display layer
-                 'size': sizeof_fmt(self.size),
-                 'status': self.ha_status()
-               }
 
     def ha_status(self):
         """Tell the caller two things:
@@ -403,20 +360,6 @@ class LunNode(models.Model):
 
     def __str__(self):
         return "%s:%s" % (self.host, self.path)
-
-    def to_dict(self):
-        from django.contrib.contenttypes.models import ContentType
-        return {
-            'id': self.id,
-            'host_id': self.host.id,
-            'host_label': self.host.__str__(),
-            'use': self.use,
-            'primary': self.primary,
-            'content_type_id': ContentType.objects.get_for_model(self.__class__).pk,
-            'pretty_string': self.pretty_string(),
-            'volume_id': self.lun_id,
-            'path': self.path
-        }
 
     def pretty_string(self):
         from chroma_core.lib.util import sizeof_fmt
@@ -604,6 +547,33 @@ class RemoveServerConfStep(Step):
         self.invoke_agent(host, "remove-server-conf")
 
 
+class LearnDevicesStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        # Get the device-scan output
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        device_info = self.invoke_agent(host, "device-scan")
+
+        # Insert it as a request_id=None response
+        from chroma_core.lib.storage_plugin.messaging import PluginResponse
+        PluginResponse.send('linux', host.fqdn, None, device_info)
+
+        # Create a HydraHostProxy for the storage plugin framework to use
+        # FIXME: reinstate virtual_machine (it's passed into create_from_string)
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        storage_plugin_manager.create_root_resource('linux',
+                'HydraHostProxy', host_id = host.pk,
+                virtual_machine = None)
+
+        # Now wait for the storage daemon to pick up the resource and do its thing
+        from chroma_core.lib.storage_plugin.daemon import DaemonRpc
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
+        record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = kwargs['host_id'])
+        DaemonRpc().start_session(record.pk)
+
+
 class SetupHostJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'unconfigured', 'lnet_unloaded')
     stateful_object = 'managed_host'
@@ -616,7 +586,8 @@ class SetupHostJob(Job, StateChangeJob):
     def get_steps(self):
         return [(LearnHostnameStep, {'host_id': self.managed_host.pk}),
                 (ConfigureRsyslogStep, {'host_id': self.managed_host.pk}),
-                (SetServerConfStep, {'host_id': self.managed_host.pk})]
+                (SetServerConfStep, {'host_id': self.managed_host.pk}),
+                (LearnDevicesStep, {'host_id': self.managed_host.pk})]
 
     class Meta:
         app_label = 'chroma_core'
@@ -775,15 +746,12 @@ class DeleteHostStep(Step):
         from chroma_core.models import StorageResourceRecord
         try:
             record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = kwargs['host_id'])
+            from chroma_core.lib.storage_plugin.daemon import DaemonRpc
+            DaemonRpc().remove_resource(record.pk)
         except StorageResourceRecord.DoesNotExist:
             # This is allowed, to account for the case where we submit the request_remove_resource,
             # then crash, then get restarted.
             pass
-        from chroma_core.lib.storage_plugin.daemon import StorageDaemon
-        StorageDaemon.request_remove_resource(record.pk)
-
-        for ln in LunNode.objects.filter(host__id = kwargs['host_id']):
-            LunNode.delete(ln.pk)
 
         from chroma_core.models import ManagedHost
         ManagedHost.delete(kwargs['host_id'])
@@ -806,6 +774,24 @@ class RemoveHostJob(Job, StateChangeJob):
     def get_steps(self):
         return [(RemoveServerConfStep, {'host_id': self.host.id}),
                 (DeleteHostStep, {'host_id': self.host.id})]
+
+
+class RemoveUnconfiguredHostJob(Job, StateChangeJob):
+    state_transition = (ManagedHost, 'unconfigured', 'removed')
+    stateful_object = 'host'
+    host = models.ForeignKey(ManagedHost)
+    state_verb = 'Remove'
+
+    requires_confirmation = True
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def description(self):
+        return "Remove host %s from configuration" % self.host
+
+    def get_steps(self):
+        return [(DeleteHostStep, {'host_id': self.host.id})]
 
 
 # Generate boilerplate classes for various origin->forgotten jobs.

@@ -50,24 +50,25 @@ class Command(models.Model):
     message = models.CharField(max_length = 512,
             help_text = "Human readable string about one sentence long describing\
             the action being done by the command")
-
-    def to_dict(self):
-        jobs = None
-        if self.jobs_created:
-            jobs = [j.id for j in self.jobs.all()],
-        return {
-                "id": self.id,
-                "complete": self.complete,
-                "errored": self.errored,
-                "cancelled": self.cancelled,
-                "jobs": jobs,
-                "message": self.message
-               }
+    created_at = WorkaroundDateTimeField(auto_now_add = True)
 
     @classmethod
-    def set_state(cls, object, state, message = None):
-        if object.state == state:
-            raise RuntimeError("%s is already in state %s" % (object, state))
+    def set_state(cls, objects, message = None):
+        """The states argument must be a collection of 2-tuples
+        of (<StatefulObject instance>, state)"""
+        dirty = False
+        for object, state in objects:
+            # Check if the state is modified
+            if object.state != state:
+                dirty = True
+                break
+
+            # Check if the new state is valid
+            if state not in object.states:
+                raise RuntimeError("'%s' is an invalid state for %s, valid states are %s" % (state, object, object.states))
+
+        if not dirty:
+            return None
 
         if not message:
             old_state = object.state
@@ -77,16 +78,32 @@ class Command(models.Model):
             job = Transition(object, route[-2], route[-1]).to_job()
             message = job.description()
 
-        with transaction.commit_on_success():
-            command = Command.objects.create(message = message)
+        object_ids = [(ContentType.objects.get_for_model(object).natural_key(), object.id, state) for object, state in objects]
 
-        # FIXME: Troublesome: if we crash here, the Command will be
-        # in the DB, but the jobs will never make it.
+        from chroma_core.tasks import command_set_state
+        async_result = command_set_state.delay(
+                object_ids,
+                message)
 
-        from chroma_core.lib.state_manager import StateManager
-        StateManager.set_state(object, state, command.pk)
+        from celery.result import EagerResult
+        if isinstance(async_result, EagerResult):
+            # Allow eager execution for testing
+            from chroma_core.lib.job import job_log
+            job_log.debug("Command.set_state running eagerly '%s'", message)
+        else:
+            # Rely on server to time out the request if this takes too
+            # long for some reason
+            complete = False
+            while not complete:
+                with transaction.commit_manually():
+                    transaction.commit()
+                    if async_result.ready():
+                        complete = True
+                    transaction.commit()
 
-        return command
+        command_id = async_result.get()
+
+        return Command.objects.get(pk = command_id)
 
     class Meta:
         app_label = 'chroma_core'
@@ -307,11 +324,6 @@ class StateLock(models.Model):
     locked_item_id = models.PositiveIntegerField()
     locked_item = WorkaroundGenericForeignKey('locked_item_type', 'locked_item_id')
 
-    def to_dict(self):
-        return {'id': self.id,
-                'locked_item_id': self.locked_item_id,
-                'locked_item_content_type_id': self.locked_item_type_id}
-
     class Meta:
         app_label = 'chroma_core'
 
@@ -384,30 +396,6 @@ class Job(models.Model):
     #: Whether the job should be added to opportunistic Job queue if it doesn't run
     #  successfully.
     opportunistic_retry = False
-
-    def to_dict(self):
-        from chroma_core.lib.util import time_str
-        read_locks = []
-        write_locks = []
-        for lock in self.statelock_set.all():
-            if lock.content_type == ContentType.objects.get_for_model(StateReadLock):
-                read_locks.append(lock.to_dict())
-            elif lock.content_type == ContentType.objects.get_for_model(StateWriteLock):
-                write_locks.append(lock.to_dict())
-            else:
-                raise NotImplementedError
-
-        return {
-         'id': self.id,
-         'state': self.state,
-         'errored': self.errored,
-         'cancelled': self.cancelled,
-         'created_at': time_str(self.created_at),
-         'modified_at': time_str(self.modified_at),
-         'description': self.description(),
-         'read_locks': read_locks,
-         'write_locks': write_locks
-        }
 
     class Meta:
         app_label = 'chroma_core'
@@ -522,11 +510,8 @@ class Job(models.Model):
         # Important: multiple connections are allowed to call run() on a job
         # that they see as pending, but only one is allowed to proceed past this
         # point and spawn tasks.
-        @transaction.commit_on_success()
-        def mark_cancelling():
-            return Job.objects.filter(~Q(state = 'complete'), pk = self.id).update(state = 'cancelling')
-
-        updated = mark_cancelling()
+        with transaction.commit_on_success():
+            updated = Job.objects.filter(~Q(state = 'complete'), pk = self.id).update(state = 'cancelling')
         if updated == 0:
             # Someone else already started this job, bug out
             job_log.debug("job %d already completed, not cancelling" % self.id)
@@ -609,7 +594,7 @@ class Job(models.Model):
         except Exception, e:
             # Catchall exception handler to ensure progression even if Job
             # subclasses have bugs in their get_deps etc.
-            job_log.error("Job %d: internal error %s" % (self.id, e))
+            job_log.error("Job %s: internal error %s" % (self.id, e))
             result = False
 
         job_log.debug("Job %s: deps satisfied=%s" % (self.id, result))
@@ -714,16 +699,23 @@ class Job(models.Model):
 class StepResult(models.Model):
     job = models.ForeignKey(Job)
     step_klass = PickledObjectField()
-    args = PickledObjectField()
+    args = PickledObjectField(help_text = 'Dictionary of arguments to this step')
 
-    step_index = models.IntegerField()
-    step_count = models.IntegerField()
+    step_index = models.IntegerField(help_text = "Zero-based index of this step within the steps of\
+            a job.  If a step is retried, then two steps can have the same index for the same job.")
+    step_count = models.IntegerField(help_text = "Number of steps in this job")
 
-    console = models.TextField()
+    console = models.TextField(help_text = "For debugging: combined standard out and standard error from all\
+            subprocesses run while completing this step.  This includes output from successful\
+            as well as unsuccessful commands, and may be very verbose.")
     exception = PickledObjectField(blank = True, null = True, default = None)
-    backtrace = models.TextField()
+    backtrace = models.TextField(help_text = "Backtrace of an exception, if the exception occurred\
+            locally on the server.  Exceptions which occur remotely include the backtrace in the\
+            ``exception`` field")
 
-    state = models.CharField(max_length = 32, default='incomplete')
+    # FIXME: we should have a 'cancelled' state for when a step
+    # is running while its job is cancelled
+    state = models.CharField(max_length = 32, default='incomplete', help_text = 'One of incomplete, failed, success')
 
     modified_at = WorkaroundDateTimeField(auto_now = True)
     created_at = WorkaroundDateTimeField(auto_now_add = True)

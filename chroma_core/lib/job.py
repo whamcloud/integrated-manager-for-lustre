@@ -112,6 +112,8 @@ class DependAny(MultiDependable):
 
 
 class Step(object):
+    timeout = None
+
     def __init__(self, job, args, result):
         self.args = args
         self.job_id = job.id
@@ -153,7 +155,7 @@ class Step(object):
             self.result.save()
 
         from chroma_core.lib.agent import Agent
-        agent = Agent(host = host, log = job_log, console_callback = console_callback)
+        agent = Agent(host = host, log = job_log, console_callback = console_callback, timeout = self.timeout)
         return agent.invoke(command, args)
 
 

@@ -56,8 +56,7 @@ class HydraDebug(cmd.Cmd, object):
         table.add_row([
             vol.id,
             vol.role(),
-            vol.name,
-            vol.status_string()
+            vol.name
             ])
 
     def __filesystem_title(self, filesystem):
@@ -66,7 +65,7 @@ class HydraDebug(cmd.Cmd, object):
 
     def __list_volumes_filesystem(self, filesystem):
         table = Texttable()
-        table.header(['id', 'kind', 'name', 'status'])
+        table.header(['id', 'kind', 'name'])
 
         try:
             self.__volume_row(filesystem.mgs, table)
@@ -122,10 +121,10 @@ class HydraDebug(cmd.Cmd, object):
         """server_list
         Display all lustre server hosts"""
         table = Texttable()
-        table.header(['id', 'address', 'kind', 'lnet status'])
+        table.header(['id', 'address', 'kind'])
         for host in ManagedHost.objects.all():
             if host.mountable_set.count() > 0:
-                table.add_row([host.id, host.address, host.role(), host.status_string()])
+                table.add_row([host.id, host.address, host.role()])
 
         screen(table.draw())
 
@@ -138,9 +137,9 @@ class HydraDebug(cmd.Cmd, object):
         """host_list
         Display all known hosts"""
         table = Texttable()
-        table.header(['id', 'name', 'status'])
+        table.header(['id', 'name'])
         for host in ManagedHost.objects.all():
-            table.add_row([host.id, host.address, host.status_string()])
+            table.add_row([host.id, host.address])
         screen(table.draw())
 
     def do_audit_list(self, line):

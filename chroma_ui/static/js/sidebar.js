@@ -2,6 +2,8 @@
 
 
 var Sidebar = function(){
+  var initialized = false;
+
   function eventStyle(ev)
   {
     var cssClassName = "";
@@ -42,6 +44,20 @@ var Sidebar = function(){
     }
   }
 
+  function commandIcon(command)
+  {
+    var prefix = "/static/images/";
+    if(!command.complete) {
+      return prefix + "ajax-loader.gif"
+    } else if (command.errored) {
+        return prefix + "dialog-error.png"
+    } else if (command.cancelled) {
+        return prefix + "gtk-cancel.png"
+    } else {
+        return prefix + "dialog_correct.png"
+    }
+  }
+
   function alertIcon(a)
   {
     return "/static/images/dialog-warning.png";
@@ -70,29 +86,25 @@ var Sidebar = function(){
         } else if (active == 1) {
           $('div.leftpanel table#events').dataTable().fnDraw();
         } else if (active == 2) {
-          $('div.leftpanel table#jobs').dataTable().fnDraw();
+          $('div.leftpanel table.commands').dataTable().fnDraw();
         } else {
           throw "Unknown accordion index " + active
         }
       }
     });
 
-    smallTable($('div.leftpanel table#jobs'), 'job/',
+    smallTable($('div.leftpanel table.commands'), 'command/',
       {order_by: "-created_at"},
-      function(job) {
-        job.icon = "<img src='" + jobIcon(job) + "'/>"
-        job.buttons = ""
-        $.each(job.available_transitions, function(i, transition) {
-          /* TODO: use job URL */
-          /* FIXME: relying on global function */
-          job.buttons += "<input type='button' class='ui-button ui-state-default ui-corner-all ui-button-text-only notification_job_buttons' onclick=setJobState("+job.id+",'"+transition.state+"') value="+transition.label+" />";
-        });
-        job.text = ellipsize(job.description) + "<br>" + shortLocalTime(job.created_at)
+      function(command) {
+        command.icon = "<img src='" + commandIcon(command) + "'/>"
+        // TODO: cancelling jobs within commands (and commands themselves?)
+        command.text = ellipsize(command.message) + "<br>" + shortLocalTime(command.created_at)
+        command.buttons = "<a class='navigation' href='/command/" + command.id + "/'>Open</a>";
       },
       [
         { "sClass": 'icon_column', "mDataProp":"icon", bSortable: false },
         { "sClass": 'txtleft', "mDataProp":"text", bSortable: false },
-        { "sClass": 'txtleft', "mDataProp":"buttons", bSortable: false },
+        { "sClass": 'txtleft', 'mDataProp': 'buttons', bSortable: false },
       ]
     );
 
@@ -121,6 +133,8 @@ var Sidebar = function(){
         { "sClass": 'txtleft', "mDataProp": "text", bSortable: false },
       ]
     );
+
+    initialized = true;
   }
 
   function smallTable(element, url, kwargs, row_fn, columns, emptyText) {
@@ -155,6 +169,9 @@ var Sidebar = function(){
   }
 
   function open() {
+    if (!initialized) {
+      init();
+    }
     $("div#sidebar div#accordion").change();
     $("#sidebar").show({effect: 'slide'});
   }
@@ -164,21 +181,11 @@ var Sidebar = function(){
   }
 
   return {
-    init: init,
     open: open,
     close: close
   }
 }();
 
-/* FIXME: global function because of the way it's called from an onclick */
-setJobState = function(job_id, state)
-{
-  Api.put("job/" + job_id + "/", {'state': state},
-  success_callback = function(data)
-  {
-    $('div.leftpanel table#jobs').dataTable().fnDraw();
-  });
-}
 
 /* FIXME: move this somewhere sensible */
 loadHostList = function(filesystem_id, targetContainer)
@@ -201,8 +208,6 @@ loadHostList = function(filesystem_id, targetContainer)
 
 $(document).ready(function() 
 {
-  Sidebar.init();
-
   $("#sidebar_open").click(function()
   {
     Sidebar.open();

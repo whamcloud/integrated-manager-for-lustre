@@ -15,10 +15,33 @@ $(document).ready(function() {
     });
     event.preventDefault();
   });
+
+  $('#ConfigParam_Cancel').click(function() {
+    $('#target_dialog').dialog('close');
+  });
+  
+  $('#ConfigParam_Apply').click(function() {
+    apply_config_params("target/" + $('#config_home_target_id').val() + "/", $('#target_dialog'), $('#target_config_param_table').dataTable());
+  });
+
+  $('#target_config_param_table').dataTable( {
+    "iDisplayLength":30,
+    "bProcessing": true,
+    "bJQueryUI": true,
+    "bPaginate" : false,
+    "bSort": false,
+    "bFilter" : false,
+    "bAutoWidth":false,
+    "aoColumns": [
+      { "sClass": 'txtleft' },
+      { "sClass": 'txtcenter' },
+      { "bVisible": false }
+    ]
+  });
 });
 
 target_dialog_link = function(target) {
-  return "<a href='#' class='target target_url_" + target.resource_uri + "'>" + object_name_markup(target) + "</a>"
+  return "<a href='#' class='target target_url_" + target.resource_uri + "'>" + LiveObject.label(target) + "</a>"
 }
 
 target_dialog_open = function(target_url) {
@@ -54,12 +77,14 @@ target_dialog_open = function(target_url) {
     properties_markup += keyval_row("Primary server", target.primary_server_name);
     properties_markup += keyval_row("Failover server", target.failover_server_name);
     properties_markup += keyval_row("Started on", target.active_host_name);
-    properties_markup += keyval_row("Alerts", alert_indicator_large_markup(target.id, target.content_type_id));
+    properties_markup += keyval_row("Alerts", LiveObject.alertLabel(target));
     properties_markup += "</table>";
     $('#target_dialog_properties').html(properties_markup);
     if (target.conf_params) {
       $('#target_dialog_tabs').tabs('enable', 2);
-      populate_conf_param_table(target.conf_params, "target_config_param_table");
+      populate_conf_param_table(target.conf_params, $("#target_config_param_table"));
+
+
     } else {
       /* Disable the advanced tab */
       $('#target_dialog_tabs').tabs('disable', 2);

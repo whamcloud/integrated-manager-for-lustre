@@ -3,8 +3,6 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-import datetime
-
 from chroma_core.models.log import Systemevents
 
 from tastypie.resources import ModelResource
@@ -40,17 +38,6 @@ class LogResource(ModelResource):
         detail_allowed_methods = ['get']
 
     def build_filters(self, filters = None):
-        # FIXME: get the UI to give us ISO8601 so that we
-        # can let tastypie use it without mangling
-        # TODO: document the expected time format in this call
-        UI_TIME_FORMAT = "%m/%d/%Y %H:%M "
-        start = filters.get('devicereportedtime_gte', None)
-        if start:
-            filters['devicereportedtime_gte'] = datetime.datetime.strptime(str(start), UI_TIME_FORMAT)
-        end = filters.get('devicereportedtime_lte', None)
-        if end:
-            filters['devicereportedtime_lte'] = datetime.datetime.strptime(str(end), UI_TIME_FORMAT)
-
         # TODO: let the UI filter on nodename to avoid the need for this mangling
         host_id = filters.get('host_id', None)
         if host_id:

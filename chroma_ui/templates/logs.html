@@ -1,131 +1,112 @@
-    {% extends 'base.html' %}
-    {% block css%}
-    {% endblock %}
-    {% block scripts%}
-    <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery-ui-timepicker-addon.js"></script>
-    <script language="javascript" type="text/javascript">
-      $(document).ready(function() 
+<script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery-ui-timepicker-addon.js"></script>
+<script language="javascript" type="text/javascript">
+  var LogView = function() {
+    var initialized = false;
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+        $('#all_log_content').dataTable().fnDraw();
+        // TODO: reload loadHostList
+      }
+    }
+    function init() 
+    {
+      //load host list
+      loadHostList('', 'logs_hostList');
+      
+      //validation for start an end time
+      $('#datetime_from').datetimepicker(
       {
-        // Menu Highlighter
-        $('#logs_menu').addClass('active');       
-        //load host list
-        loadHostList('', 'logs_hostList');
-        
-        //validation for start an end time
-        $('#datetime_from').datetimepicker(
+        maxDate: new Date(),
+        onSelect: function (selectedDateTime)
         {
-          maxDate: new Date(),
-          onSelect: function (selectedDateTime)
-          {
-            var start = $(this).datetimepicker('getDate');
-            $('#datetime_to').datetimepicker('option', 'minDate', new Date(start.getTime()));
+          var start = $(this).datetimepicker('getDate');
+          $('#datetime_to').datetimepicker('option', 'minDate', new Date(start.getTime()));
+        }
+      });
+      $('#datetime_to').datetimepicker(
+      {
+        maxDate: new Date()
+      });
+
+      $.datepicker.setDefaults({dateFormat: 'yy-mm-dd'});
+      $('#datetime_from').datetimepicker();
+      $('#datetime_to').datetimepicker();
+
+      var oTable = $('#all_log_content').dataTable(
+      {
+        "bProcessing": true,
+        "bFilter":true,
+        iDisplayLength: 25,
+        "bSorting":false,
+        "bServerSide":true,
+        "sAjaxSource": 'log/',
+        "fnServerData": function (url, aoData, callback, settings) {
+          filter_args = {}
+          if ($('#id_only_lustre').is(':checked')) {
+            filter_args['message__startswith'] = " Lustre"
           }
-        });
-        $('#datetime_to').datetimepicker(
-        {
-          maxDate: new Date()
-        });
+          filter_args['host_id'] = $('#logs_hostList').val()
 
-        /*
-        $.datepicker.setDefaults({
-dateFormat: 'yy-mm-dd',
-timezoneIso8609: true
-});*/
-        $('#datetime_from').datetimepicker();
-        $('#datetime_to').datetimepicker();
-
-        var oTable = $('#all_log_content').dataTable(
-        {
-          "bProcessing": true,
-          "bFilter":true,
-          iDisplayLength: 25,
-          "bSorting":false,
-          "bServerSide":true,
-          "sAjaxSource": 'log/',
-          "fnServerData": function (url, aoData, callback, settings) {
-            filter_args = {}
-            if ($('#id_only_lustre').is(':checked')) {
-              filter_args['message__startswith'] = " Lustre"
+          function timepicker_iso(element) {
+            /* Get a timezone-aware Date and then ISO-8601 format it */
+            // NB $.trim is used because datetimepicker seems to append a trailing space
+            var val_str = $.trim(element.val())
+            if (val_str) {
+              var val = new Date(val_str);
+              return val.toISOString();
+            } else {
+              return val_str;
             }
-            $.each(aoData, function(i, param) {
-              if (param.name == "sSearch") {
-                filter_args['message__icontains'] = param.value;
-              }
-            });
-            filter_args['host_id'] = $('#logs_hostList').val()
+          }
 
-            function timepicker_iso(element) {
-              /* Get a timezone-aware Date and then ISO-8601 format it */
-              // NB $.trim is used because datetimepicker seems to append a trailing space
-              var val_str = $.trim(element.val())
-              if (val_str) {
-                var val = new Date(val_str);
-                return val.toISOString();
-              } else {
-                return val_str;
-              }
-            }
+          filter_args['devicereportedtime__gte'] = timepicker_iso($('#datetime_from'))
+          filter_args['devicereportedtime__lte'] = timepicker_iso($('#datetime_to'))
 
-            filter_args['devicereportedtime__gte'] = timepicker_iso($('#datetime_from'))
-            filter_args['devicereportedtime__lte'] = timepicker_iso($('#datetime_to'))
-            //filter_args['order_by'] = '-devicereportedtime'
+          Api.get_datatables(url, aoData,
+            function(data) {
+              /* Annotate the rows with DT_RowClass */
+              $.each(data.aaData, function(i, row) {
+                if (row.message.search("LustreError") != -1) {
+                  row.DT_RowClass = 'log_error';
+                } else {
+                  row.DT_RowClass = 'log_info';
+                }
 
-            Api.get_datatables(url, aoData,
-              function(data) {
-                /* Annotate the rows with DT_RowClass */
-                $.each(data.aaData, function(i, row) {
-                  if (row.message.search("LustreError") != -1) {
-                    row.DT_RowClass = 'log_error';
-                  } else {
-                    row.DT_RowClass = 'log_info';
-                  }
+                row.devicereportedtime = shortLocalTime(row.devicereportedtime)
+                row.syslogtag = row.syslogtag.slice(0, -1);
+              });
+              callback(data);
+            },
+            settings,
+            removeBlankAttributes(filter_args));
+        }, 
+       aaSorting: [[0, 'desc']],
+       "aoColumns": [
+           { "sClass": 'log_line', "mDataProp":"devicereportedtime", "bSortable":true},
+           { "sClass": 'log_line', "mDataProp":"fromhost", "bSortable":true},
+           { "sClass": 'log_line', "mDataProp":"syslogtag", "bSortable":false},
+           { "sClass": 'log_line', "mDataProp":"message","bSearchable":true, "bSortable":false}
+       ],
+       "bJQueryUI": true, 
+      });
 
-                  row.devicereportedtime = shortLocalTime(row.devicereportedtime)
-                  row.syslogtag = row.syslogtag.slice(0, -1);
-                });
-                callback(data);
-              },
-              settings,
-              removeBlankAttributes(filter_args));
-          }, 
-           aaSorting: [[0, 'desc']],
-	         "aoColumns": [
-               { "sClass": 'log_line', "mDataProp":"devicereportedtime", "bSortable":true},
-               { "sClass": 'log_line', "mDataProp":"fromhost", "bSortable":true},
-               { "sClass": 'log_line', "mDataProp":"syslogtag", "bSortable":false},
-               { "sClass": 'log_line', "mDataProp":"message","bSearchable":true, "bSortable":false}
-	         ],
-	         "bJQueryUI": true, 
-	      });
       //click handler for filter
       $('#log_filter_btn').click(function()
       {
         oTable.fnDraw();
       });
-    });
-    </script>
-    {% endblock %} 
-    {% block include_content %}{% endblock %}
-{% block content %}
-<!-- Dashboard Div - Start -->
-<div id="dashboardDiv">
+    }
+
+    return {draw:draw}
+  }();
+</script>
+<div class='content'>
   <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
     <tr style="background-color:#cccccc;">
       <td width="30%">
-        <!--
-        <div class="breadCrumbHolder module">
-          <div id="breadCrumb0" class="breadCrumb module">
-            <ul style="float:left;">
-              <li>
-                  <a href="/dashboard">All FileSystems</a> </li>
-                  <select id="fsSelect">
-                    <option value="">Select File System</option>
-                  </select>
-               </li>
-             </ul>
-           </div>
-        </div>
-        -->
       </td>
       <td width="70%">
         <div class="timeint">
@@ -142,7 +123,7 @@ timezoneIso8609: true
     </tr>
     <tr>
       <td colspan="3">
-        <fieldset>
+        <div class='content'>
           <table width="100%" border="0" cellspacing="0" cellpadding="0" class="log_line"  id="all_log_content">
             <thead class="log_line">
               <tr>
@@ -155,11 +136,8 @@ timezoneIso8609: true
             <tbody class="log_line">
             </tbody>
           </table>
-        </fieldset>
-        </h3>
+        </div>
       </td>
     </tr>
   </table>
 </div>
-<!-- Dashboard Div - End -->
-{% endblock %}

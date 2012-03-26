@@ -497,11 +497,8 @@ button#sidebar_close .ui-icon{
     border-radius: 4px;
 }
 tr.odd {
-	/*background-color: #E2E4FF;*/
 	background-color: #f0f0f0;
 	text-align:center;
-
-	
 }
 
 tr.even {
@@ -509,60 +506,7 @@ tr.even {
 	text-align:center;
 	
 }
-td.bor{
-	border-bottom:1px solid #c3c0c0;
-	font-weight:bold
-}
-td.borleft{
-	border-left:1px solid #c3c0c0;
-}
-td.borright{
-	border-right:1px solid #c3c0c0;
-}
-td.bortop{
-	border-top:1px solid #c3c0c0;
-}
-td.bt{
-	border-top:1px solid #848484;
-	font-size:12px;
-}
-td.bb{
-	border-bottom:1px solid #848484;
-	font-size:12px;
-}
-td.bl{
-	border-left:1px solid #848484;
-	font-size:12px;
-}
-td.br{
-	border-right:1px solid #848484;
-	font-size:12px;
-}
-.spaceright{
-	padding-right:4px;
-}
-.spaceleft{
-	padding-left:4px;
-}
-.scroll_display{
-	margin-left:5px; 
-	height:400px; 
-	overflow:auto;
-}
-.noti_links{
-	font-family:Verdana, Arial, Helvetica, sans-serif; 
-	font-size:12px; 
-	font-weight:bold; 
-	padding-left:5px;
-}
-.bracket{
-	border:1px solid #828282;
-	font-size:12px;
-}
-.iconslinks{
-	margin-left:3px;
-	margin-right:3px;
-}
+
 .greybgcol{
 	background-color:#eeeeee;
     font-size: 12px;
@@ -806,4 +750,78 @@ table.validated_form span.error {
 
 table.validated_form input.error {
     border: 1px solid red;
+}
+
+
+div.command_job_list {
+  font-size: 9pt;
+}
+
+ul.job {
+  list-style-type: none;
+  padding-left: 12px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+div.command_job_list img {
+  margin-bottom: -3px;
+}
+
+div.command_job_list span.job_description {
+  height: 100%;
+  padding-left: 2px;
+}
+
+div.dialog_tabs {
+    /*height: 100%;*/
+}
+
+div.job_step_list h3 a {
+  text-decoration: none;
+  font-size: 11pt;
+}
+
+div.job_step_list h3 img {
+  margin-right: 6px;
+}
+
+span.job_row img {
+  margin-right: 6px;
+}
+
+div.job_summary {
+  margin-bottom: 12px;
+}
+
+div.job_summary ul {
+  list-style-type: none;
+  padding-left: 6px;
+}
+
+html {
+    overflow-y: scroll;
+    overflow: -moz-scrollbars-vertical;
+}
+
+ul.navigation li {
+  border-right: 2px solid #ddd;
+  float:left;
+  margin: 0px;
+  padding: 0px 3px 0px 3px;
+}
+
+ul.navigation li:last-child {
+  border-right: none;
+}
+
+ul.navigation {
+  list-style-type: none;
+  margin: 0px;
+  padding: 0px;
+}
+
+body {
+  margin: 0px;
+  padding: 0px;
 }

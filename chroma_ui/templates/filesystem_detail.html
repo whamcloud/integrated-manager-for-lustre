@@ -1,127 +1,167 @@
 <script language="javascript">
+  var FilesystemDetailView = function() {
+    var initialized = false;
+    var fs_id;
+    var conf_param_dialog;
+    var volume_chooser_store;
 
-
-  function loadFilesystem(fs_id) {
-    Api.get("filesystem/" + fs_id + "/", {}, 
-    success_callback = function(filesystem)
-    {
-      /* FS summary fields */
-      $('#bytes_used').html(formatBytes(filesystem.bytes_total - filesystem.bytes_free));
-      $('#bytes_total').html(formatBytes(filesystem.bytes_total));
-      $('#inodes_used').html(formatBigNumber(filesystem.files_total - filesystem.files_free));
-      $('#inodes_total').html(formatBigNumber(filesystem.files_total));
-      $('#ost_count').html(filesystem.osts.length);
-      $('#mgs_name').html(filesystem.mgt.primary_server_name);
-      $('#mds_name').html(filesystem.mdts[0].primary_server_name);
-      $('#fs_alerts').html(alert_indicator_large_markup(filesystem.id, filesystem.content_type_id));
-      $('#fs_name').html(filesystem.name);
-
-      // Config param dialog
-      populate_conf_param_table(filesystem.conf_params, "config_param_table");
-      $('#advance_opts').click(function()
-      {
-        $('#configParam').dialog('open');
-      });
-    });
-
-    $('#new_ost_dialog').dialog
-    ({
-      autoOpen: false,
-      width: 1100,
-      maxHeight:470,
-      position:"center",
-      show: "clip",
-      modal: true,
-      buttons: 
-      {
-        "Ok": 
-        {
-          text: "Ok",
-          id: "ost_ok_button",
-          click: function(){
-            var fs_id = $('#fs_id').val();       
-            var ost_lun_ids = fvc_get_value($('#new_ost_chooser'));
-            CreateOSTs(fs_id, ost_lun_ids);
-            $(this).dialog("close");
-          }
-        },
-        "Cancel": function() { 
-          $(this).dialog("close");
-        }, 
+    function draw(id) {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else{
+        $('#new_ost_chooser').volumeChooser('clear');
+        $('#ost').dataTable().fnClearTable();
+        $('#mdt').dataTable().fnClearTable();
+        $('#mgt_configuration_view').dataTable().fnClearTable();
       }
-    });
 
-    /* Tables of targets */
-    var target_table_elements = ['#mgt_configuration_view', '#ost', '#mdt'];
-    $.each(target_table_elements, function(i, selector) {
-      $(selector).dataTable( {
-        bInfo: false,
-        "bProcessing": true,
-        "bJQueryUI": true,
-        "bFilter": false,
-        "bPaginate": false, 
-        "oLanguage": {
-            "sEmptyTable": "No MGT to display"
-        },
-        "aoColumns": [
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtleft' },
-          { "sClass": 'txtcenter', bSortable: false},
-          { "sClass": 'txtcenter', bSortable: false}
-        ]
+      fs_id = id;
+      loadFilesystem();
+    }
+
+    function init() 
+    {
+      $('div#filesystem_detail button.advanced').click(function() {
+        conf_param_dialog.open();
       });
-    });
 
-    loadFilesystemTargets(fs_id);
+      // Create new OST button click handler. 
+      volume_chooser_store = VolumeChooserStore();
+      volume_chooser_store.load(function() {
+        $('#new_ost_chooser').volumeChooser({multi_select: true, store: volume_chooser_store});
+      });
+      $('#btnNewOST').click(function() {
+        $('#new_ost_dialog').dialog('open');
+        $('#new_ost_dialog').find('table').width("100%");
+      });
 
-    // Create new OST button click handler. 
-    fvc_button($("#new_ost_chooser"), {multi_select: true});
-    $('#btnNewOST').click(function() {
-      $('#new_ost_dialog').dialog('open');
-      $('#new_ost_dialog').find('table').width("100%");
-    });
-
-    // Free space pie charts
-    LoadFSGraph_EditFS(fs_id);
-  }
-
-
-  function loadFilesystemTargets(fs_id)
-  {
-    Api.get("target/", {filesystem_id : fs_id, limit: 0}, 
-    success_callback = function(data)
-    {  
-      var targets = data.objects;
-      $('#ost').dataTable().fnClearTable();
-      $('#mdt').dataTable().fnClearTable();
-      $('#mgt_configuration_view').dataTable().fnClearTable();
-
-      $.each(targets, function(i, target)
-      {
-        row = [
-                target_dialog_link(target),
-                target.lun_name,
-                target.primary_server_name,
-                target.failover_server_name,
-                target.active_host_name,
-                stateTransitionButtons(target),
-                notification_icons_markup(target.id, target.content_type_id)
-              ]
-        if (target.kind == "OST") {
-          $('#ost').dataTable().fnAddData (row);
-        } else if (target.kind == "MGT") {
-          $('#mgt_configuration_view').dataTable().fnAddData (row);
-        } else if (target.kind == "MDT") {
-          $('#mdt').dataTable().fnAddData (row);
+      $('#new_ost_dialog').dialog({
+        autoOpen: false,
+        width: 1100,
+        maxHeight:470,
+        position:"center",
+        show: "clip",
+        modal: true,
+        buttons: 
+        {
+          "Ok": 
+          {
+            text: "Ok",
+            id: "ost_ok_button",
+            click: function(){
+              var ost_lun_ids = $('#new_ost_chooser').volumeChooser('val');
+              var dialog = $(this)
+              Api.post("target/", {kind: 'OST', filesystem_id: fs_id, lun_ids: ost_lun_ids},
+                success_callback = function(data)
+                {
+                  //Reload table with latest ost's.
+                  $('#ost').dataTable().fnClearTable();
+                  $('#mdt').dataTable().fnClearTable();
+                  $('#mgt_configuration_view').dataTable().fnClearTable();
+                  loadFilesystemTargets();
+                  dialog.dialog("close");
+                });
+            }
+          },
+          "Cancel": function() { 
+            $(this).dialog("close");
+          }, 
         }
       });
-    });
-  }
+
+      /* Tables of targets */
+      var target_table_elements = ['#mgt_configuration_view', '#ost', '#mdt'];
+      $.each(target_table_elements, function(i, selector) {
+        $(selector).dataTable( {
+          bInfo: false,
+          "bProcessing": true,
+          "bJQueryUI": true,
+          "bFilter": false,
+          "bPaginate": false, 
+          "oLanguage": {
+              "sEmptyTable": "No MGT to display"
+          },
+          "aoColumns": [
+            { "sClass": 'txtleft' },
+            { "sClass": 'txtleft' },
+            { "sClass": 'txtleft' },
+            { "sClass": 'txtleft' },
+            { "sClass": 'txtleft' },
+            { "sClass": 'txtcenter', bSortable: false},
+            { "sClass": 'txtcenter', bSortable: false}
+          ]
+        });
+      });
+    }
+
+    function loadFilesystem() {
+      Api.get("filesystem/" + fs_id + "/", {}, 
+      success_callback = function(filesystem)
+      {
+        /* FS summary fields */
+        $('#bytes_used').html(formatBytes(filesystem.bytes_total - filesystem.bytes_free));
+        $('#bytes_total').html(formatBytes(filesystem.bytes_total));
+        $('#inodes_used').html(formatBigNumber(filesystem.files_total - filesystem.files_free));
+        $('#inodes_total').html(formatBigNumber(filesystem.files_total));
+        $('#ost_count').html(filesystem.osts.length);
+        $('#mgs_name').html(filesystem.mgt.primary_server_name);
+        $('#mds_name').html(filesystem.mdts[0].primary_server_name);
+        $('#fs_alerts').html(LiveObject.alertLabel(filesystem));
+        $('#fs_name').html(filesystem.name);
+
+        // Config param dialog
+        conf_param_dialog = ConfParamDialog({url: filesystem.resource_uri});
+        conf_param_dialog.set(filesystem.conf_params)
+      });
+
+      loadFilesystemTargets();
+
+      // Free space pie charts
+      LoadFSGraph_EditFS(fs_id);
+    }
+
+    function loadFilesystemTargets()
+    {
+      Api.get("target/", {filesystem_id : fs_id, limit: 0}, 
+      success_callback = function(data)
+      {  
+        var targets = data.objects;
+        $.each(targets, function(i, target)
+        {
+          row = [
+                  target_dialog_link(target),
+                  target.lun_name,
+                  target.primary_server_name,
+                  target.failover_server_name,
+                  target.active_host_name,
+                  stateTransitionButtons(target),
+                  LiveObject.icons(target)
+                ]
+          if (target.kind == "OST") {
+            $('#ost').dataTable().fnAddData (row);
+          } else if (target.kind == "MGT") {
+            $('#mgt_configuration_view').dataTable().fnAddData (row);
+          } else if (target.kind == "MDT") {
+            $('#mdt').dataTable().fnAddData (row);
+          }
+        });
+      });
+    }
+
+    function getId()
+    {
+      return fs_id;
+    }
+
+    return {
+      draw:draw,
+      getId: getId
+    }
+  }();
 </script>
 
+<div id='filesystem_detail'>
 <h2 class='section_header' id='edit_fs_title'>Filesystem <span id='fs_name'/></h2>
 
 <div style='float:left;'>
@@ -140,17 +180,17 @@
     </tr>
   </table>
   <p>
-    <button class='advanced' type="button" id="advance_opts">Advanced...</button>
+    <button class='advanced' type="button">Advanced...</button>
   </p>
 </div>
 
 <div style='float:left; margin-left: 12px;'>
   <div id="editfs_space_usage"></div>
-  <p align=center><span id="bytes_used"/>/<span id="bytes_total"/></p>
+  <p align=center><span id="bytes_used"></span>/<span id="bytes_total"></span></p>
 </div>
 <div style='float:left; margin-left: 12px;'>
   <div id="editfs_inode_usage"></div>
-  <p align=center><span id="inodes_used"/>/<span id="inodes_total"/>&nbsp;inodes</p>
+  <p align=center><span id="inodes_used"></span>/<span id="inodes_total"></span>&nbsp;inodes</p>
 </div>
 
 <div style='clear:both;'></div>
@@ -211,7 +251,11 @@
 </table>
 
 <p align='right'>
-  <a class='address_link button' href="filesystems">Back to filesystems</a>
+  <a class='navigation button' href="configure/filesystem/list/">Back to filesystems</a>
 </p>
 
+<!-- new OST popup showing all usable luns-->
+<div id="new_ost_dialog" title="Create OST">
+  <button id='new_ost_chooser'></button>
+</div>
 </div>

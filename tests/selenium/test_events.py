@@ -1,6 +1,5 @@
 """ Test Events """
 
-from utils.navigation import Navigation
 from views.events import Events
 from utils.constants import Constants
 from base import SeleniumBaseTestCase
@@ -10,10 +9,7 @@ class TestEvents(SeleniumBaseTestCase):
 
     def setUp(self):
         super(TestEvents, self).setUp()
-        # Calling navigation
-        self.page_navigation = Navigation(self.driver)
-        self.page_navigation.click(self.page_navigation.links['Events'])
-        # Calling base_layout
+        self.navigation.go('Events')
         self.events_page = Events(self.driver)
 
     def test_events_filter(self):

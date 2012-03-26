@@ -1,5 +1,15 @@
 
 from django.test import TestCase
+import mock
+
+
+def freshen(obj):
+    return obj.__class__.objects.get(pk=obj.pk)
+
+
+def set_state(obj, state):
+    from chroma_core.lib.state_manager import StateManager
+    return StateManager().set_state(freshen(obj), state)
 
 
 class MockAgent(object):
@@ -34,6 +44,14 @@ class MockAgent(object):
         elif cmdline.startswith('register-target'):
             MockAgent.label_counter += 1
             return {'label': "foofs-TTT%04d" % self.label_counter}
+
+
+class MockDaemonRpc():
+    def start_session(self, resource_id):
+        return
+
+    def remove_resource(self, resource_id):
+        return
 
 
 class JobTestCase(TestCase):
@@ -74,6 +92,18 @@ class JobTestCase(TestCase):
         MockAgent.mock_servers = self.mock_servers
         chroma_core.lib.agent.Agent = MockAgent
 
+        # Override DaemonRPC
+        import chroma_core.lib.storage_plugin.daemon
+        self.old_daemon_rpc = chroma_core.lib.storage_plugin.daemon.DaemonRpc
+        chroma_core.lib.storage_plugin.daemon.DaemonRpc = MockDaemonRpc
+
+        # Override PluginRequest/PluginResponse
+        import chroma_core.lib.storage_plugin.messaging
+        self.old_plugin_request = chroma_core.lib.storage_plugin.messaging.PluginRequest
+        self.old_plugin_response = chroma_core.lib.storage_plugin.messaging.PluginResponse
+        chroma_core.lib.storage_plugin.messaging.PluginRequest = mock.Mock()
+        chroma_core.lib.storage_plugin.messaging.PluginResponse = mock.Mock()
+
     def tearDown(self):
         import chroma_core.lib.agent
         chroma_core.lib.agent.Agent = self.old_agent
@@ -81,6 +111,13 @@ class JobTestCase(TestCase):
         from celery.app import app_or_default
         app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
         app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_eager_propagates_exceptions
+
+        import chroma_core.lib.storage_plugin.daemon
+        chroma_core.lib.storage_plugin.daemon.DaemonRpc = self.old_daemon_rpc
+
+        import chroma_core.lib.storage_plugin.messaging
+        chroma_core.lib.storage_plugin.messaging.PluginRequest = self.old_plugin_request
+        chroma_core.lib.storage_plugin.messaging.PluginResponse = self.old_plugin_response
 
 
 class JobTestCaseWithHost(JobTestCase):
@@ -96,7 +133,7 @@ class JobTestCaseWithHost(JobTestCase):
         super(JobTestCaseWithHost, self).setUp()
 
         from chroma_core.models import ManagedHost
-        self.hosts = [ManagedHost.create_from_string(address) for address, info in self.mock_servers.items()]
+        self.hosts = [ManagedHost.create_from_string(address)[0] for address, info in self.mock_servers.items()]
 
         # Handy if you're only using one
         self.host = self.hosts[0]

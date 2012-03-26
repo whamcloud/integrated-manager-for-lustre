@@ -1,46 +1,57 @@
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/server_configuration.css"/>
-<script type="text/javascript" src="{{STATIC_URL}}js/server_configuration.js"/>
-<script>
-  $(document).ready(function() {
-    //cm-json_table_data => load server list
-    // Server JQuery Data table init()
-    $('#server_configuration').dataTable( {
-      bServerSide: true,
-      "bProcessing": true,
-      "bJQueryUI": true,
-      "bAutoWidth":false,
-      sAjaxSource: 'host/',
-      fnServerData: function(url, data, callback, settings) {
-        Api.get_datatables(url, data, function(data) {
-          //console.log(data);
-          var processed_data = [];
-          $.each(data.aaData, function(i, row) {
-            row['label'] = object_name_markup(row),
-            row['state'] = object_state_markup(row),
-            row['actions'] = stateTransitionButtons(row),
-            row['icons'] = notification_icons_markup(row.id, row.content_type_id)
-          });
-          callback(data);
-        }, settings);
-      },
-      "oLanguage": {
-          "sEmptyTable": "No Servers to display"
-      },
-      aaSort: [[0, 'asc']],
-      "aoColumns": [
-        { "sClass": 'txtleft', mDataProp: 'fqdn', bSortable: true},
-        { "sClass": 'txtcenter', mDataProp: 'state', bSortable: false},
-        { "sClass": 'txtcenter', bSortable: false, mDataProp: 'actions'},
-        { "sClass": 'txtcenter', bSortable: false, mDataProp: 'icons'}
-      ]
-    } );
-    $('#btnAddNewHost').click(function()
+<script type="text/javascript" src="{{STATIC_URL}}js/server_configuration.js"></script>
+<script type='text/javascript'>
+  var ServerView = function() {
+    var initialized = false;
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+        $('#server_configuration').dataTable().fnDraw();
+      }
+    }
+
+    function init() 
     {
-      add_host_dialog();
-    });
-  } );  
-  </script>
-</head>
+      $('#server_configuration').dataTable( {
+        bServerSide: true,
+        "bProcessing": true,
+        "bJQueryUI": true,
+        "bAutoWidth":false,
+        sAjaxSource: 'host/',
+        fnServerData: function(url, data, callback, settings) {
+          Api.get_datatables(url, data, function(data) {
+            //console.log(data);
+            var processed_data = [];
+            $.each(data.aaData, function(i, row) {
+              row['label'] = LiveObject.label(row),
+              row['state'] = LiveObject.state(row),
+              row['actions'] = stateTransitionButtons(row),
+              row['icons'] = LiveObject.icons(row)
+            });
+            callback(data);
+          }, settings);
+        },
+        "oLanguage": {
+            "sEmptyTable": "No Servers to display"
+        },
+        aaSort: [[0, 'asc']],
+        "aoColumns": [
+          { "sClass": 'txtleft', mDataProp: 'fqdn', bSortable: true},
+          { "sClass": 'txtcenter', mDataProp: 'state', bSortable: false},
+          { "sClass": 'txtcenter', bSortable: false, mDataProp: 'actions'},
+          { "sClass": 'txtcenter', bSortable: false, mDataProp: 'icons'}
+        ]
+      } );
+      $('#btnAddNewHost').click(function()
+      {
+        add_host_dialog();
+      });
+    }
+    return {draw:draw}
+  }();
+</script>
 
 <h2 class='section_header'>Server configuration</h2>
 <div class="buttonspacer"><span class="first-child">

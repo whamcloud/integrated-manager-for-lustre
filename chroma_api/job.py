@@ -14,12 +14,25 @@ from chroma_core.models import Job, StateLock, StateReadLock, StateWriteLock
 class StateLockResource(ModelResource):
     locked_item_id = fields.IntegerField()
     locked_item_content_type_id = fields.IntegerField()
+    locked_item_uri = fields.CharField()
 
     def dehydrate_locked_item_id(self, bundle):
         return bundle.obj.locked_item_id
 
     def dehydrate_locked_item_content_type_id(self, bundle):
-        return bundle.obj.locked_item_type.id
+        locked_item = bundle.obj.locked_item
+        if hasattr(locked_item, 'content_type'):
+            return locked_item.content_type.id
+        else:
+            return bundle.obj.locked_item_type.id
+
+    def dehydrate_locked_item_uri(self, bundle):
+        from chroma_api.urls import api
+        locked_item = bundle.obj.locked_item
+        if hasattr(locked_item, 'content_type'):
+            locked_item = locked_item.downcast()
+
+        return api.get_resource_uri(locked_item)
 
     class Meta:
         queryset = StateLock.objects.all()
@@ -72,6 +85,9 @@ class JobResource(ModelResource):
             lambda bundle: bundle.obj.command_set.all(), null = True,
             help_text = "Commands which require this job to complete\
             sucessfully in order to succeed themselves")
+    steps = fields.ToManyField('chroma_api.step.StepResource',
+            lambda bundle: bundle.obj.stepresult_set.all(), null = True,
+            help_text = "Steps executed within this job")
 
     available_transitions = fields.DictField()
 
@@ -81,7 +97,7 @@ class JobResource(ModelResource):
             return []
         elif job.state == 'paused':
             return [{'state': 'resume', 'label': "Resume"}]
-        elif job.state in ['pending', 'tasked']:
+        elif job.state in ['pending', 'tasked', 'tasking']:
             return [{'state': 'pause', 'label': 'Pause'},
                     {'state': 'cancel', 'label': 'Cancel'}]
         else:
@@ -99,6 +115,7 @@ class JobResource(ModelResource):
         ordering = ['created_at']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'put']
+        filtering = {'id': ['exact', 'in']}
 
     def obj_update(self, bundle, request, **kwargs):
         """Modify a Job (setting 'state' field to 'pause', 'cancel', or 'resume' is the
@@ -106,13 +123,14 @@ class JobResource(ModelResource):
         # FIXME: 'cancel' and 'resume' aren't actually a state that job will ever have,
         # it causes a paused job to bounce back into a state like 'pending' or 'tasked'
         # - there should be a better way of representing this operation
+        job = Job.objects.get(pk = kwargs['pk'])
         new_state = bundle.data['state']
 
         assert new_state in ['pause', 'cancel', 'resume']
         if new_state == 'pause':
-            bundle.obj.pause()
+            job.pause()
         elif new_state == 'cancel':
-            bundle.obj.cancel()
+            job.cancel()
         else:
-            bundle.obj.resume()
+            job.resume()
         return bundle

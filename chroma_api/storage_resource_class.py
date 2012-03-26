@@ -11,6 +11,22 @@ from chroma_api.authentication import AnonymousAuthentication
 from tastypie.resources import ModelResource
 
 
+def filter_class_ids():
+    """Wrapper to avoid importing storage_plugin_manager at module scope (it
+    requires DB to construct itself) so that this module can be imported
+    for e.g. building docs without a database.
+
+    Return a list of storage resource class IDs which are valid for display (i.e.
+    those for which we have a plugin available in this process)
+    """
+    from MySQLdb import OperationalError
+    try:
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        return storage_plugin_manager.resource_class_id_to_class.keys()
+    except OperationalError:
+        return []
+
+
 class StorageResourceClassResource(ModelResource):
     """
     A type of ``storage_resource`` which may be created.
@@ -32,10 +48,6 @@ class StorageResourceClassResource(ModelResource):
 
     def dehydrate_columns(self, bundle):
         return bundle.obj.get_class().get_columns()
-        #columns = [{'mdataProp': 'id', 'bVisible': False}, {'mDataProp': '_alias', 'sTitle': 'Name'}]
-        #for c in attr_columns:
-        #    columns.append({'sTitle': c['label'], 'mDataProp': c['name']})
-        #return columns
 
     def dehydrate_fields(self, bundle):
         resource_klass = bundle.obj.get_class()
@@ -53,7 +65,10 @@ class StorageResourceClassResource(ModelResource):
         return "%s-%s" % (bundle.obj.storage_plugin.module_name, bundle.obj.class_name)
 
     class Meta:
-        queryset = StorageResourceClass.objects.all()
+        queryset = StorageResourceClass.objects.filter(
+                id__in = filter_class_ids(),
+                storage_plugin__internal = False
+                )
         resource_name = 'storage_resource_class'
         filtering = {'plugin_name': ['exact'], 'class_name': ['exact'], 'user_creatable': ['exact']}
         authorization = DjangoAuthorization()

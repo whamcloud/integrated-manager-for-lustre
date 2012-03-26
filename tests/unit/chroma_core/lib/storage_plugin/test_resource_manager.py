@@ -58,7 +58,7 @@ class TestLuns(JobTestCase):
         get_handle.handle_counter = 0
 
         from chroma_core.models import ManagedHost
-        host = ManagedHost.create_from_string('myaddress')
+        host, command = ManagedHost.create_from_string('myaddress')
 
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         resource_record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = host.pk)

@@ -11,7 +11,6 @@ from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Command
-from chroma_core.lib.state_manager import StateManager
 
 import tastypie.http as http
 from tastypie import fields
@@ -192,12 +191,10 @@ class TargetResource(MetricResource, ConfParamResource):
         if len(lun_ids) > 1:
             message += "s"
 
-        with transaction.commit_on_success():
-            command = Command(message = "Creating %s%s" % (kind, "s" if len(lun_ids) > 1 else ""))
-            command.save()
-        for target in targets:
-            StateManager.set_state(target, 'mounted', command.pk)
-        raise custom_response(self, request, http.HttpAccepted, dehydrate_command(command))
+        command = Command.set_state([(t, 'mounted') for t in targets], "Creating %s%s" % (kind, "s" if len(lun_ids) > 1 else ""))
+        raise custom_response(self, request, http.HttpAccepted,
+                {'command': dehydrate_command(command),
+                 'targets': [self.full_dehydrate(self.build_bundle(obj = t)).data for t in targets]})
 
     def get_resource_graph(self, request, **kwargs):
         target = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
@@ -298,7 +295,4 @@ class TargetResource(MetricResource, ConfParamResource):
                 'height': height
                 }
 
-        return self.create_response(request, {
-            'storage_alerts': [a.to_dict() for a in storage_alerts],
-            'lustre_alerts': [a.to_dict() for a in lustre_alerts],
-            'graph': graph})
+        return self.create_response(request, {'graph': graph})

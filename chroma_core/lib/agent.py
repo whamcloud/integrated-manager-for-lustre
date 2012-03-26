@@ -32,9 +32,7 @@ Exception: %s (%s)
 
 class Agent(object):
     def __init__(self, host, log = None, console_callback = None, timeout = None):
-
-        # Long default timeout for long-running jobs like formatting a lun
-        DEFAULT_TIMEOUT = 3600
+        DEFAULT_TIMEOUT = 60
         if timeout:
             self.timeout = timeout
         else:

@@ -1,76 +1,82 @@
-    {% extends 'base.html' %}
-    {% block css %} {% endblock %} 
-    {% block scripts %} 
     <script type="text/javascript">
-    $(document).ready(function() 
-    { 
-      // Menu Highlighter
-      $('#alerts_menu').addClass('active');
-      var oTable = $('#active_AlertContent').dataTable( {
-        "bProcessing": true,
-        "iDisplayLength":25,
-        bServerSide: true,
-        "bDeferRender": true,
-        "sAjaxSource": 'alert/',
-        "fnServerData": function (url, data, callback, settings) {
-          function formatRows(data) {
-            $.each(data.aaData, function(i, row) {
-              row.begin = shortLocalTime(row.begin);
-            });
-            callback(data);
-          }
-          Api.get_datatables(url, data, formatRows, settings, {active: true});
-        },
-        aaSorting: [[0, 'desc']],
-        "aoColumns": [
-          { "sClass": 'txtleft', "mDataProp":"begin", bSortable: true },
-          { "sClass": 'txtleft', "mDataProp":"alert_item_str", bSortable: false },
-          { "sClass": 'txtleft', "mDataProp":"message", bSortable: false }
+
+    var AlertView = function() {
+      var initialized = false;
+      function draw() {
+        if (!initialized) {
+          init();
+          initialized = true;
+        } else {
+          $('#active_AlertContent').dataTable().fnDraw();
+          $('#all_AlertContent').dataTable().fnDraw();
+        }
+      }
+
+      function init() {
+        var oTable = $('#active_AlertContent').dataTable( {
+          "bProcessing": true,
+          "iDisplayLength":25,
+          bServerSide: true,
+          "bDeferRender": true,
+          "sAjaxSource": 'alert/',
+          "fnServerData": function (url, data, callback, settings) {
+            function formatRows(data) {
+              $.each(data.aaData, function(i, row) {
+                row.begin = shortLocalTime(row.begin);
+              });
+              callback(data);
+            }
+            Api.get_datatables(url, data, formatRows, settings, {active: true});
+          },
+          aaSorting: [[0, 'desc']],
+          "aoColumns": [
+            { "sClass": 'txtleft', "mDataProp":"begin", bSortable: true },
+            { "sClass": 'txtleft', "mDataProp":"alert_item_str", bSortable: false },
+            { "sClass": 'txtleft', "mDataProp":"message", bSortable: false }
+            ],
+            "oLanguage": {
+              "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
+            },
+            "bJQueryUI": true,
+        });
+        //for alert history
+        var oTable = $('#all_AlertContent').dataTable( {
+          "bProcessing": true,
+          bServerSide: true,
+          "iDisplayLength":25,
+          "bDeferRender": true,
+          "sAjaxSource": 'alert/',
+          "fnServerData": function (url, data, callback, settings) {
+            function formatRows(data) {
+              $.each(data.aaData, function(i, row) {
+                row.begin = shortLocalTime(row.begin);
+                row.end = shortLocalTime(row.end);
+              });
+              callback(data);
+            }
+            Api.get_datatables(url, data, formatRows, settings, {active: false});
+          },
+          aaSorting: [[0, 'desc']],
+          "aoColumns": [
+            { "sClass": 'txtleft', "mDataProp":"begin", bSortable: true},
+            { "sClass": 'txtleft', "mDataProp":"end", bSortable: false },
+            { "sClass": 'txtleft', "mDataProp":"alert_item_str", bSortable: false },
+            { "sClass": 'txtleft', "mDataProp":"message", bSortable: false }
           ],
           "oLanguage": {
             "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
           },
           "bJQueryUI": true,
-      });
-      //for alert history
-      var oTable = $('#all_AlertContent').dataTable( {
-        "bProcessing": true,
-        bServerSide: true,
-        "iDisplayLength":25,
-        "bDeferRender": true,
-        "sAjaxSource": 'alert/',
-        "fnServerData": function (url, data, callback, settings) {
-          function formatRows(data) {
-            $.each(data.aaData, function(i, row) {
-              row.begin = shortLocalTime(row.begin);
-            });
-            callback(data);
-          }
-          Api.get_datatables(url, data, formatRows, settings, {active: false});
-        },
-        aaSorting: [[0, 'desc']],
-        "aoColumns": [
-          { "sClass": 'txtleft', "mDataProp":"begin", bSortable: true},
-          { "sClass": 'txtleft', "mDataProp":"end", bSortable: false },
-          { "sClass": 'txtleft', "mDataProp":"alert_item_str", bSortable: false },
-          { "sClass": 'txtleft', "mDataProp":"message", bSortable: false }
-        ],
-        "oLanguage": {
-          "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
-        },
-        "bJQueryUI": true,
-      });
-    });
+        });
+      }
+      return {draw:draw}
+    }();
     </script>
-    {% endblock %}
-    {% block include_content %}{% endblock %}  
-    {% block content %}
-      <!-- Dashboard Div - Start -->
-      <div id="dashboardDiv">
+      <div class='content'>
         <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
+                <!--
           <tr style="background-color:#cccccc;">
             <td width="100%"><div class="breadCrumbHolder module">
-                <!--
               <div id="breadCrumb0" class="breadCrumb module">
                 <ul style="float:left;">
                   <li> <a href="/dashboard">All FileSystems</a> </li>
@@ -81,47 +87,41 @@
                   </li>
                 </ul>
               </div>
-              -->
             </td>
           </tr>
+              -->
           <tr>
             <td colspan="3">
-              <fieldset>
-                <h2 class="section_header">Active Alerts</h2>
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="display" id="active_AlertContent">
-                <thead>
-                  <tr>
-                    <th width="20%">Started</th>
-                    <th width="20%">Entity</th>
-                    <th width="50%">Message</th>
-                  </tr>
-                </thead>
-                <tbody>
-                </tbody>
-                </table>
-              </fieldset>
+              <h2 class="section_header">Active Alerts</h2>
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" class="display" id="active_AlertContent">
+              <thead>
+                <tr>
+                  <th width="20%">Started</th>
+                  <th width="20%">Entity</th>
+                  <th width="50%">Message</th>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+              </table>
             </td>
           </tr>
           <tr>
           <td colspan="3">
-            <fieldset>
-              <h2 class="section_header">Alert History</h2>
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" class="display" id="all_AlertContent">
-                <thead>
-                  <tr>
-                    <th width="20%">Started</th>
-                    <th width="20%">Finished</th>
-                    <th width="20%">Entity</th>
-                    <th width="50%">Message</th>
-                    </tr>
-                </thead>
-                <tbody>
-                </tbody>
-              </table>
-            </fieldset>
+            <h2 class="section_header">Alert History</h2>
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" class="display" id="all_AlertContent">
+              <thead>
+                <tr>
+                  <th width="20%">Started</th>
+                  <th width="20%">Finished</th>
+                  <th width="20%">Entity</th>
+                  <th width="50%">Message</th>
+                  </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
           </td>
         </tr>
       </table>
       </div>
-      <!-- Dashboard Div - End -->
-    {% endblock %}

@@ -38,7 +38,7 @@ class VolumeNodeResource(ModelResource):
         return bundle.obj.host.get_label()
 
     class Meta:
-        queryset = LunNode.objects.all()
+        queryset = LunNode.objects.filter(host__not_deleted = True)
         resource_name = 'volume_node'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()

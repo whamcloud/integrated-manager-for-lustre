@@ -1,4 +1,39 @@
 
+/* So that Backbone.sync will pass GET list parameters
+ * in the way that tastypie requires them */
+jQuery.ajaxSetup({traditional: true})
+
+/* Override backbone.sync to deal with {meta:, objects:}
+ * output from API calls */
+Backbone.base_sync = Backbone.sync
+Backbone.sync = function(method, model, options) {
+  var outer_success = options.success;
+  var outer_this = this;
+  options.success = function() {
+    var data = arguments[0]
+    if (data.meta != undefined && data.objects != undefined) {
+      arguments[0] = data.objects;
+    }
+    outer_success.apply(outer_this, arguments);
+  }
+
+  var getValue = function(object, prop) {
+    if (!(object && object[prop])) return null;
+    return _.isFunction(object[prop]) ? object[prop]() : object[prop];
+  };
+  var url = options.url || getValue(model, 'url') || urlError();
+  var data = options.data || JSON.stringify(model.toJSON());
+  var type = {
+    'create': 'POST',
+    'update': 'PUT',
+    'delete': 'DELETE',
+    'read':   'GET'
+  }[method]
+
+  Api.call(type, url, data, success_callback = options.success);
+}
+
+
 
 /* The Api module wraps the global state used for 
  * accessing the /api/ URL space */
@@ -58,6 +93,7 @@ var Api = function() {
   {
     api_available = true;
     $('body').trigger('api_available');
+    $('body').unbind('api_available');
   }
 
   function unexpectedError (jqXHR)
@@ -172,7 +208,6 @@ var Api = function() {
 
     if (!kwargs.order_by && kwargs.iSortCol_0 != undefined) {
       if (kwargs['bSortable_' + kwargs.iSortCol_0]) {
-        console.log(settings.aoColumns)
         var order_by = settings.aoColumns[kwargs.iSortCol_0].mDataProp
         if (kwargs.sSortDir_0 == 'desc') {
           kwargs.order_by = "-" + order_by
@@ -233,6 +268,7 @@ var Api = function() {
         //console.log("Api: Regained contact at " + Number(Date.now()));
         //console.log("Api: Out for " + (Number(Date.now()) - lost_contact_at)/1000 + " seconds");
         $('body').trigger('api_available');
+        $('body').unbind('api_available');
       } else {
         //console.log("Api: Still out of contact at " + Date.now());
         //console.log("Api: " + calls_waiting + " calls waiting");
@@ -280,7 +316,7 @@ var Api = function() {
     };
 
     if (verb == "GET") {
-      ajax_args.data = api_args
+      ajax_args.data = $.param(api_args, true)
     } else {
       ajax_args.dataType = 'json'
       ajax_args.data = JSON.stringify(api_args)
@@ -294,6 +330,10 @@ var Api = function() {
     $.ajax(ajax_args)
     .success(function(data, textStatus, jqXHR)
     {
+      if (data && data.command) {
+        CommandNotification.begin(data.command)
+      }
+
       if (success_callback) {
         if(typeof(success_callback) == "function") {
           /* If success_callback is a function, call it */
@@ -388,6 +428,7 @@ var Api = function() {
     testMode: testMode,
     'delete': del,
     get_datatables: get_datatables,
+    UI_ROOT: UI_ROOT
   }
 }();
 

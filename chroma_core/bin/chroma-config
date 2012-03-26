@@ -41,7 +41,13 @@ if __name__ == '__main__':
                 log.error("  * %s" % error)
 
     if command == 'setup':
-        print_errors(cc.setup())
+        if len(sys.argv) == 2:
+            print_errors(cc.setup())
+        elif len(sys.argv) == 4:
+            print_errors(cc.setup(sys.argv[2], sys.argv[3]))
+        else:
+            log.error("Usage: setup [username] [password]")
+            sys.exit(-1)
     elif command == 'validate':
         print_errors(cc.validate())
     elif command == 'stop':

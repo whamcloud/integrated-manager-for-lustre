@@ -1,10 +1,154 @@
 
+var VolumeChooserStore = function ()
+{
+  var chooserButtons = {};
+  var volumes = [];
+  var id_to_volume = {}
+
+  function makeRow(element, volume) {
+    var row = $.extend({}, volume);
+
+    var select_widget_fn;
+    var opts = element.volumeChooser('getOpts');
+    if (!opts.multi_select) {
+      select_widget_fn = function() {return ""};
+    } else {
+      select_widget_fn = function(vol_info){return "<input type='checkbox' name='" + vol_info.id + "'/>";}
+    }
+
+    row.primary_host_name = "---"
+    row.secondary_host_name = "---"
+    $.each(row.volume_nodes, function(i, node) {
+      if (node.primary) {
+        row.primary_host_name = node.host_label
+      } else if (node.use) {
+        row.secondary_host_name = node.host_label
+      }
+    });
+    row.select_widget = select_widget_fn(row);
+    row.size = formatBytes(row.size);
+    return row;
+  }
+
+  function getRows(element) {
+    if (chooserButtons[element.attr('id')] == undefined) {
+      chooserButtons[element.attr('id')] = {selected: []}
+    }
+
+    var rows = [];
+    $.each(volumes, function(i, volume) {
+      rows.push(makeRow(element, volume))
+    });
+
+    return rows;
+  }
+
+  function load(callback) {
+    Api.get("/api/volume/", {category: 'usable', limit: 0}, success_callback = function(data) {
+      volumes = data.objects;
+      $.each(volumes, function(i, volume) {
+        id_to_volume[volume.id] = volume;
+      });
+      callback();
+    });
+  }
+
+  function select(element, selected) {
+    var state = chooserButtons[element.attr('id')];
+    if (state == undefined) {
+      throw "Unknown element '#" + element.id + "'"
+    }
+
+    var old_selected = state.selected;
+    if (_.isArray(selected)) {
+      state.selected = selected;
+    } else if (!selected) {
+      state.selected = [];
+    } else {
+      state.selected = [selected];
+    }
+
+    // Anything in state.selected that wasn't in old_selected, cull from
+    // all chooserButtons other than this one
+    var newly_selected = _.difference(state.selected, old_selected);
+    var no_longer_selected = _.difference(old_selected, state.selected);
+    $.each(chooserButtons, function(other_element_id, other_state) {
+      var other_element = $('#' + other_element_id);
+      if (other_element.attr('id') == element.attr('id')) {
+        return;
+      }
+
+      var dataTable = other_element.volumeChooser('getDatatable')
+
+      _.each(newly_selected, function(remove_id) {
+        $.each(dataTable.fnGetData(), function(j, row) {
+          if (row.id == remove_id) {
+            dataTable.fnDeleteRow(j);
+          } else {
+          }
+        });
+      });
+
+      _.each(no_longer_selected, function(add_id) {
+        dataTable.fnAddData(makeRow(other_element, id_to_volume[add_id]));
+      });
+    });
+  }
+
+  // When a client selects something, tell the other clients
+  // to gray it out
+  return {
+    load: load,
+    select: select,
+    getRows: getRows
+  }
+};
+
+(function( $ ) {
+  var methods = {
+    init: function(options) {
+      var defaults = {
+        multi_select: false,
+        selected_lun_id: null,
+        selected_lun_ids: []
+      }
+
+      var options = $.extend(defaults, options)
+
+      return this.each(function() {
+        fvc_button($(this), options);
+      });
+    },
+    clear: function() {
+      return this.each(function() {
+        fvc_clear($(this));
+      });
+    },
+    val: function() {
+      return fvc_get_value($(this));
+    },
+    getDatatable: function() {
+      return $(this).data('volumeChooser').data_table
+    },
+    getOpts: function() {
+      return $(this).data('volumeChooser');
+    }
+  }
+  $.fn.volumeChooser = function(method) {
+    if ( methods[method] ) {
+      return methods[ method ].apply( this, Array.prototype.slice.call( arguments, 1 ));
+    } else if ( typeof method === 'object' || ! method ) {
+      return methods.init.apply( this, arguments );
+    } else {
+      $.error( 'Method ' +  method + ' does not exist' );
+    }
+  };
+})( jQuery );
+
 /* fvc: Filesystem Volume Chooser */
 
-var fvc_instances = []
-
 fvc_clear = function(element) {
-  opts = fvc_instances[element.attr('id')]
+  opts = element.data('volumeChooser')
   element = $('#' + element.attr('id'));
 
   var changed;
@@ -13,22 +157,24 @@ fvc_clear = function(element) {
       changed = true;
     }
     opts['selected_lun_ids'] = []
+    opts.store.select(element, opts.selected_lun_ids)
     element.parents('.fvc_background').find('input').attr('checked', false);
   } else {
     if(opts['selected_lun_id'] != null) {
       changed = true;
     }
     opts['selected_lun_id'] = null
+    opts.store.select(element, opts.selected_lun_id)
     element.parents('.fvc_background').find('.fvc_selected').html("Select storage...")
   }
+  
   if (changed && opts.change) {
     opts.change();
   }
 }
 
 fvc_get_value = function(element) {
-  opts = fvc_instances[element.attr('id')]
-  //console.log(opts);
+  opts = element.data('volumeChooser')
   if (opts.multi_select) {
     return opts.selected_lun_ids
   } else {
@@ -37,11 +183,11 @@ fvc_get_value = function(element) {
 }
 
 fvc_button = function(element, opts) {
-  if (!opts) {
-    opts = []
-  }
+  $('#' + element.attr('id')).data('volumeChooser', opts)
 
-  fvc_instances[element.attr('id')] = opts
+  if (!opts.store) {
+    throw "'store' attribute required"
+  }
 
   element.wrap("<div class='fvc_background'/>")
   element.hide()
@@ -62,7 +208,11 @@ fvc_button = function(element, opts) {
     expander_div.hide();
   }
 
+
   header_div.button();
+  /* Redoing the 'data' on the element as .button() messes with the surrounding DOM */
+  element = $('#' + element.attr('id'));
+  $('#' + element.attr('id')).data('volumeChooser', opts)
 
   // dataTables requires a unique ID
   var table_id = element.attr('id') + "_table";
@@ -86,38 +236,15 @@ fvc_button = function(element, opts) {
    "   </table>"
       );
 
-  var select_widget_fn;
-  if (!opts.multi_select) { 
-    select_widget_fn = function() {return ""};
-  } else {
-    select_widget_fn = function(vol_info){return "<input type='checkbox' name='" + vol_info.id + "'/>";}
-  }
 
   var table_element = expander_div.children('table')
+
   var volumeTable = table_element.dataTable({
-    bServerSide: true,
-    sAjaxSource: "volume/",
     bJQueryUI: true,
     bPaginate: false,
     bInfo: false,
     bProcessing: true,
-    fnServerData: function(url, data, callback, settings) {
-      Api.get_datatables(url, data, function(data){
-        $.each(data.aaData, function(i, volume) {
-          volume.primary_host_name = "---"
-          volume.secondary_host_name = "---"
-          $.each(volume.volume_nodes, function(i, node) {
-            if (node.primary) {
-              volume.primary_host_name = node.host_label
-            } else if (node.use) {
-              volume.secondary_host_name = node.host_label
-            }
-          });
-          volume.select_widget = select_widget_fn(volume);
-        });
-        callback(data);
-      }, settings, {category: 'usable'});
-    },
+    aaData: opts.store.getRows(element),
     aoSort: [[2, 'asc']],
     aoColumns: [
       {sWidth: "1%", mDataProp: 'id', bSortable: false},
@@ -130,6 +257,7 @@ fvc_button = function(element, opts) {
       {sWidth: "5%", mDataProp: 'secondary_host_name', bSortable: false}
     ]
   });
+  opts.data_table = volumeTable;
 
   volumeTable.fnSetColumnVis(0, false);
   if (!opts.multi_select) {
@@ -147,15 +275,16 @@ fvc_button = function(element, opts) {
     });
   });
 
-  update_multi_select_value = function() {
+  var update_multi_select_value = function() {
     var selected = [];
-    var checkboxes = table_element.find('input').each(function() {
+    table_element.find('input').each(function() {
       if ($(this).attr('checked')) {
         selected.push ($(this).attr('name'));
       }
     });
 
-    fvc_instances[element.attr('id')].selected_lun_ids = selected
+    opts.store.select(element, selected);
+    opts.selected_lun_ids = selected
   }
 
   table_element.delegate("input", "click", function(event) {
@@ -175,13 +304,13 @@ fvc_button = function(element, opts) {
       var selected_label = header_div.find('.fvc_selected')
       selected_label.html(name + " (" + capacity + ") on " + primary_server);
 
-      fvc_instances[element.attr('id')].selected_lun_id = data.id
+      opts.store.select(element, data.id);
+      opts.selected_lun_id = data.id
 
       // TODO: a close button or something for when there are no volumes (so no 'tr')
       header_div.show();
       expander_div.slideUp();
     } else {
-      //console.log("multi select");
       var checked = $(this).find('input').attr('checked')
       $(this).find('input').attr('checked', !checked);
 
@@ -197,11 +326,9 @@ fvc_button = function(element, opts) {
     header_div.hide();
     table_element.width("100%");
     
-    expander_div.slideDown(null, function() {
-    });
-    
+    expander_div.slideDown(null, function() {});
   });
 
-  fvc_clear(element);
+  fvc_clear($('#' + element.attr('id')));
 }
 

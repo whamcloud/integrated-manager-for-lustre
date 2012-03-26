@@ -1,5 +1,6 @@
 <script>
-  var UserTab = function() {
+  var UserView = function() {
+    var initialized = false;
     function init() {
       $('#user_list').dataTable( {
         bServerSide: true,
@@ -17,9 +18,11 @@
               $.each(row.groups, function(i, group) {
                 group_names.push(group.name);
               });
+              /*
               if (row.is_superuser) {
                 group_names.push('superusers')
               }
+              */
               row.groups = group_names.join(",");
               row.buttons = "";
             });
@@ -62,7 +65,8 @@
           "Create": function() {
             var dialog = $(this);
             var user = {}
-            user.groups = [{pk: $('#create_user_dialog select[name=group]').val()}]
+            //user.groups = [{pk: $('#create_user_dialog select[name=group]').val()}]
+            user.groups = [$('#create_user_dialog select[name=group]').val()]
 
             ValidatedForm.save(dialog, Api.post, "user/", user, function ()
             {
@@ -75,15 +79,19 @@
 
       Api.get("group/", {limit: 0}, success_callback = function(data) {
         $.each(data.objects, function(i, group) {
-          var option = "<option value='" + group.id + "'>"+ group.name + "</option>";
+          var option = "<option value='" + group.resource_uri + "'>"+ group.name + "</option>";
           $('#create_user_dialog select[name=group]').prepend(option)
         });
+      });
+
+      $('#create_user').click(function() {
+        UserView.create()
       });
     }
 
     function createUser()
     {
-      ValidatedForm.clear($('#create_user_dialog input'))
+      ValidatedForm.clear($('#create_user_dialog'))
       $('#create_user_dialog').dialog('open');
     }
 
@@ -108,20 +116,21 @@
       $('#user_list').dataTable().fnDraw();
     }
 
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+        reloadTable();
+      }
+    }
+
     return {
-      init: init,
+      draw: draw,
       create: createUser,
       refresh: reloadTable
     }
   }();
-
-  $(document).ready(function() {
-    UserTab.init()
-
-    $('#create_user').click(function() {
-      UserTab.create()
-    });
-  });
 </script>
 
 <h2 class='section_header'>User administration</h2>

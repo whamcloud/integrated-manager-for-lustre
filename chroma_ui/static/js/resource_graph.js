@@ -17,7 +17,7 @@ function render_resource_graph(container, graph) {
           markup += "<span class='block_title'>" + node.type + "</span><br>"
         markup += "</div>"
         markup += "<span class='block_body'>"
-            markup += "<a href='/ui/configure/#storage_resource_" + node.id + "'>" + node.title + "</a>"
+            markup += "<a href='/configure/#storage_resource_" + node.id + "'>" + node.title + "</a>"
         markup += "</span>"
     markup += "</div>"
 

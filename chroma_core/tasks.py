@@ -153,12 +153,14 @@ def notify_state(content_type, object_id, new_state, from_states):
 
 
 @task(base = RetryOnSqlErrorTask)
-@timeit(logger=job_log)
-def set_state(content_type, object_id, new_state, command_id):
-    """content_type: a ContentType natural key tuple
-       object_id: the pk of a StatefulObject instance
-       new_state: the string of a state in the StatefulObject's states attribute"""
-    # This is done in an async task for two reasons:
+def command_set_state(object_ids, message):
+    """object_ids must be a list of 3-tuples of CT natural key, object PK, state"""
+    from django.contrib.contenttypes.models import ContentType
+
+    from chroma_core.models import Command
+    from chroma_core.lib.state_manager import StateManager
+
+    # StateManager.set_state is invoked in an async task for two reasons:
     #  1. At time of writing, StateManager.set_state's logic is not safe against
     #     concurrent runs that might schedule multiple jobs for the same objects.
     #     Submitting to a single-worker queue is a simpler and more efficient
@@ -174,12 +176,14 @@ def set_state(content_type, object_id, new_state, command_id):
     #      built from introspecting StatefulObject and StateChangeJob classes,
     #      and a long-lived worker process keeps those in memory for you.
 
-    from django.contrib.contenttypes.models import ContentType
-    model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
-    instance = model_klass.objects.get(pk = object_id)
+    with transaction.commit_on_success():
+        command = Command.objects.create(message = message)
+        for ct_nk, o_pk, state in object_ids:
+            model_klass = ContentType.objects.get_by_natural_key(*ct_nk).model_class()
+            instance = model_klass.objects.get(pk = o_pk)
+            StateManager().set_state(instance, state, command.id)
 
-    from chroma_core.lib.state_manager import StateManager
-    StateManager()._set_state(instance, new_state, command_id)
+    return command.id
 
 
 @task(base = RetryOnSqlErrorTask)
@@ -331,8 +335,9 @@ def audit_all():
 @periodic_task(run_every=timedelta(seconds=settings.AUDIT_PERIOD))
 def parse_log_entries():
     from chroma_core.lib.systemevents import SystemEventsAudit
-    audit_log.info("parse_log_entries: running")
-    SystemEventsAudit().parse_log_entries()
+    parsed_count = SystemEventsAudit().parse_log_entries()
+    if parsed_count:
+        audit_log.debug("parse_log_entries: parsed %d lines" % parsed_count)
 
 
 @periodic_task(run_every=timedelta(seconds=settings.AUDIT_PERIOD))
