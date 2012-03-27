@@ -17,7 +17,7 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
-Requires: python-simplejson python-argparse avahi-python python-daemon python-setuptools libxml2-python
+Requires: python-simplejson python-argparse avahi-python python-daemon python-setuptools
 %if 0%{?rhel} > 5
 Requires: avahi-dnsconfd
 %endif
@@ -29,7 +29,7 @@ This is the Whamcloud Monitoring and Adminstration Agent
 Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
-Requires: %{name} = %{version} rsyslog pacemaker 
+Requires: %{name} = %{version} rsyslog pacemaker libxml2-python
 %if 0%{?rhel} > 5
 Requires: fence-agents
 %endif
