@@ -71,8 +71,9 @@ def get_resource_locations():
     else:
         lines = stdout.strip().split("\n")
         for line in lines:
-            resource_name = line.strip()
-            locations[resource_name] = get_resource_location(resource_name)
+            [resource_name, resource_type] = line.strip().split("\t")
+            if resource_type.startswith("(ocf::hydra:Target)"):
+                locations[resource_name] = get_resource_location(resource_name)
 
     return locations
 
