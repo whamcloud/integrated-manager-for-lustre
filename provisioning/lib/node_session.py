@@ -7,13 +7,14 @@ from fabric.operations import run
 import time
 import datetime
 
-class Ec2Session(object):
+
+class NodeSession(object):
     """Wait for an EC2 instance to be in a ready state and SSH-contactable,
     then provide the fabric parameters for running shell operations on it"""
-    def __init__(self, instance_settings, instance_id):
+    def __init__(self, node):
+        self.node = node
         conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
-        self.settings = instance_settings
-        reservations = conn.get_all_instances([instance_id])
+        reservations = conn.get_all_instances([node.ec2_id])
         assert(len(reservations) == 1)
         instance = reservations[0].instances[0]
 
@@ -21,14 +22,14 @@ class Ec2Session(object):
         while instance.state_code == 0:
             print "%s Waiting (state %s)..." % (datetime.datetime.now(), instance.state_code)
             time.sleep(10)
-            reservations = conn.get_all_instances([instance_id])
+            reservations = conn.get_all_instances([node.ec2_id])
             assert(len(reservations) == 1)
             instance = reservations[0].instances[0]
 
         self.instance = instance
 
         if instance.state_code != 16:
-            raise RuntimeError("Instance %s has bad state code %s" % (instance_id, instance.state_code))
+            raise RuntimeError("Instance %s has bad state code %s" % (node.ec2_id, instance.state_code))
 
         with self.fabric_settings():
             from fabric.exceptions import NetworkError
@@ -39,12 +40,12 @@ class Ec2Session(object):
                     connected = True
                     print "%s Connected" % (datetime.datetime.now())
                 except NetworkError:
-                    print "%s Connecting..." % (datetime.datetime.now())
+                    print "%s Connecting to %s..." % (datetime.datetime.now(), node.ec2_id)
                     time.sleep(10)
 
     def fabric_settings(self):
         return fabric.context_managers.settings(
-            user = self.settings['username'],
+            user = self.node.username,
             key_filename = [settings.AWS_SSH_PRIVATE_KEY],
             host_string = self.instance.ip_address)
 

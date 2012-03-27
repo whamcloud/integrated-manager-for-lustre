@@ -3,12 +3,15 @@ from django.db import models
 import settings
 
 from boto.ec2.connection import EC2Connection
+from provisioning.lib.node_session import NodeSession
 
-class Ec2Instance(models.Model):
+class Node(models.Model):
     ec2_id = models.CharField(max_length = 10, unique = True)
+    username = models.CharField(max_length = 25, default = "root")
+    name = models.CharField(max_length = 20)
 
     @classmethod
-    def create(cls, instance_settings):
+    def create(cls, instance_settings, name):
         conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
 
         reservation = conn.run_instances(
@@ -19,32 +22,42 @@ class Ec2Instance(models.Model):
 
         instance = reservation.instances[0]
 
-        obj = Ec2Instance(ec2_id = instance.id)
+        obj = Node(ec2_id = instance.id, username=instance_settings['username'], name = name)
         obj.save()
         return obj
+
+    def get_session(self):
+        return NodeSession(self)
+
 
 class ChromaManager(models.Model):
-    ec2_instance = models.ForeignKey(Ec2Instance, unique = True)
+    node = models.ForeignKey(Node, unique = True, null = True)
 
     @classmethod
-    def create(cls):
-        ec2_instance = Ec2Instance.create(settings.CHROMA_MANAGER)
-        obj = ChromaManager(ec2_instance = ec2_instance)
+    def create(cls, name):
+        node = Node.create(settings.CHROMA_MANAGER, name)
+        obj = ChromaManager(node = node)
         obj.save()
         return obj
 
-class ChromaAppliance(models.Model):
-    ec2_instance = models.ForeignKey(Ec2Instance, unique = True)
+    def get_session(self):
+        return self.node.get_session()
 
+
+class ChromaAppliance(models.Model):
+    node = models.ForeignKey(Node, unique = True, null = True)
     chroma_manager = models.ForeignKey(ChromaManager)
 
     @classmethod
-    def create(cls, manager):
-        ec2_instance = Ec2Instance.create(settings.CHROMA_APPLIANCE)
-        obj = ChromaAppliance(ec2_instance = ec2_instance, chroma_manager = manager)
+    def create(cls, manager, name):
+        node = Node.create(settings.CHROMA_APPLIANCE, name)
+        obj = ChromaAppliance(node = node, chroma_manager = manager)
         obj.save()
         return obj
 
+    def get_session(self):
+        return self.node.get_session()
+    
 class ChromaFilesystem(models.Model):
     name = models.CharField(max_length = 8)
     chroma_manager = models.ForeignKey(ChromaManager)
