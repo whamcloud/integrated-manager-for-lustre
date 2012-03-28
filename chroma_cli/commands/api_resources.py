@@ -126,6 +126,10 @@ def dispatch(config, parser, namespace):
     if (namespace.verb not in endpoint.verbs + [None]
             and len(namespace.args) == 1):
         import re
+
+        # Create a map for transition verb -> transition state
+        setattr(namespace, 'states', {})
+
         # We might be dealing with a non-CRUD verb (e.g. a transition
         # like "stop", or "remove".  This is a little awkward, but we'll
         # make it work like other verbs, mostly.
@@ -142,7 +146,7 @@ def dispatch(config, parser, namespace):
                                str(re.sub(r'\s+', '_', t['verb'].lower())))
                 p = subparsers.add_parser(verb)
                 p.add_argument("id", type=int)
-                namespace.__dict__['new_state'] = str(state)
+                namespace.states[verb] = state
         except AttributeError:
             pass
 
@@ -168,7 +172,8 @@ def dispatch(config, parser, namespace):
             resources = [resources]
     except KeyError:
         # Maybe a state transition?
-        resources = endpoint.update(id=ns.id, state=ns.new_state, dry_run=False)
+        resources = endpoint.update(id=ns.id, state=ns.states[ns.verb],
+                                    dry_run=False)
 
     # peel off the commands
     commands = [resources.pop(resources.index(res)) for res
