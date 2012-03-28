@@ -22,12 +22,26 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
-Requires: Django >= 1.3 mod_wsgi httpd python-dateutil python-uuid python-multiprocessing python-paramiko python-kombu >= 1.5.1 django-celery rsyslog-mysql mysql-server MySQL-python >= 1.2.1p2 rabbitmq-server django-picklefield python-amqplib django-piston django-r3d avahi-dnsconfd avahi-python python-daemon pygobject2 python-celery >= 2.4.5 django-tastypie python-setuptools
+Requires: Django >= 1.3 mod_wsgi httpd python-dateutil python-uuid python-multiprocessing python-paramiko python-kombu >= 1.5.1 django-celery rsyslog-mysql mysql-server MySQL-python >= 1.2.1p2 rabbitmq-server django-picklefield python-amqplib django-piston django-r3d avahi-dnsconfd avahi-python python-daemon pygobject2 python-celery >= 2.4.5 django-tastypie python-setuptools hydra-server-libs = %{version}
 Conflicts: hydra-agent
 Requires(post): selinux-policy-targeted
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
+
+%package libs
+Summary: Common libraries for Chroma Server
+Group: System/Libraries
+%description libs
+This package contains libraries for Chroma CLI and Chroma Server.
+
+%package cli
+Summary: Command-Line Interface for Chroma Server
+Group: System/Utility
+Requires: hydra-server-libs = %{version} python-argparse python-requests python-tablib
+%description cli
+This package contains the Chroma CLI which can be used on a Chroma server
+or on a separate node.
 
 %prep
 %setup -n %{name}-%{unmangled_version}
@@ -124,8 +138,6 @@ fi
 %defattr(-,root,root)
 %{_bindir}/hydra-host-discover
 %{_bindir}/chroma-config
-%{_bindir}/chroma
-%{python_sitelib}/*.egg-info/*
 %dir %attr(0755,apache,apache)/usr/share/hydra-server
 /usr/share/hydra-server/*
 /etc/httpd/conf.d/hydra-server.conf
@@ -134,3 +146,14 @@ fi
 %attr(0755,root,root)/etc/init.d/hydra-host-discover
 %attr(0644,root,root)/etc/logrotate.d/hydra-server
 %attr(0755,root,root)/usr/share/hydra-server/manage.py
+# Stuff below goes into the -cli/-lib packages
+%exclude /usr/share/hydra-server/chroma_cli
+%exclude %{python_sitelib}/*.egg-info/
+
+%files libs
+%{python_sitelib}/*.egg-info/*
+
+%files cli
+%defattr(-,root,root)
+%{_bindir}/chroma
+/usr/share/hydra-server/chroma_cli/*
