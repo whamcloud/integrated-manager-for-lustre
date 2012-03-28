@@ -4,6 +4,7 @@
 # ==============================
 
 from django.db import models
+from django.db.models import Q
 
 from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState, AlertEvent
@@ -246,7 +247,13 @@ class StorageResourceStatistic(models.Model):
                     time = SimpleHistoStoreTime.objects.create(time = ts, storage_resource_statistic = self)
                     for i in range(0, len(stat_properties.bins)):
                         SimpleHistoStoreBin.objects.create(bin_idx = i, value = bin_vals[i], histo_store_time = time)
+                    # Only keep latest time
+                    SimpleHistoStoreTime.objects.filter(~Q(id = time.id), storage_resource_statistic = self).delete()
         else:
+            # FIXME: I should be allowed to store integers
+            for i in stat_data:
+                i['value'] = float(i['value'])
+
             self.metrics.update(stat_name, stat_properties, stat_data)
 
 

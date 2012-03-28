@@ -21,6 +21,13 @@ class DiskDrive(StorageResource):
     read_bytes_sec = statistics.Gauge(units = "B/s", label = "Read bandwidth")
     write_bytes_sec = statistics.Counter(units = "B/s", label = "Write bandwidth")
 
+    charts = [
+        {
+            'title': "Bandwidth",
+            'series': ['read_bytes_sec', 'write_bytes_sec']
+        }
+    ]
+
 
 class TestPlugin(StoragePlugin):
     def initial_scan(self, controller):

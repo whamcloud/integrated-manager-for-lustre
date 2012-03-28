@@ -78,11 +78,17 @@ class PluginSession(threading.Thread):
             storage_plugin_log.debug("Session %s: >>initial_scan" % self.root_resource_id)
             instance.do_initial_scan()
             self.initialized = True
-            StorageResourceOffline.notify(record, False)
             storage_plugin_log.debug("Session %s: <<initial_scan" % self.root_resource_id)
+            first_update = True
             while not self.stopping:
                 storage_plugin_log.debug("Session %s: >>periodic_update (%s)" % (self.root_resource_id, instance.update_period))
                 instance.do_periodic_update()
+                if first_update:
+                    # NB don't mark something as online until the first update has completed, to avoid
+                    # flapping if something has a working initial_scan and a failing update_scan
+                    StorageResourceOffline.notify(record, False)
+                    first_update = False
+
                 storage_plugin_log.debug("Session %s: <<periodic_update" % self.root_resource_id)
 
                 i = 0

@@ -45,104 +45,56 @@ function populate_graph(element_id, chart_info, stat_infos) {
   var unit_name = stat_infos[0].data.unit_name;
   var bin_labels = stat_infos[0].data.bin_labels;
   var enable_legend = stat_infos.length > 1;
-  if (type == 'histogram') {
-      var series = [];
-      $.each(stat_infos, function(i, stat_info) {
-        series.push({
-          data: stat_info.data.values,
-          name: stat_info.label,
-          type: 'scatter',
-          color: colors[i]
-        });
-        series.push({
-          data: stat_info.data.values,
-          name: stat_info.label,
-          type: 'areaspline',
-          color: colors[i],
-          showInLegend: false
-        });
-      });
-      opts = {
-          chart: {
-              renderTo:element_id,
-              type: 'column'
-          },
-          credits: {enabled: false},
-          title: {text: chart_info.title},
-          legend: {enabled: enable_legend},
-          yAxis: {
-              'labels': {enabled: true},
-              'title': {text: null},
-              'gridLineWidth': 0
-          },
-          xAxis: {
-              categories: bin_labels,
-              labels: {style: "font-size: 6pt;", rotation: 90, align: "left", enabled: false},
+  var series = [];
+  $.each(stat_infos, function(i, stat_info) {
+    series.push({
+      data: stat_info.data.values,
+      name: stat_info.label,
+      type: 'scatter',
+      color: colors[i]
+    });
+    series.push({
+      data: stat_info.data.values,
+      name: stat_info.label,
+      type: 'areaspline',
+      color: colors[i],
+      showInLegend: false
+    });
+  });
+  opts = {
+      chart: {
+          renderTo:element_id,
+          type: 'column'
+      },
+      credits: {enabled: false},
+      title: {text: chart_info.title},
+      legend: {enabled: enable_legend},
+      yAxis: {
+          'labels': {enabled: true},
+          'title': {text: null},
+          'gridLineWidth': 0
+      },
+      xAxis: {
+          categories: bin_labels,
+          labels: {style: "font-size: 6pt;", rotation: 90, align: "left", enabled: false},
 
+      },
+      series: series,
+      plotOptions: {
+          'column': {
+              'shadow': false,
+              'pointPadding': 0.0,
+              'groupPadding': 0.0,
           },
-          series: series,
-          plotOptions: {
-              'column': {
-                  'shadow': false,
-                  'pointPadding': 0.0,
-                  'groupPadding': 0.0,
-              },
-              areaspline: {
-                marker: {enabled: false},
-                lineWidth: 1,
-                fillOpacity: 0.25,
-                shadow: false
-              }
+          areaspline: {
+            marker: {enabled: false},
+            lineWidth: 1,
+            fillOpacity: 0.25,
+            shadow: false
           }
       }
-  } else if (type == 'timeseries') {
-    var yAxes = [];
-    var unit_to_axis = [];
-    $.each(stat_infos, function(i, stat_info) {
-      if (unit_to_axis[stat_info.data.unit_name] == null) {
-        var axis = {
-          labels: {enabled: true},
-          title: {text: stat_info.data.unit_name},
-          min: 0,
-          opposite: (yAxes.length % 2)
-        }
-        yAxes.push(axis);
-        unit_to_axis[stat_info.data.unit_name] = yAxes.length - 1;
-      }
-    });
-
-
-    var series = [];
-    $.each(stat_infos, function(i, stat_info) {
-      series.push({
-        data: stat_info.data.data_points,
-        name: stat_info.label,
-        yAxis: unit_to_axis[stat_info.data.unit_name]
-      });
-    });
-
-    opts = {
-        chart: {
-            renderTo:element_id,
-            type: 'line'
-        },
-        credits: {enabled: false},
-        title: {text: chart_info.title},
-        legend: {enabled: enable_legend},
-        yAxis: yAxes,
-        xAxis: {
-            type: 'datetime'
-        },
-        series: series,
-        plotOptions: {
-          line: {lineWidth: 1,
-                 marker: {enabled: false},
-                 shadow: false
-                }
-        }
-    }
-
   }
+
   chart = new Highcharts.Chart(opts);
 }
 
@@ -200,17 +152,43 @@ function load_resource(resource) {
 
   chart_manager = ChartManager({chart_group: 'storage_resource_dialog'});
   $.each(resource.charts, function(i, chart_info) {
+    $('#' + chart_element_id[i]).css("width", "300px");
+    $('#' + chart_element_id[i]).css("height", "200px");
+
     var stat_infos = [];
+    var is_histogram = false;
+    var missing_stats = false;
     $.each(chart_info.series, function(j, stat_name) {
-      stat_infos.push(resource.stats[stat_name]);
+      var stat_info = resource.stats[stat_name];
+      if (!stat_info) {
+        missing_stats = true;
+        return;
+      }
+
+      stat_infos.push(stat_info);
+      if (stat_info.type == 'histogram') {
+        is_histogram = true;
+      }
     });
-    if (_.include(stat_infos, undefined)) {
-      // One or more of the required statistics was not available
-      // TODO: handle this case (waiting revising this code for HYD-642)
+
+    if (missing_stats) {
+      // One or more series was unavailable, give up.
+      console.log(chart_info);
+      console.log(resource.stats);
+      return;
+    }
+
+    var enable_legend = stat_infos.length > 1;
+
+    if (is_histogram) {
+      // For histogram charts, we generate our own static graph
+        populate_graph(chart_element_id[i], chart_info, stat_infos);
     } else {
+      // For time series charts, we use ChartManager
       var yAxes = [];
       var unit_to_axis = [];
       var series = [];
+      var metrics = [];
       $.each(stat_infos, function(i, stat_info) {
         series.push({'name': stat_info.label});
         if (unit_to_axis[stat_info.unit_name] == null) {
@@ -223,22 +201,12 @@ function load_resource(resource) {
           yAxes.push(axis);
           unit_to_axis[stat_info.unit_name] = yAxes.length - 1;
         }
+        metrics.push(stat_info.name)
       });
-      $('#' + chart_element_id[i]).css("width", "300px");
-      $('#' + chart_element_id[i]).css("height", "200px");
-      var enable_legend = stat_infos.length > 1;
       chart_manager.add_chart(chart_element_id[i], 'storage_resource_dialog',
         {
           url: resource.resource_uri + "metric/",
-          metrics: ['rx_bytes', 'tx_bytes'],
-          series_callbacks: [
-            function(timestamp, data, index, chart) {
-              chart.series_data[index].push([timestamp, data.rx_bytes])
-            },
-            function(timestamp, data, index, chart) {
-              chart.series_data[index].push([timestamp, data.tx_bytes])
-            }
-          ],
+          metrics: metrics,
           chart_config: {
             chart: {
                 type: 'line',
@@ -253,13 +221,6 @@ function load_resource(resource) {
             series: series
         }
       });
-      /*
-      if (stat_infos[0].data != null) {
-        populate_graph(chart_element_id[i], chart_info, stat_infos);
-      } else {
-
-      }
-      */
     }
   });
   chart_manager.init();
