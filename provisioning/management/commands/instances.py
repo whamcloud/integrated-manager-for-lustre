@@ -37,8 +37,11 @@ class Command(BaseCommand):
         elif args[0] == 'ssh':
             manager_id = int(args[1])
             manager = ChromaManager.objects.get(id = manager_id)
-            with manager.get_session().fabric_settings():
-                open_shell()
+            session = manager.get_session()
+            import os
+            SSH_BIN = "/usr/bin/ssh"
+            os.execvp(SSH_BIN, ["ssh", "-i", settings.AWS_SSH_PRIVATE_KEY, 
+                                "%s@%s" % (manager.node.username, session.instance.ip_address)])
 
             
                 
