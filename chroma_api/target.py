@@ -4,6 +4,7 @@
 # ==============================
 
 import settings
+from collections import defaultdict
 
 from django.shortcuts import get_object_or_404
 from django.db import transaction
@@ -15,8 +16,10 @@ from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTarget
 import tastypie.http as http
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
+from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
+from chroma_api.fuzzy_lookups import FuzzyLookupFailed, FuzzyLookupException, target_vol_data
 
 # Some lookups for the three 'kind' letter strings used
 # by API consumers to refer to our target types
@@ -25,6 +28,18 @@ KIND_TO_KLASS = {"MGT": ManagedMgs,
             "MDT": ManagedMdt}
 KLASS_TO_KIND = dict([(v, k) for k, v in KIND_TO_KLASS.items()])
 KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.items()])
+
+
+class TargetValidation(Validation):
+    def is_valid(self, bundle, request=None):
+        errors = {}
+
+        try:
+            errors.update(bundle.data_errors)
+        except AttributeError:
+            pass
+
+        return errors
 
 
 class TargetResource(MetricResource, ConfParamResource):
@@ -55,6 +70,8 @@ class TargetResource(MetricResource, ConfParamResource):
     active_host_uri = fields.CharField(null = True, help_text = "URI to the host on which\
             this target is currently started")
 
+    volumes = fields.ListField(help_text = "A list of target volumes (e.g. primary:/path/to/device[,failover:/path/to/device,failover...])")
+
     def content_type_id_to_kind(self, id):
         if not hasattr(self, 'CONTENT_TYPE_ID_TO_KIND'):
             self.CONTENT_TYPE_ID_TO_KIND = dict([(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()])
@@ -71,6 +88,8 @@ class TargetResource(MetricResource, ConfParamResource):
         ordering = ['lun_name', 'name']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
+        validation = TargetValidation()
+        readonly = ['active_host_uri', 'failover_server_name', 'lun_name', 'primary_server_name', 'active_host_name', 'filesystems', 'name', 'uuid']
 
     def override_urls(self):
         urls = super(TargetResource, self).override_urls()
@@ -125,6 +144,41 @@ class TargetResource(MetricResource, ConfParamResource):
         else:
             return None
 
+    def dehydrate_volumes(self, bundle):
+        # TODO: This could be more useful as an information-rich field
+        return []
+
+    def hydrate_lun_ids(self, bundle):
+        if 'lun_ids' in bundle.data:
+            return bundle
+
+        try:
+            bundle.data['lun_ids'] = []
+            for volume_str in bundle.data['volumes']:
+                # TODO: Actually use the supplied primary/failover information
+                (primary, failover_list, lun_id) = target_vol_data(volume_str)
+                bundle.data['lun_ids'].append(lun_id)
+        except KeyError:
+            bundle.data_errors['volumes'].append("volumes is required if lun_ids is not present")
+        except (FuzzyLookupFailed, FuzzyLookupException), e:
+            bundle.data_errors['volumes'].append(str(e))
+
+        return bundle
+
+    def hydrate_filesystem_id(self, bundle):
+        if 'filesystem_id' in bundle.data:
+            return bundle
+
+        try:
+            bundle.data['filesystem_id'] = ManagedFilesystem.objects.get(name=bundle.data['filesystem_name']).pk
+        except KeyError:
+            # Filesystem isn't always required -- could be a MGT
+            pass
+        except ManagedFilesystem.DoesNotExist:
+            bundle.data_errors['filesystem_name'].append("Unknown filesystem: %s" % bundle.data['filesystem_name'])
+
+        return bundle
+
     def build_filters(self, filters = None):
         """Override this to convert a 'kind' argument into a DB field which exists"""
         custom_filters = {}
@@ -158,27 +212,46 @@ class TargetResource(MetricResource, ConfParamResource):
         return objects
 
     def obj_create(self, bundle, request = None, **kwargs):
+        # Set up an errors dict in the bundle to allow us to carry
+        # hydration errors through to validation.
+        setattr(bundle, 'data_errors', defaultdict(list))
+
+        # As with the Filesystem resource, full_hydrate() doesn't make sense
+        # for our customized Target resource.  As a convention, we'll
+        # abstract the logic for mangling the incoming bundle data into
+        # hydrate_FIELD methods and call them by hand.
+        for field in ['lun_ids', 'filesystem_id']:
+            method = getattr(self, "hydrate_%s" % field, None)
+
+            if method:
+                bundle = method(bundle)
+
         kind = bundle.data['kind']
         if not kind in KIND_TO_KLASS:
-            raise custom_response(self, request, http.HttpBadRequest, {})
+            bundle.data_errors['kind'].append("Invalid target type '%s' (choose from [%s])" % (kind, ",".join(KIND_TO_KLASS.keys())))
 
         lun_ids = bundle.data['lun_ids']
         filesystem_id = bundle.data.get('filesystem_id', None)
 
-        # TODO: move validation into a proper tastypie Validation() object (thereby
-        # get proper response instead of 500s
+        # Should really only be doing one validation pass, but this works
+        # OK for now.  It's better than raising a 404 or duplicating the
+        # filesystem validation failure if it doesn't exist, anyhow.
+        self.is_valid(bundle, request)
+
         if KIND_TO_KLASS[kind] == ManagedMgs and filesystem_id:
-            raise ValueError("Cannot specify filesystem_id creating MGTs")
+            bundle.data_errors['filesystem_id'].append("Cannot specify filesystem_id when creating MGTs")
         elif KIND_TO_KLASS[kind] == ManagedMdt:
-            raise ValueError("Cannot create MDTs independently of filesystems")
+            bundle.data_errors['kind'].append("Cannot create MDTs independently of filesystems")
         elif len(lun_ids) < 1:
-            raise ValueError("Require at least one LUN to create a target")
+            bundle.data_errors['volumes'].append("Require at least one LUN to create a target")
 
         if KIND_TO_KLASS[kind] == ManagedOst:
             fs = ManagedFilesystem.objects.get(id=filesystem_id)
             create_kwargs = {'filesystem': fs}
         elif kind == "MGT":
             create_kwargs = {'name': 'MGS'}
+
+        self.is_valid(bundle, request)
 
         targets = []
         with transaction.commit_on_success():

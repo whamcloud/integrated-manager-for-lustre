@@ -196,10 +196,11 @@ class StoragePluginManager(object):
 
         # Hook in a logger to the StoragePlugin subclass
         import logging
+        import logging.handlers
         import os
         import settings
         log = logging.getLogger("storage_plugin_log_%s" % module)
-        handler = logging.FileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
+        handler = logging.handlers.WatchedFileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
         handler.setFormatter(logging.Formatter("[%%(asctime)s: %%(levelname)s/%s] %%(message)s" % module, '%d/%b/%Y:%H:%M:%S'))
         log.addHandler(handler)
         if module in settings.STORAGE_PLUGIN_DEBUG_PLUGINS or settings.STORAGE_PLUGIN_DEBUG:

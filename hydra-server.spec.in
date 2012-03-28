@@ -2,6 +2,7 @@
 %define version @VERSION@
 %define unmangled_version @VERSION@
 %define release @RELEASE@
+%{?!python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 Summary: The Whamcloud Lustre Monitoring and Adminisration Interface
 Name: %{name}
@@ -12,6 +13,7 @@ Source1: hydra-server.conf
 Source2: hydra-worker-init.sh
 Source3: hydra-storage-init.sh
 Source4: hydra-host-discover-init.sh
+Source5: logrotate.cfg
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -20,27 +22,66 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
-Requires: Django >= 1.3 mod_wsgi httpd python-dateutil python-uuid python-multiprocessing python-paramiko python-kombu >= 1.5.1 django-celery rsyslog-mysql mysql-server MySQL-python >= 1.2.1p2 rabbitmq-server django-picklefield python-amqplib django-piston django-r3d avahi-dnsconfd avahi-python python-daemon pygobject2 python-celery >= 2.4.5 django-tastypie python-setuptools
+Requires: Django >= 1.3 mod_wsgi httpd python-dateutil python-uuid python-multiprocessing python-paramiko python-kombu >= 1.5.1 django-celery rsyslog-mysql mysql-server MySQL-python >= 1.2.1p2 rabbitmq-server django-picklefield python-amqplib django-piston django-r3d avahi-dnsconfd avahi-python python-daemon pygobject2 python-celery >= 2.4.5 django-tastypie python-setuptools hydra-server-libs = %{version}
 Conflicts: hydra-agent
 Requires(post): selinux-policy-targeted
 
 %description
 This is the Whamcloud Monitoring and Adminstration Interface
 
+%package libs
+Summary: Common libraries for Chroma Server
+Group: System/Libraries
+%description libs
+This package contains libraries for Chroma CLI and Chroma Server.
+
+%package cli
+Summary: Command-Line Interface for Chroma Server
+Group: System/Utility
+Requires: hydra-server-libs = %{version} python-argparse python-requests python-tablib
+%description cli
+This package contains the Chroma CLI which can be used on a Chroma server
+or on a separate node.
+
 %prep
 %setup -n %{name}-%{unmangled_version}
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 
 %build
-python setup.py build
+%{__python} setup.py build
+# workaround setuptools inanity for top-level datafiles
+cp -a monitor.wsgi build/lib
 
 %install
-make install DESTDIR=$RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/etc/{init,httpd/conf}.d
+%{__python} setup.py install --skip-build --root=%{buildroot}
+install -d -p $RPM_BUILD_ROOT/usr/share/hydra-server
+mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT/usr/share/hydra-server
+# Do a little dance to get the egg-info in place
+mv $RPM_BUILD_ROOT/usr/share/hydra-server/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
+# This storage_daemon script should probably be modified to run out
+# of /usr/bin like the others...
+install -d -p $RPM_BUILD_ROOT/usr/share/hydra-server/chroma_core/bin
+mv $RPM_BUILD_ROOT/usr/bin/storage_daemon $RPM_BUILD_ROOT/usr/share/hydra-server/chroma_core/bin
+mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,httpd/conf}.d
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d/hydra-server.conf
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/hydra-worker
 cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/hydra-storage
 cp %{SOURCE4} $RPM_BUILD_ROOT/etc/init.d/hydra-host-discover
+install -m 644 %{SOURCE5} $RPM_BUILD_ROOT/etc/logrotate.d/hydra-server
+
+
+# This is fugly, but it's cleaner than moving things around to get our
+# modules in the standard path.
+entry_scripts="/usr/bin/chroma"
+for script in $entry_scripts; do
+  ed $RPM_BUILD_ROOT$script <<EOF
+/import load_entry_point/ a
+sys.path.insert(0, "/usr/share/hydra-server")
+.
+w
+q
+EOF
+done
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -103,3 +144,16 @@ fi
 %attr(0755,root,root)/etc/init.d/hydra-worker
 %attr(0755,root,root)/etc/init.d/hydra-storage
 %attr(0755,root,root)/etc/init.d/hydra-host-discover
+%attr(0644,root,root)/etc/logrotate.d/hydra-server
+%attr(0755,root,root)/usr/share/hydra-server/manage.py
+# Stuff below goes into the -cli/-lib packages
+%exclude /usr/share/hydra-server/chroma_cli
+%exclude %{python_sitelib}/*.egg-info/
+
+%files libs
+%{python_sitelib}/*.egg-info/*
+
+%files cli
+%defattr(-,root,root)
+%{_bindir}/chroma
+/usr/share/hydra-server/chroma_cli/*

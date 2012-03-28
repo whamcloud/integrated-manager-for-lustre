@@ -16,10 +16,11 @@ setup_environ(settings)
 
 from chroma_core.models import ManagedHost, ManagedMdt, ManagedOst, ManagedMgs, ManagedFilesystem, Monitor
 
-from logging import getLogger, FileHandler, INFO
+from logging import getLogger, INFO
+from logging.handlers import WatchedFileHandler
 file_log_name = __name__
 getLogger(file_log_name).setLevel(INFO)
-getLogger(file_log_name).addHandler(FileHandler("%s.log" % 'debug'))
+getLogger(file_log_name).addHandler(WatchedFileHandler("%s.log" % 'debug'))
 
 
 def log():
