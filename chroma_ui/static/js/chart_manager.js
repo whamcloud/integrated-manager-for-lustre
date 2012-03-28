@@ -53,7 +53,7 @@ var ChartModel = function(options) {
         series_data             : [],    // stores all series data here and updates to here
         series_id_to_index      : {},    // map our series key to highchart's index for the series
         series_callbacks        : null,    // list of callbacks for each series
-        status                  : 'idle', // 'idle', 'loading'
+        state                   : 'idle', // 'idle', 'loading'
         url                     : ''     // url of the metric api to get
     }, options || {});
 
@@ -170,13 +170,15 @@ var ChartManager = function(options) {
     var render_charts = function() {
         log('render_charts');
         _.each(config.charts[config.chart_group], function(chart,key) {
-            if (chart.enabled) {
+            if (chart.enabled && chart.state == 'idle') {
                 log('- rendering chart ' + key);
                 if (_.isNull(chart.instance) && !window.loaded) {
                   /* Because highcharts copies the size of its parent element when it's
                    * constructed, wait for the loading/sizing to happen before creating
                    * the chart */
+                  log(' waiting for window.load');
                   $(window).load(function() {
+                    log(' window loaded, rendering chart ' + key);
                     get_data(chart);
                   });
                 } else {
@@ -228,12 +230,12 @@ var ChartManager = function(options) {
           chart.instance.showLoading();
         }
 
-        chart.status = 'loading';
+        chart.state = 'loading';
         Api.get(
             chart.url,
             api_params,
             success_callback = function(data) {
-                chart.status = 'idle';
+                chart.state = 'idle';
                 if ( _.isObject(chart.instance) )
                     chart.instance.hideLoading();
 
