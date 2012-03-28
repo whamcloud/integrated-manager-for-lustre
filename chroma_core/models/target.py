@@ -312,14 +312,14 @@ class TargetRecoveryInfo(models.Model):
             data = json.loads(self.recovery_status)
         return ("status" in data and data["status"] == "RECOVERING")
 
-    def recovery_status_str(self):
-        data = json.loads(self.recovery_status)
-        if 'status' in data and data["status"] == "RECOVERING":
-            return "%s %ss remaining" % (data["status"], data["time_remaining"])
-        elif 'status' in data:
-            return data["status"]
-        else:
-            return "N/A"
+    #def recovery_status_str(self):
+    #    data = json.loads(self.recovery_status)
+    #    if 'status' in data and data["status"] == "RECOVERING":
+    #        return "%s %ss remaining" % (data["status"], data["time_remaining"])
+    #    elif 'status' in data:
+    #        return data["status"]
+    #    else:
+    #        return "N/A"
 
 
 class DeleteTargetStep(Step):
