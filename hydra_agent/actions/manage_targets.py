@@ -55,7 +55,7 @@ def get_resource_locations():
     """Parse `corosync status` to identify where (if anywhere)
        resources (i.e. targets) are running."""
     try:
-        rc, stdout, stderr = shell.run(['crm_resource', '-l'])
+        rc, stdout, stderr = shell.run(['crm', 'resource', 'list'])
     except OSError:
         # Probably we're on a server without corosync
         return None

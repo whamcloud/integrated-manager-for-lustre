@@ -19,6 +19,11 @@ def run(arg_list, shell = False):
     import os
     import select
 
+    # some tools ~cough~crm~cough~ like to prettify they output, even
+    # when they are not supposed to ~cough~-D~cough~ so let's not give
+    # them enough information to even try to prettify
+    os.environ["TERM"] = ""
+
     # Create a PTY in order to get libc in child processes
     # to use line-buffered instead of buffered mode on stdout
     master, slave = pty.openpty()
