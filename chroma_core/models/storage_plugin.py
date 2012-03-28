@@ -214,15 +214,6 @@ class SimpleHistoStoreTime(models.Model):
         app_label = 'chroma_core'
 
 
-class SimpleScalarStoreDatapoint(models.Model):
-    storage_resource_statistic = models.ForeignKey('StorageResourceStatistic')
-    time = models.PositiveIntegerField()
-    value = models.BigIntegerField()
-
-    class Meta:
-        app_label = 'chroma_core'
-
-
 class StorageResourceStatistic(models.Model):
     class Meta:
         unique_together = ('storage_resource', 'name')
@@ -246,6 +237,7 @@ class StorageResourceStatistic(models.Model):
     def update(self, stat_name, stat_properties, stat_data):
         from chroma_core.lib.storage_plugin import statistics
         if isinstance(stat_properties, statistics.BytesHistogram):
+            # Histograms
             for dp in stat_data:
                 ts = dp['timestamp']
                 bin_vals = dp['value']
@@ -255,68 +247,7 @@ class StorageResourceStatistic(models.Model):
                     for i in range(0, len(stat_properties.bins)):
                         SimpleHistoStoreBin.objects.create(bin_idx = i, value = bin_vals[i], histo_store_time = time)
         else:
-            for dp in stat_data:
-                ts = dp['timestamp']
-                val = dp['value']
-                SimpleScalarStoreDatapoint.objects.create(
-                        time = ts,
-                        value = val,
-                        storage_resource_statistic = self)
-        #self.metrics.update(stat_name, stat_properties, stat_data)
-
-    def to_dict(self):
-        """For use with frontend.  Get a time series for scalars or a snapshot for histograms.
-        TODO: generalisation for explorable graphs, variable time series, that
-        should be done in common with the lustre graphs."""
-        from django.db import transaction
-        stat_props = self.storage_resource.get_statistic_properties(self.name)
-        from chroma_core.lib.storage_plugin import statistics
-        if isinstance(stat_props, statistics.BytesHistogram):
-            with transaction.commit_manually():
-                transaction.commit()
-                try:
-                    time = SimpleHistoStoreTime.objects.filter(storage_resource_statistic = self).latest('time')
-                    bins = SimpleHistoStoreBin.objects.filter(histo_store_time = time).order_by('bin_idx')
-                finally:
-                    transaction.commit()
-            type_name = 'histogram'
-            # Composite type
-            data = {'bin_labels': [], 'values': []}
-            for i in range(0, len(stat_props.bins)):
-                bin_info = u"\u2264%s" % stat_props.bins[i][1]
-                data['bin_labels'].append(bin_info)
-                data['values'].append(bins[i].value)
-        else:
-            with transaction.commit_manually():
-                transaction.commit()
-                try:
-                    dps = SimpleScalarStoreDatapoint.objects\
-                        .filter(storage_resource_statistic = self)\
-                        .order_by('-time')[:100]
-                    dps = list(dps)
-                    dps.reverse()
-                finally:
-                    transaction.commit()
-            type_name = 'timeseries'
-            data_points = []
-            for dp in dps:
-                # Convert to ms for convenience with highcharts
-                time_ms = dp.time * 1000
-                data_points.append((time_ms, dp.value))
-
-            data = {
-                    'unit_name': stat_props.get_unit_name(),
-                    'data_points': data_points
-                    }
-
-        label = stat_props.label
-        if not label:
-            label = self.name
-
-        return {'name': self.name,
-                'label': label,
-                'type': type_name,
-                'data': data}
+            self.metrics.update(stat_name, stat_properties, stat_data)
 
 
 class StorageResourceAttribute(models.Model):

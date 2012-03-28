@@ -1,8 +1,4 @@
 
-$(document).ready(function() {
-  Login.init();
-});
-
 var Login = function() {
   var user = null;
 

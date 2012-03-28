@@ -235,8 +235,6 @@ var Tooltip = function()
     api.hide();
   }
 
-
-
 	// Utilise delegate so we don't have to rebind for every qTip!
 	$(document).delegate('.qtip.jgrowl', 'mouseover mouseout', timer);
 	$(document).delegate('.qtip.jgrowl', 'click', hide);
@@ -471,7 +469,6 @@ var CommandNotification = function() {
 
   function updateObject(uri)
   {
-    console.log('updateObject ' + uri);
     Api.get(uri, {},
       success_callback = function(obj) {
       $(".object_label[data-resource_uri='" + uri + "']").each(function() {

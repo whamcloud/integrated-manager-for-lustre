@@ -12,6 +12,7 @@ from chroma_api.authentication import AnonymousAuthentication
 from tastypie.resources import ModelResource
 from tastypie import fields
 from chroma_core.lib.storage_plugin.query import ResourceQuery
+from chroma_api.utils import MetricResource
 
 from tastypie.exceptions import NotFound, ImmediateHttpResponse
 from tastypie import http
@@ -23,7 +24,7 @@ from chroma_core.lib.storage_plugin.daemon import ScanDaemonRpc
 from chroma_core.lib.storage_plugin import attributes
 
 
-class StorageResourceResource(ModelResource):
+class StorageResourceResource(MetricResource, ModelResource):
     """
     Storage resources are objects within Chroma's storage plugin
     framework.  Note: the term 'resource' is overloaded, used
@@ -71,9 +72,44 @@ class StorageResourceResource(ModelResource):
         return [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(bundle.obj.to_resource())]
 
     def dehydrate_stats(self, bundle):
+        from chroma_core.models import SimpleHistoStoreTime
+        from chroma_core.models import SimpleHistoStoreBin
         stats = {}
         for s in StorageResourceStatistic.objects.filter(storage_resource = bundle.obj):
-            stats[s.name] = s.to_dict()
+            from django.db import transaction
+            stat_props = s.storage_resource.get_statistic_properties(s.name)
+            from chroma_core.lib.storage_plugin import statistics
+            if isinstance(stat_props, statistics.BytesHistogram):
+                with transaction.commit_manually():
+                    transaction.commit()
+                    try:
+                        time = SimpleHistoStoreTime.objects.filter(storage_resource_statistic = s).latest('time')
+                        bins = SimpleHistoStoreBin.objects.filter(histo_store_time = time).order_by('bin_idx')
+                    finally:
+                        transaction.commit()
+                type_name = 'histogram'
+                # Composite type
+                data = {'bin_labels': [], 'values': []}
+                for i in range(0, len(stat_props.bins)):
+                    bin_info = u"\u2264%s" % stat_props.bins[i][1]
+                    data['bin_labels'].append(bin_info)
+                    data['values'].append(bins[i].value)
+            else:
+                type_name = 'timeseries'
+                # Go get the data from <resource>/metrics/
+                data = None
+
+            label = stat_props.label
+            if not label:
+                label = s.name
+
+            stat_data = {'name': s.name,
+                    'label': label,
+                    'type': type_name,
+                    'unit_name': stat_props.get_unit_name(),
+                    'data': data}
+            stats[s.name] = stat_data
+
         return stats
 
     def dehydrate_charts(self, bundle):
@@ -195,6 +231,6 @@ class StorageResourceResource(ModelResource):
 
     def override_urls(self):
         from django.conf.urls.defaults import url
-        return [
-            url(r"^(?P<resource_name>%s)/(?P<plugin_name>\w+)/(?P<class_name>\w+)/$" % self._meta.resource_name, self.wrap_view('dispatch_list'), name="dispatch_list"),
+        return super(StorageResourceResource, self).override_urls() + [
+            url(r"^(?P<resource_name>%s)/(?P<plugin_name>\D\w+)/(?P<class_name>\D\w+)/$" % self._meta.resource_name, self.wrap_view('dispatch_list'), name="dispatch_list"),
 ]

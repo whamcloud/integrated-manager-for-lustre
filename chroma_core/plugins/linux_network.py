@@ -12,8 +12,9 @@ from chroma_core.lib.storage_plugin import attributes, statistics
 class NetworkInterface(StorageResource):
     identifier = ScannableId('name')
     name = attributes.String()
-    rx_bytes = statistics.Counter()
-    tx_bytes = statistics.Counter()
+    rx_bytes = statistics.Counter(units = "Bytes/s")
+    tx_bytes = statistics.Counter(units = "Bytes/s")
+    charts = [{"title": "Bandwidth", "series": ['rx_bytes', 'tx_bytes']}]
 
 
 class LinuxNetwork(StoragePlugin):

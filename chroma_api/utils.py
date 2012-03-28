@@ -14,6 +14,8 @@ from tastypie import http
 from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
 from chroma_core.lib.metrics import R3dMetricStore
 
+from collections import defaultdict
+
 
 def custom_response(resource, request, response_klass, response_data):
     from tastypie.exceptions import ImmediateHttpResponse
@@ -136,6 +138,7 @@ class MetricResource:
                   requested metrics, that datapoint is discarded.
         :begin: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'
         :end: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'
+        :latest: boolean -- if true, you are asking for a single time point, the latest value
         :update: boolean -- if true, then begin,end specifies the region you've already presented
                  and you're asking for values *since* end.
         :reduce_fn: one of 'average', 'sum'
@@ -145,34 +148,53 @@ class MetricResource:
                    If the group_by attribute is absent from a record in the results,
                    that record is discarded.
         """
-        errors = {}
+        errors = defaultdict(list)
 
         if request.method != 'GET':
             return self.create_response(request, "", response_class = HttpMethodNotAllowed)
 
+        latest = request.GET.get('latest', False)
+        if latest:
+            latest = (latest.lower() == 'true' or latest == '1')
+
         try:
             metrics = request.GET['metrics'].split(",")
             if len(metrics) == 0:
-                errors['metrics'] = "Metrics must be a comma separated list of 1 or more strings"
+                errors['metrics'].append("Metrics must be a comma separated list of 1 or more strings")
         except KeyError:
-            errors['metrics'] = "This field is mandatory"
+            errors['metrics'].append("This field is mandatory")
 
-        try:
-            begin = dateutil.parser.parse(request.GET['begin'])
-        except KeyError:
-            errors['begin'] = "This field is mandatory"
-        except ValueError:
-            errors['begin'] = "Malformed time string"
+        if not latest:
+            try:
+                begin = dateutil.parser.parse(request.GET['begin'])
+            except KeyError:
+                errors['begin'].append("This field is mandatory when latest=false")
+            except ValueError:
+                errors['begin'].append("Malformed time string")
 
-        try:
-            end = dateutil.parser.parse(request.GET['end'])
-        except KeyError:
-            errors['end'] = "This field is mandatory"
-        except ValueError:
-            errors['end'] = "Malformed time string"
+            try:
+                end = dateutil.parser.parse(request.GET['end'])
+            except KeyError:
+                errors['end'].append("This field is mandatory when latest=false")
+            except ValueError:
+                errors['end'].append("Malformed time string")
+
+        update = request.GET.get('update', False)
+        if update:
+            update = (update.lower() == 'true' or update == '1')
+
+        if update and latest:
+            errors['update'].append("update and latest are mutually exclusive")
 
         if errors:
             return self.create_response(request, errors, response_class = HttpBadRequest)
+
+        if update:
+            begin = end
+            end = datetime.datetime.now()
+            # TODO: logic for dealing with incomplete values during update
+        elif latest:
+            begin = end = None
 
         if 'pk' in kwargs:
             return self.get_metric_detail(request, metrics, begin, end, **kwargs)
@@ -182,22 +204,53 @@ class MetricResource:
     def _format_timestamp(self, ts):
         return datetime.datetime.fromtimestamp(ts).isoformat() + "Z"
 
+    def _fetch(self, metrics_obj, metrics, begin, end):
+        if begin and end:
+            return metrics_obj.fetch("Average", fetch_metrics = metrics, start_time = begin, end_time = end)
+        else:
+            return (metrics_obj.fetch_last(fetch_metrics = metrics),)
+
     def get_metric_detail(self, request, metrics, begin, end, **kwargs):
-        """
-        """
         obj = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
-        stats = R3dMetricStore(obj, settings.AUDIT_PERIOD).fetch("Average",
-                fetch_metrics = metrics, start_time = begin, end_time = end)
+        from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
+        from collections import defaultdict
         result = []
-        for datapoint in stats:
-            # Assume the database was storing UTC
-            timestamp = datetime.datetime.fromtimestamp(datapoint[0]).isoformat() + "Z"
-            data = datapoint[1]
-            if not data:
-                continue
-            if None in data.values():
-                continue
-            result.append({'ts': timestamp, 'data': data})
+        if isinstance(obj, StorageResourceRecord):
+            # FIXME: there is a level of indirection here to go from a StorageResourceRecord
+            # to individual time series.  This is needed because although r3d lets you associate
+            # multiple variables with one object, it then requires that they call arrive at the same
+            # time with the same resolution.  There is no way for chroma to know what resolution
+            # the third party statistics will arrive at, and no way to guarantee they are all
+            # queried at the same moment, so we have to give r3d an object per time series.
+            stats = StorageResourceStatistic.objects.filter(storage_resource = obj, name__in = metrics)
+            ts_data = defaultdict(list)
+            for stat in stats:
+                data = self._fetch(stat.metrics, metrics, begin, end)
+                for dp in data:
+                    ts_data[dp[0]].append(dp[1])
+
+            for ts in sorted(ts_data.keys()):
+                data_list = ts_data[ts]
+                data = {}
+                for dl in data_list:
+                    data.update(dl)
+                timestamp = datetime.datetime.fromtimestamp(ts).isoformat() + "Z"
+                if None in data.values():
+                    continue
+                result.append({'ts': timestamp, 'data': data})
+
+        else:
+            stats = self._fetch(R3dMetricStore(obj, settings.AUDIT_PERIOD), metrics, begin, end)
+
+            for datapoint in stats:
+                # Assume the database was storing UTC
+                timestamp = datetime.datetime.fromtimestamp(datapoint[0]).isoformat() + "Z"
+                data = datapoint[1]
+                if not data:
+                    continue
+                if None in data.values():
+                    continue
+                result.append({'ts': timestamp, 'data': data})
 
         return self.create_response(request, result)
 
@@ -269,15 +322,6 @@ class MetricResource:
         if not reduce_fn and group_by:
             errors['reduce_fn'] = "This field is mandatory if 'group_by' is specified"
 
-        update = request.GET.get('update', False)
-        if update:
-            update = (update.lower() == 'true' or update == '1')
-
-        if update:
-            begin = end
-            end = datetime.datetime.now()
-            # TODO: logic for dealing with incomplete values during update
-
         if errors:
             return self.create_response(request, errors, response_class = HttpBadRequest)
 
@@ -285,20 +329,38 @@ class MetricResource:
 
         result = {}
         for obj in objs:
-            stats = R3dMetricStore(obj, settings.AUDIT_PERIOD).fetch("Average", fetch_metrics = metrics, start_time = begin, end_time = end)
+            stats = self._fetch(R3dMetricStore(obj, settings.AUDIT_PERIOD), metrics, begin, end)
             result[obj.id] = []
             # Assume these come out in chronological order
             for datapoint in stats:
                 # Assume the database was storing UTC
                 timestamp = datapoint[0]
                 data = datapoint[1]
-                if len(data) != len(metrics):
-                    # Discard, we didn't get all our metrics
-                    continue
-                if None in data.values():
-                    # Discard, incomplete sample
-                    continue
 
+                ENFORCE_NULLNESS = False
+                if ENFORCE_NULLNESS:
+                    if len(data) != len(metrics):
+                        # Discard, we didn't get all our metrics
+                        continue
+
+                    if None in data.values():
+                        # Discard, incomplete sample
+                        continue
+
+                else:
+                    # FIXME
+                    # This branch is necessary because stats which are really zero are sometimes
+                    # populated as None (the ones that Lustre doesn't report until they're nonzero)
+                    # -- None is overloaded to either mean "no data at this timestamp" or "lustre
+                    # didn't report the stat because it's zero"
+                    non_none = False
+                    for k, v in data.items():
+                        if v == None:
+                            data[k] = 0.0
+                        else:
+                            non_none = True
+                    if not non_none:
+                        continue
                 result[obj.id].append({'ts': timestamp, 'data': data})
 
         if reduce_fn and not group_by:

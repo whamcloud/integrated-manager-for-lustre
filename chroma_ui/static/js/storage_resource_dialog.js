@@ -147,70 +147,122 @@ function populate_graph(element_id, chart_info, stat_infos) {
 }
 
 function load_resource(resource) {
-    resource_id = resource.id
-    window.location.hash = "storage_resource_" + resource_id
-    $('#storage_resource_dialog').dialog("option", "title", resource.class_name)
+  resource_id = resource.id
+  window.location.hash = "storage_resource_" + resource_id
+  $('#storage_resource_dialog').dialog("option", "title", resource.class_name)
 
-    if (resource.alias) {
-        $("input#alias_edit_entry").attr('value', resource.alias);
+  if (resource.alias) {
+      $("input#alias_edit_entry").attr('value', resource.alias);
+  } else {
+      $("input#alias_edit_entry").attr('value', resource.default_alias);
+  }
+  $("input#alias_default_entry").attr('value', resource.default_alias);
+
+  $('#remove_resource_button').toggle(resource.scannable)
+
+  var attr_markup = "";
+  var rowclass = "odd";
+  $.each(resource.attributes, function(name, attr_info) {
+    if (rowclass == "odd") {
+      rowclass = "even";
     } else {
-        $("input#alias_edit_entry").attr('value', resource.default_alias);
+        rowclass = "odd";
     }
-    $("input#alias_default_entry").attr('value', resource.default_alias);
+      attr_markup += "<tr class='" + rowclass + "'><th>" + attr_info.label + ": </th><td>" + attr_info.markup + "</td></tr>";
+  }); 
+  $('table#storage_attributes').html(attr_markup);
 
-    $('#remove_resource_button').toggle(resource.scannable)
+  $('div#storage_alerts').html(LiveObject.alertList(resource));
 
-    var attr_markup = "";
-    var rowclass = "odd";
-    console.log(resource);
-    $.each(resource.attributes, function(name, attr_info) {
-      if (rowclass == "odd") {
-        rowclass = "even";
-      } else {
-          rowclass = "odd";
-      }
-        attr_markup += "<tr class='" + rowclass + "'><th>" + attr_info.label + ": </th><td>" + attr_info.markup + "</td></tr>";
-    }); 
-    $('table#storage_attributes').html(attr_markup);
+  var row = 0;
+  var col = 0;
+  var row_width = 3;
+  var chart_markup = "";
+  chart_element_id = new Array();
+  $.each(resource.charts, function(i, chart_info) {
+    if (col == 0) {
+      chart_markup += "<tr>"
+    }
 
-    $('div#storage_alerts').html(LiveObject.alertList(resource));
+    var element_id = "stat_chart_" + i;
+    chart_element_id[i] = element_id;
+    chart_markup += "<td><div id='" + element_id + "'></div></td>";
+    col += 1;
+    if (col == row_width) {
+      chart_markup += "</tr>"
+      col = 0;
+    }
+  });
+  if (col != 0) {
+    chart_markup += "</tr>";
+  }
+  $('table#stats').html(chart_markup);
 
-    var row = 0;
-    var col = 0;
-    var row_width = 3;
-    var chart_markup = "";
-    chart_element_id = new Array();
-    $.each(resource.charts, function(i, chart_info) {
-      if (col == 0) {
-        chart_markup += "<tr>"
-      }
-
-      var element_id = "stat_chart_" + i;
-      chart_element_id[i] = element_id;
-      chart_markup += "<td><div id='" + element_id + "'></div></td>";
-      col += 1;
-      if (col == row_width) {
-        chart_markup += "</tr>"
-        col = 0;
-      }
+  chart_manager = ChartManager({chart_group: 'storage_resource_dialog'});
+  $.each(resource.charts, function(i, chart_info) {
+    var stat_infos = [];
+    $.each(chart_info.series, function(j, stat_name) {
+      stat_infos.push(resource.stats[stat_name]);
     });
-    if (col != 0) {
-      chart_markup += "</tr>";
-    }
-    $('table#stats').html(chart_markup);
-
-    $.each(resource.charts, function(i, chart_info) {
-      var stat_infos = [];
-      $.each(chart_info.series, function(j, stat_name) {
-        stat_infos.push(resource.stats[stat_name]);
+    if (_.include(stat_infos, undefined)) {
+      // One or more of the required statistics was not available
+      // TODO: handle this case (waiting revising this code for HYD-642)
+    } else {
+      var yAxes = [];
+      var unit_to_axis = [];
+      var series = [];
+      $.each(stat_infos, function(i, stat_info) {
+        series.push({'name': stat_info.label});
+        if (unit_to_axis[stat_info.unit_name] == null) {
+          var axis = {
+            labels: {enabled: true},
+            title: {text: stat_info.unit_name},
+            min: 0,
+            opposite: (yAxes.length % 2)
+          }
+          yAxes.push(axis);
+          unit_to_axis[stat_info.unit_name] = yAxes.length - 1;
+        }
       });
-      if (_.include(stat_infos, undefined)) {
-        // One or more of the required statistics was not available
-        // TODO: handle this case (waiting revising this code for HYD-642)
-      } else {
+      $('#' + chart_element_id[i]).css("width", "300px");
+      $('#' + chart_element_id[i]).css("height", "200px");
+      var enable_legend = stat_infos.length > 1;
+      chart_manager.add_chart(chart_element_id[i], 'storage_resource_dialog',
+        {
+          url: resource.resource_uri + "metric/",
+          metrics: ['rx_bytes', 'tx_bytes'],
+          series_callbacks: [
+            function(timestamp, data, index, chart) {
+              chart.series_data[index].push([timestamp, data.rx_bytes])
+            },
+            function(timestamp, data, index, chart) {
+              chart.series_data[index].push([timestamp, data.tx_bytes])
+            }
+          ],
+          chart_config: {
+            chart: {
+                type: 'line',
+                renderTo: chart_element_id[i],
+            },
+            title: {text: chart_info.title},
+            legend: {enabled: enable_legend},
+            yAxis: yAxes,
+            xAxis: {
+                type: 'datetime'
+            },
+            series: series
+        }
+      });
+      /*
+      if (stat_infos[0].data != null) {
         populate_graph(chart_element_id[i], chart_info, stat_infos);
+      } else {
+
       }
-    });
+      */
+    }
+  });
+  chart_manager.init();
 }
 
 function remove_resource(ev) {

@@ -33,8 +33,6 @@ Backbone.sync = function(method, model, options) {
   Api.call(type, url, data, success_callback = options.success);
 }
 
-
-
 /* The Api module wraps the global state used for 
  * accessing the /api/ URL space */
 var Api = function() {

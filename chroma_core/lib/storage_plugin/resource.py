@@ -271,7 +271,6 @@ class StorageResource(object):
     @classmethod
     def attrs_to_id_tuple(cls, attrs):
         """Serialized ID for use in StorageResourceRecord.storage_id_str"""
-        log.debug("attrs_to_id_tuple %s" % attrs)
         identifier_val = []
         for f in cls.identifier.id_fields:
             if not f in cls._storage_attributes:

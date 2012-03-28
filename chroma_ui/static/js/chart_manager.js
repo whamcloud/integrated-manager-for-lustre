@@ -30,7 +30,7 @@ function dump(arr,level) {
 				dumped_text += level_padding + "'" + item + "' => \"" + value + "\"\n";
 			}
 		}
-	} else { //Stings/Chars/Numbers etc.
+	} else { //Strings/Chars/Numbers etc.
 		dumped_text = "===>"+arr+"<===("+typeof(arr)+")";
 	}
 	return dumped_text;
@@ -43,26 +43,24 @@ var ChartModel = function(options) {
         chart_group             : '',   // the chart group. Analagous to the tab
         enabled                 : true, // you can disable a graph by setting this to false
         error_callback          : null, // a callback executed on an error conditoin (not needed really, but an option)
-//        get_data                : null, 
         instance                : null, // stores the highcharts instance
         is_zoom                 : false, // whether we have a zoomed graph
         metrics                 : [],    // list of metrics to get
         prep_params             : null,  // callback for custom dynamic paramaters to send to the api
-        replace_data_on_update  : false, // if false, appends, if true, resets
+        snapshot                : false, // if true, displays latest data rather than time series
         series_begin            : null,  // Date object representing beginning of series
         series_end              : null,  // date object representing end of series
-        series_shifting_end     : null,  // floating end date object used for the update
         series_data             : [],    // stores all series data here and updates to here
-        series_callbacks        : [],    // list of callbacks for each series
-        status                  : 'none', // pending, success, failure
-        success_callback        : null,  // optional callback on successful call
+        series_id_to_index      : {},    // map our series key to highchart's index for the series
+        series_callbacks        : null,    // list of callbacks for each series
+        status                  : 'idle', // 'idle', 'loading'
         url                     : ''     // url of the metric api to get
     }, options || {});
 
     if( config.is_zoom ) {
         $.extend(true,config.api_params, {
             xAxis: { labels: { style: { fontSize: '12px'} } },
-            yaxis: { labels: { style: { fontSize: '12px', fontWeight: 'bold' } } },
+            yAxis: { labels: { style: { fontSize: '12px', fontWeight: 'bold' } } },
             chart: {
                 width: 780,
                 height: 360,
@@ -74,7 +72,7 @@ var ChartModel = function(options) {
     
     config.reset_series = function() {
         config.series_data = [];
-        _.each(config.series_callbacks, function() { config.series_data.push([]); } );
+        _.each(config.chart_config.series, function() { config.series_data.push([]); } );
     };
 
     config.reset_series();        
@@ -86,8 +84,39 @@ var ChartManager = function(options) {
 	var config = $.extend(true, {
         charts: {},
         chart_group: '',
-        debug: true,
-        default_time_boundry: 60 * 60 * 1000,
+        chart_config_defaults: {
+          chart: {
+            animation: false,
+            zoomType: 'xy',
+            backgroundColor: '#f9f9ff'
+          },
+          credits: {
+            enabled: false
+          },
+          title: {style: { fontSize: '12px' } },
+          legend: { enabled: false},
+          plotOptions: {
+            line: {
+                    lineWidth: 2,
+                    marker: {enabled: false},
+                    shadow: false
+                  },
+            series:{marker: {enabled: false}},
+            column:{ pointPadding: 0.0, shadow: false, groupPadding: 0.0, borderWidth: 0.0 },
+            areaspline: {fillOpacity: 0.5},
+            area: {
+              stacking: 'normal',
+              lineColor: '#666666',
+              lineWidth: 1,
+              marker: {
+                lineWidth: 1,
+                lineColor: '#666666'
+              }
+             }
+          }
+        },
+        debug: false,
+        default_time_boundary: 5 * 60 * 1000,
         interval_id: null,
         interval_seconds: 10
     }, options || {});
@@ -129,6 +158,7 @@ var ChartManager = function(options) {
             log("chart_group must be a non-empty string: " + chart_name);
             return;
         }
+        log("add_chart: " + chart_name)
         chart_model = ChartModel(options || {});
         config.charts[chart_group][chart_name] = ChartModel(options || {});
     };
@@ -142,21 +172,32 @@ var ChartManager = function(options) {
         _.each(config.charts[config.chart_group], function(chart,key) {
             if (chart.enabled) {
                 log('- rendering chart ' + key);
-                get_data(chart);
+                if (_.isNull(chart.instance) && !window.loaded) {
+                  /* Because highcharts copies the size of its parent element when it's
+                   * constructed, wait for the loading/sizing to happen before creating
+                   * the chart */
+                  $(window).load(function() {
+                    get_data(chart);
+                  });
+                } else {
+                  get_data(chart);
+                }
             }
         });
     };
 
     var default_params = function(api_params,chart) {
-
         var params = { metrics: chart.metrics.join(",") };
+        if (chart.snapshot) {
+          params.latest = true;
+        }
         if ( _.isNull( chart.series_begin) ) {
             chart.series_end          = new Date();
-            chart.series_begin        = new Date( chart.series_end - config.default_time_boundry );
-        }
-        else {
-            params.update = 'true';
-            chart.series_shifting_end = new Date();
+            chart.series_begin        = new Date( chart.series_end - config.default_time_boundary );
+        } else {
+            if (!chart.snapshot) {
+              params.update = 'true';
+            }
         }
         params.begin = chart.series_begin.toISOString();
         params.end   = chart.series_end.toISOString()
@@ -167,75 +208,118 @@ var ChartManager = function(options) {
     var get_data = function(chart) {
         var api_params = $.extend(true, {}, chart.api_params);
         api_params = default_params(api_params, chart);
+
         // custom params
         if ( _.isFunction(chart.prepare_params) ) {
             api_params = chart.prepare_params(api_params, chart);
         }
-        chart.status = 'pending';
-        if ( _.isObject(chart.instance) ) {
-            chart.instance.showLoading();
+
+        if (_.isNull(chart.instance)) {
+          var chart_config = 
+              $.extend(true, {}, config.chart_config_defaults, chart.chart_config, {
+                  // maps all the series data into single object literals with "data" as it's key
+                  // this is to allow us to merge it into the config seamlessly
+                  series: _.map(
+                              chart.series_data,
+                              function(series_data, i) { return { data: series_data }; }
+                          )
+              })
+          chart.instance = new Highcharts.Chart(chart_config);
+          chart.instance.showLoading();
         }
+
+        chart.status = 'loading';
         Api.get(
             chart.url,
             api_params,
             success_callback = function(data) {
-                chart.status = 'success';
+                chart.status = 'idle';
                 if ( _.isObject(chart.instance) )
                     chart.instance.hideLoading();
-                if ( _.isFunction(chart.success_callback) )
-                    chart.success_callback(chart,data);
-                
-                // do the series callbacks
-                //log(dump(data));
-                $.each(data, function(key, datapoint) {
-                    //log(dump(datapoint));
-                    //log(dump(i));
-                    var timestamp = new Date(datapoint.ts).getTime();
-                    //log(dump(timestamp));
-                    _.each( chart.series_callbacks, function(series_callback, i) {
-                        series_callback(timestamp, datapoint.data, i, chart );
+
+                if (chart.snapshot) {
+                  // Latest-value chart
+                  chart.reset_series();
+                  chart.snapshot_callback(chart, data);
+                } else {
+                  // Time series chart
+                  if (chart.data_callback) {
+                    // If data_callback is provided, it will update series_data for us
+                    var series_updates = chart.data_callback(chart, data);
+                    _.each(series_updates, function(series_update, series_id) {
+                      if (chart.series_id_to_index[series_id] == undefined) {
+                        var series_conf = $.extend(true, {}, chart.series_template, {name: series_update.label})
+                        var added_series = chart.instance.addSeries(series_conf);
+                        chart.series_id_to_index[series_id] = added_series.index;
+                        chart.series_data[added_series.index] = []
+                      }
+
+                     var i = chart.series_id_to_index[series_id];
+                     chart.series_data[i].push.apply(chart.series_data[i], series_update.data);
                     });
-
-                    // init chart
-                    if ( _.isNull(chart.instance) ) {
-                        chart.instance = new Highcharts.Chart(
-                            $.extend(true, {}, chart.chart_config, {
-                                // maps all the series data into single object literals with "data" as it's key
-                                // this is to allow us to merge it into the config seamlessly
-                                series: _.map(
-                                            chart.series_data,
-                                            function(series_data, i) { return { data: series_data }; }
-                                        )
-                            })
-                        );
-                    }
-                    // update chart
-                    else {
-                        // if this is a resource graph we're going to replace the data set, not append to it
-                        if (chart.replace_data_on_update )
-                            chart.reset_series();
-
-                        _.each(
-                            chart.instance.series,
-                            function(series,i) { series.setData(chart.series_data[i], false)}
-                        );
-                        chart.instance.redraw();
-                        // shift the floating end
-                        // we only update this on the success to allow for failed calls
-                        if ( ! _.isNull(chart.series_shifting_end)) {
-                            chart.series_end = new Date( chart.series_shifting_end );
+                  } else {
+                    // Updates series_data from data
+                    $.each(data, function(key, datapoint) {
+                        var timestamp = new Date(datapoint.ts).getTime();
+                        if (chart.series_callbacks) {
+                          // If series_callbacks are provided, call them per series
+                          _.each( chart.series_callbacks, function(series_callback, i) {
+                              series_callback(timestamp, datapoint.data, i, chart );
+                          });
+                        } else {
+                          // By default, pass through values to series in order of metrics list
+                          _.each(chart.metrics, function(metric, i) {
+                            chart.series_data[i].push([timestamp, datapoint.data[metric]]);
+                          });
                         }
-                        //log("END: " + chart.series_end.toISOString());
-                    }
-                    
-                });
-            },
-            error_callback = function(responseText) {
-                chart.status = 'failure';
-                if (_.isFunction(chart.error_callback)) {
-                    chart.error_callback(responseText);    
+                    });
+                  }
+
+                  // Cull any data older than the window
+                  var data_until = null;
+                  _.each(
+                      chart.series_data,
+                      function(series_data) {
+                        if (series_data.length > 0) {
+                          var latest_ts = series_data[series_data.length - 1][0];
+                          if (data_until == null || data_until < latest_ts) {
+                            data_until = latest_ts;
+                          }
+                          var newest_trash = null;
+                          for (var i = 0; i < series_data.length - 1; i++) {
+                            if (series_data[i][0] < (latest_ts - config.default_time_boundary)) {
+                              newest_trash = i;
+                            } else {
+                              break;
+                            }
+                          }
+                          if (newest_trash != null) {
+                            series_data.splice(0, newest_trash + 1)
+                          }
+                        }
+                      }
+                  );
+
+                  // shift the floating end
+                  if (data_until) {
+                    chart.series_end = new Date(data_until);
+                    log("Updated series end " + chart.series_end);
+                  } else {
+                    log("No data");
+                  }
+
+                  // Update highcharts from series_data
+                  _.each(
+                      chart.instance.series,
+                      function(series,i) {
+                        series.setData(chart.series_data[i], false)
+                      }
+                  );
                 }
+
+                chart.instance.redraw();
             },
+            error_callback = null,
             blocking = false
         );
     }
@@ -282,188 +366,3 @@ var ChartManager = function(options) {
         log: log
     };
 }
-
-function chart_manager_dashboard() {
-    var chart_manager = ChartManager({chart_group: 'dashboard'});
-    chart_manager.add_chart('db_line_cpu_mem', 'dashboard', {
-        //url: 'get_fs_stats_for_server/',
-        url: 'host/metric',
-        api_params: { reduce_fn: 'average' },
-        metrics: ["cpu_total", "cpu_user", "cpu_system", "cpu_iowait", "mem_MemFree", "mem_MemTotal"],
-        series_callbacks: [
-            function(timestamp, data, index, chart) {
-                var sum_cpu = data.cpu_user + data.cpu_system + data.cpu_iowait;
-                var pct_cpu = (100 * sum_cpu) / data.cpu_total;
-                chart.series_data[index].push( [ timestamp, pct_cpu] );
-            },
-            function( timestamp, data, index, chart ) {
-                var used_mem = data.mem_MemTotal - data.mem_MemFree;
-                var pct_mem  = 100 * ( used_mem / data.mem_MemTotal );
-                chart.series_data[index].push( [ timestamp, pct_mem ]);
-            }
-        ],
-        chart_config: {
-            chart: {
-                renderTo: 'avgCPUDiv',
-                zoomType: 'xy',
-                backgroundColor: '#f9f9ff'
-            },
-            title: { text: 'Server CPU and Memory', style: { fontSize: '12px' } },
-            xAxis: { type:'datetime' },
-            yAxis: [
-                {
-                    title: { text: 'Percent Used' },
-                    max:100, min:0, startOnTick:false,  tickInterval: 20
-                },
-            ],
-            legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0},
-            credits: { enabled:false },
-            plotOptions: {
-                series:{marker: {enabled: false}},
-                column:{ pointPadding: 0.0, shadow: false, groupPadding: 0.0, borderWidth: 0.0 }
-            },
-            series: [
-                { type: 'line', data: [], name: 'cpu' },
-                { type: 'line', data: [], name: 'mem' }
-            ]
-        }
-    });
-    /*
-    chart_manager.add_chart('db_bar_space_usage',{
-        url: 'get_fs_stats_for_targets/',
-        http_method: 'post',
-        metrics: [ "kbytestotal","kbytesfree","filestotal","filesfree" ],
-        api_params: {
-            targetkind: "OST",
-            datafunction: "Average",
-            starttime: "",
-            filesystem_id: "",
-            endtime: ""
-        },
-        prepare_params: function( params, chart ) {
-            return $.extend(true, params, {
-                fetchmetrics: chart.metrics.join(" ")
-            });
-        },
-        success_callback: function(chart,data) {
-            response = data;
-            var free = 0,
-                used = 0;
-            var freeData = [],
-                usedData = [],
-                categories = [],
-                freeFilesData = [],
-                totalFilesData = [];
-            var response = data;
-            var totalDiskSpace = 0,
-                totalFreeSpace = 0,
-                totalFiles = 0,
-                totalFreeFiles = 0;
-            $.each(response, function(resKey, resValue) {
-                free = 0, used = 0;
-                if (resValue.filesystem != undefined) {
-                    totalFreeSpace = resValue.kbytesfree / 1024;
-                    totalDiskSpace = resValue.kbytestotal / 1024;
-                    free = ((totalFreeSpace / 1024) / (totalDiskSpace / 1024)) * 100;
-                    used = 100 - free;
-
-                    freeData.push(free);
-                    usedData.push(used);
-
-                    totalFiles = resValue.filesfree / 1024;
-                    totalFreeFiles = resValue.filestotal / 1024;
-                    free = ((totalFiles / 1024) / (totalFreeFiles / 1024)) * 100;
-                    used = 100 - free;
-
-                    freeFilesData.push(free);
-                    totalFilesData.push(used);
-
-                    categories.push(resValue.filesystem);
-                }
-            });
-
-            var series = [
-                { data: freeData, stack: 0, name: 'Free Space' },
-                { data: usedData, stack: 0, name: 'Used Space' },
-                { data: freeFilesData, stack: 1, name: 'Free Files' },
-                { data: totalFilesData, stack: 1, name: 'Used Files' }
-            ];
-            if ( _.isNull(chart.instance) ) {
-                var chart_config = $.extend(true, {}, chart.chart_config, {
-                    xAxis: { categories: categories },
-                    title: { text: "All File System Space Usage" },
-                    series: series
-                });
-                if (chart.is_zoom) {
-                    chart_config.chart.renderTo = 'zoomDialog';
-                }
-                chart.instance = new Highcharts.Chart(chart_config);
-                return;
-            }
-            _.each(series, function(series_object, index) {
-                chart.instance.series[index].setData(series_object.data, false);
-            });
-            chart.instance.redraw();
-        },
-        chart_config: {
-            chart: {
-                renderTo: 'container',
-                defaultSeriesType: 'column',
-                backgroundColor: '#f9f9ff'
-            },
-            colors: ['#A6C56D', '#C76560', '#A6C56D', '#C76560', '#3D96AE', '#DB843D', '#92A8CD', '#A47D7C', '#B5CA92'],
-            plotOptions: { column: { stacking: 'normal' } },
-            legend: {
-                enabled: false,
-                layout: 'vertical',
-                align: 'right',
-                verticalAlign: 'top',
-                x: 0,
-                y: 10,
-                borderWidth: 0
-            },
-            title: {
-                text: '',
-                style: { fontSize: '12px' }
-            },
-            zoomType: 'xy',
-            xAxis: {
-                categories: ['Usage'],
-                text: '',
-                labels: {
-                    align: 'right',
-                    rotation: 310,
-                    style: { fontSize: '8px', fontWeight: 'regular' }
-                }
-            },
-            yAxis: {
-                max: 100,
-                min: 0,
-                startOnTick: false,
-                title: { text: 'Percentage' },
-                plotLines: [{ value: 0, width: 1, color: '#808080' }]
-            },
-            credits: { enabled: false },
-            tooltip: {
-                formatter: function() {
-                    var tooltiptext;
-                    if (this.point.name) {
-                        tooltiptext = '' + this.point.name + ': ' + this.y + '';
-                    } else {
-                        tooltiptext = '' + this.x + ': ' + this.y;
-                    }
-                    return tooltiptext;
-                }
-            },
-            labels: {
-                items: [{ html: '', style: { left: '40px', top: '8px', color: 'black' } }]
-            },
-            series: []
-        }
-
-    });
-    */
-    //chart_manager.render_charts();
-    chart_manager.init();
-    return chart_manager;
-};

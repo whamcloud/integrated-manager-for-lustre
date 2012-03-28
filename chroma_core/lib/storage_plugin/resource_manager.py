@@ -535,9 +535,21 @@ class ResourceManager(object):
             except StorageResourceStatistic.DoesNotExist:
                 stat_record = StorageResourceStatistic.objects.create(
                         storage_resource = record, name = stat_name, sample_period = stat_properties.sample_period)
-            from r3d.exceptions import BadUpdateString
+            from r3d.exceptions import BadUpdateString, BadUpdateTime
             try:
-                stat_record.update(stat_name, stat_properties, stat_data)
+                # FIXME: I should be allowed to store integers
+                for i in stat_data:
+                    i['value'] = float(i['value'])
+
+                # FIXME: I should be allowed to insert stats as often as I like
+                # but r3d complains if it hasn't been more than N seconds since
+                # my last update
+                try:
+                    stat_record.update(stat_name, stat_properties, stat_data)
+                except BadUpdateTime:
+                    pass
+                else:
+                    log.debug("Updated %s:%s (%s)" % (stat_record.id, stat_name, stat_data))
             except BadUpdateString:
                 # FIXME: Initial insert usually fails because r3d isn't getting
                 # its start time from the first insert time

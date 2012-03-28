@@ -34,7 +34,7 @@
       <select id="ost_file_system" style="display:none">
       </select>
       	<!-- Breadcrumb menu and time interval selection - Start -->
-    	<table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue;">
+    	<table id='dashboard_navigation' width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue;">
           <tr style="background-color: #ccc">
             <td width="50%">
               <div class="breadCrumbHolder module">
@@ -79,14 +79,14 @@
         <!-- Breadcrumb menu nad time interval selection - End -->
              
         <!-- Dashboard Div - Start -->
-        <div id="dashboardDiv">
+        <div id="dashboard_page_global" class='dashboard_page'>
           <table class='chart_grid'>
             <tr>
               <td valign="top"  align="center">
-                <div class='chart' id="container" >All File System Space Usage</div>
+                <div class='chart' id="global_usage" >All File System Space Usage</div>
               </td>
               <td valign="top"  align="center">
-                <div class='chart' id="container3" >Connected Clients</div>
+                <div class='chart' id="global_client_count" >Connected Clients</div>
               </td>
               <td valign="top"  align="left">
                 <div id="container_fs_list">
@@ -111,21 +111,21 @@
                   <button value="" class="magbutton" 
                   onclick="db_LineBar_CpuMemoryUsage_Data('true');setZoomDialogTitle('All File Systems: CPU and Memory Usage');" />
                 </div>
-                <div class='chart' id="avgCPUDiv" >Filesystems CPU and Memory Usage</div>
+                <div class='chart' id="global_cpu_mem" >Filesystems CPU and Memory Usage</div>
               </td>
               <td valign="top"  align="center">
                 <div class="magni">
                   <button value="" class="magbutton" 
                   onclick="db_Area_ReadWrite_Data('true');setZoomDialogTitle('All File Systems: Disk Read and Write');" />
                 </div>
-                <div class='chart' id="avgMemoryDiv" >Filesystems Disk Read and Write</div>
+                <div class='chart' id="global_read_write" >Filesystems Disk Read and Write</div>
               </td>
               <td valign="top"  align="center">
                 <div class="magni">
                   <button value="" class="magbutton"
                   onclick="db_Area_mdOps_Data('true');setZoomDialogTitle('All File Systems: Metadata op/s');" />
                 </div>
-                <div class='chart' id="avgReadDiv" >Metadata op/s</div>
+                <div class='chart' id="global_metadata_ops" >Metadata op/s</div>
               </td>
             </tr>
             <tr>
@@ -134,7 +134,7 @@
                   <button class="magbutton" 
                   onclick="db_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
                 </div>
-                <div class='chart' id="db_iopsSpline"></div>
+                <div class='chart' id="global_ost_bandwidth"></div>
               </td>
             </tr>
           </table>
@@ -142,7 +142,7 @@
           <!-- Dashboard Div - End -->
 
           <!-- FileSystem Div - Start -->
-          <div id="fileSystemDiv" style="display: none">
+          <div id="fileSystemDiv" class='dashboard_page' style="display: none">
             <table class='chart_grid'>
 			  <tr>
                 <td valign="top" align="center" style="font-family: Verdana, Arial, Helvetica, sans-serif;">
@@ -199,7 +199,7 @@
           <!-- FileSystem Div - End -->
 
           <!-- FileSystem Servers Div - Start -->
-          <div id="ossInfoDiv" style="display: none">
+          <div id="ossInfoDiv" class='dashboard_page' style="display: none">
             <table class='chart_grid'>
               <tr>
                 <td colspan="4">
@@ -233,7 +233,7 @@
           <!-- FileSystem Servers Div - End -->
            
           <!-- Filesystem Targets  Div - Start -->
-          <div id="ostInfoDiv" style="display: none">
+          <div id="ostInfoDiv" class='dashboard_page' style="display: none">
             <table class='chart_grid'>
               <tr>
                 <td>

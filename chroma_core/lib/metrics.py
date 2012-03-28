@@ -205,17 +205,14 @@ class HostMetricStore(R3dMetricStore):
             update_time = self._update_time()
 
         # Define lists of metrics we care about; ignore everything else.
-        mem_included = """
-                       mem_SwapTotal
-                       mem_SwapFree
-                       mem_MemFree
-                       mem_MemTotal
-                       """.split()
-        lnet_included = """
-                        lnet_recv_count
-                        lnet_send_count
-                        lnet_errors
-                        """.split()
+        mem_included = ['mem_SwapTotal',
+                        'mem_SwapFree',
+                        'mem_MemFree',
+                        'mem_MemTotal']
+
+        lnet_included = ["lnet_recv_count",
+                         "lnet_send_count",
+                         "lnet_errors"]
 
         try:
             for key in metrics['meminfo']:
