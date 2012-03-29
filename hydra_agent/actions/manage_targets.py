@@ -207,9 +207,7 @@ def configure_ha(args):
                                     '%s-%s' % (unique_label, preference)])
     out = stdout.rstrip("\n")
     if len(out) > 0:
-        # stupid crm and it's "colouring" is not even completely disabled
-        # when using -D plain
-        compare = "[?1034hlocation %s-%s %s %s: %s" % (unique_label, preference,
+        compare = "location %s-%s %s %s: %s" % (unique_label, preference,
                                                 unique_label, score,
                                                 os.uname()[1])
         if out == compare:
