@@ -7,6 +7,7 @@ import errno
 import os
 import shlex
 import re
+import libxml2
 
 
 def __sanitize_arg(arg):
@@ -173,7 +174,7 @@ def get_resource_locations():
     """Parse `corosync status` to identify where (if anywhere)
        resources (i.e. targets) are running."""
     try:
-        rc, stdout, stderr = shell.run(['crm_resource', '-l'])
+        rc, stdout, stderr = shell.run(['crm', 'resource', 'list'])
     except OSError:
         # Probably we're on a server without corosync
         return None
@@ -189,8 +190,9 @@ def get_resource_locations():
     else:
         lines = stdout.strip().split("\n")
         for line in lines:
-            resource_name = line.strip()
-            locations[resource_name] = get_resource_location(resource_name)
+            [resource_name, resource_type] = line.strip().split("\t")
+            if resource_type.startswith("(ocf::hydra:Target)"):
+                locations[resource_name] = get_resource_location(resource_name)
 
     return locations
 
@@ -322,9 +324,7 @@ def configure_ha(args):
                                     '%s-%s' % (unique_label, preference)])
     out = stdout.rstrip("\n")
     if len(out) > 0:
-        # stupid crm and it's "colouring" is not even completely disabled
-        # when using -D plain
-        compare = "[?1034hlocation %s-%s %s %s: %s" % (unique_label, preference,
+        compare = "location %s-%s %s %s: %s" % (unique_label, preference,
                                                 unique_label, score,
                                                 os.uname()[1])
         if out == compare:
@@ -348,12 +348,23 @@ def configure_ha(args):
     AgentStore.set_target_info(args.uuid, {"bdev": args.device, "mntpt": args.mountpoint})
 
 
-def list_ha_targets(args):
-    targets = []
-    for line in shell.try_run(['crm_resource', '--list']).split("\n"):
-        match = re.match(r"^\s*([^\s]+).+hydra:Target", line)
-        if match:
-            targets.append(match.groups()[0])
+def query_ha_targets(args):
+    targets = {}
+
+    for target in shell.try_run(['crm_resource', '-l']).split("\n"):
+        if len(target) < 1:
+            continue
+
+        label, serial = target.split("_")
+        targets[target] = {'label': label, 'serial': serial}
+
+        raw_xml = "\n".join(shell.try_run(['crm_resource', '-r', target, '-q']).split("\n")[2:])
+        try:
+            doc = libxml2.parseDoc(raw_xml)
+            node = doc.xpathEval('//instance_attributes/nvpair[@name="target"]')[0]
+            targets[target]['uuid'] = node.prop('value')
+        except (ValueError, libxml2.parserError):
+            continue
 
     return targets
 
@@ -466,20 +477,11 @@ def target_running(args):
 
 
 def clear_targets(args):
-    for resource in list_ha_targets(args):
-        (label, serial) = resource.split("_")
-        print "%s\n%s" % (label, len(label) * "=")
-        try:
-            print "Stopping"
-            _stop_target(label, serial)
-        except Exception:
-            pass
-        try:
-            print "Unconfiguring"
-            _unconfigure_ha(False, label, serial)
-            _unconfigure_ha(True, label, serial)
-        except Exception:
-            pass
+    for resource, attrs in query_ha_targets(args).items():
+        print "Stopping %s" % resource
+        _stop_target(attrs['label'], attrs['serial'])
+        print "Unconfiguring %s" % resource
+        _unconfigure_ha(True, attrs['label'], attrs['uuid'], attrs['serial'])
 
 
 class TargetsPlugin(ActionPlugin):
