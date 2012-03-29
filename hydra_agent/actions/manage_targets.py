@@ -41,6 +41,7 @@ def get_resource_location(resource_name):
             # node, by outputting a number of 'is running on' lines.
             # This happens while we are adding a target -- a separate process doing a get_resource_locations
             # sees one of these multi-line outputs from 'crm_resource --locate'
+            # this actually shouldn't happen any more with HYD-514 fixed
             line_count = len(stdout.strip().split('\n'))
             if line_count > 1:
                 return None
@@ -206,10 +207,13 @@ def configure_ha(args):
     rc, stdout, stderr = shell.run(['crm', '-D', 'plain', 'configure', 'show',
                                     '%s-%s' % (unique_label, preference)])
     out = stdout.rstrip("\n")
+
+    node = os.uname()[1]
+
     if len(out) > 0:
         compare = "location %s-%s %s %s: %s" % (unique_label, preference,
                                                 unique_label, score,
-                                                os.uname()[1])
+                                                node)
         if out == compare:
             return
         else:
@@ -217,7 +221,7 @@ def configure_ha(args):
 
     rc, stdout, stderr = cibadmin("-o constraints -C -X '<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>'" % (unique_label,
                                   preference,
-                                  os.uname()[1],
+                                  node,
                                   unique_label, score))
 
     create_libdir()
@@ -352,7 +356,12 @@ def unmigrate_target(args):
 def target_running(args):
     from os import _exit
     from hydra_agent.actions.utils import Mounts
-    info = AgentStore.get_target_info(args.uuid)
+    try:
+        info = AgentStore.get_target_info(args.uuid)
+    except:
+        # it can't possibly be running here if the AgentStore entry for
+        # it doesn't even exist
+        _exit(1)
     mounts = Mounts()
     for device, mntpnt, fstype in mounts.all():
         if device == info['bdev'] and mntpnt == info['mntpt']:
