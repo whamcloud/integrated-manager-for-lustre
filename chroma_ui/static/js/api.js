@@ -416,6 +416,17 @@ var Api = function() {
     return (outstanding_requests > 0)
   }
 
+  function on_available(callback)
+  {
+    if (!api_available) {
+      $('body').bind('api_available', function() {
+        callback();
+      });
+    } else {
+      callback()
+    }
+  }
+
   return {
     enable: enable,
     call : call,
@@ -426,6 +437,7 @@ var Api = function() {
     testMode: testMode,
     'delete': del,
     get_datatables: get_datatables,
+    on_available: on_available,
     UI_ROOT: UI_ROOT
   }
 }();

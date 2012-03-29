@@ -224,6 +224,9 @@ var Dashboard = function(){
     "<span class='fontStyle style2 style9'><b>Free Space</b></span></td>" +
     "</tr>";
 
+    $('#dashboard_page_global').show();
+    updateChartSizes();
+
     Api.get("filesystem", {limit: 0},
       success_callback = function(data)
       {
@@ -259,8 +262,6 @@ var Dashboard = function(){
         load_breadcrumbs();
       });
 
-      console.log('init_charts_global');
-      updateSizes();
       init_charts_global();
   }
   
@@ -285,7 +286,8 @@ var Dashboard = function(){
     
     loadLandingPage();
     $('#fileSystemDiv').hide();$('#ossInfoDiv').hide();$('#ostInfoDiv').hide();
-    $('#dashboard_page_global').slideDown("slow");
+
+    $('#dashboard_page_global').show();
 
     if(view_value == "filesystem_view")
     {
@@ -328,7 +330,8 @@ var Dashboard = function(){
   loadFSContent = function(fsId, fsName)
   {
     $('#dashboard_page_global').hide();$('#ossInfoDiv').hide();$('#ostInfoDiv').hide();
-    $('#fileSystemDiv').slideDown("slow");
+    $('#fileSystemDiv').show();
+    updateChartSizes();
     var ostKindMarkUp = "<option value=''></option>";
     
     var breadCrumbHtml = "<ul>"+
@@ -416,7 +419,8 @@ var Dashboard = function(){
   loadOSSContent = function(fsId, fsName, ossId, ossName)
   {
     $('#dashboard_page_global').hide();$('#fileSystemDiv').hide();$('#ostInfoDiv').hide();
-    $('#ossInfoDiv').slideDown("slow");
+    $('#ossInfoDiv').show();
+    updateChartSizes();
     var ostKindMarkUp = "<option value=''></option>";
     var ost_file_system_MarkUp = "<option value=''></option>";
     
@@ -521,7 +525,8 @@ var Dashboard = function(){
   loadOSTContent = function(fsId, fsName, ossName, ostId, ostName, ostKind)
   {
     $('#dashboard_page_global').hide();$('#fileSystemDiv').hide();$('#ossInfoDiv').hide();
-    $('#ostInfoDiv').slideDown("slow");
+    $('#ostInfoDiv').show();
+    updateChartSizes();
     var breadCrumbHtml = "<ul>"+
     "<li><a href='/dashboard'>Home</a></li>"+
     "<li>"+get_view_selection_markup()+"</li>";

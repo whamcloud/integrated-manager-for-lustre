@@ -673,13 +673,12 @@ div.dashboard_page {
     padding: 0px;
     margin: 0px;
     height: auto;
-    display: block;
+    display: none;
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-
 }
 
 table.chart_grid {
@@ -695,8 +694,6 @@ table.chart_grid tr td {
 }
 
 table.chart_grid td div.chart {
-    width: 0px;
-    height: 0px;
 }
 
 

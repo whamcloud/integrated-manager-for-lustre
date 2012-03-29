@@ -172,18 +172,7 @@ var ChartManager = function(options) {
         _.each(config.charts[config.chart_group], function(chart,key) {
             if (chart.enabled && chart.state == 'idle') {
                 log('- rendering chart ' + key);
-                if (_.isNull(chart.instance) && !window.loaded) {
-                  /* Because highcharts copies the size of its parent element when it's
-                   * constructed, wait for the loading/sizing to happen before creating
-                   * the chart */
-                  log(' waiting for window.load');
-                  $(window).load(function() {
-                    log(' window loaded, rendering chart ' + key);
-                    get_data(chart);
-                  });
-                } else {
-                  get_data(chart);
-                }
+                get_data(chart);
             }
         });
     };
