@@ -227,7 +227,15 @@ def format_target(args):
     blkid_output = shell.try_run(["blkid", "-o", "value", "-s", "UUID", kwargs['device']])
     uuid = blkid_output.strip()
 
-    return {'uuid': uuid}
+    dumpe2fs_output = shell.try_run(["dumpe2fs", "-h", kwargs['device']])
+    inode_count = int(re.search("Inode count:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
+    inode_size = int(re.search("Inode size:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
+
+    return {
+            'uuid': uuid,
+            'inode_size': inode_size,
+            'inode_count': inode_count
+            }
 
 
 def register_target(args):
