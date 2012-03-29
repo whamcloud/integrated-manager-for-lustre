@@ -96,6 +96,14 @@
         volume.original_ids = volume.id + "_" + primary_node_id + "_" + secondary_node_id;
         volume.dirty_ids = volume.original_ids;
 
+        if (volume.volume_nodes.length > 0) {
+          var tooltip = "";
+          $.each(volume.volume_nodes, function(i, node) {
+              tooltip = tooltip + node.host_label + ":" + node.path;
+          });
+          volume.label = "<span title='" + tooltip + "'>" + volume.label + "</span>"
+        }
+
         return volume;
       }
 
