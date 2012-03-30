@@ -781,16 +781,24 @@ function init_charts_global() {
         }
         categories.push(name);
 
-        var current_data = fs_data[0].data
-        var free;
+        if (fs_data.length) {
+          var current_data = fs_data[0].data
+          var free;
 
-        free = ((current_data.kbytesfree)/(current_data.kbytestotal))*100;
-        freeBytes.push(free);
-        usedBytes.push(100 - free);
+          free = ((current_data.kbytesfree)/(current_data.kbytestotal))*100;
+          freeBytes.push(free);
+          usedBytes.push(100 - free);
 
-        free = ((current_data.filesfree)/(current_data.filestotal))*100;
-        freeFiles.push(free);
-        usedFiles.push(100 - free);
+          free = ((current_data.filesfree)/(current_data.filestotal))*100;
+          freeFiles.push(free);
+          usedFiles.push(100 - free);
+        } else {
+          // No data, assume new
+          freeBytes.push(100);
+          usedBytes.push(0);
+          freeFiles.push(100);
+          usedFiles.push(0);
+        }
       });
 
       chart.instance.xAxis[0].setCategories(categories);
