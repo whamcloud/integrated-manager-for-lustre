@@ -345,8 +345,9 @@ cursor:pointer;
 
 .rightpanel{
     float:left;
-    /*border: 1px solid green;*/
     padding-left: 23px;
+    overflow-x: hidden;
+    overflow-y: visible;
 }
 
 a#sidebar_open {
@@ -664,7 +665,24 @@ tr.log_error {
 tr.log_info {
 }
 
+div.toplevel {
+    position: relative;
+}
+
+div.dashboard_page {
+    padding: 0px;
+    margin: 0px;
+    height: auto;
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
 table.chart_grid {
+    height: 100%;
     width: 100%;
 }
 
@@ -672,18 +690,14 @@ table.chart_grid tr {
 }
 
 table.chart_grid tr td {
-    width: 30%;
     position: relative;
 }
 
 table.chart_grid td div.chart {
-    height: 200px;
-    width: 100%;
 }
 
 
 table.chart_grid td table {
-    width: 100%;
 }
 
 .resource_alert {
@@ -742,13 +756,13 @@ table.validated_form td {
     font-size: 10pt;
 }
 
-table.validated_form span.error {
+.validated_form span.error {
     color: red;
     font-style: italic;
     display: block;
 }
 
-table.validated_form input.error {
+.validated_form input.error {
     border: 1px solid red;
 }
 

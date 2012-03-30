@@ -61,7 +61,7 @@ class TestLuns(JobTestCase):
         host, command = ManagedHost.create_from_string('myaddress')
 
         from chroma_core.lib.storage_plugin.query import ResourceQuery
-        resource_record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = host.pk)
+        resource_record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources', host_id = host.pk, plugin_name = 'linux')
 
         # Simplest case: an UnsharedDevice
         scannable_resource = resource_record.to_resource()

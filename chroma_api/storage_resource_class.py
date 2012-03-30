@@ -10,6 +10,8 @@ from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from tastypie.resources import ModelResource
 
+from chroma_core.lib.storage_plugin import attributes
+
 
 def filter_class_ids():
     """Wrapper to avoid importing storage_plugin_manager at module scope (it
@@ -47,7 +49,8 @@ class StorageResourceClassResource(ModelResource):
     fields = fields.DictField()
 
     def dehydrate_columns(self, bundle):
-        return bundle.obj.get_class().get_columns()
+        properties = bundle.obj.get_class().get_all_attribute_properties()
+        return [{'name': name, 'label': props.get_label(name)} for (name, props) in properties if not isinstance(props, attributes.Password)]
 
     def dehydrate_fields(self, bundle):
         resource_klass = bundle.obj.get_class()

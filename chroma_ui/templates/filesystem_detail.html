@@ -52,16 +52,30 @@
             click: function(){
               var ost_lun_ids = $('#new_ost_chooser').volumeChooser('val');
               var dialog = $(this)
-              Api.post("target/", {kind: 'OST', filesystem_id: fs_id, lun_ids: ost_lun_ids},
-                success_callback = function(data)
-                {
-                  //Reload table with latest ost's.
-                  $('#ost').dataTable().fnClearTable();
-                  $('#mdt').dataTable().fnClearTable();
-                  $('#mgt_configuration_view').dataTable().fnClearTable();
-                  loadFilesystemTargets();
-                  dialog.dialog("close");
-                });
+
+              function chain_creation(i) {
+                if (i == undefined) {
+                  i = 0;
+                }
+
+                Api.post("target/", {kind: 'OST', filesystem_id: fs_id, volume_id: ost_lun_ids[i]},
+                  success_callback = function(data)
+                  {
+                    if (i == ost_lun_ids.length - 1) {
+                      // Last POST succeeded, reload table
+                      $('#ost').dataTable().fnClearTable();
+                      $('#mdt').dataTable().fnClearTable();
+                      $('#mgt_configuration_view').dataTable().fnClearTable();
+                      loadFilesystemTargets();
+                      dialog.dialog("close");
+                    } else {
+                      // POST the next OST creation
+                      chain_creation(i + 1);
+                    }
+                  });
+              }
+
+              chain_creation();
             }
           },
           "Cancel": function() { 

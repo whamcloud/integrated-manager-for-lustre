@@ -279,14 +279,11 @@ EMAIL_SENDER = "chroma-server@whamcloud.com"
 
 _plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'chroma_core', 'plugins')
 sys.path.append(_plugins_path)
-INSTALLED_STORAGE_PLUGINS = ["linux"]
+INSTALLED_STORAGE_PLUGINS = ["linux", "linux_network"]
 #: Whether to enable debug-level logging across chroma_core.lib.storage_plugin
 STORAGE_PLUGIN_DEBUG = DEBUG
 #: List of plugins to enable debug-level logging for
 STORAGE_PLUGIN_DEBUG_PLUGINS = []
-
-# Enable discovery-order assignment of LunNodes as 1st primary=true, 2nd use=true, subsequent use=false
-PRIMARY_LUN_HACK = True
 
 # For django_coverage
 COVERAGE_REPORT_HTML_OUTPUT_DIR = '/tmp/test_html'

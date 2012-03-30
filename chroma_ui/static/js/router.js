@@ -127,7 +127,7 @@ var ChromaRouter = Backbone.Router.extend({
   dashboard: function() {
     this.toplevel('dashboard');
 
-    loadView(window.location.hash);
+    Dashboard.loadView(window.location.hash);
     $('#fsSelect').attr("value","");
     $('#intervalSelect').attr("value","");
   }

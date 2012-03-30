@@ -402,3 +402,75 @@ Alert conditions
 
 .. automodule:: chroma_core.lib.storage_plugin.alert_conditions
     :members:
+
+
+
+Advanced: using custom block device identifiers
+-----------------------------------------------
+
+Chroma makes a best effort to extract standard SCSI identifiers from block devices which
+it encounters on Lustre servers.  However, in some cases:
+ * The SCSI identifier may be missing
+ * The storage controller may not provide the SCSI identifier
+
+Storage plugins may provide additional code to run on Lustre servers which extracts additional
+information from block devices.
+
+Plugin code running within the Chroma agent has a much simpler interface:
+::
+    from hydra_agent.plugins import DevicePlugin
+
+
+    class FakeControllerDevicePlugin(DevicePlugin):
+        def _read_config(self):
+            import simplejson as json
+            return json.loads(open("/root/fake_controller.json").read())
+
+        def start_session(self):
+            # return all available information
+
+        def update_session(self):
+            # return information needed to update state
+
+
+Implementing `update_session` is optional: plugins which do not implement this function will only send
+information to the server once when the agent begins its connection to the server.
+
+The agent guarantees that the instance of your plugin class is persistent within the process
+between the initial call to start_session and subsequent calls to update_session, and that
+start_session will only ever be called once for a particular instance of your class.  This allows
+you to store information in start_session that is used for calculating deltas of the system
+information to send in update_session.
+
+Advanced: reporting hosts
+-------------------------
+
+Your storage hardware may be able to provide Chroma with knowledge of server addresses, for example
+if the storage hardware hosts virtual machines which act as Lustre servers.
+
+Advanced: specifying access paths
+---------------------------------
+
+If you are using custom block device identifiers, you may not want the relationship to
+be directly from the Lun on the controller to the block device on the server.  For example,
+you may wish to report this relationship via network ports so that Chroma knows which
+ports are related to which devices for performance analysis.
+
+To do this, your plugin must somehow know the relationship between these ports and devices.
+Assuming this knowledge exists, you can report the relationship from a device node to a server port, then to
+a controller port, then to a LUN.  This chain of relationships would allow Chroma Manager to provide
+for example a chart superimposing the bandwidth of each component in the chain from the device node to 
+the storage target.
+
+Advanced: specifying homing information
+---------------------------------------
+
+A given device node (i.e. presentation of a LUN) may be a more or less preferable means
+of access to a storage device.  For example:
+ * if a single LUN is presented on two controller ports then a device node on a host connected to one port may be preferable to a device node on a host connected to the other port.
+ * if a LUN is accessible via two device nodes on a single server, then one may be preferable to the other
+
+This type of information allows Chroma Manager to make intelligent selection of primary/secondary Lustre servers.
+
+To express this information, create a HomingPreference resource which is a parent of the device node, and has as its
+parent the LUN.

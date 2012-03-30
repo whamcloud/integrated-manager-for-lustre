@@ -65,10 +65,13 @@
 
       $('#btnNewMGT').click(function(){
         var volume_id = $('#new_mgt_chooser').volumeChooser('val');
-        CreateMGT(volume_id, function() {
-          $('#new_mgt_chooser').volumeChooser('clear');
-          $('#mgt_configuration').dataTable().fnDraw();
-        })
+        Api.post("target/", {kind: 'MGT', volume_id: volume_id},
+          success_callback = function(data) {
+            $('#new_mgt_chooser').volumeChooser('clear');
+            $('#mgt_configuration').dataTable().fnDraw();
+          }
+        );
+
       });
     }
     return {draw:draw}

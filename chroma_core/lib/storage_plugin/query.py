@@ -222,16 +222,24 @@ class ResourceQuery(object):
 
         return tree
 
-    def get_record_by_attributes(self, plugin, klass, **attrs):
+    def _record_by_attributes(self, fn, plugin, klass, **attrs):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        from chroma_core.models import StorageResourceRecord
         import json
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, klass)
+        # FIXME: validate that attrs.keys() are all part of the resource's GlobalId
         resource = klass(**attrs)
-        return StorageResourceRecord.objects.get(
+        return fn(
                 resource_class__id = klass_id,
                 storage_id_str = json.dumps(resource.id_tuple()),
                 storage_id_scope = None)
+
+    def get_record_by_attributes(self, plugin, klass, **attrs):
+        from chroma_core.models import StorageResourceRecord
+        return self._record_by_attributes(StorageResourceRecord.objects.get, plugin, klass, **attrs)
+
+    def filter_record_by_attributes(self, plugin, klass, **attrs):
+        from chroma_core.models import StorageResourceRecord
+        return self._record_by_attributes(StorageResourceRecord.objects.filter, plugin, klass, **attrs)
 
     def get_scannable_id_record_by_attributes(self, scope, plugin, klass, **attrs):
         # FIXME: horrendous function name indicating overcomplication

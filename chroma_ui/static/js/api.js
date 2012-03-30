@@ -33,8 +33,6 @@ Backbone.sync = function(method, model, options) {
   Api.call(type, url, data, success_callback = options.success);
 }
 
-
-
 /* The Api module wraps the global state used for 
  * accessing the /api/ URL space */
 var Api = function() {
@@ -418,6 +416,17 @@ var Api = function() {
     return (outstanding_requests > 0)
   }
 
+  function on_available(callback)
+  {
+    if (!api_available) {
+      $('body').bind('api_available', function() {
+        callback();
+      });
+    } else {
+      callback()
+    }
+  }
+
   return {
     enable: enable,
     call : call,
@@ -428,6 +437,7 @@ var Api = function() {
     testMode: testMode,
     'delete': del,
     get_datatables: get_datatables,
+    on_available: on_available,
     UI_ROOT: UI_ROOT
   }
 }();
@@ -529,13 +539,13 @@ function formatBigNumber(number) {
   }
 
 	if (number >= 1000000000) {
-	     number = Math.floor(number / 1073741824) + 'B';
+	     number = Math.floor(number / 1000000000) + 'B';
 	} else { 
 		if (number >= 1000000) {
-     		number = Math.floor(number / 1048576) + 'M';
+     		number = Math.floor(number / 1000000) + 'M';
    	} else { 
 			if (number >= 1000) {
-    		number = Math.floor(number / 1024) + 'k';
+    		number = Math.floor(number / 1000) + 'k';
   		}
  		};
 	};

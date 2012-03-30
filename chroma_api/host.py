@@ -10,8 +10,7 @@ import tastypie.http as http
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.resources import Resource
 from tastypie import fields
-from chroma_api.utils import custom_response, StatefulModelResource, dehydrate_command
-
+from chroma_api.utils import custom_response, StatefulModelResource, MetricResource, dehydrate_command
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PermissionAuthorization
@@ -19,7 +18,7 @@ from chroma_api.authentication import PermissionAuthorization
 from chroma_api import api_log
 
 
-class HostResource(StatefulModelResource):
+class HostResource(MetricResource, StatefulModelResource):
     """
     Represents a Lustre server which Chroma server is monitoring or managing.  When PUTing, requires the ``state`` field.  When POSTing, requires the ``address`` field.
     """

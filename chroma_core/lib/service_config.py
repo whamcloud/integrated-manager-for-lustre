@@ -214,7 +214,7 @@ class ServiceConfig:
             password1 = getpass.getpass("Password:")
             password2 = getpass.getpass("Confirm password:")
 
-            # TODO: validate all fields
+            # TODO: validate all fields (HYD-750)
             if password1 != password2:
                 log.error("Passwords do not match!")
             else:

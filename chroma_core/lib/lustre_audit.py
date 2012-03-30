@@ -10,7 +10,7 @@ from chroma_core.models.alert import TargetRecoveryAlert, HostContactAlert, LNet
 from chroma_core.models.event import LearnEvent
 from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, FilesystemMember, TargetRecoveryInfo
 from chroma_core.models.target_mount import ManagedTargetMount
-from chroma_core.models.host import ManagedHost, Nid, LunNode, Lun
+from chroma_core.models.host import ManagedHost, Nid, LunNode
 from chroma_core.models.filesystem import ManagedFilesystem
 from django.db import transaction
 
@@ -130,6 +130,7 @@ class UpdateScan(object):
     def cull_forgotten_data(self):
         mounted_uuids = dict([(m['fs_uuid'], m) for m in self.host_data['mounts']])
         forgotten_uuids = dict([(mt.uuid, mt) for mt in ManagedTarget._base_manager.filter(state = 'forgotten')])
+
         for forgotten_uuid in forgotten_uuids:
             if forgotten_uuid in mounted_uuids:
                 audit_log.debug("Culling forgotten ManagedTarget: %s" % forgotten_uuids[forgotten_uuid].name)
@@ -286,8 +287,7 @@ class UpdateScan(object):
             return 0
 
         try:
-            # get ALL targets -- including forgotten/deleted
-            target = ManagedTarget._base_manager.get(name=target_name,
+            target = ManagedTarget.objects.get(name=target_name,
                                         managedtargetmount__host=self.host)
         except ManagedTarget.DoesNotExist:
             # Unknown target -- ignore metrics
@@ -407,7 +407,7 @@ class DetectScan(object):
             try:
                 tm = ManagedTargetMount.objects.get(target = mgs, host = self.host)
             except ManagedTargetMount.DoesNotExist:
-                lunnode = self.get_lun_node_for_target(None, self.host, mgs_local_info['device'])
+                lunnode = self.get_lun_node_for_target(None, self.host, mgs_local_info['devices'])
                 primary = self.is_primary(mgs_local_info)
                 tm = ManagedTargetMount.objects.create(
                         immutable_state = True,
@@ -416,10 +416,16 @@ class DetectScan(object):
                         primary = primary,
                         block_device = lunnode)
         except ManagedMgs.DoesNotExist:
-            # Only do this for possibly-primary mounted MGSs
+            # Only do this for primary mount location
             # Otherwise would risk seeing an MGS somewhere it's not actually
             # used and assuming that that was the primary location.
-            if not self.is_primary(mgs_local_info) or not mgs_local_info['mounted']:
+            if not self.is_primary(mgs_local_info):
+                return None
+
+            # The MGS has to be mounted because that's the only way we
+            # can tell what its primary NID is
+            if not mgs_local_info['mounted']:
+                audit_log.warning("Cannot detect MGS on %s because it is not mounted" % self.host)
                 return None
 
             try:
@@ -429,7 +435,7 @@ class DetectScan(object):
                 pass
 
             lunnode = self.get_lun_node_for_target(None, self.host,
-                                                   mgs_local_info['device'])
+                                                   mgs_local_info['devices'])
 
             primary = self.is_primary(mgs_local_info)
 
@@ -467,7 +473,7 @@ class DetectScan(object):
             if not mgs_target_info:
                 raise KeyError
         except KeyError:
-            audit_log.warning("Saw target %s on %s:%s which is not known to mgs %s" % (local_info['name'], self.host, local_info['device'], mgs_host))
+            audit_log.warning("Saw target %s on %s:%s which is not known to mgs %s" % (local_info['name'], self.host, local_info['devices'], mgs_host))
             return False
         primary_nid = mgs_target_info['nid']
         target_nids.append(primary_nid)
@@ -479,16 +485,8 @@ class DetectScan(object):
             return False
 
     def learn_target_mounts(self):
-        # HACK: HYD-451: to deal with multipath, when a given target appears more than
-        # once we arbitrarily pick one instance.  We should be using
-        # the storage resource information to pick the 'right' one (e.g.
-        # the mpath devmapper node rather than that underlying devices)
-        culled_local_info = {}
-        for local_info in self.host_data['local_targets']:
-            culled_local_info[local_info['name']] = local_info
-
         # We will compare any found target mounts to all known MGSs
-        for local_info in culled_local_info.values():
+        for local_info in self.host_data['local_targets']:
             # We learned all targetmounts for MGSs in learn_mgs
             if local_info['name'] == 'MGS':
                 continue
@@ -516,6 +514,10 @@ class DetectScan(object):
                 audit_log.warning("Ignoring %s on %s, as it is not mountable on this host" % (local_info['name'], self.host))
                 continue
 
+            # FIXME: we ought to make sure get_or_create_target is only called
+            # if we definitely have a primary mount for the target to avoid
+            # putting something invalid in the database
+
             # TODO: detect case where we find a targetmount that matches one
             # which already exists for a different target, where the other target
             # has no name -- in this case we are overlapping with a blank target
@@ -526,7 +528,7 @@ class DetectScan(object):
 
             try:
                 primary = self.is_primary(local_info)
-                lunnode = self.get_lun_node_for_target(target, self.host, local_info['device'])
+                lunnode = self.get_lun_node_for_target(target, self.host, local_info['devices'])
                 (tm, created) = ManagedTargetMount.objects.get_or_create(target = target,
                         host = self.host, primary = primary,
                         block_device = lunnode)
@@ -538,35 +540,21 @@ class DetectScan(object):
             except NoLNetInfo:
                 audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], self.host))
 
-    def get_lun_node_for_target(self, target, host, path):
-        # TODO: tighter integration with storage resource discovery, so that we never have
-        # to create our own LunNodes: we would need to ensure that this wasn't executed
-        # until resources were discovered (or run a discovery step synchronously in here
-        # by messaging the resource manager), and then make sure the agent refered to
-        # devices by the same name as the storage resources.
-
-        # Get-or-create like logic: try getting it, then try inserting it, and
-        # if insertion failed then we collided, so try getting again.
-        from django.db import IntegrityError
-        try:
-            return self._get_lun_node_for_target(target, host, path)
-        except IntegrityError:
-            return self._get_lun_node_for_target(target, host, path)
-
-    def _get_lun_node_for_target(self, target, host, path):
-        try:
-            return LunNode.objects.get(path = path, host = host)
-        except LunNode.DoesNotExist:
-            if target and target.managedtargetmount_set.count() > 0:
-                lun = target.managedtargetmount_set.all()[0].block_device.lun
-            else:
-                # TODO: get the size from somewhere
-                lun = Lun.objects.create(size = 0, shareable = False)
-            return LunNode.objects.create(path = path, host = host, lun = lun)
+    def get_lun_node_for_target(self, target, host, paths):
+        lun_nodes = LunNode.objects.filter(path__in = paths, host = host)
+        if lun_nodes.count() == 0:
+            raise RuntimeError("No device nodes detected matching paths %s on host %s" % (paths, host))
+        else:
+            if lun_nodes.count() > 1:
+                # On a sanely configured server you wouldn't have more than one, but if
+                # e.g. you formatted an mpath device and then stopped multipath, you
+                # might end up seeing the two underlying devices.  So we cope, but warn.
+                audit_log.warning("DetectScan: Multiple LunNodes found for paths %s on host %s, using %s" % (paths, host, lun_nodes[0].path))
+            return lun_nodes[0]
 
     def get_or_create_target(self, mgs, local_info):
         name = local_info['name']
-        device_node_path = local_info['device']
+        device_node_paths = local_info['devices']
         uuid = local_info['uuid']
 
         if name.find("-MDT") != -1:
@@ -584,7 +572,8 @@ class DetectScan(object):
 
         try:
             # Is it an already detected or configured target?
-            target_mount = ManagedTargetMount.objects.get(block_device__path = device_node_path, host = self.host)
+            target_mount = ManagedTargetMount.objects.get(
+                    block_device = self.get_lun_node_for_target(None, self.host, device_node_paths), host = self.host)
             target = target_mount.target
             if target.name == None:
                 target.name = name
@@ -596,19 +585,24 @@ class DetectScan(object):
             # We are detecting a target anew, or detecting a new mount for an already-named target
             candidates = ManagedTarget.objects.filter(name = name)
             for target in candidates:
-                if isinstance(target, FilesystemMember) and target.filesystem.mgs.downcast() == mgs:
+                target = target.downcast()
+                audit_log.debug("candidate: %s %s" % (target, target.__class__))
+                audit_log.debug("candidate: %s %s" % (isinstance(target.downcast(), FilesystemMember), target.filesystem.mgs.downcast() == mgs))
+                if isinstance(target.downcast(), FilesystemMember) and target.filesystem.mgs.downcast() == mgs:
                     return target
 
             # Fall through, no targets with that name exist on this MGS
             lunnode = self.get_lun_node_for_target(None, self.host,
-                                                   device_node_path)
+                                                   device_node_paths)
             target = klass(uuid = uuid, name = name, filesystem = filesystem,
                            state = "mounted", lun = lunnode.lun,
                            immutable_state = True)
             target.save()
-            audit_log.info("%s %s %s" % (mgs.id, name, device_node_path))
+            audit_log.debug("%s" % [mt.name for mt in ManagedTarget.objects.all()])
+            audit_log.info("%s %s %s" % (mgs.id, name, device_node_paths))
             audit_log.info("Learned %s %s" % (klass.__name__, name))
             self.learn_event(target)
+
             return target
 
     def learn_event(self, learned_item):
@@ -653,6 +647,7 @@ class DetectScan(object):
                 found_mgs = True
                 mgs_local_info = volume
         if not found_mgs:
+            audit_log.debug("No MGS found on host %s" % self.host)
             return
 
         # Learn an MGS target and a TargetMount for this host

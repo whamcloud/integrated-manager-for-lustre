@@ -1,5 +1,16 @@
 
 
+def all_subclasses(obj):
+    """Used to introspect all descendents of a class.  Used because metaclasses
+       are a PITA when doing multiple inheritance"""
+    sc_recr = []
+    for sc_obj in obj.__subclasses__():
+        sc_recr.append(sc_obj)
+        for sc in all_subclasses(sc_obj):
+            sc_recr.append(sc)
+    return sc_recr
+
+
 def time_str(dt):
     import time
     return time.strftime("%Y-%m-%dT%H:%M:%S", dt.timetuple())

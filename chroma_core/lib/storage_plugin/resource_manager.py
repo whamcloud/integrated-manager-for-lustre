@@ -24,6 +24,12 @@ WARNING:
 
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 from chroma_core.lib.storage_plugin.resource import ScannableId, GlobalId
+from chroma_core.lib.util import all_subclasses
+
+from chroma_core.models import ManagedHost, ManagedTarget
+from chroma_core.models import Lun, LunNode
+from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
+from chroma_core.models import StorageResourceAlert, StorageResourceOffline
 
 from django.db import transaction
 
@@ -75,7 +81,6 @@ class EdgeIndex(object):
         del self._parent_from_edge[node]
 
     def populate(self):
-        from chroma_core.models import StorageResourceRecord
         from django.db.models import Q
         for srr in StorageResourceRecord.objects.filter(~Q(parents = None)).values('id', 'parents'):
             child = srr['id']
@@ -89,64 +94,102 @@ class SubscriberIndex(object):
         self._subscribe_value_to_id = defaultdict(set)
         self._provide_value_to_id = defaultdict(set)
 
-    def what_provides(self, field_name, field_value):
-        return self._provide_value_to_id[(field_name, field_value)]
+        # List of (provider, Provide object)
+        self._all_subscriptions = []
+        # FIXME: pass this in instead?
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin import relations
 
-    def what_subscribes(self, field_name, field_value):
-        return self._subscribe_value_to_id[(field_name, field_value)]
+        subscriptions = {}
 
-    def add_provider(self, resource_id, field_name, field_value):
-        self._provide_value_to_id[(field_name, field_value)].add(resource_id)
+        for id, klass in storage_plugin_manager.resource_class_id_to_class.items():
+            for relation in klass._relations:
+                if isinstance(relation, relations.Provide):
+                    subscription = relations.Subscribe(klass, relation.attributes)
+                    relation.provide_to._relations.append(subscription)
+                    for sc in all_subclasses(relation.provide_to):
+                        sc._relations.append(subscription)
 
-    def remove_provider(self, resource_id, field_name, field_value):
-        self._provide_value_to_id[(field_name, field_value)].remove(resource_id)
+        for id, klass in storage_plugin_manager.resource_class_id_to_class.items():
+            klass._subscriptions = []
+            for relation in klass._relations:
+                if isinstance(relation, relations.Subscribe):
+                    subscriptions[relation.key] = relation
+                    klass._subscriptions.append(relation)
 
-    def add_subscriber(self, resource_id, field_name, field_value):
-        self._subscribe_value_to_id[(field_name, field_value)].add(resource_id)
+        self._all_subscriptions = subscriptions.values()
 
-    def remove_subscriber(self, resource_id, field_name, field_value):
-        self._subscribe_value_to_id[(field_name, field_value)].remove(resource_id)
+    def what_provides(self, resource):
+        """What provides things that this resource subscribes to?"""
+        result = set()
+        for subscription in resource._subscriptions:
+            result |= self._provide_value_to_id[(subscription.key, subscription.val(resource))]
+        return result
+
+    def what_subscribes(self, resource):
+        """What subscribes to this resources?"""
+        result = set()
+        for subscription in self._all_subscriptions:
+            if isinstance(resource, subscription.subscribe_to):
+                result |= self._subscribe_value_to_id[(subscription.key, subscription.val(resource))]
+        return result
+
+    def add_provider(self, resource_id, key, value):
+        self._provide_value_to_id[(key, value)].add(resource_id)
+
+    def remove_provider(self, resource_id, key, value):
+        self._provide_value_to_id[(key, value)].remove(resource_id)
+
+    def add_subscriber(self, resource_id, key, value):
+        self._subscribe_value_to_id[(key, value)].add(resource_id)
+
+    def remove_subscriber(self, resource_id, key, value):
+        self._subscribe_value_to_id[(key, value)].remove(resource_id)
 
     def add_resource(self, resource_id, resource = None):
         if not resource:
-            from chroma_core.models import StorageResourceRecord
             resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
 
-        for field_name, key in resource._provides:
-            self.add_provider(resource_id, key, getattr(resource, field_name))
-        for field_name, key in resource._subscribes:
-            self.add_subscriber(resource_id, key, getattr(resource, field_name))
+        for subscription in self._all_subscriptions:
+            if isinstance(resource, subscription.subscribe_to):
+                self.add_provider(resource_id, subscription.key, subscription.val(resource))
+        for subscription in resource._subscriptions:
+            self.add_subscriber(resource_id, subscription.key, subscription.val(resource))
 
     def remove_resource(self, resource_id, resource = None):
+        log.debug("SubscriberIndex.remove_resource %s" % resource_id)
         if not resource:
-            from chroma_core.models import StorageResourceRecord
-            resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
+            try:
+                resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
+            except StorageResourceRecord.DoesNotExist:
+                log.warning("SubscriberIndex.remove_resource: %s not found" % resource_id)
+                return
 
-        for field_name, key in resource._provides:
-            self.remove_provider(resource_id, key, getattr(resource, field_name))
-        for field_name, key in resource._subscribes:
-            self.remove_subscriber(resource_id, key, getattr(resource, field_name))
+        for subscription in self._all_subscriptions:
+            if isinstance(resource, subscription.subscribe_to):
+                log.debug("SubscriberIndex.remove provider %s" % subscription.key)
+                self.remove_provider(resource_id, subscription.key, subscription.val(resource))
+        for subscription in resource._subscriptions:
+            log.debug("SubscriberIndex.remove subscriber %s" % subscription.key)
+            self.remove_subscriber(resource_id, subscription.key, subscription.val(resource))
 
     def populate(self):
-        from chroma_core.models import StorageResourceAttribute
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         for resource_class_id, resource_class in storage_plugin_manager.get_all_resources():
+            for subscription in self._all_subscriptions:
+                if issubclass(resource_class, subscription.subscribe_to):
+                    records = StorageResourceRecord.objects.filter(
+                            resource_class = resource_class_id)
+                    for r in records:
+                        resource = r.to_resource()
+                        self.add_provider(r.id, subscription.key, subscription.val(resource))
 
-            for p_attr, p_key in resource_class._provides:
-                instances = StorageResourceAttribute.objects.filter(
-                        resource__resource_class = resource_class_id,
-                        key = p_attr).values('resource__id', 'value')
-                attribute_object = resource_class._storage_attributes[p_attr]
-                for i in instances:
-                    self.add_provider(i['resource__id'], p_key, attribute_object.decode(i['value']))
-
-            for s_attr, s_key in resource_class._subscribes:
-                instances = StorageResourceAttribute.objects.filter(
-                        resource__resource_class = resource_class_id,
-                        key = s_attr).values('resource__id', 'value')
-                attribute_object = resource_class._storage_attributes[s_attr]
-                for i in instances:
-                    self.add_subscriber(i['resource__id'], s_key, attribute_object.decode(i['value']))
+            for subscription in resource_class._subscriptions:
+                records = StorageResourceRecord.objects.filter(
+                        resource_class = resource_class_id)
+                for r in records:
+                    resource = r.to_resource()
+                    self.add_subscriber(r.id, subscription.key, subscription.val(resource))
 
 
 class ResourceManager(object):
@@ -182,20 +225,12 @@ class ResourceManager(object):
             self._persist_new_resources(session, initial_resources)
             self._cull_lost_resources(session, initial_resources)
 
-            # TODO: cull any resources which are in the database with
-            # ScannableIds for this scannable but not in the initial
-            # resource list
-
-            # Special case for the built in 'linux' plugin: hook up resources
-            # to Lun and LunNode objects to interface with the world of Lustre
+            # Special case for agent-reported resources: update Lun and LunNode
+            # objects to interface with the world of Lustre
             # TODO: don't just do this at creation, do updates too
-            from linux import HydraHostProxy
-            from chroma_core.lib.storage_plugin.query import ResourceQuery
-            scannable_resource = ResourceQuery().get_resource(scannable_id)
-            if isinstance(scannable_resource, HydraHostProxy):
-                self._persist_lun_updates(scannable_id, scannable_resource)
+            self._persist_lun_updates(scannable_id)
 
-            # Plugins are allowed to create HydraHostProxy objects, indicating that
+            # Plugins are allowed to create VirtualMachine objects, indicating that
             # we should created a ManagedHost to go with it (e.g. discovering VMs)
             self._persist_created_hosts(session, scannable_id)
 
@@ -216,8 +251,11 @@ class ResourceManager(object):
         # class of each resource)
         def get_session_resources_of_type(session, klass):
             for record_pk in session.local_id_to_global_id.values():
-                from chroma_core.models import StorageResourceRecord
-                record = StorageResourceRecord.objects.get(pk = record_pk)
+                try:
+                    record = StorageResourceRecord.objects.get(pk = record_pk)
+                except StorageResourceRecord.DoesNotExist:
+                    log.error("Record %d is in the local session but does not exist" % (record.id))
+                    pass
                 resource = record.to_resource()
                 if isinstance(resource, klass):
                     yield (record, resource)
@@ -225,22 +263,33 @@ class ResourceManager(object):
         from chroma_core.lib.storage_plugin import builtin_resources
         for record, resource in get_session_resources_of_type(session, builtin_resources.VirtualMachine):
             if not resource.host_id:
-                from chroma_core.models import ManagedHost
-                log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
-                host, command = ManagedHost.create_from_string(
-                        resource.address,
-                        virtual_machine = record.pk)
-                record.update_attribute('host_id', host.pk)
+                try:
+                    host = ManagedHost.objects.get(address = resource.address)
+                    log.info("Associated existing host with VirtualMachine resource: %s" % resource.address)
+                    record.update_attribute('host_id', host.pk)
+                except ManagedHost.DoesNotExist:
+                    log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
+                    host, command = ManagedHost.create_from_string(resource.address)
+                    record.update_attribute('host_id', host.pk)
 
                 # NB any instances of this resource within the plugin session
                 # that reported it won't see the change to host_id attribute, but that's
                 # fine, they have no right to know.
 
     @transaction.commit_on_success
-    def _persist_lun_updates(self, scannable_id, scannable_resource):
+    def _persist_lun_updates(self, scannable_id):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         from chroma_core.lib.storage_plugin import builtin_resources
-        from chroma_core.models import Lun, LunNode, ManagedHost
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
+        scannable_resource = ResourceQuery().get_resource(scannable_id)
+
+        log.debug("%s %s %s" % (scannable_resource, storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')[0], isinstance(scannable_resource, storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')[0])))
+        if not isinstance(scannable_resource, storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')[0]):
+            return
+        else:
+            log.debug("_persist_lun_updates for scope record %s" % scannable_id)
+            host = ManagedHost.objects.get(pk = scannable_resource.host_id)
 
         def lun_get_or_create(resource_id):
             try:
@@ -249,163 +298,192 @@ class ResourceManager(object):
                 # Determine whether a device is shareable by whether it has a SCSI
                 # ancestor (e.g. an LV on a scsi device is shareable, an LV on an IDE
                 # device is not)
-                from linux import ScsiDevice
-                scsi_ancestor = ResourceQuery().record_find_ancestors(resource_id, ScsiDevice)
-                shareable = (scsi_ancestor != None)
                 r = ResourceQuery().get_resource(resource_id)
                 lun = Lun.objects.create(
                         size = r.size,
-                        storage_resource_id = r._handle,
-                        shareable = shareable)
+                        storage_resource_id = r._handle)
+                log.info("Created Lun %s for LogicalDrive %s" % (lun.pk, resource_id))
                 return lun
 
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        # Update LunNode objects for DeviceNodes
-        node_types = []
-        # FIXME: mechanism to get subclasses of builtin_resources.DeviceNode
-        node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'ScsiDeviceNode')[1])
-        node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'UnsharedDeviceNode')[1])
-        node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'LvmDeviceNode')[1])
-        node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'PartitionDeviceNode')[1])
-        node_types.append(storage_plugin_manager.get_plugin_resource_class('linux', 'MultipathDeviceNode')[1])
-        node_resources = ResourceQuery().get_class_resources(node_types, storage_id_scope = scannable_id)
-        host = ManagedHost.objects.get(pk = scannable_resource.host_id)
-        touched_luns = set()
-        touched_lun_nodes = set()
-        for record in node_resources:
-            log.debug("lunnode record %s" % record.pk)
-            r = record.to_resource()
-            # A node which has children is already in use
-            # (it might contain partitions, be an LVM PV, be in
-            #  use by a local filesystem, or as swap)
-            if ResourceQuery().record_has_children(r._handle):
-                continue
+        # Get all DeviceNodes within this scope
+        node_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
+                for klass in all_subclasses(builtin_resources.DeviceNode)]
+        node_resources = ResourceQuery().get_class_resources(node_klass_ids, storage_id_scope = scannable_id)
 
-            device = ResourceQuery().record_find_ancestor(record.pk, builtin_resources.LogicalDrive)
-            if device == None:
-                log.error("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
-                continue
-                #raise RuntimeError("Got a device node resource %s with no LogicalDrive ancestor!" % r._handle)
+        # DeviceNodes elegible for use as a LunNode (leaves)
+        usable_node_resources = [nr for nr in node_resources if not ResourceQuery().record_has_children(nr.id)]
 
-            lun = lun_get_or_create(device)
-            try:
-                lun_node = LunNode.objects.get(
-                        host = host,
-                        path = r.path)
+        # DeviceNodes which are usable but don't have LunNode
+        assigned_resource_ids = [ln['storage_resource_id'] for ln in LunNode.objects.filter(storage_resource__in = [n.id for n in node_resources]).values("id", "storage_resource_id")]
+        unassigned_node_resources = [nr for nr in usable_node_resources if nr.id not in assigned_resource_ids]
+
+        # LunNodes whose storage resource is within this scope
+        scope_lun_nodes = LunNode.objects.filter(storage_resource__storage_id_scope = scannable_id)
+
+        log.debug("%s %s %s %s" % (tuple([len(l) for l in [node_resources, usable_node_resources, unassigned_node_resources, scope_lun_nodes]])))
+
+        def affinity_weights(lun):
+            lun_nodes = LunNode.objects.filter(lun = lun)
+            if lun_nodes.count() == 0:
+                log.info("affinity_weights: Lun %d has no LunNodes" % lun.id)
+                return False
+
+            if ManagedTarget.objects.filter(lun = lun).count() > 0:
+                log.info("affinity_weights: Lun %d in use" % lun.id)
+                return False
+
+            weights = {}
+            for lun_node in lun_nodes:
                 if not lun_node.storage_resource:
-                    lun_node.storage_resource_id = record.pk
+                    log.info("affinity_weights: no storage_resource for LunNode %s" % lun_node.id)
+                    return False
+
+                weight_resource_ids = ResourceQuery().record_find_ancestors(lun_node.storage_resource, builtin_resources.PathWeight)
+                if len(weight_resource_ids) == 0:
+                    log.info("affinity_weights: no PathWeights for LunNode %s" % lun_node.id)
+                    return False
+
+                attr_model_class = StorageResourceRecord.objects.get(id = weight_resource_ids[0]).resource_class.get_class().attr_model_class('weight')
+
+                import json
+                ancestor_weights = [json.loads(w['value']) for w in attr_model_class.objects.filter(
+                    resource__in = weight_resource_ids, key = 'weight').values('value')]
+                weight = reduce(lambda x, y: x + y, ancestor_weights)
+                weights[lun_node] = weight
+
+            log.info("affinity_weights: %s" % weights)
+
+            sorted_lun_nodes = [lun_node for lun_node, weight in sorted(weights.items(), lambda x, y: cmp(x[1], y[1]))]
+            sorted_lun_nodes.reverse()
+            primary = sorted_lun_nodes[0]
+            primary.primary = True
+            primary.use = True
+            primary.save()
+            if len(sorted_lun_nodes) > 1:
+                secondary = sorted_lun_nodes[1]
+                secondary.use = True
+                secondary.primary = False
+                secondary.save()
+            for lun_node in sorted_lun_nodes[2:]:
+                lun_node.use = False
+                lun_node.primary = False
+                lun_node.save()
+
+            return True
+
+        def affinity_balance(lun):
+            lun_nodes = LunNode.objects.filter(lun = lun)
+            host_to_lun_nodes = defaultdict(list)
+            for ln in lun_nodes:
+                host_to_lun_nodes[ln.host].append(ln)
+
+            host_to_primary_count = dict([(h, LunNode.objects.filter(host = h, primary = True).count()) for h in host_to_lun_nodes.keys()])
+
+            fewest_primaries = [host for host, count in sorted(host_to_primary_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
+            primary_lun_node = host_to_lun_nodes[fewest_primaries][0]
+            primary_lun_node.primary = True
+            primary_lun_node.use = True
+            primary_lun_node.save()
+            log.info("affinity_balance: picked %s for %s primary" % (primary_lun_node.host, lun))
+
+            # Remove the primary host from consideration for the secondary mount
+            del host_to_lun_nodes[primary_lun_node.host]
+
+            if len(host_to_lun_nodes) > 0:
+                host_to_lun_node_count = dict([(h, LunNode.objects.filter(host = h, use = True).count()) for h in host_to_lun_nodes.keys()])
+                log.info("htlnc: %s" % host_to_lun_node_count)
+                fewest_lun_nodes = [host for host, count in sorted(host_to_lun_node_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
+                secondary_lun_node = host_to_lun_nodes[fewest_lun_nodes][0]
+                secondary_lun_node.primary = False
+                secondary_lun_node.use = True
+                secondary_lun_node.save()
+                log.info("affinity_balance: picked %s for %s secondary" % (secondary_lun_node.host, lun))
+            else:
+                secondary_lun_node = None
+
+            for lun_node in lun_nodes:
+                if not lun_node in (primary_lun_node, secondary_lun_node):
+                    lun_node.use = False
+                    lun_node.primary = False
                     lun_node.save()
 
-            except LunNode.DoesNotExist:
-                # If setting up a non-shareable device, make its first
-                # LunNode a primary
-                if not lun.shareable:
-                    primary = True
-                    use = True
-                else:
-                    primary = False
-                    use = False
+        # For all unattached DeviceNode resources, find or create LunNodes
+        for node_record in unassigned_node_resources:
+            logicaldrive_id = ResourceQuery().record_find_ancestor(node_record.pk, builtin_resources.LogicalDrive)
+            if logicaldrive_id == None:
+                # This is not an error: a plugin may report a device node from
+                # an agent plugin before reporting the LogicalDrive from the controller.
+                log.info("DeviceNode %s has no LogicalDrive ancestor" % node_record.pk)
+                continue
+            else:
+                log.info("Setting up DeviceNode %s" % node_record.pk)
+                node_resource = node_record.to_resource()
 
-                # FIXME: assumes that we discover the device nodes AFTER the underlying storage,
-                # in order that the underlying VDs will be here when we look for home
-                # controller information.  This is true for controller-hosted virtual machines,
-                # as we set up the VMs after scanning the controller for the first time, but
-                # it is not true in the general case.
+                lun = lun_get_or_create(logicaldrive_id)
+                try:
+                    lun_node = LunNode.objects.get(
+                            host = host,
+                            path = node_resource.path)
+                except LunNode.DoesNotExist:
+                    lun_node = LunNode.objects.create(
+                        lun = lun,
+                        host = host,
+                        path = node_resource.path,
+                        storage_resource_id = node_record.pk,
+                        primary = False,
+                        use = False)
+                    log.info("Created LunNode %s for resource %s" % (lun_node.id, node_record.pk))
+                    got_weights = affinity_weights(lun_node.lun)
+                    if not got_weights:
+                        affinity_balance(lun_node.lun)
 
-                from chroma_core.models import StorageResourceRecord
-                ancestor_virtual_disks = ResourceQuery().record_find_ancestors(
-                        record.pk, builtin_resources.VirtualDisk)
-                # collect home controller information
-                vd_home_controllers = set()
-                for vd_id in ancestor_virtual_disks:
-                    vd_res = StorageResourceRecord.objects.get(pk = vd_id).to_resource()
-                    if vd_res.home_controller:
-                        vd_home_controller_pk = vd_res.home_controller._handle
-                        vd_home_controllers.add(vd_home_controller_pk)
+        # For all LunNodes, if its storage resource was in this scope, and it
+        # was not included in the set of usable DeviceNode resources, remove
+        # the LunNode
+        for lun_node in scope_lun_nodes:
+            log.debug("lun node %s (%s) usable %s" % (lun_node.id, lun_node.storage_resource_id, lun_node.storage_resource_id in [nr.id for nr in usable_node_resources]))
+            if not lun_node.storage_resource_id in [nr.id for nr in usable_node_resources]:
+                self._try_removing_lun_node(lun_node)
 
-                host_proxy = StorageResourceRecord.objects.get(pk = scannable_id).to_resource()
-                if len(vd_home_controllers) == 1 and host_proxy.virtual_machine:
-                    # We can identify a primary host if there is one home controller
-                    # for all underlying VDs
-                    vd_home_controller_id = vd_home_controllers.pop()
-                    host_home_controller_id = host_proxy.virtual_machine.home_controller._handle
-                    if host_home_controller_id == vd_home_controller_id:
-                        primary = True
-                        use = True
-                        log.info("Device %s on same host controller as host %s, marking primary" % (device, host))
-                    else:
-                        # In this case, there is enough information that we will have found
-                        # the primary mount elsewhere, and this is a potential secondary mount.
+        # TODO: Lun Stealing: there may be an existing Lun/LunNode setup for some ScsiDeviceNodes and ScsiVolumes
+        # detected by Chroma, and a storage plugin adds in extra links to the device nodes that follow back
+        # to a LogicalDrive provided by the plugin.  In this case there are two LogicalDrive ancestors of the
+        # device nodes and we would like to have the Lun refer to the plugin-provided one rather than
+        # the auto-generated one (to get the right name etc).
+        # LogicalDrives within this scope
+        #logical_drive_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
+        #        for klass in all_subclasses(builtin_resources.LogicalDrive)]
+        #logical_drive_resources = ResourceQuery().get_class_resources(logical_drive_klass_ids, storage_id_scope = scannable_id)
 
-                        # FIXME: first-come-first-served assignment of secondary works
-                        # when the LUN is only presented to two hosts, but not in the general
-                        # case: need more advanced ALUA detection to do this right (but this
-                        # works well enough for a controlled 10KE environment)
-                        use = True
-                        primary = False
-                        log.info("Device %s (hc %s) has different home controller than host %s (hc %s)" % (device, vd_home_controller_id, host, host_home_controller_id))
-                else:
-                    log.info("Device %s on %s home controllers, host %s virtual machine='%s', cannot infer primary mount " % (device, len(vd_home_controllers), host, host_proxy.virtual_machine))
-                    # The host does not have a home controller, or the underlying VDs don't
-                    # all point to the same host controller, or don't have a host controller
-                    # set: we can't guess at the primary
+    def _try_removing_lun(self, lun):
+        targets = ManagedTarget.objects.filter(lun = lun)
+        nodes = LunNode.objects.filter(lun = lun)
+        if targets.count() == 0 and nodes.count() == 0:
+            log.warn("Removing Lun %s" % lun.id)
+            lun.storage_resource = None
+            lun.save()
+            Lun.delete(lun.id)
+            return True
+        elif targets.count():
+            log.warn("Leaving Lun %s, used by Target %s" % (lun.id, targets[0]))
+        elif nodes.count():
+            log.warn("Leaving Lun %s, used by %s nodes" % (lun.id, nodes.count()))
 
-                    # A hack to provide some arbitrary primary/secondary assignments
-                    import settings
-                    if settings.PRIMARY_LUN_HACK:
-                        if lun.lunnode_set.filter(host__not_deleted = True).count() == 0:
-                            primary = True
-                            use = True
-                        else:
-                            primary = False
-                            if lun.lunnode_set.filter(use = True, host__not_deleted = True).count() > 1:
-                                use = False
-                            else:
-                                use = True
-                    else:
-                        use = False
-                        primary = False
+        return False
 
-                lun_node = LunNode.objects.create(
-                    lun = lun,
-                    host = host,
-                    path = r.path,
-                    storage_resource_id = record.pk,
-                    primary = primary,
-                    use = use)
+    def _try_removing_lun_node(self, lun_node):
+        targets = ManagedTarget.objects.filter(managedtargetmount__block_device = lun_node)
+        if targets.count() == 0:
+            log.warn("Removing LunNode %s" % lun_node.id)
+            lun_node.storage_resource = None
+            lun_node.save()
+            LunNode.delete(lun_node.id)
+            self._try_removing_lun(lun_node.lun)
+            return True
+        else:
+            log.warn("Leaving LunNode %s, used by Target %s" % (lun_node.id, targets[0]))
 
-            touched_luns.add(lun_node.pk)
-            touched_lun_nodes.add(lun_node.pk)
-            # BUG: when mjmac set up on IU, it saw mpath devices fine as
-            # LunNodes.  But when he created some CLVM LVs on multipath
-            # devices, the multipath devices stayed (see TODO below) AND
-            # the new LV devices didn't appear.  Why didn't they get promoted
-            # to LunNodes?  they were in hydra-agent output
-            # TODO: cope with CLVM where device nodes appear and disappear
-            # - simplest thing would be to have the agent lie and claim
-            # that the device node is always there (based on LV presence
-            # in 'lvs' output.  But that's a hack.  And appearing in 'lvs'
-            # just means the PVs are on shared storage that the host has
-            # access to, not necessarily that the host is in the pacemaker
-            # group that will access the LVs.
-
-        log.debug("touched lun nodes %s" % touched_lun_nodes)
-        log.debug("LunNode count %s" % LunNode.objects.count())
-
-        # TODO: do this checking on create/remove/link operations too
-        for lun_node in LunNode.objects.filter(host = host):
-            log.debug("lun_node %s" % lun_node.pk)
-            if not lun_node.pk in touched_lun_nodes:
-                lun = lun_node.lun
-                from chroma_core.models import ManagedTargetMount
-                if ManagedTargetMount.objects.filter(block_device = lun_node).count() == 0:
-                    log.info("Removing LunNode %s" % lun_node)
-                    LunNode.delete(lun.pk)
-                    if LunNode.objects.filter(lun = lun).count() == 0:
-                        log.info("Removing Lun %s" % lun_node)
-                        Lun.delete(lun.pk)
-                    else:
-                        log.info("Keeping Lun %s, reffed by another LunNode" % lun_node)
+        return False
 
     def session_update_resource(self, scannable_id, local_resource_id, attrs):
         #with self._instance_lock:
@@ -429,7 +507,6 @@ class ResourceManager(object):
             parent_pk = session.local_id_to_global_id[local_parent_id]
             self._edges.remove_parent(record_pk, parent_pk)
             self._resource_modify_parent(record_pk, parent_pk, True)
-            # TODO: potentially orphaning resources, find and cull them
 
     def session_update_stats(self, scannable_id, local_resource_id, update_data):
         """Get global ID for a resource, look up the StoreageResourceStatistic for
@@ -444,7 +521,6 @@ class ResourceManager(object):
 
     @transaction.autocommit
     def _persist_update_stats(self, record_pk, update_data):
-        from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
         record = StorageResourceRecord.objects.get(pk = record_pk)
         for stat_name, stat_data in update_data.items():
             stat_properties = record.get_statistic_properties(stat_name)
@@ -459,9 +535,15 @@ class ResourceManager(object):
             except StorageResourceStatistic.DoesNotExist:
                 stat_record = StorageResourceStatistic.objects.create(
                         storage_resource = record, name = stat_name, sample_period = stat_properties.sample_period)
-            from r3d.exceptions import BadUpdateString
+            from r3d.exceptions import BadUpdateString, BadUpdateTime
             try:
-                stat_record.update(stat_name, stat_properties, stat_data)
+                # FIXME: I should be allowed to insert stats as often as I like
+                # but r3d complains if it hasn't been more than N seconds since
+                # my last update
+                try:
+                    stat_record.update(stat_name, stat_properties, stat_data)
+                except BadUpdateTime:
+                    pass
             except BadUpdateString:
                 # FIXME: Initial insert usually fails because r3d isn't getting
                 # its start time from the first insert time
@@ -547,54 +629,99 @@ class ResourceManager(object):
     #   remove the propagated alerts, and then finally mark inactive the alert itself.
     @transaction.autocommit
     def _persist_alert(self, record_pk, active, alert_class, attribute):
-        from chroma_core.models import StorageResourceRecord
-        from chroma_core.models import StorageResourceAlert
         record = StorageResourceRecord.objects.get(pk = record_pk)
         alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute)
         return alert_state
 
     @transaction.autocommit
     def _cull_lost_resources(self, session, reported_resources):
-        reported_global_ids = []
+        reported_scoped_resources = []
+        reported_global_resources = []
         for r in reported_resources:
             if isinstance(r.identifier, ScannableId):
-                reported_global_ids.append(session.local_id_to_global_id[r._handle])
+                reported_scoped_resources.append(session.local_id_to_global_id[r._handle])
+            else:
+                reported_global_resources.append(session.local_id_to_global_id[r._handle])
 
-        from chroma_core.models import StorageResourceRecord
         from django.db.models import Q
         lost_resources = StorageResourceRecord.objects.filter(
-                ~Q(pk__in = reported_global_ids),
+                ~Q(pk__in = reported_scoped_resources),
                 storage_id_scope = session.scannable_id)
         for r in lost_resources:
             self._cull_resource(r)
 
-    def _cull_resource(self, resource_record):
-        log.info("Culling resource '%s'" % resource_record.pk)
-        from chroma_core.models import StorageResourceRecord
+        # Look for globalid resources which were at some point reported by
+        # this scannable_id, but are missing this time around
+        forgotten_global_resources = StorageResourceRecord.objects.filter(
+                ~Q(pk__in = reported_global_resources),
+                reported_by = session.scannable_id)
+        for reportee in forgotten_global_resources:
+            reportee.reported_by.remove(session.scannable_id)
+            if reportee.reported_by.count() == 0:
+                self._cull_resource(reportee)
 
+    def _cull_resource(self, resource_record):
+        from chroma_core.models import StorageResourceAttributeReference
+
+        log.info("Culling resource '%s'" % resource_record.pk)
+        try:
+            resource_record = StorageResourceRecord.objects.get(pk = resource_record.pk)
+        except StorageResourceRecord.DoesNotExist:
+            return
+
+        # Find resources which have a parent link to this resource
         for dependent in StorageResourceRecord.objects.filter(
                 parents = resource_record):
             dependent.parents.remove(resource_record)
 
-        # TODO: find ResourceReference attributes on other objects
-        # that refer to this one and unhook them or if they're non-optional
-        # then delete that resource
+        # Find resources scoped to this resource
+        for dependent in StorageResourceRecord.objects.filter(storage_id_scope = resource_record):
+            self._cull_resource(dependent)
 
-        # TODO: find where lustre target objects or host objects hold a reference
-        # to this resource
+        # Find ResourceReference attributes on other objects
+        # that refer to this one
+        for attr in StorageResourceAttributeReference.objects.filter(value = resource_record):
+            self._cull_resource(attr.resource)
 
-        from chroma_core.models import Lun, LunNode
-        for klass in [Lun, LunNode]:
-            for instance in klass.objects.filter(storage_resource__id = resource_record.pk):
-                instance.storage_resource = None
-                instance.save()
+        # Find GlobalId resources which were reported by this resource
+        # XXX efficieny: could only do this for ScannableResources and AgentPluginResources
+        for reportee in StorageResourceRecord.objects.filter(reported_by = resource_record):
+            reportee.reported_by.remove(resource_record)
+            if reportee.reported_by.count() == 0:
+                self._cull_resource(reportee)
+
+        lun_nodes = LunNode.objects.filter(storage_resource = resource_record.pk)
+        log.debug("%s lun_nodes depend on %s" % (lun_nodes.count(), resource_record.pk))
+        for lun_node in lun_nodes:
+            removed = self._try_removing_lun_node(lun_node)
+            if not removed:
+                log.warning("Could not remove LunNode %s, disconnecting from resource %s" % (lun_node.id, resource_record.id))
+                lun_node.storage_resource = None
+                lun_node.save()
+
+        luns = Lun.objects.filter(storage_resource = resource_record.pk)
+        log.debug("%s luns depend on %s" % (luns.count(), resource_record.pk))
+        for lun in luns:
+            removed = self._try_removing_lun(lun)
+            if not removed:
+                log.warning("Could not remove Lun %s, disconnecting from resource %s" % (lun.id, resource_record.id))
+                lun.storage_resource = None
+                lun.save()
 
         self._subscriber_index.remove_resource(resource_record.pk)
+
+        for alert_state in StorageResourceAlert.filter_by_item(resource_record):
+            self._persist_alert_unpropagate(alert_state)
+            alert_state.delete()
+
+        for alert_state in StorageResourceOffline.filter_by_item(resource_record):
+            alert_state.delete()
+
         resource_record.delete()
 
     def global_remove_resource(self, resource_id):
         with self._instance_lock:
-            # Ensure that no open sessions are holding a reference to this ID
+            log.debug("global_remove_resource: %s" % resource_id)
             from chroma_core.models import StorageResourceRecord
             try:
                 record = StorageResourceRecord.objects.get(pk = resource_id)
@@ -602,27 +729,9 @@ class ResourceManager(object):
                 log.error("ResourceManager received invalid request to remove non-existent resource %s" % resource_id)
                 return
 
-            resource = record.to_resource()
-            from chroma_core.lib.storage_plugin.resource import ScannableResource
-            if isinstance(resource, ScannableResource):
-                scoped_resources = StorageResourceRecord.objects.filter(
-                    storage_id_scope = resource_id)
-                for r in scoped_resources:
-                    self._cull_resource(r)
-
             self._cull_resource(record)
 
-            # TODO: deal with GlobalId resources that get left behind, like SCSI IDs,
-            # LVM VGs and LVs.  Could look for islands of GlobalId resources with no
-            # relationships to ScannableResources, but that could falsely remove some
-            # things still existing: e.g. what if a host was just only reporting LVM
-            # things?  they wouldn't have any parents.  Probably the more robust way to
-            # do this is to track which scannables have had sessions which reported
-            # a given GlobalId resource, and treat that like a reference count
-
     def _persist_new_resource(self, session, resource):
-        from chroma_core.models import StorageResourceRecord
-
         if resource._handle_global:
             # Bit of a weird one: this covers the case where a plugin sessoin
             # was given a root resource that had some ResourceReference attributes
@@ -686,28 +795,33 @@ class ResourceManager(object):
 
             # This is a new resource which provides a field, see if any existing
             # resources would like to subscribe to it
-            for prov_field, prov_key in resource._provides:
-                subscribers = self._subscriber_index.what_subscribes(prov_key, getattr(resource, prov_field))
-                # Make myself a parent of anything that subscribes to me
-                for s in subscribers:
-                    log.info("Linked up me %s as parent of %s" % (record.pk, s))
-                    self._edges.add_parent(s, record.pk)
-                    s_record = StorageResourceRecord.objects.get(pk = s)
-                    s_record.parents.add(record.pk)
+            subscribers = self._subscriber_index.what_subscribes(resource)
+            # Make myself a parent of anything that subscribes to me
+            for s in subscribers:
+                log.info("Linked up me %s as parent of %s" % (record.pk, s))
+                self._edges.add_parent(s, record.pk)
+                s_record = StorageResourceRecord.objects.get(pk = s)
+                s_record.parents.add(record.pk)
 
             # This is a new resource which subscribes to a field, see if any existing
             # resource can provide it
-            for sub_field, sub_key in resource._subscribes:
-                providers = self._subscriber_index.what_provides(sub_key, getattr(resource, sub_field))
-                # Make my providers my parents
-                for p in providers:
-                    log.info("Linked up %s as parent of me, %s" % (p, record.pk))
-                    self._edges.add_parent(record.pk, p)
-                    record.parents.add(p)
+            providers = self._subscriber_index.what_provides(resource)
+            # Make my providers my parents
+            for p in providers:
+                log.info("Linked up %s as parent of me, %s" % (p, record.pk))
+                self._edges.add_parent(record.pk, p)
+                record.parents.add(p)
 
             # Add the new record to the index so that future records and resolve their
             # provide/subscribe relationships with respect to it
             self._subscriber_index.add_resource(record.pk, resource)
+
+        if isinstance(resource.identifier, GlobalId) and session.scannable_id != record.id:
+            try:
+                record.reported_by.get(pk = session.scannable_id)
+            except StorageResourceRecord.DoesNotExist:
+                log.debug("saw GlobalId resource %s from scope %s for the first time" % (record.id, session.scannable_id))
+                record.reported_by.add(session.scannable_id)
 
         session.local_id_to_global_id[resource._handle] = record.pk
         self._resource_persist_attributes(session, resource, record)
@@ -737,39 +851,32 @@ class ResourceManager(object):
 
             # Update the database
             # FIXME: shouldn't need to SELECT the record to set up its relationships
-            from chroma_core.models import StorageResourceRecord
             record = StorageResourceRecord.objects.get(pk = resource_global_id)
             self._resource_persist_parents(r, session, record)
 
     @transaction.autocommit
     def _resource_persist_attributes(self, session, resource, record):
-        from chroma_core.models import StorageResourceAttribute
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        # TODO: remove existing attrs not in storage_dict
         resource_class = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
 
+        attrs = {}
+        # Special case for ResourceReference attributes, because the resource
+        # object passed from the plugin won't have a global ID for the referenced
+        # resource -- we have to do the lookup inside ResourceManager
         for key, value in resource._storage_dict.items():
-            # Special case for ResourceReference attributes, because the resource
-            # object passed from the plugin won't have a global ID for the referenced
-            # resource -- we have to do the lookup inside ResourceManager
             attribute_obj = resource_class.get_attribute_properties(key)
             from chroma_core.lib.storage_plugin import attributes
             if isinstance(attribute_obj, attributes.ResourceReference):
                 if value and not value._handle_global:
-                    value = session.local_id_to_global_id[value._handle]
+                    attrs[key] = session.local_id_to_global_id[value._handle]
                 elif value and value._handle_global:
-                    value = value._handle
-            try:
-                existing = StorageResourceAttribute.objects.get(resource = record, key = key)
-                encoded_val = resource_class.encode(key, value)
-                if existing.value != encoded_val:
-                    existing.value = encoded_val
-                    existing.save()
-            except StorageResourceAttribute.DoesNotExist:
-                attr = StorageResourceAttribute(
-                        resource = record, key = key,
-                        value = resource_class.encode(key, value))
-                attr.save()
+                    attrs[key] = value._handle
+                else:
+                    attrs[key] = value
+            else:
+                attrs[key] = value
+
+        record.update_attributes(attrs)
 
     @transaction.autocommit
     def _resource_persist_parents(self, resource, session, record):
