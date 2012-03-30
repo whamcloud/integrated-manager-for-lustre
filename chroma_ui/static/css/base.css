@@ -756,13 +756,13 @@ table.validated_form td {
     font-size: 10pt;
 }
 
-table.validated_form span.error {
+.validated_form span.error {
     color: red;
     font-style: italic;
     display: block;
 }
 
-table.validated_form input.error {
+.validated_form input.error {
     border: 1px solid red;
 }
 

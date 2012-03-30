@@ -32,6 +32,10 @@ class ManagedTarget(StatefulObject):
 
     lun = models.ForeignKey('Lun')
 
+    inode_size = models.IntegerField(null = True, blank = True)
+    bytes_per_inode = models.IntegerField(null = True, blank = True)
+    inode_count = models.IntegerField(null = True, blank = True)
+
     def name_no_fs(self):
         """Something like OST0001 rather than testfs1-OST0001"""
         if self.name:
@@ -205,9 +209,6 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
 
 
 class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
-    # TODO: constraint to allow only one MetadataTarget per MGS.  The reason
-    # we don't just use a OneToOneField is to use FilesystemMember to represent
-    # MDTs and OSTs together in a convenient way
     class Meta:
         app_label = 'chroma_core'
 
@@ -610,6 +611,7 @@ class MkfsStep(Step):
             kwargs['fsname'] = target.filesystem.name
             kwargs['mgsnode'] = target.filesystem.mgs.nids()
 
+        # FIXME: HYD-266
         kwargs['reformat'] = True
 
         fail_nids = []
@@ -622,6 +624,16 @@ class MkfsStep(Step):
             kwargs['failnode'] = fail_nids
 
         kwargs['device'] = primary_mount.block_device.path
+
+        mkfsoptions = []
+        if target.inode_size:
+            mkfsoptions.append("-I %s" % (target.inode_size))
+        if target.bytes_per_inode:
+            mkfsoptions.append("-i %s" % (target.bytes_per_inode))
+        if target.inode_count:
+            mkfsoptions.append("-N %s" % (target.inode_count))
+        if mkfsoptions:
+            kwargs['mkfsoptions'] = " ".join(mkfsoptions)
 
         return kwargs
 
@@ -645,8 +657,24 @@ class MkfsStep(Step):
 
         args = self._mkfs_args(target)
         result = self.invoke_agent(target_mount.host, "format-target", args)
-        fs_uuid = result['uuid']
-        target.uuid = fs_uuid
+        target.uuid = result['uuid']
+
+        # Check that inode_size was applied correctly
+        if target.inode_size:
+            if target.inode_size != result['inode_size']:
+                raise RuntimeError("Failed for format target with inode size %s, actual inode size %s" % (
+                    target.inode_size, result['inode_size']))
+
+        # Check that inode_count was applied correctly
+        if target.inode_count:
+            if target.inode_count != result['inode_count']:
+                raise RuntimeError("Failed for format target with inode count %s, actual inode count %s" % (
+                    target.inode_count, result['inode_count']))
+
+        # NB cannot check that bytes_per_inode was applied correctly as that setting is not stored in the FS
+        target.inode_count = result['inode_count']
+        target.inode_size = result['inode_size']
+
         target.save()
 
 

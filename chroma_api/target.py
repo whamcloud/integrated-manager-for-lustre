@@ -81,7 +81,7 @@ class TargetResource(MetricResource, ConfParamResource):
     class Meta:
         queryset = ManagedTarget.objects.all()
         resource_name = 'target'
-        excludes = ['not_deleted']
+        excludes = ['not_deleted', 'bytes_per_inode']
         filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'id': ['exact', 'in']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
@@ -220,7 +220,7 @@ class TargetResource(MetricResource, ConfParamResource):
         # for our customized Target resource.  As a convention, we'll
         # abstract the logic for mangling the incoming bundle data into
         # hydrate_FIELD methods and call them by hand.
-        for field in ['lun_ids', 'filesystem_id']:
+        for field in ['volume_id', 'filesystem_id']:
             method = getattr(self, "hydrate_%s" % field, None)
 
             if method:
@@ -230,8 +230,11 @@ class TargetResource(MetricResource, ConfParamResource):
         if not kind in KIND_TO_KLASS:
             bundle.data_errors['kind'].append("Invalid target type '%s' (choose from [%s])" % (kind, ",".join(KIND_TO_KLASS.keys())))
 
-        lun_ids = bundle.data['lun_ids']
+        volume_id = bundle.data['volume_id']
         filesystem_id = bundle.data.get('filesystem_id', None)
+
+        # TODO: when creating MGS, apply same validation as filesystem creation does
+        # to refuse to create two MGS on one server
 
         # Should really only be doing one validation pass, but this works
         # OK for now.  It's better than raising a 404 or duplicating the
@@ -242,8 +245,6 @@ class TargetResource(MetricResource, ConfParamResource):
             bundle.data_errors['filesystem_id'].append("Cannot specify filesystem_id when creating MGTs")
         elif KIND_TO_KLASS[kind] == ManagedMdt:
             bundle.data_errors['kind'].append("Cannot create MDTs independently of filesystems")
-        elif len(lun_ids) < 1:
-            bundle.data_errors['volumes'].append("Require at least one LUN to create a target")
 
         if KIND_TO_KLASS[kind] == ManagedOst:
             fs = ManagedFilesystem.objects.get(id=filesystem_id)
@@ -253,21 +254,14 @@ class TargetResource(MetricResource, ConfParamResource):
 
         self.is_valid(bundle, request)
 
-        targets = []
         with transaction.commit_on_success():
-            for lun_id in lun_ids:
-                target_klass = KIND_TO_KLASS[kind]
-                target = target_klass.create_for_lun(lun_id, **create_kwargs)
-                targets.append(target)
+            target_klass = KIND_TO_KLASS[kind]
+            target = target_klass.create_for_lun(volume_id, **create_kwargs)
 
-        message = "Creating %s" % kind
-        if len(lun_ids) > 1:
-            message += "s"
-
-        command = Command.set_state([(t, 'mounted') for t in targets], "Creating %s%s" % (kind, "s" if len(lun_ids) > 1 else ""))
+        command = Command.set_state([(target, 'mounted')], "Creating %s" % kind)
         raise custom_response(self, request, http.HttpAccepted,
                 {'command': dehydrate_command(command),
-                 'targets': [self.full_dehydrate(self.build_bundle(obj = t)).data for t in targets]})
+                 'target': self.full_dehydrate(self.build_bundle(obj = target)).data})
 
     def get_resource_graph(self, request, **kwargs):
         target = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))

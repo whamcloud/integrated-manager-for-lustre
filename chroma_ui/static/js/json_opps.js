@@ -159,41 +159,7 @@ function stateTransitionButtons(stateful_object)
 }
 
 
-function CreateFS(fsname, mgt_id, mgt_lun_id, mdt_lun_id, ost_lun_ids, success, config_json)
-{
-  var conf_params;
-  if(JSON.stringify(config_json) == '{}')
-    conf_params = "";
-  else
-    conf_params = config_json;
 
-  var api_params = {
-      "name":fsname,
-      "mgt_id":mgt_id,
-      "mgt_lun_id":mgt_lun_id,
-      "mdt_lun_id":mdt_lun_id,
-      "ost_lun_ids": ost_lun_ids,
-      "conf_params": conf_params
-  };
-  
-  Api.post("filesystem/", api_params,
-  success_callback = function(data)
-  {
-    var fs_id = data.filesystem.id;
-    if (success) {
-      success(fs_id);
-    }
-  });
-}
-
-function CreateMGT(lun_id, callback)
-{
-  Api.post("target/", {kind: 'MGT', lun_ids: [lun_id]},
-  success_callback = function(data)
-  {
-    callback();
-  });
-}
 
 
 function _populate_conf_param_table(data, table, help)
