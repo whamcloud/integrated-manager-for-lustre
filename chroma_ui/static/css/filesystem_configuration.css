@@ -16,35 +16,39 @@ span.step_caption {
   font-size: 12pt;
 }
 
-span.fvc_selected {
+span.volume_chooser_selected {
   margin-left: 6px;
 }
 
-span.fvc_selected {
+span.volume_chooser_selected {
   margin-left: 6px;
 }
 
-.fvc_background {
+.volume_chooser_background {
   border-radius: 3px;
   /*background: #eee;*/
-  padding: 3px;
+  margin-bottom: 6px;
 }
 
-.fvc_background table {
+.volume_chooser_background table {
   /*height: 100%;*/
   width: 100%;
 }
 
-.fvc_background table .rowhighlight {
+.volume_chooser_background table .rowhighlight {
   background-color: #09f;
 }
 
-.fvc_expander {
+.volume_chooser_expander {
   width: 100%;
   max-height: 300px;
   overflow-x: hidden;
   overflow-y: auto;
 }
 
-.fvc_header {
+.volume_chooser_header {
+}
+
+div.mdt_advanced {
+  display: none;
 }

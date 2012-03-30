@@ -28,10 +28,81 @@
 
     function init() 
     {
+      function updateMdtEstimate() {
+        var vol = volume_chooser_store.getVolume($('#mdt_chooser').volumeChooser('val'));
+
+        var inode_size = Math.floor($('input[name=inode_size]').val());
+        var bytes_per_inode = Math.floor($('input[name=bytes_per_inode]').val());
+
+        var text;
+        var advanced_text;
+        if (inode_size >= bytes_per_inode) {
+          text = "Inode size " + inode_size + " too large (must be smaller than " + bytes_per_inode + ")";
+        } else if (vol) {
+          var inode_count = vol.size / bytes_per_inode;
+          var ea_fixed_size = 32 + 23;
+          var ea_stripe_size = 24;
+          var core_inode_size = 128;
+          var stripes_in_inode = Math.floor((inode_size - core_inode_size - ea_fixed_size) / ea_stripe_size);
+          text = "Estimated file limit: " + formatBigNumber(inode_count) + " files"
+          advanced_text = "Stripes without EA block:" + stripes_in_inode
+        } else {
+          text = "";
+          advanced_text = "";
+        }
+        $('span#mdt_estimate').html(text)
+        $('span#mdt_advanced_estimate').html(advanced_text)
+      }
+
+      $('input[name=inode_size]').change(function() {
+        updateMdtEstimate();
+      });
+      $('input[name=bytes_per_inode]').change(function() {
+        updateMdtEstimate();
+      });
+
+      function updateOstEstimate() {
+        var vol_ids = $('#ost_chooser').volumeChooser('val');
+        var text;
+        if (vol_ids.length) {
+          var sum = 0;
+          _.each(vol_ids, function(vol_id) {
+            var vol = volume_chooser_store.getVolume(vol_id);
+            sum += Math.floor(vol.size)
+          });
+          text = "Estimated filesystem capacity: " + formatBytes(sum);
+        } else {
+          text = "";
+        }
+
+        $('span#total_size_estimate').html(text)
+      }
+
+      $('#mdt_advanced_button').button();
+      $('#mdt_advanced_button').change(function() {
+        if ($(this).attr('checked')) {
+          $('.mdt_advanced').show();
+          $(this).parent().css('background-color', '#eee')
+        } else {
+          $('.mdt_advanced').hide();
+          $(this).parent().css('background-color', '')
+        }
+      });
+
       volume_chooser_store = VolumeChooserStore();
       volume_chooser_store.load(function() {
-        $('#mdt_chooser').volumeChooser({store: volume_chooser_store});
-        $('#ost_chooser').volumeChooser({store: volume_chooser_store, multi_select: true});
+        $('#mdt_chooser').volumeChooser({
+          store: volume_chooser_store,
+          change: function() {
+            updateMdtEstimate();
+          }
+        });
+        $('#ost_chooser').volumeChooser({
+          store: volume_chooser_store,
+          change: function() {
+            updateOstEstimate();
+          },
+          multi_select: true});
         $('#mgt_chooser').volumeChooser({
           store: volume_chooser_store,
           change: function() {
@@ -108,12 +179,25 @@
 
         var filesystem = {}
         filesystem.name = fs_name;
+        // Compose MGT
         if (mgt_id) {
           filesystem.mgt = {id: mgt_id}
         } else {
           filesystem.mgt = {volume_id: mgt_lun_id}
         }
+
+        // Compose MDT
         filesystem.mdt = {volume_id: mdt_lun_id}
+        var inode_size = $('input[name=inode_size]').val()
+        if (inode_size) {
+          filesystem.mdt.inode_size = inode_size
+        }
+        var bytes_per_inode = $('input[name=bytes_per_inode]').val()
+        if (bytes_per_inode) {
+          filesystem.mdt.bytes_per_inode = bytes_per_inode
+        }
+
+        // Compose OST list
         filesystem.osts = []
         _.each(ost_lun_ids, function(lun_id) {
           filesystem.osts.push({volume_id: lun_id})
@@ -187,7 +271,26 @@
         <span class="step_number">3.</span> <span class="step_caption">Choose MDT</span><br>
       </div>
       <div class='step_body'>
+        <br>
         <button id='mdt_chooser'></button>
+        <div>
+          <label for='mdt_advanced_button'>Advanced</label>
+          <input type='checkbox' id='mdt_advanced_button'/>
+          <div class='mdt_advanced'>
+            <table class='validated_form'>
+              <tr>
+                <th><label for='inode_size'>INode size:</label></th>
+                <td><input name='inode_size' value='512'/>bytes</td>
+              </tr>
+              <tr>
+                <th><label for='inode_size'>Bytes per inode:</label></th>
+                <td><input name='bytes_per_inode' value='2048'/>bytes</td>
+              </tr>
+            </table>
+            <span id='mdt_advanced_estimate'></span>
+          </div>
+        </div>
+        <span id='mdt_estimate'></span>
       </div>
     </td>
   </tr>
@@ -198,6 +301,7 @@
       </div>
       <div class='step_body'>
         <button id='ost_chooser'></button>
+        <span id='total_size_estimate'></span>
       </div>
     </td>
   </tr>

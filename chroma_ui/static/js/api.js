@@ -539,13 +539,13 @@ function formatBigNumber(number) {
   }
 
 	if (number >= 1000000000) {
-	     number = Math.floor(number / 1073741824) + 'B';
+	     number = Math.floor(number / 1000000000) + 'B';
 	} else { 
 		if (number >= 1000000) {
-     		number = Math.floor(number / 1048576) + 'M';
+     		number = Math.floor(number / 1000000) + 'M';
    	} else { 
 			if (number >= 1000) {
-    		number = Math.floor(number / 1024) + 'k';
+    		number = Math.floor(number / 1000) + 'k';
   		}
  		};
 	};
