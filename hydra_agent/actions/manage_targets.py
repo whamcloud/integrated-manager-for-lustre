@@ -63,8 +63,7 @@ def get_resource_locations():
 
     locations = {}
 
-    if rc == 234:
-        # crm_resource returns 234 if there are no resources to list
+    if stdout.strip() == "NO resources configured":
         return {}
     elif rc != 0:
         # Probably corosync isn't running?
