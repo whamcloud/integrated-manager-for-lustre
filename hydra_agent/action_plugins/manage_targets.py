@@ -1,5 +1,5 @@
 
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 from hydra_agent.store import AgentStore
 from hydra_agent import shell
 import simplejson as json
@@ -9,17 +9,136 @@ import shlex
 import re
 import libxml2
 
-LIBDIR = "/var/lib/hydra"
+
+def __sanitize_arg(arg):
+    """Private function to safely quote arguments containing whitespace."""
+    if re.search(r'\s', arg):
+        arg = '"%s"' % arg
+
+    return arg
 
 
-def create_libdir():
-    try:
-        os.makedirs(LIBDIR)
-    except OSError, e:
-        if e.errno == errno.EEXIST:
-            pass
+def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
+           servicenode=(), param={}, index="", comment="", mountfsoptions="",
+           network=(), erase_params=False, nomgs=False, writeconf=False,
+           dryrun=False, verbose=False, quiet=False):
+    """Returns shell code for performing a tunefs.lustre operation on a
+    block device."""
+
+    # freeze a view of the namespace before we start messing with it
+    args = locals()
+    types = []
+    options = []
+
+    tuple_options = "target_types mgsnode failnode servicenode network".split()
+    for name in tuple_options:
+        arg = args[name]
+        # ensure that our tuple arguments are always tuples, and not strings
+        if not hasattr(arg, "__iter__"):
+            arg = (arg,)
+
+        if name == "target_types":
+            for type in arg:
+                types.append("--%s" % type)
         else:
-            raise e
+            if len(arg) > 0:
+                options.append("--%s=%s" % (name, ",".join(arg)))
+
+    flag_options = {
+        'erase_params': '--erase-params',
+        'nomgs': '--nomgs',
+        'writeconf': '--writeconf',
+        'dryrun': '--dryrun',
+        'verbose': '--verbose',
+        'quiet': '--quiet',
+    }
+    for arg in flag_options:
+        if args[arg]:
+            options.append("%s" % flag_options[arg])
+
+    dict_options = "param".split()
+    for name in dict_options:
+        arg = args[name]
+        for key in arg:
+            if arg[key] is not None:
+                options.append("--%s %s=%s" % (name, key, __sanitize_arg(arg[key])))
+
+    # everything else
+    handled = set(flag_options.keys() + tuple_options + dict_options)
+    for name in set(args.keys()) - handled:
+        if name == "device":
+            continue
+        value = args[name]
+        if value != '':
+            options.append("--%s=%s" % (name, __sanitize_arg(value)))
+
+    # NB: Use $PATH instead of relying on hard-coded paths
+    cmd = "tunefs.lustre %s %s %s" % (" ".join(types), " ".join(options), device)
+
+    return ' '.join(cmd.split())
+
+
+def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
+         servicenode=(), param={}, index="", comment="", mountfsoptions="",
+         network=(), backfstype="", device_size="", mkfsoptions="",
+         reformat=False, stripe_count_hint="", iam_dir=False,
+         dryrun=False, verbose=False, quiet=False):
+    """Returns shell code for performing a mkfs.lustre operation on a
+    block device."""
+
+    # freeze a view of the namespace before we start messing with it
+    args = locals()
+    types = []
+    options = []
+
+    tuple_options = "target_types mgsnode failnode servicenode network".split()
+    for name in tuple_options:
+        arg = args[name]
+        # ensure that our tuple arguments are always tuples, and not strings
+        if not hasattr(arg, "__iter__"):
+            arg = (arg,)
+
+        if name == "target_types":
+            for type in arg:
+                types.append("--%s" % type)
+        elif name == 'mgsnode':
+            for mgsnode in arg:
+                options.append("--%s=%s" % (name, mgsnode))
+        else:
+            if len(arg) > 0:
+                options.append("--%s=%s" % (name, ",".join(arg)))
+
+    flag_options = {
+        'dryrun': '--dryrun',
+        'reformat': '--reformat',
+        'iam_dir': '--iam-dir',
+        'verbose': '--verbose',
+        'quiet': '--quiet',
+    }
+    for arg in flag_options:
+        if args[arg]:
+            options.append("%s" % flag_options[arg])
+
+    dict_options = "param".split()
+    for name in dict_options:
+        arg = args[name]
+        for key in arg:
+            if arg[key] is not None:
+                options.append("--%s %s=%s" % (name, key, __sanitize_arg(arg[key])))
+
+    # everything else
+    handled = set(flag_options.keys() + tuple_options + dict_options)
+    for name in set(args.keys()) - handled:
+        if name == "device":
+            continue
+        value = args[name]
+        if value != '':
+            options.append("--%s=%s" % (name, __sanitize_arg(value)))
+
+    # NB: Use $PATH instead of relying on hard-coded paths
+    cmd = "mkfs.lustre %s %s %s" % (" ".join(types), " ".join(options), device)
+
+    return ' '.join(cmd.split())
 
 
 def get_resource_location(resource_name):
@@ -100,17 +219,23 @@ def cibadmin(command_args):
 
 
 def format_target(args):
-    from hydra_agent.cmds import lustre
-
     kwargs = json.loads(args.args)
-    cmdline = lustre.mkfs(**kwargs)
+    cmdline = mkfs(**kwargs)
 
     shell.try_run(shlex.split(cmdline))
 
     blkid_output = shell.try_run(["blkid", "-o", "value", "-s", "UUID", kwargs['device']])
     uuid = blkid_output.strip()
 
-    return {'uuid': uuid}
+    dumpe2fs_output = shell.try_run(["dumpe2fs", "-h", kwargs['device']])
+    inode_count = int(re.search("Inode count:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
+    inode_size = int(re.search("Inode size:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
+
+    return {
+            'uuid': uuid,
+            'inode_size': inode_size,
+            'inode_count': inode_count
+            }
 
 
 def register_target(args):
@@ -222,8 +347,6 @@ def configure_ha(args):
                                   preference,
                                   node,
                                   unique_label, score))
-
-    create_libdir()
 
     try:
         os.makedirs(args.mountpoint)
@@ -354,13 +477,14 @@ def unmigrate_target(args):
 
 def target_running(args):
     from os import _exit
-    from hydra_agent.actions.utils import Mounts
+    from hydra_agent.utils import Mounts
     try:
         info = AgentStore.get_target_info(args.uuid)
     except:
         # it can't possibly be running here if the AgentStore entry for
         # it doesn't even exist
         _exit(1)
+
     mounts = Mounts()
     for device, mntpnt, fstype in mounts.all():
         if device == info['bdev'] and mntpnt == info['mntpt']:
@@ -377,7 +501,7 @@ def clear_targets(args):
         _unconfigure_ha(True, attrs['label'], attrs['uuid'], attrs['serial'])
 
 
-class TargetsPlugin(AgentPlugin):
+class TargetsPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser('register-target', help='register a target')
         p.add_argument('--device', required=True, help='device for target')

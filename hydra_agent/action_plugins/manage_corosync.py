@@ -7,7 +7,7 @@ Corosync verification
 """
 
 import socket
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 from hydra_agent import shell
 
 
@@ -42,7 +42,7 @@ def verify_corosync(args = None):
                    }
 
 
-class CorosyncPlugin(AgentPlugin):
+class CorosyncPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("corosync-sanity",
                               help="confirm corosync sanity")

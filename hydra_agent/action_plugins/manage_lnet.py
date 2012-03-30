@@ -3,7 +3,7 @@
 # ==============================
 
 from hydra_agent.shell import try_run
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 
 
 def start_lnet(args):
@@ -25,7 +25,7 @@ def unload_lnet(args):
     rmmod('lnet')
 
 
-class LnetPlugin(AgentPlugin):
+class LnetPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("stop-lnet",
                               help="stop LNet (lctl net down)")

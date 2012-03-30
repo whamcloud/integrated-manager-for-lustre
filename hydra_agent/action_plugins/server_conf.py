@@ -2,12 +2,12 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 
 
 def _validate_conf(server_conf):
     from hydra_agent.main_loop import send_update
-    result = send_update(server_conf['url'], server_conf['token'], None, {})
+    result = send_update(server_conf['url'], server_conf['token'], {'id': None, 'counter': 0}, {})
     if result == None:
         from socket import getfqdn
         raise RuntimeError("Cannot contact server URL %s from %s" % (server_conf['url'], getfqdn()))
@@ -28,7 +28,7 @@ def remove_server_conf(args = None):
     AgentStore.remove_server_conf()
 
 
-class ServerConfPlugin(AgentPlugin):
+class ServerConfPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("set-server-conf",
                               help="set server config params")

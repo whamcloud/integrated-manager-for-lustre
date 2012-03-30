@@ -1,17 +1,12 @@
 from django.utils import unittest
-from hydra_agent import plugins
+from hydra_agent.plugins import DevicePluginManager, ActionPluginManager
 
 
 class TestPlugins(unittest.TestCase):
-    def test_scan_plugins(self):
-        """Test that we get a list of plugin names."""
-        self.assertNotEqual(plugins.scan_plugins(), [])
+    def test_get_device_plugins(self):
+        """Test that we get a list of loaded plugin classes."""
+        self.assertNotEqual(len(DevicePluginManager.get_plugins()), 0)
 
-    @unittest.skip("test not implemented")
-    def test_load_plugins(self):
-        """Test that plugins get imported."""
-        pass
-
-    def test_find_plugins(self):
-        """Test that we get a list of loaded plugin instances."""
-        self.assertNotEqual(plugins.find_plugins(), [])
+    def test_get_action_plugins(self):
+        """Test that we get a list of loaded plugin classes."""
+        self.assertNotEqual(len(ActionPluginManager.get_plugins()), 0)

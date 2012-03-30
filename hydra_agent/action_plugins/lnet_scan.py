@@ -2,7 +2,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 import os
 
 
@@ -45,7 +45,7 @@ def lnet_scan(args):
     return lnet_nids
 
 
-class LnetScanPlugin(AgentPlugin):
+class LnetScanPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("lnet-scan",
                               help="scan for LNet details")

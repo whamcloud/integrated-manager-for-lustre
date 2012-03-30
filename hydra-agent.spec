@@ -51,7 +51,7 @@ cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/hydra-agent
 touch management.files
 cat <<EndOfList>>management.files
 %{python_sitelib}/hydra_agent/cmds/*
-%{python_sitelib}/hydra_agent/actions/manage_*
+%{python_sitelib}/hydra_agent/action_plugins/manage_*
 %{python_sitelib}/hydra_agent/rmmod.*
 /usr/lib/ocf/resource.d/hydra/Target
 EndOfList

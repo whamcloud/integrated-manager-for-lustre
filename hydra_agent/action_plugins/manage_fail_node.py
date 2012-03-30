@@ -3,7 +3,7 @@
 # ==============================
 
 from hydra_agent.shell import try_run
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 
 
 def fail_node(args):
@@ -11,7 +11,7 @@ def fail_node(args):
     try_run("sync; sync; init 0", shell = True)
 
 
-class FailNodePlugin(AgentPlugin):
+class FailNodePlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("fail-node",
                               help="fail (i.e. shut down) this node")

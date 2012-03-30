@@ -4,7 +4,7 @@
 
 import simplejson as json
 from hydra_agent.shell import try_run
-from hydra_agent.plugins import AgentPlugin
+from hydra_agent.plugins import ActionPlugin
 
 
 def set_conf_param(args):
@@ -19,7 +19,7 @@ def set_conf_param(args):
         try_run(['lctl', 'conf_param', "-d", key])
 
 
-class ConfParamPlugin(AgentPlugin):
+class ConfParamPlugin(ActionPlugin):
     def register_commands(self, parser):
         p = parser.add_parser("set-conf-param",
                               help="set/delete a Lustre config param")

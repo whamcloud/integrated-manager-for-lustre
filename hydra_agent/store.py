@@ -5,8 +5,21 @@ import errno
 
 
 class AgentStore(object):
-    LIBDIR = "/var/lib/hydra"
     server_conf_mtime = None
+    _dir_setup = False
+
+    @classmethod
+    def libdir(cls):
+        LIBDIR = "/var/lib/hydra"
+        if not cls._dir_setup:
+            try:
+                os.makedirs(LIBDIR)
+            except OSError, e:
+                if e.errno == errno.EEXIST:
+                    pass
+                else:
+                    raise e
+        return LIBDIR
 
     @classmethod
     def _json_path(cls, name):
@@ -16,7 +29,7 @@ class AgentStore(object):
         "/var/lib/hydra/server_conf"
 
         """
-        return os.path.join(cls.LIBDIR, name)
+        return os.path.join(cls.libdir(), name)
 
     @classmethod
     def _unlink_if_exists(cls, path):
@@ -79,16 +92,6 @@ class AgentStore(object):
         file = open(cls._json_path(cls.SERVER_CONF_FILE), 'w')
         json.dump(conf, file)
         file.close()
-
-    @classmethod
-    def setup(cls):
-        try:
-            os.makedirs(AgentStore.LIBDIR)
-        except OSError, e:
-            if e.errno == errno.EEXIST:
-                pass
-            else:
-                raise e
 
     @classmethod
     def get_target_info(cls, name):
