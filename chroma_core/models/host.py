@@ -153,10 +153,10 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def available_lun_nodes(self):
         from django.db.models import Q
-        from chroma_core.models.target_mount import ManagedTargetMount
 
-        used_luns = [i['block_device__lun'] for i in ManagedTargetMount.objects.all().values('block_device__lun')]
-        return LunNode.objects.filter(
+        from chroma_core.models import ManagedTargetMount
+        used_luns = [i['block_device__lun'] for i in ManagedTargetMount.objects.all().values('volume_node__volume')]
+        return VolumeNode.objects.filter(
                 ~Q(lun__in = used_luns),
                 host = self)
 
@@ -219,10 +219,10 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                     raise ManagedHost.MultipleObjectsReturned()
 
 
-class Lun(models.Model):
+class Volume(models.Model):
     storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
 
-    # Size may be null for LunNodes created when setting up
+    # Size may be null for VolumeNodes created when setting up
     # from a JSON file which just tells us a path.
     size = models.BigIntegerField(blank = True, null = True,
             help_text = "Integer number of bytes.  Can be null if this device \
@@ -243,27 +243,27 @@ class Lun(models.Model):
             queryset = cls.objects.all()
 
         from django.db.models import Max
-        queryset = queryset.annotate(any_targets = Max('lunnode__managedtargetmount__target__not_deleted'))
+        queryset = queryset.annotate(any_targets = Max('volumenode__managedtargetmount__target__not_deleted'))
         return queryset.filter(any_targets = None)
 
     @classmethod
     def get_usable_luns(cls, queryset = None):
-        """Get all Luns which are not used by Targets and have enough LunNode configuration
+        """Get all Luns which are not used by Targets and have enough VolumeNode configuration
         to be used as a Target (i.e. have only one node or at least have a primary node set)"""
         if not queryset:
             queryset = cls.objects.all()
 
         from django.db.models import Count, Max, Q
-        # Luns are usable if they have only one LunNode (i.e. no HA available but
+        # Luns are usable if they have only one VolumeNode (i.e. no HA available but
         # we can definitively say where it should be mounted) or if they have
-        # a primary LunNode (i.e. one or more LunNodes is available and we
+        # a primary VolumeNode (i.e. one or more VolumeNodes is available and we
         # know at least where the primary mount should be)
-        return queryset.filter(lunnode__host__not_deleted = True).\
+        return queryset.filter(volumenode__host__not_deleted = True).\
                 annotate(
-                    any_targets = Max('lunnode__managedtargetmount__target__not_deleted'),
-                    has_primary = Max('lunnode__primary'),
-                    num_lunnodes = Count('lunnode')
-                ).filter((Q(num_lunnodes = 1) | Q(has_primary = 1.0)) & Q(any_targets = None))
+                    any_targets = Max('volumenode__managedtargetmount__target__not_deleted'),
+                    has_primary = Max('volumenode__primary'),
+                    num_volumenodes = Count('volumenode')
+                ).filter((Q(num_volumenodes = 1) | Q(has_primary = 1.0)) & Q(any_targets = None))
 
     def get_kind(self):
         """:return: A string or unicode string which is a human readable noun corresponding
@@ -281,9 +281,9 @@ class Lun(models.Model):
             if self.label:
                 return self.label
             else:
-                if self.lunnode_set.count():
-                    lunnode = self.lunnode_set.all()[0]
-                    return "%s:%s" % (lunnode.host, lunnode.path)
+                if self.volumenode_set.count():
+                    volumenode = self.volumenode_set.all()[0]
+                    return "%s:%s" % (volumenode.host, volumenode.path)
                 else:
                     return ""
 
@@ -300,32 +300,32 @@ class Lun(models.Model):
 
     def save(self, *args, **kwargs):
         self.label = self._get_label()
-        super(Lun, self,).save(*args, **kwargs)
+        super(Volume, self,).save(*args, **kwargs)
 
     def ha_status(self):
         """Tell the caller two things:
-         * is the Lun configured enough for use as a target?
+         * is the Volume configured enough for use as a target?
          * is the configuration (if present) HA?
          by returning one of 'unconfigured', 'configured-ha', 'configured-noha'
         """
-        lunnode_count = self.lunnode_set.count()
-        primary_count = self.lunnode_set.filter(primary = True).count()
-        failover_count = self.lunnode_set.filter(primary = False, use = True).count()
-        if lunnode_count == 1 and primary_count == 0:
+        volumenode_count = self.volumenode_set.count()
+        primary_count = self.volumenode_set.filter(primary = True).count()
+        failover_count = self.volumenode_set.filter(primary = False, use = True).count()
+        if volumenode_count == 1 and primary_count == 0:
             return 'configured-noha'
-        elif lunnode_count == 1 and primary_count > 0:
+        elif volumenode_count == 1 and primary_count > 0:
             return 'configured-noha'
         elif primary_count > 0 and failover_count == 0:
             return 'configured-noha'
         elif primary_count > 0 and failover_count > 0:
             return 'configured-ha'
         else:
-            # Has no LunNodes, or has >1 but no primary
+            # Has no VolumeNodes, or has >1 but no primary
             return 'unconfigured'
 
 
-class LunNode(models.Model):
-    lun = models.ForeignKey(Lun)
+class VolumeNode(models.Model):
+    volume = models.ForeignKey(Volume)
     host = models.ForeignKey(ManagedHost)
     path = models.CharField(max_length = 512, help_text = "Device node path, e.g. '/dev/sda/'")
 
@@ -349,7 +349,7 @@ class LunNode(models.Model):
 
     def pretty_string(self):
         from chroma_core.lib.util import sizeof_fmt
-        lun_name = self.lun.get_label()
+        lun_name = self.volume.get_label()
         if lun_name:
             short_name = lun_name
         elif self.path.startswith('/dev/disk/by-path/'):
@@ -380,7 +380,7 @@ class LunNode(models.Model):
         else:
             short_name = self.path
 
-        size = self.lun.size
+        size = self.volume.size
         if size:
             human_size = sizeof_fmt(size)
         else:

@@ -58,7 +58,7 @@ class TargetResource(MetricResource, ConfParamResource):
 
     kind = fields.CharField(help_text = "Type of target, one of %s" % KIND_TO_KLASS.keys())
 
-    lun_name = fields.CharField(attribute = 'lun__label',
+    volume_name = fields.CharField(attribute = 'volume__label',
             help_text = "The ``label`` attribute of the Volume on which this target exists")
     primary_server_name = fields.CharField(help_text = "Presentation convenience.  Human\
             readable label for the primary server for this target")
@@ -69,8 +69,6 @@ class TargetResource(MetricResource, ConfParamResource):
             on which this target is currently started")
     active_host_uri = fields.CharField(null = True, help_text = "URI to the host on which\
             this target is currently started")
-
-    volumes = fields.ListField(help_text = "A list of target volumes (e.g. primary:/path/to/device[,failover:/path/to/device,failover...])")
 
     def content_type_id_to_kind(self, id):
         if not hasattr(self, 'CONTENT_TYPE_ID_TO_KIND'):
@@ -119,9 +117,6 @@ class TargetResource(MetricResource, ConfParamResource):
         except AttributeError:
             return None
 
-    #def dehydrate_lun_name(self, bundle):
-    #    return bundle.obj.lun.label
-
     def dehydrate_primary_server_name(self, bundle):
         return bundle.obj.primary_server().pretty_name()
 
@@ -143,10 +138,6 @@ class TargetResource(MetricResource, ConfParamResource):
             return HostResource().get_resource_uri(bundle.obj.active_mount.host)
         else:
             return None
-
-    def dehydrate_volumes(self, bundle):
-        # TODO: This could be more useful as an information-rich field
-        return []
 
     def hydrate_lun_ids(self, bundle):
         if 'lun_ids' in bundle.data:
@@ -256,7 +247,7 @@ class TargetResource(MetricResource, ConfParamResource):
 
         with transaction.commit_on_success():
             target_klass = KIND_TO_KLASS[kind]
-            target = target_klass.create_for_lun(volume_id, **create_kwargs)
+            target = target_klass.create_for_volume(volume_id, **create_kwargs)
 
         command = Command.set_state([(target, 'mounted')], "Creating %s" % kind)
         raise custom_response(self, request, http.HttpAccepted,
@@ -277,7 +268,7 @@ class TargetResource(MetricResource, ConfParamResource):
         id_edges = []
         for tm in target.managedtargetmount_set.all():
             lustre_alerts |= set(AlertState.filter_by_item(tm))
-            lun_node = tm.block_device
+            lun_node = tm.volume_node
             if lun_node.storage_resource:
                 parent_record = lun_node.storage_resource
                 from chroma_core.lib.storage_plugin.query import ResourceQuery

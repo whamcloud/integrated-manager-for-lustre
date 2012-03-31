@@ -1,14 +1,14 @@
-
+from chroma_core.models.target import ManagedTargetMount
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen, set_state
 
-from chroma_core.models import ManagedTarget, ManagedTargetMount, ManagedMgs, ManagedHost
+from chroma_core.models import ManagedTarget, ManagedMgs, ManagedHost
 
 
 class TestTargetTransitions(JobTestCaseWithHost):
     def setUp(self):
         super(TestTargetTransitions, self).setUp()
 
-        self.mgt = ManagedMgs.create_for_lun(self._test_lun(self.host).id, name = "MGS")
+        self.mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unformatted')
         set_state(self.mgt, 'mounted')
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'mounted')
@@ -70,7 +70,7 @@ class TestSharedTarget(JobTestCaseWithHost):
     def setUp(self):
         super(TestSharedTarget, self).setUp()
 
-        self.target = ManagedMgs.create_for_lun(self._test_lun(self.host).id, name = "MGS")
+        self.target = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
         self.assertEqual(ManagedMgs.objects.get(pk = self.target.pk).state, 'unformatted')
 
     def test_clean_setup(self):

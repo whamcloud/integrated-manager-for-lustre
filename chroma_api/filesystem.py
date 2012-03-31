@@ -8,7 +8,7 @@ from collections import defaultdict
 from django.db.models import Q
 from chroma_core.models import ManagedFilesystem, ManagedTarget
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs
-from chroma_core.models import Lun, LunNode
+from chroma_core.models import Volume, VolumeNode
 from chroma_core.models import Command
 import chroma_core.lib.conf_param
 import chroma_core.lib.util
@@ -81,14 +81,14 @@ class FilesystemValidation(Validation):
 
             try:
                 # Check the volume exists
-                lun = Lun.objects.get(id = volume_id)
+                lun = Volume.objects.get(id = volume_id)
                 try:
                     # Check the volume isn't in use
                     target = ManagedTarget.objects.get(lun = lun)
                     errors[field].append("Volume with ID %s is already in use by target %s" % (volume_id, target))
                 except ManagedTarget.DoesNotExist:
                     pass
-            except Lun.DoesNotExist:
+            except Volume.DoesNotExist:
                 errors[field].append("Volume with ID %s not found" % volume_id)
 
             used_volume_ids.add(volume_id)
@@ -126,8 +126,8 @@ class FilesystemValidation(Validation):
         # If this is an MGS, there may not be another MGS on
         # this host
         if mgt_volume_id:
-            mgt_volume = Lun.objects.get(id = mgt_volume_id)
-            hosts = [ln.host for ln in LunNode.objects.filter(lun = mgt_volume, use = True)]
+            mgt_volume = Volume.objects.get(id = mgt_volume_id)
+            hosts = [ln.host for ln in VolumeNode.objects.filter(lun = mgt_volume, use = True)]
             conflicting_mgs_count = ManagedTarget.objects.filter(~Q(managedmgs = None), managedtargetmount__host__in = hosts).count()
             if conflicting_mgs_count > 0:
                 errors['mgt'].append("Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label)
@@ -135,7 +135,7 @@ class FilesystemValidation(Validation):
         # Validate generic target settings
         for attr, targets in targets.items():
             for target in targets:
-                volume = Lun.objects.get(id = target['volume_id'])
+                volume = Volume.objects.get(id = target['volume_id'])
                 if 'inode_count' in target and 'bytes_per_inode' in target:
                     errors[attr].append("inode_count and bytes_per_inode are mutually exclusive")
 
@@ -358,7 +358,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
 
         mgt_data = bundle.data['mgt']
         if 'volume_id' in mgt_data:
-            mgt = ManagedMgs.create_for_lun(mgt_data['volume_id'], name="mgs", **self._format_attrs(mgt_data))
+            mgt = ManagedMgs.create_for_volume(mgt_data['volume_id'], name="mgs", **self._format_attrs(mgt_data))
             mgt_id = mgt.pk
         else:
             mgt_id = mgt_data['id']
@@ -379,10 +379,10 @@ class FilesystemResource(MetricResource, ConfParamResource):
                 chroma_core.lib.conf_param.set_conf_param(fs, key, value)
 
             mdt_data = bundle.data['mdt']
-            ManagedMdt.create_for_lun(mdt_data['volume_id'], filesystem = fs, **self._format_attrs(mdt_data))
+            ManagedMdt.create_for_volume(mdt_data['volume_id'], filesystem = fs, **self._format_attrs(mdt_data))
             osts = []
             for ost_data in bundle.data['osts']:
-                osts.append(ManagedOst.create_for_lun(ost_data['volume_id'], filesystem = fs, **self._format_attrs(ost_data)))
+                osts.append(ManagedOst.create_for_volume(ost_data['volume_id'], filesystem = fs, **self._format_attrs(ost_data)))
         # Important that a commit happens here so that the targets
         # land in DB before the set_state jobs act upon them.
 

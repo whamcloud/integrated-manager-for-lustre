@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from chroma_core.models import Lun, LunNode
+from chroma_core.models import Volume, VolumeNode
 
 from tastypie.resources import ModelResource
 from tastypie.exceptions import ImmediateHttpResponse
@@ -45,7 +45,7 @@ class VolumeResource(ModelResource):
     kind = fields.CharField(help_text = "A human readable noun representing the \
             type of storage, e.g. 'Linux partition', 'LVM LV', 'iSCSI LUN'")
     volume_nodes = fields.ToManyField("chroma_api.volume_node.VolumeNodeResource",
-            lambda bundle: bundle.obj.lunnode_set.filter(host__not_deleted = True),
+            lambda bundle: bundle.obj.volumenode_set.filter(host__not_deleted = True),
             null = True, full = True, help_text = "Device nodes which point to this volume")
 
     def dehydrate_kind(self, bundle):
@@ -55,7 +55,7 @@ class VolumeResource(ModelResource):
         return bundle.obj.ha_status()
 
     class Meta:
-        queryset = Lun.objects.all()
+        queryset = Volume.objects.all()
         resource_name = 'volume'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
@@ -74,9 +74,9 @@ class VolumeResource(ModelResource):
             if not category in ['unused', 'usable', None]:
                 raise ImmediateHttpResponse(response = HttpBadRequest())
             if category == 'unused':
-                objects = Lun.get_unused_luns(objects)
+                objects = Volume.get_unused_luns(objects)
             elif category == 'usable':
-                objects = Lun.get_usable_luns(objects)
+                objects = Volume.get_usable_luns(objects)
         except KeyError:
             # Not filtering on filesystem_id
             pass
@@ -90,27 +90,27 @@ class VolumeResource(ModelResource):
         bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
         volume = bundle.data
 
-        # Check that we're not trying to modify a Lun that is in
+        # Check that we're not trying to modify a Volume that is in
         # used by a target
         try:
-            Lun.get_unused_luns().get(id = volume['id'])
-        except Lun.DoesNotExist:
+            Volume.get_unused_luns().get(id = volume['id'])
+        except Volume.DoesNotExist:
             raise AssertionError("Volume %s is in use!")
 
-        lun = get_object_or_404(Lun, id = volume['id'])
+        lun = get_object_or_404(Volume, id = volume['id'])
 
         # Apply use,primary values from the request
         for lun_node_params in volume['nodes']:
             primary, use = (lun_node_params['primary'], lun_node_params['use'])
 
-            lun_node = get_object_or_404(LunNode, id = lun_node_params['id'])
+            lun_node = get_object_or_404(VolumeNode, id = lun_node_params['id'])
             lun_node.primary = primary
             lun_node.use = use
             lun_node.save()
 
         # Clear use, primary on any nodes not in this request
         from django.db.models import Q
-        for lun_node in lun.lunnode_set.filter(~Q(id__in = [n['id'] for n in volume['nodes']])):
+        for lun_node in lun.volumenode_set.filter(~Q(id__in = [n['id'] for n in volume['nodes']])):
             lun_node.primary = False
             lun_node.use = False
             lun_node.save()

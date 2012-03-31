@@ -1,7 +1,7 @@
 
 from tests.unit.chroma_core.helper import JobTestCase, set_state
 
-from chroma_core.models.host import ManagedHost, Lun, LunNode
+from chroma_core.models.host import ManagedHost, Volume, VolumeNode
 
 
 class TestHostAddRemove(JobTestCase):
@@ -28,12 +28,12 @@ class TestHostAddRemove(JobTestCase):
         host, command = ManagedHost.create_from_string('myaddress')
 
         self._test_lun(host)
-        self.assertEqual(Lun.objects.count(), 1)
-        self.assertEqual(LunNode.objects.count(), 1)
+        self.assertEqual(Volume.objects.count(), 1)
+        self.assertEqual(VolumeNode.objects.count(), 1)
 
         set_state(host, 'removed')
         with self.assertRaises(ManagedHost.DoesNotExist):
             ManagedHost.objects.get(address = 'myaddress')
         self.assertEqual(ManagedHost.objects.count(), 0)
-        self.assertEqual(Lun.objects.count(), 1)
-        self.assertEqual(LunNode.objects.count(), 0)
+        self.assertEqual(Volume.objects.count(), 1)
+        self.assertEqual(VolumeNode.objects.count(), 0)

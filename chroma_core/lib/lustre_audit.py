@@ -3,14 +3,14 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
+from chroma_core.models import ManagedTargetMount
 
 import settings
 
 from chroma_core.models.alert import TargetRecoveryAlert, HostContactAlert, LNetOfflineAlert
 from chroma_core.models.event import LearnEvent
 from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, FilesystemMember, TargetRecoveryInfo
-from chroma_core.models.target_mount import ManagedTargetMount
-from chroma_core.models.host import ManagedHost, Nid, LunNode
+from chroma_core.models.host import ManagedHost, Nid, VolumeNode
 from chroma_core.models.filesystem import ManagedFilesystem
 from django.db import transaction
 
@@ -407,14 +407,14 @@ class DetectScan(object):
             try:
                 tm = ManagedTargetMount.objects.get(target = mgs, host = self.host)
             except ManagedTargetMount.DoesNotExist:
-                lunnode = self.get_lun_node_for_target(None, self.host, mgs_local_info['devices'])
+                volumenode = self.get_volume_node_for_target(None, self.host, mgs_local_info['devices'])
                 primary = self.is_primary(mgs_local_info)
                 tm = ManagedTargetMount.objects.create(
                         immutable_state = True,
                         target = mgs,
                         host = self.host,
                         primary = primary,
-                        block_device = lunnode)
+                        volume_node = volumenode)
         except ManagedMgs.DoesNotExist:
             # Only do this for primary mount location
             # Otherwise would risk seeing an MGS somewhere it's not actually
@@ -434,7 +434,7 @@ class DetectScan(object):
             except ManagedMgs.DoesNotExist:
                 pass
 
-            lunnode = self.get_lun_node_for_target(None, self.host,
+            volumenode = self.get_volume_node_for_target(None, self.host,
                                                    mgs_local_info['devices'])
 
             primary = self.is_primary(mgs_local_info)
@@ -442,7 +442,7 @@ class DetectScan(object):
             # We didn't find an existing ManagedMgs referring to
             # this LUN, create one
             mgs = ManagedMgs(uuid = mgs_local_info['uuid'],
-                             state = "mounted", lun = lunnode.lun,
+                             state = "mounted", lun = volumenode.volume,
                              name = "MGS", immutable_state = True)
             mgs.save()
             audit_log.info("Learned MGS on %s" % self.host)
@@ -452,7 +452,7 @@ class DetectScan(object):
                     target = mgs,
                     host = self.host,
                     primary = primary,
-                    block_device = lunnode)
+                    volume_node = volumenode)
             audit_log.info("Learned MGS mount %s" % (tm.host))
             self.learn_event(tm)
 
@@ -528,10 +528,10 @@ class DetectScan(object):
 
             try:
                 primary = self.is_primary(local_info)
-                lunnode = self.get_lun_node_for_target(target, self.host, local_info['devices'])
+                volumenode = self.get_volume_node_for_target(target, self.host, local_info['devices'])
                 (tm, created) = ManagedTargetMount.objects.get_or_create(target = target,
                         host = self.host, primary = primary,
-                        block_device = lunnode)
+                        volume_node = volumenode)
                 if created:
                     tm.immutable_state = True
                     tm.save()
@@ -540,8 +540,8 @@ class DetectScan(object):
             except NoLNetInfo:
                 audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], self.host))
 
-    def get_lun_node_for_target(self, target, host, paths):
-        lun_nodes = LunNode.objects.filter(path__in = paths, host = host)
+    def get_volume_node_for_target(self, target, host, paths):
+        lun_nodes = VolumeNode.objects.filter(path__in = paths, host = host)
         if lun_nodes.count() == 0:
             raise RuntimeError("No device nodes detected matching paths %s on host %s" % (paths, host))
         else:
@@ -549,7 +549,7 @@ class DetectScan(object):
                 # On a sanely configured server you wouldn't have more than one, but if
                 # e.g. you formatted an mpath device and then stopped multipath, you
                 # might end up seeing the two underlying devices.  So we cope, but warn.
-                audit_log.warning("DetectScan: Multiple LunNodes found for paths %s on host %s, using %s" % (paths, host, lun_nodes[0].path))
+                audit_log.warning("DetectScan: Multiple VolumeNodes found for paths %s on host %s, using %s" % (paths, host, lun_nodes[0].path))
             return lun_nodes[0]
 
     def get_or_create_target(self, mgs, local_info):
@@ -573,7 +573,7 @@ class DetectScan(object):
         try:
             # Is it an already detected or configured target?
             target_mount = ManagedTargetMount.objects.get(
-                    block_device = self.get_lun_node_for_target(None, self.host, device_node_paths), host = self.host)
+                    volume_node = self.get_volume_node_for_target(None, self.host, device_node_paths), host = self.host)
             target = target_mount.target
             if target.name == None:
                 target.name = name
@@ -592,10 +592,10 @@ class DetectScan(object):
                     return target
 
             # Fall through, no targets with that name exist on this MGS
-            lunnode = self.get_lun_node_for_target(None, self.host,
+            volumenode = self.get_volume_node_for_target(None, self.host,
                                                    device_node_paths)
             target = klass(uuid = uuid, name = name, filesystem = filesystem,
-                           state = "mounted", lun = lunnode.lun,
+                           state = "mounted", volume = volumenode.volume,
                            immutable_state = True)
             target.save()
             audit_log.debug("%s" % [mt.name for mt in ManagedTarget.objects.all()])

@@ -4,10 +4,11 @@ import time
 
 from django.test.simple import DjangoTestSuiteRunner
 from django.db import transaction
+from chroma_core.models.target import ManagedTargetMount
 
 import settings
 
-from chroma_core.models import ManagedHost, ManagedOst, ManagedMdt, ManagedFilesystem, ManagedMgs, ManagedTargetMount, Lun, LunNode
+from chroma_core.models import ManagedHost, ManagedOst, ManagedMdt, ManagedFilesystem, ManagedMgs, Volume, VolumeNode
 from chroma_core.lib.lustre_audit import UpdateScan
 from benchmark.generic import GenericBenchmark
 
@@ -65,11 +66,11 @@ class TargetGenerator(Generator):
     def create_entity(self, fs):
         import uuid
         # Need to gin this stuff up to make the metrics layer happy.  Sigh.
-        lun = Lun.objects.create()
-        lun_node = LunNode.objects.create(host = self.host,
+        volume = Volume.objects.create()
+        volume_node = VolumeNode.objects.create(host = self.host,
                                           path = uuid.uuid4(),
-                                          lun = lun)
-        ManagedTargetMount.objects.create(block_device=lun_node,
+                                          lun = volume)
+        ManagedTargetMount.objects.create(volume_node=volume_node,
                                           target = self.entity,
                                           host = self.host,
                                           mount_point = uuid.uuid4(),
@@ -84,7 +85,7 @@ class OstGenerator(TargetGenerator):
             self.stats[stat_name] = 0
 
     def create_entity(self, fs):
-        ost_lun = Lun.objects.create(label=self.name)
+        ost_lun = Volume.objects.create(label=self.name)
         self.entity = ManagedOst.objects.get_or_create(name=self.name,
                                                        lun=ost_lun,
                                                        filesystem=fs)[0]
@@ -114,7 +115,7 @@ class MdtGenerator(TargetGenerator):
             self.stats[stat_name] = 0
 
     def create_entity(self, fs):
-        mdt_lun = Lun.objects.create(label=self.name)
+        mdt_lun = Volume.objects.create(label=self.name)
         self.entity = ManagedMdt.objects.get_or_create(name=self.name,
                                                        lun=mdt_lun,
                                                        filesystem=fs)[0]
@@ -205,7 +206,7 @@ class Benchmark(GenericBenchmark):
 
         self.do_db_mangling(**kwargs)
 
-        mgs_lun = Lun.objects.create(label="mgs")
+        mgs_lun = Volume.objects.create(label="mgs")
         self.mgs = ManagedMgs.objects.create(name="MGS", lun=mgs_lun)
         self.fs_entity = ManagedFilesystem.objects.create(name=kwargs['fsname'],
                                                           mgs=self.mgs)

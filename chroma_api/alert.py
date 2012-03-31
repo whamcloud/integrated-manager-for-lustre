@@ -10,6 +10,7 @@ from tastypie.resources import ModelResource
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
+from chroma_core.models.target import ManagedTargetMount
 
 
 class AlertResource(ModelResource):
@@ -45,8 +46,8 @@ class AlertResource(ModelResource):
         affected_objects = set()
 
         from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
-        from chroma_core.models import Lun
-        from chroma_core.models import ManagedTargetMount, ManagedMgs
+        from chroma_core.models import Volume
+        from chroma_core.models import  ManagedMgs
         from chroma_core.models import FilesystemMember
         from chroma_core.models import TargetOfflineAlert, TargetRecoveryAlert, TargetFailoverAlert, HostContactAlert
 
@@ -62,10 +63,10 @@ class AlertResource(ModelResource):
         if isinstance(a, StorageResourceAlert):
             affected_srrs = [sap['storage_resource_id'] for sap in StorageAlertPropagated.objects.filter(alert_state = a).values('storage_resource_id')]
             affected_srrs.append(a.alert_item_id)
-            luns = Lun.objects.filter(storage_resource__in = affected_srrs)
+            luns = Volume.objects.filter(storage_resource__in = affected_srrs)
             for l in luns:
-                for ln in l.lunnode_set.all():
-                    tms = ManagedTargetMount.objects.filter(block_device = ln)
+                for ln in l.volumenode_set.all():
+                    tms = ManagedTargetMount.objects.filter(volume_node = ln)
                     for tm in tms:
                         affect_target(tm.target)
         elif isinstance(a, TargetFailoverAlert):

@@ -29,7 +29,7 @@ from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 from chroma_core.lib.util import all_subclasses
 
 from chroma_core.models import ManagedHost, ManagedTarget
-from chroma_core.models import Lun, LunNode
+from chroma_core.models import Volume, VolumeNode
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 from chroma_core.models import StorageResourceAlert, StorageResourceOffline
 
@@ -227,7 +227,7 @@ class ResourceManager(object):
             self._persist_new_resources(session, initial_resources)
             self._cull_lost_resources(session, initial_resources)
 
-            # Special case for agent-reported resources: update Lun and LunNode
+            # Special case for agent-reported resources: update Volume and VolumeNode
             # objects to interface with the world of Lustre
             # TODO: don't just do this at creation, do updates too
             self._persist_lun_updates(scannable_id)
@@ -293,18 +293,18 @@ class ResourceManager(object):
             log.debug("_persist_lun_updates for scope record %s" % scannable_id)
             host = ManagedHost.objects.get(pk = scannable_resource.host_id)
 
-        def lun_get_or_create(resource_id):
+        def volume_get_or_create(resource_id):
             try:
-                return Lun.objects.get(storage_resource = resource_id)
-            except Lun.DoesNotExist:
+                return Volume.objects.get(storage_resource = resource_id)
+            except Volume.DoesNotExist:
                 # Determine whether a device is shareable by whether it has a SCSI
                 # ancestor (e.g. an LV on a scsi device is shareable, an LV on an IDE
                 # device is not)
                 r = ResourceQuery().get_resource(resource_id)
-                lun = Lun.objects.create(
+                lun = Volume.objects.create(
                         size = r.size,
                         storage_resource_id = r._handle)
-                log.info("Created Lun %s for LogicalDrive %s" % (lun.pk, resource_id))
+                log.info("Created Volume %s for LogicalDrive %s" % (lun.pk, resource_id))
                 return lun
 
         # Get all DeviceNodes within this scope
@@ -312,37 +312,37 @@ class ResourceManager(object):
                 for klass in all_subclasses(DeviceNode)]
         node_resources = ResourceQuery().get_class_resources(node_klass_ids, storage_id_scope = scannable_id)
 
-        # DeviceNodes elegible for use as a LunNode (leaves)
+        # DeviceNodes elegible for use as a VolumeNode (leaves)
         usable_node_resources = [nr for nr in node_resources if not ResourceQuery().record_has_children(nr.id)]
 
-        # DeviceNodes which are usable but don't have LunNode
-        assigned_resource_ids = [ln['storage_resource_id'] for ln in LunNode.objects.filter(storage_resource__in = [n.id for n in node_resources]).values("id", "storage_resource_id")]
+        # DeviceNodes which are usable but don't have VolumeNode
+        assigned_resource_ids = [ln['storage_resource_id'] for ln in VolumeNode.objects.filter(storage_resource__in = [n.id for n in node_resources]).values("id", "storage_resource_id")]
         unassigned_node_resources = [nr for nr in usable_node_resources if nr.id not in assigned_resource_ids]
 
-        # LunNodes whose storage resource is within this scope
-        scope_lun_nodes = LunNode.objects.filter(storage_resource__storage_id_scope = scannable_id)
+        # VolumeNodes whose storage resource is within this scope
+        scope_volume_nodes = VolumeNode.objects.filter(storage_resource__storage_id_scope = scannable_id)
 
-        log.debug("%s %s %s %s" % (tuple([len(l) for l in [node_resources, usable_node_resources, unassigned_node_resources, scope_lun_nodes]])))
+        log.debug("%s %s %s %s" % (tuple([len(l) for l in [node_resources, usable_node_resources, unassigned_node_resources, scope_volume_nodes]])))
 
-        def affinity_weights(lun):
-            lun_nodes = LunNode.objects.filter(lun = lun)
-            if lun_nodes.count() == 0:
-                log.info("affinity_weights: Lun %d has no LunNodes" % lun.id)
+        def affinity_weights(volume):
+            volume_nodes = VolumeNode.objects.filter(volume = volume)
+            if volume_nodes.count() == 0:
+                log.info("affinity_weights: Volume %d has no VolumeNodes" % volume.id)
                 return False
 
-            if ManagedTarget.objects.filter(lun = lun).count() > 0:
-                log.info("affinity_weights: Lun %d in use" % lun.id)
+            if ManagedTarget.objects.filter(volume = volume).count() > 0:
+                log.info("affinity_weights: Volume %d in use" % volume.id)
                 return False
 
             weights = {}
-            for lun_node in lun_nodes:
-                if not lun_node.storage_resource:
-                    log.info("affinity_weights: no storage_resource for LunNode %s" % lun_node.id)
+            for volume_node in volume_nodes:
+                if not volume_node.storage_resource:
+                    log.info("affinity_weights: no storage_resource for VolumeNode %s" % volume_node.id)
                     return False
 
-                weight_resource_ids = ResourceQuery().record_find_ancestors(lun_node.storage_resource, PathWeight)
+                weight_resource_ids = ResourceQuery().record_find_ancestors(volume_node.storage_resource, PathWeight)
                 if len(weight_resource_ids) == 0:
-                    log.info("affinity_weights: no PathWeights for LunNode %s" % lun_node.id)
+                    log.info("affinity_weights: no PathWeights for VolumeNode %s" % volume_node.id)
                     return False
 
                 attr_model_class = StorageResourceRecord.objects.get(id = weight_resource_ids[0]).resource_class.get_class().attr_model_class('weight')
@@ -351,65 +351,65 @@ class ResourceManager(object):
                 ancestor_weights = [json.loads(w['value']) for w in attr_model_class.objects.filter(
                     resource__in = weight_resource_ids, key = 'weight').values('value')]
                 weight = reduce(lambda x, y: x + y, ancestor_weights)
-                weights[lun_node] = weight
+                weights[volume_node] = weight
 
             log.info("affinity_weights: %s" % weights)
 
-            sorted_lun_nodes = [lun_node for lun_node, weight in sorted(weights.items(), lambda x, y: cmp(x[1], y[1]))]
-            sorted_lun_nodes.reverse()
-            primary = sorted_lun_nodes[0]
+            sorted_volume_nodes = [volume_node for volume_node, weight in sorted(weights.items(), lambda x, y: cmp(x[1], y[1]))]
+            sorted_volume_nodes.reverse()
+            primary = sorted_volume_nodes[0]
             primary.primary = True
             primary.use = True
             primary.save()
-            if len(sorted_lun_nodes) > 1:
-                secondary = sorted_lun_nodes[1]
+            if len(sorted_volume_nodes) > 1:
+                secondary = sorted_volume_nodes[1]
                 secondary.use = True
                 secondary.primary = False
                 secondary.save()
-            for lun_node in sorted_lun_nodes[2:]:
-                lun_node.use = False
-                lun_node.primary = False
-                lun_node.save()
+            for volume_node in sorted_volume_nodes[2:]:
+                volume_node.use = False
+                volume_node.primary = False
+                volume_node.save()
 
             return True
 
-        def affinity_balance(lun):
-            lun_nodes = LunNode.objects.filter(lun = lun)
+        def affinity_balance(volume):
+            volume_nodes = VolumeNode.objects.filter(volume = volume)
             host_to_lun_nodes = defaultdict(list)
-            for ln in lun_nodes:
+            for ln in volume_nodes:
                 host_to_lun_nodes[ln.host].append(ln)
 
-            host_to_primary_count = dict([(h, LunNode.objects.filter(host = h, primary = True).count()) for h in host_to_lun_nodes.keys()])
+            host_to_primary_count = dict([(h, VolumeNode.objects.filter(host = h, primary = True).count()) for h in host_to_lun_nodes.keys()])
 
             fewest_primaries = [host for host, count in sorted(host_to_primary_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
             primary_lun_node = host_to_lun_nodes[fewest_primaries][0]
             primary_lun_node.primary = True
             primary_lun_node.use = True
             primary_lun_node.save()
-            log.info("affinity_balance: picked %s for %s primary" % (primary_lun_node.host, lun))
+            log.info("affinity_balance: picked %s for %s primary" % (primary_lun_node.host, volume))
 
             # Remove the primary host from consideration for the secondary mount
             del host_to_lun_nodes[primary_lun_node.host]
 
             if len(host_to_lun_nodes) > 0:
-                host_to_lun_node_count = dict([(h, LunNode.objects.filter(host = h, use = True).count()) for h in host_to_lun_nodes.keys()])
+                host_to_lun_node_count = dict([(h, VolumeNode.objects.filter(host = h, use = True).count()) for h in host_to_lun_nodes.keys()])
                 log.info("htlnc: %s" % host_to_lun_node_count)
                 fewest_lun_nodes = [host for host, count in sorted(host_to_lun_node_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
                 secondary_lun_node = host_to_lun_nodes[fewest_lun_nodes][0]
                 secondary_lun_node.primary = False
                 secondary_lun_node.use = True
                 secondary_lun_node.save()
-                log.info("affinity_balance: picked %s for %s secondary" % (secondary_lun_node.host, lun))
+                log.info("affinity_balance: picked %s for %s secondary" % (secondary_lun_node.host, volume))
             else:
                 secondary_lun_node = None
 
-            for lun_node in lun_nodes:
+            for lun_node in volume_nodes:
                 if not lun_node in (primary_lun_node, secondary_lun_node):
                     lun_node.use = False
                     lun_node.primary = False
                     lun_node.save()
 
-        # For all unattached DeviceNode resources, find or create LunNodes
+        # For all unattached DeviceNode resources, find or create VolumeNodes
         for node_record in unassigned_node_resources:
             logicaldrive_id = ResourceQuery().record_find_ancestor(node_record.pk, LogicalDrive)
             if logicaldrive_id == None:
@@ -421,69 +421,69 @@ class ResourceManager(object):
                 log.info("Setting up DeviceNode %s" % node_record.pk)
                 node_resource = node_record.to_resource()
 
-                lun = lun_get_or_create(logicaldrive_id)
+                volume = volume_get_or_create(logicaldrive_id)
                 try:
-                    lun_node = LunNode.objects.get(
+                    volume_node = VolumeNode.objects.get(
                             host = host,
                             path = node_resource.path)
-                except LunNode.DoesNotExist:
-                    lun_node = LunNode.objects.create(
-                        lun = lun,
+                except VolumeNode.DoesNotExist:
+                    volume_node = VolumeNode.objects.create(
+                        volume = volume,
                         host = host,
                         path = node_resource.path,
                         storage_resource_id = node_record.pk,
                         primary = False,
                         use = False)
-                    log.info("Created LunNode %s for resource %s" % (lun_node.id, node_record.pk))
-                    got_weights = affinity_weights(lun_node.lun)
+                    log.info("Created VolumeNode %s for resource %s" % (volume_node.id, node_record.pk))
+                    got_weights = affinity_weights(volume_node.volume)
                     if not got_weights:
-                        affinity_balance(lun_node.lun)
+                        affinity_balance(volume_node.volume)
 
-        # For all LunNodes, if its storage resource was in this scope, and it
+        # For all VolumeNodes, if its storage resource was in this scope, and it
         # was not included in the set of usable DeviceNode resources, remove
-        # the LunNode
-        for lun_node in scope_lun_nodes:
-            log.debug("lun node %s (%s) usable %s" % (lun_node.id, lun_node.storage_resource_id, lun_node.storage_resource_id in [nr.id for nr in usable_node_resources]))
-            if not lun_node.storage_resource_id in [nr.id for nr in usable_node_resources]:
-                self._try_removing_lun_node(lun_node)
+        # the VolumeNode
+        for volume_node in scope_volume_nodes:
+            log.debug("volume node %s (%s) usable %s" % (volume_node.id, volume_node.storage_resource_id, volume_node.storage_resource_id in [nr.id for nr in usable_node_resources]))
+            if not volume_node.storage_resource_id in [nr.id for nr in usable_node_resources]:
+                self._try_removing_volume_node(volume_node)
 
-        # TODO: Lun Stealing: there may be an existing Lun/LunNode setup for some ScsiDeviceNodes and ScsiVolumes
+        # TODO: Volume Stealing: there may be an existing Volume/VolumeNode setup for some ScsiDeviceNodes and ScsiVolumes
         # detected by Chroma, and a storage plugin adds in extra links to the device nodes that follow back
         # to a LogicalDrive provided by the plugin.  In this case there are two LogicalDrive ancestors of the
-        # device nodes and we would like to have the Lun refer to the plugin-provided one rather than
+        # device nodes and we would like to have the Volume refer to the plugin-provided one rather than
         # the auto-generated one (to get the right name etc).
         # LogicalDrives within this scope
         #logical_drive_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
         #        for klass in all_subclasses(resources.LogicalDrive)]
         #logical_drive_resources = ResourceQuery().get_class_resources(logical_drive_klass_ids, storage_id_scope = scannable_id)
 
-    def _try_removing_lun(self, lun):
-        targets = ManagedTarget.objects.filter(lun = lun)
-        nodes = LunNode.objects.filter(lun = lun)
+    def _try_removing_volume(self, volume):
+        targets = ManagedTarget.objects.filter(volume = volume)
+        nodes = VolumeNode.objects.filter(volume = volume)
         if targets.count() == 0 and nodes.count() == 0:
-            log.warn("Removing Lun %s" % lun.id)
-            lun.storage_resource = None
-            lun.save()
-            Lun.delete(lun.id)
+            log.warn("Removing Volume %s" % volume.id)
+            volume.storage_resource = None
+            volume.save()
+            Volume.delete(volume.id)
             return True
         elif targets.count():
-            log.warn("Leaving Lun %s, used by Target %s" % (lun.id, targets[0]))
+            log.warn("Leaving Volume %s, used by Target %s" % (volume.id, targets[0]))
         elif nodes.count():
-            log.warn("Leaving Lun %s, used by %s nodes" % (lun.id, nodes.count()))
+            log.warn("Leaving Volume %s, used by %s nodes" % (volume.id, nodes.count()))
 
         return False
 
-    def _try_removing_lun_node(self, lun_node):
-        targets = ManagedTarget.objects.filter(managedtargetmount__block_device = lun_node)
+    def _try_removing_volume_node(self, volume_node):
+        targets = ManagedTarget.objects.filter(managedtargetmount__volume_node = volume_node)
         if targets.count() == 0:
-            log.warn("Removing LunNode %s" % lun_node.id)
-            lun_node.storage_resource = None
-            lun_node.save()
-            LunNode.delete(lun_node.id)
-            self._try_removing_lun(lun_node.lun)
+            log.warn("Removing VolumeNode %s" % volume_node.id)
+            volume_node.storage_resource = None
+            volume_node.save()
+            VolumeNode.delete(volume_node.id)
+            self._try_removing_volume(volume_node.volume)
             return True
         else:
-            log.warn("Leaving LunNode %s, used by Target %s" % (lun_node.id, targets[0]))
+            log.warn("Leaving VolumeNode %s, used by Target %s" % (volume_node.id, targets[0]))
 
         return False
 
@@ -692,21 +692,21 @@ class ResourceManager(object):
             if reportee.reported_by.count() == 0:
                 self._cull_resource(reportee)
 
-        lun_nodes = LunNode.objects.filter(storage_resource = resource_record.pk)
+        lun_nodes = VolumeNode.objects.filter(storage_resource = resource_record.pk)
         log.debug("%s lun_nodes depend on %s" % (lun_nodes.count(), resource_record.pk))
         for lun_node in lun_nodes:
-            removed = self._try_removing_lun_node(lun_node)
+            removed = self._try_removing_volume_node(lun_node)
             if not removed:
-                log.warning("Could not remove LunNode %s, disconnecting from resource %s" % (lun_node.id, resource_record.id))
+                log.warning("Could not remove VolumeNode %s, disconnecting from resource %s" % (lun_node.id, resource_record.id))
                 lun_node.storage_resource = None
                 lun_node.save()
 
-        luns = Lun.objects.filter(storage_resource = resource_record.pk)
+        luns = Volume.objects.filter(storage_resource = resource_record.pk)
         log.debug("%s luns depend on %s" % (luns.count(), resource_record.pk))
         for lun in luns:
-            removed = self._try_removing_lun(lun)
+            removed = self._try_removing_volume(lun)
             if not removed:
-                log.warning("Could not remove Lun %s, disconnecting from resource %s" % (lun.id, resource_record.id))
+                log.warning("Could not remove Volume %s, disconnecting from resource %s" % (lun.id, resource_record.id))
                 lun.storage_resource = None
                 lun.save()
 

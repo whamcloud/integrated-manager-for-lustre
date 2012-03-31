@@ -56,15 +56,15 @@ class MockDaemonRpc():
 
 class JobTestCase(TestCase):
     def _test_lun(self, host):
-        from chroma_core.models import Lun, LunNode
+        from chroma_core.models import Volume, VolumeNode
 
-        lun = Lun.objects.create()
+        volume = Volume.objects.create()
         primary = True
         for host in self.hosts:
-            LunNode.objects.create(lun = lun, host = host, path = "/fake/path/%s" % lun.id, primary = primary)
+            VolumeNode.objects.create(volume = volume, host = host, path = "/fake/path/%s" % volume.id, primary = primary)
             primary = False
 
-        return lun
+        return volume
 
     def setUp(self):
         # FIXME: have to do this before every test because otherwise

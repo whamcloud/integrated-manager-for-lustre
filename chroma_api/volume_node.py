@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from chroma_core.models import LunNode
+from chroma_core.models import VolumeNode
 from tastypie.resources import ModelResource
 
 from tastypie.authorization import DjangoAuthorization
@@ -38,7 +38,7 @@ class VolumeNodeResource(ModelResource):
         return bundle.obj.host.get_label()
 
     class Meta:
-        queryset = LunNode.objects.filter(host__not_deleted = True)
+        queryset = VolumeNode.objects.filter(host__not_deleted = True)
         resource_name = 'volume_node'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()

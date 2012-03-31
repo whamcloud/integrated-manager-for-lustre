@@ -4,6 +4,7 @@
 # ==============================
 
 from django.db import transaction
+from chroma_core.models.target import ManagedTargetMount
 
 
 def _validate_conf_params(conf_params):
@@ -18,35 +19,35 @@ def _validate_conf_params(conf_params):
 
 
 def _find_or_create_target(klass, mounts, **kwargs):
-    from chroma_core.models import ManagedHost, Lun, LunNode, ManagedTargetMount
+    from chroma_core.models import ManagedHost, Volume, VolumeNode
 
-    # Setup Lun/LunNode
-    lun = None
+    # Setup Volume/VolumeNode
+    volume = None
     for m in mounts:
         host = ManagedHost.objects.get(address = m['host'])
         try:
-            lun_node = LunNode.objects.get(host = host, path = m['device_node'])
-            lun = lun_node.lun
+            volume_node = VolumeNode.objects.get(host = host, path = m['device_node'])
+            volume = volume_node.volume
             break
-        except LunNode.DoesNotExist:
+        except VolumeNode.DoesNotExist:
             pass
 
-    if not lun:
-        lun = Lun.objects.create()
+    if not volume:
+        volume = Volume.objects.create()
 
     # Find existing Target if there is one
     target = None
     for m in mounts:
         host = ManagedHost.objects.get(address = m['host'])
         try:
-            mount = ManagedTargetMount.objects.get(host = host, block_device__path = m['device_node'])
+            mount = ManagedTargetMount.objects.get(host = host, volume_node__path = m['device_node'])
             target = mount.target.downcast()
         except ManagedTargetMount.DoesNotExist:
             pass
 
     # Create target if not found
     if not target:
-        target = klass.objects.create(lun = lun, **kwargs)
+        target = klass.objects.create(volume = volume, **kwargs)
 
     # Find or create TargetMounts
     _create_mounts(target, mounts)
@@ -54,13 +55,14 @@ def _find_or_create_target(klass, mounts, **kwargs):
 
 
 def _create_mounts(target, mounts):
-    from chroma_core.models import ManagedHost, LunNode, ManagedTargetMount
+    from chroma_core.models import ManagedHost, VolumeNode
+
     for m in mounts:
         host = ManagedHost.objects.get(address = m['host'])
         try:
-            lun_node = LunNode.objects.get(host = host, path = m['device_node'])
-        except LunNode.DoesNotExist:
-            lun_node = LunNode.objects.create(host = host, path = m['device_node'], lun = target.lun)
+            volume_node = VolumeNode.objects.get(host = host, path = m['device_node'])
+        except VolumeNode.DoesNotExist:
+            volume_node = VolumeNode.objects.create(host = host, path = m['device_node'], volume = target.volume)
         if len(mounts) > 1:
             primary = m['primary']
         else:
@@ -68,13 +70,13 @@ def _create_mounts(target, mounts):
 
         try:
             ManagedTargetMount.objects.get(
-                    block_device = lun_node,
+                    volume_node = volume_node,
                     target = target,
                     host = host,
                     primary = primary)
         except ManagedTargetMount.DoesNotExist:
             ManagedTargetMount.objects.create(
-                    block_device = lun_node,
+                    volume_node = volume_node,
                     target = target,
                     host = host,
                     mount_point = target.default_mount_path(host),
@@ -180,7 +182,7 @@ def save_filesystems(filesystem_names = None):
         for tm in t.managedtargetmount_set.all():
             result['mounts'].append({
                 "host": tm.host.address,
-                "device_node": tm.block_device.path,
+                "device_node": tm.volume_node.path,
                 "primary": tm.primary
                 })
         return result

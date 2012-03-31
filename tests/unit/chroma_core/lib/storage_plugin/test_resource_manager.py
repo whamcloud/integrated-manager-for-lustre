@@ -90,33 +90,33 @@ class TestLuns(JobTestCase):
         from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         resource_manager.session_open(resource_record.pk, scannable_resource._handle, [dev_resource, node_resource], 60)
 
-        # TODO: check that in a hierarchy Lun/LunNodes are only created for the leaves
+        # TODO: check that in a hierarchy Volume/VolumeNodes are only created for the leaves
 
-        from chroma_core.models import Lun, LunNode
-        # Check we got a Lun and a LunNode
-        self.assertEqual(Lun.objects.count(), 1)
-        self.assertEqual(LunNode.objects.count(), 1)
+        from chroma_core.models import Volume, VolumeNode
+        # Check we got a Volume and a VolumeNode
+        self.assertEqual(Volume.objects.count(), 1)
+        self.assertEqual(VolumeNode.objects.count(), 1)
 
-        # Check the LunNode got the correct path
-        self.assertEqual(LunNode.objects.get().path, "/dev/foo")
-        self.assertEqual(LunNode.objects.get().host, host)
+        # Check the VolumeNode got the correct path
+        self.assertEqual(VolumeNode.objects.get().path, "/dev/foo")
+        self.assertEqual(VolumeNode.objects.get().host, host)
 
-        # Check the created Lun has a link back to the UnsharedDevice
+        # Check the created Volume has a link back to the UnsharedDevice
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         dev_record = ResourceQuery().get_scannable_id_record_by_attributes(resource_record, 'linux', 'UnsharedDevice', path = "/dev/foo")
-        self.assertEqual(Lun.objects.get().storage_resource_id, dev_record.pk)
-        self.assertEqual(Lun.objects.get().size, 4096)
+        self.assertEqual(Volume.objects.get().storage_resource_id, dev_record.pk)
+        self.assertEqual(Volume.objects.get().size, 4096)
 
-        # Try closing and re-opening the session, this time without the resources, the Lun/LunNode objects
+        # Try closing and re-opening the session, this time without the resources, the Volume/VolumeNode objects
         # should be removed
         resource_manager.session_close(resource_record.pk)
         resource_manager.session_open(resource_record.pk, scannable_resource._handle, [], 60)
-        self.assertEqual(LunNode.objects.count(), 0)
-        self.assertEqual(Lun.objects.count(), 0)
+        self.assertEqual(VolumeNode.objects.count(), 0)
+        self.assertEqual(Volume.objects.count(), 0)
 
-        # TODO: try again, but after creating some targets, check that the Lun/LunNode objects are NOT removed
+        # TODO: try again, but after creating some targets, check that the Volume/VolumeNode objects are NOT removed
 
-        # TODO: try removing resources in an update_scan and check that Lun/LunNode are still removed
+        # TODO: try removing resources in an update_scan and check that Volume/VolumeNode are still removed
 
 
 class TestVirtualMachines(JobTestCase):
@@ -141,5 +141,5 @@ class TestVirtualMachines(JobTestCase):
     def test_virtual_disk_correlation(self):
         pass
         # TODO: check that a host created from a virtual machine gets its
-        # LunNodes marked as primary when VirtualDisks are marked as homed
+        # VolumeNodes marked as primary when VirtualDisks are marked as homed
         # on the same controller
