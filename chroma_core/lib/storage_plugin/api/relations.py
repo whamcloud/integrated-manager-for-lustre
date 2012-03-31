@@ -1,12 +1,4 @@
-
-
-class BaseRelation(object):
-    @property
-    def key(self):
-        return "%s_%s" % (self.subscribe_to, self.attributes)
-
-    def val(self, resource):
-        return tuple([getattr(resource, field_name) for field_name in self.attributes])
+from chroma_core.lib.storage_plugin.base_relation import BaseRelation
 
 
 class Subscribe(BaseRelation):

@@ -125,20 +125,6 @@ class HydraDebug(cmd.Cmd, object):
                     stdout.write("echo lctl conf_param %s=%s\n" % (instance.get_key(), test_val))
                     stdout.write("lctl conf_param %s=%s\n" % (instance.get_key(), test_val))
 
-    def do_create_storage_resource(self, args):
-        """Development placeholder for UI for creating
-           arbitrary parentless StorageResources e.g. inputting
-           IP addresses of controllers"""
-        args = args.split()
-        plugin, resource = args[0:2]
-        kwargs_list = args[2:]
-        kwargs = {}
-        for k in kwargs_list:
-            tokens = k.split('=')
-            kwargs[tokens[0]] = tokens[1]
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        storage_plugin_manager.create_root_resource(plugin, resource, **kwargs)
-
     def do_storage_graph(self, arg_string):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         if len(arg_string) == 0:

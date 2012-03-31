@@ -2,10 +2,10 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 import settings
 
-from chroma_core.lib.storage_plugin.resource import StorageResource
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
 
 import threading
@@ -27,7 +27,7 @@ class ResourceIndex(object):
         self._local_id_to_resource[resource._handle] = resource
 
         # Why don't we need a scope resource in here?
-        # Because if it's a ScannableId then only items for that
+        # Because if it's a ScopedId then only items for that
         # scannable will be in this ResourceIndex (index is per
         # plugin instance), and if it's a GlobalId then it doesn't
         # have a scope.
@@ -55,7 +55,7 @@ class ResourceIndex(object):
         return self._local_id_to_resource.values()
 
 
-class StoragePlugin(object):
+class BaseStoragePlugin(object):
     #: Set to true for plugins which should not be shown in the user interface
     internal = False
 
@@ -101,7 +101,7 @@ class StoragePlugin(object):
 
     def __init__(self, scannable_id = None):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        self._handle = storage_plugin_manager.register_plugin(self)
+        storage_plugin_manager.register_plugin(self)
         self._initialized = False
 
         self._handle_lock = threading.Lock()
@@ -310,8 +310,7 @@ class StoragePlugin(object):
         * Assign it a local ID
         * Add it to the local indices
         * Mark it for inclusion in the next update to global state"""
-        assert(isinstance(resource, StorageResource))
-        assert(self._handle)
+        assert(isinstance(resource, BaseStorageResource))
         assert(not resource._handle)
 
         resource.validate()

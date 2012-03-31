@@ -32,7 +32,7 @@ def _find_or_create_target(klass, mounts, **kwargs):
             pass
 
     if not lun:
-        lun = Lun.objects.create(shareable = (len(mounts) > 1))
+        lun = Lun.objects.create()
 
     # Find existing Target if there is one
     target = None

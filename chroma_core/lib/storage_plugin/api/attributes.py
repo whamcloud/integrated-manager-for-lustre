@@ -5,7 +5,8 @@
 # ==============================
 
 """This module defines BaseResourceAttribute subclasses, which represent
-the datatypes that StorageResource objects may store as attributes"""
+the datatypes that BaseStorageResource objects may store as attributes"""
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
 from chroma_core.models import StorageResourceAttributeReference
@@ -132,7 +133,7 @@ class Hostname(BaseResourceAttribute):
 class ResourceReference(BaseResourceAttribute):
     """A reference to another resource.  Conceptually similar to a
     foreign key in a database.  Assign
-    instantiated StorageResource objects to this attribute.  When a storage
+    instantiated BaseStorageResource objects to this attribute.  When a storage
     resource is deleted, any other resources having a reference to it are affected:
     * If the ResourceReference has ``optional = True`` then the field is cleared
     * Otherwise, the referencing resource is also deleted
@@ -164,10 +165,9 @@ class ResourceReference(BaseResourceAttribute):
         return mark_safe("<a class='storage_resource' href='#%s'>%s</a>" % (value._handle, name))
 
     def validate(self, value):
-        from chroma_core.lib.storage_plugin.resource import StorageResource
         if value == None and self.optional:
             return
         elif value == None and not self.optional:
             raise ValueError("ResourceReference set to None but not optional")
-        elif not isinstance(value, StorageResource):
+        elif not isinstance(value, BaseStorageResource):
             raise ValueError("Cannot take ResourceReference to %s" % value)

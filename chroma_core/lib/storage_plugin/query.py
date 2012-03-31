@@ -8,7 +8,7 @@ from django.db import transaction
 
 class ResourceQuery(object):
     def __init__(self):
-        # Map StorageResourceRecord ID to instantiated StorageResource
+        # Map StorageResourceRecord ID to instantiated BaseStorageResource
         self._pk_to_resource = {}
 
         # Record plugins which fail to load
@@ -92,7 +92,7 @@ class ResourceQuery(object):
         # Get the StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk=record_id)
 
-        # Get the StorageResource class and have it translate the alert_class
+        # Get the BaseStorageResource class and have it translate the alert_class
         klass = storage_plugin_manager.get_resource_class_by_id(
             record.resource_class_id)
         msg = "%s (%s %s)" % (klass.alert_message(alert_class), klass.get_class_label(), record.alias_or_name())
@@ -100,7 +100,7 @@ class ResourceQuery(object):
 
     def record_class_and_instance_string(self, record):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        # Get the StorageResource class and have it translate the alert_class
+        # Get the BaseStorageResource class and have it translate the alert_class
         klass = storage_plugin_manager.get_resource_class_by_id(
             record.resource_class_id)
 
@@ -123,7 +123,7 @@ class ResourceQuery(object):
 
     def _record_to_resource(self, record):
         """'record' may be a StorageResourceRecord or an ID.  Returns a
-        StorageResource, or None if the required plugin is unavailable"""
+        BaseStorageResource, or None if the required plugin is unavailable"""
         # Conditional to allow passing in a record or an ID
         if not isinstance(record, StorageResourceRecord):
             if record in self._pk_to_resource:
@@ -149,7 +149,7 @@ class ResourceQuery(object):
     # halfway through -- maybe use nested_commit_on_success?
     @transaction.commit_on_success()
     def get_resource(self, vrr):
-        """Return a StorageResource corresponding to a StorageResourceRecord
+        """Return a BaseStorageResource corresponding to a StorageResourceRecord
         identified by vrr_id.  May raise an exception if the plugin for that
         vrr cannot be loaded for any reason.
 
@@ -243,7 +243,7 @@ class ResourceQuery(object):
 
     def get_scannable_id_record_by_attributes(self, scope, plugin, klass, **attrs):
         # FIXME: horrendous function name indicating overcomplication
-        # this is for getting a resource which uses a ScannableId identifier attribute
+        # this is for getting a resource which uses a ScopedId identifier attribute
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         from chroma_core.models import StorageResourceRecord
         import json

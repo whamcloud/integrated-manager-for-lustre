@@ -1,8 +1,8 @@
 
 from django.test import TestCase
 
-from chroma_core.lib.storage_plugin import attributes
 from chroma_core.lib.storage_plugin import base_resource_attribute
+from chroma_core.lib.storage_plugin.api import attributes
 
 
 class TestAttributes(TestCase):
@@ -21,17 +21,6 @@ class TestAttributes(TestCase):
         toolong = "x" * 513
         with self.assertRaisesRegexp(ValueError, "Value '%s' too long" % toolong):
             str.validate(toolong)
-
-    def test_boolean(self):
-        bool = attributes.Boolean()
-        self.assertEqual(bool.encode(None), False)
-        self.assertEqual(bool.encode(0), False)
-        self.assertEqual(bool.encode(1), True)
-        self.assertEqual(bool.encode(True), True)
-        self.assertEqual(bool.encode(False), False)
-
-        self.assertEqual(bool.decode(False), False)
-        self.assertEqual(bool.decode(True), True)
 
     def test_integer_nolimits(self):
         i = attributes.Integer()
@@ -83,7 +72,9 @@ class TestReferenceAttribute(TestCase):
         mgr = load_plugins(['loadable_plugin'])
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = mgr
 
-        record = mgr.create_root_resource('loadable_plugin', 'TestScannableResource', name = 'foobar')
+        from chroma_core.models import StorageResourceRecord
+        resource_class, resource_class_id = mgr.get_plugin_resource_class('loadable_plugin', 'TestScannableResource')
+        record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'name': 'foobar'})
         self.record_pk = record.pk
 
         self.manager = mgr
@@ -92,17 +83,7 @@ class TestReferenceAttribute(TestCase):
         import chroma_core.lib.storage_plugin.manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.original_mgr
 
-    def test_decode(self):
-        import json
-        rr = attributes.ResourceReference()
-        self.assertEqual(rr.decode(json.dumps(None)), None)
-
-        resource = rr.decode(json.dumps(self.record_pk))
-        from chroma_core.lib.storage_plugin.resource import StorageResource
-        self.assertIsInstance(resource, StorageResource)
-
     def test_markup(self):
-        import json
         rr = attributes.ResourceReference()
 
         self.assertEqual(rr.to_markup(None), '')
@@ -111,11 +92,11 @@ class TestReferenceAttribute(TestCase):
             from django.utils.html import conditional_escape
             return "<a class='storage_resource' href='#%s'>%s</a>" % (id, conditional_escape(label))
 
-        resource = rr.decode(json.dumps(self.record_pk))
+        from chroma_core.models import StorageResourceRecord
+        resource = StorageResourceRecord.objects.get(id = self.record_pk).to_resource()
         markup = rr.to_markup(resource)
         self.assertEqual(markup, hyperlink_markup(self.record_pk, resource.get_label()))
 
-        from chroma_core.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = self.record_pk)
         record.alias = 'test alias'
         record.save()
@@ -124,13 +105,13 @@ class TestReferenceAttribute(TestCase):
         self.assertEqual(markup, hyperlink_markup(self.record_pk, 'test alias'))
 
     def test_validate(self):
-        import json
-
         rr = attributes.ResourceReference(optional = True)
         rr.validate(None)
         with self.assertRaises(ValueError):
             rr.validate("not a resource")
-        resource = rr.decode(json.dumps(self.record_pk))
+
+        from chroma_core.models import StorageResourceRecord
+        resource = StorageResourceRecord.objects.get(id = self.record_pk).to_resource()
         rr.validate(resource)
 
         rr = attributes.ResourceReference()

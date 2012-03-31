@@ -5,6 +5,7 @@
 
 from django.db import models
 from django.db.models import Q
+from chroma_core.lib.storage_plugin.api import statistics
 
 from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState, AlertEvent
@@ -21,7 +22,7 @@ MAX_NAME_LENGTH = 128
 
 
 class StoragePluginRecord(models.Model):
-    """Reference to a module defining a StoragePlugin subclass"""
+    """Reference to a module defining a BaseStoragePlugin subclass"""
     module_name = models.CharField(max_length = MAX_NAME_LENGTH)
     internal = models.BooleanField()
 
@@ -31,7 +32,7 @@ class StoragePluginRecord(models.Model):
 
 
 class StorageResourceClass(models.Model):
-    """Reference to a StorageResource subclass"""
+    """Reference to a BaseStorageResource subclass"""
     storage_plugin = models.ForeignKey(StoragePluginRecord, on_delete = models.PROTECT)
     class_name = models.CharField(max_length = MAX_NAME_LENGTH)
     user_creatable = models.BooleanField()
@@ -49,7 +50,7 @@ class StorageResourceClass(models.Model):
 
 
 class StorageResourceRecord(models.Model):
-    """Reference to an instance of a StorageResource"""
+    """Reference to an instance of a BaseStorageResource"""
     resource_class = models.ForeignKey(StorageResourceClass, on_delete = models.PROTECT)
 
     # Representing a chroma_core.lib.storage_plugin.GlobalId or LocalId
@@ -81,8 +82,9 @@ class StorageResourceRecord(models.Model):
     @classmethod
     def get_or_create_root(cls, resource_class, resource_class_id, attrs):
         # Root resource do not have parents so they must be globally identified
-        from chroma_core.lib.storage_plugin.resource import ScannableId, AutoId
-        if isinstance(resource_class.identifier, ScannableId):
+        from chroma_core.lib.storage_plugin.api.identifiers import AutoId, ScopedId
+
+        if isinstance(resource_class.identifier, ScopedId):
             raise RuntimeError("Cannot create root resource of class %s, it requires a scope" % resource_class)
 
         if isinstance(resource_class.identifier, AutoId):
@@ -236,7 +238,6 @@ class StorageResourceStatistic(models.Model):
     metrics = property(__get_metrics)
 
     def update(self, stat_name, stat_properties, stat_data):
-        from chroma_core.lib.storage_plugin import statistics
         if isinstance(stat_properties, statistics.BytesHistogram):
             # Histograms
             for dp in stat_data:
@@ -258,7 +259,7 @@ class StorageResourceStatistic(models.Model):
 
 
 class StorageResourceAttribute(models.Model):
-    """An attribute of a StorageResource instance.
+    """An attribute of a BaseStorageResource instance.
 
     Note that we store the denormalized key name of the attribute
     for each storageresource instance, to support schemaless attribute

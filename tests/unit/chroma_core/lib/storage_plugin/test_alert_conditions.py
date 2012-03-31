@@ -1,7 +1,7 @@
 
 from django.test import TestCase
 
-from chroma_core.lib.storage_plugin import alert_conditions
+from chroma_core.lib.storage_plugin.api import alert_conditions
 
 
 class FakeResource:

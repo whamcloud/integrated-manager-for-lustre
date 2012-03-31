@@ -5,7 +5,7 @@
 
 
 """The resource manager is the home of the global view of the resources populated from
-all plugins.  StoragePlugin instances have their own local caches of resources, which
+all plugins.  BaseStoragePlugin instances have their own local caches of resources, which
 they use to periodically update this central store.
 
 Concurrency:
@@ -21,9 +21,11 @@ WARNING:
     its initialization does a significant amount of DB activity.  Don't import
     this module unless you're really going to use it.
 """
+from chroma_core.lib.storage_plugin.api import attributes, relations
+from chroma_core.lib.storage_plugin.base_resource import BaseGlobalId, BaseScopedId
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
-from chroma_core.lib.storage_plugin.resource import ScannableId, GlobalId
 from chroma_core.lib.util import all_subclasses
 
 from chroma_core.models import ManagedHost, ManagedTarget
@@ -98,7 +100,6 @@ class SubscriberIndex(object):
         self._all_subscriptions = []
         # FIXME: pass this in instead?
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        from chroma_core.lib.storage_plugin import relations
 
         subscriptions = {}
 
@@ -189,6 +190,7 @@ class SubscriberIndex(object):
                         resource_class = resource_class_id)
                 for r in records:
                     resource = r.to_resource()
+                    raise RuntimeError("%s subs %s" % (resource, resource._storage_attributes))
                     self.add_subscriber(r.id, subscription.key, subscription.val(resource))
 
 
@@ -260,8 +262,8 @@ class ResourceManager(object):
                 if isinstance(resource, klass):
                     yield (record, resource)
 
-        from chroma_core.lib.storage_plugin import builtin_resources
-        for record, resource in get_session_resources_of_type(session, builtin_resources.VirtualMachine):
+        from chroma_core.lib.storage_plugin.api.resources import VirtualMachine
+        for record, resource in get_session_resources_of_type(session, VirtualMachine):
             if not resource.host_id:
                 try:
                     host = ManagedHost.objects.get(address = resource.address)
@@ -279,13 +281,13 @@ class ResourceManager(object):
     @transaction.commit_on_success
     def _persist_lun_updates(self, scannable_id):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
-        from chroma_core.lib.storage_plugin import builtin_resources
+        from chroma_core.lib.storage_plugin.api.resources import PathWeight, DeviceNode, LogicalDrive
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 
         scannable_resource = ResourceQuery().get_resource(scannable_id)
 
-        log.debug("%s %s %s" % (scannable_resource, storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')[0], isinstance(scannable_resource, storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')[0])))
-        if not isinstance(scannable_resource, storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')[0]):
+        if not isinstance(scannable_resource, HostsideResource):
             return
         else:
             log.debug("_persist_lun_updates for scope record %s" % scannable_id)
@@ -307,7 +309,7 @@ class ResourceManager(object):
 
         # Get all DeviceNodes within this scope
         node_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
-                for klass in all_subclasses(builtin_resources.DeviceNode)]
+                for klass in all_subclasses(DeviceNode)]
         node_resources = ResourceQuery().get_class_resources(node_klass_ids, storage_id_scope = scannable_id)
 
         # DeviceNodes elegible for use as a LunNode (leaves)
@@ -338,7 +340,7 @@ class ResourceManager(object):
                     log.info("affinity_weights: no storage_resource for LunNode %s" % lun_node.id)
                     return False
 
-                weight_resource_ids = ResourceQuery().record_find_ancestors(lun_node.storage_resource, builtin_resources.PathWeight)
+                weight_resource_ids = ResourceQuery().record_find_ancestors(lun_node.storage_resource, PathWeight)
                 if len(weight_resource_ids) == 0:
                     log.info("affinity_weights: no PathWeights for LunNode %s" % lun_node.id)
                     return False
@@ -409,7 +411,7 @@ class ResourceManager(object):
 
         # For all unattached DeviceNode resources, find or create LunNodes
         for node_record in unassigned_node_resources:
-            logicaldrive_id = ResourceQuery().record_find_ancestor(node_record.pk, builtin_resources.LogicalDrive)
+            logicaldrive_id = ResourceQuery().record_find_ancestor(node_record.pk, LogicalDrive)
             if logicaldrive_id == None:
                 # This is not an error: a plugin may report a device node from
                 # an agent plugin before reporting the LogicalDrive from the controller.
@@ -452,7 +454,7 @@ class ResourceManager(object):
         # the auto-generated one (to get the right name etc).
         # LogicalDrives within this scope
         #logical_drive_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
-        #        for klass in all_subclasses(builtin_resources.LogicalDrive)]
+        #        for klass in all_subclasses(resources.LogicalDrive)]
         #logical_drive_resources = ResourceQuery().get_class_resources(logical_drive_klass_ids, storage_id_scope = scannable_id)
 
     def _try_removing_lun(self, lun):
@@ -638,7 +640,7 @@ class ResourceManager(object):
         reported_scoped_resources = []
         reported_global_resources = []
         for r in reported_resources:
-            if isinstance(r.identifier, ScannableId):
+            if isinstance(r.identifier, BaseScopedId):
                 reported_scoped_resources.append(session.local_id_to_global_id[r._handle])
             else:
                 reported_global_resources.append(session.local_id_to_global_id[r._handle])
@@ -741,9 +743,9 @@ class ResourceManager(object):
         if resource._handle in session.local_id_to_global_id:
             return
 
-        if isinstance(resource.identifier, ScannableId):
+        if isinstance(resource.identifier, BaseScopedId):
             scope_id = session.scannable_id
-        elif isinstance(resource.identifier, GlobalId):
+        elif isinstance(resource.identifier, BaseGlobalId):
             scope_id = None
         else:
             raise NotImplementedError
@@ -760,7 +762,6 @@ class ResourceManager(object):
             # object passed from the plugin won't have a global ID for the referenced
             # resource -- we have to do the lookup inside ResourceManager
             attribute_obj = resource_class.get_attribute_properties(key)
-            from chroma_core.lib.storage_plugin import attributes
             if isinstance(attribute_obj, attributes.ResourceReference):
                 if value:
                     referenced_resource = value
@@ -772,8 +773,7 @@ class ResourceManager(object):
         id_tuple = resource.id_tuple()
         cleaned_id_items = []
         for t in id_tuple:
-            from chroma_core.lib.storage_plugin.resource import StorageResource
-            if isinstance(t, StorageResource):
+            if isinstance(t, BaseStorageResource):
                 cleaned_id_items.append(session.local_id_to_global_id[t._handle])
             else:
                 cleaned_id_items.append(t)
@@ -816,7 +816,7 @@ class ResourceManager(object):
             # provide/subscribe relationships with respect to it
             self._subscriber_index.add_resource(record.pk, resource)
 
-        if isinstance(resource.identifier, GlobalId) and session.scannable_id != record.id:
+        if isinstance(resource.identifier, BaseGlobalId) and session.scannable_id != record.id:
             try:
                 record.reported_by.get(pk = session.scannable_id)
             except StorageResourceRecord.DoesNotExist:

@@ -5,11 +5,11 @@ from helper import load_plugins
 
 class TestCornerCases(TestCase):
     def test_0classes(self):
-        with self.assertRaisesRegexp(RuntimeError, "Module unloadable_plugin_0classes does not define a StoragePlugin"):
+        with self.assertRaisesRegexp(RuntimeError, "Module unloadable_plugin_0classes does not define a BaseStoragePlugin"):
             load_plugins(['unloadable_plugin_0classes'])
 
     def test_2classes(self):
-        with self.assertRaisesRegexp(RuntimeError, "Module unloadable_plugin_2classes defines more than one StoragePlugin"):
+        with self.assertRaisesRegexp(RuntimeError, "Module unloadable_plugin_2classes defines more than one BaseStoragePlugin"):
             load_plugins(['unloadable_plugin_2classes'])
 
     def test_dupemodule(self):
@@ -93,5 +93,7 @@ class TestLoad(TestCase):
 
     def test_root_resource(self):
         """Test that the manager creates and returns a scannable resource"""
-        record = self.manager.create_root_resource('loadable_plugin', 'TestScannableResource', name = 'foobar')
+        from chroma_core.models import StorageResourceRecord
+        resource_class, resource_class_id = self.manager.get_plugin_resource_class('loadable_plugin', 'TestScannableResource')
+        record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'name': 'foobar'})
         self.assertEqual(self.manager.get_scannable_resource_ids('loadable_plugin'), [record.pk])

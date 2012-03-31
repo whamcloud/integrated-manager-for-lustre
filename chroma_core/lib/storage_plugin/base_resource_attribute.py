@@ -3,11 +3,11 @@ from chroma_core.models import StorageResourceAttributeSerialized
 
 
 class BaseResourceAttribute(object):
-    """Base class for declared attributes of StorageResource.  This is
-       to StorageResource as models.fields.Field is to models.Model"""
+    """Base class for declared attributes of BaseStorageResource.  This is
+       to BaseStorageResource as models.fields.Field is to models.Model"""
 
     # This is a hack to store the order in which attributes are declared so
-    # that I can sort the StorageResource attribute dict for presentation in the same order
+    # that I can sort the BaseStorageResource attribute dict for presentation in the same order
     # as the plugin author declared the attributes.
     creation_counter = 0
 

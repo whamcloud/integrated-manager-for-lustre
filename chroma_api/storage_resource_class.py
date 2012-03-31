@@ -2,6 +2,7 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
+from chroma_core.lib.storage_plugin.api import attributes
 
 from chroma_core.models import StorageResourceClass
 
@@ -9,8 +10,6 @@ from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from tastypie.resources import ModelResource
-
-from chroma_core.lib.storage_plugin import attributes
 
 
 def filter_class_ids():

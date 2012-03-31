@@ -2,6 +2,7 @@
 import math
 from django.contrib.contenttypes.models import ContentType
 from r3d.models import Average, Database
+from chroma_core.lib.storage_plugin.api import statistics
 from chroma_core.models import FrontLineMetricStore
 
 import settings
@@ -170,7 +171,6 @@ class VendorMetricStore(R3dMetricStore):
         """stat_data is an iterable in time order of dicts, where each
            dict has a member 'timestamp' which is a timestamp int, and
            'value' whose type depends on the statistic"""
-        from chroma_core.lib.storage_plugin import statistics
         r3d_format = {}
 
         for datapoint in stat_data:

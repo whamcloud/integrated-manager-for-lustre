@@ -4,6 +4,8 @@
 # ==============================
 
 from django.contrib.contenttypes.models import ContentType
+from chroma_core.lib.storage_plugin.api import attributes, statistics
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 
@@ -21,7 +23,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from chroma_api.storage_resource_class import filter_class_ids
 
 from chroma_core.lib.storage_plugin.daemon import ScanDaemonRpc
-from chroma_core.lib.storage_plugin import attributes
 
 
 class StorageResourceResource(MetricResource, ModelResource):
@@ -78,7 +79,6 @@ class StorageResourceResource(MetricResource, ModelResource):
         for s in StorageResourceStatistic.objects.filter(storage_resource = bundle.obj):
             from django.db import transaction
             stat_props = s.storage_resource.get_statistic_properties(s.name)
-            from chroma_core.lib.storage_plugin import statistics
             if isinstance(stat_props, statistics.BytesHistogram):
                 with transaction.commit_manually():
                     transaction.commit()
@@ -132,7 +132,6 @@ class StorageResourceResource(MetricResource, ModelResource):
         return ContentType.objects.get_for_model(bundle.obj.__class__).pk
 
     def dehydrate_attributes(self, bundle):
-        from chroma_core.lib.storage_plugin.resource import StorageResource
         # a list of dicts, one for each attribute.  Excludes hidden attributes.
         result = {}
         resource = bundle.obj.to_resource()
@@ -143,7 +142,7 @@ class StorageResourceResource(MetricResource, ModelResource):
                 continue
 
             val = getattr(resource, name)
-            if isinstance(val, StorageResource):
+            if isinstance(val, BaseStorageResource):
                 raw = val._handle
             else:
                 raw = val

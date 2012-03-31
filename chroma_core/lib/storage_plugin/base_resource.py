@@ -1,19 +1,10 @@
-
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
-
-"""This modules defines the StorageResource class, which StoragePlugins subclass use
-to define their system elements"""
-
-from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
-from chroma_core.lib.storage_plugin.statistics import BaseStatistic
-from chroma_core.lib.storage_plugin.alert_conditions import AlertCondition
-
-from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
-
 from collections import defaultdict
+from exceptions import KeyError, AttributeError, RuntimeError, ValueError
 import threading
+from chroma_core.lib.storage_plugin.base_alert_condition import AlertCondition
+from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
+from chroma_core.lib.storage_plugin.base_statistic import BaseStatistic
+from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 
 
 class ResourceIdentifier(object):
@@ -23,26 +14,22 @@ class ResourceIdentifier(object):
         self.id_fields = args
 
 
-class GlobalId(ResourceIdentifier):
-    """An Id which is globally unique"""
+class BaseGlobalId(ResourceIdentifier):
     pass
 
 
-class AutoId(GlobalId):
+class BaseAutoId(BaseGlobalId):
     def __init__(self):
-        super(AutoId, self).__init__('chroma_auto_id')
-    """An ID generated on resource creation by Chroma"""
+        super(BaseAutoId, self).__init__('chroma_auto_id')
     pass
 
 
-class ScannableId(ResourceIdentifier):
-    """An Id which is unique within a scannable resource"""
+class BaseScopedId(ResourceIdentifier):
     pass
 
 
 class StorageResourceMetaclass(type):
     def __new__(cls, name, bases, dct):
-        from chroma_core.lib.storage_plugin import attributes
         # Maps of attribute name to object
         dct['_storage_attributes'] = {}
         dct['_storage_statistics'] = {}
@@ -80,8 +67,9 @@ class StorageResourceMetaclass(type):
                     dct['_alert_classes'][alert_class] = field_obj
 
                 del dct[field_name]
-            elif isinstance(field_obj, AutoId):
-                field_obj = attributes.String(hidden = True)
+            elif isinstance(field_obj, BaseAutoId):
+                from chroma_core.lib.storage_plugin.api.attributes import String
+                field_obj = String(hidden = True)
                 dct['_storage_attributes']['chroma_auto_id'] = field_obj
 
         log.debug("%s: %s" % (name, dct['_storage_attributes']))
@@ -89,7 +77,7 @@ class StorageResourceMetaclass(type):
         return super(StorageResourceMetaclass, cls).__new__(cls, name, bases, dct)
 
 
-class StorageResource(object):
+class BaseStorageResource(object):
     __metaclass__ = StorageResourceMetaclass
 
     icon = 'default'
@@ -208,7 +196,7 @@ class StorageResource(object):
     def get_label(self, ancestors=[]):
         """Subclasses should implement a function which formats a string for
         presentation, possibly in a tree display as a child of 'parent' (a
-        StorageResource instance) or if parent is None then for display
+        BaseStorageResource instance) or if parent is None then for display
         on its own."""
         id = self.id_tuple()
         if len(id) == 1:
@@ -341,9 +329,10 @@ class StorageResource(object):
 
 
 class ScannableResource(object):
-    """Used for marking which StorageResource subclasses are for scanning (like couplets, hosts)"""
+    """Used for marking which BaseStorageResource subclasses are for scanning (like couplets, hosts)"""
     pass
 
 
-class ScannableStorageResource(StorageResource, ScannableResource):
+class HostsideResource(object):
+    """Resources which are the agent-side equivalent of a ScannableResource"""
     pass

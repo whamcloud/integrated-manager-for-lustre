@@ -65,7 +65,7 @@ class TargetGenerator(Generator):
     def create_entity(self, fs):
         import uuid
         # Need to gin this stuff up to make the metrics layer happy.  Sigh.
-        lun = Lun.objects.create(shareable = 0)
+        lun = Lun.objects.create()
         lun_node = LunNode.objects.create(host = self.host,
                                           path = uuid.uuid4(),
                                           lun = lun)
@@ -84,7 +84,7 @@ class OstGenerator(TargetGenerator):
             self.stats[stat_name] = 0
 
     def create_entity(self, fs):
-        ost_lun = Lun.objects.create(shareable=False, label=self.name)
+        ost_lun = Lun.objects.create(label=self.name)
         self.entity = ManagedOst.objects.get_or_create(name=self.name,
                                                        lun=ost_lun,
                                                        filesystem=fs)[0]
@@ -114,7 +114,7 @@ class MdtGenerator(TargetGenerator):
             self.stats[stat_name] = 0
 
     def create_entity(self, fs):
-        mdt_lun = Lun.objects.create(shareable=False, label=self.name)
+        mdt_lun = Lun.objects.create(label=self.name)
         self.entity = ManagedMdt.objects.get_or_create(name=self.name,
                                                        lun=mdt_lun,
                                                        filesystem=fs)[0]
@@ -205,7 +205,7 @@ class Benchmark(GenericBenchmark):
 
         self.do_db_mangling(**kwargs)
 
-        mgs_lun = Lun.objects.create(shareable=False, label="mgs")
+        mgs_lun = Lun.objects.create(label="mgs")
         self.mgs = ManagedMgs.objects.create(name="MGS", lun=mgs_lun)
         self.fs_entity = ManagedFilesystem.objects.create(name=kwargs['fsname'],
                                                           mgs=self.mgs)

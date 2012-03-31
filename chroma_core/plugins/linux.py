@@ -2,21 +2,21 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-
-from chroma_core.lib.storage_plugin.plugin import StoragePlugin
-from chroma_core.lib.storage_plugin.resource import StorageResource, ScannableId, GlobalId
-
-from chroma_core.lib.storage_plugin import attributes
-from chroma_core.lib.storage_plugin import builtin_resources
+from chroma_core.lib.storage_plugin.api import attributes
+from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
+from chroma_core.lib.storage_plugin.api.resources import Resource
+from chroma_core.lib.storage_plugin.api.plugin import Plugin
+from chroma_core.lib.storage_plugin.api.resources import   DeviceNode, LogicalDrive, StoragePool
 
 # This plugin is special, it uses Hydra's built-in infrastructure
 # in a way that third party plugins can't/shouldn't/mustn't
 from chroma_core.models import ManagedHost
+from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 
 import re
 
 
-class PluginAgentResources(StorageResource):
+class PluginAgentResources(Resource, HostsideResource):
     identifier = GlobalId('host_id', 'plugin_name')
     host_id = attributes.Integer()
     plugin_name = attributes.String()
@@ -26,7 +26,7 @@ class PluginAgentResources(StorageResource):
         return "%s" % host
 
 
-class ScsiDevice(builtin_resources.LogicalDrive):
+class ScsiDevice(LogicalDrive):
     identifier = GlobalId('serial_80', 'serial_83')
 
     serial_80 = attributes.String()
@@ -47,8 +47,8 @@ class ScsiDevice(builtin_resources.LogicalDrive):
             return self.serial_83
 
 
-class UnsharedDevice(builtin_resources.LogicalDrive):
-    identifier = ScannableId('path')
+class UnsharedDevice(LogicalDrive):
+    identifier = ScopedId('path')
     # Annoying duplication of this from the node, but it really
     # is the closest thing we have to a real ID.
     path = attributes.PosixPath()
@@ -57,11 +57,11 @@ class UnsharedDevice(builtin_resources.LogicalDrive):
         return self.path
 
 
-class LinuxDeviceNode(builtin_resources.DeviceNode):
-    identifier = ScannableId('path')
+class LinuxDeviceNode(DeviceNode):
+    identifier = ScopedId('path')
 
 
-class Partition(builtin_resources.LogicalDrive):
+class Partition(LogicalDrive):
     identifier = GlobalId('container', 'number')
     number = attributes.Integer()
     container = attributes.ResourceReference()
@@ -70,22 +70,22 @@ class Partition(builtin_resources.LogicalDrive):
         return "%s-%s" % (self.container.get_label(), self.number)
 
 
-class MdRaid(builtin_resources.LogicalDrive):
+class MdRaid(LogicalDrive):
     identifier = GlobalId('uuid')
     uuid = attributes.String()
 
 
-class LocalMount(StorageResource):
+class LocalMount(Resource):
     """A local filesystem consuming a storage resource -- reported so that
        hydra knows not to try and use the consumed resource for Lustre e.g.
        minor things like your root partition."""
-    identifier = ScannableId('mount_point')
+    identifier = ScopedId('mount_point')
 
     fstype = attributes.String()
     mount_point = attributes.String()
 
 
-class LvmGroup(builtin_resources.StoragePool):
+class LvmGroup(StoragePool):
     identifier = GlobalId('uuid')
 
     uuid = attributes.Uuid()
@@ -99,7 +99,7 @@ class LvmGroup(builtin_resources.StoragePool):
         return self.name
 
 
-class LvmVolume(builtin_resources.LogicalDrive):
+class LvmVolume(LogicalDrive):
     # Q: Why is this identified by LV UUID and VG UUID rather than just
     #    LV UUID?  Isn't the LV UUID unique enough?
     # A: We're matching LVM2's behaviour.  If you e.g. image a machine that
@@ -120,7 +120,7 @@ class LvmVolume(builtin_resources.LogicalDrive):
         return "%s-%s" % (self.vg.name, self.name)
 
 
-class Linux(StoragePlugin):
+class Linux(Plugin):
     internal = True
 
     def __init__(self, *args, **kwargs):

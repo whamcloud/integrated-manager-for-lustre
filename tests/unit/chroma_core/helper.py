@@ -34,7 +34,7 @@ class MockAgent(object):
             return self.mock_servers[self.host.address]['nids']
         elif cmdline.startswith("format-target"):
             import uuid
-            return {'uuid': uuid.uuid1().__str__()}
+            return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': 777}
         elif cmdline.startswith('start-target'):
             import re
             from chroma_core.models import ManagedTarget
@@ -58,7 +58,7 @@ class JobTestCase(TestCase):
     def _test_lun(self, host):
         from chroma_core.models import Lun, LunNode
 
-        lun = Lun.objects.create(shareable = False)
+        lun = Lun.objects.create()
         primary = True
         for host in self.hosts:
             LunNode.objects.create(lun = lun, host = host, path = "/fake/path/%s" % lun.id, primary = primary)
@@ -103,6 +103,12 @@ class JobTestCase(TestCase):
         self.old_plugin_response = chroma_core.lib.storage_plugin.messaging.PluginResponse
         chroma_core.lib.storage_plugin.messaging.PluginRequest = mock.Mock()
         chroma_core.lib.storage_plugin.messaging.PluginResponse = mock.Mock()
+
+        # Override LearnDevicesStep.run so that we don't require storage plugin RPC
+        from chroma_core.models.host import LearnDevicesStep
+        LearnDevicesStep.run = mock.Mock()
+        from chroma_core.lib.storage_plugin.daemon import AgentDaemonRpc
+        AgentDaemonRpc.remove_host_resources = mock.Mock()
 
     def tearDown(self):
         import chroma_core.lib.agent
