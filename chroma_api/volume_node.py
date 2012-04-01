@@ -23,7 +23,7 @@ class VolumeNodeResource(ModelResource):
     node belongs to.
     """
 
-    volume_id = fields.IntegerField(attribute = 'lun_id',
+    volume_id = fields.IntegerField(attribute = 'volume_id',
             help_text = "id of the volume that this node belongs to")
     host_id = fields.IntegerField(help_text = "id if the host that this\
             device node is on")
@@ -42,6 +42,6 @@ class VolumeNodeResource(ModelResource):
         resource_name = 'volume_node'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ['not_deleted', 'lun_id']
+        excludes = ['not_deleted']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get']
