@@ -101,9 +101,10 @@ class FilesystemValidation(Validation):
             mgt_volume_id = bundle.data['mgt']['volume_id']
             check_volume('mgt', mgt_volume_id)
         except KeyError:
+            mgt_volume_id = None
+
             try:
                 mgt = ManagedMgs.objects.get(id = bundle.data['mgt']['id'])
-                mgt_volume_id = None
                 try:
                     ManagedFilesystem.objects.get(name = bundle.data['name'], mgs = mgt)
                     errors['name'].append("A filesystem with name '%s' already exists for this MGT" % bundle.data['name'])
@@ -116,16 +117,16 @@ class FilesystemValidation(Validation):
 
         try:
             mdt_volume_id = bundle.data['mdt']['volume_id']
+            check_volume('mdt', mdt_volume_id)
         except KeyError:
             errors['mdt'].append("volume_id attribute is mandatory")
-        check_volume('mdt', mdt_volume_id)
 
         for ost in bundle.data['osts']:
             try:
                 volume_id = ost['volume_id']
+                check_volume('osts', volume_id)
             except KeyError:
                 errors['osts'].append("volume_id attribute is mandatory for all osts")
-            check_volume('osts', volume_id)
 
         # If formatting an MGS, check its not on a host already used as an MGS
         # If this is an MGS, there may not be another MGS on
@@ -176,7 +177,7 @@ class FilesystemValidation(Validation):
                 conf_param_info = conf_param.all_params[key]
                 conf_param_class = conf_param_info[0]
                 if not (isinstance(conf_param_class, conf_param.FilesystemGlobalConfParam) or isinstance(conf_param_class, conf_param.FilesystemClientConfParam)):
-                        errors['conf_params'].append("conf_param %s is not settable for filesystems" % (key))
+                        errors['conf_params'].append("conf_param %s is not settable for filesystems" % key)
                 conf_param_attribute_class = conf_param_info[1]
 
                 try:
@@ -218,9 +219,9 @@ class FilesystemResource(MetricResource, ConfParamResource):
     mgt = fields.ToOneField('chroma_api.target.TargetResource', attribute = 'mgs', full = True,
             help_text = "The MGT on which this filesystem is registered")
 
-    def _get_stat_simple(self, bundle, stat_name, factor = 1):
+    def _get_stat_simple(self, bundle, klass, stat_name, factor = 1):
         try:
-            return bundle.obj.metrics.fetch_last(ManagedMdt, fetch_metrics=[stat_name])[1][stat_name] * 1024
+            return bundle.obj.metrics.fetch_last(klass, fetch_metrics=[stat_name])[1][stat_name] * factor
         except (KeyError, IndexError):
             return None
 
@@ -228,16 +229,16 @@ class FilesystemResource(MetricResource, ConfParamResource):
         return bundle.obj.mount_command()
 
     def dehydrate_bytes_free(self, bundle):
-        return self._get_stat_simple(bundle, 'kbytesfree', 1024)
+        return self._get_stat_simple(bundle, ManagedOst, 'kbytesfree', 1024)
 
     def dehydrate_bytes_total(self, bundle):
-        return self._get_stat_simple(bundle, 'kbytestotal', 1024)
+        return self._get_stat_simple(bundle, ManagedOst, 'kbytestotal', 1024)
 
     def dehydrate_files_free(self, bundle):
-        return self._get_stat_simple(bundle, 'filesfree')
+        return self._get_stat_simple(bundle, ManagedMdt, 'filesfree')
 
     def dehydrate_files_total(self, bundle):
-        return self._get_stat_simple(bundle, 'filestotal')
+        return self._get_stat_simple(bundle, ManagedMdt, 'filestotal')
 
     def hydrate_mgt_lun_id(self, bundle):
         if 'mgt_lun_id' in bundle.data:
