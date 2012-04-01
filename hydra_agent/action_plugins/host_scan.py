@@ -2,17 +2,23 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import datetime
+import os
+import socket
+
 from hydra_agent.plugins import ActionPlugin
-from os import uname
 
 
 def get_fqdn(args = None):
-    from socket import getfqdn
-    return getfqdn()
+    return socket.getfqdn()
 
 
 def get_nodename(args = None):
-    return uname()[1]
+    return os.uname()[1]
+
+
+def get_time(args = None):
+    return datetime.datetime.utcnow().isoformat() + "Z"
 
 
 class HostScanPlugin(ActionPlugin):
@@ -24,3 +30,6 @@ class HostScanPlugin(ActionPlugin):
         p = parser.add_parser("get-nodename",
                               help="get the host's nodename")
         p.set_defaults(func=get_nodename)
+
+        p = parser.add_parser("get-time")
+        p.set_defaults(func=get_time)

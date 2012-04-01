@@ -8,10 +8,12 @@ from hydra_agent.plugins import DevicePluginManager, ActionPlugin
 class DevicePluginAction(ActionPlugin):
     def device_plugin(self, args):
         all_plugins = DevicePluginManager.get_plugins()
-        if args.plugin:
-            plugins = {args.plugin: all_plugins[args.plugin]}
-        else:
+        if args.plugin == None:
             plugins = all_plugins
+        elif args.plugin == "":
+            plugins = {}
+        else:
+            plugins = {args.plugin: all_plugins[args.plugin]}
 
         result = {}
         for plugin_name, plugin_class in plugins.items():

@@ -2,12 +2,19 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+import datetime
+
 from hydra_agent.plugins import ActionPlugin
 
 
 def _validate_conf(server_conf):
     from hydra_agent.main_loop import send_update
-    result = send_update(server_conf['url'], server_conf['token'], {'id': None, 'counter': 0}, {})
+    result = send_update(
+            server_conf['url'],
+            server_conf['token'],
+            {'id': None, 'counter': 0},
+            datetime.datetime.utcnow(),
+            {})
     if result == None:
         from socket import getfqdn
         raise RuntimeError("Cannot contact server URL %s from %s" % (server_conf['url'], getfqdn()))

@@ -4,30 +4,19 @@
 
 import os
 import glob
+import datetime
 
 from hydra_agent.utils import Mounts, normalize_device, list_capabilities
 from hydra_agent.action_plugins.lnet_scan import lnet_status
 from hydra_agent import shell, version
 from hydra_agent.plugins import DevicePlugin
-try:
-    from hydra_agent.action_plugins.manage_targets import get_resource_locations
-    get_resource_locations  # workaround for pyflakes issue #13
-except ImportError:
-    # If we're monitor-only, we won't have manage_targets.  Stubbing
-    # this out to return None signals to the server that there aren't
-    # any ManagedTargetMounts here anyhow.
-    #
-    # FIXME: I guess this doesn't take into account a server with mixed
-    # targets (HYD-545), but I'm not ready to deal with that crazyness yet.
-    def _grl_stub():
-        return None
-    get_resource_locations = _grl_stub
 
 # FIXME: weird naming, 'LocalAudit' is the class that fetches stats
 from hydra_agent.audit.local import LocalAudit
 
 
 def update_scan(args = None):
+    started_at = datetime.datetime.utcnow().isoformat() + "Z"
     mounts = []
     for device, mntpnt, fstype in Mounts().all():
         if fstype != 'lustre':
@@ -66,14 +55,22 @@ def update_scan(args = None):
     metrics = LocalAudit().metrics()
     lnet_loaded, lnet_up = lnet_status()
 
+    # Only set resource_locations if we have the management package
+    try:
+        from hydra_agent.action_plugins.manage_targets import get_resource_locations
+        resource_locations = get_resource_locations()
+    except ImportError:
+        resource_locations = None
+
     return {
+            "started_at": started_at,
             "agent_version": version(),
             "capabilities": list_capabilities(),
             "metrics": metrics,
             "lnet_loaded": lnet_loaded,
             "lnet_up": lnet_up,
             "mounts": mounts,
-            "resource_locations": get_resource_locations()
+            "resource_locations": resource_locations
             }
 
 

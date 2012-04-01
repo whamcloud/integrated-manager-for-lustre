@@ -125,7 +125,7 @@ def run_main_loop(args):
     daemon_log.info("Terminating")
 
 
-def send_update(server_url, server_token, session, updates):
+def send_update(server_url, server_token, session, started_at, updates):
     """POST to the UpdateScan API method.
        Returns None on errors"""
     from hydra_agent.action_plugins.host_scan import get_fqdn
@@ -140,6 +140,7 @@ def send_update(server_url, server_token, session, updates):
                                   'session': session,
                                   'fqdn': get_fqdn(),
                                   'token': server_token,
+                                  'started_at': started_at.isoformat() + "Z",
                                   'updates': updates}))
 
     response_data = None
@@ -193,7 +194,9 @@ class MainLoop(object):
                 self._reload_config = False
             elif server_conf:
                 from datetime import datetime, timedelta
-                reported_at = datetime.now()
+                # Record the *start* of the reporting cycle (all enclosed
+                # data is younger than this time)
+                update_started_at = datetime.utcnow()
 
                 updates = {}
                 from hydra_agent.plugins import DevicePluginManager
@@ -219,7 +222,7 @@ class MainLoop(object):
                         'id': session_id,
                         'counter': session_counter
                         }
-                response_data = send_update(server_conf['url'], server_conf['token'], session, updates)
+                response_data = send_update(server_conf['url'], server_conf['token'], session, update_started_at, updates)
                 quick_retry = False
                 if response_data:
                     if session_id and response_data['session_id'] != session_id:
@@ -241,7 +244,7 @@ class MainLoop(object):
                         session_counter += 1
 
                 if not quick_retry:
-                    while ((datetime.now() - reported_at) < timedelta(seconds = report_interval)):
+                    while ((datetime.utcnow() - update_started_at) < timedelta(seconds = report_interval)):
                         time.sleep(1)
             else:
                 time.sleep(config_interval)
