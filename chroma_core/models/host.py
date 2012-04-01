@@ -4,6 +4,7 @@
 # ==============================
 
 import datetime
+import dateutil.parser
 
 from django.db import models
 from django.db import transaction
@@ -349,9 +350,9 @@ class VolumeNode(models.Model):
 
     def pretty_string(self):
         from chroma_core.lib.util import sizeof_fmt
-        lun_name = self.volume.get_label()
-        if lun_name:
-            short_name = lun_name
+        volume_label = self.volume.get_label()
+        if volume_label:
+            short_name = volume_label
         elif self.path.startswith('/dev/disk/by-path/'):
             short_name = self.path.replace('/dev/disk/by-path/', '', 1)
 
@@ -559,6 +560,30 @@ class LearnDevicesStep(Step):
         AgentDaemonRpc().await_session(kwargs['host_id'])
 
 
+class CheckClockStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        # Get the device-scan output
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        agent_time_str = self.invoke_agent(host, "get-time")
+        agent_time = dateutil.parser.parse(agent_time_str)
+
+        # Get a tz-aware datetime object
+        server_time = datetime.datetime.utcnow()
+        from dateutil import tz
+        server_time = server_time.replace(tzinfo=tz.tzutc())
+
+        if agent_time > server_time:
+            if (agent_time - server_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
+                raise RuntimeError("Host %s clock is fast.  agent time %s, server time %s" % (host, agent_time, server_time))
+
+        if server_time > agent_time:
+            if (server_time - agent_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
+                raise RuntimeError("Host %s clock is slow.  agent time %s, server time %s" % (host, agent_time, server_time))
+
+
 class SetupHostJob(Job, StateChangeJob):
     state_transition = (ManagedHost, 'unconfigured', 'lnet_unloaded')
     stateful_object = 'managed_host'
@@ -572,6 +597,7 @@ class SetupHostJob(Job, StateChangeJob):
         return [(LearnHostnameStep, {'host_id': self.managed_host.pk}),
                 (ConfigureRsyslogStep, {'host_id': self.managed_host.pk}),
                 (SetServerConfStep, {'host_id': self.managed_host.pk}),
+                (CheckClockStep, {'host_id': self.managed_host.pk}),
                 (LearnDevicesStep, {'host_id': self.managed_host.pk})]
 
     class Meta:

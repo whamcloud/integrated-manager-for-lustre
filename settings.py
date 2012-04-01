@@ -296,6 +296,10 @@ SERVER_HTTP_URL = None
 # LOG_SERVER_HOSTNAME = "mylogserver.mydoman"
 LOG_SERVER_HOSTNAME = None
 
+# Maximum latency between server and agent: used to
+# check if clocks are 'reasonably' in sync
+AGENT_CLOCK_TOLERANCE = 20
+
 # Set to False to require logins even for read-only access
 # to chroma_api
 ALLOW_ANONYMOUS_READ = True

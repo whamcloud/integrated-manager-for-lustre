@@ -27,6 +27,10 @@ class FilesystemValidation(Validation):
     def is_valid(self, bundle, request=None):
         errors = defaultdict(list)
 
+        if request.method != "POST":
+            # TODO: validate PUTs
+            return errors
+
         try:
             # Merge errors found during other phases (e.g. hydration)
             errors.update(bundle.data_errors)
@@ -81,10 +85,10 @@ class FilesystemValidation(Validation):
 
             try:
                 # Check the volume exists
-                lun = Volume.objects.get(id = volume_id)
+                volume = Volume.objects.get(id = volume_id)
                 try:
                     # Check the volume isn't in use
-                    target = ManagedTarget.objects.get(lun = lun)
+                    target = ManagedTarget.objects.get(volume = volume)
                     errors[field].append("Volume with ID %s is already in use by target %s" % (volume_id, target))
                 except ManagedTarget.DoesNotExist:
                     pass
@@ -97,15 +101,16 @@ class FilesystemValidation(Validation):
             mgt_volume_id = bundle.data['mgt']['volume_id']
             check_volume('mgt', mgt_volume_id)
         except KeyError:
-            mgt = ManagedMgs.objects.get(id = bundle.data['mgt']['id'])
-            mgt_volume_id = None
             try:
-                ManagedFilesystem.objects.get(name = bundle.data['name'], mgs = mgt)
-                errors['name'].append("A filesystem with name '%s' already exists for this MGT" % bundle.data['name'])
-            except ManagedFilesystem.DoesNotExist:
-                pass
-        except KeyError:
-            errors['mgt'].append("One of id or volume_id must be set")
+                mgt = ManagedMgs.objects.get(id = bundle.data['mgt']['id'])
+                mgt_volume_id = None
+                try:
+                    ManagedFilesystem.objects.get(name = bundle.data['name'], mgs = mgt)
+                    errors['name'].append("A filesystem with name '%s' already exists for this MGT" % bundle.data['name'])
+                except ManagedFilesystem.DoesNotExist:
+                    pass
+            except KeyError:
+                errors['mgt'].append("One of id or volume_id must be set")
         except ManagedMgs.DoesNotExist:
             errors['mgt'].append("MGT with ID %s not found" % (bundle.data['mgt']['id']))
 
@@ -127,7 +132,7 @@ class FilesystemValidation(Validation):
         # this host
         if mgt_volume_id:
             mgt_volume = Volume.objects.get(id = mgt_volume_id)
-            hosts = [ln.host for ln in VolumeNode.objects.filter(lun = mgt_volume, use = True)]
+            hosts = [vn.host for vn in VolumeNode.objects.filter(volume = mgt_volume, use = True)]
             conflicting_mgs_count = ManagedTarget.objects.filter(~Q(managedmgs = None), managedtargetmount__host__in = hosts).count()
             if conflicting_mgs_count > 0:
                 errors['mgt'].append("Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label)

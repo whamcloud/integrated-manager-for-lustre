@@ -87,8 +87,9 @@ class UpdateScan(object):
             return False
 
     @transaction.commit_on_success
-    def run(self, host_id, host_data):
+    def run(self, host_id, started_at, host_data):
         host = ManagedHost.objects.get(pk=host_id)
+        self.started_at = started_at
         self.host = host
         audit_log.debug("UpdateScan.run: %s" % self.host)
 
@@ -193,6 +194,7 @@ class UpdateScan(object):
         # Update LNet status
         from chroma_core.lib.state_manager import StateManager
         StateManager.notify_state(self.host.downcast(),
+                                  self.started_at,
                                   self._audited_lnet_state(),
                                   ['lnet_unloaded', 'lnet_down', 'lnet_up'])
         # Update LNet alerts
@@ -279,7 +281,7 @@ class UpdateScan(object):
 
                 state = ['unmounted', 'mounted'][active_mount != None]
                 from chroma_core.lib.state_manager import StateManager
-                StateManager.notify_state(target, state, ['mounted', 'unmounted'])
+                StateManager.notify_state(target, self.started_at, state, ['mounted', 'unmounted'])
 
     def store_lustre_target_metrics(self, target_name, metrics):
         # TODO: Re-enable MGS metrics storage if it turns out it's useful.

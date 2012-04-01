@@ -37,10 +37,7 @@ class LoadedPlugin(object):
             plugin_class._resource_classes = []
             for name, cls in inspect.getmembers(module):
                 if inspect.isclass(cls) and issubclass(cls, BaseStorageResource) and cls != BaseStorageResource:
-                    storage_plugin_log.debug("recognized class %s %s" % (name, cls))
                     plugin_class._resource_classes.append(cls)
-                else:
-                    storage_plugin_log.debug("ignoring class %s %s" % (name, cls))
 
         # Map of name string to class
         self.resource_classes = {}

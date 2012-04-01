@@ -529,8 +529,7 @@ class MountStep(AnyTargetMountStep):
         try:
             started_on = ManagedHost.objects.get(nodename = result['location'])
         except ManagedHost.DoesNotExist:
-            job_log.error("Target %s (%s) found on host %s, which is not a ManagedHost" % (target, target_id, result['location']))
-            raise
+            raise RuntimeError("Target %s (%s) found on host %s, which is not a ManagedHost" % (target, target_id, result['location']))
         try:
             target.set_active_mount(target.managedtargetmount_set.get(host = started_on))
         except ManagedTargetMount.DoesNotExist:

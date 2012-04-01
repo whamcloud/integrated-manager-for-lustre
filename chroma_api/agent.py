@@ -1,4 +1,4 @@
-
+import dateutil.parser
 
 from tastypie import fields
 from tastypie.authorization import Authorization
@@ -79,7 +79,7 @@ class AgentResource(Resource):
                 # pass it along to the storage plugin framework
                 try:
                     lustre_data = updates.pop('lustre')
-                    UpdateScan().run(host.id, lustre_data)
+                    UpdateScan().run(host.id, dateutil.parser.parse(bundle.data['started_at']), lustre_data)
                 except KeyError:
                     pass
 

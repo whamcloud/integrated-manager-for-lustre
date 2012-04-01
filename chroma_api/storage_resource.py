@@ -159,7 +159,6 @@ class StorageResourceResource(MetricResource, ModelResource):
         filtering = {'class_name': ['exact'], 'plugin_name': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        #ordering = ['lun_name']
 
     def obj_delete(self, request = None, **kwargs):
         try:

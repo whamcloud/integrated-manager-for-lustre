@@ -157,7 +157,8 @@ class PluginRequest(object):
             # Compose the body
             import uuid
             request_id = uuid.uuid1().__str__()
-            body = {'id': request_id}
+            body = {'id': request_id,
+                    'created_at': datetime.datetime.utcnow().isoformat() + "Z"}
             for k, v in request_dict.items():
                 if k == 'id':
                     raise RuntimeError("Cannot use 'id' in PluginRequest body")
@@ -270,7 +271,13 @@ class PluginResponse(object):
                     else:
                         log.warning("Dropping unexpected response %s on %s" % (id, response_routing_key))
                 finally:
-                    message.ack()
+                    import dateutil.parser
+                    UNHANDLED_RESPONSE_TIMEOUT = 600
+                    if accepted:
+                        message.ack()
+                    elif datetime.datetime.utcnow() - dateutil.parser.parse(body['created_at']) > datetime.timedelta(seconds = UNHANDLED_RESPONSE_TIMEOUT):
+                        log.warning("Dropping stale response %s on %s (created at %s)" % (id, response_routing_key, body['created_at']))
+                        message.ack()
 
                 return accepted
 

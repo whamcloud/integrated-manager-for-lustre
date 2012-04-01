@@ -718,6 +718,10 @@ class ResourceManager(object):
         for alert_state in StorageResourceOffline.filter_by_item(resource_record):
             alert_state.delete()
 
+        # Explicitly remove each StorageResourceRecord to remove underlying stats data
+        for statistic in StorageResourceStatistic.objects.filter(storage_resource = resource_record):
+            statistic.delete()
+
         resource_record.delete()
 
     def global_remove_resource(self, resource_id):

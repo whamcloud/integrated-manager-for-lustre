@@ -57,34 +57,32 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         self.assertEqual(hosts[1]['state'], 'lnet_up')
 
         # Wait for device discovery
-        ha_luns = []
+        ha_volumes = []
         response = self.hydra_server.get(
             '/api/volume/',
             params = {'category': 'usable'}
         )
         self.assertTrue(response.successful, response.text)
 
-        # FIXME: currently depending on settings.PRIMARY_LUN_HACK to
-        # set primary and secondary for us.
-        #  -> we could readily wait until the volume has two nodes, and then
-        #     use the API to set the primary and secondary from the test
+        # TODO: set primary and secondary mounts explicitly and check they
+        # are respected
         # Count how many of the reported Luns are ready for our test
         # (i.e. they have both a primary and a secondary node)
-        ha_luns = []
-        for l in response.json['objects']:
-            has_primary = len([node for node in l['volume_nodes'] if node['primary']]) == 1
-            has_two = len([node for node in l['volume_nodes'] if node['use']]) >= 2
+        ha_volumes = []
+        for v in response.json['objects']:
+            has_primary = len([node for node in v['volume_nodes'] if node['primary']]) == 1
+            has_two = len([node for node in v['volume_nodes'] if node['use']]) >= 2
             if has_primary and has_two:
-                ha_luns.append(l)
-        self.assertGreaterEqual(len(ha_luns), 4)
+                ha_volumes.append(v)
+        self.assertGreaterEqual(len(ha_volumes), 4)
 
         # Create new filesystem
-        self.verify_usable_luns_valid(ha_luns, 4)
+        self.verify_usable_luns_valid(ha_volumes, 4)
         filesystem_id = self.create_filesystem(
             name = 'testfs',
-            mgt_lun_id = ha_luns[0]['id'],
-            mdt_lun_id = ha_luns[1]['id'],
-            ost_lun_ids = [str(ha_luns[2]['id']), str(ha_luns[3]['id'])]
+            mgt_volume_id = ha_volumes[0]['id'],
+            mdt_volume_id = ha_volumes[1]['id'],
+            ost_volume_ids = [v['id'] for v in ha_volumes[2:4]]
         )
 
         # Mount the filesystem

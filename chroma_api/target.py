@@ -83,11 +83,11 @@ class TargetResource(MetricResource, ConfParamResource):
         filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'id': ['exact', 'in']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        ordering = ['lun_name', 'name']
+        ordering = ['volume_name', 'name']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
         validation = TargetValidation()
-        readonly = ['active_host_uri', 'failover_server_name', 'lun_name', 'primary_server_name', 'active_host_name', 'filesystems', 'name', 'uuid']
+        readonly = ['active_host_uri', 'failover_server_name', 'volume_name', 'primary_server_name', 'active_host_name', 'filesystems', 'name', 'uuid']
 
     def override_urls(self):
         urls = super(TargetResource, self).override_urls()

@@ -147,9 +147,9 @@ def janitor():
 
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
-def notify_state(content_type, object_id, new_state, from_states):
+def notify_state(content_type, object_id, time, new_state, from_states):
     from chroma_core.lib.state_manager import StateManager
-    StateManager._notify_state(content_type, object_id, new_state, from_states)
+    StateManager._notify_state(content_type, object_id, time, new_state, from_states)
 
 
 @task(base = RetryOnSqlErrorTask)

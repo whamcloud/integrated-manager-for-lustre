@@ -1,4 +1,4 @@
-
+import datetime
 from django.test import TestCase
 import mock
 
@@ -32,6 +32,8 @@ class MockAgent(object):
             return self.mock_servers[self.host.address]['nodename']
         elif cmdline == "lnet-scan":
             return self.mock_servers[self.host.address]['nids']
+        elif cmdline == 'get-time':
+            return datetime.datetime.utcnow().isoformat() + "Z"
         elif cmdline.startswith("format-target"):
             import uuid
             return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': 777}
@@ -55,6 +57,9 @@ class MockDaemonRpc():
 
 
 class JobTestCase(TestCase):
+    mock_servers = None
+    hosts = None
+
     def _test_lun(self, host):
         from chroma_core.models import Volume, VolumeNode
 
