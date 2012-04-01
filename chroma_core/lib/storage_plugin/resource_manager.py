@@ -393,7 +393,6 @@ class ResourceManager(object):
 
             if len(host_to_lun_nodes) > 0:
                 host_to_lun_node_count = dict([(h, VolumeNode.objects.filter(host = h, use = True).count()) for h in host_to_lun_nodes.keys()])
-                log.info("htlnc: %s" % host_to_lun_node_count)
                 fewest_lun_nodes = [host for host, count in sorted(host_to_lun_node_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
                 secondary_lun_node = host_to_lun_nodes[fewest_lun_nodes][0]
                 secondary_lun_node.primary = False
@@ -865,7 +864,7 @@ class ResourceManager(object):
         # resource -- we have to do the lookup inside ResourceManager
         for key, value in resource._storage_dict.items():
             attribute_obj = resource_class.get_attribute_properties(key)
-            from chroma_core.lib.storage_plugin import attributes
+            from chroma_core.lib.storage_plugin.api import attributes
             if isinstance(attribute_obj, attributes.ResourceReference):
                 if value and not value._handle_global:
                     attrs[key] = session.local_id_to_global_id[value._handle]

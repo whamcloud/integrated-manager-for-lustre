@@ -311,7 +311,7 @@ class AgentDaemon(object):
 
         # TODO: validate plugin_name
         for plugin_name, plugin_data in updates.items():
-            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager, PluginNotFound
             from chroma_core.lib.storage_plugin.query import ResourceQuery
             try:
                 record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
@@ -320,7 +320,11 @@ class AgentDaemon(object):
                 resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')
                 record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'plugin_name': plugin_name, 'host_id': host.id})
 
-            klass = storage_plugin_manager.get_plugin_class(plugin_name)
+            try:
+                klass = storage_plugin_manager.get_plugin_class(plugin_name)
+            except PluginNotFound:
+                storage_plugin_log.warning("Ignoring information from %s for plugin %s, no such plugin found." % (host, plugin_name))
+
             if initial:
                 instance = klass(record.id)
                 session_state.plugin_instances[plugin_name] = instance

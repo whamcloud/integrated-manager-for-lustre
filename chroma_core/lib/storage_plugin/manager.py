@@ -154,7 +154,10 @@ class StoragePluginManager(object):
                 yield (loaded_res.resource_class_id, loaded_res.resource_class)
 
     def get_plugin_class(self, module):
-        return self.loaded_plugins[module].plugin_class
+        try:
+            return self.loaded_plugins[module].plugin_class
+        except KeyError:
+            raise PluginNotFound(module)
 
     def _load_plugin(self, module, module_name, plugin_klass):
         storage_plugin_log.debug("_load_plugin %s %s" % (module_name, plugin_klass))
