@@ -16,13 +16,13 @@ class Servers:
         self.add_host_confirm_button = self.driver.find_element_by_css_selector('a.add_host_confirm_button')
         self.add_host_close_button = self.driver.find_element_by_css_selector('a.add_host_close_button')
 
-        self.add_dialog_div = '#add_host_dialog'
-        self.prompt_dialog_div = '#add_host_prompt'
-        self.loading_dialog_div = '#add_host_loading'
-        self.confirm_dialog_div = '#add_host_confirm'
-        self.complete_dialog_div = '#add_host_complete'
-        self.error_dialog_div = '#add_host_error'
-        self.host_address_text = '#add_host_address'
+        self.add_dialog_div = '.add_host_dialog'
+        self.prompt_dialog_div = '.add_host_prompt'
+        self.loading_dialog_div = '.add_host_loading'
+        self.confirm_dialog_div = '.add_host_confirm'
+        self.complete_dialog_div = '.add_host_complete'
+        self.error_dialog_div = '.add_host_error'
+        self.host_address_text = '.add_host_address'
         self.server_list_datatable = 'server_configuration_content'
 
     def verify_added_server(self, host_name):

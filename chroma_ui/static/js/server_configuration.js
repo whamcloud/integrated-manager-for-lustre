@@ -1,83 +1,62 @@
 
 var add_host_dialog = function() {
-  $('#add_host_tabs').tabs('select', '#add_host_prompt');
-  $('#add_host_dialog').dialog('open');
-  $('#add_host_address').focus();
-}
+  var template = _.template($('#add_host_dialog_template').html())
+  var html = template();
+  var element = $(html)
+  element.dialog({title: 'Add server', resizable: false})
 
-$(document).ready(function() {
-  /* FIXME: HYD-439 this code is getting re-run each time the 
-   * user navigates to the server configuration tab, resulting
-   * in multiple signal handlers for e.g. adding the host */
-  $('#add_host_dialog').dialog({
-      autoOpen: false,
-      title: "Add server",
-      resizable: false
+  element.find('.add_host_close_button').button()
+  element.find('.add_host_confirm_button').button()
+  element.find('.add_host_submit_button').button()
+  element.find('.add_host_back_button').button()
+
+  function select_page(name) {
+    console.log(name)
+    element.find('.add_host_prompt').hide();
+    element.find('.add_host_loading').hide();
+    element.find('.add_host_complete').hide();
+    element.find('.add_host_confirm').hide();
+    element.find('.add_host_error').hide();
+
+    element.find('.' + name).show();
+  }
+
+  select_page('add_host_prompt')
+
+  element.find('.add_host_address').keypress(function(ev) {
+    if (ev.which == 13) {
+      element.find('.add_host_submit_button').click();
+      ev.stopPropagation();
+      ev.preventDefault();
+      return false;
+    }
   });
-  $('#add_host_tabs').tabs()
 
-  $('.add_host_close_button').button()
-  $('.add_host_confirm_button').button()
-  $('.add_host_submit_button').button()
-  $('.add_host_back_button').button()
-
-  $('#add_host_address').keypress(function(ev) {
-      if (ev.which == 13) {
-          $('.add_host_submit_button').click();
-          ev.stopPropagation();
-          ev.preventDefault();
-          return false;
-      }
-  });
   function submit_complete(result) {
-      //console.log('submit_complete: ' + result);
-      $('#add_host_tabs').tabs('select', '#add_host_confirm');
+      select_page('add_host_confirm')
       $('.add_host_confirm_button').focus();
 
-      $('#add_host_address_label').html(result['address']);
-      $('#add_host_resolve').toggleClass('success', result['resolve']);
-      $('#add_host_resolve').toggleClass('failure', !result['resolve']);
-      $('#add_host_ping').toggleClass('success', result['ping']);
-      $('#add_host_ping').toggleClass('failure', !result['ping']);
-      $('#add_host_agent').toggleClass('success', result['agent']);
-      $('#add_host_agent').toggleClass('failure', !result['agent']);
+      element.find('.add_host_address_label').html(result['address']);
+      element.find('.add_host_resolve').toggleClass('success', result['resolve']);
+      element.find('.add_host_resolve').toggleClass('failure', !result['resolve']);
+      element.find('.add_host_ping').toggleClass('success', result['ping']);
+      element.find('.add_host_ping').toggleClass('failure', !result['ping']);
+      element.find('.add_host_agent').toggleClass('success', result['agent']);
+      element.find('.add_host_agent').toggleClass('failure', !result['agent']);
   }
 
   function add_host_error(message) {
-      $('#add_host_tabs').tabs('select', '#add_host_error');
-      $('#add_host_error_message').html(message);
+    select_page('add_host_error');
+    element.find('.add_host_error_message').html(message);
   }
 
-  function submit_poll(task_id) {
-      $.get('/djcelery/' + task_id + '/status/')
-          .success(function(data, textStatus, jqXHR) {
-              task_status = data['task']['status']
-              //console.log(task_status)
-              if (task_status == 'SUCCESS') {
-                  //console.log(data);
-                  submit_complete(data['task']['result']);
-              } else if (task_status == 'FAILURE') {
-                  //console.log(event.responseText);
-                  add_host_error("Internal error.");
-              } else {
-                  /* Incomplete, schedule re-check */
-                  setTimeout(function() {submit_poll(task_id)}, 1000);
-              }
-              })
-          .error(function(event) {
-                  //console.log(event.responseText);
-                  add_host_error("Failed to get status for task " + task_id + ".");
-              });
-  }
+  element.find('.add_host_submit_button').click(function(ev) {
+      select_page('add_host_loading')
 
-  $('.add_host_submit_button').click(function(ev) {
-      $('#add_host_tabs').tabs('select', '#add_host_loading');
-
-      Api.post("test_host/", {address: $('#add_host_address').attr('value')},
+      Api.post("test_host/", {address: element.find('.add_host_address').attr('value')},
       success_callback = function(data)
       {
-        task_id = data.task_id
-        submit_poll(task_id);
+         submit_complete(data);
       },
       error_callback = function(data)
       {
@@ -89,30 +68,29 @@ $(document).ready(function() {
       ev.preventDefault();
   });
 
-  $('.add_host_confirm_button').click(function(ev) {
-    Api.post("host/", {address: $('#add_host_address_label').html(), commit: true}, 
+  element.find('.add_host_confirm_button').click(function(ev) {
+    Api.post("host/", {address: element.find('.add_host_address_label').html(), commit: true},
     success_callback = function(data)
     {
-      $('#add_host_tabs').tabs('select', '#add_host_complete');
+      select_page('add_host_loading')
       $('.add_host_back_button').focus();
       $('#server_configuration').dataTable().fnDraw();
     },
     error_callback = function(data)
     {
-      //console.log(event.responseText);
       add_host_error(data['errors']);
     });
     
     ev.preventDefault();
   });
 
-  $('.add_host_close_button').click(function(ev) {
-      $('#add_host_dialog').dialog('close')
+  element.find('.add_host_close_button').click(function(ev) {
+      element.find('.add_host_dialog').dialog('close')
       ev.preventDefault();
   });
 
-  $('.add_host_back_button').click(function(ev) {
-      $('#add_host_tabs').tabs('select', '#add_host_prompt')
+  element.find('.add_host_back_button').click(function(ev) {
+      select_page('add_host_prompt')
       ev.preventDefault();
   });
-});
+}

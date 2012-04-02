@@ -9,8 +9,7 @@ from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from picklefield.fields import PickledObjectField
 
-from chroma_core.models.utils import WorkaroundGenericForeignKey, WorkaroundDateTimeField
-#from django.contrib.contenttypes.generic import GenericForeignKey
+from chroma_core.models.utils import WorkaroundGenericForeignKey, WorkaroundDateTimeField, await_async_result
 
 from django.db.models import Q
 from collections import defaultdict
@@ -76,23 +75,7 @@ class Command(models.Model):
                 object_ids,
                 message)
 
-        from celery.result import EagerResult
-        if isinstance(async_result, EagerResult):
-            # Allow eager execution for testing
-            from chroma_core.lib.job import job_log
-            job_log.debug("Command.set_state running eagerly '%s'", message)
-        else:
-            # Rely on server to time out the request if this takes too
-            # long for some reason
-            complete = False
-            while not complete:
-                with transaction.commit_manually():
-                    transaction.commit()
-                    if async_result.ready():
-                        complete = True
-                    transaction.commit()
-
-        command_id = async_result.get()
+        command_id = await_async_result(async_result)
 
         return Command.objects.get(pk = command_id)
 

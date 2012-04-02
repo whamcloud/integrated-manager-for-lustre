@@ -37,6 +37,7 @@ def dehydrate_command(command):
     else:
         return None
 
+
 # monkey-patch ResourceOptions to have a default-empty readonly list
 setattr(ResourceOptions, 'readonly', [])
 

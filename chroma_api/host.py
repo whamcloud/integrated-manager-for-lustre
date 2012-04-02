@@ -66,7 +66,10 @@ class HostTestResource(Resource):
         object_class = dict
 
     def obj_create(self, bundle, request = None, **kwargs):
+        from chroma_core.models.utils import await_async_result
         from chroma_core.tasks import test_host_contact
         host = ManagedHost(address = bundle.data['address'])
-        task = test_host_contact.delay(host)
-        raise custom_response(self, request, http.HttpAccepted, {'task_id': task.task_id, 'status': task.status})
+        async_result = test_host_contact.delay(host)
+        result = await_async_result(async_result)
+
+        raise custom_response(self, request, http.HttpAccepted, result)
