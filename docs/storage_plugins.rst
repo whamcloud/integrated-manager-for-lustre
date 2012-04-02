@@ -194,31 +194,31 @@ reported by the plugin, and what properties they will have.  The plugin module
 must also contain a subclass of *StoragePlugin* which implements at least the
 ``initial_scan`` function:
 
-.. automethod:: chroma_core.lib.storage_plugin.plugin.StoragePlugin.initial_scan
+.. automethod:: chroma_core.lib.storage_plugin.api.plugin.Plugin.initial_scan
 
 Within ``initial_scan``, plugins use the ``update_or_create`` function to 
 report resources.
 
-.. automethod:: chroma_core.lib.storage_plugin.plugin.StoragePlugin.update_or_create
+.. automethod:: chroma_core.lib.storage_plugin.api.plugin.Plugin.update_or_create
 
 If any resources are allocated in ``initial_scan``, such as threads or 
 sockets, they may be freed in the ``teardown`` function:
 
-.. automethod:: chroma_core.lib.storage_plugin.plugin.StoragePlugin.teardown
+.. automethod:: chroma_core.lib.storage_plugin.api.plugin.Plugin.teardown
 
 After initialization, the ``update_scan`` function will be called periodically.
 You can set the delay between ``update_scan`` calls by assigning to
 ``self.update_period`` before leaving in ``initial_scan``.  Assignments to
 ``update_period`` after ``initial_scan`` will have no effect.
 
-.. automethod:: chroma_core.lib.storage_plugin.plugin.StoragePlugin.update_scan
+.. automethod:: chroma_core.lib.storage_plugin.api.plugin.Plugin.update_scan
 
 If a resource has changed, you can either use ``update_or_create`` to modify 
 attributes or parent relationships, or you can directly assign to the resource's 
 attributes, or use its add_parent and remove_parent functions.  If a resource has 
 gone away, use ``remove`` to notify Chroma:
 
-.. automethod:: chroma_core.lib.storage_plugin.plugin.StoragePlugin.remove
+.. automethod:: chroma_core.lib.storage_plugin.api.plugin.Plugin.remove
 
 Although resources must be reported synchronously during ``initial_scan``, this
 is not the case for updates.  For example, if a storage device provides asynchronous
@@ -376,7 +376,7 @@ Reference
 Attribute classes
 ----------------------------
 
-.. automodule:: chroma_core.lib.storage_plugin.attributes
+.. automodule:: chroma_core.lib.storage_plugin.api.attributes
    :members:
 
 .. _storage_plugin_statistic_classes:
@@ -384,7 +384,7 @@ Attribute classes
 Statistic classes
 ----------------------------
 
-.. automodule:: chroma_core.lib.storage_plugin.statistics
+.. automodule:: chroma_core.lib.storage_plugin.api.statistics
    :members:
 
 .. _storage_plugin_builtin_resource_classes:
@@ -392,7 +392,7 @@ Statistic classes
 Built-in resource classes
 ------------------------------------
 
-.. automodule:: chroma_core.lib.storage_plugin.builtin_resources
+.. automodule:: chroma_core.lib.storage_plugin.api.resources
    :members:
 
 .. _storage_plugin_alert_conditions:
@@ -400,7 +400,7 @@ Built-in resource classes
 Alert conditions
 ----------------
 
-.. automodule:: chroma_core.lib.storage_plugin.alert_conditions
+.. automodule:: chroma_core.lib.storage_plugin.api.alert_conditions
     :members:
 
 
@@ -410,14 +410,15 @@ Advanced: using custom block device identifiers
 
 Chroma makes a best effort to extract standard SCSI identifiers from block devices which
 it encounters on Lustre servers.  However, in some cases:
- * The SCSI identifier may be missing
- * The storage controller may not provide the SCSI identifier
+* The SCSI identifier may be missing
+* The storage controller may not provide the SCSI identifier
 
 Storage plugins may provide additional code to run on Lustre servers which extracts additional
 information from block devices.
 
 Plugin code running within the Chroma agent has a much simpler interface:
 ::
+
     from hydra_agent.plugins import DevicePlugin
 
 
@@ -467,8 +468,8 @@ Advanced: specifying homing information
 
 A given device node (i.e. presentation of a LUN) may be a more or less preferable means
 of access to a storage device.  For example:
- * if a single LUN is presented on two controller ports then a device node on a host connected to one port may be preferable to a device node on a host connected to the other port.
- * if a LUN is accessible via two device nodes on a single server, then one may be preferable to the other
+* if a single LUN is presented on two controller ports then a device node on a host connected to one port may be preferable to a device node on a host connected to the other port.
+* if a LUN is accessible via two device nodes on a single server, then one may be preferable to the other
 
 This type of information allows Chroma Manager to make intelligent selection of primary/secondary Lustre servers.
 

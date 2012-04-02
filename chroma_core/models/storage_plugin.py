@@ -5,7 +5,6 @@
 
 from django.db import models
 from django.db.models import Q
-from chroma_core.lib.storage_plugin.api import statistics
 
 from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState, AlertEvent
@@ -238,6 +237,8 @@ class StorageResourceStatistic(models.Model):
     metrics = property(__get_metrics)
 
     def update(self, stat_name, stat_properties, stat_data):
+        from chroma_core.lib.storage_plugin.api import statistics
+
         if isinstance(stat_properties, statistics.BytesHistogram):
             # Histograms
             for dp in stat_data:
