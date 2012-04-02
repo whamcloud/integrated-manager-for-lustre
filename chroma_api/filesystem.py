@@ -148,8 +148,8 @@ class FilesystemValidation(Validation):
                 # If they specify and inode size and a bytes_per_inode, check the inode fits
                 # within the ratio
                 try:
-                    inode_size = target['inode_size']
-                    bytes_per_inode = target['bytes_per_inode']
+                    inode_size = int(target['inode_size'])
+                    bytes_per_inode = int(target['bytes_per_inode'])
                     if inode_size >= bytes_per_inode:
                         errors['inode_size'].append("inode_size must be less than bytes_per_inode")
                 except KeyError:
@@ -157,9 +157,9 @@ class FilesystemValidation(Validation):
 
                 # If they specify an inode count, check it will fit on the device
                 try:
-                    inode_count = target['inode_count']
+                    inode_count = int(target['inode_count'])
                     try:
-                        inode_size = target['inode_size']
+                        inode_size = int(target['inode_size'])
                     except KeyError:
                         inode_size = {'mgs': 128, 'mdt': 512, 'osts': 256}[attr]
 
