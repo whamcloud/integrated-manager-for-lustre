@@ -538,10 +538,10 @@ var CommandNotification = function() {
 
 var AlertNotification = function() {
   var slow_poll_interval = 5000;
-  var active_alerts = {};
-  var alert_effects = {};
-  var initialized = false;
-
+  var active_alerts    = {};
+  var alert_effects    = {};
+  var initialized      = false;
+  
   function init()
   {
     if (initialized) {
@@ -551,16 +551,41 @@ var AlertNotification = function() {
     initialized = true;
   }
 
+  function updateSidebarMessage(new_alerts, resolved_alerts) {
+    if (new_alerts.length == 1 && resolved_alerts.length == 0) {
+      Tooltip.sidebarMessage("New alert", new_alerts[0].message, false, 'ui-tooltip-red');
+    }
+    else if (new_alerts.length == 0 && resolved_alerts.length == 1) {
+      /*
+      Tooltip.message("Alert cleared", resolved_alerts[0].message, false, 'ui-tooltip-green');
+      */
+    }
+    else if (new_alerts.length > 0 && resolved_alerts.length == 0) {
+      Tooltip.sidebarMessage(new_alerts.length + " alerts active", " ", false, 'ui-tooltip-red');
+    }
+    else if (new_alerts.length == 0 && resolved_alerts.length > 0) {
+      /*
+      Tooltip.message(resolved_alerts.length + " alerts resolved", " ", false, 'ui-tooltip-green');
+      */
+    }
+    else if (new_alerts.length > 0 && resolved_alerts.length > 0) {
+      Tooltip.sidebarMessage("Alerts",
+          new_alerts.length + " new alerts, " + resolved_alerts.length + " alerts resolved",
+          false, 'ui-tooltip-red');
+    }
+  }
+
   function update(initial_load)
   {
     Api.get("/api/alert/", {active: true, limit: 0}, success_callback = function(data) {
       var seen_alerts = {}
+      
       var new_alerts = []
       var resolved_alerts = []
 
       $.each(data.objects, function(i, alert_info) {
         seen_alerts[alert_info.id] = true
-        if (!active_alerts[alert_info.id]) {
+        if ( alert_info.dismissed === false && !active_alerts[alert_info.id] ) {
           activateAlert(alert_info);
           new_alerts.push(alert_info)
         }
@@ -568,31 +593,15 @@ var AlertNotification = function() {
 
       $.each(active_alerts, function(i, alert_info) {
         if (!seen_alerts[alert_info.id]) {
-          deactivateAlert(alert_info)
-          resolved_alerts.push(alert_info)
+          deactivateAlert(alert_info);
+          resolved_alerts.push(alert_info);
+
         }
       });
 
       if (!initial_load) {
-        if (new_alerts.length == 1 && resolved_alerts.length == 0) {
-          Tooltip.sidebarMessage("New alert", new_alerts[0].message, false, 'ui-tooltip-red');
-        } else if (new_alerts.length == 0 && resolved_alerts.length == 1) {
-          /*
-          Tooltip.message("Alert cleared", resolved_alerts[0].message, false, 'ui-tooltip-green');
-          */
-        } else if (new_alerts.length > 0 && resolved_alerts.length == 0) {
-          Tooltip.sidebarMessage(new_alerts.length + " alerts active", " ", false, 'ui-tooltip-red');
-        } else if (new_alerts.length == 0 && resolved_alerts.length > 0) {
-          /*
-          Tooltip.message(resolved_alerts.length + " alerts resolved", " ", false, 'ui-tooltip-green');
-          */
-        } else if (new_alerts.length > 0 && resolved_alerts.length > 0) {
-          Tooltip.sidebarMessage("Alerts",
-              new_alerts.length + " new alerts, " + resolved_alerts.length + " alerts resolved",
-              false, 'ui-tooltip-red');
-        }
+        updateSidebarMessage(new_alerts,resolved_alerts);
       }
-
       setTimeout(update, slow_poll_interval);
     }, error_callback = undefined, blocking = false);
   }
@@ -610,6 +619,11 @@ var AlertNotification = function() {
     }
   }
 
+  /* given an alert object
+   * - add it to active_alerts
+   * - update icons of affected resources
+   * - update sidebar
+   */
   function activateAlert(alert_info) {
     if (active_alerts[alert_info.id]) {
       throw "Alert " + alert_info.id + " activated twice"
@@ -645,6 +659,7 @@ var AlertNotification = function() {
     });
 
     updateSidebar();
+
   }
 
   function updateIcon(element)
@@ -706,6 +721,7 @@ var AlertNotification = function() {
   }
 
   return {
+    deactivateAlert: deactivateAlert,
     init: init,
     updateIcons: updateIcons
   }
