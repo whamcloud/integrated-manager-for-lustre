@@ -3,7 +3,7 @@
 %{?!release: %define release 1}
 %{?!python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
-Summary: The Whamcloud Lustre Monitoring and Adminisration Interface Agent
+Summary: Chroma Agent
 Name: %{name}
 Version: %{version}
 Release: %{release}
@@ -23,7 +23,7 @@ Requires: avahi-dnsconfd
 %endif
 
 %description
-This is the Whamcloud Monitoring and Adminstration Agent
+This is the Whamcloud monitoring and adminstration agent
 
 %package management
 Summary: Management functionality layer.
@@ -50,7 +50,6 @@ cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/hydra-agent
 
 touch management.files
 cat <<EndOfList>>management.files
-%{python_sitelib}/hydra_agent/cmds/*
 %{python_sitelib}/hydra_agent/action_plugins/manage_*
 %{python_sitelib}/hydra_agent/rmmod.*
 /usr/lib/ocf/resource.d/hydra/Target
