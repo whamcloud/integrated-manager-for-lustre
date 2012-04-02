@@ -36,7 +36,8 @@ class ApiClient(object):
         elif response.status_code == 404:
             raise AttributeError("No resource with that id")
         else:  # TODO: add more classes of reponse exceptions
-            raise RuntimeError(response.text)
+            raise RuntimeError("status: %s, text: %s" % (response.status_code,
+                                                         response.text))
 
     def login(self, username, password):
         response = self._session.post(urljoin(self.url, "session/"),

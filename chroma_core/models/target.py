@@ -411,7 +411,7 @@ class ConfigurePacemakerStep(Step):
         # target.name should have been populated by RegisterTarget
         assert(target_mount.volume_node != None and target_mount.target.name != None)
 
-        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --uuid %s --serial %s %s --mountpoint %s" % (
+        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --uuid %s --id %s %s --mountpoint %s" % (
                                     target_mount.volume_node.path,
                                     target_mount.target.name,
                                     target_mount.target.uuid,
@@ -432,7 +432,7 @@ class UnconfigurePacemakerStep(Step):
         # didn't have its name
         assert(target_mount.target.name != None)
 
-        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s --uuid %s --serial %s %s" % (
+        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s --uuid %s --id %s %s" % (
                                     target_mount.target.name,
                                     target_mount.target.uuid,
                                     target_mount.target.pk,
@@ -525,7 +525,7 @@ class MountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id)
 
-        result = self._run_agent_command(target, "start-target --label %s --serial %s" % (target.name, target.pk))
+        result = self._run_agent_command(target, "start-target --label %s --id %s" % (target.name, target.pk))
         try:
             started_on = ManagedHost.objects.get(nodename = result['location'])
         except ManagedHost.DoesNotExist:
@@ -568,7 +568,7 @@ class UnmountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id)
 
-        self._run_agent_command(target, "stop-target --label %s --serial %s" % (target.name, target.pk))
+        self._run_agent_command(target, "stop-target --label %s --id %s" % (target.name, target.pk))
         target.set_active_mount(None)
 
 
