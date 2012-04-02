@@ -1,21 +1,22 @@
 
 from django.test import TestCase
-from chroma_core.lib.storage_plugin.resource import StorageResource, GlobalId
-from chroma_core.lib.storage_plugin import attributes
+from chroma_core.lib.storage_plugin.api import attributes
+from chroma_core.lib.storage_plugin.api.identifiers import GlobalId
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 
-class TestDefaults1(StorageResource):
+class TestDefaults1(BaseStorageResource):
     name = attributes.String()
     identifier = GlobalId('name')
 
 
-class TestDefaults2(StorageResource):
+class TestDefaults2(BaseStorageResource):
     name = attributes.String()
     name_scope = attributes.String()
     identifier = GlobalId('name', 'name_scope')
 
 
-class TestOverrides(StorageResource):
+class TestOverrides(BaseStorageResource):
     name = attributes.String()
     identifier = GlobalId('name')
 

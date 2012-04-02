@@ -15,32 +15,7 @@
     $('a.button:not(.ui-button)').each(function() {
       $(this).button();
     });
-  });
 
-  $(document).ready(function() {
-    function updateSizes() {
-      $('div.rightpanel').width($(window).width() - $('div.leftpanel').width())
-    }
-    updateSizes();
-    $(window).resize(updateSizes);
-
-    $("#tabs").tabs({
-      selected: -1,
-      select: function (event, ui) {
-        var tab = ui.panel.id.split("-")[0];
-        var path = "configure/" + tab + "/";
-        if (window.location.pathname.indexOf(path) != 1) {
-          Backbone.history.navigate(path, {trigger: true});
-        }
-      }
-    });
-
-    new ChromaRouter();
-    Backbone.history.start({root: "/ui/", pushState: true})
-  });    
-
-  //Fix Me:Need to find another weay to do thisto load the button + sign css.
-  $(document).ajaxComplete(function() {
     var apply_button = function(selector, icon) {
       $(selector).each(function() {
         if (!$(this).hasClass('ui-button')) {
@@ -56,6 +31,23 @@
     //for adding smoothness to all table buttons
     $("button").button();
   });
+
+  var ConfigureTabs = function() {
+    function init() {
+      $("#tabs").tabs({
+        selected: -1,
+        select: function (event, ui) {
+          var tab = ui.panel.id.split("-")[0];
+          var path = "configure/" + tab + "/";
+          if (window.location.pathname.indexOf(path) != 1) {
+            Backbone.history.navigate(path, {trigger: true});
+          }
+        }
+      });
+    }
+
+    return {init: init}
+  }();
 </script>
 
 <input type=hidden id="config_home_target_id" value="" />

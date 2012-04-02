@@ -17,13 +17,13 @@ class Mgt:
         self.device_node_coloumn = 2
         self.host_name_coloumn = 5
         # Initialise all elements on that view.
-        self.fvc_selected = self.driver.find_elements_by_class_name("fvc_selected")
+        self.volume_chooser_selected = self.driver.find_elements_by_class_name("volume_chooser_selected")
         self.create_mgt_button = self.driver.find_element_by_id('btnNewMGT')
         self.selected_mgt_host = ""
 
     def select_mgt(self, host_name, device_node):
         """Select an MGT"""
-        mgtchooser = self.fvc_selected.__getitem__(0)
+        mgtchooser = self.volume_chooser_selected.__getitem__(0)
         mgtchooser.click()
         sleep(2)
         mgt_rows = self.driver.find_elements_by_xpath("id('new_mgt_chooser_table')/tbody/tr")

@@ -4,6 +4,8 @@
 # ==============================
 
 from django.contrib.contenttypes.models import ContentType
+from chroma_core.lib.storage_plugin.api import attributes, statistics
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 
@@ -12,16 +14,18 @@ from chroma_api.authentication import AnonymousAuthentication
 from tastypie.resources import ModelResource
 from tastypie import fields
 from chroma_core.lib.storage_plugin.query import ResourceQuery
+from chroma_api.utils import MetricResource
 
 from tastypie.exceptions import NotFound, ImmediateHttpResponse
 from tastypie import http
 from django.core.exceptions import ObjectDoesNotExist
-from chroma_core.lib.storage_plugin.daemon import StorageDaemon
 
 from chroma_api.storage_resource_class import filter_class_ids
 
+from chroma_core.lib.storage_plugin.daemon import ScanDaemonRpc
 
-class StorageResourceResource(ModelResource):
+
+class StorageResourceResource(MetricResource, ModelResource):
     """
     Storage resources are objects within Chroma's storage plugin
     framework.  Note: the term 'resource' is overloaded, used
@@ -69,9 +73,43 @@ class StorageResourceResource(ModelResource):
         return [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(bundle.obj.to_resource())]
 
     def dehydrate_stats(self, bundle):
+        from chroma_core.models import SimpleHistoStoreTime
+        from chroma_core.models import SimpleHistoStoreBin
         stats = {}
         for s in StorageResourceStatistic.objects.filter(storage_resource = bundle.obj):
-            stats[s.name] = s.to_dict()
+            from django.db import transaction
+            stat_props = s.storage_resource.get_statistic_properties(s.name)
+            if isinstance(stat_props, statistics.BytesHistogram):
+                with transaction.commit_manually():
+                    transaction.commit()
+                    try:
+                        time = SimpleHistoStoreTime.objects.filter(storage_resource_statistic = s).latest('time')
+                        bins = SimpleHistoStoreBin.objects.filter(histo_store_time = time).order_by('bin_idx')
+                    finally:
+                        transaction.commit()
+                type_name = 'histogram'
+                # Composite type
+                data = {'bin_labels': [], 'values': []}
+                for i in range(0, len(stat_props.bins)):
+                    bin_info = u"\u2264%s" % stat_props.bins[i][1]
+                    data['bin_labels'].append(bin_info)
+                    data['values'].append(bins[i].value)
+            else:
+                type_name = 'timeseries'
+                # Go get the data from <resource>/metrics/
+                data = None
+
+            label = stat_props.label
+            if not label:
+                label = s.name
+
+            stat_data = {'name': s.name,
+                    'label': label,
+                    'type': type_name,
+                    'unit_name': stat_props.get_unit_name(),
+                    'data': data}
+            stats[s.name] = stat_data
+
         return stats
 
     def dehydrate_charts(self, bundle):
@@ -94,7 +132,22 @@ class StorageResourceResource(ModelResource):
         return ContentType.objects.get_for_model(bundle.obj.__class__).pk
 
     def dehydrate_attributes(self, bundle):
-        return bundle.obj.to_resource().get_attribute_items()
+        # a list of dicts, one for each attribute.  Excludes hidden attributes.
+        result = {}
+        resource = bundle.obj.to_resource()
+        attr_props = resource.get_all_attribute_properties()
+        for name, props in attr_props:
+            # Exclude password hashes
+            if isinstance(props, attributes.Password):
+                continue
+
+            val = getattr(resource, name)
+            if isinstance(val, BaseStorageResource):
+                raw = val._handle
+            else:
+                raw = val
+            result[name] = {'raw': raw, 'markup': props.to_markup(val), 'label': props.get_label(name)}
+        return result
 
     class Meta:
         queryset = StorageResourceRecord.objects.filter(
@@ -106,44 +159,76 @@ class StorageResourceResource(ModelResource):
         filtering = {'class_name': ['exact'], 'plugin_name': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        #ordering = ['lun_name']
 
     def obj_delete(self, request = None, **kwargs):
         try:
             obj = self.obj_get(request, **kwargs)
         except ObjectDoesNotExist:
             raise NotFound("A model instance matching the provided arguments could not be found.")
-        StorageDaemon.request_remove_resource(obj.id)
+
+        ScanDaemonRpc().remove_resource(obj.id)
         raise ImmediateHttpResponse(http.HttpAccepted())
 
     def obj_create(self, bundle, request = None, **kwargs):
         # Note: not importing this at module scope so that this module can
         # be imported without loading plugins (useful at installation)
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        record = storage_plugin_manager.create_root_resource(bundle.data['plugin_name'], bundle.data['class_name'], **bundle.data['attrs'])
+        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(bundle.data['plugin_name'], bundle.data['class_name'])
+        attrs = {}
+        input_attrs = bundle.data['attrs']
+        for name, properties in resource_class.get_all_attribute_properties():
+            if isinstance(properties, attributes.Password) and name in input_attrs:
+                attrs[name] = properties.encrypt(input_attrs[name])
+            elif name in input_attrs:
+                attrs[name] = input_attrs[name]
+            elif not properties.optional:
+                # TODO: proper validation
+                raise RuntimeError("%s not optional" % name)
+
+        # Construct a record
+        record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, attrs)
+        #record_dict = self.full_dehydrate(self.build_bundle(obj = record)).data
         bundle.obj = record
 
         return bundle
 
     def obj_update(self, bundle, request = None, **kwargs):
         bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
-        # We only support updating the 'alias' field
-        if not 'alias' in bundle.data:
-            raise ImmediateHttpResponse(http.HttpBadRequest())
 
-        # FIXME: sanitize input for alias (it gets echoed back as markup)
-        alias = bundle.data['alias']
-        record = bundle.obj
-        if alias == "":
-            record.alias = None
-        else:
-            record.alias = alias
-        record.save()
+        if 'alias' in bundle.data:
+            # FIXME: sanitize input for alias (it gets echoed back as markup)
+            alias = bundle.data['alias']
+            record = bundle.obj
+            if alias == "":
+                record.alias = None
+            else:
+                record.alias = alias
+            record.save()
+
+        input_attrs = bundle.data
+        attrs = {}
+        resource_class = record.resource_class.get_class()
+        for name, properties in resource_class.get_all_attribute_properties():
+            if name in bundle.data:
+                if isinstance(properties, attributes.Password):
+                    attrs[name] = properties.encrypt(input_attrs[name])
+                else:
+                    attrs[name] = input_attrs[name]
+
+        if len(attrs):
+            # NB this operation is done inside the storage daemon, because it is
+            # necessary to tear down any running session (e.g. consider modifying the IP
+            # address of a controller)
+            ScanDaemonRpc().modify_resource(record.id, attrs)
+
+        # Require that something was set
+        if not 'alias' in bundle.data or len(attrs):
+            raise ImmediateHttpResponse(http.HttpBadRequest())
 
         return bundle
 
     def override_urls(self):
         from django.conf.urls.defaults import url
-        return [
-            url(r"^(?P<resource_name>%s)/(?P<plugin_name>\w+)/(?P<class_name>\w+)/$" % self._meta.resource_name, self.wrap_view('dispatch_list'), name="dispatch_list"),
+        return super(StorageResourceResource, self).override_urls() + [
+            url(r"^(?P<resource_name>%s)/(?P<plugin_name>\D\w+)/(?P<class_name>\D\w+)/$" % self._meta.resource_name, self.wrap_view('dispatch_list'), name="dispatch_list"),
 ]

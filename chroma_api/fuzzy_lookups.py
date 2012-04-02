@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, LunNode, ManagedHost
+from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, VolumeNode, ManagedHost
 
 
 class FuzzyLookupFailed(Exception):
@@ -20,13 +20,13 @@ def target_vol_id(fuzzy_id):
             hostname, device_path = fuzzy_id.split(":")
             # TODO: try other ways to get the host
             mh = ManagedHost.objects.get(fqdn=hostname)
-            ln = LunNode.objects.get(host=mh,
+            ln = VolumeNode.objects.get(host=mh,
                                      path=device_path)
 
-            return ln.lun.pk
+            return ln.volume.pk
     except ManagedHost.DoesNotExist:
         raise FuzzyLookupException("Unable to parse host from %s" % fuzzy_id)
-    except LunNode.DoesNotExist:
+    except VolumeNode.DoesNotExist:
         raise FuzzyLookupException("Unable to parse volume from %s" % fuzzy_id)
 
     raise FuzzyLookupFailed("Unable to resolve '%s'" % fuzzy_id)
@@ -71,12 +71,12 @@ def mgt_vol_id(fuzzy_id):
         try:
             # fqdn by itself -- only makes sense for MGS/MGT
             mgs = ManagedMgs.objects.get(managedtargetmount__host__fqdn=fuzzy_id)
-            return mgs.lun.pk
+            return mgs.volume.pk
         except ManagedMgs.DoesNotExist:
             # maybe they've supplied the MGS id?
             try:
                 mgs = ManagedMgs.objects.get(pk=fuzzy_id)
-                return mgs.lun.pk
+                return mgs.volume.pk
             except (ValueError, ManagedMgs.DoesNotExist):
                 raise FuzzyLookupFailed("No MGS volume found on %s" % fuzzy_id)
 
@@ -87,7 +87,7 @@ def mdt_vol_id(fuzzy_id):
     except FuzzyLookupFailed:
         try:
             mdt = ManagedMdt.objects.get(pk=fuzzy_id)
-            return mdt.lun.pk
+            return mdt.volume.pk
         except (ValueError, ManagedMdt.DoesNotExist):
             raise FuzzyLookupFailed("No MDT volume found on %s" % fuzzy_id)
 
@@ -98,6 +98,6 @@ def ost_vol_id(fuzzy_id):
     except FuzzyLookupFailed:
         try:
             ost = ManagedOst.objects.get(pk=fuzzy_id)
-            return ost.lun.pk
+            return ost.volume.pk
         except (ValueError, ManagedOst.DoesNotExist):
             raise FuzzyLookupFailed("No OST volume found on %s" % fuzzy_id)

@@ -5,8 +5,10 @@
 
 from collections import defaultdict
 
+from django.db.models import Q
+from chroma_core.models import ManagedFilesystem, ManagedTarget
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs
-from chroma_core.models import ManagedFilesystem
+from chroma_core.models import Volume, VolumeNode
 from chroma_core.models import Command
 import chroma_core.lib.conf_param
 import chroma_core.lib.util
@@ -16,14 +18,18 @@ from tastypie import fields
 from tastypie.validation import Validation
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_api.utils import custom_response, ConfParamResource, dehydrate_command
+from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
 from chroma_api import api_log
 from chroma_api.fuzzy_lookups import FuzzyLookupFailed, FuzzyLookupException, mgt_vol_id, mdt_vol_id, ost_vol_id
 
 
 class FilesystemValidation(Validation):
     def is_valid(self, bundle, request=None):
-        errors = {}
+        errors = defaultdict(list)
+
+        if request.method != "POST":
+            # TODO: validate PUTs
+            return errors
 
         try:
             # Merge errors found during other phases (e.g. hydration)
@@ -31,12 +37,162 @@ class FilesystemValidation(Validation):
         except AttributeError:
             pass
 
-        # TODO: Conf params validation
+        # Check that client hasn't specified and existing MGT *and* a volume to format
+        if 'id' in bundle.data['mgt'] and 'volume_id' in bundle.data['mgt']:
+            errors['mgt'].append("id and volume_id are mutually exclusive")
+
+        targets = defaultdict(list)
+        # Check 'mgt', 'mdt', 'osts' are present and compose
+        # a record of targets which will be formatted
+        try:
+            mgt = bundle.data['mgt']
+            if 'volume_id' in mgt:
+                targets['mgt'].append(mgt)
+        except KeyError:
+            errors['mgt'].append("This field is mandatory")
+        try:
+            targets['mdt'].append(bundle.data['mdt'])
+        except KeyError:
+            errors['mdt'].append("This field is mandatory")
+        try:
+            targets['osts'].extend(bundle.data['osts'])
+        except KeyError:
+            errors['osts'].append("This field is mandatory")
+
+        if 'conf_params' not in bundle.data:
+            errors['conf_params'].append("This field is mandatory")
+
+        if 'name' not in bundle.data:
+            errors['name'].append("This field is mandatory")
+
+        # Return if some of the things we're going to validate in detail are absent
+        if len(errors):
+            return errors
+
+        # Validate filesystem name
+        if len(bundle.data['name']) > 8:
+            errors['name'].append("Name '%s' too long (max 8 characters)" % bundle.data['name'])
+        if len(bundle.data['name']) < 1:
+            errors['name'].append("Name '%s' too short (min 1 character)" % bundle.data['name'])
+
+        # Check volume IDs are present and correct
+        used_volume_ids = set()
+
+        def check_volume(field, volume_id):
+            # Check we haven't tried to use the same volume twice
+            if volume_id in used_volume_ids:
+                errors[field].append("Volume ID %s specified for multiple targets!" % volume_id)
+
+            try:
+                # Check the volume exists
+                volume = Volume.objects.get(id = volume_id)
+                try:
+                    # Check the volume isn't in use
+                    target = ManagedTarget.objects.get(volume = volume)
+                    errors[field].append("Volume with ID %s is already in use by target %s" % (volume_id, target))
+                except ManagedTarget.DoesNotExist:
+                    pass
+            except Volume.DoesNotExist:
+                errors[field].append("Volume with ID %s not found" % volume_id)
+
+            used_volume_ids.add(volume_id)
+
+        try:
+            mgt_volume_id = bundle.data['mgt']['volume_id']
+            check_volume('mgt', mgt_volume_id)
+        except KeyError:
+            mgt_volume_id = None
+
+            try:
+                mgt = ManagedMgs.objects.get(id = bundle.data['mgt']['id'])
+                try:
+                    ManagedFilesystem.objects.get(name = bundle.data['name'], mgs = mgt)
+                    errors['name'].append("A filesystem with name '%s' already exists for this MGT" % bundle.data['name'])
+                except ManagedFilesystem.DoesNotExist:
+                    pass
+            except KeyError:
+                errors['mgt'].append("One of id or volume_id must be set")
+        except ManagedMgs.DoesNotExist:
+            errors['mgt'].append("MGT with ID %s not found" % (bundle.data['mgt']['id']))
+
+        try:
+            mdt_volume_id = bundle.data['mdt']['volume_id']
+            check_volume('mdt', mdt_volume_id)
+        except KeyError:
+            errors['mdt'].append("volume_id attribute is mandatory")
+
+        for ost in bundle.data['osts']:
+            try:
+                volume_id = ost['volume_id']
+                check_volume('osts', volume_id)
+            except KeyError:
+                errors['osts'].append("volume_id attribute is mandatory for all osts")
+
+        # If formatting an MGS, check its not on a host already used as an MGS
+        # If this is an MGS, there may not be another MGS on
+        # this host
+        if mgt_volume_id:
+            mgt_volume = Volume.objects.get(id = mgt_volume_id)
+            hosts = [vn.host for vn in VolumeNode.objects.filter(volume = mgt_volume, use = True)]
+            conflicting_mgs_count = ManagedTarget.objects.filter(~Q(managedmgs = None), managedtargetmount__host__in = hosts).count()
+            if conflicting_mgs_count > 0:
+                errors['mgt'].append("Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label)
+
+        # Validate generic target settings
+        for attr, targets in targets.items():
+            for target in targets:
+                volume = Volume.objects.get(id = target['volume_id'])
+                if 'inode_count' in target and 'bytes_per_inode' in target:
+                    errors[attr].append("inode_count and bytes_per_inode are mutually exclusive")
+
+                # If they specify and inode size and a bytes_per_inode, check the inode fits
+                # within the ratio
+                try:
+                    inode_size = int(target['inode_size'])
+                    bytes_per_inode = int(target['bytes_per_inode'])
+                    if inode_size >= bytes_per_inode:
+                        errors['inode_size'].append("inode_size must be less than bytes_per_inode")
+                except KeyError:
+                    pass
+
+                # If they specify an inode count, check it will fit on the device
+                try:
+                    inode_count = int(target['inode_count'])
+                    try:
+                        inode_size = int(target['inode_size'])
+                    except KeyError:
+                        inode_size = {'mgs': 128, 'mdt': 512, 'osts': 256}[attr]
+
+                    if inode_count * inode_size > volume.size:
+                        errors['inode_count'].append("%d %d-byte inodes too large for %s-byte device" % (
+                            inode_count, inode_size, volume.size))
+                except KeyError:
+                    pass
+
+        # Validate conf params
+        # TODO: put this somewhere it can be used by conf param updates too
+        for key, val in bundle.data['conf_params'].items():
+            try:
+                from chroma_core.lib import conf_param
+                conf_param_info = conf_param.all_params[key]
+                conf_param_class = conf_param_info[0]
+                if not (issubclass(conf_param_class, conf_param.FilesystemGlobalConfParam) or issubclass(conf_param_class, conf_param.FilesystemClientConfParam)):
+                    api_log.error("bad conf param %s %s" % (key, conf_param_class))
+                    errors['conf_params'].append("conf_param %s is not settable for filesystems" % key)
+                conf_param_attribute_class = conf_param_info[1]
+
+                try:
+                    conf_param_attribute_class.validate(val)
+                except ValueError, e:
+                    errors['conf_params'].append("Invalid value for %s: %s" % (key, e.message))
+
+            except KeyError:
+                errors['conf_params'].append("Unknown conf_param %s" % key)
 
         return errors
 
 
-class FilesystemResource(ConfParamResource):
+class FilesystemResource(MetricResource, ConfParamResource):
     """
     A Lustre filesystem, consisting of one or mode MDTs, and one or more OSTs.
 
@@ -64,9 +220,9 @@ class FilesystemResource(ConfParamResource):
     mgt = fields.ToOneField('chroma_api.target.TargetResource', attribute = 'mgs', full = True,
             help_text = "The MGT on which this filesystem is registered")
 
-    def _get_stat_simple(self, bundle, stat_name, factor = 1):
+    def _get_stat_simple(self, bundle, klass, stat_name, factor = 1):
         try:
-            return bundle.obj.metrics.fetch_last(ManagedMdt, fetch_metrics=[stat_name])[1][stat_name] * 1024
+            return bundle.obj.metrics.fetch_last(klass, fetch_metrics=[stat_name])[1][stat_name] * factor
         except (KeyError, IndexError):
             return None
 
@@ -74,16 +230,16 @@ class FilesystemResource(ConfParamResource):
         return bundle.obj.mount_command()
 
     def dehydrate_bytes_free(self, bundle):
-        return self._get_stat_simple(bundle, 'kbytesfree', 1024)
+        return self._get_stat_simple(bundle, ManagedOst, 'kbytesfree', 1024)
 
     def dehydrate_bytes_total(self, bundle):
-        return self._get_stat_simple(bundle, 'kbytestotal', 1024)
+        return self._get_stat_simple(bundle, ManagedOst, 'kbytestotal', 1024)
 
     def dehydrate_files_free(self, bundle):
-        return self._get_stat_simple(bundle, 'filesfree')
+        return self._get_stat_simple(bundle, ManagedMdt, 'filesfree')
 
     def dehydrate_files_total(self, bundle):
-        return self._get_stat_simple(bundle, 'filestotal')
+        return self._get_stat_simple(bundle, ManagedMdt, 'filestotal')
 
     def hydrate_mgt_lun_id(self, bundle):
         if 'mgt_lun_id' in bundle.data:
@@ -128,32 +284,6 @@ class FilesystemResource(ConfParamResource):
 
         return bundle
 
-    def hydrate_conf_params(self, bundle):
-        import re
-
-        # don't mess with conf_params if it's already a dict
-        if ('conf_params' in bundle.data
-                and hasattr('items', bundle.data['conf_params'])):
-            return bundle
-
-        if ('conf_params' in bundle.data
-                and len(bundle.data['conf_params']) > 0):
-            conf_params = {}
-            # This is very simpleminded.  I'd originally thought that
-            # we could ask the resource's deserializer to parse the
-            # YAML, but we can't count on YAML being available.
-            for keyval in re.split('\s*,\s*', bundle.data['conf_params']):
-                try:
-                    key, val = re.split('\s*:\s*', keyval)
-                    conf_params[key] = val
-                except ValueError:
-                    bundle.data_errors['conf_params'].append("Invalid param format '%s' (try key: val, key: val)" % keyval)
-            bundle.data['conf_params'] = conf_params
-        else:
-            bundle.data['conf_params'] = {}
-
-        return bundle
-
     class Meta:
         queryset = ManagedFilesystem.objects.all()
         resource_name = 'filesystem'
@@ -165,6 +295,18 @@ class FilesystemResource(ConfParamResource):
         detail_allowed_methods = ['get', 'delete', 'put']
         readonly = ['bytes_free', 'bytes_total', 'files_free', 'files_total', 'mount_command']
         validation = FilesystemValidation()
+
+    def _format_attrs(self, target_data):
+        """Map API target attributes to kwargs suitable for model construction"""
+        # Exploit that these attributes happen to have the same name in
+        # the API and in the ManagedTarget model
+        result = {}
+        for attr in ['inode_count', 'inode_size', 'bytes_per_inode']:
+            try:
+                result[attr] = target_data[attr]
+            except KeyError:
+                pass
+        return result
 
     def obj_create(self, bundle, request = None, **kwargs):
         # Set up an errors dict in the bundle to allow us to carry
@@ -184,66 +326,48 @@ class FilesystemResource(ConfParamResource):
         # happening, since there isn't actually any deserialization
         # going on.  There aren't any other hook name conventions for
         # "mangle incoming bundle data on a per-field basis" though.
-        for field in ['mgt_lun_id', 'mdt_lun_id', 'ost_lun_ids', 'conf_params']:
-            method = getattr(self, "hydrate_%s" % field, None)
+        #for field in ['mgt_lun_id', 'mdt_lun_id', 'ost_lun_ids', 'conf_params']:
+        #    method = getattr(self, "hydrate_%s" % field, None)
+#
+#            if method:
+#                bundle = method(bundle)
+#
 
-            if method:
-                bundle = method(bundle)
-
-        try:
-            fsname = bundle.data['name']
-            mgt_id = bundle.data['mgt_id']
-            mgt_lun_id = bundle.data['mgt_lun_id']
-            mdt_lun_id = bundle.data['mdt_lun_id']
-            ost_lun_ids = bundle.data['ost_lun_ids']
-            conf_params = bundle.data['conf_params']
-        except KeyError, e:
-            bundle.data_errors[str(e)].append("Required field")
-
+        # NB: this call will be redundant when the data_errors stuff is
+        # removed (tastypie calls is_valid before invoking obj_create)
         self.is_valid(bundle, request)
 
-        # mgt_id and mgt_lun_id are mutually exclusive:
-        # * mgt_id is a PK of an existing ManagedMgt to use
-        # * mgt_lun_id is a PK of a Lun to use for a new ManagedMgt
-        assert bool(mgt_id) != bool(mgt_lun_id)
-
-        if not mgt_id:
-            mgt = ManagedMgs.create_for_lun(mgt_lun_id, name="MGS")
+        mgt_data = bundle.data['mgt']
+        if 'volume_id' in mgt_data:
+            mgt = ManagedMgs.create_for_volume(mgt_data['volume_id'], name="MGS", **self._format_attrs(mgt_data))
             mgt_id = mgt.pk
         else:
-            mgt_lun_id = ManagedMgs.objects.get(pk = mgt_id).lun.id
+            mgt_id = mgt_data['id']
 
-        api_log.debug("fsname: %s" % fsname)
+        api_log.debug("fsname: %s" % bundle.data['name'])
         api_log.debug("MGS: %s" % mgt_id)
-        api_log.debug("MGT LUN: %s" % mgt_lun_id)
-        api_log.debug("MDT LUN: %s" % mdt_lun_id)
-        api_log.debug("OST LUNs: %s" % ost_lun_ids)
-        api_log.debug("conf_params: %s" % conf_params)
-
-        # This is a brute safety measure, to be superceded by
-        # some appropriate validation that gives a helpful
-        # error to the user.
-        all_lun_ids = [mgt_lun_id] + [mdt_lun_id] + ost_lun_ids
-        # Test that all values in all_lun_ids are unique
-        assert len(set(all_lun_ids)) == len(all_lun_ids)
+        api_log.debug("MDT: %s" % bundle.data['mdt'])
+        api_log.debug("OSTs: %s" % bundle.data['osts'])
+        api_log.debug("conf_params: %s" % bundle.data['conf_params'])
 
         from django.db import transaction
         with transaction.commit_on_success():
-            mgs = ManagedMgs.objects.get(id=mgt_id)
-            fs = ManagedFilesystem(mgs=mgs, name = fsname)
+            mgs = ManagedMgs.objects.get(id = mgt_id)
+            fs = ManagedFilesystem(mgs=mgs, name = bundle.data['name'])
             fs.save()
 
-            for key, value in conf_params.items():
+            for key, value in bundle.data['conf_params'].items():
                 chroma_core.lib.conf_param.set_conf_param(fs, key, value)
 
-            ManagedMdt.create_for_lun(mdt_lun_id, filesystem = fs)
+            mdt_data = bundle.data['mdt']
+            ManagedMdt.create_for_volume(mdt_data['volume_id'], filesystem = fs, **self._format_attrs(mdt_data))
             osts = []
-            for lun_id in ost_lun_ids:
-                osts.append(ManagedOst.create_for_lun(lun_id, filesystem = fs))
+            for ost_data in bundle.data['osts']:
+                osts.append(ManagedOst.create_for_volume(ost_data['volume_id'], filesystem = fs, **self._format_attrs(ost_data)))
         # Important that a commit happens here so that the targets
         # land in DB before the set_state jobs act upon them.
 
-        command = Command.set_state([(fs, 'available')], "Creating filesystem %s" % fsname)
+        command = Command.set_state([(fs, 'available')], "Creating filesystem %s" % bundle.data['name'])
 
         filesystem_data = self.full_dehydrate(self.build_bundle(obj = fs)).data
 

@@ -1,8 +1,4 @@
 
-$(document).ready(function() {
-  Login.init();
-});
-
 var Login = function() {
   var user = null;
 
@@ -118,10 +114,10 @@ var Login = function() {
           $('#user_info #anonymous').hide();
         }
 
-        Api.enable();
-
         $('.fsadmin_only').toggle(userHasGroup('filesystem_administrators'));
         $('.superuser_only').toggle(userHasGroup(user, 'superusers'));
+
+        Api.enable();
       }
     }, undefined, false, true);
   }

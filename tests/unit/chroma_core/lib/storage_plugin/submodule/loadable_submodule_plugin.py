@@ -1,6 +1,6 @@
 
-from chroma_core.lib.storage_plugin.plugin import StoragePlugin
+from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 
 
-class SubmodulePlugin(StoragePlugin):
+class SubmodulePlugin(BaseStoragePlugin):
     pass

@@ -2,6 +2,7 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
+from chroma_core.lib.storage_plugin.api import attributes
 
 from chroma_core.models import StorageResourceClass
 
@@ -47,7 +48,8 @@ class StorageResourceClassResource(ModelResource):
     fields = fields.DictField()
 
     def dehydrate_columns(self, bundle):
-        return bundle.obj.get_class().get_columns()
+        properties = bundle.obj.get_class().get_all_attribute_properties()
+        return [{'name': name, 'label': props.get_label(name)} for (name, props) in properties if not isinstance(props, attributes.Password)]
 
     def dehydrate_fields(self, bundle):
         resource_klass = bundle.obj.get_class()

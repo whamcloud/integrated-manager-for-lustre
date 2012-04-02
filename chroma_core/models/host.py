@@ -4,6 +4,7 @@
 # ==============================
 
 import datetime
+import dateutil.parser
 
 from django.db import models
 from django.db import transaction
@@ -153,10 +154,10 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def available_lun_nodes(self):
         from django.db.models import Q
-        from chroma_core.models.target_mount import ManagedTargetMount
 
-        used_luns = [i['block_device__lun'] for i in ManagedTargetMount.objects.all().values('block_device__lun')]
-        return LunNode.objects.filter(
+        from chroma_core.models import ManagedTargetMount
+        used_luns = [i['block_device__lun'] for i in ManagedTargetMount.objects.all().values('volume_node__volume')]
+        return VolumeNode.objects.filter(
                 ~Q(lun__in = used_luns),
                 host = self)
 
@@ -219,25 +220,14 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                     raise ManagedHost.MultipleObjectsReturned()
 
 
-class Lun(models.Model):
+class Volume(models.Model):
     storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
 
-    # Size may be null for LunNodes created when setting up
+    # Size may be null for VolumeNodes created when setting up
     # from a JSON file which just tells us a path.
     size = models.BigIntegerField(blank = True, null = True,
             help_text = "Integer number of bytes.  Can be null if this device \
                     was manually created, rather than detected.")
-
-    # Whether the originating StorageResource can be shared between hosts
-    # Note: this is ultimately a hint, as it's always possible for a virtual
-    # environment to trick us by showing the same IDE device to two hosts, or
-    # for shared storage to not provide a serial number.
-    shareable = models.BooleanField("Whether the device can potentially be \
-            shared between hosts (irrespective of whether it has been \
-            seen on multiple hosts).  This is a hint, based on whether Chroma \
-            can detect sharing on this device -- it is possible that the device \
-            is shared but Chroma can't detect the sharing (e.g. some virtualization \
-            environments)")
 
     label = models.CharField(max_length = 128)
 
@@ -254,27 +244,27 @@ class Lun(models.Model):
             queryset = cls.objects.all()
 
         from django.db.models import Max
-        queryset = queryset.annotate(any_targets = Max('lunnode__managedtargetmount__target__not_deleted'))
+        queryset = queryset.annotate(any_targets = Max('volumenode__managedtargetmount__target__not_deleted'))
         return queryset.filter(any_targets = None)
 
     @classmethod
     def get_usable_luns(cls, queryset = None):
-        """Get all Luns which are not used by Targets and have enough LunNode configuration
+        """Get all Luns which are not used by Targets and have enough VolumeNode configuration
         to be used as a Target (i.e. have only one node or at least have a primary node set)"""
         if not queryset:
             queryset = cls.objects.all()
 
         from django.db.models import Count, Max, Q
-        # Luns are usable if they have only one LunNode (i.e. no HA available but
+        # Luns are usable if they have only one VolumeNode (i.e. no HA available but
         # we can definitively say where it should be mounted) or if they have
-        # a primary LunNode (i.e. one or more LunNodes is available and we
+        # a primary VolumeNode (i.e. one or more VolumeNodes is available and we
         # know at least where the primary mount should be)
-        return queryset.filter(lunnode__host__not_deleted = True).\
+        return queryset.filter(volumenode__host__not_deleted = True).\
                 annotate(
-                    any_targets = Max('lunnode__managedtargetmount__target__not_deleted'),
-                    has_primary = Max('lunnode__primary'),
-                    num_lunnodes = Count('lunnode')
-                ).filter((Q(num_lunnodes = 1) | Q(has_primary = 1.0)) & Q(any_targets = None))
+                    any_targets = Max('volumenode__managedtargetmount__target__not_deleted'),
+                    has_primary = Max('volumenode__primary'),
+                    num_volumenodes = Count('volumenode')
+                ).filter((Q(num_volumenodes = 1) | Q(has_primary = 1.0)) & Q(any_targets = None))
 
     def get_kind(self):
         """:return: A string or unicode string which is a human readable noun corresponding
@@ -289,11 +279,14 @@ class Lun(models.Model):
 
     def _get_label(self):
         if not self.storage_resource_id:
-            if self.lunnode_set.count():
-                lunnode = self.lunnode_set.all()[0]
-                return "%s:%s" % (lunnode.host, lunnode.path)
+            if self.label:
+                return self.label
             else:
-                return ""
+                if self.volumenode_set.count():
+                    volumenode = self.volumenode_set.all()[0]
+                    return "%s:%s" % (volumenode.host, volumenode.path)
+                else:
+                    return ""
 
         # TODO: this is a link to the local e.g. ScsiDevice resource: to get the
         # best possible name, we should follow back to VirtualDisk ancestors, and
@@ -308,38 +301,32 @@ class Lun(models.Model):
 
     def save(self, *args, **kwargs):
         self.label = self._get_label()
-        super(Lun, self,).save(*args, **kwargs)
+        super(Volume, self,).save(*args, **kwargs)
 
     def ha_status(self):
         """Tell the caller two things:
-         * is the Lun configured enough for use as a target?
+         * is the Volume configured enough for use as a target?
          * is the configuration (if present) HA?
          by returning one of 'unconfigured', 'configured-ha', 'configured-noha'
         """
-        lunnode_count = self.lunnode_set.count()
-        if not self.shareable:
-            if lunnode_count > 0:
-                return 'configured-noha'
-            else:
-                return 'unconfigured'
+        volumenode_count = self.volumenode_set.count()
+        primary_count = self.volumenode_set.filter(primary = True).count()
+        failover_count = self.volumenode_set.filter(primary = False, use = True).count()
+        if volumenode_count == 1 and primary_count == 0:
+            return 'configured-noha'
+        elif volumenode_count == 1 and primary_count > 0:
+            return 'configured-noha'
+        elif primary_count > 0 and failover_count == 0:
+            return 'configured-noha'
+        elif primary_count > 0 and failover_count > 0:
+            return 'configured-ha'
         else:
-            primary_count = self.lunnode_set.filter(primary = True).count()
-            failover_count = self.lunnode_set.filter(primary = False, use = True).count()
-            if lunnode_count == 1 and primary_count == 0:
-                return 'configured-noha'
-            elif lunnode_count == 1 and primary_count > 0:
-                return 'configured-noha'
-            elif primary_count > 0 and failover_count == 0:
-                return 'configured-noha'
-            elif primary_count > 0 and failover_count > 0:
-                return 'configured-ha'
-            else:
-                # Has no LunNodes, or has >1 but no primary
-                return 'unconfigured'
+            # Has no VolumeNodes, or has >1 but no primary
+            return 'unconfigured'
 
 
-class LunNode(models.Model):
-    lun = models.ForeignKey(Lun)
+class VolumeNode(models.Model):
+    volume = models.ForeignKey(Volume)
     host = models.ForeignKey(ManagedHost)
     path = models.CharField(max_length = 512, help_text = "Device node path, e.g. '/dev/sda/'")
 
@@ -363,9 +350,9 @@ class LunNode(models.Model):
 
     def pretty_string(self):
         from chroma_core.lib.util import sizeof_fmt
-        lun_name = self.lun.get_label()
-        if lun_name:
-            short_name = lun_name
+        volume_label = self.volume.get_label()
+        if volume_label:
+            short_name = volume_label
         elif self.path.startswith('/dev/disk/by-path/'):
             short_name = self.path.replace('/dev/disk/by-path/', '', 1)
 
@@ -394,7 +381,7 @@ class LunNode(models.Model):
         else:
             short_name = self.path
 
-        size = self.lun.size
+        size = self.volume.size
         if size:
             human_size = sizeof_fmt(size)
         else:
@@ -410,7 +397,8 @@ class LNetConfiguration(StatefulObject):
     host = models.OneToOneField('ManagedHost')
 
     def get_nids(self):
-        assert(self.state == 'nids_known')
+        if self.state != 'nids_known':
+            raise ValueError("Nids not known yet for host %s" % self.host)
         return [n.nid_string for n in self.nid_set.all()]
 
     def __str__(self):
@@ -552,26 +540,49 @@ class LearnDevicesStep(Step):
 
     def run(self, kwargs):
         # Get the device-scan output
+        from chroma_core.models import ManagedHost, AgentSession
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        updates = self.invoke_agent(host, "device-plugin")
+        try:
+            del updates['lustre']
+        except KeyError:
+            pass
+
+        # Fake a session as if the agent had reported in
+        from chroma_core.lib.storage_plugin import messaging
+        session, created = AgentSession.objects.get_or_create(host = host)
+        messaging.simple_send('agent', {
+                    "session_id": session.session_id,
+                    "host_id": host.id,
+                    "updates": updates
+            })
+
+        from chroma_core.lib.storage_plugin.daemon import AgentDaemonRpc
+        AgentDaemonRpc().await_session(kwargs['host_id'])
+
+
+class CheckClockStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        # Get the device-scan output
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        device_info = self.invoke_agent(host, "device-scan")
+        agent_time_str = self.invoke_agent(host, "get-time")
+        agent_time = dateutil.parser.parse(agent_time_str)
 
-        # Insert it as a request_id=None response
-        from chroma_core.lib.storage_plugin.messaging import PluginResponse
-        PluginResponse.send('linux', host.fqdn, None, device_info)
+        # Get a tz-aware datetime object
+        server_time = datetime.datetime.utcnow()
+        from dateutil import tz
+        server_time = server_time.replace(tzinfo=tz.tzutc())
 
-        # Create a HydraHostProxy for the storage plugin framework to use
-        # FIXME: reinstate virtual_machine (it's passed into create_from_string)
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        storage_plugin_manager.create_root_resource('linux',
-                'HydraHostProxy', host_id = host.pk,
-                virtual_machine = None)
+        if agent_time > server_time:
+            if (agent_time - server_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
+                raise RuntimeError("Host %s clock is fast.  agent time %s, server time %s" % (host, agent_time, server_time))
 
-        # Now wait for the storage daemon to pick up the resource and do its thing
-        from chroma_core.lib.storage_plugin.daemon import DaemonRpc
-        from chroma_core.lib.storage_plugin.query import ResourceQuery
-        record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = kwargs['host_id'])
-        DaemonRpc().start_session(record.pk)
+        if server_time > agent_time:
+            if (server_time - agent_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
+                raise RuntimeError("Host %s clock is slow.  agent time %s, server time %s" % (host, agent_time, server_time))
 
 
 class SetupHostJob(Job, StateChangeJob):
@@ -587,6 +598,7 @@ class SetupHostJob(Job, StateChangeJob):
         return [(LearnHostnameStep, {'host_id': self.managed_host.pk}),
                 (ConfigureRsyslogStep, {'host_id': self.managed_host.pk}),
                 (SetServerConfStep, {'host_id': self.managed_host.pk}),
+                (CheckClockStep, {'host_id': self.managed_host.pk}),
                 (LearnDevicesStep, {'host_id': self.managed_host.pk})]
 
     class Meta:
@@ -742,12 +754,10 @@ class DeleteHostStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.lib.storage_plugin.query import ResourceQuery
         from chroma_core.models import StorageResourceRecord
+        from chroma_core.lib.storage_plugin.daemon import AgentDaemonRpc
         try:
-            record = ResourceQuery().get_record_by_attributes('linux', 'HydraHostProxy', host_id = kwargs['host_id'])
-            from chroma_core.lib.storage_plugin.daemon import DaemonRpc
-            DaemonRpc().remove_resource(record.pk)
+            AgentDaemonRpc().remove_host_resources(kwargs['host_id'])
         except StorageResourceRecord.DoesNotExist:
             # This is allowed, to account for the case where we submit the request_remove_resource,
             # then crash, then get restarted.

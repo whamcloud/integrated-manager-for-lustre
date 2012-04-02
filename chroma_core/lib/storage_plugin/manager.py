@@ -6,13 +6,12 @@
 
 """This module defines StoragePluginManager which loads and provides
 access to StoragePlugins and their StorageResources"""
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, ScannableResource
 
-from chroma_core.lib.storage_plugin.resource import StorageResource, ScannableResource
-from chroma_core.lib.storage_plugin.plugin import StoragePlugin
+from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
 from chroma_core.models.storage_plugin import StoragePluginRecord, StorageResourceClassStatistic
 from chroma_core.models.storage_plugin import StorageResourceRecord, StorageResourceClass
-from django.db import transaction
 
 
 class PluginNotFound(Exception):
@@ -20,7 +19,7 @@ class PluginNotFound(Exception):
 
 
 class LoadedResourceClass(object):
-    """Convenience store of introspected information about StorageResource
+    """Convenience store of introspected information about BaseStorageResource
        subclasses from loaded modules."""
     def __init__(self, resource_class, resource_class_id):
         self.resource_class = resource_class
@@ -30,11 +29,20 @@ class LoadedResourceClass(object):
 class LoadedPlugin(object):
     """Convenience store of introspected information about loaded
        plugin modules."""
-    def __init__(self, plugin_manager, module, plugin_class):
+    def __init__(self, plugin_manager, module, module_name, plugin_class):
+        # Populate _resource_classes from all BaseStorageResource in the same module
+        # (or leave it untouched if the plugin author overrode it)
+        if not hasattr(plugin_class, '_resource_classes'):
+            import inspect
+            plugin_class._resource_classes = []
+            for name, cls in inspect.getmembers(module):
+                if inspect.isclass(cls) and issubclass(cls, BaseStorageResource) and cls != BaseStorageResource:
+                    plugin_class._resource_classes.append(cls)
+
         # Map of name string to class
         self.resource_classes = {}
         self.plugin_class = plugin_class
-        self.plugin_record, created = StoragePluginRecord.objects.get_or_create(module_name = module)
+        self.plugin_record, created = StoragePluginRecord.objects.get_or_create(module_name = module_name)
         if created:
             self.plugin_record.internal = plugin_class.internal
             self.plugin_record.save()
@@ -55,6 +63,7 @@ class LoadedPlugin(object):
                         name = name)
 
             plugin_manager.resource_class_id_to_class[vrc.id] = cls
+            plugin_manager.resource_class_class_to_id[cls] = vrc.id
             self.resource_classes[cls.__name__] = LoadedResourceClass(cls, vrc.id)
             if issubclass(cls, ScannableResource):
                 self.scannable_resource_classes.append(cls.__name__)
@@ -63,13 +72,19 @@ class LoadedPlugin(object):
 class StoragePluginManager(object):
     def __init__(self):
         self.loaded_plugins = {}
-        self.plugin_sessions = {}
 
         self.resource_class_id_to_class = {}
+        self.resource_class_class_to_id = {}
 
         from settings import INSTALLED_STORAGE_PLUGINS
         for plugin in INSTALLED_STORAGE_PLUGINS:
             self.load_plugin(plugin)
+
+    def get_resource_class_id(self, klass):
+        try:
+            return self.resource_class_class_to_id[klass]
+        except KeyError:
+            raise PluginNotFound()
 
     def get_resource_class_by_id(self, id):
         try:
@@ -105,36 +120,17 @@ class StoragePluginManager(object):
 
         return class_records
 
-    @transaction.commit_on_success
-    def create_root_resource(self, plugin_mod, resource_class_name, **kwargs):
-        storage_plugin_log.debug("create_root_resource %s %s %s" % (plugin_mod, resource_class_name, kwargs))
-        # Try to find the resource class in the plugin module
-        resource_class, resource_class_id = self.get_plugin_resource_class(plugin_mod, resource_class_name)
-
-        # Construct a record
-        record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, kwargs)
-
-        # XXX should we let people modify root records?  e.g. change the IP
-        # address of a controller rather than deleting it, creating a new
-        # one and letting the pplugin repopulate us with 'new' resources?
-        # This will present the challenge of what to do with instances of
-        # StorageResource subclasses which are already present in running plugins.
-
-        storage_plugin_log.debug("create_root_resource created %d" % (record.id))
-        return record
-
     def register_plugin(self, plugin_instance):
-        """Register a particular instance of a StoragePlugin"""
+        """Register a particular instance of a BaseStoragePlugin"""
         # FIXME: session ID not really used for anything, it's a vague
         # nod to the future remote-run plugins.
         session_id = plugin_instance.__class__.__name__
 
-        self.plugin_sessions[session_id] = plugin_instance
         storage_plugin_log.info("Registered plugin instance %s with id %s" % (plugin_instance, session_id))
         return session_id
 
     def get_plugin_resource_class(self, plugin_module, resource_class_name):
-        """Return a StorageResource subclass"""
+        """Return a BaseStorageResource subclass"""
         try:
             loaded_plugin = self.loaded_plugins[plugin_module]
         except KeyError:
@@ -155,20 +151,23 @@ class StoragePluginManager(object):
                 yield (loaded_res.resource_class_id, loaded_res.resource_class)
 
     def get_plugin_class(self, module):
-        return self.loaded_plugins[module].plugin_class
+        try:
+            return self.loaded_plugins[module].plugin_class
+        except KeyError:
+            raise PluginNotFound(module)
 
-    def _load_plugin(self, module_name, plugin_klass):
+    def _load_plugin(self, module, module_name, plugin_klass):
         storage_plugin_log.debug("_load_plugin %s %s" % (module_name, plugin_klass))
-        self.loaded_plugins[module_name] = LoadedPlugin(self, module_name, plugin_klass)
+        self.loaded_plugins[module_name] = LoadedPlugin(self, module, module_name, plugin_klass)
 
     def load_plugin(self, module):
-        """Load a StoragePlugin class from a module given a
+        """Load a BaseStoragePlugin class from a module given a
            python path like chroma_core.lib.lvm',
            or simply return it if it was already loaded.  Note that the
-           StoragePlugin within the module will not be instantiated when this
+           BaseStoragePlugin within the module will not be instantiated when this
            returns, caller is responsible for instantiating it.
 
-           @return A subclass of StoragePlugin"""
+           @return A subclass of BaseStoragePlugin"""
         if module in self.loaded_plugins:
             raise RuntimeError("Duplicate storage plugin module %s" % module)
 
@@ -181,22 +180,23 @@ class StoragePluginManager(object):
             plugin_name = comp
         plugin_module = mod
 
-        # Find all StoragePlugin subclasses in the module
+        # Find all BaseStoragePlugin subclasses in the module
+        from chroma_core.lib.storage_plugin.api.plugin import Plugin
         plugin_klasses = []
         import inspect
         for name, cls in inspect.getmembers(plugin_module):
-            if inspect.isclass(cls) and issubclass(cls, StoragePlugin) and cls != StoragePlugin:
+            if inspect.isclass(cls) and issubclass(cls, BaseStoragePlugin) and cls != BaseStoragePlugin and cls != Plugin:
                 plugin_klasses.append(cls)
 
-        # Make sure we have exactly one StoragePlugin subclass
+        # Make sure we have exactly one BaseStoragePlugin subclass
         if len(plugin_klasses) > 1:
-            raise RuntimeError("Module %s defines more than one StoragePlugin: %s!" % (module, plugin_klasses))
+            raise RuntimeError("Module %s defines more than one BaseStoragePlugin: %s!" % (module, plugin_klasses))
         elif len(plugin_klasses) == 0:
-            raise RuntimeError("Module %s does not define a StoragePlugin!" % module)
+            raise RuntimeError("Module %s does not define a BaseStoragePlugin!" % module)
         else:
             plugin_klass = plugin_klasses[0]
 
-        # Hook in a logger to the StoragePlugin subclass
+        # Hook in a logger to the BaseStoragePlugin subclass
         import logging
         import logging.handlers
         import os
@@ -211,16 +211,7 @@ class StoragePluginManager(object):
             log.setLevel(logging.WARNING)
         plugin_klass.log = log
 
-        # Populate _resource_classes from all StorageResource in the same module
-        # (or leave it untouched if the plugin author overrode it)
-        if not hasattr(plugin_klass, '_resource_classes'):
-            import inspect
-            plugin_klass._resource_classes = []
-            for name, cls in inspect.getmembers(plugin_module):
-                if inspect.isclass(cls) and issubclass(cls, StorageResource) and cls != StorageResource:
-                    plugin_klass._resource_classes.append(cls)
-
-        self._load_plugin(plugin_name, plugin_klass)
+        self._load_plugin(plugin_module, plugin_name, plugin_klass)
         return plugin_klass
 
 

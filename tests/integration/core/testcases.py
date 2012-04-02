@@ -197,15 +197,17 @@ class ChromaIntegrationTestCase(TestCase):
                         lun_node['path'], config_device_paths)
                 )
 
-    def create_filesystem(self, verify_successful=True, **kwargs):
-        for param in ['mgt_id', 'mgt_lun_id', 'conf_params']:
-            # some params can be empty strings, but have to be present.
-            if not param in kwargs:
-                kwargs[param] = ''
+    def create_filesystem(self, name, mgt_volume_id, mdt_volume_id, ost_volume_ids, conf_params = {}, verify_successful = True):
+        args = {}
+        args['name'] = name
+        args['mgt'] = {'volume_id': mgt_volume_id}
+        args['mdt'] = {'volume_id': mdt_volume_id}
+        args['osts'] = [{'volume_id': id} for id in ost_volume_ids]
+        args['conf_params'] = conf_params
 
         response = self.hydra_server.post(
             '/api/filesystem/',
-            body = kwargs
+            body = args
         )
 
         self.assertTrue(response.successful, response.text)
@@ -235,11 +237,11 @@ class ChromaIntegrationTestCase(TestCase):
             )
             self.assertRegexpMatches(
                 configuration,
-                "primitive %s-" % kwargs['name']
+                "primitive %s-" % args['name']
             )
             self.assertRegexpMatches(
                 configuration,
-                "id=\"%s-" % kwargs['name']
+                "id=\"%s-" % args['name']
             )
 
         return filesystem_id
@@ -292,5 +294,5 @@ class ChromaIntegrationTestCase(TestCase):
         # TODO: read back the size of the filesystem first and don't exceed its size
         self.remote_command(
             client,
-            "dd if=/dev/zero of=/mnt/%s/test.dat bs=1K count=500K" % filesystem_name
+            "dd if=/dev/zero of=/mnt/%s/test.dat bs=1K count=100K" % filesystem_name
         )

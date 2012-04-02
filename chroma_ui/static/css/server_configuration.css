@@ -1,4 +1,9 @@
 
+
+div.add_host_wizard {
+    padding: 12px;
+}
+
 td.success {
     background-image: url('../images/icon_tick.png');
     background-repeat: no-repeat;

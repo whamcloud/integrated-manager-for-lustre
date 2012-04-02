@@ -5,7 +5,7 @@ import django.contrib.auth as auth
 import settings
 
 from chroma_core.models import ManagedHost, ManagedTarget, ManagedFilesystem, StorageResourceRecord
-from chroma_core.models import Job, Command, Lun, LunNode
+from chroma_core.models import Job, Command, Volume, VolumeNode
 
 
 def setup_groups(sender, **kwargs):
@@ -24,8 +24,8 @@ def setup_groups(sender, **kwargs):
         grant_write(fsadmin_group, StorageResourceRecord)
         grant_write(fsadmin_group, Job)
         grant_write(fsadmin_group, Command)
-        grant_write(fsadmin_group, Lun)
-        grant_write(fsadmin_group, LunNode)
+        grant_write(fsadmin_group, Volume)
+        grant_write(fsadmin_group, VolumeNode)
         auth.models.Group.objects.create(name = "filesystem_users")
 
     if settings.DEBUG and auth.models.User.objects.count() == 0:

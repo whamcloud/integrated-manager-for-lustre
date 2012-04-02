@@ -7,10 +7,10 @@ class TestFSTransitions(JobTestCaseWithHost):
         super(TestFSTransitions, self).setUp()
 
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
-        self.mgt = ManagedMgs.create_for_lun(self._test_lun(self.host).id, name = "MGS")
+        self.mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
         self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
-        self.mdt = ManagedMdt.create_for_lun(self._test_lun(self.host).id, filesystem = self.fs)
-        self.ost = ManagedOst.create_for_lun(self._test_lun(self.host).id, filesystem = self.fs)
+        self.mdt = ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
+        self.ost = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
 
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unformatted')
         self.assertEqual(ManagedMdt.objects.get(pk = self.mdt.pk).state, 'unformatted')

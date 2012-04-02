@@ -216,3 +216,19 @@ class MeasuredEntity(object):
         return self._metrics
 
     metrics = property(__get_metrics)
+
+
+def await_async_result(async_result):
+    from celery.result import EagerResult
+    if not isinstance(async_result, EagerResult):
+        # Rely on server to time out the request if this takes too
+        # long for some reason
+        complete = False
+        while not complete:
+            with transaction.commit_manually():
+                transaction.commit()
+                if async_result.ready():
+                    complete = True
+                transaction.commit()
+
+    return async_result.get()

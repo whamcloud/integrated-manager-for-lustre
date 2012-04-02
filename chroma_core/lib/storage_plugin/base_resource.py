@@ -1,22 +1,31 @@
-
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
-
-"""This modules defines the StorageResource class, which StoragePlugins subclass use
-to define their system elements"""
-
-from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
-from chroma_core.lib.storage_plugin.statistics import BaseStatistic
-from chroma_core.lib.storage_plugin.alert_conditions import AlertCondition
-
 from collections import defaultdict
+from exceptions import KeyError, AttributeError, RuntimeError, ValueError
 import threading
+from chroma_core.lib.storage_plugin.base_alert_condition import AlertCondition
+from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
+from chroma_core.lib.storage_plugin.base_statistic import BaseStatistic
+from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 
 
-class Statistic(object):
+class ResourceIdentifier(object):
+    def __init__(self, *args):
+        args = list(args)
+        assert(len(args) > 0)
+        self.id_fields = args
+
+
+class BaseGlobalId(ResourceIdentifier):
+    pass
+
+
+class BaseAutoId(BaseGlobalId):
     def __init__(self):
-        pass
+        super(BaseAutoId, self).__init__('chroma_auto_id')
+    pass
+
+
+class BaseScopedId(ResourceIdentifier):
+    pass
 
 
 class StorageResourceMetaclass(type):
@@ -27,9 +36,9 @@ class StorageResourceMetaclass(type):
         dct['_alert_conditions'] = {}
         dct['_alert_classes'] = {}
 
-        # Lists of attribute names
-        dct['_provides'] = []
-        dct['_subscribes'] = []
+        # FIXME: a pretty way of letting the user specify subscriptions (in a Meta?)
+        if not '_relations' in dct:
+            dct['_relations'] = []
 
         for base in bases:
             if hasattr(base, '_storage_attributes'):
@@ -38,15 +47,13 @@ class StorageResourceMetaclass(type):
                 dct['_storage_statistics'].update(base._storage_statistics)
             if hasattr(base, '_alert_conditions'):
                 dct['_alert_conditions'].update(base._alert_conditions)
+            if hasattr(base, '_relations'):
+                dct['_relations'].extend(base._relations)
 
         for field_name, field_obj in dct.items():
             if isinstance(field_obj, BaseResourceAttribute):
                 dct['_storage_attributes'][field_name] = field_obj
                 del dct[field_name]
-                if field_obj.provide:
-                    dct['_provides'].append((field_name, field_obj.provide))
-                if field_obj.subscribe:
-                    dct['_subscribes'].append((field_name, field_obj.subscribe))
             elif isinstance(field_obj, BaseStatistic):
                 dct['_storage_statistics'][field_name] = field_obj
                 del dct[field_name]
@@ -60,11 +67,17 @@ class StorageResourceMetaclass(type):
                     dct['_alert_classes'][alert_class] = field_obj
 
                 del dct[field_name]
+            elif isinstance(field_obj, BaseAutoId):
+                from chroma_core.lib.storage_plugin.api.attributes import String
+                field_obj = String(hidden = True)
+                dct['_storage_attributes']['chroma_auto_id'] = field_obj
+
+        log.debug("%s: %s" % (name, dct['_storage_attributes']))
 
         return super(StorageResourceMetaclass, cls).__new__(cls, name, bases, dct)
 
 
-class StorageResource(object):
+class BaseStorageResource(object):
     __metaclass__ = StorageResourceMetaclass
 
     icon = 'default'
@@ -76,6 +89,10 @@ class StorageResource(object):
     @classmethod
     def encode(cls, attr, value):
         return cls._storage_attributes[attr].encode(value)
+
+    @classmethod
+    def attr_model_class(cls, attr):
+        return cls._storage_attributes[attr].model_class
 
     @classmethod
     def decode(cls, attr, value):
@@ -92,23 +109,12 @@ class StorageResource(object):
         for k in self._storage_dict.keys():
             yield k, self.format(k)
 
-    def get_attribute_items(self):
-        result = {}
-        attr_props = self.get_all_attribute_properties()
-        for name, props in attr_props:
-            val = getattr(self, name)
-            if isinstance(val, StorageResource):
-                raw = val._handle
-            else:
-                raw = val
-            result[name] = {'raw': raw, 'markup': props.to_markup(val), 'label': props.get_label(name)}
-        return result
-
     @classmethod
     def get_all_attribute_properties(cls):
+        """Returns a list of (name, BaseAttribute), one for each attribute.  Excludes hidden attributes."""
         attr_name_pairs = cls._storage_attributes.items()
         attr_name_pairs.sort(lambda a, b: cmp(a[1].creation_counter, b[1].creation_counter))
-        return attr_name_pairs
+        return [pair for pair in attr_name_pairs if not pair[1].hidden]
 
     @classmethod
     def get_charts(cls):
@@ -168,10 +174,6 @@ class StorageResource(object):
         # Blackhawk down!
         return deltas
 
-    @classmethod
-    def get_columns(cls):
-        return [{'name': name, 'label': props.get_label(name)} for (name, props) in cls._storage_attributes.items()]
-
     def to_json(self, stack = []):
         dct = {}
         dct['id'] = self._handle
@@ -194,7 +196,7 @@ class StorageResource(object):
     def get_label(self, ancestors=[]):
         """Subclasses should implement a function which formats a string for
         presentation, possibly in a tree display as a child of 'parent' (a
-        StorageResource instance) or if parent is None then for display
+        BaseStorageResource instance) or if parent is None then for display
         on its own."""
         id = self.id_tuple()
         if len(id) == 1:
@@ -251,6 +253,7 @@ class StorageResource(object):
                 if attr.optional:
                     return None
                 else:
+                    log.error("Missing attribute %s, %s" % (key, self._storage_dict))
                     raise AttributeError("attribute %s not found" % key)
 
     @classmethod
@@ -258,10 +261,16 @@ class StorageResource(object):
         """Serialized ID for use in StorageResourceRecord.storage_id_str"""
         identifier_val = []
         for f in cls.identifier.id_fields:
+            if not f in cls._storage_attributes:
+                raise RuntimeError("Invalid attribute %s named in identifier for %s" % (f, cls))
+
             if f in attrs:
                 identifier_val.append(attrs[f])
             else:
-                identifier_val.append(None)
+                if cls._storage_attributes[f].optional:
+                    identifier_val.append(None)
+                else:
+                    raise RuntimeError("Missing ID attribute '%s'" % f)
         return tuple(identifier_val)
 
     def id_tuple(self):
@@ -319,23 +328,11 @@ class StorageResource(object):
             return cls.__name__
 
 
-class GlobalId(object):
-    """An Id which is globally unique"""
-    def __init__(self, *args):
-        args = list(args)
-        assert(len(args) > 0)
-        self.id_fields = args
-
-
-class ScannableId(GlobalId):
-    """An Id which is unique within a scannable resource"""
-    pass
-
-
 class ScannableResource(object):
-    """Used for marking which StorageResource subclasses are for scanning (like couplets, hosts)"""
+    """Used for marking which BaseStorageResource subclasses are for scanning (like couplets, hosts)"""
     pass
 
 
-class ScannableStorageResource(StorageResource, ScannableResource):
+class HostsideResource(object):
+    """Resources which are the agent-side equivalent of a ScannableResource"""
     pass

@@ -18,7 +18,7 @@ from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_api.utils import custom_response, ConfParamResource, dehydrate_command
+from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
 from chroma_api.fuzzy_lookups import FuzzyLookupFailed, FuzzyLookupException, target_vol_data
 
 # Some lookups for the three 'kind' letter strings used
@@ -42,7 +42,7 @@ class TargetValidation(Validation):
         return errors
 
 
-class TargetResource(ConfParamResource):
+class TargetResource(MetricResource, ConfParamResource):
     """
     Lustre targets: MGTs, OSTs and MDTs.
 
@@ -58,7 +58,7 @@ class TargetResource(ConfParamResource):
 
     kind = fields.CharField(help_text = "Type of target, one of %s" % KIND_TO_KLASS.keys())
 
-    lun_name = fields.CharField(attribute = 'lun__label',
+    volume_name = fields.CharField(attribute = 'volume__label',
             help_text = "The ``label`` attribute of the Volume on which this target exists")
     primary_server_name = fields.CharField(help_text = "Presentation convenience.  Human\
             readable label for the primary server for this target")
@@ -70,8 +70,6 @@ class TargetResource(ConfParamResource):
     active_host_uri = fields.CharField(null = True, help_text = "URI to the host on which\
             this target is currently started")
 
-    volumes = fields.ListField(help_text = "A list of target volumes (e.g. primary:/path/to/device[,failover:/path/to/device,failover...])")
-
     def content_type_id_to_kind(self, id):
         if not hasattr(self, 'CONTENT_TYPE_ID_TO_KIND'):
             self.CONTENT_TYPE_ID_TO_KIND = dict([(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()])
@@ -81,21 +79,25 @@ class TargetResource(ConfParamResource):
     class Meta:
         queryset = ManagedTarget.objects.all()
         resource_name = 'target'
-        excludes = ['not_deleted']
+        excludes = ['not_deleted', 'bytes_per_inode']
         filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'id': ['exact', 'in']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        ordering = ['lun_name', 'name']
+        ordering = ['volume_name', 'name']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
         validation = TargetValidation()
-        readonly = ['active_host_uri', 'failover_server_name', 'lun_name', 'primary_server_name', 'active_host_name', 'filesystems', 'name', 'uuid']
+        readonly = ['active_host_uri', 'failover_server_name', 'volume_name', 'primary_server_name', 'active_host_name', 'filesystems', 'name', 'uuid']
 
     def override_urls(self):
+        urls = super(TargetResource, self).override_urls()
         from django.conf.urls.defaults import url
-        return [
+        urls.extend([
             url(r"^(?P<resource_name>%s)/(?P<pk>\d+)/resource_graph/$" % self._meta.resource_name, self.wrap_view('get_resource_graph'), name="api_get_resource_graph"),
-        ]
+            #url(r"^(?P<resource_name>%s)/metric/$" % self._meta.resource_name, self.wrap_view('get_metric_list'), name="get_metric_list"),
+            #url(r"^(?P<resource_name>%s)/(?P<pk>\d+)/metric/$" % self._meta.resource_name, self.wrap_view('get_metric_detail'), name="get_metric_detail"),
+        ])
+        return urls
 
     def dehydrate_filesystems(self, bundle):
         if hasattr(bundle.obj, 'managedmgs'):
@@ -114,9 +116,6 @@ class TargetResource(ConfParamResource):
             return bundle.obj.filesystem.name
         except AttributeError:
             return None
-
-    #def dehydrate_lun_name(self, bundle):
-    #    return bundle.obj.lun.label
 
     def dehydrate_primary_server_name(self, bundle):
         return bundle.obj.primary_server().pretty_name()
@@ -139,10 +138,6 @@ class TargetResource(ConfParamResource):
             return HostResource().get_resource_uri(bundle.obj.active_mount.host)
         else:
             return None
-
-    def dehydrate_volumes(self, bundle):
-        # TODO: This could be more useful as an information-rich field
-        return []
 
     def hydrate_lun_ids(self, bundle):
         if 'lun_ids' in bundle.data:
@@ -216,7 +211,7 @@ class TargetResource(ConfParamResource):
         # for our customized Target resource.  As a convention, we'll
         # abstract the logic for mangling the incoming bundle data into
         # hydrate_FIELD methods and call them by hand.
-        for field in ['lun_ids', 'filesystem_id']:
+        for field in ['volume_id', 'filesystem_id']:
             method = getattr(self, "hydrate_%s" % field, None)
 
             if method:
@@ -226,8 +221,11 @@ class TargetResource(ConfParamResource):
         if not kind in KIND_TO_KLASS:
             bundle.data_errors['kind'].append("Invalid target type '%s' (choose from [%s])" % (kind, ",".join(KIND_TO_KLASS.keys())))
 
-        lun_ids = bundle.data['lun_ids']
+        volume_id = bundle.data['volume_id']
         filesystem_id = bundle.data.get('filesystem_id', None)
+
+        # TODO: when creating MGS, apply same validation as filesystem creation does
+        # to refuse to create two MGS on one server
 
         # Should really only be doing one validation pass, but this works
         # OK for now.  It's better than raising a 404 or duplicating the
@@ -238,8 +236,6 @@ class TargetResource(ConfParamResource):
             bundle.data_errors['filesystem_id'].append("Cannot specify filesystem_id when creating MGTs")
         elif KIND_TO_KLASS[kind] == ManagedMdt:
             bundle.data_errors['kind'].append("Cannot create MDTs independently of filesystems")
-        elif len(lun_ids) < 1:
-            bundle.data_errors['volumes'].append("Require at least one LUN to create a target")
 
         if KIND_TO_KLASS[kind] == ManagedOst:
             fs = ManagedFilesystem.objects.get(id=filesystem_id)
@@ -249,21 +245,14 @@ class TargetResource(ConfParamResource):
 
         self.is_valid(bundle, request)
 
-        targets = []
         with transaction.commit_on_success():
-            for lun_id in lun_ids:
-                target_klass = KIND_TO_KLASS[kind]
-                target = target_klass.create_for_lun(lun_id, **create_kwargs)
-                targets.append(target)
+            target_klass = KIND_TO_KLASS[kind]
+            target = target_klass.create_for_volume(volume_id, **create_kwargs)
 
-        message = "Creating %s" % kind
-        if len(lun_ids) > 1:
-            message += "s"
-
-        command = Command.set_state([(t, 'mounted') for t in targets], "Creating %s%s" % (kind, "s" if len(lun_ids) > 1 else ""))
+        command = Command.set_state([(target, 'mounted')], "Creating %s" % kind)
         raise custom_response(self, request, http.HttpAccepted,
                 {'command': dehydrate_command(command),
-                 'targets': [self.full_dehydrate(self.build_bundle(obj = t)).data for t in targets]})
+                 'target': self.full_dehydrate(self.build_bundle(obj = target)).data})
 
     def get_resource_graph(self, request, **kwargs):
         target = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
@@ -279,7 +268,7 @@ class TargetResource(ConfParamResource):
         id_edges = []
         for tm in target.managedtargetmount_set.all():
             lustre_alerts |= set(AlertState.filter_by_item(tm))
-            lun_node = tm.block_device
+            lun_node = tm.volume_node
             if lun_node.storage_resource:
                 parent_record = lun_node.storage_resource
                 from chroma_core.lib.storage_plugin.query import ResourceQuery

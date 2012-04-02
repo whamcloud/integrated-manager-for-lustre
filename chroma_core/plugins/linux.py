@@ -2,110 +2,53 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-
-from chroma_core.lib.storage_plugin.plugin import StoragePlugin
-from chroma_core.lib.storage_plugin.resource import StorageResource, ScannableId, GlobalId, ScannableResource
-
-from chroma_core.lib.storage_plugin import attributes
-from chroma_core.lib.storage_plugin import builtin_resources
-from chroma_core.lib.storage_plugin import alert_conditions
-from chroma_core.lib.storage_plugin import statistics
-from chroma_core.lib.storage_plugin import messaging
+from chroma_core.lib.storage_plugin.api import attributes
+from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
+from chroma_core.lib.storage_plugin.api.resources import Resource
+from chroma_core.lib.storage_plugin.api.plugin import Plugin
+from chroma_core.lib.storage_plugin.api.resources import   DeviceNode, LogicalDrive, StoragePool
 
 # This plugin is special, it uses Hydra's built-in infrastructure
 # in a way that third party plugins can't/shouldn't/mustn't
 from chroma_core.models import ManagedHost
+from chroma_core.lib.storage_plugin.base_resource import HostsideResource
+
+import re
 
 
-class DeviceNode(StorageResource):
-    # NB ideally we would get this from exploring the graph rather than
-    # tagging it onto each one, but this is simpler for now - jcs
-    host = attributes.ResourceReference()
-    path = attributes.PosixPath()
-    class_label = 'Device node'
-
-    def get_label(self):
-        path = self.path
-        strip_strings = ["/dev/",
-                         "/dev/mapper/",
-                         "/dev/disk/by-id/",
-                         "/dev/disk/by-path/"]
-        strip_strings.sort(lambda a, b: cmp(len(b), len(a)))
-        for s in strip_strings:
-            if path.startswith(s):
-                path = path[len(s):]
-        return "%s:%s" % (self.host.get_label(), path)
-
-
-class HydraHostProxy(StorageResource, ScannableResource):
-    # FIXME using address here is troublesome for hosts whose
-    # addresses might change.  However it is useful for doing
-    # an update_or_create on VMs discovered on controllers.  Hmm.
-    # I wonder if what I really want is a HostResource base and then
-    # subclasses for on-controller hosts (identified by controller+index)
-    # and separately for general hosts (identified by ManagedHost.pk)
-    identifier = GlobalId('host_id')
-
+class PluginAgentResources(Resource, HostsideResource):
+    identifier = GlobalId('host_id', 'plugin_name')
     host_id = attributes.Integer()
-    virtual_machine = attributes.ResourceReference(optional = True)
+    plugin_name = attributes.String()
 
     def get_label(self, parent = None):
         host = ManagedHost._base_manager.get(pk=self.host_id)
         return "%s" % host
 
-# Things to offer the user when formatting
-# all of the below must NOT be offered if they have an LVM VG descendent
-# or a NonLustreFilesystem descendent
-# * ScsiDevice (i.e. shared LUNs like DDN VDs) IF it has no LV descendents
-# * UnsharedDeviceNode (i.e. IDE or virtio devices)
-# * LvmVolume
-#
-# For any of the above, we must also work out their leaf device nodes, which
-# should be just the leaf resources.
 
-HACK_TEST_STATS = False
+class ScsiDevice(LogicalDrive):
+    identifier = GlobalId('serial_80', 'serial_83')
 
-
-class ScsiDevice(builtin_resources.LogicalDrive):
-    identifier = GlobalId('serial')
-
-    serial = attributes.String(subscribe = 'scsi_serial')
+    serial_80 = attributes.String()
+    serial_83 = attributes.String()
 
     class_label = "SCSI device"
 
-    if HACK_TEST_STATS:
-        test_stat = statistics.Gauge()
-        test_hist = statistics.BytesHistogram(bins = [(0, 256), (257, 512), (513, 2048), (2049, 8192)])
-        beef_alert = alert_conditions.AttrValAlertCondition('serial', warn_states = ['SQEMU    QEMU HARDDISK  WD-deadbeef0'], message = "Beef alert in sector 2!")
-
     def get_label(self, ancestors = []):
-        qemu_strip_hack = "SQEMU    QEMU HARDDISK  "
-
-        if self.serial.startswith(qemu_strip_hack):
-            # FIXME: this is a hack that I'm doing for demos because we're not getting SCSI serials in parts yet
-            return self.serial[len(qemu_strip_hack):]
-        elif self.serial[0] == 'S':
-            return self.serial[1:]
-        else:
-            return self.serial
-
-
-class UnsharedDeviceNode(DeviceNode):
-    """A device node whose underlying device has no SCSI ID
-    and is therefore assumed to be unshared"""
-    identifier = ScannableId('path')
-
-    class_label = "Local disk"
-
-    def get_label(self, ancestors = []):
-        if self.path.startswith("/dev/"):
-            return self.path[5:]
-        else:
-            return self.path
+        if self.serial_80:
+            QEMU_PREFIX = "SQEMU    QEMU HARDDISK  "
+            if self.serial_80.find(QEMU_PREFIX) == 0:
+                return self.serial_80[len(QEMU_PREFIX):]
+            elif self.serial_80[0] == 'S':
+                return self.serial_80[1:]
+            else:
+                return self.serial_80
+        elif self.serial_83:
+            return self.serial_83
 
 
-class UnsharedDevice(builtin_resources.LogicalDrive):
-    identifier = ScannableId('path')
+class UnsharedDevice(LogicalDrive):
+    identifier = ScopedId('path')
     # Annoying duplication of this from the node, but it really
     # is the closest thing we have to a real ID.
     path = attributes.PosixPath()
@@ -114,76 +57,83 @@ class UnsharedDevice(builtin_resources.LogicalDrive):
         return self.path
 
 
-class ScsiDeviceNode(DeviceNode):
-    """SCSI in this context is a catch-all to refer to
-    block devices which look like real disks to the host OS"""
-    identifier = ScannableId('path')
-    #class_label = "SCSI device node"
-    host = attributes.ResourceReference()
+class LinuxDeviceNode(DeviceNode):
+    identifier = ScopedId('path')
 
 
-class MultipathDeviceNode(DeviceNode):
-    identifier = ScannableId('path')
-    class_label = "Multipath device node"
-
-
-class LvmDeviceNode(DeviceNode):
-    identifier = ScannableId('path')
-    class_label = "LVM device node"
+class Partition(LogicalDrive):
+    identifier = GlobalId('container', 'number')
+    number = attributes.Integer()
+    container = attributes.ResourceReference()
 
     def get_label(self):
-        # LVM devices are only presented once per host,
-        # so just need to say which host this device node is for
-        return "%s" % (self.host.get_label())
+        return "%s-%s" % (self.container.get_label(), self.number)
 
 
-# FIXME: partitions should really be GlobalIds (they can be seen from more than
-# one host) where the ID is their number plus the a foreign key to the parent
-# ScsiDevice or UnsharedDevice(HYD-272)
-# TODO: include containng object get_label in partition get_label
-class Partition(builtin_resources.LogicalDrive):
-    identifier = ScannableId('path')
-    class_label = "Linux partition"
-    path = attributes.PosixPath()
-
-    def get_label(self):
-        return self.path
+class MdRaid(LogicalDrive):
+    identifier = GlobalId('uuid')
+    uuid = attributes.String()
 
 
-class PartitionDeviceNode(DeviceNode):
-    identifier = ScannableId('path')
-    class_label = "Linux partition"
-
-
-class LocalMount(StorageResource):
+class LocalMount(Resource):
     """A local filesystem consuming a storage resource -- reported so that
        hydra knows not to try and use the consumed resource for Lustre e.g.
        minor things like your root partition."""
-    identifier = ScannableId('mount_point')
+    identifier = ScopedId('mount_point')
 
     fstype = attributes.String()
     mount_point = attributes.String()
 
 
-class Linux(StoragePlugin):
+class LvmGroup(StoragePool):
+    identifier = GlobalId('uuid')
+
+    uuid = attributes.Uuid()
+    name = attributes.String()
+    size = attributes.Bytes()
+
+    icon = 'lvm_vg'
+    class_label = 'Volume group'
+
+    def get_label(self, parent = None):
+        return self.name
+
+
+class LvmVolume(LogicalDrive):
+    # Q: Why is this identified by LV UUID and VG UUID rather than just
+    #    LV UUID?  Isn't the LV UUID unique enough?
+    # A: We're matching LVM2's behaviour.  If you e.g. image a machine that
+    #    has some VGs and LVs, then if you want to disambiguate them you run
+    #    'vgchange -u' to get a new VG UUID.  However, there is no equivalent
+    #    command to reset LV uuid, because LVM finds two LVs with the same UUID
+    #    in VGs with different UUIDs to be unique enough.
+    identifier = GlobalId('uuid', 'vg')
+
+    vg = attributes.ResourceReference()
+    uuid = attributes.Uuid()
+    name = attributes.String()
+
+    icon = 'lvm_lv'
+    class_label = 'Logical volume'
+
+    def get_label(self, ancestors = []):
+        return "%s-%s" % (self.vg.name, self.name)
+
+
+class Linux(Plugin):
     internal = True
 
     def __init__(self, *args, **kwargs):
         super(Linux, self).__init__(*args, **kwargs)
 
-        self._scsi_devices = set()
-
     def teardown(self):
         self.log.debug("Linux.teardown")
 
-    # TODO: need to document that initial_scan may not kick off async operations, because
-    # the caller looks at overall resource state at exit of function.  If they eg
-    # want to kick off an async update thread they should do it at the first
-    # call to update_scan, or maybe we could give them a separate function for that.
-    def initial_scan(self, root_resource):
-        host = ManagedHost.objects.get(pk=root_resource.host_id)
+    def agent_session_continue(self, host_id, data):
+        pass
 
-        devices = messaging.plugin_rpc('linux', host, {})
+    def agent_session_start(self, host_id, data):
+        devices = data
 
         lv_block_devices = set()
         for vg, lv_list in devices['lvs'].items():
@@ -197,28 +147,33 @@ class Linux(StoragePlugin):
         for mp_name, mp in devices['mpath'].items():
             mpath_block_devices.add(mp['block_device'])
 
-        dm_block_devices = lv_block_devices | mpath_block_devices
+        special_block_devices = lv_block_devices | mpath_block_devices
+        for uuid, md_info in devices['mds'].items():
+            special_block_devices.add(md_info['block_device'])
 
-        # List of BDs with serial numbers that aren't devicemapper BDs
-        devs_by_serial = {}
+        def preferred_serial(bdev):
+            if bdev['serial_80']:
+                return bdev['serial_80']
+            elif bdev['serial_83']:
+                return bdev['serial_83']
+            else:
+                return None
+
+        # Create ScsiDevices
+        res_by_serial = {}
         for bdev in devices['devs'].values():
-            serial = bdev['serial']
-            if not bdev['major_minor'] in dm_block_devices:
-                if serial != None and not serial in devs_by_serial:
+            serial = preferred_serial(bdev)
+            if not bdev['major_minor'] in special_block_devices:
+                if serial != None and not serial in res_by_serial:
                     # NB it's okay to have multiple block devices with the same
                     # serial (multipath): we just store the serial+size once
-                    devs_by_serial[serial] = {
-                            'serial': serial,
-                            'size': bdev['size']
-                            }
+                    res, created = self.update_or_create(ScsiDevice,
+                            serial_80 = bdev['serial_80'],
+                            serial_83 = bdev['serial_83'],
+                            size = bdev['size'])
+                    res_by_serial[serial] = res
 
-        # Resources for devices with serial numbers
-        res_by_serial = {}
-        for dev in devs_by_serial.values():
-            res, created = self.update_or_create(ScsiDevice, serial = dev['serial'], size = dev['size'])
-            self._scsi_devices.add(res)
-            res_by_serial[dev['serial']] = res
-
+        # Create DeviceNodes for ScsiDevices and UnsharedDevices
         bdev_to_resource = {}
         for bdev in devices['devs'].values():
             # Partitions: we will do these in a second pass once their
@@ -226,23 +181,24 @@ class Linux(StoragePlugin):
             if bdev['parent'] != None:
                 continue
 
-            # DM devices: we will do these later
-            if bdev['major_minor'] in dm_block_devices:
+            # Don't create ScsiDevices for devicemapper, mdraid
+            if bdev['major_minor'] in special_block_devices:
                 continue
 
-            if bdev['serial'] != None:
-                lun_resource = res_by_serial[bdev['serial']]
-                res, created = self.update_or_create(ScsiDeviceNode,
+            serial = preferred_serial(bdev)
+            if serial != None:
+                lun_resource = res_by_serial[serial]
+                res, created = self.update_or_create(LinuxDeviceNode,
                                     parents = [lun_resource],
-                                    host = root_resource,
+                                    host_id = host_id,
                                     path = bdev['path'])
             else:
                 res, created = self.update_or_create(UnsharedDevice,
                         path = bdev['path'],
                         size = bdev['size'])
-                res, created = self.update_or_create(UnsharedDeviceNode,
+                res, created = self.update_or_create(LinuxDeviceNode,
                         parents = [res],
-                        host = root_resource,
+                        host_id = host_id,
                         path = bdev['path'])
             bdev_to_resource[bdev['major_minor']] = res
 
@@ -251,16 +207,16 @@ class Linux(StoragePlugin):
         # So we have to build a graph and then traverse it to populate our resources.
         for bdev in devices['devs'].values():
             if bdev['major_minor'] in lv_block_devices:
-                res, created = self.update_or_create(LvmDeviceNode,
-                                    host = root_resource,
+                res, created = self.update_or_create(LinuxDeviceNode,
+                                    host_id = host_id,
                                     path = bdev['path'])
             elif bdev['major_minor'] in mpath_block_devices:
-                res, created = self.update_or_create(MultipathDeviceNode,
-                                    host = root_resource,
+                res, created = self.update_or_create(LinuxDeviceNode,
+                                    host_id = host_id,
                                     path = bdev['path'])
             elif bdev['parent']:
-                res, created = self.update_or_create(PartitionDeviceNode,
-                        host = root_resource,
+                res, created = self.update_or_create(LinuxDeviceNode,
+                        host_id = host_id,
                         path = bdev['path'])
             else:
                 continue
@@ -273,11 +229,13 @@ class Linux(StoragePlugin):
 
             this_node = bdev_to_resource[bdev['major_minor']]
             parent_resource = bdev_to_resource[bdev['parent']]
+            number = int(re.search("(\d+)$", bdev['path']).group(1))
 
             partition, created = self.update_or_create(Partition,
                     parents = [parent_resource],
-                    size = bdev['size'],
-                    path = bdev['path'])
+                    container = parent_resource,
+                    number = number,
+                    size = bdev['size'])
 
             this_node.add_parent(partition)
 
@@ -323,6 +281,19 @@ class Linux(StoragePlugin):
             for p in mpath_parents:
                 mpath_bdev.add_parent(p)
 
+        for uuid, md_info in devices['mds'].items():
+            md_res, created = self.update_or_create(MdRaid,
+                    size = devices['devs'][md_info['block_device']]['size'],
+                    uuid = uuid)
+            node_res, created = self.update_or_create(LinuxDeviceNode,
+                    parents = [md_res],
+                    host_id = host_id,
+                    path = md_info['path'])
+            for drive_bd in md_info['drives']:
+                drive_res = bdev_to_resource[drive_bd]
+                md_res.add_parent(drive_res)
+            bdev_to_resource[md_info['block_device']] = node_res
+
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             bdev_resource = bdev_to_resource[bdev]
             self.update_or_create(LocalMount,
@@ -331,44 +302,4 @@ class Linux(StoragePlugin):
                     fstype = fstype)
 
     def update_scan(self, scannable_resource):
-        if HACK_TEST_STATS:
-            for scsi_dev in list(self._scsi_devices):
-                import random
-                num = random.randint(10, 20)
-                scsi_dev.test_stat = num
-                scsi_dev.test_hist = [random.randint(50, 100) for r in range(0, 4)]
-
-
-class LvmGroup(builtin_resources.StoragePool):
-    identifier = GlobalId('uuid')
-
-    uuid = attributes.Uuid()
-    name = attributes.String()
-    size = attributes.Bytes()
-
-    icon = 'lvm_vg'
-    class_label = 'Volume group'
-
-    def get_label(self, parent = None):
-        return self.name
-
-
-class LvmVolume(builtin_resources.LogicalDrive):
-    # Q: Why is this identified by LV UUID and VG UUID rather than just
-    #    LV UUID?  Isn't the LV UUID unique enough?
-    # A: We're matching LVM2's behaviour.  If you e.g. image a machine that
-    #    has some VGs and LVs, then if you want to disambiguate them you run
-    #    'vgchange -u' to get a new VG UUID.  However, there is no equivalent
-    #    command to reset LV uuid, because LVM finds two LVs with the same UUID
-    #    in VGs with different UUIDs to be unique enough.
-    identifier = GlobalId('uuid', 'vg')
-
-    vg = attributes.ResourceReference()
-    uuid = attributes.Uuid()
-    name = attributes.String()
-
-    icon = 'lvm_lv'
-    class_label = 'Logical volume'
-
-    def get_label(self, ancestors = []):
-        return "%s-%s" % (self.vg.name, self.name)
+        pass

@@ -1,4 +1,4 @@
-
+import datetime
 from django.test import TestCase
 import mock
 
@@ -32,9 +32,11 @@ class MockAgent(object):
             return self.mock_servers[self.host.address]['nodename']
         elif cmdline == "lnet-scan":
             return self.mock_servers[self.host.address]['nids']
+        elif cmdline == 'get-time':
+            return datetime.datetime.utcnow().isoformat() + "Z"
         elif cmdline.startswith("format-target"):
             import uuid
-            return {'uuid': uuid.uuid1().__str__()}
+            return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': 777}
         elif cmdline.startswith('start-target'):
             import re
             from chroma_core.models import ManagedTarget
@@ -55,16 +57,19 @@ class MockDaemonRpc():
 
 
 class JobTestCase(TestCase):
-    def _test_lun(self, host):
-        from chroma_core.models import Lun, LunNode
+    mock_servers = None
+    hosts = None
 
-        lun = Lun.objects.create(shareable = False)
+    def _test_lun(self, host):
+        from chroma_core.models import Volume, VolumeNode
+
+        volume = Volume.objects.create()
         primary = True
         for host in self.hosts:
-            LunNode.objects.create(lun = lun, host = host, path = "/fake/path/%s" % lun.id, primary = primary)
+            VolumeNode.objects.create(volume = volume, host = host, path = "/fake/path/%s" % volume.id, primary = primary)
             primary = False
 
-        return lun
+        return volume
 
     def setUp(self):
         # FIXME: have to do this before every test because otherwise
@@ -103,6 +108,12 @@ class JobTestCase(TestCase):
         self.old_plugin_response = chroma_core.lib.storage_plugin.messaging.PluginResponse
         chroma_core.lib.storage_plugin.messaging.PluginRequest = mock.Mock()
         chroma_core.lib.storage_plugin.messaging.PluginResponse = mock.Mock()
+
+        # Override LearnDevicesStep.run so that we don't require storage plugin RPC
+        from chroma_core.models.host import LearnDevicesStep
+        LearnDevicesStep.run = mock.Mock()
+        from chroma_core.lib.storage_plugin.daemon import AgentDaemonRpc
+        AgentDaemonRpc.remove_host_resources = mock.Mock()
 
     def tearDown(self):
         import chroma_core.lib.agent

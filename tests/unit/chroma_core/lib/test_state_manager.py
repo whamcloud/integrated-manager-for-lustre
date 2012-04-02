@@ -37,10 +37,10 @@ class TestStateManager(JobTestCaseWithHost):
     def test_opportunistic_execution(self):
         # Set up an MGS, leave it offline
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
-        mgt = ManagedMgs.create_for_lun(self._test_lun(self.host).id, name = "MGS")
+        mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
         fs = ManagedFilesystem.objects.create(mgs = mgt, name = "testfs")
-        ManagedMdt.create_for_lun(self._test_lun(self.host).id, filesystem = fs)
-        ManagedOst.create_for_lun(self._test_lun(self.host).id, filesystem = fs)
+        ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = fs)
+        ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = fs)
 
         set_state(ManagedMgs.objects.get(pk = mgt.pk), 'unmounted')
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unmounted')

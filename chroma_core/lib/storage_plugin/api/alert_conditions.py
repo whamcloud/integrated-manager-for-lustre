@@ -1,11 +1,4 @@
-
-
-class AlertCondition(object):
-    def __init__(self):
-        self._name = None
-
-    def set_name(self, name):
-        self._name = name
+from chroma_core.lib.storage_plugin.base_alert_condition import AlertCondition
 
 
 class AttrValAlertCondition(AlertCondition):

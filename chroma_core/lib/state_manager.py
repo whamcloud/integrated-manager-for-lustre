@@ -5,6 +5,7 @@
 # ==============================
 
 from collections import defaultdict
+from dateutil import tz
 from django.db import transaction
 from chroma_core.lib.job import job_log
 
@@ -174,21 +175,22 @@ class StateManager(object):
         Job.run_next()
 
     @classmethod
-    def notify_state(cls, instance, new_state, from_states):
+    def notify_state(cls, instance, time, new_state, from_states):
         """from_states: list of states it's valid to transition from.  This lets
            the audit code safely update the state of e.g. a mount it doesn't find
            to 'unmounted' without risking incorrectly transitioning from 'unconfigured'"""
         if instance.state in from_states and instance.state != new_state:
-            job_log.info("Enqueuing notify_state %s %s->%s" % (instance, instance.state, new_state))
+            job_log.info("Enqueuing notify_state %s %s->%s at %s" % (instance, instance.state, new_state, time))
             from chroma_core.tasks import notify_state
             notify_state.delay(
                 instance.content_type.natural_key(),
                 instance.id,
+                time,
                 new_state,
                 from_states)
 
     @classmethod
-    def _notify_state(cls, content_type, object_id, new_state, from_states):
+    def _notify_state(cls, content_type, object_id, notification_time, new_state, from_states):
         # Get the StatefulObject
         from django.contrib.contenttypes.models import ContentType
         model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
@@ -205,14 +207,20 @@ class StateManager(object):
             from chroma_core.models import StateLock
             outstanding_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
             if outstanding_locks == 0:
-                # No jobs lock this object, go ahead and update its state
-                job_log.info("notify_state: Updating state of item %d (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
-                instance.state = new_state
-                instance.save()
 
-                # FIXME: should check the new state against reverse dependencies
-                # and apply any fix_states
-                cls._run_opportunistic_jobs(instance)
+                modified_at = instance.state_modified_at
+                modified_at = modified_at.replace(tzinfo = tz.tzutc())
+
+                if notification_time > modified_at:
+                    # No jobs lock this object, go ahead and update its state
+                    job_log.info("notify_state: Updating state of item %d (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
+                    instance.set_state(new_state)
+
+                    # FIXME: should check the new state against reverse dependencies
+                    # and apply any fix_states
+                    cls._run_opportunistic_jobs(instance)
+                else:
+                    job_log.info("notify_state: Dropping update of %d (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, instance.new_state))
 
     @classmethod
     def add_job(cls, job):

@@ -7,6 +7,7 @@ import json
 
 from django.db import models, transaction
 from chroma_core.lib.job import StateChangeJob, DependOn, DependAny, DependAll, Step, NullStep, AnyTargetMountStep, job_log
+from chroma_core.models import DeletableMetaclass
 from chroma_core.models.jobs import StatefulObject, Job
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 
@@ -30,7 +31,11 @@ class ManagedTarget(StatefulObject):
             help_text = "UUID of the target's internal filesystem.  May be null\
                     if the target has not yet been formatted")
 
-    lun = models.ForeignKey('Lun')
+    volume = models.ForeignKey('Volume')
+
+    inode_size = models.IntegerField(null = True, blank = True)
+    bytes_per_inode = models.IntegerField(null = True, blank = True)
+    inode_count = models.IntegerField(null = True, blank = True)
 
     def name_no_fs(self):
         """Something like OST0001 rather than testfs1-OST0001"""
@@ -56,7 +61,6 @@ class ManagedTarget(StatefulObject):
         return [(p.key, p.value) for p in self.targetparam_set.all()]
 
     def primary_host(self):
-        from chroma_core.models.target_mount import ManagedTargetMount
         return ManagedTargetMount.objects.get(target = self, primary = True).host
 
     def get_label(self):
@@ -135,7 +139,6 @@ class ManagedTarget(StatefulObject):
         """Return iterable of all ManagedTargets which could potentially depend on the state
            of a managed host"""
         # Break this out into a function to avoid importing ManagedTargetMount at module scope
-        from chroma_core.models.target_mount import ManagedTargetMount
         return set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)])
 
     reverse_deps = {
@@ -145,36 +148,35 @@ class ManagedTarget(StatefulObject):
             }
 
     @classmethod
-    def create_for_lun(cls, lun_id, **kwargs):
+    def create_for_volume(cls, volume_id, **kwargs):
         # Local imports to avoid inter-model import dependencies
-        from chroma_core.models.target_mount import ManagedTargetMount
-        from chroma_core.models.host import Lun, LunNode
+        from chroma_core.models.host import Volume, VolumeNode
 
-        lun = Lun.objects.get(pk = lun_id)
+        volume = Volume.objects.get(pk = volume_id)
 
         target = cls(**kwargs)
-        target.lun = lun
+        target.volume = volume
         target.save()
 
-        def create_target_mount(lun_node):
+        def create_target_mount(volume_node):
             mount = ManagedTargetMount(
-                block_device = lun_node,
+                volume_node = volume_node,
                 target = target,
-                host = lun_node.host,
-                mount_point = target.default_mount_path(lun_node.host),
-                primary = lun_node.primary)
+                host = volume_node.host,
+                mount_point = target.default_mount_path(volume_node.host),
+                primary = volume_node.primary)
             mount.save()
 
         try:
-            primary_lun_node = lun.lunnode_set.get(primary = True, host__not_deleted = True)
-            create_target_mount(primary_lun_node)
-        except LunNode.DoesNotExist:
-            raise RuntimeError("No primary lun_node exists for lun %s, cannot created target" % lun)
-        except LunNode.MultipleObjectsReturned:
-            raise RuntimeError("Multiple primary lun_nodes exist for lun %s, internal error")
+            primary_volume_node = volume.volumenode_set.get(primary = True, host__not_deleted = True)
+            create_target_mount(primary_volume_node)
+        except VolumeNode.DoesNotExist:
+            raise RuntimeError("No primary lun_node exists for volume %s, cannot created target" % volume.id)
+        except VolumeNode.MultipleObjectsReturned:
+            raise RuntimeError("Multiple primary lun_nodes exist for volume %s, internal error" % volume.id)
 
-        for secondary_lun_node in lun.lunnode_set.filter(use = True, primary = False, host__not_deleted = True):
-            create_target_mount(secondary_lun_node)
+        for secondary_volume_node in volume.volumenode_set.filter(use = True, primary = False, host__not_deleted = True):
+            create_target_mount(secondary_volume_node)
 
         return target
 
@@ -205,9 +207,6 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
 
 
 class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
-    # TODO: constraint to allow only one MetadataTarget per MGS.  The reason
-    # we don't just use a OneToOneField is to use FilesystemMember to represent
-    # MDTs and OSTs together in a convenient way
     class Meta:
         app_label = 'chroma_core'
 
@@ -312,14 +311,14 @@ class TargetRecoveryInfo(models.Model):
             data = json.loads(self.recovery_status)
         return ("status" in data and data["status"] == "RECOVERING")
 
-    def recovery_status_str(self):
-        data = json.loads(self.recovery_status)
-        if 'status' in data and data["status"] == "RECOVERING":
-            return "%s %ss remaining" % (data["status"], data["time_remaining"])
-        elif 'status' in data:
-            return data["status"]
-        else:
-            return "N/A"
+    #def recovery_status_str(self):
+    #    data = json.loads(self.recovery_status)
+    #    if 'status' in data and data["status"] == "RECOVERING":
+    #        return "%s %ss remaining" % (data["status"], data["time_remaining"])
+    #    elif 'status' in data:
+    #        return data["status"]
+    #    else:
+    #        return "N/A"
 
 
 class DeleteTargetStep(Step):
@@ -393,7 +392,7 @@ class RegisterTargetStep(Step):
         target_mount_id = kwargs['target_mount_id']
         target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
 
-        result = self.invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.block_device.path, target_mount.mount_point))
+        result = self.invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.volume_node.path, target_mount.mount_point))
         label = result['label']
         target = target_mount.target
         job_log.debug("Registration complete, updating target %d with name=%s" % (target.id, label))
@@ -410,10 +409,10 @@ class ConfigurePacemakerStep(Step):
         target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
 
         # target.name should have been populated by RegisterTarget
-        assert(target_mount.block_device != None and target_mount.target.name != None)
+        assert(target_mount.volume_node != None and target_mount.target.name != None)
 
         self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --uuid %s --serial %s %s --mountpoint %s" % (
-                                    target_mount.block_device.path,
+                                    target_mount.volume_node.path,
                                     target_mount.target.name,
                                     target_mount.target.uuid,
                                     target_mount.target.pk,
@@ -530,8 +529,7 @@ class MountStep(AnyTargetMountStep):
         try:
             started_on = ManagedHost.objects.get(nodename = result['location'])
         except ManagedHost.DoesNotExist:
-            job_log.error("Target %s (%s) found on host %s, which is not a ManagedHost" % (target, target_id, result['location']))
-            raise
+            raise RuntimeError("Target %s (%s) found on host %s, which is not a ManagedHost" % (target, target_id, result['location']))
         try:
             target.set_active_mount(target.managedtargetmount_set.get(host = started_on))
         except ManagedTargetMount.DoesNotExist:
@@ -610,6 +608,7 @@ class MkfsStep(Step):
             kwargs['fsname'] = target.filesystem.name
             kwargs['mgsnode'] = target.filesystem.mgs.nids()
 
+        # FIXME: HYD-266
         kwargs['reformat'] = True
 
         fail_nids = []
@@ -621,7 +620,17 @@ class MkfsStep(Step):
         if len(fail_nids) > 0:
             kwargs['failnode'] = fail_nids
 
-        kwargs['device'] = primary_mount.block_device.path
+        kwargs['device'] = primary_mount.volume_node.path
+
+        mkfsoptions = []
+        if target.inode_size:
+            mkfsoptions.append("-I %s" % (target.inode_size))
+        if target.bytes_per_inode:
+            mkfsoptions.append("-i %s" % (target.bytes_per_inode))
+        if target.inode_count:
+            mkfsoptions.append("-N %s" % (target.inode_count))
+        if mkfsoptions:
+            kwargs['mkfsoptions'] = " ".join(mkfsoptions)
 
         return kwargs
 
@@ -640,13 +649,27 @@ class MkfsStep(Step):
         target = ManagedTarget.objects.get(id = target_id).downcast()
 
         target_mount = target.managedtargetmount_set.get(primary = True)
-        # This is a primary target mount so must have a LunNode
-        assert(target_mount.block_device != None)
 
         args = self._mkfs_args(target)
         result = self.invoke_agent(target_mount.host, "format-target", args)
-        fs_uuid = result['uuid']
-        target.uuid = fs_uuid
+        target.uuid = result['uuid']
+
+        # Check that inode_size was applied correctly
+        if target.inode_size:
+            if target.inode_size != result['inode_size']:
+                raise RuntimeError("Failed for format target with inode size %s, actual inode size %s" % (
+                    target.inode_size, result['inode_size']))
+
+        # Check that inode_count was applied correctly
+        if target.inode_count:
+            if target.inode_count != result['inode_count']:
+                raise RuntimeError("Failed for format target with inode count %s, actual inode count %s" % (
+                    target.inode_count, result['inode_count']))
+
+        # NB cannot check that bytes_per_inode was applied correctly as that setting is not stored in the FS
+        target.inode_count = result['inode_count']
+        target.inode_size = result['inode_size']
+
         target.save()
 
 
@@ -713,3 +736,52 @@ for origin in ['unmounted', 'mounted']:
     import sys
     this_module = sys.modules[__name__]
     setattr(this_module, name, cls)
+
+
+class ManagedTargetMount(models.Model):
+    """Associate a particular Lustre target with a device node on a host"""
+    __metaclass__ = DeletableMetaclass
+
+    # FIXME: both VolumeNode and TargetMount refer to the host
+    host = models.ForeignKey('ManagedHost')
+    mount_point = models.CharField(max_length = 512, null = True, blank = True)
+    volume_node = models.ForeignKey('VolumeNode')
+    primary = models.BooleanField()
+    target = models.ForeignKey('ManagedTarget')
+
+    def save(self, force_insert = False, force_update = False, using = None):
+        # If primary is true, then target must be unique
+        if self.primary:
+            from django.db.models import Q
+            other_primaries = ManagedTargetMount.objects.filter(~Q(id = self.id), target = self.target, primary = True)
+            if other_primaries.count() > 0:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("Cannot have multiple primary mounts for target %s" % self.target)
+
+        # If this is an MGS, there may not be another MGS on
+        # this host
+        from chroma_core.models.target import ManagedMgs
+        if isinstance(self.target.downcast(), ManagedMgs):
+            from django.db.models import Q
+            other_mgs_mountables_local = ManagedTargetMount.objects.filter(~Q(id = self.id), target__in = ManagedMgs.objects.all(), host = self.host).count()
+            if other_mgs_mountables_local > 0:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("Cannot have multiple MGS mounts on host %s" % self.host.address)
+
+        return super(ManagedTargetMount, self).save(force_insert, force_update, using)
+
+    def device(self):
+        return self.volume_node.path
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def __str__(self):
+        if self.primary:
+            kind_string = "primary"
+        elif not self.volume_node:
+            kind_string = "failover_nodev"
+        else:
+            kind_string = "failover"
+
+        return "%s:%s:%s" % (self.host, kind_string, self.target)

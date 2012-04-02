@@ -19,7 +19,7 @@ class CreateFilesystem:
         self.mdt_chooser = self.driver.find_element_by_id('mdt_chooser')
         self.ost_chooser = self.driver.find_element_by_id('ost_chooser')
         self.create_file_system_button = self.driver.find_element_by_id('btnCreateFS')
-        self.fvc_selected = self.driver.find_elements_by_class_name("fvc_selected")
+        self.volume_chooser_selected = self.driver.find_elements_by_class_name("volume_chooser_selected")
 
     def click_create_file_system_button(self):
         #Click create file system button
@@ -39,7 +39,7 @@ class CreateFilesystem:
 
     def select_mdt(self, host_name, device_node):
         """Select an MDT"""
-        mdtchooser = self.fvc_selected.__getitem__(1)
+        mdtchooser = self.volume_chooser_selected.__getitem__(1)
         mdtchooser.click()
         mdt_rows = self.driver.find_elements_by_xpath("id('mdt_chooser_table')/tbody/tr")
         for tr in mdt_rows:

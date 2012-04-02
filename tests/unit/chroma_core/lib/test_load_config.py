@@ -1,4 +1,4 @@
-
+from chroma_core.models import ManagedTargetMount
 from tests.unit.chroma_core.helper import JobTestCase
 
 
@@ -47,7 +47,6 @@ class TestJsonImport(JobTestCase):
         example02 = ManagedHost.objects.get(address = 'example02')
 
         from chroma_core.models import ManagedFilesystem, ManagedMgs, ManagedMdt, ManagedOst
-        from chroma_core.models import ManagedTargetMount
 
         ManagedFilesystem.objects.get(name = 'egfs')
         mgs = ManagedMgs.objects.get()

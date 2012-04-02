@@ -22,9 +22,9 @@ class IntegerParam(ParamType):
 
     def validate(self, val):
         if self.min_val != None and val < self.min_val:
-            raise ValueError
+            raise ValueError("%s lower than minimum %s" % (val, self.min_val))
         if self.max_val != None and val > self.min_val:
-            raise ValueError
+            raise ValueError("%s higher than maximum %s" % (val, self.max_val))
 
     def test_vals(self):
         vals = []
@@ -54,7 +54,7 @@ class EnumParam(ParamType):
 
     def validate(self, val):
         if not val in self.options:
-            raise ValueError
+            raise ValueError("%s not one of %s" % (val, self.options))
 
     def test_vals(self):
         return self.options
@@ -117,17 +117,17 @@ class BytesParam(ParamType):
     def validate(self, val):
         if self.units:
             if not re.match("^\d+$", val):
-                raise ValueError()
+                raise ValueError("Invalid size string '%s' (no units allowed)" % val)
             bytes_val = self._str_to_bytes(val + self.units)
         else:
             if not re.match("^\d+(\.\d+)?[ptgmkPTGMK]?$", val):
-                raise ValueError()
+                raise ValueError("Invalid size string '%s'" % val)
             bytes_val = self._str_to_bytes(val)
 
         if self.min_val and bytes_val < self._str_to_bytes(self.min_val):
-            raise ValueError()
+            raise ValueError("%s lower than minimum %s" % (val, self.min_val))
         if self.max_val and bytes_val > self._str_to_bytes(self.max_val):
-            raise ValueError()
+            raise ValueError("%s higher than maximum %s" % (val, self.max_val))
 
 
 class PercentageParam(IntegerParam):

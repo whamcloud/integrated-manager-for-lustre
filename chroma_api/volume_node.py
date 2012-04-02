@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from chroma_core.models import LunNode
+from chroma_core.models import VolumeNode
 from tastypie.resources import ModelResource
 
 from tastypie.authorization import DjangoAuthorization
@@ -23,7 +23,7 @@ class VolumeNodeResource(ModelResource):
     node belongs to.
     """
 
-    volume_id = fields.IntegerField(attribute = 'lun_id',
+    volume_id = fields.IntegerField(attribute = 'volume_id',
             help_text = "id of the volume that this node belongs to")
     host_id = fields.IntegerField(help_text = "id if the host that this\
             device node is on")
@@ -38,10 +38,10 @@ class VolumeNodeResource(ModelResource):
         return bundle.obj.host.get_label()
 
     class Meta:
-        queryset = LunNode.objects.filter(host__not_deleted = True)
+        queryset = VolumeNode.objects.filter(host__not_deleted = True)
         resource_name = 'volume_node'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ['not_deleted', 'lun_id']
+        excludes = ['not_deleted']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get']

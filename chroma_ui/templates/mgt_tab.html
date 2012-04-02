@@ -42,7 +42,7 @@
         aaSort: [[1, 'asc']],
         "aoColumns": [
           { "sClass": 'txtleft', mDataProp: 'fs_names', bSortable: false},
-          { "sClass": 'txtleft', mDataProp: 'lun_name', bSortable: true },
+          { "sClass": 'txtleft', mDataProp: 'volume_name', bSortable: true },
           { "sClass": 'txtleft', mDataProp: 'primary_server_name', bSortable: false},
           { "sClass": 'txtleft', mDataProp: 'failover_server_name', bSortable: false},
           { "sClass": 'txtleft', mDataProp: 'active_host_name', bSortable: false},
@@ -65,10 +65,13 @@
 
       $('#btnNewMGT').click(function(){
         var volume_id = $('#new_mgt_chooser').volumeChooser('val');
-        CreateMGT(volume_id, function() {
-          $('#new_mgt_chooser').volumeChooser('clear');
-          $('#mgt_configuration').dataTable().fnDraw();
-        })
+        Api.post("target/", {kind: 'MGT', volume_id: volume_id},
+          success_callback = function(data) {
+            $('#new_mgt_chooser').volumeChooser('clear');
+            $('#mgt_configuration').dataTable().fnDraw();
+          }
+        );
+
       });
     }
     return {draw:draw}

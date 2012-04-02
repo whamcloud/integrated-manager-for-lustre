@@ -25,11 +25,11 @@ def _drain_all(connection, queue, handler, timeout = 0.1):
 
     def local_handler(body, message):
         if handler(body, message):
-            any_accepted.push(True)
+            any_accepted.append(True)
 
     latency = 0.5
     started = datetime.datetime.now()
-    with connection.Consumer([queue], callbacks=[handler]):
+    with connection.Consumer([queue], callbacks=[local_handler]):
         # Loop until we get a call to drain_events which
         # does not result in a handler callback
         while True:
@@ -52,6 +52,24 @@ def _amqp_connection():
         settings.BROKER_HOST,
         settings.BROKER_PORT,
         settings.BROKER_VHOST))
+
+
+def simple_send(name, body):
+    with _amqp_connection() as conn:
+        q = conn.SimpleQueue(name, serializer = 'json')
+        q.put(body)
+
+
+def simple_receive(name):
+    with _amqp_connection() as conn:
+        q = conn.SimpleQueue(name, serializer = 'json')
+        from Queue import Empty
+        try:
+            message = q.get(block = False)
+            message.ack()
+            return message.decode()
+        except Empty:
+            return None
 
 
 def _wait_for_host(host, timeout):
@@ -110,20 +128,13 @@ def plugin_rpc(plugin_name, host, request, timeout = 0):
         raise
 
 
-def control_rpc(kwargs):
-    """
-    :param method: String
-    :param args: Dict
-    """
-    plugin_name = '_control'
-    tag = "daemon"
-
-    request_id = PluginRequest.send(plugin_name, tag, kwargs)
+def rpc(queue_name, kwargs):
+    request_id = PluginRequest.send(queue_name, "", kwargs)
     try:
-        return PluginResponse.receive(plugin_name, tag, request_id)
+        return PluginResponse.receive(queue_name, "", request_id)
     except Timeout:
         # Revoke the request, we will never handle a response from it
-        PluginRequest.revoke(plugin_name, tag, request_id)
+        PluginRequest.revoke(queue_name, "", request_id)
         raise
 
 
@@ -146,7 +157,8 @@ class PluginRequest(object):
             # Compose the body
             import uuid
             request_id = uuid.uuid1().__str__()
-            body = {'id': request_id}
+            body = {'id': request_id,
+                    'created_at': datetime.datetime.utcnow().isoformat() + "Z"}
             for k, v in request_dict.items():
                 if k == 'id':
                     raise RuntimeError("Cannot use 'id' in PluginRequest body")
@@ -259,7 +271,13 @@ class PluginResponse(object):
                     else:
                         log.warning("Dropping unexpected response %s on %s" % (id, response_routing_key))
                 finally:
-                    message.ack()
+                    import dateutil.parser
+                    UNHANDLED_RESPONSE_TIMEOUT = 600
+                    if accepted:
+                        message.ack()
+                    elif datetime.datetime.utcnow() - dateutil.parser.parse(body['created_at']) > datetime.timedelta(seconds = UNHANDLED_RESPONSE_TIMEOUT):
+                        log.warning("Dropping stale response %s on %s (created at %s)" % (id, response_routing_key, body['created_at']))
+                        message.ack()
 
                 return accepted
 

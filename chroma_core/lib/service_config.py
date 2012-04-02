@@ -42,14 +42,15 @@ class RsyslogConfig:
         config_lines.extend([
                     "$ModLoad imtcp.so\n",
                     "$InputTCPServerRun 514\n",
-                    "$ModLoad ommysql\n"])
+                    "$ModLoad ommysql\n",
+                    "$template sqltpl,\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, convert_tz('%timereported:::date-mysql%', '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%', '+00:00'), convert_tz('%timegenerated:::date-mysql%', '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%', '+00:00'), %iut%, '%syslogtag%')\",SQL\n"])
         if port:
             config_lines.append("$ActionOmmysqlServerPort %d\n" % port)
 
-        action_line = "*.*       :ommysql:%s,%s,%s" % (server, database, user)
+        action_line = "*.*       :ommysql:%s,%s,%s," % (server, database, user)
         if password:
-            action_line += ",%s" % password
-        action_line += "\n"
+            action_line += "%s" % password
+        action_line += ";sqltpl\n"
         config_lines.append(action_line)
         config_lines.append(self.SENTINEL)
 
@@ -213,7 +214,7 @@ class ServiceConfig:
             password1 = getpass.getpass("Password:")
             password2 = getpass.getpass("Confirm password:")
 
-            # TODO: validate all fields
+            # TODO: validate all fields (HYD-750)
             if password1 != password2:
                 log.error("Passwords do not match!")
             else:

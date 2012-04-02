@@ -2,32 +2,22 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
+import datetime
 
 from django.db import models
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from picklefield.fields import PickledObjectField
 
-from chroma_core.models.utils import WorkaroundGenericForeignKey, WorkaroundDateTimeField
-#from django.contrib.contenttypes.generic import GenericForeignKey
+from chroma_core.models.utils import WorkaroundGenericForeignKey, WorkaroundDateTimeField, await_async_result
 
 from django.db.models import Q
 from collections import defaultdict
 from polymorphic.models import DowncastMetaclass
 from chroma_core.lib.job import StateChangeJob, DependOn, DependAll
+from chroma_core.lib.util import all_subclasses
 
 MAX_STATE_STRING = 32
-
-
-def _subclasses(obj):
-    """Used to introspect all descendents of a class.  Used because metaclasses
-       are a PITA when doing multiple inheritance"""
-    sc_recr = []
-    for sc_obj in obj.__subclasses__():
-        sc_recr.append(sc_obj)
-        for sc in _subclasses(sc_obj):
-            sc_recr.append(sc)
-    return sc_recr
 
 
 class Command(models.Model):
@@ -85,23 +75,7 @@ class Command(models.Model):
                 object_ids,
                 message)
 
-        from celery.result import EagerResult
-        if isinstance(async_result, EagerResult):
-            # Allow eager execution for testing
-            from chroma_core.lib.job import job_log
-            job_log.debug("Command.set_state running eagerly '%s'", message)
-        else:
-            # Rely on server to time out the request if this takes too
-            # long for some reason
-            complete = False
-            while not complete:
-                with transaction.commit_manually():
-                    transaction.commit()
-                    if async_result.ready():
-                        complete = True
-                    transaction.commit()
-
-        command_id = async_result.get()
+        command_id = await_async_result(async_result)
 
         return Command.objects.get(pk = command_id)
 
@@ -131,6 +105,7 @@ class StatefulObject(models.Model):
         abstract = True
         app_label = 'chroma_core'
 
+    state_modified_at = WorkaroundDateTimeField()
     state = models.CharField(max_length = MAX_STATE_STRING)
     immutable_state = models.BooleanField(default=False)
     states = None
@@ -143,6 +118,12 @@ class StatefulObject(models.Model):
 
         if not self.state:
             self.state = self.initial_state
+            self.state_modified_at = datetime.datetime.utcnow()
+
+    def set_state(self, state):
+        self.state = state
+        self.state_modified_at = datetime.datetime.utcnow()
+        self.save()
 
     def not_state(self, state):
         return list(set(self.states) - set([state]))
@@ -178,7 +159,7 @@ class StatefulObject(models.Model):
            twice or concurrently."""
         cls = StatefulObject.so_child(cls)
 
-        transition_classes = [s for s in _subclasses(StateChangeJob) if s.state_transition[0] == cls]
+        transition_classes = [s for s in all_subclasses(StateChangeJob) if s.state_transition[0] == cls]
         transition_options = defaultdict(list)
         job_class_map = {}
         for c in transition_classes:
@@ -294,7 +275,7 @@ class StatefulObject(models.Model):
         # dependents of an instance of that class.
         if not hasattr(StatefulObject, 'reverse_deps_map'):
             reverse_deps_map = defaultdict(list)
-            for klass in _subclasses(StatefulObject):
+            for klass in all_subclasses(StatefulObject):
                 for class_name, lookup_fn in klass.reverse_deps.items():
                     import chroma_core.models
                     #FIXME: looking up class this way eliminates our ability to move
@@ -667,9 +648,8 @@ class Job(models.Model):
             new_state = self.state_transition[2]
             with transaction.commit_on_success():
                 obj = self.get_stateful_object()
-                obj.state = new_state
+                obj.set_state(new_state)
                 job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.pk, new_state, obj))
-                obj.save()
 
         job_log.info("Job %d completing (errored=%s, cancelled=%s)" %
                 (self.id, errored, cancelled))

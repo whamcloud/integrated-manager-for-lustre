@@ -1,21 +1,19 @@
-
-from chroma_core.lib.storage_plugin.plugin import StoragePlugin
-from chroma_core.lib.storage_plugin.resource import StorageResource
-from chroma_core.lib.storage_plugin import attributes
-from chroma_core.lib.storage_plugin import statistics
-from chroma_core.lib.storage_plugin.resource import GlobalId, ScannableResource
+from chroma_core.lib.storage_plugin.api import attributes, statistics
+from chroma_core.lib.storage_plugin.api.identifiers import GlobalId
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, ScannableResource
+from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 
 
-class TestScannableResource(StorageResource, ScannableResource):
+class TestScannableResource(BaseStorageResource, ScannableResource):
     name = attributes.String()
     identifier = GlobalId('name')
 
 
-class TestResource(StorageResource):
+class TestResource(BaseStorageResource):
     name = attributes.String()
     thing_count = statistics.Counter()
     identifier = GlobalId('name')
 
 
-class TestPlugin(StoragePlugin):
+class TestPlugin(BaseStoragePlugin):
     pass

@@ -4,10 +4,15 @@
 # ==============================
 
 from django.db import models
+from django.db.models import Q
 
 from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState, AlertEvent
 from chroma_core.models.utils import WorkaroundDateTimeField
+from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
+
+from collections import defaultdict
+import json
 
 # Our limit on the length of python names where we put
 # them in CharFields -- python doesn't impose a limit, so this
@@ -16,7 +21,7 @@ MAX_NAME_LENGTH = 128
 
 
 class StoragePluginRecord(models.Model):
-    """Reference to a module defining a StoragePlugin subclass"""
+    """Reference to a module defining a BaseStoragePlugin subclass"""
     module_name = models.CharField(max_length = MAX_NAME_LENGTH)
     internal = models.BooleanField()
 
@@ -26,8 +31,8 @@ class StoragePluginRecord(models.Model):
 
 
 class StorageResourceClass(models.Model):
-    """Reference to a StorageResource subclass"""
-    storage_plugin = models.ForeignKey(StoragePluginRecord)
+    """Reference to a BaseStorageResource subclass"""
+    storage_plugin = models.ForeignKey(StoragePluginRecord, on_delete = models.PROTECT)
     class_name = models.CharField(max_length = MAX_NAME_LENGTH)
     user_creatable = models.BooleanField()
 
@@ -44,8 +49,8 @@ class StorageResourceClass(models.Model):
 
 
 class StorageResourceRecord(models.Model):
-    """Reference to an instance of a StorageResource"""
-    resource_class = models.ForeignKey(StorageResourceClass)
+    """Reference to an instance of a BaseStorageResource"""
+    resource_class = models.ForeignKey(StorageResourceClass, on_delete = models.PROTECT)
 
     # Representing a chroma_core.lib.storage_plugin.GlobalId or LocalId
     # TODO: put some checking for id_strs longer than this field: they
@@ -53,7 +58,7 @@ class StorageResourceRecord(models.Model):
     # conservative in what they use for an ID
     storage_id_str = models.CharField(max_length = 256)
     storage_id_scope = models.ForeignKey('StorageResourceRecord',
-            blank = True, null = True)
+            blank = True, null = True, on_delete = models.PROTECT)
 
     # XXX aargh when the id_scope is nullable a unique_together across it
     # doesn't enforce uniqueness for GlobalID resources
@@ -63,6 +68,8 @@ class StorageResourceRecord(models.Model):
             related_name = 'resource_parent')
 
     alias = models.CharField(max_length = 64, blank = True, null = True)
+
+    reported_by = models.ManyToManyField('StorageResourceRecord', related_name = 'resource_reported_by')
 
     class Meta:
         app_label = 'chroma_core'
@@ -74,15 +81,19 @@ class StorageResourceRecord(models.Model):
     @classmethod
     def get_or_create_root(cls, resource_class, resource_class_id, attrs):
         # Root resource do not have parents so they must be globally identified
-        from chroma_core.lib.storage_plugin.resource import GlobalId
-        if not isinstance(resource_class.identifier, GlobalId):
-            raise RuntimeError("Cannot create root resource of class %s, it is not globally identified" % resource_class)
+        from chroma_core.lib.storage_plugin.api.identifiers import AutoId, ScopedId
+
+        if isinstance(resource_class.identifier, ScopedId):
+            raise RuntimeError("Cannot create root resource of class %s, it requires a scope" % resource_class)
+
+        if isinstance(resource_class.identifier, AutoId):
+            import uuid
+            attrs['chroma_auto_id'] = uuid.uuid4().__str__()
+        id_str = json.dumps(resource_class.attrs_to_id_tuple(attrs))
 
         # NB assumes that none of the items in ID tuple are ResourceReferences: this
         # would raise an exception from json encoding.
         # FIXME: weird separate code path for creating resources (cf resourcemanager)
-        import json
-        id_str = json.dumps(resource_class.attrs_to_id_tuple(attrs))
         try:
             # See if you're trying to create something which already exists
             existing_record = StorageResourceRecord.objects.get(
@@ -98,38 +109,50 @@ class StorageResourceRecord(models.Model):
                 resource_class_id = resource_class_id,
                 storage_id_str = id_str)
         record.save()
+
+        log.info("StorageResourceRecord created %d" % (record.id))
+
         for name, value in attrs.items():
-            StorageResourceAttribute.objects.create(resource = record,
-                    key = name, value = resource_class.encode(name, value))
+            attr_model_class = resource_class.attr_model_class(name)
+            attr_model_class.objects.create(resource = record,
+                    key = name, value = attr_model_class.encode(value))
 
         return record, True
+
+    def update_attributes(self, attributes):
+        for key, val in attributes.items():
+            self.update_attribute(key, val)
 
     def update_attribute(self, key, val):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         resource_class = storage_plugin_manager.get_resource_class_by_id(self.resource_class_id)
 
         # Try to update an existing record
-        updated = StorageResourceAttribute.objects.filter(
+        attr_model_class = resource_class.attr_model_class(key)
+        updated = attr_model_class.objects.filter(
                     resource = self,
-                    key = key).update(value = resource_class.encode(key, val))
+                    key = key).update(value = attr_model_class.encode(val))
         # If there was no existing record, create one
         if updated == 0:
             from django.db import IntegrityError
             try:
-                StorageResourceAttribute.objects.create(
+                attr_model_class.objects.create(
                         resource = self,
                         key = key,
-                        value = resource_class.encode(key, val))
+                        value = attr_model_class.encode(val))
             except IntegrityError:
                 # Collided with another update, order undefined so let him win
                 pass
 
     def delete_attribute(self, attr_name):
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        resource_class = storage_plugin_manager.get_resource_class_by_id(self.resource_class_id)
+        model_class = resource_class.attr_model_class(attr_name)
         try:
-            StorageResourceAttribute.objects.get(
+            model_class.objects.get(
                     resource = self,
                     key = attr_name).delete()
-        except StorageResourceAttribute.DoesNotExist:
+        except model_class.DoesNotExist:
             pass
 
     def items(self):
@@ -139,9 +162,14 @@ class StorageResourceRecord(models.Model):
     def to_resource(self):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         klass = storage_plugin_manager.get_resource_class_by_id(self.resource_class_id)
+        attr_model_to_keys = defaultdict(list)
+        for attr, attr_props in klass._storage_attributes.items():
+            attr_model_to_keys[attr_props.model_class].append(attr)
         storage_dict = {}
-        for attr in self.storageresourceattribute_set.all():
-            storage_dict[attr.key] = klass.decode(attr.key, attr.value)
+        for attr_model, keys in attr_model_to_keys.items():
+            for attr in attr_model.objects.filter(resource = self, key__in = keys):
+                storage_dict[attr.key] = attr_model.decode(attr.value)
+
         resource = klass(**storage_dict)
         resource._handle = self.id
         resource._handle_global = True
@@ -188,21 +216,12 @@ class SimpleHistoStoreTime(models.Model):
         app_label = 'chroma_core'
 
 
-class SimpleScalarStoreDatapoint(models.Model):
-    storage_resource_statistic = models.ForeignKey('StorageResourceStatistic')
-    time = models.PositiveIntegerField()
-    value = models.BigIntegerField()
-
-    class Meta:
-        app_label = 'chroma_core'
-
-
 class StorageResourceStatistic(models.Model):
     class Meta:
         unique_together = ('storage_resource', 'name')
         app_label = 'chroma_core'
 
-    storage_resource = models.ForeignKey(StorageResourceRecord)
+    storage_resource = models.ForeignKey(StorageResourceRecord, on_delete = models.PROTECT)
     sample_period = models.IntegerField()
     name = models.CharField(max_length = 64)
 
@@ -218,8 +237,10 @@ class StorageResourceStatistic(models.Model):
     metrics = property(__get_metrics)
 
     def update(self, stat_name, stat_properties, stat_data):
-        from chroma_core.lib.storage_plugin import statistics
+        from chroma_core.lib.storage_plugin.api import statistics
+
         if isinstance(stat_properties, statistics.BytesHistogram):
+            # Histograms
             for dp in stat_data:
                 ts = dp['timestamp']
                 bin_vals = dp['value']
@@ -228,73 +249,18 @@ class StorageResourceStatistic(models.Model):
                     time = SimpleHistoStoreTime.objects.create(time = ts, storage_resource_statistic = self)
                     for i in range(0, len(stat_properties.bins)):
                         SimpleHistoStoreBin.objects.create(bin_idx = i, value = bin_vals[i], histo_store_time = time)
+                    # Only keep latest time
+                    SimpleHistoStoreTime.objects.filter(~Q(id = time.id), storage_resource_statistic = self).delete()
         else:
-            for dp in stat_data:
-                ts = dp['timestamp']
-                val = dp['value']
-                SimpleScalarStoreDatapoint.objects.create(
-                        time = ts,
-                        value = val,
-                        storage_resource_statistic = self)
-        #self.metrics.update(stat_name, stat_properties, stat_data)
+            # FIXME: I should be allowed to store integers
+            for i in stat_data:
+                i['value'] = float(i['value'])
 
-    def to_dict(self):
-        """For use with frontend.  Get a time series for scalars or a snapshot for histograms.
-        TODO: generalisation for explorable graphs, variable time series, that
-        should be done in common with the lustre graphs."""
-        from django.db import transaction
-        stat_props = self.storage_resource.get_statistic_properties(self.name)
-        from chroma_core.lib.storage_plugin import statistics
-        if isinstance(stat_props, statistics.BytesHistogram):
-            with transaction.commit_manually():
-                transaction.commit()
-                try:
-                    time = SimpleHistoStoreTime.objects.filter(storage_resource_statistic = self).latest('time')
-                    bins = SimpleHistoStoreBin.objects.filter(histo_store_time = time).order_by('bin_idx')
-                finally:
-                    transaction.commit()
-            type_name = 'histogram'
-            # Composite type
-            data = {'bin_labels': [], 'values': []}
-            for i in range(0, len(stat_props.bins)):
-                bin_info = u"\u2264%s" % stat_props.bins[i][1]
-                data['bin_labels'].append(bin_info)
-                data['values'].append(bins[i].value)
-        else:
-            with transaction.commit_manually():
-                transaction.commit()
-                try:
-                    dps = SimpleScalarStoreDatapoint.objects\
-                        .filter(storage_resource_statistic = self)\
-                        .order_by('-time')[:100]
-                    dps = list(dps)
-                    dps.reverse()
-                finally:
-                    transaction.commit()
-            type_name = 'timeseries'
-            data_points = []
-            for dp in dps:
-                # Convert to ms for convenience with highcharts
-                time_ms = dp.time * 1000
-                data_points.append((time_ms, dp.value))
-
-            data = {
-                    'unit_name': stat_props.get_unit_name(),
-                    'data_points': data_points
-                    }
-
-        label = stat_props.label
-        if not label:
-            label = self.name
-
-        return {'name': self.name,
-                'label': label,
-                'type': type_name,
-                'data': data}
+            self.metrics.update(stat_name, stat_properties, stat_data)
 
 
 class StorageResourceAttribute(models.Model):
-    """An attribute of a StorageResource instance.
+    """An attribute of a BaseStorageResource instance.
 
     Note that we store the denormalized key name of the attribute
     for each storageresource instance, to support schemaless attribute
@@ -302,15 +268,67 @@ class StorageResourceAttribute(models.Model):
     and only allow explicitly declared fields, then we would normalize
     out the attribute names.
     """
+    @classmethod
+    def encode(cls, value):
+        return value
+
+    @classmethod
+    def decode(cls, value):
+        return value
+
     resource = models.ForeignKey(StorageResourceRecord)
-    # TODO: specialized attribute tables for common types like
-    # short strings, integers
-    value = models.TextField()
+    # TODO: normalize this field (store a list of attributes
+    # with StorageResourceClass, that list would also be useful
+    # for comparing against at plugin load time to e.g. complain
+    # about new fields and/or mung existing records
     key = models.CharField(max_length = 64)
 
     class Meta:
+        abstract = True
         unique_together = ('resource', 'key')
         app_label = 'chroma_core'
+
+
+class StorageResourceAttributeSerialized(StorageResourceAttribute):
+    class Meta:
+        app_label = 'chroma_core'
+
+    value = models.TextField()
+
+    @classmethod
+    def encode(cls, value):
+        return json.dumps(value)
+
+    @classmethod
+    def decode(cls, value):
+        return json.loads(value)
+
+
+class StorageResourceAttributeReference(StorageResourceAttribute):
+    class Meta:
+        app_label = 'chroma_core'
+
+    value = models.ForeignKey(StorageResourceRecord, blank = True, null = True, related_name = 'value_resource', on_delete = models.PROTECT)
+
+    # NB no 'encode' impl here because it has to be a special case to
+    # resolve a local resource to a global ID
+
+    def __setattr__(self, k, v):
+        if k == 'value' and isinstance(v, int):
+            return super(StorageResourceAttributeReference, self).__setattr__('value_id', v)
+        else:
+            return super(StorageResourceAttributeReference, self).__setattr__(k, v)
+
+    @classmethod
+    def encode(cls, value):
+        return StorageResourceRecord.objects.get(pk = value)
+
+    @classmethod
+    def decode(cls, value):
+        if value:
+            return value.to_resource()
+        else:
+            return None
 
 
 class StorageResourceClassStatistic(models.Model):
@@ -328,6 +346,28 @@ class StorageResourceStatistic(models.Model):
 
     timestamp = WorkaroundDateTimeField()
     value = models.IntegerField()
+
+    class Meta:
+        app_label = 'chroma_core'
+
+
+class StorageResourceOffline(AlertState):
+    def message(self):
+        return "%s not contactable" % self.alert_item.alias_or_name()
+
+    def begin_event(self):
+        import logging
+        return AlertEvent(
+                message_str = "Lost contact with %s" % self.alert_item.alias_or_name(),
+                alert = self,
+                severity = logging.WARNING)
+
+    def end_event(self):
+        import logging
+        return AlertEvent(
+                message_str = "Re-established contact with %s" % self.alert_item.alias_or_name(),
+                alert = self,
+                severity = logging.INFO)
 
     class Meta:
         app_label = 'chroma_core'

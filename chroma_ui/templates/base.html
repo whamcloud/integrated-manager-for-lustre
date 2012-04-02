@@ -49,18 +49,19 @@
 
     <!-- Application (toplevel) -->
     <script type="text/javascript" src="{{STATIC_URL}}js/api.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/api_cache.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/router.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/login.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/sidebar.js"></script>  
     <script type="text/javascript" src="{{STATIC_URL}}js/notifications.js" ></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/highcharts_theme.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/help.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/conf_params.js"></script>
 
     <!-- Application (individual panes) -->
     <script type='text/javascript' src="{{STATIC_URL}}js/resource_graph.js"></script>
     <script type='text/javascript' src="{{STATIC_URL}}js/target_dialog.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_dialog.js"></script>
-
     <script type="text/javascript" src="{{STATIC_URL}}js/command_dialog.js"></script>
 
 
@@ -68,6 +69,62 @@
     {% block scripts %}{% endblock %}
     <title>Chroma server</title>
   </head>
+
+  <script type='text/javascript'>
+        function updateSizes() {
+          $('div.rightpanel').width($(window).width() - $('div.leftpanel').width())
+          $('div.rightpanel').height($(window).height() - $('div.logohead').height())
+          $('div.toplevel').css('min-height', $('div.rightpanel').height());
+          updateChartSizes();
+        }
+
+        function updateChartSizes() {
+          $('div.dashboard_page').css('margin-top', $('#dashboard_navigation').height());
+          $('div.dashboard_page').height($('div.rightpanel').height() - $('#dashboard_navigation').height() - 16)
+
+          $('.chart_grid').each(function() {
+            var grid = $(this);
+            if (grid.is(":visible")) {
+              var grid_width = grid.parent().width();
+              var grid_height = grid.parent().height();
+              var chart_pad_x = 6;
+              var chart_pad_y = 6;
+
+              var row_count = grid.children('tbody').children('tr').length;
+              grid.children('tbody').children('tr').each(function() {
+                var row = $(this);
+                var col_count = row.children('td').length
+                var chart_width = (grid_width / col_count) - chart_pad_x;
+                var chart_height = (grid_height / row_count) - chart_pad_y;
+                row.find('.chart').each(function() {
+                  var chart = $(this);
+                  chart.width(chart_width);
+                  chart.height(chart_height);
+                });
+              });
+            }
+          });
+        }
+
+    $(document).ready(function() {
+        $('div.rightpanel').css('visibility', 'hidden');
+        Login.init();
+        ApiCache.init();
+        HelpLinks.init();
+        ConfigureTabs.init();
+
+        updateSizes();
+        $(window).resize(updateSizes);
+        $('div.rightpanel').css('visibility', 'visible');
+        window.loaded = true;
+
+        new ChromaRouter();
+        Api.on_available(function() {
+          Backbone.history.start({root: "/ui/", pushState: true})
+        });
+    });
+  </script>
+
   <body>
     {% include 'header.html'%}
     <div class='columns read_enabled_only'>
@@ -94,6 +151,4 @@
       </div>
     </div>
   </body>
-
-
 </html>

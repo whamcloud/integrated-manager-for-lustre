@@ -10,8 +10,7 @@ import tastypie.http as http
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.resources import Resource
 from tastypie import fields
-from chroma_api.utils import custom_response, StatefulModelResource, dehydrate_command
-
+from chroma_api.utils import custom_response, StatefulModelResource, MetricResource, dehydrate_command
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PermissionAuthorization
@@ -19,7 +18,7 @@ from chroma_api.authentication import PermissionAuthorization
 from chroma_api import api_log
 
 
-class HostResource(StatefulModelResource):
+class HostResource(MetricResource, StatefulModelResource):
     """
     Represents a Lustre server which Chroma server is monitoring or managing.  When PUTing, requires the ``state`` field.  When POSTing, requires the ``address`` field.
     """
@@ -67,7 +66,10 @@ class HostTestResource(Resource):
         object_class = dict
 
     def obj_create(self, bundle, request = None, **kwargs):
+        from chroma_core.models.utils import await_async_result
         from chroma_core.tasks import test_host_contact
         host = ManagedHost(address = bundle.data['address'])
-        task = test_host_contact.delay(host)
-        raise custom_response(self, request, http.HttpAccepted, {'task_id': task.task_id, 'status': task.status})
+        async_result = test_host_contact.delay(host)
+        result = await_async_result(async_result)
+
+        raise custom_response(self, request, http.HttpAccepted, result)
