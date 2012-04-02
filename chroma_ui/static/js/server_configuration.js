@@ -36,13 +36,19 @@ var add_host_dialog = function() {
       select_page('add_host_confirm')
       $('.add_host_confirm_button').focus();
 
+      var field_to_class = {
+        resolve: 'add_host_resolve',
+        ping: 'add_host_ping',
+        agent: 'add_host_agent',
+        reverse_ping: 'add_host_reverse_ping',
+        reverse_resolve: 'add_host_reverse_resolve'};
+
+      _.each(field_to_class, function(el_class, field) {
+        element.find('.' + el_class).toggleClass('success', result[field]);
+        element.find('.' + el_class).toggleClass('failure', !result[field]);
+      });
+
       element.find('.add_host_address_label').html(result['address']);
-      element.find('.add_host_resolve').toggleClass('success', result['resolve']);
-      element.find('.add_host_resolve').toggleClass('failure', !result['resolve']);
-      element.find('.add_host_ping').toggleClass('success', result['ping']);
-      element.find('.add_host_ping').toggleClass('failure', !result['ping']);
-      element.find('.add_host_agent').toggleClass('success', result['agent']);
-      element.find('.add_host_agent').toggleClass('failure', !result['agent']);
   }
 
   function add_host_error(message) {

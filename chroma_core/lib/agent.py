@@ -52,7 +52,7 @@ class Agent(object):
         if self.console_callback:
             self.console_callback(chunk)
 
-    def _ssh(self, command):
+    def ssh(self, command):
         import paramiko
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -99,9 +99,9 @@ class Agent(object):
 
         ssh.close()
 
-        self.log.debug("_ssh:%s:%s:%s" % (self.host, result_code, command))
+        self.log.debug("ssh:%s:%s:%s" % (self.host, result_code, command))
         if result_code != 0:
-            self.log.error("_ssh: nonzero rc %d" % result_code)
+            self.log.error("ssh: nonzero rc %d" % result_code)
             self.log.error(stdout_buf)
             self.log.error(stderr_buf)
         return result_code, stdout_buf, stderr_buf
@@ -112,7 +112,7 @@ class Agent(object):
             from re import escape
             args_str = "--args %s" % escape(json.dumps(args))
         cmdline = "hydra-agent %s %s" % (cmd, args_str)
-        code, out, err = self._ssh(cmdline)
+        code, out, err = self.ssh(cmdline)
 
         if code == 0:
             # May raise a ValueError

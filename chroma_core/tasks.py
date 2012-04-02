@@ -419,6 +419,31 @@ def test_host_contact(host):
         ping = (0 == call(['ping', '-c 1', resolved_address]))
 
     from chroma_core.lib.agent import Agent
+
+    ping = (0 == call(['ping', '-c 1', resolved_address]))
+    if settings.SERVER_HTTP_URL:
+        import urlparse
+        server_host = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
+    else:
+        server_host = socket.getfqdn()
+
+    if resolve:
+        rc, out, err = Agent(host).ssh("ping -c 1 %s" % server_host)
+        if rc == 0:
+            reverse_resolve = True
+            reverse_ping = True
+        elif rc == 1:
+            # Can resolve, cannot ping
+            reverse_resolve = True
+            reverse_ping = False
+        else:
+            # Cannot resolve
+            reverse_resolve = False
+            reverse_ping = False
+    else:
+        reverse_resolve = False
+        reverse_ping = False
+
     # Don't depend on ping to try invoking agent, could well have
     # SSH but no ping
     agent = False
@@ -435,6 +460,8 @@ def test_host_contact(host):
             'resolve': resolve,
             'ping': ping,
             'agent': agent,
+            'reverse_resolve': reverse_resolve,
+            'reverse_ping': reverse_ping
             }
 
 
