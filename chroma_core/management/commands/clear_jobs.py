@@ -22,4 +22,4 @@ before running this."""
         # Cancel anything that's in a running state
         CommandModel.objects.filter(complete = False).update(complete = True, cancelled = True)
         Job.objects.filter(~Q(state = 'complete')).update(state = 'complete', cancelled = True)
-        OpportunisticJob.objects.filter(run = False).update(run = True, run_at = datetime.datetime.now())
+        OpportunisticJob.objects.filter(run = False).update(run = True, run_at = datetime.datetime.utcnow())
