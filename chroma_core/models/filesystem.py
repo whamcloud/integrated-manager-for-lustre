@@ -165,11 +165,6 @@ class StartStoppedFilesystemJob(FilesystemJob, Job, StateChangeJob):
     state_transition = (ManagedFilesystem, 'stopped', 'available')
     filesystem = models.ForeignKey('ManagedFilesystem')
 
-    # Opportunistic retry so that after try to starting a filesystem,
-    # if something fails and then the targets later reach an all-mounted
-    # state, we'll run (i.e. mark the FS started)
-    opportunistic_retry = True
-
     def description(self):
         return "Start filesystem %s" % (self.filesystem.name)
 
@@ -178,8 +173,6 @@ class StartUnavailableFilesystemJob(FilesystemJob, Job, StateChangeJob):
     state_verb = "Start"
     state_transition = (ManagedFilesystem, 'unavailable', 'available')
     filesystem = models.ForeignKey('ManagedFilesystem')
-
-    opportunistic_retry = True
 
     def description(self):
         return "Start filesystem %s" % (self.filesystem.name)
