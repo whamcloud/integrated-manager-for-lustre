@@ -34,7 +34,11 @@ class RetryOnSqlErrorTask(Task):
         try:
             return self.run(*args, **kwargs)
         except (ProgrammingError, OperationalError), e:
-            job_log.error("Internal error %s" % e)
+            import sys
+            import traceback
+            exc_info = sys.exc_info()
+            trace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            job_log.error("Internal error %s" % trace)
             self.retry(args, kwargs, e, countdown=settings.SQL_RETRY_PERIOD)
 
 
