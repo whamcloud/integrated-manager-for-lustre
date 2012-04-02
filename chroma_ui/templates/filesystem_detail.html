@@ -127,12 +127,12 @@
         // Config param dialog
         conf_param_dialog = ConfParamDialog({url: filesystem.resource_uri});
         conf_param_dialog.set(filesystem.conf_params)
+
+        // Free space pie charts
+        LoadFSGraph_EditFS(filesystem);
       });
 
       loadFilesystemTargets();
-
-      // Free space pie charts
-      LoadFSGraph_EditFS(fs_id);
     }
 
     function loadFilesystemTargets()
