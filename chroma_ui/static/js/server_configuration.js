@@ -72,7 +72,7 @@ var add_host_dialog = function() {
     Api.post("host/", {address: element.find('.add_host_address_label').html(), commit: true},
     success_callback = function(data)
     {
-      select_page('add_host_loading')
+      select_page('add_host_complete')
       $('.add_host_back_button').focus();
       $('#server_configuration').dataTable().fnDraw();
     },

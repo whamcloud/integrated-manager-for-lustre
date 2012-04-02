@@ -51,7 +51,7 @@ class ApplyConfParams(Job):
     def get_steps(self):
         from chroma_core.models import ConfParam
         from chroma_core.lib.job import job_log
-        new_params = ConfParam.objects.filter(version__gt = self.mgs.conf_param_version_applied).order_by('version')
+        new_params = ConfParam.objects.filter(version__gt = self.mgs.conf_param_version_applied, mgs = self.mgs).order_by('version')
         steps = []
 
         new_param_count = new_params.count()

@@ -171,13 +171,14 @@ class FilesystemValidation(Validation):
 
         # Validate conf params
         # TODO: put this somewhere it can be used by conf param updates too
-        for key, val in bundle.data['conf_params']:
+        for key, val in bundle.data['conf_params'].items():
             try:
                 from chroma_core.lib import conf_param
                 conf_param_info = conf_param.all_params[key]
                 conf_param_class = conf_param_info[0]
-                if not (isinstance(conf_param_class, conf_param.FilesystemGlobalConfParam) or isinstance(conf_param_class, conf_param.FilesystemClientConfParam)):
-                        errors['conf_params'].append("conf_param %s is not settable for filesystems" % key)
+                if not (issubclass(conf_param_class, conf_param.FilesystemGlobalConfParam) or issubclass(conf_param_class, conf_param.FilesystemClientConfParam)):
+                    api_log.error("bad conf param %s %s" % (key, conf_param_class))
+                    errors['conf_params'].append("conf_param %s is not settable for filesystems" % key)
                 conf_param_attribute_class = conf_param_info[1]
 
                 try:
@@ -280,32 +281,6 @@ class FilesystemResource(MetricResource, ConfParamResource):
                 except (FuzzyLookupFailed, FuzzyLookupException), e:
                     bundle.data_errors['osts'].append(str(e))
             bundle.data['ost_lun_ids'] = ost_lun_ids
-
-        return bundle
-
-    def hydrate_conf_params(self, bundle):
-        import re
-
-        # don't mess with conf_params if it's already a dict
-        if ('conf_params' in bundle.data
-                and hasattr('items', bundle.data['conf_params'])):
-            return bundle
-
-        if ('conf_params' in bundle.data
-                and len(bundle.data['conf_params']) > 0):
-            conf_params = {}
-            # This is very simpleminded.  I'd originally thought that
-            # we could ask the resource's deserializer to parse the
-            # YAML, but we can't count on YAML being available.
-            for keyval in re.split('\s*,\s*', bundle.data['conf_params']):
-                try:
-                    key, val = re.split('\s*:\s*', keyval)
-                    conf_params[key] = val
-                except ValueError:
-                    bundle.data_errors['conf_params'].append("Invalid param format '%s' (try key: val, key: val)" % keyval)
-            bundle.data['conf_params'] = conf_params
-        else:
-            bundle.data['conf_params'] = {}
 
         return bundle
 

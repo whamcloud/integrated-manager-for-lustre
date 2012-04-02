@@ -17,6 +17,7 @@
       }
 
       fs_id = id;
+      conf_param_dialog = undefined;
       loadFilesystem();
     }
 
@@ -125,8 +126,7 @@
         $('#fs_name').html(filesystem.name);
 
         // Config param dialog
-        conf_param_dialog = ConfParamDialog({url: filesystem.resource_uri});
-        conf_param_dialog.set(filesystem.conf_params)
+        conf_param_dialog = ConfParamDialog({url: filesystem.resource_uri, conf_params: filesystem.conf_params});
 
         // Free space pie charts
         LoadFSGraph_EditFS(filesystem);

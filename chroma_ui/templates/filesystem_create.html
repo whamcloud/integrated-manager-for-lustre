@@ -17,7 +17,7 @@
         $('#mgt_chooser').volumeChooser('clear');
         $('#mdt_chooser').volumeChooser('clear');
         $('#ost_chooser').volumeChooser('clear');
-        conf_param_dialog.clear()
+        conf_param_dialog = undefined;
         advanced_tab_clicked = false;
 
         $('#filesystem_create_form').find('span.error').remove();
@@ -111,8 +111,6 @@
         });
       });
 
-      conf_param_dialog = ConfParamDialog();
-
       /* Populate existing MGT list */
       Api.get("target/", {
           kind: "MGT",
@@ -202,7 +200,11 @@
         _.each(ost_lun_ids, function(lun_id) {
           filesystem.osts.push({volume_id: lun_id})
         });
-        filesystem.conf_params = conf_param_dialog.get()
+        if (conf_param_dialog) {
+            filesystem.conf_params = conf_param_dialog.get()
+        } else {
+            filesystem.conf_params = {}
+        }
 
         Api.post("filesystem/", filesystem,
           success_callback = function(data) {
@@ -214,18 +216,18 @@
       $('div#filesystem_create_form button.advanced').click(function()
       {
         // If clicked first time then only fetch parameters else show already entered values
-        if(!advanced_tab_clicked) {
+        if(!conf_param_dialog) {
           Api.get("help/conf_param/", {kind: 'FS'}, success_callback = function(help_dict) {
             var data = {};
             for(var key in help_dict) {
               data[key] = null;
             }
             advanced_tab_clicked = true;
-            conf_param_dialog.setHelp(help_dict)
-            conf_param_dialog.open()
+            conf_param_dialog = ConfParamDialog({help: help_dict})
+            conf_param_dialog.open();
           })
         } else {
-          conf_param_dialog.open()
+            conf_param_dialog.open()
         }
       });
     }
