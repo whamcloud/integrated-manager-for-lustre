@@ -455,6 +455,38 @@ def _stop_target(label, id):
         raise RuntimeError("failed to stop target %s" % unique_label)
 
 
+# fail a target back to it's primary node
+def failback_target(args):
+    from time import sleep
+    unique_label = "%s_%s" % (args.label, args.id)
+    stdout = shell.try_run(shlex.split("crm configure show %s-primary" %
+                                       unique_label))
+    primary = stdout[stdout.rfind(' ') + 1:-1]
+    stdout = shell.try_run("crm_resource --resource %s --move --node %s 2>&1" % \
+                           (unique_label, primary), shell = True)
+
+    if stdout.find("%s is already active on %s\n" % \
+                   (unique_label, primary)) > -1:
+        return
+
+    # now wait for it to complete its move
+    timeout = 100
+    n = 0
+    migrated = False
+    while n < timeout:
+        if get_resource_location(unique_label) == primary:
+            migrated = True
+            break
+        sleep(1)
+        n += 1
+
+    # now delete the constraint that crm resource move created
+    shell.try_run(shlex.split("crm configure delete cli-prefer-%s" % \
+                              unique_label))
+    if not migrated:
+        raise RuntimeError("failed to fail back target %s" % unique_label)
+
+
 def migrate_target(args):
     # a migration scores at 500 to force it higher than stickiness
     score = 500
@@ -562,6 +594,14 @@ class TargetsPlugin(ActionPlugin):
         p.add_argument('--node', required=True,
                        help='node to migrate target to')
         p.set_defaults(func=migrate_target)
+
+        p = parser.add_parser('failback-target',
+                              help='fail a target back to it\'s primary node')
+        p.add_argument('--label', required=True,
+                       help='label of target to migrate')
+        p.add_argument('--id', required=True,
+                       help='id of target to stop')
+        p.set_defaults(func=failback_target)
 
         p = parser.add_parser('unmigrate-target',
                               help='cancel prevous target migrate')
