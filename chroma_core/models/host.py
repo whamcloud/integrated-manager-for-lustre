@@ -397,7 +397,8 @@ class LNetConfiguration(StatefulObject):
     host = models.OneToOneField('ManagedHost')
 
     def get_nids(self):
-        assert(self.state == 'nids_known')
+        if self.state != 'nids_known':
+            raise ValueError("Nids not known yet for host %s" % self.host)
         return [n.nid_string for n in self.nid_set.all()]
 
     def __str__(self):
