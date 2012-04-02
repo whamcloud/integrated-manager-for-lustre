@@ -172,7 +172,7 @@ def get_resource_location(resource_name):
 
 
 def get_resource_locations():
-    """Parse `corosync status` to identify where (if anywhere)
+    """Parse `crm resource list` to identify where (if anywhere)
        resources (i.e. targets) are running."""
     try:
         rc, stdout, stderr = shell.run(['crm', 'resource', 'list'])
@@ -268,11 +268,11 @@ def register_target(args):
 
 
 def unconfigure_ha(args):
-    _unconfigure_ha(args.primary, args.label, args.uuid, args.serial)
+    _unconfigure_ha(args.primary, args.label, args.uuid, args.id)
 
 
-def _unconfigure_ha(primary, label, uuid, serial):
-    unique_label = "%s_%s" % (label, serial)
+def _unconfigure_ha(primary, label, uuid, id):
+    unique_label = "%s_%s" % (label, id)
 
     if get_resource_location(unique_label):
         raise RuntimeError("cannot unconfigure-ha: %s is still running " % \
@@ -290,7 +290,7 @@ def _unconfigure_ha(primary, label, uuid, serial):
 
 
 def configure_ha(args):
-    unique_label = "%s_%s" % (args.label, args.serial)
+    unique_label = "%s_%s" % (args.label, args.id)
 
     if args.primary:
         # now configure pacemaker for this target
@@ -366,8 +366,8 @@ def query_ha_targets(args):
         if len(target) < 1:
             continue
 
-        label, serial = target.split("_")
-        targets[target] = {'label': label, 'serial': serial}
+        label, id = target.split("_")
+        targets[target] = {'label': label, 'id': id}
 
         raw_xml = "\n".join(shell.try_run(['crm_resource', '-r', target, '-q']).split("\n")[2:])
         try:
@@ -393,7 +393,7 @@ def unmount_target(args):
 
 def start_target(args):
     from time import sleep
-    unique_label = "%s_%s" % (args.label, args.serial)
+    unique_label = "%s_%s" % (args.label, args.id)
     shell.try_run(['crm_resource', '-r', unique_label, '-p', 'target-role',
                    '-m', '-v', 'Started'])
 
@@ -430,11 +430,11 @@ def start_target(args):
 
 
 def stop_target(args):
-    _stop_target(args.label, args.serial)
+    _stop_target(args.label, args.id)
 
 
-def _stop_target(label, serial):
-    unique_label = "%s_%s" % (label, serial)
+def _stop_target(label, id):
+    unique_label = "%s_%s" % (label, id)
     from time import sleep
     shell.try_run(['crm_resource', '-r', unique_label, '-p', 'target-role',
                   '-m', '-v', 'Stopped'])
@@ -496,9 +496,9 @@ def target_running(args):
 def clear_targets(args):
     for resource, attrs in query_ha_targets(args).items():
         print "Stopping %s" % resource
-        _stop_target(attrs['label'], attrs['serial'])
+        _stop_target(attrs['label'], attrs['id'])
         print "Unconfiguring %s" % resource
-        _unconfigure_ha(True, attrs['label'], attrs['uuid'], attrs['serial'])
+        _unconfigure_ha(True, attrs['label'], attrs['uuid'], attrs['id'])
 
 
 class TargetsPlugin(ActionPlugin):
@@ -513,7 +513,7 @@ class TargetsPlugin(ActionPlugin):
         p.add_argument('--device', required=True, help='device of the target')
         p.add_argument('--label', required=True, help='label of the target')
         p.add_argument('--uuid', required=True, help='uuid of the target')
-        p.add_argument('--serial', required=True, help='serial of the target')
+        p.add_argument('--id', required=True, help='id of the target')
         p.add_argument('--primary', action='store_true',
                        help='target is primary on this node')
         p.add_argument('--mountpoint', required=True, help='mountpoint for target')
@@ -523,7 +523,7 @@ class TargetsPlugin(ActionPlugin):
                                   help='unconfigure a target\'s HA parameters')
         p.add_argument('--label', required=True, help='label of the target')
         p.add_argument('--uuid', required=True, help='uuid of the target')
-        p.add_argument('--serial', required=True, help='serial of target')
+        p.add_argument('--id', required=True, help='id of target')
         p.add_argument('--primary', action='store_true',
                        help='target is primary on this node')
         p.set_defaults(func=unconfigure_ha)
@@ -533,17 +533,22 @@ class TargetsPlugin(ActionPlugin):
         p.set_defaults(func=mount_target)
 
         p = parser.add_parser('unmount-target', help='unmount a target')
-        p.add_argument('--uuid', required=True, help='uuid of target to unmount')
+        p.add_argument('--uuid', required=True,
+                       help='uuid of target to unmount')
         p.set_defaults(func=unmount_target)
 
         p = parser.add_parser('start-target', help='start a target')
-        p.add_argument('--label', required=True, help='label of target to start')
-        p.add_argument('--serial', required=True, help='serial of target to start')
+        p.add_argument('--label', required=True,
+                       help='label of target to start')
+        p.add_argument('--id', required=True,
+                       help='id of target to start')
         p.set_defaults(func=start_target)
 
         p = parser.add_parser('stop-target', help='stop a target')
-        p.add_argument('--label', required=True, help='label of target to stop')
-        p.add_argument('--serial', required=True, help='serial of target to stop')
+        p.add_argument('--label', required=True,
+                       help='label of target to stop')
+        p.add_argument('--id', required=True,
+                       help='id of target to stop')
         p.set_defaults(func=stop_target)
 
         p = parser.add_parser('format-target', help='format a target')
@@ -551,19 +556,21 @@ class TargetsPlugin(ActionPlugin):
         p.set_defaults(func=format_target)
 
         p = parser.add_parser('migrate-target',
-                                  help='migrate a target to a node')
-        p.add_argument('--label', required=True, help='label of target to migrate')
-        p.add_argument('--node', required=True, help='node to migrate target to')
+                              help='migrate a target to a node')
+        p.add_argument('--label', required=True,
+                       help='label of target to migrate')
+        p.add_argument('--node', required=True,
+                       help='node to migrate target to')
         p.set_defaults(func=migrate_target)
 
         p = parser.add_parser('unmigrate-target',
-                                  help='cancel prevous target migrate')
+                              help='cancel prevous target migrate')
         p.add_argument('--label', required=True,
                        help='label of target to cancel migration of')
         p.set_defaults(func=unmigrate_target)
 
         p = parser.add_parser('target-running',
-                                  help='check if a target is running')
+                              help='check if a target is running')
         p.add_argument('--uuid', required=True,
                        help='uuid of target to check')
         p.set_defaults(func=target_running)
