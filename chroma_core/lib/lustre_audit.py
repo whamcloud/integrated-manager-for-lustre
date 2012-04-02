@@ -290,16 +290,20 @@ class UpdateScan(object):
 
         try:
             target = ManagedTarget.objects.get(name=target_name,
-                                        managedtargetmount__host=self.host)
+                                        managedtargetmount__host=self.host).downcast()
         except ManagedTarget.DoesNotExist:
             # Unknown target -- ignore metrics
             audit_log.warning("Discarding metrics for unknown target: %s" % target_name)
             return 0
 
+        # Synthesize the 'client_count' metric (assumes one MDT per filesystem)
+        if isinstance(target, ManagedMdt):
+            metrics['client_count'] = metrics['num_exports'] - 1
+
         if target.state == 'forgotten':
             return 0
         else:
-            return target.downcast().metrics.update(metrics)
+            return target.metrics.update(metrics)
 
     def store_node_metrics(self, metrics):
         return self.host.downcast().metrics.update(metrics)

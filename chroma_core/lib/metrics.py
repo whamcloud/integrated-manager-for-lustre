@@ -371,13 +371,6 @@ class FilesystemMetricStore(R3dMetricStore):
         """
         results = {}
 
-        def client_count(num_exports, targets):
-            target_count = len(targets)
-            # ((total - # MDS OSCs) / # OSTS) - MGS
-            return ((num_exports - target_count) / target_count) - 1
-
-        computed_metrics = {'num_exports': client_count}
-
         from django.core.exceptions import FieldError
         try:
             fs_components = query_class.objects.filter(filesystem=self.filesystem)
@@ -404,11 +397,6 @@ class FilesystemMetricStore(R3dMetricStore):
                                 results[row_ts][metric] += row_dict[metric]
                     except KeyError:
                         results[row_ts][metric] = row_dict[metric]
-
-        for row_ts in results:
-            for metric in results[row_ts]:
-                if metric in computed_metrics:
-                    results[row_ts][metric] = computed_metrics[metric](results[row_ts][metric], fs_components)
 
         return tuple(
                 sorted(

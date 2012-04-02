@@ -839,7 +839,7 @@ function init_charts_global() {
   chart_manager.add_chart('client_count', 'dashboard', {
     url: 'target/metric',
     api_params: { reduce_fn: 'sum', kind: 'MDT'},
-    metrics: ["num_exports"],
+    metrics: ["client_count"],
     chart_config: {
       chart: {
         renderTo: 'global_client_count',
