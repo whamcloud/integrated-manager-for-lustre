@@ -60,7 +60,7 @@ class VolumeResource(ModelResource):
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         excludes = ['not_deleted']
-        ordering = ['label']
+        ordering = ['label', 'size']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'put']
 
