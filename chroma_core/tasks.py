@@ -229,7 +229,8 @@ def run_job(job_id):
     if job.started_step:
         job_log.warning("Job %d restarting, started, finished=%s,%s" % (job.id, job.started_step, job.finished_step))
         if job.started_step != job.finished_step:
-            if steps[job.started_step].is_idempotent():
+            step_klass, step_args = steps[job.started_step]
+            if step_klass.idempotent:
                 job_log.info("Job %d step %d will be re-run (it is idempotent)" % (job.id, job.started_step))
             else:
                 job_log.error("Job %d step %d is dirty and cannot be re-run (it is not idempotent, marking job errored." % (job.id, job.started_step))

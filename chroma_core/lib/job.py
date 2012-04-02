@@ -131,14 +131,11 @@ class Step(object):
     def mark_final(self):
         self.final = True
 
+    # Indicate whether the step is idempotent.  For example, mounting
+    # a target.  Step subclasses which are always idempotent should set the
+    # idempotent class attribute.   Subclasses which may be idempotent should
+    # override this attribute.
     idempotent = False
-
-    def is_idempotent(self):
-        """Indicate whether the step is idempotent.  For example, mounting
-           a target.  Step subclasses which are always idempotent should set the
-           idempotent class attribute.   Subclasses which may be idempotent should
-           override this method."""
-        return self.idempotent
 
     def run(self, kwargs):
         raise NotImplementedError
