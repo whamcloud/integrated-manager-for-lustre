@@ -80,6 +80,7 @@ target_dialog_open = function(target_url) {
     properties_markup += keyval_row("Alerts", LiveObject.alertLabel(target));
     properties_markup += "</table>";
     $('#target_dialog_properties').html(properties_markup);
+    $('#target_dialog_tabs').tabs('select', 0);
     if (target.conf_params) {
       $('#target_dialog_tabs').tabs('enable', 2);
       populate_conf_param_table(target.conf_params, $("#target_config_param_table"));
