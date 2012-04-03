@@ -239,7 +239,7 @@ class PluginResponse(object):
             conn.connect()
             response_routing_key = "plugin_data_response_%s_%s" % (plugin_name, resource_tag)
             with conn.Producer(exchange = exchange, serializer = 'json', routing_key = response_routing_key) as producer:
-                producer.publish({'id': request_id, 'data': response_data})
+                producer.publish({'id': request_id, 'data': response_data, 'created_at': datetime.datetime.utcnow().isoformat() + "Z"})
 
     @classmethod
     def receive(cls, plugin_name, resource_tag, request_id, timeout = DEFAULT_RESPONSE_TIMEOUT):
@@ -257,25 +257,28 @@ class PluginResponse(object):
             response_data = []
 
             def handle_response(body, message):
+                import dateutil.parser
                 accepted = False
                 try:
                     id = body['id']
-                except KeyError:
+                    data = body['data']
+                    created_at = dateutil.parser.parse(body['created_at'])
+                except (KeyError, ValueError):
                     import json
                     log.warning("Malformed response '%s' on %s" % (json.dumps(body), response_routing_key))
+                    message.ack()
+                    return
+
+                if id == request_id:
+                    log.info("Got response for request %s" % request_id)
+                    response_data.append(data)
+                    accepted = True
+                    message.ack()
                 else:
-                    if id == request_id:
-                        response_data.append(body['data'])
-                        log.info("Got response for request %s" % request_id)
-                        accepted = True
-                    else:
-                        log.warning("Dropping unexpected response %s on %s" % (id, response_routing_key))
-                finally:
-                    import dateutil.parser
+                    # Someone elses request, ignore it unless it's too old.  If it exceeds the timeout
+                    # assume the owner will never claim it, and ack it to prevent it lingering forever.
                     UNHANDLED_RESPONSE_TIMEOUT = 600
-                    if accepted:
-                        message.ack()
-                    elif datetime.datetime.utcnow() - dateutil.parser.parse(body['created_at']) > datetime.timedelta(seconds = UNHANDLED_RESPONSE_TIMEOUT):
+                    if datetime.datetime.utcnow() - dateutil.parser.parse(created_at) > datetime.timedelta(seconds = UNHANDLED_RESPONSE_TIMEOUT):
                         log.warning("Dropping stale response %s on %s (created at %s)" % (id, response_routing_key, body['created_at']))
                         message.ack()
 
