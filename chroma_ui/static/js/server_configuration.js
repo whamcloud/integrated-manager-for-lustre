@@ -91,7 +91,8 @@ var add_host_dialog = function() {
   });
 
   element.find('.add_host_close_button').click(function(ev) {
-      element.find('.add_host_dialog').dialog('close')
+      element.dialog('close')
+      element.remove();
       ev.preventDefault();
   });
 
