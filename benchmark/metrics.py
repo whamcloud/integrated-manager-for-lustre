@@ -1,10 +1,10 @@
 import random
 import sys
 import time
+import uuid
 
 from django.test.simple import DjangoTestSuiteRunner
 from django.db import transaction
-from chroma_core.models.target import ManagedTargetMount
 
 import settings
 
@@ -54,7 +54,7 @@ class ServerGenerator(Generator):
             self.stats['cpustats'][lnet_stat] = 0
 
     def create_entity(self, fs):
-        self.entity = ManagedHost.objects.get_or_create(address=self.name)[0]
+        self.entity = ManagedHost.objects.create(address=self.name)
         self.entity.metrics
 
 
@@ -63,18 +63,13 @@ class TargetGenerator(Generator):
         self.host = host
         super(TargetGenerator, self).__init__(fs, **kwargs)
 
-    def create_entity(self, fs):
-        import uuid
-        # Need to gin this stuff up to make the metrics layer happy.  Sigh.
-        volume = Volume.objects.create()
-        volume_node = VolumeNode.objects.create(host = self.host,
-                                          path = uuid.uuid4(),
-                                          lun = volume)
-        ManagedTargetMount.objects.create(volume_node=volume_node,
-                                          target = self.entity,
-                                          host = self.host,
-                                          mount_point = uuid.uuid4(),
-                                          primary = True)
+    def create_volume(self):
+        self.volume = Volume.objects.create()
+        self.volume_node = VolumeNode.objects.create(host = self.host,
+                                                     path = uuid.uuid4(),
+                                                     primary = True,
+                                                     use = True,
+                                                     volume = self.volume)
 
 
 class OstGenerator(TargetGenerator):
@@ -85,12 +80,11 @@ class OstGenerator(TargetGenerator):
             self.stats[stat_name] = 0
 
     def create_entity(self, fs):
-        ost_lun = Volume.objects.create(label=self.name)
-        self.entity = ManagedOst.objects.get_or_create(name=self.name,
-                                                       lun=ost_lun,
-                                                       filesystem=fs)[0]
+        self.create_volume()
+        self.entity = ManagedOst.create_for_volume(self.volume.pk,
+                                                   name=self.name,
+                                                   filesystem=fs)
         self.entity.metrics
-        super(OstGenerator, self).create_entity(fs)
 
     def __init__(self, host, oss_idx, idx, fs, **kwargs):
         self.name = "%s-OST%04d" % (kwargs['fsname'],
@@ -115,12 +109,11 @@ class MdtGenerator(TargetGenerator):
             self.stats[stat_name] = 0
 
     def create_entity(self, fs):
-        mdt_lun = Volume.objects.create(label=self.name)
-        self.entity = ManagedMdt.objects.get_or_create(name=self.name,
-                                                       lun=mdt_lun,
-                                                       filesystem=fs)[0]
+        self.create_volume()
+        self.entity = ManagedMdt.create_for_volume(self.volume.pk,
+                                                   name=self.name,
+                                                   filesystem=fs)
         self.entity.metrics
-        super(MdtGenerator, self).create_entity(fs)
 
     def __init__(self, host, fs, **kwargs):
         self.name = "%s-MDT%04d" % (kwargs['fsname'], 0)
@@ -206,8 +199,14 @@ class Benchmark(GenericBenchmark):
 
         self.do_db_mangling(**kwargs)
 
-        mgs_lun = Volume.objects.create(label="mgs")
-        self.mgs = ManagedMgs.objects.create(name="MGS", lun=mgs_lun)
+        mgs_host = ManagedHost.objects.create(address="mgs")
+        mgs_vol = Volume.objects.create(label="mgs")
+        VolumeNode.objects.create(host = mgs_host,
+                                  path = uuid.uuid4(),
+                                  primary = True,
+                                  use = True,
+                                  volume = mgs_vol)
+        self.mgs = ManagedMgs.create_for_volume(mgs_vol.pk, name="MGS")
         self.fs_entity = ManagedFilesystem.objects.create(name=kwargs['fsname'],
                                                           mgs=self.mgs)
         self.oss_list = self.prepare_oss_list(**kwargs)
