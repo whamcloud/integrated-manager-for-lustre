@@ -40,7 +40,7 @@ class MockAgent(object):
         elif cmdline.startswith('start-target'):
             import re
             from chroma_core.models import ManagedTarget
-            target_id = re.search("--serial ([^\s]+)", cmdline).group(1)
+            target_id = re.search("--id ([^\s]+)", cmdline).group(1)
             target = ManagedTarget.objects.get(id = target_id)
             return {'location': target.primary_server().nodename}
         elif cmdline.startswith('register-target'):
