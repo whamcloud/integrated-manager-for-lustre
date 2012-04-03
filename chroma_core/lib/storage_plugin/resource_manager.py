@@ -379,7 +379,18 @@ class ResourceManager(object):
             for ln in volume_nodes:
                 host_to_lun_nodes[ln.host].append(ln)
 
-            host_to_primary_count = dict([(h, VolumeNode.objects.filter(host = h, primary = True).count()) for h in host_to_lun_nodes.keys()])
+            host_to_primary_count = {}
+            for h in host_to_lun_nodes.keys():
+                # Instead of just counting primary nodes (that would include local volumes), only
+                # give a host credit for a primary node if the node's volume also has a secondary
+                # somewhere.
+                primary_count = 0
+                for vn in VolumeNode.objects.filter(host = h, primary = True):
+                    if vn.volume.volumenode_set.filter(use = True, primary = False).count() > 0:
+                        primary_count += 1
+
+                host_to_primary_count[h] = primary_count
+                log.info("primary_count %s = %s" % (h, primary_count))
 
             fewest_primaries = [host for host, count in sorted(host_to_primary_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
             primary_lun_node = host_to_lun_nodes[fewest_primaries][0]
