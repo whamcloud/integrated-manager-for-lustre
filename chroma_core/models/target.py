@@ -222,6 +222,14 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
     def default_mount_path(self, host):
         return "/mnt/%s/mdt" % self.filesystem.name
 
+    def get_available_states(self, begin_state):
+        # Exclude the transition to 'removed' in favour of being removed when our FS is
+        available_states = super(ManagedMdt, self).get_available_states(begin_state)
+        if 'removed' in available_states:
+            available_states.remove('removed')
+
+        return available_states
+
 
 class ManagedMgs(ManagedTarget, MeasuredEntity):
     conf_param_version = models.IntegerField(default = 0)
@@ -229,6 +237,15 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
 
     def role(self):
         return "MGT"
+
+    def get_available_states(self, begin_state):
+        # Exclude the transition to 'removed' in favour of being removed when our FS is
+        available_states = super(ManagedMgs, self).get_available_states(begin_state)
+        if self.managedfilesystem_set.count() > 0:
+            if 'removed' in available_states:
+                available_states.remove('removed')
+
+        return available_states
 
     @classmethod
     def get_by_host(cls, host):
@@ -334,7 +351,14 @@ class RemoveConfiguredTargetJob(Job, StateChangeJob):
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
 
-    requires_confirmation = True
+    def get_requires_confirmation(self):
+        return True
+
+    def get_confirmation_string(self):
+        if isinstance(self.target.downcast(), ManagedOst):
+            return "Ensure that you have followed the manual OST removal procedure before continuing"
+        else:
+            return None
 
     class Meta:
         app_label = 'chroma_core'
@@ -356,7 +380,7 @@ class RemoveConfiguredTargetJob(Job, StateChangeJob):
         return steps
 
 
-# FIXME: this is a pretty horrible way of generating job classes for
+# FIXME HYD-627: this is a pretty horrible way of generating job classes for
 # a number of originating states to the same end state
 # TODO: when transitioning from 'registered' to 'removed', do something to
 # remove this target from the MGS
@@ -367,6 +391,19 @@ for origin in ['unformatted', 'formatted', 'registered']:
     def get_steps(self):
         return [(DeleteTargetStep, {'target_id': self.target.id})]
 
+    # Mangling name to make pyflakes happy pending HYD-627
+    def get_confirmation_string(self):
+        if isinstance(self.target.downcast(), ManagedOst):
+            if self.target.state == 'registered':
+                return "Ensure that you have followed the manual OST removal procedure before continuing"
+            else:
+                return None
+        else:
+            return None
+
+    def get_requires_confirmation_foo(self):
+        return True
+
     name = "RemoveTargetJob_%s" % origin
     cls = type(name, (Job, StateChangeJob), {
         'state_transition': (ManagedTarget, origin, 'removed'),
@@ -375,7 +412,8 @@ for origin in ['unformatted', 'formatted', 'registered']:
         'target': models.ForeignKey(ManagedTarget),
         'Meta': type('Meta', (object,), {'app_label': 'chroma_core'}),
         'description': description,
-        'requires_confirmation': True,
+        'get_requires_confirmation': get_requires_confirmation_foo,
+        'get_confirmation_string': get_confirmation_string,
         'get_steps': get_steps,
         '__module__': __name__,
     })
@@ -578,7 +616,8 @@ class StopTargetJob(Job, StateChangeJob):
     state_verb = "Stop"
     target = models.ForeignKey(ManagedTarget)
 
-    requires_confirmation = True
+    def get_requires_confirmation(self):
+        return True
 
     class Meta:
         app_label = 'chroma_core'
@@ -721,6 +760,9 @@ for origin in ['unmounted', 'mounted']:
     def forget_get_steps(self):
         return [(DeleteTargetStep, {'target_id': self.target.id})]
 
+    def get_requires_confirmation(self):
+        return True
+
     name = "ForgetTargetJob_%s" % origin
     cls = type(name, (Job, StateChangeJob), {
         'state_transition': (ManagedTarget, origin, 'forgotten'),
@@ -729,7 +771,7 @@ for origin in ['unmounted', 'mounted']:
         'target': models.ForeignKey(ManagedTarget),
         'Meta': type('Meta', (object,), {'app_label': 'chroma_core'}),
         'description': forget_description,
-        'requires_confirmation': True,
+        'get_requires_confirmation': get_requires_confirmation,
         'get_steps': forget_get_steps,
         '__module__': __name__,
     })

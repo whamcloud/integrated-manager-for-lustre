@@ -1,7 +1,4 @@
 
-stateTransitionCommit = function(url, state)
-{
-}
 
 $(document).ready(function() {
   $('#transition_confirmation_dialog').dialog({autoOpen: false, maxHeight: 400, maxWidth: 800, width: 'auto', height: 'auto'});
@@ -13,22 +10,30 @@ stateTransition = function (url, state)
   success_callback = function(data)  
   {
     var requires_confirmation = false;
+    var confirmation_markup;
 
-    var confirmation_markup = "<p>This action will have the following consequences:</p><ul>";
-    if (data.length == 0) {
+    if (data.transition_job == null) {
       // A no-op
       return;
-    } else if (data.length > 1) {
-      $.each(data, function(i, consequence_info) {
+    } else if (data.transition_job.confirmation_prompt) {
+      requires_confirmation = true;
+      confirmation_markup = "<p><strong>" + data.transition_job.confirmation_prompt + "</strong></p><p>Are you sure?</p>";
+    } else if (data.dependency_jobs.length > 0) {
+      confirmation_markup = "<p>This action has the following consequences:</p><ul>";
+      requires_confirmation = data.transition_job.requires_confirmation;
+
+      $.each(data.dependency_jobs, function(i, consequence_info) {
+        console.log(consequence_info)
         confirmation_markup += "<li>" + consequence_info.description + "</li>";
+
         if (consequence_info.requires_confirmation) {
           requires_confirmation = true;
         }
       });
       confirmation_markup += "</ul>"
     } else {
-      requires_confirmation = data[0].requires_confirmation;
-      confirmation_markup = "<p><strong>" + data[0].description + "</strong></p><p>Are you sure?</p>";
+      requires_confirmation = data.transition_job.requires_confirmation;
+      confirmation_markup = "<p><strong>" + data.transition_job.description + "</strong></p><p>Are you sure?</p>";
     }
 
     if (requires_confirmation) {

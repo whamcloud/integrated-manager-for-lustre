@@ -232,6 +232,9 @@ class StatefulObject(models.Model):
             raise RuntimeError("%s->%s not legal state transition for %s" % (begin_state, end_state, cls))
 
     def get_available_states(self, begin_state):
+        """States which should be advertised externally (i.e. exclude states which
+        are used internally but don't make sense when requested externally, for example
+        the 'removed' state for an MDT (should only be reached by removing the owning filesystem)"""
         if self.immutable_state:
             # The only available state transition for immutable objects is
             # to a special "forgotten" state, which is a shortcut state
@@ -372,7 +375,13 @@ class Job(models.Model):
 
     # Job classes declare whether presentation layer should
     # request user confirmation (e.g. removals, stops)
-    requires_confirmation = False
+    def get_requires_confirmation(self):
+        return False
+
+    # If running this job has a string which should
+    # be presented to the user for confirmations
+    def get_confirmation_string(self):
+        return None
 
     #: Whether the job should be added to opportunistic Job queue if it doesn't run
     #  successfully.

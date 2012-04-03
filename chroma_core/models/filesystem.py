@@ -139,6 +139,9 @@ class RemoveFilesystemJob(Job, StateChangeJob):
     state_verb = "Remove"
     filesystem = models.ForeignKey('ManagedFilesystem')
 
+    def get_requires_confirmation(self):
+        return True
+
     class Meta:
         app_label = 'chroma_core'
 

@@ -34,8 +34,6 @@ class UserValidation(Validation):
 
     def is_valid(self, bundle, request = None):
         data = bundle.data or {}
-        print "bundle.data = %s" % bundle.data
-        print "data = %s" % bundle.data
         if request.method == "PUT":
             errors = {}
             if not data['password1']:

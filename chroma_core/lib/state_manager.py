@@ -42,6 +42,9 @@ class StateManager(object):
         """Return a list states to which the object can be set from
            its current state, or None if the object is currently
            locked by a Job"""
+        if hasattr(stateful_object, 'content_type'):
+            stateful_object = stateful_object.downcast()
+
         # If the object is subject to an incomplete StateChangeJob
         # then don't offer any other transitions.
         from chroma_core.models import StateLock
@@ -275,8 +278,10 @@ class StateManager(object):
             job_log.debug("  dep %s" % (d,))
         for e in self.edges:
             job_log.debug("  edge [%s]->[%s]" % (e))
+        self.deps = self._sort_graph(self.deps, self.edges)
 
         depended_jobs = []
+        transition_job = None
         for d in self.deps:
             job = d.to_job()
             from chroma_core.lib.job import StateChangeJob
@@ -288,14 +293,53 @@ class StateManager(object):
             else:
                 stateful_object_id = None
                 stateful_object_content_type_id = None
-            depended_jobs.append({
+
+            description = {
                 'class': job.__class__.__name__,
-                'requires_confirmation': job.requires_confirmation,
+                'requires_confirmation': job.get_requires_confirmation(),
+                'confirmation_prompt': job.get_confirmation_string(),
                 'description': job.description(),
                 'stateful_object_id': stateful_object_id,
                 'stateful_object_content_type_id': stateful_object_content_type_id
-            })
-        return depended_jobs
+            }
+
+            if d == self.deps[-1]:
+                transition_job = description
+            else:
+                depended_jobs.append(description)
+
+        return {'transition_job': transition_job, 'dependency_jobs': depended_jobs}
+
+    def _sort_graph(self, objects, edges):
+        """Sort items in a graph by their longest path from a leaf.  Items
+           at the start of the result are the leaves.  Roots come last."""
+        object_edges = defaultdict(list)
+        for e in edges:
+            parent, child = e
+            object_edges[parent].append(child)
+
+        leaf_distance_cache = {}
+
+        def leaf_distance(obj, depth = 0, hops = 0):
+            if obj in leaf_distance_cache:
+                return leaf_distance_cache[obj] + hops
+
+            depth = depth + 1
+            max_child_hops = hops
+            for child in object_edges[obj]:
+                child_hops = leaf_distance(child, depth, hops + 1)
+                max_child_hops = max(child_hops, max_child_hops)
+
+            leaf_distance_cache[obj] = max_child_hops - hops
+
+            return max_child_hops
+
+        object_leaf_distances = []
+        for o in objects:
+            object_leaf_distances.append((o, leaf_distance(o)))
+
+        object_leaf_distances.sort(lambda x, y: cmp(x[1], y[1]))
+        return [obj for obj, ld in object_leaf_distances]
 
     def set_state(self, instance, new_state, command_id = None):
         """Return a Job or None if the object is already in new_state.
@@ -338,44 +382,13 @@ class StateManager(object):
             self.get_expected_state(instance),
             new_state))
 
-        def sort_graph(objects, edges):
-            """Sort items in a graph by their longest path from a leaf.  Items
-               at the start of the result are the leaves.  Roots come last."""
-            object_edges = defaultdict(list)
-            for e in edges:
-                parent, child = e
-                object_edges[parent].append(child)
-
-            leaf_distance_cache = {}
-
-            def leaf_distance(obj, depth = 0, hops = 0):
-                if obj in leaf_distance_cache:
-                    return leaf_distance_cache[obj] + hops
-
-                depth = depth + 1
-                max_child_hops = hops
-                for child in object_edges[obj]:
-                    child_hops = leaf_distance(child, depth, hops + 1)
-                    max_child_hops = max(child_hops, max_child_hops)
-
-                leaf_distance_cache[obj] = max_child_hops - hops
-
-                return max_child_hops
-
-            object_leaf_distances = []
-            for o in objects:
-                object_leaf_distances.append((o, leaf_distance(o)))
-
-            object_leaf_distances.sort(lambda x, y: cmp(x[1], y[1]))
-            return [obj for obj, ld in object_leaf_distances]
-
         # XXX
         # VERY IMPORTANT: this sort is what gives us the following rule:
         #  The order of the rows in the Job table corresponds to the order in which
         #  the jobs would run (including accounting for dependencies) in the absence
         #  of parallelism.
         # XXX
-        self.deps = sort_graph(self.deps, self.edges)
+        self.deps = self._sort_graph(self.deps, self.edges)
 
         job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
         for e in self.edges:
