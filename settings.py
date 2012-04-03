@@ -161,8 +161,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.middleware.transaction.TransactionMiddleware',
-    'middleware.ExceptionFormatterMiddleware',
+    'middleware.TastypieTransactionMiddleware',
 )
 if 'debug_toolbar' in INSTALLED_APPS:
     MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)

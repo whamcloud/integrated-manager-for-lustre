@@ -1,38 +1,28 @@
+from django.db import transaction
+from django.middleware.transaction import TransactionMiddleware
+from tastypie import http
 
 
-import traceback
-import sys
+class TastypieTransactionMiddleware(TransactionMiddleware):
+    """
 
-from chroma_api import api_log
+    HYD-813
+    Cope with tastypie's behaviour of serializing exceptions
+    for the benefit of the client: this doesn't look like an
+    error to stock TransactionMiddleware so we have to customize it.
 
-from django.http import HttpResponse
-import json
-import settings
+    https://github.com/toastdriven/django-tastypie/issues/85
+    """
 
+    def process_response(selfself, request, response):
+        if transaction.is_managed():
+            if transaction.is_dirty():
+                successful = not isinstance(response, http.HttpApplicationError)
+                if successful:
+                    transaction.commit()
+                else:
+                    transaction.rollback()
 
-class ExceptionFormatterMiddleware:
-    def process_exception(self, request, exception):
-        exc_info = sys.exc_info()
-        traceback_str = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            transaction.leave_transaction_management()
 
-        api_log.error("######################## Exception #############################")
-        api_log.error(traceback_str)
-        api_log.error("################################################################")
-
-        if request.META['HTTP_ACCEPT'] == "application/json":
-            if settings.DEBUG:
-                report = {
-                    'error_message': str(exception),
-                    'traceback': traceback_str
-                    }
-            else:
-                report = {
-                    'error_message': "Sorry, this request could not be processed.  Please try again later."
-                    }
-            # For JSON requests, return a serialized exception
-            # instead of rendering an HTML 500 page
-            return HttpResponse(json.dumps(report), status=500, content_type = "application/json")
-        else:
-            # Non-JSON request: let django return a default
-            # 500 page
-            return None
+        return response
