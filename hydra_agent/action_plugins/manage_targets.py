@@ -281,8 +281,13 @@ def _unconfigure_ha(primary, label, uuid, id):
     if primary:
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-primary\">'" % unique_label)
         rc, stdout, stderr = cibadmin("-D -X '<primitive id=\"%s\">'" % unique_label)
-        shell.try_run(['crm_resource', '--cleanup', '--resource',
+        rc, stdout, stderr = shell.run(['crm_resource', '--cleanup', '--resource',
                        unique_label])
+
+        if rc != 0 and rc != 234:
+            raise RuntimeError("Error %s trying to cleanup the resource " % (rc, \
+                               unique_label))
+
     else:
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" % unique_label)
 
