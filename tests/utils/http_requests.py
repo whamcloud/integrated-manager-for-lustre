@@ -33,7 +33,10 @@ class HttpRequests(object):
 
         return HttpResponse(response)
 
-    def put(self, url, **kwargs):
+    def put(self, url, body = None, **kwargs):
+        if body and 'data' not in kwargs:
+            kwargs['data'] = json.dumps(body)
+
         response = self.session.put(
             urljoin(self.server_http_url, url),
             **kwargs

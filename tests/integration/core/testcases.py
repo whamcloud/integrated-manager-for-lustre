@@ -112,7 +112,7 @@ class ChromaIntegrationTestCase(TestCase):
                 'crm configure show'
             )
             configuration = stdout.read()
-            print configuration
+            # print configuration
             self.assertNotRegexpMatches(
                 configuration,
                 "location [^\n]* %s\n" % host['nodename']
@@ -196,6 +196,40 @@ class ChromaIntegrationTestCase(TestCase):
                     "Path: %s Config Paths: %s" % (
                         lun_node['path'], config_device_paths)
                 )
+
+    def set_volume_mounts(self, volume, primary_host_id, secondary_host_id):
+        for node in volume['volume_nodes']:
+            if node['host_id'] == int(primary_host_id):
+                primary_volume_node_id = node['id']
+            elif node['host_id'] == int(secondary_host_id):
+                secondary_volume_node_id = node['id']
+
+        response = self.hydra_server.put(
+            "/api/volume/%s/" % volume['id'],
+            body = {
+                "id": volume['id'],
+                "nodes": [
+                    {
+                        "id": secondary_volume_node_id,
+                        "primary": False,
+                        "use": True,
+                    },
+                    {
+                        "id": primary_volume_node_id,
+                        "primary": True,
+                        "use": True,
+                    }
+                ]
+            }
+        )
+        self.assertTrue(response.successful, response.text)
+
+    def verify_volume_mounts(self, volume, expected_primary_host_id, expected_secondary_host_id):
+        for node in volume['volume_nodes']:
+            if node['primary']:
+                self.assertEqual(node['host_id'], int(expected_primary_host_id))
+            else:
+                self.assertEqual(node['host_id'], int(expected_secondary_host_id))
 
     def create_filesystem(self, name, mgt_volume_id, mdt_volume_id, ost_volume_ids, conf_params = {}, verify_successful = True):
         args = {}
@@ -286,7 +320,7 @@ class ChromaIntegrationTestCase(TestCase):
                 " on /mtn/%s " % filesystem_name
             )
         else:
-            print "Unmount requested for %s, but %s not mounted." % (
+            print "WARN: Unmount requested for %s, but %s not mounted." % (
                 filesystem_name, filesystem_name)
 
     def exercise_filesystem(self, client, filesystem_name):
@@ -296,3 +330,28 @@ class ChromaIntegrationTestCase(TestCase):
             client,
             "dd if=/dev/zero of=/mnt/%s/test.dat bs=1K count=100K" % filesystem_name
         )
+
+    def get_targets(self, filesystem_id, kind):
+        response = self.hydra_server.get(
+            '/api/target/',
+            params = {
+                'filesystem_id': filesystem_id,
+                'kind': kind
+            }
+        )
+        self.assertTrue(response.successful, response.text)
+        return response.json['objects']
+
+    def verify_targets_started_on_host(self, filesystem_id, kind, expected_host_name):
+        targets = self.get_targets(filesystem_id, kind)
+
+        for target in targets:
+            self.assertEqual(expected_host_name, target['active_host_name'])
+
+    def targets_started_on_host(self, filesystem_id, kind, expected_host_name):
+        targets = self.get_targets(filesystem_id, kind)
+
+        for target in targets:
+            if not expected_host_name == target['active_host_name']:
+                return False
+        return True
