@@ -132,5 +132,5 @@ class JobResource(ModelResource):
         elif new_state == 'cancel':
             job.cancel()
         else:
-            job.resume()
+            job.unpause()
         return bundle
