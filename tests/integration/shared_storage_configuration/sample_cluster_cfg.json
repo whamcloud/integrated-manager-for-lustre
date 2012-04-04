@@ -1,4 +1,5 @@
 {
+    "failover_is_configured": false,
     "hydra_servers": [
         {
             "server_http_url": "http://hydra:8000/",
@@ -18,7 +19,10 @@
                 "/dev/sde",
                 "/dev/sdf",
                 "/dev/sdg"
-            ]
+            ],
+
+            "host": "vmhost",
+            "destroy_command": "virsh destroy lustre1"
         },
         {
             "address": "lustre2",
@@ -30,10 +34,16 @@
                 "/dev/sde",
                 "/dev/sdf",
                 "/dev/sdg"
-            ]
+            ],
+
+            "host": "vmhost",
+            "destroy_command": "virsh destroy lustre2"
         }
     ],
     "lustre_clients": {
-        "dev": {}
+        "client1": {}
+    },
+    "hosts": {
+        "vmhost": {}
     }
 }
