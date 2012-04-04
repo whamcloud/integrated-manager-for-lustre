@@ -23,7 +23,6 @@ stateTransition = function (url, state)
       requires_confirmation = data.transition_job.requires_confirmation;
 
       $.each(data.dependency_jobs, function(i, consequence_info) {
-        console.log(consequence_info)
         confirmation_markup += "<li>" + consequence_info.description + "</li>";
 
         if (consequence_info.requires_confirmation) {
