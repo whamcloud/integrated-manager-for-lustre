@@ -1,5 +1,6 @@
 
 # TODO connection caching
+from dateutil import tz
 from kombu import BrokerConnection, Exchange, Queue
 import socket
 import settings
@@ -278,7 +279,11 @@ class PluginResponse(object):
                     # Someone elses request, ignore it unless it's too old.  If it exceeds the timeout
                     # assume the owner will never claim it, and ack it to prevent it lingering forever.
                     UNHANDLED_RESPONSE_TIMEOUT = 600
-                    if datetime.datetime.utcnow() - dateutil.parser.parse(created_at) > datetime.timedelta(seconds = UNHANDLED_RESPONSE_TIMEOUT):
+                    now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
+                    log.warning(now)
+                    log.warning(created_at)
+                    log.warning(now - created_at)
+                    if now - created_at > datetime.timedelta(seconds = UNHANDLED_RESPONSE_TIMEOUT):
                         log.warning("Dropping stale response %s on %s (created at %s)" % (id, response_routing_key, body['created_at']))
                         message.ack()
 
