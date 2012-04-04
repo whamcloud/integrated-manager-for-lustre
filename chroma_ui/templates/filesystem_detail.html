@@ -9,12 +9,14 @@
       if (!initialized) {
         init();
         initialized = true;
-      } else{
-        $('#new_ost_chooser').volumeChooser('clear');
-        $('#ost').dataTable().fnClearTable();
-        $('#mdt').dataTable().fnClearTable();
-        $('#mgt_configuration_view').dataTable().fnClearTable();
+      } else {
+          /* TODO: HYD-816 reload OST chooser */
+          $('#new_ost_chooser').volumeChooser('clear');
       }
+
+      $('#ost').dataTable().fnClearTable();
+      $('#mdt').dataTable().fnClearTable();
+      $('#mgt_configuration_view').dataTable().fnClearTable();
 
       fs_id = id;
       conf_param_dialog = undefined;
@@ -92,7 +94,7 @@
           },
           "Cancel": function() { 
             $(this).dialog("close");
-          }, 
+          }
         }
       });
 
@@ -105,9 +107,6 @@
           "bJQueryUI": true,
           "bFilter": false,
           "bPaginate": false, 
-          "oLanguage": {
-              "sEmptyTable": "No MGT to display"
-          },
           "aoColumns": [
             { "sClass": 'txtleft' },
             { "sClass": 'txtleft' },
@@ -154,7 +153,7 @@
         var targets = data.objects;
         $.each(targets, function(i, target)
         {
-          row = [
+          var row = [
                   target_dialog_link(target),
                   target.volume_name,
                   target.primary_server_name,
@@ -162,7 +161,7 @@
                   target.active_host_name,
                   stateTransitionButtons(target),
                   LiveObject.icons(target)
-                ]
+                ];
           if (target.kind == "OST") {
             $('#ost').dataTable().fnAddData (row);
           } else if (target.kind == "MGT") {
