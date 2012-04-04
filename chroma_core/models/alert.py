@@ -29,6 +29,9 @@ class AlertState(models.Model):
     # unique-together constraint only applied to active alerts
     active = models.NullBooleanField()
 
+    # whether a user has manually dismissed alert
+    dismissed = models.BooleanField()
+
     def to_dict(self):
         from chroma_core.lib.util import time_str
         return {

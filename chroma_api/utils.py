@@ -261,7 +261,7 @@ class MetricResource:
 
         if update:
             begin = end
-            end = datetime.datetime.now()
+            end = datetime.datetime.utcnow()
             # TODO: logic for dealing with incomplete values during update
         elif latest:
             begin = end = None

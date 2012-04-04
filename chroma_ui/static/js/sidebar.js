@@ -63,6 +63,15 @@ var Sidebar = function(){
     return "/static/images/dialog-warning.png";
   }
 
+  function dismissIcon(a) {
+    if (a.dismissed === true) {
+      return '';
+    }
+    else {
+      return "<img alt='Dismiss' class='dismiss_button' title='Dismiss' src='/static/images/gtk-cancel.png' />";
+    }
+  }
+
   function ellipsize(str)
   {
     /* FIXME: find or implement real ellipsization by element size
@@ -104,22 +113,47 @@ var Sidebar = function(){
       [
         { "sClass": 'icon_column', "mDataProp":"icon", bSortable: false },
         { "sClass": 'txtleft', "mDataProp":"text", bSortable: false },
-        { "sClass": 'txtleft', 'mDataProp': 'buttons', bSortable: false },
+        { "sClass": 'txtleft', 'mDataProp': 'buttons', bSortable: false }
       ]
     );
 
     smallTable($('div.leftpanel table#alerts'), 'alert/',
       {active: true, order_by: "-begin"},
       function(a) {
-        a.text = ellipsize(a.message) + "<br>" + shortLocalTime(a.begin)
-        a.icon = "<img src='" + alertIcon(a) + "'/>"
+        a.text = ellipsize(a.message) + "<br>" + shortLocalTime(a.begin);
+        a.icon = "<img src='" + alertIcon(a) + "'/>";
+        a.dismiss = dismissIcon(a);
       },
       [
         { "sClass": 'icon_column', "mDataProp":"icon", bSortable: false },
         { "sClass": 'txtleft', "mDataProp":"text", bSortable: false },
+        { "sClass": 'dismiss_column', "mDataProp":"dismiss", bSortable: false }
       ],
       "<img src='/static/images/dialog_correct.png'/>&nbsp;No alerts active"
     );
+    
+    // delegated event for dismissing an alert
+    $("#alerts").delegate("img.dismiss_button", "click", function() {
+      var dismiss_icon = this;
+      
+      // get the stored alert data, set to dismissed
+      var dataTable = $('div.leftpanel table#alerts').dataTable()
+      var alert_info = dataTable.fnGetData($(dismiss_icon).closest('tr').get(0));
+      alert_info.dismissed = true;
+      Api.put(
+        'alert/' + alert_info.id + '/',
+        api_params = alert_info,
+        // remove the dismiss image, deactivate the alert
+        success_callback = function() {
+          $(dismiss_icon).parents('tr:eq(0)').removeClass('odd even').addClass('alert_row_dismissed');
+          $(dismiss_icon).remove();
+          AlertNotification.deactivateAlert(alert_info);
+        },
+        error_callback = undefined,
+        blocking = false
+      );
+
+    });
 
     smallTable($('div.leftpanel table#events'), 'event/',
       {order_by: "-created_at"},

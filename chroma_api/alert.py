@@ -113,13 +113,13 @@ class AlertResource(ModelResource):
     class Meta:
         queryset = AlertState.objects.all()
         resource_name = 'alert'
-        fields = ['begin', 'end', 'message', 'active', 'alert_item_id', 'alert_item_content_type_id', 'id']
+        fields = ['begin', 'end', 'message', 'active', 'dismissed', 'alert_item_id', 'alert_item_content_type_id', 'id']
         filtering = {'active': ['exact']}
         ordering = ['begin', 'end', 'active']
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ['get']
-        detail_allowed_methods = ['get']
+        detail_allowed_methods = ['get', 'put']
 
     def dehydrate_message(self, bundle):
         return bundle.obj.message()
