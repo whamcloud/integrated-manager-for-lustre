@@ -203,23 +203,49 @@ class ServiceConfig:
         log.info("Creating database '%s'...\n" % database['NAME'])
         self.try_shell(["mysql", "-e", "create database %s;" % database['NAME']])
 
+    def get_input(self, msg = "", empty_allowed = True, password = False):
+        answer = ""
+        while answer == "":
+            if password:
+                answer = getpass.getpass(msg)
+            else:
+                answer = raw_input(msg)
+
+            if not empty_allowed and answer == "":
+                print "A value is required"
+            else:
+                break
+
+        return answer
+
+    def get_pass(self, msg = "", empty_allowed = True, confirm_msg = ""):
+        match = False
+
+        while not match:
+            pass1 = self.get_input(msg = msg, empty_allowed = empty_allowed,
+                                   password = True)
+
+            pass2 = self.get_input(msg = confirm_msg,
+                                   empty_allowed = empty_allowed,
+                                   password = True)
+
+            if pass1 != pass2:
+                print "Passwords do not match!"
+            else:
+                match = True
+
+        return pass1
+
     def _user_account_prompt(self):
         log.info("Chroma will now create an initial administrative user using the" +
                  "credentials which you provide.")
 
-        valid = False
-        while not valid:
-            username = raw_input("Username:")
-            email = raw_input("Email:")
-            password1 = getpass.getpass("Password:")
-            password2 = getpass.getpass("Confirm password:")
+        username = self.get_input(msg = "Username:", empty_allowed = False)
+        email = self.get_input(msg = "Email:")
+        password = self.get_pass(msg = "Password:", empty_allowed = False,
+                                     confirm_msg = "Confirm password:")
 
-            # TODO: validate all fields (HYD-750)
-            if password1 != password2:
-                log.error("Passwords do not match!")
-            else:
-                valid = True
-        return username, email, password1
+        return username, email, password
 
     def _setup_database(self, username = None, password = None):
         if not self._db_accessible():
