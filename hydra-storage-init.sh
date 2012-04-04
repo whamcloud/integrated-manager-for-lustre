@@ -22,12 +22,13 @@ fi
 export PYTHONPATH=${HYDRA_PATH}
 
 start() {
-    action "Starting ${SERVICE_NAME}" daemon --pidfile ${PID_FILE} '${DAEMON_PATH} > ${LOG_DIR}/startup_${SERVICE_NAME}_out.log 2>${LOG_DIR}/startup_${SERVICE_NAME}_err.log & echo $! > ${PID_FILE}'
+    action "Starting ${SERVICE_NAME}" ${DAEMON_PATH} >/dev/null 2>/dev/null
     echo
 }
 
 stop() {
     action "Stopping ${SERVICE_NAME}: " killproc -p ${PID_FILE}
+    rm -f ${PID_FILE}.lock
     echo
 }
 
