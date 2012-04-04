@@ -738,11 +738,32 @@ table.chart_grid td table {
   display: none;
 }
 
+tr.alert_row_dismissed {
+  background-color: #CCC;
+  text-align:       center;
+  color:            #999;
+}
+
+tr.alert_row_dismissed td.icon_column {
+  opacity: 0.2;
+  filter: alpha(opacity=20);
+}
 
 .icon_column{
-	padding:2px;
-    width: 20px;
-    background-color: transparent;
+  padding:2px;
+  width: 20px;
+  background-color: transparent;
+}
+
+.dismiss_column {
+  padding:2px;
+  width: 20px;
+  background-color: transparent;
+  vertical-align: top;
+}
+
+.dismiss_column img {
+  cursor: pointer;
 }
 
 table.validated_form th {
