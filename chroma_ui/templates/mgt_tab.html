@@ -57,7 +57,7 @@
         $('#new_mgt_chooser').volumeChooser({
           store: volume_chooser_store,
           change: function() {
-            var val = $('#new_mgt_chooser').volumeChooser('val');
+            var val = $(this).volumeChooser('val');
             $('#btnNewMGT').button('option', 'disabled', val == null);
           }
         });

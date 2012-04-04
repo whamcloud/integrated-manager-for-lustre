@@ -30,11 +30,21 @@
       // Create new OST button click handler. 
       volume_chooser_store = VolumeChooserStore();
       volume_chooser_store.load(function() {
-        $('#new_ost_chooser').volumeChooser({multi_select: true, store: volume_chooser_store});
+        $('#new_ost_chooser').volumeChooser({
+            multi_select: true,
+            store: volume_chooser_store,
+            change: function() {
+                var val = $(this).volumeChooser('val');
+                $('#ost_ok_button').button('option', 'disabled', val.length == 0);
+            }
+        });
       });
       $('#btnNewOST').click(function() {
         $('#new_ost_dialog').dialog('open');
         $('#new_ost_dialog').find('table').width("100%");
+
+          $('#new_ost_chooser').volumeChooser('clear');
+          $('#ost_ok_button').button('option', 'disabled', true)
       });
 
       $('#new_ost_dialog').dialog({
@@ -50,9 +60,10 @@
           {
             text: "Ok",
             id: "ost_ok_button",
+
             click: function(){
               var ost_lun_ids = $('#new_ost_chooser').volumeChooser('val');
-              var dialog = $(this)
+              var dialog = $(this);
 
               function chain_creation(i) {
                 if (i == undefined) {

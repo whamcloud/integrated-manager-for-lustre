@@ -2,6 +2,8 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
+from chroma_core.models.host import Volume, VolumeNode
+from chroma_core.models.target import FilesystemMember
 
 import settings
 from collections import defaultdict
@@ -32,7 +34,49 @@ KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.ite
 
 class TargetValidation(Validation):
     def is_valid(self, bundle, request=None):
-        errors = {}
+        errors = defaultdict(list)
+
+        if request.method != "POST":
+            # TODO: validate PUTs
+            return errors
+
+        for mandatory_field in ['kind', 'volume_id']:
+            if mandatory_field not in bundle.data or bundle.data[mandatory_field] == None:
+                errors[mandatory_field].append("This field is mandatory")
+
+        if errors:
+            return errors
+
+        volume_id = bundle.data['volume_id']
+        try:
+            Volume.objects.get(id = volume_id)
+        except Volume.DoesNotExist:
+            errors['volume_id'].append("Volume %s not found" % volume_id)
+
+        kind = bundle.data['kind']
+        if not kind in KIND_TO_KLASS:
+            errors['kind'].append("Invalid target type '%s' (choose from [%s])" % (kind, ",".join(KIND_TO_KLASS.keys())))
+        else:
+            if issubclass(KIND_TO_KLASS[kind], FilesystemMember):
+                if not 'filesystem_id' in bundle.data:
+                    errors['filesystem_id'].append("Mandatory for targets of kind '%s'" % kind)
+                else:
+                    filesystem_id = bundle.data['filesystem_id']
+                    try:
+                        ManagedFilesystem.objects.get(id = filesystem_id)
+                    except ManagedFilesystem.DoesNotExist:
+                        errors['filesystem_id'].append("Filesystem %s not found" % filesystem_id)
+            if KIND_TO_KLASS[kind] == ManagedMgs:
+                mgt_volume = Volume.objects.get(id = volume_id)
+                hosts = [vn.host for vn in VolumeNode.objects.filter(volume = mgt_volume, use = True)]
+                conflicting_mgs_count = ManagedTarget.objects.filter(~Q(managedmgs = None), managedtargetmount__host__in = hosts).count()
+                if conflicting_mgs_count > 0:
+                    errors['mgt'].append("Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label)
+
+                if 'filesystem_id' in bundle.data:
+                    bundle.data_errors['filesystem_id'].append("Cannot specify filesystem_id when creating MGT")
+            if KIND_TO_KLASS[kind] == ManagedMdt:
+                bundle.data_errors['kind'].append("Cannot create MDTs independently of filesystems")
 
         try:
             errors.update(bundle.data_errors)
@@ -217,26 +261,15 @@ class TargetResource(MetricResource, ConfParamResource):
             if method:
                 bundle = method(bundle)
 
-        kind = bundle.data['kind']
-        if not kind in KIND_TO_KLASS:
-            bundle.data_errors['kind'].append("Invalid target type '%s' (choose from [%s])" % (kind, ",".join(KIND_TO_KLASS.keys())))
-
         volume_id = bundle.data['volume_id']
         filesystem_id = bundle.data.get('filesystem_id', None)
-
-        # TODO: when creating MGS, apply same validation as filesystem creation does
-        # to refuse to create two MGS on one server
 
         # Should really only be doing one validation pass, but this works
         # OK for now.  It's better than raising a 404 or duplicating the
         # filesystem validation failure if it doesn't exist, anyhow.
         self.is_valid(bundle, request)
 
-        if KIND_TO_KLASS[kind] == ManagedMgs and filesystem_id:
-            bundle.data_errors['filesystem_id'].append("Cannot specify filesystem_id when creating MGTs")
-        elif KIND_TO_KLASS[kind] == ManagedMdt:
-            bundle.data_errors['kind'].append("Cannot create MDTs independently of filesystems")
-
+        kind = bundle.data['kind']
         if KIND_TO_KLASS[kind] == ManagedOst:
             fs = ManagedFilesystem.objects.get(id=filesystem_id)
             create_kwargs = {'filesystem': fs}
@@ -282,8 +315,6 @@ class TargetResource(MetricResource, ConfParamResource):
                     if not parent_record in rows[i]:
                         rows[i].append(parent_record)
                     for p in parent_record.parents.all():
-                        #if 25 in [parent_record.id, p.id]:
-                        #    id_edges.append((parent_record.id, p.id))
                         id_edges.append((parent_record.id, p.id))
                         row_iterate(p, i + 1)
                 row_iterate(parent_record, 0)

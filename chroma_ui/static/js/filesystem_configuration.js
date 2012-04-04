@@ -130,7 +130,7 @@ var VolumeChooserStore = function ()
     }
     
     if (changed && opts.change) {
-      opts.change();
+      opts.change.apply(element);
     }
   }
 
@@ -145,6 +145,7 @@ var VolumeChooserStore = function ()
 
   volumeChooserButton = function(element, opts) {
     $('#' + element.attr('id')).data('volumeChooser', opts)
+      opts.element = $('#' + element.attr('id'));
 
     if (!opts.store) {
       throw "'store' attribute required"
@@ -279,7 +280,7 @@ var VolumeChooserStore = function ()
       }
 
       if (opts.change) {
-        opts.change();
+        opts.change.apply(element);
       }
     });
 
