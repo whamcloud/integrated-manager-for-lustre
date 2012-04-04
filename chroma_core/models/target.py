@@ -503,10 +503,6 @@ class ConfigureTargetJob(Job, StateChangeJob):
 
         deps.append(DependOn(self.target.downcast().managedtargetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
 
-        if isinstance(self.target, FilesystemMember):
-            mgs = self.target.filesystem.mgs.downcast()
-            deps.append(DependOn(mgs, "mounted"))
-
         return DependAll(deps)
 
 
@@ -548,8 +544,9 @@ class RegisterTargetJob(Job, StateChangeJob):
 
         deps.append(DependOn(self.target.downcast().managedtargetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
 
-        if isinstance(self.target, FilesystemMember):
-            mgs = self.target.filesystem.mgs.downcast()
+        target = self.target.downcast()
+        if isinstance(target, FilesystemMember):
+            mgs = target.filesystem.mgs.downcast()
             deps.append(DependOn(mgs, "mounted"))
 
         return DependAll(deps)
