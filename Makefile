@@ -21,8 +21,10 @@ agent:
 
 $(SUBDIRS): dist agent
 	# We only do a full build on EL6
-	$(BUILDER_IS_EL6) && $(MAKE) -C $@ rpms || true
-	$(BUILDER_IS_EL6) && $(MAKE) -C $@ docs || true
-	$(BUILDER_IS_EL6) && cp -a $@/dist/* dist/ || true
+	if $(BUILDER_IS_EL6); then \
+		$(MAKE) -C $@ rpms; \
+		$(MAKE) -C $@ docs; \
+		cp -a $@/dist/* dist/; \
+	fi
 
 rpms: $(SUBDIRS)
