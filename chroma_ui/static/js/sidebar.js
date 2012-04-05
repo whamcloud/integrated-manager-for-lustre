@@ -84,21 +84,27 @@ var Sidebar = function(){
     }
   }
 
+  function refresh() {
+    var active = $('div#sidebar div#accordion').accordion("option", "active");
+    if (active == false) {
+      /* pass */
+    } else if (active == 0) {
+      $('div.leftpanel table#alerts').dataTable().fnDraw();
+    } else if (active == 1) {
+      $('div.leftpanel table#events').dataTable().fnDraw();
+    } else if (active == 2) {
+      $('div.leftpanel table.commands').dataTable().fnDraw();
+    } else {
+      throw "Unknown accordion index " + active
+    }
+  }
+
   function init() {
     $("div#sidebar div#accordion").accordion({
       fillSpace: true,
       collapsible: true,
       changestart: function (event, ui) {
-        var active = $('div#sidebar div#accordion').accordion("option", "active");
-        if (active == 0) {
-          $('div.leftpanel table#alerts').dataTable().fnDraw();
-        } else if (active == 1) {
-          $('div.leftpanel table#events').dataTable().fnDraw();
-        } else if (active == 2) {
-          $('div.leftpanel table.commands').dataTable().fnDraw();
-        } else {
-          throw "Unknown accordion index " + active
-        }
+        refresh();
       }
     });
 
@@ -206,7 +212,8 @@ var Sidebar = function(){
     if (!initialized) {
       init();
     }
-    $("div#sidebar div#accordion").change();
+
+    refresh();
     $("#sidebar").show({effect: 'slide'});
   }
 
