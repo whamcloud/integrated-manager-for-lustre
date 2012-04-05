@@ -1,0 +1,29 @@
+
+create a local_settings.py like this:
+
+AWS_KEY_ID='' # From your 'security credentials -> access keys' page
+AWS_SECRET='' # From your 'security credentials -> access keys' page
+AWS_SSH_KEY = 'jcs-aws-key' # An AWS keypair name
+AWS_SSH_PRIVATE_KEY = '/Users/jcspray/ec2/jcs-aws-key.pem' # a local path
+
+create a virtualenv and do a pip install -r requirements.txt
+
+run ./manage.py syncdb --migrate --noinput
+
+make sure you have the required two security groups in your AWS account:
+chroma-manager (ports 22, 80, 514)
+chroma-appliance  (port 22, 988)
+
+./manage.py create_fs
+ (create one manager, one appliance, and add the appliance to the manager)
+./manage.py instances list
+ (get a list of your instances with their local IDs)
+./manage.py create_fs recover <local id>
+ (when some instances have been created, try to set them up again e.g. if something
+went wrong and you've fixed it now)
+./manage.py instances terminate all
+ (remove all the locally-known instances, i.e. those created with director)
+./manage.py create_fs recover <local id>
+ (open an ssh session to a ChromaManager by its local ID)
+./manage.py issh <manager|appliance> <ec2 id>
+ (open an SSH session to EC2 instance by its EC2 ID)
