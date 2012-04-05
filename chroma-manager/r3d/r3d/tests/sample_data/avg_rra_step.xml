@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<xport>
+  <meta>
+    <start>1318149240</start>
+    <step>60</step>
+    <end>1318149540</end>
+    <rows>6</rows>
+    <columns>4</columns>
+    <legend>
+      <entry>counter</entry>
+      <entry>gauge</entry>
+      <entry>derive</entry>
+      <entry>absolute</entry>
+    </legend>
+  </meta>
+  <data>
+    <row><t>1318149240</t><v>4.0200000000e+02</v><v>9.7669246185e+10</v><v>1.7300000000e+02</v><v>1.3363874295e+10</v></row>
+    <row><t>1318149300</t><v>5.0260000000e+02</v><v>1.0464852588e+11</v><v>3.7833333333e+02</v><v>1.4473441816e+10</v></row>
+    <row><t>1318149360</t><v>2.5520000000e+02</v><v>8.9471013590e+11</v><v>1.7766666667e+02</v><v>1.1152390349e+10</v></row>
+    <row><t>1318149420</t><v>9.5666666667e+01</v><v>4.9403794007e+11</v><v>2.7980000000e+02</v><v>1.0859769113e+10</v></row>
+    <row><t>1318149480</t><v>3.9693333333e+02</v><v>4.6569331405e+11</v><v>9.4866666667e+01</v><v>1.4924959029e+10</v></row>
+    <row><t>1318149540</t><v>NaN</v><v>NaN</v><v>NaN</v><v>NaN</v></row>
+  </data>
+</xport>
