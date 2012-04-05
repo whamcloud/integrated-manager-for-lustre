@@ -1,0 +1,285 @@
+<script language="javascript">
+  var FilesystemDetailView = function() {
+    var initialized = false;
+    var fs_id;
+    var conf_param_dialog;
+    var volume_chooser_store;
+
+    function draw(id) {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+          /* TODO: HYD-816 reload OST chooser */
+          $('#new_ost_chooser').volumeChooser('clear');
+      }
+
+      $('#ost').dataTable().fnClearTable();
+      $('#mdt').dataTable().fnClearTable();
+      $('#mgt_configuration_view').dataTable().fnClearTable();
+
+      fs_id = id;
+      conf_param_dialog = undefined;
+      loadFilesystem();
+    }
+
+    function init() 
+    {
+      $('div#filesystem_detail button.advanced').click(function() {
+        conf_param_dialog.open();
+      });
+
+      // Create new OST button click handler. 
+      volume_chooser_store = VolumeChooserStore();
+      volume_chooser_store.load(function() {
+        $('#new_ost_chooser').volumeChooser({
+            multi_select: true,
+            store: volume_chooser_store,
+            change: function() {
+                var val = $(this).volumeChooser('val');
+                $('#ost_ok_button').button('option', 'disabled', val.length == 0);
+            }
+        });
+      });
+      $('#btnNewOST').click(function() {
+        $('#new_ost_dialog').dialog('open');
+        $('#new_ost_dialog').find('table').width("100%");
+
+          $('#new_ost_chooser').volumeChooser('clear');
+          $('#ost_ok_button').button('option', 'disabled', true)
+      });
+
+      $('#new_ost_dialog').dialog({
+        autoOpen: false,
+        width: 1100,
+        maxHeight:470,
+        position:"center",
+        show: "clip",
+        modal: true,
+        buttons: 
+        {
+          "Ok": 
+          {
+            text: "Ok",
+            id: "ost_ok_button",
+
+            click: function(){
+              var ost_lun_ids = $('#new_ost_chooser').volumeChooser('val');
+              var dialog = $(this);
+
+              function chain_creation(i) {
+                if (i == undefined) {
+                  i = 0;
+                }
+
+                Api.post("target/", {kind: 'OST', filesystem_id: fs_id, volume_id: ost_lun_ids[i]},
+                  success_callback = function(data)
+                  {
+                    if (i == ost_lun_ids.length - 1) {
+                      // Last POST succeeded, reload table
+                      $('#ost').dataTable().fnClearTable();
+                      $('#mdt').dataTable().fnClearTable();
+                      $('#mgt_configuration_view').dataTable().fnClearTable();
+                      loadFilesystemTargets();
+                      dialog.dialog("close");
+                    } else {
+                      // POST the next OST creation
+                      chain_creation(i + 1);
+                    }
+                  });
+              }
+
+              chain_creation();
+            }
+          },
+          "Cancel": function() { 
+            $(this).dialog("close");
+          }
+        }
+      });
+
+      /* Tables of targets */
+      var target_table_elements = ['#mgt_configuration_view', '#ost', '#mdt'];
+      $.each(target_table_elements, function(i, selector) {
+        $(selector).dataTable( {
+          bInfo: false,
+          "bProcessing": true,
+          "bJQueryUI": true,
+          "bFilter": false,
+          "bPaginate": false, 
+          "aoColumns": [
+            { "sClass": 'txtleft' },
+            { "sClass": 'txtleft' },
+            { "sClass": 'txtleft' },
+            { "sClass": 'txtleft' },
+            { "sClass": 'txtleft' },
+            { "sClass": 'txtcenter', bSortable: false},
+            { "sClass": 'txtcenter', bSortable: false}
+          ]
+        });
+      });
+    }
+
+    function loadFilesystem() {
+      Api.get("filesystem/" + fs_id + "/", {}, 
+      success_callback = function(filesystem)
+      {
+        /* FS summary fields */
+        $('#bytes_used').html(formatBytes(filesystem.bytes_total - filesystem.bytes_free));
+        $('#bytes_total').html(formatBytes(filesystem.bytes_total));
+        $('#inodes_used').html(formatBigNumber(filesystem.files_total - filesystem.files_free));
+        $('#inodes_total').html(formatBigNumber(filesystem.files_total));
+        $('#ost_count').html(filesystem.osts.length);
+        $('#mgs_name').html(filesystem.mgt.primary_server_name);
+        $('#mds_name').html(filesystem.mdts[0].primary_server_name);
+        $('#fs_alerts').html(LiveObject.alertLabel(filesystem));
+        $('#fs_name').html(filesystem.name);
+
+        // Config param dialog
+        conf_param_dialog = ConfParamDialog({url: filesystem.resource_uri, conf_params: filesystem.conf_params});
+
+        // Free space pie charts
+        LoadFSGraph_EditFS(filesystem);
+      });
+
+      loadFilesystemTargets();
+    }
+
+    function loadFilesystemTargets()
+    {
+      Api.get("target/", {filesystem_id : fs_id, limit: 0}, 
+      success_callback = function(data)
+      {  
+        var targets = data.objects;
+        $.each(targets, function(i, target)
+        {
+          var row = [
+                  target_dialog_link(target),
+                  target.volume_name,
+                  target.primary_server_name,
+                  target.failover_server_name,
+                  target.active_host_name,
+                  stateTransitionButtons(target),
+                  LiveObject.icons(target)
+                ];
+          if (target.kind == "OST") {
+            $('#ost').dataTable().fnAddData (row);
+          } else if (target.kind == "MGT") {
+            $('#mgt_configuration_view').dataTable().fnAddData (row);
+          } else if (target.kind == "MDT") {
+            $('#mdt').dataTable().fnAddData (row);
+          }
+        });
+      });
+    }
+
+    function getId()
+    {
+      return fs_id;
+    }
+
+    return {
+      draw:draw,
+      getId: getId
+    }
+  }();
+</script>
+
+<div id='filesystem_detail'>
+<h2 class='section_header' id='edit_fs_title'>Filesystem <span id='fs_name'/></h2>
+
+<div style='float:left;'>
+  <table class='fs'>
+    <tr>
+      <th>MGS:</th><td id='mgs_name'></td>
+    </tr>
+    <tr>
+      <th>MDS:</th><td id='mds_name'></td>
+    </tr>
+    <tr>
+      <th>No. OST:</th><td id='ost_count'></td>
+    </tr>
+    <tr>
+      <th></th><td id='fs_alerts'></td>
+    </tr>
+  </table>
+  <p>
+    <button class='advanced' type="button">Advanced...</button>
+  </p>
+</div>
+
+<div style='float:left; margin-left: 12px;'>
+  <div id="editfs_space_usage"></div>
+  <p align=center><span id="bytes_used"></span>/<span id="bytes_total"></span></p>
+</div>
+<div style='float:left; margin-left: 12px;'>
+  <div id="editfs_inode_usage"></div>
+  <p align=center><span id="inodes_used"></span>/<span id="inodes_total"></span>&nbsp;inodes</p>
+</div>
+
+<div style='clear:both;'></div>
+
+<h2 class='section_header'>Management target</h2>
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="mgt_configuration_view" width="100%">
+  <thead>
+    <tr>
+      <th width="12%">Name</th>
+      <th width="15%">Volume</th>
+      <th width="7%">Primary&nbsp;server</th>
+      <th width="7%">Failover&nbsp;server</th>
+      <th width="12%">Started&nbsp;on</th>
+      <th width='1%'></th>
+      <th width='1%'></th>
+    </tr>
+  </thead>
+  <tbody id="example_content">
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </tbody>
+</table>
+
+<h2 class='section_header'>Metadata target</h2>
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
+  <thead>
+    <tr>
+      <th width="12%">Name</th>
+      <th width="15%">Volume</th>
+      <th width="7%">Primary&nbsp;server</th>
+      <th width="7%">Failover&nbsp;server</th>
+      <th width="12%">Started&nbsp;on</th>
+      <th width='1%'></th>
+      <th width='1%'></th>
+    </tr>
+  </thead>
+  <tbody id="mdt_content">
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </tbody>
+</table>
+
+<h2 class="section_header">Object store targets</h2>
+<p><button class='add' type="button" id="btnNewOST">Create new OST</button></p>
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
+  <thead>
+    <tr>
+      <th width="12%">Name</th>
+      <th width="15%">Volume</th>
+      <th width="7%">Primary&nbsp;server</th>
+      <th width="7%">Failover&nbsp;server</th>
+      <th width="12%">Started&nbsp;on</th>
+      <th width='1%'></th>
+      <th width='1%'></th>
+    </tr>
+  </thead>
+  <tbody id="ost_content">
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </tbody>
+</table>
+
+<p align='right'>
+  <a class='navigation button' href="configure/filesystem/list/">Back to filesystems</a>
+</p>
+
+<!-- new OST popup showing all usable luns-->
+<div id="new_ost_dialog" title="Create OST">
+  <button id='new_ost_chooser'></button>
+</div>
+</div>

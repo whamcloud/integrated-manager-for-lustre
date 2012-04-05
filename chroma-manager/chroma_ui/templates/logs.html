@@ -1,0 +1,143 @@
+<script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery-ui-timepicker-addon.js"></script>
+<script language="javascript" type="text/javascript">
+  var LogView = function() {
+    var initialized = false;
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+        $('#all_log_content').dataTable().fnDraw();
+        // TODO: reload loadHostList
+      }
+    }
+    function init() 
+    {
+      //load host list
+      loadHostList('', 'logs_hostList');
+      
+      //validation for start an end time
+      $('#datetime_from').datetimepicker(
+      {
+        maxDate: new Date(),
+        onSelect: function (selectedDateTime)
+        {
+          var start = $(this).datetimepicker('getDate');
+          $('#datetime_to').datetimepicker('option', 'minDate', new Date(start.getTime()));
+        }
+      });
+      $('#datetime_to').datetimepicker(
+      {
+        maxDate: new Date()
+      });
+
+      $.datepicker.setDefaults({dateFormat: 'yy-mm-dd'});
+      $('#datetime_from').datetimepicker();
+      $('#datetime_to').datetimepicker();
+
+      var oTable = $('#all_log_content').dataTable(
+      {
+        "bProcessing": true,
+        "bFilter":true,
+        iDisplayLength: 25,
+        "bSorting":false,
+        "bServerSide":true,
+        "sAjaxSource": 'log/',
+        "fnServerData": function (url, aoData, callback, settings) {
+          filter_args = {}
+          if ($('#id_only_lustre').is(':checked')) {
+            filter_args['message__startswith'] = " Lustre"
+          }
+          filter_args['host_id'] = $('#logs_hostList').val()
+
+          function timepicker_iso(element) {
+            /* Get a timezone-aware Date and then ISO-8601 format it */
+            // NB $.trim is used because datetimepicker seems to append a trailing space
+            var val_str = $.trim(element.val())
+            if (val_str) {
+              var val = new Date(val_str);
+              return val.toISOString();
+            } else {
+              return val_str;
+            }
+          }
+
+          filter_args['devicereportedtime__gte'] = timepicker_iso($('#datetime_from'))
+          filter_args['devicereportedtime__lte'] = timepicker_iso($('#datetime_to'))
+
+          Api.get_datatables(url, aoData,
+            function(data) {
+              /* Annotate the rows with DT_RowClass */
+              $.each(data.aaData, function(i, row) {
+                if (row.message.search("LustreError") != -1) {
+                  row.DT_RowClass = 'log_error';
+                } else {
+                  row.DT_RowClass = 'log_info';
+                }
+
+                row.devicereportedtime = shortLocalTime(row.devicereportedtime)
+                row.syslogtag = row.syslogtag.slice(0, -1);
+              });
+              callback(data);
+            },
+            settings,
+            removeBlankAttributes(filter_args));
+        }, 
+       aaSorting: [[0, 'desc']],
+       "aoColumns": [
+           { "sClass": 'log_line', "mDataProp":"devicereportedtime", "bSortable":true},
+           { "sClass": 'log_line', "mDataProp":"fromhost", "bSortable":true},
+           { "sClass": 'log_line', "mDataProp":"syslogtag", "bSortable":false},
+           { "sClass": 'log_line', "mDataProp":"message","bSearchable":true, "bSortable":false}
+       ],
+       "bJQueryUI": true, 
+      });
+
+      //click handler for filter
+      $('#log_filter_btn').click(function()
+      {
+        oTable.fnDraw();
+      });
+    }
+
+    return {draw:draw}
+  }();
+</script>
+<div class='content'>
+  <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
+    <tr style="background-color:#cccccc;">
+      <td width="30%">
+      </td>
+      <td width="70%">
+        <div class="timeint">
+          Host: &nbsp;
+          <select id="logs_hostList">
+          <option value="">All</option>
+          </select>
+          From:&nbsp;<input id="datetime_from" />&nbsp;To:&nbsp;<input id="datetime_to" />
+          &nbsp;Only Lustre Messages:&nbsp;
+          <input type="checkbox" id="id_only_lustre" name="only_lustre" checked="checked" value="true">
+          &nbsp;<input value="Filter" id="log_filter_btn" type="button"></input>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="3">
+        <div class='content'>
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" class="log_line"  id="all_log_content">
+            <thead class="log_line">
+              <tr>
+                <th width="10%">Date</th>
+                <th width="10%">Host</th>
+                <th width="10%">Service</th>
+                <th width="70%">Message</th>
+              </tr>
+            </thead>
+            <tbody class="log_line">
+            </tbody>
+          </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>

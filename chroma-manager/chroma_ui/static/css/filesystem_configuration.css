@@ -1,0 +1,54 @@
+div.step_header {
+  margin-bottom: 12px;
+}
+
+div.step_body {
+  padding-left: 12px;
+}
+
+span.step_number {
+    font-size: 14pt;
+    font-weight: bold;
+    text-shadow: #aaa 2px 2px 3px;
+}
+
+span.step_caption {
+  font-size: 12pt;
+}
+
+span.volume_chooser_selected {
+  margin-left: 6px;
+}
+
+span.volume_chooser_selected {
+  margin-left: 6px;
+}
+
+.volume_chooser_background {
+  border-radius: 3px;
+  /*background: #eee;*/
+  margin-bottom: 6px;
+}
+
+.volume_chooser_background table {
+  /*height: 100%;*/
+  width: 100%;
+}
+
+.volume_chooser_background table .rowhighlight {
+  background-color: #09f;
+}
+
+.volume_chooser_expander {
+  width: 100%;
+  max-height: 300px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.volume_chooser_header {
+}
+
+div.mdt_advanced {
+  display: none;
+}

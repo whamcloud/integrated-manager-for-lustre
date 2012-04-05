@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="../helpproject.xsl" ?>
+<topic template="Default" lasteditedby="Linda Bebernes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../helpproject.xsd">
+  <title translate="true">Copyrights/disclaimer</title>
+  <body>
+    <header>
+      <para styleclass="Heading1"><text styleclass="Heading1" translate="true">Copyrights/disclaimer</text></para>
+    </header>
+    <para styleclass="Normal"><text styleclass="Normal" translate="true">Need to add link somewhere to this. </text></para>
+    <para style="margin-bottom:13px; line-height:1.15;"><text styleclass="Font Style" style="font-family:calibri; font-size:11pt; font-weight:normal; font-style:normal; text-decoration:none; text-transform:none; vertical-align:baseline; color:#000000; background-color:transparent; letter-spacing:normal; letter-scaling:100%;" translate="true">Copyrights, disclaimers, licensing compliance statements – TBD where to place these.</text></para>
+    <para style="margin-bottom:13px; line-height:1.15;"></para>
+    <para style="margin-bottom:13px; line-height:1.15;"></para>
+    <para style="margin-bottom:13px; line-height:1.15;"></para>
+  </body>
+</topic>

@@ -1,0 +1,323 @@
+
+<script language="javascript">
+  // Globals for Create new fs Page.
+
+  var FilesystemCreateView = function() {
+    var initialized = false;
+    var advanced_tab_clicked = false; 
+    var conf_param_dialog;
+    var volume_chooser_store;
+
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+        // TODO HYD-816: reload lists of volumes, reload list of existing MGSs
+        $('#mgt_chooser').volumeChooser('clear');
+        $('#mdt_chooser').volumeChooser('clear');
+        $('#ost_chooser').volumeChooser('clear');
+        conf_param_dialog = undefined;
+        advanced_tab_clicked = false;
+
+        $('#filesystem_create_form').find('span.error').remove();
+        $('#filesystem_create_form').find('.error').removeClass('error');
+        $('#txtfsnameid').val("");
+      }
+    }
+
+    function init() 
+    {
+      function updateMdtEstimate() {
+        var vol = volume_chooser_store.getVolume($('#mdt_chooser').volumeChooser('val'));
+
+        var inode_size = Math.floor($('input[name=inode_size]').val());
+        var bytes_per_inode = Math.floor($('input[name=bytes_per_inode]').val());
+
+        var text;
+        var advanced_text;
+        if (inode_size >= bytes_per_inode) {
+          text = "Inode size " + inode_size + " too large (must be smaller than " + bytes_per_inode + ")";
+        } else if (vol) {
+          var inode_count = vol.size / bytes_per_inode;
+          var ea_fixed_size = 32 + 23;
+          var ea_stripe_size = 24;
+          var core_inode_size = 128;
+          var stripes_in_inode = Math.floor((inode_size - core_inode_size - ea_fixed_size) / ea_stripe_size);
+          text = "Estimated file limit: " + formatBigNumber(inode_count) + " files"
+          advanced_text = "Stripes without EA block:" + stripes_in_inode
+        } else {
+          text = "";
+          advanced_text = "";
+        }
+        $('span#mdt_estimate').html(text)
+        $('span#mdt_advanced_estimate').html(advanced_text)
+      }
+
+      $('input[name=inode_size]').change(function() {
+        updateMdtEstimate();
+      });
+      $('input[name=bytes_per_inode]').change(function() {
+        updateMdtEstimate();
+      });
+
+      function updateOstEstimate() {
+        var vol_ids = $('#ost_chooser').volumeChooser('val');
+        var text;
+        if (vol_ids.length) {
+          var sum = 0;
+          _.each(vol_ids, function(vol_id) {
+            var vol = volume_chooser_store.getVolume(vol_id);
+            sum += Math.floor(vol.size)
+          });
+          text = "Estimated filesystem capacity: " + formatBytes(sum);
+        } else {
+          text = "";
+        }
+
+        $('span#total_size_estimate').html(text)
+      }
+
+      $('#mdt_advanced_button').button();
+      $('#mdt_advanced_button').change(function() {
+        if ($(this).attr('checked')) {
+          $('.mdt_advanced').show();
+          $(this).parent().css('background-color', '#eee')
+        } else {
+          $('.mdt_advanced').hide();
+          $(this).parent().css('background-color', '')
+        }
+      });
+
+      volume_chooser_store = VolumeChooserStore();
+      volume_chooser_store.load(function() {
+        $('#mdt_chooser').volumeChooser({
+          store: volume_chooser_store,
+          change: function() {
+            updateMdtEstimate();
+          }
+        });
+        $('#ost_chooser').volumeChooser({
+          store: volume_chooser_store,
+          change: function() {
+            updateOstEstimate();
+          },
+          multi_select: true});
+        $('#mgt_chooser').volumeChooser({
+          store: volume_chooser_store,
+          change: function() {
+            $('#mgt_existing_dropdown').val('');
+          }
+        });
+      });
+
+      /* Populate existing MGT list */
+      Api.get("target/", {
+          kind: "MGT",
+          limit: 0
+        },
+        success_callback = function(data) {
+          var targets = data.objects;
+          var options_markup = "<option value=''></option>";
+          var count = 0;
+          $.each(targets, function(i, target_info) {
+            options_markup += "<option value='" + target_info.id + "'>" + target_info.primary_server_name + "</option>"
+            count += 1;
+          });
+          if (count == 0) {
+            $('#existing_or_new_mgt_options').hide();
+          } else {
+            $('#mgt_existing_dropdown').html(options_markup);
+          }
+        }
+      );
+
+      $('#mgt_existing_dropdown').change(function() {
+        if ($('#mgt_existing_dropdown option:selected').val()) {
+          $('#mgt_chooser').volumeChooser('clear');
+        }
+      });
+
+      $('#btnCreateFS').click(function()
+      {
+        $('#filesystem_create_form').find('span.error').remove();
+        $('#filesystem_create_form').find().removeClass('error');
+
+        var fs_name = $('#txtfsnameid').val();
+        var mgt_lun_id = $('#mgt_chooser').volumeChooser('val'); 
+        var mgt_id = $('#mgt_existing_dropdown').val()
+        var mdt_lun_id = $('#mdt_chooser').volumeChooser('val'); 
+        var ost_lun_ids = $('#ost_chooser').volumeChooser('val'); 
+
+        var errors = []
+        if(fs_name=="") {
+          errors.push({element: $('#txtfsnameid'), message: "Filesystem name is mandatory"})
+        }
+
+        if (!(mgt_id || mgt_lun_id)) {
+          errors.push({element: $('#mgt_chooser'), message: "An MGT must be selected"})
+        }
+
+        if (!mdt_lun_id) {
+          errors.push({element: $('#mdt_chooser'), message: "An MDT must be selected"})
+        }
+
+        if(ost_lun_ids.length==0) {
+          errors.push({element: $('#ost_chooser'), message: "At least one OST must be selected"})
+        }
+
+        if (_.size(errors) > 0) {
+          _.each(errors, function(error) {
+            error.element.before("<span class='error'>" + error.message + "</span>");
+            error.element.addClass('error');
+          });
+
+          return;
+        }
+
+        var filesystem = {}
+        filesystem.name = fs_name;
+        // Compose MGT
+        if (mgt_id) {
+          filesystem.mgt = {id: mgt_id}
+        } else {
+          filesystem.mgt = {volume_id: mgt_lun_id}
+        }
+
+        // Compose MDT
+        filesystem.mdt = {volume_id: mdt_lun_id}
+        var inode_size = $('input[name=inode_size]').val()
+        if (inode_size) {
+          filesystem.mdt.inode_size = inode_size
+        }
+        var bytes_per_inode = $('input[name=bytes_per_inode]').val()
+        if (bytes_per_inode) {
+          filesystem.mdt.bytes_per_inode = bytes_per_inode
+        }
+
+        // Compose OST list
+        filesystem.osts = []
+        _.each(ost_lun_ids, function(lun_id) {
+          filesystem.osts.push({volume_id: lun_id})
+        });
+        if (conf_param_dialog) {
+            filesystem.conf_params = conf_param_dialog.get()
+        } else {
+            filesystem.conf_params = {}
+        }
+
+        Api.post("filesystem/", filesystem,
+          success_callback = function(data) {
+            Backbone.history.navigate("configure/filesystem/detail/" + data.filesystem.id + "/", {trigger: true});
+          }
+        );
+      }); 
+      //Advance Options button click handler.
+      $('div#filesystem_create_form button.advanced').click(function()
+      {
+        // If clicked first time then only fetch parameters else show already entered values
+        if(!conf_param_dialog) {
+          Api.get("help/conf_param/", {kind: 'FS'}, success_callback = function(help_dict) {
+            var data = {};
+            for(var key in help_dict) {
+              data[key] = null;
+            }
+            advanced_tab_clicked = true;
+            conf_param_dialog = ConfParamDialog({help: help_dict})
+            conf_param_dialog.open();
+          })
+        } else {
+            conf_param_dialog.open()
+        }
+      });
+    }
+    return {draw:draw}
+  }();
+</script>
+
+<div id='filesystem_create_form' class='validated_form'>
+<table style="font-size:12px; padding-top:15px;">
+  <tr>
+    <td width="30%" align="left" valign="top">
+      <div class='step_header'>
+        <span class="step_number">1.</span> <span class="step_caption">Filesystem options</span><br>
+      </div>
+      <div class='step_body'>
+        <label>Filesystem name:</label> <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" maxlength="8"/>
+        <button class='advanced' type="button">Advanced...</button>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="left" valign="top">
+      <div class='step_header'>
+        <span class="step_number">2.</span> <span class="step_caption">Choose MGT</span><br>
+      </div>
+      <div class='step_body'>
+
+        <ul id='existing_or_new_mgt_options'>
+          <li id="existing_mgt_field">
+            Use existing: <select id="mgt_existing_dropdown"></select>
+          </li>
+          <li>
+          Create new:
+          </li>
+        </ul>
+        <button id='mgt_chooser'></button>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="left" valign="top">
+      <div class='step_header'>
+        <span class="step_number">3.</span> <span class="step_caption">Choose MDT</span><br>
+      </div>
+      <div class='step_body'>
+        <br>
+        <button id='mdt_chooser'></button>
+        <div>
+          <label for='mdt_advanced_button'>Advanced</label>
+          <input type='checkbox' id='mdt_advanced_button'/>
+          <div class='mdt_advanced'>
+            <table class='validated_form'>
+              <tr>
+                <th><label for='inode_size'>INode size:</label></th>
+                <td><input name='inode_size' value='512'/>bytes</td>
+              </tr>
+              <tr>
+                <th><label for='inode_size'>Bytes per inode:</label></th>
+                <td><input name='bytes_per_inode' value='2048'/>bytes</td>
+              </tr>
+            </table>
+            <span id='mdt_advanced_estimate'></span>
+          </div>
+        </div>
+        <span id='mdt_estimate'></span>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="left" valign="top">
+      <div class='step_header'>
+        <span class="step_number">4.</span> <span class="step_caption">Choose OSTs</span><br>
+      </div>
+      <div class='step_body'>
+        <button id='ost_chooser'></button>
+        <span id='total_size_estimate'></span>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="left" valign="top">
+      <div class='step_header'>
+        <span class="step_number">5.</span> <span class="step_caption">Finish</span><br>
+      </div>
+      <div class='step_body'>
+        <button class='back_button'/>
+        <button class='submit' id='btnCreateFS'>Create filesystem now</button>
+      </div>
+    </td>
+  </tr>
+</table>
+</div>
+

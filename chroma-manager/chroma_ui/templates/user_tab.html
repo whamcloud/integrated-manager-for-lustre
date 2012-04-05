@@ -1,0 +1,181 @@
+<script>
+  var UserView = function() {
+    var initialized = false;
+    function init() {
+      $('#user_list').dataTable( {
+        bServerSide: true,
+        bProcessing: true,
+        bJQueryUI: true,
+        bAutoWidth: false,
+        sAjaxSource: 'user/',
+        fnServerData: function(url, data, callback, settings) {
+          Api.get_datatables(url, data, function(data) {
+            $.each(data.aaData, function(i, row) {
+              // Stash a copy of the true object
+              row.user = jQuery.extend(true, {}, row);
+
+              var group_names = [];
+              $.each(row.groups, function(i, group) {
+                group_names.push(group.name);
+              });
+              /*
+              if (row.is_superuser) {
+                group_names.push('superusers')
+              }
+              */
+              row.groups = group_names.join(",");
+              row.buttons = "";
+            });
+            callback(data);
+          }, settings);
+        },
+        fnRowCallback: function(nRow, row, iDisplayIndex, iDisplayIndexFull) {
+          var buttons = []
+          if (row.id != Login.getUser().id) {
+            buttons.push($("<button>Delete</button>").click(function(){
+              deleteUser(row.user);
+            }))
+          }
+          buttons.push($("<button>Edit</button>").click(function() {
+            UserDialog.edit(row.user, function() {reloadTable();});
+          }));
+          $.each(buttons, function(i, button) {
+            $('td:eq(4)', nRow).prepend(button);
+          });
+          return nRow;
+        },
+        aoColumns: [
+          {mDataProp: 'username', bSortable: true},
+          {mDataProp: 'full_name', bSortable: false},
+          {mDataProp: 'email', bSortable: true},
+          {mDataProp: 'groups', bSortable: false},
+          {mDataProp: 'buttons', bSortable: false}
+        ]
+      });
+
+      $('#create_user_dialog').dialog({
+        resizable: false,
+        draggable: false,
+        autoOpen: false,
+        width: 'auto',
+        modal: true,
+        title: 'Create user',
+        buttons: {
+          "Cancel": function(){$(this).dialog('close');},
+          "Create": function() {
+            var dialog = $(this);
+            var user = {}
+            //user.groups = [{pk: $('#create_user_dialog select[name=group]').val()}]
+            user.groups = [$('#create_user_dialog select[name=group]').val()]
+
+            ValidatedForm.save(dialog, Api.post, "user/", user, function ()
+            {
+              dialog.dialog('close');
+              reloadTable();
+            });
+          }
+        }
+      });
+
+      Api.get("group/", {limit: 0}, success_callback = function(data) {
+        $.each(data.objects, function(i, group) {
+          var option = "<option value='" + group.resource_uri + "'>"+ group.name + "</option>";
+          $('#create_user_dialog select[name=group]').prepend(option)
+        });
+      });
+
+      $('#create_user').click(function() {
+        UserView.create()
+      });
+    }
+
+    function createUser()
+    {
+      ValidatedForm.clear($('#create_user_dialog'))
+      $('#create_user_dialog').dialog('open');
+    }
+
+    function deleteUser(user) {
+      $("<div>Delete user '" + user.username + "'?</div>").dialog({
+        resizable: false,
+        width: 'auto',
+        buttons: {
+          "Cancel": function() {$(this).dialog('close')},
+          "Delete": function() {
+            var dialog = $(this);
+            Api.delete('user/' + user.id + '/', {}, success_callback = function() {
+              dialog.dialog('close');
+              reloadTable();
+            });
+          }
+        }
+      });
+    }
+
+    function reloadTable() {
+      $('#user_list').dataTable().fnDraw();
+    }
+
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+        reloadTable();
+      }
+    }
+
+    return {
+      draw: draw,
+      create: createUser,
+      refresh: reloadTable
+    }
+  }();
+</script>
+
+<h2 class='section_header'>User administration</h2>
+<div class="buttonspacer">
+  <span class="first-child">
+  <button class='add' type="button" id="create_user">Create user</button>
+  </span></span>
+</div>
+
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="user_list" width="100%">
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Group</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+
+<div id="create_user_dialog">
+  <table class='validated_form'>
+    <tr>
+      <th>Group:</th><td><select name='group'></select></td>
+    </tr>
+    <tr>
+      <th>Username:</th><td><input type='entry' name='username' width=16/></td>
+    </tr>
+    <tr>
+      <th>First name:</th><td><input type='entry' name='first_name'/></td>
+    </tr>
+    <tr>
+      <th>Last name:</th><td><input type='entry' name='last_name'/></td>
+    </tr>
+    <tr>
+      <th>Email:</th><td><input type='entry' name='email'/></td>
+    </tr>
+    <tr>
+      <th>Password:</th><td><input type='password' name='password1'/></td>
+    </tr>
+    <tr>
+      <th>Confirm password:</th><td><input type='password' name='password2'/></td>
+    </tr>
+  </table>
+</div>

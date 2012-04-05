@@ -1,0 +1,100 @@
+<script>
+  var MgtView = function() {
+    var initialized = false;
+    var volume_chooser_store;
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+        $('#mgt_configuration').dataTable().fnDraw();
+      }
+    }
+
+    function init() 
+    {
+      // List Existing MGT JQuery Table init()
+      var oMgtConfiguration = $('#mgt_configuration').dataTable( {
+        bServerSide: true,
+        bPaginate: false,
+        bFilter: false,
+        bInfo: false,
+        sAjaxSource: 'target/',
+        fnServerData: function(url, data, callback, settings) {
+          Api.get_datatables(url, data, function(data) {
+            $.each(data.aaData, function(i, mgt) {
+              var fs_names = [];
+              $.each(mgt.filesystems, function(i, fs) {fs_names.push(fs.name);});
+              mgt.fs_names = fs_names.join(", ")
+              mgt.primary_server_name = target_dialog_link(mgt)
+              mgt.state_transitions = stateTransitionButtons(mgt)
+              mgt.notification_icons = LiveObject.icons(mgt)
+            });
+            callback(data);
+          }, settings, {kind: 'MGT'});
+        },
+        bProcessing: true,
+        "bJQueryUI": true,
+        "bDestory": true,
+        "oLanguage": {
+            "sEmptyTable": "No MGT to display"
+        },
+        aaSort: [[1, 'asc']],
+        "aoColumns": [
+          { "sClass": 'txtleft', mDataProp: 'fs_names', bSortable: false},
+          { "sClass": 'txtleft', mDataProp: 'volume_name', bSortable: true },
+          { "sClass": 'txtleft', mDataProp: 'primary_server_name', bSortable: false},
+          { "sClass": 'txtleft', mDataProp: 'failover_server_name', bSortable: false},
+          { "sClass": 'txtleft', mDataProp: 'active_host_name', bSortable: false},
+          { "sClass": 'txtcenter', bSortable: false, mDataProp: 'state_transitions', bSortable: false},
+          { "sClass": 'txtleft', bSortable: false, mDataProp: 'notification_icons', bSortable: false}
+        ]
+      } );
+
+      $('#btnNewMGT').attr('disabled', true);
+      volume_chooser_store = VolumeChooserStore();
+      volume_chooser_store.load(function() {
+        $('#new_mgt_chooser').volumeChooser({
+          store: volume_chooser_store,
+          change: function() {
+            var val = $(this).volumeChooser('val');
+            $('#btnNewMGT').button('option', 'disabled', val == null);
+          }
+        });
+      });
+
+      $('#btnNewMGT').click(function(){
+        var volume_id = $('#new_mgt_chooser').volumeChooser('val');
+        Api.post("target/", {kind: 'MGT', volume_id: volume_id},
+          success_callback = function(data) {
+            $('#new_mgt_chooser').volumeChooser('clear');
+            $('#mgt_configuration').dataTable().fnDraw();
+          }
+        );
+
+      });
+    }
+    return {draw:draw}
+  }();
+</script>
+
+<h2 class='section_header'>MGT Configuration</h2>
+  <table cellpadding="0" cellspacing="0" border="0" class="display" id="mgt_configuration" width="100%">
+    <thead>
+      <tr>
+        <th width='19%' class="blueheader" bgcolor="#990000">Filesystems</th>
+        <th width='15%'>Volume</th>
+        <th width='15%'>Primary server</th>
+        <th width='15%'>Failover server</th>
+        <th width='15%'>Started on</th>
+        <th width='1%'></th>
+        <th width='1%'></th>
+      </tr>
+    </thead>
+    <tbody id="mgt_configuration_content">
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    </tbody>
+  </table>
+<h2 class='section_header'>New MGT</h2>
+<button id='new_mgt_chooser'></button>
+<button type="button" class='add' id="btnNewMGT">Create new MGT</button>

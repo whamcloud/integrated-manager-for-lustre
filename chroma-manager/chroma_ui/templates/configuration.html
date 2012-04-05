@@ -1,0 +1,123 @@
+<link href="{{STATIC_URL}}css/storage_resource_create.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="{{STATIC_URL}}css/filesystem_configuration.css" type='text/css' />
+
+<script type="text/javascript" src="{{STATIC_URL}}js/json_opps.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/configure_charts.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_create.js"></script>
+<script type='text/javascript' src="{{STATIC_URL}}js/filesystem_configuration.js"></script>
+<script type="text/javascript">
+  $(document).ajaxComplete(function() {
+    $('button.back_button:not(.ui-button)').each(function() {
+      $(this).html('Back');
+      $(this).click(function() {window.history.back();});
+      $(this).button({icons: {primary: 'ui-icon-arrowreturnthick-1-w'}});
+    });
+    $('a.button:not(.ui-button)').each(function() {
+      $(this).button();
+    });
+
+    var apply_button = function(selector, icon) {
+      $(selector).each(function() {
+        if (!$(this).hasClass('ui-button')) {
+          $(this).button({icons: {primary: icon}});
+        }
+      });
+    }
+    apply_button('button.add', 'ui-icon-plusthick');
+    apply_button('button.submit', 'ui-icon-check');
+    apply_button('button.advanced', 'ui-icon-gear');
+    apply_button('button.close', 'ui-icon-closethick');
+    
+    //for adding smoothness to all table buttons
+    $("button").button();
+  });
+
+  var ConfigureTabs = function() {
+    function init() {
+      $("#tabs").tabs({
+        selected: -1,
+        select: function (event, ui) {
+          var tab = ui.panel.id.split("-")[0];
+          var path = "configure/" + tab + "/";
+          if (window.location.pathname.indexOf(path) != 1) {
+            Backbone.history.navigate(path, {trigger: true});
+          }
+        }
+      });
+    }
+
+    return {init: init}
+  }();
+</script>
+
+<input type=hidden id="config_home_target_id" value="" />
+
+<div id="tabs">
+  <ul>
+    <li><a href='#filesystem-tab' title='filesystems'>Filesystems</a></li>
+    <li><a href='#mgt-tab' title='mgts'>MGTs</a></li>
+    <li><a href='#volume-tab' title='volumes'>Volumes</a></li>
+    <li><a href='#server-tab' title='servers'>Servers</a></li>
+    <li><a href='#storage-tab' title='storage'>Storage</a></li>
+    <li><a class="superuser_only" href='#user-tab' title='users'>Users</a></li>
+  </ul>
+  <div id='filesystem-tab'>
+    <div id='filesystem-tab-list' style="display: none">
+      {% include "filesystem_list.html" %}
+    </div>
+    <div id='filesystem-tab-create' style="display: none">
+      {% include "filesystem_create.html" %}
+    </div>
+    <div id='filesystem-tab-detail' style="display: none">
+      {% include "filesystem_detail.html" %}
+    </div>
+  </div>
+  <div id='mgt-tab'>
+    {% include "mgt_tab.html" %}
+  </div>
+  <div id='volume-tab'>
+    {% include "volume_tab.html" %}
+  </div>
+  <div id='server-tab'>
+    {% include "server_tab.html" %}
+  </div>
+  <div id='storage-tab'>
+    {% include "storage_tab.html" %}
+  </div>
+  <div id='user-tab'>
+    {% include "user_tab.html" %}
+  </div>
+</div>
+
+<!-- Markup for storage_resource_dialog.js -->
+<div style="overflow-y: auto; max-height: 700px;" id="storage_resource_dialog">
+  <input style='display: none' id='alias_default_entry' value=''>
+  </input>
+  <div id='storage_attributes'>
+    <span class='resource_name'>Name:
+    <input type='entry' id='alias_edit_entry' value=''>
+    </input>
+    </span> <a id='alias_save_button' href='#'>save</a> <a id='alias_reset_button' href='#'>reset</a> <img id='alias_spinner' style='display: none;' src='{{STATIC_URL}}/images/ajax-loader.gif'/>
+    <table class="storage_attributes" id='storage_attributes'>
+    </table>
+    <a href='#' id='remove_resource_button'>Remove</a>
+  </div>
+  <div id='storage_alerts'>
+  </div>
+  <table class="storage_statistics" id='stats'>
+  </table>
+</div>
+<!-- End markup for storage_resource_dialog.js -->
+
+<!-- Markup for storage_resource_create.js -->
+<div style="overflow-y: auto; max-height: 700px;" id="storage_resource_create_dialog">
+  <table id='storage_resource_create_fields'>
+    <tr><th>Resource class:</th><td colspan=2><select style="width: 200px;" id='storage_resource_create_classes'></select></td></tr>
+  </table>
+</div>
+<!-- End markup for storage_resource_create.js -->
+
+<!-- Markup for transition confirmation dialog -->
+<div style="overflow-y: auto; max-height: 700px;" id="transition_confirmation_dialog">
+</div>
+<!-- End markup for transition confirmation dialog -->

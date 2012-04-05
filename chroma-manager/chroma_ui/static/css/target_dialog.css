@@ -1,0 +1,25 @@
+
+
+div#target_dialog_devices {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-width: 900px;
+  max-height: 1000px;
+
+  margin: 8px;
+  position: relative;
+}
+
+div#target_dialog_properties table {
+  border-collapse: collapse;
+}
+
+div#target_dialog_properties th {
+  text-align: left;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+div#target_dialog_properties td {
+  text-align: left;
+}

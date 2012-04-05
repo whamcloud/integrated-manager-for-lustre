@@ -1,0 +1,130 @@
+
+div.jGrowl div.job_cancelled div.jGrowl-message {
+  background-image: 			url(../images/gtk-cancel.png);
+  background-repeat: no-repeat;
+  background-position: 			4px 4px;
+  padding-left: 24px;
+  padding-top: 4px;
+  min-height: 24px;
+}
+
+
+div.jGrowl div.job_success div.jGrowl-message {
+  background-image: 			url(../images/icon_tick.png);
+  background-repeat: no-repeat;
+  background-position: 			4px 4px;
+  padding-left: 24px;
+  padding-top: 4px;
+  min-height: 24px;
+}
+
+div.jGrowl div.job_errored div.jGrowl-message {
+  background-image: 			url(../images/dialog-error.png);
+  background-repeat: no-repeat;
+  background-position: 			4px 4px;
+  padding-left: 24px;
+  padding-top: 4px;
+  min-height: 24px;
+}
+
+div.jGrowl div.alert_raised div.jGrowl-message {
+  background-image: 			url(../images/dialog-warning.png);
+  background-repeat: no-repeat;
+  background-position: 			4px 4px;
+  padding-left: 24px;
+  padding-top: 4px;
+  min-height: 24px;
+}
+
+span.alert_indicator {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  vertical-align: center;
+  border-radius: 3px;
+
+  background-repeat: no-repeat;
+  background-position: 2px;
+}
+
+span.alert_indicator_large {
+  width: 65px;
+  height: 20px;
+  padding-left: 24px;
+  padding-top: 3px;
+  vertical-align: center;
+  font-size: 8pt;
+  text-align: left;
+  border-radius: 3px;
+  line-height: normal;
+}
+
+
+span.alert_indicator_active {
+  /*
+  color: #664f00;
+  background-color: #FFBF00;
+  */
+  font-weight: bold;
+
+  background-image: url(../images/dialog-warning.png);
+}
+
+span.alert_indicator_inactive {
+  /*
+  color: #444;
+  background-color: #efe;
+  */
+  font-weight: normal;
+
+  background-image: url(../images/icon_tick.png);
+}
+
+span.alert_indicator_list.alert_indicator_inactive {
+  padding-left: 24px;
+  padding-top: 3px;
+}
+span.alert_indicator_list {
+  overflow-y: auto;
+  width: auto;
+  height: auto;
+}
+
+span.alert_indicator_list ul {
+  list-style: none;
+  margin-left: 0px;
+  padding-left: 0px;
+}
+
+span.alert_indicator_list ul li {
+  padding-left: 24px;
+  background-image: url(../images/dialog-warning.png);
+  background-repeat: no-repeat;
+  background-position: 2px;
+}
+
+
+span.alert_indicator_list.alert_indicator_active {
+  background-image: none;
+}
+
+span.notification_object_icon {
+  display: inline-block;
+  background-repeat: no-repeat;
+  background-position: 4px 4px;
+  width: 24px;
+  height: 24px;
+}
+
+.busy_icon {
+  background-image: url(../images/ajax-loader.gif);
+}
+
+.locked_icon {
+  background-image: url(../images/lock.png);
+}
+
+span.notification_icons {
+  white-space: nowrap;
+}
+

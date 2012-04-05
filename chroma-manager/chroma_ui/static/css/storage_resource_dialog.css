@@ -1,0 +1,61 @@
+
+div#storage_attributes {
+    float: left;
+    /*
+    border: 1px solid #4572a7;
+    border-radius: 4px;
+    */
+    padding: 3px;
+    width: 50%;
+}
+
+div#storage_alerts {
+    float: left;
+    width: 49%;
+}
+
+div#storage_alerts table {
+    font-size: 9pt;
+}
+
+table.storage_attributes {
+    border-top: 1px solid gray;
+    border-bottom: 1px solid gray;
+    border-collapse: collapse;
+    margin-top: 12px;
+    width: 100%;
+}
+
+table.storage_attributes tr {
+    border: 1px solid #c0c0c0;
+}
+
+table.storage_attributes tr.odd {
+    background: #ffffff;
+}
+
+table.storage_attributes tr.even {
+    background: #f9f9f9;
+}
+
+table.storage_attributes th {
+    font-weight: bold;
+    text-align: left;
+    padding-left: 3px;
+    border-right: 1px solid #c0c0c0;
+}
+
+table.storage_attributes td {
+    font-weight: normal;
+    text-align: left;
+}
+
+table.storage_statistics td {
+    margin: 0px;
+    padding: 0px;
+}
+
+span.resource_name {
+    font-size: 10;
+    font-weight: bold;
+}

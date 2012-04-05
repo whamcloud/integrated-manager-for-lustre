@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="../helpproject.xsl" ?>
+<topic template="Default" lasteditedby="Linda Bebernes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../helpproject.xsd">
+  <title translate="true">Install/Configure</title>
+  <body>
+    <header>
+      <para styleclass="Heading1"><text styleclass="Heading1" translate="true">Install/Configure</text></para>
+    </header>
+    <para styleclass="Normal"><text styleclass="Font Style" style="font-family:calibri; font-size:12pt; font-weight:normal; font-style:italic; text-decoration:none; text-transform:none; vertical-align:baseline; color:#000000; background-color:transparent; letter-spacing:normal; letter-scaling:100%;" translate="true">Installation/configuration</text><text styleclass="Font Style" style="font-family:&apos;times new roman&apos;; font-size:12pt; font-weight:normal; font-style:italic; text-decoration:none; text-transform:none; vertical-align:baseline; color:#000000; background-color:transparent; letter-spacing:normal; letter-scaling:100%;" translate="true">.</text><text styleclass="Font Style" style="font-family:calibri; font-size:12pt; font-weight:normal; font-style:normal; text-decoration:none; text-transform:none; vertical-align:baseline; color:#000000; background-color:transparent; letter-spacing:normal; letter-scaling:100%;" translate="true"> Describe how to get the Chroma server set up and running). Includes:</text></para>
+    <para styleclass="Normal"></para>
+    <list id="8" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Normal" style="font-family:Symbol; font-size:10pt; color:#000000;">
+      <li styleclass="Normal"><text styleclass="Font Style" style="font-family:calibri; font-size:12pt; font-weight:normal; font-style:italic; text-decoration:none; text-transform:none; vertical-align:baseline; color:#000000; background-color:transparent; letter-spacing:normal; letter-scaling:100%;" translate="true">Install Chroma.</text><text styleclass="Font Style" style="font-family:calibri; font-size:12pt; font-weight:normal; font-style:normal; text-decoration:none; text-transform:none; vertical-align:baseline; color:#000000; background-color:transparent; letter-spacing:normal; letter-scaling:100%;" translate="true"> Installing the OS CD with Chroma provided by Whamcloud onto a clean server to create a Chroma server. Include instructions for how to set up root password, connect to network, etc.</text></li>
+    </list>
+    <list id="7" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" style="margin-bottom:13px; line-height:1.15; font-family:Symbol; font-size:11pt; color:#000000;">
+      <li style="margin-bottom:13px; line-height:1.15;"><text styleclass="Font Style" style="font-family:calibri; font-size:11pt; font-weight:normal; font-style:italic; text-decoration:none; text-transform:none; vertical-align:baseline; color:#000000; background-color:transparent; letter-spacing:normal; letter-scaling:100%;" translate="true">Configure Chroma.</text><text styleclass="Font Style" style="font-family:calibri; font-size:11pt; font-weight:normal; font-style:normal; text-decoration:none; text-transform:none; vertical-align:baseline; color:#000000; background-color:transparent; letter-spacing:normal; letter-scaling:100%;" translate="true"> Setting up user accounts and &#160;passwords, pointing to mail server, configuring fire wall, etc.</text></li>
+    </list>
+    <para style="margin-bottom:13px; line-height:1.15;"></para>
+    <para style="margin-bottom:13px; line-height:1.15;"></para>
+    <para style="margin-bottom:13px; line-height:1.15;"></para>
+  </body>
+</topic>

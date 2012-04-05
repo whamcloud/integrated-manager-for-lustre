@@ -1,0 +1,12 @@
+include Makefile
+include logrotate.cfg
+include monitor.wsgi
+include chroma_core/fixtures/*
+include chroma_core/bin/*.py
+include chroma_core/bin/storage-daemon
+include chroma_core/bin/chroma-config
+include chroma_ui/templates/*
+graft polymorphic
+graft chroma_ui/static
+global-exclude .*.swp
+global-exclude local_settings.py*

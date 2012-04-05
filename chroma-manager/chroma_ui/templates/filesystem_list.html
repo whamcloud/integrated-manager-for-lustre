@@ -1,0 +1,87 @@
+<script type='text/javascript'>
+  var FilesystemListView = function() {
+    var initialized = false;
+    function draw() {
+      if (!initialized) {
+        init();
+        initialized = true;
+      } else {
+        $('#fs_list').dataTable().fnDraw();
+      }
+    }
+
+    function init() 
+    {
+      var oTable = $('#fs_list').dataTable( {
+        bServerSide: true,
+        sAjaxSource: 'filesystem/',
+        "bProcessing": true,
+        "bJQueryUI": true,
+        "bAutoWidth":false,
+        "oLanguage": {
+            "sEmptyTable": "No filesystems"
+        },
+        bPaginate: false,
+        bFilter: false,
+        bInfo: false,
+        fnServerData: function(url, data, callback, settings) {
+          Api.get_datatables(url, data, function(data) {
+            $.each(data.aaData, function(i, row) {
+              if (row.mdts.length) {
+                mdt_hostname = row.mdts[0].primary_server_name
+              }
+              row.name = "<a class='navigation' href='configure/filesystem/detail/" + row.id +"/'>" + row.name + "</a>";
+              row.mgs_hostname = row.mgt.primary_server_name
+              if (row.mdts.length > 0) {
+                row.mds_hostname = row.mdts[0].primary_server_name
+              } else {
+                row.mds_hostname = "";
+              }
+              row.ost_count = row.osts.length
+              row.bytes_total = formatBytes(row.bytes_total)
+              row.bytes_free = formatBytes(row.bytes_free)
+              row.state_transitions = stateTransitionButtons(row)
+              row.notification_icons = LiveObject.icons(row)
+            });
+            callback(data);
+          }, settings, {});
+        },
+        "aoColumns": [
+          { "sClass": 'txtleft', mDataProp: 'name'},
+          { "sClass": 'txtleft', mDataProp: 'mgs_hostname', bSortable: false},
+          { "sClass": 'txtleft', mDataProp: 'mds_hostname', bSortable: false},
+          { "sClass": 'txtright', mDataProp: 'ost_count', bSortable: false},
+          { "sClass": 'txtright', mDataProp: 'bytes_total', bSortable: false},
+          { "sClass": 'txtright', mDataProp: 'bytes_free', bSortable: false},
+          { "sClass": 'txtright', mDataProp: 'state_transitions', bSortable: false},
+          { "sClass": 'txtleft', mDataProp: 'notification_icons', bSortable: false}
+        ]
+      });
+
+      $('#create_new_fs').button();
+    }
+    return {draw:draw}
+  }();
+
+</script>
+
+<h2 class='section_header'>Filesystem Configuration</h2>
+<p>
+  <a id='create_new_fs' class='navigation' href='configure/filesystem/create/'>New filesystem...</a>
+</p>
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="fs_list" width="100%">
+  <thead>
+    <tr>
+      <th width="9%">Name</th>
+      <th width="10%">Management server</th>
+      <th width="10%">Metadata server</th>
+      <th width="9%">No. OSS</th>
+      <th width="5%">Size</th>
+      <th width="5%">Free</th>
+      <th width="1%"></th>
+      <th width="1%"></th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>

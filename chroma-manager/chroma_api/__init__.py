@@ -1,0 +1,7 @@
+
+# ==============================
+# Copyright 2011 Whamcloud, Inc.
+# ==============================
+
+import settings
+api_log = settings.setup_log('django.request.tastypie', "api.log")
