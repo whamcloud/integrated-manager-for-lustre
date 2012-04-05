@@ -262,7 +262,7 @@ var Dashboard = function(){
         load_breadcrumbs();
       });
 
-      init_charts_global();
+      init_charts('dashboard');
   }
   
   $("#selectView").live('change', function ()
@@ -608,7 +608,7 @@ function populateFsSelect(filesystems)
   $('#fsSelect').html(filesystem_list_content);
 }
 
-function init_charts_global() {
+function init_charts(chart_group) {
   /* Set up charts for dashboard_page_global */
   var chart_manager = ChartManager({chart_group: 'dashboard'});
   chart_manager.add_chart('db_line_cpu_mem', 'dashboard', {
@@ -747,7 +747,7 @@ function init_charts_global() {
     ],
     chart_config: {
       chart: {
-          renderTo: 'global_read_write',
+          renderTo: 'global_read_write'
       },
       title: { text: 'Read/write bandwidth'},
       xAxis: { type:'datetime' },
@@ -809,7 +809,7 @@ function init_charts_global() {
     },
     chart_config: {
       chart: {
-          renderTo: 'global_usage',
+          renderTo: 'global_usage'
       },
       title: { text: 'Space usage'},
       series: [
@@ -842,7 +842,7 @@ function init_charts_global() {
     metrics: ["client_count"],
     chart_config: {
       chart: {
-        renderTo: 'global_client_count',
+        renderTo: 'global_client_count'
       },
       title: { text: 'Client count'},
       xAxis: { type:'datetime' },
@@ -853,6 +853,71 @@ function init_charts_global() {
     }
   });
 
+  chart_manager.chart_group('servers');
+  chart_manager.add_chart('cpu_mem','servers', {
+    url: function() { return 'host/' + $('#ls_ossId').val() + '/metric'; },
+    api_params: { reduce_fn: 'average' },
+    metrics: ["cpu_total", "cpu_user", "cpu_system", "cpu_iowait", "mem_MemFree", "mem_MemTotal"],
+    series_callbacks: [
+      function(timestamp, data, index, chart) {
+        var pct_user = ((100 * data.cpu_user + (data.cpu_total / 2)) / data.cpu_total);
+        chart.series_data[index].push( [ timestamp, pct_user] );
+      },
+      function(timestamp, data, index, chart) {
+        var pct_system = ((100 * data.cpu_system + (data.cpu_total / 2)) / data.cpu_total);
+        chart.series_data[index].push( [ timestamp, pct_system] );
+      },
+      function(timestamp, data, index, chart) {
+        var pct_iowait = ((100 * data.cpu_iowait + (data.cpu_total / 2)) / data.cpu_total);
+        chart.series_data[index].push( [ timestamp, pct_iowait] );
+      },
+      function( timestamp, data, index, chart ) {
+        var pct_mem  = 100 * ( ( data.mem_MemTotal - data.mem_MemFree )/ data.mem_MemTotal );
+        chart.series_data[index].push( [ timestamp, pct_mem ]);
+      }
+    ],
+    chart_config: {
+      chart: { renderTo: 'oss_avgReadDiv' },
+      title: { text: 'Server CPU and Memory'},
+      xAxis: { type:'datetime' },
+      legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0},
+      yAxis: [{
+        title: { text: 'Percentage' },
+        max:100, min:0, startOnTick:false,  tickInterval: 20
+      }],
+      series: _.map(
+        [ 'user','system','iowait','mem'],
+        function(metric) { return { type: 'line', data: [], name: metric }; }
+      )
+    }
+  });
+
+  chart_manager.add_chart('readwrite', 'servers', {
+    url: function() { return 'target/' + $('#ls_fsId').val() + '/metric'; },
+    api_params: { reduce_fn: 'sum', kind: 'OST'},
+    metrics: ["stats_read_bytes", "stats_write_bytes"],
+    series_callbacks: [
+      function(timestamp, data, index, chart) {
+          chart.series_data[index].push( [ timestamp, data.stats_read_bytes] );
+      },
+      function( timestamp, data, index, chart ) {
+          chart.series_data[index].push( [ timestamp, -data.stats_write_bytes] );
+      }
+    ],
+    chart_config: {
+      chart: { renderTo: 'oss_avgWriteDiv' },
+      title: { text: 'Read/write bandwidth'},
+      xAxis: { type:'datetime' },
+      yAxis: [{title: { text: 'Bytes/s' }}],
+      series: [
+          { type: 'area', name: 'read' },
+          { type: 'area', name: 'write' }
+      ]
+    }
+  });
+
+  // switch back to dashboard group
+  chart_manager.chart_group(chart_group);
   chart_manager.init();
   return chart_manager;
 };

@@ -54,7 +54,7 @@ var ChartModel = function(options) {
         series_id_to_index      : {},    // map our series key to highchart's index for the series
         series_callbacks        : null,    // list of callbacks for each series
         state                   : 'idle', // 'idle', 'loading'
-        url                     : ''     // url of the metric api to get
+        url                     : ''     // url (str or func for dynamic) of the metric api to get
     }, options || {});
 
     if( config.is_zoom ) {
@@ -220,8 +220,13 @@ var ChartManager = function(options) {
         }
 
         chart.state = 'loading';
+		var url;
+		if ( _.isFunction(chart.url) )
+			url = chart.url();
+		else
+			url = chart.url;
         Api.get(
-            chart.url,
+            url,
             api_params,
             success_callback = function(data) {
                 chart.state = 'idle';
