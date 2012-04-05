@@ -1,5 +1,7 @@
+BUILDER_IS_EL6 = $(shell uname -r | grep -q '2.6.32.*el6' && echo true || echo false)
+
 # Top-level Makefile
-SUBDIRS ?= $(shell find . -maxdepth 1 -mindepth 1 -type d -not -name '.*' -not -name dist -not -name scripts)
+SUBDIRS ?= $(shell find . -maxdepth 1 -mindepth 1 -type d -not -name '.*' -not -name dist -not -name scripts) chroma-manager/r3d
 
 .PHONY: subdirs $(SUBDIRS)
 
@@ -11,11 +13,12 @@ cleandist:
 dist: cleandist
 	mkdir dist
 
-# This will go away when r3d is properly integrated into chroma-manager
-r3d:
-	$(MAKE) -C chroma-manager/r3d rpms
-	cp -a chroma-manager/r3d/dist/* dist/
+agent:
+	# On non-EL6 builders, we'll only do an agent build
+	$(BUILDER_IS_EL6) || $(MAKE) -C chroma-agent rpms
+	$(BUILDER_IS_EL6) || cp -a chroma-agent/dist/* dist/
 
-$(SUBDIRS): dist r3d
-	$(MAKE) -C $@ rpms
-	cp -a $@/dist/* dist/ || true
+$(SUBDIRS): dist agent
+	# We only do a full build on EL6
+	$(BUILDER_IS_EL6) && $(MAKE) -C $@ rpms || true
+	$(BUILDER_IS_EL6) && cp -a $@/dist/* dist/ || true
