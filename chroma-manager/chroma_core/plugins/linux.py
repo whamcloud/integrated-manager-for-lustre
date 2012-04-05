@@ -190,6 +190,7 @@ class Linux(Plugin):
                 lun_resource = res_by_serial[serial]
                 res, created = self.update_or_create(LinuxDeviceNode,
                                     parents = [lun_resource],
+                                    logical_drive = lun_resource,
                                     host_id = host_id,
                                     path = bdev['path'])
             else:
@@ -198,6 +199,7 @@ class Linux(Plugin):
                         size = bdev['size'])
                 res, created = self.update_or_create(LinuxDeviceNode,
                         parents = [res],
+                        logical_drive = res,
                         host_id = host_id,
                         path = bdev['path'])
             bdev_to_resource[bdev['major_minor']] = res
@@ -222,22 +224,6 @@ class Linux(Plugin):
                 continue
 
             bdev_to_resource[bdev['major_minor']] = res
-
-        for bdev in devices['devs'].values():
-            if bdev['parent'] == None:
-                continue
-
-            this_node = bdev_to_resource[bdev['major_minor']]
-            parent_resource = bdev_to_resource[bdev['parent']]
-            number = int(re.search("(\d+)$", bdev['path']).group(1))
-
-            partition, created = self.update_or_create(Partition,
-                    parents = [parent_resource],
-                    container = parent_resource,
-                    number = number,
-                    size = bdev['size'])
-
-            this_node.add_parent(partition)
 
         # Now all the LUNs and device nodes are in, create the links between
         # the DM block devices and their parent entities.
@@ -287,6 +273,7 @@ class Linux(Plugin):
                     uuid = uuid)
             node_res, created = self.update_or_create(LinuxDeviceNode,
                     parents = [md_res],
+                    logical_drive = md_res,
                     host_id = host_id,
                     path = md_info['path'])
             for drive_bd in md_info['drives']:
@@ -300,6 +287,23 @@ class Linux(Plugin):
                     parents=[bdev_resource],
                     mount_point = mntpnt,
                     fstype = fstype)
+
+        for bdev in devices['devs'].values():
+            if bdev['parent'] == None:
+                continue
+
+            this_node = bdev_to_resource[bdev['major_minor']]
+            parent_resource = bdev_to_resource[bdev['parent']]
+            number = int(re.search("(\d+)$", bdev['path']).group(1))
+
+            assert(parent_resource.logical_drive)
+            partition, created = self.update_or_create(Partition,
+                    parents = [parent_resource],
+                    container = parent_resource.logical_drive,
+                    number = number,
+                    size = bdev['size'])
+
+            this_node.add_parent(partition)
 
     def update_scan(self, scannable_resource):
         pass
