@@ -1,0 +1,26 @@
+#!/bin/sh
+
+SUBDIRS=()
+REMOTES=()
+
+SUBDIRS[0]=chroma-manager
+REMOTES[0]=hydra/hydra-server
+SUBDIRS[1]=chroma-manager/r3d
+REMOTES[1]=hydra/django_r3d
+SUBDIRS[2]=chroma-agent
+REMOTES[2]=hydra/hydra-agent
+SUBDIRS[3]=chroma-director
+REMOTES[3]=chroma/chroma-director
+
+for idx in ${!SUBDIRS[*]}; do
+  subdir=${SUBDIRS[$idx]}
+  remote_path=${REMOTES[$idx]}
+  remote_uri=ssh://$USER@git.whamcloud.com:29418/$remote_path
+
+  echo "merging $remote_uri -> $subdir"
+  git remote add -f $subdir $remote_uri
+  git merge -s ours --no-commit $subdir/master
+  git read-tree --prefix=$subdir/ -u $subdir/master
+  git commit -m "merge $remote_path -> $subdir"
+  echo "finished."
+done

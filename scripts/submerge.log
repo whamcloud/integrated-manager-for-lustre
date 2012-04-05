@@ -1,0 +1,68 @@
+merging ssh://mjmac@git.whamcloud.com:29418/hydra/hydra-server -> chroma-manager
+Updating chroma-manager
+warning: no common commits
+remote: Counting objects: 11767, done
+remote: Finding sources: 100% (11767/11767)
+remote: Total 11767 (delta 8527), reused 11750 (delta 8527)
+Receiving objects: 100% (11767/11767), 3.72 MiB | 1.09 MiB/s, done.
+Resolving deltas: 100% (8527/8527), done.
+From ssh://git.whamcloud.com:29418/hydra/hydra-server
+ * [new branch]      437b6fcf1604939dda4eff2e8e1e58a21810ffd5 -> chroma-manager/437b6fcf1604939dda4eff2e8e1e58a21810ffd5
+ * [new branch]      HYD-629    -> chroma-manager/HYD-629
+ * [new branch]      HYD-674    -> chroma-manager/HYD-674
+ * [new branch]      api_docs   -> chroma-manager/api_docs
+ * [new branch]      auto-discovery -> chroma-manager/auto-discovery
+ * [new branch]      create_fs  -> chroma-manager/create_fs
+ * [new branch]      graphs     -> chroma-manager/graphs
+ * [new branch]      isc11      -> chroma-manager/isc11
+ * [new branch]      log_viewer -> chroma-manager/log_viewer
+ * [new branch]      master     -> chroma-manager/master
+ * [new branch]      metrics_api -> chroma-manager/metrics_api
+ * [new branch]      pacemaker  -> chroma-manager/pacemaker
+ * [new branch]      stats_integration -> chroma-manager/stats_integration
+ * [new branch]      tastypie   -> chroma-manager/tastypie
+Automatic merge went well; stopped before committing as requested
+[master 20befd9] merge hydra/hydra-server -> chroma-manager
+finished.
+merging ssh://mjmac@git.whamcloud.com:29418/hydra/django_r3d -> chroma-manager/r3d
+Updating chroma-manager/r3d
+warning: no common commits
+remote: Counting objects: 361, done
+remote: Finding sources: 100% (361/361)
+remote: Total 361 (delta 193), reused 356 (delta 193)
+Receiving objects: 100% (361/361), 118.53 KiB, done.
+Resolving deltas: 100% (193/193), done.
+From ssh://git.whamcloud.com:29418/hydra/django_r3d
+ * [new branch]      master     -> chroma-manager/r3d/master
+Automatic merge went well; stopped before committing as requested
+[master 3c33034] merge hydra/django_r3d -> chroma-manager/r3d
+finished.
+merging ssh://mjmac@git.whamcloud.com:29418/hydra/hydra-agent -> chroma-agent
+Updating chroma-agent
+warning: no common commits
+remote: Counting objects: 2067, done
+remote: Finding sources: 100% (2067/2067)
+remote: Total 2067 (delta 1000), reused 2061 (delta 1000)
+Receiving objects: 100% (2067/2067), 376.75 KiB, done.
+Resolving deltas: 100% (1000/1000), done.
+From ssh://git.whamcloud.com:29418/hydra/hydra-agent
+ * [new branch]      HYD-674    -> chroma-agent/HYD-674
+ * [new branch]      cmd_lib    -> chroma-agent/cmd_lib
+ * [new branch]      master     -> chroma-agent/master
+ * [new branch]      pacemaker  -> chroma-agent/pacemaker
+ * [new branch]      ref/for/master -> chroma-agent/ref/for/master
+Automatic merge went well; stopped before committing as requested
+[master 55b97e5] merge hydra/hydra-agent -> chroma-agent
+finished.
+merging ssh://mjmac@git.whamcloud.com:29418/chroma/chroma-director -> chroma-director
+Updating chroma-director
+warning: no common commits
+remote: Counting objects: 72, done
+remote: Finding sources: 100% (72/72)
+remote: Total 72 (delta 25), reused 72 (delta 25)
+Unpacking objects: 100% (72/72), done.
+From ssh://git.whamcloud.com:29418/chroma/chroma-director
+ * [new branch]      master     -> chroma-director/master
+Automatic merge went well; stopped before committing as requested
+[master 03f62d0] merge chroma/chroma-director -> chroma-director
+finished.
