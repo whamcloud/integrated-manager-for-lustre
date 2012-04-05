@@ -1,7 +1,7 @@
 BUILDER_IS_EL6 = $(shell rpm --eval '%{?el6:true}%{!?el6:false}')
 
 # Top-level Makefile
-SUBDIRS ?= $(shell find . -maxdepth 1 -mindepth 1 -type d -not -name '.*' -not -name dist -not -name scripts)
+SUBDIRS ?= $(shell find . -maxdepth 1 -mindepth 1 -type d -not -name '.*' -not -name dist -not -name scripts  -not -name '*.egg-info')
 
 .PHONY: subdirs $(SUBDIRS)
 
@@ -21,8 +21,12 @@ agent:
 
 $(SUBDIRS): dist agent
 	# We only do a full build on EL6
-	$(BUILDER_IS_EL6) && $(MAKE) -C $@ rpms || true
-	$(BUILDER_IS_EL6) && $(MAKE) -C $@ docs || true
-	$(BUILDER_IS_EL6) && cp -a $@/dist/* dist/ || true
+	if $(BUILDER_IS_EL6); then \
+		$(MAKE) -C $@ rpms; \
+		$(MAKE) -C $@ docs; \
+		if [ -d $@/dist/ ]; then \
+			cp -a $@/dist/* dist/; \
+		fi; \
+	fi
 
 rpms: $(SUBDIRS)
