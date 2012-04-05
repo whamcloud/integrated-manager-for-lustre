@@ -17,34 +17,36 @@
  *     - chart_manager - Global instance of the ChartManager
  */
 function dump(arr,level) {
-	var dumped_text = "";
-	if(!level) level = 0;
-	
-	//The padding given at the beginning of the line.
-	var level_padding = "";
-	for(var j=0;j<level+1;j++) level_padding += "    ";
-	
-	if(typeof(arr) == 'object') { //Array/Hashes/Objects 
-		for(var item in arr) {
-			var value = arr[item];
-			
-			if(typeof(value) == 'object') { //If it is an array,
-				dumped_text += level_padding + "'" + item + "' ...\n";
-				dumped_text += dump(value,level+1);
-			} else {
-				dumped_text += level_padding + "'" + item + "' => \"" + value + "\"\n";
-			}
-		}
-	} else { //Strings/Chars/Numbers etc.
-		dumped_text = "===>"+arr+"<===("+typeof(arr)+")";
-	}
-	return dumped_text;
+  var dumped_text = "";
+  if(!level) level = 0;
+  
+  //The padding given at the beginning of the line.
+  var level_padding = "";
+  for(var j=0;j<level+1;j++) level_padding += "    ";
+  
+  if(typeof(arr) == 'object') { //Array/Hashes/Objects 
+    for(var item in arr) {
+      var value = arr[item];
+      
+      if(typeof(value) == 'object') { //If it is an array,
+        dumped_text += level_padding + "'" + item + "' ...\n";
+        dumped_text += dump(value,level+1);
+      } else {
+        dumped_text += level_padding + "'" + item + "' => \"" + value + "\"\n";
+      }
+    }
+  } else { //Strings/Chars/Numbers etc.
+    dumped_text = "===>"+arr+"<===("+typeof(arr)+")";
+  }
+  return dumped_text;
 }
 var ChartModel = function(options) {
 
     var config = $.extend(true,  {
         api_params              : {},   // the static params sent to the api request (excluding metrics)
+        api_params_callback     : null,
         chart_config            : {},   // highcharts config
+        chart_config_callback   : null, // callback to modify chart config
         chart_group             : '',   // the chart group. Analagous to the tab
         enabled                 : true, // you can disable a graph by setting this to false
         error_callback          : null, // a callback executed on an error conditoin (not needed really, but an option)
@@ -59,7 +61,7 @@ var ChartModel = function(options) {
         series_id_to_index      : {},    // map our series key to highchart's index for the series
         series_callbacks        : null,    // list of callbacks for each series
         state                   : 'idle', // 'idle', 'loading'
-        url                     : ''     // url of the metric api to get
+        url                     : ''     // url (str or func for dynamic) of the metric api to get
     }, options || {});
 
     if( config.is_zoom ) {
@@ -86,7 +88,7 @@ var ChartModel = function(options) {
 };
 
 var ChartManager = function(options) {
-	var config = $.extend(true, {
+  var config = $.extend(true, {
         charts: {},
         chart_group: '',
         chart_config_defaults: {
@@ -109,6 +111,14 @@ var ChartManager = function(options) {
             series:{marker: {enabled: false}},
             column:{ pointPadding: 0.0, shadow: false, groupPadding: 0.0, borderWidth: 0.0 },
             areaspline: {fillOpacity: 0.5},
+            pie: { 
+              allowPointSelect: true, cursor: 'pointer', showInLegend: true, size: '100%', 
+              dataLabels: {
+                enabled: false,
+                color: '#000000',
+                connectorColor: '#000000'
+              }
+            },
             area: {
               stacking: 'normal',
               lineColor: '#666666',
@@ -117,7 +127,7 @@ var ChartManager = function(options) {
                 lineWidth: 1,
                 lineColor: '#666666'
               }
-             }
+            }
           }
         },
         debug: false,
@@ -204,10 +214,9 @@ var ChartManager = function(options) {
     var get_data = function(chart) {
         var api_params = $.extend(true, {}, chart.api_params);
         api_params = default_params(api_params, chart);
-
         // custom params
-        if ( _.isFunction(chart.prepare_params) ) {
-            api_params = chart.prepare_params(api_params, chart);
+        if ( _.isFunction(chart.api_params_callback) ) {
+            api_params = chart.api_params_callback(api_params, chart);
         }
 
         if (_.isNull(chart.instance)) {
@@ -219,14 +228,22 @@ var ChartManager = function(options) {
                               chart.series_data,
                               function(series_data, i) { return { data: series_data }; }
                           )
-              })
+          });
+          if ( _.isFunction(chart.chart_config_callback)) {
+            chart_config = chart.chart_config_callback(chart_config);
+          }
           chart.instance = new Highcharts.Chart(chart_config);
           chart.instance.showLoading();
         }
 
         chart.state = 'loading';
+        var url;
+        if ( _.isFunction(chart.url) )
+          url = chart.url();
+        else
+          url = chart.url;
         Api.get(
-            chart.url,
+            url,
             api_params,
             success_callback = function(data) {
                 chart.state = 'idle';
@@ -350,12 +367,25 @@ var ChartManager = function(options) {
         return;
     }
 
+    var destroy = function() {
+      clear_recurring();
+      _.each(config.charts, function(charts_in_group,chart_group) {
+        _each(charts_in_group, function(chart,chart_key) {
+          if(_.isObject(chart.instance)) {
+            chart.instance.destroy();
+            chart.instance = null;
+          }
+        });
+      });
+    }
+
     // return an object
     return {
         add_chart: add_chart,
         chart_group: chart_group,
         clear_recurring: clear_recurring,
         config: config,
+        destroy: destroy,
         init: init,
         render_charts: render_charts,
         set_recurring: set_recurring,

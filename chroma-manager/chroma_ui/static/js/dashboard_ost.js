@@ -96,6 +96,7 @@ var ChartConfig_OST_Space =
  * Param - Target Id, Target name, start date, end date, datafunction (average/min/max), targetKind, fetchematrics, isZoom
  * Return - Returns the graph plotted in container
 /*****************************************************************************/
+
 ost_Pie_Space_Data = function(targetId, targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
   var free=0,used=0;
@@ -153,6 +154,7 @@ ost_Pie_Space_Data = function(targetId, targetName, sDate, endDate, dataFunction
  * Param - Target Id, Target name, start date, end date, datafunction (average/min/max), targetKind, fetchematrics, isZoom
  * Return - Returns the graph plotted in container
 /*****************************************************************************/
+
 ost_Pie_Inode_Data = function(targetId, targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom) //250
 {
   var free=0,used=0;
@@ -266,6 +268,7 @@ ost_Area_mgtOps_Data = function(targetId, isZoom)
  * Param - Target Id, Target name, start date, end date, datafunction (average/min/max), targetkind , fetchematrics, isZoom
  * Return - Returns the graph plotted in container
 *****************************************************************************/
+
 ost_Area_ReadWrite_Data = function(targetId, targetName, sDate, endDate, dataFunction, targetKind, fetchMetrics, isZoom)
 {
   obj_oss_Area_ReadWrite_Data = JSON.parse(JSON.stringify(chartConfig_Area_ReadWrite));
@@ -390,30 +393,23 @@ initOSTPolling = function()
 loadTargetGraphs = function()
 {
   var ostKind = $("#ls_ostKind").val();
-  if(ostKind == 'OST')
-  {
-    ost_Pie_Space_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
-    ost_Pie_Inode_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
-    ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, "Average", $('#ls_ostKind').val(), readWriteFetchMatric, "false");
-    show_hide_targetSpaceUsageContainer("block");
-    show_hide_targetFilesUsageContainer("block");
-    show_hide_targetReadWriteContainer("block");
-    show_hide_targetMgtOpsContainer("none");
+  if(ostKind == 'OST') {
+    //ost_Pie_Space_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
+    //ost_Pie_Inode_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
+    //ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, "Average", $('#ls_ostKind').val(), readWriteFetchMatric, "false");
+    $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div").show();
+    $("#target_mgt_ops_container_div").hide();
+    init_charts(dashboard_chart_manager,'targets_ost');
+
   }
-  else if (ostKind == 'MDT')
-  {
-    ost_Area_mgtOps_Data($('#ls_ostId').val(), "false");
-    show_hide_targetReadWriteContainer("none")
-    show_hide_targetSpaceUsageContainer("none"); 
-    show_hide_targetFilesUsageContainer("none");
-    show_hide_targetMgtOpsContainer("block");
+  else if (ostKind == 'MDT') {
+    //ost_Area_mgtOps_Data($('#ls_ostId').val(), "false");
+    $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div").hide();
+    $("#target_mgt_ops_container_div").show();
+    init_charts(dashboard_chart_manager,'targets_mdt');
   }
-  else
-  {
-    show_hide_targetSpaceUsageContainer("none");
-    show_hide_targetFilesUsageContainer("none");
-    show_hide_targetReadWriteContainer("none");
-    show_hide_targetMgtOpsContainer("none");
+  else {
+    $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div,#target_mgt_ops_container_div").hide();
   }
 }
 /*****************************************************************************/
