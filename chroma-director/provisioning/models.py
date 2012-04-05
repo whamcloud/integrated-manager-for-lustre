@@ -26,9 +26,33 @@ class Node(models.Model):
         obj.save()
         return obj
 
+    def get_instance(self):
+        conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
+        reservations = conn.get_all_instances([self.ec2_id])
+        assert(len(reservations) == 1)
+        return  reservations[0].instances[0]
+
     def get_session(self):
         return NodeSession(self)
 
+
+    def reboot(self):
+        conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
+        conn.reboot_instances(instance_ids=[self.ec2_id])
+
+# class Volume(models.Model):
+#     ebs_id = models.CharField(max_length = 10, unique = True)
+#     node = models.ForeignKey(Node)
+
+#     @classmethod
+#     def create(cls, size, node):
+#         instance = node.get_instance()
+#         conn = EC2Conection(settings.AWS_KEY_ID, settings.AWS_SECRET)
+#         conn.create_volume(size,instance.placement)
+
+#         obj = Volume(ebs_id = id, size = size, node = node)
+#         obj.save()
+        # return obj
 
 class ChromaManager(models.Model):
     node = models.ForeignKey(Node, unique = True, null = True)

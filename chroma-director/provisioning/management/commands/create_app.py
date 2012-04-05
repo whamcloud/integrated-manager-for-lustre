@@ -1,6 +1,6 @@
 
-from provisioning.models import ChromaManager, ChromaAppliance
-from provisioning.lib.chroma_ops import ChromaManagerOps, ChromaApplianceOps
+from provisioning.models import Node
+from provisioning.lib.chroma_ops import StorageImageOps
 
 from django.core.management.base import BaseCommand
 
@@ -9,22 +9,21 @@ from boto.ec2.connection import EC2Connection
 
 class Command(BaseCommand):
     def _create_instances(self):
-        manager = ChromaManager.create()
-        return manager
+        node = Node.create(settings.BASE_IMAGE, "image_node")
+        return node
 
-    def _setup_instances(self, appliance):
-        appliance_ops = ChromaManagerOps(appliance.ec2_instance.ec2_id)
-        appliance_ops.install_app_deps()
-        conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
-        conn.reboot_instances([appliance.ec2_instance.ec2_id])
-
+    def _setup_instances(self, node):
+        image_ops = StorageImageOps(node)
+        image_ops.install_app_deps()
+        image_ops.make_image("chroma-image")
+#        image_ops.terminate()
 
     def execute(self, *args, **options):
         if len(args) == 0:
-            appliance = self._create_instances()
-            self._setup_instances(appliance)
+            image = self._create_instances()
+            self._setup_instances(image)
         elif args[0] == 'recover':
-            appliance = ChromaManager.objects.get(id = int(args[1]))
+            appliance = Node.objects.get(id = int(args[1]))
             self._setup_instances(appliance)
 
             # TODO: wait for completion of server add and device discovery

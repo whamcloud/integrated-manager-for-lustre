@@ -153,9 +153,17 @@ CHROMA_MANAGER = {
         'instance_type': 'm1.small',
         'security_group': 'chroma-manager'}
 
+BASE_IMAGE = {
+        'username': 'root',
+        'ami': 'ami-d91dcbb0', # A CentOS 6.x AMI of unknown heritage,
+        'instance_type': 'm1.small',
+        'security_group': 'chroma-manager'}
+
 CHROMA_APPLIANCE = {
-        'ami': 'ami-762af61f',
-        'instance_type': 't1.micro',
+#        'ami': 'ami-762af61f',
+        'ami': 'ami-5bad7432',
+#        'instance_type': 't1.micro',
+        'instance_type': 'm1.small',
         'username': 'root',
         'security_group': 'chroma-appliance'}
 
@@ -166,7 +174,8 @@ import os
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 YUM_KEYS = "%s/static/yum_keys" % SITE_ROOT
 YUM_REPO = "%s/static/chroma.repo" % SITE_ROOT
-
+COROSYNC_CONF = "%s/static/corosync.conf" % SITE_ROOT
+COROSYNC_INIT = "%s/static/corosync" % SITE_ROOT
 AWS_REGION = 'us-east-1d'
 
 AWS_KEY_ID=None  # String
@@ -175,6 +184,3 @@ AWS_SSH_KEY = None  # Name of keypair
 AWS_SSH_PRIVATE_KEY = None  # Path to private key file
 
 from local_settings import *
-
-
-

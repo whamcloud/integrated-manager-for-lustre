@@ -1,6 +1,6 @@
 
-from provisioning.models import ChromaManager, ChromaAppliance
-from provisioning.lib.chroma_ops import ChromaManagerOps, ChromaApplianceOps
+from provisioning.models import ChromaManager, ChromaAppliance, Node
+from provisioning.lib.chroma_ops import ChromaManagerOps, ChromaApplianceOps, ManagerImageOps
 
 from django.core.management.base import BaseCommand
 
@@ -17,22 +17,37 @@ class Command(BaseCommand):
 #        ChromaAppliance.create(manager, "node02")
         return manager
 
+    def _prepare_image(self, node):
+        ops = ManagerImageOps(node)
+        ops.install_deps()
+
     def _setup_instances(self, manager):
+        
+        # XXX - using base image instaed of manager AMI
+        self._prepare_image(manager.node)
+
         appliances = ChromaAppliance.objects.filter(chroma_manager = manager)
         manager_ops = ChromaManagerOps(manager)
 
-        manager_ops.install_deps()
+        manager_ops.update_deps()
+        manager_ops.add_etc_hosts(Node.objects.all())
+        manager_ops.set_hostname()
         manager_ops.setup_chroma()
         manager_ops.create_keys()
         manager_key = manager_ops.get_key()
 
         for appliance in appliances:
             appliance_ops = ChromaApplianceOps(appliance)
+            appliance_ops.update_deps()
+            appliance_ops.add_volume(1, '/dev/sdf')
+            appliance_ops.add_volume(1, '/dev/sdg')
+            appliance_ops.add_volume(1, '/dev/sdh')
+            appliance_ops.add_volume(1, '/dev/sdi')
+            appliance_ops.add_etc_hosts(Node.objects.all())
             appliance_ops.set_key(manager_key)
+            appliance_ops.set_hostname()
+            appliance_ops.reset_corosync()
             manager_ops.add_server(appliance_ops)
-
-        time.sleep(30)
-        manager_ops.reset_chroma()
 
 
     def handle(self, *args, **options):
