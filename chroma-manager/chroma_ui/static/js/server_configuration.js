@@ -16,7 +16,6 @@ var add_host_dialog = function() {
     element.find('.add_host_loading').hide();
     element.find('.add_host_complete').hide();
     element.find('.add_host_confirm').hide();
-    element.find('.add_host_error').hide();
 
     element.find('.' + name).show();
   }
@@ -51,11 +50,6 @@ var add_host_dialog = function() {
       element.find('.add_host_address_label').html(result['address']);
   }
 
-  function add_host_error(message) {
-    select_page('add_host_error');
-    element.find('.add_host_error_message').html(message);
-  }
-
   element.find('.add_host_submit_button').click(function(ev) {
       select_page('add_host_loading')
 
@@ -63,12 +57,6 @@ var add_host_dialog = function() {
       success_callback = function(data)
       {
          submit_complete(data);
-      },
-      error_callback = function(data)
-      {
-        //console.log(event.responseText);
-        data = $.parseJSON(event.responseText);
-        add_host_error(data['error']);
       });
       
       ev.preventDefault();
@@ -76,16 +64,12 @@ var add_host_dialog = function() {
 
   element.find('.add_host_confirm_button').click(function(ev) {
     Api.post("host/", {address: element.find('.add_host_address_label').html(), commit: true},
-    success_callback = function(data)
-    {
-      select_page('add_host_complete')
-      $('.add_host_back_button').focus();
-      $('#server_configuration').dataTable().fnDraw();
-    },
-    error_callback = function(data)
-    {
-      add_host_error(data['errors']);
-    });
+      success_callback = function(data)
+      {
+        select_page('add_host_complete')
+        $('.add_host_back_button').focus();
+        $('#server_configuration').dataTable().fnDraw();
+      });
     
     ev.preventDefault();
   });
