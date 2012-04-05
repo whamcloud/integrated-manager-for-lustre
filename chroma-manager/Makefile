@@ -29,3 +29,13 @@ rpms: cleandist tarball
 	rpmbuild -bb --define "_topdir $$(pwd)/_topdir" _topdir/SPECS/hydra-server.spec
 	mv _topdir/RPMS/noarch/hydra-server-*$(VERSION)-$(RELEASE).noarch.rpm dist/
 	rm -rf _topdir
+
+docs:
+	virtualenv myenv
+	cd myenv; \
+	. bin/activate; \
+	pip install -r ../requirements.txt
+	cd docs; \
+	make html SPHINXBUILD='../myenv/bin/sphinx-build'
+
+.PHONY: docs

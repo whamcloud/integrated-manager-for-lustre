@@ -28,3 +28,6 @@ rpms: production cleandist tarball
 		-bb _topdir/SPECS/hydra-agent.spec
 	mv _topdir/RPMS/noarch/hydra-agent-*.noarch.rpm dist/
 	rm -rf _topdir
+
+docs:
+	@echo "Nothing to do here"

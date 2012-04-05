@@ -27,3 +27,6 @@ rpms: production cleandist tarball
 		-bb _topdir/SPECS/django-r3d.spec
 	mv _topdir/RPMS/noarch/django-r3d-*.noarch.rpm dist/
 	rm -rf _topdir MANIFEST
+
+docs:
+	@echo "Nothing to do here"
