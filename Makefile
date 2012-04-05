@@ -24,7 +24,9 @@ $(SUBDIRS): dist agent
 	if $(BUILDER_IS_EL6); then \
 		$(MAKE) -C $@ rpms; \
 		$(MAKE) -C $@ docs; \
-		cp -a $@/dist/* dist/; \
+		if [ -d $@/dist/ ]; then \
+			cp -a $@/dist/* dist/; \
+		fi; \
 	fi
 
 rpms: $(SUBDIRS)
