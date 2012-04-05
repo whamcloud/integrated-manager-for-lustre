@@ -3,8 +3,10 @@
 # ==============================
 
 from argparse import REMAINDER
+import sys
+import traceback
 
-from chroma_cli.exceptions import BadRequest
+from chroma_cli.exceptions import BadRequest, InternalError
 from chroma_cli.parser import ResettableArgumentParser
 from chroma_cli.config import Configuration
 
@@ -40,13 +42,28 @@ def main():
     command_dispatcher.update(api_resources.commands())
 
     try:
-        try:
-            # First try dispatching to known, static handlers
-            command_dispatcher[ns.resource](config, parser, ns)
-        except KeyError:
-            # If that fails, throw it at the api resources dispatcher and
-            # see if it sticks.
-            api_resources.dispatch(config, parser, ns)
+        # Static handlers
+        dispatcher = command_dispatcher[ns.resource]
+    except KeyError:
+        # Dynamic handlers from API introspection
+        dispatcher = api_resources.dispatch
+
+    try:
+        dispatcher(config, parser, ns)
     except BadRequest, e:
         print "Failed validation check(s):"
         print e
+        sys.exit(1)
+    except InternalError, e:
+        print "Internal server error:"
+        print e
+        sys.exit(2)
+    except Exception, e:
+        # Handlers are plugin-like so do some unexpected exception handling
+        exc_info = sys.exc_info()
+        trace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+        print "Internal client error from handler '%s': %s" % (dispatcher, trace)
+        sys.exit(3)
+
+if __name__ == '__main__':
+    main()

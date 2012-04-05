@@ -143,7 +143,7 @@ INSTALLED_APPS = (
     'benchmark'
     )
 
-OPTIONAL_APPS = ['debug_toolbar', 'django_extensions', 'django_coverage', 'django_nose']
+OPTIONAL_APPS = ['debug_toolbar', 'django_extensions', 'django_coverage', 'django_nose', 'djsupervisor']
 for app in OPTIONAL_APPS:
     import imp
     try:
@@ -234,6 +234,7 @@ CELERY_ROUTES = (
         {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
         {"chroma_core.tasks.parse_log_entries": {"queue": "parselog"}},
         {"chroma_core.tasks.janitor": {"queue": "periodic"}},
+        {"chroma_core.tasks.command_run_jobs": {"queue": "serialize"}},
         {"chroma_core.tasks.command_set_state": {"queue": "serialize"}},
         {"chroma_core.tasks.notify_state": {"queue": "serialize"}},
         {"chroma_core.tasks.add_job": {"queue": "serialize"}},
