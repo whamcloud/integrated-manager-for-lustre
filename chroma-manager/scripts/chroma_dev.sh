@@ -9,7 +9,7 @@ rm -f celery_*.pid celery_*.log
 
 echo "Starting..."
 
-python ${MANAGE_PY} celeryd_multi start ${WORKER_NAMES} -Q:serialize serialize -Q:periodic periodic -Q:jobs jobs -Q:parselog parselog -c:parselog 1 -B:periodic -c:periodic 1 -c:serialize 1 -c:jobs 8 --pidfile=$PIDFILE --logfile=$LOGFILE --scheduler=celery.beat.Scheduler
+python ${MANAGE_PY} celeryd_multi start ${WORKER_NAMES} -Q:serialize serialize -Q:periodic periodic -Q:jobs jobs -Q:parselog parselog -c:parselog 1 -B:periodic -c:periodic 1 -c:serialize 1 -c:jobs 8 --pidfile=$PIDFILE --logfile=$LOGFILE --scheduler=chroma_core.tasks.EphemeralScheduler
 
 chroma_core/bin/storage_daemon -f 2>storage_daemon_err.log > storage_daemon_out.log &
 echo $! > storage_daemon.pid

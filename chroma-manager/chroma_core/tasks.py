@@ -3,6 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 import subprocess
+from celery.beat import Scheduler
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.lib.state_manager import StateManager
 from chroma_core.models.jobs import Command
@@ -19,6 +20,15 @@ from chroma_core.lib.util import timeit
 from chroma_core.lib.job import job_log
 from chroma_core.lib.lustre_audit import audit_log
 from chroma_core.lib.metrics import metrics_log
+
+
+class EphemeralScheduler(Scheduler):
+    """A scheduler which does not persist the schedule to disk because
+      we only use high frequency things, so its no problem to just start
+      from scratch when celerybeat restarts"""
+    def setup_schedule(self):
+        self.merge_inplace(self.app.conf.CELERYBEAT_SCHEDULE)
+        self.install_default_entries(self.schedule)
 
 
 class RetryOnSqlErrorTask(Task):
