@@ -1,0 +1,22 @@
+snapshot_time             1314641981.20469 secs.usecs
+read_bytes                1861 samples [bytes] 4096 1048576 503164928
+write_bytes               15076 samples [bytes] 49152 1048576 15260975104
+get_page                  16937 samples [usec] 1 48950 4550874 15184013934
+cache_access              122843 samples [pages] 1 1 122843
+cache_hit                 101123 samples [pages] 1 1 101123
+cache_miss                21720 samples [pages] 1 1 21720
+get_info                  50382 samples [reqs]
+set_info_async            4 samples [reqs]
+connect                   1 samples [reqs]
+reconnect                 2 samples [reqs]
+disconnect                1 samples [reqs]
+statfs                    14503 samples [reqs]
+create                    726 samples [reqs]
+destroy                   50254 samples [reqs]
+punch                     127 samples [reqs]
+sync                      214 samples [reqs]
+preprw                    16937 samples [reqs]
+commitrw                  16937 samples [reqs]
+llog_init                 2 samples [reqs]
+llog_connect              1 samples [reqs]
+ping                      587 samples [reqs]

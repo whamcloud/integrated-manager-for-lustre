@@ -1,0 +1,18 @@
+physical pages:          1310720
+pages per pool:          512
+max pages:               163840
+max pools:               320
+total pages:             0
+total free:              0
+idle index:              0/100
+last shrink:             34614s
+last access:             34614s
+max pages reached:       0
+grows:                   0
+grows failure:           0
+shrinks:                 0
+cache access:            0
+cache missing:           0
+low free mark:           0
+max waitqueue depth:     0
+max wait time:           0/1000

@@ -1,0 +1,9 @@
+  0 UP mgs MGS MGS 5
+  1 UP mgc MGC10.10.4.208@tcp a653df33-aa34-eac0-ae0f-9b0ec06722e4 5
+  2 UP mdt MDS MDS_uuid 3
+  3 UP lov lustre-mdtlov lustre-mdtlov_UUID 4
+  4 UP mds lustre-MDT0000 lustre-MDT0000_UUID 5
+  5 UP osc lustre-OST0000-osc lustre-mdtlov_UUID 5
+  6 UP lov lustre-clilov-ffff81004aeea800 1dda5395-7b76-d0da-89de-20778e12a2f1 4
+  7 UP mdc lustre-MDT0000-mdc-ffff81004aeea800 1dda5395-7b76-d0da-89de-20778e12a2f1 5
+  8 UP osc lustre-OST0000-osc-ffff81004aeea800 1dda5395-7b76-d0da-89de-20778e12a2f1 5
