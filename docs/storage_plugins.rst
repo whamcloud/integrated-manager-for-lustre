@@ -167,6 +167,7 @@ Declaring a ScannableStorageResource
 ------------------------------------
 
 Certain storage resources are considered 'scannable':
+
 * They can be added by the administrator using the user interface
 * Plugins contact this resource to learn about other resources
 * This resource 'owns' some other resources
@@ -410,6 +411,7 @@ Advanced: using custom block device identifiers
 
 Chroma makes a best effort to extract standard SCSI identifiers from block devices which
 it encounters on Lustre servers.  However, in some cases:
+
 * The SCSI identifier may be missing
 * The storage controller may not provide the SCSI identifier
 
@@ -468,6 +470,7 @@ Advanced: specifying homing information
 
 A given device node (i.e. presentation of a LUN) may be a more or less preferable means
 of access to a storage device.  For example:
+
 * if a single LUN is presented on two controller ports then a device node on a host connected to one port may be preferable to a device node on a host connected to the other port.
 * if a LUN is accessible via two device nodes on a single server, then one may be preferable to the other
 

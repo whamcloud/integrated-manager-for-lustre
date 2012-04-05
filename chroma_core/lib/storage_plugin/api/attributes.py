@@ -135,6 +135,7 @@ class ResourceReference(BaseResourceAttribute):
     foreign key in a database.  Assign
     instantiated BaseStorageResource objects to this attribute.  When a storage
     resource is deleted, any other resources having a reference to it are affected:
+
     * If the ResourceReference has ``optional = True`` then the field is cleared
     * Otherwise, the referencing resource is also deleted
 
