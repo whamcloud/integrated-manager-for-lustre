@@ -22,3 +22,5 @@ $(SUBDIRS): dist agent
 	# We only do a full build on EL6
 	$(BUILDER_IS_EL6) && $(MAKE) -C $@ rpms || true
 	$(BUILDER_IS_EL6) && cp -a $@/dist/* dist/ || true
+
+rpms: $(SUBDIRS)
