@@ -161,9 +161,9 @@ BASE_IMAGE = {
 
 CHROMA_APPLIANCE = {
 #        'ami': 'ami-762af61f',
-        'ami': 'ami-5bad7432',
+        'ami': 'ami-2b1cc542',
 #        'instance_type': 't1.micro',
-        'instance_type': 'm1.small',
+        'instance_type': 'm1.large',
         'username': 'root',
         'security_group': 'chroma-appliance'}
 

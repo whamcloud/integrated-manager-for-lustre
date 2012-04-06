@@ -14,9 +14,7 @@ class Command(BaseCommand):
 
     def _setup_instances(self, node):
         image_ops = StorageImageOps(node)
-        image_ops.install_app_deps()
-        image_ops.make_image("chroma-image")
-#        image_ops.terminate()
+        image_ops.install_deps()
 
     def execute(self, *args, **options):
         if len(args) == 0:
@@ -25,6 +23,3 @@ class Command(BaseCommand):
         elif args[0] == 'recover':
             appliance = Node.objects.get(id = int(args[1]))
             self._setup_instances(appliance)
-
-            # TODO: wait for completion of server add and device discovery
-            # TODO: once devices are discovered, create a ChromaFilesystem

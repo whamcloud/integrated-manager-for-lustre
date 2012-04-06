@@ -7,12 +7,12 @@ from boto.ec2.connection import EC2Connection
 
 from fabric.operations import open_shell
 
-from provisioning.lib.chroma_ops import NodeOps
+from provisioning.lib.chroma_ops import NodeOps, ImageOps
 
 import time
 
 class Command(BaseCommand):
-    args = "list|ssh <id>|terminate all"
+    args = "list|ssh <id>|terminate all|terminate <id>|new_image <id> <name>"
     help = "Utility command to manage instances"
     can_import_settings = True
 
@@ -26,15 +26,21 @@ class Command(BaseCommand):
 #            conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
             for node in Node.objects.all():
                 node_ops = NodeOps(node);
-                node.terminate(node)
+                node_ops.terminate(node)
 #            conn.terminate_instances([i.ec2_id for i in Node.objects.all()])
 #            Node.objects.all().delete()
 
         elif args[0] == 'terminate' and int(args[1]) > 0:
             node_id = int(args[1])
-            node = Node.objects.get(id = node_id)
-            node_ops = NodeOps(node)
+            node_ops = NodeOps.get(node_id)
             node_ops.terminate()
+
+        elif args[0] == 'new_image':
+            node_id = int(args[1])
+            image_name = args[2]
+            node = Node.objects.get(id = node_id)
+            image_ops = ImageOps(node)
+            image_ops.make_image(image_name)
 
         elif args[0] == 'ssh':
             node_id = int(args[1])

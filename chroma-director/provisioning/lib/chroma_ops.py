@@ -8,10 +8,18 @@ from fabric.exceptions import NetworkError
 import StringIO
 import time
 
+from provisioning.models import ChromaManager, ChromaAppliance, Node
+
 class NodeOps(object):
     def __init__(self, node):
         self.node = node
         self.session = None
+        
+    @classmethod
+    def get(cls, node_id):
+        node = Node.objects.get(id = node_id)
+        return NodeOps(node)
+
 
     def open_session(self):
         if self.session is None:
@@ -62,8 +70,7 @@ class ChromaManagerOps(NodeOps):
 
     def update_deps(self):
         with self.open_session():
-            sudo('yum install -y hydra-server')
-            sudo('yum install -y hydra-server-cli')
+            sudo('yum install -y hydra-server hydra-server-cli')
 
     def setup_chroma(self):
         with self.open_session():
@@ -143,7 +150,7 @@ class ImageOps(NodeOps):
         put(settings.YUM_REPO, "/etc/yum.repos.d", use_sudo = True)
 
     def _clean_image(self):
-        with self.ec2_session.fabric_settings():
+        with self.open_session():
             sudo('find /home -maxdepth 1 -type d -exec rm -rf {}/.ssh \;')
             sudo('rm -f ~/.bash_history')
             sudo('rm -f /etc/ssh/ssh_host*')
@@ -189,6 +196,6 @@ class ManagerImageOps(ImageOps):
             run('wget http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-5.noarch.rpm')
             sudo('rpm -i --force epel-release-6-5.noarch.rpm')
             self._setup_chroma_repo()
-            sudo('yum install -y hydra-server')
+            sudo('yum install -y hydra-server hydra-server-cli')
             # XXX !
-            sudo('yum install -y python-argparse python-tablib python-request hydra-server-cli')
+#            sudo('yum install -y python-argparse python-tablib python-request ')
