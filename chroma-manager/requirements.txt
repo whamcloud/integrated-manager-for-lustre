@@ -21,3 +21,4 @@ lockfile==0.8
 django-tastypie==0.9.11
 tablib
 requests
+nose-testconfig
