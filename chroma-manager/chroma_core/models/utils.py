@@ -4,6 +4,7 @@
 # ==============================
 
 import datetime
+import time
 
 from django.db import models, transaction
 from django.contrib.contenttypes.generic import GenericForeignKey
@@ -227,8 +228,9 @@ def await_async_result(async_result):
         while not complete:
             with transaction.commit_manually():
                 transaction.commit()
-                if async_result.ready():
-                    complete = True
-                transaction.commit()
+            if async_result.ready():
+                complete = True
+            else:
+                time.sleep(0.5)
 
     return async_result.get()
