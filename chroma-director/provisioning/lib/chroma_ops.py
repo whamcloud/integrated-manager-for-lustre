@@ -41,15 +41,15 @@ class NodeOps(object):
             print "need to delete", volumes
             conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
             for vol in conn.get_all_volumes(volumes):
-                print "detaching volume: %s  %s" % (vol.id, vol.status)
-                vol.detach(force=True)
+                if vol.status != u'available':
+                    print "detaching volume: %s  %s" % (vol.id, vol.status)
+                    vol.detach(force=True)
 
             detaching = 1
             while detaching:
                 detaching = 0
                 for vol in conn.get_all_volumes(volumes):
-                    print "checking volume: %s  %s" % (vol.id, vol.status)
-                    detching += vol.status != u'available'
+                    detaching += vol.status != u'available'
                 time.sleep(10)
 
             for vol in conn.get_all_volumes(volumes):

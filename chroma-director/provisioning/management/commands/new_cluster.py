@@ -30,7 +30,7 @@ class Command(BaseCommand):
         manager_ops = ChromaManagerOps(manager)
 
         manager_ops.update_deps()
-        manager_ops.add_etc_hosts(Node.objects.all())
+        manager_ops.add_etc_hosts([manager.node] + [a.node for a in appliances])
         manager_ops.set_hostname()
         manager_ops.setup_chroma()
         manager_ops.create_keys()
@@ -43,7 +43,7 @@ class Command(BaseCommand):
             appliance_ops.add_volume(1, 'sdg')
             appliance_ops.add_volume(1, 'sdh')
             appliance_ops.add_volume(1, 'sdi')
-            appliance_ops.add_etc_hosts(Node.objects.all())
+            appliance_ops.add_etc_hosts([manager.node] + [a.node for a in appliances])
             appliance_ops.set_key(manager_key)
             appliance_ops.set_hostname()
             appliance_ops.reset_corosync()
