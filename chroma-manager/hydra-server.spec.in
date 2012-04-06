@@ -43,6 +43,14 @@ Requires: hydra-server-libs = %{version} python-argparse python-requests python-
 This package contains the Chroma CLI which can be used on a Chroma server
 or on a separate node.
 
+%package tests
+Summary: Chroma Manager testing framework
+Group: Development/Tools
+Requires: hydra-server = %{version}
+%description tests
+This package contains the Chroma Manager tests and scripts and is intended
+to be used by the Chroma Manager testing framework.
+
 %prep
 %setup -n %{name}-%{unmangled_version}
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
@@ -149,6 +157,8 @@ fi
 # Stuff below goes into the -cli/-lib packages
 %exclude /usr/share/hydra-server/chroma_cli
 %exclude %{python_sitelib}/*.egg-info/
+# will go into the -tests package
+%exclude /usr/share/hydra-server/tests
 
 %files libs
 %{python_sitelib}/*.egg-info/*
@@ -157,3 +167,8 @@ fi
 %defattr(-,root,root)
 %{_bindir}/chroma
 /usr/share/hydra-server/chroma_cli/*
+
+%files tests
+%defattr(-,root,root)
+/usr/share/hydra-server/tests/*
+%attr(0755,root,root)/usr/share/hydra-server/tests/integration/run_tests
