@@ -21,28 +21,43 @@ class NodeOps(object):
         return NodeOps(node)
 
 
+    def reboot(self):
+        instance = self.node.get_instance()
+        instance.reboot()
+        
+
     def open_session(self):
         if self.session is None:
             self.session = self.node.get_session()
         return self.session.fabric_settings()
 
+    def reset_session(self):
+        self.session = self.node.get_session()
+
     def terminate_node(self):
         instance = self.node.get_instance()
         volumes = [b[1].volume_id for b in instance.block_device_mapping.items() if not b[1].delete_on_termination]
-        print "terminating %s %s" % (self.node.name, instance.id)
-        instance.terminate()
-
         if len(volumes):
             print "need to delete", volumes
-            while( instance.state != 'terminated' ):
-                print "waiting for instance: %s %s"%(instance.id, instance.state)
-                time.sleep(5)
-                instance = self.node.get_instance()
-                
             conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
+            for vol in conn.get_all_volumes(volumes):
+                print "detaching volume: %s  %s" % (vol.id, vol.status)
+                vol.detach(force=True)
+
+            detaching = 1
+            while detaching:
+                detaching = 0
+                for vol in conn.get_all_volumes(volumes):
+                    print "checking volume: %s  %s" % (vol.id, vol.status)
+                    detching += vol.status != u'available'
+                time.sleep(10)
+
             for vol in conn.get_all_volumes(volumes):
                 print "deleting volume: %s  %s" % (vol.id, vol.status)
                 vol.delete()
+
+        print "terminating %s %s" % (self.node.name, instance.id)
+        instance.terminate()
         self.node.delete()
 
     def terminate(self):
@@ -151,30 +166,33 @@ class ImageOps(NodeOps):
 
     def _clean_image(self):
         with self.open_session():
-            sudo('find /home -maxdepth 1 -type d -exec rm -rf {}/.ssh \;')
             sudo('rm -f ~/.bash_history')
-            sudo('rm -f /etc/ssh/ssh_host*')
             sudo('rm -f /var/log/secure')
             sudo('rm -f /var/log/lastlog')
             sudo('rm -rf /root/*')
             sudo('rm -rf /tmp/*')
             sudo('rm -rf /root/.*hist*')
             sudo('rm -rf /var/log/*.gz')
+            sudo('rm -f /etc/ssh/ssh_host*')
+            sudo('find /home -maxdepth 1 -type d -exec rm -rf {}/.ssh \;')
         
 
     def make_image(self, image_name):
         self._clean_image()
         conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
-        id = self.node.ec2_id
-        image_id = conn.create_image(id, image_name)
-        print "New AMI is %s" % (image_id)
+        image_id = conn.create_image(self.node.ec2_id, image_name)
         image = conn.get_image(image_id=image_id)
 
+        print "waiting for image to finish... (can take a very long time)"
+        while(image.state == u'pending'):
+            time.sleep(10)
+            image = conn.get_image(image_id=image_id)
+        print "New AMI is %s  %s" % (image.id, image.state)
+        return image.id
 
 
 class StorageImageOps(ImageOps):
-
-    # n.b. unlike a manager, a storage node must be rebooted before it can used
+    # n.b. unlike a manager, a new storage image must be rebooted before it can used
     def install_deps(self):
         with self.open_session():
             self._setup_chroma_repo()
@@ -196,6 +214,4 @@ class ManagerImageOps(ImageOps):
             run('wget http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-5.noarch.rpm')
             sudo('rpm -i --force epel-release-6-5.noarch.rpm')
             self._setup_chroma_repo()
-            sudo('yum install -y hydra-server hydra-server-cli')
-            # XXX !
-#            sudo('yum install -y python-argparse python-tablib python-request ')
+            sudo('yum install -y Django-south hydra-server hydra-server-cli')

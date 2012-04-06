@@ -22,7 +22,7 @@ class Node(models.Model):
 
         instance = reservation.instances[0]
 
-        obj = Node(ec2_id = instance.id, username=instance_settings['username'], name = name)
+        obj = Node(ec2_id = instance.id, username=instance_settings['username'],  name = name) 
         obj.save()
         return obj
 

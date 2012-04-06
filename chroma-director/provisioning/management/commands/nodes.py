@@ -26,7 +26,7 @@ class Command(BaseCommand):
 #            conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
             for node in Node.objects.all():
                 node_ops = NodeOps(node);
-                node_ops.terminate(node)
+                node_ops.terminate()
 #            conn.terminate_instances([i.ec2_id for i in Node.objects.all()])
 #            Node.objects.all().delete()
 

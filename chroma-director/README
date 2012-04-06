@@ -10,6 +10,12 @@ create a virtualenv and do a pip install -r requirements.txt
 
 run ./manage.py syncdb --migrate --noinput
 
+Create AMIs from the manager and storage instances.  Each of these
+will take several minutes.
+
+ ./manage.py create_manager_image
+ ./manage.py create_storage_image
+
 make sure you have the required two security groups in your AWS account:
 chroma-manager (ports 22, 80, 514)
 chroma-appliance  (port 22, 988)
@@ -25,5 +31,14 @@ went wrong and you've fixed it now)
  (remove all the locally-known instances, i.e. those created with director)
 ./manage.py create_fs recover <local id>
  (open an ssh session to a ChromaManager by its local ID)
-./manage.py issh <manager|appliance> <ec2 id>
- (open an SSH session to EC2 instance by its EC2 ID)
+
+./manage.py nodes
+   list all instances by local ids
+./manage.py nodes ssh <id>
+   open ssh connection to instance
+./manage.py nodes terminate <id>
+   destroy specified instance and all attached storage
+./manage.py nodes terminate all
+   you die, she dies, everybody dies
+./manage.py new_image <id> <name>
+   create AMI based on the specified instance

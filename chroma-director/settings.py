@@ -147,11 +147,6 @@ LOGGING = {
 CHROMA_MANAGER_SECURITY_GROUP = 'chroma-manager'
 CHROMA_APPLIANCE_SECURITY_GROUP = 'chroma-appliance'
 
-CHROMA_MANAGER = {
-        'username': 'root',
-        'ami': 'ami-d91dcbb0', # A CentOS 6.x AMI of unknown heritage,
-        'instance_type': 'm1.small',
-        'security_group': 'chroma-manager'}
 
 BASE_IMAGE = {
         'username': 'root',
@@ -159,13 +154,18 @@ BASE_IMAGE = {
         'instance_type': 'm1.small',
         'security_group': 'chroma-manager'}
 
-CHROMA_APPLIANCE = {
+# Create your images and put these in your local-settings.py
+#
+#CHROMA_MANAGER = {
+#        'username': 'root',
+#        'ami': 'ami-d91dcbb0', # A CentOS 6.x AMI of unknown heritage,
+#        'instance_type': 'm1.small',
+#        'security_group': 'chroma-manager'}
+#CHROMA_APPLIANCE = {
 #        'ami': 'ami-762af61f',
-        'ami': 'ami-2b1cc542',
 #        'instance_type': 't1.micro',
-        'instance_type': 'm1.large',
-        'username': 'root',
-        'security_group': 'chroma-appliance'}
+#        'username': 'root',
+#        'security_group': 'chroma-appliance'}
 
 CHROMA_MANAGER_USER = 'cloud'
 CHROMA_MANAGER_PASSWORD = 'chr0m4_d3bug'
