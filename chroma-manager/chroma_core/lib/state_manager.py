@@ -108,7 +108,7 @@ class StateManager(object):
             # scenario.
             if job._deps_satisfied():
                 job_log.info("Opportunistic job %s (%s) ready to run" % (oj.pk, job.description()))
-                StateManager()._add_job(job)
+                StateManager().add_job(job)
                 oj.run = True
                 oj.run_at = datetime.datetime.utcnow()
                 oj.save()
