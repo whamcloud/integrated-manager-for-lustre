@@ -183,7 +183,7 @@ class ImageOps(NodeOps):
         image_id = conn.create_image(self.node.ec2_id, image_name)
         image = conn.get_image(image_id=image_id)
 
-        print "waiting for image to finish... (can take a very long time)"
+        print "waiting for image (%s) to finish... (can take a very long time)" % image.id
         while(image.state == u'pending'):
             time.sleep(10)
             image = conn.get_image(image_id=image_id)

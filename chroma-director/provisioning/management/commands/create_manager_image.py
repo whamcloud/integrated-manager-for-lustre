@@ -29,7 +29,7 @@ class Command(BaseCommand):
             f.close()
         except:
             print("Please add this to your local_settings.py:")
-            print("CHROMA_APPLIANCE = %s" % json.dumps(config))
+            print("CHROMA_MANAGER = %s" % json.dumps(config))
 
     def handle(self, *args, **options):
         if len(args) == 0:

@@ -16,6 +16,11 @@ will take several minutes.
  ./manage.py create_manager_image
  ./manage.py create_storage_image
 
+Both of these commands are unusual in that they don't save their local
+state in the database. They each append he appropriate config statement to
+local-settings.py.  This makes it easier to tweak the settings -
+particularly useful if you want to change the instance type. 
+
 make sure you have the required two security groups in your AWS account:
 chroma-manager (ports 22, 80, 514)
 chroma-appliance  (port 22, 988)

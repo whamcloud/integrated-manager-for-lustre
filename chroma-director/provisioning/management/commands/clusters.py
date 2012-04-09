@@ -18,7 +18,7 @@ class Command(BaseCommand):
         if not args or args[0] == 'list':
             for m in ChromaManager.objects.all():
                 i = m.node.get_instance()
-                print m.id, 'manager', m.node.ec2_id, m.node.name, i.ip_address
+                print("%s manager %s %s http://%s/" %(m.id, m.node.ec2_id, m.node.name, i.ip_address))
                 for a in ChromaAppliance.objects.filter(chroma_manager = m):
                     print("    %s %s" % (a.node.name, a.node.ec2_id))
 
