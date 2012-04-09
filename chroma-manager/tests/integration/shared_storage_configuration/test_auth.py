@@ -23,7 +23,7 @@ class TestAuthentication(ChromaIntegrationTestCase):
 
         # Must initially set up session and CSRF cookies
         response = self.hydra_server.get("/api/session/")
-        self.assertEqual(response.successful, True)
+        self.assertEqual(response.successful, True, response.text)
         self.assertEqual(response.json['user'], None)
         self.hydra_server.session.headers['X-CSRFToken'] = response.cookies['csrftoken']
         self.hydra_server.session.cookies['csrftoken'] = response.cookies['csrftoken']
@@ -31,17 +31,17 @@ class TestAuthentication(ChromaIntegrationTestCase):
 
         response = self.hydra_server.post(
                 "/api/session/",
-                data = json.dumps({'username': user['username'], 'password': user['password']}),
-                headers = {"content-type": "application/json"})
-        self.assertEqual(response.successful, True)
+                body = {'username': user['username'], 'password': user['password']},
+        )
+        self.assertEqual(response.successful, True, response.text)
 
         response = self.hydra_server.get("/api/session/")
-        self.assertEqual(response.successful, True)
+        self.assertEqual(response.successful, True, response.text)
         self.assertEqual(response.json['user']['username'], user['username'])
 
         response = self.hydra_server.delete("/api/session/")
-        self.assertEqual(response.successful, True)
+        self.assertEqual(response.successful, True, response.text)
 
         response = self.hydra_server.get("/api/session/")
-        self.assertEqual(response.successful, True)
+        self.assertEqual(response.successful, True, response.text)
         self.assertEqual(response.json['user'], None)
