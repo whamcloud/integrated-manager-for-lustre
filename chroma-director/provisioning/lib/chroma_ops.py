@@ -21,6 +21,13 @@ class NodeOps(object):
         return NodeOps(node)
 
 
+    def _setup_chroma_repo(self):
+        sudo('mkdir -p /root/keys')
+        for key in ['chroma_ca-cacert.pem', 'privkey-nopass.pem', 'test-ami-cert.pem']:
+            put("%s/%s" % (settings.YUM_KEYS, key), "/root/keys/%s" % key, use_sudo = True)
+        put(settings.YUM_REPO, "/etc/yum.repos.d", use_sudo = True)
+
+
     def reboot(self):
         instance = self.node.get_instance()
         instance.reboot()
@@ -60,6 +67,17 @@ class NodeOps(object):
         instance.terminate()
         self.node.delete()
 
+    def add_volume(self, size, device):
+        instance = self.node.get_instance()
+        conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
+        vol = conn.create_volume(size, instance.placement)
+        vol.attach(instance.id, device)
+        while vol.status != u'in-use':
+            print("waiting for volume %s %s" % (vol.id, vol.status))
+            time.sleep(10)
+            vol = conn.get_all_volumes([vol.id])[0]
+        print("Attached volume %s" % (vol.id))
+        
     def terminate(self):
         self.terminate_node()
 
@@ -72,6 +90,8 @@ class NodeOps(object):
     def set_hostname(self):
         with self.open_session():
             sudo("hostname %s" %(self.node.name))
+            # XXX !
+            sudo('echo "HOSTNAME=%s" >> /etc/sysconfig/network' % self.node.name)
     
 
 class ChromaManagerOps(NodeOps):
@@ -85,6 +105,7 @@ class ChromaManagerOps(NodeOps):
 
     def update_deps(self):
         with self.open_session():
+            self._setup_chroma_repo()
             sudo('yum install -y hydra-server hydra-server-cli')
 
     def setup_chroma(self):
@@ -136,15 +157,13 @@ class ChromaApplianceOps(NodeOps):
 
     def update_deps(self):
         with self.open_session():
+            self._setup_chroma_repo()
             # ensure latest version of agent is installed
             sudo('yum install -y hydra-agent-management')
         
-    def add_volume(self, size, device):
-        instance = self.appliance.node.get_instance()
-        conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
-        vol = conn.create_volume(size, instance.placement)
-        vol.attach(instance.id, device)
-
+    def mkraid(self):
+        with self.open_session():
+            sudo('mdadm --create /dev/md0 --level 5 -n 4 /dev/xvdj /dev/xvdk /dev/xvdl /dev/xvdm')
 
     def set_key(self, key):
         with self.open_session():
@@ -154,16 +173,22 @@ class ChromaApplianceOps(NodeOps):
         with self.open_session():
             sudo("service corosync restart")
 
+
+    def configure(self):
+        self.set_hostname()
+        self.update_deps()
+        self.add_volume(1, 'sdf')
+        self.add_volume(1, 'sdg')
+        self.add_volume(1, 'sdh')
+        self.add_volume(1, 'sdi')
+        self.mkraid()
+        self.reset_corosync()
+        
+
 #
 # Classes to Create AMIs
 #
 class ImageOps(NodeOps):
-    def _setup_chroma_repo(self):
-        sudo('mkdir -p /root/keys')
-        for key in ['chroma_ca-cacert.pem', 'privkey-nopass.pem', 'test-ami-cert.pem']:
-            put("%s/%s" % (settings.YUM_KEYS, key), "/root/keys/%s" % key, use_sudo = True)
-        put(settings.YUM_REPO, "/etc/yum.repos.d", use_sudo = True)
-
     def _clean_image(self):
         with self.open_session():
             sudo('rm -f ~/.bash_history')

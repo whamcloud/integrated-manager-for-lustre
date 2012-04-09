@@ -41,6 +41,24 @@ class Command(BaseCommand):
             manager_ops.terminate()
 
 
+        elif args[0] == 'add_node':
+            manager_id = int(args[1])
+            name = args[2]
+            manager = ChromaManager.objects.get(id = manager_id)
+            manager_ops = ChromaManagerOps(manager)
+            manager_key = manager_ops.get_key()
+
+            appliance = ChromaAppliance.create(manager, name)
+            appliance_ops = ChromaApplianceOps(appliance)
+            appliance_ops.configure()
+            appliance_ops.set_key(manager_key)
+
+            appliances = ChromaAppliance.objects.filter(chroma_manager = manager)
+            appliance_ops.add_etc_hosts([manager.node] + [a.node for a in appliances])
+
+            manager_ops.add_etc_hosts([appliance.node])
+            manager_ops.add_server(appliance_ops)
+
         elif args[0] == 'open':
             manager_id = int(args[1])
             manager = ChromaManager.objects.get(id = manager_id)
