@@ -88,8 +88,12 @@ class JobResource(ModelResource):
     steps = fields.ToManyField('chroma_api.step.StepResource',
             lambda bundle: bundle.obj.stepresult_set.all(), null = True,
             help_text = "Steps executed within this job")
+    class_name = fields.CharField(help_text = "Internal class name of job")
 
     available_transitions = fields.DictField()
+
+    def dehydrate_class_name(self, bundle):
+        return bundle.obj.content_type.model_class().__name__
 
     def dehydrate_available_transitions(self, bundle):
         job = bundle.obj

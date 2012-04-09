@@ -39,6 +39,7 @@ class VirtualMachine(BaseStorageResource):
 class DeviceNode(BaseStorageResource):
     host_id = attributes.Integer()
     path = attributes.PosixPath()
+    logical_drive = attributes.ResourceReference(optional = True)
     class_label = 'Device node'
 
     def get_label(self):

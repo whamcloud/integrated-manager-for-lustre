@@ -247,41 +247,57 @@ var VolumeChooserStore = function ()
 
       opts.store.select(element, selected);
       opts.selected_lun_ids = selected
+      console.log(opts.selected_lun_ids);
+
+      if (opts.change) {
+        opts.change.apply(element);
+      }
     }
 
-    table_element.delegate("input", "click", function(event) {
-      update_multi_select_value();
 
-      event.stopPropagation();
-    });
 
-    table_element.delegate("tr", "click", function(event) {
-      var aPos = volumeTable.fnGetPosition(this);
+    function row_clicked(tr_element) {
+      var aPos = volumeTable.fnGetPosition(tr_element);
       var data = volumeTable.fnGetData(aPos);
+      console.log(tr_element);
       if (!opts.multi_select) {
-        name = data.label;
-        capacity = data.size;
-        primary_server = data.primary_host_name;
+        var name = data.label;
+        var capacity = data.size;
+        var primary_server = data.primary_host_name;
 
         var selected_label = header_div.find('.volume_chooser_selected')
         selected_label.html(name + " (" + capacity + ") on " + primary_server);
 
         opts.store.select(element, data.id);
-        opts.selected_lun_id = data.id
+        opts.selected_lun_id = data.id;
 
         // TODO: a close button or something for when there are no volumes (so no 'tr')
         header_div.show();
         expander_div.slideUp();
+
+        if (opts.change) {
+          opts.change.apply(element);
+        }
       } else {
-        var checked = $(this).find('input').attr('checked')
-        $(this).find('input').attr('checked', !checked);
-
-        update_multi_select_value();
+        var input_element =$(tr_element).find('input');
+        var checked = input_element.attr('checked');
+        input_element.attr('checked', !checked);
+        input_element.change();
       }
+    }
 
-      if (opts.change) {
-        opts.change.apply(element);
-      }
+    table_element.delegate("input[type=checkbox]", "change", function(event) {
+      console.log('foo');
+      console.log(this);
+      update_multi_select_value();
+    });
+
+    table_element.delegate("input[type=checkbox]", "click", function(event) {
+      event.stopPropagation();
+    });
+
+    table_element.delegate("tr", "click", function(event) {
+      row_clicked(this);
     });
 
     header_div.click(function() {

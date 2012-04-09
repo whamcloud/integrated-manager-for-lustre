@@ -190,7 +190,6 @@ class SubscriberIndex(object):
                         resource_class = resource_class_id)
                 for r in records:
                     resource = r.to_resource()
-                    raise RuntimeError("%s subs %s" % (resource, resource._storage_attributes))
                     self.add_subscriber(r.id, subscription.key, subscription.val(resource))
 
 

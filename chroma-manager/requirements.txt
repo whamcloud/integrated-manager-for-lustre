@@ -3,7 +3,9 @@ django==1.3.1
 nose>=1.1.2
 django-nose
 django-extensions
-django-celery
+django-celery==2.2.7
+kombu==1.5.1
+celery==2.4.5
 mock
 paramiko
 pep8
@@ -19,3 +21,4 @@ lockfile==0.8
 django-tastypie==0.9.11
 tablib
 requests
+nose-testconfig

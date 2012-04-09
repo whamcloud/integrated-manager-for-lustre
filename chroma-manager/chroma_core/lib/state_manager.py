@@ -108,7 +108,7 @@ class StateManager(object):
             # scenario.
             if job._deps_satisfied():
                 job_log.info("Opportunistic job %s (%s) ready to run" % (oj.pk, job.description()))
-                StateManager()._add_job(job)
+                StateManager().add_job(job)
                 oj.run = True
                 oj.run_at = datetime.datetime.utcnow()
                 oj.save()
@@ -147,6 +147,7 @@ class StateManager(object):
                 elif True in [j['cancelled'] for j in jobs]:
                     command.cancelled = True
 
+                job_log.info("Completing command %s" % command.id)
                 command.complete = True
                 command.save()
 
@@ -225,27 +226,23 @@ class StateManager(object):
                 else:
                     job_log.info("notify_state: Dropping update of %d (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, instance.new_state))
 
-    @classmethod
-    def add_job(cls, job):
-        from chroma_core.tasks import add_job
-        celery_task = add_job.delay(job)
-        job_log.debug("add_job: celery task %s" % celery_task.task_id)
-
-    def _add_job(self, job):
+    def add_job(self, job, command = None):
         """Add a job, and any others which are required in order to reach its prerequisite state"""
         for dependency in job.get_deps().all():
             if not dependency.satisfied():
-                job_log.info("_add_job: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
-                self.set_state(dependency.get_stateful_object(), dependency.preferred_state, None)
+                job_log.info("add_job: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
+                self.set_state(dependency.get_stateful_object(), dependency.preferred_state, command.id if command else None)
 
-        job_log.info("_add_job: done checking dependencies")
+        job_log.info("add_job: done checking dependencies")
         # Important: the Job must not be committed until all
         # its dependencies and locks are in.
         with transaction.commit_on_success():
             job.save()
             job.create_locks()
             job.create_dependencies()
-            job_log.info("_add_job: created %s (%s)" % (job.pk, job.description()))
+            job_log.info("add_job: created %s (%s)" % (job.pk, job.description()))
+            if command:
+                command.jobs.add(job)
 
         from chroma_core.models import Job
         Job.run_next()

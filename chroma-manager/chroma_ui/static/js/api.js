@@ -96,6 +96,13 @@ var Api = function() {
 
   function unexpectedError (jqXHR)
   {
+      // On 'unauthorized' bounce them to the root to 
+      // give them a chance to login
+      if (jqXHR.status == 401) {
+        window.location.href = UI_ROOT
+        return
+      }
+
       /* Caller has provided no error handlers, this is a bug
          or unhandled error */
       try {
@@ -400,7 +407,6 @@ var Api = function() {
         }
       } else {
         unexpectedError(jqXHR);
-
       }
     })
     .complete(function(event)

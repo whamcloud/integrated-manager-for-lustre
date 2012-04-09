@@ -447,7 +447,7 @@ class ConfigurePacemakerStep(Step):
         target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
 
         # target.name should have been populated by RegisterTarget
-        assert(target_mount.volume_node != None and target_mount.target.name != None)
+        assert(target_mount.volume_node is not None and target_mount.target.name is not None)
 
         self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --uuid %s --id %s %s --mountpoint %s" % (
                                     target_mount.volume_node.path,
@@ -548,6 +548,11 @@ class RegisterTargetJob(Job, StateChangeJob):
         if isinstance(target, FilesystemMember):
             mgs = target.filesystem.mgs.downcast()
             deps.append(DependOn(mgs, "mounted"))
+
+        if isinstance(target, ManagedOst):
+            mdts = ManagedMdt.objects.filter(filesystem = target.filesystem)
+            for mdt in mdts:
+                deps.append(DependOn(mdt, "mounted"))
 
         return DependAll(deps)
 
