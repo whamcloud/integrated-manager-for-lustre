@@ -3,8 +3,9 @@
 # ==============================
 
 import sys
+import time
 
-from chroma_cli.exceptions import BadRequest
+from chroma_cli.exceptions import BadRequest, InternalError
 
 import requests
 from urlparse import urljoin
@@ -33,6 +34,12 @@ class ApiClient(object):
         elif response.status_code == 400:
             # A bad request -- deserialize the errors
             raise BadRequest(json.loads(response.text))
+        elif response.status_code == 500:
+            try:
+                decoded = json.loads(response.text)
+                raise InternalError(decoded['traceback'])
+            except (ValueError, KeyError):
+                raise InternalError("Malformed content: %s" % response.text)
         elif response.status_code == 404:
             raise AttributeError("No resource with that id")
         else:  # TODO: add more classes of reponse exceptions
@@ -220,7 +227,10 @@ class ApiResource(object):
         self.api = api
 
     def __getattr__(self, attr):
-        return self._data[attr]
+        try:
+            return self._data[attr]
+        except KeyError:
+            raise AttributeError(attr)
 
     def __repr__(self):
         return "%s" % self._data
@@ -252,21 +262,15 @@ class ApiCommandResource(ApiResource):
                 }[(self.complete, self.jobs_created,
                    self.cancelled, self.errored)]
 
-    def _simple_monitor(self, output=sys.stdout):
+    def _simple_monitor(self, output=sys.stderr):
         # FIXME: HYD-731
         # Probably ought to have a timeout here, although the
         # server seems to have its own timeout logic.
-        import time
-        saved_stdout = sys.stdout
-        sys.stdout = output
-
         while not self.complete:
-            print "\r{0:20}: {1}".format(self.message, self.get_status()),
+            output.write("\r{0:20}: {1}\n".format(self.message, self.get_status())),
             time.sleep(0.5)
             self._refresh()
-        print "\r{0:20}: {1}".format(self.message, self.get_status())
-
-        sys.stdout = saved_stdout
+        output.write("\r{0:20}: {1}\n".format(self.message, self.get_status()))
 
     def get_monitor(self):
         return self._simple_monitor

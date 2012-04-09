@@ -2,6 +2,11 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
+import subprocess
+from celery.beat import Scheduler
+from django.contrib.contenttypes.models import ContentType
+from chroma_core.lib.state_manager import StateManager
+from chroma_core.models.jobs import Command
 
 import settings
 from datetime import datetime, timedelta
@@ -15,6 +20,15 @@ from chroma_core.lib.util import timeit
 from chroma_core.lib.job import job_log
 from chroma_core.lib.lustre_audit import audit_log
 from chroma_core.lib.metrics import metrics_log
+
+
+class EphemeralScheduler(Scheduler):
+    """A scheduler which does not persist the schedule to disk because
+      we only use high frequency things, so its no problem to just start
+      from scratch when celerybeat restarts"""
+    def setup_schedule(self):
+        self.merge_inplace(self.app.conf.CELERYBEAT_SCHEDULE)
+        self.install_default_entries(self.schedule)
 
 
 class RetryOnSqlErrorTask(Task):
@@ -152,18 +166,32 @@ def janitor():
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def notify_state(content_type, object_id, time, new_state, from_states):
-    from chroma_core.lib.state_manager import StateManager
     StateManager._notify_state(content_type, object_id, time, new_state, from_states)
+
+
+@task(base = RetryOnSqlErrorTask)
+def command_run_jobs(job_dicts, message):
+    assert(len(job_dicts) > 0)
+    jobs = []
+    for job in job_dicts:
+        job_klass = ContentType.objects.get_by_natural_key('chroma_core', job['class_name'].lower()).model_class()
+        jobs.append(job_klass(**job['args']))
+
+    with transaction.commit_on_success():
+        command = Command.objects.create(message = message)
+        job_log.debug("command_run_jobs: command %s" % command.id)
+        for job in jobs:
+            StateManager().add_job(job, command)
+            job_log.debug("command_run_jobs: job %s" % job.id)
+        command.jobs_created = True
+        command.save()
+
+    return command.id
 
 
 @task(base = RetryOnSqlErrorTask)
 def command_set_state(object_ids, message):
     """object_ids must be a list of 3-tuples of CT natural key, object PK, state"""
-    from django.contrib.contenttypes.models import ContentType
-
-    from chroma_core.models import Command
-    from chroma_core.lib.state_manager import StateManager
-
     # StateManager.set_state is invoked in an async task for two reasons:
     #  1. At time of writing, StateManager.set_state's logic is not safe against
     #     concurrent runs that might schedule multiple jobs for the same objects.
@@ -188,13 +216,6 @@ def command_set_state(object_ids, message):
             StateManager().set_state(instance, state, command.id)
 
     return command.id
-
-
-@task(base = RetryOnSqlErrorTask)
-@timeit(logger=job_log)
-def add_job(job):
-    from chroma_core.lib.state_manager import StateManager
-    StateManager()._add_job(job)
 
 
 @task(base = RetryOnSqlErrorTask)
@@ -257,7 +278,7 @@ def run_job(job_id):
         job.save()
 
     step_index = 0
-    while(step_index < len(steps)):
+    while step_index < len(steps):
         mark_start_step(step_index)
         klass, args = steps[step_index]
 
@@ -318,7 +339,7 @@ def run_job(job_id):
             result.save()
 
         mark_finish_step(step_index)
-        step_index = step_index + 1
+        step_index += 1
 
     job_log.info("Job %d finished %d steps successfully" % (job.id, job.finish_step + 1))
     job.complete(errored = False)
@@ -413,19 +434,15 @@ def test_host_contact(host):
 
     try:
         addresses = socket.getaddrinfo(hostname, "22", socket.AF_INET, socket.SOCK_STREAM, socket.SOL_TCP)
-        resolve = True
         resolved_address = addresses[0][4][0]
     except socket.gaierror:
         resolve = False
-
-    ping = False
-    if resolve:
-        from subprocess import call
-        ping = (0 == call(['ping', '-c 1', resolved_address]))
+        ping = False
+    else:
+        resolve = True
+        ping = (0 == subprocess.call(['ping', '-c 1', resolved_address]))
 
     from chroma_core.lib.agent import Agent
-
-    ping = (0 == call(['ping', '-c 1', resolved_address]))
     if settings.SERVER_HTTP_URL:
         import urlparse
         server_host = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname

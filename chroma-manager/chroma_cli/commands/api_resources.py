@@ -16,7 +16,10 @@ def register_global_arguments(parser):
 
 
 def commands():
-    cmd_handlers = {'resources': list_resources}
+    cmd_handlers = {
+        'resources': list_resources,
+        'detect_filesystems': detect_filesystems
+        }
 
     return cmd_handlers
 
@@ -24,6 +27,20 @@ def commands():
 def list_resources(config, parser, namespace):
     api = ApiClient(config.api_url, config.username, config.password)
     print " ".join(sorted(api.resource_names))
+
+
+def detect_filesystems(config, parser, args):
+    api = ApiClient(config.api_url, config.username, config.password)
+    endpoint = api.command
+    resources = endpoint.create(message = "Detecting filesystems", jobs = [{'class_name': 'DetectTargetsJob', 'args': {}}])
+
+    # FIXME: blob2objects turns the returned dict into a list of one ApiResource containing the dict, which
+    # is not what is wanted in this case.
+    command = resources[0]._data
+
+    command = ApiCommandResource(endpoint.name, endpoint.api, **command)
+    if not args.async:
+        command.get_monitor()()
 
 
 def add_verb_arguments(parser, verb, endpoint):
