@@ -44,6 +44,8 @@ class NodeOps(object):
     def terminate_node(self):
         instance = self.node.get_instance()
         volumes = [b[1].volume_id for b in instance.block_device_mapping.items() if not b[1].delete_on_termination]
+        print "terminating %s %s" % (self.node.name, instance.id)
+        instance.terminate()
         if len(volumes):
             print "need to delete", volumes
             conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
@@ -63,8 +65,6 @@ class NodeOps(object):
                 print "deleting volume: %s  %s" % (vol.id, vol.status)
                 vol.delete()
 
-        print "terminating %s %s" % (self.node.name, instance.id)
-        instance.terminate()
         self.node.delete()
 
     def add_volume(self, size, device):
@@ -181,7 +181,7 @@ class ChromaApplianceOps(NodeOps):
         self.add_volume(1, 'sdg')
         self.add_volume(1, 'sdh')
         self.add_volume(1, 'sdi')
-        self.mkraid()
+#        self.mkraid()
         self.reset_corosync()
         
 
