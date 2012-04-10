@@ -164,8 +164,6 @@ var CommandDetail = Backbone.View.extend({
       link.click(function(ev) {
         var uri = link.data('job_uri');
         var state = link.data('state');
-        console.log(uri);
-        console.log(state);
         Api.put(uri, {'state': state},
           success_callback = function(data) {
             command_detail_view.model.fetch({success:function(){

@@ -247,7 +247,6 @@ var VolumeChooserStore = function ()
 
       opts.store.select(element, selected);
       opts.selected_lun_ids = selected
-      console.log(opts.selected_lun_ids);
 
       if (opts.change) {
         opts.change.apply(element);
@@ -259,7 +258,6 @@ var VolumeChooserStore = function ()
     function row_clicked(tr_element) {
       var aPos = volumeTable.fnGetPosition(tr_element);
       var data = volumeTable.fnGetData(aPos);
-      console.log(tr_element);
       if (!opts.multi_select) {
         var name = data.label;
         var capacity = data.size;
@@ -287,8 +285,6 @@ var VolumeChooserStore = function ()
     }
 
     table_element.delegate("input[type=checkbox]", "change", function(event) {
-      console.log('foo');
-      console.log(this);
       update_multi_select_value();
     });
 
