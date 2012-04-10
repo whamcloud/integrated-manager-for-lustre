@@ -4,8 +4,6 @@ from testconfig import config
 from tests.utils.http_requests import HttpRequests
 from tests.integration.core.testcases import ChromaIntegrationTestCase
 
-import json
-
 
 class TestAuthentication(ChromaIntegrationTestCase):
     def setUp(self):
