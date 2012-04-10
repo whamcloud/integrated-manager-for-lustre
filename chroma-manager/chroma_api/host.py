@@ -23,6 +23,8 @@ from chroma_api import api_log
 class HostValidation(Validation):
     def is_valid(self, bundle, request=None):
         errors = defaultdict(list)
+        if request.method != 'POST':
+            return errors
 
         try:
             address = bundle.data['address']
@@ -37,7 +39,7 @@ class HostValidation(Validation):
 
         return errors
 
-    
+
 class HostResource(MetricResource, StatefulModelResource):
     """
     Represents a Lustre server which Chroma server is monitoring or managing.  When PUTing, requires the ``state`` field.  When POSTing, requires the ``address`` field.
