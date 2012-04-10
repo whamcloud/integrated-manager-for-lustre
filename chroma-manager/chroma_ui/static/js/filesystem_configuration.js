@@ -246,14 +246,12 @@ var VolumeChooserStore = function ()
       });
 
       opts.store.select(element, selected);
-      opts.selected_lun_ids = selected
+      opts.selected_lun_ids = selected;
 
       if (opts.change) {
         opts.change.apply(element);
       }
-    }
-
-
+    };
 
     function row_clicked(tr_element) {
       var aPos = volumeTable.fnGetPosition(tr_element);
@@ -278,8 +276,14 @@ var VolumeChooserStore = function ()
         }
       } else {
         var input_element =$(tr_element).find('input');
+
+
         var checked = input_element.attr('checked');
-        input_element.attr('checked', !checked);
+        if (checked) {
+          input_element.get(0).checked = "";
+        } else {
+          input_element.get(0).checked = "checked";
+        }
         input_element.change();
       }
     }
