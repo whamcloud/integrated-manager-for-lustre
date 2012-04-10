@@ -38,8 +38,8 @@ class Command(BaseCommand):
 
         for appliance in appliances:
             appliance_ops = ChromaApplianceOps(appliance)
-            self.set_key(manager_key)
-            self.add_etc_hosts([manager.node] + [a.node for a in appliances])
+            appliance_ops.set_key(manager_key)
+            appliance_ops.add_etc_hosts([manager.node] + [a.node for a in appliances])
             appliance_ops.configure()
             manager_ops.add_server(appliance_ops)
 

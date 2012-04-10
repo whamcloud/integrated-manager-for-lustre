@@ -75,7 +75,3 @@ class Command(BaseCommand):
             SSH_BIN = "/usr/bin/ssh"
             os.execvp(SSH_BIN, ["ssh", "-i", settings.AWS_SSH_PRIVATE_KEY, 
                                 "%s@%s" % (manager.node.username, session.instance.ip_address)])
-
-            
-                
-                
