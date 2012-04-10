@@ -44,7 +44,7 @@ This package layers on management capabilities for the Whamcloud Hydra Agent.
 
 %install
 rm -rf %{buildroot}
-%{__python} setup.py install --skip-build --root=%{buildroot}
+%{__python} setup.py install --skip-build --install-lib=%{python_sitelib} --install-scripts=%{_bindir} --root=%{buildroot}
 mkdir -p $RPM_BUILD_ROOT/etc/init.d/
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/hydra-agent
 

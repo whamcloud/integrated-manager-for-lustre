@@ -15,14 +15,14 @@ class Node(models.Model):
         conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
 
         reservation = conn.run_instances(
-                instance_settings['ami'],
-                key_name = settings.AWS_SSH_KEY,
-                instance_type = instance_settings['instance_type'],
-                security_groups = [instance_settings['security_group']])
-
+            instance_settings['ami'],
+            key_name = settings.AWS_SSH_KEY,
+            instance_type = instance_settings['instance_type'],
+            security_groups = [instance_settings['security_group']])
+        
         instance = reservation.instances[0]
 
-        obj = Node(ec2_id = instance.id, username=instance_settings['username'], name = name)
+        obj = Node(ec2_id = instance.id, username=instance_settings['username'],  name = name) 
         obj.save()
         return obj
 

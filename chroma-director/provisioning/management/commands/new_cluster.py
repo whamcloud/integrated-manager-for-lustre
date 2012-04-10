@@ -14,7 +14,7 @@ class Command(BaseCommand):
     def _create_instances(self):
         manager = ChromaManager.create("chroma")
         ChromaAppliance.create(manager, "node01")
-#        ChromaAppliance.create(manager, "node02")
+        ChromaAppliance.create(manager, "node02")
         return manager
 
     def _prepare_image(self, node):
@@ -24,13 +24,13 @@ class Command(BaseCommand):
     def _setup_instances(self, manager):
         
         # XXX - using base image instaed of manager AMI
-        self._prepare_image(manager.node)
+#        self._prepare_image(manager.node)
 
         appliances = ChromaAppliance.objects.filter(chroma_manager = manager)
         manager_ops = ChromaManagerOps(manager)
 
         manager_ops.update_deps()
-        manager_ops.add_etc_hosts(Node.objects.all())
+        manager_ops.add_etc_hosts([manager.node] + [a.node for a in appliances])
         manager_ops.set_hostname()
         manager_ops.setup_chroma()
         manager_ops.create_keys()
@@ -38,16 +38,13 @@ class Command(BaseCommand):
 
         for appliance in appliances:
             appliance_ops = ChromaApplianceOps(appliance)
-            appliance_ops.update_deps()
-            appliance_ops.add_volume(1, '/dev/sdf')
-            appliance_ops.add_volume(1, '/dev/sdg')
-            appliance_ops.add_volume(1, '/dev/sdh')
-            appliance_ops.add_volume(1, '/dev/sdi')
-            appliance_ops.add_etc_hosts(Node.objects.all())
-            appliance_ops.set_key(manager_key)
-            appliance_ops.set_hostname()
-            appliance_ops.reset_corosync()
+            self.set_key(manager_key)
+            self.add_etc_hosts([manager.node] + [a.node for a in appliances])
+            appliance_ops.configure()
             manager_ops.add_server(appliance_ops)
+
+        print "Chroma is ready! http://%s/" % manager.node.get_instance().ip_address
+
 
 
     def handle(self, *args, **options):
