@@ -173,8 +173,6 @@ function load_resource(resource) {
 
     if (missing_stats) {
       // One or more series was unavailable, give up.
-      console.log(chart_info);
-      console.log(resource.stats);
       return;
     }
 

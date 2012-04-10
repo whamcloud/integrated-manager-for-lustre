@@ -52,7 +52,16 @@ class StorageResourceResource(MetricResource, ModelResource):
 
     deletable = fields.BooleanField()
 
-    def apply_sorting(self, obj_list, options = None):
+    def obj_get_list(self, request = None, **kwargs):
+        """Override this to do sorting in a way that depends on kwargs (we need
+        to know what kind of object is being listed in order to resolve the
+        ordering attribute to a model, and apply_sorting's arguments don't
+        give you kwargs)"""
+        objs = super(StorageResourceResource, self).obj_get_list(request, **kwargs)
+        objs = self._sort_by_attr(objs, request.GET, **kwargs)
+        return objs
+
+    def _sort_by_attr(self, obj_list, options = None, **kwargs):
         options = options or {}
         order_by = options.get('order_by', None)
         if not order_by:
@@ -67,7 +76,24 @@ class StorageResourceResource(MetricResource, ModelResource):
         else:
             raise RuntimeError("Can't sort on %s" % order_by)
 
-        return obj_list.filter(storageresourceattribute__key = attr_name).order_by(("-" if invert else "") + 'storageresourceattribute__value')
+        try:
+            class_name = kwargs['class_name']
+            plugin_name = kwargs['plugin_name']
+        except KeyError:
+            return obj_list
+        else:
+            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+            klass, klass_id = storage_plugin_manager.get_plugin_resource_class(plugin_name, class_name)
+            model_klass = klass.attr_model_class(attr_name)
+
+            filter_args = {model_klass.__name__.lower() + "__key": attr_name}
+            order_attr = model_klass.__name__.lower() + "__value"
+
+            return obj_list.filter(**filter_args).order_by(("-" if invert else "") + order_attr)
+
+    def apply_sorting(self, obj_list, options=None):
+        """Pass-through in favour of sorting done in obj_get_list"""
+        return obj_list
 
     def dehydrate_propagated_alerts(self, bundle):
         return [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(bundle.obj.to_resource())]

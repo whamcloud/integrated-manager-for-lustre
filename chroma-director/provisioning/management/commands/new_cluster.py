@@ -14,7 +14,7 @@ class Command(BaseCommand):
     def _create_instances(self):
         manager = ChromaManager.create("chroma")
         ChromaAppliance.create(manager, "node01")
-#        ChromaAppliance.create(manager, "node02")
+        ChromaAppliance.create(manager, "node02")
         return manager
 
     def _prepare_image(self, node):
@@ -38,15 +38,9 @@ class Command(BaseCommand):
 
         for appliance in appliances:
             appliance_ops = ChromaApplianceOps(appliance)
-            appliance_ops.update_deps()
-            appliance_ops.add_volume(1, 'sdf')
-            appliance_ops.add_volume(1, 'sdg')
-            appliance_ops.add_volume(1, 'sdh')
-            appliance_ops.add_volume(1, 'sdi')
-            appliance_ops.add_etc_hosts([manager.node] + [a.node for a in appliances])
-            appliance_ops.set_key(manager_key)
-            appliance_ops.set_hostname()
-            appliance_ops.reset_corosync()
+            self.set_key(manager_key)
+            self.add_etc_hosts([manager.node] + [a.node for a in appliances])
+            appliance_ops.configure()
             manager_ops.add_server(appliance_ops)
 
         print "Chroma is ready! http://%s/" % manager.node.get_instance().ip_address

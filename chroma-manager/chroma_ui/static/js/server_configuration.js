@@ -11,7 +11,6 @@ var add_host_dialog = function() {
   element.find('.add_host_back_button').button()
 
   function select_page(name) {
-    console.log(name)
     element.find('.add_host_prompt').hide();
     element.find('.add_host_loading').hide();
     element.find('.add_host_complete').hide();

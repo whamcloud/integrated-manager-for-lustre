@@ -128,8 +128,8 @@ def _device_node(device_name, major_minor, path, size, parent):
 
 def _parse_sys_block():
     mapper_devs = _find_block_devs("/dev/mapper/")
-    #by_id_devs = _find_block_devs("/dev/disk/by-path/")
-    by_id_devs = []
+    by_id_nodes = _find_block_devs("/dev/disk/by-id/")
+    by_path_nodes = _find_block_devs("/dev/disk/by-path/")
 
     def get_path(major_minor, device_name):
         # Try to find device nodes for these:
@@ -138,8 +138,11 @@ def _parse_sys_block():
         if major_minor in mapper_devs:
             return mapper_devs[major_minor]
         # * Then try /dev/disk/by-id
-        elif major_minor in by_id_devs:
-            return by_id_devs[major_minor]
+        elif major_minor in by_id_nodes:
+            return by_id_nodes[major_minor]
+        # * Then try /dev/disk/by-path
+        elif major_minor in by_path_nodes:
+            return by_path_nodes[major_minor]
         # * Then fall back to just /dev
         elif os.path.exists(fallback_dev_path):
             return fallback_dev_path

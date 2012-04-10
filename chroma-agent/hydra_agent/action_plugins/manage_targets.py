@@ -285,8 +285,7 @@ def _unconfigure_ha(primary, label, uuid, id):
                        unique_label])
 
         if rc != 0 and rc != 234:
-            raise RuntimeError("Error %s trying to cleanup the resource " % (rc, \
-                               unique_label))
+            raise RuntimeError("Error %s trying to cleanup resource %s" % (rc, unique_label))
 
     else:
         rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" % unique_label)
