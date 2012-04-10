@@ -5,8 +5,8 @@ $(document).ready(function() {
   AlertNotification.init();
 });
 
-$(document).ajaxComplete(function(){AlertNotification.updateIcons()})
-$(document).ajaxComplete(function(){CommandNotification.updateIcons()})
+$(document).ajaxComplete(function(){AlertNotification.updateIcons()});
+$(document).ajaxComplete(function(){CommandNotification.updateIcons()});
 
 var LiveObject = function()
 {
@@ -64,11 +64,11 @@ var Tooltip = function()
   function detailList(options)
   {
     var tooltip = "";
-    tooltip += "<ul>"
+    tooltip += "<ul>";
     $.each(options.objects, function(i, obj) {
       tooltip += "<li>" + obj[options.attr] + "</li>";
     });
-    tooltip += "</ul>"
+    tooltip += "</ul>";
 
     var classes = options.class || "";
 
@@ -83,14 +83,7 @@ var Tooltip = function()
           classes: 'ui-tooltip-rounded ui-tooltip-shadow ' + classes
         },
         position: {
-          viewport: $("div.rightpanel"),
-      /*
-          my: "top left",
-          at: "bottom right",
-          adjust: {
-            method: "flip"
-          }
-          */
+          viewport: $("div.rightpanel")
         }
     });
   }
@@ -123,11 +116,7 @@ var Tooltip = function()
         event: false
       },
       style: {
-        classes: 'ui-tooltip-shadow' + " " + classes,
-        /* uncomment for themeroller
-        tip: 'top center',
-        widget: true
-        */
+        classes: 'ui-tooltip-shadow' + " " + classes
       },
       events: {
         render: function(event, api) {
@@ -422,8 +411,8 @@ var CommandNotification = function() {
   }
 
   function updateIcons(){
-    $('notification_object_icon').each(function() {
-      var uri = $(this).data('resource_uri')
+    $('.notification_object_icon').each(function() {
+      var uri = $(this).data('resource_uri');
       updateIcon(uri, $(this));
     });
   }
@@ -467,36 +456,35 @@ var CommandNotification = function() {
     });
   }
 
-  function updateObject(uri)
-  {
+  function updateObject(uri) {
     Api.get(uri, {},
-      success_callback = function(obj) {
-      $(".object_label[data-resource_uri='" + uri + "']").each(function() {
-        $(this).html(obj.label);
-      });
-      $(".object_state[data-resource_uri='" + uri + "']").each(function() {
-        $(this).html(obj.state);
-      });
+      success_callback = function (obj) {
+        $(".object_label[data-resource_uri='" + uri + "']").each(function () {
+          $(this).html(obj.label);
+        });
+        $(".object_state[data-resource_uri='" + uri + "']").each(function () {
+          $(this).html(obj.state);
+        });
 
-      $(".transition_buttons[data-resource_uri='" + uri + "']").each(function() {
-        $(this).html(stateTransitionButtons(obj));
-      });
-    },
-    error_callback = {404: function() {
-      // The object has gone away
-      // TODO: handle removing it from its container (e.g. row from table)
-      $(".object_label[data-resource_uri='" + uri + "']").each(function() {
-        $(this).html("");
-      });
-      $(".object_state[data-resource_uri='" + uri + "']").each(function() {
-        $(this).html("");
-      });
+        $(".transition_buttons[data-resource_uri='" + uri + "']").each(function () {
+          $(this).html(stateTransitionButtons(obj));
+        });
+      },
+      {404:function () {
+        // The object has gone away
+        // TODO: handle removing it from its container (e.g. row from table)
+        $(".object_label[data-resource_uri='" + uri + "']").each(function () {
+          $(this).html("");
+        });
+        $(".object_state[data-resource_uri='" + uri + "']").each(function () {
+          $(this).html("");
+        });
 
-      $(".transition_buttons[data-resource_uri='" + uri + "']").each(function() {
-        $(this).html("");
-      });
-    }},
-    blocking = false);
+        $(".transition_buttons[data-resource_uri='" + uri + "']").each(function () {
+          $(this).html("");
+        });
+      }},
+      false);
   }
 
   function completeJob(job) {
