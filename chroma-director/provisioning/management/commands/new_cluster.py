@@ -15,6 +15,8 @@ class Command(BaseCommand):
         manager = ChromaManager.create("chroma")
         ChromaAppliance.create(manager, "node01")
         ChromaAppliance.create(manager, "node02")
+#        ChromaAppliance.create(manager, "node03")
+#        ChromaAppliance.create(manager, "node04")
         return manager
 
     def _prepare_image(self, node):
@@ -38,8 +40,8 @@ class Command(BaseCommand):
 
         for appliance in appliances:
             appliance_ops = ChromaApplianceOps(appliance)
-            self.set_key(manager_key)
-            self.add_etc_hosts([manager.node] + [a.node for a in appliances])
+            appliance_ops.set_key(manager_key)
+            appliance_ops.add_etc_hosts([manager.node] + [a.node for a in appliances])
             appliance_ops.configure()
             manager_ops.add_server(appliance_ops)
 
