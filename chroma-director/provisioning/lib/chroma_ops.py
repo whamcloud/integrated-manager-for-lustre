@@ -173,7 +173,6 @@ class ChromaApplianceOps(NodeOps):
         with self.open_session():
             sudo("service corosync restart")
 
-
     def configure(self):
         self.set_hostname()
         self.update_deps()
@@ -183,6 +182,13 @@ class ChromaApplianceOps(NodeOps):
         self.add_volume(1, 'sdi')
 #        self.mkraid()
         self.reset_corosync()
+
+    def configure_client(self):
+        self.set_hostname()
+        with self.open_session():
+            self._setup_chroma_repo()
+            sudo("mkdir /mnt/lustre")
+
         
 
 #
