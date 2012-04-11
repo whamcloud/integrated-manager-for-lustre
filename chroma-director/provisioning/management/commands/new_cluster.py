@@ -15,6 +15,8 @@ class Command(BaseCommand):
         manager = ChromaManager.create("chroma")
         ChromaAppliance.create(manager, "node01")
         ChromaAppliance.create(manager, "node02")
+#        ChromaAppliance.create(manager, "node03")
+#        ChromaAppliance.create(manager, "node04")
         return manager
 
     def _prepare_image(self, node):

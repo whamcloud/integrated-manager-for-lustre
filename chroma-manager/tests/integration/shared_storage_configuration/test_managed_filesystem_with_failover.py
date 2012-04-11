@@ -25,7 +25,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
                 '/api/test_host/',
                 body = {'address': host_address}
             )
-            self.assertTrue(response.successful, response.text)
+            self.assertEqual(response.successful, True, response.text)
             # FIXME: test_host here isn't serving a purpose as we
             # don't check on its result (it's asynchronous but
             # annoyingly returns a celery task instead of a Command)
@@ -34,7 +34,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
                 '/api/host/',
                 body = {'address': host_address}
             )
-            self.assertTrue(response.successful, response.text)
+            self.assertEqual(response.successful, True, response.text)
             host_id = response.json['host']['id']
             host_create_command_ids.append(response.json['command']['id'])
             self.assertTrue(host_id)
@@ -42,7 +42,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             response = self.hydra_server.get(
                 '/api/host/%s/' % host_id,
             )
-            self.assertTrue(response.successful, response.text)
+            self.assertEqual(response.successful, True, response.text)
             host = response.json
             self.assertEqual(host['address'], host_address)
 
@@ -53,7 +53,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         response = self.hydra_server.get(
             '/api/host/',
         )
-        self.assertTrue(response.successful, response.text)
+        self.assertEqual(response.successful, True, response.text)
         hosts = response.json['objects']
         self.assertEqual(2, len(hosts))
         self.assertEqual(hosts[0]['state'], 'lnet_up')
@@ -65,7 +65,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             '/api/volume/',
             params = {'category': 'usable'}
         )
-        self.assertTrue(response.successful, response.text)
+        self.assertEqual(response.successful, True, response.text)
 
         ha_volumes = []
         for v in response.json['objects']:
@@ -90,7 +90,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             '/api/volume/',
             params = {'category': 'usable'}
         )
-        self.assertTrue(response.successful, response.text)
+        self.assertEqual(response.successful, True, response.text)
         volumes = response.json['objects']
         refreshed_mgt_volume = None
         refreshed_mdt_volume = None
@@ -127,7 +127,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         response = self.hydra_server.get(
             '/api/filesystem/%s/' % filesystem_id,
         )
-        self.assertTrue(response.successful, response.text)
+        self.assertEqual(response.successful, True, response.text)
         mount_command = response.json['mount_command']
 
         client = config['lustre_clients'].keys()[0]
