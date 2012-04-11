@@ -455,15 +455,15 @@ class ConfigureRsyslogStep(Step):
 
     def run(self, kwargs):
         if settings.LOG_SERVER_HOSTNAME:
-            hostname = settings.LOG_SERVER_HOSTNAME
+            fqdn = settings.LOG_SERVER_HOSTNAME
         else:
-            from os import uname
-            hostname = uname()[1]
+            import socket
+            fqdn = socket.getfqdn()
 
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         try:
-            self.invoke_agent(host, "configure-rsyslog --node %s" % hostname)
+            self.invoke_agent(host, "configure-rsyslog --node %s" % fqdn)
         except RuntimeError, e:
             # FIXME: Would be smarter to detect capabilities before
             # trying to run things which may break.  Don't want to do it
