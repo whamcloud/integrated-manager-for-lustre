@@ -200,8 +200,9 @@ class ServiceConfig:
         self.try_shell(["service", "mysqld", "restart"])
         self.try_shell(["chkconfig", "mysqld", "on"])
 
-        log.info("Creating database '%s'...\n" % database['NAME'])
-        self.try_shell(["mysql", "-e", "create database %s;" % database['NAME']])
+        if not self._db_accessible():
+            log.info("Creating database '%s'...\n" % database['NAME'])
+            self.try_shell(["mysql", "-e", "create database %s;" % database['NAME']])
 
     def get_input(self, msg = "", empty_allowed = True, password = False):
         answer = ""
