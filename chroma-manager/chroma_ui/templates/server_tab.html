@@ -29,6 +29,9 @@
               row['state'] = LiveObject.state(row),
               row['actions'] = stateTransitionButtons(row),
               row['icons'] = LiveObject.icons(row)
+              if (!row['fqdn']) {
+                row['fqdn'] = row['address']
+              }
             });
             callback(data);
           }, settings);
