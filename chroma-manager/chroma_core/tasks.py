@@ -433,8 +433,7 @@ def test_host_contact(host):
     user, hostname, port = host.ssh_params()
 
     try:
-        addresses = socket.getaddrinfo(hostname, "22", socket.AF_INET, socket.SOCK_STREAM, socket.SOL_TCP)
-        resolved_address = addresses[0][4][0]
+        resolved_address = socket.gethostbyname(hostname)
     except socket.gaierror:
         resolve = False
         ping = False
