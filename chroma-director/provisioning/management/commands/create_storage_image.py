@@ -16,7 +16,7 @@ class Command(BaseCommand):
 
     def _setup_instances(self, node):
         image_ops = StorageImageOps(node)
-#        image_ops.install_deps()
+        image_ops.install_deps()
         # The first reboot takes a lot longer than subsequent ones, so get it out of the way now
         # (something to do with SElinux rescanning root)
         # However, fabric->ssh  is raising an SSHException('SSH session not active') after the reboot
