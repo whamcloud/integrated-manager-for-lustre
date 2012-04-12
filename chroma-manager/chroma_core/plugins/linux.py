@@ -54,7 +54,14 @@ class UnsharedDevice(LogicalDrive):
     path = attributes.PosixPath()
 
     def get_label(self):
-        return self.path
+        hide_prefixes = ["/dev/disk/by-path/", "/dev/disk/by-id/"]
+        path = self.path
+        for prefix in hide_prefixes:
+            if path.startswith(prefix):
+                path = path[len(prefix):]
+                break
+
+        return path
 
 
 class LinuxDeviceNode(DeviceNode):
