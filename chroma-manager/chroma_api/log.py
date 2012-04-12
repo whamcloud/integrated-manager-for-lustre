@@ -2,6 +2,7 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
+from tastypie import fields
 
 from chroma_core.models.log import Systemevents
 
@@ -20,8 +21,12 @@ class LogResource(ModelResource):
     the ``host`` resource -- it is not guaranteed that a host mentioned in the
     syslog is configured as a host in Chroma server.
     """
-    def dehydrate_message(self, bundle):
-        return nid_finder(bundle.obj.message)
+    substitutions = fields.ListField(null = True, help_text = """List of dictionaries describing
+substrings which may be used to decorate the `message` attribute with hyperlinks.  Each substitution
+has `start`, `end`, `label` and `resource_uri` attributes.""")
+
+    def dehydrate_substitutions(self, bundle):
+        return self._substitutions(bundle.obj)
 
     class Meta:
         queryset = Systemevents.objects.all()
@@ -29,7 +34,7 @@ class LogResource(ModelResource):
                 'severity': ['exact'],
                 'fromhost': ['exact', 'startswith'],
                 'devicereportedtime': ['gte', 'lte'],
-                'message': ['icontains', 'startswith'],
+                'message': ['icontains', 'startswith', 'contains'],
                 }
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
@@ -48,42 +53,49 @@ class LogResource(ModelResource):
 
         return super(LogResource, self).build_filters(filters)
 
+    def _substitutions(self, obj):
+        print "_substitutions %s" % obj.message
+        message = obj.message
+        from chroma_api import api_log
+        from chroma_api.urls import api
 
-def nid_finder(message):
-    from chroma_api import api_log
+        from chroma_core.models import ManagedHost, ManagedTarget
+        from chroma_core.lib.lustre_audit import normalize_nid
+        import re
 
-    from chroma_core.models import ManagedHost, ManagedTarget
-    from chroma_core.lib.lustre_audit import normalize_nid
-    import re
-    # TODO: detect IB/other(cray?) as well as tcp
-    nid_regex = re.compile("(\d{1,3}\.){3}\d{1,3}@tcp(_\d+)?")
-    target_regex = re.compile("\\b(\\w+-(MDT|OST)\\d\\d\\d\\d)\\b")
-    for match in nid_regex.finditer(message):
-        replace = match.group()
-        replace = normalize_nid(replace)
-        try:
-            host = ManagedHost.get_by_nid(replace)
-        except ManagedHost.DoesNotExist:
-            api_log.warn("No host has NID %s" % replace)
-            continue
-        except ManagedHost.MultipleObjectsReturned:
-            api_log.warn("Multiple hosts have NID %s" % replace)
-            continue
+        substitutions = []
+        def substitute(object, match, group = 1):
+            resource_uri = api.get_resource_uri(object)
+            substitutions.append({
+                'start': match.start(group),
+                'end': match.end(group),
+                'label': object.get_label(),
+                'resource_uri': resource_uri})
 
-        markup = "<a href='#' title='%s'>%s</a>" % (match.group(), host.address)
-        message = message.replace(match.group(),
-                                  markup)
-    for match in target_regex.finditer(message):
-        # TODO: look up to a target and link to something useful
-        replace = match.group()
-        #markup = "<a href='#' title='%s'>%s</a>" % ("foo", match.group())
-        markup = match.group()
-        try:
-            t = ManagedTarget.objects.get(name=markup)
-            markup = "<a href='#' class='target target_id_%s'>%s</a>" % (t.id, t.get_label())
-        except:
-            pass
-        message = message.replace(match.group(),
-                                  markup,
-                                  1)
-    return message
+
+        # TODO: detect other NID types (cray?)
+        nid_regex = re.compile("(\d{1,3}\.){3}\d{1,3}@(tcp|ib)(_\d+)?")
+        target_regex = re.compile("[^\w](\w{1,8}-(MDT|OST)[\da-f]{4})")
+        for match in nid_regex.finditer(message):
+            nid = match.group(0)
+            nid = normalize_nid(nid)
+            try:
+                host = ManagedHost.get_by_nid(nid)
+            except ManagedHost.DoesNotExist:
+                api_log.warn("No host has NID %s" % nid)
+                continue
+            except ManagedHost.MultipleObjectsReturned:
+                api_log.warn("Multiple hosts have NID %s" % nid)
+                continue
+            else:
+                substitute(host, match, 0)
+
+        for match in target_regex.finditer(message):
+            target_name = match.group(1)
+            print target_name
+            targets = ManagedTarget.objects.filter(name=target_name)
+            if targets.count() > 0:
+                target = targets[0]
+                substitute(target, match)
+
+        return sorted(substitutions, lambda x, y: cmp(x['start'], y['start']))
