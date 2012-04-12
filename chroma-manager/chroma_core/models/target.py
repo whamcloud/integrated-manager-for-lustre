@@ -8,6 +8,7 @@ import json
 from django.db import models, transaction
 from chroma_core.lib.job import StateChangeJob, DependOn, DependAny, DependAll, Step, NullStep, AnyTargetMountStep, job_log
 from chroma_core.models import DeletableMetaclass
+from chroma_core.models.host import ManagedHost
 from chroma_core.models.jobs import StatefulObject, Job
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 
@@ -60,8 +61,20 @@ class ManagedTarget(StatefulObject):
     def get_params(self):
         return [(p.key, p.value) for p in self.targetparam_set.all()]
 
+    @property
     def primary_host(self):
         return ManagedTargetMount.objects.get(target = self, primary = True).host
+
+    @property
+    def failover_hosts(self):
+        return ManagedHost.objects.filter(managedtargetmount__target = self, managedtargetmount__primary = False)
+
+    @property
+    def active_host(self):
+        if self.active_mount:
+            return self.active_mount.host
+        else:
+            return None
 
     def get_label(self):
         if self.name:
@@ -135,15 +148,9 @@ class ManagedTarget(StatefulObject):
 
         return DependAll(deps)
 
-    def managed_host_to_managed_targets(mh):
-        """Return iterable of all ManagedTargets which could potentially depend on the state
-           of a managed host"""
-        # Break this out into a function to avoid importing ManagedTargetMount at module scope
-        return set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)])
-
     reverse_deps = {
             'ManagedTargetMount': (lambda mtm: ManagedTarget.objects.filter(pk = mtm.target_id)),
-            'ManagedHost': managed_host_to_managed_targets,
+            'ManagedHost': lambda mh: set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)]),
             'ManagedFilesystem': lambda mfs: [t.downcast() for t in mfs.get_filesystem_targets()]
             }
 
