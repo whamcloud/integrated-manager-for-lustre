@@ -16,9 +16,10 @@
     {
       $('#server_configuration').dataTable( {
         bServerSide: true,
-        "bProcessing": true,
-        "bJQueryUI": true,
-        "bAutoWidth":false,
+        bProcessing: true,
+        bJQueryUI: true,
+        bAutoWidth:false,
+        bFilter: false,
         sAjaxSource: 'host/',
         fnServerData: function(url, data, callback, settings) {
           Api.get_datatables(url, data, function(data) {

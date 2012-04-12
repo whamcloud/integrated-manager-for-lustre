@@ -130,6 +130,7 @@
 
             resourceTable = $('#resource_table').dataTable({
                 bServerSide: true,
+                bFilter: false,
                 sAjaxSource: "storage_resource/" + module_name + "/" + class_name + "/",
                 fnServerData: function(url, data, callback, settings) {
                   Api.get_datatables(url, data, function(data){

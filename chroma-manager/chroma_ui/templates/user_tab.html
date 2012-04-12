@@ -7,6 +7,7 @@
         bProcessing: true,
         bJQueryUI: true,
         bAutoWidth: false,
+        bFilter: false,
         sAjaxSource: 'user/',
         fnServerData: function(url, data, callback, settings) {
           Api.get_datatables(url, data, function(data) {
