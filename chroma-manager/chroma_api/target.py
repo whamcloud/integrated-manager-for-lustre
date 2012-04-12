@@ -120,6 +120,9 @@ class TargetResource(MetricResource, ConfParamResource):
         null = True, help_text = "The server on which this target is currently started, or null if" \
                                  "the target is not currently started")
 
+    volume = fields.ToOneField('chroma_api.volume.VolumeResource', 'volume', full = False, help_text = "\
+                             The Volume on which this target is stored.")
+
     def content_type_id_to_kind(self, id):
         if not hasattr(self, 'CONTENT_TYPE_ID_TO_KIND'):
             self.CONTENT_TYPE_ID_TO_KIND = dict([(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()])

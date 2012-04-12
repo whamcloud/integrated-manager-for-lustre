@@ -2,6 +2,7 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
+from tastypie.constants import ALL
 from chroma_core.lib.storage_plugin.api import attributes
 
 from chroma_core.models import StorageResourceClass
@@ -43,6 +44,7 @@ class StorageResourceClassResource(ModelResource):
     a plugin-qualified name like "TestPlugin-ResourceOne".
     """
     plugin_name = fields.CharField(attribute='storage_plugin__module_name')
+    plugin_internal = fields.BooleanField(attribute='storage_plugin__internal')
     columns = fields.ListField()
     label = fields.CharField()
     fields = fields.DictField()
@@ -68,11 +70,13 @@ class StorageResourceClassResource(ModelResource):
 
     class Meta:
         queryset = StorageResourceClass.objects.filter(
-                id__in = filter_class_ids(),
-                storage_plugin__internal = False
-                )
+                id__in = filter_class_ids())
         resource_name = 'storage_resource_class'
-        filtering = {'plugin_name': ['exact'], 'class_name': ['exact'], 'user_creatable': ['exact']}
+        filtering = {
+            'plugin_name': ['exact'],
+            'class_name': ['exact'],
+            'user_creatable': ['exact'],
+            'plugin_internal': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         ordering = ['class_name']
