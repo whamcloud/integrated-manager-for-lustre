@@ -1,4 +1,24 @@
 
+
+div#storage_alerts {
+    float: left;
+    width: 49%;
+}
+
+div#storage_alerts table {
+    font-size: 9pt;
+}
+
+table.storage_statistics td {
+    margin: 0px;
+    padding: 0px;
+}
+
+span.resource_name {
+    font-size: 10;
+    font-weight: bold;
+}
+
 select#storage_resource_create_classes {
 }
 

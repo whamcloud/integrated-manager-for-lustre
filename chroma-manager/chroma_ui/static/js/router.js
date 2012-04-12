@@ -1,5 +1,23 @@
 
 
+function uri_properties_link(resource_uri, label)
+{
+  if (resource_uri) {
+    var url = resource_uri.replace("/api/", "/");
+    return "<a class='navigation' href='" + url + "'>" + label + "</a>"
+  } else {
+    return ""
+  }
+}
+
+function object_properties_link(object, label)
+{
+  if (!label) {
+    label = LiveObject.label(object);
+  }
+  return uri_properties_link(object.resource_uri, label);
+}
+
 /* FIXME: if router callbacks throw an exception when called
  * as a result of Backbone.history.navigate({trigger:true}),
  * the exception isn't visible at the console, and the URL
@@ -15,40 +33,56 @@ var ChromaRouter = Backbone.Router.extend({
     "configure/": "configureIndex",
     "dashboard/": "dashboard",
     "command/:id/": 'command_detail',
+    "target/:id/": 'target_detail',
+    "host/:id/": 'server_detail',
+    "storage_resource/:id/": 'storage_resource_detail',
     "job/:id/": 'job_detail',
     "": "dashboard",
     "alert/": "alert",
     "event/": "event",
-    "log/": "log",
+    "log/": "log"
   },
-  command_detail: function(id) 
+  object_detail: function(id, model_class, view_class, title_attr)
   {
-    var c = new Command({id: id});
+    var c = new model_class({id: id});
     c.fetch({success: function(model, response) {
-      var mydiv = $("<div></div>")
+      var mydiv = $("<div></div>");
+
+      var title;
+      if (title_attr){
+        title = c.get(title_attr);
+      } else {
+        title = undefined;
+      }
       mydiv.dialog({
-        buttons: [{text: "Close", class: "close", click: function(){}}],
+        buttons: [{text: "Close", 'class': "close", click: function(){}}],
         width: 400,
-        modal: true
-      })
-      var cd = new CommandDetail({model: c, el: mydiv.parent()});
+        modal: true,
+        title: title
+      });
+      var cd = new view_class({model: c, el: mydiv.parent()});
       cd.render();
     }})
   },
+  command_detail: function(id)
+  {
+    this.object_detail(id, Command, CommandDetail);
+  },
+  target_detail: function(id)
+  {
+    this.object_detail(id, Target, TargetDetail, 'label');
+  },
+  storage_resource_detail: function(id)
+  {
+    this.object_detail(id, StorageResource, StorageResourceDetail, 'class_name');
+  },
   job_detail: function(id) 
   {
-    var j = new Job({id: id});
-    j.fetch({success: function(model, response) {
-      var dialog = $("<div></div>")
-      dialog.dialog({
-        buttons: [{text: "Close", class: "close", click: function(){}}],
-        width: 600,
-        height: 600,
-        modal: true
-      })
-      var view = new JobDetail({model: j, el: dialog.parent()})
-      view.render();
-    }})
+    this.object_detail(id, StorageResource, StorageResourceDetail);
+  },
+  server_detail: function(id)
+  {
+    this.object_detail(id, Server, ServerDetail);
   },
   alert: function()
   {
@@ -90,7 +124,7 @@ var ChromaRouter = Backbone.Router.extend({
     $("#tabs").tabs('select', '#' + tab + "-tab");
   },
   configure: function(tab) {
-    this.configureTab(tab)
+    this.configureTab(tab);
     if (tab == 'filesystem') {
       this.filesystemList();
     } else if (tab == 'server') {
@@ -131,4 +165,4 @@ var ChromaRouter = Backbone.Router.extend({
     $('#fsSelect').attr("value","");
     $('#intervalSelect').attr("value","");
   }
-})
+});

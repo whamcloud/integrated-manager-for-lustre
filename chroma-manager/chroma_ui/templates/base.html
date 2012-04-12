@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html>
   <head>
-
+    {% include 'target_detail.html' %}
+    {% include 'server_detail.html' %}
+    {% include 'command_detail.html' %}
+    {% include 'storage_resource_detail.html' %}
     <div style="display:none">
       {% include 'login_dialog.html' %}
-      {% include 'target_dialog.html' %}
-      {% include 'command_dialog.html' %}
     </div>
     <script type='text/javascript'>
       // Take a javascript copy of the STATIC_URL variable
       // so that we can access it from static .js code
       var STATIC_URL = '{{STATIC_URL}}';
+      var UI_ROOT = "/ui/";
     </script>
 
     <link rel="stylesheet" href="{{STATIC_URL}}css/base.css" type="text/css" />
@@ -19,9 +21,9 @@
     <link href="{{STATIC_URL}}css/clo_BreadCrumb.css" rel="stylesheet" type="text/css" />
 
     <link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="{{STATIC_URL}}css/target_dialog.css" type='text/css' />
+    <link rel="stylesheet" href="{{STATIC_URL}}css/target_detail.css" type='text/css' />
     <link href="{{STATIC_URL}}css/js-graph-it.css" rel="stylesheet" type="text/css" />
-    <link href="{{STATIC_URL}}css/storage_resource_dialog.css" rel="stylesheet" type="text/css" />
+    <link href="{{STATIC_URL}}css/storage_resource_detail.css" rel="stylesheet" type="text/css" />
     <link href="{{STATIC_URL}}css/jquery.alerts.css" rel="stylesheet" type="text/css" />
 
     <link rel="stylesheet" href="{{STATIC_URL}}css/notifications.css" type='text/css' />
@@ -60,9 +62,10 @@
 
     <!-- Application (individual panes) -->
     <script type='text/javascript' src="{{STATIC_URL}}js/resource_graph.js"></script>
-    <script type='text/javascript' src="{{STATIC_URL}}js/target_dialog.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_dialog.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/command_dialog.js"></script>
+    <script type='text/javascript' src="{{STATIC_URL}}js/server_detail.js"></script>
+    <script type='text/javascript' src="{{STATIC_URL}}js/target_detail.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_detail.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/command_detail.js"></script>
 
 
     <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
@@ -120,7 +123,7 @@
 
         new ChromaRouter();
         Api.on_available(function() {
-          Backbone.history.start({root: "/ui/", pushState: true})
+          Backbone.history.start({root: UI_ROOT, pushState: true})
         });
     });
   </script>

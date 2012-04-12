@@ -10,25 +10,34 @@ Backbone.sync = function(method, model, options) {
   var outer_success = options.success;
   var outer_this = this;
   options.success = function() {
-    var data = arguments[0]
-    if (data.meta != undefined && data.objects != undefined) {
+    var data = arguments[0];
+
+    // If we got data, and it looks like a tastypie meta/objects body
+    // then just extract the .objects to give Backbone the list it
+    // expects
+    if (data && data.meta != undefined && data.objects != undefined) {
       arguments[0] = data.objects;
     }
     outer_success.apply(outer_this, arguments);
-  }
+  };
 
   var getValue = function(object, prop) {
     if (!(object && object[prop])) return null;
     return _.isFunction(object[prop]) ? object[prop]() : object[prop];
   };
   var url = options.url || getValue(model, 'url') || urlError();
-  var data = options.data || JSON.stringify(model.toJSON());
+  var data = options.data || model.toJSON();
   var type = {
     'create': 'POST',
     'update': 'PUT',
     'delete': 'DELETE',
     'read':   'GET'
-  }[method]
+  }[method];
+
+  // Backbone composes urls without a trailing slash
+  if (url.substr(url.length - 1) !== '/') {
+    url = url + "/";
+  }
 
   Api.call(type, url, data, success_callback = options.success);
 }
@@ -199,7 +208,6 @@ var Api = function() {
   /* Wrap API calls to tastypie paginated methods such that
      jquery.Datatables understands the resulting format */
   var get_datatables = function(url, data, callback, settings, kwargs, datatable) {
-    var kwargs = kwargs;
     if (kwargs == undefined) {
       kwargs = {}
     }

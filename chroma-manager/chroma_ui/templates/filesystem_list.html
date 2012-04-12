@@ -37,11 +37,11 @@
               } else {
                 row.mds_hostname = "";
               }
-              row.ost_count = row.osts.length
-              row.bytes_total = formatBytes(row.bytes_total)
-              row.bytes_free = formatBytes(row.bytes_free)
-              row.state_transitions = stateTransitionButtons(row)
-              row.notification_icons = LiveObject.icons(row)
+              row.ost_count = row.osts.length;
+              row.bytes_total = formatBytes(row.bytes_total);
+              row.bytes_free = formatBytes(row.bytes_free);
+              row.state_transitions = LiveObject.actions(row);
+              row.notification_icons = LiveObject.icons(row);
             });
             callback(data);
           }, settings, {});

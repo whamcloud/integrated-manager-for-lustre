@@ -25,13 +25,14 @@
             //console.log(data);
             var processed_data = [];
             $.each(data.aaData, function(i, row) {
-              row['label'] = LiveObject.label(row),
-              row['state'] = LiveObject.state(row),
-              row['actions'] = stateTransitionButtons(row),
-              row['icons'] = LiveObject.icons(row)
+              row['label'] = LiveObject.label(row);
+              row['state'] = LiveObject.state(row);
+              row['actions'] = LiveObject.actions(row);
+              row['icons'] = LiveObject.icons(row);
               if (!row['fqdn']) {
-                row['fqdn'] = row['address']
+                row['fqdn'] = row['address'];
               }
+              row['fqdn'] = object_properties_link(row, row['fqdn']);
             });
             callback(data);
           }, settings);

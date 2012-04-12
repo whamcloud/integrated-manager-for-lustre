@@ -1,0 +1,28 @@
+<script type="text/template" id="storage_resource_detail_template">
+    <div class="storage_resource_detail">
+        <div>
+        <span class='resource_name'>Name:
+            <input type='text' class='alias' value='<%= alias ? alias : default_alias %>'/>
+        </span>
+        <button class='save_alias'>Save</button>
+        <button class='reset_alias'>reset</button>
+        <% if (deletable) { %>
+        <button class='del'>Delete</button>
+        <% } %>
+
+        <table class="storage_attributes properties">
+            <% $.each(attributes, function(name, attr_info) { %>
+            <tr>
+                <th><%= attr_info.label %></th>
+                <td><%= attr_info.markup %></td>
+            </tr>
+            <% }); %>
+        </table>
+
+        </div>
+        <div class='storage_alerts'>
+        </div>
+        <table class="storage_statistics">
+        </table>
+    </div>
+</script>

@@ -48,6 +48,23 @@ var LiveObject = function()
     return spanMarkup(obj, ['object_state'], obj.state)
   }
 
+  function actions(stateful_object)
+  {
+    var available_transitions = stateful_object.available_transitions;
+
+    var ops_action="";
+    var action="<span class='transition_buttons' data-resource_uri='" + stateful_object.resource_uri + "'>";
+    var button_class = "ui-state-default ui-corner-all";
+    $.each(available_transitions, function(i, transition)
+    {
+      var function_name = "stateTransition(\"" + stateful_object.resource_uri + "\", \"" + transition.state + "\")"
+      ops_action = "<button" + " onclick='"+ function_name + "'>" + transition.verb + "</button>&nbsp;";
+      action += ops_action;
+    });
+    action += "</span>";
+    return action;
+  }
+
   return {
     alertIcon: alertIcon,
     alertList: alertList,
@@ -55,7 +72,8 @@ var LiveObject = function()
     busyIcon: busyIcon,
     icons: icons,
     label: label,
-    state: state
+    state: state,
+    actions: actions
   }
 }();
 
@@ -467,7 +485,7 @@ var CommandNotification = function() {
         });
 
         $(".transition_buttons[data-resource_uri='" + uri + "']").each(function () {
-          $(this).html(stateTransitionButtons(obj));
+          $(this).html(LiveObject.actions(obj));
         });
       },
       {404:function () {

@@ -10,7 +10,6 @@
 	visibility: hidden;
 }
 
-
 /* float clearing for IE6 */
 * html .module
 {
@@ -533,9 +532,6 @@ table.fs th:first-child {
     text-align: right;
 }
 
-.fw{
-	font-weight:bold;
-}
 .txtleft{
 	text-align:left;
 	padding-left:10px;
@@ -633,7 +629,28 @@ h2.section_header {
     margin: 0;
     padding-left: 3px;
     text-align:left;
+    vertical-align: top;
 }
+
+tr.log_error {
+    color: #990000;
+    margin-right: 2px;
+}
+
+tr.log_info {
+    border-right: 2px solid green;
+}
+
+.log_line a {
+    color: #111;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.log_line a:hover {
+    text-decoration: underline;
+}
+
 /* css for timepicker */
 .ui-timepicker-div .ui-widget-header{ margin-bottom: 8px; }
 .ui-timepicker-div dl{ text-align: left; }
@@ -646,7 +663,7 @@ span.transition_buttons {
 }
 
 .no_notification {
-  background-color:'#F0F0F0';
+  background-color: #F0F0F0;
   font-family:'Verdana, Arial, Helvetica, sans-serif';
   font-size:12px;
 }
@@ -656,13 +673,6 @@ span.transition_buttons {
   margin-left:5px; 
   height:300px;
   overflow:auto;
-}
-
-tr.log_error {
-  color: #ff0000;
-}
-
-tr.log_info {
 }
 
 div.toplevel {
@@ -859,4 +869,94 @@ ul.navigation {
 body {
   margin: 0px;
   padding: 0px;
+}
+
+div.step_header {
+    margin-bottom: 12px;
+}
+
+div.step_body {
+    padding-left: 12px;
+}
+
+span.step_number {
+    font-size: 14pt;
+    font-weight: bold;
+    text-shadow: #aaa 2px 2px 3px;
+}
+
+span.step_caption {
+    font-size: 12pt;
+}
+
+span.volume_chooser_selected {
+    margin-left: 6px;
+}
+
+span.volume_chooser_selected {
+    margin-left: 6px;
+}
+
+.volume_chooser_background {
+    border-radius: 3px;
+    /*background: #eee;*/
+    margin-bottom: 6px;
+}
+
+.volume_chooser_background table {
+    /*height: 100%;*/
+    width: 100%;
+}
+
+.volume_chooser_background table .rowhighlight {
+    background-color: #09f;
+}
+
+.volume_chooser_expander {
+    width: 100%;
+    max-height: 300px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.volume_chooser_header {
+}
+
+div.mdt_advanced {
+    display: none;
+}
+
+table.properties {
+    border-top: 1px solid gray;
+    border-bottom: 1px solid gray;
+    border-collapse: collapse;
+    margin-top: 12px;
+    width: 100%;
+    font-size: 10pt;
+}
+
+table.properties tr {
+    border: 1px solid #c0c0c0;
+}
+
+table.properties tr.odd {
+    background: #ffffff;
+}
+
+table.properties tr.even {
+    background: #f9f9f9;
+}
+
+table.properties th {
+    font-weight: 550;
+    text-align: left;
+    padding-left: 3px;
+    border-right: 1px solid #c0c0c0;
+    white-space: nowrap;
+}
+
+table.properties td {
+    font-weight: normal;
+    text-align: left;
+    white-space: nowrap;
 }
