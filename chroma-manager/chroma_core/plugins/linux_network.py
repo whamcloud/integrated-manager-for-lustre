@@ -18,6 +18,8 @@ class NetworkInterface(BaseStorageResource):
 
 
 class LinuxNetwork(BaseStoragePlugin):
+    internal = True
+
     def _linux_update(self, data):
         for iface in data:
             iface_resource, created = self.update_or_create(NetworkInterface, name = iface['name'])

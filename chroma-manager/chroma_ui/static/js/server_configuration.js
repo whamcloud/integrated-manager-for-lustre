@@ -1,9 +1,9 @@
 
 var add_host_dialog = function() {
-  var template = _.template($('#add_host_dialog_template').html())
+  var template = _.template($('#add_host_dialog_template').html());
   var html = template();
-  var element = $(html)
-  element.dialog({title: 'Add server', resizable: false})
+  var element = $(html);
+  element.dialog({title: 'Add server', resizable: false, modal: true});
 
   element.find('.add_host_close_button').button()
   element.find('.add_host_confirm_button').button()

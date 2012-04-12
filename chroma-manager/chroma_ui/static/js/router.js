@@ -46,7 +46,7 @@ var ChromaRouter = Backbone.Router.extend({
   {
     var c = new model_class({id: id});
     c.fetch({success: function(model, response) {
-      var mydiv = $("<div></div>");
+      var mydiv = $("<div style='overflow-y: scroll;'></div>");
 
       var title;
       if (title_attr){
@@ -56,9 +56,15 @@ var ChromaRouter = Backbone.Router.extend({
       }
       mydiv.dialog({
         buttons: [{text: "Close", 'class': "close", click: function(){}}],
-        width: 400,
+        width: 600,
+        height: 600,
         modal: true,
-        title: title
+        title: title,
+        open: function(event, ui) {
+          // Hide the window close button to have a single close handler
+          // (the button) which manages history.
+          mydiv.parent().find('.ui-dialog-titlebar-close').hide();
+        }
       });
       var cd = new view_class({model: c, el: mydiv.parent()});
       cd.render();

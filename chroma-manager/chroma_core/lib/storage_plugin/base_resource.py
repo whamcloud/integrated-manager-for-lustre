@@ -193,7 +193,7 @@ class BaseStorageResource(object):
     def __str__(self):
         return "<%s %s>" % (self.__class__.__name__, self._handle)
 
-    def get_label(self, ancestors=[]):
+    def get_label(self):
         """Subclasses should implement a function which formats a string for
         presentation, possibly in a tree display as a child of 'parent' (a
         BaseStorageResource instance) or if parent is None then for display

@@ -45,12 +45,16 @@
         });
 
         Api.post("storage_resource/",
-                {attrs:attrs,
-                    plugin_name:module_name,
-                    class_name:class_name},
-                success_callback = function (data) {
-                    $('#storage_resource_create_dialog').dialog('close');
-                });
+          {
+            attrs:attrs,
+            plugin_name:module_name,
+            class_name:class_name
+          },
+          success_callback = function (data) {
+            $('#storage_resource_create_dialog').dialog('close');
+            $('#resource_table').dataTable().fnDraw();
+          }
+        );
     }
 
     function storage_resource_create_load_fields() {
@@ -85,7 +89,7 @@
         $('#storage_resource_create_save').attr('disabled', true);
         $('#storage_resource_create_dialog').dialog('open');
 
-        Api.get("storage_resource_class/", {user_creatable:true, internal:false},
+        Api.get("storage_resource_class/", {user_creatable:true, plugin_internal:false, limit: 0},
                 success_callback = function (data) {
                     var option_markup = "";
                     $.each(data.objects, function (i, resource_class) {
@@ -174,7 +178,7 @@
           load_resource_table();
       });
       /* Initial population of dropdown of resource classes */
-      Api.get("storage_resource_class/", {},
+      Api.get("storage_resource_class/", {plugin_internal: false, limit: 0},
         success_callback = function(data) {
           options = ""
           if (data.objects.length == 0) {

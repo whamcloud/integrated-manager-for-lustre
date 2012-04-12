@@ -23,7 +23,6 @@
               </table>
           </div>
           <div id='devices_tab'>
-            <div class='resource_graph_canvas'></div>
           </div>
 
           <% if (target.conf_params) { %>
@@ -46,4 +45,15 @@
           <% } %>
         </div>
     </div>
+</script>
+
+<script type='text/template' id='storage_resource_list_template'>
+    <table>
+        <% _.each(storage_resources, function(resource) { %>
+        <tr>
+            <td><%= uri_properties_link(resource.resource_uri, resource.alias) %></td>
+            <td><%= LiveObject.alertIcon(resource) %> </td>
+        </tr>
+        <% }); %>
+    </table>
 </script>
