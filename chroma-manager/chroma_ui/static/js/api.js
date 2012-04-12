@@ -541,9 +541,9 @@ function formatBytes(bytes) {
     		bytes = formatNumber(bytes / 1024, 0) + 'KB';
   		} else {
     		bytes = formatNumber(bytes, 0) + 'b';
-			};
- 		};
-	};
+			}
+ 		}
+	}
   return bytes;
 }
 
@@ -561,8 +561,8 @@ function formatBigNumber(number) {
 			if (number >= 1000) {
     		number = Math.floor(number / 1000) + 'k';
   		}
- 		};
-	};
+ 		}
+	}
   return number;
 }
 
@@ -575,10 +575,10 @@ function shortLocalTime(str)
       return n
     }
   }
-  var date = new Date(str)
-  var days_elapsed = ((new Date()) - date) / (3600 * 24 * 1000)
-  var localTime = pad(date.getHours()) + ":" + pad(date.getMinutes())
-  var localDate = date.getFullYear() + "/" + pad(date.getMonth()) + "/" + pad(date.getDate())
+  var date = Date.parse(str);
+  var days_elapsed = ((new Date()) - date) / (3600 * 24 * 1000);
+  var localTime = pad(date.getHours()) + ":" + pad(date.getMinutes());
+  var localDate = date.getFullYear() + "/" + pad(date.getMonth()) + "/" + pad(date.getDate());
   if (days_elapsed < 1.0) {
     return localTime
   } else {
