@@ -960,3 +960,11 @@ table.properties td {
     text-align: left;
     white-space: nowrap;
 }
+
+.job_row a.navigation {
+    text-decoration: none;
+}
+
+.job_row a.navigation:hover {
+    text-decoration: underline;
+}

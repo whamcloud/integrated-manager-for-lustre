@@ -1,7 +1,9 @@
 <script type="text/template" id="job_row_template">
-  <span id='job_row'>
-    <%= _.template($('#job_icon_template').html(), {job: job}) %>
-    <span class='job_description'><%= job.description %></span>
+  <span class='job_row'>
+    <a class='navigation' href="<%= "job/" + job.id + "/" %>">
+        <%= _.template($('#job_icon_template').html(), {job: job}) %>
+        <span class='job_description'><%= job.description %></span>
+    </a>
   </span>
 </script>
 
@@ -62,7 +64,6 @@
     <% _.each(jobs, function(job) { %>
       <li>
       <%= _.template($('#job_row_template').html(), {job: job}) %>
-      <%= _.template($('#job_link_template').html(), {job: job}) %>
       <%= _.template($('#job_buttons_template').html(), {job: job}) %>
         <% if (job.children.length) { %>
           <%= _.template($('#job_list_template').html(), {jobs: job.children}) %>
@@ -74,9 +75,21 @@
 
 <script type="text/template" id="command_detail_template">
   <div style='font-size: 10pt;'>
-    <div class='command_params'>
-      <%= message %>
-    </div>
+      <h2>Summary</h2>
+      <table class='properties'>
+          <tbody>
+          <tr>
+            <th>Description:</th><td><%= message %></td>
+          </tr>
+          <tr>
+            <th>Created at:</th><td><%= shortLocalTime(created_at) %></td>
+          </tr>
+          <tr>
+              <th>Status:</th><td><%= complete ? (errored ? "Error" : (cancelled ? "Cancelled" : "Successful")) : "Incomplete" %></td>
+          </tr>
+          </tbody>
+      </table>
+    <h2>Detail</h2>
     <div class='command_job_list'>
       <%= _.template($('#job_list_template').html(), {jobs: jobs_tree}) %>
     </div>
@@ -137,7 +150,6 @@
       <% _.each(job.wait_for, function(awaited_job) { %>
         <li>
           <%= _.template($('#job_row_template').html(), {job: awaited_job}) %>
-          <%= _.template($('#job_link_template').html(), {job: awaited_job}) %>
         </li>
       <% }); %>
     </ul>

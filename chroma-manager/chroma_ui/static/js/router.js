@@ -84,11 +84,11 @@ var ChromaRouter = Backbone.Router.extend({
   },
   job_detail: function(id) 
   {
-    this.object_detail(id, StorageResource, StorageResourceDetail);
+    this.object_detail(id, Job, JobDetail, 'description');
   },
   server_detail: function(id)
   {
-    this.object_detail(id, Server, ServerDetail);
+    this.object_detail(id, Server, ServerDetail, 'label');
   },
   alert: function()
   {

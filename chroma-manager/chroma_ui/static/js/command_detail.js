@@ -5,8 +5,8 @@ var UriCollection = Backbone.Collection.extend({
   fetch_uris: function(uris, success) {
     var ids = [];
     $.each(uris, function(i, uri) {
-      var tokens = uri.split("/")
-      var id = tokens[tokens.length - 2]
+      var tokens = uri.split("/");
+      var id = tokens[tokens.length - 2];
       ids.push(id);
     });
     if (ids.length) {
@@ -23,18 +23,17 @@ var Job = Backbone.Model.extend({
 
 var JobCollection = UriCollection.extend({
   model: Job,
-  url: "/api/job/",
-
-})
+  url: "/api/job/"
+});
 
 var Step = Backbone.Model.extend({
-  urlRoot: "/api/step/",
+  urlRoot: "/api/step/"
 });
 
 var StepCollection = UriCollection.extend({
   model: Step,
   url: "/api/step/"
-})
+});
 
 
 
@@ -179,6 +178,7 @@ var CommandDetail = Backbone.View.extend({
   },
   close: function() {
     this.remove();
+    window.history.back();
   }
 });
 
@@ -219,6 +219,7 @@ var JobDetail = Backbone.View.extend({
   },
   close: function() {
     this.remove();
+    window.history.back();
   }
 });
 
