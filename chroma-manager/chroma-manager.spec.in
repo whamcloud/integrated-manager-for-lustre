@@ -58,7 +58,7 @@ echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 %build
 %{__python} setup.py build
 # workaround setuptools inanity for top-level datafiles
-cp -a monitor.wsgi build/lib
+cp -a chroma-manager.wsgi build/lib
 
 %install
 %{__python} setup.py install --skip-build --root=%{buildroot}
