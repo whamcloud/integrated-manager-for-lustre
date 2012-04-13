@@ -1,6 +1,6 @@
 include Makefile
 include logrotate.cfg
-include monitor.wsgi
+include chroma-manager.wsgi
 include chroma_core/fixtures/*
 include chroma_core/bin/*.py
 include chroma_core/bin/storage-daemon
