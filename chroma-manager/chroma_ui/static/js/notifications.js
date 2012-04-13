@@ -54,11 +54,9 @@ var LiveObject = function()
 
     var ops_action="";
     var action="<span class='transition_buttons' data-resource_uri='" + stateful_object.resource_uri + "'>";
-    var button_class = "ui-state-default ui-corner-all";
     $.each(available_transitions, function(i, transition)
     {
-      var function_name = "stateTransition(\"" + stateful_object.resource_uri + "\", \"" + transition.state + "\")"
-      ops_action = "<button" + " onclick='"+ function_name + "'>" + transition.verb + "</button>&nbsp;";
+      ops_action = "<button " + "data-resource_uri='" + stateful_object.resource_uri + "' data-state='" + transition.state + "' onclick='stateTransition.apply(this)'>" + transition.verb + "</button>&nbsp;";
       action += ops_action;
     });
     action += "</span>";

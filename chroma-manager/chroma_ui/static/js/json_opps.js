@@ -1,6 +1,10 @@
 
-stateTransition = function (url, state)
+stateTransition = function ()
 {
+  console.log(this);
+  var url = $(this).data('resource_uri');
+  var state = $(this).data('state');
+
   Api.put(url, {dry_run: true, state: state}, 
   success_callback = function(data)  
   {
@@ -31,10 +35,7 @@ stateTransition = function (url, state)
     }
 
     if (requires_confirmation) {
-      console.log('requires confirmation');
-
       var markup = "<div style='overflow-y: auto; max-height: 700px;' id='transition_confirmation_dialog'>" + confirmation_markup + "</div>";
-      console.log(markup);
       $(markup).dialog({'buttons': {
         'Cancel': function() {$(this).dialog('close');},
         'Confirm':
