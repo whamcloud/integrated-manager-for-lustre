@@ -291,6 +291,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
         authentication = AnonymousAuthentication()
         excludes = ['not_deleted']
         ordering = ['name']
+        filtering = {'id': ['exact', 'in']}
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'delete', 'put']
         readonly = ['bytes_free', 'bytes_total', 'files_free', 'files_total', 'mount_command']

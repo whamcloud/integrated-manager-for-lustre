@@ -659,7 +659,7 @@ function init_charts_global() {
           update_data.push([timestamp, datapoint.data.stats_write_bytes])
         });
 
-        var target = ApiCache.target.get(target_id);
+        var target = ApiCache.get('target', target_id);
         var label;
         if (target) {
           label = target.attributes.label;
@@ -773,7 +773,7 @@ function init_charts_global() {
 
       _.each(data, function(fs_data, fs_id) {
         var name;
-        var filesystem = ApiCache.filesystem.get(fs_id)
+        var filesystem = ApiCache.get('filesystem', fs_id);
         if (filesystem) {
           name = filesystem.attributes.name;
         } else {

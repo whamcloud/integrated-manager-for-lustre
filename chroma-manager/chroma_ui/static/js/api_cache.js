@@ -7,7 +7,7 @@ var ApiCache = function(){
   var FilesystemCollection = Backbone.Collection.extend({
     model: Filesystem,
     url: "/api/filesystem/"
-  })
+  });
 
   var Target = Backbone.Model.extend({
     urlRoot: "/api/filesystem/"
@@ -16,10 +16,10 @@ var ApiCache = function(){
   var TargetCollection = Backbone.Collection.extend({
     model: Target,
     url: "/api/target/"
-  })
+  });
 
-  var filesystem_collection = new FilesystemCollection()
-  var target_collection = new TargetCollection()
+  var filesystem_collection = new FilesystemCollection();
+  var target_collection = new TargetCollection();
 
   var init = function(params) {
     params = params || {};
@@ -36,11 +36,28 @@ var ApiCache = function(){
         }
       }});
     });
+  };
+
+  function get(obj_type, obj_id) {
+    var collection = undefined;
+    if (obj_type == 'target') {
+      collection = target_collection;
+    } else if (obj_type == 'filesystem') {
+      collection = filesystem_collection;
+    }
+
+    var object = collection.get(obj_id);
+    if (!object) {
+      console.log('Fetching ' + obj_id);
+      collection.fetch({add:true, data: {id: obj_id}});
+    }
+    return object;
   }
 
   return {
     filesystem: filesystem_collection,
     target: target_collection,
+    get: get,
     init: init
   }
 }();
