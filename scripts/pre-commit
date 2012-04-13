@@ -80,7 +80,7 @@ CHECKS = [
         'command': 'pep8 -r --ignore=E501,E251 %s',
         'match_files': ['.*\.py$', '.*setup.py.in'],
         'ignore_files': ['.*migrations.*', '.*manage.py', '.*/chroma-director/.*'],
-        'print_filename': False,
+        'print_filename': False
     },
     {
         'output': 'Checking boilerplate...',
@@ -90,6 +90,7 @@ CHECKS = [
             '.*chroma_ui/static/js/[^/]+\.js$'
         ],
         'ignore_files': [
+            '.*production_version.py$',
             '.*/chroma-manager/docs/conf.py',
             '.*/chroma-manager/userdocs/conf.py',
             '.*/chroma-manager/docs/lib/tastydoc.py',
