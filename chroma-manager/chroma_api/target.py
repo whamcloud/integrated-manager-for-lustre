@@ -110,7 +110,7 @@ class TargetResource(MetricResource, ConfParamResource):
     primary_server = fields.ToOneField('chroma_api.host.HostResource', 'primary_host')
     primary_server_name = fields.CharField(help_text = "Presentation convenience.  Human\
             readable label for the primary server for this target")
-    failover_servers = fields.ToManyField('chroma_api.host.HostResource', 'failover_hosts')
+    failover_servers = fields.ToManyField('chroma_api.host.HostResource', 'failover_hosts', null = True)
     failover_server_name = fields.CharField(help_text = "Presentation convenience.  Human\
             readable label for the secondary server for this target")
 
