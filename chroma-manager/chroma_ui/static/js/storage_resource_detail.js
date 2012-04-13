@@ -1,3 +1,8 @@
+//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
+
 
 var StorageResource = Backbone.Model.extend({
   urlRoot: "/api/storage_resource/"

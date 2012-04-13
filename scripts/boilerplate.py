@@ -18,6 +18,13 @@ PYTHON_BOILERPLATE = """#
 
 """
 
+JAVASCRIPT_BOILERPLATE = """//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
+
+"""
+
 
 def apply_boilerplate(filename):
     if filename.endswith(".py"):
@@ -44,8 +51,12 @@ def apply_boilerplate(filename):
 
         output = "".join(lines[0:insert_at]) + PYTHON_BOILERPLATE + "".join(lines[insert_at:])
         open(filename, 'w').write(output)
+    elif filename.endswith(".js"):
+        if not has_boilerplate(filename):
+            text = JAVASCRIPT_BOILERPLATE + open(filename, 'r').read()
+            open(filename, 'w').write(text)
     else:
-        raise NotImplementedError("Unknown extension")
+        raise NotImplementedError("Unknown extension %s" % filename)
 
 
 def has_boilerplate(filename):
@@ -63,8 +74,14 @@ def has_boilerplate(filename):
                 return False
             else:
                 return True
+    elif filename.endswith(".js"):
+        text = open(filename, 'r').read()
+        if text.startswith(JAVASCRIPT_BOILERPLATE):
+            return True
+        else:
+            return False
     else:
-        raise NotImplementedError("Unknown extension")
+        raise NotImplementedError("Unknown extension %s" % filename)
 
 
 def freshen_boilerplate(filename):

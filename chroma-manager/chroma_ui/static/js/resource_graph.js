@@ -1,3 +1,8 @@
+//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
+
 
 function load_resource_graph(container, target_id) {
     Api.get("target/" + target_id + "/resource_graph/", {},

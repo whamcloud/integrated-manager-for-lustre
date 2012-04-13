@@ -1,3 +1,8 @@
+//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
+
 /**************************************************************************
  * File Name - custome_ost.js
  * Description - Contains function to plot pie, line and bar charts on OST Screen

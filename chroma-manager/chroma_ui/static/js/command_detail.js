@@ -1,3 +1,8 @@
+//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
+
 
 /* Subclass of Backbone.Collection which provides
  * methods for working with URIs instead of IDs */

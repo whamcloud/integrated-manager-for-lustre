@@ -59,7 +59,9 @@ CHECKS = [
     {
         'output': 'Running Pyflakes...',
         'command': 'pyflakes %s',
-        'match_files': ['.*\.py$', '.*setup.py.in'],
+        'match_files': [
+            '.*\.py$',
+            '.*setup.py.in'            ],
         # NB excluding chroma_core/models/__init__.py because imports things
         # but don't use them
         'ignore_files': ['.*settings/.*',
@@ -83,7 +85,10 @@ CHECKS = [
     {
         'output': 'Checking boilerplate...',
         'command': 'scripts/boilerplate.py test %s',
-        'match_files': ['.*\.py$'],
+        'match_files': [
+            '.*\.py$',
+            '.*chroma_ui/static/js/[^/]+\.js$'
+        ],
         'ignore_files': [
             '.*/chroma-manager/docs/conf.py',
             '.*/chroma-manager/userdocs/conf.py',

@@ -1,3 +1,8 @@
+//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
+
 /*******************************************************************************
  * File name: custom_dasboard.js
  * Description: Common functions required by dashboard
