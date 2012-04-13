@@ -25,7 +25,7 @@ class Command(BaseCommand):
             'security_group': 'chroma-manager'}
         try:
             f = open("local_settings.py", "a")
-            f.write("CHROMA_APPLIANCE = %s" % json.dumps(config))
+            f.write("CHROMA_MANAGER = %s\n" % json.dumps(config))
             f.close()
         except:
             print("Please add this to your local_settings.py:")
