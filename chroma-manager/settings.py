@@ -274,7 +274,7 @@ def setup_log(log_name, filename = None):
     return logger
 
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
-EMAIL_SENDER = "chroma-server@whamcloud.com"
+EMAIL_SENDER = "chroma-manager@whamcloud.com"
 
 _plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'chroma_core', 'plugins')
 sys.path.append(_plugins_path)
