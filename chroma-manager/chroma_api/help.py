@@ -2,7 +2,6 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-from tastypie.validation import Validation
 
 import chroma_core.lib.conf_param
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem

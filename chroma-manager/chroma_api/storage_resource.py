@@ -23,7 +23,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from chroma_api.storage_resource_class import filter_class_ids
 
 from chroma_core.lib.storage_plugin.daemon import ScanDaemonRpc
-from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 
 class StorageResourceResource(MetricResource, ModelResource):
@@ -80,11 +79,8 @@ class StorageResourceResource(MetricResource, ModelResource):
 
     def get_list(self, request, **kwargs):
         if 'ancestor_of' in request.GET:
-            objects = self.obj_get_list(request=request, **self.remove_api_resource_names(kwargs))
-
             record = StorageResourceRecord.objects.get(id = request.GET['ancestor_of'])
-            ancestor_records = set()
-            ancestor_records |= set(ResourceQuery().record_all_ancestors(record))
+            ancestor_records = set(ResourceQuery().record_all_ancestors(record))
 
             bundles = [self.build_bundle(obj=obj, request=request) for obj in ancestor_records]
             dicts = [self.full_dehydrate(bundle) for bundle in bundles]

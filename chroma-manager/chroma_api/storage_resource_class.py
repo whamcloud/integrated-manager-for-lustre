@@ -2,7 +2,6 @@
 # ==============================
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
-from tastypie.constants import ALL
 from chroma_core.lib.storage_plugin.api import attributes
 
 from chroma_core.models import StorageResourceClass

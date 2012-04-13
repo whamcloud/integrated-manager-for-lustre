@@ -64,6 +64,7 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
         import re
 
         substitutions = []
+
         def substitute(object, match, group = 1):
             resource_uri = api.get_resource_uri(object)
             substitutions.append({
@@ -71,7 +72,6 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
                 'end': match.end(group),
                 'label': object.get_label(),
                 'resource_uri': resource_uri})
-
 
         # TODO: detect other NID types (cray?)
         nid_regex = re.compile("(\d{1,3}\.){3}\d{1,3}@(tcp|ib)(_\d+)?")
