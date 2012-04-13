@@ -1,3 +1,9 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
 import chroma_agent.audit
 from chroma_agent.audit import BaseAudit
 from chroma_agent.audit.mixins import FileSystemMixin

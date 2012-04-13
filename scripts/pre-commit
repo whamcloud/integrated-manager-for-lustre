@@ -92,8 +92,7 @@ CHECKS = [
             '.*/chroma-manager/.*migrations.*',
             '.*/tests/.*.py',
             '.*/manage.py',
-            '.*/chroma-director/.*',
-            '.*/chroma-agent/.*'],
+            '.*/chroma-director/.*'],
         'print_filename': True
     }
 ]

@@ -1,3 +1,8 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 from chroma_agent.plugins import ActionPlugin
 from chroma_agent.store import AgentStore
