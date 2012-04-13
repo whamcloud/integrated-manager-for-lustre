@@ -1,6 +1,6 @@
 from django.utils import unittest
 import os
-from hydra_agent.audit.node import NodeAudit
+from chroma_agent.audit.node import NodeAudit
 
 
 class TestNodeMetrics(unittest.TestCase):

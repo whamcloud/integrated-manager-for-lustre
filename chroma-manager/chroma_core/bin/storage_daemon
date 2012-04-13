@@ -84,7 +84,7 @@ if __name__ == '__main__':
         foreground = False
 
     if not foreground:
-        PID_FILE = "/var/run/hydra-storage.pid"
+        PID_FILE = "/var/run/chroma-storage.pid"
         from daemon import DaemonContext
         from daemon.pidlockfile import PIDLockFile
 

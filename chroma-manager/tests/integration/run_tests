@@ -53,7 +53,7 @@ if ! $FORCED
         if [ "$?" -ne "0" ]
         then
             echo ""
-            read -p "*****YOUR CLUSTER IS NOT EMPTY! Running integration tests may wipe all hosts and/or targets for the hydra-server specified in your config file for this cluster. Press [Enter] to continue on with the tests..."
+            read -p "*****YOUR CLUSTER IS NOT EMPTY! Running integration tests may wipe all hosts and/or targets for the chroma-manager specified in your config file for this cluster. Press [Enter] to continue on with the tests..."
         fi
 fi
 

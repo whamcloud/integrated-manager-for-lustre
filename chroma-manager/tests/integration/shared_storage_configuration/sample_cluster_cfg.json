@@ -1,8 +1,8 @@
 {
     "failover_is_configured": false,
-    "hydra_servers": [
+    "chroma_managers": [
         {
-            "server_http_url": "http://hydra:8000/",
+            "server_http_url": "http://chroma:8000/",
             "users": [
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
             ]

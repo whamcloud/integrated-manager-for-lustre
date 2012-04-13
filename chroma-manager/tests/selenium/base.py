@@ -116,20 +116,20 @@ class SeleniumBaseTestCase(TestCase):
     def setUp(self):
         from views.login import Login
 
-        if config['hydra_servers']['headless']:
+        if config['chroma_managers']['headless']:
             from pyvirtualdisplay import Display
             display = Display(visible = 0, size = (1280, 1024))
             display.start()
 
         if not self.driver:
-            self.driver = getattr(webdriver, config['hydra_servers']['browser'])()
+            self.driver = getattr(webdriver, config['chroma_managers']['browser'])()
 
         constants = Constants()
         self.wait_time = constants.get_wait_time('standard')
         self.long_wait_time = constants.get_wait_time('long')
-        if not config['hydra_servers']['server_http_url']:
+        if not config['chroma_managers']['server_http_url']:
             raise RuntimeError("Please set server_http_url in config file")
-        self.driver.get(config['hydra_servers']['server_http_url'])
+        self.driver.get(config['chroma_managers']['server_http_url'])
 
         wait_for_any_element(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
         login_view = Login(self.driver)

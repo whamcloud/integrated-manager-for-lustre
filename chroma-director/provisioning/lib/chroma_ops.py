@@ -106,7 +106,7 @@ class ChromaManagerOps(NodeOps):
     def update_deps(self):
         with self.open_session():
             self._setup_chroma_repo()
-            sudo('yum install -y hydra-server hydra-server-cli')
+            sudo('yum install -y chroma-manager chroma-manager-cli')
 
     def setup_chroma(self):
         with self.open_session():
@@ -159,7 +159,7 @@ class ChromaApplianceOps(NodeOps):
         with self.open_session():
             self._setup_chroma_repo()
             # ensure latest version of agent is installed
-            sudo('yum install -y hydra-agent-management')
+            sudo('yum install -y chroma-agent-management')
         
     def mkraid(self):
         with self.open_session():
@@ -229,7 +229,7 @@ class StorageImageOps(ImageOps):
             self._setup_chroma_repo()
             sudo('yum install -y lustre')
             sudo('grubby --set-default "/boot/vmlinuz-2.6.32-*lustre*"')
-            sudo('yum install -y hydra-agent-management')
+            sudo('yum install -y chroma-agent-management')
             put("%s" % (settings.COROSYNC_CONF), "/etc/corosync/corosync.conf", use_sudo = True)
             put("%s" % (settings.COROSYNC_INIT), "/etc/init.d/corosync", use_sudo = True, mode=0755)
             sudo("service corosync start")
@@ -245,4 +245,4 @@ class ManagerImageOps(ImageOps):
             run('wget http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-5.noarch.rpm')
             sudo('rpm -i --force epel-release-6-5.noarch.rpm')
             self._setup_chroma_repo()
-            sudo('yum install -y Django-south hydra-server hydra-server-cli')
+            sudo('yum install -y Django-south chroma-manager chroma-manager-cli')

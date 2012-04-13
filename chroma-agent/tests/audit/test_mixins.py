@@ -2,8 +2,8 @@ from django.utils import unittest
 import tempfile
 import os
 import shutil
-from hydra_agent.audit import BaseAudit
-from hydra_agent.audit.mixins import FileSystemMixin
+from chroma_agent.audit import BaseAudit
+from chroma_agent.audit.mixins import FileSystemMixin
 
 
 class TestFileSystemMixinWithDefaultContext(unittest.TestCase):

@@ -8,7 +8,7 @@ from chroma_core.lib.storage_plugin.api.resources import Resource
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
 from chroma_core.lib.storage_plugin.api.resources import   DeviceNode, LogicalDrive, StoragePool
 
-# This plugin is special, it uses Hydra's built-in infrastructure
+# This plugin is special, it uses chroma-manager internals
 # in a way that third party plugins can't/shouldn't/mustn't
 from chroma_core.models import ManagedHost
 from chroma_core.lib.storage_plugin.base_resource import HostsideResource
@@ -83,9 +83,8 @@ class MdRaid(LogicalDrive):
 
 
 class LocalMount(Resource):
-    """A local filesystem consuming a storage resource -- reported so that
-       hydra knows not to try and use the consumed resource for Lustre e.g.
-       minor things like your root partition."""
+    """Used for marking devices which are already in use, so that
+    we don't offer them for use as Lustre targets."""
     identifier = ScopedId('mount_point')
 
     fstype = attributes.String()

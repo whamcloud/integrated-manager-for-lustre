@@ -11,17 +11,17 @@ from tests.integration.core.testcases import ChromaIntegrationTestCase
 
 class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
     def setUp(self):
-        user = config['hydra_servers'][0]['users'][0]
-        self.hydra_server = AuthorizedHttpRequests(user['username'], user['password'],
-                server_http_url = config['hydra_servers'][0]['server_http_url'])
-        self.reset_cluster(self.hydra_server)
+        user = config['chroma_managers'][0]['users'][0]
+        self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
+                server_http_url = config['chroma_managers'][0]['server_http_url'])
+        self.reset_cluster(self.chroma_manager)
 
     def test_create_filesystem_with_failover(self):
         # Add two hosts as managed hosts
         host_create_command_ids = []
         for host_config in config['lustre_servers'][:2]:
             host_address = host_config['address']
-            response = self.hydra_server.post(
+            response = self.chroma_manager.post(
                 '/api/test_host/',
                 body = {'address': host_address}
             )
@@ -30,7 +30,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             # don't check on its result (it's asynchronous but
             # annoyingly returns a celery task instead of a Command)
 
-            response = self.hydra_server.post(
+            response = self.chroma_manager.post(
                 '/api/host/',
                 body = {'address': host_address}
             )
@@ -39,7 +39,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             host_create_command_ids.append(response.json['command']['id'])
             self.assertTrue(host_id)
 
-            response = self.hydra_server.get(
+            response = self.chroma_manager.get(
                 '/api/host/%s/' % host_id,
             )
             self.assertEqual(response.successful, True, response.text)
@@ -47,10 +47,10 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             self.assertEqual(host['address'], host_address)
 
         # Wait for the host setup and device discovery to complete
-        self.wait_for_commands(self.hydra_server, host_create_command_ids)
+        self.wait_for_commands(self.chroma_manager, host_create_command_ids)
 
         # Verify there are now two hosts in the database.
-        response = self.hydra_server.get(
+        response = self.chroma_manager.get(
             '/api/host/',
         )
         self.assertEqual(response.successful, True, response.text)
@@ -61,7 +61,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
         # Count how many of the reported Luns are ready for our test
         # (i.e. they have both a primary and a secondary node)
-        response = self.hydra_server.get(
+        response = self.chroma_manager.get(
             '/api/volume/',
             params = {'category': 'usable'}
         )
@@ -86,7 +86,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         for volume in ost_volumes:
             self.set_volume_mounts(volume, hosts[1]['id'], hosts[0]['id'])
 
-        response = self.hydra_server.get(
+        response = self.chroma_manager.get(
             '/api/volume/',
             params = {'category': 'usable'}
         )
@@ -124,7 +124,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         self.verify_targets_started_on_host(filesystem_id, 'OST', hosts[1]['nodename'])
 
         # Mount the filesystem
-        response = self.hydra_server.get(
+        response = self.chroma_manager.get(
             '/api/filesystem/%s/' % filesystem_id,
         )
         self.assertEqual(response.successful, True, response.text)
@@ -198,13 +198,13 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             mgt = self.get_targets(filesystem_id, 'MGT')[0]
             _, stdout, _ = self.remote_command(
                 hosts[0]['nodename'],
-                'hydra-agent failback-target --label %s --id %s' % (mgt['label'], mgt['id'])
+                'chroma-agent failback-target --label %s --id %s' % (mgt['label'], mgt['id'])
             )
 
             mdt = self.get_targets(filesystem_id, 'MDT')[0]
             _, stdout, _ = self.remote_command(
                 hosts[0]['nodename'],
-                'hydra-agent failback-target --label %s --id %s' % (mdt['label'], mdt['id'])
+                'chroma-agent failback-target --label %s --id %s' % (mdt['label'], mdt['id'])
             )
 
             # Wait for the targets to move back to their original server

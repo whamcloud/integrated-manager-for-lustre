@@ -1,9 +1,9 @@
 from django.utils import unittest
 import os
-import hydra_agent.audit
-from hydra_agent.audit.local import LocalAudit
-from hydra_agent.audit.node import NodeAudit
-from hydra_agent.audit.lustre import LnetAudit, MdtAudit, MgsAudit
+import chroma_agent.audit
+from chroma_agent.audit.local import LocalAudit
+from chroma_agent.audit.node import NodeAudit
+from chroma_agent.audit.lustre import LnetAudit, MdtAudit, MgsAudit
 
 
 class TestAuditScanner(unittest.TestCase):
@@ -12,9 +12,9 @@ class TestAuditScanner(unittest.TestCase):
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
 
     def test_audit_scanner(self):
-        """hydra_agent.audit.local_audit_classes() should return a list of classes."""
+        """chroma_agent.audit.local_audit_classes() should return a list of classes."""
         list = [cls for cls in
-                hydra_agent.audit.local_audit_classes(self.test_root)]
+                chroma_agent.audit.local_audit_classes(self.test_root)]
         self.assertEqual(list, [LnetAudit, MdtAudit, MgsAudit, NodeAudit])
 
 

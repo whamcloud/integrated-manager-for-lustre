@@ -70,14 +70,14 @@ CHECKS = [
             '.*chroma_core/lib/storage_plugin/api/__init__.py',
             '.*settings.py',
             '.*example_storage_plugin_package/example_storage_plugin/__init__.py',
-            './chroma-director/.*'],
+            '.*/chroma-director/.*'],
         'print_filename': False,
     },
     {
         'output': 'Running pep8...',
         'command': 'pep8 -r --ignore=E501,E251 %s',
         'match_files': ['.*\.py$', '.*setup.py.in'],
-        'ignore_files': ['.*migrations.*', '.*manage.py', './chroma-director/.*'],
+        'ignore_files': ['.*migrations.*', '.*manage.py', '.*/chroma-director/.*'],
         'print_filename': False,
     },
 ]
@@ -146,7 +146,7 @@ def main(all_files, exclude = []):
             return_code = subprocess.call(['python', manage_script, 'validate'], cwd = project_dir)
             result = return_code or result
         else:
-            raise RuntimeError("Cannot run manage.py in %s" % project_dir)
+            print "WARNING: skipping Django model validation"
     
     for check in CHECKS:
         result = check_files(files, check) or result

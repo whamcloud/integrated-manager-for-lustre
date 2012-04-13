@@ -111,7 +111,7 @@ class Agent(object):
         if args:
             from re import escape
             args_str = "--args %s" % escape(json.dumps(args))
-        cmdline = "hydra-agent %s %s" % (cmd, args_str)
+        cmdline = "chroma-agent %s %s" % (cmd, args_str)
         code, out, err = self.ssh(cmdline)
 
         if code == 0:

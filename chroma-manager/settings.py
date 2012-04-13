@@ -1,4 +1,3 @@
-# Django settings for hydra project.
 
 import sys
 import os
@@ -115,9 +114,9 @@ djcelery.setup_loader()
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 5672
-BROKER_USER = "hydra"
-BROKER_PASSWORD = "hydra123"
-BROKER_VHOST = "hydravhost"
+BROKER_USER = "chroma"
+BROKER_PASSWORD = "chroma123"
+BROKER_VHOST = "chromavhost"
 
 CELERY_RESULT_BACKEND = "database"
 
@@ -255,7 +254,7 @@ CELERY_ACKS_LATE = True
 if DEBUG:
     LOG_PATH = ""
 else:
-    LOG_PATH = "/var/log/hydra"
+    LOG_PATH = "/var/log/chroma"
 
 
 def setup_log(log_name, filename = None):

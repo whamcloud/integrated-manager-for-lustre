@@ -1,7 +1,7 @@
 PLUGIN_NAME="example-storage-plugin"
 
 
-LOCAL_SETTINGS=/usr/share/hydra-server/local_settings.py
+LOCAL_SETTINGS=/usr/share/chroma-manager/local_settings.py
 
 if [ ! -f "$LOCAL_SETTINGS" ]; then
     exit 0

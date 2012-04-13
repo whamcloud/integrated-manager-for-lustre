@@ -15,7 +15,7 @@ from django.core.management import ManagementUtility
 
 class RsyslogConfig:
     CONFIG_FILE = "/etc/rsyslog.conf"
-    SENTINEL = "# Added by hydra-server\n"
+    SENTINEL = "# Added by chroma-manager\n"
 
     def __init__(self, config_file = None):
         self.config_file = config_file or self.CONFIG_FILE
@@ -150,9 +150,9 @@ class ServiceConfig:
         self.try_shell(['service', 'rsyslog', 'restart'])
 
     def _setup_rabbitmq(self):
-        RABBITMQ_USER = "hydra"
-        RABBITMQ_PASSWORD = "hydra123"
-        RABBITMQ_VHOST = "hydravhost"
+        RABBITMQ_USER = "chroma"
+        RABBITMQ_PASSWORD = "chroma123"
+        RABBITMQ_VHOST = "chromavhost"
 
         log.info("Starting RabbitMQ...")
         self.try_shell(["chkconfig", "rabbitmq-server", "on"])
@@ -179,21 +179,21 @@ class ServiceConfig:
 
     def _enable_services(self):
         log.info("Enabling Chroma daemons")
-        self.try_shell(['chkconfig', '--add', 'hydra-worker'])
-        self.try_shell(['chkconfig', '--add', 'hydra-storage'])
-        self.try_shell(['chkconfig', '--add', 'hydra-host-discover'])
+        self.try_shell(['chkconfig', '--add', 'chroma-worker'])
+        self.try_shell(['chkconfig', '--add', 'chroma-storage'])
+        self.try_shell(['chkconfig', '--add', 'chroma-host-discover'])
 
     def _start_services(self):
         log.info("Starting Chroma daemons")
-        self.try_shell(['service', 'hydra-worker', 'start'])
-        self.try_shell(['service', 'hydra-storage', 'start'])
-        self.try_shell(['service', 'hydra-host-discover', 'start'])
+        self.try_shell(['service', 'chroma-worker', 'start'])
+        self.try_shell(['service', 'chroma-storage', 'start'])
+        self.try_shell(['service', 'chroma-host-discover', 'start'])
 
     def _stop_services(self):
         log.info("Stopping Chroma daemons")
-        self.try_shell(['service', 'hydra-worker', 'stop'])
-        self.try_shell(['service', 'hydra-storage', 'stop'])
-        self.try_shell(['service', 'hydra-host-discover', 'stop'])
+        self.try_shell(['service', 'chroma-worker', 'stop'])
+        self.try_shell(['service', 'chroma-storage', 'stop'])
+        self.try_shell(['service', 'chroma-host-discover', 'stop'])
 
     def _setup_mysql(self, database):
         log.info("Setting up MySQL daemon...")
@@ -336,7 +336,7 @@ class ServiceConfig:
         elif not self._users_exist():
             errors.append("No user accounts exist")
 
-        interesting_services = ['hydra-worker', 'hydra-storage', 'hydra-host-discover', 'mysqld', 'rsyslog', 'rabbitmq-server']
+        interesting_services = ['chroma-worker', 'chroma-storage', 'chroma-host-discover', 'mysqld', 'rsyslog', 'rabbitmq-server']
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
             try:

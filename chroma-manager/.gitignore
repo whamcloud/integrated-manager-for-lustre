@@ -8,7 +8,7 @@ database.db
 MANIFEST
 celerybeat-schedule
 celerystate.db
-hydra-server.spec
+chroma-manager.spec
 setup.py
 *~
 *.pid

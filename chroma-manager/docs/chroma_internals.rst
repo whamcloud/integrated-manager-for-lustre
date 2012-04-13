@@ -6,14 +6,14 @@ Code layout
 ------------
 
 * <top of git repository>
- - hydra-server
+ - chroma-manager
   + chroma_ui
   + chroma_api
   + chroma_core
- - hydra-agent
+ - chroma-agent
 
-hydra-server
+chroma-manager
 ------------
 
-hydra-agent
+chroma-agent
 ------------

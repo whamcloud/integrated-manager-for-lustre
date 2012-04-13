@@ -3,7 +3,7 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
-from hydra_agent.action_plugins.manage_targets import tunefs, mkfs
+from chroma_agent.action_plugins.manage_targets import tunefs, mkfs
 from django.utils import unittest
 
 
