@@ -1,3 +1,9 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
 from chroma_core.lib.storage_plugin.api import attributes, statistics
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
 from chroma_core.lib.storage_plugin.api.resources import ScannableResource

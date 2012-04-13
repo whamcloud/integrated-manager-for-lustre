@@ -1,7 +1,8 @@
 #
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.lib.storage_plugin.api import attributes, statistics

@@ -1,3 +1,9 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
 from collections import defaultdict
 from exceptions import KeyError, AttributeError, RuntimeError, ValueError
 import threading

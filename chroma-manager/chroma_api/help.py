@@ -1,7 +1,8 @@
 #
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 import chroma_core.lib.conf_param
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem

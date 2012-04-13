@@ -1,7 +1,9 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+
 import subprocess
 from celery.beat import Scheduler
 from django.contrib.contenttypes.models import ContentType

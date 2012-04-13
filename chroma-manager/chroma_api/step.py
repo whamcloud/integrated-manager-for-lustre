@@ -1,3 +1,8 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 from chroma_core.models.jobs import StepResult
 from tastypie.resources import ModelResource

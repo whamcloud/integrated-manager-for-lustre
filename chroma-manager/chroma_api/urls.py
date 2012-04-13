@@ -1,6 +1,8 @@
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 from django.conf.urls.defaults import patterns, include
 from piston.resource import Resource

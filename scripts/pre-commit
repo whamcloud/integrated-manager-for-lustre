@@ -80,6 +80,22 @@ CHECKS = [
         'ignore_files': ['.*migrations.*', '.*manage.py', '.*/chroma-director/.*'],
         'print_filename': False,
     },
+    {
+        'output': 'Checking boilerplate...',
+        'command': 'scripts/boilerplate.py test %s',
+        'match_files': ['.*\.py$'],
+        'ignore_files': [
+            '.*/chroma-manager/docs/conf.py',
+            '.*/chroma-manager/userdocs/conf.py',
+            '.*/chroma-manager/docs/lib/tastydoc.py',
+            '.*/chroma-manager/polymorphic/.*',
+            '.*/chroma-manager/.*migrations.*',
+            '.*/tests/.*.py',
+            '.*/manage.py',
+            '.*/chroma-director/.*',
+            '.*/chroma-agent/.*'],
+        'print_filename': True
+    }
 ]
 
 DJANGO_PROJECTS = ['chroma-manager']

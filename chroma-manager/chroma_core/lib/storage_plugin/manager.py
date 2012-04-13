@@ -1,8 +1,8 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
 
 """This module defines StoragePluginManager which loads and provides
 access to StoragePlugins and their StorageResources"""

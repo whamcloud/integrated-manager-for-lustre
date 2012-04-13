@@ -1,7 +1,8 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
 
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, ScannableResource
 from chroma_core.lib.storage_plugin.api import attributes
