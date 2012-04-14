@@ -31,10 +31,6 @@ class Command(BaseCommand):
                 help="how many seconds' worth of stats to generate (default: 300)"),
             make_option("--frequency", type=int, default=settings.AUDIT_PERIOD,
                 help="audit frequency for generated metrics (default: 10)"),
-            make_option("--use_flms", action='store_true', default=False,
-                help="use high-speed simple stats table instead of R3D"),
-            make_option("--use_flms_mem", action='store_true', default=False,
-                help="use MEMORY engine type for FLMS"),
             make_option("--use_r3d_myisam", action='store_true', default=False,
                 help="use MyISAM engine type for R3D tables"),
     )

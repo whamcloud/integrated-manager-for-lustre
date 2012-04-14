@@ -5,6 +5,8 @@
 
 
 import time
+#from datetime import datetime
+#from dateutil.tz import tzutc, tzlocal
 import math
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
@@ -12,6 +14,74 @@ from django.contrib.contenttypes import generic
 from r3d.exceptions import BadUpdateString, BadUpdateTime
 from r3d import lib
 from r3d.lib import DNAN, DINF, debug_print
+
+# Don't want a try/except block to fall back to slow pickle.
+# If we can't use cPickle, then we're going to have problems!
+import cPickle as pickle
+from cPickle import UnpicklingError
+
+
+class PickledObject(str):
+    """
+    Used by PickledObjectField to flag when the value's already been pickled.
+    """
+    pass
+
+
+class PickledObjectField(models.Field):
+    """
+    A field which automatically pickles on save and unpickles on load.
+    Uses MEDIUMBLOB on MySQL (max field size 16MB).
+    """
+    __metaclass__ = models.SubfieldBase
+
+    def to_python(self, value):
+        try:
+            return pickle.loads(str(value))
+        except UnpicklingError:
+            return value
+
+    def get_prep_value(self, value):
+        if value is not None and not isinstance(value, PickledObject):
+            #items = value.keys()
+            # NB: Binary pickle doesn't play well with field types
+            # that expect to work with strings (i.e. have a character
+            # encoding).  On MySQL, we want to use a BLOB type.
+            value = PickledObject(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
+
+        #if value is not None:
+            #print "%s: %d items, %d bytes" % (self.name, len(items),
+            #                                             len(value))
+            #print "%s: %s" % (self.name, items)
+        return value
+
+    def db_type(self, connection):
+        if connection.settings_dict['ENGINE'] == 'django.db.backends.mysql':
+            # Performance-wise, there's no appreciable difference between
+            # BLOB and MEDIUMBLOB.  We're not doing any kind of indexing
+            # or queries on the pickle columns, so it's probably best to
+            # go with the safer option to keep our pickles from being
+            # truncated (we wouldn't want that, would we?).
+            #
+            # 2^16 bytes == 65KB
+            #return 'BLOB'
+            # 2^24 bytes == 16MB
+            return 'MEDIUMBLOB'
+            # 2^32 bytes == 4GB
+            #return 'LONGBLOB'
+        else:
+            # generic default
+            return 'TEXTFIELD'
+
+    def get_prep_lookup(self, lookup_type, value):
+        if lookup_type == "exact":
+            value = self.get_prep_value(value)
+            return super(PickledObjectField, self).get_prep_lookup(lookup_type, value)
+        elif lookup_type == "in":
+            value = [self.get_prep_value(v) for v in value]
+            return super(PickledObjectField, self).get_prep_lookup(lookup_type, value)
+        else:
+            raise TypeError("Lookup type %s is not supported." % lookup_type)
 
 
 class SciFloatField(models.FloatField):
@@ -79,6 +149,8 @@ class Database(models.Model):
     start = models.BigIntegerField(default=lambda: Database.default_start())
     step = models.BigIntegerField(default=300)
     last_update = models.BigIntegerField(blank=True)
+    ds_pickle = PickledObjectField(null=True)
+    prep_pickle = PickledObjectField(null=True)
 
     # Leverage the ContentTypes framework to allow R3D databases to be
     # optionally associated with other apps' models.
@@ -104,10 +176,89 @@ class Database(models.Model):
 
         super(Database, self).__init__(*args, **kwargs)
 
+        self.cache_lists_and_check_pickles()
+
+    def cache_lists_and_check_pickles(self):
+        self.ds_list = list(self.datasources.all().order_by('id'))
+        self.rra_list = list(self.archives.all().order_by('id'))
+
+        if self.pk is not None:
+            if self.ds_pickle is None:
+                self.rebuild_ds_pickle()
+
+            if self.prep_pickle is None:
+                self.rebuild_prep_pickle()
+
+    def rebuild_ds_pickle(self, force=False):
+        if force or self.ds_pickle is None:
+            self.ds_pickle = {}
+
+        unknown_seconds = self.last_update % self.step
+        self.ds_list = list(self.datasources.all().order_by('id'))
+        for ds in self.ds_list:
+            if ds.name not in self.ds_pickle:
+                self.ds_pickle[ds.name] = PdpPrep(ds.pk, unknown_seconds)
+
+    def rebuild_prep_pickle(self, force=False):
+        if force or self.prep_pickle is None:
+            self.prep_pickle = {}
+
+        debug_print("rebuilding prep pickle")
+
+        # Rebuild this here because if the prep pickle needs to
+        # be rebuilt this probably does too.
+        self.rra_list = list(self.archives.all().order_by('id'))
+
+        from django.db import connection
+        cursor = connection.cursor()
+        sql = """
+SELECT rra.id, ds.id, ds.name, rra.cdp_per_row
+FROM %s_archive AS rra
+INNER JOIN %s_datasource AS ds
+ON ds.database_id = rra.database_id
+WHERE rra.database_id = %s
+        """ % (self._meta.app_label, self._meta.app_label, self.pk)
+        cursor.execute(sql)
+
+        def calc_unknown_pdps(db, ds_name, cdp_per_row):
+            try:
+                return ((db.last_update - db.ds_pickle[ds_name].unknown_seconds)
+                                        % (db.step * cdp_per_row)
+                                        / db.step)
+            except KeyError:
+                # If this fails, it's because the ds prep hasn't been pickled
+                # yet, which means that there can't be any unknown seconds
+                # anyway.
+                return long(0)
+
+        for row in cursor.fetchall():
+            cdp_key = tuple([row[0], row[1]])
+            if cdp_key not in self.prep_pickle:
+                unk_pdps = calc_unknown_pdps(self, row[2], row[3])
+                self.prep_pickle[cdp_key] = CdpPrep(archive_id=row[0],
+                                                    datasource_id=row[1],
+                                                    unknown_pdps=unk_pdps)
+                debug_print("new CdpPrep for %s: %d" % (list(cdp_key),
+                                                        unk_pdps))
+
     def save(self, *args, **kwargs):
         if not self.last_update:
             self.last_update = self.start
+        #print "%s: %d ds, %d rra" % (self.name, len(self.ds_list), len(self.rra_list))
+        #print "%s: %s x %s" % (self.name, [ds.id for ds in self.ds_list],
+        #                                  [rra.id for rra in self.rra_list])
+
+        new_db = self.pk is None
         super(Database, self).save(*args, **kwargs)
+
+        # After saving a new DB, build the pickle list.  We don't
+        # want or need to do this with existing DBs for performance reasons.
+        if new_db:
+            self.cache_lists_and_check_pickles()
+
+        for name, prep in self.ds_pickle.items():
+            debug_print("%s pickled %s: %s" % (hex(id(self)),
+                                               name, prep.__dict__))
 
     # FIXME: The fancy-pants delete() doesn't seem to handle entities
     # with more than one FK reference.  Or something.  Go back and figure
@@ -124,8 +275,11 @@ class Database(models.Model):
 
         debug_print("vvv--------------------------------------------------vvv")
 
-        if len(new_values) != len(self.ds_cache):
-            raise BadUpdateString("Update string DS count doesn't match database DS count")
+        if len(new_values.keys()) != len(self.ds_list):
+            self.rebuild_ds_pickle()
+            self.rebuild_prep_pickle()
+            if len(new_values.keys()) != len(self.ds_list):
+                raise BadUpdateString("Update string DS count (%d) doesn't match database DS count (%d)" % (len(new_values.keys()), len(self.ds_list)))
 
         if interval < 1:
             raise BadUpdateTime("Illegal update time %d (minimum one second step from %d)" % (update_time, self.last_update))
@@ -138,20 +292,18 @@ class Database(models.Model):
                                                   update_time,
                                                   interval)
 
-        # Update each DS's internal counters using the new reading.
-        for idx in range(0, len(self.ds_cache)):
-            self.ds_cache[idx].add_new_reading(new_values[idx],
-                                               update_time,
-                                               interval)
+        # Update each DS's internal counters using the new readings.
+        # TODO: Optimize this to update the pickle values directly
+        for ds in self.ds_list:
+            ds.add_new_reading(self, new_values[ds.name], update_time,
+                               interval)
 
         if elapsed_steps == 0:
             # If we haven't crossed a step threshold, then we don't
             # want to consolidate any datapoints.  Just update the DS
             # scratch counters.
             debug_print("simple update")
-            lib.simple_update(self.ds_cache,
-                              update_time,
-                              interval)
+            self.simple_update(update_time, interval)
         else:
             # If we have crossed one (or more) step thresholds, then
             # we need to run through and consolidate all DS PDPs.
@@ -168,48 +320,58 @@ class Database(models.Model):
 
         debug_print("^^^--------------------------------------------------^^^")
 
-    def load_cached_associations(self):
-        # Try to preload stuff as much as possible.
-        self.pdp_cache = list(PdpPrep.objects.select_related().filter(datasource__database__id=self.id).order_by('datasource'))
-        # This is ass-backwards, but that's django for you.
-        self.ds_cache = [pdp.datasource for pdp in self.pdp_cache]
+    def simple_update(self, update_time, interval):
+        for ds_name, prep in self.ds_pickle.items():
+            if math.isnan(prep.new_val):
+                prep.unknown_seconds += math.floor(interval)
+            else:
+                if math.isnan(prep.scratch):
+                    prep.scratch = prep.new_val
+                else:
+                    prep.scratch += prep.new_val
 
-        self.rra_cache = list(self.archives.order_by('id'))
-        self.pcdp_cache = list(CdpPrep.objects.select_related().filter(archive__database__id=self.id).order_by('datasource', 'archive'))
+            debug_print("%s scratch %lf, unknown %lu" % (ds_name, prep.scratch,
+                                                         prep.unknown_seconds))
 
     def parse_update_dict(self, update, missing_ds_block=None):
-        new_values = []
+        standard_update = {}
 
         # First, get new readings for all of the DSes we know about.
-        for ds in self.ds_cache:
+        for ds in self.ds_list:
             try:
                 ds_update = update.pop(ds.name)
                 # handle either style of update dict
                 try:
-                    new_values.append(ds_update['value'])
+                    standard_update[ds.name] = ds_update['value']
                 except TypeError:
-                    new_values.append(ds_update)
+                    standard_update[ds.name] = ds_update
             except KeyError:
                 # no news is still news
-                new_values.append(DNAN)
+                standard_update[ds.name] = DNAN
 
         # Now, if there's anything left over, we'll let the caller create
         # DS/RRA entries, if it bothered to try.
-        if len(update.keys()) > 0 and missing_ds_block:
-            for key in update.keys():
-                missing_ds_block(self, key, update[key])
-                ds_update = update.pop(key)
-                try:
-                    new_values.append(ds_update['value'])
-                except TypeError:
-                    new_values.append(ds_update)
+        if len(update.keys()) > 0:
+            debug_print("leftover updates: %s" % update.keys())
+            if missing_ds_block:
+                for new_ds_name in update.keys():
+                    missing_ds_block(self, new_ds_name, update[new_ds_name])
 
-            # Reload caches
-            self.load_cached_associations()
-        elif len(update.keys()) > 0:
-            raise ValueError("Unknown metrics: %s" % update.keys())
+            # Rebuild pickles to account for new DS
+            self.rebuild_ds_pickle()
+            self.rebuild_prep_pickle()
 
-        return new_values
+            for new_ds_name in update.keys():
+                if new_ds_name in self.ds_pickle:
+                    ds_update = update.pop(new_ds_name)
+                    try:
+                        standard_update[new_ds_name] = ds_update['value']
+                    except TypeError:
+                        standard_update[new_ds_name] = ds_update
+                else:
+                    raise ValueError("Unknown metrics: %s" % update.keys())
+
+        return standard_update
 
     def update(self, updates, missing_ds_block=None):
         """
@@ -220,16 +382,19 @@ class Database(models.Model):
 
         No return value.
         """
-        self.load_cached_associations()
-
         if hasattr(updates, "partition"):
-            update_time, new_values = lib.parse_update_string(updates)
-            self.single_update(update_time, new_values)
+            # TODO: This is legacy cruft and terribly inefficient.
+            # The tests rely on being able to supply rrdtool-style update
+            # strings, though.  Need to update them at some point.
+            update_time, update_vals = lib.parse_update_string(updates)
+            ds_names = [ds.name for ds in self.datasources.all().order_by('id')]
+            new_readings = dict(zip(ds_names, update_vals))
+            self.single_update(update_time, new_readings)
         else:
             for update in sorted(updates.keys()):
-                new_values = self.parse_update_dict(updates[update],
-                                                    missing_ds_block)
-                self.single_update(self._parse_time(update), new_values)
+                new_readings = self.parse_update_dict(updates[update],
+                                                      missing_ds_block)
+                self.single_update(self._parse_time(update), new_readings)
 
     def fetch(self, archive_type, start_time=None,
                                   end_time=None,
@@ -262,66 +427,11 @@ class Database(models.Model):
         """
         results = {}
 
-        if fetch_metrics is None:
-            for ds in self.datasources.all():
-                results[ds.name] = ds.prep.last_reading
-        else:
-            for ds in self.datasources.filter(name__in=fetch_metrics):
-                results[ds.name] = ds.prep.last_reading
+        for ds_name, prep in self.ds_pickle.items():
+            if fetch_metrics is None or ds_name in fetch_metrics:
+                results[ds_name] = prep.last_reading
 
         return (self.last_update, results)
-
-    def dump(self):
-        """
-        dump()
-
-        Dump the database contents to JSON.
-        """
-        from django.core.serializers import serialize
-        import json
-
-        output = []
-        output.append(serialize("json", Database.objects.filter(id=self.id)))
-        output.append(serialize("json", self.datasources.all()))
-        output.append(serialize("json", self.archives.all()))
-        for rra in self.archives.all():
-            output.append(serialize("json", Archive.objects.filter(id=rra.id)))
-            for ds in self.datasources.all():
-                output.append(serialize("json", rra.preps.filter(datasource=ds.id)))
-            ds_cdps = {}
-            for ds in self.datasources.all():
-                ds_cdps[ds] = rra.ds_cdps(ds)
-
-            for idx in range(0, rra.rows):
-                row_vals = []
-                try:
-                    for ds in self.datasources.all():
-                        row_vals.append(ds_cdps[ds][idx].value)
-                except IndexError:
-                    continue
-                output.append(json.dumps([idx, row_vals]))
-
-        return "\n".join([json.dumps(o, indent=2) for o in
-                          [json.loads(j) for j in output]])
-
-    def purge_cdps(self):
-        debug_print("Housekeeping: Deleting old CDPs")
-
-        old_cdps = []
-        for rra in self.archives.all():
-            for ds in self.datasources.all():
-                old_cdps.extend(rra.find_obsolete_cdps(ds))
-
-        if len(old_cdps) > 0:
-            # We can avoid a useless select if we just nuke the
-            # old CDPs directly.
-            from django.db import connection, transaction
-            cursor = connection.cursor()
-            cursor.execute("DELETE FROM r3d_cdp WHERE id IN (%s)" %
-                           ",".join(old_cdps))
-            transaction.commit_unless_managed()
-
-        debug_print("deleted %d old CDPs" % len(old_cdps))
 
 
 # http://djangosnippets.org/snippets/2408/
@@ -378,11 +488,9 @@ class Datasource(PoorMansStiModel):
             # and the entities will be precreated when the Archives are
             # defined.  This path should only be taken when a DS is added
             # after a Database has already been set up.
-            prep = PdpPrep(datasource=self)
-            prep.save(new_prep=True, force_insert=True)
+            # FIXME: Is this still necessary?
             for rra in self.database.archives.all():
                 debug_print("Associating new DS with rra: %s" % rra.__dict__)
-                rra.create_ds_prep(self)
                 rra.create_filler_cdps(self)
 
     # This seems to be necessary to avoid integrity errors on delete.  Grumble.
@@ -390,33 +498,36 @@ class Datasource(PoorMansStiModel):
         # Let's not mess around with the ORM -- just delete these quick-like.
         from django.db import connection, transaction
         cursor = connection.cursor()
-        for table in "r3d_pdpprep r3d_cdpprep r3d_cdp".split():
+        for table in "r3d_cdp".split():
             cursor.execute("DELETE FROM %s WHERE datasource_id = %s" %
                            (table, self.id))
         transaction.commit_unless_managed()
 
         super(Datasource, self).delete(*args, **kwargs)
 
-    def transform_reading(self, value, update_time, interval):
+    def transform_reading(self, db, value, update_time, interval):
         return value
 
-    def add_new_reading(self, new_reading, update_time, interval):
+    def add_new_reading(self, db, new_reading, update_time, interval):
+        #debug_print("anr %s top: %s" % (self.name,
+        #                            db.ds_pickle[self.name].__dict__))
         # stash this for debugging
-        saved_last = self.prep.last_reading
+        saved_last = db.ds_pickle[self.name].last_reading
 
         if self.heartbeat < interval:
-            self.prep.last_reading = DNAN
+            db.ds_pickle[self.name].last_reading = DNAN
 
         if math.isnan(new_reading) or self.heartbeat < interval:
-            self.prep.new_val = DNAN
+            db.ds_pickle[self.name].new_val = DNAN
         else:
-            self.prep.new_val = self.transform_reading(new_reading,
+            db.ds_pickle[self.name].new_val = self.transform_reading(db,
+                                                       new_reading,
                                                        update_time,
                                                        interval)
 
             # Make sure that we're inside the bounds defined by the DS.
             try:
-                rate = self.prep.new_val / interval
+                rate = db.ds_pickle[self.name].new_val / interval
             except ZeroDivisionError:
                 rate = DNAN
 
@@ -425,12 +536,14 @@ class Datasource(PoorMansStiModel):
                   rate > self.max_reading)) or
                 ((not math.isnan(self.min_reading) and
                   rate < self.min_reading))):
-                self.prep.new_val = DNAN
+                db.ds_pickle[self.name].new_val = DNAN
 
         # save this for the next run
-        self.prep.last_reading = new_reading
+        db.ds_pickle[self.name].last_reading = new_reading
 
-        debug_print("%s @ %d: (%10.2f) %10.2f -> %10.2f" % (self.name, update_time, saved_last, new_reading, self.prep.new_val))
+        #debug_print("anr %s bottom: %s" % (self.name,
+        #                                   db.ds_pickle[self.name].__dict__))
+        debug_print("%s @ %d: (%10.2f) %10.2f -> %10.2f" % (self.name, update_time, saved_last, new_reading, db.ds_pickle[self.name].new_val))
 
 
 class Absolute(Datasource):
@@ -474,11 +587,11 @@ class Counter(Datasource):
     class Meta:
         proxy = True
 
-    def transform_reading(self, value, update_time, interval):
-        if math.isnan(self.prep.last_reading) or math.isnan(value):
+    def transform_reading(self, db, value, update_time, interval):
+        if math.isnan(db.ds_pickle[self.name].last_reading) or math.isnan(value):
             return DNAN
 
-        value -= self.prep.last_reading
+        value -= db.ds_pickle[self.name].last_reading
 
         if value < 0.0:
             value += 4294967296.0  # 2^32
@@ -509,11 +622,11 @@ class Derive(Datasource):
     class Meta:
         proxy = True
 
-    def transform_reading(self, value, update_time, interval):
-        if math.isnan(self.prep.last_reading):
+    def transform_reading(self, db, value, update_time, interval):
+        if math.isnan(db.ds_pickle[self.name].last_reading):
             return DNAN
         else:
-            return value - self.prep.last_reading
+            return value - db.ds_pickle[self.name].last_reading
 
 
 class Gauge(Datasource):
@@ -531,34 +644,8 @@ class Gauge(Datasource):
     class Meta:
         proxy = True
 
-    def transform_reading(self, value, update_time, interval):
+    def transform_reading(self, db, value, update_time, interval):
         return value * interval
-
-
-class PdpPrep(models.Model):
-    """
-    Provides storage for primary data points prior to consolidation.
-    """
-    datasource = models.OneToOneField(Datasource,
-                                           primary_key=True,
-                                           related_name="prep")
-    last_reading = SciFloatField(null=True)
-    scratch = SciFloatField(null=True, default=0.0)
-    unknown_seconds = models.BigIntegerField(default=0)
-
-    # ephemeral attributes
-    new_val = DNAN
-    temp_val = DNAN
-
-    def save(self, new_prep=False, *args, **kwargs):
-        if new_prep:
-            # We need to initialize the unknown seconds counter based
-            # on where we are relative to the last update and the next
-            # step.
-            self.unknown_seconds = (self.datasource.database.last_update %
-                                    self.datasource.database.step)
-
-        super(PdpPrep, self).save(*args, **kwargs)
 
 
 class Archive(PoorMansStiModel):
@@ -585,38 +672,10 @@ class Archive(PoorMansStiModel):
         # current row count. This is ugly, but hopefully shouldn't happen
         # too often.
         for i in range(0, self.current_row):
-            self.cdps.add(CDP.objects.create(archive=self, datasource=ds))
-
-    def create_ds_prep(self, ds):
-        # This will result in a constraint violation if it's a duplicate.
-        self.preps.add(CdpPrep.objects.create(archive=self,
-                                              datasource=ds))
-
-    def seed_preps(self):
-        for ds in self.database.datasources.all():
-            self.create_ds_prep(ds)
-
-    def save(self, *args, **kwargs):
-        new_rra = False
-        if self.id is None:
-            new_rra = True
-
-        super(Archive, self).save(*args, **kwargs)
-
-        # On RRA create, we need to precreate the CdpPreps.
-        if new_rra:
-            self.seed_preps()
+            CDP.objects.create(archive=self, datasource=ds)
 
     def ds_cdps(self, ds):
-        # Fetch the rows in reverse, newest to oldest, limited by the max
-        # number of possible rows for this RRA.  Then reverse that list
-        # for the consumer.
-        cdps = list(self.cdps.filter(datasource=ds).order_by('-id')[:self.rows])
-        cdps.reverse()
-        return cdps
-
-    def ds_prep(self, ds):
-        return self.preps.filter(datasource=ds)[0]
+        return self.cdps.filter(datasource=ds).order_by('row_id')
 
     def store_ds_cdp(self, ds, cdp_prep):
         # First, create and insert the new CDP for this row.
@@ -625,32 +684,13 @@ class Archive(PoorMansStiModel):
         debug_print("saved %10.2f -> datapoints[%d]" % (cdp.value,
                                                         self.current_row))
 
-    def find_obsolete_cdps(self, ds):
-        return ["%d" % cdp.id for cdp in
-            self.cdps.filter(datasource=ds).order_by("-id")[self.rows:]]
-
-    def purge_ds_cdps(self, ds):
-        debug_print("Housekeeping: Deleting old CDPs")
-        old = self.find_obsolete_cdps(self, ds)
-
-        if len(old) > 0:
-            # We can avoid a useless select if we just nuke the
-            # old CDPs directly.
-            from django.db import connection, transaction
-            cursor = connection.cursor()
-            cursor.execute("DELETE FROM r3d_cdp WHERE id IN (%s)" %
-                           ",".join(old))
-            transaction.commit_unless_managed()
-
-        debug_print("deleted %d old CDPs" % len(old))
-
-    def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
+    def calculate_cdp_value(self, cdp_prep, db, ds, elapsed_steps):
         raise RuntimeError("Method not implemented at this level")
 
-    def initialize_cdp_value(self, cdp_prep, ds, start_pdp_offset):
+    def initialize_cdp_value(self, cdp_prep, db, ds, start_pdp_offset):
         raise RuntimeError("Method not implemented at this level")
 
-    def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
+    def carryover_cdp_value(self, cdp_prep, db, ds, elapsed_steps, start_pdp_offset):
         raise RuntimeError("Method not implemented at this level")
 
 
@@ -669,26 +709,26 @@ class Average(Archive):
     class Meta:
         proxy = True
 
-    def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
+    def calculate_cdp_value(self, cdp_prep, db, ds, elapsed_steps):
         if math.isnan(cdp_prep.value):
-            return ds.prep.temp_val * elapsed_steps
+            return db.ds_pickle[ds.name].temp_val * elapsed_steps
 
-        return cdp_prep.value + ds.prep.temp_val * elapsed_steps
+        return cdp_prep.value + db.ds_pickle[ds.name].temp_val * elapsed_steps
 
-    def initialize_cdp_value(self, cdp_prep, ds, start_pdp_offset):
+    def initialize_cdp_value(self, cdp_prep, db, ds, start_pdp_offset):
         cum_val = 0.0 if math.isnan(cdp_prep.value) else cdp_prep.value
-        cur_val = 0.0 if math.isnan(ds.prep.temp_val) else ds.prep.temp_val
+        cur_val = 0.0 if math.isnan(db.ds_pickle[ds.name].temp_val) else db.ds_pickle[ds.name].temp_val
         primary = ((cum_val + cur_val * start_pdp_offset) /
                    (self.cdp_per_row - cdp_prep.unknown_pdps))
         debug_print("%10.9f = (%10.9f + %10.9f * %lu) / (%lu - %lu)" % (primary, cum_val, cur_val, start_pdp_offset, self.cdp_per_row, cdp_prep.unknown_pdps))
         return primary
 
-    def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
+    def carryover_cdp_value(self, cdp_prep, db, ds, elapsed_steps, start_pdp_offset):
         overlap_count = ((elapsed_steps - start_pdp_offset) % self.cdp_per_row)
-        if overlap_count == 0 or math.isnan(ds.prep.temp_val):
+        if overlap_count == 0 or math.isnan(db.ds_pickle[ds.name].temp_val):
             cdp_prep.value = 0
         else:
-            cdp_prep.value = ds.prep.temp_val * overlap_count
+            cdp_prep.value = db.ds_pickle[ds.name].temp_val * overlap_count
 
 
 class Last(Archive):
@@ -706,18 +746,18 @@ class Last(Archive):
     class Meta:
         proxy = True
 
-    def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
-        return ds.prep.temp_val
+    def calculate_cdp_value(self, cdp_prep, db, ds, elapsed_steps):
+        return db.ds_pickle[ds.name].temp_val
 
-    def initialize_cdp_value(self, cdp_prep, ds, start_pdp_offset):
-        return ds.prep.temp_val
+    def initialize_cdp_value(self, cdp_prep, db, ds, start_pdp_offset):
+        return db.ds_pickle[ds.name].temp_val
 
-    def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
+    def carryover_cdp_value(self, cdp_prep, db, ds, elapsed_steps, start_pdp_offset):
         overlap_count = ((elapsed_steps - start_pdp_offset) % self.cdp_per_row)
-        if overlap_count == 0 or math.isnan(ds.prep.temp_val):
+        if overlap_count == 0 or math.isnan(db.ds_pickle[ds.name].temp_val):
             cdp_prep.value = DNAN
         else:
-            cdp_prep.value = ds.prep.temp_val
+            cdp_prep.value = db.ds_pickle[ds.name].temp_val
 
 
 class Max(Archive):
@@ -735,27 +775,27 @@ class Max(Archive):
     class Meta:
         proxy = True
 
-    def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
+    def calculate_cdp_value(self, cdp_prep, db, ds, elapsed_steps):
         if math.isnan(cdp_prep.value):
-            return ds.prep.temp_val
+            return db.ds_pickle[ds.name].temp_val
 
-        return ds.prep.temp_val if (ds.prep.temp_val > cdp_prep.value) else cdp_prep.value
+        return db.ds_pickle[ds.name].temp_val if (db.ds_pickle[ds.name].temp_val > cdp_prep.value) else cdp_prep.value
 
-    def initialize_cdp_value(self, cdp_prep, ds, start_pdp_offset):
+    def initialize_cdp_value(self, cdp_prep, db, ds, start_pdp_offset):
         cum_val = -DINF if math.isnan(cdp_prep.value) else cdp_prep.value
-        cur_val = -DINF if math.isnan(ds.prep.temp_val) else ds.prep.temp_val
+        cur_val = -DINF if math.isnan(db.ds_pickle[ds.name].temp_val) else db.ds_pickle[ds.name].temp_val
 
         if cur_val > cum_val:
             return cur_val
         else:
             return cum_val
 
-    def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
+    def carryover_cdp_value(self, cdp_prep, db, ds, elapsed_steps, start_pdp_offset):
         overlap_count = ((elapsed_steps - start_pdp_offset) % self.cdp_per_row)
-        if overlap_count == 0 or math.isnan(ds.prep.temp_val):
+        if overlap_count == 0 or math.isnan(db.ds_pickle[ds.name].temp_val):
             cdp_prep.value = -DINF
         else:
-            cdp_prep.value = ds.prep.temp_val
+            cdp_prep.value = db.ds_pickle[ds.name].temp_val
 
 
 class Min(Archive):
@@ -773,27 +813,27 @@ class Min(Archive):
     class Meta:
         proxy = True
 
-    def calculate_cdp_value(self, cdp_prep, ds, elapsed_steps):
+    def calculate_cdp_value(self, cdp_prep, db, ds, elapsed_steps):
         if math.isnan(cdp_prep.value):
-            return ds.prep.temp_val
+            return db.ds_pickle[ds.name].temp_val
 
-        return ds.prep.temp_val if (ds.prep.temp_val < cdp_prep.value) else cdp_prep.value
+        return db.ds_pickle[ds.name].temp_val if (db.ds_pickle[ds.name].temp_val < cdp_prep.value) else cdp_prep.value
 
-    def initialize_cdp_value(self, cdp_prep, ds, start_pdp_offset):
+    def initialize_cdp_value(self, cdp_prep, db, ds, start_pdp_offset):
         cum_val = DINF if math.isnan(cdp_prep.value) else cdp_prep.value
-        cur_val = DINF if math.isnan(ds.prep.temp_val) else ds.prep.temp_val
+        cur_val = DINF if math.isnan(db.ds_pickle[ds.name].temp_val) else db.ds_pickle[ds.name].temp_val
 
         if cur_val < cum_val:
             return cur_val
         else:
             return cum_val
 
-    def carryover_cdp_value(self, cdp_prep, ds, elapsed_steps, start_pdp_offset):
+    def carryover_cdp_value(self, cdp_prep, db, ds, elapsed_steps, start_pdp_offset):
         overlap_count = ((elapsed_steps - start_pdp_offset) % self.cdp_per_row)
-        if overlap_count == 0 or math.isnan(ds.prep.temp_val):
+        if overlap_count == 0 or math.isnan(db.ds_pickle[ds.name].temp_val):
             cdp_prep.value = DINF
         else:
-            cdp_prep.value = ds.prep.temp_val
+            cdp_prep.value = db.ds_pickle[ds.name].temp_val
 
 
 class CDP(models.Model):
@@ -802,82 +842,98 @@ class CDP(models.Model):
     the associated Archive's consolidation function.
 
     """
+    # We don't want an auto-incrementing id here, because the id
+    # will be incremented per archive/datasource.  To keep Django happy,
+    # we'll let it create an id field but nuke it in the migration.
+    row_id = models.BigIntegerField(default=0)
     archive = models.ForeignKey(Archive,
                                 db_index=True,
                                 related_name="cdps")
     datasource = models.ForeignKey(Datasource,
                                    db_index=True,
                                    related_name="cdps")
+    slot = models.BigIntegerField(default=0)
     value = SciFloatField(null=True)
 
+    class Meta:
+        # For performance, we need a multi-column primary key spanning
+        # [row_id, archive, datasource], but Django doesn't roll that way
+        # (now?).  We'll need to set that up in the migration.  Just
+        # pretend like this works:
+        # primary_key = ["row_id", "archive", "datasource"]
+        # This index will trigger the ON DUPLICATE KEY ... clause of the
+        # query which we need for the round-robin functionality.
+        unique_together = ["archive", "datasource", "slot"]
 
-class CdpPrep(models.Model):
+    def _get_db_prepped_value(self, field_name):
+        meta = self.__class__._meta
+        try:
+            field = [f for f in meta.local_fields if f.name == field_name][0]
+        except IndexError:
+            return RuntimeError("Can't find Field for %s" % field_name)
+
+        # Can NOT for the life of me figure out the "correct" way to do
+        # this, so whatevs.  Rummaged through Django's guts but couldn't
+        # figure out where None -> "NULL".  If we don't catch this here,
+        # it gets through to the DB which barfs on it.
+        pv = field.get_prep_value(field.pre_save(self, True))
+        return (pv is None and "NULL" or pv)
+
+    def save(self, **kwargs):
+        # Bit of a hack; have to let the field diddle itself to get a
+        # db-safe value.
+        prep_value = self._get_db_prepped_value("value")
+
+        from django.db import connection, transaction
+        cursor = connection.cursor()
+        sql = """
+INSERT INTO %s_cdp (row_id, slot, archive_id, datasource_id, value)
+SELECT
+  (COALESCE(MAX(row_id), -1) + 1),
+  (COALESCE(MAX(row_id), -1) + 1) MOD %s,
+  %s, %s, %s
+FROM %s_cdp
+WHERE archive_id = %s AND datasource_id = %s
+ON DUPLICATE KEY UPDATE
+  row_id=VALUES(row_id),
+  slot=VALUES(slot),
+  archive_id=VALUES(archive_id),
+  datasource_id=VALUES(datasource_id),
+  value=VALUES(value)
+        """ % (self._meta.app_label,
+               self.archive.rows,
+               self.archive.pk, self.datasource.pk, prep_value,
+               self._meta.app_label,
+               self.archive.pk, self.datasource.pk)
+        cursor.execute(sql)
+        transaction.commit_unless_managed()
+
+
+class CdpPrep(object):
     """
     Provides temporary storage for data points during the consolidation
     process.
     """
-    archive = models.ForeignKey(Archive, related_name="preps")
-    datasource = models.ForeignKey(Datasource, related_name="preps")
-    value = SciFloatField(null=True)
-    primary = SciFloatField(null=True, default=0.0)
-    secondary = SciFloatField(null=True, default=0.0)
-    unknown_pdps = models.BigIntegerField(default=0)
+    def __init__(self, archive_id, datasource_id, unknown_pdps=long(0)):
+        self.archive_id = archive_id
+        self.datasource_id = datasource_id
 
-    class Meta:
-        unique_together = ("archive", "datasource")
+        self.value = DNAN
+        self.primary = 0.0
+        self.secondary = 0.0
+        self.unknown_pdps = long(unknown_pdps)
 
-    def save(self, *args, **kwargs):
-        new_prep = False
-        if self.id is None:
-            new_prep = True
 
-        if new_prep:
-            # We need to initialize the unknown pdp counter based
-            # on where we are in the archive's consolidation cycle.
-            db_step = self.datasource.database.step
-            db_update = self.datasource.database.last_update
-            self.unknown_pdps = ((db_update - self.datasource.prep.unknown_seconds)
-                                 % (db_step * self.archive.cdp_per_row)
-                                 / db_step)
+class PdpPrep(object):
+    """
+    Provides temporary storage for data points prior to the consolidation
+    process.
+    """
+    def __init__(self, datasource_id, unknown_seconds=long(0)):
+        self.datasource_id = datasource_id
 
-        super(CdpPrep, self).save(*args, **kwargs)
-
-    def update(self, rra, ds, elapsed_steps, start_pdp_offset):
-        debug_print("->update: ds.prep.temp_val %10.2f rra.steps_since_update %d elapsed_steps %d start_pdp_offset %d rra.cdp_per_row %d xff %10.2f" % (ds.prep.temp_val, rra.steps_since_update, elapsed_steps, start_pdp_offset, rra.cdp_per_row, rra.xff))
-
-        if rra.steps_since_update > 0:
-            if math.isnan(ds.prep.temp_val):
-                self.unknown_pdps += start_pdp_offset
-                self.secondary = DNAN
-            else:
-                self.secondary = ds.prep.temp_val
-
-            if self.unknown_pdps > rra.cdp_per_row * rra.xff:
-                debug_print("%d > %d * %10.2f" % (self.unknown_pdps, rra.cdp_per_row, rra.xff))
-                self.primary = DNAN
-            else:
-                debug_print("primary before initialize_cdp: %10.9f" % self.primary)
-                self.primary = rra.initialize_cdp_value(self, ds, start_pdp_offset)
-                debug_print("primary after initialize_cdp: %10.9f" % self.primary)
-            rra.carryover_cdp_value(self, ds, elapsed_steps, start_pdp_offset)
-
-            if math.isnan(ds.prep.temp_val):
-                self.unknown_pdps = ((elapsed_steps - start_pdp_offset)
-                                     % rra.cdp_per_row)
-                debug_print("%d = ((%d - %d) %% %d)" % (self.unknown_pdps, elapsed_steps, start_pdp_offset, rra.cdp_per_row))
-            else:
-                debug_print("resetting unknown counter")
-                self.unknown_pdps = 0
-        else:
-            if math.isnan(ds.prep.temp_val):
-                self.unknown_pdps += elapsed_steps
-            else:
-                self.value = rra.calculate_cdp_value(self, ds, elapsed_steps)
-
-        self.save(force_update=True)
-
-    def reset(self, ds, elapsed_steps):
-        debug_print("->reset_cdp")
-        self.primary = ds.prep.temp_val
-        self.secondary = ds.prep.temp_val
-        self.save(force_update=True)
+        self.last_reading = DNAN
+        self.scratch = 0.0
+        self.unknown_seconds = long(unknown_seconds)
+        self.new_val = DNAN
+        self.temp_val = DNAN

@@ -305,10 +305,10 @@ class UpdateScan(object):
         if target.state == 'forgotten':
             return 0
         else:
-            return target.metrics.update(metrics)
+            return target.metrics.update(metrics, self.update_time)
 
     def store_node_metrics(self, metrics):
-        return self.host.downcast().metrics.update(metrics)
+        return self.host.downcast().metrics.update(metrics, self.update_time)
 
     def store_metrics(self):
         """
@@ -316,6 +316,9 @@ class UpdateScan(object):
         """
         raw_metrics = self.host_data['metrics']['raw']
         count = 0
+
+        if not hasattr(self, 'update_time'):
+            self.update_time = None
 
         try:
             node_metrics = raw_metrics['node']

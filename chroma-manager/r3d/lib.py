@@ -89,97 +89,118 @@ def calculate_elapsed_steps(db_last_update, db_steps, update_time, interval):
     return elapsed_steps, pre_int, post_int, pdp_count
 
 
-def simple_update(ds_list, update_time, interval):
-    for ds in ds_list:
-        if math.isnan(ds.prep.new_val):
-            ds.prep.unknown_seconds += math.floor(interval)
-        else:
-            if math.isnan(ds.prep.scratch):
-                ds.prep.scratch = ds.prep.new_val
-            else:
-                ds.prep.scratch += ds.prep.new_val
-
-        debug_print("%s scratch %lf, unknown %lu" % (ds.name, ds.prep.scratch,
-                                                     ds.prep.unknown_seconds))
-
-        ds.prep.save(force_update=True)
-
-
-def process_pdp_st(ds, db_step, interval, pre_int, post_int, seconds):
+def process_pdp_st(ds, db, interval, pre_int, post_int, seconds):
     pre_unknown = 0.0
 
-    debug_print("prep.new_val: %10.2f prep.scratch: %10.2f" % (ds.prep.new_val, ds.prep.scratch))
-    if math.isnan(ds.prep.new_val):
+    debug_print("prep.new_val: %10.2f prep.scratch: %10.2f" % (db.ds_pickle[ds.name].new_val, db.ds_pickle[ds.name].scratch))
+    if math.isnan(db.ds_pickle[ds.name].new_val):
         pre_unknown = pre_int
     else:
-        if math.isnan(ds.prep.scratch):
-            ds.prep.scratch = 0.0
-        ds.prep.scratch += ds.prep.new_val / interval * pre_int
+        if math.isnan(db.ds_pickle[ds.name].scratch):
+            db.ds_pickle[ds.name].scratch = 0.0
+        db.ds_pickle[ds.name].scratch += db.ds_pickle[ds.name].new_val / interval * pre_int
 
-    debug_print("interval: %lf, heartbeat: %lu, step: %lu, prep.unknown_seconds: %lu" % (interval, ds.heartbeat, db_step, ds.prep.unknown_seconds))
-    if interval > ds.heartbeat or (db_step / 2.0) < ds.prep.unknown_seconds:
-        ds.prep.temp_val = DNAN
+    debug_print("interval: %lf, heartbeat: %lu, step: %lu, prep.unknown_seconds: %lu" % (interval, ds.heartbeat, db.step, db.ds_pickle[ds.name].unknown_seconds))
+    if interval > ds.heartbeat or (db.step / 2.0) < db.ds_pickle[ds.name].unknown_seconds:
+        db.ds_pickle[ds.name].temp_val = DNAN
     else:
         try:
-            ds.prep.temp_val = ds.prep.scratch / ((seconds - ds.prep.unknown_seconds) - pre_unknown)
+            db.ds_pickle[ds.name].temp_val = db.ds_pickle[ds.name].scratch / ((seconds - db.ds_pickle[ds.name].unknown_seconds) - pre_unknown)
         except ZeroDivisionError:
             # Both C and Ruby handle this OK without all the flailing. :P
-            ds.prep.temp_val = DNAN
-        debug_print("%10.2f = %10.2f / ((%d - %d) - %d)" % (ds.prep.temp_val, ds.prep.scratch, seconds, ds.prep.unknown_seconds, pre_unknown))
+            db.ds_pickle[ds.name].temp_val = DNAN
+        debug_print("%10.2f = %10.2f / ((%d - %d) - %d)" % (db.ds_pickle[ds.name].temp_val, db.ds_pickle[ds.name].scratch, seconds, db.ds_pickle[ds.name].unknown_seconds, pre_unknown))
 
-    if math.isnan(ds.prep.new_val):
-        ds.prep.unknown_seconds = math.floor(post_int)
-        ds.prep.scratch = DNAN
+    if math.isnan(db.ds_pickle[ds.name].new_val):
+        db.ds_pickle[ds.name].unknown_seconds = long(math.floor(post_int))
+        db.ds_pickle[ds.name].scratch = DNAN
     else:
-        ds.prep.unknown_seconds = 0
-        ds.prep.scratch = ds.prep.new_val / interval * post_int
-        debug_print("%lf = %lf / %lf * %lu" % (ds.prep.scratch, ds.prep.new_val, interval, post_int))
+        db.ds_pickle[ds.name].unknown_seconds = long(0)
+        db.ds_pickle[ds.name].scratch = db.ds_pickle[ds.name].new_val / interval * post_int
+        debug_print("%lf = %lf / %lf * %lu" % (db.ds_pickle[ds.name].scratch, db.ds_pickle[ds.name].new_val, interval, post_int))
 
     debug_print("in process_pdp_st:")
     debug_print("pre_int: %10.2f" % pre_int)
     debug_print("post_int: %10.2f" % post_int)
     debug_print("seconds (diff_pdp_st): %d" % seconds)
-    debug_print("prep.temp_val: %10.2f" % ds.prep.temp_val)
-    debug_print("scratch: %10.2f" % ds.prep.scratch)
+    debug_print("prep.temp_val: %10.2f" % db.ds_pickle[ds.name].temp_val)
+    debug_print("scratch: %10.2f" % db.ds_pickle[ds.name].scratch)
 
-    ds.prep.save(force_update=True)
+
+def update_cdp_prep(prep, db, rra, ds, elapsed_steps, start_pdp_offset):
+    debug_print("->update: db.ds_pickle[self.name].temp_val %10.2f rra.steps_since_update %d elapsed_steps %d start_pdp_offset %d rra.cdp_per_row %d xff %10.2f" % (db.ds_pickle[ds.name].temp_val, rra.steps_since_update, elapsed_steps, start_pdp_offset, rra.cdp_per_row, rra.xff))
+
+    if rra.steps_since_update > 0:
+        if math.isnan(db.ds_pickle[ds.name].temp_val):
+            prep.unknown_pdps += start_pdp_offset
+            prep.secondary = DNAN
+        else:
+            prep.secondary = db.ds_pickle[ds.name].temp_val
+
+        if prep.unknown_pdps > rra.cdp_per_row * rra.xff:
+            debug_print("%d > %d * %10.2f" % (prep.unknown_pdps, rra.cdp_per_row, rra.xff))
+            prep.primary = DNAN
+        else:
+            debug_print("primary before initialize_cdp: %10.9f" % prep.primary)
+            prep.primary = rra.initialize_cdp_value(prep, db, ds, start_pdp_offset)
+            debug_print("primary after initialize_cdp: %10.9f" % prep.primary)
+        rra.carryover_cdp_value(prep, db, ds, elapsed_steps, start_pdp_offset)
+
+        if math.isnan(db.ds_pickle[ds.name].temp_val):
+            prep.unknown_pdps = ((elapsed_steps - start_pdp_offset)
+                                 % rra.cdp_per_row)
+            debug_print("%d = ((%d - %d) %% %d)" % (prep.unknown_pdps, elapsed_steps, start_pdp_offset, rra.cdp_per_row))
+        else:
+            debug_print("resetting unknown counter")
+            prep.unknown_pdps = 0
+    else:
+        if math.isnan(db.ds_pickle[ds.name].temp_val):
+            prep.unknown_pdps += elapsed_steps
+        else:
+            prep.value = rra.calculate_cdp_value(prep, db, ds, elapsed_steps)
+
+    db.prep_pickle[(rra.pk, ds.pk)] = prep
+
+
+def reset_cdp_prep(prep, db, ds, elapsed_steps):
+    debug_print("->reset_cdp")
+    prep.primary = db.ds_pickle[ds.name].temp_val
+    prep.secondary = db.ds_pickle[ds.name].temp_val
+    db.prep_pickle[(prep.archive_id, prep.datasource_id)] = prep
 
 
 def consolidate_all_pdps(db, interval, elapsed_steps, pre_int, post_int, pdp_count):
-    for ds in db.ds_cache:
-        process_pdp_st(ds, db.step, interval, pre_int, post_int,
+    for ds in db.ds_list:
+        process_pdp_st(ds, db, interval, pre_int, post_int,
                        elapsed_steps * db.step)
-        debug_print("PDP UPD %s elapsed_steps %d prep.temp_val %lf new_prep: %lf new_unknown_sec: %d" % (ds.name, elapsed_steps, ds.prep.temp_val, ds.prep.scratch, ds.prep.unknown_seconds))
+        debug_print("PDP UPD %s elapsed_steps %d prep.temp_val %lf new_prep: %lf new_unknown_sec: %d" % (ds.name, elapsed_steps, db.ds_pickle[ds.name].temp_val, db.ds_pickle[ds.name].scratch, db.ds_pickle[ds.name].unknown_seconds))
 
-    for rra in db.rra_cache:
+    for rra in db.rra_list:
         start_pdp_offset = rra.cdp_per_row - pdp_count % rra.cdp_per_row
         if start_pdp_offset <= elapsed_steps:
             rra.steps_since_update = (elapsed_steps - start_pdp_offset) / rra.cdp_per_row + 1
         else:
             rra.steps_since_update = 0
 
-        for ds in db.ds_cache:
-            cdp_prep = [prep for prep in db.pcdp_cache
-                        if (prep.datasource_id == ds.id
-                            and prep.archive_id == rra.id)][0]
+        for ds in db.ds_list:
+            cdp_prep = db.prep_pickle[(rra.pk, ds.pk)]
 
             if rra.cdp_per_row > 1:
                 debug_print("%d: updating cdp counters" % rra.id)
                 debug_print("cdp_prep before: %s" % cdp_prep.__dict__)
-                cdp_prep.update(rra, ds, elapsed_steps, start_pdp_offset)
+                update_cdp_prep(cdp_prep, db, rra, ds,
+                                elapsed_steps, start_pdp_offset)
             else:
                 debug_print("%d: no consolidation necessary" % rra.id)
-                cdp_prep.primary = ds.prep.temp_val
+                db.prep_pickle[(rra.pk, ds.id)].primary = db.ds_pickle[ds.name].temp_val
                 if elapsed_steps > 2:
-                    cdp_prep.reset(ds, elapsed_steps)
+                    reset_cdp_prep(cdp_prep, db, ds, elapsed_steps)
 
             debug_print("cdp_prep after: %s" % cdp_prep.__dict__)
 
         for idx in range(0, rra.steps_since_update):
-            for ds in db.ds_cache:
-                cdp_prep = [prep for prep in db.pcdp_cache
-                            if (prep.datasource_id == ds.id
-                                and prep.archive_id == rra.id)][0]
+            for ds in db.ds_list:
+                cdp_prep = db.prep_pickle[(rra.pk, ds.pk)]
 
                 # Optimization for times when we're playing catch-up after
                 # a long period of disuse.  Rather than pointlessly storing
@@ -230,7 +251,7 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
 
     debug_print("Looking for start %d end %d step %d" % (start_time, end_time, step))
 
-    for rra in db.archives.filter(cls=archive_type):
+    for rra in db.archives.filter(cls=archive_type).order_by('id'):
         cal_end = (db.last_update -
                    (db.last_update % (rra.cdp_per_row * db.step)))
         cal_start = (cal_end - (rra.cdp_per_row * rra.rows * db.step))
@@ -302,9 +323,9 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
 
     results = []
     if fetch_metrics is None:
-        ds_list = db.datasources.all()
+        ds_list = db.ds_list
     else:
-        ds_list = db.datasources.filter(name__in=fetch_metrics)
+        ds_list = db.datasources.filter(name__in=fetch_metrics).order_by('id')
     ds_cdps = {}
     for ds in ds_list:
         ds_cdps[ds] = chosen_rra.ds_cdps(ds)
