@@ -53,7 +53,6 @@ var ApiCache = function(){
 
     var object = collection.get(obj_id);
     if (!object) {
-      console.log('Fetching ' + obj_id);
       collection.fetch({add:true, data: {id: obj_id}});
     }
     return object;

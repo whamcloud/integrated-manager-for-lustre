@@ -198,17 +198,17 @@ var Api = function() {
 
 
   var get = function() {
-    call.apply(null, ["GET"].concat([].slice.apply(arguments)))
-  }
+    return call.apply(null, ["GET"].concat([].slice.apply(arguments)))
+  };
   var post = function() {
-    call.apply(null, ["POST"].concat([].slice.apply(arguments)))
-  }
+    return call.apply(null, ["POST"].concat([].slice.apply(arguments)))
+  };
   var put = function() {
-    call.apply(null, ["PUT"].concat([].slice.apply(arguments)))
-  }
+    return call.apply(null, ["PUT"].concat([].slice.apply(arguments)))
+  };
   var del = function() {
-    call.apply(null, ["DELETE"].concat([].slice.apply(arguments)))
-  }
+    return call.apply(null, ["DELETE"].concat([].slice.apply(arguments)))
+  };
 
   /* Wrap API calls to tastypie paginated methods such that
      jquery.Datatables understands the resulting format */
@@ -253,7 +253,7 @@ var Api = function() {
       datatables_data.iTotalDisplayRecords = data.meta.total_count
       callback(datatables_data);
     }, error_callback = null, blocking = false);
-  }
+  };
 
   var lost_contact = false;
   var lost_contact_at;
@@ -345,7 +345,7 @@ var Api = function() {
       startBlocking();
     }
 
-    $.ajax(ajax_args)
+    return $.ajax(ajax_args)
     .success(function(data, textStatus, jqXHR)
     {
       if (data && data.command) {
@@ -373,8 +373,7 @@ var Api = function() {
     })
     .error(function(jqXHR, textStatus)
     {
-      //console.log("error " + jqXHR.status);
-      if (jqXHR.status == 0) {
+      if (jqXHR.status == 0 && jqXHR.statusText == "error") {
         /* This is a workaroud to deal with the fact that some POSTs
          * are actually read-only (especially the /notifications/ and
          * /object_summary).  Remove these training wheels before release.
@@ -396,6 +395,9 @@ var Api = function() {
         // For non-idempotent operations fall through to 'something has
         // gone wrong' to prompt the user to reload the UI as we can
         // no longer be sure of the state.
+      } else if (jqXHR.status == 0 && jqXHR.statusText == "abort"){
+        // Assume aborts are on purpose and let them pass without incident
+        return;
       }
       if (error_callback) {
         if(typeof(error_callback) == "function") {
@@ -428,7 +430,7 @@ var Api = function() {
         completeBlocking();
       }
     });
-  }
+  };
 
   function busy()
   {

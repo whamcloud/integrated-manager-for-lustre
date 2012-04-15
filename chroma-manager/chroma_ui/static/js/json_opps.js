@@ -6,7 +6,6 @@
 
 stateTransition = function ()
 {
-  console.log(this);
   var url = $(this).data('resource_uri');
   var state = $(this).data('state');
 
