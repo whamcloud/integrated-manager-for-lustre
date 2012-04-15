@@ -156,7 +156,6 @@ class BaseStoragePlugin(object):
 
         resource_manager.session_open(
                 self._scannable_id,
-                self._root_resource._handle,
                 self._index.all(),
                 self.update_period)
         self._session_open = True
@@ -299,7 +298,7 @@ class BaseStoragePlugin(object):
         with self._alerts_lock:
             try:
                 existing = self._alerts[key]
-                if existing == (value):
+                if existing == value:
                     return
             except KeyError:
                 pass

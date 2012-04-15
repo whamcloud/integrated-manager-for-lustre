@@ -78,8 +78,6 @@ class StorageResourceMetaclass(type):
                 field_obj = String(hidden = True)
                 dct['_storage_attributes']['chroma_auto_id'] = field_obj
 
-        log.debug("%s: %s" % (name, dct['_storage_attributes']))
-
         return super(StorageResourceMetaclass, cls).__new__(cls, name, bases, dct)
 
 

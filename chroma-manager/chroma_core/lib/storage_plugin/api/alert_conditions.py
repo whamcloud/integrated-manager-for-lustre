@@ -4,10 +4,79 @@
 # ========================================================
 
 
+import logging
+
 from chroma_core.lib.storage_plugin.base_alert_condition import AlertCondition
 
 
-class AttrValAlertCondition(AlertCondition):
+class BoundCondition(AlertCondition):
+    def __init__(self, attribute, error_bound = None, warn_bound = None, info_bound = None, message = None, *args, **kwargs):
+        self.error_bound = error_bound
+        self.warn_bound = warn_bound
+        self.info_bound = info_bound
+        self.attribute = attribute
+        self.message = message
+        super(BoundCondition, self).__init__(*args, **kwargs)
+
+    def alert_classes(self):
+        result = []
+        bound_sev = [
+            (self.error_bound, logging.ERROR),
+            (self.warn_bound, logging.WARNING),
+            (self.info_bound, logging.INFO)
+        ]
+        for bound, sev in bound_sev:
+            if bound == None:
+                continue
+            else:
+                alert_name = "_%s_%s_%s" % (self._name, self.attribute, sev)
+                result.append(alert_name)
+
+        return result
+
+    def test(self, resource):
+        result = []
+        bound_sev = [
+            (self.error_bound, logging.ERROR),
+            (self.warn_bound, logging.WARNING),
+            (self.info_bound, logging.INFO)
+        ]
+        for bound, sev in bound_sev:
+            if bound == None:
+                continue
+            # FIXME: nowhere to put the severity for an alert yet
+            alert_name = "_%s_%s_%s" % (self._name, self.attribute, sev)
+            if self.upper:
+                active = getattr(resource, self.attribute) > bound
+            else:
+                active = getattr(resource, self.attribute) < bound
+
+            result.append([alert_name, self.attribute, active])
+
+        return result
+
+
+class UpperBoundCondition(BoundCondition):
+    """A condition that checks a numeric attribute against an upper bound, and
+       raises the alert if it exceeds that bound
+       ::
+
+        UpperBoundCondition('temperature', error_bound = 85, message = "Maximum operating temperature exceeded"
+    """
+    upper = True
+
+
+class LowerBoundCondition(BoundCondition):
+    """A condition that checks a numeric attribute against a lower bound, and
+       raises the alert if it falls below that bound
+       ::
+
+        LowerBoundCondition('rate', error_bound = 10, message = "Rate too low"
+    """
+    upper = False
+
+
+class ValueCondition(AlertCondition):
     """A condition that checks an attribute against certain values indicating varying
     severities of alert.  For example, if you had a 'status' attribute on your
     'widget' resource class which could be 'OK' or 'FAILED' then you might
@@ -22,11 +91,10 @@ class AttrValAlertCondition(AlertCondition):
         self.info_states = info_states
         self.attribute = attribute
         self.message = message
-        super(AttrValAlertCondition, self).__init__(*args, **kwargs)
+        super(ValueCondition, self).__init__(*args, **kwargs)
 
     def alert_classes(self):
         result = []
-        import logging
         states_sev = [
                 (self.error_states, logging.ERROR),
                 (self.warn_states, logging.WARNING),
@@ -43,7 +111,6 @@ class AttrValAlertCondition(AlertCondition):
 
     def test(self, resource):
         result = []
-        import logging
         states_sev = [
                 (self.error_states, logging.ERROR),
                 (self.warn_states, logging.WARNING),

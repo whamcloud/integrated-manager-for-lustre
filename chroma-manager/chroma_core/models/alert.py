@@ -103,9 +103,9 @@ class AlertState(models.Model):
             alert_item = alert_item.downcast()
 
         if active:
-            alert_klass.high(alert_item, **kwargs)
+            return alert_klass.high(alert_item, **kwargs)
         else:
-            alert_klass.low(alert_item, **kwargs)
+            return alert_klass.low(alert_item, **kwargs)
 
     @classmethod
     def high(alert_klass, alert_item, **kwargs):
@@ -132,6 +132,7 @@ class AlertState(models.Model):
                 # the .end of the existing record as we are logically concurrent
                 # with the creator.
                 pass
+        return alert_state
 
     @classmethod
     def low(alert_klass, alert_item, **kwargs):
@@ -147,6 +148,8 @@ class AlertState(models.Model):
                 ee.save()
         except alert_klass.DoesNotExist:
             alert_state = None
+
+        return alert_state
 
 
 class AlertEmail(models.Model):

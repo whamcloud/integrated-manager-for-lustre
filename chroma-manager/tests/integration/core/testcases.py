@@ -198,6 +198,7 @@ class ChromaIntegrationTestCase(TestCase):
                 )
 
     def set_volume_mounts(self, volume, primary_host_id, secondary_host_id):
+        print "set %s %s %s" % (volume.id, primary_host_id, secondary_host_id)
         for node in volume['volume_nodes']:
             if node['host_id'] == int(primary_host_id):
                 primary_volume_node_id = node['id']
@@ -225,6 +226,7 @@ class ChromaIntegrationTestCase(TestCase):
         self.assertTrue(response.successful, response.text)
 
     def verify_volume_mounts(self, volume, expected_primary_host_id, expected_secondary_host_id):
+        print "%s %s %s" % (volume.id, expected_primary_host_id, expected_secondary_host_id)
         for node in volume['volume_nodes']:
             if node['primary']:
                 self.assertEqual(node['host_id'], int(expected_primary_host_id))

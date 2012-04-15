@@ -1,25 +1,26 @@
 
-from chroma_core.lib.storage_plugin.plugin import StoragePlugin
-from chroma_core.lib.storage_plugin.resource import StorageResource, ScannableResource, ScannableId, AutoId
-from chroma_core.lib.storage_plugin import attributes
-from chroma_core.lib.storage_plugin import statistics
-from chroma_core.lib.storage_plugin import builtin_resources
-from chroma_core.lib.storage_plugin import relations
+from chroma_core.lib.storage_plugin.api.plugin import Plugin
+from chroma_core.lib.storage_plugin.api.resources import ScannableResource
+from chroma_core.lib.storage_plugin.api.identifiers import ScopedId, AutoId
+from chroma_core.lib.storage_plugin.api import attributes
+from chroma_core.lib.storage_plugin.api import statistics
+from chroma_core.lib.storage_plugin.api import resources
+from chroma_core.lib.storage_plugin.api import relations
 
 
 def crypt(password):
     return password.upper()
 
 
-class Couplet(StorageResource, ScannableResource):
+class Couplet(ScannableResource):
     identifier = AutoId()
 
     address = attributes.Hostname()
     password = attributes.Password(crypt)
 
 
-class Lun(builtin_resources.LogicalDrive):
-    identifier = ScannableId('lun_id')
+class Lun(resources.LogicalDrive):
+    identifier = ScopedId('lun_id')
     lun_id = attributes.String()
 
     charts = [
@@ -55,16 +56,17 @@ class Lun(builtin_resources.LogicalDrive):
         return self.lun_id
 
 
-class FakePresentation(builtin_resources.PathWeight):
-    identifier = ScannableId('path')
+class FakePresentation(resources.PathWeight):
+    identifier = ScopedId('path')
     lun_id = attributes.String()
     path = attributes.String()
     host_id = attributes.Integer()
     # FIXME: allow subscribers to use different name for their attributes than the provider did
 
-    _relations = [
+    class Meta:
+        relations = [
                       relations.Provide(
-                          provide_to = builtin_resources.DeviceNode,
+                          provide_to = resources.DeviceNode,
                           attributes = ['host_id', 'path']),
                       relations.Subscribe(
                           subscribe_to = Lun,
@@ -72,11 +74,11 @@ class FakePresentation(builtin_resources.PathWeight):
                       ]
 
 
-class FakeVirtualMachine(builtin_resources.VirtualMachine):
-    identifier = ScannableId('address')
+class FakeVirtualMachine(resources.VirtualMachine):
+    identifier = ScopedId('address')
 
 
-class FakeControllerPlugin(StoragePlugin):
+class FakeControllerPlugin(Plugin):
     def initial_scan(self, couplet):
         hosts = ['flint01', 'flint02']
         for host in hosts:
