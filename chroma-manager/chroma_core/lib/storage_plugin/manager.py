@@ -6,10 +6,12 @@
 
 """This module defines StoragePluginManager which loads and provides
 access to StoragePlugins and their StorageResources"""
-from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, ScannableResource
+from chroma_core.lib.storage_plugin.api import relations
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, ScannableResource, ResourceProgrammingError
 
 from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
+from chroma_core.lib.util import all_subclasses
 from chroma_core.models.storage_plugin import StoragePluginRecord, StorageResourceClassStatistic
 from chroma_core.models.storage_plugin import StorageResourceRecord, StorageResourceClass
 
@@ -50,6 +52,9 @@ class LoadedPlugin(object):
         self.scannable_resource_classes = []
 
         for cls in plugin_class._resource_classes:
+            if not hasattr(cls._meta, 'identifier'):
+                raise ResourceProgrammingError(cls.__name__, "No Meta.identifier")
+
             # Populate database records for the classes
             vrc, created = StorageResourceClass.objects.get_or_create(
                     storage_plugin = self.plugin_record,
@@ -57,7 +62,7 @@ class LoadedPlugin(object):
             if created:
                 vrc.user_creatable = issubclass(cls, ScannableResource)
                 vrc.save()
-            for name, stat_obj in cls._storage_statistics.items():
+            for name, stat_obj in cls._meta.storage_statistics.items():
                 class_stat, created = StorageResourceClassStatistic.objects.get_or_create(
                         resource_class = vrc,
                         name = name)
@@ -79,6 +84,21 @@ class StoragePluginManager(object):
         from settings import INSTALLED_STORAGE_PLUGINS
         for plugin in INSTALLED_STORAGE_PLUGINS:
             self.load_plugin(plugin)
+
+        for id, klass in self.resource_class_id_to_class.items():
+            klass._meta.relations = list(klass._meta.orig_relations)
+
+        for id, klass in self.resource_class_id_to_class.items():
+            for relation in klass._meta.relations:
+                if isinstance(relation, relations.Provide):
+                    # Synthesize Subscribe objects on the objects which might
+                    # be on the receiving event of a Provide relation.  The original
+                    # Provide object plays no further role.
+                    subscription = relations.Subscribe(klass, relation.attributes)
+                    relation.provide_to._meta.relations.append(subscription)
+                    for sc in all_subclasses(relation.provide_to):
+                        storage_plugin_log.debug("subclass relation %s %s %s" % (klass, relation.provide_to, sc))
+                        sc._meta.relations.append(subscription)
 
     def get_resource_class_id(self, klass):
         try:
@@ -172,7 +192,12 @@ class StoragePluginManager(object):
             raise RuntimeError("Duplicate storage plugin module %s" % module)
 
         # Load the module
-        mod = __import__(module)
+        try:
+            mod = __import__(module)
+        except (ImportError, ResourceProgrammingError) as e:
+            storage_plugin_log.error("Error importing %s: %s" % (module, e))
+            raise
+
         components = module.split('.')
         plugin_name = module
         for comp in components[1:]:
@@ -211,8 +236,13 @@ class StoragePluginManager(object):
             log.setLevel(logging.WARNING)
         plugin_klass.log = log
 
-        self._load_plugin(plugin_module, plugin_name, plugin_klass)
-        return plugin_klass
+        try:
+            self._load_plugin(plugin_module, plugin_name, plugin_klass)
+        except ResourceProgrammingError as e:
+            storage_plugin_log.error("Error loading %s: %s" % (plugin_name, e))
+            raise
+        else:
+            return plugin_klass
 
 
 storage_plugin_manager = StoragePluginManager()

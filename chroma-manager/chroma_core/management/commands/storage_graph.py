@@ -37,7 +37,7 @@ class Command(BaseCommand):
             iterate(start_record)
         G = pgv.AGraph(directed=True)
         for r in resources:
-            G.add_node(r._handle, label="%s:%s:%s" % (r._handle, r.get_class_label(), r.get_label()))
+            G.add_node(r._handle, label="%s:%s:%s" % (r._handle, r._meta.label, r.get_label()))
 
         for r in resources:
             for p in r.get_parents():

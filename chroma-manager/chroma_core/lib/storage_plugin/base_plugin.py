@@ -131,6 +131,8 @@ class BaseStoragePlugin(object):
         root_resource._handle_global = False
         self._root_resource = root_resource
 
+        self.log = None
+
     def do_agent_session_start(self, data):
         self._initial_populate(self.agent_session_start, self._root_resource.host_id, data)
 

@@ -5,12 +5,15 @@ from chroma_core.lib.storage_plugin.api import attributes
 
 
 class Controller(resources.Controller):
+    class Meta:
+        identifier = GlobalId('address')
+
     address = attributes.String()
-    identifier = GlobalId('address')
 
 
 class VirtualMachine(resources.VirtualMachine):
-    identifier = GlobalId('address')
+    class Meta:
+        identifier = GlobalId('address')
 
 
 class TestPlugin(Plugin):

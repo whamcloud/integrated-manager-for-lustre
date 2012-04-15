@@ -276,7 +276,7 @@ class Volume(models.Model):
         from chroma_core.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
         resource_klass = record.to_resource_class()
-        return resource_klass.get_class_label()
+        return resource_klass._meta.label()
 
     def _get_label(self):
         if not self.storage_resource_id:

@@ -2,37 +2,45 @@
 from django.test import TestCase
 from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId
-from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, ScannableResource
-from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
+from chroma_core.lib.storage_plugin.api import resources
+from chroma_core.lib.storage_plugin.api.plugin import Plugin
 
 import mock
 import types
 import sys
 
 
-class TestResource(BaseStorageResource, ScannableResource):
+class TestResource(resources.ScannableResource):
+    class Meta:
+        identifier = GlobalId('name')
+
     name = attributes.String()
-    identifier = GlobalId('name')
 
 
-class TestSecondResource(BaseStorageResource, ScannableResource):
+class TestSecondResource(resources.ScannableResource):
+    class Meta:
+        identifier = GlobalId('name')
+
     name = attributes.String()
-    identifier = GlobalId('name')
 
 
-class TestResourceExtraInfo(BaseStorageResource, ScannableResource):
+class TestResourceExtraInfo(resources.ScannableResource):
+    class Meta:
+        identifier = GlobalId('name')
+
     name = attributes.String()
     extra_info = attributes.String()
-    identifier = GlobalId('name')
 
 
-class TestResourceStatistic(BaseStorageResource, ScannableResource):
+class TestResourceStatistic(resources.ScannableResource):
+    class Meta:
+        identifier = GlobalId('name')
+
     name = attributes.String()
     extra_info = attributes.String()
-    identifier = GlobalId('name')
 
 
-class TestPlugin(BaseStoragePlugin):
+class TestPlugin(Plugin):
     _resource_classes = [TestResource,
                          TestSecondResource,
                          TestResourceExtraInfo,
@@ -43,7 +51,7 @@ class TestPlugin(BaseStoragePlugin):
         self.update_scan_called = False
         self.teardown_called = False
 
-        BaseStoragePlugin.__init__(self, *args, **kwargs)
+        Plugin.__init__(self, *args, **kwargs)
 
     def initial_scan(self, root_resource):
         self.initial_scan_called = True

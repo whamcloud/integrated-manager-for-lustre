@@ -97,40 +97,31 @@ class SubscriberIndex(object):
 
         # List of (provider, Provide object)
         self._all_subscriptions = []
-        # FIXME: pass this in instead?
+
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
         subscriptions = {}
 
         for id, klass in storage_plugin_manager.resource_class_id_to_class.items():
-            try:
-                klass._relations = list(klass.Meta.relations)
-            except AttributeError:
-                klass._relations = []
-
-        for id, klass in storage_plugin_manager.resource_class_id_to_class.items():
-            for relation in klass._relations:
-                if isinstance(relation, relations.Provide):
-                    subscription = relations.Subscribe(klass, relation.attributes)
-                    relation.provide_to._relations.append(subscription)
-                    for sc in all_subclasses(relation.provide_to):
-                        log.debug("subclass relation %s %s %s" % (klass, relation.provide_to, sc))
-                        sc._relations.append(subscription)
-
-        for id, klass in storage_plugin_manager.resource_class_id_to_class.items():
-            klass._subscriptions = []
-            for relation in klass._relations:
+            klass._meta.subscriptions = []
+            for relation in klass._meta.relations:
                 if isinstance(relation, relations.Subscribe):
                     log.debug("klass = %s relation %s" % (klass, relation))
                     subscriptions[relation.key] = relation
-                    klass._subscriptions.append(relation)
+                    klass._meta.subscriptions.append(relation)
+
+        for id, klass in storage_plugin_manager.resource_class_id_to_class.items():
+            if klass._meta.relations:
+                log.debug("%s._meta.relations = %s" % (klass.__name__, klass._meta.relations))
+            if klass._meta.subscriptions:
+                log.debug("%s._meta.subscriptions = %s" % (klass.__name__, klass._meta.subscriptions))
 
         self._all_subscriptions = subscriptions.values()
 
     def what_provides(self, resource):
         """What provides things that this resource subscribes to?"""
         result = set()
-        for subscription in resource._subscriptions:
+        for subscription in resource._meta.subscriptions:
             result |= self._provide_value_to_id[(subscription.key, subscription.val(resource))]
         return result
 
@@ -160,7 +151,7 @@ class SubscriberIndex(object):
         for subscription in self._all_subscriptions:
             if isinstance(resource, subscription.subscribe_to):
                 self.add_provider(resource_id, subscription.key, subscription.val(resource))
-        for subscription in resource._subscriptions:
+        for subscription in resource._meta.subscriptions:
             self.add_subscriber(resource_id, subscription.key, subscription.val(resource))
 
     def remove_resource(self, resource_id):
@@ -171,8 +162,8 @@ class SubscriberIndex(object):
             if isinstance(resource, subscription.subscribe_to):
                 log.debug("SubscriberIndex.remove provider %s" % subscription.key)
                 self.remove_provider(resource_id, subscription.key, subscription.val(resource))
-        log.debug("subscriptions = %s" % resource._subscriptions)
-        for subscription in resource._subscriptions:
+        log.debug("subscriptions = %s" % resource._meta.subscriptions)
+        for subscription in resource._meta.subscriptions:
             log.debug("SubscriberIndex.remove subscriber %s" % subscription.key)
             self.remove_subscriber(resource_id, subscription.key, subscription.val(resource))
 
@@ -187,7 +178,7 @@ class SubscriberIndex(object):
                         resource = r.to_resource()
                         self.add_provider(r.id, subscription.key, subscription.val(resource))
 
-            for subscription in resource_class._subscriptions:
+            for subscription in resource_class._meta.subscriptions:
                 records = StorageResourceRecord.objects.filter(
                         resource_class = resource_class_id)
                 for r in records:
@@ -646,7 +637,7 @@ class ResourceManager(object):
         reported_scoped_resources = []
         reported_global_resources = []
         for r in reported_resources:
-            if isinstance(r.identifier, BaseScopedId):
+            if isinstance(r._meta.identifier, BaseScopedId):
                 reported_scoped_resources.append(session.local_id_to_global_id[r._handle])
             else:
                 reported_global_resources.append(session.local_id_to_global_id[r._handle])
@@ -763,9 +754,9 @@ class ResourceManager(object):
         if resource._handle in session.local_id_to_global_id:
             return
 
-        if isinstance(resource.identifier, BaseScopedId):
+        if isinstance(resource._meta.identifier, BaseScopedId):
             scope_id = session.scannable_id
-        elif isinstance(resource.identifier, BaseGlobalId):
+        elif isinstance(resource._meta.identifier, BaseGlobalId):
             scope_id = None
         else:
             raise NotImplementedError
@@ -836,7 +827,7 @@ class ResourceManager(object):
             # provide/subscribe relationships with respect to it
             self._subscriber_index.add_resource(record.pk, resource)
 
-        if isinstance(resource.identifier, BaseGlobalId) and session.scannable_id != record.id:
+        if isinstance(resource._meta.identifier, BaseGlobalId) and session.scannable_id != record.id:
             try:
                 record.reported_by.get(pk = session.scannable_id)
             except StorageResourceRecord.DoesNotExist:

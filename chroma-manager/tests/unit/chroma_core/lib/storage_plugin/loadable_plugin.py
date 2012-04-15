@@ -5,14 +5,18 @@ from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 
 
 class TestScannableResource(BaseStorageResource, ScannableResource):
+    class Meta:
+        identifier = GlobalId('name')
+
     name = attributes.String()
-    identifier = GlobalId('name')
 
 
 class TestResource(BaseStorageResource):
+    class Meta:
+        identifier = GlobalId('name')
+
     name = attributes.String()
     thing_count = statistics.Counter()
-    identifier = GlobalId('name')
 
 
 class TestPlugin(BaseStoragePlugin):

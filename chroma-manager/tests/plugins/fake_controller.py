@@ -1,6 +1,5 @@
 
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
-from chroma_core.lib.storage_plugin.api.resources import ScannableResource
 from chroma_core.lib.storage_plugin.api.identifiers import ScopedId, AutoId
 from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api import statistics
@@ -12,27 +11,29 @@ def crypt(password):
     return password.upper()
 
 
-class Couplet(ScannableResource):
-    identifier = AutoId()
+class Couplet(resources.ScannableResource):
+    class Meta:
+        identifier = AutoId()
 
     address = attributes.Hostname()
     password = attributes.Password(crypt)
 
 
 class Lun(resources.LogicalDrive):
-    identifier = ScopedId('lun_id')
-    lun_id = attributes.String()
+    class Meta:
+        identifier = ScopedId('lun_id')
+        charts = [
+                {
+                'title': "Bandwidth",
+                'series': ['read_bytes_sec', 'write_bytes_sec']
+            },
+                {
+                'title': "Latency distribution",
+                'series': ['write_latency_hist']
+            }
+        ]
 
-    charts = [
-        {
-            'title': "Bandwidth",
-            'series': ['read_bytes_sec', 'write_bytes_sec']
-        },
-        {
-            'title': "Latency distribution",
-            'series': ['write_latency_hist']
-        }
-    ]
+    lun_id = attributes.String()
 
     read_bytes_sec = statistics.Gauge(units = "B/s", label = "Read bandwidth")
     write_bytes_sec = statistics.Gauge(units = "B/s", label = "Write bandwidth")
@@ -57,13 +58,14 @@ class Lun(resources.LogicalDrive):
 
 
 class FakePresentation(resources.PathWeight):
-    identifier = ScopedId('path')
     lun_id = attributes.String()
     path = attributes.String()
     host_id = attributes.Integer()
     # FIXME: allow subscribers to use different name for their attributes than the provider did
 
     class Meta:
+        identifier = ScopedId('path')
+
         relations = [
                       relations.Provide(
                           provide_to = resources.DeviceNode,
@@ -75,7 +77,8 @@ class FakePresentation(resources.PathWeight):
 
 
 class FakeVirtualMachine(resources.VirtualMachine):
-    identifier = ScopedId('address')
+    class Meta:
+        identifier = ScopedId('address')
 
 
 class FakeControllerPlugin(Plugin):

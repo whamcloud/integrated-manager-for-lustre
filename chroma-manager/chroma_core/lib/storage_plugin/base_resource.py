@@ -34,51 +34,74 @@ class BaseScopedId(ResourceIdentifier):
     pass
 
 
-class StorageResourceMetaclass(type):
-    def __new__(cls, name, bases, dct):
-        # Maps of attribute name to object
-        dct['_storage_attributes'] = {}
-        dct['_storage_statistics'] = {}
-        dct['_alert_conditions'] = {}
-        dct['_alert_classes'] = {}
+class ResourceProgrammingError(Exception):
+    def __init__(self, class_name, message):
+        self.message = message
+        self.class_name = class_name
 
-        # FIXME: a pretty way of letting the user specify subscriptions (in a Meta?)
-        if not '_relations' in dct:
-            dct['_relations'] = []
+    def __str__(self):
+        return "Resource class '%s': %s" % (self.class_name, self.message)
+
+
+class StorageResourceMetaclass(type):
+    def __new__(mcs, name, bases, dct):
+        try:
+            meta = dct['Meta']
+            del dct['Meta']
+        except KeyError:
+            meta = type('Meta', (object,), {})
+
+        if not hasattr(meta, 'relations'):
+            meta.relations = []
+        if not hasattr(meta, 'alert_conditions'):
+            meta.alert_conditions = []
+        if not hasattr(meta, 'alert_classes'):
+            meta.alert_classes = {}
+        if not hasattr(meta, 'storage_attributes'):
+            meta.storage_attributes = {}
+        if not hasattr(meta, 'storage_statistics'):
+            meta.storage_statistics = {}
+        if not hasattr(meta, 'charts'):
+            meta.charts = []
+        if not hasattr(meta, 'label'):
+            meta.label = name
+
+        meta.orig_relations = list(meta.relations)
 
         for base in bases:
-            if hasattr(base, '_storage_attributes'):
-                dct['_storage_attributes'].update(base._storage_attributes)
-            if hasattr(base, '_storage_statistics'):
-                dct['_storage_statistics'].update(base._storage_statistics)
-            if hasattr(base, '_alert_conditions'):
-                dct['_alert_conditions'].update(base._alert_conditions)
-            if hasattr(base, '_relations'):
-                dct['_relations'].extend(base._relations)
+            if name != 'BaseStorageResource' and issubclass(base, BaseStorageResource):
+                meta.storage_attributes.update(base._meta.storage_attributes)
+                meta.storage_statistics.update(base._meta.storage_statistics)
+                meta.alert_conditions.extend(base._meta.alert_conditions)
+                meta.alert_classes.update(base._meta.alert_classes)
+                meta.relations.extend(base._meta.relations)
+                meta.charts.extend(base._meta.charts)
 
         for field_name, field_obj in dct.items():
             if isinstance(field_obj, BaseResourceAttribute):
-                dct['_storage_attributes'][field_name] = field_obj
+                meta.storage_attributes[field_name] = field_obj
                 del dct[field_name]
             elif isinstance(field_obj, BaseStatistic):
-                dct['_storage_statistics'][field_name] = field_obj
+                meta.storage_statistics[field_name] = field_obj
                 del dct[field_name]
             elif isinstance(field_obj, AlertCondition):
-                dct['_alert_conditions'][field_name] = field_obj
-                field_obj.set_name(field_name)
-
-                # Build map to find the AlertCondition which
-                # generated a particular alert
-                for alert_class in field_obj.alert_classes():
-                    dct['_alert_classes'][alert_class] = field_obj
-
+                meta.alert_conditions[field_name] = field_obj
                 del dct[field_name]
-            elif isinstance(field_obj, BaseAutoId):
-                from chroma_core.lib.storage_plugin.api.attributes import String
-                field_obj = String(hidden = True)
-                dct['_storage_attributes']['chroma_auto_id'] = field_obj
 
-        return super(StorageResourceMetaclass, cls).__new__(cls, name, bases, dct)
+        if hasattr(meta, 'identifier') and isinstance(meta.identifier, BaseAutoId):
+            from chroma_core.lib.storage_plugin.api.attributes import String
+            field_obj = String(hidden = True)
+            meta.storage_attributes['chroma_auto_id'] = field_obj
+
+        # Build map to find the AlertCondition which
+        # generated a particular alert
+        for alert_condition in meta.alert_conditions:
+            for alert_class in alert_condition.alert_classes():
+                meta.alert_classes[alert_class] = alert_condition
+
+        dct['_meta'] = meta
+
+        return super(StorageResourceMetaclass, mcs).__new__(mcs, name, bases, dct)
 
 
 class BaseStorageResource(object):
@@ -88,24 +111,24 @@ class BaseStorageResource(object):
 
     @classmethod
     def alert_message(cls, alert_class):
-        return cls._alert_classes[alert_class].message
+        return cls._meta.alert_classes[alert_class].message
 
     @classmethod
     def encode(cls, attr, value):
-        return cls._storage_attributes[attr].encode(value)
+        return cls._meta.storage_attributes[attr].encode(value)
 
     @classmethod
     def attr_model_class(cls, attr):
-        return cls._storage_attributes[attr].model_class
+        return cls._meta.storage_attributes[attr].model_class
 
     @classmethod
     def decode(cls, attr, value):
-        return cls._storage_attributes[attr].decode(value)
+        return cls._meta.storage_attributes[attr].decode(value)
 
     def format(self, attr, val = None):
         if not val:
             val = getattr(self, attr)
-        return self._storage_attributes[attr].to_markup(val)
+        return self._meta.storage_attributes[attr].to_markup(val)
 
     def format_all(self):
         """Return a list of 2-tuples for names and human readable
@@ -141,7 +164,7 @@ class BaseStorageResource(object):
 
     @classmethod
     def get_attribute_properties(cls, name):
-        return cls._storage_attributes[name]
+        return cls._meta.storage_attributes[name]
 
     def __init__(self, **kwargs):
         self._storage_dict = {}
@@ -163,8 +186,8 @@ class BaseStorageResource(object):
         self._delta_stats = defaultdict(list)
 
         for k, v in kwargs.items():
-            if not k in self._storage_attributes:
-                raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._storage_attributes.keys()))
+            if not k in self._meta.storage_attributes:
+                raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._meta.storage_attributes.keys()))
             setattr(self, k, v)
         self.flush_deltas()
 
@@ -175,24 +198,7 @@ class BaseStorageResource(object):
             self._delta_attrs = {}
             self._delta_parents = []
 
-        # Blackhawk down!
         return deltas
-
-    def to_json(self, stack = []):
-        dct = {}
-        dct['id'] = self._handle
-        dct['label'] = self.get_label()
-        dct['class_label'] = self.get_class_label()
-        dct['icon'] = self.icon
-        dct.update(dict(list(self.format_all())))
-        dct['children'] = []
-
-        stack = stack + [self]
-        # This is a bit ropey, .children is actually only added when doing a resource_tree from resourcemanager
-        for c in self._children:
-            dct['children'].append(c.to_json(stack))
-
-        return dct
 
     def __str__(self):
         return "<%s %s>" % (self.__class__.__name__, self._handle)
@@ -205,16 +211,16 @@ class BaseStorageResource(object):
         id = self.id_tuple()
         if len(id) == 1:
             id = id[0]
-        return "%s %s" % (self.get_class_label(), id)
+        return "%s %s" % (self._meta.label, id)
 
     def __setattr__(self, key, value):
         if key.startswith("_"):
             # Do this check first to avoid extra dict lookups for access
             # to internal vars
             object.__setattr__(self, key, value)
-        elif key in self._storage_attributes:
+        elif key in self._meta.storage_attributes:
             # Validate the value
-            self._storage_attributes[key].validate(value)
+            self._meta.storage_attributes[key].validate(value)
 
             # First see if the new val is the same as an existing
             # value if there is an existing value, and if so return.
@@ -228,8 +234,8 @@ class BaseStorageResource(object):
             self._storage_dict[key] = value
             with self._delta_lock:
                 self._delta_attrs[key] = value
-        elif key in self._storage_statistics:
-            stat_obj = self._storage_statistics[key]
+        elif key in self._meta.storage_statistics:
+            stat_obj = self._meta.storage_statistics[key]
             stat_obj.validate(value)
 
             import time
@@ -247,13 +253,13 @@ class BaseStorageResource(object):
         return tmp
 
     def __getattr__(self, key):
-        if key.startswith("_") or not key in self._storage_attributes:
+        if key.startswith("_") or not key in self._meta.storage_attributes:
             raise AttributeError("Unknown attribute %s" % key)
         else:
             try:
                 return self._storage_dict[key]
             except KeyError:
-                attr = self._storage_attributes[key]
+                attr = self._meta.storage_attributes[key]
                 if attr.optional:
                     return None
                 else:
@@ -264,14 +270,14 @@ class BaseStorageResource(object):
     def attrs_to_id_tuple(cls, attrs):
         """Serialized ID for use in StorageResourceRecord.storage_id_str"""
         identifier_val = []
-        for f in cls.identifier.id_fields:
-            if not f in cls._storage_attributes:
+        for f in cls._meta.identifier.id_fields:
+            if not f in cls._meta.storage_attributes:
                 raise RuntimeError("Invalid attribute %s named in identifier for %s" % (f, cls))
 
             if f in attrs:
                 identifier_val.append(attrs[f])
             else:
-                if cls._storage_attributes[f].optional:
+                if cls._meta.storage_attributes[f].optional:
                     identifier_val.append(None)
                 else:
                     raise RuntimeError("Missing ID attribute '%s'" % f)
@@ -298,10 +304,10 @@ class BaseStorageResource(object):
         """Call validate() on the BaseResourceAttribute for all _storage_dict items, and
            ensure that all non-optional BaseResourceAttributes have a value in _storage_dict"""
         for k, v in self._storage_dict.items():
-            if k in self._storage_attributes:
-                self._storage_attributes[k].validate(v)
+            if k in self._meta.storage_attributes:
+                self._meta.storage_attributes[k].validate(v)
 
-        for k, a in self._storage_attributes.items():
+        for k, a in self._meta.storage_attributes.items():
             if not k in self._storage_dict and not a.optional:
                 raise ValueError("Missing mandatory attribute %s" % k)
 
@@ -309,7 +315,7 @@ class BaseStorageResource(object):
         """Return one member of self._parents of class 'parent_klass'.  Raises
            an exception if there are multiple matches or no matches."""
         parents_filtered = [p for p in self._parents if isinstance(p, parent_klass)]
-        if len(parents_filtered) == 0:
+        if not parents_filtered:
             raise RuntimeError("No parents of class %s" % parent_klass)
         elif len(parents_filtered) > 1:
             raise RuntimeError("Multiple parents of class %s" % parent_klass)
@@ -317,19 +323,7 @@ class BaseStorageResource(object):
             return parents_filtered[0]
 
     def get_parents(self):
-        """Template helper b/c templates aren't allowed to touch _members"""
         return self._parents
-
-    def get_handle(self):
-        """Template helper"""
-        return self._handle
-
-    @classmethod
-    def get_class_label(cls):
-        if hasattr(cls, 'class_label'):
-            return cls.class_label
-        else:
-            return cls.__name__
 
 
 class ScannableResource(object):

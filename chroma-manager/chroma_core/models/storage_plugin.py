@@ -84,10 +84,10 @@ class StorageResourceRecord(models.Model):
         # Root resource do not have parents so they must be globally identified
         from chroma_core.lib.storage_plugin.api.identifiers import AutoId, ScopedId
 
-        if isinstance(resource_class.identifier, ScopedId):
+        if isinstance(resource_class._meta.identifier, ScopedId):
             raise RuntimeError("Cannot create root resource of class %s, it requires a scope" % resource_class)
 
-        if isinstance(resource_class.identifier, AutoId):
+        if isinstance(resource_class._meta.identifier, AutoId):
             import uuid
             attrs['chroma_auto_id'] = uuid.uuid4().__str__()
         id_str = json.dumps(resource_class.attrs_to_id_tuple(attrs))
@@ -164,7 +164,7 @@ class StorageResourceRecord(models.Model):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         klass = storage_plugin_manager.get_resource_class_by_id(self.resource_class_id)
         attr_model_to_keys = defaultdict(list)
-        for attr, attr_props in klass._storage_attributes.items():
+        for attr, attr_props in klass._meta.storage_attributes.items():
             attr_model_to_keys[attr_props.model_class].append(attr)
         storage_dict = {}
         for attr_model, keys in attr_model_to_keys.items():
@@ -197,7 +197,7 @@ class StorageResourceRecord(models.Model):
                 self.resource_class.storage_plugin.module_name,
                 self.resource_class.class_name)
 
-        return klass._storage_statistics[stat_name]
+        return klass._meta.storage_statistics[stat_name]
 
 
 class SimpleHistoStoreBin(models.Model):

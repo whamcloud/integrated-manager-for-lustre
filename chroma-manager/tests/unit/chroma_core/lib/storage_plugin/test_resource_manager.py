@@ -376,12 +376,11 @@ class TestAlerts(ResourceManagerTestCase):
     def _update_alerts(self, scannable_pk, resource, alert_klass):
         from chroma_core.lib.storage_plugin.resource_manager import resource_manager
 
-        alert_name, attribute, active = resource._alert_classes.values()[0].test(resource)[0]
-        for name, ac in resource._alert_conditions.items():
+        for ac in resource._meta.alert_conditions:
             if isinstance(ac, alert_klass):
                 alert_list = ac.test(resource)
                 for name, attribute, active in alert_list:
-                    resource_manager.session_notify_alert(scannable_pk, resource._handle, active, alert_name, attribute)
+                    resource_manager.session_notify_alert(scannable_pk, resource._handle, active, name, attribute)
                     return active
 
     def test_raise_alert(self):

@@ -17,8 +17,9 @@ class ScannableResource(BaseStorageResource, ScannableResource):
 
 
 class Host(BaseStorageResource):
-    class_label = 'Host'
-    icon = 'host'
+    class Meta:
+        label = 'Host'
+        icon = 'host'
 
 
 class PathWeight(BaseStorageResource):
@@ -41,7 +42,9 @@ class DeviceNode(BaseStorageResource):
     host_id = attributes.Integer()
     path = attributes.PosixPath()
     logical_drive = attributes.ResourceReference(optional = True)
-    class_label = 'Device node'
+
+    class Meta:
+        label = 'Device node'
 
     def get_label(self):
         path = self.path
@@ -58,8 +61,10 @@ class DeviceNode(BaseStorageResource):
 
 class LogicalDrive(BaseStorageResource):
     """A storage device with a fixed size that could be used for installing Lustre"""
+    class Meta:
+        icon = 'virtual_disk'
+
     size = attributes.Bytes()
-    icon = 'virtual_disk'
 
 
 class Enclosure(BaseStorageResource):
@@ -79,11 +84,13 @@ class Controller(BaseStorageResource):
 
 class StoragePool(BaseStorageResource):
     """An aggregation of physical drives"""
-    class_label = 'Storage pool'
-    icon = 'storage_pool'
+    class Meta:
+        label = 'Storage pool'
+        icon = 'storage_pool'
 
 
 class PhysicalDisk(BaseStorageResource):
     """A physical storage device, such as a hard drive or SSD"""
-    class_label = 'Physical disk'
-    icon = 'physical_disk'
+    class Meta:
+        label = 'Physical disk'
+        icon = 'physical_disk'
