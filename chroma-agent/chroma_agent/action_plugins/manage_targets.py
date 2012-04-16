@@ -528,7 +528,7 @@ def target_running(args):
 
     mounts = Mounts()
     for device, mntpnt, fstype in mounts.all():
-        if device == info['bdev'] and mntpnt == info['mntpt']:
+        if device == info['bdev']:
             _exit(0)
 
     _exit(1)
