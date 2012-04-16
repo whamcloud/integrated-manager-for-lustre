@@ -54,7 +54,7 @@
         ]
       });
 
-      $('#create_user_dialog').dialog({
+      $('div.create_user_dialog').dialog({
         resizable: false,
         draggable: false,
         autoOpen: false,
@@ -63,17 +63,21 @@
         title: 'Create user',
         buttons: {
           "Cancel": function(){$(this).dialog('close');},
-          "Create": function() {
-            var dialog = $(this);
-            var user = {}
-            //user.groups = [{pk: $('#create_user_dialog select[name=group]').val()}]
-            user.groups = [$('#create_user_dialog select[name=group]').val()]
+          "Create":{
+            "text":"Create",
+            "class":"create_button",
+            "click": function(){
+              var dialog = $(this);
+              var user = {}
+              //user.groups = [{pk: $('div.create_user_dialog select[name=group]').val()}]
+              user.groups = [$('div.create_user_dialog select[name=group]').val()]
 
-            ValidatedForm.save(dialog, Api.post, "user/", user, function ()
-            {
-              dialog.dialog('close');
-              reloadTable();
-            });
+              ValidatedForm.save(dialog, Api.post, "user/", user, function ()
+              {
+                dialog.dialog('close');
+                reloadTable();
+              });
+            }
           }
         }
       });
@@ -81,7 +85,7 @@
       Api.get("group/", {limit: 0}, success_callback = function(data) {
         $.each(data.objects, function(i, group) {
           var option = "<option value='" + group.resource_uri + "'>"+ group.name + "</option>";
-          $('#create_user_dialog select[name=group]').prepend(option)
+          $('div.create_user_dialog select[name=group]').prepend(option)
         });
       });
 
@@ -92,22 +96,26 @@
 
     function createUser()
     {
-      ValidatedForm.clear($('#create_user_dialog'))
-      $('#create_user_dialog').dialog('open');
+      ValidatedForm.clear($('div.create_user_dialog'))
+      $('div.create_user_dialog').dialog('open');
     }
 
     function deleteUser(user) {
-      $("<div>Delete user '" + user.username + "'?</div>").dialog({
+      $("<div class='delete_user_dialog'>Delete user '" + user.username + "'?</div>").dialog({
         resizable: false,
         width: 'auto',
         buttons: {
           "Cancel": function() {$(this).dialog('close')},
-          "Delete": function() {
-            var dialog = $(this);
-            Api.delete('user/' + user.id + '/', {}, success_callback = function() {
-              dialog.dialog('close');
-              reloadTable();
-            });
+          "Delete": {
+            "text": "Delete",
+            "class": "delete_button",
+            "click": function(){
+              var dialog = $(this);
+              Api.delete('user/' + user.id + '/', {}, success_callback = function() {
+                dialog.dialog('close');
+                reloadTable();
+              });
+           }
           }
         }
       });
@@ -155,7 +163,7 @@
   </tbody>
 </table>
 
-<div id="create_user_dialog">
+<div class="create_user_dialog">
   <table class='validated_form'>
     <tr>
       <th>Group:</th><td><select name='group'></select></td>

@@ -1,73 +1,42 @@
-"""Page Object of Events Page """
-from utils.constants import Constants
-from time import sleep
+from utils.constants import static_text
 from selenium.webdriver.support.ui import Select
 
 
 class Events:
-    """ Page Object for Events Page
+    """
+    Page Object for Events Page
     """
     def __init__(self, driver):
         self.driver = driver
-        #Initialise the constants class
-        constants = Constants()
-        self.WAIT_TIME = constants.wait_time
 
-        # Initialise all elements on that view.
-        self.host_list = self.driver.find_element_by_id('event_host')
-        self.event_severity = self.driver.find_element_by_id('event_severity')
-        self.event_type = self.driver.find_element_by_id('event_type')
-        self.filter_btn = self.driver.find_element_by_id('filter_btn')
+        self.NO_DATATABLE_DATA = static_text['no_data_for_datable']
 
-    def filter_records(self):
-        #Click filter button
-        self.filter_btn.click()
-        # FIXME: need to add a generic function to wait for an action
-        sleep(2)
+        # Initialise elements on this page
+        self.host_list = '#event_host'
+        self.event_severity = '#event_severity'
+        self.event_type = 'event_type'
+        self.events_datatable = 'events_table'
 
-    def select_host(self, index):
-        #Click severity select dropdown option
-        self.host_list_options = self.host_list.find_elements_by_tag_name('option')
-        self.host_list_options[index].click()
-        # FIXME: need to add a generic function to wait for an action
-        sleep(2)
+        self.filter_btn = self.driver.find_element_by_css_selector('#filter_btn')
 
-    def select_severity(self, index):
-        #Click severity select dropdown option
-        self.event_severity_options = self.event_severity.find_elements_by_tag_name('option')
-        self.event_severity_options[index].click()
-        # FIXME: need to add a generic function to wait for an action
-        sleep(2)
-
-    def get_table_data(self):
-        """Returns text of first <td> tag of events table
-        """
-        td = self.driver.find_element_by_xpath("id('events_table')/tbody/tr/td")
-        return td.text
+    def check_table_data(self):
+        # Checks length of events datatable. Throws exception if no data present
+        table_data = self.driver.find_element_by_xpath("id('" + self.events_datatable + "')/tbody/tr/td")
+        if table_data.text == self.NO_DATATABLE_DATA:
+            raise RuntimeError("No data in table with ID: " + self.events_datatable)
 
     def get_host_value(self):
-        """Returns text of first severity value from list in events table
-        """
-        td = self.driver.find_element_by_xpath("id('events_table')/tbody/tr/td[3]")
+        # Returns text of first host value from events datatable
+        td = self.driver.find_element_by_xpath("id('" + self.events_datatable + "')/tbody/tr/td[3]")
         return td.text
 
     def get_severity_value(self):
-        """Returns text of first severity value from list in events table
-        """
-        td = self.driver.find_element_by_xpath("id('events_table')/tbody/tr/td[2]")
+        # Returns text of first severity value from events datatable
+        td = self.driver.find_element_by_xpath("id('" + self.events_datatable + "')/tbody/tr/td[2]")
         return td.text
 
-    def get_host_list_length(self):
-        """Returns length of host dropdown list
-        """
-        self.log_host_options = self.host_list.find_elements_by_tag_name('option')
-        option_values = [option.get_attribute('value') for option in self.log_host_options]
-        return len(option_values)
-
-    def get_host_value_from_dropdown(self):
-        """Returns text of selected value from list from host dropdown
-        """
-        host_list = Select(self.host_list)
-        for opt in host_list.options:
-            if opt.is_selected():
-                return opt.text
+    def check_host_list_length(self):
+        # Checks length of available hosts. Throws exception if no hosts available
+        select_box_element = Select(self.driver.find_element_by_css_selector(self.host_list))
+        if select_box_element.options.__len__() == 1:
+            raise RuntimeError("No hosts available in host list")

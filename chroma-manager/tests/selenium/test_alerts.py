@@ -1,41 +1,39 @@
-""" Test Alerts"""
-
 from views.alerts import Alerts
-from utils.constants import Constants
 from base import SeleniumBaseTestCase
+from base import enter_text_for_element
+from base import wait_for_datatable
 
 
 class TestAlerts(SeleniumBaseTestCase):
+    """Test cases for alerts page"""
+
     def setUp(self):
         super(TestAlerts, self).setUp()
 
         self.navigation.go('Alerts')
-
-        # Calling Alerts
         self.alerts_page = Alerts(self.driver)
-        self.active_alert_data = self.alerts_page.get_active_alerts_table_data()
-        self.history_table_data = self.alerts_page.get_history_table_data()
+
+        wait_for_datatable(self.driver, '#active_AlertContent')
+        wait_for_datatable(self.driver, '#all_AlertContent')
 
     def test_active_alerts_search(self):
-        # Initialise the constants class
-        constants = Constants()
-        self.NO_DATATABLE_DATA = constants.get_static_text('no_data_for_datable')
-        if self.active_alert_data != self.NO_DATATABLE_DATA:
-            entity_data = self.alerts_page.get_active_entity_data()
-            self.alerts_page.enter_active_alert_search_data(entity_data)
-            filtered_entity_data = self.alerts_page.get_active_entity_data()
-            self.assertEqual(entity_data, filtered_entity_data)
+        """Test active alert search"""
+
+        active_alert_data = self.alerts_page.get_table_data(self.alerts_page.active_alert_datatable)
+        enter_text_for_element(self.driver, self.alerts_page.active_alert_search_text, active_alert_data)
+
+        filtered_entity_data = self.alerts_page.get_active_alert_entity_data()
+        self.assertEqual(active_alert_data, filtered_entity_data, "Searched data in active alerts not matching")
 
     def test_alerts_history_search(self):
-        # Initialise the constants class
-        constants = Constants()
-        self.NO_DATATABLE_DATA = constants.get_static_text('no_data_for_datable')
-        if self.history_table_data != self.NO_DATATABLE_DATA:
-            entity_data = self.alerts_page.get_history_entity_data()
-            self.alerts_page.enter_alert_history_search_data(entity_data)
-            filtered_entity_data = self.alerts_page.get_history_entity_data()
-            self.assertEqual(entity_data, filtered_entity_data)
+        """Test alert history search"""
 
-import unittest
+        history_table_data = self.alerts_page.get_table_data(self.alerts_page.alert_history_datatable)
+        enter_text_for_element(self.driver, self.alerts_page.alert_history_search_text, history_table_data)
+
+        filtered_entity_data = self.alerts_page.get_alert_history_entity_data()
+        self.assertEqual(history_table_data, filtered_entity_data, "Searched data in alert history not matching")
+
+import django.utils.unittest
 if __name__ == '__main__':
-    unittest.main()
+    django.utils.unittest.main()

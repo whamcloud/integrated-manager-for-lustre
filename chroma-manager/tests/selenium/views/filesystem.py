@@ -1,102 +1,75 @@
-"""Page Object of mgt creation"""
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-from utils.constants import Constants
-from time import sleep
-from selenium.common.exceptions import StaleElementReferenceException
-from selenium.common.exceptions import NoSuchElementException
+
+from utils.constants import wait_time
+from base import wait_for_element
+from base import wait_for_transition
 
 
 class Filesystem:
-    """ Page Object for mgt creation
+    """
+    Page Object for file system operations
     """
     def __init__(self, driver):
         self.driver = driver
-        #Initialise the constants class
-        constants = Constants()
-        self.WAIT_TIME = constants.wait_time['standard']
-        self.action_button_td = 7
 
-    def stop_fs(self, filesystem_name):
-        """Stops filesystem"""
-        fs_list = self.driver.find_elements_by_xpath("id('fs_list')/tbody/tr/td[1]/a")
-        if len(fs_list) > 0:
-            for i in range(len(fs_list)):
-                if fs_list.__getitem__(i).text == filesystem_name:
-                    stop_lnet_button = self.driver.find_element_by_xpath("id('fs_list')/tr[" + str(i + 1) + "]/td[" + str(self.action_button_td) + "]/span/button[1]")
-                    stop_lnet_button.click()
-                    self.test_loading_image()
+        self.medium_wait = wait_time['medium']
+        self.standard_wait = wait_time['standard']
 
-    def start_fs(self, filesystem_name):
-        """Stops filesystem"""
-        fs_list = self.driver.find_elements_by_xpath("id('fs_list')/tbody/tr/td[1]/a")
-        if len(fs_list) > 0:
-            for i in range(len(fs_list)):
-                if fs_list.__getitem__(i).text == filesystem_name:
-                    start_lnet_button = self.driver.find_element_by_xpath("id('fs_list')/tr[" + str(i + 1) + "]/td[" + str(self.action_button_td) + "]/span/button[1]")
-                    start_lnet_button.click()
-                    self.test_loading_image()
+        self.filesystem_name_td = 0
+        self.filesystem_datatable = 'fs_list'
 
-    def remove_fs(self, filesystem_name):
-        """Removes filesystem"""
-        fs_list = self.driver.find_elements_by_xpath("id('fs_list')/tbody/tr/td[1]/a")
-        if len(fs_list) > 0:
-            for i in range(len(fs_list)):
-                if fs_list.__getitem__(i).text == filesystem_name:
-                    remove_lnet_button = self.driver.find_element_by_xpath("id('fs_list')/tr[" + str(i + 1) + "]/td[" + str(self.action_button_td) + "]/span/button[2]")
-                    remove_lnet_button.click()
-                    sleep(5)
-                    self.driver.find_element_by_id('transition_confirm_button').click()
-                    self.test_loading_image()
+    def locate_filesystem(self, filesystem_name):
+        filesystem_list = self.driver.find_elements_by_xpath("id('" + self.filesystem_datatable + "')/tbody/tr")
+        for tr in filesystem_list:
+            tds = tr.find_elements_by_tag_name("td")
+            if tds[self.filesystem_name_td].text == filesystem_name:
+                return tr
 
-    def check_fs_actions(self, fs_name, action_name):
-        """Check whether the given action_name not present in available actions"""
-        fs_list = self.driver.find_elements_by_xpath("id('fs_list')/tbody/tr/td[1]/a")
-        if len(fs_list) > 0:
-            for i in range(len(fs_list)):
-                if fs_list.__getitem__(i).text == fs_name:
-                    fs_buttons = self.driver.find_elements_by_xpath("id('fs_list')/tbody/tr[" + str(i + 1) + "]/td[" + str(self.action_button_td) + "]/span/button")
-                    for i in range(len(fs_buttons)):
-                        if fs_buttons[i].text == action_name:
-                            return True
-        return False
+        raise RuntimeError("File system: " + filesystem_name + " not found in file system list")
 
-    def edit_fs_action(self, fs_name):
-        fs_list = self.driver.find_elements_by_xpath("id('fs_list')/tbody/tr/td[1]/a")
-        for fs in fs_list:
-            if fs.text == fs_name:
-                fs.click()
+    def transition(self, filesystem_name, transition_name, transition_confirm = True):
+        """Perform given transition on target filesystem"""
 
-    def select_ost(self, host_name, device_node):
-        """Select an OST"""
-        create_ost_button = self.driver.find_element_by_id('btnNewOST')
-        create_ost_button.click()
-        sleep(2)
-        ost_rows = self.driver.find_elements_by_xpath("id='new_ost_chooser_table']/tbody/tr")
-        for tr in ost_rows:
-            if tr.find_element_by_xpath("td[5]").text == host_name and tr.find_element_by_xpath("td[1]").text == device_node:
-                tr.click()
-        ok_button = self.driver.find_element_by_id('ost_ok_button')
-        ok_button.click()
-
-    def get_file_system_list_length(self):
-        """Returns length of file system list"""
-        fs_list = self.driver.find_elements_by_xpath("id('fs_list')/tbody/tr/td[1]/a")
-        return len(fs_list)
-
-    def test_loading_image(self):
-        from time import sleep
-        for i in xrange(10):
-            print "Retrying attempt: " + str(i)
-            try:
-                loading_div = self.driver.find_element_by_css_selector("span.notification_object_icon.busy_icon")
-                try:
-                    if loading_div.is_displayed():
-                        print "Waiting for process to get complete"
-                        sleep(2)
-                        continue
-                except StaleElementReferenceException:
-                    sleep(2)
-                    return
-            except NoSuchElementException:
-                sleep(2)
+        target_filesystem_row = self.locate_filesystem(filesystem_name)
+        buttons = target_filesystem_row.find_elements_by_tag_name("button")
+        for button in buttons:
+            if button.text == transition_name:
+                button.click()
+                if transition_confirm:
+                    wait_for_element(self.driver, '#transition_confirm_button', self.medium_wait)
+                    self.driver.find_element_by_css_selector('#transition_confirm_button').click()
+                wait_for_transition(self.driver, self.standard_wait)
                 return
+
+        raise RuntimeError("Cannot perform transition " + transition_name + " on filesystem " + filesystem_name)
+
+    def check_action_available(self, fs_name, action_name):
+        """Check whether the given transition(action) is present in all possible transitions available for the filesystem"""
+        target_filesystem_row = self.locate_filesystem(fs_name)
+        buttons = target_filesystem_row.find_elements_by_tag_name("button")
+        for button in buttons:
+            if button.text == action_name:
+                raise RuntimeError("Error in File system while performing operation: " + action_name)
+
+        return True
+
+    def edit(self, fs_name):
+        """Click filesystem name to be edited"""
+
+        target_filesystem_row = self.locate_filesystem(fs_name)
+        target_filesystem_row.find_element_by_xpath("td[1]/a").click()
+
+    def get_filesystem_list(self):
+        """Returns file system name list"""
+        fs_list = self.driver.find_elements_by_xpath("id('fs_list')/tbody/tr/td[1]/a")
+        filtered_filesystem_list = []
+
+        # Get actual display text from list of webelement objects, append the names to a new list and sort the new list
+        for count in range(len(fs_list)):
+            filtered_filesystem_list.append(fs_list.__getitem__(count).text)
+        filtered_filesystem_list.sort()
+        return filtered_filesystem_list

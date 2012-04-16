@@ -1,9 +1,17 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
+import django.utils.unittest
 from views.servers import Servers
 from base import SeleniumBaseTestCase
+from utils.constants import static_text
+from utils.constants import wait_time
 from utils.sample_data import Testdata
 from views.volumes import Volumes
-from base import enter_text_for_element
-from base import wait_for_element
+from base import wait_for_datatable
 
 
 class TestServer(SeleniumBaseTestCase):
@@ -14,43 +22,47 @@ class TestServer(SeleniumBaseTestCase):
         self.navigation.go('Configure', 'Servers')
 
         self.server_page = Servers(self.driver)
+        self.long_wait = wait_time['long']
+        self.medium_wait = wait_time['medium']
 
         # Getting test data for servers
         self.test_data = Testdata()
         self.host_list = self.test_data.get_test_data_for_server_configuration()
 
+        wait_for_datatable(self.driver, '#server_configuration')
+        self.server_page = Servers(self.driver)
+
     def test_create_server(self):
-        """Test server creation"""
-
+        #Test server creation
+        self.server_page.add_servers(self.host_list)
+        self.navigation.go('Volumes', 'Servers')
         for host in self.host_list:
-            self.server_page.new_add_server_button.click()
             host_name = host["address"]
-
-            enter_text_for_element(self.driver, self.server_page.host_address_text, host_name)
-            self.server_page.host_continue_button.click()
-
-            # Verifying that add server confirm dialog is displayed
-            self.assertTrue(wait_for_element(self.driver, self.server_page.confirm_dialog_div, 10), 'Add server confirm dialog not displayed')
-
-            self.server_page.add_host_confirm_button.click()
-
-            # Verifying that add server complete dialog is displayed
-            self.assertTrue(wait_for_element(self.driver, self.server_page.complete_dialog_div, 10), 'Add server complete dialog not displayed')
-
-            self.server_page.add_host_close_button.click()
-
-            self.navigation.go('Volumes', 'Servers')
-
-            self.server_page = Servers(self.driver)
-            # Verifying that added server is displayed in server configuration list
-            self.assertTrue(self.server_page.verify_added_server(host_name), 'Added server not displayed in server configuration list')
-
             # Check LNet state
-            self.assertEqual('lnet_up', self.server_page.get_lnet_state(host_name), 'Incorrect LNet state')
+            self.assertEqual('lnet_up', self.server_page.get_lnet_state(host_name), 'Incorrect LNet state for host ' + host_name)
 
     def test_volume_config_for_added_server(self):
         """Test for verifying that volumes appear for newly added server"""
 
+        self.server_page.add_servers(self.host_list)
+        self.check_volume_config_for_added_server()
+        self.navigation.go('Servers')
+
+    def test_start_and_stop_lnet_on_server(self):
+        """Test for starting and stopping LNet on server"""
+
+        self.server_page.add_servers(self.host_list)
+        self.stop_lnet_on_servers()
+        self.start_lnet_on_servers()
+
+    def test_load_and_unload_lnet_on_server(self):
+        """Test for loading and unloading LNet on server"""
+
+        self.server_page.add_servers(self.host_list)
+        self.unload_lnet_on_servers()
+        self.load_lnet_on_servers()
+
+    def check_volume_config_for_added_server(self):
         self.navigation.go('Volumes')
         volumes_page = Volumes(self.driver)
 
@@ -58,62 +70,43 @@ class TestServer(SeleniumBaseTestCase):
             host_name = host["address"]
 
             # Verifying that volume configuration appear for added server
-            self.assertTrue(volumes_page.get_volumes_for_added_server(host_name), 'Volumes not recognized for server: ' + host_name)
+            self.assertTrue(volumes_page.check_primary_volumes(host_name), 'Volumes not recognized for server: ' + host_name)
 
-    def test_stop_lnet_on_server(self):
-        """Test for Stopping LNet on server"""
-
+    def stop_lnet_on_servers(self):
         for host in self.host_list:
             host_name = host["address"]
-            self.server_page.stop_lnet(host_name)
+            self.server_page.transition(host_name, static_text['stop_lnet'])
 
             # Check LNet state
             self.assertEqual('lnet_down', self.server_page.get_lnet_state(host_name), 'LNet not stopped')
 
-    def test_start_lnet_on_server(self):
-        """Test for Starting LNet on server"""
-
+    def start_lnet_on_servers(self):
         for host in self.host_list:
             host_name = host["address"]
-
-            self.server_page.start_lnet(host_name)
+            self.server_page.transition(host_name, static_text['start_lnet'])
 
             # Check LNet state
             self.assertEqual('lnet_up', self.server_page.get_lnet_state(host_name), 'LNet not started')
 
-    def test_unload_lnet_on_server(self):
-        """Test for Unloading LNet on server"""
-
+    def unload_lnet_on_servers(self):
         for host in self.host_list:
             host_name = host["address"]
-
-            self.server_page.unload_lnet(host_name)
+            self.server_page.transition(host_name, static_text['unload_lnet'])
 
             # Check LNet state
             self.assertEqual('lnet_unloaded', self.server_page.get_lnet_state(host_name), 'LNet not unloaded')
 
-    def test_load_lnet_on_server(self):
-        """Test for Loading LNet on server"""
-
+    def load_lnet_on_servers(self):
         for host in self.host_list:
             host_name = host["address"]
-
-            self.server_page.load_lnet(host_name)
+            self.server_page.transition(host_name, static_text['load_lnet'])
 
             # Check LNet state
             self.assertEqual('lnet_down', self.server_page.get_lnet_state(host_name), 'LNet not loaded')
 
-    def test_remove_server(self):
-        """Test for Removing server"""
+    def tearDown(self):
+        self.server_page.remove_servers(self.host_list)
+        self.driver.close()
 
-        for host in self.host_list:
-            host_name = host["address"]
-
-            self.server_page.remove_server(host_name)
-
-            # Check LNet state
-            self.assertEqual('lnet_unloaded', self.server_page.get_lnet_state(host_name), 'Server not removed')
-
-import django.utils.unittest
 if __name__ == '__main__':
     django.utils.unittest.main()
