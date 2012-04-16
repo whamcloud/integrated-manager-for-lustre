@@ -85,18 +85,23 @@ def client_connection_handler(entry, h):
 
 #
 # Lustre: 5629:0:(sec.c:1474:sptlrpc_import_sec_adapt()) import lustre-MDT0000->NET_0x20000c0a87ada_UUID netid 20000: select flavor null
+# Lustre: 20380:0:(sec.c:1474:sptlrpc_import_sec_adapt()) import MGC192.168.122.105@tcp->MGC192.168.122.105@tcp_0 netid 20000: select flavor null
 #
 def server_security_flavor_handler(entry, h):
     # get the flavour out of the string
     flavour_start = entry.message.rfind(" ") + 1
     flavour = entry.message[flavour_start:]
-    lustre_pid = entry.message[9:9 + \
-                               entry.message[9:].find(":")]
-    event = ClientConnectEvent.objects.filter(lustre_pid = \
-                             lustre_pid).order_by('-id')[0]
-    event.message_str = "%s with security flavor %s" % \
-                        (event.message_str, flavour)
-    event.save()
+    lustre_pid = entry.message[9:9 + entry.message[9:].find(":")]
+
+    # Associate this with a previous client connect event if possible
+    try:
+        event = ClientConnectEvent.objects.filter(lustre_pid = \
+                                 lustre_pid).order_by('-id')[0]
+        event.message_str = "%s with security flavor %s" % \
+                            (event.message_str, flavour)
+        event.save()
+    except IndexError:
+        pass
 
 
 #
@@ -171,7 +176,7 @@ class SystemEventsAudit:
                             try:
                                 fn(entry, h)
                             except Exception, e:
-                                syslog_events_log.error("Failed to parse log line %s using handler %s: %s" % (entry.message, fn, e))
+                                syslog_events_log.error("Failed to parse log line '%s' using handler %s: %s" % (entry.message, fn, e))
                     # now that we have some real events, i don't think we
                     # need to keep logging this noise, but let's leave it
                     # here in case somebody wants to
