@@ -526,9 +526,12 @@ def target_running(args):
         # it doesn't even exist
         _exit(1)
 
+    def devices_match(a, b):
+        return os.stat(a).st_ino == os.stat(b).st_ino
+
     mounts = Mounts()
     for device, mntpnt, fstype in mounts.all():
-        if device == info['bdev']:
+        if mntpnt == info['mntpt'] and devices_match(device, info['bdev']):
             _exit(0)
 
     _exit(1)
