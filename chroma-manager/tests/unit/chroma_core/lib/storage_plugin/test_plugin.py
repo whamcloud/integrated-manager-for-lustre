@@ -155,7 +155,6 @@ class TestAddRemove(TestCase):
             instance.do_initial_scan()
             rm.session_open.assert_called_once_with(
                     instance._scannable_id,
-                    instance._root_resource._handle,
                     [instance._root_resource, instance.resource1],
                     instance.update_period)
 
@@ -168,7 +167,6 @@ class TestAddRemove(TestCase):
             # Should just report back the scannable resource to session_open
             rm.session_open.assert_called_once_with(
                     instance._scannable_id,
-                    instance._root_resource._handle,
                     [instance._root_resource],
                     instance.update_period)
 

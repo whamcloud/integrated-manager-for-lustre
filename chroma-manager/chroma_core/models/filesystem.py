@@ -5,8 +5,8 @@
 
 
 from django.db import models
-from chroma_core.lib.job import StateChangeJob, DependOn, DependAll, Step
-from chroma_core.models.jobs import StatefulObject, Job
+from chroma_core.lib.job import  DependOn, DependAll, Step
+from chroma_core.models.jobs import StatefulObject, StateChangeJob
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 
 
@@ -134,7 +134,7 @@ class DeleteFilesystemStep(Step):
         ManagedFilesystem.delete(kwargs['filesystem_id'])
 
 
-class RemoveFilesystemJob(Job, StateChangeJob):
+class RemoveFilesystemJob(StateChangeJob):
     state_transition = (ManagedFilesystem, 'stopped', 'removed')
     stateful_object = 'filesystem'
     state_verb = "Remove"
@@ -164,7 +164,7 @@ class FilesystemJob():
         return [(NullStep, {})]
 
 
-class StartStoppedFilesystemJob(FilesystemJob, Job, StateChangeJob):
+class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Start"
     state_transition = (ManagedFilesystem, 'stopped', 'available')
     filesystem = models.ForeignKey('ManagedFilesystem')
@@ -173,7 +173,7 @@ class StartStoppedFilesystemJob(FilesystemJob, Job, StateChangeJob):
         return "Start filesystem %s" % (self.filesystem.name)
 
 
-class StartUnavailableFilesystemJob(FilesystemJob, Job, StateChangeJob):
+class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Start"
     state_transition = (ManagedFilesystem, 'unavailable', 'available')
     filesystem = models.ForeignKey('ManagedFilesystem')
@@ -182,7 +182,7 @@ class StartUnavailableFilesystemJob(FilesystemJob, Job, StateChangeJob):
         return "Start filesystem %s" % (self.filesystem.name)
 
 
-class StopUnavailableFilesystemJob(FilesystemJob, Job, StateChangeJob):
+class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Stop"
     state_transition = (ManagedFilesystem, 'unavailable', 'stopped')
     filesystem = models.ForeignKey('ManagedFilesystem')
@@ -191,7 +191,7 @@ class StopUnavailableFilesystemJob(FilesystemJob, Job, StateChangeJob):
         return "Stop filesystem %s" % (self.filesystem.name)
 
 
-class MakeAvailableFilesystemUnavailable(FilesystemJob, Job, StateChangeJob):
+class MakeAvailableFilesystemUnavailable(FilesystemJob, StateChangeJob):
     state_verb = None
     state_transition = (ManagedFilesystem, 'available', 'unavailable')
     filesystem = models.ForeignKey('ManagedFilesystem')
@@ -200,27 +200,18 @@ class MakeAvailableFilesystemUnavailable(FilesystemJob, Job, StateChangeJob):
         return "Make filesystem %s unavailable" % (self.filesystem.name)
 
 
-# Generate boilerplate classes for various origin->forgotten jobs.
-# This may go away as a result of work tracked in HYD-627.
-for origin in ['unavailable', 'stopped', 'available']:
-    def forget_description(self):
+class ForgetFilesystemJob(StateChangeJob):
+    class Meta:
+        app_label = 'chroma_core'
+
+    state_transition = (ManagedFilesystem, ['unavailable', 'stopped', 'available'], 'forgotten')
+    stateful_object = 'filesystem'
+    state_verb = "Remove"
+    filesystem = models.ForeignKey(ManagedFilesystem),
+    requires_confirmation = True
+
+    def description(self):
         return "Removing unmanaged filesystem %s" % (self.filesystem.name)
 
-    def forget_get_steps(self):
+    def get_steps(self):
         return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
-
-    name = "ForgetFilesystemJob_%s" % origin
-    cls = type(name, (Job, StateChangeJob), {
-        'state_transition': (ManagedFilesystem, origin, 'forgotten'),
-        'stateful_object': 'filesystem',
-        'state_verb': "Remove",
-        'filesystem': models.ForeignKey(ManagedFilesystem),
-        'Meta': type('Meta', (object,), {'app_label': 'chroma_core'}),
-        'description': forget_description,
-        'requires_confirmation': True,
-        'get_steps': forget_get_steps,
-        '__module__': __name__,
-    })
-    import sys
-    this_module = sys.modules[__name__]
-    setattr(this_module, name, cls)

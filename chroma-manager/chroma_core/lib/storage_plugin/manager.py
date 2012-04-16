@@ -6,6 +6,7 @@
 
 """This module defines StoragePluginManager which loads and provides
 access to StoragePlugins and their StorageResources"""
+import sys
 from chroma_core.lib.storage_plugin.api import relations
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, ScannableResource, ResourceProgrammingError
 
@@ -97,7 +98,6 @@ class StoragePluginManager(object):
                     subscription = relations.Subscribe(klass, relation.attributes)
                     relation.provide_to._meta.relations.append(subscription)
                     for sc in all_subclasses(relation.provide_to):
-                        storage_plugin_log.debug("subclass relation %s %s %s" % (klass, relation.provide_to, sc))
                         sc._meta.relations.append(subscription)
 
     def get_resource_class_id(self, klass):
@@ -191,12 +191,16 @@ class StoragePluginManager(object):
         if module in self.loaded_plugins:
             raise RuntimeError("Duplicate storage plugin module %s" % module)
 
-        # Load the module
-        try:
-            mod = __import__(module)
-        except (ImportError, ResourceProgrammingError) as e:
-            storage_plugin_log.error("Error importing %s: %s" % (module, e))
-            raise
+        if module in sys.modules:
+            storage_plugin_log.warning("Reloading module %s (okay if testing)" % module)
+            mod = sys.modules[module]
+        else:
+            # Load the module
+            try:
+                mod = __import__(module)
+            except (ImportError, ResourceProgrammingError) as e:
+                storage_plugin_log.error("Error importing %s: %s" % (module, e))
+                raise
 
         components = module.split('.')
         plugin_name = module
@@ -222,19 +226,22 @@ class StoragePluginManager(object):
             plugin_klass = plugin_klasses[0]
 
         # Hook in a logger to the BaseStoragePlugin subclass
-        import logging
-        import logging.handlers
-        import os
-        import settings
-        log = logging.getLogger("storage_plugin_log_%s" % module)
-        handler = logging.handlers.WatchedFileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
-        handler.setFormatter(logging.Formatter("[%%(asctime)s: %%(levelname)s/%s] %%(message)s" % module, '%d/%b/%Y:%H:%M:%S'))
-        log.addHandler(handler)
-        if module in settings.STORAGE_PLUGIN_DEBUG_PLUGINS or settings.STORAGE_PLUGIN_DEBUG:
-            log.setLevel(logging.DEBUG)
+        if not plugin_klass.log:
+            import logging
+            import logging.handlers
+            import os
+            import settings
+            log = logging.getLogger("storage_plugin_log_%s" % module)
+            handler = logging.handlers.WatchedFileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
+            handler.setFormatter(logging.Formatter("[%%(asctime)s: %%(levelname)s/%s] %%(message)s" % module, '%d/%b/%Y:%H:%M:%S'))
+            log.addHandler(handler)
+            if module in settings.STORAGE_PLUGIN_DEBUG_PLUGINS or settings.STORAGE_PLUGIN_DEBUG:
+                log.setLevel(logging.DEBUG)
+            else:
+                log.setLevel(logging.WARNING)
+            plugin_klass.log = log
         else:
-            log.setLevel(logging.WARNING)
-        plugin_klass.log = log
+            storage_plugin_log.warning("Double load of %s (okay if testing)" % plugin_name)
 
         try:
             self._load_plugin(plugin_module, plugin_name, plugin_klass)

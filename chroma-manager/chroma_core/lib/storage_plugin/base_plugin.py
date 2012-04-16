@@ -61,6 +61,8 @@ class BaseStoragePlugin(object):
     #: Set to true for plugins which should not be shown in the user interface
     internal = False
 
+    log = None
+
     # TODO: need to document that initial_scan may not kick off async operations, because
     # the caller looks at overall resource state at exit of function.  If they eg
     # want to kick off an async update thread they should do it at the first
@@ -131,8 +133,6 @@ class BaseStoragePlugin(object):
         root_resource._handle_global = False
         self._root_resource = root_resource
 
-        self.log = None
-
     def do_agent_session_start(self, data):
         self._initial_populate(self.agent_session_start, self._root_resource.host_id, data)
 
@@ -184,7 +184,7 @@ class BaseStoragePlugin(object):
     def check_alert_conditions(self):
         for resource in self._index.all():
             # Check if any AlertConditions are matched
-            for name, ac in resource._alert_conditions.items():
+            for ac in resource._meta.alert_conditions:
                 alert_list = ac.test(resource)
                 for name, attribute, active in alert_list:
                     self.notify_alert(active, resource, name, attribute)

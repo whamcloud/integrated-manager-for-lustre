@@ -161,29 +161,6 @@ class IdempotentStep(Step):
     idempotent = True
 
 
-class StateChangeJob(object):
-    """Subclasses must define a class attribute 'stateful_object'
-       identifying another attribute which returns a StatefulObject"""
-
-    # Tuple of (StatefulObjectSubclass, old_state, new_state)
-    state_transition = None
-    # Name of an attribute which is a ForeignKey to a StatefulObject
-    stateful_object = None
-    # Terse human readable verb, e.g. "Change this" (for buttons)
-    state_verb = None
-
-    def get_stateful_object_id(self):
-        stateful_object = getattr(self, self.stateful_object)
-        return stateful_object.pk
-
-    def get_stateful_object(self):
-        stateful_object = getattr(self, self.stateful_object)
-        # Get a fresh instance every time, we don't want one hanging around in the job
-        # run procedure because steps might be modifying it
-        stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
-        return stateful_object
-
-
 class NullStep(Step):
     def run(self, kwargs):
         pass

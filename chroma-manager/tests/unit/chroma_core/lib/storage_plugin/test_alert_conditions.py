@@ -11,14 +11,14 @@ class FakeResource:
 
 class TestAlertConditions(TestCase):
     def test_attrvalalertcondition_empty(self):
-        avac = alert_conditions.AttrValAlertCondition('status')
+        avac = alert_conditions.ValueCondition('status')
         avac.set_name('avac')
         self.assertListEqual(avac.alert_classes(), [])
         result = avac.test(FakeResource('ERROR'))
         self.assertListEqual(result, [])
 
     def test_attrvalalertcondition(self):
-        avac = alert_conditions.AttrValAlertCondition('status', error_states = ["ERROR"], warn_states = ["WARN"], info_states = ["INFO"], message = "Alert raised now")
+        avac = alert_conditions.ValueCondition('status', error_states = ["ERROR"], warn_states = ["WARN"], info_states = ["INFO"], message = "Alert raised now")
 
         # Fake up populating _name as manager would do when an alert condition
         # is a member of a resource

@@ -9,6 +9,7 @@ from collections import defaultdict
 from dateutil import tz
 from django.db import transaction
 from chroma_core.lib.job import job_log
+from chroma_core.models.jobs import StateChangeJob
 
 
 class Transition(object):
@@ -33,7 +34,7 @@ class Transition(object):
     def to_job(self):
         job_klass = self.stateful_object.get_job_class(self.old_state, self.new_state)
         stateful_object_attr = job_klass.stateful_object
-        kwargs = {stateful_object_attr: self.stateful_object}
+        kwargs = {stateful_object_attr: self.stateful_object, 'old_state': self.old_state}
         return job_klass(**kwargs)
 
 
@@ -91,7 +92,6 @@ class StateManager(object):
 
             # Skip running a job if it's a state-change and the object
             # is already in the 'new' state.
-            from chroma_core.lib.job import StateChangeJob
             if isinstance(job, StateChangeJob):
                 stateful_object = job.get_stateful_object()
                 new_state = job.state_transition[2]
@@ -159,7 +159,6 @@ class StateManager(object):
         # the user has explicitly cancelled something.
         job = job.downcast()
 
-        from chroma_core.lib.job import StateChangeJob
         if isinstance(job, StateChangeJob):
             cls._run_opportunistic_jobs(job.get_stateful_object())
 
@@ -282,7 +281,6 @@ class StateManager(object):
         transition_job = None
         for d in self.deps:
             job = d.to_job()
-            from chroma_core.lib.job import StateChangeJob
             if isinstance(job, StateChangeJob):
                 from django.contrib.contenttypes.models import ContentType
                 so = getattr(job, job.stateful_object)

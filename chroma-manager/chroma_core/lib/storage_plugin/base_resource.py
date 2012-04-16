@@ -27,7 +27,6 @@ class BaseGlobalId(ResourceIdentifier):
 class BaseAutoId(BaseGlobalId):
     def __init__(self):
         super(BaseAutoId, self).__init__('chroma_auto_id')
-    pass
 
 
 class BaseScopedId(ResourceIdentifier):
@@ -139,7 +138,7 @@ class BaseStorageResource(object):
     @classmethod
     def get_all_attribute_properties(cls):
         """Returns a list of (name, BaseAttribute), one for each attribute.  Excludes hidden attributes."""
-        attr_name_pairs = cls._storage_attributes.items()
+        attr_name_pairs = cls._meta.storage_attributes.items()
         attr_name_pairs.sort(lambda a, b: cmp(a[1].creation_counter, b[1].creation_counter))
         return [pair for pair in attr_name_pairs if not pair[1].hidden]
 
@@ -149,7 +148,7 @@ class BaseStorageResource(object):
             return cls.charts
         else:
             charts = []
-            for name, stat_props in cls._storage_statistics.items():
+            for name, stat_props in cls._meta.storage_statistics.items():
                 if stat_props.label:
                     label = stat_props.label
                 else:
