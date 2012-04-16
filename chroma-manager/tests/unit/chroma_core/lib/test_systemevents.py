@@ -54,6 +54,6 @@ class TestHandlers(JobTestCaseWithHost):
         ]
 
         for example in examples:
-            client_eviction_handler(Systemevents.objects.create(message=example), self.host)
+            client_eviction_handler(Systemevents.objects.create(message=example['message']), self.host)
             event = ClientConnectEvent.objects.latest('id')
             self.assertEqual(event.lustre_pid, example['lustre_pid'])
