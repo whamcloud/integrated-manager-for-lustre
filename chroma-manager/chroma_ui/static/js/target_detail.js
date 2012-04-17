@@ -17,8 +17,6 @@ var TargetDetail = Backbone.View.extend({
     $(this.el).find('.ui-dialog-content').html(rendered);
     $(this.el).find('.tabs').tabs({'show': function(event, ui) {view.tab_select(event, ui)}});
 
-    load_resource_graph($(this.el).find(".resource_graph_canvas"), this.model.get('id'));
-
     var conf_params = this.model.get('conf_params');
     if (conf_params != null) {
       $(this.el).find(".conf_param_table").dataTable( {
