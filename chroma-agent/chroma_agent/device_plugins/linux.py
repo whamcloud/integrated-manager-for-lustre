@@ -5,12 +5,8 @@
 
 
 from chroma_agent.plugins import DevicePlugin
-
 from chroma_agent.log import agent_log
 from chroma_agent import shell
-from chroma_agent.plugins import ActionPlugin
-
-#from chroma_agent.plugins import DevicePluginManager
 
 import os
 import glob
@@ -345,10 +341,3 @@ def device_scan(args = None):
             "devs": block_device_nodes,
             "local_fs": bdev_to_local_fs,
             'mds': mds}
-
-
-class DeviceScanPlugin(ActionPlugin):
-    def register_commands(self, parser):
-        p = parser.add_parser("device-scan",
-                              help="scan for devices, or something")
-        p.set_defaults(func=device_scan)
