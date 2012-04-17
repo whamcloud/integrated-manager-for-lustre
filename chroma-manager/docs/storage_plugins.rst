@@ -351,7 +351,7 @@ SCSI devices detected by Chroma have two serial number attributes called `serial
 To match up two resources based on their attributes, use the `Meta.relations` attribute,
 which must be a list of `relations.Provide` and `relations.Subscribe` objects.
 
-::
+.. code-block:: python
 
     class MyLunClass(Resource):
         serial_80 = attributes.String()
@@ -420,7 +420,8 @@ Storage plugins may provide additional code to run on Lustre servers which extra
 information from block devices.
 
 Plugin code running within the Chroma agent has a much simpler interface:
-::
+
+.. code-block:: python
 
     from chroma_agent.plugins import DevicePlugin
 
@@ -446,11 +447,44 @@ start_session will only ever be called once for a particular instance of your cl
 you to store information in start_session that is used for calculating deltas of the system
 information to send in update_session.
 
+DevicePlugin reference
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: chroma_agent.plugins.DevicePlugin
+  :noindex:
+  :members:
+
 Advanced: reporting hosts
 -------------------------
 
 Your storage hardware may be able to provide Chroma with knowledge of server addresses, for example
 if the storage hardware hosts virtual machines which act as Lustre servers.
+
+To report these hosts from a storage plugin, create resources of a class which
+subclasses `resources.VirtualMachine`.
+
+.. code-block:: python
+    class MyController(resources.ScannableResource):
+        class Meta:
+            identifier = identifiers.GlobalId('address')
+        address = attributes.Hostname()
+
+    class MyVirtualMachine(resources.VirtualMachine):
+        class Meta:
+            identifier = identifiers.GlobalId('vm_id', 'controller')
+
+        controller = attributes.ResourceReference()
+        vm_id = attributes.Integer()
+        # NB the 'address' attribute is inherited
+
+    class MyPlugin(plugin.Plugin):
+        def initial_scan(self, controller):
+            # ... somehow learn about a virtual machine hosted on `controller` ...
+            self.update_or_create(MyVirtualMachine, vm_id = 0, controller = controller, address = "192.168.1.11")
+
+When a new VirtualMachine resource is created by a plugin, Chroma Manager goes through the same configuration
+process as if the host had been added via the user interface, and the added host will appear in the list of
+servers in the user interface.
 
 Advanced: specifying access paths
 ---------------------------------
@@ -477,5 +511,5 @@ of access to a storage device.  For example:
 
 This type of information allows Chroma Manager to make intelligent selection of primary/secondary Lustre servers.
 
-To express this information, create a HomingPreference resource which is a parent of the device node, and has as its
+To express this information, create a PathWeight resource which is a parent of the device node, and has as its
 parent the LUN.

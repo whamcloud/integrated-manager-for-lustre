@@ -1,6 +1,6 @@
 
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
-from chroma_core.lib.storage_plugin.api.identifiers import ScopedId, AutoId
+from chroma_core.lib.storage_plugin.api.identifiers import ScopedId, AutoId, GlobalId
 from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api import statistics
 from chroma_core.lib.storage_plugin.api import resources
@@ -57,6 +57,14 @@ class Lun(resources.LogicalDrive):
         return self.lun_id
 
 
+class ScsiLun(resources.LogicalDrive):
+    serial_80 = attributes.String()
+
+    class Meta:
+        identifier = GlobalId('serial_80')
+        relations = [relations.Provide(provide_to = ('linux', 'ScsiDevice'), attributes = ['serial_80'])]
+
+
 class FakePresentation(resources.PathWeight):
     lun_id = attributes.String()
     path = attributes.String()
@@ -83,15 +91,17 @@ class FakeVirtualMachine(resources.VirtualMachine):
 
 class FakeControllerPlugin(Plugin):
     def initial_scan(self, couplet):
-        hosts = ['flint01', 'flint02']
-        for host in hosts:
-            self.update_or_create(FakeVirtualMachine, address = host)
+        #hosts = ['flint01', 'flint02']
+        #for host in hosts:
+        #    self.update_or_create(FakeVirtualMachine, address = host)
 
-        luns = ['lun_rhubarb1', 'lun_rhubarb2']
+        #luns = ['lun_rhubarb1', 'lun_rhubarb2']
         self._luns = []
-        for lun in luns:
-            lun, creaated = self.update_or_create(Lun, parents = [couplet], lun_id = lun, size = 73 * 1024 * 1024 * 1024)
-            self._luns.append(lun)
+        #for lun in luns:
+        #   lun, creaated = self.update_or_create(Lun, parents = [couplet], lun_id = lun, size = 73 * 1024 * 1024 * 1024)
+        #    self._luns.append(lun)
+
+        self.update_or_create(ScsiLun, serial_80 = "SQEMU    QEMU HARDDISK  MPATH-testdev01", size = 73 * 1024 * 1024 * 1024)
 
     def update_scan(self, scannable_resource):
         import random

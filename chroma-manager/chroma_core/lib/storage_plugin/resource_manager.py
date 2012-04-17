@@ -123,6 +123,10 @@ class SubscriberIndex(object):
         result = set()
         for subscription in resource._meta.subscriptions:
             result |= self._provide_value_to_id[(subscription.key, subscription.val(resource))]
+
+        if result:
+            log.debug("what_provides: %s" % result)
+
         return result
 
     def what_subscribes(self, resource):
@@ -131,6 +135,9 @@ class SubscriberIndex(object):
         for subscription in self._all_subscriptions:
             if isinstance(resource, subscription.subscribe_to):
                 result |= self._subscribe_value_to_id[(subscription.key, subscription.val(resource))]
+
+        if result:
+            log.debug("what_subscribes: %s" % result)
         return result
 
     def add_provider(self, resource_id, key, value):
@@ -277,9 +284,6 @@ class ResourceManager(object):
             try:
                 return Volume.objects.get(storage_resource = resource_id)
             except Volume.DoesNotExist:
-                # Determine whether a device is shareable by whether it has a SCSI
-                # ancestor (e.g. an LV on a scsi device is shareable, an LV on an IDE
-                # device is not)
                 r = ResourceQuery().get_resource(resource_id)
                 lun = Volume.objects.create(
                         size = r.size,
