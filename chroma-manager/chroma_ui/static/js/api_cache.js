@@ -33,6 +33,8 @@ var ApiCache = function(){
     'target': []
   };
 
+
+  var initialized = false;
   var init = function(params) {
     params = params || {};
 
@@ -41,6 +43,7 @@ var ApiCache = function(){
       collection.fetch({success: function() {
         init_counter = init_counter + 1;
         if (init_counter == collections.length) {
+          initialized = true;
           if (params.success) {
             params.success();
           }
@@ -54,7 +57,7 @@ var ApiCache = function(){
 
     var object = collection.get(obj_id);
     if (!object) {
-      if (_.include(outstanding_requests[obj_type], obj_id)) {
+      if (!initialized || _.include(outstanding_requests[obj_type], obj_id)) {
         return null;
       } else {
         outstanding_requests[obj_type].push(obj_id);
