@@ -23,13 +23,19 @@ var ApiCache = function(){
     url: "/api/target/"
   });
 
-  var filesystem_collection = new FilesystemCollection();
-  var target_collection = new TargetCollection();
+  var collections = {
+    'filesystem': new FilesystemCollection(),
+    'target': new TargetCollection()
+  };
+
+  var outstanding_requests = {
+    'filesystem': [],
+    'target': []
+  };
 
   var init = function(params) {
     params = params || {};
 
-    var collections = [filesystem_collection, target_collection]
     var init_counter = 0;
     _.each(collections, function(collection) {
       collection.fetch({success: function() {
@@ -44,23 +50,27 @@ var ApiCache = function(){
   };
 
   function get(obj_type, obj_id) {
-    var collection = undefined;
-    if (obj_type == 'target') {
-      collection = target_collection;
-    } else if (obj_type == 'filesystem') {
-      collection = filesystem_collection;
-    }
+    var collection = collections[obj_type];
 
     var object = collection.get(obj_id);
     if (!object) {
-      collection.fetch({add:true, data: {id: obj_id}});
+      if (_.include(outstanding_requests[obj_type], obj_id)) {
+        return null;
+      } else {
+        outstanding_requests[obj_type].push(obj_id);
+        collection.fetch({
+            add:true,
+            data:{id:obj_id},
+            success:function () {
+              outstanding_requests[obj_type] = _.reject(outstanding_requests[obj_type], function (x) {return x == obj_id;});
+            }
+        });
+      }
     }
     return object;
   }
 
   return {
-    filesystem: filesystem_collection,
-    target: target_collection,
     get: get,
     init: init
   }
