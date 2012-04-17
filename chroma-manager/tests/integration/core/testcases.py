@@ -133,7 +133,31 @@ class ChromaIntegrationTestCase(TestCase):
                 running_time += 1
 
         self.assertTrue(command_complete, command)
-        if verify_successful:
+        if verify_successful and (command['errored'] or command['cancelled']):
+            print "COMMAND %s FAILED:" % command['id']
+            print "-----------------------------------------------------------"
+            print command
+            print ''
+
+            for job_uri in command['jobs']:
+                response = chroma_manager.get(job_uri)
+                self.assertTrue(response.successful, response.text)
+                job = response.json
+                if job['errored']:
+                    print "Job %s Errored:" % job['id']
+                    print job
+                    print ''
+                    for step_uri in job['steps']:
+                        response = chroma_manager.get(step_uri)
+                        self.assertTrue(response.successful, response.text)
+                        step = response.json
+                        if step['exception']:
+                            print "Step %s Errored:" % step['id']
+                            print step['console']
+                            print step['exception']
+                            print step['backtrace']
+                            print ''
+
             self.assertFalse(command['errored'] or command['cancelled'], command)
 
     def wait_for_commands(self, chroma_manager, command_ids, timeout=TEST_TIMEOUT):
@@ -318,9 +342,6 @@ class ChromaIntegrationTestCase(TestCase):
                 stdout.read(),
                 " on /mtn/%s " % filesystem_name
             )
-        else:
-            print "WARN: Unmount requested for %s, but %s not mounted." % (
-                filesystem_name, filesystem_name)
 
     def exercise_filesystem(self, client, filesystem_name):
         # TODO: Expand on this. Perhaps use existing lustre client tests.
