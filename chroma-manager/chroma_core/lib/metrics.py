@@ -86,15 +86,18 @@ class R3dMetricStore(MetricStore):
         import time
         start_time = int(time.time()) - 1
         ct = ContentType.objects.get_for_model(measured_object)
-        self.r3d = Database.objects.create(name="%s-%d" % (ct, measured_object.id),
-                                           start=start_time,
-                                           object_id=measured_object.id,
-                                           content_type=ct,
-                                           step=sample_period,
-                                           **kwargs)
+        db_name = "%s-%d" % (ct, measured_object.id)
+        self.r3d, created = Database.objects.get_or_create(
+                                                name=db_name,
+                                                start=start_time,
+                                                object_id=measured_object.id,
+                                                content_type=ct,
+                                                step=sample_period,
+                                                **kwargs)
         rra_create_fn(self.r3d)
 
-        metrics_log.info("Created R3D: %s (%s)" % (ct, measured_object))
+        if created:
+            metrics_log.info("Created R3D: %s (%s)" % (ct, measured_object))
 
     def __init__(self, measured_object, sample_period, **kwargs):
         """
