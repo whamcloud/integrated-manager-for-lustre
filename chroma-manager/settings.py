@@ -228,13 +228,8 @@ AUDIT_MAX_AGE = 3600 * 24
 
 SQL_RETRY_PERIOD = 10
 
-# metrics settings
-USE_FRONTLINE_METRICSTORE = True
-
 CELERY_ROUTES = (
         {"chroma_core.tasks.audit_all": {"queue": "periodic"}},
-        {"chroma_core.tasks.purge_and_optimize_metrics": {"queue": "periodic"}},
-        {"chroma_core.tasks.drain_flms_table": {"queue": "periodic"}},
         {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
         {"chroma_core.tasks.parse_log_entries": {"queue": "parselog"}},
         {"chroma_core.tasks.janitor": {"queue": "periodic"}},

@@ -7,14 +7,11 @@
 import math
 from django.contrib.contenttypes.models import ContentType
 from r3d.models import Average, Database
+from r3d.exceptions import BadUpdateTime
 from chroma_core.lib.storage_plugin.api import statistics
-from chroma_core.models import FrontLineMetricStore
 
 import settings
 metrics_log = settings.setup_log('metrics')
-
-DRAIN_LOCK_NAME = 'FLMS_LOCK'
-DRAIN_LOCK_TIME = 60 * 30  # Try 30 minutes, adjust as necessary.
 
 
 class MetricStore(object):
@@ -30,11 +27,13 @@ def _autocreate_ds(db, key, payload):
     ct = ContentType.objects.get(model=payload['type'])
     ds_klass = ct.model_class()
 
-    db.datasources.add(ds_klass.objects.create(name=key,
-                                               heartbeat=db.step * 2,
-                                               database=db))
+    new_ds = ds_klass.objects.create(name=key,
+                                     heartbeat=db.step * 2,
+                                     database=db)
+    db.datasources.add(new_ds)
     metrics_log.info("Added new %s to DB (%s -> %s)" % (payload['type'],
                                                         key, db.name))
+    return new_ds
 
 
 class R3dMetricStore(MetricStore):
@@ -126,7 +125,11 @@ class R3dMetricStore(MetricStore):
         return int(time.time())
 
     def update_r3d(self, update):
-        self.r3d.update(update, _autocreate_ds)
+        try:
+            self.r3d.update(update, _autocreate_ds)
+        except BadUpdateTime:
+            metrics_log.warn("Discarding %d update for %s" % (update.keys()[0],
+                                                              self))
 
     def list(self):
         """Returns a dict of name:type pairs for this wrapper's database."""
@@ -249,12 +252,7 @@ class HostMetricStore(R3dMetricStore):
 
         count = len(update.keys())
 
-        if (hasattr(settings, 'USE_FRONTLINE_METRICSTORE')
-            and settings.USE_FRONTLINE_METRICSTORE):
-            FrontLineMetricStore.store_update(self.ct, self.mo_id,
-                                              update_time, update)
-        else:
-            self.update_r3d({update_time: update})
+        self.update_r3d({update_time: update})
 
         return count
 
@@ -317,12 +315,7 @@ class TargetMetricStore(R3dMetricStore):
 
         count = len(update.keys())
 
-        if (hasattr(settings, 'USE_FRONTLINE_METRICSTORE')
-            and settings.USE_FRONTLINE_METRICSTORE):
-            FrontLineMetricStore.store_update(self.ct, self.mo_id,
-                                              update_time, update)
-        else:
-            self.update_r3d({update_time: update})
+        self.update_r3d({update_time: update})
 
         return count
 
@@ -463,110 +456,3 @@ def get_instance_metrics(measured_object):
         return FilesystemMetricStore(measured_object, settings.AUDIT_PERIOD)
     else:
         raise NotImplementedError
-
-
-class FlmsDrain(object):
-    # This class exists to drain the FrontLineMetricStorage table.  Perhaps
-    # I should have named it FlmsLance, I dunno.  There is some pretty
-    # flagrant disregard for the ORM in here, so if you have delicate
-    # sensibilities it might be best to just go read Garfield comics instead.
-    from django.db import transaction
-
-    def __init__(self, *args, **kwargs):
-        self.entity_cache = {}
-        super(FlmsDrain, self).__init__(*args, **kwargs)
-
-    def _update_groups(self):
-        return FrontLineMetricStore.objects.filter(complete=True).order_by("insert_time")
-
-    def _reconstitute_update(self, group):
-        ids = []
-        update = {}
-        for row in FrontLineMetricStore.objects.filter(content_type=group.content_type_id,
-                                                       object_id=group.object_id,
-                                                       insert_time=group.insert_time):
-            update[row.metric_name] = {'type': row.metric_type, 'value': row.value}
-            ids.append(row.id)
-
-        return ids, update
-
-    def _find_measured_entity(self, group):
-        try:
-            return self.entity_cache[(group.content_type_id, group.object_id)]
-        except KeyError:
-            ct = ContentType.objects.get(id=group.content_type_id)
-            entity = ct.model_class().objects.get(id=group.object_id)
-            self.entity_cache[(group.content_type_id, group.object_id)] = entity
-            return entity
-
-    # Throw together a quicky locking framework to keep us from
-    # stomping all over ourselves.
-    def find_lock(self):
-        try:
-            return FrontLineMetricStore.objects.get(metric_type=DRAIN_LOCK_NAME)
-        except FrontLineMetricStore.DoesNotExist:
-            return None
-
-    def query_lock(self):
-        lock = self.find_lock()
-        try:
-            return (lock.value, "%s" % lock.insert_time)
-        except AttributeError:
-            return None
-
-    def unlock(self):
-        lock = self.find_lock()
-        try:
-            lock.delete()
-        except AttributeError:
-            pass
-
-    def lock(self, req_id, expire_time=DRAIN_LOCK_TIME):
-        import datetime
-        now = datetime.datetime.utcnow()
-
-        lock = self.find_lock()
-        if lock:
-            if lock.insert_time < now:
-                self.unlock()
-            else:
-                return False
-
-        then = now + datetime.timedelta(seconds=expire_time)
-        FrontLineMetricStore.objects.create(insert_time=then,
-                                            metric_name=DRAIN_LOCK_NAME,
-                                            metric_type=DRAIN_LOCK_NAME,
-                                            value=req_id)
-
-        return True
-
-    @transaction.commit_on_success
-    def run(self):
-        """Call this to drain entries from the FrontLineMetricStorage
-        table.  Takes no arguments, returns nothing."""
-        from django.db import connection
-        from django.core.exceptions import ObjectDoesNotExist
-        from r3d.exceptions import BadUpdateTime
-
-        # FIXME: Should there be an upper limit to how many drained rows
-        # we deal with at a time?
-        drained_rows = []
-        for group in self._update_groups():
-            ids, update = self._reconstitute_update(group)
-            try:
-                entity = self._find_measured_entity(group)
-                entity.metrics.update_r3d({group.insert_time: update})
-            except ObjectDoesNotExist:
-                metrics_log.warn("FLMS: Discarding metrics for missing entity (deleted/forgotten?)")
-            except BadUpdateTime:
-                pass
-
-            drained_rows.extend(ids)
-
-        if len(drained_rows) > 0:
-            cursor = connection.cursor()
-            cursor.execute("DELETE FROM %s WHERE id IN (%s)" %
-                           ("chroma_core_frontlinemetricstore",
-                            ",".join(["%d" % r for r in sorted(drained_rows)])))
-
-        metrics_log.debug("Drained %d rows from FLMS" % len(drained_rows))

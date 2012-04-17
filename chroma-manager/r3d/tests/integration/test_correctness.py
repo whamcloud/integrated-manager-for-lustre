@@ -411,7 +411,7 @@ class LastRraTest(TestCase):
         """
         Tests that what we get back from fetch() is correct.
         """
-        self.LastDiff = None
+        self.maxDiff = None
         self.update_database()
 
         expected = self.load_xport("last_rra_step.xml")

@@ -569,10 +569,7 @@ var Dashboard = function(){
     }
     
     loadTargetGraphs();
-    
-    /* HYD-375: ostSelect value is a name instead of an ID */
-    load_resource_graph("ost_resource_graph_canvas", ostId);
-  }
+  };
 
 		  
 /******************************************************************************

@@ -1,5 +1,5 @@
 
-VERSION := $(shell echo 0.3.`date -u +%Y%m%d%H%M`.`git rev-parse --short HEAD`)
+VERSION := $(shell echo 0.4.`date -u +%Y%m%d%H%M`.`git rev-parse --short HEAD`)
 
 RELEASE := 1
 

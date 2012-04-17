@@ -21,7 +21,6 @@ from chroma_core.lib.util import timeit
 
 from chroma_core.lib.job import job_log
 from chroma_core.lib.lustre_audit import audit_log
-from chroma_core.lib.metrics import metrics_log
 
 
 class EphemeralScheduler(Scheduler):
@@ -366,67 +365,6 @@ def parse_log_entries():
     parsed_count = SystemEventsAudit().parse_log_entries()
     if parsed_count:
         audit_log.debug("parse_log_entries: parsed %d lines" % parsed_count)
-
-
-@periodic_task(run_every=timedelta(seconds=settings.AUDIT_PERIOD))
-def drain_flms_table():
-    from chroma_core.lib.metrics import FlmsDrain
-    import os
-
-    drain = FlmsDrain()
-    acquire_lock = lambda: drain.lock(os.getpid())
-    query_lock = lambda: drain.query_lock()
-    release_lock = lambda: drain.unlock()
-
-    if acquire_lock():
-        try:
-            drain.run()
-            return
-        finally:
-            release_lock()
-
-    metrics_log.warn("Drain task with pid %d has a lock until %s!" % query_lock())
-
-
-@periodic_task(run_every=timedelta(seconds=settings.AUDIT_PERIOD * 180))
-@timeit(logger=metrics_log)
-def purge_and_optimize_metrics():
-    from chroma_core.lib.metrics import FlmsDrain
-    from r3d.models import Database
-    from django.db import connection
-    import os
-    import time
-
-    # Run the purge first, outside of a lock.  Some performance hit, but
-    # we shouldn't see any deadlocks.  We may need to revisit this if we do.
-    metrics_log.info("Pid %d starting R3D purge" % os.getpid())
-    for db in Database.objects.all():
-        db.purge_cdps()
-    metrics_log.info("Pid %d finished R3D purge" % os.getpid())
-
-    # We borrow this lock both to avoid stomping on ourselves but also
-    # to avoid contending with a drain operation while we're optimizing.
-    drain = FlmsDrain()
-    acquire_lock = lambda: drain.lock(os.getpid(), 60 * 5)
-    query_lock = lambda: drain.query_lock()
-    release_lock = lambda: drain.unlock()
-
-    attempts = 10
-    while attempts > 0:
-        if acquire_lock():
-            try:
-                cursor = connection.cursor()
-                metrics_log.info("Pid %d starting R3D optimize" % os.getpid())
-                cursor.execute('OPTIMIZE TABLE r3d_cdp')
-                metrics_log.info("Pid %d finished R3D optimize" % os.getpid())
-                return
-            finally:
-                release_lock()
-
-        attempts -= 1
-        time.sleep(1)
-
-    metrics_log.warn("Drain task with pid %d has a lock until %s!" % query_lock())
 
 
 @task()
