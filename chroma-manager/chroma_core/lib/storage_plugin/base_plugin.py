@@ -68,7 +68,7 @@ class BaseStoragePlugin(object):
     # want to kick off an async update thread they should do it at the first
     # call to update_scan, or maybe we could give them a separate function for that.
     def initial_scan(self, root_resource):
-        """Mandatory.  Identify all resources
+        """Identify all resources
            present at this time and call register_resource on them.
 
            If you return from this function you must have succeeded
@@ -81,9 +81,34 @@ class BaseStoragePlugin(object):
         raise NotImplementedError
 
     def update_scan(self, root_resource):
-        """Optional.  Perform any required
+        """Perform any required
            periodic refresh of data and update any resource instances.
            Guaranteed that initial_scan will have been called before this."""
+        pass
+
+    def agent_session_start(self, host_id, data):
+        """Start a session based on information sent from an agent plugin.
+
+        :param host_id: ID of the host from which the agent information was sent -- this is
+          a chroma-specific identifier which is mainly useful for constructing DeviceNode
+          resources.
+        :param data: Arbitrary JSON-serializable data sent by plugin.
+        :rtype: None
+        """
+        pass
+
+    def agent_session_continue(self, host_id, data):
+        """Continue a session using information sent from an agent plugin.
+
+        This will only ever be called on Plugin instances where `agent_session_start` has
+        already been called.
+
+        :param host_id: ID of the host from which the agent information was sent -- this is
+          a chroma-specific identifier which is mainly useful for constructing DeviceNode
+          resources.
+        :param data: Arbitrary JSON-serializable data sent by plugin.
+        :rtype: None
+        """
         pass
 
     def teardown(self):

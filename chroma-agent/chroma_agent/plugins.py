@@ -115,6 +115,9 @@ class DevicePlugin(object):
         Return information needed to maintain a manager-agent session, i.e. what
         has changed since the start of the session or since the last update.
 
+        If you need to refer to any data from the start_session call, you can
+        store it as an attribute on this DevicePlugin instance.
+
         :rtype: JSON-serializable object, typically a dict
         """
         raise NotImplementedError()

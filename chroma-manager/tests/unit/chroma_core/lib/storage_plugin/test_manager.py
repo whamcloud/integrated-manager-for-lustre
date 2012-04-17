@@ -1,19 +1,23 @@
 
 from django.test import TestCase
+import os
+from chroma_core.lib.storage_plugin.manager import PluginProgrammingError
 from helper import load_plugins
+from chroma_core.management.commands.validate_storage_plugin import Command as ValidateCommand
+import settings
 
 
 class TestCornerCases(TestCase):
     def test_0classes(self):
-        with self.assertRaisesRegexp(RuntimeError, "Module unloadable_plugin_0classes does not define a BaseStoragePlugin"):
+        with self.assertRaisesRegexp(PluginProgrammingError, "Module unloadable_plugin_0classes does not define a BaseStoragePlugin"):
             load_plugins(['unloadable_plugin_0classes'])
 
     def test_2classes(self):
-        with self.assertRaisesRegexp(RuntimeError, "Module unloadable_plugin_2classes defines more than one BaseStoragePlugin"):
+        with self.assertRaisesRegexp(PluginProgrammingError, "Module unloadable_plugin_2classes defines more than one BaseStoragePlugin"):
             load_plugins(['unloadable_plugin_2classes'])
 
     def test_dupemodule(self):
-        with self.assertRaisesRegexp(RuntimeError, "Duplicate storage plugin module loadable_plugin"):
+        with self.assertRaisesRegexp(PluginProgrammingError, "Duplicate storage plugin module loadable_plugin"):
             load_plugins(['loadable_plugin', 'loadable_plugin'])
 
     def test_submodule(self):
@@ -74,9 +78,9 @@ class TestLoad(TestCase):
         self.assertEqual(self.manager.get_resource_class_by_id(resource.pk).__name__, 'TestScannableResource')
 
     def test_absences(self):
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(PluginProgrammingError):
             self.manager.get_plugin_resource_class('loadable_plugin', 'noexist')
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(PluginProgrammingError):
             self.manager.get_plugin_resource_class('noexist', 'TestResource')
 
     def test_get_resource_classes(self):
@@ -97,3 +101,37 @@ class TestLoad(TestCase):
         resource_class, resource_class_id = self.manager.get_plugin_resource_class('loadable_plugin', 'TestScannableResource')
         record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'name': 'foobar'})
         self.assertEqual(self.manager.get_scannable_resource_ids('loadable_plugin'), [record.pk])
+
+
+class TestValidate(TestCase):
+    def setUp(self):
+        import chroma_core.lib.storage_plugin.manager
+        self.old_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
+        self.old_INSTALLED_STORAGE_PLUGINS = settings.INSTALLED_STORAGE_PLUGINS
+        settings.INSTALLED_STORAGE_PLUGINS = []
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+
+    def tearDown(self):
+        import chroma_core.lib.storage_plugin.manager
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.old_manager
+        settings.INSTALLED_STORAGE_PLUGINS = self.old_INSTALLED_STORAGE_PLUGINS
+
+    def test_submodule(self):
+        errors = ValidateCommand().execute(os.path.join(os.path.abspath(os.path.dirname(__file__)), "submodule/loadable_submodule_plugin.py"))
+        self.assertListEqual(errors, [])
+
+    def test_failures(self):
+        errors = ValidateCommand().execute(os.path.join(os.path.abspath(os.path.dirname(__file__)), "unloadable_plugin_0classes.py"))
+        self.assertListEqual(errors, ['Module unloadable_plugin_0classes does not define a BaseStoragePlugin!'])
+        errors = ValidateCommand().execute(os.path.join(os.path.abspath(os.path.dirname(__file__)), "unloadable_plugin_2classes.py"))
+        self.assertListEqual(errors, ["Module unloadable_plugin_2classes defines more than one BaseStoragePlugin: [<class 'unloadable_plugin_2classes.TestPluginOne'>, <class 'unloadable_plugin_2classes.TestPluginTwo'>]!"])
+
+    def test_example_package(self):
+        dirname = os.path.dirname(__file__) + "/../../../../../example_storage_plugin_package/"
+        errors = ValidateCommand().execute(os.path.join(os.path.abspath(dirname), "example_storage_plugin/"))
+        self.assertListEqual(errors, [])
+
+    def test_fake_controller(self):
+        dirname = os.path.dirname(__file__) + "/../../../../plugins/"
+        errors = ValidateCommand().execute(os.path.join(os.path.abspath(dirname), "fake_controller.py"))
+        self.assertListEqual(errors, [])

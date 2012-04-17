@@ -70,15 +70,15 @@ virtual machine.
 
 .. code-block:: python
 
-   from chroma_core.lib.storage_plugin.resource import Resource, GlobalId
-   from chroma_core.lib.storage_plugin import attributes, statistics
+   from chroma_core.lib.storage_plugin.api import resources, identifiers, attributes, statistics
 
-   class HardDrive(Resource):
+   class HardDrive(resources.Resource):
        serial_number = attributes.String()
        capacity = attributes.Bytes()
        temperature = statistics.Gauge(units = 'C')
 
-       identifier = GlobalId('serial_number')
+       class Meta:
+           identifier = GlobalId('serial_number')
 
 In general storage resources may inherit from Resource directly, but
 optionally they may inherit from a built-in resource class as a way of 
@@ -310,6 +310,22 @@ the read and write bandwidth on the same chart:
 Running a plugin
 ----------------
 
+Validating
+~~~~~~~~~~
+
+Before running your plugin as part of a Chroma Manager instance, it is a good idea to check it over
+using the `validate_storage_plugin` command provided with Chroma Manager:
+
+::
+
+    $ cd /usr/share/chroma-manager
+    $ ./manage.py validate_storage_plugin /tmp/my_plugin.py
+    Validating plugin 'my_plugin'...
+    OK
+
+Installing
+~~~~~~~~~~
+
 Chroma loads plugins specified by the ``settings.INSTALLED_STORAGE_PLUGINS``.  This variable
 is a list of module names within the python import path.  If your plugin is located
 at ``/home/developer/project/my_plugin.py`` then you would create a ``local_settings.py`` file
@@ -323,21 +339,13 @@ from RPM) with the following content:
 
 After modifying this setting, restart the Chroma manager services.
 
-Advanced: reporting virtual machines
-------------------------------------
+Errors from the storage plugin subsystem, including any errors output
+from your plugin may be found in `/var/log/chroma/storage_plugin.log`. To
+increase the verbosity of the log output (by default only WARN and above
+is output), add your plugin to ``settings.STORAGE_PLUGIN_DEBUG_PLUGINS``.
+Changes to these settings take effect when the Chroma Manager services are restarted.
 
-Most of the built-in resource types are purely for identification of 
-common types of resource for presentation purposes.  However, the
-``chroma_core.lib.storage_plugin.api.VirtualMachine``
-class is treated specially by Chroma.  When a resource of this class is
-reported by a plugin, Chroma uses the ``address`` attribute of the 
-resource to set up a Lustre server as if it had been added using the 
-user interface.
-
-The ``VirtualMachine`` resource is intended to be used for reporting 
-virtual machines which are embedded on a particular storage controller.
-
-Correlating controller resources with Linux devices using ``provide``
+Correlating controller resources with Linux devices using relations
 ---------------------------------------------------------------------
 
 As well as explicit *parents* relations between resources, resource attributes can be 
@@ -359,9 +367,13 @@ which must be a list of `relations.Provide` and `relations.Subscribe` objects.
         class Meta:
             identifier = identifiers.GlobalId('my_serial')
             relations = [relations.Provide(
-                provide_to = resources.LogicalDrive,
+                provide_to = ('linux', 'ScsiDevice'),
                 attributes = 'serial_80')]
 
+
+The `provide_to` argument to `Provide` can either be a resource class, or a 2-tuple of `([plugin name], [class name])`
+for referring to resources in another plugin.  In this case we are referring to a resource in the 'linux' plugin which
+is what Chroma Manager uses for detecting standard devices and device nodes on Linux servers.
 
 Example plugin
 --------------
@@ -419,24 +431,13 @@ it encounters on Lustre servers.  However, in some cases:
 Storage plugins may provide additional code to run on Lustre servers which extracts additional
 information from block devices.
 
-Plugin code running within the Chroma agent has a much simpler interface:
+Agent plugins
+~~~~~~~~~~~~~
 
-.. code-block:: python
+Plugin code running within the Chroma agent has a simple interface:
 
-    from chroma_agent.plugins import DevicePlugin
-
-
-    class FakeControllerDevicePlugin(DevicePlugin):
-        def _read_config(self):
-            import simplejson as json
-            return json.loads(open("/root/fake_controller.json").read())
-
-        def start_session(self):
-            # return all available information
-
-        def update_session(self):
-            # return information needed to update state
-
+.. autoclass:: chroma_agent.plugins.DevicePlugin
+  :members: start_session, update_session
 
 Implementing `update_session` is optional: plugins which do not implement this function will only send
 information to the server once when the agent begins its connection to the server.
@@ -446,6 +447,15 @@ between the initial call to start_session and subsequent calls to update_session
 start_session will only ever be called once for a particular instance of your class.  This allows
 you to store information in start_session that is used for calculating deltas of the system
 information to send in update_session.
+
+Handling data from agent plugins
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The information sent by an agent plugin is passed on to the server plugin with the same name.  To handle
+this type of information, the plugin must implement two methods:
+
+.. autoclass:: chroma_core.lib.storage_plugin.api.plugin.Plugin
+  :members: agent_session_start, agent_session_continue
 
 DevicePlugin reference
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -464,6 +474,7 @@ To report these hosts from a storage plugin, create resources of a class which
 subclasses `resources.VirtualMachine`.
 
 .. code-block:: python
+
     class MyController(resources.ScannableResource):
         class Meta:
             identifier = identifiers.GlobalId('address')
@@ -499,6 +510,8 @@ Assuming this knowledge exists, you can report the relationship from a device no
 a controller port, then to a LUN.  This chain of relationships would allow Chroma Manager to provide
 for example a chart superimposing the bandwidth of each component in the chain from the device node to 
 the storage target.
+
+These relationships are specified using the usual
 
 Advanced: specifying homing information
 ---------------------------------------

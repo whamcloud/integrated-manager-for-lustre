@@ -12,14 +12,16 @@ from chroma_core.lib.storage_plugin.api.resources import    Controller, StorageP
 
 
 class Resource1(ScannableResource):
-    identifier = GlobalId('address1', 'address2')
+    class Meta:
+        identifier = GlobalId('address1', 'address2')
 
     address_1 = attributes.Hostname()
     address_2 = attributes.Hostname()
 
 
 class Resource2(Controller):
-    identifier = ScopedId('index')
+    class Meta:
+        identifier = ScopedId('index')
 
     index = attributes.Enum(0, 1)
 
@@ -29,7 +31,8 @@ class Resource3(PhysicalDisk):
     capacity = attributes.Bytes()
     temperature = statistics.Gauge(units = 'C')
 
-    identifier = ScopedId('serial_number')
+    class Meta:
+        identifier = ScopedId('serial_number')
 
 
 class Resource4(StoragePool):
@@ -37,7 +40,8 @@ class Resource4(StoragePool):
     raid_type = attributes.Enum('raid0', 'raid1', 'raid5', 'raid6')
     capacity = attributes.Bytes()
 
-    identifier = ScopedId('local_id')
+    class Meta:
+        identifier = ScopedId('local_id')
 
     def get_label(self):
         return self.local_id
@@ -48,9 +52,8 @@ class Resource5(LogicalDrive):
     capacity = attributes.Bytes()
     name = attributes.String()
 
-    scsi_id = attributes.String(provide = 'scsi_serial')
-
-    identifier = ScopedId('local_id')
+    class Meta:
+        identifier = ScopedId('local_id')
 
     def get_label(self):
         return self.name
@@ -58,14 +61,9 @@ class Resource5(LogicalDrive):
 
 class ExamplePlugin(Plugin):
     def initial_scan(self, scannable_resource):
-        # This is where the plugin should detect all the resources
-        # belonging to scannable_resource, or throw an exception
-        # if that cannot be done.
         pass
 
     def update_scan(self, scannable_resource):
-        # Update any changed or added/removed resources
-        # Update any statistics
         pass
 
     def teardown(self):

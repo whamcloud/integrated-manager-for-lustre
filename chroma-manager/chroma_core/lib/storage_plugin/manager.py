@@ -22,6 +22,10 @@ class PluginNotFound(Exception):
         return "PluginNotFound: %s" % self.message
 
 
+class PluginProgrammingError(Exception):
+    pass
+
+
 class LoadedResourceClass(object):
     """Convenience store of introspected information about BaseStorageResource
        subclasses from loaded modules."""
@@ -197,6 +201,17 @@ class StoragePluginManager(object):
         except KeyError:
             raise PluginNotFound(module)
 
+    def validate_plugin(self, module):
+        errors = []
+        try:
+            self.load_plugin(module)
+        except ResourceProgrammingError, e:
+            errors.append(e.__str__())
+        except PluginProgrammingError, e:
+            errors.append(e.__str__())
+
+        return errors
+
     def _load_plugin(self, module, module_name, plugin_klass):
         storage_plugin_log.debug("_load_plugin %s %s" % (module_name, plugin_klass))
         self.loaded_plugins[module_name] = LoadedPlugin(self, module, module_name, plugin_klass)
@@ -210,7 +225,7 @@ class StoragePluginManager(object):
 
            @return A subclass of BaseStoragePlugin"""
         if module in self.loaded_plugins:
-            raise RuntimeError("Duplicate storage plugin module %s" % module)
+            raise PluginProgrammingError("Duplicate storage plugin module %s" % module)
 
         if module in sys.modules:
             storage_plugin_log.warning("Reloading module %s (okay if testing)" % module)
@@ -240,9 +255,9 @@ class StoragePluginManager(object):
 
         # Make sure we have exactly one BaseStoragePlugin subclass
         if len(plugin_klasses) > 1:
-            raise RuntimeError("Module %s defines more than one BaseStoragePlugin: %s!" % (module, plugin_klasses))
+            raise PluginProgrammingError("Module %s defines more than one BaseStoragePlugin: %s!" % (module, plugin_klasses))
         elif len(plugin_klasses) == 0:
-            raise RuntimeError("Module %s does not define a BaseStoragePlugin!" % module)
+            raise PluginProgrammingError("Module %s does not define a BaseStoragePlugin!" % module)
         else:
             plugin_klass = plugin_klasses[0]
 
