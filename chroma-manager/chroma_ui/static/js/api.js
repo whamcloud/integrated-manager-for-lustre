@@ -474,6 +474,10 @@ function removeBlankAttributes(obj) {
 
 function shortLocalTime(str)
 {
+  if (!str) {
+    return "";
+  }
+
   function pad(n) {
     if (n < 10) {
       return "0" + n
