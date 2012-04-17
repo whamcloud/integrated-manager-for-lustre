@@ -151,7 +151,7 @@ class ChromaIntegrationTestCase(TestCase):
                         response = chroma_manager.get(step_uri)
                         self.assertTrue(response.successful, response.text)
                         step = response.json
-                        if step['exception']:
+                        if step['exception'] and not step['exception'] == 'None':
                             print "Step %s Errored:" % step['id']
                             print step['console']
                             print step['exception']
