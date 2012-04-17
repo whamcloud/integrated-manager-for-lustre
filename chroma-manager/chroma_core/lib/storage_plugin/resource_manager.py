@@ -32,6 +32,7 @@ from chroma_core.models import ManagedHost, ManagedTarget
 from chroma_core.models import Volume, VolumeNode
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 from chroma_core.models import StorageResourceAlert, StorageResourceOffline
+from chroma_core.models.alert import AlertState
 
 from django.db import transaction
 
@@ -709,7 +710,7 @@ class ResourceManager(object):
 
         self._subscriber_index.remove_resource(resource_record.pk)
 
-        for alert_state in StorageResourceAlert.filter_by_item(resource_record):
+        for alert_state in AlertState.filter_by_item(resource_record):
             self._persist_alert_unpropagate(alert_state)
             alert_state.delete()
 
