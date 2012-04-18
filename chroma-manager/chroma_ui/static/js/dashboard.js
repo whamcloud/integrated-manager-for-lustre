@@ -866,13 +866,7 @@ var Dashboard = function(){
       chart_config: {
         chart: {
           renderTo: 'target_space_usage_container',
-          marginLeft: '50',
-          width: '250',
-          height: '200',
-          borderWidth: 0,
-          plotBorderWidth: 0,
-          plotShadow: false,
-          style:{ width:'100%',  height:'200px' }
+          plotShadow: false
         },
         colors: [ '#A6C56D', '#C76560' ],
         title:{ text: '' },
@@ -921,13 +915,7 @@ var Dashboard = function(){
       chart_config: {
         chart: {
           renderTo: 'target_inodes_container',
-          //marginLeft: '50',
-          width: '250',
-          height: '200',
-          borderWidth: 0,
-          plotBorderWidth: 0,
-          plotShadow: false,
-          style:{ width:'100%',  height:'200px' }
+          plotShadow: false
         },
         colors: [ '#A6C56D', '#C76560' ],
         title:{ text: '' },
