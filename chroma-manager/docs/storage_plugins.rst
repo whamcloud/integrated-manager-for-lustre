@@ -49,10 +49,10 @@ Terminology
 
 plugin
   A python module providing a number of classes inheriting from Chroma's
-  StoragePlugin and StorageResource classes.
+  Plugin and Resource classes.
 
 resource class
-  A subclass of StorageResource declaring a means of identification, attributes,
+  A subclass of Resource declaring a means of identification, attributes,
   statistics and alert conditions.
 
 resource
@@ -61,26 +61,26 @@ resource
 
 .. _storage_resources:
 
-Declaring StorageResources
+Declaring Resources
 --------------------------
 
-A `StorageResource` represents a single, uniquely identified object.  It may be a physical
+A `Resource` represents a single, uniquely identified object.  It may be a physical
 device such as a physical hard drive, or a virtual object such as a storage pool or 
 virtual machine.
 
 .. code-block:: python
 
-   from chroma_core.lib.storage_plugin.resource import StorageResource, GlobalId
-   from chroma_core.lib.storage_plugin import attributes, statistics
+   from chroma_core.lib.storage_plugin.api import resources, identifiers, attributes, statistics
 
-   class HardDrive(StorageResource):
+   class HardDrive(resources.Resource):
        serial_number = attributes.String()
        capacity = attributes.Bytes()
        temperature = statistics.Gauge(units = 'C')
 
-       identifier = GlobalId('serial_number')
+       class Meta:
+           identifier = GlobalId('serial_number')
 
-In general storage resources may inherit from StorageResource directly, but
+In general storage resources may inherit from Resource directly, but
 optionally they may inherit from a built-in resource class as a way of 
 identifying common resource types to Chroma for presentation purposes.  See 
 :ref:`storage_plugin_builtin_resource_classes` for the available built-in
@@ -90,7 +90,7 @@ Attributes
 ~~~~~~~~~~
 
 The ``serial_number`` and ``capacity`` attributes of the HardDrive class are
-StorageResourceAttributes.  These are special classes which:
+from the ``attributes`` module.  These are special classes which:
 
 * apply validation conditions to the attributes
 * act as metadata for the presentation of the attribute in the user interface
@@ -104,7 +104,7 @@ Statistics
 ~~~~~~~~~~
 
 The ``temperature`` attribute of the HardDrive class is an example of
-a StorageResourceStatistic.  Resource statistics differ from resource
+a resource statistic.  Resource statistics differ from resource
 attributes in the way they are presented to the user.  See :ref:`storage_plugin_statistic_classes`
 for more on statistics.
 
@@ -116,18 +116,18 @@ the statistic.
 Identifiers
 ~~~~~~~~~~~
 
-Every StorageResource subclass is required to have an ``identifier`` attribute
+Every Resource subclass is required to have an ``identifier`` attribute
 which declares which attributes are to be used to uniquely identify the resource.
 
 If a resource has a universally unique name and may be reported from more than one
 place (for example, a physical disk which might be reported from more than one 
-controller), use ``chroma_core.lib.storage_plugin.resource.GlobalId``.  This is the
+controller), use ``chroma_core.lib.storage_plugin.api.identifiers.GlobalId``.  This is the
 case for the example ``HardDrive`` class above, which has a factory-assigned ID 
 for the drive.
 
 If a resource has an identifier which is scoped to a *scannable* storage resource or
 it always belongs to a particular scannable storage resource, then use
-``chroma_core.lib.storage_plugin.resource.ScannableId``.
+``chroma_core.lib.storage_plugin.api.identifiers.ScopedId``.
 
 Either of the above classes is initialized with a list of attributes which
 in combination are a unique identifier.  For example, if a true hard drive 
@@ -135,10 +135,11 @@ identifier was unavailable, a drive might be identified within a particular coup
 by its shelf and slot number, like this:
 ::
 
-    class HardDrive(StorageResource):
+    class HardDrive(Resource):
+        class Meta:
+            identifier = ScopedId('shelf', 'slot')
         shelf = attributes.ResourceReference()
         slot = attributes.Integer()
-        identifier = ScannableId('shelf', 'slot')
 
 Relationships
 ~~~~~~~~~~~~~
@@ -158,12 +159,12 @@ Alert conditions
 ~~~~~~~~~~~~~~~~
 
 Bad values of attributes may be declared using class attributes 
-of the types from ``chroma_core.lib.storage_plugin.alert_conditions``,
+of the types from ``chroma_core.lib.storage_plugin.api.alert_conditions``,
 see :ref:`storage_plugin_alert_conditions`
 
 .. _scannable_storage_resources:
 
-Declaring a ScannableStorageResource
+Declaring a ScannableResource
 ------------------------------------
 
 Certain storage resources are considered 'scannable':
@@ -177,22 +178,24 @@ storage controllers.
 
 ::
 
-   from chroma_core.lib.storage_plugin.resource import ScannableStorageResource, GlobalId
+   from chroma_core.lib.storage_plugin.api import resource
+   from chroma_core.lib.storage_plugin.api import identifiers
 
-   class StorageController(StorageResource):
+   class StorageController(resource.Resource):
        address_1 = attributes.Hostname()
        address_2 = attributes.Hostname()
 
-       identifier = GlobalId('address_1', 'address_2')
+       class Meta:
+           identifier = identifiers.GlobalId('address_1', 'address_2')
 
 .. _storage_plugins:
 
-Implementing StoragePlugin
+Implementing Plugin
 --------------------------
 
-The StorageResource classes are simply declarations of what resources can be 
+The Resource classes are simply declarations of what resources can be 
 reported by the plugin, and what properties they will have.  The plugin module
-must also contain a subclass of *StoragePlugin* which implements at least the
+must also contain a subclass of *Plugin* which implements at least the
 ``initial_scan`` function:
 
 .. automethod:: chroma_core.lib.storage_plugin.api.plugin.Plugin.initial_scan
@@ -232,13 +235,12 @@ Logging
 ~~~~~~~
 
 Plugins should refrain from using ``print`` or any custom logging, in favor of
-using the ``StoragePlugin.log`` object, which is a standard python
+using the ``log`` attribute of Plugin instances, which is a standard python
 ``logging.Logger`` object which Chroma provides to each plugin.
 
 The following shows the wrong and right ways to emit log messages:
 ::
 
-    def initial_scan(self, scannable_resource):
         # BAD: do not use print
         print "log message"
 
@@ -267,7 +269,7 @@ constructors:
 Resource classes are by default referred to by their python class name, qualified
 with the plugin module name.  For example, if the ``acme`` plugin had a class called
 ``HardDrive`` then it would be called ``acme.HardDrive``.  This can be overridden by setting
-the ``class_label`` class attribute on a StorageResource class.
+the ``label`` attribute on the Meta attribute of a Resource class.
 
 Instances of resources have a default human readable name of their class name followed by
 their identifier attributes.  This can be overridden by implementing the ``get_label``
@@ -292,20 +294,37 @@ the read and write bandwidth on the same chart:
 
 ::
 
-    class MyResource(StorageResource):
+    class MyResource(Resource):
         read_bytes_per_sec = statistics.Gauge(units = 'bytes/s')
         write_bytes_per_sec = statistics.Gauge(units = 'bytes/s')
 
-        charts = [
-            {
-                'title': "Bandwidth",
-                'series': ['read_bytes_per_sec', 'write_bytes_per_sec']
-            }
-        ]
+        class Meta:
+            charts = [
+                {
+                    'title': "Bandwidth",
+                    'series': ['read_bytes_per_sec', 'write_bytes_per_sec']
+                }
+            ]
 
 
 Running a plugin
 ----------------
+
+Validating
+~~~~~~~~~~
+
+Before running your plugin as part of a Chroma Manager instance, it is a good idea to check it over
+using the `validate_storage_plugin` command provided with Chroma Manager:
+
+::
+
+    $ cd /usr/share/chroma-manager
+    $ ./manage.py validate_storage_plugin /tmp/my_plugin.py
+    Validating plugin 'my_plugin'...
+    OK
+
+Installing
+~~~~~~~~~~
 
 Chroma loads plugins specified by the ``settings.INSTALLED_STORAGE_PLUGINS``.  This variable
 is a list of module names within the python import path.  If your plugin is located
@@ -320,47 +339,54 @@ from RPM) with the following content:
 
 After modifying this setting, restart the Chroma manager services.
 
-Advanced: reporting virtual machines
-------------------------------------
+Errors from the storage plugin subsystem, including any errors output
+from your plugin may be found in `/var/log/chroma/storage_plugin.log`. To
+increase the verbosity of the log output (by default only WARN and above
+is output), add your plugin to ``settings.STORAGE_PLUGIN_DEBUG_PLUGINS``.
+Changes to these settings take effect when the Chroma Manager services are restarted.
 
-Most of the built-in resource types are purely for identification of 
-common types of resource for presentation purposes.  However, the
-``chroma_core.lib.storage_plugin.builtin_resources.VirtualMachine``
-class is treated specially by Chroma.  When a resource of this class is
-reported by a plugin, Chroma uses the ``address`` attribute of the 
-resource to set up a Lustre server as if it had been added using the 
-user interface.
+Running separately
+~~~~~~~~~~~~~~~~~~
 
-The ``VirtualMachine`` resource is intended to be used for reporting 
-virtual machines which are embedded on a particular storage controller.  To
-indicate which controller this is, the resource must have the ``home_controller``
-attribute set to a suitable resource.  This resource does not have to be of
-a particular class, but must match the optional ``home_controller`` attribute
-of the ``VirtualDisk`` class.  When these two fields match, the Lustre server
-derived form the VirtualMachine resource is identified as the primary
-access path for that particular ``VirtualDisk``.  The resulting user
-experience is that the scannable resource (e.g. couplet) is added, the 
-Lustre servers automatically appear, and the detected storage resources
-are automatically set up for failover.
+The process which hosts storage plugins may be run separately to the usual
+Chroma services, so that it may be stopped and started quickly by
+plugin developers:
 
-Correlating controller resources with Linux devices using ``provide``
+::
+
+    service chroma-storage stop
+    cd /usr/share/chroma-manager
+    chroma_core/bin/storage_daemon -f
+
+Correlating controller resources with Linux devices using relations
 ---------------------------------------------------------------------
 
 As well as explicit *parents* relations between resources, resource attributes can be 
 declared to *provide* a particular entity.  This is used for linking up resource between
 different plugins, or between storage controllers and Linux hosts.
 
-Currently the only supported use of this is for correlating LUNs to Linux block devices
-using SCSI IDs.  To take advantage of this functionality from a plugin, declare an attribute
-containing the serial number like this:
+SCSI devices detected by Chroma have two serial number attributes called `serial_80` and
+`serial_83`: these correspond to the output of the `scsi_id` tool when using `-p 0x80` or
+`-p 0x83` arguments respectively.
 
-::
+To match up two resources based on their attributes, use the `Meta.relations` attribute,
+which must be a list of `relations.Provide` and `relations.Subscribe` objects.
 
-    class MyLunClass(StorageResource):
-        my_serial = attributes.String(provide='scsi_serial')
+.. code-block:: python
 
-The 'magic' here is the 'scsi_serial' name -- this is the identifier that
-Chroma knows can be used for matching up with SCSI IDs on Linux hosts.
+    class MyLunClass(Resource):
+        serial_80 = attributes.String()
+
+        class Meta:
+            identifier = identifiers.GlobalId('my_serial')
+            relations = [relations.Provide(
+                provide_to = ('linux', 'ScsiDevice'),
+                attributes = 'serial_80')]
+
+
+The `provide_to` argument to `Provide` can either be a resource class, or a 2-tuple of `([plugin name], [class name])`
+for referring to resources in another plugin.  In this case we are referring to a resource in the 'linux' plugin which
+is what Chroma Manager uses for detecting standard devices and device nodes on Linux servers.
 
 Example plugin
 --------------
@@ -418,23 +444,13 @@ it encounters on Lustre servers.  However, in some cases:
 Storage plugins may provide additional code to run on Lustre servers which extracts additional
 information from block devices.
 
-Plugin code running within the Chroma agent has a much simpler interface:
-::
+Agent plugins
+~~~~~~~~~~~~~
 
-    from chroma_agent.plugins import DevicePlugin
+Plugin code running within the Chroma agent has a simple interface:
 
-
-    class FakeControllerDevicePlugin(DevicePlugin):
-        def _read_config(self):
-            import simplejson as json
-            return json.loads(open("/root/fake_controller.json").read())
-
-        def start_session(self):
-            # return all available information
-
-        def update_session(self):
-            # return information needed to update state
-
+.. autoclass:: chroma_agent.plugins.DevicePlugin
+  :members: start_session, update_session
 
 Implementing `update_session` is optional: plugins which do not implement this function will only send
 information to the server once when the agent begins its connection to the server.
@@ -445,11 +461,54 @@ start_session will only ever be called once for a particular instance of your cl
 you to store information in start_session that is used for calculating deltas of the system
 information to send in update_session.
 
+Handling data from agent plugins
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The information sent by an agent plugin is passed on to the server plugin with the same name.  To handle
+this type of information, the plugin must implement two methods:
+
+.. autoclass:: chroma_core.lib.storage_plugin.api.plugin.Plugin
+  :members: agent_session_start, agent_session_continue
+
+DevicePlugin reference
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: chroma_agent.plugins.DevicePlugin
+  :noindex:
+  :members:
+
 Advanced: reporting hosts
 -------------------------
 
 Your storage hardware may be able to provide Chroma with knowledge of server addresses, for example
 if the storage hardware hosts virtual machines which act as Lustre servers.
+
+To report these hosts from a storage plugin, create resources of a class which
+subclasses `resources.VirtualMachine`.
+
+.. code-block:: python
+
+    class MyController(resources.ScannableResource):
+        class Meta:
+            identifier = identifiers.GlobalId('address')
+        address = attributes.Hostname()
+
+    class MyVirtualMachine(resources.VirtualMachine):
+        class Meta:
+            identifier = identifiers.GlobalId('vm_id', 'controller')
+
+        controller = attributes.ResourceReference()
+        vm_id = attributes.Integer()
+        # NB the 'address' attribute is inherited
+
+    class MyPlugin(plugin.Plugin):
+        def initial_scan(self, controller):
+            # ... somehow learn about a virtual machine hosted on `controller` ...
+            self.update_or_create(MyVirtualMachine, vm_id = 0, controller = controller, address = "192.168.1.11")
+
+When a new VirtualMachine resource is created by a plugin, Chroma Manager goes through the same configuration
+process as if the host had been added via the user interface, and the added host will appear in the list of
+servers in the user interface.
 
 Advanced: specifying access paths
 ---------------------------------
@@ -465,6 +524,8 @@ a controller port, then to a LUN.  This chain of relationships would allow Chrom
 for example a chart superimposing the bandwidth of each component in the chain from the device node to 
 the storage target.
 
+These relationships are specified using the usual
+
 Advanced: specifying homing information
 ---------------------------------------
 
@@ -476,5 +537,5 @@ of access to a storage device.  For example:
 
 This type of information allows Chroma Manager to make intelligent selection of primary/secondary Lustre servers.
 
-To express this information, create a HomingPreference resource which is a parent of the device node, and has as its
+To express this information, create a PathWeight resource which is a parent of the device node, and has as its
 parent the LUN.

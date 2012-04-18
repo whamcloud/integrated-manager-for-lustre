@@ -97,19 +97,56 @@ class PluginManager(object):
 
 
 class DevicePlugin(object):
+    """
+    A plugin for monitoring something on the server, for example for detecting
+    and monitoring a particular type of device.
+    """
     def start_session(self):
+        """
+        Return information needed to start a manager-agent session, i.e. a full
+        listing of all available information.
+
+        :rtype: JSON-serializable object, typically a dict
+        """
         raise NotImplementedError()
 
     def update_session(self):
+        """
+        Return information needed to maintain a manager-agent session, i.e. what
+        has changed since the start of the session or since the last update.
+
+        If you need to refer to any data from the start_session call, you can
+        store it as an attribute on this DevicePlugin instance.
+
+        :rtype: JSON-serializable object, typically a dict
+        """
         raise NotImplementedError()
 
 
 class ActionPlugin(object):
+    """
+    A plugin for performing a set of related actions on the server, for example
+    performing operations on a particular type of device.
+    """
+    def register_commands(self, parser):
+        """
+        Define command line actions offered by this plugin.
+
+        :param parser: An argparse.ArgumentParser
+        :rtype: None
+        """
+        raise NotImplementedError()
+
     def capabilities(self):
-        """Returns a list of capabilities advertised by this plugin."""
-        # The default here is to simply return
-        # the parent module name (e.g. manage_targets).  This can
-        # be overridden by subclasses if the default is nonsensical.
+        """
+        Returns a list of capabilities advertised by this plugin.
+
+        The default here is to simply return
+        the parent module name (e.g. manage_targets).  This can
+        be overridden by subclasses if the default is nonsensical.
+
+        Optional for subclasses.
+        """
         return [self.__class__.__module__.split('.')[-1]]
 
 

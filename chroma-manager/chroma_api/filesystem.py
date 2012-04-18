@@ -197,6 +197,17 @@ class FilesystemResource(MetricResource, ConfParamResource):
     """
     A Lustre filesystem, consisting of one or mode MDTs, and one or more OSTs.
 
+    When POSTing to create a filesystem, specify volumes to use like this:
+    ::
+
+        {osts: [{volume_id: 22}],
+        mdt: {volume_id: 23},
+        mgt: {volume_id: 24}}
+
+    To create a filesystem using an existing MGT instead of creating a new
+    MGT, set the `id` attribute instead of the `volume_id` attribute for
+    that target (i.e. `mgt: {id: 123}`).
+
     Note: Lustre filesystems are owned by an MGT, and the ``name`` of a filesystem
     is unique within that MGT.  Do not use ``name`` as a globally unique identifier
     for filesystems in your application.

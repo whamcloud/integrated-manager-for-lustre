@@ -18,6 +18,11 @@ from chroma_core.models.storage_plugin import StorageResourceRecord, StorageReso
 
 
 class PluginNotFound(Exception):
+    def __str__(self):
+        return "PluginNotFound: %s" % self.message
+
+
+class PluginProgrammingError(Exception):
     pass
 
 
@@ -78,39 +83,67 @@ class LoadedPlugin(object):
 class StoragePluginManager(object):
     def __init__(self):
         self.loaded_plugins = {}
+        self.errored_plugins = []
 
         self.resource_class_id_to_class = {}
         self.resource_class_class_to_id = {}
 
         from settings import INSTALLED_STORAGE_PLUGINS
         for plugin in INSTALLED_STORAGE_PLUGINS:
-            self.load_plugin(plugin)
+            try:
+                self.load_plugin(plugin)
+            except (ImportError, SyntaxError, ResourceProgrammingError, PluginProgrammingError):
+                storage_plugin_log.error("Failed to load plugin '%s'" % plugin)
+                self.errored_plugins.append(plugin)
 
         for id, klass in self.resource_class_id_to_class.items():
             klass._meta.relations = list(klass._meta.orig_relations)
 
+        def can_satisfy_relation(klass, attributes):
+            for attribute in attributes:
+                if not attribute in klass._meta.storage_attributes:
+                    return False
+
+            return True
+
         for id, klass in self.resource_class_id_to_class.items():
             for relation in klass._meta.relations:
+                # If ('linux', 'ScsiDevice') form was used, substitute the real class
+                if isinstance(relation, relations.Provide):
+                    if isinstance(relation.provide_to, tuple):
+                        prov_klass, prov_klass_id = self.get_plugin_resource_class(*relation.provide_to)
+                        relation.provide_to = prov_klass
+                elif isinstance(relation, relations.Subscribe):
+                    if isinstance(relation.subscribe_to, tuple):
+                        sub_klass, sub_klass_id = self.get_plugin_resource_class(*relation.subscribe_to)
+                        relation.subscribe_to = sub_klass
+
+                # Generate reverse-Subscribe relations
                 if isinstance(relation, relations.Provide):
                     # Synthesize Subscribe objects on the objects which might
                     # be on the receiving event of a Provide relation.  The original
                     # Provide object plays no further role.
                     subscription = relations.Subscribe(klass, relation.attributes)
-                    relation.provide_to._meta.relations.append(subscription)
+                    if can_satisfy_relation(relation.provide_to, relation.attributes):
+                        relation.provide_to._meta.relations.append(subscription)
                     for sc in all_subclasses(relation.provide_to):
-                        sc._meta.relations.append(subscription)
+                        if can_satisfy_relation(sc, relation.attributes):
+                            sc._meta.relations.append(subscription)
+
+    def get_errored_plugins(self):
+        return self.errored_plugins
 
     def get_resource_class_id(self, klass):
         try:
             return self.resource_class_class_to_id[klass]
         except KeyError:
-            raise PluginNotFound()
+            raise PluginNotFound("Looking for class %s" % klass.__name__)
 
     def get_resource_class_by_id(self, id):
         try:
             return self.resource_class_id_to_class[id]
         except KeyError:
-            raise PluginNotFound()
+            raise PluginNotFound("Looking for class id %s " % id)
 
     def get_scannable_resource_ids(self, plugin):
         loaded_plugin = self.loaded_plugins[plugin]
@@ -154,12 +187,12 @@ class StoragePluginManager(object):
         try:
             loaded_plugin = self.loaded_plugins[plugin_module]
         except KeyError:
-            raise RuntimeError("Plugin %s not found (not one of %s)" % (plugin_module, self.loaded_plugins.keys()))
+            raise PluginNotFound("Plugin %s not found (not one of %s)" % (plugin_module, self.loaded_plugins.keys()))
 
         try:
             loaded_resource = loaded_plugin.resource_classes[resource_class_name]
         except KeyError:
-            raise RuntimeError("Resource %s not found in %s (not one of %s)" % (
+            raise PluginNotFound("Resource %s not found in %s (not one of %s)" % (
                 resource_class_name, plugin_module, loaded_plugin.resource_classes.keys()))
 
         return loaded_resource.resource_class, loaded_resource.resource_class_id
@@ -176,6 +209,21 @@ class StoragePluginManager(object):
         except KeyError:
             raise PluginNotFound(module)
 
+    def validate_plugin(self, module):
+        errors = []
+        try:
+            self.load_plugin(module)
+        except ResourceProgrammingError, e:
+            errors.append(e.__str__())
+        except PluginProgrammingError, e:
+            errors.append(e.__str__())
+        except SyntaxError, e:
+            errors.append("SyntaxError: %s:%s:%s: %s" % (e.filename, e.lineno, e.offset, e.text))
+        except ImportError, e:
+            errors.append(e.__str__())
+
+        return errors
+
     def _load_plugin(self, module, module_name, plugin_klass):
         storage_plugin_log.debug("_load_plugin %s %s" % (module_name, plugin_klass))
         self.loaded_plugins[module_name] = LoadedPlugin(self, module, module_name, plugin_klass)
@@ -189,7 +237,7 @@ class StoragePluginManager(object):
 
            @return A subclass of BaseStoragePlugin"""
         if module in self.loaded_plugins:
-            raise RuntimeError("Duplicate storage plugin module %s" % module)
+            raise PluginProgrammingError("Duplicate storage plugin module %s" % module)
 
         if module in sys.modules:
             storage_plugin_log.warning("Reloading module %s (okay if testing)" % module)
@@ -198,7 +246,7 @@ class StoragePluginManager(object):
             # Load the module
             try:
                 mod = __import__(module)
-            except (ImportError, ResourceProgrammingError) as e:
+            except (ImportError, ResourceProgrammingError, SyntaxError) as e:
                 storage_plugin_log.error("Error importing %s: %s" % (module, e))
                 raise
 
@@ -219,9 +267,9 @@ class StoragePluginManager(object):
 
         # Make sure we have exactly one BaseStoragePlugin subclass
         if len(plugin_klasses) > 1:
-            raise RuntimeError("Module %s defines more than one BaseStoragePlugin: %s!" % (module, plugin_klasses))
+            raise PluginProgrammingError("Module %s defines more than one BaseStoragePlugin: %s!" % (module, plugin_klasses))
         elif len(plugin_klasses) == 0:
-            raise RuntimeError("Module %s does not define a BaseStoragePlugin!" % module)
+            raise PluginProgrammingError("Module %s does not define a BaseStoragePlugin!" % module)
         else:
             plugin_klass = plugin_klasses[0]
 

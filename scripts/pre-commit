@@ -72,6 +72,7 @@ CHECKS = [
             '.*chroma_core/lib/storage_plugin/api/__init__.py',
             '.*settings.py',
             '.*example_storage_plugin_package/example_storage_plugin/__init__.py',
+            '.*chroma-manager/tests/unit/chroma_core/lib/storage_plugin/junk.py',
             '.*/chroma-director/.*'],
         'print_filename': False,
     },

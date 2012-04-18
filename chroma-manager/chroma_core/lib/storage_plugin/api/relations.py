@@ -12,8 +12,14 @@ class Subscribe(BaseRelation):
         self.attributes = attributes
         self.subscribe_to = subscribe_to
 
+    def __repr__(self):
+        return "<Subscribe %s%s>" % (self.subscribe_to.__name__, self.attributes)
+
 
 class Provide(BaseRelation):
     def __init__(self, provide_to, attributes):
         self.attributes = attributes
         self.provide_to = provide_to
+
+    def __repr__(self):
+        return "<Provide %s%s>" % (self.provide_to.__name__, self.attributes)
