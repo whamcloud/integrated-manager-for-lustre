@@ -12,6 +12,7 @@
       // Take a javascript copy of the STATIC_URL variable
       // so that we can access it from static .js code
       var STATIC_URL = '{{STATIC_URL}}';
+      var CACHE_INITIAL_DATA = {{cache|safe}};
       var UI_ROOT = "/ui/";
     </script>
 
@@ -113,21 +114,18 @@
     $(document).ready(function() {
         $('div.rightpanel').css('visibility', 'hidden');
         Login.init();
-        ApiCache.init({success: function() {
-            HelpLinks.init();
-            ConfigureTabs.init();
+        HelpLinks.init();
+        ConfigureTabs.init();
 
-            updateSizes();
-            $(window).resize(updateSizes);
-            $('div.rightpanel').css('visibility', 'visible');
-            window.loaded = true;
+        updateSizes();
+        $(window).resize(updateSizes);
+        $('div.rightpanel').css('visibility', 'visible');
+        window.loaded = true;
 
-            new ChromaRouter();
-            Api.on_available(function() {
-                Backbone.history.start({root: UI_ROOT, pushState: true})
-            });
-        }});
-
+        new ChromaRouter();
+        Api.on_available(function() {
+            Backbone.history.start({root: UI_ROOT, pushState: true})
+        });
     });
   </script>
 

@@ -23,12 +23,12 @@ var ApiCache = function(){
     url: "/api/target/"
   });
 
-  var Server = Backbone.Model.extend({
+  var Host = Backbone.Model.extend({
     urlRoot: "/api/host/"
   });
 
-  var ServerCollection = Backbone.Collection.extend({
-    model: Server,
+  var HostCollection = Backbone.Collection.extend({
+    model: Host,
     url: "/api/host/"
   });
 
@@ -36,40 +36,25 @@ var ApiCache = function(){
   var collections = {
     'filesystem': new FilesystemCollection(),
     'target': new TargetCollection(),
-    'server': new ServerCollection()
+    'host': new HostCollection()
   };
 
   var outstanding_requests = {
     'filesystem': [],
     'target': [],
-    'server': []
+    'host': []
   };
 
-
-  var initialized = false;
-  var init = function(params) {
-    params = params || {};
-
-    var init_counter = 0;
-    _.each(collections, function(collection) {
-      collection.fetch({success: function() {
-        init_counter = init_counter + 1;
-        if (init_counter == _.size(collections)) {
-          initialized = true;
-          if (params.success) {
-            params.success();
-          }
-        }
-      }});
-    });
-  };
+  _.each(collections, function(collection, resource_name) {
+    collection.add(CACHE_INITIAL_DATA[resource_name]);
+  });
 
   function get(obj_type, obj_id) {
     var collection = collections[obj_type];
 
     var object = collection.get(obj_id);
     if (!object) {
-      if (!initialized || _.include(outstanding_requests[obj_type], obj_id)) {
+      if (_.include(outstanding_requests[obj_type], obj_id)) {
         return null;
       } else {
         outstanding_requests[obj_type].push(obj_id);
@@ -92,7 +77,6 @@ var ApiCache = function(){
 
   return {
     get: get,
-    list: list,
-    init: init
+    list: list
   }
 }();
