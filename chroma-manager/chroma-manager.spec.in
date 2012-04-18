@@ -158,6 +158,7 @@ fi
 %exclude /usr/share/chroma-manager/chroma_cli
 %exclude %{python_sitelib}/*.egg-info/
 # will go into the -tests package
+%exclude /usr/share/chroma-manager/example_storage_plugin_package
 %exclude /usr/share/chroma-manager/tests
 
 %files libs
@@ -171,4 +172,5 @@ fi
 %files tests
 %defattr(-,root,root)
 /usr/share/chroma-manager/tests/*
+/usr/share/chroma-manager/example_storage_plugin_package/*
 %attr(0755,root,root)/usr/share/chroma-manager/tests/integration/run_tests
