@@ -1,7 +1,6 @@
 
 from django.test import TestCase
 import os
-from chroma_core.lib.storage_plugin.manager import PluginProgrammingError
 from helper import load_plugins
 from chroma_core.management.commands.validate_storage_plugin import Command as ValidateCommand
 import settings
@@ -9,20 +8,21 @@ import settings
 
 class TestCornerCases(TestCase):
     def test_0classes(self):
-        with self.assertRaisesRegexp(PluginProgrammingError, "Module unloadable_plugin_0classes does not define a BaseStoragePlugin"):
-            load_plugins(['unloadable_plugin_0classes'])
+        manager = load_plugins(['unloadable_plugin_0classes'])
+        self.assertEqual(manager.get_errored_plugins(), ['unloadable_plugin_0classes'])
 
     def test_2classes(self):
-        with self.assertRaisesRegexp(PluginProgrammingError, "Module unloadable_plugin_2classes defines more than one BaseStoragePlugin"):
-            load_plugins(['unloadable_plugin_2classes'])
+        manager = load_plugins(['unloadable_plugin_2classes'])
+        self.assertEqual(manager.get_errored_plugins(), ['unloadable_plugin_2classes'])
 
     def test_dupemodule(self):
-        with self.assertRaisesRegexp(PluginProgrammingError, "Duplicate storage plugin module loadable_plugin"):
-            load_plugins(['loadable_plugin', 'loadable_plugin'])
+        manager = load_plugins(['loadable_plugin', 'loadable_plugin'])
+        self.assertEqual(manager.get_errored_plugins(), ['loadable_plugin'])
 
     def test_submodule(self):
         # Check we can load a plugin via a dotted reference
         mgr = load_plugins(['submodule.loadable_submodule_plugin'])
+        self.assertEquals(mgr.get_errored_plugins(), [])
         # Check that the path has been stripped from the reference
         mgr.get_plugin_class('loadable_submodule_plugin')
 
@@ -30,13 +30,15 @@ class TestCornerCases(TestCase):
 class TestExample(TestCase):
     def test_load(self):
         """Test that the example plugin used in documentation loads"""
-        load_plugins(['example_plugin'])
+        manager = load_plugins(['example_plugin'])
+        self.assertEquals(manager.get_errored_plugins(), [])
 
 
 class TestThousandDrives(TestCase):
     def test_load(self):
         """Test that the thousand_drives plugin used for stats load testing loads"""
-        load_plugins(['thousand_drives'])
+        manager = load_plugins(['thousand_drives'])
+        self.assertEquals(manager.get_errored_plugins(), [])
 
 
 class TestLoad(TestCase):
@@ -44,6 +46,7 @@ class TestLoad(TestCase):
         import loadable_plugin
         self.loadable_plugin = loadable_plugin
         self.manager = load_plugins(['loadable_plugin'])
+        self.assertEquals(self.manager.get_errored_plugins(), [])
 
         import chroma_core
         self.old_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
@@ -78,9 +81,10 @@ class TestLoad(TestCase):
         self.assertEqual(self.manager.get_resource_class_by_id(resource.pk).__name__, 'TestScannableResource')
 
     def test_absences(self):
-        with self.assertRaises(PluginProgrammingError):
+        from chroma_core.lib.storage_plugin.manager import PluginNotFound
+        with self.assertRaises(PluginNotFound):
             self.manager.get_plugin_resource_class('loadable_plugin', 'noexist')
-        with self.assertRaises(PluginProgrammingError):
+        with self.assertRaises(PluginNotFound):
             self.manager.get_plugin_resource_class('noexist', 'TestResource')
 
     def test_get_resource_classes(self):
@@ -135,3 +139,12 @@ class TestValidate(TestCase):
         dirname = os.path.dirname(__file__) + "/../../../../plugins/"
         errors = ValidateCommand().execute(os.path.join(os.path.abspath(dirname), "fake_controller.py"))
         self.assertListEqual(errors, [])
+
+    def test_thousand_drives(self):
+        errors = ValidateCommand().execute(os.path.join(os.path.abspath(os.path.dirname(__file__)), "thousand_drives.py"))
+        self.assertListEqual(errors, [])
+
+    def test_junk(self):
+        errors = ValidateCommand().execute(os.path.join(os.path.abspath(os.path.dirname(__file__)), "junk.py"))
+        self.assertEqual(len(errors), 1)
+        self.assertTrue(errors[0].startswith("SyntaxError:"), errors[0])

@@ -6,16 +6,18 @@
 
 import sys
 import os
+
 bin_dir = os.path.abspath(os.path.dirname(sys.modules['__main__'].__file__))
 project_dir = "/" + os.path.join(*(bin_dir.split(os.sep)[0:-2]))
 sys.path.append(project_dir)
+
+from chroma_core.lib.storage_plugin.log import storage_plugin_log
 
 from django.core.management import setup_environ
 import settings
 setup_environ(settings)
 
 import signal
-import os
 import threading
 import time
 
@@ -83,6 +85,13 @@ if __name__ == '__main__':
     except IndexError:
         foreground = False
 
+    from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+    errors = storage_plugin_manager.get_errored_plugins()
+    if errors:
+        sys.stderr.write("Cannot start, see storage_plugin.log for more details.")
+        sys.stderr.write("The following plugins could not be loaded: %s" % errors)
+        sys.exit(-1)
+
     if not foreground:
         PID_FILE = "/var/run/chroma-storage.pid"
         from daemon import DaemonContext
@@ -112,6 +121,7 @@ if __name__ == '__main__':
         daemon_log.setLevel(logging.DEBUG)
         daemon_log.addHandler(logging.StreamHandler())
         daemon_log.info("Starting in the foreground")
+        storage_plugin_log.addHandler(logging.StreamHandler())
 
     try:
         run_main_loop()

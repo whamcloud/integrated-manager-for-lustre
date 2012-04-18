@@ -345,6 +345,19 @@ increase the verbosity of the log output (by default only WARN and above
 is output), add your plugin to ``settings.STORAGE_PLUGIN_DEBUG_PLUGINS``.
 Changes to these settings take effect when the Chroma Manager services are restarted.
 
+Running separately
+~~~~~~~~~~~~~~~~~~
+
+The process which hosts storage plugins may be run separately to the usual
+Chroma services, so that it may be stopped and started quickly by
+plugin developers:
+
+::
+
+    service chroma-storage stop
+    cd /usr/share/chroma-manager
+    chroma_core/bin/storage_daemon -f
+
 Correlating controller resources with Linux devices using relations
 ---------------------------------------------------------------------
 

@@ -83,13 +83,18 @@ class LoadedPlugin(object):
 class StoragePluginManager(object):
     def __init__(self):
         self.loaded_plugins = {}
+        self.errored_plugins = []
 
         self.resource_class_id_to_class = {}
         self.resource_class_class_to_id = {}
 
         from settings import INSTALLED_STORAGE_PLUGINS
         for plugin in INSTALLED_STORAGE_PLUGINS:
-            self.load_plugin(plugin)
+            try:
+                self.load_plugin(plugin)
+            except (ImportError, SyntaxError, ResourceProgrammingError, PluginProgrammingError):
+                storage_plugin_log.error("Failed to load plugin '%s'" % plugin)
+                self.errored_plugins.append(plugin)
 
         for id, klass in self.resource_class_id_to_class.items():
             klass._meta.relations = list(klass._meta.orig_relations)
@@ -124,6 +129,9 @@ class StoragePluginManager(object):
                     for sc in all_subclasses(relation.provide_to):
                         if can_satisfy_relation(sc, relation.attributes):
                             sc._meta.relations.append(subscription)
+
+    def get_errored_plugins(self):
+        return self.errored_plugins
 
     def get_resource_class_id(self, klass):
         try:
@@ -179,12 +187,12 @@ class StoragePluginManager(object):
         try:
             loaded_plugin = self.loaded_plugins[plugin_module]
         except KeyError:
-            raise RuntimeError("Plugin %s not found (not one of %s)" % (plugin_module, self.loaded_plugins.keys()))
+            raise PluginNotFound("Plugin %s not found (not one of %s)" % (plugin_module, self.loaded_plugins.keys()))
 
         try:
             loaded_resource = loaded_plugin.resource_classes[resource_class_name]
         except KeyError:
-            raise RuntimeError("Resource %s not found in %s (not one of %s)" % (
+            raise PluginNotFound("Resource %s not found in %s (not one of %s)" % (
                 resource_class_name, plugin_module, loaded_plugin.resource_classes.keys()))
 
         return loaded_resource.resource_class, loaded_resource.resource_class_id
@@ -208,6 +216,10 @@ class StoragePluginManager(object):
         except ResourceProgrammingError, e:
             errors.append(e.__str__())
         except PluginProgrammingError, e:
+            errors.append(e.__str__())
+        except SyntaxError, e:
+            errors.append("SyntaxError: %s:%s:%s: %s" % (e.filename, e.lineno, e.offset, e.text))
+        except ImportError, e:
             errors.append(e.__str__())
 
         return errors
@@ -234,7 +246,7 @@ class StoragePluginManager(object):
             # Load the module
             try:
                 mod = __import__(module)
-            except (ImportError, ResourceProgrammingError) as e:
+            except (ImportError, ResourceProgrammingError, SyntaxError) as e:
                 storage_plugin_log.error("Error importing %s: %s" % (module, e))
                 raise
 
