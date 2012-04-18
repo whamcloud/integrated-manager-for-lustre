@@ -20,16 +20,20 @@ function formatNumber(number, decimals, dec_point, thousands_sep) {
 }
 
 /* http://snipplr.com/view/5949/ */
-function formatBytes(bytes) {
+function formatBytes(bytes, decimals) {
   if (bytes == null || bytes == undefined) {
     return bytes;
   }
 
+  if (decimals == undefined) {
+    decimals = 2;
+  }
+
 	if (bytes >= 1073741824) {
-	     bytes = formatNumber(bytes / 1073741824, 2, '.', '') + 'GB';
+	     bytes = formatNumber(bytes / 1073741824, decimals, '.', '') + 'GB';
 	} else { 
 		if (bytes >= 1048576) {
-     		bytes = formatNumber(bytes / 1048576, 2, '.', '') + 'MB';
+     		bytes = formatNumber(bytes / 1048576, decimals, '.', '') + 'MB';
    	} else { 
 			if (bytes >= 1024) {
     		bytes = formatNumber(bytes / 1024, 0) + 'KB';

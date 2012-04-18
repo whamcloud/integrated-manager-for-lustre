@@ -22,56 +22,34 @@
 		
       });
       </script>
-      <input type="hidden" id="ls_fsName" />
-      <input type="hidden" id="ls_fsId" />
-      <input type="hidden" id="ls_ossName" />
-      <input type="hidden" id="ls_ossId" />
-      <input type="hidden" id="ls_ostName" />
-      <input type="hidden" id="ls_ostId" />
-      <input type="hidden" id="ls_ostKind" />
-      <select id="ostKind" style="display:none">
-      </select>
-      <select id="ost_file_system" style="display:none">
-      </select>
       	<!-- Breadcrumb menu and time interval selection - Start -->
     	<table id='dashboard_navigation' width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue;">
           <tr style="background-color: #ccc">
             <td width="50%">
               <div class="breadCrumbHolder module">
                <div id="breadCrumb0" class="breadCrumb module">
-                 <ul style="float: left;">
-                   <li><a href="/dashboard">Home</a></li>
-                   <li>
-                     <select id="selectView">
-                       <option value="filesystem_view" selected="selected">File System View</option>
-                       <option value="server_view">Server View</option>
-                     </select>
-                   </li>
-                   <li>
-                     <select id="fsSelect">
-                     </select>
-                   </li>
-                 </ul>
+
                </div>
               </div>
             </td>
             <td width="50%">
               <div class="timeint">
-                <input id="db_polling_element" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>
+                <input id="polling" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>
                 &nbsp;&nbsp;<font color="black">|</font> 
                 Time Interval: &nbsp;
-                <select id="intervalSelect">
-                  <option value="">Select</option>
-                  <option value="minutes">Minutes</option>
-                  <option value="hour">Hour</option>
-                  <option value="day">Day</option>
-                  <option value="week">Week</option>
-                </select> 
-                &nbsp;&nbsp;<font color="black">|</font>
-                Unit: &nbsp; 
                 <select id="unitSelect">
                   <option value=''>Select</option>
                 </select>
+                <select id="intervalSelect">
+                  <option value="">Select</option>
+                  <option value="minutes" selected='selected'>Minutes</option>
+                  <option value="hour">Hour</option>
+                  <option value="day">Day</option>
+                  <option value="week">Week</option>
+                </select>
+                &nbsp;&nbsp;<font color="black">|</font>
+
+
               </div>
             </td>
           </tr>
@@ -141,7 +119,7 @@
           <!-- Dashboard Div - End -->
 
           <!-- FileSystem Div - Start -->
-          <div id="fileSystemDiv" class='dashboard_page' style="display: none">
+          <div id="dashboard_page_filesystem" class='dashboard_page' style="display: none">
             <table class='chart_grid'>
 			  <tr>
                 <td valign="top" align="center" style="font-family: Verdana, Arial, Helvetica, sans-serif;">
@@ -198,7 +176,7 @@
           <!-- FileSystem Div - End -->
 
           <!-- FileSystem Servers Div - Start -->
-          <div id="ossInfoDiv" class='dashboard_page' style="display: none">
+          <div id="dashboard_page_server" class='dashboard_page' style="display: none">
             <table class='chart_grid'>
               <tr>
                 <td colspan="4">
@@ -232,7 +210,7 @@
           <!-- FileSystem Servers Div - End -->
            
           <!-- Filesystem Targets  Div - Start -->
-          <div id="ostInfoDiv" class='dashboard_page' style="display: none">
+          <div id="dashboard_page_target" class='dashboard_page' style="display: none">
             <table class='chart_grid'>
               <tr>
                 <td>
@@ -251,8 +229,7 @@
                 <td>
                   <div id="target_read_write_container_div" style="display: none">
                     <div class="magni">
-	                    <button class="magbutton" 
-	                    onclick="ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, 'Average', $('#ls_ostKind').val(), readWriteFetchMatric, 'true');setZoomDialogTitle('Target: Disk Read and Write');" />
+	                    <button class="magbutton" />
 	                  </div>
 	                  <div id="target_read_write_container" class="chart">Disk Read and Write</div>
 	                </div>
@@ -260,8 +237,7 @@
                 <td>
                   <div id="target_mgt_ops_container_div" style="display: none">
                     <div class="magni">
-                      <button class="magbutton" 
-                      onclick="ost_Area_mgtOps_Data($('#ls_ostId').val(), 'true');setZoomDialogTitle('Target: Metadata op/s');" />
+                      <button class="magbutton" />
                     </div>
                     <div id="target_mgt_ops_container" class="chart">Metadata op/s</div>
                   </div>
@@ -270,8 +246,9 @@
               </tr>
             </table>
           </div>
+
           <!-- FileSystem Targets Div - End -->
-				<input type='hidden' id='zoomed_graph_id' name='zoomed_graph_id' value='' />
-			    <div id="zoomDialog" title="All File System CPU Usage">
-			      <div id="dialog_avgCPUDiv"></div>
-			    </div>
+        <input type='hidden' id='zoomed_graph_id' name='zoomed_graph_id' value='' />
+        <div id="zoomDialog" title="All File System CPU Usage">
+          <div id="dialog_avgCPUDiv"></div>
+        </div>

@@ -238,10 +238,11 @@ var ChartManager = function(options) {
 
         chart.state = 'loading';
         var url;
-        if ( _.isFunction(chart.url) )
+        if ( _.isFunction(chart.url) ) {
           url = chart.url();
-        else
+        } else {
           url = chart.url;
+        }
         Api.get(
             url,
             api_params,
@@ -342,7 +343,6 @@ var ChartManager = function(options) {
         if(config.interval_seconds > 0 ) {
             config.interval_id = setInterval(render_charts, config.interval_seconds * 1000 );
         }
-        return;
     };
 
     // Interval based refreshing
@@ -352,7 +352,6 @@ var ChartManager = function(options) {
         }
         config.interval_id = null;
         config.interval_seconds = 0;
-        return;
     };
     var set_recurring = function (seconds) {
         if ( ! _.isNumber(seconds) ) {
@@ -364,13 +363,12 @@ var ChartManager = function(options) {
         }
         config.interval_id = setInterval(render_charts,seconds * 1000);
         config.interval_seconds = seconds;
-        return;
-    }
+    };
 
     var destroy = function() {
       clear_recurring();
       _.each(config.charts, function(charts_in_group,chart_group) {
-        _each(charts_in_group, function(chart,chart_key) {
+        _.each(charts_in_group, function(chart,chart_key) {
           if(_.isObject(chart.instance)) {
             chart.instance.destroy();
             chart.instance = null;

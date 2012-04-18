@@ -15,7 +15,7 @@ var ApiCache = function(){
   });
 
   var Target = Backbone.Model.extend({
-    urlRoot: "/api/filesystem/"
+    urlRoot: "/api/target/"
   });
 
   var TargetCollection = Backbone.Collection.extend({
@@ -23,14 +23,26 @@ var ApiCache = function(){
     url: "/api/target/"
   });
 
+  var Server = Backbone.Model.extend({
+    urlRoot: "/api/host/"
+  });
+
+  var ServerCollection = Backbone.Collection.extend({
+    model: Server,
+    url: "/api/host/"
+  });
+
+
   var collections = {
     'filesystem': new FilesystemCollection(),
-    'target': new TargetCollection()
+    'target': new TargetCollection(),
+    'server': new ServerCollection()
   };
 
   var outstanding_requests = {
     'filesystem': [],
-    'target': []
+    'target': [],
+    'server': []
   };
 
 
@@ -42,7 +54,7 @@ var ApiCache = function(){
     _.each(collections, function(collection) {
       collection.fetch({success: function() {
         init_counter = init_counter + 1;
-        if (init_counter == collections.length) {
+        if (init_counter == _.size(collections)) {
           initialized = true;
           if (params.success) {
             params.success();
@@ -73,8 +85,14 @@ var ApiCache = function(){
     return object;
   }
 
+  function list(obj_type) {
+    var collection = collections[obj_type];
+    return collection.toJSON();
+  }
+
   return {
     get: get,
+    list: list,
     init: init
   }
 }();

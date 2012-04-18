@@ -1127,38 +1127,3 @@ setZoomDialogTitle = function(titleName)
   $('#zoomDialog').dialog('open');
   $('#zoomDialog').html("<img src='/static/images/wait_progress.gif' style='align:center;'/>");
 }
-/*****************************************************************************
- * Function to start polling for all graphs on dashboard landing page
-*****************************************************************************/
-initDashboardPolling = function()
-{
-  dashboardPollingInterval = self.setInterval(function()
-  {
-    loadLandingPageGraphs();
-  }, 10000);
-}
-/*****************************************************************************
- * Function to load graphs on the dashboard lading page
-*****************************************************************************/
-loadLandingPageGraphs = function()
-{
-  db_Bar_SpaceUsage_Data('false');
-  db_Line_connectedClients_Data('false');
-  //db_LineBar_CpuMemoryUsage_Data('false');
-  db_Area_ReadWrite_Data('false');
-  db_Area_mdOps_Data('false');
-  db_AreaSpline_ioOps_Data('false');
-}
-/*****************************************************************************
- * Function to clear dashboard pooling intervals
-*****************************************************************************/
-clearAllIntervals = function()
-{
-  clearInterval(dashboardPollingInterval);
-  clearInterval(fsPollingInterval);
-  clearInterval(ossPollingInterval);
-  clearInterval(ostPollingInterval);
-  
-  $("input[id *= polling_element]").attr("checked",false);
-}
-/******************************************************************************/

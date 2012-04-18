@@ -183,6 +183,6 @@ loadServerGraphs = function()
 ******************************************************************************/
 function showOSSDashboard()
 {
-  loadOSSContent($('#ls_fsId').val(), $('#ls_fsName').val(), $('#ls_ossId').val(), $('#ls_ossName').val());
+  loadServer($('#ls_fsId').val(), $('#ls_fsName').val(), $('#ls_ossId').val(), $('#ls_ossName').val());
 }
 /*********************************************************************************************/

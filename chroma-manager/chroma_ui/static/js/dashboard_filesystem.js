@@ -510,83 +510,8 @@ fs_HeatMap_ReadWriteData = function(fetchmetrics, isZoom)
  * Param - File System Id
  * Return - Returns the summary information of the selected file system
 *****************************************************************************/
-loadFileSystemSummary = function (fsId)
+loadFileSystemSummary = function ()
 {
-  var innerContent = "";
-  $('#fileSystemSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
-  "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />" +
-  "</td></tr>");
-
-  Api.get("filesystem/" + fsId + "/", {}, 
-	success_callback = function(filesystem)
-	{
-      innerContent = innerContent + 
-      "<tr>" +
-      "<td class='greybgcol'>MGS :</td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.mgt.primary_server_name+"</td>" +
-      "<td>&nbsp;</td>" +
-      "<td>&nbsp;</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>MDS:</td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.mdts[0].primary_server_name+"</td>" +
-      "<td>&nbsp;</td>" +
-      "<td>&nbsp;</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>Total OSTs:</td>" +
-      "<td class='tblContent txtleft'>"+filesystem.osts.length+"</td>" +
-      "<td>&nbsp;</td>" +
-      "<td>&nbsp;</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>Total Capacity: </td>" +
-      "<td class='tblContent greybgcol'>"+formatBytes(filesystem.bytes_total)+" </td>" +
-      "<td class='greybgcol'>Total Free:</td>" +
-      "<td class='tblContent txtleft'>"+formatBytes(filesystem.bytes_free)+"</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>Files Total: </td>" +
-      "<td class='tblContent greybgcol'>"+formatBigNumber(filesystem.files_total)+" </td>" +
-      "<td class='greybgcol'>Files Free:</td>" +
-      "<td class='tblContent txtleft'>"+formatBigNumber(filesystem.files_free)+"</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>Status:</td>";
-
-      $('#fileSystemSummaryTbl').html(innerContent);
-	});
-}
-/*****************************************************************************
- * Function to initialize polling of graphs on the file system dashboard page
-*****************************************************************************/
-initFileSystemPolling = function()
-{
-  fsPollingInterval = self.setInterval(function()
-  {
-    loadFileSytemGraphs();
-  }, 10000);
-}
-/*****************************************************************************
- * Function to load graphs on the filesystem dashboard page
-*****************************************************************************/
-loadFileSytemGraphs = function()
-{
-  //fs_Bar_SpaceUsage_Data($('#ls_fsId').val(), "", "", "Average", "OST", spaceUsageFetchMatric, false);
-  //fs_Line_connectedClients_Data($('#ls_fsId').val(), startTime, endTime, "Average", clientsConnectedFetchMatric, false);
-  //fs_LineBar_CpuMemoryUsage_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", cpuMemoryFetchMatric, false);
-  //fs_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, "Average", "OST", readWriteFetchMatric, false);
-  //fs_Area_mdOps_Data($('#ls_fsId').val(), startTime, endTime, "Average", "MDT", mdOpsFetchmatric, false);
-  //fs_AreaSpline_ioOps_Data('false');
-  init_charts(dashboard_chart_manager,'filesystem');
 
 }
-/*****************************************************************************/
-/******************************************************************************
- * Function to show FS dashboard content
-******************************************************************************/
-function showFSDashboard()
-{
-  loadFSContent($('#ls_fsId').val(), $('#ls_fsName').val());
-}
-/*********************************************************************************************/
+

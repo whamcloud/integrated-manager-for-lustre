@@ -44,7 +44,6 @@
 
     <!-- Plugins -->
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.easing.1.3.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.jBreadCrumb.1.1.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.blockUI.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.alerts.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/js-graph-it.js" ></script>
@@ -113,19 +112,21 @@
     $(document).ready(function() {
         $('div.rightpanel').css('visibility', 'hidden');
         Login.init();
-        ApiCache.init();
-        HelpLinks.init();
-        ConfigureTabs.init();
+        ApiCache.init({success: function() {
+            HelpLinks.init();
+            ConfigureTabs.init();
 
-        updateSizes();
-        $(window).resize(updateSizes);
-        $('div.rightpanel').css('visibility', 'visible');
-        window.loaded = true;
+            updateSizes();
+            $(window).resize(updateSizes);
+            $('div.rightpanel').css('visibility', 'visible');
+            window.loaded = true;
 
-        new ChromaRouter();
-        Api.on_available(function() {
-          Backbone.history.start({root: UI_ROOT, pushState: true})
-        });
+            new ChromaRouter();
+            Api.on_available(function() {
+                Backbone.history.start({root: UI_ROOT, pushState: true})
+            });
+        }});
+
     });
   </script>
 

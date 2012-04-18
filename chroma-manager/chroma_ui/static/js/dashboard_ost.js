@@ -331,85 +331,14 @@ ost_Area_ReadWrite_Data = function(targetId, targetName, sDate, endDate, dataFun
  * Param - File System name
  * Return - Returns the summary information of the selected file system
 *****************************************************************************/
-loadOSTSummary = function (fsId)
+loadOSTSummary = function ()
 {
-  //console.log("loadOSTSummary");
-  var innerContent = "";
-  $('#ostSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
-      "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
 
-  Api.get("filesystem/" + fsId + "/", {}, 
-    success_callback = function(filesystem)
-    {
-      innerContent = innerContent + 
-      "<tr>" +
-      "<td class='greybgcol'>MGS :</td><td class='tblContent greybgcol'>"+filesystem.mgt.primary_server_name+"</td><td>&nbsp;</td><td>&nbsp;</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>MDS :</td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.mdts[0].primary_server_name+"</td>" +
-      "<td class='greybgcol'>Failover :</td><td class='tblContent greybgcol'>NA</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>File System :</td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.name+"</td>" +
-      "<td>&nbsp;</td>" +
-      "<td>&nbsp;</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>Size: </td>" +
-      "<td class='tblContent greybgcol'>"+formatBytes(filesystem.bytes_total)+" </td>" +
-      "<td class='greybgcol'>Free space:</td>" +
-      "<td class='tblContent greybgcol'>"+formatBytes(filesystem.bytes_free)+"</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>Max. files: </td>" +
-      "<td class='tblContent greybgcol'>"+formatBigNumber(filesystem.files_total)+" </td>" +
-      "<td class='greybgcol'>Files:</td>" +
-      "<td class='tblContent greybgcol'>"+formatBigNumber(filesystem.files_total - filesystem.files_free)+"</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>Total OSTs:</td>" +
-      "<td class='tblContent greybgcol'>"+filesystem.osts.length+" </td>" +
-      "<td>&nbsp;</td><td>&nbsp;</td>" +
-      "</tr>"
 
-      $('#ostSummaryTbl').html(innerContent);
-    });
 }
-/*****************************************************************************
- * Function to initialize polling of graphs on the ost dashboard page
-*****************************************************************************/
-initOSTPolling = function()
-{
-  ossPollingInterval = self.setInterval(function()
-  {
-    loadTargetGraphs();
-  }, 10000);
-}
+
 /*****************************************************************************
  * Function to load graphs on the ost dashboard page
 *****************************************************************************/
-loadTargetGraphs = function()
-{
-  var ostKind = $("#ls_ostKind").val();
-  if(ostKind == 'OST') {
-    //ost_Pie_Space_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
-    //ost_Pie_Inode_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
-    //ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, "Average", $('#ls_ostKind').val(), readWriteFetchMatric, "false");
-    $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div").show();
-    $("#target_mgt_ops_container_div").hide();
-    init_charts(dashboard_chart_manager,'targets_ost');
 
-  }
-  else if (ostKind == 'MDT') {
-    //ost_Area_mgtOps_Data($('#ls_ostId').val(), "false");
-    $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div").hide();
-    $("#target_mgt_ops_container_div").show();
-    init_charts(dashboard_chart_manager,'targets_mdt');
-  }
-  else {
-    $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div,#target_mgt_ops_container_div").hide();
-  }
-}
 /*****************************************************************************/
