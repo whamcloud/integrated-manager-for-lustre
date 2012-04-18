@@ -159,6 +159,8 @@ def send_update(server_url, server_token, session, started_at, updates):
             daemon_log.error("Exception: %s" % content['traceback'])
         except ValueError:
             daemon_log.error("Unreadable payload")
+        except KeyError:
+            daemon_log.error("No exception in payload")
     except urllib2.URLError, e:
         daemon_log.error("Failed to open %s: %s" % (url, e))
     except BadStatusLine, e:
