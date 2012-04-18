@@ -1,3 +1,8 @@
+//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
+
 
 var VolumeChooserStore = function ()
 {
@@ -246,20 +251,16 @@ var VolumeChooserStore = function ()
       });
 
       opts.store.select(element, selected);
-      opts.selected_lun_ids = selected
-      console.log(opts.selected_lun_ids);
+      opts.selected_lun_ids = selected;
 
       if (opts.change) {
         opts.change.apply(element);
       }
-    }
-
-
+    };
 
     function row_clicked(tr_element) {
       var aPos = volumeTable.fnGetPosition(tr_element);
       var data = volumeTable.fnGetData(aPos);
-      console.log(tr_element);
       if (!opts.multi_select) {
         var name = data.label;
         var capacity = data.size;
@@ -280,15 +281,19 @@ var VolumeChooserStore = function ()
         }
       } else {
         var input_element =$(tr_element).find('input');
+
+
         var checked = input_element.attr('checked');
-        input_element.attr('checked', !checked);
+        if (checked) {
+          input_element.get(0).checked = "";
+        } else {
+          input_element.get(0).checked = "checked";
+        }
         input_element.change();
       }
     }
 
     table_element.delegate("input[type=checkbox]", "change", function(event) {
-      console.log('foo');
-      console.log(this);
       update_multi_select_value();
     });
 

@@ -1,3 +1,9 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
 from django.db import transaction
 from django.middleware.transaction import TransactionMiddleware
 from tastypie import http

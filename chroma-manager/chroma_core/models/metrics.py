@@ -1,3 +1,7 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
 
 from django.db import models

@@ -26,9 +26,9 @@
               var fs_names = [];
               $.each(mgt.filesystems, function(i, fs) {fs_names.push(fs.name);});
               mgt.fs_names = fs_names.join(", ")
-              mgt.primary_server_name = target_dialog_link(mgt)
-              mgt.state_transitions = stateTransitionButtons(mgt)
-              mgt.notification_icons = LiveObject.icons(mgt)
+              mgt.primary_server_name = object_properties_link(mgt, mgt.primary_server_name);
+              mgt.state_transitions = LiveObject.actions(mgt);
+              mgt.notification_icons = LiveObject.icons(mgt);
             });
             callback(data);
           }, settings, {kind: 'MGT'});

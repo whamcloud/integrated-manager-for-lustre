@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 #
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
 from chroma_core.models import ManagedTargetMount
 
 import settings
@@ -240,12 +242,12 @@ class UpdateScan(object):
         if self.host_data['resource_locations'] == None:
             # None here means that it was not possible to obtain a
             # list from corosync: corosync may well be absent if
-            # we're monitoring a non-hydra-managed monitor-only
+            # we're monitoring a non-chroma-managed monitor-only
             # system.  But if there are managed mounts
             # then this is a problem.
             from django.db.models import Q
             if ManagedTargetMount.objects.filter(~Q(target__immutable_state = True), host = self.host).count() > 0:
-                audit_log.error("Got no resource_locations from host %s, but there are hydra-configured mounts on that server!" % self.host)
+                audit_log.error("Got no resource_locations from host %s, but there are chroma-configured mounts on that server!" % self.host)
             return
 
         for resource_name, node_name in self.host_data['resource_locations'].items():
@@ -303,10 +305,10 @@ class UpdateScan(object):
         if target.state == 'forgotten':
             return 0
         else:
-            return target.metrics.update(metrics)
+            return target.metrics.update(metrics, self.update_time)
 
     def store_node_metrics(self, metrics):
-        return self.host.downcast().metrics.update(metrics)
+        return self.host.downcast().metrics.update(metrics, self.update_time)
 
     def store_metrics(self):
         """
@@ -314,6 +316,9 @@ class UpdateScan(object):
         """
         raw_metrics = self.host_data['metrics']['raw']
         count = 0
+
+        if not hasattr(self, 'update_time'):
+            self.update_time = None
 
         try:
             node_metrics = raw_metrics['node']

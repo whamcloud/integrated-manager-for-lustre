@@ -1,7 +1,8 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
 
 import datetime
 import time
@@ -213,7 +214,8 @@ class MeasuredEntity(object):
     """Provides mix-in access to metrics specific to the instance."""
     def __get_metrics(self):
         from chroma_core.lib.metrics import get_instance_metrics
-        self._metrics = get_instance_metrics(self)
+        if not hasattr(self, '_metrics'):
+            self._metrics = get_instance_metrics(self)
         return self._metrics
 
     metrics = property(__get_metrics)

@@ -1,7 +1,11 @@
 #
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
+from collections import defaultdict
+from tastypie.validation import Validation
 
 from chroma_core.models import ManagedHost
 from django.db import IntegrityError
@@ -18,6 +22,26 @@ from chroma_api.authentication import PermissionAuthorization
 from chroma_api import api_log
 
 
+class HostValidation(Validation):
+    def is_valid(self, bundle, request=None):
+        errors = defaultdict(list)
+        if request.method != 'POST':
+            return errors
+
+        try:
+            address = bundle.data['address']
+        except KeyError:
+            errors['address'].append("This field is mandatory")
+        else:
+            try:
+                ManagedHost.objects.get(address = address)
+                errors['address'].append("This address is already in use")
+            except ManagedHost.DoesNotExist:
+                pass
+
+        return errors
+
+
 class HostResource(MetricResource, StatefulModelResource):
     """
     Represents a Lustre server which Chroma server is monitoring or managing.  When PUTing, requires the ``state`` field.  When POSTing, requires the ``address`` field.
@@ -32,6 +56,7 @@ class HostResource(MetricResource, StatefulModelResource):
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
         readonly = ['nodename', 'fqdn']
+        validation = HostValidation()
 
         # So that we can return Commands for PUTs
         always_return_data = True

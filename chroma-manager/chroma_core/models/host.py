@@ -1,7 +1,8 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
 
 import datetime
 import dateutil.parser
@@ -9,10 +10,11 @@ import dateutil.parser
 from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
+from chroma_core.models import StateChangeJob
 
 from chroma_core.models.utils import WorkaroundDateTimeField
 from chroma_core.models.jobs import StatefulObject, Job
-from chroma_core.lib.job import StateChangeJob, DependOn, DependAll, Step
+from chroma_core.lib.job import  DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
 
 import settings
@@ -275,7 +277,7 @@ class Volume(models.Model):
         from chroma_core.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
         resource_klass = record.to_resource_class()
-        return resource_klass.get_class_label()
+        return resource_klass._meta.label
 
     def _get_label(self):
         if not self.storage_resource_id:
@@ -431,7 +433,7 @@ class LearnNidsStep(Step):
                     nid_string = normalize_nid(nid_string))
 
 
-class ConfigureLNetJob(Job, StateChangeJob):
+class ConfigureLNetJob(StateChangeJob):
     state_transition = (LNetConfiguration, 'nids_unknown', 'nids_known')
     stateful_object = 'lnet_configuration'
     lnet_configuration = models.ForeignKey(LNetConfiguration)
@@ -455,15 +457,15 @@ class ConfigureRsyslogStep(Step):
 
     def run(self, kwargs):
         if settings.LOG_SERVER_HOSTNAME:
-            hostname = settings.LOG_SERVER_HOSTNAME
+            fqdn = settings.LOG_SERVER_HOSTNAME
         else:
-            from os import uname
-            hostname = uname()[1]
+            import socket
+            fqdn = socket.getfqdn()
 
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         try:
-            self.invoke_agent(host, "configure-rsyslog --node %s" % hostname)
+            self.invoke_agent(host, "configure-rsyslog --node %s" % fqdn)
         except RuntimeError, e:
             # FIXME: Would be smarter to detect capabilities before
             # trying to run things which may break.  Don't want to do it
@@ -585,7 +587,7 @@ class CheckClockStep(Step):
                 raise RuntimeError("Host %s clock is slow.  agent time %s, server time %s" % (host, agent_time, server_time))
 
 
-class SetupHostJob(Job, StateChangeJob):
+class SetupHostJob(StateChangeJob):
     state_transition = (ManagedHost, 'unconfigured', 'lnet_unloaded')
     stateful_object = 'managed_host'
     managed_host = models.ForeignKey(ManagedHost)
@@ -686,7 +688,7 @@ class UnloadLNetStep(Step):
         self.invoke_agent(host, "unload-lnet")
 
 
-class LoadLNetJob(Job, StateChangeJob):
+class LoadLNetJob(StateChangeJob):
     state_transition = (ManagedHost, 'lnet_unloaded', 'lnet_down')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
@@ -702,7 +704,7 @@ class LoadLNetJob(Job, StateChangeJob):
         return [(LoadLNetStep, {'host_id': self.host.id})]
 
 
-class UnloadLNetJob(Job, StateChangeJob):
+class UnloadLNetJob(StateChangeJob):
     state_transition = (ManagedHost, 'lnet_down', 'lnet_unloaded')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
@@ -718,7 +720,7 @@ class UnloadLNetJob(Job, StateChangeJob):
         return [(UnloadLNetStep, {'host_id': self.host.id})]
 
 
-class StartLNetJob(Job, StateChangeJob):
+class StartLNetJob(StateChangeJob):
     state_transition = (ManagedHost, 'lnet_down', 'lnet_up')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
@@ -734,7 +736,7 @@ class StartLNetJob(Job, StateChangeJob):
         return [(StartLNetStep, {'host_id': self.host.id})]
 
 
-class StopLNetJob(Job, StateChangeJob):
+class StopLNetJob(StateChangeJob):
     state_transition = (ManagedHost, 'lnet_up', 'lnet_down')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
@@ -767,8 +769,8 @@ class DeleteHostStep(Step):
         ManagedHost.delete(kwargs['host_id'])
 
 
-class RemoveHostJob(Job, StateChangeJob):
-    state_transition = (ManagedHost, 'lnet_unloaded', 'removed')
+class RemoveHostJob(StateChangeJob):
+    state_transition = (ManagedHost, ['lnet_up', 'lnet_down', 'lnet_unloaded'], 'removed')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
@@ -786,13 +788,11 @@ class RemoveHostJob(Job, StateChangeJob):
                 (DeleteHostStep, {'host_id': self.host.id})]
 
 
-class RemoveUnconfiguredHostJob(Job, StateChangeJob):
+class RemoveUnconfiguredHostJob(StateChangeJob):
     state_transition = (ManagedHost, 'unconfigured', 'removed')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
-
-    requires_confirmation = True
 
     class Meta:
         app_label = 'chroma_core'
@@ -804,28 +804,21 @@ class RemoveUnconfiguredHostJob(Job, StateChangeJob):
         return [(DeleteHostStep, {'host_id': self.host.id})]
 
 
-# Generate boilerplate classes for various origin->forgotten jobs.
-# This may go away as a result of work tracked in HYD-627.
-for origin in ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up']:
-    def forget_description(self):
+class ForgetHostJob(StateChangeJob):
+    class Meta:
+        app_label = 'chroma_core'
+
+    state_transition = (ManagedHost, ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up'], 'forgotten')
+    stateful_object = 'host'
+    state_verb = "Remove"
+    host = models.ForeignKey(ManagedHost)
+
+    def description(self):
         return "Removing unmanaged host %s" % (self.host.downcast())
 
-    def forget_get_steps(self):
+    def get_steps(self):
         return [(RemoveServerConfStep, {'host_id': self.host.id}),
                 (DeleteHostStep, {'host_id': self.host.id})]
 
-    name = "ForgetHostJob_%s" % origin
-    cls = type(name, (Job, StateChangeJob), {
-        'state_transition': (ManagedHost, origin, 'forgotten'),
-        'stateful_object': 'host',
-        'state_verb': "Remove",
-        'host': models.ForeignKey(ManagedHost),
-        'Meta': type('Meta', (object,), {'app_label': 'chroma_core'}),
-        'description': forget_description,
-        'requires_confirmation': True,
-        'get_steps': forget_get_steps,
-        '__module__': __name__,
-    })
-    import sys
-    this_module = sys.modules[__name__]
-    setattr(this_module, name, cls)
+    def get_requires_confirmation(self):
+        return True

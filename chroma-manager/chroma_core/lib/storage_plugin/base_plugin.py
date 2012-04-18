@@ -1,7 +1,9 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 import settings
@@ -58,6 +60,8 @@ class ResourceIndex(object):
 class BaseStoragePlugin(object):
     #: Set to true for plugins which should not be shown in the user interface
     internal = False
+
+    log = None
 
     # TODO: need to document that initial_scan may not kick off async operations, because
     # the caller looks at overall resource state at exit of function.  If they eg
@@ -154,7 +158,6 @@ class BaseStoragePlugin(object):
 
         resource_manager.session_open(
                 self._scannable_id,
-                self._root_resource._handle,
                 self._index.all(),
                 self.update_period)
         self._session_open = True
@@ -181,7 +184,7 @@ class BaseStoragePlugin(object):
     def check_alert_conditions(self):
         for resource in self._index.all():
             # Check if any AlertConditions are matched
-            for name, ac in resource._alert_conditions.items():
+            for ac in resource._meta.alert_conditions:
                 alert_list = ac.test(resource)
                 for name, attribute, active in alert_list:
                     self.notify_alert(active, resource, name, attribute)
@@ -297,7 +300,7 @@ class BaseStoragePlugin(object):
         with self._alerts_lock:
             try:
                 existing = self._alerts[key]
-                if existing == (value):
+                if existing == value:
                     return
             except KeyError:
                 pass

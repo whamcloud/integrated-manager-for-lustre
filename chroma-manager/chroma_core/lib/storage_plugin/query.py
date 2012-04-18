@@ -1,3 +1,7 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
 
 from chroma_core.models import StorageResourceRecord
@@ -95,7 +99,7 @@ class ResourceQuery(object):
         # Get the BaseStorageResource class and have it translate the alert_class
         klass = storage_plugin_manager.get_resource_class_by_id(
             record.resource_class_id)
-        msg = "%s (%s %s)" % (klass.alert_message(alert_class), klass.get_class_label(), record.alias_or_name())
+        msg = "%s (%s %s)" % (klass.alert_message(alert_class), klass._meta.label, record.alias_or_name())
         return msg
 
     def record_class_and_instance_string(self, record):
@@ -104,7 +108,7 @@ class ResourceQuery(object):
         klass = storage_plugin_manager.get_resource_class_by_id(
             record.resource_class_id)
 
-        return klass.get_class_label(), record.to_resource().get_label()
+        return klass._meta.label, record.to_resource().get_label()
 
     def _record_to_resource_parents(self, record):
         if isinstance(record, StorageResourceRecord):

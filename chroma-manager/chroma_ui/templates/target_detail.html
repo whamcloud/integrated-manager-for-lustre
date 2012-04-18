@@ -1,0 +1,59 @@
+
+<script type='text/template' id='target_detail_template'>
+    <div class='target_detail'>
+        <div class='tabs'>
+          <ul>
+            <li><a href='#properties_tab' onfocus="this.blur()" tabindex="-1">Properties</a></li>
+            <li><a href='#devices_tab' onfocus="this.blur()" tabindex="-1">Devices</a></li>
+            <% if (target.conf_params) { %>
+              <li><a href='#target_dialog_config_param_tab' onfocus="this.blur()" tabindex="-1">Advanced</a></li>
+            <% } %>
+          </ul>
+          <div id='properties_tab'>
+              <table class='properties'>
+                  <tr><th>Name:</th><td><%= target.label %></td></tr>
+                  <% if (target.filesystem_name) { %>
+                    <tr class=''><th>Filesystem:</th><td><%= target.filesystem_name %></td></tr>
+                  <% } %>
+                  <tr><th>Primary server:</th><td><%= uri_properties_link(target.primary_server, target.primary_server_name) %></td></tr>
+                  <tr><th>Failover server:</th><td><%= uri_properties_link(target.failover_servers[0], target.failover_server_name) %></td></tr>
+                  <tr><th>Started on:</th><td><%= uri_properties_link(target.active_host, target.active_host_name) %></td></tr>
+                  <tr><th>Alerts:</th><td><%= LiveObject.alertLabel(target) %></td></tr>
+                  <tr><th>Actions:</th><td><%= LiveObject.actions(target) %><%= LiveObject.busyIcon(target) %></td></tr>
+              </table>
+          </div>
+          <div id='devices_tab'>
+          </div>
+
+          <% if (target.conf_params) { %>
+              <div id='target_dialog_config_param_tab'>
+                <table border="0" cellspacing="0" cellpadding="0" class="conf_param_table">
+                  <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Value</th>
+                        <th></th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+                <div align="right">
+                    <button class='conf_param_apply'>Apply</button>
+                    <button class='conf_param_reset'>Reset</button>
+                </div>
+              </div>
+          <% } %>
+        </div>
+    </div>
+</script>
+
+<script type='text/template' id='storage_resource_list_template'>
+    <table>
+        <% _.each(storage_resources, function(resource) { %>
+        <tr>
+            <td><%= uri_properties_link(resource.resource_uri, resource.alias) %></td>
+            <td><%= LiveObject.alertIcon(resource) %> </td>
+        </tr>
+        <% }); %>
+    </table>
+</script>

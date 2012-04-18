@@ -16,19 +16,24 @@
     {
       $('#server_configuration').dataTable( {
         bServerSide: true,
-        "bProcessing": true,
-        "bJQueryUI": true,
-        "bAutoWidth":false,
+        bProcessing: true,
+        bJQueryUI: true,
+        bAutoWidth:false,
+        bFilter: false,
         sAjaxSource: 'host/',
         fnServerData: function(url, data, callback, settings) {
           Api.get_datatables(url, data, function(data) {
             //console.log(data);
             var processed_data = [];
             $.each(data.aaData, function(i, row) {
-              row['label'] = LiveObject.label(row),
-              row['state'] = LiveObject.state(row),
-              row['actions'] = stateTransitionButtons(row),
-              row['icons'] = LiveObject.icons(row)
+              row['label'] = LiveObject.label(row);
+              row['state'] = LiveObject.state(row);
+              row['actions'] = LiveObject.actions(row);
+              row['icons'] = LiveObject.icons(row);
+              if (!row['fqdn']) {
+                row['fqdn'] = row['address'];
+              }
+              row['fqdn'] = object_properties_link(row, row['fqdn']);
             });
             callback(data);
           }, settings);
@@ -56,7 +61,8 @@
 <h2 class='section_header'>Server configuration</h2>
 <div class="buttonspacer"><span class="first-child">
   <button class='add' type="button" id="btnAddNewHost">Add Server</button>
-  </span></span></div>
+  </span>
+</div>
 <table cellpadding="0" cellspacing="0" border="0" class="display" id="server_configuration" width="100%">
   <thead>
     <tr>
@@ -85,6 +91,7 @@
             <div class="add_host_loading">
                 <img src='{{STATIC_URL}}/images/ajax-loader.gif'/>
                 <span class='loading_placeholder'>Checking connectivity...</span>
+                <a href="#" class="add_host_skip_button">Skip</a>
             </div>
             <div class='add_host_confirm'>
                 <p style="margin-bottom: 0px;margin-top:0px;">Host: <span style="font-weight: bold;" class="add_host_address_label"></span></p>

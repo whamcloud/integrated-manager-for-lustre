@@ -1,3 +1,9 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
 import random
 import sys
 import time
@@ -5,8 +11,6 @@ import uuid
 
 from django.test.simple import DjangoTestSuiteRunner
 from django.db import transaction
-
-import settings
 
 from chroma_core.models import ManagedHost, ManagedOst, ManagedMdt, ManagedFilesystem, ManagedMgs, Volume, VolumeNode
 from chroma_core.lib.lustre_audit import UpdateScan
@@ -104,9 +108,10 @@ class OssGenerator(ServerGenerator):
 class MdtGenerator(TargetGenerator):
     def init_stats(self, **kwargs):
         self.stats = GenStatsDict()
-        for idx in range(0, kwargs['ost_stats']):
+        for idx in range(0, kwargs['mdt_stats']):
             stat_name = "mdt_stat_%d" % idx
             self.stats[stat_name] = 0
+        self.stats['num_exports'] = 1
 
     def create_entity(self, fs):
         self.create_volume()
@@ -134,8 +139,6 @@ class Benchmark(GenericBenchmark):
         self.test_runner = DjangoTestSuiteRunner()
         self.prepare(*args, **kwargs)
 
-        settings.USE_FRONTLINE_METRICSTORE = kwargs['use_flms']
-
     def prepare_oss_list(self, **kwargs):
         return [oss for oss in
                     [OssGenerator(idx=idx, fs=self.fs_entity, **kwargs)
@@ -156,12 +159,6 @@ class Benchmark(GenericBenchmark):
                 cursor.execute("ALTER TABLE %s DROP FOREIGN KEY %s" %
                                (table, constraint.replace('`', '')))
 
-        # We need to finagle this by hand since we're not using migrations.
-        if kwargs['use_flms'] and kwargs['use_flms_mem']:
-            cursor = connection.cursor()
-            drop_constraints(cursor, 'chroma_core_frontlinemetricstore')
-            cursor.execute("ALTER TABLE chroma_core_frontlinemetricstore ENGINE = MEMORY")
-
         if kwargs['use_r3d_myisam']:
             cursor = connection.cursor()
             for table in "archive cdp cdpprep database datasource pdpprep".split():
@@ -179,6 +176,9 @@ class Benchmark(GenericBenchmark):
                         'lustre': {'target': {}}}
                 for node_stat in server.stats.keys():
                     stats['node'][node_stat] = server.stats[node_stat]
+
+                # make this match up with what comes in from an update scan
+                stats['lustre']['lnet'] = stats['node']['lnet']
 
                 for target in server.target_list:
                     stats['lustre']['target'][target.name] = {}

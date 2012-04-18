@@ -1,7 +1,9 @@
-## Copyright 2011 Whamcloud, Inc.
-## Authors: Michael MacDonald <mjmac@whamcloud.com>
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-# encoding: utf-8
+
 import datetime
 from south.db import db
 from south.v2 import SchemaMigration

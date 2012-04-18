@@ -1,7 +1,8 @@
 #
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 import chroma_core.lib.conf_param
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem
@@ -62,4 +63,4 @@ class HelpResource(Resource):
             keys = keys.split(",")
             return self.create_response(request, dict([(key, chroma_core.lib.conf_param.get_conf_param_help(key)) for key in keys]))
         else:
-            return self.create_repsonse(request, response = HttpBadRequest)
+            return self.create_response(request, {'kind': ["This field is mandatory"]}, response_class = HttpBadRequest)

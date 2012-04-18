@@ -13,10 +13,11 @@
       }
 
       function init() {
-        var oTable = $('#active_AlertContent').dataTable( {
+        $('#active_AlertContent').dataTable( {
           "bProcessing": true,
           "iDisplayLength":25,
           bServerSide: true,
+          bFilter: false,
           "bDeferRender": true,
           "sAjaxSource": 'alert/',
           "fnServerData": function (url, data, callback, settings) {
@@ -37,12 +38,13 @@
             "oLanguage": {
               "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
             },
-            "bJQueryUI": true,
+            "bJQueryUI": true
         });
-        //for alert history
-        var oTable = $('#all_AlertContent').dataTable( {
+
+        $('#all_AlertContent').dataTable( {
           "bProcessing": true,
           bServerSide: true,
+          bFilter: false,
           "iDisplayLength":25,
           "bDeferRender": true,
           "sAjaxSource": 'alert/',
@@ -66,7 +68,7 @@
           "oLanguage": {
             "sProcessing": "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />"
           },
-          "bJQueryUI": true,
+          "bJQueryUI": true
         });
       }
       return {draw:draw}

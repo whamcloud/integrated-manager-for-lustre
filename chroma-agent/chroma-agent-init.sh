@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# chroma-agent Starts the chroma-agent daemon
+#
+# chkconfig: 345 88 12
+# description: Starts the chroma-agent daemon
+# processname: python
+
+. /etc/init.d/functions
+
+export PID_FILE=/var/run/chroma-agent.pid
+export AGENT_BIN=/usr/bin/chroma-agent
+
+start() {
+    echo -n "Starting the Chroma Agent daemon: "
+    $AGENT_BIN daemon
+    echo
+}
+
+stop() {
+    echo -n "Stopping the Chroma agent daemon: "
+    kill $(cat ${PID_FILE})
+    echo
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+
+    restart|force-reload)
+        stop
+        start
+        ;;
+  *)
+        echo "Usage: $0 {start|stop|restart|force-reload}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

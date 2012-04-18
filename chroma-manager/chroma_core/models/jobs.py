@@ -1,7 +1,9 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+
 import datetime
 
 from django.db import models
@@ -14,7 +16,7 @@ from chroma_core.models.utils import WorkaroundGenericForeignKey, WorkaroundDate
 from django.db.models import Q
 from collections import defaultdict
 from polymorphic.models import DowncastMetaclass
-from chroma_core.lib.job import StateChangeJob, DependOn, DependAll
+from chroma_core.lib.job import DependOn, DependAll
 from chroma_core.lib.util import all_subclasses
 
 MAX_STATE_STRING = 32
@@ -163,9 +165,15 @@ class StatefulObject(models.Model):
         transition_options = defaultdict(list)
         job_class_map = {}
         for c in transition_classes:
-            from_state, to_state = c.state_transition[1], c.state_transition[2]
-            transition_options[from_state].append(to_state)
-            job_class_map[(from_state, to_state)] = c
+            to_state = c.state_transition[2]
+            if isinstance(c.state_transition[1], list):
+                from_states = c.state_transition[1]
+            else:
+                from_states = [c.state_transition[1]]
+
+            for from_state in from_states:
+                transition_options[from_state].append(to_state)
+                job_class_map[(from_state, to_state)] = c
 
         transition_map = defaultdict(list)
         route_map = {}
@@ -444,14 +452,13 @@ class Job(models.Model):
         self.save()
 
     def create_locks(self):
-        from chroma_core.lib.job import StateChangeJob
         # Take read lock on everything from self.get_deps
         for dependency in self.get_deps().all():
             StateReadLock.objects.create(job = self, locked_item = dependency.stateful_object)
 
         if isinstance(self, StateChangeJob):
             stateful_object = self.get_stateful_object()
-            target_klass, old_state, new_state = self.state_transition
+            target_klass, origins, new_state = self.state_transition
 
             # Take read lock on everything from get_stateful_object's get_deps if
             # this is a StateChangeJob.  We do things depended on by both the old
@@ -461,7 +468,7 @@ class Job(models.Model):
             # requirement of lnet_up (to prevent someone stopping lnet while
             # we're still running)
             from itertools import chain
-            for d in chain(stateful_object.get_deps(old_state).all(), stateful_object.get_deps(new_state).all()):
+            for d in chain(stateful_object.get_deps(self.old_state).all(), stateful_object.get_deps(new_state).all()):
                 StateReadLock.objects.create(job = self,
                         locked_item = d.stateful_object)
 
@@ -469,7 +476,7 @@ class Job(models.Model):
             StateWriteLock.objects.create(
                     job = self,
                     locked_item = stateful_object,
-                    begin_state = old_state,
+                    begin_state = self.old_state,
                     end_state = new_state)
 
     @classmethod
@@ -555,7 +562,7 @@ class Job(models.Model):
         # which will safely cancel the job if something has changed that breaks our deps.
         if isinstance(self, StateChangeJob):
             stateful_object = self.get_stateful_object()
-            target_klass, old_state, new_state = self.state_transition
+            target_klass, origins, new_state = self.state_transition
 
             # Generate dependencies (which will fail) for any dependents
             # which depend on our old state (bit of a roundabout way of doing it)
@@ -571,8 +578,7 @@ class Job(models.Model):
                     DependAll(dependent_deps),
                     self.get_deps(),
                     stateful_object.get_deps(new_state),
-                    DependOn(stateful_object, old_state)
-                    )
+                    DependOn(stateful_object, self.old_state))
         else:
             return self.get_deps()
 
@@ -722,3 +728,31 @@ class StepResult(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+
+
+class StateChangeJob(Job):
+    """Subclasses must define a class attribute 'stateful_object'
+       identifying another attribute which returns a StatefulObject"""
+
+    old_state = models.CharField(max_length = MAX_STATE_STRING)
+
+    # Tuple of (StatefulObjectSubclass, old_state, new_state)
+    state_transition = None
+    # Name of an attribute which is a ForeignKey to a StatefulObject
+    stateful_object = None
+    # Terse human readable verb, e.g. "Change this" (for buttons)
+    state_verb = None
+
+    class Meta:
+        abstract = True
+
+    def get_stateful_object_id(self):
+        stateful_object = getattr(self, self.stateful_object)
+        return stateful_object.pk
+
+    def get_stateful_object(self):
+        stateful_object = getattr(self, self.stateful_object)
+        # Get a fresh instance every time, we don't want one hanging around in the job
+        # run procedure because steps might be modifying it
+        stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
+        return stateful_object

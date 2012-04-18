@@ -310,7 +310,7 @@ Running a plugin
 Chroma loads plugins specified by the ``settings.INSTALLED_STORAGE_PLUGINS``.  This variable
 is a list of module names within the python import path.  If your plugin is located
 at ``/home/developer/project/my_plugin.py`` then you would create a ``local_settings.py`` file
-in the ``hydra-server`` directory (``/usr/share/hydra-server`` when installed
+in the ``chroma-manager`` directory (``/usr/share/chroma-manager`` when installed
 from RPM) with the following content:
 
 ::
@@ -318,7 +318,7 @@ from RPM) with the following content:
     sys.path.append("/home/developer/project/")
     INSTALLED_STORAGE_PLUGINS.append('my_plugin')
 
-After modifying this setting, restart the hydra services.
+After modifying this setting, restart the Chroma manager services.
 
 Advanced: reporting virtual machines
 ------------------------------------
@@ -421,7 +421,7 @@ information from block devices.
 Plugin code running within the Chroma agent has a much simpler interface:
 ::
 
-    from hydra_agent.plugins import DevicePlugin
+    from chroma_agent.plugins import DevicePlugin
 
 
     class FakeControllerDevicePlugin(DevicePlugin):

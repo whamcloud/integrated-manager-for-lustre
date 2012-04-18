@@ -1,3 +1,8 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 from django.db.models.signals import post_syncdb
 from django.contrib.contenttypes.models import ContentType

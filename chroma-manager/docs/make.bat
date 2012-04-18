@@ -99,9 +99,9 @@ if "%1" == "qthelp" (
 	echo.
 	echo.Build finished; now you can run "qcollectiongenerator" with the ^
 .qhcp project file in %BUILDDIR%/qthelp, like this:
-	echo.^> qcollectiongenerator %BUILDDIR%\qthelp\chroma-server.qhcp
+	echo.^> qcollectiongenerator %BUILDDIR%\qthelp\chroma-manager.qhcp
 	echo.To view the help file:
-	echo.^> assistant -collectionFile %BUILDDIR%\qthelp\chroma-server.ghc
+	echo.^> assistant -collectionFile %BUILDDIR%\qthelp\chroma-manager.ghc
 	goto end
 )
 

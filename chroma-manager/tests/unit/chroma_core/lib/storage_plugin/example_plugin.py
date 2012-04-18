@@ -1,50 +1,54 @@
 from chroma_core.lib.storage_plugin.api import attributes, statistics
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
-from chroma_core.lib.storage_plugin.api.resources import ScannableResource
+from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
-from chroma_core.lib.storage_plugin.api.resources import    Controller, StoragePool, PhysicalDisk, LogicalDrive
 
 
-class Couplet(ScannableResource):
-    identifier = GlobalId('address_1', 'address_2')
+class Couplet(resources.ScannableResource):
+    class Meta:
+        identifier = GlobalId('address_1', 'address_2')
 
     address_1 = attributes.Hostname()
     address_2 = attributes.Hostname()
 
 
-class Controller(Controller):
-    identifier = ScopedId('index')
+class Controller(resources.Controller):
+    class Meta:
+        identifier = ScopedId('index')
 
     index = attributes.Enum(0, 1)
 
 
-class HardDrive(PhysicalDisk):
+class HardDrive(resources.PhysicalDisk):
+    class Meta:
+        identifier = ScopedId('serial_number')
+
     serial_number = attributes.String()
     capacity = attributes.Bytes()
     temperature = statistics.Gauge(units = 'C')
 
-    identifier = ScopedId('serial_number')
 
+class RaidPool(resources.StoragePool):
+    class Meta:
+        identifier = ScopedId('local_id')
 
-class RaidPool(StoragePool):
     local_id = attributes.Integer()
     raid_type = attributes.Enum('raid0', 'raid1', 'raid5', 'raid6')
     capacity = attributes.Bytes()
-
-    identifier = ScopedId('local_id')
 
     def get_label(self):
         return self.local_id
 
 
-class Lun(LogicalDrive):
+class Lun(resources.LogicalDrive):
+    class Meta:
+        identifier = ScopedId('local_id')
+
     local_id = attributes.Integer()
     capacity = attributes.Bytes()
     name = attributes.String()
 
     scsi_id = attributes.String(provide = 'scsi_serial')
-
-    identifier = ScopedId('local_id')
 
     def get_label(self):
         return self.name

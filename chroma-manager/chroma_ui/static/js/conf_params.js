@@ -1,3 +1,8 @@
+//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
+
 
 var ConfParamDialog = function(options) {
   var el = $("<div><table width='100%' border='0' cellspacing='0' cellpadding='0'><thead><th>Property</th><th>Value</th><th></th></thead><tbody></tbody></table></div>");
@@ -29,7 +34,7 @@ var ConfParamDialog = function(options) {
         "Apply": function() {
           var datatable = $(this).find('table').dataTable();
           if (_options.url) {
-            apply_config_params(_options.url, $(this), datatable);
+            apply_config_params(_options.url, datatable);
           }
           $(this).dialog('close')
         },
@@ -99,7 +104,7 @@ function _populate_conf_param_table(data, table, help)
       value = "";
     }
     property_box = "<input type=textbox value='" + value + "' id='conf_param_" + key +
-      "' title='" + help[key] + "' onblur='validateNumber($(this))'/>";
+      "' title='" + help[key] + "'/>";
     table.dataTable().fnAddData ([
       key,
       property_box,
@@ -107,7 +112,6 @@ function _populate_conf_param_table(data, table, help)
     ]);
   });
 }
-
 
 function populate_conf_param_table(data, table, help)
 {
@@ -124,18 +128,17 @@ function populate_conf_param_table(data, table, help)
   }
 }
 
-function validateNumber(el)
+function reset_config_params(datatable)
 {
-  if (isNaN(el.val()))
-  {
-    jAlert("Please enter numeric value");
-    el.attr("value","");
-    el.focus();
+  var oSetting = datatable.fnSettings();
+  for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
+    var conf_param_name = oSetting.aoData[i]._aData[0];
+    $("input[id='conf_param_" + conf_param_name + "']").val(oSetting.aoData[i]._aData[2]);
   }
 }
 
 /* Read modified conf params out of datatable, PUT them to url, and close dialog_id */
-function apply_config_params(url, dialog, datatable)
+function apply_config_params(url, datatable)
 {
   var oSetting = datatable.fnSettings();
   var changed_conf_params = {}
@@ -158,23 +161,14 @@ function apply_config_params(url, dialog, datatable)
     Api.put(url, api_params,
       success_callback = function(data)
       {
-        jAlert("Update Successful");
         // Set the 'original' value to what we just posted
         for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
           var conf_param_name = oSetting.aoData[i]._aData[0];
           var input_val = $("input[id='conf_param_" + conf_param_name + "']").val();
           oSetting.aoData[i]._aData[2] = input_val
         }
-      },
-      error_callback = function(data)
-      {
-        if(data.errors != undefined) {
-          jAlert("Error setting Cofiguration Params: " + data.errors);
-          return true;
-        } else {
-          return false;
-        }
-      });
+      }
+    );
 
     dialog.dialog('close');
   }

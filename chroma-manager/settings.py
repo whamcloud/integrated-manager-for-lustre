@@ -1,4 +1,8 @@
-# Django settings for hydra project.
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 import sys
 import os
@@ -115,9 +119,9 @@ djcelery.setup_loader()
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 5672
-BROKER_USER = "hydra"
-BROKER_PASSWORD = "hydra123"
-BROKER_VHOST = "hydravhost"
+BROKER_USER = "chroma"
+BROKER_PASSWORD = "chroma123"
+BROKER_VHOST = "chromavhost"
 
 CELERY_RESULT_BACKEND = "database"
 
@@ -224,13 +228,8 @@ AUDIT_MAX_AGE = 3600 * 24
 
 SQL_RETRY_PERIOD = 10
 
-# metrics settings
-USE_FRONTLINE_METRICSTORE = True
-
 CELERY_ROUTES = (
         {"chroma_core.tasks.audit_all": {"queue": "periodic"}},
-        {"chroma_core.tasks.purge_and_optimize_metrics": {"queue": "periodic"}},
-        {"chroma_core.tasks.drain_flms_table": {"queue": "periodic"}},
         {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
         {"chroma_core.tasks.parse_log_entries": {"queue": "parselog"}},
         {"chroma_core.tasks.janitor": {"queue": "periodic"}},
@@ -255,7 +254,7 @@ CELERY_ACKS_LATE = True
 if DEBUG:
     LOG_PATH = ""
 else:
-    LOG_PATH = "/var/log/hydra"
+    LOG_PATH = "/var/log/chroma"
 
 
 def setup_log(log_name, filename = None):
@@ -275,7 +274,7 @@ def setup_log(log_name, filename = None):
     return logger
 
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
-EMAIL_SENDER = "chroma-server@whamcloud.com"
+EMAIL_SENDER = "chroma-manager@whamcloud.com"
 
 _plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'chroma_core', 'plugins')
 sys.path.append(_plugins_path)

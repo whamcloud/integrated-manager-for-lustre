@@ -11,8 +11,8 @@ from tests.integration.core.constants import TEST_TIMEOUT
 
 class ChromaIntegrationTestCase(TestCase):
 
-    def reset_cluster(self, hydra_server):
-        response = hydra_server.get(
+    def reset_cluster(self, chroma_manager):
+        response = chroma_manager.get(
             '/api/filesystem/',
             params = {'limit': 0}
         )
@@ -27,16 +27,16 @@ class ChromaIntegrationTestCase(TestCase):
             # Remove filesystems
             remove_filesystem_command_ids = []
             for filesystem in filesystems:
-                response = hydra_server.delete(filesystem['resource_uri'])
+                response = chroma_manager.delete(filesystem['resource_uri'])
                 self.assertTrue(response.successful, response.text)
                 command_id = response.json['command']['id']
                 self.assertTrue(command_id)
                 remove_filesystem_command_ids.append(command_id)
 
-            self.wait_for_commands(hydra_server, remove_filesystem_command_ids)
+            self.wait_for_commands(chroma_manager, remove_filesystem_command_ids)
 
         # Remove MGT
-        response = hydra_server.get(
+        response = chroma_manager.get(
             '/api/target/',
             params = {'kind': 'MGT', 'limit': 0}
         )
@@ -45,15 +45,15 @@ class ChromaIntegrationTestCase(TestCase):
         if len(mgts) > 0:
             remove_mgt_command_ids = []
             for mgt in mgts:
-                response = hydra_server.delete(mgt['resource_uri'])
+                response = chroma_manager.delete(mgt['resource_uri'])
                 command_id = response.json['command']['id']
                 self.assertTrue(command_id)
                 remove_mgt_command_ids.append(command_id)
 
-            self.wait_for_commands(hydra_server, remove_mgt_command_ids)
+            self.wait_for_commands(chroma_manager, remove_mgt_command_ids)
 
         # Remove hosts
-        response = hydra_server.get(
+        response = chroma_manager.get(
             '/api/host/',
             params = {'limit': 0}
         )
@@ -63,23 +63,23 @@ class ChromaIntegrationTestCase(TestCase):
         if len(hosts) > 0:
             remove_host_command_ids = []
             for host in hosts:
-                response = hydra_server.delete(host['resource_uri'])
+                response = chroma_manager.delete(host['resource_uri'])
                 self.assertTrue(response.successful, response.text)
                 command_id = response.json['command']['id']
                 self.assertTrue(command_id)
                 remove_host_command_ids.append(command_id)
 
-            self.wait_for_commands(hydra_server, remove_host_command_ids)
+            self.wait_for_commands(chroma_manager, remove_host_command_ids)
 
-        self.verify_cluster_not_configured(hydra_server, hosts)
+        self.verify_cluster_not_configured(chroma_manager, hosts)
 
-    def verify_cluster_not_configured(self, hydra_server, lustre_servers):
+    def verify_cluster_not_configured(self, chroma_manager, lustre_servers):
         """
         Checks that the database and the hosts specified in the config
         do not have (unremoved) targets for the filesystems specified.
         """
         # Verify there are zero filesystems
-        response = hydra_server.get(
+        response = chroma_manager.get(
             '/api/filesystem/',
             params = {'limit': 0}
         )
@@ -88,7 +88,7 @@ class ChromaIntegrationTestCase(TestCase):
         self.assertEqual(0, len(filesystems))
 
         # Verify there are zero mgts
-        response = hydra_server.get(
+        response = chroma_manager.get(
             '/api/target/',
             params = {'kind': 'MGT'}
         )
@@ -97,7 +97,7 @@ class ChromaIntegrationTestCase(TestCase):
         self.assertEqual(0, len(mgts))
 
         # Verify there are now zero hosts in the database.
-        response = hydra_server.get(
+        response = chroma_manager.get(
             '/api/host/',
         )
         self.assertTrue(response.successful, response.text)
@@ -112,18 +112,17 @@ class ChromaIntegrationTestCase(TestCase):
                 'crm configure show'
             )
             configuration = stdout.read()
-            # print configuration
             self.assertNotRegexpMatches(
                 configuration,
                 "location [^\n]* %s\n" % host['nodename']
             )
 
-    def wait_for_command(self, hydra_server, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
+    def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
         # TODO: More elegant timeout?
         running_time = 0
         command_complete = False
         while running_time < timeout and not command_complete:
-            response = hydra_server.get(
+            response = chroma_manager.get(
                 '/api/command/%s/' % command_id,
             )
             self.assertTrue(response.successful, response.text)
@@ -134,12 +133,36 @@ class ChromaIntegrationTestCase(TestCase):
                 running_time += 1
 
         self.assertTrue(command_complete, command)
-        if verify_successful:
+        if verify_successful and (command['errored'] or command['cancelled']):
+            print "COMMAND %s FAILED:" % command['id']
+            print "-----------------------------------------------------------"
+            print command
+            print ''
+
+            for job_uri in command['jobs']:
+                response = chroma_manager.get(job_uri)
+                self.assertTrue(response.successful, response.text)
+                job = response.json
+                if job['errored']:
+                    print "Job %s Errored:" % job['id']
+                    print job
+                    print ''
+                    for step_uri in job['steps']:
+                        response = chroma_manager.get(step_uri)
+                        self.assertTrue(response.successful, response.text)
+                        step = response.json
+                        if step['exception'] and not step['exception'] == 'None':
+                            print "Step %s Errored:" % step['id']
+                            print step['console']
+                            print step['exception']
+                            print step['backtrace']
+                            print ''
+
             self.assertFalse(command['errored'] or command['cancelled'], command)
 
-    def wait_for_commands(self, hydra_server, command_ids, timeout=TEST_TIMEOUT):
+    def wait_for_commands(self, chroma_manager, command_ids, timeout=TEST_TIMEOUT):
         for command_id in command_ids:
-            self.wait_for_command(hydra_server, command_id, timeout)
+            self.wait_for_command(chroma_manager, command_id, timeout)
 
     def remote_command(self, server, command, expected_return_code=0):
         ssh = paramiko.SSHClient()
@@ -164,13 +187,13 @@ class ChromaIntegrationTestCase(TestCase):
         self.assertGreaterEqual(len(usable_luns), num_luns_needed)
 
         # Verify no extra devices not in the config visible.
-        response = self.hydra_server.get(
+        response = self.chroma_manager.get(
             '/api/volume_node/'
         )
         self.assertTrue(response.successful, response.text)
         lun_nodes = response.json['objects']
 
-        response = self.hydra_server.get(
+        response = self.chroma_manager.get(
             '/api/host/',
         )
         self.assertTrue(response.successful, response.text)
@@ -204,7 +227,7 @@ class ChromaIntegrationTestCase(TestCase):
             elif node['host_id'] == int(secondary_host_id):
                 secondary_volume_node_id = node['id']
 
-        response = self.hydra_server.put(
+        response = self.chroma_manager.put(
             "/api/volume/%s/" % volume['id'],
             body = {
                 "id": volume['id'],
@@ -228,7 +251,7 @@ class ChromaIntegrationTestCase(TestCase):
         for node in volume['volume_nodes']:
             if node['primary']:
                 self.assertEqual(node['host_id'], int(expected_primary_host_id))
-            else:
+            elif node['use']:
                 self.assertEqual(node['host_id'], int(expected_secondary_host_id))
 
     def create_filesystem(self, name, mgt_volume_id, mdt_volume_id, ost_volume_ids, conf_params = {}, verify_successful = True):
@@ -239,7 +262,7 @@ class ChromaIntegrationTestCase(TestCase):
         args['osts'] = [{'volume_id': id} for id in ost_volume_ids]
         args['conf_params'] = conf_params
 
-        response = self.hydra_server.post(
+        response = self.chroma_manager.post(
             '/api/filesystem/',
             body = args
         )
@@ -248,10 +271,10 @@ class ChromaIntegrationTestCase(TestCase):
         filesystem_id = response.json['filesystem']['id']
         command_id = response.json['command']['id']
 
-        self.wait_for_command(self.hydra_server, command_id,
+        self.wait_for_command(self.chroma_manager, command_id,
             verify_successful=verify_successful)
 
-        response = self.hydra_server.get(
+        response = self.chroma_manager.get(
             '/api/host/',
             params = {'limit': 0}
         )
@@ -319,9 +342,6 @@ class ChromaIntegrationTestCase(TestCase):
                 stdout.read(),
                 " on /mtn/%s " % filesystem_name
             )
-        else:
-            print "WARN: Unmount requested for %s, but %s not mounted." % (
-                filesystem_name, filesystem_name)
 
     def exercise_filesystem(self, client, filesystem_name):
         # TODO: Expand on this. Perhaps use existing lustre client tests.
@@ -332,7 +352,7 @@ class ChromaIntegrationTestCase(TestCase):
         )
 
     def get_targets(self, filesystem_id, kind):
-        response = self.hydra_server.get(
+        response = self.chroma_manager.get(
             '/api/target/',
             params = {
                 'filesystem_id': filesystem_id,

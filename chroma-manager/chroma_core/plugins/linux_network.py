@@ -1,23 +1,28 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+
 from chroma_core.lib.storage_plugin.api import attributes, statistics
 from chroma_core.lib.storage_plugin.api.identifiers import ScopedId
-from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
+from chroma_core.lib.storage_plugin.api import resources
+from chroma_core.lib.storage_plugin.api.plugin import Plugin
 
-from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 
+class NetworkInterface(resources.Resource):
+    class Meta:
+        identifier = ScopedId('name')
+        charts = [{"title": "Bandwidth", "series": ['rx_bytes', 'tx_bytes']}]
 
-class NetworkInterface(BaseStorageResource):
-    identifier = ScopedId('name')
     name = attributes.String()
     rx_bytes = statistics.Counter(units = "Bytes/s")
     tx_bytes = statistics.Counter(units = "Bytes/s")
-    charts = [{"title": "Bandwidth", "series": ['rx_bytes', 'tx_bytes']}]
 
 
-class LinuxNetwork(BaseStoragePlugin):
+class LinuxNetwork(Plugin):
+    internal = True
+
     def _linux_update(self, data):
         for iface in data:
             iface_resource, created = self.update_or_create(NetworkInterface, name = iface['name'])

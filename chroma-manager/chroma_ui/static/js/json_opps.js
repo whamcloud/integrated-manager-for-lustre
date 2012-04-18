@@ -1,11 +1,14 @@
+//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
 
 
-$(document).ready(function() {
-  $('#transition_confirmation_dialog').dialog({autoOpen: false, maxHeight: 400, maxWidth: 800, width: 'auto', height: 'auto'});
-});
-
-stateTransition = function (url, state)
+stateTransition = function ()
 {
+  var url = $(this).data('resource_uri');
+  var state = $(this).data('state');
+
   Api.put(url, {dry_run: true, state: state}, 
   success_callback = function(data)  
   {
@@ -36,44 +39,23 @@ stateTransition = function (url, state)
     }
 
     if (requires_confirmation) {
-     $('#transition_confirmation_dialog').html(confirmation_markup);
-     $('#transition_confirmation_dialog').dialog('option', 'buttons', {
-       'Cancel': function() {$(this).dialog('close');},
-       'Confirm': 
-       {
-           text: "Confirm",
-           id: "transition_confirm_button",
-           click: function(){
-             var dialog = $(this);
-             Api.put(url, {state: state}, success_callback = function() {
-               dialog.dialog('close');
-             })
-           }
-       }
-     });
-     $('#transition_confirmation_dialog').dialog('open');
+      var markup = "<div style='overflow-y: auto; max-height: 700px;' id='transition_confirmation_dialog'>" + confirmation_markup + "</div>";
+      $(markup).dialog({'buttons': {
+        'Cancel': function() {$(this).dialog('close');},
+        'Confirm':
+        {
+            text: "Confirm",
+            id: "transition_confirm_button",
+            click: function(){
+              var dialog = $(this);
+              Api.put(url, {state: state}, success_callback = function() {
+                dialog.dialog('close');
+              })
+            }
+        }
+      }});
     } else {
       Api.put(url, {state: state})
     }
   });
-}
-
-
-function stateTransitionButtons(stateful_object)
-{
-  var id = stateful_object.id;
-  var ct = stateful_object.content_type_id;
-  var available_transitions = stateful_object.available_transitions;
-
-  var ops_action="";
-  var action="<span class='transition_buttons' data-resource_uri='" + stateful_object.resource_uri + "'>";
-  var button_class = "ui-state-default ui-corner-all";
-  $.each(available_transitions, function(i, transition)
-  {
-    var function_name = "stateTransition(\"" + stateful_object.resource_uri + "\", \"" + transition.state + "\")"
-    ops_action = "<button" + " onclick='"+ function_name + "'>" + transition.verb + "</button>&nbsp;";
-    action += ops_action;
-  });
-  action += "</span>"
-  return action;
-}
+};

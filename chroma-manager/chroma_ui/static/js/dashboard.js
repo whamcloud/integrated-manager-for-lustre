@@ -1,3 +1,8 @@
+//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
+
 /*******************************************************************************
  * File name: custom_dasboard.js
  * Description: Common functions required by dashboard
@@ -564,10 +569,7 @@ var Dashboard = function(){
     }
     
     loadTargetGraphs();
-    
-    /* HYD-375: ostSelect value is a name instead of an ID */
-    load_resource_graph("ost_resource_graph_canvas", ostId);
-  }
+  };
 
 		  
 /******************************************************************************
@@ -676,7 +678,7 @@ function init_charts(chart_manager,chart_group) {
           update_data.push([timestamp, ( datapoint.data.stats_read_bytes + datapoint.data.stats_write_bytes )])
         });
 
-        var target = ApiCache.target.get(target_id);
+        var target = ApiCache.get('target', target_id);
         var label;
         if (target) {
           label = target.attributes.label;
@@ -790,7 +792,7 @@ function init_charts(chart_manager,chart_group) {
 
       _.each(data, function(fs_data, fs_id) {
         var name;
-        var filesystem = ApiCache.filesystem.get(fs_id)
+        var filesystem = ApiCache.get('filesystem', fs_id);
         if (filesystem) {
           name = filesystem.attributes.name;
         } else {

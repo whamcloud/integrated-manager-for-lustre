@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# chroma-server documentation build configuration file, created by
+# chroma-manager documentation build configuration file, created by
 # sphinx-quickstart on Tue Nov 29 14:06:11 2011.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -52,7 +52,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'chroma-server'
+project = u'chroma-manager'
 copyright = u'2011, Whamcloud Inc.'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -195,7 +195,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'chroma-server.tex', u'chroma-server Documentation',
+  ('index', 'chroma-manager.tex', u'chroma-manager Documentation',
    u'Whamcloud Inc.', 'manual'),
 ]
 
@@ -225,7 +225,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'chroma-server', u'chroma-server Documentation',
+    ('index', 'chroma-manager', u'chroma-manager Documentation',
      [u'Whamcloud Inc.'], 1)
 ]
 
@@ -239,8 +239,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'chroma-server', u'chroma-server Documentation',
-   u'Whamcloud Inc.', 'chroma-server', 'One line description of project.',
+  ('index', 'chroma-manager', u'chroma-manager Documentation',
+   u'Whamcloud Inc.', 'chroma-manager', 'One line description of project.',
    'Miscellaneous'),
 ]
 

@@ -1,5 +1,5 @@
 from django.utils import unittest
-from hydra_agent.fscontext import FileSystemContext
+from chroma_agent.fscontext import FileSystemContext
 
 
 class TestDefaultFileSystemContext(unittest.TestCase):

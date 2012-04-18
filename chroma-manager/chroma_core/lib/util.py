@@ -1,3 +1,7 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
 
 def all_subclasses(obj):
@@ -6,8 +10,7 @@ def all_subclasses(obj):
     sc_recr = []
     for sc_obj in obj.__subclasses__():
         sc_recr.append(sc_obj)
-        for sc in all_subclasses(sc_obj):
-            sc_recr.append(sc)
+        sc_recr.extend(all_subclasses(sc_obj))
     return sc_recr
 
 

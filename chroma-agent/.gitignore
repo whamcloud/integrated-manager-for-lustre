@@ -1,5 +1,5 @@
 MANIFEST
-hydra-agent.spec
+chroma-agent.spec
 setup.py
 dist/
 *.swp

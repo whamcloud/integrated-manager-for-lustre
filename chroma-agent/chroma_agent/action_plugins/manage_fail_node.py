@@ -1,0 +1,20 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
+from chroma_agent.shell import try_run
+from chroma_agent.plugins import ActionPlugin
+
+
+def fail_node(args):
+    # force a manual failover by failing a node
+    try_run("sync; sync; init 0", shell = True)
+
+
+class FailNodePlugin(ActionPlugin):
+    def register_commands(self, parser):
+        p = parser.add_parser("fail-node",
+                              help="fail (i.e. shut down) this node")
+        p.set_defaults(func=fail_node)

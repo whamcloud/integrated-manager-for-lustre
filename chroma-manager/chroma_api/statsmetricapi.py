@@ -1,7 +1,8 @@
 #
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 from chroma_api.requesthandler import RequestHandler
 from chroma_core.models import (ManagedFilesystem,

@@ -1,0 +1,159 @@
+<script type="text/template" id="job_row_template">
+  <span class='job_row'>
+    <a class='navigation' href="<%= "job/" + job.id + "/" %>">
+        <%= _.template($('#job_icon_template').html(), {job: job}) %>
+        <span class='job_description'><%= job.description %></span>
+    </a>
+  </span>
+</script>
+
+<script type="text/template" id="job_link_template">
+ <a href="job/<%=job.id%>/" class="navigation">open</a>
+</script>
+
+<script type="text/template" id="job_buttons_template">
+  <% _.each(job.available_transitions, function(transition) { %>
+    <a class='job_state_transition' data-job_uri='<%=job.resource_uri%>' data-state='<%=transition.state%>'><%=transition.label%></a>
+  <% }); %>
+</script>
+
+<script type="text/template" id="job_icon_template">
+  <% 
+    function job_icon(job) {
+      if (job.state == 'pending') {
+        return "/static/images/icon_hourglass.png"
+      } else if (job.state == 'complete') {
+        if (job.cancelled) {
+          return "/static/images/gtk-cancel.png"
+        } else if (job.errored) {
+          return "/static/images/dialog-error.png"
+        } else {
+          return "/static/images/icon_tick.png"
+        }
+      } else {
+        return "/static/images/ajax-loader.gif"
+      }
+    }
+  %>
+  <img src='<%= job_icon(job) %>'/>
+</script>
+
+<script type="text/template" id="job_adjective_template">
+  <% 
+    function job_adjective(job) {
+      if (job.state == 'pending') {
+        return "Waiting to run"
+      } else if (job.state == 'complete') {
+        if (job.cancelled) {
+          return "Cancelled"
+        } else if (job.errored) {
+          return "Failed"
+        } else {
+          return "Success"
+        }
+      } else {
+        return "Running"
+      }
+    }
+  %>
+  <%= job_adjective(job) %>
+</script>
+
+<script type="text/template" id="job_list_template">
+  <ul class='job'>
+    <% _.each(jobs, function(job) { %>
+      <li>
+      <%= _.template($('#job_row_template').html(), {job: job}) %>
+      <%= _.template($('#job_buttons_template').html(), {job: job}) %>
+        <% if (job.children.length) { %>
+          <%= _.template($('#job_list_template').html(), {jobs: job.children}) %>
+        <% } %>
+      </li>
+    <% }); %>
+  </ul>
+</script>
+
+<script type="text/template" id="command_detail_template">
+  <div style='font-size: 10pt;'>
+      <h2>Summary</h2>
+      <table class='properties'>
+          <tbody>
+          <tr>
+            <th>Description:</th><td><%= message %></td>
+          </tr>
+          <tr>
+            <th>Created at:</th><td><%= shortLocalTime(created_at) %></td>
+          </tr>
+          <tr>
+              <th>Status:</th><td><%= complete ? (errored ? "Error" : (cancelled ? "Cancelled" : "Successful")) : "Incomplete" %></td>
+          </tr>
+          </tbody>
+      </table>
+    <h2>Detail</h2>
+    <div class='command_job_list'>
+      <%= _.template($('#job_list_template').html(), {jobs: jobs_tree}) %>
+    </div>
+  </div>
+</script>
+
+<script type="text/template" id="job_detail_template">
+  <div class='job_summary'>
+    <ul>
+    <li>Description: <%= job.description %></li>
+    <li>Status: <%= _.template($('#job_icon_template').html(), {job: job}) %>
+                <%= _.template($('#job_adjective_template').html(), {job: job}) %>
+</li>
+    <li>Run at: <%= shortLocalTime(job.modified_at) %></li>
+    </ul>
+  </div>
+  <div class='dialog_tabs'>
+    <ul>
+      <li><a href='#steps'>Steps</a></li>
+      <li><a href='#dependencies'>Dependencies</a></li>
+    </ul>
+    <div class='job_step_list' id='steps'>
+      <%
+        function step_icon(step) {
+          if (step.state == 'success') {
+            return "/static/images/icon_tick.png"
+          } else if (step.state == 'failed') {
+            return "/static/images/dialog-error.png"
+          } else if (step.state == 'incomplete') {
+            return "/static/images/ajax-loader.gif"
+          }
+        }
+      %>
+        <% _.each(job.steps, function(step) { %>
+        <h3><a href='#'><img src='<%= step_icon(step) %>'/><%= step.step_index + 1 %>/<%= step.step_count %> <%= step.class_name %></a></h3>
+        <div>
+          <h4>Arguments</h4>
+<pre class='console'>
+<%= JSON.stringify(step.args) %>
+</pre>
+          <h4>Console</h4>
+<pre class='console'>
+<%= step.console %>
+</pre>
+          <h4>Exception</h4>
+<pre class='console'>
+<%= step.exception %>
+</pre>
+          <h4>Backtrace</h4>
+<pre class='console'>
+<%= step.backtrace %>
+</pre>
+        </div>
+        <% }); %>
+    </div>
+    <div id='dependencies'>
+      <ul class='job'>
+      <% _.each(job.wait_for, function(awaited_job) { %>
+        <li>
+          <%= _.template($('#job_row_template').html(), {job: awaited_job}) %>
+        </li>
+      <% }); %>
+    </ul>
+    </div>
+  </div>
+</script>
+

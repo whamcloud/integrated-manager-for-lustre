@@ -1,14 +1,16 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
 
 import json
 
 from django.db import models, transaction
-from chroma_core.lib.job import StateChangeJob, DependOn, DependAny, DependAll, Step, NullStep, AnyTargetMountStep, job_log
-from chroma_core.models import DeletableMetaclass
-from chroma_core.models.jobs import StatefulObject, Job
+from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, NullStep, AnyTargetMountStep, job_log
+from chroma_core.models import DeletableMetaclass, StateChangeJob
+from chroma_core.models.host import ManagedHost
+from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 
 
@@ -60,8 +62,20 @@ class ManagedTarget(StatefulObject):
     def get_params(self):
         return [(p.key, p.value) for p in self.targetparam_set.all()]
 
+    @property
     def primary_host(self):
         return ManagedTargetMount.objects.get(target = self, primary = True).host
+
+    @property
+    def failover_hosts(self):
+        return ManagedHost.objects.filter(managedtargetmount__target = self, managedtargetmount__primary = False)
+
+    @property
+    def active_host(self):
+        if self.active_mount:
+            return self.active_mount.host
+        else:
+            return None
 
     def get_label(self):
         if self.name:
@@ -135,15 +149,9 @@ class ManagedTarget(StatefulObject):
 
         return DependAll(deps)
 
-    def managed_host_to_managed_targets(mh):
-        """Return iterable of all ManagedTargets which could potentially depend on the state
-           of a managed host"""
-        # Break this out into a function to avoid importing ManagedTargetMount at module scope
-        return set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)])
-
     reverse_deps = {
             'ManagedTargetMount': (lambda mtm: ManagedTarget.objects.filter(pk = mtm.target_id)),
-            'ManagedHost': managed_host_to_managed_targets,
+            'ManagedHost': lambda mh: set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)]),
             'ManagedFilesystem': lambda mfs: [t.downcast() for t in mfs.get_filesystem_targets()]
             }
 
@@ -345,7 +353,7 @@ class DeleteTargetStep(Step):
         ManagedTarget.delete(kwargs['target_id'])
 
 
-class RemoveConfiguredTargetJob(Job, StateChangeJob):
+class RemoveConfiguredTargetJob(StateChangeJob):
     state_transition = (ManagedTarget, 'unmounted', 'removed')
     stateful_object = 'target'
     state_verb = "Remove"
@@ -380,18 +388,23 @@ class RemoveConfiguredTargetJob(Job, StateChangeJob):
         return steps
 
 
-# FIXME HYD-627: this is a pretty horrible way of generating job classes for
-# a number of originating states to the same end state
-# TODO: when transitioning from 'registered' to 'removed', do something to
+# HYD-832: when transitioning from 'registered' to 'removed', do something to
 # remove this target from the MGS
-for origin in ['unformatted', 'formatted', 'registered']:
+class RemoveTargetJob(StateChangeJob):
+    class Meta:
+        app_label = 'chroma_core'
+
+    state_transition = (ManagedTarget, ['unformatted', 'formatted', 'registered'], 'removed')
+    stateful_object = 'target'
+    state_verb = "Remove"
+    target = models.ForeignKey(ManagedTarget)
+
     def description(self):
         return "Removing target %s from configuration" % (self.target.downcast())
 
     def get_steps(self):
         return [(DeleteTargetStep, {'target_id': self.target.id})]
 
-    # Mangling name to make pyflakes happy pending HYD-627
     def get_confirmation_string(self):
         if isinstance(self.target.downcast(), ManagedOst):
             if self.target.state == 'registered':
@@ -403,23 +416,6 @@ for origin in ['unformatted', 'formatted', 'registered']:
 
     def get_requires_confirmation_foo(self):
         return True
-
-    name = "RemoveTargetJob_%s" % origin
-    cls = type(name, (Job, StateChangeJob), {
-        'state_transition': (ManagedTarget, origin, 'removed'),
-        'stateful_object': 'target',
-        'state_verb': "Remove",
-        'target': models.ForeignKey(ManagedTarget),
-        'Meta': type('Meta', (object,), {'app_label': 'chroma_core'}),
-        'description': description,
-        'get_requires_confirmation': get_requires_confirmation_foo,
-        'get_confirmation_string': get_confirmation_string,
-        'get_steps': get_steps,
-        '__module__': __name__,
-    })
-    import sys
-    this_module = sys.modules[__name__]
-    setattr(this_module, name, cls)
 
 
 class RegisterTargetStep(Step):
@@ -477,7 +473,7 @@ class UnconfigurePacemakerStep(Step):
                                     target_mount.primary and "--primary" or ""))
 
 
-class ConfigureTargetJob(Job, StateChangeJob):
+class ConfigureTargetJob(StateChangeJob):
     state_transition = (ManagedTarget, 'registered', 'unmounted')
     stateful_object = 'target'
     state_verb = "Configure mount points"
@@ -506,7 +502,7 @@ class ConfigureTargetJob(Job, StateChangeJob):
         return DependAll(deps)
 
 
-class RegisterTargetJob(Job, StateChangeJob):
+class RegisterTargetJob(StateChangeJob):
     # FIXME: this really isn't ManagedTarget, it's FilesystemMember+ManagedTarget
     state_transition = (ManagedTarget, 'formatted', 'registered')
     stateful_object = 'target'
@@ -577,7 +573,7 @@ class MountStep(AnyTargetMountStep):
             raise RuntimeError("Target %s reported as running on %s, but it is not configured there" % (target, started_on))
 
 
-class StartTargetJob(Job, StateChangeJob):
+class StartTargetJob(StateChangeJob):
     stateful_object = 'target'
     state_transition = (ManagedTarget, 'unmounted', 'mounted')
     state_verb = "Start"
@@ -612,7 +608,7 @@ class UnmountStep(AnyTargetMountStep):
         target.set_active_mount(None)
 
 
-class StopTargetJob(Job, StateChangeJob):
+class StopTargetJob(StateChangeJob):
     stateful_object = 'target'
     state_transition = (ManagedTarget, 'mounted', 'unmounted')
     state_verb = "Stop"
@@ -714,7 +710,7 @@ class MkfsStep(Step):
         target.save()
 
 
-class FormatTargetJob(Job, StateChangeJob):
+class FormatTargetJob(StateChangeJob):
     state_transition = (ManagedTarget, 'unformatted', 'formatted')
     target = models.ForeignKey(ManagedTarget)
     stateful_object = 'target'
@@ -753,33 +749,23 @@ class FormatTargetJob(Job, StateChangeJob):
         return [(MkfsStep, {'target_id': self.target.id})]
 
 
-# Generate boilerplate classes for various origin->forgotten jobs.
-# This may go away as a result of work tracked in HYD-627.
-for origin in ['unmounted', 'mounted']:
-    def forget_description(self):
+class ForgetTargetJob(StateChangeJob):
+    class Meta:
+        app_label = 'chroma_core'
+
+    def description(self):
         return "Removing unmanaged target %s" % (self.target.downcast())
 
-    def forget_get_steps(self):
+    def get_steps(self):
         return [(DeleteTargetStep, {'target_id': self.target.id})]
 
     def get_requires_confirmation(self):
         return True
 
-    name = "ForgetTargetJob_%s" % origin
-    cls = type(name, (Job, StateChangeJob), {
-        'state_transition': (ManagedTarget, origin, 'forgotten'),
-        'stateful_object': 'target',
-        'state_verb': "Remove",
-        'target': models.ForeignKey(ManagedTarget),
-        'Meta': type('Meta', (object,), {'app_label': 'chroma_core'}),
-        'description': forget_description,
-        'get_requires_confirmation': get_requires_confirmation,
-        'get_steps': forget_get_steps,
-        '__module__': __name__,
-    })
-    import sys
-    this_module = sys.modules[__name__]
-    setattr(this_module, name, cls)
+    state_transition = (ManagedTarget, ['unmounted', 'mounted'], 'forgotten')
+    stateful_object = 'target'
+    state_verb = "Remove"
+    target = models.ForeignKey(ManagedTarget)
 
 
 class ManagedTargetMount(models.Model):

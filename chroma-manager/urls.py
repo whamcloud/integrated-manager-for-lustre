@@ -1,3 +1,9 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
 from django.conf.urls.defaults import patterns, include
 
 from django.contrib import admin

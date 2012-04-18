@@ -1,14 +1,15 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+
 from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
-from chroma_core.lib.storage_plugin.api.resources import Resource
+from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
-from chroma_core.lib.storage_plugin.api.resources import   DeviceNode, LogicalDrive, StoragePool
 
-# This plugin is special, it uses Hydra's built-in infrastructure
+# This plugin is special, it uses chroma-manager internals
 # in a way that third party plugins can't/shouldn't/mustn't
 from chroma_core.models import ManagedHost
 from chroma_core.lib.storage_plugin.base_resource import HostsideResource
@@ -16,25 +17,27 @@ from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 import re
 
 
-class PluginAgentResources(Resource, HostsideResource):
-    identifier = GlobalId('host_id', 'plugin_name')
+class PluginAgentResources(resources.Resource, HostsideResource):
+    class Meta:
+        identifier = GlobalId('host_id', 'plugin_name')
+
     host_id = attributes.Integer()
     plugin_name = attributes.String()
 
-    def get_label(self, parent = None):
+    def get_label(self):
         host = ManagedHost._base_manager.get(pk=self.host_id)
         return "%s" % host
 
 
-class ScsiDevice(LogicalDrive):
-    identifier = GlobalId('serial_80', 'serial_83')
+class ScsiDevice(resources.LogicalDrive):
+    class Meta:
+        identifier = GlobalId('serial_80', 'serial_83')
+        label = "SCSI device"
 
     serial_80 = attributes.String()
     serial_83 = attributes.String()
 
-    class_label = "SCSI device"
-
-    def get_label(self, ancestors = []):
+    def get_label(self):
         if self.serial_80:
             QEMU_PREFIX = "SQEMU    QEMU HARDDISK  "
             if self.serial_80.find(QEMU_PREFIX) == 0:
@@ -47,22 +50,34 @@ class ScsiDevice(LogicalDrive):
             return self.serial_83
 
 
-class UnsharedDevice(LogicalDrive):
-    identifier = ScopedId('path')
+class UnsharedDevice(resources.LogicalDrive):
+    class Meta:
+        identifier = ScopedId('path')
+
     # Annoying duplication of this from the node, but it really
     # is the closest thing we have to a real ID.
     path = attributes.PosixPath()
 
     def get_label(self):
-        return self.path
+        hide_prefixes = ["/dev/disk/by-path/", "/dev/disk/by-id/"]
+        path = self.path
+        for prefix in hide_prefixes:
+            if path.startswith(prefix):
+                path = path[len(prefix):]
+                break
+
+        return path
 
 
-class LinuxDeviceNode(DeviceNode):
-    identifier = ScopedId('path')
+class LinuxDeviceNode(resources.DeviceNode):
+    class Meta:
+        identifier = ScopedId('path')
 
 
-class Partition(LogicalDrive):
-    identifier = GlobalId('container', 'number')
+class Partition(resources.LogicalDrive):
+    class Meta:
+        identifier = GlobalId('container', 'number')
+
     number = attributes.Integer()
     container = attributes.ResourceReference()
 
@@ -70,36 +85,37 @@ class Partition(LogicalDrive):
         return "%s-%s" % (self.container.get_label(), self.number)
 
 
-class MdRaid(LogicalDrive):
-    identifier = GlobalId('uuid')
+class MdRaid(resources.LogicalDrive):
+    class Meta:
+        identifier = GlobalId('uuid')
     uuid = attributes.String()
 
 
-class LocalMount(Resource):
-    """A local filesystem consuming a storage resource -- reported so that
-       hydra knows not to try and use the consumed resource for Lustre e.g.
-       minor things like your root partition."""
-    identifier = ScopedId('mount_point')
+class LocalMount(resources.Resource):
+    """Used for marking devices which are already in use, so that
+    we don't offer them for use as Lustre targets."""
+    class Meta:
+        identifier = ScopedId('mount_point')
 
     fstype = attributes.String()
     mount_point = attributes.String()
 
 
-class LvmGroup(StoragePool):
-    identifier = GlobalId('uuid')
+class LvmGroup(resources.StoragePool):
+    class Meta:
+        identifier = GlobalId('uuid')
+        icon = 'lvm_vg'
+        label = 'Volume group'
 
     uuid = attributes.Uuid()
     name = attributes.String()
     size = attributes.Bytes()
 
-    icon = 'lvm_vg'
-    class_label = 'Volume group'
-
-    def get_label(self, parent = None):
+    def get_label(self):
         return self.name
 
 
-class LvmVolume(LogicalDrive):
+class LvmVolume(resources.LogicalDrive):
     # Q: Why is this identified by LV UUID and VG UUID rather than just
     #    LV UUID?  Isn't the LV UUID unique enough?
     # A: We're matching LVM2's behaviour.  If you e.g. image a machine that
@@ -107,24 +123,21 @@ class LvmVolume(LogicalDrive):
     #    'vgchange -u' to get a new VG UUID.  However, there is no equivalent
     #    command to reset LV uuid, because LVM finds two LVs with the same UUID
     #    in VGs with different UUIDs to be unique enough.
-    identifier = GlobalId('uuid', 'vg')
+    class Meta:
+        identifier = GlobalId('uuid', 'vg')
+        icon = 'lvm_lv'
+        label = 'Logical volume'
 
     vg = attributes.ResourceReference()
     uuid = attributes.Uuid()
     name = attributes.String()
 
-    icon = 'lvm_lv'
-    class_label = 'Logical volume'
-
-    def get_label(self, ancestors = []):
+    def get_label(self):
         return "%s-%s" % (self.vg.name, self.name)
 
 
 class Linux(Plugin):
     internal = True
-
-    def __init__(self, *args, **kwargs):
-        super(Linux, self).__init__(*args, **kwargs)
 
     def teardown(self):
         self.log.debug("Linux.teardown")

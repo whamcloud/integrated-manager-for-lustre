@@ -1,3 +1,8 @@
+//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
+
 
 /* So that Backbone.sync will pass GET list parameters
  * in the way that tastypie requires them */
@@ -10,25 +15,34 @@ Backbone.sync = function(method, model, options) {
   var outer_success = options.success;
   var outer_this = this;
   options.success = function() {
-    var data = arguments[0]
-    if (data.meta != undefined && data.objects != undefined) {
+    var data = arguments[0];
+
+    // If we got data, and it looks like a tastypie meta/objects body
+    // then just extract the .objects to give Backbone the list it
+    // expects
+    if (data && data.meta != undefined && data.objects != undefined) {
       arguments[0] = data.objects;
     }
     outer_success.apply(outer_this, arguments);
-  }
+  };
 
   var getValue = function(object, prop) {
     if (!(object && object[prop])) return null;
     return _.isFunction(object[prop]) ? object[prop]() : object[prop];
   };
   var url = options.url || getValue(model, 'url') || urlError();
-  var data = options.data || JSON.stringify(model.toJSON());
+  var data = options.data || model.toJSON();
   var type = {
     'create': 'POST',
     'update': 'PUT',
     'delete': 'DELETE',
     'read':   'GET'
-  }[method]
+  }[method];
+
+  // Backbone composes urls without a trailing slash
+  if (url.substr(url.length - 1) !== '/') {
+    url = url + "/";
+  }
 
   Api.call(type, url, data, success_callback = options.success);
 }
@@ -184,22 +198,21 @@ var Api = function() {
 
 
   var get = function() {
-    call.apply(null, ["GET"].concat([].slice.apply(arguments)))
-  }
+    return call.apply(null, ["GET"].concat([].slice.apply(arguments)))
+  };
   var post = function() {
-    call.apply(null, ["POST"].concat([].slice.apply(arguments)))
-  }
+    return call.apply(null, ["POST"].concat([].slice.apply(arguments)))
+  };
   var put = function() {
-    call.apply(null, ["PUT"].concat([].slice.apply(arguments)))
-  }
+    return call.apply(null, ["PUT"].concat([].slice.apply(arguments)))
+  };
   var del = function() {
-    call.apply(null, ["DELETE"].concat([].slice.apply(arguments)))
-  }
+    return call.apply(null, ["DELETE"].concat([].slice.apply(arguments)))
+  };
 
   /* Wrap API calls to tastypie paginated methods such that
      jquery.Datatables understands the resulting format */
   var get_datatables = function(url, data, callback, settings, kwargs, datatable) {
-    var kwargs = kwargs;
     if (kwargs == undefined) {
       kwargs = {}
     }
@@ -240,7 +253,7 @@ var Api = function() {
       datatables_data.iTotalDisplayRecords = data.meta.total_count
       callback(datatables_data);
     }, error_callback = null, blocking = false);
-  }
+  };
 
   var lost_contact = false;
   var lost_contact_at;
@@ -332,7 +345,7 @@ var Api = function() {
       startBlocking();
     }
 
-    $.ajax(ajax_args)
+    return $.ajax(ajax_args)
     .success(function(data, textStatus, jqXHR)
     {
       if (data && data.command) {
@@ -360,8 +373,7 @@ var Api = function() {
     })
     .error(function(jqXHR, textStatus)
     {
-      //console.log("error " + jqXHR.status);
-      if (jqXHR.status == 0) {
+      if (jqXHR.status == 0 && jqXHR.statusText == "error") {
         /* This is a workaroud to deal with the fact that some POSTs
          * are actually read-only (especially the /notifications/ and
          * /object_summary).  Remove these training wheels before release.
@@ -383,6 +395,9 @@ var Api = function() {
         // For non-idempotent operations fall through to 'something has
         // gone wrong' to prompt the user to reload the UI as we can
         // no longer be sure of the state.
+      } else if (jqXHR.status == 0 && jqXHR.statusText == "abort"){
+        // Assume aborts are on purpose and let them pass without incident
+        return;
       }
       if (error_callback) {
         if(typeof(error_callback) == "function") {
@@ -415,7 +430,7 @@ var Api = function() {
         completeBlocking();
       }
     });
-  }
+  };
 
   function busy()
   {
@@ -448,45 +463,6 @@ var Api = function() {
   }
 }();
 
-/* https://docs.djangoproject.com/en/1.2/ref/contrib/csrf/#csrf-ajax */
-$(document).ajaxSend(function(event, xhr, settings) {
-    function getCookie(name) {
-        var cookieValue = null;
-        if (document.cookie && document.cookie != '') {
-            var cookies = document.cookie.split(';');
-            for (var i = 0; i < cookies.length; i++) {
-                var cookie = jQuery.trim(cookies[i]);
-                // Does this cookie string begin with the name we want?
-                if (cookie.substring(0, name.length + 1) == (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-    function sameOrigin(url) {
-        // url could be relative or scheme relative or absolute
-        var host = document.location.host; // host + port
-        var protocol = document.location.protocol;
-        var sr_origin = '//' + host;
-        var origin = protocol + sr_origin;
-        // Allow absolute or scheme relative URLs to same origin
-        return (url == origin || url.slice(0, origin.length + 1) == origin + '/') ||
-            (url == sr_origin || url.slice(0, sr_origin.length + 1) == sr_origin + '/') ||
-            // or any other URL that isn't scheme relative or absolute i.e relative.
-            !(/^(\/\/|http:|https:).*/.test(url));
-    }
-    function safeMethod(method) {
-        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-    }
-
-    if (!safeMethod(settings.type) && sameOrigin(settings.url)) {
-        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
-    }
-
-});
-
 function removeBlankAttributes(obj) {
   $.each(obj, function(attr_name, attr_val) {
     if (attr_val == "") {
@@ -496,70 +472,12 @@ function removeBlankAttributes(obj) {
   return obj;
 }
 
-
-/* http://snipplr.com/view/5945/ */
-function formatNumber(number, decimals, dec_point, thousands_sep) {
-    // http://kevin.vanzonneveld.net
-    // +   original by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
-    // +   improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-    // +     bugfix by: Michael White (http://crestidg.com)
-    // +     bugfix by: Benjamin Lupton
-    // +     bugfix by: Allan Jensen (http://www.winternet.no)
-    // +    revised by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)    
-    // *     example 1: number_format(1234.5678, 2, '.', '');
-    // *     returns 1: 1234.57     
- 
-    var n = number, c = isNaN(decimals = Math.abs(decimals)) ? 2 : decimals;
-    var d = dec_point == undefined ? "." : dec_point;
-    var t = thousands_sep == undefined ? "," : thousands_sep, s = n < 0 ? "-" : "";
-    var i = parseInt(n = Math.abs(+n || 0).toFixed(c)) + "", j = (j = i.length) > 3 ? j % 3 : 0;
- 
-    return s + (j ? i.substr(0, j) + t : "") + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) + (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "");
-}
-
-/* http://snipplr.com/view/5949/ */
-function formatBytes(bytes) {
-  if (bytes == null || bytes == undefined) {
-    return bytes;
-  }
-
-	if (bytes >= 1073741824) {
-	     bytes = formatNumber(bytes / 1073741824, 2, '.', '') + 'GB';
-	} else { 
-		if (bytes >= 1048576) {
-     		bytes = formatNumber(bytes / 1048576, 2, '.', '') + 'MB';
-   	} else { 
-			if (bytes >= 1024) {
-    		bytes = formatNumber(bytes / 1024, 0) + 'KB';
-  		} else {
-    		bytes = formatNumber(bytes, 0) + 'b';
-			};
- 		};
-	};
-  return bytes;
-}
-
-function formatBigNumber(number) {
-  if (number == null || number == undefined) {
-    return number;
-  }
-
-	if (number >= 1000000000) {
-	     number = Math.floor(number / 1000000000) + 'B';
-	} else { 
-		if (number >= 1000000) {
-     		number = Math.floor(number / 1000000) + 'M';
-   	} else { 
-			if (number >= 1000) {
-    		number = Math.floor(number / 1000) + 'k';
-  		}
- 		};
-	};
-  return number;
-}
-
 function shortLocalTime(str)
 {
+  if (!str) {
+    return "";
+  }
+
   function pad(n) {
     if (n < 10) {
       return "0" + n
@@ -567,10 +485,13 @@ function shortLocalTime(str)
       return n
     }
   }
-  var date = new Date(str)
-  var days_elapsed = ((new Date()) - date) / (3600 * 24 * 1000)
-  var localTime = pad(date.getHours()) + ":" + pad(date.getMinutes())
-  var localDate = date.getFullYear() + "/" + pad(date.getMonth()) + "/" + pad(date.getDate())
+
+  // FIXME: HYD-648: The API gives datetimes without a TZ, we happen to know they are UTC.
+  str = str + "Z";
+  var date = new XDate(str);
+  var days_elapsed = ((new Date()) - date) / (3600 * 24 * 1000);
+  var localTime = pad(date.getHours()) + ":" + pad(date.getMinutes());
+  var localDate = date.getFullYear() + "/" + pad(date.getMonth()) + "/" + pad(date.getDate());
   if (days_elapsed < 1.0) {
     return localTime
   } else {

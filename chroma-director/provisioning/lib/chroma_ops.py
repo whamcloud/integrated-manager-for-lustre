@@ -8,35 +8,76 @@ from fabric.exceptions import NetworkError
 import StringIO
 import time
 
+from provisioning.models import ChromaManager, ChromaAppliance, Node
+
 class NodeOps(object):
     def __init__(self, node):
         self.node = node
         self.session = None
+        
+    @classmethod
+    def get(cls, node_id):
+        node = Node.objects.get(id = node_id)
+        return NodeOps(node)
+
+
+    def _setup_chroma_repo(self):
+        sudo('mkdir -p /root/keys')
+        for key in ['chroma_ca-cacert.pem', 'privkey-nopass.pem', 'test-ami-cert.pem']:
+            put("%s/%s" % (settings.YUM_KEYS, key), "/root/keys/%s" % key, use_sudo = True)
+        put(settings.YUM_REPO, "/etc/yum.repos.d", use_sudo = True)
+
+
+    def reboot(self):
+        instance = self.node.get_instance()
+        instance.reboot()
+        
 
     def open_session(self):
         if self.session is None:
             self.session = self.node.get_session()
         return self.session.fabric_settings()
 
+    def reset_session(self):
+        self.session = self.node.get_session()
+
     def terminate_node(self):
         instance = self.node.get_instance()
         volumes = [b[1].volume_id for b in instance.block_device_mapping.items() if not b[1].delete_on_termination]
         print "terminating %s %s" % (self.node.name, instance.id)
         instance.terminate()
-
         if len(volumes):
             print "need to delete", volumes
-            while( instance.state != 'terminated' ):
-                print "waiting for instance: %s %s"%(instance.id, instance.state)
-                time.sleep(5)
-                instance = self.node.get_instance()
-                
             conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
+            for vol in conn.get_all_volumes(volumes):
+                if vol.status != u'available':
+                    print "detaching volume: %s  %s" % (vol.id, vol.status)
+                    vol.detach(force=True)
+
+            detaching = 1
+            while detaching:
+                detaching = 0
+                for vol in conn.get_all_volumes(volumes):
+                    detaching += vol.status != u'available'
+                time.sleep(10)
+
             for vol in conn.get_all_volumes(volumes):
                 print "deleting volume: %s  %s" % (vol.id, vol.status)
                 vol.delete()
+
         self.node.delete()
 
+    def add_volume(self, size, device):
+        instance = self.node.get_instance()
+        conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
+        vol = conn.create_volume(size, instance.placement)
+        vol.attach(instance.id, device)
+        while vol.status != u'in-use':
+            print("waiting for volume %s %s" % (vol.id, vol.status))
+            time.sleep(10)
+            vol = conn.get_all_volumes([vol.id])[0]
+        print("Attached volume %s" % (vol.id))
+        
     def terminate(self):
         self.terminate_node()
 
@@ -49,6 +90,8 @@ class NodeOps(object):
     def set_hostname(self):
         with self.open_session():
             sudo("hostname %s" %(self.node.name))
+            # XXX !
+            sudo('echo "HOSTNAME=%s" >> /etc/sysconfig/network' % self.node.name)
     
 
 class ChromaManagerOps(NodeOps):
@@ -62,8 +105,8 @@ class ChromaManagerOps(NodeOps):
 
     def update_deps(self):
         with self.open_session():
-            sudo('yum install -y hydra-server')
-            sudo('yum install -y hydra-server-cli')
+            self._setup_chroma_repo()
+            sudo('yum install -y chroma-manager chroma-manager-cli')
 
     def setup_chroma(self):
         with self.open_session():
@@ -114,15 +157,13 @@ class ChromaApplianceOps(NodeOps):
 
     def update_deps(self):
         with self.open_session():
+            self._setup_chroma_repo()
             # ensure latest version of agent is installed
-            sudo('yum install -y hydra-agent-management')
+            sudo('yum install -y chroma-agent-management')
         
-    def add_volume(self, size, device):
-        instance = self.appliance.node.get_instance()
-        conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
-        vol = conn.create_volume(size, instance.placement)
-        vol.attach(instance.id, device)
-
+    def mkraid(self):
+        with self.open_session():
+            sudo('mdadm --create /dev/md0 --level 5 -n 4 /dev/xvdj /dev/xvdk /dev/xvdl /dev/xvdm')
 
     def set_key(self, key):
         with self.open_session():
@@ -132,48 +173,63 @@ class ChromaApplianceOps(NodeOps):
         with self.open_session():
             sudo("service corosync restart")
 
+    def configure(self):
+        self.set_hostname()
+        self.update_deps()
+        self.add_volume(1, 'sdf')
+        self.add_volume(1, 'sdg')
+        self.add_volume(1, 'sdh')
+        self.add_volume(1, 'sdi')
+#        self.mkraid()
+        self.reset_corosync()
+
+    def configure_client(self):
+        self.set_hostname()
+        with self.open_session():
+            self._setup_chroma_repo()
+            sudo("mkdir /mnt/lustre")
+
+        
+
 #
 # Classes to Create AMIs
 #
 class ImageOps(NodeOps):
-    def _setup_chroma_repo(self):
-        sudo('mkdir -p /root/keys')
-        for key in ['chroma_ca-cacert.pem', 'privkey-nopass.pem', 'test-ami-cert.pem']:
-            put("%s/%s" % (settings.YUM_KEYS, key), "/root/keys/%s" % key, use_sudo = True)
-        put(settings.YUM_REPO, "/etc/yum.repos.d", use_sudo = True)
-
     def _clean_image(self):
-        with self.ec2_session.fabric_settings():
-            sudo('find /home -maxdepth 1 -type d -exec rm -rf {}/.ssh \;')
+        with self.open_session():
             sudo('rm -f ~/.bash_history')
-            sudo('rm -f /etc/ssh/ssh_host*')
             sudo('rm -f /var/log/secure')
             sudo('rm -f /var/log/lastlog')
             sudo('rm -rf /root/*')
             sudo('rm -rf /tmp/*')
             sudo('rm -rf /root/.*hist*')
             sudo('rm -rf /var/log/*.gz')
+            sudo('rm -f /etc/ssh/ssh_host*')
+            sudo('find /home -maxdepth 1 -type d -exec rm -rf {}/.ssh \;')
         
 
     def make_image(self, image_name):
         self._clean_image()
         conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
-        id = self.node.ec2_id
-        image_id = conn.create_image(id, image_name)
-        print "New AMI is %s" % (image_id)
+        image_id = conn.create_image(self.node.ec2_id, image_name)
         image = conn.get_image(image_id=image_id)
 
+        print "waiting for image (%s) to finish... (can take a very long time)" % image.id
+        while(image.state == u'pending'):
+            time.sleep(10)
+            image = conn.get_image(image_id=image_id)
+        print "New AMI is %s  %s" % (image.id, image.state)
+        return image.id
 
 
 class StorageImageOps(ImageOps):
-
-    # n.b. unlike a manager, a storage node must be rebooted before it can used
+    # n.b. unlike a manager, a new storage image must be rebooted before it can used
     def install_deps(self):
         with self.open_session():
             self._setup_chroma_repo()
             sudo('yum install -y lustre')
             sudo('grubby --set-default "/boot/vmlinuz-2.6.32-*lustre*"')
-            sudo('yum install -y hydra-agent-management')
+            sudo('yum install -y chroma-agent-management')
             put("%s" % (settings.COROSYNC_CONF), "/etc/corosync/corosync.conf", use_sudo = True)
             put("%s" % (settings.COROSYNC_INIT), "/etc/init.d/corosync", use_sudo = True, mode=0755)
             sudo("service corosync start")
@@ -189,6 +245,4 @@ class ManagerImageOps(ImageOps):
             run('wget http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-5.noarch.rpm')
             sudo('rpm -i --force epel-release-6-5.noarch.rpm')
             self._setup_chroma_repo()
-            sudo('yum install -y hydra-server')
-            # XXX !
-            sudo('yum install -y python-argparse python-tablib python-request hydra-server-cli')
+            sudo('yum install -y Django-south chroma-manager chroma-manager-cli')

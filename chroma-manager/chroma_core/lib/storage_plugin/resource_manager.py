@@ -1,7 +1,7 @@
-
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
 
 """The resource manager is the home of the global view of the resources populated from
@@ -17,7 +17,7 @@ Concurrency:
     each one to see changes from other threads.
 
 WARNING:
-    There is a globl instance of ResourceManager initialized in this module, and
+    There is a global instance of ResourceManager initialized in this module, and
     its initialization does a significant amount of DB activity.  Don't import
     this module unless you're really going to use it.
 """
@@ -32,6 +32,7 @@ from chroma_core.models import ManagedHost, ManagedTarget
 from chroma_core.models import Volume, VolumeNode
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 from chroma_core.models import StorageResourceAlert, StorageResourceOffline
+from chroma_core.models.alert import AlertState
 
 from django.db import transaction
 
@@ -42,6 +43,7 @@ import threading
 class PluginSession(object):
     def __init__(self, scannable_id, update_period):
         self.local_id_to_global_id = {}
+        self.global_id_to_local_id = {}
         self.scannable_id = scannable_id
         self.update_period = update_period
 
@@ -75,10 +77,7 @@ class EdgeIndex(object):
         edges = edges | self._parent_from_edge[node]
         edges = edges | self._parent_to_edge[node]
         for e in edges:
-            for k, v in self._parent_from_edge.items():
-                v.remove(e)
-            for k, v in self._parent_to_edge.items():
-                v.remove(e)
+            self.remove_parent(e[0], e[1])
         del self._parent_to_edge[node]
         del self._parent_from_edge[node]
 
@@ -92,38 +91,38 @@ class EdgeIndex(object):
 
 class SubscriberIndex(object):
     def __init__(self):
+        log.debug("SubscriberIndex.__init__")
         # Map (field_name, field_value) to list of resource global id
         self._subscribe_value_to_id = defaultdict(set)
         self._provide_value_to_id = defaultdict(set)
 
         # List of (provider, Provide object)
         self._all_subscriptions = []
-        # FIXME: pass this in instead?
+
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
         subscriptions = {}
 
         for id, klass in storage_plugin_manager.resource_class_id_to_class.items():
-            for relation in klass._relations:
-                if isinstance(relation, relations.Provide):
-                    subscription = relations.Subscribe(klass, relation.attributes)
-                    relation.provide_to._relations.append(subscription)
-                    for sc in all_subclasses(relation.provide_to):
-                        sc._relations.append(subscription)
+            klass._meta.subscriptions = []
+            for relation in klass._meta.relations:
+                if isinstance(relation, relations.Subscribe):
+                    log.debug("klass = %s relation %s" % (klass, relation))
+                    subscriptions[relation.key] = relation
+                    klass._meta.subscriptions.append(relation)
 
         for id, klass in storage_plugin_manager.resource_class_id_to_class.items():
-            klass._subscriptions = []
-            for relation in klass._relations:
-                if isinstance(relation, relations.Subscribe):
-                    subscriptions[relation.key] = relation
-                    klass._subscriptions.append(relation)
+            if klass._meta.relations:
+                log.debug("%s._meta.relations = %s" % (klass.__name__, klass._meta.relations))
+            if klass._meta.subscriptions:
+                log.debug("%s._meta.subscriptions = %s" % (klass.__name__, klass._meta.subscriptions))
 
         self._all_subscriptions = subscriptions.values()
 
     def what_provides(self, resource):
         """What provides things that this resource subscribes to?"""
         result = set()
-        for subscription in resource._subscriptions:
+        for subscription in resource._meta.subscriptions:
             result |= self._provide_value_to_id[(subscription.key, subscription.val(resource))]
         return result
 
@@ -142,35 +141,30 @@ class SubscriberIndex(object):
         self._provide_value_to_id[(key, value)].remove(resource_id)
 
     def add_subscriber(self, resource_id, key, value):
+        log.debug("add_subscriber %s %s %s" % (resource_id, key, value))
         self._subscribe_value_to_id[(key, value)].add(resource_id)
 
     def remove_subscriber(self, resource_id, key, value):
+        log.debug("remove_subscriber %s %s %s" % (resource_id, key, value))
         self._subscribe_value_to_id[(key, value)].remove(resource_id)
 
-    def add_resource(self, resource_id, resource = None):
-        if not resource:
-            resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
-
+    def add_resource(self, resource_id, resource):
         for subscription in self._all_subscriptions:
             if isinstance(resource, subscription.subscribe_to):
                 self.add_provider(resource_id, subscription.key, subscription.val(resource))
-        for subscription in resource._subscriptions:
+        for subscription in resource._meta.subscriptions:
             self.add_subscriber(resource_id, subscription.key, subscription.val(resource))
 
-    def remove_resource(self, resource_id, resource = None):
+    def remove_resource(self, resource_id):
         log.debug("SubscriberIndex.remove_resource %s" % resource_id)
-        if not resource:
-            try:
-                resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
-            except StorageResourceRecord.DoesNotExist:
-                log.warning("SubscriberIndex.remove_resource: %s not found" % resource_id)
-                return
+        resource = StorageResourceRecord.objects.get(pk = resource_id).to_resource()
 
         for subscription in self._all_subscriptions:
             if isinstance(resource, subscription.subscribe_to):
                 log.debug("SubscriberIndex.remove provider %s" % subscription.key)
                 self.remove_provider(resource_id, subscription.key, subscription.val(resource))
-        for subscription in resource._subscriptions:
+        log.debug("subscriptions = %s" % resource._meta.subscriptions)
+        for subscription in resource._meta.subscriptions:
             log.debug("SubscriberIndex.remove subscriber %s" % subscription.key)
             self.remove_subscriber(resource_id, subscription.key, subscription.val(resource))
 
@@ -185,7 +179,7 @@ class SubscriberIndex(object):
                         resource = r.to_resource()
                         self.add_provider(r.id, subscription.key, subscription.val(resource))
 
-            for subscription in resource_class._subscriptions:
+            for subscription in resource_class._meta.subscriptions:
                 records = StorageResourceRecord.objects.filter(
                         resource_class = resource_class_id)
                 for r in records:
@@ -211,7 +205,6 @@ class ResourceManager(object):
 
     def session_open(self,
             scannable_id,
-            scannable_local_id,
             initial_resources,
             update_period):
         log.debug(">> session_open %s (%s resources)" % (scannable_id, len(initial_resources)))
@@ -221,19 +214,16 @@ class ResourceManager(object):
                 del self._sessions[scannable_id]
 
             session = PluginSession(scannable_id, update_period)
-            #session.local_id_to_global_id[scannable_local_id] = scannable_id
             self._sessions[scannable_id] = session
             self._persist_new_resources(session, initial_resources)
             self._cull_lost_resources(session, initial_resources)
 
-            # Special case for agent-reported resources: update Volume and VolumeNode
-            # objects to interface with the world of Lustre
-            # TODO: don't just do this at creation, do updates too
+            # Update Volume and VolumeNode objects
             self._persist_lun_updates(scannable_id)
 
             # Plugins are allowed to create VirtualMachine objects, indicating that
             # we should created a ManagedHost to go with it (e.g. discovering VMs)
-            self._persist_created_hosts(session, scannable_id)
+            self._persist_created_hosts(session, scannable_id, initial_resources)
 
         log.debug("<< session_open %s" % scannable_id)
 
@@ -245,24 +235,20 @@ class ResourceManager(object):
                 log.warning("Cannot remove session for %s, it does not exist" % scannable_id)
 
     @transaction.commit_on_success
-    def _persist_created_hosts(self, session, scannable_id):
+    def _persist_created_hosts(self, session, scannable_id, new_resources):
         log.debug("_persist_created_hosts")
 
-        # FIXME: look up more efficiently (don't currently keep an in-memory record of the
-        # class of each resource)
-        def get_session_resources_of_type(session, klass):
-            for record_pk in session.local_id_to_global_id.values():
-                try:
-                    record = StorageResourceRecord.objects.get(pk = record_pk)
-                except StorageResourceRecord.DoesNotExist:
-                    log.error("Record %d is in the local session but does not exist" % (record.id))
-                    pass
-                resource = record.to_resource()
-                if isinstance(resource, klass):
-                    yield (record, resource)
-
+        record_pks = []
         from chroma_core.lib.storage_plugin.api.resources import VirtualMachine
-        for record, resource in get_session_resources_of_type(session, VirtualMachine):
+        for resource in new_resources:
+            if isinstance(resource, VirtualMachine):
+                assert(not resource._handle_global)
+                record_pks.append(session.local_id_to_global_id[resource._handle])
+
+        for vm_record_pk in record_pks:
+            record = StorageResourceRecord.objects.get(pk = vm_record_pk)
+            resource = record.to_resource()
+
             if not resource.host_id:
                 try:
                     host = ManagedHost.objects.get(address = resource.address)
@@ -272,10 +258,6 @@ class ResourceManager(object):
                     log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
                     host, command = ManagedHost.create_from_string(resource.address)
                     record.update_attribute('host_id', host.pk)
-
-                # NB any instances of this resource within the plugin session
-                # that reported it won't see the change to host_id attribute, but that's
-                # fine, they have no right to know.
 
     @transaction.commit_on_success
     def _persist_lun_updates(self, scannable_id):
@@ -580,14 +562,21 @@ class ResourceManager(object):
         and if so they must be added in a blob so that we can hook up the
         parent relationships"""
         with self._instance_lock:
-            self._persist_new_resources(self._sessions[scannable_id], resources)
+            session = self._sessions[scannable_id]
+            self._persist_new_resources(session, resources)
+            self._persist_lun_updates(scannable_id)
+            self._persist_created_hosts(session, scannable_id, resources)
 
     def session_remove_resources(self, scannable_id, resources):
         with self._instance_lock:
-            # TODO: remove these resources (unless some other resources
-            # are still referring to them)
-            #self._edges.remove_node(
-            pass
+            session = self._sessions[scannable_id]
+            for local_resource in resources:
+                try:
+                    resource_global_id = session.local_id_to_global_id[local_resource._handle]
+                    self._cull_resource(StorageResourceRecord.objects.get(pk = resource_global_id))
+                except KeyError:
+                    pass
+            self._persist_lun_updates(scannable_id)
 
     def session_notify_alert(self, scannable_id, resource_local_id, active, alert_class, attribute):
         with self._instance_lock:
@@ -649,7 +638,7 @@ class ResourceManager(object):
         reported_scoped_resources = []
         reported_global_resources = []
         for r in reported_resources:
-            if isinstance(r.identifier, BaseScopedId):
+            if isinstance(r._meta.identifier, BaseScopedId):
                 reported_scoped_resources.append(session.local_id_to_global_id[r._handle])
             else:
                 reported_global_resources.append(session.local_id_to_global_id[r._handle])
@@ -674,7 +663,7 @@ class ResourceManager(object):
     def _cull_resource(self, resource_record):
         from chroma_core.models import StorageResourceAttributeReference
 
-        log.info("Culling resource '%s'" % resource_record.pk)
+        log.info("ResourceManager._cull_resource '%s'" % resource_record.pk)
         try:
             resource_record = StorageResourceRecord.objects.get(pk = resource_record.pk)
         except StorageResourceRecord.DoesNotExist:
@@ -721,7 +710,7 @@ class ResourceManager(object):
 
         self._subscriber_index.remove_resource(resource_record.pk)
 
-        for alert_state in StorageResourceAlert.filter_by_item(resource_record):
+        for alert_state in AlertState.filter_by_item(resource_record):
             self._persist_alert_unpropagate(alert_state)
             alert_state.delete()
 
@@ -731,6 +720,16 @@ class ResourceManager(object):
         # Explicitly remove each StorageResourceRecord to remove underlying stats data
         for statistic in StorageResourceStatistic.objects.filter(storage_resource = resource_record):
             statistic.delete()
+
+        for session in self._sessions.values():
+            try:
+                local_id = session.global_id_to_local_id[resource_record.pk]
+                del session.local_id_to_global_id[local_id]
+                del session.global_id_to_local_id[local_id]
+            except KeyError:
+                pass
+
+        self._edges.remove_node(resource_record.pk)
 
         resource_record.delete()
 
@@ -756,9 +755,9 @@ class ResourceManager(object):
         if resource._handle in session.local_id_to_global_id:
             return
 
-        if isinstance(resource.identifier, BaseScopedId):
+        if isinstance(resource._meta.identifier, BaseScopedId):
             scope_id = session.scannable_id
-        elif isinstance(resource.identifier, BaseGlobalId):
+        elif isinstance(resource._meta.identifier, BaseGlobalId):
             scope_id = None
         else:
             raise NotImplementedError
@@ -829,7 +828,7 @@ class ResourceManager(object):
             # provide/subscribe relationships with respect to it
             self._subscriber_index.add_resource(record.pk, resource)
 
-        if isinstance(resource.identifier, BaseGlobalId) and session.scannable_id != record.id:
+        if isinstance(resource._meta.identifier, BaseGlobalId) and session.scannable_id != record.id:
             try:
                 record.reported_by.get(pk = session.scannable_id)
             except StorageResourceRecord.DoesNotExist:
@@ -837,10 +836,11 @@ class ResourceManager(object):
                 record.reported_by.add(session.scannable_id)
 
         session.local_id_to_global_id[resource._handle] = record.pk
+        session.global_id_to_local_id[record.pk] = resource._handle
         self._resource_persist_attributes(session, resource, record)
 
         if created:
-            log.debug("persist_new_resource[%s] %s %s %s" % (session.scannable_id, created, record.pk, resource._handle))
+            log.debug("ResourceManager._persist_new_resource[%s] %s %s %s" % (session.scannable_id, created, record.pk, resource._handle))
         return record
 
     # Use commit on success to avoid situations where a resource record

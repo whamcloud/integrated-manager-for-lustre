@@ -6,24 +6,29 @@ from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 
 class TestDefaults1(BaseStorageResource):
+    class Meta:
+        identifier = GlobalId('name')
+
     name = attributes.String()
-    identifier = GlobalId('name')
 
 
 class TestDefaults2(BaseStorageResource):
+    class Meta:
+        identifier = GlobalId('name', 'name_scope')
+
     name = attributes.String()
     name_scope = attributes.String()
-    identifier = GlobalId('name', 'name_scope')
 
 
 class TestOverrides(BaseStorageResource):
-    name = attributes.String()
-    identifier = GlobalId('name')
-
-    class_label = "Alpha"
+    class Meta:
+        identifier = GlobalId('name')
+        label = "Alpha"
 
     def get_label(self):
         return "Bravo"
+
+    name = attributes.String()
 
 
 class TestDisplayNames(TestCase):
@@ -37,4 +42,4 @@ class TestDisplayNames(TestCase):
     def test_overrides(self):
         to = TestOverrides(name = "foo")
         self.assertEqual(to.get_label(), "Bravo")
-        self.assertEqual(to.get_class_label(), "Alpha")
+        self.assertEqual(to._meta.label, "Alpha")

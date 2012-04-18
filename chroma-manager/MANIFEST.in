@@ -1,11 +1,14 @@
 include Makefile
 include logrotate.cfg
-include monitor.wsgi
+include chroma-manager.wsgi
 include chroma_core/fixtures/*
 include chroma_core/bin/*.py
 include chroma_core/bin/storage-daemon
 include chroma_core/bin/chroma-config
 include chroma_ui/templates/*
+include tests/sample_data/*
+include tests/integration/run_tests
+include tests/integration/*/*.json
 graft polymorphic
 graft chroma_ui/static
 global-exclude .*.swp

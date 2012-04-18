@@ -1,7 +1,8 @@
 #
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 from chroma_core.models import Volume, VolumeNode
 
@@ -47,6 +48,9 @@ class VolumeResource(ModelResource):
     volume_nodes = fields.ToManyField("chroma_api.volume_node.VolumeNodeResource",
             lambda bundle: bundle.obj.volumenode_set.filter(host__not_deleted = True),
             null = True, full = True, help_text = "Device nodes which point to this volume")
+    storage_resource = fields.ToOneField("chroma_api.storage_resource.StorageResourceResource",
+            'storage_resource', null = True, blank = True, full = False, help_text = "The \
+            `storage_resource` corresponding to the device which this Volume represents")
 
     def dehydrate_kind(self, bundle):
         return bundle.obj.get_kind()

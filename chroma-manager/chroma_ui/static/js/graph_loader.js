@@ -1,3 +1,8 @@
+//
+// ========================================================
+// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+// ========================================================
+
 /*******************************************************************************
  * File name: custom_dashboard.js
  * Description: Plots all the graphs for dashboard landing page.

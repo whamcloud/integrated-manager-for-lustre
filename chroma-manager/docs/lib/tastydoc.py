@@ -1,8 +1,11 @@
 
-# This script borrowed from https://github.com/socialize/django-tastypie/commit/6a98aa4ff344105f8b5090a2d4f2d407bccae089
+# This script extracted from https://github.com/socialize/django-tastypie/commit/6a98aa4ff344105f8b5090a2d4f2d407bccae089
 # Inheriting django-tastypie LICENSE for this file only
 # Copyright (c) 2010, Daniel Lindsley
 # All rights reserved.
+
+# The following notice applies to this file only, and has no bearing
+# on other material in the package which contains the file.
 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:

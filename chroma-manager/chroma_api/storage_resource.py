@@ -1,7 +1,8 @@
 #
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.lib.storage_plugin.api import attributes, statistics
@@ -33,6 +34,9 @@ class StorageResourceResource(MetricResource, ModelResource):
 
     A storage resource is of a class defined by the
     ``storage_resource_class`` resource.
+
+    This resource has a special ancestor_of filter argument, which may be set to
+    the ID of a storage resource to retrieve all resources which its ancestors.
     """
     #FIXME: document this fully when the storage plugin API freezes
 
@@ -50,9 +54,42 @@ class StorageResourceResource(MetricResource, ModelResource):
     plugin_name = fields.CharField(attribute='resource_class__storage_plugin__module_name')
     class_name = fields.CharField(attribute='resource_class__class_name')
 
+    parent_classes = fields.ListField(blank = True, null = True)
+
     deletable = fields.BooleanField()
 
-    def apply_sorting(self, obj_list, options = None):
+    def dehydrate_parent_classes(self, bundle):
+        def find_bases(klass, bases = set()):
+            for parent in klass.__bases__:
+                if issubclass(parent, BaseStorageResource):
+                    bases.add(parent)
+                    bases |= find_bases(parent, bases)
+
+            return bases
+
+        return [k.__name__ for k in find_bases(bundle.obj.resource_class.get_class())]
+
+    def obj_get_list(self, request = None, **kwargs):
+        """Override this to do sorting in a way that depends on kwargs (we need
+        to know what kind of object is being listed in order to resolve the
+        ordering attribute to a model, and apply_sorting's arguments don't
+        give you kwargs)"""
+        objs = super(StorageResourceResource, self).obj_get_list(request, **kwargs)
+        objs = self._sort_by_attr(objs, request.GET, **kwargs)
+        return objs
+
+    def get_list(self, request, **kwargs):
+        if 'ancestor_of' in request.GET:
+            record = StorageResourceRecord.objects.get(id = request.GET['ancestor_of'])
+            ancestor_records = set(ResourceQuery().record_all_ancestors(record))
+
+            bundles = [self.build_bundle(obj=obj, request=request) for obj in ancestor_records]
+            dicts = [self.full_dehydrate(bundle) for bundle in bundles]
+            return self.create_response(request, {"meta": None, "objects": dicts})
+        else:
+            return super(StorageResourceResource, self).get_list(request, **kwargs)
+
+    def _sort_by_attr(self, obj_list, options = None, **kwargs):
         options = options or {}
         order_by = options.get('order_by', None)
         if not order_by:
@@ -67,7 +104,24 @@ class StorageResourceResource(MetricResource, ModelResource):
         else:
             raise RuntimeError("Can't sort on %s" % order_by)
 
-        return obj_list.filter(storageresourceattribute__key = attr_name).order_by(("-" if invert else "") + 'storageresourceattribute__value')
+        try:
+            class_name = kwargs['class_name']
+            plugin_name = kwargs['plugin_name']
+        except KeyError:
+            return obj_list
+        else:
+            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+            klass, klass_id = storage_plugin_manager.get_plugin_resource_class(plugin_name, class_name)
+            model_klass = klass.attr_model_class(attr_name)
+
+            filter_args = {model_klass.__name__.lower() + "__key": attr_name}
+            order_attr = model_klass.__name__.lower() + "__value"
+
+            return obj_list.filter(**filter_args).order_by(("-" if invert else "") + order_attr)
+
+    def apply_sorting(self, obj_list, options=None):
+        """Pass-through in favour of sorting done in obj_get_list"""
+        return obj_list
 
     def dehydrate_propagated_alerts(self, bundle):
         return [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(bundle.obj.to_resource())]
@@ -150,10 +204,7 @@ class StorageResourceResource(MetricResource, ModelResource):
         return result
 
     class Meta:
-        queryset = StorageResourceRecord.objects.filter(
-                resource_class__id__in = filter_class_ids(),
-                resource_class__storage_plugin__internal = False
-                )
+        queryset = StorageResourceRecord.objects.filter(resource_class__id__in = filter_class_ids())
         resource_name = 'storage_resource'
         #filtering = {'storage_plugin__module_name': ['exact'], 'class_name': ['exact']}
         filtering = {'class_name': ['exact'], 'plugin_name': ['exact']}

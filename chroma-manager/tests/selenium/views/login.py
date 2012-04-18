@@ -29,7 +29,7 @@ class Login:
                     continue
 
     def login_superuser(self):
-        for user in config['hydra_servers']['users']:
+        for user in config['chroma_managers']['users']:
             if user['is_superuser']:
                 self.username.send_keys(user['username'])
                 self.password.send_keys(user['password'])

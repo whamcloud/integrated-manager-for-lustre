@@ -1,5 +1,5 @@
 {
-    "hydra_servers": 
+    "chroma_managers":
         {
             "server_http_url": "http://localhost:8000/ui/",
             "browser": "Chrome",

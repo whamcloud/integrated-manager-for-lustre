@@ -140,7 +140,7 @@ be specified in values, or behaviour is undefined.
 
 You may find it useful to browse the API using a web browser.  To do this on a running
 system, first log into the Chroma web interface, and then point your browser at
-``http://my-chroma-server/api/host/?format=json``.  The resulting output is best browsed
+``http://my-chroma-manager/api/host/?format=json``.  The resulting output is best browsed
 using a plugin like ``JSONView`` for Google Chrome.  Note that using ``format=json`` is
 only necessary when using a browser: your own client will set the ``Accept`` header instead.
 
@@ -374,7 +374,7 @@ in development mode, the exception and traceback will be serialized and returned
 
     {
         "error_message": "Exception 'foo'",
-        "traceback": "Traceback (most recent call last):\n  File "/Users/jcspray/hydra/lib/python2.7/site-packages/django/core/handlers/base.py", line 111, in get_response\n    response = callback(request, *callback_args, **callback_kwargs)"
+        "traceback": "Traceback (most recent call last):\n  File "/usr/lib/python2.7/site-packages/django/core/handlers/base.py", line 111, in get_response\n    response = callback(request, *callback_args, **callback_kwargs)"
     }
 
 

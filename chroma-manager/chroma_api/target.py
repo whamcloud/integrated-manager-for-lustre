@@ -1,7 +1,9 @@
 #
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
 from chroma_core.models.host import Volume, VolumeNode
 from chroma_core.models.target import FilesystemMember
 
@@ -95,8 +97,10 @@ class TargetResource(MetricResource, ConfParamResource):
     """
     filesystems = fields.ListField(null = True, help_text = "For MGTs, the list of filesystems\
             belonging to this MGT.  Null for other targets.")
+    filesystem = fields.CharField('chroma_api.filesystem.FilesystemResource', 'filesystem',
+        help_text = "For OSTs and MDTs, the owning filesystem.  Null for MGTs.", null = True)
     filesystem_id = fields.IntegerField(help_text = "For OSTs and MDTs, the ``id`` attribute of\
-            the owning filesystem.  Null for MGTs.")
+            the owning filesystem.  Null for MGTs.", null = True)
     filesystem_name = fields.CharField(help_text = "For OSTs and MDTs, the ``name`` attribute \
             of the owning filesystem.  Null for MGTs.")
 
@@ -104,15 +108,22 @@ class TargetResource(MetricResource, ConfParamResource):
 
     volume_name = fields.CharField(attribute = 'volume__label',
             help_text = "The ``label`` attribute of the Volume on which this target exists")
+
+    primary_server = fields.ToOneField('chroma_api.host.HostResource', 'primary_host')
     primary_server_name = fields.CharField(help_text = "Presentation convenience.  Human\
             readable label for the primary server for this target")
-    # FIXME: return a list (shift the 'one secondary' assumption into the UI
+    failover_servers = fields.ToManyField('chroma_api.host.HostResource', 'failover_hosts', null = True)
     failover_server_name = fields.CharField(help_text = "Presentation convenience.  Human\
             readable label for the secondary server for this target")
-    active_host_name = fields.CharField(help_text = "Human readable label for the host\
-            on which this target is currently started")
-    active_host_uri = fields.CharField(null = True, help_text = "URI to the host on which\
-            this target is currently started")
+
+    active_host_name = fields.CharField(help_text = "Presentation convenience. Human \
+        readable label for the host on which this target is currently started")
+    active_host = fields.ToOneField('chroma_api.host.HostResource', 'active_host',
+        null = True, help_text = "The server on which this target is currently started, or null if" \
+                                 "the target is not currently started")
+
+    volume = fields.ToOneField('chroma_api.volume.VolumeResource', 'volume', full = False, help_text = "\
+                             The Volume on which this target is stored.")
 
     def content_type_id_to_kind(self, id):
         if not hasattr(self, 'CONTENT_TYPE_ID_TO_KIND'):
@@ -131,7 +142,9 @@ class TargetResource(MetricResource, ConfParamResource):
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
         validation = TargetValidation()
-        readonly = ['active_host_uri', 'failover_server_name', 'volume_name', 'primary_server_name', 'active_host_name', 'filesystems', 'name', 'uuid']
+        readonly = ['active_host', 'failover_server_name', 'volume_name',
+                    'primary_server_name', 'active_host_name', 'filesystems',
+                    'name', 'uuid', 'primary_server', 'failover_servers', 'active_host_name']
 
     def override_urls(self):
         urls = super(TargetResource, self).override_urls()
@@ -152,12 +165,20 @@ class TargetResource(MetricResource, ConfParamResource):
     def dehydrate_kind(self, bundle):
         return self.content_type_id_to_kind(bundle.obj.content_type_id)
 
+    def dehydrate_filesystem(self, bundle):
+        from chroma_api.filesystem import FilesystemResource
+        filesystem = getattr(bundle.obj.downcast(), 'filesystem', None)
+        if filesystem:
+            return FilesystemResource().get_resource_uri(filesystem)
+        else:
+            return None
+
     def dehydrate_filesystem_id(self, bundle):
-        return getattr(bundle.obj, 'filesystem_id', None)
+        return getattr(bundle.obj.downcast(), 'filesystem_id', None)
 
     def dehydrate_filesystem_name(self, bundle):
         try:
-            return bundle.obj.filesystem.name
+            return bundle.obj.downcast().filesystem.name
         except AttributeError:
             return None
 

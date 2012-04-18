@@ -1,4 +1,5 @@
 import datetime
+import logging
 from django.test import TestCase
 import mock
 
@@ -25,7 +26,7 @@ class MockAgent(object):
         if not self.succeed:
             raise RuntimeError("Test-generated failure")
 
-        print "invoke_agent %s %s %s" % (self.host, cmdline, args)
+        logging.getLogger('mock_agent').info("invoke_agent %s %s %s" % (self.host, cmdline, args))
         if cmdline == "get-fqdn":
             return self.mock_servers[self.host.address]['fqdn']
         if cmdline == "get-nodename":

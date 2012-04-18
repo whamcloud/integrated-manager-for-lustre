@@ -1,5 +1,5 @@
 from django.utils import unittest
-from hydra_agent.plugins import DevicePluginManager, ActionPluginManager
+from chroma_agent.plugins import DevicePluginManager, ActionPluginManager
 
 
 class TestPlugins(unittest.TestCase):

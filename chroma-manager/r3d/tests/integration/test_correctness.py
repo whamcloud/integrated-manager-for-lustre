@@ -1,5 +1,8 @@
-## Copyright 2011 Whamcloud, Inc.
-## Authors: Michael MacDonald <mjmac@whamcloud.com>
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 from django.test import TestCase
 from r3d.models import Database, Counter, Gauge, Derive, Absolute, Min, Max, Average, Last
@@ -408,7 +411,7 @@ class LastRraTest(TestCase):
         """
         Tests that what we get back from fetch() is correct.
         """
-        self.LastDiff = None
+        self.maxDiff = None
         self.update_database()
 
         expected = self.load_xport("last_rra_step.xml")

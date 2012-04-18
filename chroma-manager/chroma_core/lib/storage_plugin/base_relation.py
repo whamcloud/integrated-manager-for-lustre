@@ -1,3 +1,9 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
 class BaseRelation(object):
     @property
     def key(self):

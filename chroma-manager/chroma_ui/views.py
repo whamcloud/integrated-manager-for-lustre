@@ -1,7 +1,8 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
 
 from django.shortcuts import render_to_response
 from django.template import RequestContext

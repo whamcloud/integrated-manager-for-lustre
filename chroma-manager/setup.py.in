@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 #
-# ==============================
-# Copyright 2012 Whamcloud, Inc.
-# ==============================
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 
 from setuptools import setup, find_packages
 
-excludes = ["*tests*", "*docs*"]
+excludes = ["*docs*"]
 
 setup(
-    name = 'hydra-server',
+    name = 'chroma-manager',
     version = '@VERSION@',
     author = "Whamcloud, Inc.",
     author_email = "info@whamcloud.com",
@@ -24,11 +25,12 @@ setup(
     # file creation/cleanup in the Makefile) to deal with the fact
     # that setuptools wants to strip the first character off the filename.
     package_data = {
-        '': ".monitor.wsgi".split(),
+        '': [".chroma-manager.wsgi"],
         'chroma_ui': "static/js/lib/*.js static/js/*.js static/css/smoothness/images/* static/css/smoothness/*.css static/css/images/* static/css/*.css static/images/storage_plugin/* static/images/*.ico static/images/*.jpg static/images/*.png static/images/*.gif templates/*".split(),
         'chroma_help': "static/contextual/*.html static/webhelp/*.html".split(),
+        'tests': "integration/run_tests integration/*/*.json sample_data/*".split(),
     },
-    scripts = ["chroma_core/bin/storage_daemon", "chroma_core/bin/chroma-config", "hydra-host-discover"],
+    scripts = ["chroma_core/bin/storage_daemon", "chroma_core/bin/chroma-config", "chroma-host-discover"],
     entry_points = {
         'console_scripts': [
             'chroma = chroma_cli.main:main',
