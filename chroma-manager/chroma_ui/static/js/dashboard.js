@@ -319,7 +319,7 @@ var Dashboard = function(){
     else if (dashboard_target.kind == 'MDT') {
       //ost_Area_mgtOps_Data($('#ls_ostId').val(), "false");
       $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div").hide();
-      $("#target_mgt_ops_container_div").show();
+      $("#target_mdt_ops_container_div").show();
       init_charts('targets_mdt');
     }
     else {
