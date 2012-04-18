@@ -163,25 +163,6 @@ var ChartManager = function(options) {
         else { log("debug must be a bool"); }
     };
 
-  /*
-  TODO: prepend one of these to charts
-
-  <div class="magni">
-    <button value="" class="magbutton"
-    onclick="db_Area_mdOps_Data('true');setZoomDialogTitle('All File Systems: Metadata op/s');" />
-  </div>
-
-
-   <!-- FileSystem Targets Div - End -->
-   <input type='hidden' id='zoomed_graph_id' name='zoomed_graph_id' value='' />
-   <div id="zoomDialog" title="All File System CPU Usage">
-   <div id="dialog_avgCPUDiv"></div>
-   </div>
-
-   */
-
-
-
     // add a chart from a chart model
     var add_chart = function(chart_name,chart_group,options) {
         if (! _.isString(chart_name) || chart_name.length < 1 ) {
@@ -197,16 +178,12 @@ var ChartManager = function(options) {
         config.charts[chart_group][chart_name] = ChartModel(options || {});
     };
 
-    var zoom_options = function() {
-
-    };
-
     var render_charts = function() {
         log('render_charts');
         _.each(config.charts[config.chart_group], function(chart,key) {
             if (chart.enabled && chart.state == 'idle') {
                 log('- rendering chart ' + key);
-                get_data(chart);
+                update_chart(chart);
             }
         });
     };
@@ -225,19 +202,12 @@ var ChartManager = function(options) {
             }
         }
         params.begin = chart.series_begin.toISOString();
-        params.end   = chart.series_end.toISOString()
+        params.end   = chart.series_end.toISOString();
 
         return $.extend(true, api_params, params );
     };
 
-    var get_data = function(chart) {
-        var api_params = $.extend(true, {}, chart.api_params);
-        api_params = default_params(api_params, chart);
-        // custom params
-        if ( _.isFunction(chart.api_params_callback) ) {
-            api_params = chart.api_params_callback(api_params, chart);
-        }
-
+    var update_chart = function(chart) {
         if (_.isNull(chart.instance)) {
           var chart_config = 
               $.extend(true, {}, config.chart_config_defaults, chart.chart_config, {
@@ -251,110 +221,143 @@ var ChartManager = function(options) {
           if ( _.isFunction(chart.chart_config_callback)) {
             chart_config = chart.chart_config_callback(chart_config);
           }
+          var container = $('#' + chart_config.chart.renderTo);
+          if (container.prev('div.magni').length == 0) {
+            container.before("<div class='magni'><button class='magbutton'></button></div>");
+            container.prev('div.magni').find('button.magbutton').button({icons: {primary: 'ui-icon-zoomin'}});
+            container.prev('div.magni').find('button.magbutton').click(function(ev) {
+              var dialog = $("<div><div class='zoomed_chart'></div></div>");
+              dialog.dialog({width: window.innerWidth - 200, height: 450, modal: true});
+              var zoomed_container = dialog.find('.zoomed_chart');
+              var zoomed_config = $.extend(true, {}, chart_config);
+              zoomed_config.chart.renderTo = zoomed_container.get(0);
+
+              var zoomed_chart = new ChartModel($.extend(true, {}, chart));
+              zoomed_chart.instance = new Highcharts.Chart(zoomed_config);
+              zoomed_chart.instance.showLoading();
+              zoomed_chart.series_begin = null;
+
+              update_chart_data(zoomed_chart);
+            });
+          }
+
           chart.instance = new Highcharts.Chart(chart_config);
           chart.instance.showLoading();
         }
 
-        chart.state = 'loading';
-        var url;
-        if ( _.isFunction(chart.url) ) {
-          url = chart.url();
-        } else {
-          url = chart.url;
-        }
-        Api.get(
-            url,
-            api_params,
-            success_callback = function(data) {
-                chart.state = 'idle';
-                if ( _.isObject(chart.instance) )
-                    chart.instance.hideLoading();
+      update_chart_data(chart);
+    };
 
-                if (chart.snapshot) {
-                  // Latest-value chart
-                  chart.reset_series();
-                  chart.snapshot_callback(chart, data);
-                } else {
-                  // Time series chart
-                  if (chart.data_callback) {
-                    // If data_callback is provided, it will update series_data for us
-                    var series_updates = chart.data_callback(chart, data);
-                    _.each(series_updates, function(series_update, series_id) {
-                      if (chart.series_id_to_index[series_id] == undefined) {
-                        var series_conf = $.extend(true, {}, chart.series_template, {name: series_update.label})
-                        var added_series = chart.instance.addSeries(series_conf);
-                        chart.series_id_to_index[series_id] = added_series.index;
-                        chart.series_data[added_series.index] = []
-                      }
+    function update_chart_data(chart) {
+      var api_params = $.extend(true, {}, chart.api_params);
+      api_params = default_params(api_params, chart);
+      // custom params
+      if ( _.isFunction(chart.api_params_callback) ) {
+        api_params = chart.api_params_callback(api_params, chart);
+      }
 
-                     var i = chart.series_id_to_index[series_id];
-                     chart.series_data[i].push.apply(chart.series_data[i], series_update.data);
-                    });
-                  } else {
-                    // Updates series_data from data
-                    $.each(data, function(key, datapoint) {
-                        var timestamp = new Date(datapoint.ts).getTime();
-                        if (chart.series_callbacks) {
-                          // If series_callbacks are provided, call them per series
-                          _.each( chart.series_callbacks, function(series_callback, i) {
-                              series_callback(timestamp, datapoint.data, i, chart );
-                          });
-                        } else {
-                          // By default, pass through values to series in order of metrics list
-                          _.each(chart.metrics, function(metric, i) {
-                            chart.series_data[i].push([timestamp, datapoint.data[metric]]);
-                          });
-                        }
-                    });
-                  }
+      chart.state = 'loading';
+      var url;
+      if ( _.isFunction(chart.url) ) {
+        url = chart.url();
+      } else {
+        url = chart.url;
+      }
+      Api.get(
+        url,
+        api_params,
+        success_callback = function(data) {
+          chart.state = 'idle';
+          if ( _.isObject(chart.instance) )
+            chart.instance.hideLoading();
 
-                  // Cull any data older than the window
-                  var data_until = null;
-                  _.each(
-                      chart.series_data,
-                      function(series_data) {
-                        if (series_data.length > 0) {
-                          var latest_ts = series_data[series_data.length - 1][0];
-                          if (data_until == null || data_until < latest_ts) {
-                            data_until = latest_ts;
-                          }
-                          var newest_trash = null;
-                          for (var i = 0; i < series_data.length - 1; i++) {
-                            if (series_data[i][0] < (latest_ts - config.default_time_boundary)) {
-                              newest_trash = i;
-                            } else {
-                              break;
-                            }
-                          }
-                          if (newest_trash != null) {
-                            series_data.splice(0, newest_trash + 1)
-                          }
-                        }
-                      }
-                  );
-
-                  // shift the floating end
-                  if (data_until) {
-                    chart.series_end = new Date(data_until);
-                    log("Updated series end " + chart.series_end);
-                  } else {
-                    log("No data");
-                  }
-
-                  // Update highcharts from series_data
-                  _.each(
-                      chart.instance.series,
-                      function(series,i) {
-                        series.setData(chart.series_data[i], false)
-                      }
-                  );
+          if (chart.snapshot) {
+            // Latest-value chart
+            chart.reset_series();
+            chart.snapshot_callback(chart, data);
+          } else {
+            // Time series chart
+            if (chart.data_callback) {
+              // If data_callback is provided, it will update series_data for us
+              var series_updates = chart.data_callback(chart, data);
+              _.each(series_updates, function(series_update, series_id) {
+                if (chart.series_id_to_index[series_id] == undefined) {
+                  var series_conf = $.extend(true, {}, chart.series_template, {name: series_update.label})
+                  var added_series = chart.instance.addSeries(series_conf);
+                  chart.series_id_to_index[series_id] = added_series.index;
+                  chart.series_data[added_series.index] = []
                 }
 
-                chart.instance.redraw();
-            },
-            error_callback = null,
-            blocking = false
-        );
+                var i = chart.series_id_to_index[series_id];
+                chart.series_data[i].push.apply(chart.series_data[i], series_update.data);
+              });
+            } else {
+              // Updates series_data from data
+              $.each(data, function(key, datapoint) {
+                var timestamp = new Date(datapoint.ts).getTime();
+                if (chart.series_callbacks) {
+                  // If series_callbacks are provided, call them per series
+                  _.each( chart.series_callbacks, function(series_callback, i) {
+                    series_callback(timestamp, datapoint.data, i, chart );
+                  });
+                } else {
+                  // By default, pass through values to series in order of metrics list
+                  _.each(chart.metrics, function(metric, i) {
+                    chart.series_data[i].push([timestamp, datapoint.data[metric]]);
+                  });
+                }
+              });
+            }
+
+            // Cull any data older than the window
+            var data_until = null;
+            _.each(
+              chart.series_data,
+              function(series_data) {
+                if (series_data.length > 0) {
+                  var latest_ts = series_data[series_data.length - 1][0];
+                  if (data_until == null || data_until < latest_ts) {
+                    data_until = latest_ts;
+                  }
+                  var newest_trash = null;
+                  for (var i = 0; i < series_data.length - 1; i++) {
+                    if (series_data[i][0] < (latest_ts - config.default_time_boundary)) {
+                      newest_trash = i;
+                    } else {
+                      break;
+                    }
+                  }
+                  if (newest_trash != null) {
+                    series_data.splice(0, newest_trash + 1)
+                  }
+                }
+              }
+            );
+
+            // shift the floating end
+            if (data_until) {
+              chart.series_end = new Date(data_until);
+              log("Updated series end " + chart.series_end);
+            } else {
+              log("No data");
+            }
+
+            console.log('heyo');
+            console.log(chart.series_data);
+            // Update highcharts from series_data
+            _.each(
+              chart.instance.series,
+              function(series,i) {
+                series.setData(chart.series_data[i], false)
+              }
+            );
+          }
+
+          chart.instance.redraw();
+        },
+        error_callback = null,
+        blocking = false
+      );
     }
 
     var init = function() {
