@@ -1,254 +1,185 @@
-      <link href="{{STATIC_URL}}css/js-graph-it.css" rel="stylesheet" type="text/css" />
-      <link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
-      <script type="text/javascript" src="{{STATIC_URL}}js/chart_manager.js"></script>
-      <script type="text/javascript" src="{{STATIC_URL}}js/dashboard.js"></script>
-      <script type="text/javascript" src="{{STATIC_URL}}js/dashboard_filesystem.js"></script>
-      <script type="text/javascript" src="{{STATIC_URL}}js/dashboard_oss.js"></script>
-      <script type="text/javascript" src="{{STATIC_URL}}js/dashboard_ost.js"></script>
-      <script type="text/javascript" src="{{STATIC_URL}}js/graph_loader.js"></script>
-      <script id="source" language="javascript" type="text/javascript">
+<link href="{{STATIC_URL}}css/js-graph-it.css" rel="stylesheet" type="text/css" />
+<link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="{{STATIC_URL}}js/chart_manager.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/dashboard.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/dashboard_filesystem.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/dashboard_oss.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/dashboard_ost.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/graph_loader.js"></script>
+<script id="source" language="javascript" type="text/javascript">
 
-      $(document).ready(function() {
-        // This will show the chart time based on client timezone
-        Highcharts.setOptions({
-          global:{
-          useUTC:false
-          }
-        });
+$(document).ready(function() {
+// This will show the chart time based on client timezone
+Highcharts.setOptions({
+  global:{
+  useUTC:false
+  }
+});
 
-        $('.magbutton').button({icons: {primary: 'ui-icon-zoomin'}});
-		
-		// Zooming
-		
-      });
-      </script>
-      	<!-- Breadcrumb menu and time interval selection - Start -->
-    	<table id='dashboard_navigation' width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px; border-color: blue;">
-          <tr style="background-color: #ccc">
-            <td width="50%">
-              <div class="breadCrumbHolder module">
-               <div id="breadCrumb0" class="breadCrumb module">
+$('.magbutton').button({icons: {primary: 'ui-icon-zoomin'}});
 
-               </div>
-              </div>
-            </td>
-            <td width="50%">
-              <div class="timeint">
+// Zooming
+
+});
+</script>
+
+<table id='dashboard_navigation' width="100%" border="0" cellspacing="0" cellpadding="3" align="center"
+       style="border: 1px; border-color: blue;">
+    <tr style="background-color: #ccc">
+        <td width="50%">
+            <div class="breadCrumbHolder module">
+                <div id="breadcrumbs" class="breadCrumb module">
+                </div>
+            </div>
+        </td>
+        <td width="50%">
+            <div class="timeint">
                 <input id="polling" type="checkbox" class="polling_checkbox_margin">Auto Refresh</input>
-                &nbsp;&nbsp;<font color="black">|</font> 
+                &nbsp;&nbsp;<font color="black">|</font>
                 Time Interval: &nbsp;
                 <select id="unitSelect">
-                  <option value=''>Select</option>
+                    <option value=''>Select</option>
                 </select>
                 <select id="intervalSelect">
-                  <option value="">Select</option>
-                  <option value="minutes" selected='selected'>Minutes</option>
-                  <option value="hour">Hour</option>
-                  <option value="day">Day</option>
-                  <option value="week">Week</option>
+                    <option value="">Select</option>
+                    <option value="minutes" selected='selected'>Minutes</option>
+                    <option value="hour">Hour</option>
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
                 </select>
                 &nbsp;&nbsp;<font color="black">|</font>
+            </div>
+        </td>
+    </tr>
+</table>
 
-
-              </div>
+<div id="dashboard_page_global" class='dashboard_page'>
+    <table class='chart_grid'>
+        <tr>
+            <td valign="top" align="center">
+                <div class='chart' id="global_usage"></div>
             </td>
-          </tr>
-        </table>
-        <!-- Breadcrumb menu nad time interval selection - End -->
-             
-        <div id="dashboard_page_global" class='dashboard_page'>
-          <table class='chart_grid'>
-            <tr>
-              <td valign="top"  align="center">
-                <div class='chart' id="global_usage" >All File System Space Usage</div>
-              </td>
-              <td valign="top"  align="center">
-                <div class='chart' id="global_client_count" >Connected Clients</div>
-              </td>
-              <td valign="top"  align="left">
-                <div id="container_fs_list">
-                  <table id="allFileSystemSummaryTbl" class="display">
-                    <thead>
-                      <tr>
-                        <th>Filesystem</th>
-                        <th>OST</th>
-                        <th>Total</th>
-                        <th>Free</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                  </table>
+            <td valign="top" align="center">
+                <div class='chart' id="global_client_count"></div>
+            </td>
+            <td valign="top" align="left">
+                <div id="container_fs_list" class="chart_info_pane">
+                    <table id="global_filesystem_table">
+                        <thead>
+                        <tr>
+                            <th class='icon_column'></th>
+                            <th>Filesystem</th>
+                            <th>Total</th>
+                            <th>Free</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
                 </div>
-              </td>
-            </tr>
-            <tr>
-              <td valign="top"  align="center">
-                <div class="magni">
-                  <button value="" class="magbutton" 
-                  onclick="db_LineBar_CpuMemoryUsage_Data('true');setZoomDialogTitle('All File Systems: CPU and Memory Usage');" />
-                </div>
-                <div class='chart' id="global_cpu_mem" >Filesystems CPU and Memory Usage</div>
-              </td>
-              <td valign="top"  align="center">
-                <div class="magni">
-                  <button value="" class="magbutton" 
-                  onclick="db_Area_ReadWrite_Data('true');setZoomDialogTitle('All File Systems: Disk Read and Write');" />
-                </div>
-                <div class='chart' id="global_read_write" >Filesystems Disk Read and Write</div>
-              </td>
-              <td valign="top"  align="center">
-                <div class="magni">
-                  <button value="" class="magbutton"
-                  onclick="db_Area_mdOps_Data('true');setZoomDialogTitle('All File Systems: Metadata op/s');" />
-                </div>
-                <div class='chart' id="global_metadata_ops" >Metadata op/s</div>
-              </td>
-            </tr>
-            <tr>
-              <td colspan="3">
-                <div class="magni">
-                  <button class="magbutton" 
-                  onclick="db_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
-                </div>
+            </td>
+        </tr>
+        <tr>
+            <td valign="top" align="center">
+                <div class='chart' id="global_cpu_mem"></div>
+            </td>
+            <td valign="top" align="center">
+                <div class='chart' id="global_read_write"></div>
+            </td>
+            <td valign="top" align="center">
+                <div class='chart' id="global_metadata_ops"></div>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
                 <div class='chart' id="global_ost_bandwidth"></div>
-              </td>
-            </tr>
-          </table>
-          </div>
-          <!-- Dashboard Div - End -->
+            </td>
+        </tr>
+    </table>
+</div>
 
-          <!-- FileSystem Div - Start -->
-          <div id="dashboard_page_filesystem" class='dashboard_page' style="display: none">
-            <table class='chart_grid'>
-			  <tr>
-                <td valign="top" align="center" style="font-family: Verdana, Arial, Helvetica, sans-serif;">
-                  <table id="fileSystemSummaryTbl" width="100%">
-                  </table>
-                </td>
-                <td width="30%" valign="top"  align="center">
-                 <div id="fs_container2" class="chart" >File system space usage</div>
-                </td>
-                <td width="30%" valign="top"  align="center">
-                  <div id="fs_container3" class="chart" >Connected clients</div>
-                </td>
-              </tr>
-              <tr>
-                <td valign="top"  width="30%" align="center">
-                  <div class="magni">
-                    <button value="" class="magbutton" 
-                    onclick="fs_LineBar_CpuMemoryUsage_Data($('#ls_fsId').val(), startTime, endTime, 'Average', 'OST', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('File System: CPU and Memory Usage');" />
-                  </div>
-                  <div id="fs_avgCPUDiv" class="chart" >Server CPU and Memory Usage</div>
-                </td>
-                <td valign="top"  align="center">
-                  <div class="magni">
-                    <button value="" class="magbutton" 
-                    onclick="fs_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('File System: Disk Read and Write');" />
-                  </div>
-                  <div id="fs_avgMemoryDiv" class="chart" >Disk Read and Write</div>
-                </td>
-                <td valign="top"  width="30%" align="center">
-                  <div class="magni">
-                    <button value="" class="magbutton" 
-                    onclick="fs_Area_mdOps_Data($('#ls_fsId').val(), startTime, endTime, 'Average', 'MDT', mdOpsFetchmatric, 'true');setZoomDialogTitle('File System: Metadata op/s');" />
-                  </div>
-                  <div id="fs_avgReadDiv" class="chart" >Metadata op/s</div>
-                </td>
-              </tr>
-	            <tr>
-	              <td colspan="3">
-				            <table border="0" align="center">
-				              <tr>
-				                <td valign="top"  align="center">
-				                  <div class="magni">
-				                    <button class="magbutton"  
-				                    onclick="fs_AreaSpline_ioOps_Data('true');setZoomDialogTitle('OST Stats');" />
-				                  </div>
-				                  <div id="fs_iopsSpline" class="chart"></div>
-				                </td>
-				              </tr>
-				            </table>
-	              </td>
-	            </tr>   
-            </table>
-          </div>
-          <!-- FileSystem Div - End -->
+<div id="dashboard_page_filesystem" class='dashboard_page' style="display: none">
+    <table class='chart_grid'>
+        <tr>
+            <td valign="top">
+                <div class='chart_info_pane'>
+                    <h2 id="filesystem_name"></h2>
+                    <table id="fileSystemSummaryTbl" width="100%">
+                    </table>
+                </div>
+            </td>
+            <td width="30%" valign="top" align="center">
+                <div id="filesystem_usage" class="chart"></div>
+            </td>
+            <td width="30%" valign="top" align="center">
+                <div id="filesystem_client_count" class="chart"></div>
+            </td>
+        </tr>
+        <tr>
+            <td valign="top" width="30%" align="center">
+                <div id="filesystem_cpu_mem" class="chart"></div>
+            </td>
+            <td valign="top" align="center">
+                <div id="filesystem_read_write" class="chart"></div>
+            </td>
+            <td valign="top" width="30%" align="center">
+                <div id="filesystem_md_ops" class="chart"></div>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                <div id="filesystem_ost_read_write" class="chart"></div>
+            </td>
+        </tr>
+    </table>
+</div>
 
-          <!-- FileSystem Servers Div - Start -->
-          <div id="dashboard_page_server" class='dashboard_page' style="display: none">
-            <table class='chart_grid'>
-              <tr>
-                <td colspan="4">
-                  <div id="ossSummaryTblDiv" style="display: none">
-                  	<table id="ossSummaryTbl" width="40%" align="left">
-                  	</table>
-                  </div>
-                </td>
-                <td></td>
-                <td></td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="magni">
-                    <button value="" class="magbutton"
-                    onclick="oss_LineBar_CpuMemoryUsage_Data($('#ls_ossId').val(), startTime, endTime, 'Average', cpuMemoryFetchMatric, 'true');setZoomDialogTitle('Server: CPU and Memory Usage');" />   
-                  </div>
-                  <div id="oss_avgReadDiv" class="chart">Server CPU and Memory</div>
-                </td>
-                <td>
-                  <div class="magni">
-                    <button value="" class="magbutton"
-                     onclick="oss_Area_ReadWrite_Data($('#ls_fsId').val(), startTime, endTime, 'Average', 'OST', readWriteFetchMatric, 'true');setZoomDialogTitle('Server: Disk Read and Write');" />  
-                  </div>
-                  <div id="oss_avgWriteDiv" class="chart" >Disk Read and Write</div>
-                </td>
-                <td></td>
-              </tr>
-            </table>
-          </div>
-          <!-- FileSystem Servers Div - End -->
-           
-          <!-- Filesystem Targets  Div - Start -->
-          <div id="dashboard_page_target" class='dashboard_page' style="display: none">
-            <table class='chart_grid'>
-              <tr>
-                <td>
-                  <table id="ostSummaryTbl" width="100%">
-                  </table>
-                </td>
-                <td width="25%" valign="top"  align="center">
-                  <div id="target_space_usage_container" class="chart">Space Usage</div>
-                </td>
-                <td>
-                  <div id="target_inodes_container" class="chart">Files Vs Free Inodes</div>
-                </td>
-                <td></td>
-              </tr>
-              <tr>
-                <td>
-                  <div id="target_read_write_container_div" style="display: none">
-                    <div class="magni">
-	                    <button class="magbutton" />
-	                  </div>
-	                  <div id="target_read_write_container" class="chart">Disk Read and Write</div>
-	                </div>
-                </td>
-                <td>
-                  <div id="target_mgt_ops_container_div" style="display: none">
-                    <div class="magni">
-                      <button class="magbutton" />
-                    </div>
-                    <div id="target_mgt_ops_container" class="chart">Metadata op/s</div>
-                  </div>
-                </td>
-                <td></td>
-              </tr>
-            </table>
-          </div>
+<div id="dashboard_page_server" class='dashboard_page' style="display: none">
+    <table class='chart_grid'>
+        <tr>
+            <td>
+                <div id="server_detail" class="chart_info_pane"></div>
+            </td>
+            <td>
+                <div id="server_read_write" class="chart"></div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div id="server_cpu" class="chart"></div>
+            </td>
+            <td>
+                <div id="server_mem" class="chart"></div>
+            </td>
+        </tr>
+    </table>
+</div>
 
-          <!-- FileSystem Targets Div - End -->
-        <input type='hidden' id='zoomed_graph_id' name='zoomed_graph_id' value='' />
-        <div id="zoomDialog" title="All File System CPU Usage">
-          <div id="dialog_avgCPUDiv"></div>
-        </div>
+<div id="dashboard_page_target" class='dashboard_page' style="display: none">
+    <table class='chart_grid'>
+        <tr>
+            <td>
+                <table id="ostSummaryTbl" width="100%">
+                </table>
+            </td>
+            <td width="25%" valign="top" align="center">
+                <div id="target_space_usage_container" class="chart"></div>
+            </td>
+            <td>
+                <div id="target_inodes_container" class="chart"></div>
+            </td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>
+                <div id="target_read_write_container_div" style="display: none"></div>
+            </td>
+            <td>
+                <div id="target_mdt_ops_container_div" style="display: none">
+                    <div id="target_mdt_ops_container" class="chart"></div>
+                </div>
+            </td>
+            <td></td>
+        </tr>
+    </table>
+</div>

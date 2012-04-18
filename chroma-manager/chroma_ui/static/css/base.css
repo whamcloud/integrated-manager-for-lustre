@@ -968,3 +968,16 @@ table.properties td {
 .job_row a.navigation:hover {
     text-decoration: underline;
 }
+
+.chart_info_pane {
+    padding: 6px;
+}
+
+.chart_info_pane h2 {
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+.chart_info_pane table {
+    font-size: 9pt;
+}

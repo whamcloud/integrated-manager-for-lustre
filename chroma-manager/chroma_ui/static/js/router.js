@@ -175,21 +175,17 @@ var ChromaRouter = Backbone.Router.extend({
     FilesystemCreateView.draw()
   },
   dashboard: function() {
-    console.log('dashboard');
     this.dashboard_type('filesystem');
   },
   dashboard_type: function(type) {
-    console.log('dashboard_type');
     this.toplevel('dashboard');
     Dashboard.setPath(type);
   },
   dashboard_servers: function(server_id, target_id) {
-    console.log('dashboard_servers');
     this.toplevel('dashboard');
     Dashboard.setPath('server', server_id, target_id);
   },
   dashboard_filesystems: function(filesystem_id, target_id) {
-    console.log('dashboard_filesystems');
     this.toplevel('dashboard');
     Dashboard.setPath('filesystem', filesystem_id, target_id);
   }

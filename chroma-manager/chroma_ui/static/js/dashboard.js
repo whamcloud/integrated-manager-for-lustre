@@ -7,10 +7,12 @@
 var Dashboard = function(){
   var initialized = false;
   var chart_manager = null;
+
   var dashboard_type;
   var dashboard_server;
   var dashboard_target;
   var dashboard_filesystem;
+
   var polling_enabled = true;
   var time_period;
 
@@ -18,34 +20,25 @@ var Dashboard = function(){
     function updateUnits(interval_select) {
       var intervalValue = interval_select.val();
       var unitSelectOptions = "";
-      if(intervalValue == "")
-      {
+
+      var max_vals = {
+        'seconds': 60,
+        'minutes': 60,
+        'hour': 24,
+        'day': 31,
+        'week': 4,
+        'month': 12
+      };
+      if(intervalValue == "") {
         unitSelectOptions = "<option value=''>Select</option>";
+      } else {
+        unitSelectOptions="<option value=''>Select</option>";
+        for(var i=1; i<max_vals[intervalValue]; i++)
+        {
+          unitSelectOptions = unitSelectOptions + "<option value="+i+">"+i+"</option>";
+        }
       }
-      else if(intervalValue == "seconds")
-      {
-        unitSelectOptions = getUnitSelectOptions(61);
-      }
-      else if(intervalValue == "minutes")
-      {
-        unitSelectOptions = getUnitSelectOptions(61);
-      }
-      else if(intervalValue == "hour")
-      {
-        unitSelectOptions = getUnitSelectOptions(24);
-      }
-      else if(intervalValue == "day")
-      {
-        unitSelectOptions = getUnitSelectOptions(32);
-      }
-      else if(intervalValue == "week")
-      {
-        unitSelectOptions = getUnitSelectOptions(5);
-      }
-      else if(intervalValue == "month")
-      {
-        unitSelectOptions = getUnitSelectOptions(13);
-      }
+
       $("select[id=unitSelect]").html(unitSelectOptions);
     }
     $("select[id=intervalSelect]").change(function()
@@ -54,7 +47,19 @@ var Dashboard = function(){
     });
 
     $("select[id=unitSelect]").change(function(){
-      setStartEndTime($(this).prev('font').prev('select').find('option:selected').val(), $(this).find('option:selected').val(), "");
+
+      var timeUnit = $(this).next('select').find('option:selected').val();
+      var timeValue = $(this).find('option:selected').val();
+
+      var factor = {
+        minutes: 60,
+        hour: 3600,
+        day: 3600 * 24,
+        week: 7 * 24 * 3600
+      };
+
+      time_period = factor[timeUnit] * timeValue;
+      init_charts(chart_manager.config.chart_group);
     });
 
     // Set defaults
@@ -95,7 +100,6 @@ var Dashboard = function(){
     $("#breadcrumb_target").live('change', function ()
     {
       var target_id = $(this).val();
-      console.log('select target ' + target_id);
       if(target_id) {
         if (dashboard_filesystem) {
           Backbone.history.navigate("/dashboard/filesystem/" + dashboard_filesystem.id + "/target/" + target_id + "/", {trigger: true});
@@ -160,8 +164,6 @@ var Dashboard = function(){
     dashboard_server = undefined;
     dashboard_target = undefined;
     dashboard_filesystem = undefined;
-
-    console.log(type + " > " + id_1 + " > " + id_2);
 
     if (id_1) {
       if (type == 'server') {
@@ -232,7 +234,7 @@ var Dashboard = function(){
           "</select>"+
           "</li>"+
           "</ul>";
-        $("#breadCrumb0").html(breadCrumbHtml);
+        $("#breadcrumbs").html(breadCrumbHtml);
 
         $('#ossSummaryTblDiv').show();
         $('#serverSummaryTblDiv').show();
@@ -244,9 +246,6 @@ var Dashboard = function(){
   function load_target_page()
   {
     dashboard_page('target');
-
-    $('#dashboard_page_global').hide();$('#fileSystemDiv').hide();$('#ossInfoDiv').hide();
-    $('#ostInfoDiv').show();
 
     var breadCrumbHtml = "<ul>"+
       "<li><a href='dashboard/' class='home_icon navigation'>Home</a></li>"+
@@ -260,7 +259,7 @@ var Dashboard = function(){
     breadCrumbHtml += "<li>"+dashboard_target.label+"</li>"+
       "</ul>";
 
-    $("#breadCrumb0").html(breadCrumbHtml);
+    $("#breadcrumbs").html(breadCrumbHtml);
 
     if (dashboard_target.filesystem) {
       var innerContent = "";
@@ -362,7 +361,7 @@ var Dashboard = function(){
           "</select>"+
           "</li>"+
           "</ul>";
-        $("#breadCrumb0").html(breadCrumbHtml);
+        $("#breadcrumbs").html(breadCrumbHtml);
         populate_breadcrumb_filesystem(ApiCache.list('filesystem'), dashboard_filesystem.id);
 
         $("#ostKind").html(ostKindMarkUp);
@@ -370,44 +369,29 @@ var Dashboard = function(){
 
     init_charts('filesystem');
 
+    $('#filesystem_name').html(dashboard_filesystem.label);
     var innerContent = "";
-    $('#fileSystemSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
-      "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' />" +
-      "</td></tr>");
-
     innerContent = innerContent +
       "<tr>" +
-      "<td class='greybgcol'>MGS :</td>" +
-      "<td class='tblContent greybgcol'>"+dashboard_filesystem.mgt.primary_server_name+"</td>" +
-      "<td>&nbsp;</td>" +
-      "<td>&nbsp;</td>" +
+      "<td>MGS :</td>" +
+      "<td>"+dashboard_filesystem.mgt.primary_server_name+"</td>" +
       "</tr>"+
       "<tr>" +
-      "<td class='greybgcol'>MDS:</td>" +
-      "<td class='tblContent greybgcol'>"+dashboard_filesystem.mdts[0].primary_server_name+"</td>" +
-      "<td>&nbsp;</td>" +
-      "<td>&nbsp;</td>" +
+      "<td>MDS:</td>" +
+      "<td>"+dashboard_filesystem.mdts[0].primary_server_name+"</td>" +
       "</tr>"+
       "<tr>" +
-      "<td class='greybgcol'>Total OSTs:</td>" +
-      "<td class='tblContent txtleft'>"+dashboard_filesystem.osts.length+"</td>" +
-      "<td>&nbsp;</td>" +
-      "<td>&nbsp;</td>" +
+      "<td>Total OSTs:</td>" +
+      "<td>"+dashboard_filesystem.osts.length+"</td>" +
       "</tr>"+
       "<tr>" +
-      "<td class='greybgcol'>Total Capacity: </td>" +
-      "<td class='tblContent greybgcol'>"+formatBytes(dashboard_filesystem.bytes_total)+" </td>" +
-      "<td class='greybgcol'>Total Free:</td>" +
-      "<td class='tblContent txtleft'>"+formatBytes(dashboard_filesystem.bytes_free)+"</td>" +
+      "<td>Capacity used: </td>" +
+      "<td>"+formatBytes(dashboard_filesystem.bytes_total - dashboard_filesystem.bytes_free)+"/" + formatBytes(dashboard_filesystem.bytes_total) + "</td>" +
       "</tr>"+
       "<tr>" +
-      "<td class='greybgcol'>Files Total: </td>" +
-      "<td class='tblContent greybgcol'>"+formatBigNumber(dashboard_filesystem.files_total)+" </td>" +
-      "<td class='greybgcol'>Files Free:</td>" +
-      "<td class='tblContent txtleft'>"+formatBigNumber(dashboard_filesystem.files_free)+"</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td class='greybgcol'>Status:</td>";
+      "<td>Files used: </td>" +
+      "<td>"+formatBigNumber(dashboard_filesystem.files_total - dashboard_filesystem.files_free)+"/" + formatBigNumber(dashboard_filesystem.files_total) + "</td>" +
+      "</tr>";
 
     $('#fileSystemSummaryTbl').html(innerContent);
   }
@@ -416,22 +400,14 @@ var Dashboard = function(){
   function load_global_page()
   {
     dashboard_page('global');
-    var allfileSystemsSummaryContent = "<tr>"+
-      "<td align='center' colspan='4'>"+
-      "<b>All Filesystems Summary</b></td>" +
-      "</tr>"+
-      "<tr>"+
-      "<td width='25%' align='left' valign='top'>"+
-      "<span class='fontStyle style2 style9'><b>File system</b></span></td>"+
-      "<td width='5%' align='right' valign='top'>"+
-      "<span class='fontStyle style2 style9'><b>OSS</b></span></td>"+
-      "<td width='5%' align='right' valign='top' >"+
-      "<span class='fontStyle style2 style9'><b>OST</b></span></td>"+
-      "<td width='33%' align='right' valign='top' >"+
-      "<span class='fontStyle style2 style9'><b>Total Space</b></span></td>"+
-      "<td width='33%' align='right' valign='top' >"+
-      "<span class='fontStyle style2 style9'><b>Free Space</b></span></td>" +
-      "</tr>";
+
+    var filesystem_rows = "";
+    _.each(ApiCache.list('filesystem'), function(filesystem) {
+      var t = _.template("<tr><td class='icon_columns'><%= LiveObject.alertIcon(filesystem) %></td><td><%= filesystem.name %></td><td><%= formatBytes(filesystem.bytes_total) %></td><td><%= formatBytes(filesystem.bytes_free) %></td></tr>");
+      filesystem_rows += t({filesystem: filesystem});
+    });
+    $('#global_filesystem_table').find('tbody').html(filesystem_rows);
+
 
     var breadCrumbHtml = "<ul>" +
     "  <li><a href='dashboard/' class='home_icon navigation'>Home</a></li>" +
@@ -449,7 +425,7 @@ var Dashboard = function(){
     "  </li>" +
     "</ul>";
 
-    $('#breadCrumb0').html(breadCrumbHtml);
+    $('#breadcrumbs').html(breadCrumbHtml);
     if (dashboard_type == 'filesystem') {
       $('#breadcrumb_server').hide();
       populate_breadcrumb_filesystem(ApiCache.list('filesystem'));
@@ -457,8 +433,42 @@ var Dashboard = function(){
       $('#breadcrumb_filesystem').hide();
       populate_breadcrumb_server(ApiCache.list('server'));
     }
-
+    $(this).find('option:selected').val()
     init_charts('dashboard');
+  }
+
+  function bytes_rate_formatter() {
+    return bytes_formatter.apply(this) + "/s";
+  }
+
+  function bytes_formatter() {
+    if (this.value < 0) {
+      this.value = this.value * -1;
+    }
+
+    if (this.value == 0) {
+      // No units on zeros, it's meaningless.
+      return this.value;
+    }
+
+    var l = "" + formatBytes(this.value, 0);
+    if (l[0] == '-') {
+      return l.substr(1)
+    } else {
+      return l;
+    }
+  }
+
+  function percentage_formatter() {
+    return this.value + "%";
+  }
+
+  function whole_numbers_only_formatter() {
+    if (Math.round(this.value) != this.value){
+      return ""
+    } else {
+      return this.value;
+    }
   }
 
   function init_charts(chart_group) {
@@ -471,7 +481,7 @@ var Dashboard = function(){
     if (!_.isNull(chart_manager)) {
       chart_manager.destroy();
     }
-    chart_manager = ChartManager({chart_group: 'dashboard'});
+    chart_manager = ChartManager({chart_group: 'dashboard', default_time_boundary: time_period * 1000});
     chart_manager.add_chart('db_line_cpu_mem', 'dashboard', {
       url: 'host/metric/',
       api_params: { reduce_fn: 'average' },
@@ -496,8 +506,9 @@ var Dashboard = function(){
         xAxis: { type:'datetime' },
         legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0},
         yAxis: [{
-          title: { text: 'Percentage' },
-          max:100, min:0, startOnTick:false,  tickInterval: 20
+          max:100, min:0, startOnTick:false,  tickInterval: 20,
+          title: null,
+          labels: {formatter: percentage_formatter}
         }],
         series: [
           { type: 'line', data: [], name: 'cpu' },
@@ -542,8 +553,11 @@ var Dashboard = function(){
           renderTo: 'global_ost_bandwidth'
         },
         title: { text: 'OST read/write bandwidth'},
-        xAxis: { type:'datetime' },
-        yAxis: [{title: { text: 'Bytes/s' }}],
+        xAxis: {type:'datetime'},
+        yAxis: [{
+          title: null,
+          labels: {formatter: bytes_rate_formatter}
+        }],
         plotOptions: {
           areaspline: {
             stacking: 'normal'
@@ -563,7 +577,7 @@ var Dashboard = function(){
         chart: {
           renderTo: 'global_metadata_ops'
         },
-        title: { text: 'Metadata op/s'},
+        title: { text: 'Metadata operations'},
         xAxis: { type:'datetime' },
         yAxis: [{title: { text: 'MD op/s' }}],
         colors: [
@@ -612,17 +626,9 @@ var Dashboard = function(){
         },
         title: { text: 'Read/write bandwidth'},
         xAxis: { type:'datetime' },
-        yAxis: [{title: { text: 'Bytes/s' }, labels: {formatter: function() {
-          if (this.value < 0) {
-            this.value = this.value * -1;
-          }
-          var l = "" + formatBytes(this.value, 0);
-          if (l[0] == '-') {
-            return l.substr(1)
-          } else {
-            return l;
-          }
-        }}}],
+        yAxis: [
+          {title: null,
+           labels: {formatter: bytes_rate_formatter}}],
         series: [
           { type: 'area', name: 'read' },
           { type: 'area', name: 'write' }
@@ -682,7 +688,7 @@ var Dashboard = function(){
         chart: {
           renderTo: 'global_usage'
         },
-        title: { text: 'Space usage'},
+        title: { text: 'Usage'},
         series: [
           { type: 'column', stack: 0, name: 'Free bytes'},
           { type: 'column', stack: 0, name: 'Used bytes'},
@@ -696,7 +702,12 @@ var Dashboard = function(){
           }
         },
         xAxis:{ categories: ['Usage'], text: '', labels : {align: 'right', rotation: 310, style:{fontSize:'8px', fontWeight:'regular'} } },
-        yAxis:{max:100, min:0, startOnTick:false, title:{text:'Percentage'}, plotLines: [ { value: 0,width: 1, color: '#808080' } ] },
+        yAxis:{
+          max:100, min:0, startOnTick:false,
+          title:null,
+          labels: {formatter: percentage_formatter},
+          plotLines: [ { value: 0,width: 1, color: '#808080' } ]
+        },
         labels:{ items:[{html: '',style:{left: '40px',top: '8px',color: 'black'}}]},
         colors: [
           '#A6C56D',
@@ -717,7 +728,8 @@ var Dashboard = function(){
         },
         title: { text: 'Client count'},
         xAxis: { type:'datetime' },
-        yAxis: [{title: { text: 'Clients' }}],
+        yAxis: [
+          {title: null, labels: {formatter: whole_numbers_only_formatter}}],
         series: [
           { type: 'line', data: [], name: 'Client count' }
         ]
@@ -726,10 +738,10 @@ var Dashboard = function(){
 
     // oss
     chart_manager.chart_group('servers');
-    chart_manager.add_chart('cpu_mem','servers', {
+    chart_manager.add_chart('cpu','servers', {
       url: function() { return 'host/' + dashboard_server.id + '/metric/'; },
       api_params: { reduce_fn: 'average' },
-      metrics: ["cpu_total", "cpu_user", "cpu_system", "cpu_iowait", "mem_MemFree", "mem_MemTotal"],
+      metrics: ["cpu_total", "cpu_user", "cpu_system", "cpu_iowait"],
       series_callbacks: [
         function(timestamp, data, index, chart) {
           var pct_user = ((100 * data.cpu_user + (data.cpu_total / 2)) / data.cpu_total);
@@ -742,23 +754,57 @@ var Dashboard = function(){
         function(timestamp, data, index, chart) {
           var pct_iowait = ((100 * data.cpu_iowait + (data.cpu_total / 2)) / data.cpu_total);
           chart.series_data[index].push( [ timestamp, pct_iowait] );
-        },
-        function( timestamp, data, index, chart ) {
-          var pct_mem  = 100 * ( ( data.mem_MemTotal - data.mem_MemFree )/ data.mem_MemTotal );
-          chart.series_data[index].push( [ timestamp, pct_mem ]);
         }
       ],
       chart_config: {
-        chart: { renderTo: 'oss_avgReadDiv', width: 500 },
-        title: { text: 'Server CPU and Memory'},
+        chart: { renderTo: 'server_cpu'},
+        title: { text: 'CPU usage'},
         xAxis: { type:'datetime' },
         legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0},
         yAxis: [{
-          title: { text: 'Percentage' },
+          title: null,
+          labels: {formatter: percentage_formatter},
           max:100, min:0, startOnTick:false,  tickInterval: 20
         }],
         series: _.map(
-          [ 'user','system','iowait','mem'],
+          [ 'user','system','iowait'],
+          function(metric) { return { type: 'line', data: [], name: metric }; }
+        )
+      }
+    });
+
+    chart_manager.chart_group('servers');
+    chart_manager.add_chart('mem','servers', {
+      url: function() { return 'host/' + dashboard_server.id + '/metric/'; },
+      api_params: { reduce_fn: 'average' },
+      metrics: ["mem_MemFree", "mem_MemTotal", 'mem_SwapTotal', 'mem_SwapFree'],
+
+      series_callbacks: [
+        function( timestamp, data, index, chart ) {
+          chart.series_data[index].push( [ timestamp, data.mem_MemTotal*1024 ]);
+        },
+        function( timestamp, data, index, chart ) {
+          chart.series_data[index].push( [ timestamp, data.mem_MemTotal*1024 - data.mem_MemFree*1024]);
+        },
+        function( timestamp, data, index, chart ) {
+          chart.series_data[index].push( [ timestamp, data.mem_SwapTotal*1024 ]);
+        },
+        function( timestamp, data, index, chart ) {
+          chart.series_data[index].push( [ timestamp, data.mem_SwapTotal*1024 - data.mem_SwapFree*1024 ]);
+        }
+      ],
+      chart_config: {
+        chart: { renderTo: 'server_mem'},
+        title: { text: 'Memory usage'},
+        xAxis: { type:'datetime'},
+        legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0},
+        yAxis: [{
+          title: null,
+          labels: {formatter: bytes_formatter},
+          min: 0
+        }],
+        series: _.map(
+          ['Total memory', 'Used memory', 'Total swap', 'Used swap'],
           function(metric) { return { type: 'line', data: [], name: metric }; }
         )
       }
@@ -778,10 +824,13 @@ var Dashboard = function(){
         }
       ],
       chart_config: {
-        chart: { renderTo: 'oss_avgWriteDiv', width: 500 },
+        chart: { renderTo: 'server_read_write'},
         title: { text: 'Read/write bandwidth'},
         xAxis: { type:'datetime' },
-        yAxis: [{title: { text: 'Bytes/s' }}],
+        yAxis: [{
+          title: null,
+          labels: {formatter: bytes_rate_formatter}
+        }],
         series: [
           { type: 'area', name: 'read' },
           { type: 'area', name: 'write' }
@@ -800,9 +849,9 @@ var Dashboard = function(){
         var free=0,used=0;
         var totalDiskSpace=0,totalFreeSpace=0;
         if ( _.isObject(data[0])) {
-          totalFreeSpace = data[0].data.kbytesfree/1024;
-          totalDiskSpace = data[0].data.kbytestotal/1024;
-          free = Math.round(((totalFreeSpace/1024)/(totalDiskSpace/1024))*100);
+          totalFreeSpace = data[0].data.kbytesfree;
+          totalDiskSpace = data[0].data.kbytestotal;
+          free = Math.round(((totalFreeSpace)/(totalDiskSpace))*100);
           used = Math.round(100 - free);
         }
         chart.instance.series[0].setData([ ['Free', free], ['Used', used] ]);
@@ -855,15 +904,15 @@ var Dashboard = function(){
         var free=0,used=0;
         var totalFiles=0,totalFreeFiles=0;
         if ( _.isObject(data[0])) {
-          totalFiles = data[0].data.filesfree/1024;
-          totalFreeFiles = data[0].data.filestotal/1024;
-          free = Math.round(((totalFiles/1024)/(totalFreeFiles/1024))*100);
+          totalFiles = data[0].data.filesfree;
+          totalFreeFiles = data[0].data.filestotal;
+          free = Math.round(((totalFiles)/(totalFreeFiles))*100);
           used = Math.round(100 - free);
         }
         chart.instance.series[0].setData([ ['Free', free], ['Used', used] ]);
       },
       chart_config_callback: function(chart_config) {
-        chart_config.title.text = dashboard_target.label + " - Files vs Free Inodes"
+        chart_config.title.text = dashboard_target.label + " - File usage"
         return chart_config;
       },
       chart_config: {
@@ -917,15 +966,17 @@ var Dashboard = function(){
       chart_config: {
         colors: [ '#6285AE', '#AE3333', '#A6C56D', '#C76560', '#3D96AE', '#DB843D', '#92A8CD',  '#A47D7C',  '#B5CA92' ],
         chart: {
-          renderTo: 'target_read_write_container',
-          width: 500
+          renderTo: 'target_read_write_container'
         },
         legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
         title: { text: 'Read vs Writes'},
         tooltip: { formatter: function()  { return ''+ this.series.name +': '+ this.y +''; } },
 
         xAxis: { type:'datetime' },
-        yAxis: [{title: { text: 'KB' }}],
+        yAxis: [{
+          title: null,
+          labels: {formatter: bytes_rate_formatter}
+        }],
         series: [
           { type: 'area', name: 'Read', data: []},
           { type: 'area', name: 'Write',data: []}
@@ -942,12 +993,11 @@ var Dashboard = function(){
         "stats_rmdir", "stats_setattr", "stats_statfs", "stats_unlink"],
       chart_config: {
         chart: {
-          renderTo: 'target_mgt_ops_container',
-          width: 480
+          renderTo: 'target_mdt_ops_container'
         },
         tooltip: { formatter: function() { return ''+ this.x +': '+ Highcharts.numberFormat(this.y, 0, ',') +' '; } },
 
-        title: { text: 'Metadata op/s'},
+        title: { text: 'Metadata operations'},
         xAxis: { type:'datetime' },
         yAxis: [{title: { text: 'MD op/s' }}],
         colors: [ '#63B7CF', '#9277AF', '#A6C56D', '#C76560', '#6087B9', '#DB843D', '#92A8CD', '#A47D7C',  '#B5CA92' ],
@@ -1010,9 +1060,9 @@ var Dashboard = function(){
       },
       chart_config: {
         chart: {
-          renderTo: 'fs_container2'
+          renderTo: 'filesystem_usage'
         },
-        title: { text: 'All File System Space Usage'},
+        title: { text: 'Usage'},
         series: [
           { type: 'column', stack: 0, name: 'Free bytes'},
           { type: 'column', stack: 0, name: 'Used bytes'},
@@ -1026,7 +1076,10 @@ var Dashboard = function(){
           }
         },
         xAxis:{ categories: ['Usage'], text: '', labels : {align: 'right', rotation: 310, style:{fontSize:'8px', fontWeight:'regular'} } },
-        yAxis:{max:100, min:0, startOnTick:false, title:{text:'Percentage'}, plotLines: [ { value: 0,width: 1, color: '#808080' } ] },
+        yAxis:{max:100, min:0, startOnTick:false,
+          title: null,
+          labels: {formatter: percentage_formatter},
+          plotLines: [ { value: 0,width: 1, color: '#808080' } ] },
         labels:{ items:[{html: '',style:{left: '40px',top: '8px',color: 'black'}}]},
         colors: [
           '#A6C56D',
@@ -1043,7 +1096,7 @@ var Dashboard = function(){
       metrics: ["client_count"],
       chart_config: {
         chart: {
-          renderTo: 'fs_container3'
+          renderTo: 'filesystem_client_count'
         },
         title: { text: 'Client count'},
         xAxis: { type:'datetime' },
@@ -1076,13 +1129,14 @@ var Dashboard = function(){
       ],
       chart_config: {
         chart: {
-          renderTo: 'fs_avgCPUDiv'
+          renderTo: 'filesystem_cpu_mem'
         },
         title: { text: 'Server CPU and Memory'},
         xAxis: { type:'datetime' },
         legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0},
         yAxis: [{
-          title: { text: 'Percentage' },
+          title: null,
+          labels: {formatter: percentage_formatter},
           max:100,
           min:0,
           startOnTick:false,
@@ -1101,19 +1155,22 @@ var Dashboard = function(){
       metrics: ["stats_read_bytes", "stats_write_bytes"],
       series_callbacks: [
         function(timestamp, data, index, chart) {
-          chart.series_data[index].push( [ timestamp, ( data.stats_read_bytes / 1024 )] );
+          chart.series_data[index].push( [ timestamp, ( data.stats_read_bytes)] );
         },
         function( timestamp, data, index, chart ) {
-          chart.series_data[index].push( [ timestamp, - ( data.stats_write_bytes / 1024 ) ] );
+          chart.series_data[index].push( [ timestamp, - ( data.stats_write_bytes) ] );
         }
       ],
       chart_config: {
         chart: {
-          renderTo: 'fs_avgMemoryDiv'
+          renderTo: 'filesystem_read_write'
         },
         title: { text: 'Read vs Writes'},
         xAxis: { type:'datetime' },
-        yAxis: [{title: { text: 'Bytes/s' }}],
+        yAxis: [{
+          title: null,
+          labels: {formatter: bytes_rate_formatter}
+        }],
         tooltip:  { formatter: function()  { return ''+this.series.name +': '+ this.y +''; } },
         series: [
           { type: 'area', name: 'read' },
@@ -1130,7 +1187,7 @@ var Dashboard = function(){
         "stats_rmdir", "stats_setattr", "stats_statfs", "stats_unlink"],
       chart_config: {
         chart: {
-          renderTo: 'fs_avgReadDiv'
+          renderTo: 'filesystem_md_ops'
         },
         title: { text: 'Metadata op/s'},
         xAxis: { type:'datetime' },
@@ -1187,11 +1244,14 @@ var Dashboard = function(){
       series_template: {type: 'areaspline'},
       chart_config: {
         chart: {
-          renderTo: 'fs_iopsSpline'
+          renderTo: 'filesystem_ost_read_write'
         },
         title: { text: 'OST read/write bandwidth'},
         xAxis: { type:'datetime' },
-        yAxis: [{title: { text: 'Bytes/s' }}],
+        yAxis: [{
+          title: null,
+          labels: {formatter: bytes_rate_formatter}
+        }],
         plotOptions: {
           areaspline: {
             stacking: 'normal'
@@ -1213,16 +1273,6 @@ var Dashboard = function(){
   }
 }();
 
-function getUnitSelectOptions(countNumber)
-{
-  var unitSelectOptions="<option value=''>Select</option>";
-  for(var i=1; i<countNumber; i++)
-  {
-    unitSelectOptions = unitSelectOptions + "<option value="+i+">"+i+"</option>";
-  }
-  return unitSelectOptions;
-}
-
 function resetTimeInterval()
 {
   $("select[id=intervalSelect]").attr("value","");
@@ -1232,19 +1282,6 @@ function resetTimeInterval()
   endTime = "";
 }
 
-setStartEndTime = function(timeFactor, startTimeValue, endTimeValue)
-{
-  endTime = endTimeValue;
-
-  if(timeFactor == "minutes")
-    startTime = startTimeValue;
-  else if(timeFactor == "hour")
-    startTime = startTimeValue * (60);
-  else if(timeFactor == "day")
-    startTime = startTimeValue * (24 * 60);
-  else if(timeFactor == "week")
-    startTime = startTimeValue * (7 * 24 * 60);
-};
 
 get_server_list_markup = function()
 {

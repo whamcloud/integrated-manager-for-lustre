@@ -163,6 +163,25 @@ var ChartManager = function(options) {
         else { log("debug must be a bool"); }
     };
 
+  /*
+  TODO: prepend one of these to charts
+
+  <div class="magni">
+    <button value="" class="magbutton"
+    onclick="db_Area_mdOps_Data('true');setZoomDialogTitle('All File Systems: Metadata op/s');" />
+  </div>
+
+
+   <!-- FileSystem Targets Div - End -->
+   <input type='hidden' id='zoomed_graph_id' name='zoomed_graph_id' value='' />
+   <div id="zoomDialog" title="All File System CPU Usage">
+   <div id="dialog_avgCPUDiv"></div>
+   </div>
+
+   */
+
+
+
     // add a chart from a chart model
     var add_chart = function(chart_name,chart_group,options) {
         if (! _.isString(chart_name) || chart_name.length < 1 ) {
