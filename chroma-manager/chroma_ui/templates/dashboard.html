@@ -152,29 +152,28 @@ $('.magbutton').button({icons: {primary: 'ui-icon-zoomin'}});
     <table class='chart_grid'>
         <tr>
             <td>
-                <table id="ostSummaryTbl" width="100%">
-                </table>
+                <div class='chart_info_pane'>
+                    <h2 id='target_name'></h2>
+                    <table id="ostSummaryTbl" width="100%">
+                    </table>
+                </div>
             </td>
             <td width="25%" valign="top" align="center">
+                <div id="target_read_write_container_div" style="display: none">
+                    <div class='chart' id='target_read_write_container'></div>
+                </div>
+                <div id="target_mdt_ops_container_div" style="display: none">
+                    <div id="target_mdt_ops_container" class="chart"></div>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
                 <div id="target_space_usage_container" class="chart"></div>
             </td>
             <td>
                 <div id="target_inodes_container" class="chart"></div>
             </td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>
-                <div id="target_read_write_container_div" style="display: none">
-                    <div class='chart' id='target_read_write_container'></div>
-                </div>
-            </td>
-            <td>
-                <div id="target_mdt_ops_container_div" style="display: none">
-                    <div id="target_mdt_ops_container" class="chart"></div>
-                </div>
-            </td>
-            <td></td>
         </tr>
     </table>
 </div>

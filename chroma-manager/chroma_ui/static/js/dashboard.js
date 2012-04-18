@@ -167,7 +167,7 @@ var Dashboard = function(){
 
     if (id_1) {
       if (type == 'server') {
-        dashboard_server = ApiCache.get('server', id_1).toJSON();
+        dashboard_server = ApiCache.get('host', id_1).toJSON();
         if (id_2) {
           // Showing a target within a server
           dashboard_target = ApiCache.get('target', id_2).toJSON();
@@ -209,7 +209,7 @@ var Dashboard = function(){
     var breadCrumbHtml = "<ul>"+
       "<li><a href='dashboard/' class='home_icon navigation'>Home</a></li>"+
       "<li>"+get_view_selection_markup()+"</li>";
-    breadCrumbHtml += "<li>"+get_server_list_markup()+"</li>";
+    breadCrumbHtml += "<li><select id='breadcrumb_server'></select></li>";
 
     breadCrumbHtml += "<li>"+
       "<select id='breadcrumb_target'>"+
@@ -235,6 +235,7 @@ var Dashboard = function(){
           "</li>"+
           "</ul>";
         $("#breadcrumbs").html(breadCrumbHtml);
+        populate_breadcrumb_server(ApiCache.list('host'));
 
         $('#ossSummaryTblDiv').show();
         $('#serverSummaryTblDiv').show();
@@ -256,6 +257,8 @@ var Dashboard = function(){
       breadCrumbHtml += "<li><a class='navigation' href='dashboard/server/" + dashboard_server.id + "/'>"+dashboard_server.label+"</a></li>";
     }
 
+    $('#target_name').html(dashboard_target.label);
+
     breadCrumbHtml += "<li>"+dashboard_target.label+"</li>"+
       "</ul>";
 
@@ -274,7 +277,7 @@ var Dashboard = function(){
         "<tr>" +
         "<td class='greybgcol'>MDS :</td>" +
         "<td class='tblContent greybgcol'>"+filesystem.mdts[0].primary_server_name+"</td>" +
-        "<td class='greybgcol'>Failover :</td><td class='tblContent greybgcol'>NA</td>" +
+        "<td></td><td></td>" +
         "</tr>"+
         "<tr>" +
         "<td class='greybgcol'>File System :</td>" +
@@ -431,7 +434,7 @@ var Dashboard = function(){
       populate_breadcrumb_filesystem(ApiCache.list('filesystem'));
     } else if (dashboard_type == 'server') {
       $('#breadcrumb_filesystem').hide();
-      populate_breadcrumb_server(ApiCache.list('server'));
+      populate_breadcrumb_server(ApiCache.list('host'));
     }
     $(this).find('option:selected').val()
     init_charts('dashboard');
@@ -1267,56 +1270,45 @@ var Dashboard = function(){
     return chart_manager;
   }
 
+  function populate_breadcrumb_filesystem(filesystems)
+  {
+    var selected_filesystem_id;
+    if (dashboard_filesystem){
+      selected_filesystem_id = dashboard_filesystem.id;
+    }
+
+    var filesystem_list_content = "";
+    filesystem_list_content = "<option value=''>Select File System</option>";
+    _.each(filesystems, function(filesystem) {
+      filesystem_list_content += "<option value="+filesystem.id;
+      if (filesystem.id == selected_filesystem_id) {
+        filesystem_list_content += " selected='selected'";
+      }
+      filesystem_list_content += ">" +filesystem.label+"</option>";
+    });
+    $('#breadcrumb_filesystem').html(filesystem_list_content);
+  }
+
+  function populate_breadcrumb_server(servers)
+  {
+    var selected_server_id;
+    if (dashboard_server){
+      selected_server_id = dashboard_server.id;
+    }
+
+    var server_list_content = "<option value=''>Select Server</option>";
+    _.each(servers, function(server) {
+      server_list_content += "<option value="+server.id;
+      if (server.id == selected_server_id) {
+        server_list_content += " selected='selected'";
+      }
+      server_list_content += ">" +server.label+"</option>";
+    });
+    $('#breadcrumb_server').html(server_list_content);
+  }
+
   return {
     init: init,
     setPath: setPath
   }
 }();
-
-function resetTimeInterval()
-{
-  $("select[id=intervalSelect]").attr("value","");
-  $("select[id=unitSelect]").html("<option value=''>Select</option>");
-  $("select[id=unitSelect]").attr("value","");
-  startTime = "5";
-  endTime = "";
-}
-
-
-get_server_list_markup = function()
-{
-  var server_list_markup = "<select id='breadcrumb_server'>";
-  _.each(ApiCache.list('server'), function(server) {
-    server_list_markup += "<option value="+server.id+">" + server.label + "</option>";
-  });
-
-  server_list_markup += "</select>";
-  return server_list_markup;
-};
-
-function populate_breadcrumb_filesystem(filesystems, selected_filesystem_id)
-{
-  var filesystem_list_content = "";
-  filesystem_list_content = "<option value=''>Select File System</option>";
-  _.each(filesystems, function(filesystem) {
-    filesystem_list_content += "<option value="+filesystem.id;
-    if (filesystem.id == selected_filesystem_id) {
-      filesystem_list_content += " selected='selected'";
-    }
-    filesystem_list_content += ">" +filesystem.label+"</option>";
-  });
-  $('#breadcrumb_filesystem').html(filesystem_list_content);
-}
-
-function populate_breadcrumb_server(servers, selected_server_id)
-{
-  var server_list_content = "<option value=''>Select Server</option>";
-  _.each(servers, function(server) {
-    server_list_content += "<option value="+server.id;
-    if (server.id == selected_server_id) {
-      server_list_content += " selected='selected'";
-    }
-    server_list_content += ">" +server.label+"</option>";
-  });
-  $('#breadcrumb_server').html(server_list_content);
-}

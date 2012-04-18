@@ -507,12 +507,6 @@ tr.even {
 	
 }
 
-.greybgcol{
-	background-color:#eeeeee;
-    font-size: 12px;
-    font-weight: bold;
-}
-
 #tabs {
   width: 98%;
 }
@@ -701,6 +695,7 @@ table.chart_grid tr {
 
 table.chart_grid tr td {
     position: relative;
+    vertical-align: top;
 }
 
 table.chart_grid td div.chart {
