@@ -1,0 +1,20 @@
+# WhamOS-Base.repo
+#
+
+[base]
+name=WhamOS-$releasever - Base
+#mirrorlist=http://mirrorlist.whamcloud.com/?release=$releasever&arch=$basearch&repo=os
+baseurl=https://mirror.whamcloud.com/whamos/$releasever/os/$basearch/
+gpgcheck=0
+#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-WhamOS-6
+enabled=0
+
+#released updates
+[updates]
+name=WhamOS-$releasever - Updates
+#mirrorlist=http://mirrorlist.whamcloud.com/?release=$releasever&arch=$basearch&repo=updates
+baseurl=https://mirror.whamcloud.com/whamos/$releasever/updates/$basearch/
+gpgcheck=0
+#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-WhamOS-6
+enabled=0
+

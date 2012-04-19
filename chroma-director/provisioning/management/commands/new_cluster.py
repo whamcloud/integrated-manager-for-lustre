@@ -14,7 +14,7 @@ class Command(BaseCommand):
     def _create_instances(self):
         manager = ChromaManager.create("chroma")
         ChromaAppliance.create(manager, "node01")
-        ChromaAppliance.create(manager, "node02")
+#        ChromaAppliance.create(manager, "node02")
 #        ChromaAppliance.create(manager, "node03")
 #        ChromaAppliance.create(manager, "node04")
         return manager
