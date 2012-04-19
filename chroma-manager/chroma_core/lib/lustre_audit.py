@@ -15,6 +15,10 @@ from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, Manage
 from chroma_core.models.host import ManagedHost, Nid, VolumeNode
 from chroma_core.models.filesystem import ManagedFilesystem
 from django.db import transaction
+import functools
+
+# django doesn't abstract this
+import MySQLdb as Database
 
 audit_log = settings.setup_log('audit')
 
@@ -89,19 +93,12 @@ class UpdateScan(object):
             return False
 
     @transaction.commit_on_success
-    def run(self, host_id, started_at, host_data):
-        host = ManagedHost.objects.get(pk=host_id)
-        self.started_at = started_at
-        self.host = host
-        audit_log.debug("UpdateScan.run: %s" % self.host)
-
-        self.host_data = host_data
-
-        if isinstance(host_data, Exception):
-            audit_log.error("exception contacting %s: %s" % (self.host, host_data))
+    def audit_host(self):
+        if isinstance(self.host_data, Exception):
+            audit_log.error("exception contacting %s: %s" % (self.host, self.host_data))
             contact = False
         elif not self.is_valid():
-            audit_log.error("invalid output from %s: %s" % (self.host, host_data))
+            audit_log.error("invalid output from %s: %s" % (self.host, self.host_data))
             contact = False
         else:
             contact = True
@@ -114,19 +111,30 @@ class UpdateScan(object):
             self.cull_forgotten_data()
 
             # Older agents don't send this list
-            if 'capabilities' in host_data:
+            if 'capabilities' in self.host_data:
                 self.learn_unmanaged_host()
 
             self.update_lnet()
             self.update_resource_locations()
             self.update_target_mounts()
-            self.store_metrics()
 
         HostContactAlert.notify(self.host, not contact)
 
         if contact:
             from datetime import datetime
             ManagedHost.objects.filter(pk = self.host.pk).update(last_contact = datetime.utcnow())
+
+        return contact
+
+    def run(self, host_id, started_at, host_data):
+        host = ManagedHost.objects.get(pk=host_id)
+        self.started_at = started_at
+        self.host = host
+        self.host_data = host_data
+        audit_log.debug("UpdateScan.run: %s" % self.host)
+
+        contact = self.audit_host()
+        self.store_metrics()
 
         return contact
 
@@ -285,6 +293,26 @@ class UpdateScan(object):
                 from chroma_core.lib.state_manager import StateManager
                 StateManager.notify_state(target, self.started_at, state, ['mounted', 'unmounted'])
 
+    def catch_metrics_deadlocks(fn):
+        # This decorator is specific to catching deadlocks which may occur
+        # during an r3d update.  Ideally, these shouldn't happen at all, but
+        # if they do they shouldn't be fatal.  In any case, we need to log
+        # warnings so we can keep track of this and figure out if it's really
+        # a problem, and if it is, whether to fix it in code or in db tuning.
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except Database.OperationalError, e:
+                if e[0] == 1213:
+                    audit_log.warn("Caught deadlock on metrics update; discarding metrics and continuing")
+                    return 0
+
+                raise e
+        return wrapper
+
+    @catch_metrics_deadlocks
+    @transaction.commit_on_success
     def store_lustre_target_metrics(self, target_name, metrics):
         # TODO: Re-enable MGS metrics storage if it turns out it's useful.
         if target_name == "MGS":
@@ -307,6 +335,8 @@ class UpdateScan(object):
         else:
             return target.metrics.update(metrics, self.update_time)
 
+    @catch_metrics_deadlocks
+    @transaction.commit_on_success
     def store_node_metrics(self, metrics):
         return self.host.downcast().metrics.update(metrics, self.update_time)
 
