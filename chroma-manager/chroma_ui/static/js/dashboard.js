@@ -414,11 +414,7 @@ var Dashboard = function(){
 
     var breadCrumbHtml = "<ul>" +
     "  <li><a href='dashboard/' class='home_icon navigation'>Home</a></li>" +
-    "  <li>" +
-    "    <select id='breadcrumb_type'>" +
-    "      <option value='filesystem' selected='selected'>File System View</option>" +
-    "      <option value='server'>Server View</option>" +
-    "    </select>" +
+    "  <li>" + get_view_selection_markup() + "</li>" +
     "  </li>" +
     "  <li>" +
     "    <select id='breadcrumb_filesystem'>" +
