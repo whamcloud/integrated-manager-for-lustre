@@ -37,15 +37,15 @@ fi
 
 
 while true; do
-    name=cptest.$(uname -n)/
-    cp -pr /lib/ $LUSTRE/$name
+    name=$LUSTRE/cptest.$(uname -n)/
+    cp -pr /lib/ $name
     sleep 1
-    rm -rf $LUSTRE/$name
+    rm -rf $name
 
     sleep 1
-    name=iotest-$(uname -n)
+    name=$LUSTRE/iotest-$(uname -n)
     rm -f $name
-    lfs setstripe -c $STRIPE_COUNT $LUSTRE/$name
+    lfs setstripe -c $STRIPE_COUNT $name
     dd if=/dev/zero of=$name bs=128k count=10k
     rm -f $name
     sleep $((RANDOM % 100 / 4))
