@@ -30,9 +30,20 @@
 </div>
 
 <script type='text/javascript'>
+  $(document).ajaxComplete(function() {
+      $("a.navigation").each(function() {
+         var el = $(this);
+         console.log(el);
+         var href = el.attr('href');
+         if (href.indexOf(UI_ROOT) != 0) {
+           el.attr('href', UI_ROOT + href);
+         }
+      });
+  });
   $(document).ready(function() {
     $("a.navigation").live('click', function(ev) {
-      Backbone.history.navigate($(this).attr('href'), {trigger: true});
+      var url = $(this).attr('href').substr(UI_ROOT.length);
+      Backbone.history.navigate(url, {trigger: true});
       ev.preventDefault();
     });
   });
