@@ -5,10 +5,11 @@
 # ========================================================
 #
 # Usage: 
-#   loagen.sh <mount target>
+#   loagen.sh <mount target> [mntpoint]
 #
-# Example:
+# Examples:
 #   loadgen.sh mgsnode@tcp:/testfs
+#   loadgen.sh mgsnode@tcp:/testfs mount2
 #
 
 set -xe
@@ -16,6 +17,10 @@ set -xe
 if [[ $1 ]]; then
     MGSPATH=$1
     FSNAME=$(basename $MGSPATH)
+fi
+
+if [[ $2 ]]; then
+    FSNAME=$2
 fi
 
 FSNAME=${FSNAME:-"lustre"}
@@ -39,8 +44,9 @@ while true; do
 
     sleep 1
     name=iotest-$(uname -n)
+    rm -f $name
     lfs setstripe -c $STRIPE_COUNT $LUSTRE/$name
     dd if=/dev/zero of=$name bs=128k count=10k
-    rm $name
+    rm -f $name
     sleep $((RANDOM % 100 / 4))
 done
