@@ -106,7 +106,7 @@ class ChromaManagerOps(NodeOps):
     def update_deps(self):
         with self.open_session():
             self._setup_chroma_repo()
-            sudo('yum install -y chroma-manager chroma-manager-cli')
+            sudo('yum -y update')
 
     def setup_chroma(self):
         with self.open_session():
@@ -159,6 +159,7 @@ class ChromaApplianceOps(NodeOps):
         with self.open_session():
             self._setup_chroma_repo()
             # ensure latest version of agent is installed
+            # don't do yum update because we don't want to update kernel
             sudo('yum install -y chroma-agent-management')
         
     def mkraid(self):
@@ -189,7 +190,6 @@ class ChromaApplianceOps(NodeOps):
             self._setup_chroma_repo()
             sudo("mkdir /mnt/lustre")
 
-        
 
 #
 # Classes to Create AMIs
@@ -205,6 +205,7 @@ class ImageOps(NodeOps):
             sudo('rm -rf /root/.*hist*')
             sudo('rm -rf /var/log/*.gz')
             sudo('rm -f /etc/ssh/ssh_host*')
+            sudo('rm -f /etc/yum.repos.d/chroma.repo')
             sudo('find /home -maxdepth 1 -type d -exec rm -rf {}/.ssh \;')
         
 
@@ -221,12 +222,22 @@ class ImageOps(NodeOps):
         print "New AMI is %s  %s" % (image.id, image.state)
         return image.id
 
+    def _update_whamos(self):
+        sudo('yum install -y whamos-release')
+        # Disable the repo file added by whamos-release
+        put(settings.WHAMOS_REPO, "/etc/yum.repos.d", use_sudo = True)
+        sudo('yum -y remove cups') # XXX base image specific
+        sudo('userdel -r vishal') # XXX base image specific
+        sudo('yum -y update')
+
 
 class StorageImageOps(ImageOps):
     # n.b. unlike a manager, a new storage image must be rebooted before it can used
     def install_deps(self):
         with self.open_session():
             self._setup_chroma_repo()
+            self._update_whamos()
+            sudo('yum install -y kernel')
             sudo('yum install -y lustre')
             sudo('grubby --set-default "/boot/vmlinuz-2.6.32-*lustre*"')
             sudo('yum install -y chroma-agent-management')
@@ -242,7 +253,8 @@ class StorageImageOps(ImageOps):
 class ManagerImageOps(ImageOps):
     def install_deps(self):
         with self.open_session():
+            self._setup_chroma_repo()
+            self._update_whamos()
             run('wget http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-5.noarch.rpm')
             sudo('rpm -i --force epel-release-6-5.noarch.rpm')
-            self._setup_chroma_repo()
             sudo('yum install -y Django-south chroma-manager chroma-manager-cli')
