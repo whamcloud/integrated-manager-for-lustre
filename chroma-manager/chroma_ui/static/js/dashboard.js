@@ -855,17 +855,13 @@ var Dashboard = function(){
         }
         chart.instance.series[0].setData([ ['Free', free], ['Used', used] ]);
       },
-      chart_config_callback: function(chart_config) {
-        chart_config.title.text = dashboard_target.label + " Space Usage"
-        return chart_config;
-      },
       chart_config: {
         chart: {
           renderTo: 'target_space_usage_container',
           plotShadow: false
         },
         colors: [ '#A6C56D', '#C76560' ],
-        title:{ text: '' },
+        title:{ text: 'Space Usage' },
         zoomType: 'xy',
         tooltip: {
           formatter: function() { return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %'; }
@@ -904,17 +900,13 @@ var Dashboard = function(){
         }
         chart.instance.series[0].setData([ ['Free', free], ['Used', used] ]);
       },
-      chart_config_callback: function(chart_config) {
-        chart_config.title.text = dashboard_target.label + " - File usage"
-        return chart_config;
-      },
       chart_config: {
         chart: {
           renderTo: 'target_inodes_container',
           plotShadow: false
         },
         colors: [ '#A6C56D', '#C76560' ],
-        title:{ text: '' },
+        title:{ text: 'File usage'},
         zoomType: 'xy',
         tooltip: {
           formatter: function() { return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %'; }
@@ -974,7 +966,7 @@ var Dashboard = function(){
     chart_manager.chart_group('targets_mdt');
     chart_manager.add_chart('mdops', 'targets_mdt', {
       url: function() { return 'target/' + dashboard_target.id + '/metric/' },
-      api_params: { reduce_fn: 'sum', kind: 'MDT'},
+      api_params: {},
       metrics: ["stats_close", "stats_getattr", "stats_getxattr", "stats_link",
         "stats_mkdir", "stats_mknod", "stats_open", "stats_rename",
         "stats_rmdir", "stats_setattr", "stats_statfs", "stats_unlink"],

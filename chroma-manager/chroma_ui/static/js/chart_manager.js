@@ -51,7 +51,6 @@ var ChartModel = function(options) {
         enabled                 : true, // you can disable a graph by setting this to false
         error_callback          : null, // a callback executed on an error conditoin (not needed really, but an option)
         instance                : null, // stores the highcharts instance
-        is_zoom                 : false, // whether we have a zoomed graph
         metrics                 : [],    // list of metrics to get
         prep_params             : null,  // callback for custom dynamic paramaters to send to the api
         snapshot                : false, // if true, displays latest data rather than time series
@@ -64,19 +63,6 @@ var ChartModel = function(options) {
         url                     : ''     // url (str or func for dynamic) of the metric api to get
     }, options || {});
 
-    if( config.is_zoom ) {
-        $.extend(true,config.api_params, {
-            xAxis: { labels: { style: { fontSize: '12px'} } },
-            yAxis: { labels: { style: { fontSize: '12px', fontWeight: 'bold' } } },
-            chart: {
-                width: 780,
-                height: 360,
-                style: { height: 360, width: "100%" }
-            },
-            legend: { enabled: true }
-        });
-    }
-    
     config.reset_series = function() {
         config.series_data = [];
         _.each(config.chart_config.series, function() { config.series_data.push([]); } );
@@ -231,11 +217,15 @@ var ChartManager = function(options) {
               var zoomed_container = dialog.find('.zoomed_chart');
               var zoomed_config = $.extend(true, {}, chart_config);
               zoomed_config.chart.renderTo = zoomed_container.get(0);
+              if (!zoomed_config.legend.enabled) {
+                zoomed_config.legend = {layout: 'vertical', align: 'right', borderWidth: 0, enabled: true};
+              }
 
               var zoomed_chart = new ChartModel($.extend(true, {}, chart));
               zoomed_chart.instance = new Highcharts.Chart(zoomed_config);
               zoomed_chart.instance.showLoading();
               zoomed_chart.series_begin = null;
+              zoomed_chart.series_id_to_index = {};
 
               update_chart_data(zoomed_chart);
             });
