@@ -6,6 +6,7 @@
 
 import math
 from django.contrib.contenttypes.models import ContentType
+from chroma_core.models.storage_plugin import StorageResourceStatistic
 from r3d.models import Average, Database
 from r3d.exceptions import BadUpdateTime
 from chroma_core.lib.storage_plugin.api import statistics
@@ -40,84 +41,113 @@ class R3dMetricStore(MetricStore):
     """
     Base class for R3D-backed metric stores.
     """
-    def _default_rra_fn(db):
-        """
-        Configure a default set of RRAs for a new database.  Subclasses
-        may (and probably should) override this layout.
-        """
-        # This isn't an ideal layout, but it's probably best to default to
-        # collecting too much.  The subclasses should define something which
-        # makes more sense for the metrics being collected.
-
-        # 60 rows of 1 sample = 10 minutes of 10s samples
-        db.archives.add(Average.objects.create(xff=0.5,
-                                               database=db,
-                                               cdp_per_row=1,
-                                               rows=60))
-        # 60 rows of 6 consolidated samples = 60 minutes of 1 minute samples
-        db.archives.add(Average.objects.create(xff=0.5,
-                                               database=db,
-                                               cdp_per_row=6,
-                                               rows=60))
-        # 168 rows of 360 consolidated samples = 7 days of 1hr samples
-        db.archives.add(Average.objects.create(xff=0.5,
-                                               database=db,
-                                               cdp_per_row=360,
-                                               rows=168))
-        # 365 rows of 8640 consolidated samples = 1 year of 1 day samples
-        db.archives.add(Average.objects.create(xff=0.5,
-                                               database=db,
-                                               cdp_per_row=8640,
-                                               rows=365))
-
     def _create_r3d(self,
             measured_object,
             sample_period,
-            rra_create_fn=_default_rra_fn,
             **kwargs):
         """
         Creates a new R3D Database and associates it with the given
         measured object via ContentType.
         """
+        def _default_rra_fn(db):
+            """
+            Configure a default set of RRAs for a new database.  Subclasses
+            may (and probably should) override this layout.
+            """
+            # This isn't an ideal layout, but it's probably best to default to
+            # collecting too much.  The subclasses should define something which
+            # makes more sense for the metrics being collected.
+
+            # 60 rows of 1 sample = 10 minutes of 10s samples
+            db.archives.add(Average.objects.create(xff=0.5,
+                database=db,
+                cdp_per_row=1,
+                rows=60))
+            # 60 rows of 6 consolidated samples = 60 minutes of 1 minute samples
+            db.archives.add(Average.objects.create(xff=0.5,
+                database=db,
+                cdp_per_row=6,
+                rows=60))
+            # 168 rows of 360 consolidated samples = 7 days of 1hr samples
+            db.archives.add(Average.objects.create(xff=0.5,
+                database=db,
+                cdp_per_row=360,
+                rows=168))
+            # 365 rows of 8640 consolidated samples = 1 year of 1 day samples
+            db.archives.add(Average.objects.create(xff=0.5,
+                database=db,
+                cdp_per_row=8640,
+                rows=365))
+
+        def _minimal_archives(db):
+            """
+            Workaround performance issues, create the least possible archives
+            """
+            # 60 rows of 1 sample = 10 minutes of 10s samples
+            db.archives.add(Average.objects.create(xff=0.5,
+                database=db,
+                cdp_per_row=1,
+                rows=60))
+
+        # FIXME: because of stats storage performance issues,
+        # only store very short period of data for (numerous)
+        # storage resource statistics.
+        if isinstance(measured_object, StorageResourceStatistic):
+            metrics_log.debug('minimal archive for %s' % measured_object)
+            rra_create_fn = _minimal_archives
+        else:
+            metrics_log.debug('full archive for %s' % measured_object)
+            rra_create_fn = _default_rra_fn
+
         # We want our start time to be prior to the first insert, but
         # not so far back that we waste lots of time with filling in
         # null data.
         # FIXME HYD-366: this should be set at first insert.
         import time
         start_time = int(time.time()) - 1
+
         ct = ContentType.objects.get_for_model(measured_object)
         db_name = "%s-%d" % (ct, measured_object.id)
-        self.r3d, created = Database.objects.get_or_create(
+        r3d, created = Database.objects.get_or_create(
                                                 name=db_name,
                                                 start=start_time,
                                                 object_id=measured_object.id,
                                                 content_type=ct,
                                                 step=sample_period,
                                                 **kwargs)
-        rra_create_fn(self.r3d)
+        rra_create_fn(r3d)
 
         if created:
             metrics_log.info("Created R3D: %s (%s)" % (ct, measured_object))
 
-    def __init__(self, measured_object, sample_period, **kwargs):
+        return r3d
+
+    def clear(self):
+        r3d = self.get_r3d()
+        if r3d:
+            r3d.delete()
+
+    def get_r3d(self, create = False):
+        try:
+            ct = ContentType.objects.get_for_model(self.measured_object)
+            mo_id = self.measured_object.id
+            return Database.objects.get(object_id=mo_id,
+                content_type=ct)
+        except Database.DoesNotExist:
+            if create:
+                return self._create_r3d(self.measured_object, self.sample_period)
+            else:
+                return None
+
+    def __init__(self, measured_object, sample_period = None):
         """
         Given an object to wrap with MetricStore capabilities, either
         retrieves the existing associated R3D Database or creates one.
         """
-        # FIXME: This should be handled in a different way.  Creating a
-        # new R3D Database on first access is convenient, but has the
-        # potential for undesirable behavior when the access is read-only
-        # (e.g. stats).
-        try:
-            if hasattr(measured_object, 'content_type'):
-                measured_object = measured_object.downcast()
-
-            self.ct = ContentType.objects.get_for_model(measured_object)
-            self.mo_id = measured_object.id
-            self.r3d = Database.objects.get(object_id=self.mo_id,
-                                            content_type=self.ct)
-        except Database.DoesNotExist:
-            self._create_r3d(measured_object, sample_period, **kwargs)
+        self.measured_object = measured_object
+        if hasattr(self.measured_object, 'content_type'):
+            self.measured_object = self.measured_object.downcast()
+        self.sample_period = sample_period
 
     def _update_time(self):
         """
@@ -129,15 +159,20 @@ class R3dMetricStore(MetricStore):
 
     def update_r3d(self, update):
         try:
-            self.r3d.update(update, _autocreate_ds)
+            r3d = self.get_r3d(create = True)
+            r3d.update(update, _autocreate_ds)
         except BadUpdateTime:
             metrics_log.warn("Discarding %d update for %s" % (update.keys()[0],
                                                               self))
 
     def list(self):
         """Returns a dict of name:type pairs for this wrapper's database."""
-        return dict([[ds.name, ds.__class__.__name__]
-                     for ds in self.r3d.datasources.all()])
+        r3d = self.get_r3d()
+        if r3d:
+            return dict([[ds.name, ds.__class__.__name__]
+                     for ds in r3d.datasources.all()])
+        else:
+            return {}
 
     def fetch(self, cfname, **kwargs):
         """
@@ -149,7 +184,11 @@ class R3dMetricStore(MetricStore):
         and an optinal end time, returns a dict containing rows of
         datapoints retrieved from the appropriate RRA.
         """
-        return self.r3d.fetch(cfname, **kwargs)
+        r3d = self.get_r3d()
+        if r3d:
+            return r3d.fetch(cfname, **kwargs)
+        else:
+            return {}
 
     def fetch_last(self, fetch_metrics=None):
         """
@@ -159,23 +198,15 @@ class R3dMetricStore(MetricStore):
         taken from the last reading of each datasource.  Takes
         an optional list of metrics to filter output.
         """
-        return self.r3d.fetch_last(fetch_metrics)
-
-
-def minimal_archives(db):
-    """
-    Workaround performance issues, create the least possible archives
-    """
-    # 60 rows of 1 sample = 10 minutes of 10s samples
-    db.archives.add(Average.objects.create(xff=0.5,
-                                           database=db,
-                                           cdp_per_row=1,
-                                           rows=60))
+        r3d = self.get_r3d()
+        if r3d:
+            return r3d.fetch_last(fetch_metrics)
+        else:
+            return [0, {}]
 
 
 class VendorMetricStore(R3dMetricStore):
     def __init__(self, *args, **kwargs):
-        kwargs['rra_create_fn'] = minimal_archives
         super(VendorMetricStore, self).__init__(*args, **kwargs)
 
     def update(self, stat_name, stat_properties, stat_data):
@@ -199,7 +230,7 @@ class VendorMetricStore(R3dMetricStore):
                 r3d_format[ts] = bins_dict
 
         # Skipping sanitize
-        self.r3d.update(r3d_format, _autocreate_ds)
+        self.get_r3d(create = True).update(r3d_format, _autocreate_ds)
 
 
 class HostMetricStore(R3dMetricStore):

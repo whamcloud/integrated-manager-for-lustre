@@ -414,7 +414,7 @@ class RemoveTargetJob(StateChangeJob):
         else:
             return None
 
-    def get_requires_confirmation_foo(self):
+    def get_requires_confirmation(self):
         return True
 
 

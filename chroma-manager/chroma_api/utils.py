@@ -408,7 +408,7 @@ class MetricResource:
 
         result = {}
         for obj in objs:
-            stats = self._fetch(R3dMetricStore(obj, settings.AUDIT_PERIOD), metrics, begin, end)
+            stats = self._fetch(R3dMetricStore(obj), metrics, begin, end)
             result[obj.id] = []
             # Assume these come out in chronological order
             for datapoint in stats:

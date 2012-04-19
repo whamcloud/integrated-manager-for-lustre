@@ -9,7 +9,6 @@ from django.db.models import Q
 
 from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState, AlertEvent
-from chroma_core.models.utils import WorkaroundDateTimeField
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 
 from collections import defaultdict
@@ -61,7 +60,7 @@ class StorageResourceRecord(models.Model):
     storage_id_scope = models.ForeignKey('StorageResourceRecord',
             blank = True, null = True, on_delete = models.PROTECT)
 
-    # XXX aargh when the id_scope is nullable a unique_together across it
+    # FIXME: when the id_scope is nullable a unique_together across it
     # doesn't enforce uniqueness for GlobalID resources
 
     # Parent-child relationships between resources
@@ -227,7 +226,7 @@ class StorageResourceStatistic(models.Model):
     name = models.CharField(max_length = 64)
 
     def delete(self, *args, **kwargs):
-        # TODO: delete VendorMetricStore
+        self.metrics.clear()
         super(StorageResourceStatistic, self).delete(*args, **kwargs)
 
     def __get_metrics(self):
@@ -338,17 +337,6 @@ class StorageResourceClassStatistic(models.Model):
 
     class Meta:
         unique_together = ('resource_class', 'name')
-        app_label = 'chroma_core'
-
-
-class StorageResourceStatistic(models.Model):
-    resource = models.ForeignKey(StorageResourceRecord)
-    resource_class_statistic = models.ForeignKey(StorageResourceClassStatistic)
-
-    timestamp = WorkaroundDateTimeField()
-    value = models.IntegerField()
-
-    class Meta:
         app_label = 'chroma_core'
 
 
