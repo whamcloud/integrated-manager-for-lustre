@@ -297,6 +297,8 @@ class MetricResource:
             # time with the same resolution.  There is no way for chroma to know what resolution
             # the third party statistics will arrive at, and no way to guarantee they are all
             # queried at the same moment, so we have to give r3d an object per time series.
+            # We should be able to refer to time series by (object, stat name) without
+            # implicitly coupling all stats for the same object.
             stats = StorageResourceStatistic.objects.filter(storage_resource = obj, name__in = metrics)
             ts_data = defaultdict(list)
             for stat in stats:
@@ -313,7 +315,6 @@ class MetricResource:
                 if None in data.values():
                     continue
                 result.append({'ts': timestamp, 'data': data})
-
         else:
             stats = self._fetch(R3dMetricStore(obj, settings.AUDIT_PERIOD), metrics, begin, end)
 
@@ -325,6 +326,9 @@ class MetricResource:
                     continue
                 if None in data.values():
                     continue
+                for metric in metrics:
+                    if not metric in data:
+                        data[metric] = 0
                 result.append({'ts': timestamp, 'data': data})
 
         return self.create_response(request, result)
