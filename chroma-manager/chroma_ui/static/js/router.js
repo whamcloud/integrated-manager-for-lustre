@@ -37,6 +37,11 @@ var ChromaRouter = Backbone.Router.extend({
     "configure/:tab/": "configure",
     "configure/": "configureIndex",
     "dashboard/": "dashboard",
+    "dashboard/:type/": "dashboard_type",
+    "dashboard/filesystem/:filesystem_id/": "dashboard_filesystems",
+    "dashboard/filesystem/:filesystem_id/target/:target_id/": "dashboard_filesystems",
+    "dashboard/server/:server_id/": "dashboard_servers",
+    "dashboard/server/:server_id/target/:target_id/": "dashboard_servers",
     "command/:id/": 'command_detail',
     "target/:id/": 'target_detail',
     "host/:id/": 'server_detail',
@@ -151,11 +156,11 @@ var ChromaRouter = Backbone.Router.extend({
     }
   },
   filesystemPage: function(page) {
-    this.configureTab('filesystem')
-    $('#filesystem-tab-list').hide()
-    $('#filesystem-tab-create').hide()
-    $('#filesystem-tab-detail').hide()
-    $('#filesystem-tab-' + page).show()
+    this.configureTab('filesystem');
+    $('#filesystem-tab-list').hide();
+    $('#filesystem-tab-create').hide();
+    $('#filesystem-tab-detail').hide();
+    $('#filesystem-tab-' + page).show();
   },
   filesystemList: function() {
     this.filesystemPage('list');
@@ -170,10 +175,18 @@ var ChromaRouter = Backbone.Router.extend({
     FilesystemCreateView.draw()
   },
   dashboard: function() {
+    this.dashboard_type('filesystem');
+  },
+  dashboard_type: function(type) {
     this.toplevel('dashboard');
-
-    Dashboard.loadView(window.location.hash);
-    $('#fsSelect').attr("value","");
-    $('#intervalSelect').attr("value","");
+    Dashboard.setPath(type);
+  },
+  dashboard_servers: function(server_id, target_id) {
+    this.toplevel('dashboard');
+    Dashboard.setPath('server', server_id, target_id);
+  },
+  dashboard_filesystems: function(filesystem_id, target_id) {
+    this.toplevel('dashboard');
+    Dashboard.setPath('filesystem', filesystem_id, target_id);
   }
 });

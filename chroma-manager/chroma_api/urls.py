@@ -5,28 +5,7 @@
 
 
 from django.conf.urls.defaults import patterns, include
-from piston.resource import Resource
 from tastypie.api import Api
-
-from statsmetricapi import(GetFSTargetStats,
-                           GetFSServerStats,
-                           GetFSMGSStats,
-                           GetServerStats,
-                           GetTargetStats,
-                           GetFSClientsStats,
-                           GetHeatMapFSStats)
-
-
-class CsrfResource(Resource):
-    """CSRF protection is disabled by default in django-piston, this
-       class turns it back on.
-
-       We require CSRF protection because this API is used from a web browser.
-
-       """
-    def __init__(self, handler, authentication=None):
-        super(CsrfResource, self).__init__(handler, authentication)
-        self.csrf_exempt = False
 
 
 class ChromaApi(Api):
@@ -94,16 +73,5 @@ api.register(chroma_api.help.HelpResource())
 api.register(chroma_api.agent.AgentResource())
 
 urlpatterns = patterns('',
-    # Un-RESTful URLs pending re-work of stats store and UI
-    # >>>
-    (r'^api/get_fs_stats_for_targets/$', CsrfResource(GetFSTargetStats)),
-    (r'^api/get_fs_stats_for_server/$', CsrfResource(GetFSServerStats)),
-    (r'^api/get_fs_stats_for_mgs/$', CsrfResource(GetFSMGSStats)),
-    (r'^api/get_stats_for_server/$', CsrfResource(GetServerStats)),
-    (r'^api/get_stats_for_targets/$', CsrfResource(GetTargetStats)),
-    (r'^api/get_fs_stats_for_client/$', CsrfResource(GetFSClientsStats)),
-    (r'^api/get_fs_stats_heatmap/$', CsrfResource(GetHeatMapFSStats)),
-    # <<<
-
     (r'^', include(api.urls)),
 )

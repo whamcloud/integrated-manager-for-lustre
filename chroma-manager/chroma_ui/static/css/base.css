@@ -507,12 +507,6 @@ tr.even {
 	
 }
 
-.greybgcol{
-	background-color:#eeeeee;
-    font-size: 12px;
-    font-weight: bold;
-}
-
 #tabs {
   width: 98%;
 }
@@ -701,6 +695,7 @@ table.chart_grid tr {
 
 table.chart_grid tr td {
     position: relative;
+    vertical-align: top;
 }
 
 table.chart_grid td div.chart {
@@ -967,4 +962,17 @@ table.properties td {
 
 .job_row a.navigation:hover {
     text-decoration: underline;
+}
+
+.chart_info_pane {
+    padding: 6px;
+}
+
+.chart_info_pane h2 {
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+.chart_info_pane table {
+    font-size: 9pt;
 }

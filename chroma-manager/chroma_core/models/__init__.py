@@ -12,6 +12,5 @@ from conf_param import *
 from storage_plugin import *
 from alert import *
 from event import *
-from metrics import *
 from log import *
 from agent_session import *

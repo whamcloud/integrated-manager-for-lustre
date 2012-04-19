@@ -11,9 +11,6 @@ import sys
 import traceback
 import datetime
 
-from chroma_agent.avahi_publish import ZeroconfService
-from chroma_agent.avahi_publish import ZeroconfServiceException
-
 daemon_log = logging.getLogger('daemon')
 daemon_log.setLevel(logging.INFO)
 
@@ -98,6 +95,15 @@ def run_main_loop(args):
         daemon_log.info("Starting in the foreground")
 
     if args.publish_zconf:
+        try:
+            from chroma_agent.avahi_publish import ZeroconfService
+            from chroma_agent.avahi_publish import ZeroconfServiceException
+        except ImportError:
+            daemon_log.error("Unable to import Zeroconf modules, is python-avahi installed?")
+            if context:
+                context.close()
+            sys.exit(-1)
+
         # Before entering the main loop, advertize ourselves
         # using Avahi (call this only once per process)
         service = ZeroconfService(name="%s" % os.uname()[1], port=22)
@@ -159,6 +165,8 @@ def send_update(server_url, server_token, session, started_at, updates):
             daemon_log.error("Exception: %s" % content['traceback'])
         except ValueError:
             daemon_log.error("Unreadable payload")
+        except KeyError:
+            daemon_log.error("No exception in payload")
     except urllib2.URLError, e:
         daemon_log.error("Failed to open %s: %s" % (url, e))
     except BadStatusLine, e:

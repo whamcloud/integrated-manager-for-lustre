@@ -17,34 +17,36 @@
  *     - chart_manager - Global instance of the ChartManager
  */
 function dump(arr,level) {
-	var dumped_text = "";
-	if(!level) level = 0;
-	
-	//The padding given at the beginning of the line.
-	var level_padding = "";
-	for(var j=0;j<level+1;j++) level_padding += "    ";
-	
-	if(typeof(arr) == 'object') { //Array/Hashes/Objects 
-		for(var item in arr) {
-			var value = arr[item];
-			
-			if(typeof(value) == 'object') { //If it is an array,
-				dumped_text += level_padding + "'" + item + "' ...\n";
-				dumped_text += dump(value,level+1);
-			} else {
-				dumped_text += level_padding + "'" + item + "' => \"" + value + "\"\n";
-			}
-		}
-	} else { //Strings/Chars/Numbers etc.
-		dumped_text = "===>"+arr+"<===("+typeof(arr)+")";
-	}
-	return dumped_text;
+  var dumped_text = "";
+  if(!level) level = 0;
+  
+  //The padding given at the beginning of the line.
+  var level_padding = "";
+  for(var j=0;j<level+1;j++) level_padding += "    ";
+  
+  if(typeof(arr) == 'object') { //Array/Hashes/Objects 
+    for(var item in arr) {
+      var value = arr[item];
+      
+      if(typeof(value) == 'object') { //If it is an array,
+        dumped_text += level_padding + "'" + item + "' ...\n";
+        dumped_text += dump(value,level+1);
+      } else {
+        dumped_text += level_padding + "'" + item + "' => \"" + value + "\"\n";
+      }
+    }
+  } else { //Strings/Chars/Numbers etc.
+    dumped_text = "===>"+arr+"<===("+typeof(arr)+")";
+  }
+  return dumped_text;
 }
 var ChartModel = function(options) {
 
     var config = $.extend(true,  {
         api_params              : {},   // the static params sent to the api request (excluding metrics)
+        api_params_callback     : null,
         chart_config            : {},   // highcharts config
+        chart_config_callback   : null, // callback to modify chart config
         chart_group             : '',   // the chart group. Analagous to the tab
         enabled                 : true, // you can disable a graph by setting this to false
         error_callback          : null, // a callback executed on an error conditoin (not needed really, but an option)
@@ -59,7 +61,7 @@ var ChartModel = function(options) {
         series_id_to_index      : {},    // map our series key to highchart's index for the series
         series_callbacks        : null,    // list of callbacks for each series
         state                   : 'idle', // 'idle', 'loading'
-        url                     : ''     // url of the metric api to get
+        url                     : ''     // url (str or func for dynamic) of the metric api to get
     }, options || {});
 
     if( config.is_zoom ) {
@@ -86,7 +88,7 @@ var ChartModel = function(options) {
 };
 
 var ChartManager = function(options) {
-	var config = $.extend(true, {
+  var config = $.extend(true, {
         charts: {},
         chart_group: '',
         chart_config_defaults: {
@@ -109,6 +111,14 @@ var ChartManager = function(options) {
             series:{marker: {enabled: false}},
             column:{ pointPadding: 0.0, shadow: false, groupPadding: 0.0, borderWidth: 0.0 },
             areaspline: {fillOpacity: 0.5},
+            pie: { 
+              allowPointSelect: true, cursor: 'pointer', showInLegend: true, size: '100%', 
+              dataLabels: {
+                enabled: false,
+                color: '#000000',
+                connectorColor: '#000000'
+              }
+            },
             area: {
               stacking: 'normal',
               lineColor: '#666666',
@@ -117,7 +127,7 @@ var ChartManager = function(options) {
                 lineWidth: 1,
                 lineColor: '#666666'
               }
-             }
+            }
           }
         },
         debug: false,
@@ -168,16 +178,12 @@ var ChartManager = function(options) {
         config.charts[chart_group][chart_name] = ChartModel(options || {});
     };
 
-    var zoom_options = function() {
-
-    };
-
     var render_charts = function() {
         log('render_charts');
         _.each(config.charts[config.chart_group], function(chart,key) {
             if (chart.enabled && chart.state == 'idle') {
                 log('- rendering chart ' + key);
-                get_data(chart);
+                update_chart(chart);
             }
         });
     };
@@ -196,20 +202,12 @@ var ChartManager = function(options) {
             }
         }
         params.begin = chart.series_begin.toISOString();
-        params.end   = chart.series_end.toISOString()
+        params.end   = chart.series_end.toISOString();
 
         return $.extend(true, api_params, params );
     };
 
-    var get_data = function(chart) {
-        var api_params = $.extend(true, {}, chart.api_params);
-        api_params = default_params(api_params, chart);
-
-        // custom params
-        if ( _.isFunction(chart.prepare_params) ) {
-            api_params = chart.prepare_params(api_params, chart);
-        }
-
+    var update_chart = function(chart) {
         if (_.isNull(chart.instance)) {
           var chart_config = 
               $.extend(true, {}, config.chart_config_defaults, chart.chart_config, {
@@ -219,105 +217,145 @@ var ChartManager = function(options) {
                               chart.series_data,
                               function(series_data, i) { return { data: series_data }; }
                           )
-              })
+          });
+          if ( _.isFunction(chart.chart_config_callback)) {
+            chart_config = chart.chart_config_callback(chart_config);
+          }
+          var container = $('#' + chart_config.chart.renderTo);
+          if (container.prev('div.magni').length == 0) {
+            container.before("<div class='magni'><button class='magbutton'></button></div>");
+            container.prev('div.magni').find('button.magbutton').button({icons: {primary: 'ui-icon-zoomin'}});
+            container.prev('div.magni').find('button.magbutton').click(function(ev) {
+              var dialog = $("<div><div class='zoomed_chart'></div></div>");
+              dialog.dialog({width: window.innerWidth - 200, height: 450, modal: true});
+              var zoomed_container = dialog.find('.zoomed_chart');
+              var zoomed_config = $.extend(true, {}, chart_config);
+              zoomed_config.chart.renderTo = zoomed_container.get(0);
+
+              var zoomed_chart = new ChartModel($.extend(true, {}, chart));
+              zoomed_chart.instance = new Highcharts.Chart(zoomed_config);
+              zoomed_chart.instance.showLoading();
+              zoomed_chart.series_begin = null;
+
+              update_chart_data(zoomed_chart);
+            });
+          }
+
           chart.instance = new Highcharts.Chart(chart_config);
           chart.instance.showLoading();
         }
 
-        chart.state = 'loading';
-        Api.get(
-            chart.url,
-            api_params,
-            success_callback = function(data) {
-                chart.state = 'idle';
-                if ( _.isObject(chart.instance) )
-                    chart.instance.hideLoading();
+      update_chart_data(chart);
+    };
 
-                if (chart.snapshot) {
-                  // Latest-value chart
-                  chart.reset_series();
-                  chart.snapshot_callback(chart, data);
-                } else {
-                  // Time series chart
-                  if (chart.data_callback) {
-                    // If data_callback is provided, it will update series_data for us
-                    var series_updates = chart.data_callback(chart, data);
-                    _.each(series_updates, function(series_update, series_id) {
-                      if (chart.series_id_to_index[series_id] == undefined) {
-                        var series_conf = $.extend(true, {}, chart.series_template, {name: series_update.label})
-                        var added_series = chart.instance.addSeries(series_conf);
-                        chart.series_id_to_index[series_id] = added_series.index;
-                        chart.series_data[added_series.index] = []
-                      }
+    function update_chart_data(chart) {
+      var api_params = $.extend(true, {}, chart.api_params);
+      api_params = default_params(api_params, chart);
+      // custom params
+      if ( _.isFunction(chart.api_params_callback) ) {
+        api_params = chart.api_params_callback(api_params, chart);
+      }
 
-                     var i = chart.series_id_to_index[series_id];
-                     chart.series_data[i].push.apply(chart.series_data[i], series_update.data);
-                    });
-                  } else {
-                    // Updates series_data from data
-                    $.each(data, function(key, datapoint) {
-                        var timestamp = new Date(datapoint.ts).getTime();
-                        if (chart.series_callbacks) {
-                          // If series_callbacks are provided, call them per series
-                          _.each( chart.series_callbacks, function(series_callback, i) {
-                              series_callback(timestamp, datapoint.data, i, chart );
-                          });
-                        } else {
-                          // By default, pass through values to series in order of metrics list
-                          _.each(chart.metrics, function(metric, i) {
-                            chart.series_data[i].push([timestamp, datapoint.data[metric]]);
-                          });
-                        }
-                    });
-                  }
+      chart.state = 'loading';
+      var url;
+      if ( _.isFunction(chart.url) ) {
+        url = chart.url();
+      } else {
+        url = chart.url;
+      }
+      Api.get(
+        url,
+        api_params,
+        success_callback = function(data) {
+          chart.state = 'idle';
+          if ( _.isObject(chart.instance) )
+            chart.instance.hideLoading();
 
-                  // Cull any data older than the window
-                  var data_until = null;
-                  _.each(
-                      chart.series_data,
-                      function(series_data) {
-                        if (series_data.length > 0) {
-                          var latest_ts = series_data[series_data.length - 1][0];
-                          if (data_until == null || data_until < latest_ts) {
-                            data_until = latest_ts;
-                          }
-                          var newest_trash = null;
-                          for (var i = 0; i < series_data.length - 1; i++) {
-                            if (series_data[i][0] < (latest_ts - config.default_time_boundary)) {
-                              newest_trash = i;
-                            } else {
-                              break;
-                            }
-                          }
-                          if (newest_trash != null) {
-                            series_data.splice(0, newest_trash + 1)
-                          }
-                        }
-                      }
-                  );
-
-                  // shift the floating end
-                  if (data_until) {
-                    chart.series_end = new Date(data_until);
-                    log("Updated series end " + chart.series_end);
-                  } else {
-                    log("No data");
-                  }
-
-                  // Update highcharts from series_data
-                  _.each(
-                      chart.instance.series,
-                      function(series,i) {
-                        series.setData(chart.series_data[i], false)
-                      }
-                  );
+          if (chart.snapshot) {
+            // Latest-value chart
+            chart.reset_series();
+            chart.snapshot_callback(chart, data);
+          } else {
+            // Time series chart
+            if (chart.data_callback) {
+              // If data_callback is provided, it will update series_data for us
+              var series_updates = chart.data_callback(chart, data);
+              _.each(series_updates, function(series_update, series_id) {
+                if (chart.series_id_to_index[series_id] == undefined) {
+                  var series_conf = $.extend(true, {}, chart.series_template, {name: series_update.label})
+                  var added_series = chart.instance.addSeries(series_conf);
+                  chart.series_id_to_index[series_id] = added_series.index;
+                  chart.series_data[added_series.index] = []
                 }
 
-                chart.instance.redraw();
-            },
-            error_callback = null,
-            blocking = false
-        );
+                var i = chart.series_id_to_index[series_id];
+                chart.series_data[i].push.apply(chart.series_data[i], series_update.data);
+              });
+            } else {
+              // Updates series_data from data
+              $.each(data, function(key, datapoint) {
+                var timestamp = new Date(datapoint.ts).getTime();
+                if (chart.series_callbacks) {
+                  // If series_callbacks are provided, call them per series
+                  _.each( chart.series_callbacks, function(series_callback, i) {
+                    series_callback(timestamp, datapoint.data, i, chart );
+                  });
+                } else {
+                  // By default, pass through values to series in order of metrics list
+                  _.each(chart.metrics, function(metric, i) {
+                    chart.series_data[i].push([timestamp, datapoint.data[metric]]);
+                  });
+                }
+              });
+            }
+
+            // Cull any data older than the window
+            var data_until = null;
+            _.each(
+              chart.series_data,
+              function(series_data) {
+                if (series_data.length > 0) {
+                  var latest_ts = series_data[series_data.length - 1][0];
+                  if (data_until == null || data_until < latest_ts) {
+                    data_until = latest_ts;
+                  }
+                  var newest_trash = null;
+                  for (var i = 0; i < series_data.length - 1; i++) {
+                    if (series_data[i][0] < (latest_ts - config.default_time_boundary)) {
+                      newest_trash = i;
+                    } else {
+                      break;
+                    }
+                  }
+                  if (newest_trash != null) {
+                    series_data.splice(0, newest_trash + 1)
+                  }
+                }
+              }
+            );
+
+            // shift the floating end
+            if (data_until) {
+              chart.series_end = new Date(data_until);
+              log("Updated series end " + chart.series_end);
+            } else {
+              log("No data");
+            }
+
+            // Update highcharts from series_data
+            _.each(
+              chart.instance.series,
+              function(series,i) {
+                series.setData(chart.series_data[i], false)
+              }
+            );
+          }
+
+          chart.instance.redraw();
+        },
+        error_callback = null,
+        blocking = false
+      );
     }
 
     var init = function() {
@@ -325,7 +363,6 @@ var ChartManager = function(options) {
         if(config.interval_seconds > 0 ) {
             config.interval_id = setInterval(render_charts, config.interval_seconds * 1000 );
         }
-        return;
     };
 
     // Interval based refreshing
@@ -335,7 +372,6 @@ var ChartManager = function(options) {
         }
         config.interval_id = null;
         config.interval_seconds = 0;
-        return;
     };
     var set_recurring = function (seconds) {
         if ( ! _.isNumber(seconds) ) {
@@ -347,7 +383,18 @@ var ChartManager = function(options) {
         }
         config.interval_id = setInterval(render_charts,seconds * 1000);
         config.interval_seconds = seconds;
-        return;
+    };
+
+    var destroy = function() {
+      clear_recurring();
+      _.each(config.charts, function(charts_in_group,chart_group) {
+        _.each(charts_in_group, function(chart,chart_key) {
+          if(_.isObject(chart.instance)) {
+            chart.instance.destroy();
+            chart.instance = null;
+          }
+        });
+      });
     }
 
     // return an object
@@ -356,6 +403,7 @@ var ChartManager = function(options) {
         chart_group: chart_group,
         clear_recurring: clear_recurring,
         config: config,
+        destroy: destroy,
         init: init,
         render_charts: render_charts,
         set_recurring: set_recurring,
