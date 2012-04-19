@@ -342,8 +342,6 @@ var ChartManager = function(options) {
               log("No data");
             }
 
-            console.log('heyo');
-            console.log(chart.series_data);
             // Update highcharts from series_data
             _.each(
               chart.instance.series,
