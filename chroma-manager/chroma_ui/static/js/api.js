@@ -374,14 +374,7 @@ var Api = function() {
     .error(function(jqXHR, textStatus)
     {
       if (jqXHR.status == 0 && jqXHR.statusText == "error") {
-        /* This is a workaroud to deal with the fact that some POSTs
-         * are actually read-only (especially the /notifications/ and
-         * /object_summary).  Remove these training wheels before release.
-         * HYD-618
-         * */
-
-        var HACK_RETRY_ALL = true
-        if (verb == "GET" || verb == "PUT" || verb == "DELETE" || HACK_RETRY_ALL) {
+        if (verb == "GET" || verb == "PUT" || verb == "DELETE") {
           // For idempotent HTTP verbs, we can retry once
           // contact is reestablished
           lostContact();
