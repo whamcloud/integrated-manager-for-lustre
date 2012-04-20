@@ -11,13 +11,16 @@ admin.autodiscover()
 
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
+import chroma_ui.urls
+import chroma_api.urls
+
 
 urlpatterns = patterns('',
     (r'^admin/', include(admin.site.urls)),
 
-    (r'^ui/', include('chroma_ui.urls')),
+    (r'^ui/', include(chroma_ui.urls)),
 
-    (r'^', include('chroma_api.urls')),
+    (r'^', include(chroma_api.urls)),
 )
 
 urlpatterns += staticfiles_urlpatterns()

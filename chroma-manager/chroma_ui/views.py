@@ -14,6 +14,23 @@ from chroma_api.host import HostResource
 from chroma_api.target import TargetResource
 
 
+def _build_cache():
+    cache = {}
+    resources = [
+        FilesystemResource,
+        TargetResource,
+        HostResource
+    ]
+    for resource in resources:
+        r = resource()
+        l = [r.full_dehydrate(r.build_bundle(obj = m)).data for m in resource.Meta.queryset._clone()]
+        cache[resource.Meta.resource_name] = l
+
+    from tastypie.serializers import Serializer
+    serializer = Serializer()
+    return serializer.to_simple(cache, {})
+
+
 def index(request):
     """Serve either the javascript UI, or an advice HTML page
     if the backend isn't ready yet."""
@@ -23,21 +40,7 @@ def index(request):
         return render_to_response("installation.html",
                 RequestContext(request, {}))
     else:
-        cache = {}
-        resources = [
-            FilesystemResource,
-            TargetResource,
-            HostResource
-        ]
-        for resource in resources:
-            r = resource()
-            l = [r.full_dehydrate(r.build_bundle(obj = m)).data for m in resource.Meta.queryset]
-            cache[resource.Meta.resource_name] = l
-
-        from tastypie.serializers import Serializer
-        serializer = Serializer()
-        cache = serializer.to_simple(cache, {})
 
         from django.core.serializers import json as django_json
         return render_to_response("base.html",
-                RequestContext(request, {'cache': json.dumps(cache, cls = django_json.DjangoJSONEncoder)}))
+                RequestContext(request, {'cache': json.dumps(_build_cache(), cls = django_json.DjangoJSONEncoder)}))
