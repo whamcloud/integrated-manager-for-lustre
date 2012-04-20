@@ -389,18 +389,24 @@ def test_host_contact(host):
         server_host = socket.getfqdn()
 
     if resolve:
-        rc, out, err = Agent(host).ssh("ping -c 1 %s" % server_host)
-        if rc == 0:
-            reverse_resolve = True
-            reverse_ping = True
-        elif rc == 1:
-            # Can resolve, cannot ping
-            reverse_resolve = True
-            reverse_ping = False
-        else:
-            # Cannot resolve
+        try:
+            rc, out, err = Agent(host).ssh("ping -c 1 %s" % server_host)
+        except Exception, e:
+            audit_log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
             reverse_resolve = False
             reverse_ping = False
+        else:
+            if rc == 0:
+                reverse_resolve = True
+                reverse_ping = True
+            elif rc == 1:
+                # Can resolve, cannot ping
+                reverse_resolve = True
+                reverse_ping = False
+            else:
+                # Cannot resolve
+                reverse_resolve = False
+                reverse_ping = False
     else:
         reverse_resolve = False
         reverse_ping = False
