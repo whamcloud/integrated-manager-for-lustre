@@ -312,7 +312,6 @@ class UpdateScan(object):
         return wrapper
 
     @catch_metrics_deadlocks
-    @transaction.commit_on_success
     def store_lustre_target_metrics(self, target_name, metrics):
         # TODO: Re-enable MGS metrics storage if it turns out it's useful.
         if target_name == "MGS":
@@ -336,7 +335,6 @@ class UpdateScan(object):
             return target.metrics.update(metrics, self.update_time)
 
     @catch_metrics_deadlocks
-    @transaction.commit_on_success
     def store_node_metrics(self, metrics):
         return self.host.downcast().metrics.update(metrics, self.update_time)
 
