@@ -490,6 +490,10 @@ var CommandNotification = function() {
         $(".transition_buttons[data-resource_uri='" + uri + "']").each(function () {
           $(this).html(LiveObject.actions(obj));
         });
+
+        var resource = uri.split('/')[2];
+        var id = uri.split('/')[3];
+        ApiCache.put(resource, obj);
       },
       {404:function () {
         // The object has gone away
@@ -504,6 +508,10 @@ var CommandNotification = function() {
         $(".transition_buttons[data-resource_uri='" + uri + "']").each(function () {
           $(this).html("");
         });
+
+        var resource = uri.split('/')[2];
+        var id = uri.split('/')[3];
+        ApiCache.purge(resource, id);
       }},
       false);
   }

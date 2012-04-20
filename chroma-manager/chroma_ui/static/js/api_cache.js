@@ -32,7 +32,6 @@ var ApiCache = function(){
     url: "/api/host/"
   });
 
-
   var collections = {
     'filesystem': new FilesystemCollection(),
     'target': new TargetCollection(),
@@ -70,13 +69,41 @@ var ApiCache = function(){
     return object;
   }
 
-  function list(obj_type) {
-    var collection = collections[obj_type];
+  function put(resource, obj)
+  {
+    var collection = collections[resource];
+    if (collection){
+      // If this is a cached resource
+      var model = collection.get(obj.id);
+      if (!model) {
+        collection.add(obj);
+      } else {
+        model.set(obj);
+      }
+    }
+  }
+
+  function list(resource) {
+    var collection = collections[resource];
     return collection.toJSON();
+  }
+
+  function purge(resource, id){
+    var collection = collections[resource];
+    if (collection){
+      // If this is a cached resource
+      var model = collection.get(id);
+      if (model) {
+        // If we had a cached copy of this object
+        collection.remove(model);
+      }
+    }
   }
 
   return {
     get: get,
+    put: put,
+    purge: purge,
     list: list
   }
 }();

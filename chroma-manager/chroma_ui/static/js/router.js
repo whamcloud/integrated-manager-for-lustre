@@ -133,6 +133,11 @@ var ChromaRouter = Backbone.Router.extend({
     } else if (name == 'log') {
       LogView.draw();
     }
+
+    // FIXME: generalise this once there is a global ChartManager
+    if (name != 'dashboard') {
+      Dashboard.stopCharts();
+    }
   },
   configureTab: function(tab)
   {

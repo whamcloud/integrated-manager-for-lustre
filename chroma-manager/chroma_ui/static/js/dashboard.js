@@ -16,6 +16,13 @@ var Dashboard = function(){
   var polling_enabled = true;
   var time_period;
 
+  function stopCharts() {
+    // FIXME: revise when there is a global chart_manager
+    if (chart_manager) {
+      chart_manager.destroy();
+    }
+  }
+
   function init() {
     function updateUnits(interval_select) {
       var intervalValue = interval_select.val();
@@ -1287,6 +1294,7 @@ var Dashboard = function(){
 
   return {
     init: init,
-    setPath: setPath
+    setPath: setPath,
+    stopCharts: stopCharts
   }
 }();
