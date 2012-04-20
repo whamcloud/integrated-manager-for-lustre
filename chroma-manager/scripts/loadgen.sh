@@ -33,6 +33,8 @@ if ! grep -q $LUSTRE /proc/mounts; then
   mkdir -p $LUSTRE
   mount -tlustre $MGSPATH $LUSTRE
 #  lfs setstripe $LUSTRE -c $STRIPE_COUNT
+else
+  MGSPATH=$(grep $LUSTRE /proc/mounts | sed -e 's/ .*//')
 fi
 
 
