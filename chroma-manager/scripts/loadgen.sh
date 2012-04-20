@@ -47,6 +47,8 @@ while true; do
     rm -f $name
     lfs setstripe -c $STRIPE_COUNT $name
     dd if=/dev/zero of=$name bs=128k count=10k
+    umount $LUSTRE
+    mount -tlustre $MGSPATH $LUSTRE
     dd of=/dev/zero if=$name bs=128k count=10k
     rm -f $name
     sleep $((RANDOM % 100 / 4))
