@@ -110,6 +110,7 @@ class ChromaManagerOps(NodeOps):
 
     def setup_chroma(self):
         with self.open_session():
+            put("%s" % (settings.CHROMA_SETTINGS), "/usr/share/chroma-manager/local_settings.py", use_sudo = True)
             sudo("chroma-config setup %s %s" % (
                 settings.CHROMA_MANAGER_USER,
                 settings.CHROMA_MANAGER_PASSWORD))
@@ -117,6 +118,7 @@ class ChromaManagerOps(NodeOps):
     def reset_chroma(self):
         with self.open_session():
             sudo("chroma-config start")
+            sudo("service httpd restart")
 
     def create_keys(self):
         with self.open_session():
@@ -183,12 +185,16 @@ class ChromaApplianceOps(NodeOps):
         self.add_volume(1, 'sdi')
 #        self.mkraid()
         self.reset_corosync()
+        with self.open_session():
+            put('../chroma-manager/scripts/loadgen.sh', 'loadgen.sh', mode=0755)
+
 
     def configure_client(self):
         self.set_hostname()
         with self.open_session():
             self._setup_chroma_repo()
             sudo("mkdir /mnt/lustre")
+            put('../chroma-manager/scripts/loadgen.sh', 'loadgen.sh', mode=0755)
 
 
 #
