@@ -383,7 +383,7 @@ in development mode, the exception and traceback will be serialized and returned
 Example client
 --------------
 
-The example below is written in Python and uses the excellent ``python-requests``
+The example below is written in Python and uses the ``python-requests``
 module for HTTP operations.  It demonstrates how to establish a session, authenticate,
 and retrieve a list of hosts.
 
