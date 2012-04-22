@@ -26,6 +26,7 @@ class NodeOps(object):
         for key in ['chroma_ca-cacert.pem', 'privkey-nopass.pem', 'test-ami-cert.pem']:
             put("%s/%s" % (settings.YUM_KEYS, key), "/root/keys/%s" % key, use_sudo = True)
         put(settings.YUM_REPO, "/etc/yum.repos.d", use_sudo = True)
+        put(settings.MASTER_REPO, "/etc/yum.repos.d", use_sudo = True)
 
 
     def reboot(self):
@@ -47,7 +48,7 @@ class NodeOps(object):
         print "terminating %s %s" % (self.node.name, instance.id)
         instance.terminate()
         if len(volumes):
-            print "need to delete", volumes
+            #print "need to delete", volumes
             conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
             for vol in conn.get_all_volumes(volumes):
                 if vol.status != u'available':
@@ -211,7 +212,7 @@ class ImageOps(NodeOps):
             sudo('rm -rf /root/.*hist*')
             sudo('rm -rf /var/log/*.gz')
             sudo('rm -f /etc/ssh/ssh_host*')
-            sudo('rm -f /etc/yum.repos.d/chroma.repo')
+            sudo('rm -f /etc/yum.repos.d/chroma*.repo')
             sudo('find /home -maxdepth 1 -type d -exec rm -rf {}/.ssh \;')
         
 
