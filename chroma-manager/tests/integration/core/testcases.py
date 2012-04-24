@@ -351,27 +351,33 @@ class ChromaIntegrationTestCase(TestCase):
             "dd if=/dev/zero of=/mnt/%s/test.dat bs=1K count=100K" % filesystem_name
         )
 
-    def get_targets(self, filesystem_id, kind):
+    def _check_targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts, assert_true):
         response = self.chroma_manager.get(
             '/api/target/',
             params = {
                 'filesystem_id': filesystem_id,
-                'kind': kind
             }
         )
         self.assertTrue(response.successful, response.text)
-        return response.json['objects']
-
-    def verify_targets_started_on_host(self, filesystem_id, kind, expected_host_name):
-        targets = self.get_targets(filesystem_id, kind)
+        targets = response.json['objects']
 
         for target in targets:
-            self.assertEqual(expected_host_name, target['active_host_name'])
+            target_volume_url = target['volume']
+            response = self.chroma_manager.get(target_volume_url)
+            self.assertTrue(response.successful, response.text)
+            target_volume_id = response.json['id']
+            if target_volume_id in volumes_to_expected_hosts:
+                expected_host = volumes_to_expected_hosts[target_volume_id]
+                if assert_true:
+                    self.assertEqual(expected_host, target['active_host_name'])
+                else:
+                    if not expected_host == target['active_host_name']:
+                        return False
 
-    def targets_started_on_host(self, filesystem_id, kind, expected_host_name):
-        targets = self.get_targets(filesystem_id, kind)
-
-        for target in targets:
-            if not expected_host_name == target['active_host_name']:
-                return False
         return True
+
+    def targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts):
+        return self._check_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_to_expected_hosts, assert_true = False)
+
+    def verify_targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts):
+        return self._check_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_to_expected_hosts, assert_true = True)

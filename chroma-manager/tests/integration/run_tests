@@ -38,7 +38,8 @@ if [ -e "$TEST_DIR/test_cluster_setup.py" ]
         # If the cluster isn't set up properly, just exit and don't execute the tests.
         cluster_setup_status=$?
         if [ "$cluster_setup_status" -ne "0" ]; then
-            exit $cluster_status_status
+            echo "Cluster config check failed. Exiting with status $cluster_setup_status"
+            exit $cluster_setup_status
         fi
     else
         echo "No test_cluster_setup.* found, continuing..."
