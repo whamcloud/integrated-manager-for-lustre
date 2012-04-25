@@ -56,7 +56,6 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
         return super(LogResource, self).build_filters(filters)
 
     def _substitutions(self, obj):
-        print "_substitutions %s" % obj.message
         message = obj.message
         from chroma_api import api_log
         from chroma_api.urls import api
