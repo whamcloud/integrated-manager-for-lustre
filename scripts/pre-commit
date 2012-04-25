@@ -91,6 +91,7 @@ CHECKS = [
             '.*chroma_ui/static/js/[^/]+\.js$'
         ],
         'ignore_files': [
+            '.*/chroma-manager/r3d/prettytable.py',
             '.*production_version.py$',
             '.*/chroma-manager/docs/conf.py',
             '.*/chroma-manager/userdocs/conf.py',
