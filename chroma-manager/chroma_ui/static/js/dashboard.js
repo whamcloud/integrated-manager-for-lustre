@@ -322,7 +322,7 @@ var Dashboard = function(){
       //ost_Pie_Inode_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
       //ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, "Average", $('#ls_ostKind').val(), readWriteFetchMatric, "false");
       $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div").show();
-      $("#target_mgt_ops_container_div").hide();
+      $("#target_mdt_ops_container_div").hide();
       init_charts('targets_ost');
 
     }
