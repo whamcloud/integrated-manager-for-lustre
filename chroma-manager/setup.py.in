@@ -34,6 +34,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'chroma = chroma_cli.main:main',
+            'qr3d = r3d.cli:main'
         ]
     }
 )

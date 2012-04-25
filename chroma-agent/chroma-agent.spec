@@ -18,6 +18,7 @@ Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
 Requires: python-simplejson python-argparse python-daemon python-setuptools
+Requires(post): selinux-policy
 
 %description
 This is the Whamcloud monitoring and adminstration agent
