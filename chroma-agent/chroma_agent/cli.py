@@ -17,15 +17,6 @@ def main():
     for plugin_name, plugin_class in ActionPluginManager.get_plugins().items():
         plugin_class().register_commands(subparsers)
 
-    # FIXME: This really ought to be split out into a separate
-    # daemon script.
-    import chroma_agent.main_loop
-    p = subparsers.add_parser("daemon",
-                              help="start daemon (publish with Avahi)")
-    p.add_argument("--foreground", action="store_true")
-    p.add_argument("--publish-zconf", action="store_true")
-    p.set_defaults(func=chroma_agent.main_loop.run_main_loop)
-
     try:
         args = parser.parse_args()
         result = args.func(args)

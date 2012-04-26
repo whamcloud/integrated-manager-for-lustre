@@ -9,11 +9,11 @@
 . /etc/init.d/functions
 
 export PID_FILE=/var/run/chroma-agent.pid
-export AGENT_BIN=/usr/bin/chroma-agent
+export DAEMON_BIN=/usr/bin/chroma-agent-daemon
 
 start() {
     echo -n "Starting the Chroma Agent daemon: "
-    $AGENT_BIN daemon
+    $AGENT_BIN --pid-file=$PID_FILE
     echo
 }
 

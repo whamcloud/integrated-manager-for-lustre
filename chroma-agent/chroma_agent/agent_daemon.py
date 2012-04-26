@@ -10,6 +10,7 @@ import logging
 import sys
 import traceback
 import datetime
+import argparse
 
 daemon_log = logging.getLogger('daemon')
 daemon_log.setLevel(logging.INFO)
@@ -61,26 +62,32 @@ def retry_main_loop():
                     backoff *= 2
 
 
-def run_main_loop(args):
+def main():
     """Daemonize and handle unexpected exceptions"""
+    parser = argparse.ArgumentParser(description="Whamcloud Chroma Agent")
+    parser.add_argument("--foreground", action="store_true")
+    parser.add_argument("--publish-zconf", action="store_true")
+    parser.add_argument("--pid-file", default = "/var/run/chroma-agent.pid")
+    args = parser.parse_args()
+
     if not args.foreground:
         from daemon import DaemonContext
         from daemon.pidlockfile import PIDLockFile
 
-        if os.path.exists(MainLoop.PID_FILE + ".lock") or os.path.exists(MainLoop.PID_FILE):
-            pid = int(open(MainLoop.PID_FILE).read())
+        if os.path.exists(args.pid_file + ".lock") or os.path.exists(args.pid_file):
+            pid = int(open(args.pid_file).read())
             try:
                 os.kill(pid, 0)
             except OSError:
                 # Not running, delete stale PID file
-                os.remove(MainLoop.PID_FILE)
-                os.remove(MainLoop.PID_FILE + ".lock")
+                os.remove(args.pid_file)
+                os.remove(args.pid_file + ".lock")
                 sys.stderr.write("Removing stale PID file\n")
             else:
                 # Running, we should refuse to run
                 raise RuntimeError("Daemon is already running (PID %s)" % pid)
 
-        context = DaemonContext(pidfile = PIDLockFile(MainLoop.PID_FILE))
+        context = DaemonContext(pidfile = PIDLockFile(args.pid_file))
         context.open()
         # NB Have to set up logger after entering DaemonContext because it closes all files when
         # it forks
@@ -178,8 +185,6 @@ def send_update(server_url, server_token, session, started_at, updates):
 
 
 class MainLoop(object):
-    PID_FILE = '/var/run/chroma-agent.pid'
-
     def run(self):
         # Load server config (server URL etc)
         from chroma_agent.store import AgentStore
@@ -257,7 +262,7 @@ class MainLoop(object):
                         session_counter += 1
 
                 if not quick_retry:
-                    while ((datetime.utcnow() - update_started_at) < timedelta(seconds = report_interval)):
+                    while (datetime.utcnow() - update_started_at) < timedelta(seconds = report_interval):
                         time.sleep(1)
             else:
                 time.sleep(config_interval)

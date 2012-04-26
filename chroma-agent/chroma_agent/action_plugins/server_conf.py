@@ -10,7 +10,7 @@ from chroma_agent.plugins import ActionPlugin
 
 
 def _validate_conf(server_conf):
-    from chroma_agent.main_loop import send_update
+    from chroma_agent.agent_daemon import send_update
     result = send_update(
             server_conf['url'],
             server_conf['token'],

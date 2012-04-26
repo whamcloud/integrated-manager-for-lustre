@@ -24,6 +24,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'chroma-agent = chroma_agent.cli:main',
+            'chroma-agent-daemon = chroma_agent.agent_daemon:main',
         ],
     }
 )
