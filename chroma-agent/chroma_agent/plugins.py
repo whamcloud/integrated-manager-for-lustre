@@ -11,15 +11,6 @@ from chroma_agent.log import agent_log
 
 EXCLUDED_PLUGINS = []
 
-#class DdnDevicePlugin(object):
-#    def annotate_block_device(info):
-#        # Special case for DDN 10KE which correlates volumes via
-#        # their 'OID' identifier and publishes this ID in /sys/block
-#        # FIXME: find a way to shift this into the DDN plugin
-#        oid_path = os.path.join("/sys/block", device_name, 'oid')
-#        if os.path.exists(oid_path):
-#            serial = open(oid_path, 'r').read().strip()
-
 
 class PluginManager(object):
     """
