@@ -319,6 +319,7 @@ class Benchmark(GenericBenchmark):
             mem_info['pct_swap_used'] = ((mem_info['SwapTotal'] - mem_info['SwapFree']) / mem_info['SwapTotal']) * 100
             return mem_info
 
+        # TODO: Include relevant MySQL tuning params
         profile = LazyStruct()
         cpu_info = _cpu_info()
         profile.cpu_count = cpu_info['count']
@@ -335,7 +336,7 @@ class Benchmark(GenericBenchmark):
     def print_report(self, run_info):
         profile = self.profile_system()
         print "CPUs: %d @ %.2f GHz, Mem: %d MB real (%.2f%% used) / %d MB swap (%.2f%% used)" % (profile.cpu_count, (profile.cpu_speed / 1000), (profile.mem_total / 1000), profile.mem_pct_used, (profile.swap_total / 1000), profile.swap_pct_used)
-        print "counts: OSS: %d, OSTs/OSS: %d (%d total); stats: OST: %d, MDT: %d, server: %d" % (options.oss, options.ost, (options.oss * options.ost), options.ost_stats, options.mdt_stats, options.server_stats)
+        print "counts: OSS: %d, OSTs/OSS: %d (%d total); stats-per: OSS: %d, MDS: %d" % (options.oss, options.ost, (options.oss * options.ost), ((options.ost * options.ost_stats) + options.server_stats), (options.mdt_stats + options.server_stats))
         print "run count (%d stats) / run time (%.2f sec) = run rate (%.2f stats/sec)" % (run_info.run_count, run_info.run_interval, run_info.run_rate)
 
     def cleanup(self):
