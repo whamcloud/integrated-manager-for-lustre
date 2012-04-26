@@ -17,7 +17,6 @@ def set_conf_param(args):
     if value:
         try_run(['lctl', 'conf_param', "%s=%s" % (key, value)])
     else:
-        # FIXME: shouldn't this be in remove_conf_param() ?
         try_run(['lctl', 'conf_param', "-d", key])
 
 
