@@ -91,6 +91,9 @@ Highcharts.theme = {
          color: 'gray'
       }
    },
+   global: {
+        useUTC: false
+   },
    labels: {
       style: {
          color: '#99b'
