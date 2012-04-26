@@ -219,7 +219,6 @@ class Benchmark(GenericBenchmark):
     def server_list(self):
         return self.mds_list + self.oss_list
 
-    @transaction.commit_on_success
     def store_metrics(self, scan):
         return scan.store_metrics()
 
