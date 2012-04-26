@@ -142,10 +142,10 @@ var Dashboard = (function() {
   {
     var view_selection_markup = "<select id='breadcrumb_type'>";
     if(dashboard_type === "filesystem") {
-      view_selection_markup += "<option value='filesystem' selected>Filesystems</option>";
+      view_selection_markup += "<option value='filesystem' selected>File systems</option>";
     }
     else {
-      view_selection_markup += "<option value='filesystem'>Filesystems</option>";
+      view_selection_markup += "<option value='filesystem'>File systems</option>";
     }
 
     if(dashboard_type === "server") {

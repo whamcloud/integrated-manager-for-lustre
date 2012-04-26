@@ -113,7 +113,7 @@
           success_callback = function(resource_class) {
             var columns = resource_class.columns;
             var aoColumns = [
-              {'mdataProp': 'id', 'bVisible': false, bSortable: false},
+              {'mdataProp': 'id', sTitle: 'ID', 'bVisible': false, bSortable: false},
               {'mDataProp': 'alias', 'sTitle': 'Name', bSortable: false}];
             $.each(columns, function(i, c) {
               aoColumns.push({
@@ -126,7 +126,7 @@
                 resourceTable.fnDestroy();
                 resourceTable = null;
                 $('#resource_table').html("")
-            } 
+            }
 
             resourceTable = $('#resource_table').dataTable({
                 bServerSide: true,
@@ -153,7 +153,7 @@
                 bAutoWidth: false,
                 iDisplayLength:25,
                 aoColumns: aoColumns
-            }); 
+            });
 
             $('#resource_table tbody tr').live('click', function() {
                 var aPos = resourceTable.fnGetPosition(this);
@@ -173,7 +173,7 @@
       }
     }
 
-    function init() 
+    function init()
     {
       $('#resource_class_select').change(function() {
           load_resource_table();
@@ -215,7 +215,7 @@
 
 
 <div id="plugins_available">
-  <h2 class='section_header'>Storage resources</h2>
+  <h2 class='section_header'>Storage Resources</h2>
   <p><button class='add storage_resource_create_link'>Add storage device...</button></p>
   <p>Filter: <select id='resource_class_select'></select>&nbsp;</p>
   <table class='display tight_lines' id='resource_table' width="100%">

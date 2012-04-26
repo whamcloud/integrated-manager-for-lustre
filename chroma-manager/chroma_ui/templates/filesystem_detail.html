@@ -23,13 +23,13 @@
       loadFilesystem();
     }
 
-    function init() 
+    function init()
     {
       $('div#filesystem_detail button.advanced').click(function() {
         conf_param_dialog.open();
       });
 
-      // Create new OST button click handler. 
+      // Create new OST button click handler.
       volume_chooser_store = VolumeChooserStore();
       volume_chooser_store.load(function() {
         $('#new_ost_chooser').volumeChooser({
@@ -56,9 +56,9 @@
         position:"center",
         show: "clip",
         modal: true,
-        buttons: 
+        buttons:
         {
-          "Ok": 
+          "Ok":
           {
             text: "Ok",
             id: "ost_ok_button",
@@ -92,7 +92,7 @@
               chain_creation();
             }
           },
-          "Cancel": function() { 
+          "Cancel": function() {
             $(this).dialog("close");
           }
         }
@@ -106,7 +106,7 @@
           "bProcessing": true,
           "bJQueryUI": true,
           "bFilter": false,
-          "bPaginate": false, 
+          "bPaginate": false,
           "aoColumns": [
             { "sClass": 'txtleft' },
             { "sClass": 'txtleft' },
@@ -121,7 +121,7 @@
     }
 
     function loadFilesystem() {
-      Api.get("filesystem/" + fs_id + "/", {}, 
+      Api.get("filesystem/" + fs_id + "/", {},
       success_callback = function(filesystem)
       {
         /* FS summary fields */
@@ -148,9 +148,9 @@
 
     function loadFilesystemTargets()
     {
-      Api.get("target/", {filesystem_id : fs_id, limit: 0}, 
+      Api.get("target/", {filesystem_id : fs_id, limit: 0},
       success_callback = function(data)
-      {  
+      {
         var targets = data.objects;
         $.each(targets, function(i, target)
         {
@@ -187,7 +187,7 @@
 </script>
 
 <div id='filesystem_detail'>
-<h2 class='section_header' id='edit_fs_title'>Filesystem <span id='fs_name'/></h2>
+<h2 class='section_header' id='edit_fs_title'>File system <span id='fs_name'/></h2>
 
 <div style='float:left;'>
   <table class='fs'>
@@ -208,7 +208,7 @@
     </tr>
   </table>
   <p>
-    <button class='advanced' type="button">Advanced...</button>
+    <button class='advanced' type="button">Advanced Settings</button>
   </p>
 </div>
 
@@ -279,7 +279,7 @@
 </table>
 
 <p align='right'>
-  <a class='navigation button' href="configure/filesystem/list/">Back to filesystems</a>
+  <a class='navigation button' href="configure/filesystem/list/">Back to file systems</a>
 </p>
 
 <!-- new OST popup showing all usable luns-->

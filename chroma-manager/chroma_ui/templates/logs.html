@@ -11,11 +11,11 @@
         // TODO: reload loadHostList
       }
     }
-    function init() 
+    function init()
     {
       //load host list
       loadHostList('', 'logs_hostList');
-      
+
       //validation for start an end time
       $('#datetime_from').datetimepicker(
       {
@@ -82,6 +82,7 @@
 
                 row.devicereportedtime = shortLocalTime(row.devicereportedtime);
                 row.syslogtag = row.syslogtag.slice(0, -1);
+                row.message = "<div class='log_line'>" + _.escape(row.message) + "</div>";
 
                 var substituted = "";
                 var cursor = 0;
@@ -104,13 +105,21 @@
             },
             settings,
             removeBlankAttributes(filter_args));
-        }, 
+        },
        aaSorting: [[0, 'desc']],
        "aoColumns": [
-           { "sClass": 'log_line', "mDataProp":"devicereportedtime", "bSortable":true},
-           { "sClass": 'log_line', "mDataProp":"fromhost", "bSortable":true},
-           { "sClass": 'log_line', "mDataProp":"syslogtag", "bSortable":false},
-           { "sClass": 'log_line', "mDataProp":"message","bSearchable":true, "bSortable":false}
+           { "sClass": 'txtleft', "mDataProp":"devicereportedtime", "bSortable":true},
+           { "sClass": 'txtleft', "mDataProp":"fromhost", "bSortable":true},
+           { "sClass": 'txtleft', "mDataProp":"syslogtag", "bSortable":false},
+           { "sClass": 'txtleft', "mDataProp":"message","bSearchable":true, "bSortable":false}
+           //{ "sClass": 'txtleft log_line', "mDataProp":"devicereportedtime", "bSortable":true},
+           //{ "sClass": 'txtleft log_line', "mDataProp":"fromhost", "bSortable":true},
+           //{ "sClass": 'txtleft log_line', "mDataProp":"syslogtag", "bSortable":false},
+           //{ "sClass": 'txtleft log_line', "mDataProp":"message","bSearchable":true, "bSortable":false}
+           //{ "mDataProp":"devicereportedtime", "bSortable":true},
+           //{ "mDataProp":"fromhost", "bSortable":true},
+           //{ "mDataProp":"syslogtag", "bSortable":false},
+           //{ "mDataProp":"message","bSearchable":true, "bSortable":false}
        ],
        "bJQueryUI": true
       });
@@ -149,8 +158,8 @@
     <tr>
       <td colspan="3">
         <div class='content'>
-          <table width="100%" border="0" cellspacing="0" cellpadding="0" class="log_line"  id="all_log_content">
-            <thead class="log_line">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" id="all_log_content">
+            <thead>
               <tr>
                 <th width="10%">Date</th>
                 <th width="10%">Host</th>
@@ -158,7 +167,7 @@
                 <th width="70%">Message</th>
               </tr>
             </thead>
-            <tbody class="log_line">
+            <tbody>
             </tbody>
           </table>
         </div>

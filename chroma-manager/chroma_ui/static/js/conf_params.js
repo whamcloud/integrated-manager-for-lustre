@@ -5,7 +5,7 @@
 
 
 var ConfParamDialog = function(options) {
-  var el = $("<div><table width='100%' border='0' cellspacing='0' cellpadding='0'><thead><th>Property</th><th>Value</th><th></th></thead><tbody></tbody></table></div>");
+  var el = $("<div><table width='100%' border='0' cellspacing='0' cellpadding='0'><thead><th></th><th></th><th></th></thead><tbody></tbody></table></div>");
   var _options = $.extend({}, options)
 
   el.find('table').dataTable( {
@@ -97,24 +97,41 @@ function _populate_conf_param_table(data, table, help)
 {
   table.dataTable().fnClearTable();
   var property_box="";
+
+  var sections = {
+    'llite' : { label: 'Tuneable Settings', entries: [] },
+    'sys'   : { label: 'Timeout Settings',  entries: [] },
+    ''      : { label: 'General Settings',  entries: [] }
+  };
+  var section_display_order = [ 'llite','sys','' ];
   $.each(data, function(key, value)
   {
+    var split_setting = key.split('.');
+    var section = split_setting.shift();
+    var setting_label = split_setting.join('.');
+    // unknown setting groups go to "General"
+    if (_.isUndefined(sections[section])) {
+      section = '';
+    }
+
     if (value == null) {
       /* TODO: represent nulls as a gray 'unset' state (and display default value)*/
       value = "";
     }
-    property_box = "<input type=textbox value='" + value + "' id='conf_param_" + key +
-      "' title='" + help[key] + "'/>";
-    table.dataTable().fnAddData ([
-      key,
-      property_box,
-      value
-    ]);
+    property_box = "<input type=textbox value='" + _.escape(value) + "' id='conf_param_" + key +
+      "' title='" + _.escape(help[key]) + "'/>";
+    sections[section].entries.push([ setting_label, property_box, value ]);
+  });
+  $.each(section_display_order, function() {
+    // skip if no entries
+    if ( sections[this].entries.length === 0 ) return true;
+    table.dataTable().fnAddData( [ '<b>' + _.escape(sections[this].label) + '</b>', '', '' ]);
+    table.dataTable().fnAddData( sections[this].entries );
   });
 }
 
-function populate_conf_param_table(data, table, help)
-{
+function populate_conf_param_table(data, table, help) {
+
   if (help) {
     _populate_conf_param_table(data, table, help);
   } else {
