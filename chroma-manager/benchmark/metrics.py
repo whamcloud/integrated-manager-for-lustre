@@ -5,6 +5,7 @@
 
 
 import random
+import os
 import sys
 import time
 import uuid
@@ -246,6 +247,7 @@ class Benchmark(GenericBenchmark):
         run_count = 0
         create_interval = 0
         create_count = 0
+        start_la = os.getloadavg()
         print "start: %s, stop: %s" % (t2s(run_start),
                                        t2s(run_start + options.duration))
         for update_time in range(int(run_start),
@@ -274,6 +276,7 @@ class Benchmark(GenericBenchmark):
                 create_count = count
 
         run_end = time.time()
+        end_la = os.getloadavg()
 
         run_info = LazyStruct()
         run_info.run_count = run_count
@@ -281,6 +284,8 @@ class Benchmark(GenericBenchmark):
         run_info.run_rate = (run_count - create_count) / run_info.run_interval
         run_info.create_interval = create_interval
         run_info.create_count = create_count
+        run_info.start_load_avg = start_la
+        run_info.end_load_avg = end_la
 
         self.print_report(run_info)
 
@@ -335,6 +340,7 @@ class Benchmark(GenericBenchmark):
     def print_report(self, run_info):
         profile = self.profile_system()
         print "CPUs: %d @ %.2f GHz, Mem: %d MB real (%.2f%% used) / %d MB swap (%.2f%% used)" % (profile.cpu_count, (profile.cpu_speed / 1000), (profile.mem_total / 1000), profile.mem_pct_used, (profile.swap_total / 1000), profile.swap_pct_used)
+        print "Load averages (1/5/15): start: %.2f/%.2f/%.2f, end: %.2f/%.2f/%.2f" % (run_info.start_load_avg + run_info.end_load_avg)
         print "counts: OSS: %d, OSTs/OSS: %d (%d total); stats-per: OSS: %d, MDS: %d" % (options.oss, options.ost, (options.oss * options.ost), ((options.ost * options.ost_stats) + options.server_stats), (options.mdt_stats + options.server_stats))
         print "run count (%d stats) / run time (%.2f sec) = run rate (%.2f stats/sec)" % (run_info.run_count, run_info.run_interval, run_info.run_rate)
 
