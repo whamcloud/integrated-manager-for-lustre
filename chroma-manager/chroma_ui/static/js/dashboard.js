@@ -57,6 +57,8 @@ var Dashboard = function(){
 
       var timeUnit = $(this).next('select').find('option:selected').val();
       var timeValue = $(this).find('option:selected').val();
+      if ( timeValue === '' )
+        return;
 
       var factor = {
         minutes: 60,
