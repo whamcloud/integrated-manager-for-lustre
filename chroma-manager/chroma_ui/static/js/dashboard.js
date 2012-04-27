@@ -24,61 +24,53 @@ var Dashboard = function(){
   }
 
   function init() {
-    function updateUnits(interval_select) {
-      var intervalValue = interval_select.val();
-      var unitSelectOptions = "";
 
-      var max_vals = {
-        'seconds': 60,
-        'minutes': 60,
-        'hour': 24,
-        'day': 31,
-        'week': 4,
-        'month': 12
-      };
-      if(intervalValue == "") {
-        unitSelectOptions = "<option value=''>Select</option>";
-      } else {
-        unitSelectOptions="<option value=''>Select</option>";
-        for(var i=1; i<max_vals[intervalValue]; i++)
-        {
-          unitSelectOptions = unitSelectOptions + "<option value="+i+">"+i+"</option>";
-        }
-      }
+    var intervals = {
+      minutes: { max: 60, default: 5, factor:   60          },
+      hour:    { max: 24, default: 1, factor: 3600          },
+      day:     { max: 32, default: 1, factor: 3600 * 24     },
+      week:    { max:  4, default: 1, factor: 3600 * 24 * 7 }
+    };
 
-      $("select[id=unitSelect]").html(unitSelectOptions);
+    // populate the unit value on changing of the interval_type
+    function updateUnits(interval_type, unit_value) {
+      interval = intervals[interval_type];
+
+      // set to "reasonable" default value for interval if exceeds max
+      if ( unit_value > interval.max )
+        unit_value = interval.default;
+
+      var unit_select_options = _.map(
+        _.range(1, interval.max + 1),
+        function(i) { return "<option value='"+i+"'>"+i+"</option>"; }
+      ).join('');
+
+      $("#unitSelect").html(unit_select_options).val(unit_value);
+
     }
-    $("select[id=intervalSelect]").change(function()
-    {
-      updateUnits($(this));
+
+    // update the available units + trigger change
+    $("#intervalSelect").change(function() {
+      updateUnits( $(this).val(), $("#unitSelect").val() );
+      $("#unitSelect").change();
     });
 
-    $("select[id=unitSelect]").change(function(){
+    // re-init the charts on changing the unit/interval
+    $("#unitSelect").change(function(){
+      var interval_type = $('#intervalSelect').val();
+      var unit_value = $(this).val();
 
-      var timeUnit = $(this).next('select').find('option:selected').val();
-      var timeValue = $(this).find('option:selected').val();
-      if ( timeValue === '' )
-        return;
-
-      var factor = {
-        minutes: 60,
-        hour: 3600,
-        day: 3600 * 24,
-        week: 7 * 24 * 3600
-      };
-
-      time_period = factor[timeUnit] * timeValue;
+      time_period = intervals[interval_type]['factor'] * unit_value;
       init_charts(chart_manager.config.chart_group);
     });
 
     // Set defaults
     polling_enabled = true;
     time_period = 5 * 60;
-    $('select#intervalSelect').attr('value', 'minutes');
-    updateUnits($('select#intervalSelect'));
-    $('select#unitSelect').attr('value', '5');
+    $('#intervalSelect').val('minutes');
+    updateUnits('minutes',5);
     $('input#polling').attr('checked', 'checked');
-    
+
     $("input#polling").click(function()
     {
       if($(this).is(":checked")) {
@@ -489,6 +481,7 @@ var Dashboard = function(){
     if (!_.isNull(chart_manager)) {
       chart_manager.destroy();
     }
+    
     chart_manager = ChartManager({chart_group: 'dashboard', default_time_boundary: time_period * 1000});
     chart_manager.add_chart('db_line_cpu_mem', 'dashboard', {
       url: 'host/metric/',
