@@ -1,6 +1,5 @@
-
+from provisioning.lib.image_ops import ManagerImageOps
 from provisioning.models import Node
-from provisioning.lib.chroma_ops import ManagerImageOps
 
 from django.core.management.base import BaseCommand
 
