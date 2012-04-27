@@ -90,9 +90,9 @@ var Dashboard = function(){
       show: "clip",
       modal: true,
       position:"center",
-      buttons: 
+      buttons:
       {
-        "Close": function() { 
+        "Close": function() {
           $(this).dialog("close");
         }
       }
@@ -481,7 +481,7 @@ var Dashboard = function(){
     if (!_.isNull(chart_manager)) {
       chart_manager.destroy();
     }
-    
+
     chart_manager = ChartManager({chart_group: 'dashboard', default_time_boundary: time_period * 1000});
     chart_manager.add_chart('db_line_cpu_mem', 'dashboard', {
       url: 'host/metric/',
