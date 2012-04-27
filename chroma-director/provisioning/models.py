@@ -1,6 +1,7 @@
 from django.db import models
 
 import settings
+import time
 
 from boto.ec2.connection import EC2Connection
 from provisioning.lib.node_session import NodeSession
@@ -30,7 +31,7 @@ class Node(models.Model):
         conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
         reservations = conn.get_all_instances([self.ec2_id])
         assert(len(reservations) == 1)
-        return  reservations[0].instances[0]
+        return reservations[0].instances[0]
 
     def get_session(self):
         return NodeSession(self)
@@ -39,6 +40,51 @@ class Node(models.Model):
     def reboot(self):
         conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
         conn.reboot_instances(instance_ids=[self.ec2_id])
+
+    def _device_name(self, index):
+        return 'sd' +  ['f', 'g', 'h', 'i', 'j', 'k','l','m','n','o','p'][index]
+
+    def add_volumes(self, count, size):
+        instance = self.get_instance()
+        conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
+        volumes = []
+        for i in range(0, count):
+            vol = conn.create_volume(size, instance.placement)
+            vol.attach(instance.id, self._device_name(i))
+            print("attached new volume %s" % vol.id)
+            volumes.append(vol)
+
+        unavail = 1
+        while unavail:
+            unavail = 0
+            for vol in conn.get_all_volumes([v.id for v in volumes]):
+                print ("waiting for volume %s %s" % (vol.id, vol.status))
+                unavail += vol.status != u'in-use'
+            time.sleep(10)
+
+    def delete_volumes(self, volumes):
+        conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
+        for vol in conn.get_all_volumes(volumes):
+            if vol.status != u'available':
+                print "detaching volume: %s  %s" % (vol.id, vol.status)
+                vol.detach(force=True)
+
+        detaching = 1
+        while detaching:
+            detaching = 0
+            for vol in conn.get_all_volumes(volumes):
+                detaching += vol.status != u'available'
+            time.sleep(10)
+
+        for vol in conn.get_all_volumes(volumes):
+            print "deleting volume: %s  %s" % (vol.id, vol.status)
+            vol.delete()
+
+
+
+
+
+
 
 # class Volume(models.Model):
 #     ebs_id = models.CharField(max_length = 10, unique = True)

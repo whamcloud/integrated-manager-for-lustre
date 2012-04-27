@@ -1,6 +1,5 @@
-
+from provisioning.lib.image_ops import StorageImageOps
 from provisioning.models import Node
-from provisioning.lib.chroma_ops import StorageImageOps
 
 from django.core.management.base import BaseCommand
 from fabric.operations import run

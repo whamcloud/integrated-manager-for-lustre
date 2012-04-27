@@ -320,7 +320,10 @@ class Benchmark(GenericBenchmark):
                         break
 
             mem_info['pct_mem_used'] = ((mem_info['MemTotal'] - mem_info['MemFree']) / mem_info['MemTotal']) * 100
-            mem_info['pct_swap_used'] = ((mem_info['SwapTotal'] - mem_info['SwapFree']) / mem_info['SwapTotal']) * 100
+            try:
+                mem_info['pct_swap_used'] = ((mem_info['SwapTotal'] - mem_info['SwapFree']) / mem_info['SwapTotal']) * 100
+            except ZeroDivisionError:
+                mem_info['pct_swap_used'] = 0.0
             return mem_info
 
         # TODO: Include relevant MySQL tuning params

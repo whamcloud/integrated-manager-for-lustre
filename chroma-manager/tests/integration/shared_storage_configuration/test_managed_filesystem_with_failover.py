@@ -241,3 +241,5 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
             self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for failback")
             self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
+
+            # TODO: Also add a test for failback on the active/active OSTs.

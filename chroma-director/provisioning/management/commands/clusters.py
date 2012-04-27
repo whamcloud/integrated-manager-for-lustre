@@ -7,7 +7,7 @@ from boto.ec2.connection import EC2Connection
 
 from fabric.operations import open_shell
 
-from provisioning.lib.chroma_ops import ChromaManagerOps, ChromaApplianceOps
+from provisioning.lib.chroma_ops import ChromaManagerOps, ChromaStorageOps
 
 
 class Command(BaseCommand):
@@ -24,7 +24,7 @@ class Command(BaseCommand):
 
         elif args[0] == 'terminate' and args[1] == 'all':
             for a in ChromaAppliance.objects.all():
-                appliance_ops = ChromaApplianceOps(a)
+                appliance_ops = ChromaStorageOps(a)
                 appliance_ops.terminate()
             for m in ChromaManager.objects.all():
                 manager_ops = ChromaManagerOps(m)
@@ -35,7 +35,7 @@ class Command(BaseCommand):
             manager = ChromaManager.objects.get(id = manager_id)
             appliances = ChromaAppliance.objects.filter(chroma_manager = manager)
             for appliance in appliances:
-                appliance_ops = ChromaApplianceOps(appliance)
+                appliance_ops = ChromaStorageOps(appliance)
                 appliance_ops.terminate()
             manager_ops = ChromaManagerOps(manager)
             manager_ops.terminate()
@@ -49,7 +49,7 @@ class Command(BaseCommand):
             manager_key = manager_ops.get_key()
 
             appliance = ChromaAppliance.create(manager, name)
-            appliance_ops = ChromaApplianceOps(appliance)
+            appliance_ops = ChromaStorageOps(appliance)
             appliance_ops.configure()
             appliance_ops.set_key(manager_key)
 
@@ -67,7 +67,7 @@ class Command(BaseCommand):
             manager_key = manager_ops.get_key()
 
             appliance = ChromaAppliance.create(manager, name)
-            appliance_ops = ChromaApplianceOps(appliance)
+            appliance_ops = ChromaStorageOps(appliance)
             appliance_ops.set_key(manager_key)
             appliance_ops.configure_client()
 
