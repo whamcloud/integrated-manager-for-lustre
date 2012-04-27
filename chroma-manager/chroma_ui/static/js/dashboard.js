@@ -3,8 +3,12 @@
 // Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 // ========================================================
 
+// JSLint option info: http://www.jslint.com/lint.html
+/*jslint indent: 2, newcap: true, nomen:true, sloppy: true, undef: true, vars: true, white: true */
+/*global _,$ */
 
-var Dashboard = function(){
+
+var Dashboard = (function() {
   var initialized = false;
   var chart_manager = null;
 
@@ -34,11 +38,12 @@ var Dashboard = function(){
 
     // populate the unit value on changing of the interval_type
     function updateUnits(interval_type, unit_value) {
-      interval = intervals[interval_type];
+      var interval = intervals[interval_type];
 
       // set to "reasonable" default value for interval if exceeds max
-      if ( unit_value > interval.max )
+      if (unit_value > interval.max) {
         unit_value = interval.default;
+      }
 
       var unit_select_options = _.map(
         _.range(1, interval.max + 1),
@@ -60,7 +65,7 @@ var Dashboard = function(){
       var interval_type = $('#intervalSelect').val();
       var unit_value = $(this).val();
 
-      time_period = intervals[interval_type]['factor'] * unit_value;
+      time_period = intervals[interval_type].factor * unit_value;
       init_charts(chart_manager.config.chart_group);
     });
 
@@ -82,8 +87,7 @@ var Dashboard = function(){
       }
     });
 
-    $('#zoomDialog').dialog
-    ({
+    $('#zoomDialog').dialog({
       autoOpen: false,
       width: 800,
       height:490,
@@ -137,15 +141,19 @@ var Dashboard = function(){
   function get_view_selection_markup()
   {
     var view_selection_markup = "<select id='breadcrumb_type'>";
-    if(dashboard_type == "filesystem")
+    if(dashboard_type === "filesystem") {
       view_selection_markup += "<option value='filesystem' selected>Filesystems</option>";
-    else
+    }
+    else {
       view_selection_markup += "<option value='filesystem'>Filesystems</option>";
+    }
 
-    if(dashboard_type == "server")
+    if(dashboard_type === "server") {
       view_selection_markup += "<option value='server' selected>Servers</option>";
-    else
+    }
+    else {
       view_selection_markup += "<option value='server'>Servers</option>";
+    }
 
     view_selection_markup += "</select>";
     return view_selection_markup;
@@ -167,7 +175,7 @@ var Dashboard = function(){
     dashboard_filesystem = undefined;
 
     if (id_1) {
-      if (type == 'server') {
+      if (type === 'server') {
         dashboard_server = ApiCache.get('host', id_1).toJSON();
         if (id_2) {
           // Showing a target within a server
@@ -177,7 +185,7 @@ var Dashboard = function(){
           // Showing a server
           load_server_page();
         }
-      } else if (type == 'filesystem') {
+      } else if (type === 'filesystem') {
         dashboard_filesystem = ApiCache.get('filesystem', id_1).toJSON();
         if (id_2) {
           dashboard_target = ApiCache.get('target', id_2).toJSON();
@@ -220,12 +228,12 @@ var Dashboard = function(){
       success_callback = function(data)
       {
         var targets = data.objects;
-        targets = targets.sort(function(a,b) {return a.label > b.label;})
+        targets = targets.sort(function(a,b) {return a.label > b.label;});
 
         var count = 0;
         $.each(targets, function(i, target_info)
         {
-          breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>"
+          breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>";
           ostKindMarkUp = ostKindMarkUp + "<option value="+target_info.id+">"+target_info.kind+"</option>";
           ost_file_system_MarkUp = ost_file_system_MarkUp + "<option value="+target_info.id+">"+target_info.filesystem_id+"</option>";
           count += 1;
@@ -311,7 +319,7 @@ var Dashboard = function(){
       $('#ostSummaryTbl').html("");
     }
 
-    if(dashboard_target.kind == 'OST') {
+    if(dashboard_target.kind === 'OST') {
       //ost_Pie_Space_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
       //ost_Pie_Inode_Data($('#ls_ostId').val(), $('#ls_ostName').val(), "", "", "Average", $('#ls_ostKind').val(), spaceUsageFetchMatric, "false");
       //ost_Area_ReadWrite_Data($('#ls_ostId').val(), $('#ls_ostName').val(), startTime, endTime, "Average", $('#ls_ostKind').val(), readWriteFetchMatric, "false");
@@ -320,7 +328,7 @@ var Dashboard = function(){
       init_charts('targets_ost');
 
     }
-    else if (dashboard_target.kind == 'MDT') {
+    else if (dashboard_target.kind === 'MDT') {
       //ost_Area_mgtOps_Data($('#ls_ostId').val(), "false");
       $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div").hide();
       $("#target_mdt_ops_container_div").show();
@@ -349,12 +357,12 @@ var Dashboard = function(){
       success_callback = function(data)
       {
         var targets = data.objects;
-        targets = targets.sort(function(a,b) {return a.label > b.label;})
+        targets = targets.sort(function(a,b) {return a.label > b.label;});
 
         var count = 0;
         $.each(targets, function(i, target_info)
         {
-          breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>"
+          breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>";
 
           ostKindMarkUp = ostKindMarkUp + "<option value="+target_info.id+">"+target_info.kind+"</option>";
 
@@ -426,14 +434,14 @@ var Dashboard = function(){
     "</ul>";
 
     $('#breadcrumbs').html(breadCrumbHtml);
-    if (dashboard_type == 'filesystem') {
+    if (dashboard_type === 'filesystem') {
       $('#breadcrumb_server').hide();
       populate_breadcrumb_filesystem(ApiCache.list('filesystem'));
-    } else if (dashboard_type == 'server') {
+    } else if (dashboard_type === 'server') {
       $('#breadcrumb_filesystem').hide();
       populate_breadcrumb_server(ApiCache.list('host'));
     }
-    $(this).find('option:selected').val()
+    $(this).find('option:selected').val();
     init_charts('dashboard');
   }
 
@@ -445,31 +453,32 @@ var Dashboard = function(){
     if (this.value < 0) {
       this.value = this.value * -1;
     }
-
+    /*jslint eqeq: true */
     if (this.value == 0) {
       // No units on zeros, it's meaningless.
       return this.value;
     }
+    /*jslint eqeq: false */
 
     var l = "" + formatBytes(this.value, 0);
-    if (l[0] == '-') {
-      return l.substr(1)
-    } else {
-      return l;
+    if (l[0] === '-') {
+      return l.substr(1);
     }
+    return l;
   }
 
   function percentage_formatter() {
     return this.value + "%";
   }
 
+  /*jslint eqeq: true */
   function whole_numbers_only_formatter() {
     if (Math.round(this.value) != this.value){
-      return ""
-    } else {
-      return this.value;
+      return "";
     }
+    return this.value;
   }
+  /*jslint eqeq: false */
 
   function init_charts(chart_group) {
     /* helper callbacks */
@@ -545,7 +554,7 @@ var Dashboard = function(){
             id: target_id,
             label: label,
             data: update_data
-          }
+          };
         });
 
         return result;
@@ -662,7 +671,7 @@ var Dashboard = function(){
           categories.push(name);
 
           if (fs_data.length) {
-            var current_data = fs_data[0].data
+            var current_data = fs_data[0].data;
             var free;
 
             free = ((current_data.kbytesfree)/(current_data.kbytestotal))*100;
@@ -844,7 +853,7 @@ var Dashboard = function(){
     // ost
     chart_manager.chart_group('targets_ost');
     chart_manager.add_chart('freespace','targets_ost', {
-      url: function() { return 'target/' + dashboard_target.id + '/metric/' },
+      url: function() { return 'target/' + dashboard_target.id + '/metric/'; },
       api_params: {reduce_fn: 'sum', kind: 'OST', group_by: 'filesystem', latest: true},
       metrics: ["kbytestotal", "kbytesfree"],
       snapshot: true,
@@ -889,7 +898,7 @@ var Dashboard = function(){
       }
     });
     chart_manager.add_chart('inode','targets_ost', {
-      url: function() { return 'target/' + dashboard_target.id + '/metric/' },
+      url: function() { return 'target/' + dashboard_target.id + '/metric/'; },
       api_params: {reduce_fn: 'sum', kind: 'OST', group_by: 'filesystem', latest: true},
       metrics: ["filestotal", "filesfree"],
       snapshot: true,
@@ -935,7 +944,7 @@ var Dashboard = function(){
     });
 
     chart_manager.add_chart('readwrite', 'targets_ost', {
-      url: function() { return 'target/' + dashboard_target.id + '/metric/' },
+      url: function() { return 'target/' + dashboard_target.id + '/metric/'; },
       api_params: { reduce_fn: 'sum', kind: 'OST'},
       metrics: ["stats_read_bytes", "stats_write_bytes"],
       series_callbacks: [
@@ -969,7 +978,7 @@ var Dashboard = function(){
 
     chart_manager.chart_group('targets_mdt');
     chart_manager.add_chart('mdops', 'targets_mdt', {
-      url: function() { return 'target/' + dashboard_target.id + '/metric/' },
+      url: function() { return 'target/' + dashboard_target.id + '/metric/'; },
       api_params: {},
       metrics: ["stats_close", "stats_getattr", "stats_getxattr", "stats_link",
         "stats_mkdir", "stats_mknod", "stats_open", "stats_rename",
@@ -985,7 +994,7 @@ var Dashboard = function(){
         yAxis: [{title: { text: 'MD op/s' }}],
         colors: [ '#63B7CF', '#9277AF', '#A6C56D', '#C76560', '#6087B9', '#DB843D', '#92A8CD', '#A47D7C',  '#B5CA92' ],
         series: _.map(
-          "close getattr getxattr link mkdir mknod open rename rmdir setattr statfs unlink".split(' '),
+          ['close','getattr','getxattr','link','mkdir','mknod','open','rename','rmdir','setattr','statfs','unlink'],
           function(metric, i) { return { name: metric, type: 'area' }; }
         )
       }
@@ -999,11 +1008,11 @@ var Dashboard = function(){
       metrics: ["kbytestotal", "kbytesfree", "filestotal", "filesfree"],
       snapshot: true,
       snapshot_callback: function(chart, data) {
-        var categories = []
-        var freeBytes = [];
-        var usedBytes = [];
-        var freeFiles = [];
-        var usedFiles = [];
+        var categories = [];
+        var freeBytes  = [];
+        var usedBytes  = [];
+        var freeFiles  = [];
+        var usedFiles  = [];
 
         _.each(data, function(fs_data, fs_id) {
           var name;
@@ -1016,7 +1025,7 @@ var Dashboard = function(){
           categories.push(name);
 
           if (fs_data.length) {
-            var current_data = fs_data[0].data
+            var current_data = fs_data[0].data;
             var free;
 
             free = ((current_data.kbytesfree)/(current_data.kbytestotal))*100;
@@ -1222,7 +1231,7 @@ var Dashboard = function(){
             id: target_id,
             label: label,
             data: update_data
-          }
+          };
         });
 
         return result;
@@ -1264,9 +1273,11 @@ var Dashboard = function(){
     filesystem_list_content = "<option value=''>Select File System</option>";
     _.each(filesystems, function(filesystem) {
       filesystem_list_content += "<option value="+filesystem.id;
+      /*jslint eqeq: true */
       if (filesystem.id == selected_filesystem_id) {
         filesystem_list_content += " selected='selected'";
       }
+      /*jslint eqeq: false */
       filesystem_list_content += ">" +filesystem.label+"</option>";
     });
     $('#breadcrumb_filesystem').html(filesystem_list_content);
@@ -1282,9 +1293,11 @@ var Dashboard = function(){
     var server_list_content = "<option value=''>Select Server</option>";
     _.each(servers, function(server) {
       server_list_content += "<option value="+server.id;
+      /*jslint eqeq: true */
       if (server.id == selected_server_id) {
         server_list_content += " selected='selected'";
       }
+      /*jslint eqeq: false */
       server_list_content += ">" +server.label+"</option>";
     });
     $('#breadcrumb_server').html(server_list_content);
@@ -1294,5 +1307,5 @@ var Dashboard = function(){
     init: init,
     setPath: setPath,
     stopCharts: stopCharts
-  }
-}();
+  };
+}());
