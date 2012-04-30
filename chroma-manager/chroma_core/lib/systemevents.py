@@ -45,6 +45,12 @@ def plain_find_one_in_many(haystack, needles):
 find_one_in_many = plain_find_one_in_many
 
 
+def get_word_after(string, after):
+    s = string.find(after) + len(after)
+    l = string[s:].find(" ")
+    return string[s:s + l]
+
+
 #
 # acceptor port is already being used
 #
@@ -109,17 +115,26 @@ def server_security_flavor_handler(entry, h):
 #
 # Lustre: 2689:0:(genops.c:1379:obd_export_evict_by_uuid()) lustre-OST0001: evicting 26959b68-1208-1fca-1f07-da2dc872c55f at adminstrative request
 #
-def client_eviction_handler(entry, h):
-    # get the client UUID out of the string
-    uuid_start = entry.message.find("evicting ") + 9
-    uuid_len = entry.message[uuid_start:].find(" ")
-    msg = "client %s evicted by the administrator" % \
-        entry.message[uuid_start:uuid_start + uuid_len]
-    lustre_pid = entry.message[9:9 + \
-                               entry.message[9:].find(":")]
+def admin_client_eviction_handler(entry, h):
+    uuid = get_word_after(entry.message, "evicting ")
+    msg = "client %s evicted by the administrator" %  uuid
+    lustre_pid = entry.message[9:9 + entry.message[9:].find(":")]
     ClientConnectEvent(severity = logging.WARNING, host = h, message_str = msg,
                        lustre_pid = lustre_pid).save()
 
+#
+# real eviction
+#
+# LustreError: 0:0:(ldlm_lockd.c:356:waiting_locks_callback()) ### lock callback timer expired after 101s: evicting client at 0@lo ns: mdt-ffff8801cd5be000 lock: ffff880126f8f480/0xe99a593b682aed45 lrc: 3/0,0 mode: PR/PR res: 8589935876/10593 bits 0x3 rrc: 2 type: IBT flags: 0x4000020 remote: 0xe99a593b682aecea expref: 14 pid: 3636 timeout: 4389324308' 
+def client_eviction_handler(entry, h):
+    s = entry.message.find("### ") + 4
+    l = entry.message[s:].find(": evicting client at ")
+    reason = entry.message[s:s + l]
+    client = get_word_after(entry.message, ": evicting client at ")
+    msg = "client %s evicted: %s" % (client, reason)
+    lustre_pid = get_word_after(entry.message, "pid: ")
+    ClientConnectEvent(severity = logging.WARNING, host = h, message_str = msg,
+                       lustre_pid = lustre_pid).save()
 
 class SystemEventsAudit:
     def get_last_id(self):
@@ -137,7 +152,8 @@ class SystemEventsAudit:
                  "Can't create socket:": port_used_handler,
                  ": connection from ": client_connection_handler,
                  ": select flavor ": server_security_flavor_handler,
-                 ": evicting ": client_eviction_handler,
+                 ": obd_export_evict_by_uuid()": admin_client_eviction_handler,
+                 ": evicting client at ": client_eviction_handler,
                 }
 
     def parse_log_entries(self):
