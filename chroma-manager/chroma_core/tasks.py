@@ -268,19 +268,11 @@ def run_job(job_id):
         # any incomplete StepResults as complete.
         job.stepresult_set.filter(state = 'incomplete').update(state = 'crashed')
 
-    @transaction.commit_on_success()
-    def mark_start_step(i):
-        job.started_step = i
-        job.save()
-
-    @transaction.commit_on_success()
-    def mark_finish_step(i):
-        job.finish_step = i
-        job.save()
-
     step_index = 0
     while step_index < len(steps):
-        mark_start_step(step_index)
+        with transaction.commit_on_success():
+            job.started_step = step_index
+            job.save()
         klass, args = steps[step_index]
 
         result = StepResult(
@@ -339,7 +331,9 @@ def run_job(job_id):
         finally:
             result.save()
 
-        mark_finish_step(step_index)
+        with transaction.commit_on_success():
+            job.finish_step = step_index
+            job.save()
         step_index += 1
 
     job_log.info("Job %d finished %d steps successfully" % (job.id, job.finish_step + 1))
