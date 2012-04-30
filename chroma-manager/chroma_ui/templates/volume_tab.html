@@ -224,8 +224,7 @@
       }
       });
 
-      /* FIXME this selector should be more specific */
-      $('select[id *="_host"]').live('change', function ()
+      $('#volume_configuration select[id *="_host_"]').live('change', function ()
       {
         var oSetting = $('#volume_configuration').dataTable().fnSettings();
         //Note : lun_id i storage as part of select control id E.g. primary_host_<Lun_id>
