@@ -13,8 +13,7 @@
 
     function init() 
     { 
-      //load host combo list
-      loadHostList('', 'event_host');
+      loadObjectSelection('host', $('#event_host'));
             
       var oTable = $('#events_table').dataTable(
       {

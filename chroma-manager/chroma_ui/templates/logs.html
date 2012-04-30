@@ -13,9 +13,8 @@
     }
     function init() 
     {
-      //load host list
-      loadHostList('', 'logs_hostList');
-      
+      loadObjectSelection('host', $('#logs_hostList'));
+
       //validation for start an end time
       $('#datetime_from').datetimepicker(
       {

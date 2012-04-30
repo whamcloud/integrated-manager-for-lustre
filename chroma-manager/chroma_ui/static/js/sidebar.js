@@ -233,23 +233,6 @@ var Sidebar = function(){
 }();
 
 
-/* FIXME: move this somewhere sensible */
-loadHostList = function(filesystem_id, targetContainer)
-{
-  var hostList = '<option value="">All</option>';
-  
-  var api_params = {'filesystem_id':filesystem_id};
-
-  Api.get("host/", api_params,
-  success_callback = function(data)
-  {
-    $.each(data.objects, function(i, host)
-    {
-      hostList  =  hostList + "<option value="+host.id+">"+host.label+"</option>";
-    });
-    $('#'+targetContainer).html(hostList);
-  });
-}
 
 
 $(document).ready(function() 

@@ -13,6 +13,16 @@ $(document).ready(function() {
 $(document).ajaxComplete(function(){AlertNotification.updateIcons()});
 $(document).ajaxComplete(function(){CommandNotification.updateIcons()});
 
+function loadObjectSelection(kind, select_el)
+{
+  var objects = ApiCache.list(kind);
+  select_el.html('');
+  select_el.append($("<option value=''>All</option>"));
+  _.each(objects, function(obj) {
+    select_el.append($("<option value=''" + obj.id + "'>" + obj.label+ "</option>"))
+  });
+}
+
 var LiveObject = function()
 {
   function spanMarkup(obj, classes, content) {
