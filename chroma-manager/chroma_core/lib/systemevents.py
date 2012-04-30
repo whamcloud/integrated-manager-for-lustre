@@ -173,10 +173,14 @@ class SystemEventsAudit:
                         h = get_host_from_entry(entry)
                         if h != None:
                             fn = self.selectors[hit]
-                            try:
-                                fn(entry, h)
-                            except Exception, e:
-                                syslog_events_log.error("Failed to parse log line '%s' using handler %s: %s" % (entry.message, fn, e))
+                            with transaction.commit_manually():
+                                try:
+                                    fn(entry, h)
+                                except Exception, e:
+                                    syslog_events_log.error("Failed to parse log line '%s' using handler %s: %s" % (entry.message, fn, e))
+                                    transaction.rollback()
+                                else:
+                                    transaction.commit()
                     # now that we have some real events, i don't think we
                     # need to keep logging this noise, but let's leave it
                     # here in case somebody wants to
