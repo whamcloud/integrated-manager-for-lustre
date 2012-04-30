@@ -177,6 +177,7 @@ YUM_REPO = "%s/static/chroma.repo" % SITE_ROOT
 WHAMOS_REPO = "%s/static/WhamOS-Base.repo" % SITE_ROOT
 COROSYNC_CONF = "%s/static/corosync.conf" % SITE_ROOT
 COROSYNC_INIT = "%s/static/corosync" % SITE_ROOT
+CHROMA_SETTINGS = "%s/static/local_settings.py" % SITE_ROOT
 AWS_REGION = 'us-east-1d'
 
 AWS_KEY_ID=None  # String

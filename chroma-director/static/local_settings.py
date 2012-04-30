@@ -1,0 +1,2 @@
+ALLOW_ANONYMOUS_READ = False
+

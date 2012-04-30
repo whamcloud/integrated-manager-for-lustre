@@ -336,8 +336,8 @@ var Api = function() {
     if (verb == "GET") {
       ajax_args.data = $.param(api_args, true)
     } else {
-      ajax_args.dataType = 'json'
-      ajax_args.data = JSON.stringify(api_args)
+      ajax_args.dataType = 'json';
+      ajax_args.data = JSON.stringify(api_args);
       ajax_args.contentType ="application/json; charset=utf-8"
     }
 

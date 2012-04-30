@@ -18,3 +18,10 @@ sslverify=1
 sslclientcert=/root/keys/test-ami-cert.pem
 sslclientkey=/root/keys/privkey-nopass.pem
 
+[chroma-master]
+name=WhamOS-$releasever - Master
+baseurl=https://build.whamcloud.com/0b9505167130/job/chroma/arch=x86_64%2Cdistro=el6/lastSuccessfulBuild/artifact/dist/
+gpgcheck=0
+enabled=0
+sslverify=0
+

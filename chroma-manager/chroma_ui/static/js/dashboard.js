@@ -16,6 +16,13 @@ var Dashboard = function(){
   var polling_enabled = true;
   var time_period;
 
+  function stopCharts() {
+    // FIXME: revise when there is a global chart_manager
+    if (chart_manager) {
+      chart_manager.destroy();
+    }
+  }
+
   function init() {
     function updateUnits(interval_select) {
       var intervalValue = interval_select.val();
@@ -526,9 +533,11 @@ var Dashboard = function(){
         _.each(data, function(series_data, target_id) {
           var update_data = [];
           _.each(series_data, function(datapoint) {
-            var timestamp = new Date(datapoint.ts).getTime();
-            update_data.push([timestamp, ( datapoint.data.stats_read_bytes + datapoint.data.stats_write_bytes )])
-          });
+              var timestamp = new Date(datapoint.ts).getTime();
+              var read_bytes = _.isUndefined(datapoint.data.stats_read_bytes)? 0 : datapoint.data.stats_read_bytes;
+              var write_bytes =  _.isUndefined(datapoint.data.stats_write_bytes)? 0 : datapoint.data.stats_write_bytes;
+              update_data.push([timestamp, read_bytes - write_bytes]);
+            });
 
           var target = ApiCache.get('target', target_id);
           var label;
@@ -551,7 +560,7 @@ var Dashboard = function(){
         chart: {
           renderTo: 'global_ost_bandwidth'
         },
-        title: { text: 'OST read/write bandwidth'},
+        title: { text: 'OST read/write balance'},
         xAxis: {type:'datetime'},
         yAxis: [{
           title: null,
@@ -1198,11 +1207,14 @@ var Dashboard = function(){
         // Generate a number of series objects and return them
         var result = {};
         _.each(data, function(series_data, target_id) {
+
           var update_data = [];
           _.each(series_data, function(datapoint) {
-            var timestamp = new Date(datapoint.ts).getTime();
-            update_data.push([timestamp, ( datapoint.data.stats_read_bytes + datapoint.data.stats_write_bytes ) ])
-          });
+              var timestamp = new Date(datapoint.ts).getTime();
+              var read_bytes = _.isUndefined(datapoint.data.stats_read_bytes)? 0 : datapoint.data.stats_read_bytes;
+              var write_bytes =  _.isUndefined(datapoint.data.stats_write_bytes)? 0 : datapoint.data.stats_write_bytes;
+              update_data.push([timestamp, read_bytes - write_bytes]);
+            });
 
           var target = ApiCache.get('target', target_id);
           var label;
@@ -1225,7 +1237,7 @@ var Dashboard = function(){
         chart: {
           renderTo: 'filesystem_ost_read_write'
         },
-        title: { text: 'OST read/write bandwidth'},
+        title: { text: 'OST read/write balance'},
         xAxis: { type:'datetime' },
         yAxis: [{
           title: null,
@@ -1285,6 +1297,7 @@ var Dashboard = function(){
 
   return {
     init: init,
-    setPath: setPath
+    setPath: setPath,
+    stopCharts: stopCharts
   }
 }();
