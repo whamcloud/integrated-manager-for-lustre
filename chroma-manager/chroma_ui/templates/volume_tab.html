@@ -141,7 +141,7 @@
       {
         var oSetting = $('#volume_configuration').dataTable().fnSettings();
 
-        /* FIXME: instead of letting the user set this and complaining, we should
+        /* FIXME: HYD-978 instead of letting the user set this and complaining, we should
            prevent the user selecting this by checking in the handler for <select> changes
            (if they select the same one then swap the values) */
         var same_primary_secondary_error_markup = "<b>Volumes must have different primary and secondary servers</b><br /><br />"+
