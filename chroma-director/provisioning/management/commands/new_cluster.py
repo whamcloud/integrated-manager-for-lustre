@@ -1,21 +1,11 @@
-
 from optparse import make_option
 from django.core.management.base import BaseCommand
 
 from provisioning.models import ChromaManager, ChromaAppliance
 from provisioning.lib.chroma_ops import ChromaManagerOps, ChromaStorageOps
-
+from provisioning.lib.util import LazyStruct
 import time
 
-class LazyStruct(object):
-    """
-    It's kind of like a struct, and I'm lazy.
-    """
-    def __init__(self, **kwargs):
-        self.__dict__ = kwargs
-
-    def __getattr__(self, key):
-        return self.__dict__[key]
 
 
 class Command(BaseCommand):
@@ -40,7 +30,7 @@ class Command(BaseCommand):
         manager = ChromaManager.create(self.options.name)
         ChromaAppliance.create(manager, "mds1")
         for i in range(0, self.options.oss):
-            ChromaAppliance.create(manager, "oss%d" % i)
+            ChromaAppliance.create(manager, "oss%d" % i+1)
 
         return manager
 
