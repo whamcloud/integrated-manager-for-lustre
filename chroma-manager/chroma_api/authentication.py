@@ -8,6 +8,7 @@ import settings
 
 from tastypie.authentication import Authentication
 from tastypie.authorization import Authorization
+from django.utils.crypto import constant_time_compare
 
 
 class CsrfAuthentication(Authentication):
@@ -33,8 +34,16 @@ class CsrfAuthentication(Authentication):
     of username/password, and if so avoid applying the CSRF check.
     """
     def is_authenticated(self, request, object = None):
-        # TODO: implement me, c.f. CsrfMiddleware
-        return True
+        if request.method != "POST":
+            return True
+
+        request_csrf_token = request.META.get('HTTP_X_CSRFTOKEN', '')
+        csrf_token = request.META["CSRF_COOKIE"]
+
+        if not constant_time_compare(csrf_token, request_csrf_token):
+            return False
+        else:
+            return True
 
 
 class AnonymousAuthentication(CsrfAuthentication):
