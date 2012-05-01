@@ -391,7 +391,7 @@ is what Chroma Manager uses for detecting standard devices and device nodes on L
 Example plugin
 --------------
 
-.. literalinclude:: /../tests/unit/chroma_core/lib/storage_plugin/example_plugin.py
+.. literalinclude:: /../../tests/unit/chroma_core/lib/storage_plugin/example_plugin.py
    :language: python
    :linenos:
 
@@ -461,6 +461,15 @@ start_session will only ever be called once for a particular instance of your cl
 you to store information in start_session that is used for calculating deltas of the system
 information to send in update_session.
 
+To install an agent plugin like this, copy the .py file containing a DevicePlugin subclass into
+`/usr/lib/python2.[46]/site-packages/chroma_agent-*.egg/chroma_agent/device_plugins/` on the
+servers with chroma-agent installed, and restart the chroma-agent service.  Test the output
+of your plugin with `chroma-agent device-plugin --plugin=my_controller` (if for example
+your plugin file was called my_controller.py).
+
+The name of the agent plugin module must exactly match the name of the plugin module running
+on Chroma Manager.
+
 Handling data from agent plugins
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -469,13 +478,6 @@ this type of information, the plugin must implement two methods:
 
 .. autoclass:: chroma_core.lib.storage_plugin.api.plugin.Plugin
   :members: agent_session_start, agent_session_continue
-
-DevicePlugin reference
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: chroma_agent.plugins.DevicePlugin
-  :noindex:
-  :members:
 
 Advanced: reporting hosts
 -------------------------
@@ -509,22 +511,6 @@ subclasses `resources.VirtualMachine`.
 When a new VirtualMachine resource is created by a plugin, Chroma Manager goes through the same configuration
 process as if the host had been added via the user interface, and the added host will appear in the list of
 servers in the user interface.
-
-Advanced: specifying access paths
----------------------------------
-
-If you are using custom block device identifiers, you may not want the relationship to
-be directly from the Lun on the controller to the block device on the server.  For example,
-you may wish to report this relationship via network ports so that Chroma knows which
-ports are related to which devices for performance analysis.
-
-To do this, your plugin must somehow know the relationship between these ports and devices.
-Assuming this knowledge exists, you can report the relationship from a device node to a server port, then to
-a controller port, then to a LUN.  This chain of relationships would allow Chroma Manager to provide
-for example a chart superimposing the bandwidth of each component in the chain from the device node to 
-the storage target.
-
-These relationships are specified using the usual
 
 Advanced: specifying homing information
 ---------------------------------------
