@@ -164,12 +164,16 @@ def main():
     parser = ArgumentParser(description="R3D debug CLI")
 
     parser.add_argument("query", action=QueryAction,
-                        help="content_type=(name{,name}|all), e.g. ManagedHost=all, ManagedOst=jovian-OST0000,jovian-OST0001")
+                        help="model=(name{,name}|all), e.g. ManagedHost=all, ManagedOst=jovian-OST0000,jovian-OST0001")
     parser.add_argument("--archive", "-a", action=ArchiveAction,
                         help="Archive type to query (default: Average)",
                         default="Average")
     parser.add_argument("--datasource", "-d", action="append",
                         help="Datasource(s) to display (default: all)")
+    parser.add_argument("--separate", "-s", action="store_true",
+                        help="Don't aggregate per-row metrics")
+    parser.add_argument("--group", "-g", action="store_true",
+                        help="Display unaggregated results grouped by datasource")
 
     parser.add_argument("--last", "-l", action="store_true",
                         help="Fetch last reading")
@@ -191,7 +195,7 @@ def main():
         import r3d.lib
         r3d.lib.DEBUG = True
 
-    def aggregate_result(results, time, data):
+    def aggregate_results(results, time, data):
         if time in results:
             for key in results[time].keys():
                 a = (results[time][key] or float("NaN"))
@@ -199,6 +203,14 @@ def main():
                 results[time][key] = a + b
         else:
             results[time] = data
+
+    def interleave_results(results, db, time, data):
+        # the re.sub() is a hack but it helps to keep the display sane
+        db_data = dict([[re.sub(r'(managed |stats_)', '', "%s:%s" % (db.name, key)), val] for key, val in data.items()])
+        if time in results:
+            results[time].update(db_data)
+        else:
+            results[time] = db_data
 
     def pretty_time(in_time):
         local_tz = find_local_timezone()
@@ -227,28 +239,51 @@ def main():
             ns.begin += interval
             ns.end += interval
 
-        # TODO: Figure out how to optionally display unaggregated results when
-        # there are multiple DBs being queried.
         results = {}
         for db in ns.db_set:
             if ns.last:
                 row_time, data = db.fetch_last(fetch_metrics=ns.datasource)
-                aggregate_result(results, row_time, data)
+                if ns.separate:
+                    interleave_results(results, db, row_time, data)
+                else:
+                    aggregate_results(results, row_time, data)
             else:
                 flush_transaction()
                 rows = db.fetch(ns.archive, fetch_metrics=ns.datasource,
                                 start_time=ns.begin, end_time=ns.end)
                 for row in rows:
                     row_time, data = row
-                    aggregate_result(results, row_time, data)
+                    if ns.separate:
+                        interleave_results(results, db, row_time, data)
+                    else:
+                        aggregate_results(results, row_time, data)
 
-        columns = sorted(results.values()[0].keys())
-        headers = ["time"] + columns
-        row_times = sorted(results.keys())
-        table = PrettyTable(headers)
-        for row_time in row_times:
-            table.add_row([pretty_time(row_time)] +
-                          [results[row_time][key] for key in columns])
+        if ns.separate and ns.group:
+            result_keys = results.values()[0].keys()
+            groups = {}
+            for ds in [re.sub(r'stats_', '', ds) for ds in ns.datasource]:
+                groups[ds] = sorted([key for key in result_keys if ds in key])
+
+            columns = []
+            for group in sorted(groups.keys()):
+                columns.extend(groups[group])
+            headers = ["time"] + columns
+            table = PrettyTable(headers)
+            row_times = sorted(results.keys())
+            for row_time in row_times:
+                row = [pretty_time(row_time)]
+                for group in sorted(groups.keys()):
+                    for key in groups[group]:
+                        row.append(results[row_time][key])
+                table.add_row(row)
+        else:
+            columns = sorted(results.values()[0].keys())
+            headers = ["time"] + columns
+            row_times = sorted(results.keys())
+            table = PrettyTable(headers)
+            for row_time in row_times:
+                table.add_row([pretty_time(row_time)] +
+                              [results[row_time][key] for key in columns])
         print table
 
         if ns.interval is None:
