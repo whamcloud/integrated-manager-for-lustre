@@ -1,4 +1,4 @@
-
+from provisioning.lib.image_ops import ImageOps
 from provisioning.models import ChromaManager, ChromaAppliance, Node
 
 import settings
@@ -7,7 +7,7 @@ from boto.ec2.connection import EC2Connection
 
 from fabric.operations import open_shell
 
-from provisioning.lib.chroma_ops import NodeOps, ImageOps
+from provisioning.lib.chroma_ops import NodeOps
 
 import time
 

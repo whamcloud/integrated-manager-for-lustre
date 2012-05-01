@@ -10,34 +10,48 @@
     ],
     "lustre_servers": [
         {
-            "address": "lustre1",
-            "nodename": "lustre1",
+            "address": "storage_appliance_1",
+            "nodename": "storage_appliance_1",
             "device_paths": [
                 "/dev/sdb",
-                "/dev/sdc",
-                "/dev/sdd",
-                "/dev/sde",
-                "/dev/sdf",
-                "/dev/sdg"
+                "/dev/sdc"
             ],
 
             "host": "vmhost",
-            "destroy_command": "virsh destroy lustre1"
+            "destroy_command": "virsh destroy storage_appliance_1"
         },
         {
-            "address": "lustre2",
-            "nodename": "lustre2",
+            "address": "storage_appliance_2",
+            "nodename": "storage_appliance_2",
             "device_paths": [
                 "/dev/sdb",
-                "/dev/sdc",
-                "/dev/sdd",
-                "/dev/sde",
-                "/dev/sdf",
-                "/dev/sdg"
+                "/dev/sdc"
             ],
 
             "host": "vmhost",
-            "destroy_command": "virsh destroy lustre2"
+            "destroy_command": "virsh destroy storage_appliance_2"
+        },
+        {
+            "address": "storage_appliance_3",
+            "nodename": "storage_appliance_3",
+            "device_paths": [
+                "/dev/sdb",
+                "/dev/sdc"
+            ],
+
+            "host": "vmhost",
+            "destroy_command": "virsh destroy storage_appliance_3"
+        },
+        {
+            "address": "storage_appliance_4",
+            "nodename": "storage_appliance_4",
+            "device_paths": [
+                "/dev/sdb",
+                "/dev/sdc"
+            ],
+
+            "host": "vmhost",
+            "destroy_command": "virsh destroy storage_appliance_4"
         }
     ],
     "lustre_clients": {

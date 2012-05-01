@@ -293,26 +293,6 @@ class UpdateScan(object):
                 from chroma_core.lib.state_manager import StateManager
                 StateManager.notify_state(target, self.started_at, state, ['mounted', 'unmounted'])
 
-    def catch_metrics_deadlocks(fn):
-        # This decorator is specific to catching deadlocks which may occur
-        # during an r3d update.  Ideally, these shouldn't happen at all, but
-        # if they do they shouldn't be fatal.  In any case, we need to log
-        # warnings so we can keep track of this and figure out if it's really
-        # a problem, and if it is, whether to fix it in code or in db tuning.
-        @functools.wraps(fn)
-        def wrapper(*args, **kwargs):
-            try:
-                return fn(*args, **kwargs)
-            except Database.OperationalError, e:
-                if e[0] == 1213:
-                    audit_log.warn("Caught deadlock on metrics update; discarding metrics and continuing")
-                    return 0
-
-                raise e
-        return wrapper
-
-    @catch_metrics_deadlocks
-    @transaction.commit_on_success
     def store_lustre_target_metrics(self, target_name, metrics):
         # TODO: Re-enable MGS metrics storage if it turns out it's useful.
         if target_name == "MGS":
@@ -335,11 +315,29 @@ class UpdateScan(object):
         else:
             return target.metrics.update(metrics, self.update_time)
 
-    @catch_metrics_deadlocks
-    @transaction.commit_on_success
     def store_node_metrics(self, metrics):
         return self.host.downcast().metrics.update(metrics, self.update_time)
 
+    def catch_metrics_deadlocks(fn):
+        # This decorator is specific to catching deadlocks which may occur
+        # during an r3d update.  Ideally, these shouldn't happen at all, but
+        # if they do they shouldn't be fatal.  In any case, we need to log
+        # warnings so we can keep track of this and figure out if it's really
+        # a problem, and if it is, whether to fix it in code or in db tuning.
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except Database.OperationalError, e:
+                if e[0] == 1213:
+                    audit_log.warn("Caught deadlock on metrics update; discarding metrics and continuing")
+                    return 0
+
+                raise e
+        return wrapper
+
+    @catch_metrics_deadlocks
+    @transaction.commit_on_success
     def store_metrics(self):
         """
         Pass the received metrics into the metrics library for storage.

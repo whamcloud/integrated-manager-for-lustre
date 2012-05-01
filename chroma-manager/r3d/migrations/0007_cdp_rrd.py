@@ -14,8 +14,8 @@ class Migration(SchemaMigration):
         # Adding field 'CDP.slot'
         db.add_column('r3d_cdp', 'slot', self.gf('django.db.models.fields.BigIntegerField')(default=0), keep_default=False)
 
-        # Adding unique constraint on 'CDP', fields ['slot', 'archive', 'datasource']
-        db.create_unique('r3d_cdp', ['slot', 'archive_id', 'datasource_id'])
+        # Adding unique constraint on 'CDP', fields ['archive', 'datasource', 'slot']
+        db.create_unique('r3d_cdp', ['archive_id', 'datasource_id', 'slot'])
 
         # For performance (InnoDB is optimized to make pk queries fast),
         # we'll drop the django-default pk and create our own.  This is
@@ -46,8 +46,8 @@ CHANGE id id INT(11) AUTO_INCREMENT;
             """
             db.execute(sql)
         
-        # Removing unique constraint on 'CDP', fields ['slot', 'archive', 'datasource']
-        db.delete_unique('r3d_cdp', ['slot', 'archive_id', 'datasource_id'])
+        # Removing unique constraint on 'CDP', fields ['archive', 'datasource', 'slot']
+        db.delete_unique('r3d_cdp', ['archive_id', 'datasource_id', 'slot'])
 
         # Deleting field 'CDP.row_id'
         db.delete_column('r3d_cdp', 'row_id')
