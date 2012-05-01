@@ -72,7 +72,6 @@ class SingleDsTutorialTest(TestCase):
             (920808600L, {u'speed': 0.0066666666666700004}),
             (920808900L, {u'speed': 0.0033333333333299998}),
             (920809200L, {u'speed': None}),
-            (920809500L, {u'speed': None})
         )
 
         actual = self.rrd.fetch("Average", 920804400, 920809200)
@@ -84,7 +83,6 @@ class SingleDsTutorialTest(TestCase):
             (920804400L, {u'speed': None}),
             (920806200L, {u'speed': 0.018666666666699999}),
             (920808000L, {u'speed': 0.0233333333333}),
-            (920809800L, {u'speed': None})
         )
 
         actual = self.rrd.fetch("Average", 920799000, 920809200)
@@ -167,7 +165,6 @@ class MultiDsTutorialTest(TestCase):
             (920808600L, {u'speed': 0.0066666666666700004, u'kbytes_free': 1979800.0}),
             (920808900L, {u'speed': 0.0033333333333299998, u'kbytes_free': 1979940.0}),
             (920809200L, {u'speed': None, u'kbytes_free': None}),
-            (920809500L, {u'speed': None, u'kbytes_free': None})
         )
 
         actual = self.rrd.fetch("Average", 920804400, 920809200)
@@ -179,7 +176,6 @@ class MultiDsTutorialTest(TestCase):
             (920804400L, {u'speed': None, u'kbytes_free': None}),
             (920806200L, {u'speed': 0.018666666666699999, u'kbytes_free': 1979617.5}),
             (920808000L, {u'speed': 0.0233333333333, u'kbytes_free': 1979611.6666699999}),
-            (920809800L, {u'speed': None, u'kbytes_free': None})
         )
 
         actual = self.rrd.fetch("Average", 920799000, 920809200)
@@ -205,7 +201,6 @@ class MultiDsTutorialTest(TestCase):
             (920804400L, {u'kbytes_free': None}),
             (920806200L, {u'kbytes_free': 1979617.5}),
             (920808000L, {u'kbytes_free': 1979611.6666699999}),
-            (920809800L, {u'kbytes_free': None})
         )
 
         actual = self.rrd.fetch("Average",
@@ -268,7 +263,6 @@ class LongerMultiDSOverlaps(TestCase):
             (920809800L, {u'speed': 0.0088888888888900008, u'kbytes_free': 1979619.0}),
             (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
             (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666699999}),
-            (920815200L, {u'speed': None, u'kbytes_free': None})
         )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)
@@ -334,7 +328,6 @@ class PostCreateNewDs(TestCase):
             (920809800L, {u'speed': 0.0088888888888900008, u'kbytes_free': 1979619.0}),
             (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
             (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666699999}),
-            (920815200L, {u'speed': None, u'kbytes_free': None})
         )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)
@@ -411,7 +404,6 @@ class SingleDsUpdateDictTest(TestCase):
             (920808600L, {u'speed': 0.0066666666666700004}),
             (920808900L, {u'speed': 0.0033333333333299998}),
             (920809200L, {u'speed': None}),
-            (920809500L, {u'speed': None})
         )
 
         actual = self.rrd.fetch("Average", 920804400, 920809200)
@@ -423,7 +415,6 @@ class SingleDsUpdateDictTest(TestCase):
             (920804400L, {u'speed': None}),
             (920806200L, {u'speed': 0.018666666666699999}),
             (920808000L, {u'speed': 0.0233333333333}),
-            (920809800L, {u'speed': None})
         )
 
         actual = self.rrd.fetch("Average", 920799000, 920809200)
@@ -511,7 +502,6 @@ class PostCreateNewDsUpdateDict(TestCase):
             (920809800L, {u'speed': 0.0088888888888900008, u'kbytes_free': 1979619.0}),
             (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
             (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666699999}),
-            (920815200L, {u'speed': None, u'kbytes_free': None})
         )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)
@@ -588,7 +578,6 @@ class PostCreateNewDsUpdateDictWithOpts(TestCase):
             (920809800L, {u'speed': 0.0088888888888900008, u'kbytes_free': 1979619.0}),
             (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
             (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666699999}),
-            (920815200L, {u'speed': None, u'kbytes_free': None})
         )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)

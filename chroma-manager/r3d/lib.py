@@ -370,8 +370,15 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
                 debug_print("%10.2f" % fn(row_results[ds.name]), end=" ")
 
         debug_print("")
-        results.append((dp_time, row_results))
 
+        # HYD-371
+        # This behavior deviates from stock rrdtool behavior, but improves
+        # usability.
+        if dp_time <= end_time:
+            results.append((dp_time, row_results))
+        else:
+            debug_print("Omitting dp row after end_time (%d > %d)" % (dp_time,
+                                                                      end_time))
         dp_time += real_step
         rra_pointer += 1
 
