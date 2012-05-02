@@ -5,10 +5,7 @@
 
 function LoadFSGraph_EditFS(filesystem)
 {
-  var spaceUsageFetchMatric = "kbytestotal kbytesfree filestotal filesfree";
-  var fs_Pie_Space_Data_Api_Url = "get_fs_stats_for_targets/";
-  /*******************************************************************************/
-  var chartConfig_Pie_DB = 
+  var chartConfig_Pie_DB =
   {
     chart:{
       renderTo: '',
@@ -17,7 +14,7 @@ function LoadFSGraph_EditFS(filesystem)
       backgroundColor: null,
       plotShadow: false,
       borderWidth: 0,
-
+      animation: false
     },
     colors: [
       '#A6C56D', 
@@ -29,27 +26,26 @@ function LoadFSGraph_EditFS(filesystem)
     yAxis:{ title:{text:''}, plotLines: [{value: 0,width: 1, color: '#808080' }]},
     credits:{ enabled:false },
     legend: {enabled: false},
-    tooltip:
-    {
-      formatter: function() 
-        {
-          return '<b>'+ this.point.name +'</b>: '+ this.y +' %';
-        }
-     },
+    tooltip: {enabled: false},
      plotOptions:
      {
-       pie:{allowPointSelect: true,cursor: 'pointer',showInLegend: true, dataLabels: {enabled: false}}
+       pie:{
+         allowPointSelect: false,
+         cursor: 'normal',
+         showInLegend: true,
+         dataLabels: {enabled: false},
+         animation: false
+       }
      },
      series: []
   };
  
-  obj_ost_pie_space = JSON.parse(JSON.stringify(chartConfig_Pie_DB));
+  var obj_ost_pie_space = JSON.parse(JSON.stringify(chartConfig_Pie_DB));
   obj_ost_pie_space.title.text = null;
   obj_ost_pie_space.chart.renderTo = "editfs_space_usage";
   
-  var free=0,used=0;
-  free = Math.round(((filesystem.bytes_free)/(filesystem.bytes_total))*100);
-  used = Math.round(100 - free);
+  var free = Math.round(((filesystem.bytes_free)/(filesystem.bytes_total))*100);
+  var used = Math.round(100 - free);
   var freeData = [],usedData = [];
   freeData.push(free);
   usedData.push(used);
@@ -62,15 +58,15 @@ function LoadFSGraph_EditFS(filesystem)
      ['Used',    used]
     ]
   }];
-  chart = new Highcharts.Chart(obj_ost_pie_space);
 
-  obj_ost_pie_inode = JSON.parse(JSON.stringify(chartConfig_Pie_DB));
+  new Highcharts.Chart(obj_ost_pie_space);
+
+  var obj_ost_pie_inode = JSON.parse(JSON.stringify(chartConfig_Pie_DB));
   obj_ost_pie_inode.title.text = null;
   obj_ost_pie_inode.chart.renderTo = "editfs_inode_usage";
 
-  var free=0,used=0;
-  free = Math.round(((filesystem.files_free)/(filesystem.files_total))*100);
-  used = Math.round(100 - free);
+  var free = Math.round(((filesystem.files_free)/(filesystem.files_total))*100);
+  var used = Math.round(100 - free);
 
   var freeFilesData = [],totalFilesData = [];
   freeFilesData.push(free);
@@ -84,5 +80,5 @@ function LoadFSGraph_EditFS(filesystem)
      ['Used',    used]
    ]
   }];
-  chart = new Highcharts.Chart(obj_ost_pie_inode);
+  new Highcharts.Chart(obj_ost_pie_inode);
 }
