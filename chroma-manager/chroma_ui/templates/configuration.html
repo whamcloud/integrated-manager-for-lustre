@@ -4,10 +4,10 @@
 <script type='text/javascript' src="{{STATIC_URL}}js/filesystem_configuration.js"></script>
 <script type="text/javascript">
   $(document).ajaxComplete(function() {
-    $('button.back_button:not(.ui-button)').each(function() {
-      $(this).html('Back');
-      $(this).click(function() {window.history.back();});
-      $(this).button({icons: {primary: 'ui-icon-arrowreturnthick-1-w'}});
+    $('button.cancel_button:not(.ui-button)').each(function() {
+      $(this).html('Cancel')
+        .click(function() {window.history.back();})
+        .button({icons: {primary: 'ui-icon-close'}});
     });
     $('a.button:not(.ui-button)').each(function() {
       $(this).button();
@@ -24,7 +24,7 @@
     apply_button('button.submit', 'ui-icon-check');
     apply_button('button.advanced', 'ui-icon-gear');
     apply_button('button.close', 'ui-icon-closethick');
-    
+
     //for adding smoothness to all table buttons
     $("button").button();
   });
@@ -49,7 +49,7 @@
 
 <div id="tabs">
   <ul>
-    <li><a href='#filesystem-tab' title='filesystems'>Filesystems</a></li>
+    <li><a href='#filesystem-tab' title='filesystems'>File Systems</a></li>
     <li><a href='#mgt-tab' title='mgts'>MGTs</a></li>
     <li><a href='#volume-tab' title='volumes'>Volumes</a></li>
     <li><a href='#server-tab' title='servers'>Servers</a></li>

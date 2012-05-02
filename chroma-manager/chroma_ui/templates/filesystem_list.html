@@ -10,7 +10,7 @@
       }
     }
 
-    function init() 
+    function init()
     {
       var oTable = $('#fs_list').dataTable( {
         bServerSide: true,
@@ -19,7 +19,7 @@
         "bJQueryUI": true,
         "bAutoWidth":false,
         "oLanguage": {
-            "sEmptyTable": "No filesystems"
+            "sEmptyTable": "No file systems"
         },
         bPaginate: false,
         bFilter: false,
@@ -65,17 +65,17 @@
 
 </script>
 
-<h2 class='section_header'>Filesystem Configuration</h2>
+<h2 class='section_header'>File System Configuration</h2>
 <p>
-  <a id='create_new_fs' class='navigation' href='configure/filesystem/create/'>New filesystem...</a>
+  <a id='create_new_fs' class='navigation' href='configure/filesystem/create/'>New File System...</a>
 </p>
 <table cellpadding="0" cellspacing="0" border="0" class="display" id="fs_list" width="100%">
   <thead>
     <tr>
       <th width="9%">Name</th>
-      <th width="10%">Management server</th>
-      <th width="10%">Metadata server</th>
-      <th width="9%">No. OSS</th>
+      <th width="10%">Management Server</th>
+      <th width="10%">Metadata Server</th>
+      <th width="9%"><abbr title="Object Storage Targets">OSTs</abbr></th>
       <th width="5%">Size</th>
       <th width="5%">Free</th>
       <th width="1%"></th>

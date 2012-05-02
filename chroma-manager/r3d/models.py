@@ -429,7 +429,9 @@ WHERE rra.database_id = %s
 
         for ds_name, prep in self.ds_pickle.items():
             if fetch_metrics is None or ds_name in fetch_metrics:
-                results[ds_name] = prep.last_reading
+                # Convert NaN -> None for consumers (HYD-985)
+                results[ds_name] = (None if math.isnan(prep.last_reading)
+                                         else prep.last_reading)
 
         return (self.last_update, results)
 
