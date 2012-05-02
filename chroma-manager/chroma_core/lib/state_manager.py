@@ -141,6 +141,8 @@ class StateManager(object):
                 cls._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'available', ['stopped', 'unavailable'])
             if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
                 cls._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'stopped', ['stopped', 'unavailable'])
+            if changed_item.state == 'unmounted' and fs.state == 'available' and states != set(['mounted']):
+                cls._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'unavailable', ['available'])
 
         if isinstance(changed_item, ManagedTarget):
             if isinstance(changed_item, FilesystemMember):

@@ -121,10 +121,6 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         else:
             return [target.filesystem]
 
-    reverse_deps = {
-            'ManagedTarget': lambda mt: ManagedFilesystem.filter_by_target(mt)
-            }
-
 
 class DeleteFilesystemStep(Step):
     idempotent = True

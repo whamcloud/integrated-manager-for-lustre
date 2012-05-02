@@ -47,6 +47,16 @@ class TestFSTransitions(JobTestCaseWithHost):
         self.assertEqual(ManagedMdt.objects.get(pk = self.mdt.pk).state, 'unmounted')
         self.assertEqual(ManagedFilesystem.objects.get(pk = self.fs.pk).state, 'unavailable')
 
+    def test_target_start(self):
+        from chroma_core.models import ManagedMdt, ManagedOst, ManagedFilesystem
+
+        set_state(self.fs, 'stopped')
+        set_state(self.mdt, 'mounted')
+
+        self.assertEqual(ManagedMdt.objects.get(pk = self.mdt.pk).state, 'mounted')
+        self.assertEqual(ManagedOst.objects.get(pk = self.ost.pk).state, 'unmounted')
+        self.assertEqual(ManagedFilesystem.objects.get(pk = self.fs.pk).state, 'stopped')
+
     def test_stop_start(self):
         from chroma_core.models import ManagedMdt, ManagedOst, ManagedFilesystem
         set_state(self.fs, 'stopped')
