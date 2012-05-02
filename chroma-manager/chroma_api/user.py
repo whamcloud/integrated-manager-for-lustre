@@ -5,6 +5,7 @@
 
 
 from django.contrib.auth.models import User
+from tastypie.bundle import Bundle
 
 from chroma_api.authentication import AnonymousAuthentication
 from tastypie.authorization import DjangoAuthorization
@@ -82,12 +83,27 @@ class UserResource(ModelResource):
     password2 = fields.CharField(help_text = "Password confirmation, must match ``password1``")
 
     def hydrate_groups(self, bundle):
+        from chroma_api.group import GroupResource
+
         # Prevent non-superusers from modifying their groups
         if not bundle.request.user.is_superuser:
-            group_ids = [int(group['pk']) for group in bundle.data['groups']]
-            user_group_ids = [group.pk for group in bundle.request.user.groups.all()]
-            if not set(group_ids) == set(user_group_ids):
-                raise ImmediateHttpResponse(HttpForbidden())
+            if 'groups' in bundle.data:
+                group_ids = []
+                print "*** %s" % bundle.data['groups']
+                for group in bundle.data['groups']:
+                    if isinstance(group, dict):
+                        group_ids.append(int(group['id']))
+                    elif isinstance(group, basestring):
+                        group_ids.append(int(GroupResource().get_via_uri(group).id))
+                    elif isinstance(group, Bundle):
+                        group_ids.append(int(group.obj.id))
+                    else:
+                        raise NotImplementedError(group.__class__)
+
+                user_group_ids = [int(group.pk) for group in bundle.request.user.groups.all()]
+                if not set(group_ids) == set(user_group_ids):
+                    print "%s %s" % (set(group_ids), set(user_group_ids))
+                    raise ImmediateHttpResponse(HttpForbidden())
         return bundle
 
     def hydrate_password1(self, bundle):
@@ -123,3 +139,4 @@ class UserResource(ModelResource):
         ordering = ['username', 'email']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
+        always_return_data = True
