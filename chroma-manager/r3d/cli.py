@@ -198,8 +198,8 @@ def main():
     def aggregate_results(results, time, data):
         if time in results:
             for key in results[time].keys():
-                a = (results[time][key] or float("NaN"))
-                b = (data[key] or float("NaN"))
+                a = ((results[time][key] == None) and float("NaN")) or results[time][key]
+                b = ((data[key] == None) and float("NaN")) or data[key]
                 results[time][key] = a + b
         else:
             results[time] = data
