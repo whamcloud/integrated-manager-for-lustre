@@ -28,14 +28,15 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
         mgt_volume = ha_volumes[0]
         mdt_volume = ha_volumes[1]
-        ost_volumes = ha_volumes[2:4]
+        ost_volume_1 = ha_volumes[2]
+        ost_volume_2 = ha_volumes[3]
 
         # Set primary and secondary mounts explicitly and check they
         # are respected
         self.set_volume_mounts(mgt_volume, hosts[0]['id'], hosts[1]['id'])
         self.set_volume_mounts(mdt_volume, hosts[0]['id'], hosts[1]['id'])
-        for volume in ost_volumes:
-            self.set_volume_mounts(volume, hosts[1]['id'], hosts[0]['id'])
+        self.set_volume_mounts(ost_volume_1, hosts[2]['id'], hosts[3]['id'])
+        self.set_volume_mounts(ost_volume_2, hosts[3]['id'], hosts[2]['id'])
 
         response = self.chroma_manager.get(
             '/api/volume/',
@@ -45,20 +46,22 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         volumes = response.json['objects']
         refreshed_mgt_volume = None
         refreshed_mdt_volume = None
-        refreshed_ost_volumes = []
+        refreshed_ost_volume_1 = None
+        refreshed_ost_volume_2 = None
         for volume in volumes:
             if volume['id'] == mgt_volume['id']:
                 refreshed_mgt_volume = volume
             elif volume['id'] == mdt_volume['id']:
                 refreshed_mdt_volume = volume
-            elif volume['id'] in [v['id'] for v in ost_volumes]:
-                refreshed_ost_volumes.append(volume)
-        self.assertTrue(refreshed_mgt_volume and refreshed_mdt_volume)
-        self.assertEqual(2, len(refreshed_ost_volumes))
+            elif volume['id'] == ost_volume_1['id']:
+                refreshed_ost_volume_1 = volume
+            elif volume['id'] == ost_volume_2['id']:
+                refreshed_ost_volume_2 = volume
+        self.assertTrue(refreshed_mgt_volume and refreshed_mdt_volume and refreshed_ost_volume_1 and refreshed_ost_volume_2)
         self.verify_volume_mounts(refreshed_mgt_volume, hosts[0]['id'], hosts[1]['id'])
         self.verify_volume_mounts(refreshed_mdt_volume, hosts[0]['id'], hosts[1]['id'])
-        for ost_volume in refreshed_ost_volumes:
-            self.verify_volume_mounts(ost_volume, hosts[1]['id'], hosts[0]['id'])
+        self.verify_volume_mounts(refreshed_ost_volume_1, hosts[2]['id'], hosts[3]['id'])
+        self.verify_volume_mounts(refreshed_ost_volume_2, hosts[3]['id'], hosts[2]['id'])
 
         # Create new filesystem
         self.verify_usable_luns_valid(ha_volumes, 4)
@@ -67,15 +70,28 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
                 'name': 'testfs',
                 'mgt': {'volume_id': mgt_volume['id']},
                 'mdt': {'volume_id': mdt_volume['id'], 'conf_params': {}},
-                'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in ost_volumes],
+                'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in [ost_volume_1, ost_volume_2]],
                 'conf_params': {}
             }
+
         )
 
+        # Define where we expect targets for volumes to be started on depending on our failover state.
+        volumes_expected_hosts_in_normal_state = {
+            mgt_volume['id']: hosts[0]['nodename'],
+            mdt_volume['id']: hosts[0]['nodename'],
+            ost_volume_1['id']: hosts[2]['nodename'],
+            ost_volume_2['id']: hosts[3]['nodename'],
+        }
+        volumes_expected_hosts_in_failover_state = {
+            mgt_volume['id']: hosts[1]['nodename'],
+            mdt_volume['id']: hosts[1]['nodename'],
+            ost_volume_1['id']: hosts[2]['nodename'],
+            ost_volume_2['id']: hosts[3]['nodename'],
+        }
+
         # Verify targets are started on the correct hosts
-        self.verify_targets_started_on_host(filesystem_id, 'MGT', hosts[0]['nodename'])
-        self.verify_targets_started_on_host(filesystem_id, 'MDT', hosts[0]['nodename'])
-        self.verify_targets_started_on_host(filesystem_id, 'OST', hosts[1]['nodename'])
+        self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
 
         # Mount the filesystem
         response = self.chroma_manager.get(
@@ -105,15 +121,12 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
             # Wait for failover to occur
             running_time = 0
-            while running_time < TEST_TIMEOUT and (
-                not self.targets_started_on_host(filesystem_id, 'MGT', hosts[1]['nodename']) or
-                not self.targets_started_on_host(filesystem_id, 'MDT', hosts[1]['nodename'])):
+            while running_time < TEST_TIMEOUT and not self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state):
                 time.sleep(1)
                 running_time += 1
 
             self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for failover")
-            self.verify_targets_started_on_host(filesystem_id, 'MGT', hosts[1]['nodename'])
-            self.verify_targets_started_on_host(filesystem_id, 'MDT', hosts[1]['nodename'])
+            self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
             # Wait for the stonithed server to come back online
             running_time = 0
@@ -147,18 +160,32 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             self.assertNotRegexpMatches(stdout.read(), "offline")
 
             # Verify did not auto-failback
-            self.verify_targets_started_on_host(filesystem_id, 'MGT', hosts[1]['nodename'])
-            self.verify_targets_started_on_host(filesystem_id, 'MDT', hosts[1]['nodename'])
-            self.verify_targets_started_on_host(filesystem_id, 'OST', hosts[1]['nodename'])
+            self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
             # Failback
-            mgt = self.get_targets(filesystem_id, 'MGT')[0]
+            response = self.chroma_manager.get(
+                '/api/target/',
+                params = {
+                    'filesystem_id': filesystem_id,
+                    'kind': 'MGT',
+                }
+            )
+            self.assertTrue(response.successful, response.text)
+            mgt = response.json['objects'][0]
             _, stdout, _ = self.remote_command(
                 hosts[0]['nodename'],
                 'chroma-agent failback-target --label %s --id %s' % (mgt['label'], mgt['id'])
             )
 
-            mdt = self.get_targets(filesystem_id, 'MDT')[0]
+            response = self.chroma_manager.get(
+                '/api/target/',
+                params = {
+                    'filesystem_id': filesystem_id,
+                    'kind': 'MDT',
+                }
+            )
+            self.assertTrue(response.successful, response.text)
+            mdt = response.json['objects'][0]
             _, stdout, _ = self.remote_command(
                 hosts[0]['nodename'],
                 'chroma-agent failback-target --label %s --id %s' % (mdt['label'], mdt['id'])
@@ -166,12 +193,11 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
             # Wait for the targets to move back to their original server
             running_time = 0
-            while running_time < TEST_TIMEOUT and (
-                not self.targets_started_on_host(filesystem_id, 'MGT', hosts[0]['nodename']) or
-                not self.targets_started_on_host(filesystem_id, 'MDT', hosts[0]['nodename'])):
+            while running_time < TEST_TIMEOUT and not self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state):
                 time.sleep(1)
                 running_time += 1
 
             self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for failback")
-            self.verify_targets_started_on_host(filesystem_id, 'MGT', hosts[0]['nodename'])
-            self.verify_targets_started_on_host(filesystem_id, 'MDT', hosts[0]['nodename'])
+            self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
+
+            # TODO: Also add a test for failback on the active/active OSTs.

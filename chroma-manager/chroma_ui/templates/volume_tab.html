@@ -11,7 +11,7 @@
       }
     }
 
-    function init() 
+    function init()
     {
       $('#btnApplyConfig').button();
       $('#btnCancelConfig').button();
@@ -43,7 +43,7 @@
           dialog.html(confirmation_markup);
           dialog.dialog({'buttons': {
            'Cancel': function() {$(this).dialog('close');},
-           'Confirm': 
+           'Confirm':
            {
                text: "Confirm",
                id: "transition_confirm_button",
@@ -51,7 +51,7 @@
                  var dialog = $(this);
                  sendUpdates(volumes, function() {dialog.dialog('close')});
                }
-           } 
+           }
          }});
       }
 
@@ -150,12 +150,12 @@
         var dirty_luns = [];
 
         var confirmation_markup = "The following volumes will be modified:<ul>";
-        for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) 
+        for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++)
         {
           var volume = oSetting.aoData[i]._aData;
           if (volume.original_ids != volume.dirty_ids)
           {
-            var params = volume.dirty_ids.split("_") 
+            var params = volume.dirty_ids.split("_")
 
             // Parse out modified row
             var id = parseInt(params[0])
@@ -211,16 +211,16 @@
         show: "clip",
         modal: true,
         position:"center",
-        buttons: 
+        buttons:
         {
-          "OK" : 
+          "OK" :
         {
             text: "OK",
             id: "error_ok_button",
             click: function(){
               $(this).dialog("close");
             }
-            }   
+            }
       }
       });
 
@@ -252,7 +252,7 @@
           else
           {
             new_secondary_node_id = $(this).val();
-            new_primary_node_id = old_primary_node_id  
+            new_primary_node_id = old_primary_node_id
           }
 
           volume.dirty_ids = lun_id + '_' + new_primary_node_id + '_' + new_secondary_node_id;
@@ -266,13 +266,13 @@
     return {draw:draw}
   }();
 </script>
-<h2 class='section_header'>Volume configuration</h2>
+<h2 class='section_header'>Volume Configuration</h2>
 <table class="display tight_lines" id="volume_configuration" width="100%">
   <thead>
     <tr>
       <th width="20%">Name</th>
-      <th width="25%">Primary server</th>
-      <th width="25%">Failover server</th>
+      <th width="25%">Primary Server</th>
+      <th width="25%">Failover Server</th>
       <th width="10%">Size</th>
       <th width="20%">Status</th>
       <th></th>

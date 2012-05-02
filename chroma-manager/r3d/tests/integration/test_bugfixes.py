@@ -4,6 +4,8 @@
 # ========================================================
 
 
+import time
+
 from django.test import TestCase
 from r3d.models import Database, Counter, Gauge, Average
 
@@ -71,7 +73,6 @@ class BugHyd330(TestCase):
             (1318119595L, {u'ds_counter': None, u'ds_gauge': None}),
             (1318119596L, {u'ds_counter': None, u'ds_gauge': None}),
             (1318119597L, {u'ds_counter': None, u'ds_gauge': None}),
-            (1318119598L, {u'ds_counter': None, u'ds_gauge': None}),
         )
 
         actual = self.rrd.fetch("Average", 1318119572, 1318119597)
@@ -116,6 +117,98 @@ class BugHyd352(TestCase):
                           step=audit_freq,
                           content_type=ct,
                           object_id=user.id)
+
+    def tearDown(self):
+        self.rrd.delete()
+
+
+class BugHyd371(TestCase):
+    """HYD-371 omit trailing Nones when fetching most recent data"""
+    def setUp(self):
+        self.audit_freq = 3600
+        self.start_time = long(time.time()) - (self.audit_freq * 6)
+        self.rrd = Database.objects.create(name="hyd371",
+                                           start=self.start_time - (self.audit_freq),
+                                           step=self.audit_freq)
+        self.rrd.datasources.add(Gauge.objects.create(name="ds_gauge",
+                                                      heartbeat=self.audit_freq * 2,
+                                                      database=self.rrd))
+        self.rrd.archives.add(Average.objects.create(xff="0.5",
+                                                     cdp_per_row=1,
+                                                     rows=24,
+                                                     database=self.rrd))
+
+    def update_database(self):
+        updates = {}
+        for i in range(self.start_time,
+                       self.start_time + (self.audit_freq * 5),
+                       self.audit_freq):
+            updates[i] = {'ds_gauge': (i - self.start_time) / self.audit_freq}
+
+        self.rrd.update(updates)
+
+    def test_database_fetch(self):
+        """
+        Returned rowset should not include rows newer than the supplied
+        end time.
+        """
+        self.maxDiff = None
+        self.update_database()
+
+        test_row_count = 3
+        start_slot = self.start_time - (self.start_time % self.audit_freq)
+        end_slot = start_slot + (self.audit_freq * test_row_count)
+
+        expected_rows = []
+        for row_time in range(start_slot + self.audit_freq,
+                              end_slot + self.audit_freq, self.audit_freq):
+            expected_rows.append(long(row_time))
+
+        end_time = self.start_time + (self.audit_freq * test_row_count)
+        actual = self.rrd.fetch("Average", self.start_time, end_time)
+        # In this test, we don't care about the values returned, just the
+        # set of rows.  We shouldn't get rows newer than end_time because
+        # they'll necessarily be full of NaNs if end_time is now().
+        self.assertSequenceEqual(expected_rows, [r[0] for r in actual])
+
+    def tearDown(self):
+        self.rrd.delete()
+
+
+class BugHyd985(TestCase):
+    """HYD-985 NaNs should never get past fetch()/fetch_last()"""
+    def setUp(self):
+        self.audit_freq = 10
+        self.start_time = long(time.time()) - (self.audit_freq * 5)
+        self.rrd = Database.objects.create(name="hyd985",
+                                           start=self.start_time - (self.audit_freq),
+                                           step=self.audit_freq)
+        self.rrd.datasources.add(Gauge.objects.create(name="ds_gauge",
+                                                      heartbeat=self.audit_freq * 2,
+                                                      database=self.rrd))
+        self.rrd.archives.add(Average.objects.create(xff="0.5",
+                                                     cdp_per_row=1,
+                                                     rows=24,
+                                                     database=self.rrd))
+
+    def update_database(self):
+        updates = {}
+        for i in range(self.start_time,
+                       self.start_time + (self.audit_freq * 5),
+                       self.audit_freq):
+            updates[i] = {'ds_gauge': float("nan")}
+
+        self.rrd.update(updates)
+
+    def test_database_fetch(self):
+        """
+        fetch_last() should never return NaNs
+        """
+        self.maxDiff = None
+        self.update_database()
+
+        last_tuple = self.rrd.fetch_last()
+        self.assertEqual({u'ds_gauge': None}, last_tuple[1])
 
     def tearDown(self):
         self.rrd.delete()

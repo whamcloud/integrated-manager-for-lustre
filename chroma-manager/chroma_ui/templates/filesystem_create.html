@@ -4,7 +4,7 @@
 
   var FilesystemCreateView = function() {
     var initialized = false;
-    var advanced_tab_clicked = false; 
+    var advanced_tab_clicked = false;
     var conf_param_dialog;
     var volume_chooser_store;
 
@@ -26,7 +26,7 @@
       }
     }
 
-    function init() 
+    function init()
     {
       function updateMdtEstimate() {
         var vol = volume_chooser_store.getVolume($('#mdt_chooser').volumeChooser('val'));
@@ -70,7 +70,7 @@
             var vol = volume_chooser_store.getVolume(vol_id);
             sum += Math.floor(vol.size)
           });
-          text = "Estimated filesystem capacity: " + formatBytes(sum);
+          text = "Estimated file system capacity: " + formatBytes(sum);
         } else {
           text = "";
         }
@@ -144,14 +144,14 @@
         $('#filesystem_create_form').find().removeClass('error');
 
         var fs_name = $('#txtfsnameid').val();
-        var mgt_lun_id = $('#mgt_chooser').volumeChooser('val'); 
+        var mgt_lun_id = $('#mgt_chooser').volumeChooser('val');
         var mgt_id = $('#mgt_existing_dropdown').val()
-        var mdt_lun_id = $('#mdt_chooser').volumeChooser('val'); 
-        var ost_lun_ids = $('#ost_chooser').volumeChooser('val'); 
+        var mdt_lun_id = $('#mdt_chooser').volumeChooser('val');
+        var ost_lun_ids = $('#ost_chooser').volumeChooser('val');
 
         var errors = []
         if(fs_name=="") {
-          errors.push({element: $('#txtfsnameid'), message: "Filesystem name is mandatory"})
+          errors.push({element: $('#txtfsnameid'), message: "File system name is mandatory"})
         }
 
         if (!(mgt_id || mgt_lun_id)) {
@@ -217,17 +217,13 @@
             Backbone.history.navigate("configure/filesystem/detail/" + data.filesystem.id + "/", {trigger: true});
           }
         );
-      }); 
-      //Advance Options button click handler.
+      });
+      //Advance Settings button click handler.
       $('div#filesystem_create_form button.advanced').click(function()
       {
         // If clicked first time then only fetch parameters else show already entered values
         if(!conf_param_dialog) {
           Api.get("help/conf_param/", {kind: 'FS'}, success_callback = function(help_dict) {
-            var data = {};
-            for(var key in help_dict) {
-              data[key] = null;
-            }
             advanced_tab_clicked = true;
             conf_param_dialog = ConfParamDialog({help: help_dict})
             conf_param_dialog.open();
@@ -241,23 +237,25 @@
   }();
 </script>
 
+<h2 class='section_header'>New File System Configuration</h2>
+
 <div id='filesystem_create_form' class='validated_form'>
 <table style="font-size:12px; padding-top:15px;">
   <tr>
     <td width="30%" align="left" valign="top">
       <div class='step_header'>
-        <span class="step_number">1.</span> <span class="step_caption">Filesystem options</span><br>
+        <span class="step_number">1.</span> <span class="step_caption">Set file system options</span><br>
       </div>
       <div class='step_body'>
-        <label>Filesystem name:</label> <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" maxlength="8"/>
-        <button class='advanced' type="button">Advanced...</button>
+        <label>File system name:</label> <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" maxlength="8"/>
+        <button class='advanced' type="button">Advanced Settings</button>
       </div>
     </td>
   </tr>
   <tr>
     <td colspan="2" align="left" valign="top">
       <div class='step_header'>
-        <span class="step_number">2.</span> <span class="step_caption">Choose MGT</span><br>
+        <span class="step_number">2.</span> <span class="step_caption">Choose one management target (MGT)</span><br>
       </div>
       <div class='step_body'>
         <ul id='existing_or_new_mgt_options'>
@@ -265,7 +263,7 @@
             Use existing: <select id="mgt_existing_dropdown"></select>
           </li>
           <li>
-          Create new:
+          OR create a new <abbr title="Management Target">MGT</abbr>:
           </li>
         </ul>
         <button id='mgt_chooser'></button>
@@ -275,12 +273,12 @@
   <tr>
     <td colspan="2" align="left" valign="top">
       <div class='step_header'>
-        <span class="step_number">3.</span> <span class="step_caption">Choose MDT</span><br>
+        <span class="step_number">3.</span> <span class="step_caption">Choose one metadata target (MDT)</span><br>
       </div>
       <div class='step_body'>
         <button id='mdt_chooser'></button>
         <div>
-          <label for='mdt_advanced_button'>Advanced</label>
+          <label for='mdt_advanced_button'>Advanced Options</label>
           <input type='checkbox' id='mdt_advanced_button'/>
           <div class='mdt_advanced'>
             <table class='validated_form'>
@@ -303,7 +301,7 @@
   <tr>
     <td colspan="2" align="left" valign="top">
       <div class='step_header'>
-        <span class="step_number">4.</span> <span class="step_caption">Choose OSTs</span><br>
+        <span class="step_number">4.</span> <span class="step_caption">Choose object storage targets (OSTs)</span><br>
       </div>
       <div class='step_body'>
         <button id='ost_chooser'></button>
@@ -317,11 +315,10 @@
         <span class="step_number">5.</span> <span class="step_caption">Finish</span><br>
       </div>
       <div class='step_body'>
-        <button class='back_button'/>
-        <button class='submit' id='btnCreateFS'>Create filesystem now</button>
+        <button class='submit' id='btnCreateFS'>Create file system now</button>
+        <button class='cancel_button' />
       </div>
     </td>
   </tr>
 </table>
 </div>
-

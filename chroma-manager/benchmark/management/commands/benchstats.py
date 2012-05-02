@@ -33,6 +33,8 @@ class Command(BaseCommand):
                 help="audit frequency for generated metrics (default: 10)"),
             make_option("--use_r3d_myisam", action='store_true', default=False,
                 help="use MyISAM engine type for R3D tables"),
+            make_option("--include_create", action='store_true', default=False,
+                help="include initial creation time in final tally"),
     )
     help = "Benchmark metrics storage by simulating incoming metrics traffic"
 

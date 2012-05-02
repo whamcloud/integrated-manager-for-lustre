@@ -11,7 +11,7 @@
       }
     }
 
-    function init() 
+    function init()
     { 
       loadObjectSelection('host', $('#event_host'));
             
@@ -22,7 +22,7 @@
         "bFilter": false,
         iDisplayLength: 25,
         "sAjaxSource": "event/",
-        "fnServerData": function (url, data, callback, settings) 
+        "fnServerData": function (url, data, callback, settings)
         {
           function formatRows(data) {
             $.each(data.aaData, function(i, row) {
@@ -35,17 +35,17 @@
             "severity": $('#event_severity').val(),
             "event_type": $('#event_type').val()
           }))
-        }, 
+        },
         aaSorting: [[0, 'desc']],
         "aoColumns": [
             { "sClass": 'txtleft',"mDataProp":"created_at", "bSortable":true},
             { "sClass": 'txtcenter',"mDataProp":"severity", "bSortable":false},
             { "sClass": 'txtleft',"mDataProp":"host_name", "bSortable":true},
             { "sClass": 'txtleft',"mDataProp":"message","bSortable":false}
-         ], 
+         ],
          "bJQueryUI": true
       });
-      
+
       //click handler for filter button
       $('#filter_btn').click(function()
       {
@@ -86,13 +86,13 @@
   <tr>
     <td colspan="3"><form>
       <div class='content'>
-        <table cellpadding="0" cellspacing="0" border="0" class="display" id="events_table">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" id="events_table">
           <thead>
             <tr>
-              <th width="5%">Event Created At</th>
+              <th width="10%">Event&nbsp;Created&nbsp;At</th>
               <th width="10%">Status</th>
               <th width="10%">Host</th>
-              <th width="75%">Message</th>
+              <th width="70%">Message</th>
             </tr>
           </thead>
         </table>
