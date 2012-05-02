@@ -135,8 +135,7 @@ class StateManager(object):
             fs = changed_item.filesystem
             members = list(ManagedMdt._base_manager.filter(filesystem = fs)) + list(ManagedOst._base_manager.filter(filesystem = fs))
             states = set([t.state for t in members])
-            now = datetime.datetime.utcnow()
-            now = now.replace(tzinfo = tz.tzutc())
+            now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
             if not fs.state == 'available' and changed_item.state == 'mounted' and states == set(['mounted']):
                 cls._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'available', ['stopped', 'unavailable'])
             if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
@@ -188,22 +187,20 @@ class StateManager(object):
             # Check that no incomplete jobs hold a lock on this object
             from django.db.models import Q
             from chroma_core.models import StateLock
-            outstanding_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
-            if outstanding_locks == 0:
-
+            if not StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count():
                 modified_at = instance.state_modified_at
                 modified_at = modified_at.replace(tzinfo = tz.tzutc())
 
                 if notification_time > modified_at:
                     # No jobs lock this object, go ahead and update its state
-                    job_log.info("notify_state: Updating state of item %d (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
+                    job_log.info("notify_state: Updating state of item %s (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
                     instance.set_state(new_state)
 
                     # FIXME: should check the new state against reverse dependencies
                     # and apply any fix_states
                     cls._run_opportunistic_jobs(instance)
                 else:
-                    job_log.info("notify_state: Dropping update of %d (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, instance.new_state))
+                    job_log.info("notify_state: Dropping update of %s (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, new_state))
 
     def add_job(self, job, command = None):
         """Add a job, and any others which are required in order to reach its prerequisite state"""

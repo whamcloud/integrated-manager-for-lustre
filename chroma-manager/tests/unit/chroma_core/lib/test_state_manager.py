@@ -1,5 +1,7 @@
 
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen, set_state
+import datetime
+from dateutil import tz
 
 
 class TestTransitionsWithCommands(JobTestCaseWithHost):
@@ -81,6 +83,25 @@ class TestStateManager(JobTestCaseWithHost):
         # This tests a state transition which is done by a single job
         set_state(self.host, 'lnet_down')
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_down')
+
+    def test_notification(self):
+        """Test that state notifications cause the state of an object to change"""
+        from chroma_core.lib.state_manager import StateManager
+
+        self.assertEqual(freshen(self.host).state, 'lnet_up')
+        now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
+        StateManager.notify_state(freshen(self.host), now, 'lnet_down', ['lnet_up'])
+        self.assertEqual(freshen(self.host).state, 'lnet_down')
+
+    def test_late_notification(self):
+        """Test that notifications are droppped when they are older than
+        the last change to an objects state"""
+        from chroma_core.lib.state_manager import StateManager
+
+        self.assertEqual(freshen(self.host).state, 'lnet_up')
+        awhile_ago = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc()) - datetime.timedelta(seconds = 120)
+        StateManager.notify_state(freshen(self.host), awhile_ago, 'lnet_down', ['lnet_up'])
+        self.assertEqual(freshen(self.host).state, 'lnet_up')
 
     def test_2steps(self):
         from chroma_core.models import ManagedHost
