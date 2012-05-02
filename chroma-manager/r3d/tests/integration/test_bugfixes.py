@@ -173,3 +173,42 @@ class BugHyd371(TestCase):
 
     def tearDown(self):
         self.rrd.delete()
+
+
+class BugHyd985(TestCase):
+    """HYD-985 NaNs should never get past fetch()/fetch_last()"""
+    def setUp(self):
+        self.audit_freq = 10
+        self.start_time = long(time.time()) - (self.audit_freq * 5)
+        self.rrd = Database.objects.create(name="hyd985",
+                                           start=self.start_time - (self.audit_freq),
+                                           step=self.audit_freq)
+        self.rrd.datasources.add(Gauge.objects.create(name="ds_gauge",
+                                                      heartbeat=self.audit_freq * 2,
+                                                      database=self.rrd))
+        self.rrd.archives.add(Average.objects.create(xff="0.5",
+                                                     cdp_per_row=1,
+                                                     rows=24,
+                                                     database=self.rrd))
+
+    def update_database(self):
+        updates = {}
+        for i in range(self.start_time,
+                       self.start_time + (self.audit_freq * 5),
+                       self.audit_freq):
+            updates[i] = {'ds_gauge': float("nan")}
+
+        self.rrd.update(updates)
+
+    def test_database_fetch(self):
+        """
+        fetch_last() should never return NaNs
+        """
+        self.maxDiff = None
+        self.update_database()
+
+        last_tuple = self.rrd.fetch_last()
+        self.assertEqual({u'ds_gauge': None}, last_tuple[1])
+
+    def tearDown(self):
+        self.rrd.delete()
