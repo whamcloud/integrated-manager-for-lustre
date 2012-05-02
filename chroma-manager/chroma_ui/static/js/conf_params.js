@@ -137,7 +137,7 @@ function reset_config_params(datatable)
   }
 }
 
-/* Read modified conf params out of datatable, PUT them to url, and close dialog_id */
+/* Read modified conf params out of datatable, PUT them to url */
 function apply_config_params(url, datatable)
 {
   var oSetting = datatable.fnSettings();
@@ -169,7 +169,5 @@ function apply_config_params(url, datatable)
         }
       }
     );
-
-    dialog.dialog('close');
   }
 }
