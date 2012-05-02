@@ -121,6 +121,7 @@ class AlertResource(ModelResource):
         authentication = AnonymousAuthentication()
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'put']
+        always_return_data = True
 
     def dehydrate_message(self, bundle):
         return bundle.obj.message()

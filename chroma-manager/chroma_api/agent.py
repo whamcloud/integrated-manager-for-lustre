@@ -37,6 +37,7 @@ class AgentResource(Resource):
         authorization = Authorization()
         list_allowed_methods = ['post']
         detail_allowed_methods = []
+        always_return_data = True
         resource_name = 'agent'
 
     def get_resource_uri(self, bundle):

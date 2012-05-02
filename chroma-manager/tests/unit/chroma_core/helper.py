@@ -2,6 +2,7 @@ import datetime
 import logging
 from django.test import TestCase
 import mock
+from chroma_core.models.jobs import Command
 
 
 def freshen(obj):
@@ -9,8 +10,7 @@ def freshen(obj):
 
 
 def set_state(obj, state):
-    from chroma_core.lib.state_manager import StateManager
-    return StateManager().set_state(freshen(obj), state)
+    Command.set_state([(obj, state)], "Unit test transition %s to %s" % (obj, state))
 
 
 class MockAgent(object):

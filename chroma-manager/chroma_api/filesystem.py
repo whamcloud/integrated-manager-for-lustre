@@ -308,6 +308,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
         detail_allowed_methods = ['get', 'delete', 'put']
         readonly = ['bytes_free', 'bytes_total', 'files_free', 'files_total', 'mount_command']
         validation = FilesystemValidation()
+        always_return_data = True
 
     def _format_attrs(self, target_data):
         """Map API target attributes to kwargs suitable for model construction"""
@@ -325,26 +326,6 @@ class FilesystemResource(MetricResource, ConfParamResource):
         # Set up an errors dict in the bundle to allow us to carry
         # hydration errors through to validation.
         setattr(bundle, 'data_errors', defaultdict(list))
-
-        # It would be nice to use the stock full_hydrate(), but it
-        # kind of falls apart with our custom obj_create().  We
-        # /could/ go through the contortions of getting the various
-        # related resources hydrated via incoming LUN ids, but I'm
-        # not convinced it buys us anything except more code to maintain.
-        # Instead, we'll go through the motions of calling hydrate_FIELD
-        # methods by hand to hammer the incoming request into a shape
-        # this obj_create() understands.  Calling them hydrate_FIELD
-        # is just an adherence to convention rather than an invocation
-        # of magic.  In fact, it's really kind of a bad name for what's
-        # happening, since there isn't actually any deserialization
-        # going on.  There aren't any other hook name conventions for
-        # "mangle incoming bundle data on a per-field basis" though.
-        #for field in ['mgt_lun_id', 'mdt_lun_id', 'ost_lun_ids', 'conf_params']:
-        #    method = getattr(self, "hydrate_%s" % field, None)
-#
-#            if method:
-#                bundle = method(bundle)
-#
 
         # NB: this call will be redundant when the data_errors stuff is
         # removed (tastypie calls is_valid before invoking obj_create)
@@ -369,19 +350,20 @@ class FilesystemResource(MetricResource, ConfParamResource):
             fs = ManagedFilesystem(mgs=mgs, name = bundle.data['name'])
             fs.save()
 
-            for key, value in bundle.data['conf_params'].items():
-                chroma_core.lib.conf_param.set_conf_param(fs, key, value)
+            chroma_core.lib.conf_param.set_conf_params(fs, bundle.data['conf_params'])
 
             mdt_data = bundle.data['mdt']
-            ManagedMdt.create_for_volume(mdt_data['volume_id'], filesystem = fs, **self._format_attrs(mdt_data))
+            mdt = ManagedMdt.create_for_volume(mdt_data['volume_id'], filesystem = fs, **self._format_attrs(mdt_data))
+            chroma_core.lib.conf_param.set_conf_params(mdt, mdt_data['conf_params'])
             osts = []
             for ost_data in bundle.data['osts']:
-                osts.append(ManagedOst.create_for_volume(ost_data['volume_id'], filesystem = fs, **self._format_attrs(ost_data)))
+                ost = ManagedOst.create_for_volume(ost_data['volume_id'], filesystem = fs, **self._format_attrs(ost_data))
+                osts.append(ost)
+                chroma_core.lib.conf_param.set_conf_params(ost, ost_data['conf_params'])
         # Important that a commit happens here so that the targets
         # land in DB before the set_state jobs act upon them.
 
         command = Command.set_state([(fs, 'available')], "Creating filesystem %s" % bundle.data['name'])
-
         filesystem_data = self.full_dehydrate(self.build_bundle(obj = fs)).data
 
         raise custom_response(self, request, http.HttpAccepted,

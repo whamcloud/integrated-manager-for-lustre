@@ -31,8 +31,8 @@
       function updateMdtEstimate() {
         var vol = volume_chooser_store.getVolume($('#mdt_chooser').volumeChooser('val'));
 
-        var inode_size = Math.floor($('input[name=inode_size]').val());
-        var bytes_per_inode = Math.floor($('input[name=bytes_per_inode]').val());
+        var inode_size = Math.floor($('input#inode_size').val());
+        var bytes_per_inode = Math.floor($('input#bytes_per_inode').val());
 
         var text;
         var advanced_text;
@@ -54,10 +54,10 @@
         $('span#mdt_advanced_estimate').html(advanced_text)
       }
 
-      $('input[name=inode_size]').change(function() {
+      $('input#inode_size').change(function() {
         updateMdtEstimate();
       });
-      $('input[name=bytes_per_inode]').change(function() {
+      $('input#bytes_per_inode').change(function() {
         updateMdtEstimate();
       });
 
@@ -175,7 +175,7 @@
           return;
         }
 
-        var filesystem = {}
+        var filesystem = {};
         filesystem.name = fs_name;
         // Compose MGT
         if (mgt_id) {
@@ -185,20 +185,26 @@
         }
 
         // Compose MDT
-        filesystem.mdt = {volume_id: mdt_lun_id}
-        var inode_size = $('input[name=inode_size]').val()
+        filesystem.mdt = {
+            volume_id: mdt_lun_id,
+            conf_params: {}
+        };
+        var inode_size = $('input#inode_size').val();
         if (inode_size) {
           filesystem.mdt.inode_size = inode_size
         }
-        var bytes_per_inode = $('input[name=bytes_per_inode]').val()
+        var bytes_per_inode = $('input#bytes_per_inode').val();
         if (bytes_per_inode) {
           filesystem.mdt.bytes_per_inode = bytes_per_inode
         }
 
         // Compose OST list
-        filesystem.osts = []
+        filesystem.osts = [];
         _.each(ost_lun_ids, function(lun_id) {
-          filesystem.osts.push({volume_id: lun_id})
+          filesystem.osts.push({
+              volume_id: lun_id,
+              conf_params: {}
+          })
         });
         if (conf_param_dialog) {
             filesystem.conf_params = conf_param_dialog.get()
@@ -280,11 +286,11 @@
             <table class='validated_form'>
               <tr>
                 <th><label for='inode_size'>INode size:</label></th>
-                <td><input name='inode_size' value='512'/>bytes</td>
+                <td><input id='inode_size' value='512'/>bytes</td>
               </tr>
               <tr>
-                <th><label for='inode_size'>Bytes per inode:</label></th>
-                <td><input name='bytes_per_inode' value='2048'/>bytes</td>
+                <th><label for='bytes_per_inode'>Bytes per inode:</label></th>
+                <td><input id='bytes_per_inode' value='2048'/>bytes</td>
               </tr>
             </table>
             <span id='mdt_advanced_estimate'></span>

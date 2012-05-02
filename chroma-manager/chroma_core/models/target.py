@@ -292,23 +292,13 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
 
     def set_conf_params(self, params):
         """params is a list of unsaved ConfParam objects"""
-        from django.db import transaction
-
-        @transaction.commit_on_success()
-        def get_version():
-            from django.db.models import F
-            ManagedMgs.objects.filter(pk = self.id).update(conf_param_version = F('conf_param_version') + 1)
-            return ManagedMgs.objects.get(pk = self.id).conf_param_version
-
-        version = get_version()
-
-        @transaction.commit_on_success()
-        def create_params():
-            for p in params:
-                p.version = version
-                p.save()
-
-        create_params()
+        version = None
+        from django.db.models import F
+        ManagedMgs.objects.filter(pk = self.id).update(conf_param_version = F('conf_param_version') + 1)
+        version = ManagedMgs.objects.get(pk = self.id).conf_param_version
+        for p in params:
+            p.version = version
+            p.save()
 
 
 class TargetRecoveryInfo(models.Model):
@@ -350,7 +340,16 @@ class DeleteTargetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        ManagedTarget.delete(kwargs['target_id'])
+        try:
+            target = ManagedTarget.objects.get(pk = kwargs['target_id']).downcast()
+        except ManagedTarget.DoesNotExist:
+            job_log.warning("Skipping deletion of non existent target %s (already deleted?)" % kwargs['target_id'])
+            pass
+        else:
+            if isinstance(target, ManagedMgs):
+                from chroma_core.models.filesystem import ManagedFilesystem
+                assert ManagedFilesystem.objects.filter(mgs = target).count() == 0
+            ManagedTarget.delete(kwargs['target_id'])
 
 
 class RemoveConfiguredTargetJob(StateChangeJob):

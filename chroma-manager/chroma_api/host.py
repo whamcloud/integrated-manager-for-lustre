@@ -57,8 +57,6 @@ class HostResource(MetricResource, StatefulModelResource):
         detail_allowed_methods = ['get', 'put', 'delete']
         readonly = ['nodename', 'fqdn']
         validation = HostValidation()
-
-        # So that we can return Commands for PUTs
         always_return_data = True
 
         filtering = {'id': ['exact'],

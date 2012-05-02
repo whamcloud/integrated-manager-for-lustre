@@ -10,6 +10,9 @@ import bisect
 
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.lib.state_manager import StateManager
+from chroma_core.models.jobs import Command
+from chroma_core.models.utils import await_async_result
+from chroma_core.tasks import command_run_jobs
 import settings
 import chroma_core.lib.conf_param
 
@@ -151,14 +154,12 @@ class StatefulModelResource(CustomModelResource):
                 report = StateManager().get_transition_consequences(stateful_object, new_state)
             raise custom_response(self, request, http.HttpResponse, report)
         else:
-            from chroma_core.models import Command
             command = Command.set_state([(stateful_object, new_state)])
             raise custom_response(self, request, http.HttpAccepted,
                     {'command': dehydrate_command(command)})
 
     def obj_delete(self, request = None, **kwargs):
         obj = self.obj_get(request, **kwargs)
-        from chroma_core.models import Command
         command = Command.set_state([(obj, 'removed')])
         raise custom_response(self, request, http.HttpAccepted,
                 {'command': dehydrate_command(command)})
@@ -184,15 +185,24 @@ class ConfParamResource(StatefulModelResource):
         if not 'conf_params' in bundle.data:
             super(ConfParamResource, self).obj_update(bundle, request, **kwargs)
 
-        # TODO: validate all the conf_params before trying to set any of them
         try:
             conf_params = bundle.data['conf_params']
-            for k, v in conf_params.items():
-                chroma_core.lib.conf_param.set_conf_param(obj, k, v)
         except KeyError:
             # TODO: pass in whole objects every time so that I can legitimately
             # validate the presence of this field
             pass
+        else:
+            # TODO: validate all the conf_params before trying to set any of them
+            mgs = chroma_core.lib.conf_param.set_conf_params(obj, conf_params)
+
+            async_result = command_run_jobs.delay([{'class_name': 'ApplyConfParams', 'args': {
+                'mgs_id': mgs.id
+            }}], "Updating configuration parameters")
+            command_id = await_async_result(async_result)
+
+            raise custom_response(self, request, http.HttpAccepted,
+                    {'command': dehydrate_command(Command.objects.get(pk = command_id)),
+                     self.Meta.resource_name: self.full_dehydrate(bundle).data})
 
         return bundle
 

@@ -18,61 +18,12 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
     def test_create_filesystem_with_failover(self):
         # Add two hosts as managed hosts
-        host_create_command_ids = []
-        for host_config in config['lustre_servers'][:2]:
-            host_address = host_config['address']
-            response = self.chroma_manager.post(
-                '/api/test_host/',
-                body = {'address': host_address}
-            )
-            self.assertEqual(response.successful, True, response.text)
-            # FIXME: test_host here isn't serving a purpose as we
-            # don't check on its result (it's asynchronous but
-            # annoyingly returns a celery task instead of a Command)
-
-            response = self.chroma_manager.post(
-                '/api/host/',
-                body = {'address': host_address}
-            )
-            self.assertEqual(response.successful, True, response.text)
-            host_id = response.json['host']['id']
-            host_create_command_ids.append(response.json['command']['id'])
-            self.assertTrue(host_id)
-
-            response = self.chroma_manager.get(
-                '/api/host/%s/' % host_id,
-            )
-            self.assertEqual(response.successful, True, response.text)
-            host = response.json
-            self.assertEqual(host['address'], host_address)
-
-        # Wait for the host setup and device discovery to complete
-        self.wait_for_commands(self.chroma_manager, host_create_command_ids)
-
-        # Verify there are now two hosts in the database.
-        response = self.chroma_manager.get(
-            '/api/host/',
-        )
-        self.assertEqual(response.successful, True, response.text)
-        hosts = response.json['objects']
-        self.assertEqual(2, len(hosts))
-        self.assertEqual(hosts[0]['state'], 'lnet_up')
-        self.assertEqual(hosts[1]['state'], 'lnet_up')
+        self.assertGreaterEqual(len(config['lustre_servers']), 2)
+        hosts = self.add_hosts([h['address'] for h in config['lustre_servers'][:2]])
 
         # Count how many of the reported Luns are ready for our test
         # (i.e. they have both a primary and a secondary node)
-        response = self.chroma_manager.get(
-            '/api/volume/',
-            params = {'category': 'usable'}
-        )
-        self.assertEqual(response.successful, True, response.text)
-
-        ha_volumes = []
-        for v in response.json['objects']:
-            has_primary = len([node for node in v['volume_nodes'] if node['primary']]) == 1
-            has_two = len([node for node in v['volume_nodes'] if node['use']]) >= 2
-            if has_primary and has_two:
-                ha_volumes.append(v)
+        ha_volumes = self.get_shared_volumes()
         self.assertGreaterEqual(len(ha_volumes), 4)
 
         mgt_volume = ha_volumes[0]
@@ -112,10 +63,13 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         # Create new filesystem
         self.verify_usable_luns_valid(ha_volumes, 4)
         filesystem_id = self.create_filesystem(
-            name = 'testfs',
-            mgt_volume_id = mgt_volume['id'],
-            mdt_volume_id = mdt_volume['id'],
-            ost_volume_ids = [v['id'] for v in ost_volumes]
+            {
+                'name': 'testfs',
+                'mgt': {'volume_id': mgt_volume['id']},
+                'mdt': {'volume_id': mdt_volume['id'], 'conf_params': {}},
+                'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in ost_volumes],
+                'conf_params': {}
+            }
         )
 
         # Verify targets are started on the correct hosts
@@ -132,7 +86,10 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
         client = config['lustre_clients'].keys()[0]
         self.mount_filesystem(client, "testfs", mount_command)
-        self.exercise_filesystem(client, "testfs")
+        try:
+            self.exercise_filesystem(client, "testfs")
+        finally:
+            self.unmount_filesystem(client, 'testfs')
 
         if config['failover_is_configured']:
             for lustre_server in config['lustre_servers']:

@@ -53,6 +53,7 @@ class EventResource(ModelResource):
                 }
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get']
+        always_return_data = True
 
     def dehydrate_host_name(self, bundle):
         return bundle.obj.host.pretty_name() if bundle.obj.host else "---"

@@ -329,33 +329,33 @@ class AgentDaemon(object):
                 klass = storage_plugin_manager.get_plugin_class(plugin_name)
             except PluginNotFound:
                 storage_plugin_log.warning("Ignoring information from %s for plugin %s, no such plugin found." % (host, plugin_name))
-
-            if initial:
-                instance = klass(record.id)
-                session_state.plugin_instances[plugin_name] = instance
             else:
-                instance = session_state.plugin_instances[plugin_name]
-
-            try:
                 if initial:
-                    storage_plugin_log.info("Started session for %s on %s" % (plugin_name, host))
-                    instance.do_agent_session_start(plugin_data)
+                    instance = klass(record.id)
+                    session_state.plugin_instances[plugin_name] = instance
                 else:
-                    instance.do_agent_session_continue(plugin_data)
-            except Exception:
-                import sys
-                import traceback
-                exc_info = sys.exc_info()
-                backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-                storage_plugin_log.error("Exception in agent session for %s from %s: %s" % (
-                    plugin_name, host, backtrace))
-                storage_plugin_log.error("Data: %s" % plugin_data)
+                    instance = session_state.plugin_instances[plugin_name]
 
-                # Tear down the session as we are no longer coherent, information could have
-                # been lost.
-                session.delete()
-                del self._session_state[host.id]
-                break
+                try:
+                    if initial:
+                        storage_plugin_log.info("Started session for %s on %s" % (plugin_name, host))
+                        instance.do_agent_session_start(plugin_data)
+                    else:
+                        instance.do_agent_session_continue(plugin_data)
+                except Exception:
+                    import sys
+                    import traceback
+                    exc_info = sys.exc_info()
+                    backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+                    storage_plugin_log.error("Exception in agent session for %s from %s: %s" % (
+                        plugin_name, host, backtrace))
+                    storage_plugin_log.error("Data: %s" % plugin_data)
+
+                    # Tear down the session as we are no longer coherent, information could have
+                    # been lost.
+                    session.delete()
+                    del self._session_state[host.id]
+                    break
 
 
 class ScanDaemon(object):

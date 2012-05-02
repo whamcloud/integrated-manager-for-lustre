@@ -6,6 +6,7 @@
 
 
 import re
+from chroma_core.models.conf_param import ConfParam
 
 
 class ParamType(object):
@@ -274,7 +275,7 @@ def get_possible_conf_params(klass):
 
 
 def get_conf_params(obj):
-    from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem, ConfParam
+    from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem
     if hasattr(obj, 'content_type'):
         obj = obj.downcast()
 
@@ -298,15 +299,8 @@ def get_conf_params(obj):
     return result
 
 
-def set_conf_param(obj, key, value):
+def set_conf_params(obj, params):
     from chroma_core.models import ManagedFilesystem, ManagedMdt, ManagedOst, FilesystemMember
-    from chroma_core.models import ApplyConfParams
-    from chroma_core.lib.state_manager import StateManager
-
-    # TODO: check if the value is unchanged and return if so
-
-    # TODO: provide a way for callers to wrap up multiple conf param set
-    # operations into a Command for presentation
 
     if isinstance(obj, ManagedFilesystem):
         mgs = obj.mgs.downcast()
@@ -324,9 +318,25 @@ def set_conf_param(obj, key, value):
     else:
         raise NotImplementedError
 
-    model_klass, param_value_obj, help_text = all_params[key]
-    p = model_klass(key = key,
-                    value = value,
-                    **kwargs)
-    mgs.set_conf_params([p])
-    StateManager().add_job(ApplyConfParams(mgs = mgs))
+    # TODO: check if the value is unchanged and return if so
+
+    if not len(params):
+        return
+
+    param_records = []
+    for key, value in params.items():
+        model_klass, param_value_obj, help_text = all_params[key]
+        existing_params = ConfParam.get_latest_params(model_klass.objects.filter(key = key, **kwargs))
+        if len(existing_params) == 0 or existing_params[0].value != value:
+            p = model_klass(key = key,
+                value = value,
+                **kwargs)
+            param_records.append(p)
+        else:
+            from chroma_api import api_log
+            api_log.info("Ignoring %s %s=%s, already set" % (obj, key, value))
+
+    if param_records:
+        mgs.set_conf_params(param_records)
+
+    return mgs

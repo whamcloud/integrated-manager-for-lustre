@@ -52,14 +52,17 @@ class TestStateManager(JobTestCaseWithHost):
             MockAgent.succeed = False
 
             import chroma_core.lib.conf_param
-            chroma_core.lib.conf_param.set_conf_param(fs, "llite.max_cached_mb", "32")
+            mgs = chroma_core.lib.conf_param.set_conf_params(fs, {"llite.max_cached_mb": "32"})
+            from chroma_core.models import ApplyConfParams
+            from chroma_core.lib.state_manager import StateManager
+            StateManager().add_job(ApplyConfParams(mgs = mgs))
 
             self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 1)
             self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 0)
         finally:
             MockAgent.succeed = True
 
-        set_state(mgt, 'mounted')
+        set_state(fs, 'available')
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
 
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 1)

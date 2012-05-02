@@ -130,6 +130,9 @@ class StatefulObject(models.Model):
     def not_state(self, state):
         return list(set(self.states) - set([state]))
 
+    def not_states(self, states):
+        return list(set(self.states) - set(states))
+
     def get_deps(self, state = None):
         """Return static dependencies, e.g. a targetmount in state
            mounted has a dependency on a host in state lnet_started but
@@ -541,19 +544,13 @@ class Job(models.Model):
         from chroma_core.lib.job import job_log
         job_log.debug("Job %d: Job.unpause" % self.id)
 
-        # Important: multiple connections are allowed to call run() on a job
-        # that they see as pending, but only one is allowed to proceed past this
-        # point and spawn tasks.
-        @transaction.commit_on_success()
-        def mark_unpaused():
-            return Job.objects.filter(state = 'paused', pk = self.id).update(state = 'pending')
-
-        updated = mark_unpaused()
-        if updated != 1:
+        jobs_updated = Job.objects.filter(state = 'paused', pk = self.id).update(state = 'pending')
+        if jobs_updated != 1:
             job_log.warning("Job %d: failed to pause, it had already left state 'pending'" % self.id)
         else:
             job_log.warning("Job %d: unpaused, running any available jobs" % self.id)
-            Job.run_next()
+            from chroma_core.tasks import unpaused_job
+            unpaused_job.delay(self.id)
 
     def all_deps(self):
         # This is not necessarily 100% consistent with the dependencies used by StateManager

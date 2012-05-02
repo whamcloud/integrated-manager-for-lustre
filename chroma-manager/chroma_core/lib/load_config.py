@@ -121,7 +121,7 @@ def _load(text):
         for k, v in fs_conf_params.items():
             try:
                 klass, ignore, ignore = all_params[k]
-            except:
+            except KeyError:
                 # If we don't know anything about this param, then
                 # fall back to ClientConfParam (i.e. set it for the
                 # filesystem but don't re-set it when targets change)

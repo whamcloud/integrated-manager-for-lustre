@@ -142,6 +142,7 @@ class TargetResource(MetricResource, ConfParamResource):
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
         validation = TargetValidation()
+        always_return_data = True
         readonly = ['active_host', 'failover_server_name', 'volume_name',
                     'primary_server_name', 'active_host_name', 'filesystems',
                     'name', 'uuid', 'primary_server', 'failover_servers', 'active_host_name']

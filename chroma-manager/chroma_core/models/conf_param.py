@@ -8,7 +8,7 @@ import json
 from re import escape
 
 from django.db import models
-from chroma_core.lib.job import DependOn, Step
+from chroma_core.lib.job import DependOn, Step, DependAll
 from polymorphic.models import DowncastMetaclass
 
 from chroma_core.models.jobs import Job
@@ -73,7 +73,22 @@ class ApplyConfParams(Job):
         return steps
 
     def get_deps(self):
-        return DependOn(self.mgs, 'mounted')
+        deps = [DependOn(self.mgs, 'mounted')]
+        new_params = ConfParam.objects.filter(version__gt = self.mgs.conf_param_version_applied, mgs = self.mgs).order_by('version')
+        targets = set()
+        for param in new_params:
+            param = param.downcast()
+            if hasattr(param, 'mdt'):
+                targets.add(param.mdt)
+            if hasattr(param, 'ost'):
+                targets.add(param.ost)
+            if hasattr(param, 'filesystem'):
+                targets.add(ManagedMdt._base_manager.get(filesystem = param.filesystem))
+
+        for target in targets:
+            deps.append(DependOn(target, 'mounted', acceptable_states = target.not_states(['unformatted', 'formatted'])))
+
+        return DependAll(deps)
 
 
 class ConfParam(models.Model):

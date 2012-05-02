@@ -210,6 +210,7 @@ class StorageResourceResource(MetricResource, ModelResource):
         filtering = {'class_name': ['exact'], 'plugin_name': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
+        always_return_data = True
 
     def obj_delete(self, request = None, **kwargs):
         try:

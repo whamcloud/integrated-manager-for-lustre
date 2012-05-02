@@ -67,6 +67,7 @@ class VolumeResource(ModelResource):
         ordering = ['label', 'size']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'put']
+        always_return_data = True
 
     def apply_filters(self, request, filters = None):
         """Override this to build a filesystem filter using Q expressions (not
@@ -118,3 +119,5 @@ class VolumeResource(ModelResource):
             lun_node.primary = False
             lun_node.use = False
             lun_node.save()
+
+        return bundle

@@ -10,8 +10,20 @@ from tests.integration.core.constants import TEST_TIMEOUT
 
 
 class ChromaIntegrationTestCase(TestCase):
+    def reset_accounts(self, chroma_manager):
+        """Remove any user accounts which are not in the config (such as
+        those left hanging by tests)"""
+
+        configured_usernames = [u['username'] for u in config['chroma_managers'][0]['users']]
+
+        response = chroma_manager.get('/api/user/', data = {'limit': 0})
+        self.assertEqual(response.status_code, 200)
+        for user in response.json['objects']:
+            if not user['username'] in configured_usernames:
+                chroma_manager.delete(user['resource_uri'])
 
     def reset_cluster(self, chroma_manager):
+        """Remove all Filesystems, MGTs, and Hosts"""
         response = chroma_manager.get(
             '/api/filesystem/',
             params = {'limit': 0}
@@ -254,17 +266,10 @@ class ChromaIntegrationTestCase(TestCase):
             elif node['use']:
                 self.assertEqual(node['host_id'], int(expected_secondary_host_id))
 
-    def create_filesystem(self, name, mgt_volume_id, mdt_volume_id, ost_volume_ids, conf_params = {}, verify_successful = True):
-        args = {}
-        args['name'] = name
-        args['mgt'] = {'volume_id': mgt_volume_id}
-        args['mdt'] = {'volume_id': mdt_volume_id}
-        args['osts'] = [{'volume_id': id} for id in ost_volume_ids]
-        args['conf_params'] = conf_params
-
+    def create_filesystem(self, filesystem, verify_successful = True):
         response = self.chroma_manager.post(
             '/api/filesystem/',
-            body = args
+            body = filesystem
         )
 
         self.assertTrue(response.successful, response.text)
@@ -294,11 +299,11 @@ class ChromaIntegrationTestCase(TestCase):
             )
             self.assertRegexpMatches(
                 configuration,
-                "primitive %s-" % args['name']
+                "primitive %s-" % filesystem['name']
             )
             self.assertRegexpMatches(
                 configuration,
-                "id=\"%s-" % args['name']
+                "id=\"%s-" % filesystem['name']
             )
 
         return filesystem_id
@@ -375,3 +380,66 @@ class ChromaIntegrationTestCase(TestCase):
             if not expected_host_name == target['active_host_name']:
                 return False
         return True
+
+    def add_hosts(self, addresses):
+        host_create_command_ids = []
+        for host_address in addresses:
+            response = self.chroma_manager.post(
+                '/api/test_host/',
+                body = {'address': host_address}
+            )
+            self.assertEqual(response.successful, True, response.text)
+            # FIXME: check the body of the response to test_host to see
+            # if it actually reported contactability correctly
+
+            response = self.chroma_manager.post(
+                '/api/host/',
+                body = {'address': host_address}
+            )
+            self.assertEqual(response.successful, True, response.text)
+            host_id = response.json['host']['id']
+            host_create_command_ids.append(response.json['command']['id'])
+            self.assertTrue(host_id)
+
+            response = self.chroma_manager.get(
+                '/api/host/%s/' % host_id,
+            )
+            self.assertEqual(response.successful, True, response.text)
+            host = response.json
+            self.assertEqual(host['address'], host_address)
+
+        # Wait for the host setup and device discovery to complete
+        self.wait_for_commands(self.chroma_manager, host_create_command_ids)
+
+        # Verify there are now two hosts in the database.
+        response = self.chroma_manager.get(
+            '/api/host/',
+        )
+        self.assertEqual(response.successful, True, response.text)
+        hosts = response.json['objects']
+        self.assertEqual(len(addresses), len(hosts))
+        self.assertListEqual([h['state'] for h in hosts], ['lnet_up'] * len(hosts))
+
+        return hosts
+
+    def get_usable_volumes(self):
+        response = self.chroma_manager.get(
+            '/api/volume/',
+            params = {'category': 'usable', 'limit': 0}
+        )
+        self.assertEqual(response.successful, True, response.text)
+        return response.json['objects']
+
+    def get_shared_volumes(self):
+        # Volumes suitable for shared storage test
+        # (i.e. they have both a primary and a secondary node)
+        volumes = self.get_usable_volumes()
+
+        ha_volumes = []
+        for v in volumes:
+            has_primary = len([node for node in v['volume_nodes'] if node['primary']]) == 1
+            has_two = len([node for node in v['volume_nodes'] if node['use']]) >= 2
+            if has_primary and has_two:
+                ha_volumes.append(v)
+
+        return ha_volumes

@@ -130,7 +130,9 @@ class DeleteFilesystemStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedFilesystem
+        from chroma_core.models.target import ManagedMdt, ManagedOst
+        assert ManagedMdt.objects.filter(filesystem = kwargs['filesystem_id']).count() == 0
+        assert ManagedOst.objects.filter(filesystem = kwargs['filesystem_id']).count() == 0
         ManagedFilesystem.delete(kwargs['filesystem_id'])
 
 

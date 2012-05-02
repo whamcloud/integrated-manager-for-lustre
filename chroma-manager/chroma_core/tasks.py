@@ -187,6 +187,9 @@ def command_run_jobs(job_dicts, message):
         command.jobs_created = True
         command.save()
 
+    from chroma_core.models import Job
+    Job.run_next()
+
     return command.id
 
 
@@ -216,6 +219,9 @@ def command_set_state(object_ids, message):
             instance = model_klass.objects.get(pk = o_pk)
             StateManager().set_state(instance, state, command.id)
 
+    from chroma_core.models import Job
+    Job.run_next()
+
     return command.id
 
 
@@ -224,6 +230,16 @@ def command_set_state(object_ids, message):
 def complete_job(job_id):
     from chroma_core.lib.state_manager import StateManager
     StateManager._complete_job(job_id)
+
+    from chroma_core.models import Job
+    Job.run_next()
+
+
+@task(base = RetryOnSqlErrorTask)
+def unpaused_job(job_id):
+    """Notify that a job was unpaused: advance the queue"""
+    from chroma_core.models import Job
+    Job.run_next()
 
 
 @task(base = RetryOnSqlErrorTask)

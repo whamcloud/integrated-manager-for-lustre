@@ -4,6 +4,7 @@
 # ========================================================
 
 
+from django.contrib.auth.models import User
 from django.db.models.signals import post_syncdb
 from django.contrib.contenttypes.models import ContentType
 import django.contrib.auth as auth
@@ -31,7 +32,11 @@ def setup_groups(sender, **kwargs):
         grant_write(fsadmin_group, Command)
         grant_write(fsadmin_group, Volume)
         grant_write(fsadmin_group, VolumeNode)
-        auth.models.Group.objects.create(name = "filesystem_users")
+        grant_write(fsadmin_group, User)
+
+        fsusers_group = auth.models.Group.objects.create(name = "filesystem_users")
+        # For modifying his own account
+        grant_write(fsusers_group, User)
 
     if settings.DEBUG and auth.models.User.objects.count() == 0:
         print "***\n" * 3,

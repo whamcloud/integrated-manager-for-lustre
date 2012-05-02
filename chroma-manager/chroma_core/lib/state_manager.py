@@ -6,10 +6,15 @@
 
 
 from collections import defaultdict
+import datetime
 from dateutil import tz
+from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
+from django.db.models.query_utils import Q
 from chroma_core.lib.job import job_log
-from chroma_core.models.jobs import StateChangeJob
+from chroma_core.models.conf_param import ApplyConfParams
+from chroma_core.models.jobs import StateChangeJob, Command
+from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget
 
 
 class Transition(object):
@@ -50,7 +55,6 @@ class StateManager(object):
         # If the object is subject to an incomplete StateChangeJob
         # then don't offer any other transitions.
         from chroma_core.models import StateLock
-        from django.db.models import Q
 
         # We don't advertise transitions for anything which is currently
         # locked by an incomplete job.  We could alternatively advertise
@@ -74,45 +78,6 @@ class StateManager(object):
                 transitions.append({"state": to_state, "verb": verb})
 
         return transitions
-
-    @classmethod
-    def _run_opportunistic_jobs(cls, changed_stateful_object = None):
-        """Call this when an object state changes, to see if anything
-        in the queue of opportunistic jobs is now able to run"""
-        from chroma_core.models import OpportunisticJob
-        pending_opportunistic_jobs = OpportunisticJob.objects.filter(run = False)
-        count = pending_opportunistic_jobs.count()
-        if count > 0:
-            job_log.info("Opportunistic jobs waiting: %s" % count)
-
-        for oj in pending_opportunistic_jobs:
-            import datetime
-
-            job = oj.get_job()
-
-            # Skip running a job if it's a state-change and the object
-            # is already in the 'new' state.
-            if isinstance(job, StateChangeJob):
-                stateful_object = job.get_stateful_object()
-                new_state = job.state_transition[2]
-                if new_state == stateful_object.state:
-                    job_log.info("Opportunistic job %s: skipping (%s already in state %s)" % (
-                        oj.pk, stateful_object, new_state))
-                    oj.run = True
-                    oj.run_at = datetime.datetime.utcnow()
-                    oj.save()
-                    continue
-
-            # FIXME: should check if some of the job's dependencies are absent, e.g.
-            # if you try to set a conf param on an offline MGS, then delete the MGS -- otherwise
-            # jobs will linger in the opportunistic queue indefinitely in that (admittedly rare)
-            # scenario.
-            if job._deps_satisfied():
-                job_log.info("Opportunistic job %s (%s) ready to run" % (oj.pk, job.description()))
-                StateManager().add_job(job)
-                oj.run = True
-                oj.run_at = datetime.datetime.utcnow()
-                oj.save()
 
     def get_expected_state(self, stateful_object_instance):
         try:
@@ -139,7 +104,6 @@ class StateManager(object):
         else:
             assert job.state == 'complete'
 
-        from chroma_core.models import Command
         for command in Command.objects.filter(jobs = job):
             jobs = command.jobs.all().values('state', 'errored', 'cancelled')
             if set([j['state'] for j in jobs]) == set(['complete']):
@@ -148,7 +112,7 @@ class StateManager(object):
                 elif True in [j['cancelled'] for j in jobs]:
                     command.cancelled = True
 
-                job_log.info("Completing command %s" % command.id)
+                job_log.info("Command %s (%s) completed in %s" % (command.id, command.message, datetime.datetime.utcnow() - command.created_at))
                 command.complete = True
                 command.save()
 
@@ -162,21 +126,34 @@ class StateManager(object):
         if isinstance(job, StateChangeJob):
             cls._run_opportunistic_jobs(job.get_stateful_object())
 
-        if (job.errored or job.cancelled) and job.opportunistic_retry:
-            copy_args = {}
-            for field in [f for f in job._meta.fields if not f in Job._meta.fields]:
-                if not field.name.endswith("_ptr"):
-                    copy_args[field.name] = getattr(job, field.name)
-            # Get all attributes which aren't in the base Job class
-            future_job = job.__class__(**copy_args)
+    @classmethod
+    def _run_opportunistic_jobs(cls, changed_item):
+        if hasattr(changed_item, 'content_type'):
+            changed_item = changed_item.downcast()
 
-            from chroma_core.models.jobs import OpportunisticJob
-            oj = OpportunisticJob(job = future_job)
-            oj.save()
-            job_log.warn("Job %s failed, transforming to OpportunisticJob %s" % (job.pk, oj.pk))
+        if isinstance(changed_item, FilesystemMember):
+            fs = changed_item.filesystem
+            members = list(ManagedMdt._base_manager.filter(filesystem = fs)) + list(ManagedOst._base_manager.filter(filesystem = fs))
+            states = set([t.state for t in members])
+            now = datetime.datetime.utcnow()
+            now = now.replace(tzinfo = tz.tzutc())
+            if not fs.state == 'available' and changed_item.state == 'mounted' and states == set(['mounted']):
+                cls._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'available', ['stopped', 'unavailable'])
+            if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
+                cls._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'stopped', ['stopped', 'unavailable'])
 
-        job_log.debug("Job %s completed, running any dependents..." % job_id)
-        Job.run_next()
+        if isinstance(changed_item, ManagedTarget):
+            if isinstance(changed_item, FilesystemMember):
+                mgs = changed_item.filesystem.mgs
+            else:
+                mgs = changed_item
+
+            if mgs.conf_param_version != mgs.conf_param_version_applied:
+                if not ApplyConfParams.objects.filter(~Q(state = 'complete')).count():
+                    job = ApplyConfParams(mgs = mgs)
+                    if job.get_deps().satisfied():
+                        command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
+                        StateManager().add_job(job, command)
 
     @classmethod
     def notify_state(cls, instance, time, new_state, from_states):
@@ -243,9 +220,6 @@ class StateManager(object):
             job_log.info("add_job: created %s (%s)" % (job.pk, job.description()))
             if command:
                 command.jobs.add(job)
-
-        from chroma_core.models import Job
-        Job.run_next()
 
     def get_transition_consequences(self, instance, new_state):
         """For use in the UI, for warning the user when an
@@ -410,9 +384,6 @@ class StateManager(object):
             if command:
                 command.jobs_created = True
                 command.save()
-
-        from chroma_core.models import Job
-        Job.run_next()
 
     def emit_transition_deps(self, transition, transition_stack = {}):
         if transition in self.deps:

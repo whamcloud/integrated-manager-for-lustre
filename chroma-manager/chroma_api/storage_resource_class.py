@@ -80,6 +80,8 @@ class StorageResourceClassResource(ModelResource):
             'plugin_internal': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
+        list_allowed_methods = ['get']
+        detail_allowed_methods = ['get']
         ordering = ['class_name']
 
     def override_urls(self):
