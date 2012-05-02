@@ -309,21 +309,9 @@ var ChartManager = function(options) {
                   if (data_until == null || data_until < latest_ts) {
                     data_until = latest_ts;
                   }
-                  var newest_trash = null;
-                  for (var i = 0; i < series_data.length - 1; i++) {
-                    if (series_data[i][0] < (latest_ts - config.default_time_boundary)) {
-                      newest_trash = i;
-                    } else {
-                      break;
-                    }
-                  }
-                  if (newest_trash != null) {
-                    series_data.splice(0, newest_trash + 1)
-                  }
                 }
               }
             );
-
             // shift the floating end
             if (data_until) {
               chart.series_end = new Date(data_until);
@@ -331,6 +319,25 @@ var ChartManager = function(options) {
             } else {
               log("No data");
             }
+
+            var latest_ts = chart.series_end.getTime()
+            _.each(
+              chart.series_data,
+              function(series_data) {
+                  var newest_trash = null;
+                  for (var i = 0; i < series_data.length - 1; i++) {
+                      if (series_data[i][0] < (latest_ts - config.default_time_boundary)) {
+                          newest_trash = i;
+                      } else {
+                          break;
+                      }
+                  }
+                  if (newest_trash != null) {
+                      series_data.splice(0, newest_trash + 1)
+                  }
+              }
+            );
+
 
             // Update highcharts from series_data
             _.each(
