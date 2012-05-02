@@ -82,16 +82,30 @@ class TestCalculateElapsedSteps(TestCase):
         last_update = 920805600
         step_length = 300
         update_time = 920805900
-        interval = float(update_time) - float(last_update)
 
         (elapsed_steps,
          pre_int,
          post_int,
          pdp_count) = calculate_elapsed_steps(last_update,
                                               step_length,
-                                              update_time,
-                                              interval)
-        self.assertEquals(elapsed_steps, 1)
-        self.assertEquals(pre_int, 300)
-        self.assertEquals(post_int, 0)
-        #self.assertEquals(pdp_count, 3069352)
+                                              update_time)
+        self.assertEquals(1, elapsed_steps)
+        self.assertEquals(300, pre_int)
+        self.assertEquals(0, post_int)
+        self.assertEquals(3069352, pdp_count)
+
+    def test_a_bunch_of_steps(self):
+        last_update = 1335992566
+        step_length = 10
+        update_time = 1335993276
+
+        (elapsed_steps,
+         pre_int,
+         post_int,
+         pdp_count) = calculate_elapsed_steps(last_update,
+                                              step_length,
+                                              update_time)
+        self.assertEquals(71, elapsed_steps)
+        self.assertEquals(704, pre_int)
+        self.assertEquals(6, post_int)
+        self.assertEquals(133599256, pdp_count)

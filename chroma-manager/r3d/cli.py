@@ -192,8 +192,8 @@ def main():
     ns = parser.parse_args()
 
     if ns.debug_r3d:
-        import r3d.lib
-        r3d.lib.DEBUG = True
+        import r3d
+        r3d.DEBUG = True
 
     def aggregate_results(results, time, data):
         if time in results:
