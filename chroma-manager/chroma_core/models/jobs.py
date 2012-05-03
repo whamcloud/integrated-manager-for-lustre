@@ -85,22 +85,6 @@ class Command(models.Model):
         app_label = 'chroma_core'
 
 
-class OpportunisticJob(models.Model):
-    job = PickledObjectField()
-    run = models.BooleanField(default = False)
-    run_at = WorkaroundDateTimeField(null = True, blank = True)
-
-    class Meta:
-        app_label = 'chroma_core'
-
-    def get_job(self):
-        job = self.job
-        # Jobs here are meant to be unsaved instances
-        assert not job.pk
-
-        return job
-
-
 class StatefulObject(models.Model):
     # Use of abstract base classes to avoid django bug #12002
     class Meta:

@@ -6,9 +6,8 @@
 
 from django.core.management.base import BaseCommand
 
-from chroma_core.models import Command as CommandModel, Job, OpportunisticJob
+from chroma_core.models import Command as CommandModel, Job
 from django.db.models import Q
-import datetime
 
 
 class Command(BaseCommand):
@@ -27,4 +26,3 @@ before running this."""
         # Cancel anything that's in a running state
         CommandModel.objects.filter(complete = False).update(complete = True, cancelled = True)
         Job.objects.filter(~Q(state = 'complete')).update(state = 'complete', cancelled = True)
-        OpportunisticJob.objects.filter(run = False).update(run = True, run_at = datetime.datetime.utcnow())
