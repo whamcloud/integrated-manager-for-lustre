@@ -141,6 +141,11 @@ by its shelf and slot number, like this:
         shelf = attributes.ResourceReference()
         slot = attributes.Integer()
 
+If there is a resource that is created by users and doesn't have a natural unique
+set of attributes, you can use ``identifiers.AutoId()`` to have Chroma assign
+an internal ID.  This is only valid for ScannableResource subclasses, and will
+allow the user to create more than one identical resource: use with care.
+
 Relationships
 ~~~~~~~~~~~~~
 
@@ -173,15 +178,16 @@ Certain storage resources are considered 'scannable':
 * Plugins contact this resource to learn about other resources
 * This resource 'owns' some other resources
 
-The archetypal scannable resource is a storage controller or couplet of
+A typical scannable resource is a storage controller or couplet of
 storage controllers.
 
 ::
 
-   from chroma_core.lib.storage_plugin.api import resource
+   from chroma_core.lib.storage_plugin.api import resources
    from chroma_core.lib.storage_plugin.api import identifiers
+   from chroma_core.lib.storage_plugin.api import attributes
 
-   class StorageController(resource.Resource):
+   class StorageController(resources.ScannableResource):
        address_1 = attributes.Hostname()
        address_2 = attributes.Hostname()
 
