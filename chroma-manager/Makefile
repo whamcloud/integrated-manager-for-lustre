@@ -36,6 +36,6 @@ docs:
 	. bin/activate; \
 	pip install -r ../requirements.txt; \
 	cd ../docs; \
-	make clean html SPHINXBUILD='../myenv/bin/sphinx-build'
+	make SPHINXBUILD="$$PWD/../myenv/bin/sphinx-build"
 
 .PHONY: docs
