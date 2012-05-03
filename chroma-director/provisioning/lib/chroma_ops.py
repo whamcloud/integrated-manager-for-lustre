@@ -39,12 +39,15 @@ class NodeOps(object):
         self.session = self.node.get_session()
 
     def terminate_node(self):
-        instance = self.node.get_instance()
-        volumes = [b[1].volume_id for b in instance.block_device_mapping.items() if not b[1].delete_on_termination]
-        print "terminating %s %s" % (self.node.name, instance.id)
-        instance.terminate()
-        if len(volumes):
-            self.node.delete_volumes(volumes)
+        try:
+            instance = self.node.get_instance()
+            volumes = [b[1].volume_id for b in instance.block_device_mapping.items() if not b[1].delete_on_termination]
+            print "terminating %s %s" % (self.node.name, instance.id)
+            instance.terminate()
+            if len(volumes):
+                self.node.delete_volumes(volumes)
+        except:
+            print "Unable to terminate node: ", self.node.name, self.node.ec2_id
         self.node.delete()
         
     def terminate(self):
@@ -72,10 +75,13 @@ class ChromaManagerOps(NodeOps):
         self.terminate_node()
         self.manager.delete()
 
-    def update_deps(self):
+    def update_deps(self, use_master):
         with self.open_session():
             self._setup_chroma_repo()
-            sudo('yum -y update')
+            if use_master:
+                sudo('yum --enablerepo=chroma-master -y update')
+            else:
+                sudo('yum -y update')
 
     def setup_chroma(self):
         with self.open_session():
@@ -126,13 +132,16 @@ class ChromaStorageOps(NodeOps):
         self.terminate_node()
         self.appliance.delete()
 
-    def update_deps(self):
+    def update_deps(self, use_master):
         with self.open_session():
             self._setup_chroma_repo()
             # ensure latest version of agent is installed
             # don't do yum update because we don't want to update kernel
-            sudo('yum install -y chroma-agent-management')
-        
+            if use_master:
+                sudo('yum --enablerepo=chroma-master install -y chroma-agent-management')
+            else:
+                sudo('yum install -y chroma-agent-management')
+
     def mkraid(self):
         with self.open_session():
             sudo('mdadm --create /dev/md0 --level 5 -n 4 /dev/xvdj /dev/xvdk /dev/xvdl /dev/xvdm')
@@ -142,18 +151,21 @@ class ChromaStorageOps(NodeOps):
             sudo("echo \"%s\" >> .ssh/authorized_keys" % key)
 
 
-    def configure(self):
+    def configure(self, use_master):
         self.set_hostname()
-        self.update_deps()
+        self.update_deps(use_master)
         with self.open_session():
             sudo("service corosync restart")
+            sudo("service rsyslog restart")
             put('../chroma-manager/scripts/loadgen.sh', 'loadgen.sh', mode=0755)
 
     def configure_oss(self, vol_count):
         self.node.add_volumes(vol_count, 1)
 
     def configure_mds(self):
-        self.node.add_volumes(2, 1)
+        self.node.add_volumes(3, 1)
+        #with self.open_session():
+        #    sudo('')
         #        self.mkraid()
 
 
