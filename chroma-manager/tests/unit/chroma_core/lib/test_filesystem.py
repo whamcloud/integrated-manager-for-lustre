@@ -1,5 +1,5 @@
 
-from tests.unit.chroma_core.helper import JobTestCaseWithHost, set_state
+from tests.unit.chroma_core.helper import JobTestCaseWithHost, set_state, freshen
 
 
 class TestFSTransitions(JobTestCaseWithHost):
@@ -70,3 +70,38 @@ class TestFSTransitions(JobTestCaseWithHost):
         self.assertEqual(ManagedMdt.objects.get(pk = self.mdt.pk).state, 'mounted')
         self.assertEqual(ManagedOst.objects.get(pk = self.ost.pk).state, 'mounted')
         self.assertEqual(ManagedFilesystem.objects.get(pk = self.fs.pk).state, 'available')
+
+
+class TestDetectedFSTransitions(JobTestCaseWithHost):
+    def setUp(self):
+        super(TestDetectedFSTransitions, self).setUp()
+
+        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
+        self.mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
+        self.mdt = ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
+        self.ost = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
+
+        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unformatted')
+        self.assertEqual(ManagedMdt.objects.get(pk = self.mdt.pk).state, 'unformatted')
+        self.assertEqual(ManagedOst.objects.get(pk = self.ost.pk).state, 'unformatted')
+
+        set_state(self.fs, 'available')
+
+        for obj in [self.mgt, self.mdt, self.ost, self.fs]:
+            obj = freshen(obj)
+            obj.immutable_state = True
+            obj.save()
+
+    def test_remove(self):
+        from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedMdt, ManagedOst
+
+        set_state(self.mgt, 'forgotten')
+        with self.assertRaises(ManagedMgs.DoesNotExist):
+            freshen(self.mgt)
+        with self.assertRaises(ManagedFilesystem.DoesNotExist):
+            freshen(self.fs)
+        with self.assertRaises(ManagedMdt.DoesNotExist):
+            freshen(self.mdt)
+        with self.assertRaises(ManagedOst.DoesNotExist):
+            freshen(self.ost)

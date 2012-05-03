@@ -92,34 +92,34 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         deps = []
 
         mgs = self.mgs.downcast()
-        if state != 'removed':
-            deps.append(DependOn(mgs,
-                    'unmounted',
-                    acceptable_states = mgs.not_state('removed'),
-                    fix_state = 'removed'))
 
-        if state == 'available':
-            for t in self.get_targets():
-                deps.append(DependOn(t,
-                    'mounted',
-                    fix_state = 'unavailable'))
-        elif state == 'stopped':
-            for t in self.get_filesystem_targets():
-                deps.append(DependOn(t,
+        if not self.immutable_state:
+            if state != 'removed':
+                deps.append(DependOn(mgs,
+                        'unmounted',
+                        acceptable_states = mgs.not_state('removed'),
+                        fix_state = 'removed'))
+        else:
+            if state != 'forgotten':
+                deps.append(DependOn(mgs,
                     'unmounted',
-                    acceptable_states = t.not_state('mounted'),
-                    fix_state = 'unavailable'))
+                    acceptable_states = mgs.not_state('forgotten'),
+                    fix_state = 'forgotten'))
 
         return DependAll(deps)
 
     @classmethod
-    def filter_by_target(self, target):
+    def filter_by_target(cls, target):
         from chroma_core.models import ManagedMgs
         target = target.downcast()
         if isinstance(target, ManagedMgs):
             return ManagedFilesystem.objects.filter(mgs = target)
         else:
             return [target.filesystem]
+
+    reverse_deps = {
+                'ManagedTarget': lambda mt: ManagedFilesystem.filter_by_target(mt)
+                }
 
 
 class DeleteFilesystemStep(Step):
@@ -145,7 +145,7 @@ class RemoveFilesystemJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Removing filesystem %s from configuration" % (self.filesystem.name)
+        return "Removing filesystem %s from configuration" % self.filesystem.name
 
     def get_steps(self):
         return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
@@ -168,7 +168,15 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     def description(self):
-        return "Start filesystem %s" % (self.filesystem.name)
+        return "Start filesystem %s" % self.filesystem.name
+
+    def get_deps(self):
+        deps = []
+        for t in self.filesystem.get_targets():
+            deps.append(DependOn(t,
+                'mounted',
+                    fix_state = 'unavailable'))
+        return DependAll(deps)
 
 
 class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
@@ -177,7 +185,15 @@ class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     def description(self):
-        return "Start filesystem %s" % (self.filesystem.name)
+        return "Start filesystem %s" % self.filesystem.name
+
+    def get_deps(self):
+        deps = []
+        for t in self.filesystem.get_targets():
+            deps.append(DependOn(t,
+                'mounted',
+                fix_state = 'unavailable'))
+        return DependAll(deps)
 
 
 class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
@@ -186,7 +202,16 @@ class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     def description(self):
-        return "Stop filesystem %s" % (self.filesystem.name)
+        return "Stop filesystem %s" % self.filesystem.name
+
+    def get_deps(self):
+        deps = []
+        for t in self.filesystem.get_filesystem_targets():
+            deps.append(DependOn(t,
+                'unmounted',
+                acceptable_states = t.not_state('mounted'),
+                fix_state = 'unavailable'))
+        return DependAll(deps)
 
 
 class MakeAvailableFilesystemUnavailable(FilesystemJob, StateChangeJob):
@@ -195,7 +220,7 @@ class MakeAvailableFilesystemUnavailable(FilesystemJob, StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     def description(self):
-        return "Make filesystem %s unavailable" % (self.filesystem.name)
+        return "Make filesystem %s unavailable" % self.filesystem.name
 
 
 class ForgetFilesystemJob(StateChangeJob):
@@ -205,7 +230,7 @@ class ForgetFilesystemJob(StateChangeJob):
     state_transition = (ManagedFilesystem, ['unavailable', 'stopped', 'available'], 'forgotten')
     stateful_object = 'filesystem'
     state_verb = "Remove"
-    filesystem = models.ForeignKey(ManagedFilesystem),
+    filesystem = models.ForeignKey(ManagedFilesystem)
     requires_confirmation = True
 
     def description(self):

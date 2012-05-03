@@ -251,7 +251,10 @@ class StatefulObject(models.Model):
             # to a special "forgotten" state, which is a shortcut state
             # to allow us to get to what is effectively 'removed' without
             # passing through all the normal states (which would fail).
-            return ['forgotten']
+            if self.state != 'forgotten':
+                return ['forgotten']
+            else:
+                return []
 
         if not begin_state in self.states:
             raise RuntimeError("%s not legal state for %s, legal states are %s" % (begin_state, self.__class__, self.states))

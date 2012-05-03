@@ -415,7 +415,7 @@ class StateManager(object):
         return prev
 
     def collect_dependencies(self, root_transition, transition_stack):
-        job_log.debug("collect_dependencies: %s" % (root_transition))
+        job_log.debug("collect_dependencies: %s" % root_transition)
         # What is explicitly required for this state transition?
         transition_deps = root_transition.to_job().get_deps()
         for dependency in transition_deps.all():
