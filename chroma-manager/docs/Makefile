@@ -1,8 +1,11 @@
 
 all: api storage_plugin
 
+dist:
+	mkdir -p dist
+
 .PHONY: api
-api:
+api: dist/
 	pushd rest-api ;\
 	rm -rf _build ;\
 	make html ;\
@@ -13,7 +16,7 @@ api:
 	tar czf chroma-doc-rest-api.tar.gz chroma-doc-rest-api
 
 .PHONY: storage_plugin
-storage_plugin:
+storage_plugin: dist/
 	pushd storage-plugin-api ;\
 	rm -rf _build ;\
 	make html ;\
