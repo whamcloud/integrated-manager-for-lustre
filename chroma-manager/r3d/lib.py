@@ -278,9 +278,28 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_step_interval,
             if r3d.DEBUG:
                 debug_print("  cdp_prep after: %s" % cdp_prep.__dict__)
 
+        stashed_primaries = {}
         for idx in range(0, rra.steps_since_update):
             for ds in db.ds_list:
                 cdp_prep = db.prep_pickle[(rra.pk, ds.pk)]
+
+                # When catching up, we have a choice between filling the
+                # "holes" with the latest datapoint or NaNs.  Using the
+                # latest datapoint results in "smeary" graphs as the
+                # same datapoint value is repeated across the gap.  If we
+                # use NaNs, we get breaks in the charts, but that is
+                # probably preferable to made-up data.
+                if r3d.EMPTY_GAPS:
+                    if (rra.steps_since_update > 1
+                        and idx < rra.steps_since_update - 1):
+                        if idx == 0:
+                            stashed_primaries[(rra.pk, ds.pk)] = cdp_prep.primary
+
+                        if r3d.DEBUG:
+                            debug_print("  storing NaN for catchup step: %d" % idx)
+                        cdp_prep.primary = DNAN
+                    elif rra.steps_since_update > 1:
+                        cdp_prep.primary = stashed_primaries[(rra.pk, ds.pk)]
 
                 # Optimization for times when we're playing catch-up after
                 # a long period of disuse.  Rather than pointlessly storing
