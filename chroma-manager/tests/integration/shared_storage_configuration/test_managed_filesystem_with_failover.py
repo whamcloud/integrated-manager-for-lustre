@@ -17,9 +17,9 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         self.reset_cluster(self.chroma_manager)
 
     def test_create_filesystem_with_failover(self):
-        # Add two hosts as managed hosts
-        self.assertGreaterEqual(len(config['lustre_servers']), 2)
-        hosts = self.add_hosts([h['address'] for h in config['lustre_servers'][:2]])
+        # Add hosts as managed hosts
+        self.assertGreaterEqual(len(config['lustre_servers']), 4)
+        hosts = self.add_hosts([h['address'] for h in config['lustre_servers'][:4]])
 
         # Count how many of the reported Luns are ready for our test
         # (i.e. they have both a primary and a secondary node)
