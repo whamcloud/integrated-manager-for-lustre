@@ -11,6 +11,7 @@ import bisect
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.lib.state_manager import StateManager
 from chroma_core.models.jobs import Command
+from chroma_core.models.target import ManagedMgs
 from chroma_core.models.utils import await_async_result
 from chroma_core.tasks import command_run_jobs
 import settings
@@ -155,8 +156,11 @@ class StatefulModelResource(CustomModelResource):
             raise custom_response(self, request, http.HttpResponse, report)
         else:
             command = Command.set_state([(stateful_object, new_state)])
-            raise custom_response(self, request, http.HttpAccepted,
-                    {'command': dehydrate_command(command)})
+            if command:
+                raise custom_response(self, request, http.HttpAccepted,
+                        {'command': dehydrate_command(command)})
+            else:
+                raise custom_response(self, request, http.HttpNoContent, None)
 
     def obj_delete(self, request = None, **kwargs):
         obj = self.obj_get(request, **kwargs)
@@ -182,7 +186,10 @@ class ConfParamResource(StatefulModelResource):
         else:
             obj = bundle.obj
 
-        if not 'conf_params' in bundle.data:
+        # FIXME: PUTing modified conf_params and modified state in the same request will
+        # cause one of those two things to be ignored.
+
+        if not 'conf_params' in bundle.data or isinstance(obj, ManagedMgs):
             super(ConfParamResource, self).obj_update(bundle, request, **kwargs)
 
         try:
@@ -194,15 +201,17 @@ class ConfParamResource(StatefulModelResource):
         else:
             # TODO: validate all the conf_params before trying to set any of them
             mgs = chroma_core.lib.conf_param.set_conf_params(obj, conf_params)
+            if mgs.conf_param_version != mgs.conf_param_version_applied:
+                async_result = command_run_jobs.delay([{'class_name': 'ApplyConfParams', 'args': {
+                    'mgs_id': mgs.id
+                }}], "Updating configuration parameters")
+                command_id = await_async_result(async_result)
 
-            async_result = command_run_jobs.delay([{'class_name': 'ApplyConfParams', 'args': {
-                'mgs_id': mgs.id
-            }}], "Updating configuration parameters")
-            command_id = await_async_result(async_result)
-
-            raise custom_response(self, request, http.HttpAccepted,
-                    {'command': dehydrate_command(Command.objects.get(pk = command_id)),
-                     self.Meta.resource_name: self.full_dehydrate(bundle).data})
+                raise custom_response(self, request, http.HttpAccepted,
+                        {'command': dehydrate_command(Command.objects.get(pk = command_id)),
+                         self.Meta.resource_name: self.full_dehydrate(bundle).data})
+            else:
+                return super(ConfParamResource, self).obj_update(bundle, request, **kwargs)
 
         return bundle
 

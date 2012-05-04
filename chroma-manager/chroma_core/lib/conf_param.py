@@ -327,7 +327,8 @@ def set_conf_params(obj, params):
     for key, value in params.items():
         model_klass, param_value_obj, help_text = all_params[key]
         existing_params = ConfParam.get_latest_params(model_klass.objects.filter(key = key, **kwargs))
-        if len(existing_params) == 0 or existing_params[0].value != value:
+        # Store if the new value is
+        if (len(existing_params) > 0 and existing_params[0].value != value) or (len(existing_params) == 0 and value != None):
             p = model_klass(key = key,
                 value = value,
                 **kwargs)

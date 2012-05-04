@@ -9,7 +9,7 @@ from chroma_core.models import ManagedTargetMount
 
 import settings
 
-from chroma_core.models.alert import TargetRecoveryAlert, HostContactAlert, LNetOfflineAlert
+from chroma_core.models.alert import TargetRecoveryAlert, HostContactAlert
 from chroma_core.models.event import LearnEvent
 from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, FilesystemMember, TargetRecoveryInfo
 from chroma_core.models.host import ManagedHost, Nid, VolumeNode
@@ -207,10 +207,6 @@ class UpdateScan(object):
                                   self.started_at,
                                   self._audited_lnet_state(),
                                   ['lnet_unloaded', 'lnet_down', 'lnet_up'])
-        # Update LNet alerts
-        # TODO: also set the alert status in Job completions when the state is changed,
-        # rather than waiting for this scan to notice.
-        LNetOfflineAlert.notify(self.host, not self.host_data['lnet_up'])
 
     def update_target_mounts(self):
         # Loop over all mountables we expected on this host, whether they

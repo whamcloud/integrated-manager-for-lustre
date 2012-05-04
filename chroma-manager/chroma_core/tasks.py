@@ -445,7 +445,7 @@ def test_host_contact(host):
 def mail_alerts():
     from chroma_core.models.alert import AlertState, AlertEmail
 
-    alerts = AlertState.objects.filter(alertemail = None)
+    alerts = AlertState.objects.filter(alertemail = None, dismissed = False)
     if not alerts:
         # no un-e-mailed alerts yet so just bail
         return

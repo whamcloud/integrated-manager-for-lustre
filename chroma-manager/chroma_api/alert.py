@@ -27,6 +27,7 @@ class AlertResource(ModelResource):
     message = fields.CharField(readonly = True, help_text = "Human readable description\
             of the alert, about one sentence")
     alert_item_content_type_id = fields.IntegerField()
+    alert_item = fields.CharField()
     active = fields.BooleanField(attribute = 'active', null = True,
             help_text = "True if the alert is a current issue, false\
             if it is historical")
@@ -34,6 +35,10 @@ class AlertResource(ModelResource):
     affected = fields.ListField(null = True, help_text = "List of objects which\
             are affected by the alert (e.g. a target alert also affects the\
             filesystem to which the target belongs)")
+
+    def dehydrate_alert_item(self, bundle):
+        from chroma_api.urls import api
+        return api.get_resource_uri(bundle.obj.alert_item)
 
     def dehydrate_affected(self, bundle):
         from chroma_api.urls import api
@@ -115,7 +120,7 @@ class AlertResource(ModelResource):
         queryset = AlertState.objects.all()
         resource_name = 'alert'
         fields = ['begin', 'end', 'message', 'active', 'dismissed', 'alert_item_id', 'alert_item_content_type_id', 'id']
-        filtering = {'active': ['exact']}
+        filtering = {'active': ['exact'], 'dismissed': ['exact']}
         ordering = ['begin', 'end', 'active']
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()

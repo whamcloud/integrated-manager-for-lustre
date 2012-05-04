@@ -108,10 +108,18 @@ class ManagedTarget(StatefulObject):
             # writing stale 'state' attribute (fixing HYD-619)
             ManagedTarget.objects.filter(pk = self.pk).update(active_mount = active_mount)
 
-            from chroma_core.models import TargetFailoverAlert, TargetOfflineAlert
-            TargetOfflineAlert.notify(self, active_mount == None)
+            from chroma_core.models import TargetFailoverAlert
             for tm in self.managedtargetmount_set.filter(primary = False):
                 TargetFailoverAlert.notify(tm, active_mount == tm)
+
+    def set_state(self, state, intentional = False):
+        from chroma_core.models.alert import TargetOfflineAlert
+        job_log.debug("mt.set_state %s %s" % (state, intentional))
+        super(ManagedTarget, self).set_state(state, intentional)
+        if intentional:
+            TargetOfflineAlert.notify_quiet(self, self.state == 'unmounted')
+        else:
+            TargetOfflineAlert.notify(self, self.state == 'unmounted')
 
     class Meta:
         app_label = 'chroma_core'

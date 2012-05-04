@@ -98,29 +98,43 @@ class AlertState(models.Model):
                 alert_item_type__app_label = item_class._meta.app_label)
 
     @classmethod
-    def notify(alert_klass, alert_item, active, **kwargs):
+    def notify(cls, alert_item, active, **kwargs):
+        return cls._notify(alert_item, active, False, **kwargs)
+
+    @classmethod
+    def notify_quiet(cls, alert_item, active, **kwargs):
+        return cls._notify(alert_item, active, True, **kwargs)
+
+    @classmethod
+    def _notify(cls, alert_item, active, dismissed, **kwargs):
         if hasattr(alert_item, 'content_type'):
             alert_item = alert_item.downcast()
 
         if active:
-            return alert_klass.high(alert_item, **kwargs)
+            return cls.high(alert_item, dismissed, **kwargs)
         else:
-            return alert_klass.low(alert_item, **kwargs)
+            return cls.low(alert_item, **kwargs)
 
     @classmethod
-    def high(alert_klass, alert_item, **kwargs):
+    def high(cls, alert_item, dismissed, **kwargs):
+        if hasattr(alert_item, 'not_deleted') and alert_item.not_deleted != True:
+            return None
+
         import datetime
         from django.db import IntegrityError
         now = datetime.datetime.utcnow()
         try:
-            alert_state = alert_klass.filter_by_item(alert_item).get(**kwargs)
+            alert_state = cls.filter_by_item(alert_item).get(**kwargs)
             alert_state.end = now
             alert_state.save()
-        except alert_klass.DoesNotExist:
-            alert_state = alert_klass(
+        except cls.DoesNotExist:
+            from chroma_core.lib.job import job_log
+            job_log.info("AlertState: Raised %s on %s" % (cls, alert_item))
+            alert_state = cls(
                     active = True,
                     begin = now,
                     end = now,
+                    dismissed = dismissed,
                     alert_item = alert_item, **kwargs)
             try:
                 alert_state.save()
@@ -135,18 +149,18 @@ class AlertState(models.Model):
         return alert_state
 
     @classmethod
-    def low(alert_klass, alert_item, **kwargs):
+    def low(cls, alert_item, **kwargs):
         import datetime
         now = datetime.datetime.utcnow()
         try:
-            alert_state = alert_klass.filter_by_item(alert_item).get(**kwargs)
+            alert_state = cls.filter_by_item(alert_item).get(**kwargs)
             alert_state.end = now
             alert_state.active = None
             alert_state.save()
             ee = alert_state.end_event()
             if ee:
                 ee.save()
-        except alert_klass.DoesNotExist:
+        except cls.DoesNotExist:
             alert_state = None
 
         return alert_state

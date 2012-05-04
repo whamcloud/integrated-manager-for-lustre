@@ -4,7 +4,9 @@
 # ========================================================
 
 
+import datetime
 import dateutil.parser
+from dateutil import tz
 
 from tastypie import fields
 from tastypie.authorization import Authorization
@@ -82,11 +84,19 @@ class AgentResource(Resource):
                 updates = bundle.data['updates']
                 api_log.debug("Received %d updates for session %s from %s" % (len(updates), session.session_id, host))
 
+                # Ensure the audit time is always respectably in the past to protect
+                # against fast clocks on monitored servers
+                latency_guess = datetime.timedelta(seconds = 2)
+                started_at = dateutil.parser.parse(bundle.data['started_at'])
+                now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
+                if started_at > now - latency_guess:
+                    started_at = now - latency_guess
+
                 # Special case for 'lustre' update, do not
                 # pass it along to the storage plugin framework
                 try:
                     lustre_data = updates.pop('lustre')
-                    UpdateScan().run(host.id, dateutil.parser.parse(bundle.data['started_at']), lustre_data)
+                    UpdateScan().run(host.id, started_at, lustre_data)
                 except KeyError:
                     pass
 

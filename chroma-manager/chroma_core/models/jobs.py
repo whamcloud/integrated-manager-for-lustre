@@ -106,7 +106,9 @@ class StatefulObject(models.Model):
             self.state = self.initial_state
             self.state_modified_at = datetime.datetime.utcnow()
 
-    def set_state(self, state):
+    def set_state(self, state, intentional = False):
+        from chroma_core.lib.job import job_log
+        job_log.info("StatefulObject.set_state %s %s->%s (intentional=%s)" % (self, self.state, state, intentional))
         self.state = state
         self.state_modified_at = datetime.datetime.utcnow()
         self.save()
@@ -647,7 +649,7 @@ class Job(models.Model):
             new_state = self.state_transition[2]
             with transaction.commit_on_success():
                 obj = self.get_stateful_object()
-                obj.set_state(new_state)
+                obj.set_state(new_state, intentional = True)
                 job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.pk, new_state, obj))
 
         job_log.info("Job %d completing (errored=%s, cancelled=%s)" %

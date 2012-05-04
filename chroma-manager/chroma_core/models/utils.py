@@ -149,10 +149,10 @@ def _make_deletable(metaclass, dct):
             instance.not_deleted = None
             instance.save()
 
-        from chroma_core.lib.lustre_audit import audit_log
+        from chroma_core.lib.job import job_log
         from chroma_core.models.alert import AlertState
         updated = AlertState.filter_by_item_id(klass, id).update(active = None)
-        audit_log.info("Lowered %d alerts while deleting %s %s" % (updated, klass, id))
+        job_log.info("Lowered %d alerts while deleting %s %s" % (updated, klass, id))
 
     dct['objects'] = DeletableManager()
     dct['delete'] = delete
