@@ -89,7 +89,6 @@ class UserResource(ModelResource):
         if not bundle.request.user.is_superuser:
             if 'groups' in bundle.data:
                 group_ids = []
-                print "*** %s" % bundle.data['groups']
                 for group in bundle.data['groups']:
                     if isinstance(group, dict):
                         group_ids.append(int(group['id']))
@@ -102,7 +101,6 @@ class UserResource(ModelResource):
 
                 user_group_ids = [int(group.pk) for group in bundle.request.user.groups.all()]
                 if not set(group_ids) == set(user_group_ids):
-                    print "%s %s" % (set(group_ids), set(user_group_ids))
                     raise ImmediateHttpResponse(HttpForbidden())
         return bundle
 

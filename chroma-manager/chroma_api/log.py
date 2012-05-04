@@ -93,7 +93,6 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
 
         for match in target_regex.finditer(message):
             target_name = match.group(1)
-            print target_name
             targets = ManagedTarget.objects.filter(name=target_name)
             if targets.count() > 0:
                 target = targets[0]
