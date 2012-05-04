@@ -12,7 +12,7 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from r3d.exceptions import BadUpdateString, BadUpdateTime
-from r3d import lib
+import r3d
 from r3d.lib import DNAN, DINF, debug_print
 
 # Don't want a try/except block to fall back to slow pickle.
@@ -203,7 +203,8 @@ class Database(models.Model):
         if force or self.prep_pickle is None:
             self.prep_pickle = {}
 
-        debug_print("rebuilding prep pickle")
+        if r3d.DEBUG:
+            debug_print("  rebuilding prep pickle")
 
         # Rebuild this here because if the prep pickle needs to
         # be rebuilt this probably does too.
@@ -238,8 +239,9 @@ WHERE rra.database_id = %s
                 self.prep_pickle[cdp_key] = CdpPrep(archive_id=row[0],
                                                     datasource_id=row[1],
                                                     unknown_pdps=unk_pdps)
-                debug_print("new CdpPrep for %s: %d" % (list(cdp_key),
-                                                        unk_pdps))
+                if r3d.DEBUG:
+                    debug_print("  new CdpPrep for %s: %d" % (list(cdp_key),
+                                                              unk_pdps))
 
     def save(self, *args, **kwargs):
         if not self.last_update:
@@ -257,8 +259,9 @@ WHERE rra.database_id = %s
             self.cache_lists_and_check_pickles()
 
         for name, prep in self.ds_pickle.items():
-            debug_print("%s pickled %s: %s" % (hex(id(self)),
-                                               name, prep.__dict__))
+            if r3d.DEBUG:
+                debug_print("  %s pickled %s: %s" % (hex(id(self)),
+                                                     name, prep.__dict__))
 
     # FIXME: The fancy-pants delete() doesn't seem to handle entities
     # with more than one FK reference.  Or something.  Go back and figure
@@ -273,7 +276,8 @@ WHERE rra.database_id = %s
     def single_update(self, update_time, new_values):
         interval = float(update_time) - float(self.last_update)
 
-        debug_print("vvv--------------------------------------------------vvv")
+        if r3d.DEBUG:
+            debug_print("vvv--------------------------------------------------vvv")
 
         if len(new_values.keys()) != len(self.ds_list):
             self.rebuild_ds_pickle()
@@ -285,12 +289,11 @@ WHERE rra.database_id = %s
             raise BadUpdateTime("Illegal update time %d (minimum one second step from %d)" % (update_time, self.last_update))
 
         (elapsed_steps,
-         pre_int,
-         post_int,
-         pdp_count) = lib.calculate_elapsed_steps(self.last_update,
-                                                  self.step,
-                                                  update_time,
-                                                  interval)
+         pre_step_interval,
+         current_step_fraction,
+         pdp_count) = r3d.lib.calculate_elapsed_steps(self.last_update,
+                                                      self.step,
+                                                      update_time)
 
         # Update each DS's internal counters using the new readings.
         # TODO: Optimize this to update the pickle values directly
@@ -302,23 +305,26 @@ WHERE rra.database_id = %s
             # If we haven't crossed a step threshold, then we don't
             # want to consolidate any datapoints.  Just update the DS
             # scratch counters.
-            debug_print("simple update")
+            if r3d.DEBUG:
+                debug_print("  simple update")
             self.simple_update(update_time, interval)
         else:
             # If we have crossed one (or more) step thresholds, then
             # we need to run through and consolidate all DS PDPs.
-            debug_print("consolidation needed")
-            lib.consolidate_all_pdps(self,
-                                     interval,
-                                     elapsed_steps,
-                                     pre_int,
-                                     post_int,
-                                     pdp_count)
+            if r3d.DEBUG:
+                debug_print("  consolidation needed")
+            r3d.lib.consolidate_all_pdps(self,
+                                         interval,
+                                         elapsed_steps,
+                                         pre_step_interval,
+                                         current_step_fraction,
+                                         pdp_count)
 
         self.last_update = update_time
         self.save(force_update=True)
 
-        debug_print("^^^--------------------------------------------------^^^")
+        if r3d.DEBUG:
+            debug_print("^^^--------------------------------------------------^^^")
 
     def simple_update(self, update_time, interval):
         for ds_name, prep in self.ds_pickle.items():
@@ -330,8 +336,9 @@ WHERE rra.database_id = %s
                 else:
                     prep.scratch += prep.new_val
 
-            debug_print("%s scratch %lf, unknown %lu" % (ds_name, prep.scratch,
-                                                         prep.unknown_seconds))
+            if r3d.DEBUG:
+                debug_print("  %s scratch %lf, unknown %lu" %
+                            (ds_name, prep.scratch, prep.unknown_seconds))
 
     def parse_update_dict(self, update, missing_ds_block=None):
         standard_update = {}
@@ -352,7 +359,8 @@ WHERE rra.database_id = %s
         # Now, if there's anything left over, we'll let the caller create
         # DS/RRA entries, if it bothered to try.
         if len(update.keys()) > 0:
-            debug_print("leftover updates: %s" % update.keys())
+            if r3d.DEBUG:
+                debug_print("  leftover updates: %s" % update.keys())
             if missing_ds_block:
                 for new_ds_name in update.keys():
                     missing_ds_block(self, new_ds_name, update[new_ds_name])
@@ -386,7 +394,7 @@ WHERE rra.database_id = %s
             # TODO: This is legacy cruft and terribly inefficient.
             # The tests rely on being able to supply rrdtool-style update
             # strings, though.  Need to update them at some point.
-            update_time, update_vals = lib.parse_update_string(updates)
+            update_time, update_vals = r3d.lib.parse_update_string(updates)
             ds_names = [ds.name for ds in self.datasources.all().order_by('id')]
             new_readings = dict(zip(ds_names, update_vals))
             self.single_update(update_time, new_readings)
@@ -411,12 +419,12 @@ WHERE rra.database_id = %s
         if not end_time:
             end_time = int(time.time())
 
-        return lib.fetch_best_rra_rows(self,
-                                       archive_type,
-                                       self._parse_time(start_time),
-                                       self._parse_time(end_time),
-                                       step,
-                                       fetch_metrics)
+        return r3d.lib.fetch_best_rra_rows(self,
+                                           archive_type,
+                                           self._parse_time(start_time),
+                                           self._parse_time(end_time),
+                                           step,
+                                           fetch_metrics)
 
     def fetch_last(self, fetch_metrics=None):
         """
@@ -492,7 +500,9 @@ class Datasource(PoorMansStiModel):
             # after a Database has already been set up.
             # FIXME: Is this still necessary?
             for rra in self.database.archives.all():
-                debug_print("Associating new DS with rra: %s" % rra.__dict__)
+                if r3d.DEBUG:
+                    debug_print("  Associating new DS with rra: %s" %
+                                rra.__dict__)
                 rra.create_filler_cdps(self)
 
     # This seems to be necessary to avoid integrity errors on delete.  Grumble.
@@ -511,8 +521,9 @@ class Datasource(PoorMansStiModel):
         return value
 
     def add_new_reading(self, db, new_reading, update_time, interval):
-        #debug_print("anr %s top: %s" % (self.name,
-        #                            db.ds_pickle[self.name].__dict__))
+        if r3d.DEBUG:
+            debug_print("  anr %s top: %s" %
+                        (self.name, db.ds_pickle[self.name].__dict__))
         # stash this for debugging
         saved_last = db.ds_pickle[self.name].last_reading
 
@@ -543,9 +554,12 @@ class Datasource(PoorMansStiModel):
         # save this for the next run
         db.ds_pickle[self.name].last_reading = new_reading
 
-        #debug_print("anr %s bottom: %s" % (self.name,
-        #                                   db.ds_pickle[self.name].__dict__))
-        debug_print("%s @ %d: (%10.2f) %10.2f -> %10.2f" % (self.name, update_time, saved_last, new_reading, db.ds_pickle[self.name].new_val))
+        if r3d.DEBUG:
+            debug_print("  anr %s bottom: %s" %
+                        (self.name, db.ds_pickle[self.name].__dict__))
+            debug_print("  %s @ %d: (%.2f) %.2f -> %.2f" %
+                        (self.name, update_time, saved_last, new_reading,
+                         db.ds_pickle[self.name].new_val))
 
 
 class Absolute(Datasource):
@@ -683,8 +697,9 @@ class Archive(PoorMansStiModel):
         # First, create and insert the new CDP for this row.
         cdp = CDP(archive=self, datasource=ds, value=cdp_prep.primary)
         cdp.save(force_insert=True)
-        debug_print("saved %10.2f -> datapoints[%d]" % (cdp.value,
-                                                        self.current_row))
+        if r3d.DEBUG:
+            debug_print("  saved %.2f -> datapoints[%d]" % (cdp.value,
+                                                            self.current_row))
 
     def calculate_cdp_value(self, cdp_prep, db, ds, elapsed_steps):
         raise RuntimeError("Method not implemented at this level")
@@ -722,7 +737,8 @@ class Average(Archive):
         cur_val = 0.0 if math.isnan(db.ds_pickle[ds.name].temp_val) else db.ds_pickle[ds.name].temp_val
         primary = ((cum_val + cur_val * start_pdp_offset) /
                    (self.cdp_per_row - cdp_prep.unknown_pdps))
-        debug_print("%10.9f = (%10.9f + %10.9f * %lu) / (%lu - %lu)" % (primary, cum_val, cur_val, start_pdp_offset, self.cdp_per_row, cdp_prep.unknown_pdps))
+        if r3d.DEBUG:
+            debug_print("%10.9f = (%10.9f + %10.9f * %lu) / (%lu - %lu)" % (primary, cum_val, cur_val, start_pdp_offset, self.cdp_per_row, cdp_prep.unknown_pdps))
         return primary
 
     def carryover_cdp_value(self, cdp_prep, db, ds, elapsed_steps, start_pdp_offset):
