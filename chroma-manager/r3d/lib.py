@@ -222,7 +222,7 @@ def update_cdp_prep(prep, db, rra, ds, elapsed_steps, start_pdp_offset):
 def reset_cdp_prep(prep, db, ds, elapsed_steps):
     if r3d.DEBUG:
         debug_print("reset_cdp_prep(%s, %s, %s, %d)" %
-                    prep.__dict__, db.name, ds.name, elapsed_steps)
+                    (prep.__dict__, db.name, ds.name, elapsed_steps))
 
     prep.primary = db.ds_pickle[ds.name].temp_val
     prep.secondary = db.ds_pickle[ds.name].temp_val
@@ -279,7 +279,9 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_step_interval,
                 debug_print("  cdp_prep after: %s" % cdp_prep.__dict__)
 
         stashed_primaries = {}
+        from r3d.models import ArchiveRow
         for idx in range(0, rra.steps_since_update):
+            rra_row = ArchiveRow(archive_id=rra.pk, slot=db.rra_pointers[rra.id])
             for ds in db.ds_list:
                 cdp_prep = db.prep_pickle[(rra.pk, ds.pk)]
 
@@ -310,23 +312,23 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_step_interval,
                     # Don't bother storing another NaN if we've already got
                     # a full set of NaNs in there.
                     if rra.nan_cdps < rra.rows:
-                        rra.store_ds_cdp(ds, cdp_prep)
+                        rra_row.ds_pickle[ds.pk] = cdp_prep.primary
                     rra.nan_cdps += 1
                 else:
                     # Reset the NaN counter
                     rra.nan_cdps = 0
-                    rra.store_ds_cdp(ds, cdp_prep)
+                    rra_row.ds_pickle[ds.pk] = cdp_prep.primary
 
-            # FIXME: At some point try to stash this somewhere we're already
-            # updating, maybe.
-            rra.current_row += 1
-            if rra.current_row >= rra.rows:
+            rra_row.save()
+            if r3d.DEBUG:
+                debug_print("  saved @ %d: %s" %
+                            (rra_row.slot, rra_row.__dict__))
+
+            db.rra_pointers[rra.id] += 1
+            if db.rra_pointers[rra.id] >= rra.rows:
                 if r3d.DEBUG:
-                    debug_print("wrapped")
-                rra.current_row = 0
-
-        if rra.steps_since_update > 0:
-            rra.save()
+                    debug_print("  wrapped")
+                db.rra_pointers[rra.id] = 0
 
 
 # FIXME: This monster needs a serious refactoring.  At some point.
@@ -416,33 +418,33 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
                     (real_start, real_end, real_step, rows))
 
     rra_end_time = (db.last_update - (db.last_update % real_step))
-
-    if r3d.DEBUG:
-        debug_print("  rra_end_time: %d = (%d - (%d %% %d))" %
-                    (rra_end_time, db.last_update, db.last_update, real_step))
-
     rra_start_time = (rra_end_time - (real_step * (chosen_rra.rows - 1)))
-
-    if r3d.DEBUG:
-        debug_print("  rra_start_time: %d = (%d - (%d * (%d - 1)))" %
-                    (rra_start_time, rra_end_time, real_step, chosen_rra.rows))
-
     start_offset = (real_start + real_step - rra_start_time) / real_step
     end_offset = (rra_end_time - real_end) / real_step
 
     if r3d.DEBUG:
+        debug_print("  rra_end_time: %d = (%d - (%d %% %d))" %
+                    (rra_end_time, db.last_update, db.last_update, real_step))
+        debug_print("  rra_start_time: %d = (%d - (%d * (%d - 1)))" %
+                    (rra_start_time, rra_end_time, real_step, chosen_rra.rows))
+        debug_print("  start_offset: %d = (%d + %d - %d) / %d" %
+                    (start_offset, real_start, real_step, rra_start_time,
+                     real_step))
+        debug_print("  end_offset: %d = (%d - %d) / %d)" %
+                    (end_offset, rra_end_time, real_end, real_step))
         debug_print("rra_start %d rra_end %d start_off %d end_off %d cur_row %d" %
                     (rra_start_time, rra_end_time, start_offset, end_offset,
-                     chosen_rra.current_row))
+                     db.rra_pointers[chosen_rra.pk]))
+
     rra_pointer = 0
     if real_start <= rra_end_time and real_end >= (rra_start_time - real_step):
         if start_offset <= 0:
-            rra_pointer = chosen_rra.current_row
+            rra_pointer = db.rra_pointers[chosen_rra.pk]
 
             if r3d.DEBUG:
                 debug_print("%d = current_row" % rra_pointer)
         else:
-            rra_pointer = chosen_rra.current_row + start_offset
+            rra_pointer = db.rra_pointers[chosen_rra.pk] + start_offset
 
             if r3d.DEBUG:
                 debug_print("%d = current_row + start_offset" % rra_pointer)
@@ -456,18 +458,41 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
     if fetch_metrics is None:
         ds_list = db.ds_list
     else:
-        ds_list = db.datasources.filter(name__in=fetch_metrics).order_by('id')
-    ds_cdps = {}
-    for ds in ds_list:
-        ds_cdps[ds] = chosen_rra.ds_cdps(ds)
+        ds_list = [ds for ds in db.ds_list if ds.name in fetch_metrics]
+
+    calc_end_offset = chosen_rra.rows - end_offset
+
+    from r3d.models import ArchiveRow
+    if rra_pointer + rows >= chosen_rra.rows:
+        window_start = rra_pointer
+        window_end = chosen_rra.rows
+        wrapped_end = (rra_pointer + rows) - window_end
+        window_rows = list(ArchiveRow.objects.filter(archive_id=chosen_rra.pk).order_by('slot')[window_start:window_end])
+        window_rows.extend(list(ArchiveRow.objects.filter(archive_id=chosen_rra.pk).order_by('slot')[0:wrapped_end]))
+    else:
+        window_start = rra_pointer
+        window_end = rra_pointer + rows
+        wrapped_end = window_end
+        window_rows = list(ArchiveRow.objects.filter(archive_id=chosen_rra.pk).order_by('slot')[window_start:window_end])
+
+    if r3d.DEBUG:
+        print "rra pointer: %d" % rra_pointer
+        print "start_offset: %d" % start_offset
+        print "end_offset: %d" % end_offset
+        print "window_start: %d" % window_start
+        print "window_end: %d" % window_end
+        if wrapped_end != window_end:
+            print "wrapped_end: %d" % wrapped_end
+        for i in range(len(window_rows)):
+            print "%d: %s" % (i, window_rows[i].__dict__)
 
     # convert None -> NaN for debug output
     fn = lambda v: v or float("NaN")
 
     dp_time = real_start + real_step
-    for i in range(start_offset, chosen_rra.rows - end_offset):
+    for i in range(start_offset, calc_end_offset):
         row_results = {}
-        if i < 0:
+        if i <= window_start:
             if r3d.DEBUG:
                 debug_print("pre fetch %d -- " % i, end=" ")
 
@@ -487,32 +512,33 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
                     debug_print("%.2f" % fn(row_results[ds.name]), end=" ")
         else:
             if rra_pointer >= chosen_rra.rows:
-                rra_pointer -= chosen_rra.rows
+                rra_pointer = wrapped_end
+                window_start = 0
 
                 if r3d.DEBUG:
                     debug_print("wrapped")
 
+            selector = rra_pointer - window_start
+
             if r3d.DEBUG:
-                debug_print("post fetch %d -- " % i, end=" ")
+                debug_print("post fetch %d (%d) -- " % (i, selector), end=" ")
 
             for ds in ds_list:
-                # If we've got a full set of CDPs, we don't need to play
-                # offset games.
-                selector = (i if len(ds_cdps[ds]) == chosen_rra.rows
-                              else rra_pointer)
                 try:
-                    value = ds_cdps[ds][selector].value
+                    value = window_rows[selector].ds_pickle[ds.pk]
                     if math.isnan(value):
                         row_results[ds.name] = None
                     else:
                         row_results[ds.name] = value
-                except IndexError:
+                except (IndexError, KeyError):
                     # If we didn't find the DB record, then we've hit a
                     # dead zone in the Archive rows, and we just return None.
                     row_results[ds.name] = None
 
                 if r3d.DEBUG:
                     debug_print("%.2f" % fn(row_results[ds.name]), end=" ")
+
+            rra_pointer += 1
 
         if r3d.DEBUG:
             debug_print("")
@@ -527,6 +553,5 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
                 debug_print("Omitting dp row after end_time (%d > %d)" % (dp_time,
                                                                          end_time))
         dp_time += real_step
-        rra_pointer += 1
 
     return tuple(results)
