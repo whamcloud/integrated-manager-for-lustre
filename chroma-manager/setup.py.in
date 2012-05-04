@@ -29,6 +29,7 @@ setup(
         'chroma_ui': "static/js/lib/*.js static/js/*.js static/css/smoothness/images/* static/css/smoothness/*.css static/css/images/* static/css/*.css static/images/storage_plugin/* static/images/*.ico static/images/*.jpg static/images/*.png static/images/*.gif templates/*".split(),
         'chroma_help': "static/contextual/*.html static/webhelp/*.html".split(),
         'tests': "integration/run_tests integration/*/*.json sample_data/*".split(),
+        'r3d': ["tests/sample_data/*"],
     },
     scripts = ["chroma_core/bin/storage_daemon", "chroma_core/bin/chroma-config", "chroma-host-discover"],
     entry_points = {
