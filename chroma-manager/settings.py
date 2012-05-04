@@ -158,7 +158,7 @@ for app in OPTIONAL_APPS:
 
 if 'django_nose' in INSTALLED_APPS:
     TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-    NOSE_ARGS = ['--exclude=.*(integration|selenium).*']
+    NOSE_ARGS = ["--exclude-dir=tests/integration \n tests/selenium"]
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
