@@ -449,3 +449,65 @@ class ChromaIntegrationTestCase(TestCase):
 
     def verify_targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts):
         return self._check_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_to_expected_hosts, assert_true = True)
+
+    def get_list(self, url, args = {}):
+        response = self.chroma_manager.get(url, params = args)
+        self.assertEqual(response.status_code, 200, response.content)
+        return response.json['objects']
+
+    def set_state(self, uri, state):
+        object = self.get_by_uri(uri)
+        object['state'] = state
+
+        response = self.chroma_manager.put(uri, body = object)
+        if response.status_code == 204:
+            return
+        elif response.status_code == 202:
+            self.wait_for_command(self.chroma_manager, response.json['command']['id'])
+        else:
+            self.assertEquals(response.status_code, 202, response.content)
+
+        self.assertState(uri, state)
+
+    def get_by_uri(self, uri):
+        response = self.chroma_manager.get(uri)
+        self.assertEqual(response.status_code, 200, response.content)
+        return response.json
+
+    def assertNoAlerts(self, uri):
+        alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
+        self.assertNotIn(uri, [a['alert_item'] for a in alerts])
+
+    def assertHasAlert(self, uri):
+        alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
+        self.assertIn(uri, [a['alert_item'] for a in alerts])
+
+    def assertState(self, uri, state):
+        obj = self.get_by_uri(uri)
+        self.assertEqual(obj['state'], state)
+
+    def create_filesystem_simple(self):
+        """The simplest possible filesystem on a single server"""
+        self.add_hosts([config['lustre_servers'][0]['address']])
+
+        ha_volumes = self.get_usable_volumes()
+        self.assertGreaterEqual(len(ha_volumes), 4)
+
+        mgt_volume = ha_volumes[0]
+        mdt_volume = ha_volumes[1]
+        ost_volumes = [ha_volumes[2]]
+        return self.create_filesystem(
+                {
+                'name': 'testfs',
+                'mgt': {'volume_id': mgt_volume['id']},
+                'mdt': {
+                    'volume_id': mdt_volume['id'],
+                    'conf_params': {}
+                },
+                'osts': [{
+                    'volume_id': v['id'],
+                    'conf_params': {}
+                } for v in ost_volumes],
+                'conf_params': {}
+            }
+        )

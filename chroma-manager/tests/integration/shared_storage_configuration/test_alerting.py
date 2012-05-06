@@ -12,67 +12,6 @@ class TestAlerting(ChromaIntegrationTestCase):
             server_http_url = config['chroma_managers'][0]['server_http_url'])
         self.reset_cluster(self.chroma_manager)
 
-    def create_filesystem_simple(self):
-        self.add_hosts([config['lustre_servers'][0]['address']])
-
-        ha_volumes = self.get_usable_volumes()
-        self.assertGreaterEqual(len(ha_volumes), 4)
-
-        mgt_volume = ha_volumes[0]
-        mdt_volume = ha_volumes[1]
-        ost_volumes = [ha_volumes[2]]
-        return self.create_filesystem(
-                {
-                'name': 'testfs',
-                'mgt': {'volume_id': mgt_volume['id']},
-                'mdt': {
-                    'volume_id': mdt_volume['id'],
-                    'conf_params': {}
-                },
-                'osts': [{
-                    'volume_id': v['id'],
-                    'conf_params': {}
-                } for v in ost_volumes],
-                'conf_params': {}
-            }
-        )
-
-    def get_list(self, url, args = {}):
-        response = self.chroma_manager.get(url, params = args)
-        self.assertEqual(response.status_code, 200, response.content)
-        return response.json['objects']
-
-    def set_state(self, uri, state):
-        object = self.get_by_uri(uri)
-        object['state'] = state
-
-        response = self.chroma_manager.put(uri, body = object)
-        if response.status_code == 204:
-            return
-        elif response.status_code == 202:
-            self.wait_for_command(self.chroma_manager, response.json['command']['id'])
-        else:
-            self.assertEquals(response.status_code, 202, response.content)
-
-        self.assertState(uri, state)
-
-    def get_by_uri(self, uri):
-        response = self.chroma_manager.get(uri)
-        self.assertEqual(response.status_code, 200, response.content)
-        return response.json
-
-    def assertNoAlerts(self, uri):
-        alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
-        self.assertNotIn(uri, [a['alert_item'] for a in alerts])
-
-    def assertHasAlert(self, uri):
-        alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
-        self.assertIn(uri, [a['alert_item'] for a in alerts])
-
-    def assertState(self, uri, state):
-        obj = self.get_by_uri(uri)
-        self.assertEqual(obj['state'], state)
-
     def test_alerts(self):
         fs_id = self.create_filesystem_simple()
 
