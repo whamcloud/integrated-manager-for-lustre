@@ -86,11 +86,14 @@ class AgentResource(Resource):
 
                 # Ensure the audit time is always respectably in the past to protect
                 # against fast clocks on monitored servers
-                latency_guess = datetime.timedelta(seconds = 2)
+                latency_guess = datetime.timedelta(seconds = 1)
                 started_at = dateutil.parser.parse(bundle.data['started_at'])
+                sent_at = dateutil.parser.parse(bundle.data['sent_at'])
+
                 now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
-                if started_at > now - latency_guess:
-                    started_at = now - latency_guess
+                if sent_at > now - latency_guess:
+                    delta = sent_at - (now - latency_guess)
+                    started_at -= delta
 
                 # Special case for 'lustre' update, do not
                 # pass it along to the storage plugin framework

@@ -159,6 +159,7 @@ def send_update(server_url, server_token, session, started_at, updates):
                                   'fqdn': get_fqdn(),
                                   'token': server_token,
                                   'started_at': started_at.isoformat() + "Z",
+                                  'sent_at': datetime.datetime.utcnow().isoformat() + "Z",
                                   'updates': updates}))
 
     response_data = None
