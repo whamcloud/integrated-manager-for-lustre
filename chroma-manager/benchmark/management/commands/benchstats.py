@@ -15,17 +15,17 @@ from benchmark.metrics import Benchmark
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
-            make_option("--oss", type=int, default=1,
-                help="number of OSSes to simulate (default: 1)"),
-            make_option("--ost", type=int, default=1,
-                help="number of OSTs per OSS (default: 1)"),
+            make_option("--oss", type=int, default=8,
+                help="number of OSSes to simulate (default: 8)"),
+            make_option("--ost", type=int, default=4,
+                help="number of OSTs per OSS (default: 4)"),
             make_option("--fsname", type=str, default="stattest",
                 help="lustre filesystem name for stats testing"),
             make_option("--server_stats", type=int, default=12,
                 help="number of server stats"),
-            make_option("--ost_stats", type=int, default=23,
+            make_option("--ost_stats", type=int, default=29,
                 help="number of ost stats"),
-            make_option("--mdt_stats", type=int, default=27,
+            make_option("--mdt_stats", type=int, default=28,
                 help="number of mdt stats"),
             make_option("--duration", type=int, default=300,
                 help="how many seconds' worth of stats to generate (default: 300)"),
