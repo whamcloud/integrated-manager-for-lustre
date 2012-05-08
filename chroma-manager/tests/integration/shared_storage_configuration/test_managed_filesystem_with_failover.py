@@ -63,8 +63,18 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         self.verify_volume_mounts(refreshed_ost_volume_1, hosts[2]['id'], hosts[3]['id'])
         self.verify_volume_mounts(refreshed_ost_volume_2, hosts[3]['id'], hosts[2]['id'])
 
-        # Create new filesystem
+        # Double check our system is ready for a filesystem to be created.
         self.verify_usable_luns_valid(ha_volumes, 4)
+        self.remote_command(
+            hosts[2]['address'],
+            'lctl ping %s' % hosts[0]['address']
+        )
+        self.remote_command(
+            hosts[3]['address'],
+            'lctl ping %s' % hosts[0]['address']
+        )
+
+        # Create new filesystem
         filesystem_id = self.create_filesystem(
             {
                 'name': 'testfs',
