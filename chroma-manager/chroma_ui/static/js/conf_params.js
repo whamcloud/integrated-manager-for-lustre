@@ -65,11 +65,11 @@ var ConfParamDialog = function(options) {
     var result = {};
 
     for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
-      var conf_param_name = oSetting.aoData[i]._aData[0];
+      var conf_param_name = oSetting.aoData[i]._aData[3];
       var input_val = $("input[id='conf_param_" + conf_param_name + "']").val();
       if(oSetting.aoData[i]._aData[2] != input_val)
       {
-        result[oSetting.aoData[i]._aData[0]] = input_val;
+        result[oSetting.aoData[i]._aData[3]] = input_val;
       }
     }
 
@@ -120,7 +120,7 @@ function _populate_conf_param_table(data, table, help)
     }
     property_box = "<input type=textbox value='" + _.escape(value) + "' id='conf_param_" + key +
       "' title='" + _.escape(help[key]) + "'/>";
-    sections[section].entries.push([ setting_label, property_box, value ]);
+    sections[section].entries.push([ setting_label, property_box, value, key]);
   });
   $.each(section_display_order, function() {
     // skip if no entries
@@ -149,7 +149,7 @@ function reset_config_params(datatable)
 {
   var oSetting = datatable.fnSettings();
   for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
-    var conf_param_name = oSetting.aoData[i]._aData[0];
+    var conf_param_name = oSetting.aoData[i]._aData[3];
     $("input[id='conf_param_" + conf_param_name + "']").val(oSetting.aoData[i]._aData[2]);
   }
 }
@@ -158,11 +158,12 @@ function reset_config_params(datatable)
 function apply_config_params(url, datatable)
 {
   var oSetting = datatable.fnSettings();
-  var changed_conf_params = {}
+  var changed_conf_params = {};
   var dirty = false;
   for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
-    var conf_param_name = oSetting.aoData[i]._aData[0];
+    var conf_param_name = oSetting.aoData[i]._aData[3];
     var input_val = $("input[id='conf_param_" + conf_param_name + "']").val();
+
     if(oSetting.aoData[i]._aData[2] != input_val)
     {
       dirty = true;
@@ -172,15 +173,12 @@ function apply_config_params(url, datatable)
 
   if(dirty)
   {
-    var api_params = {
-      "conf_params": changed_conf_params,
-    };
-    Api.put(url, api_params,
+    Api.put(url, {"conf_params": changed_conf_params},
       success_callback = function(data)
       {
         // Set the 'original' value to what we just posted
         for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
-          var conf_param_name = oSetting.aoData[i]._aData[0];
+          var conf_param_name = oSetting.aoData[i]._aData[3];
           var input_val = $("input[id='conf_param_" + conf_param_name + "']").val();
           oSetting.aoData[i]._aData[2] = input_val
         }
