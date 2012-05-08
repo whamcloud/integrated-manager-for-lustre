@@ -339,5 +339,6 @@ def set_conf_params(obj, params):
 
     if param_records:
         mgs.set_conf_params(param_records)
-
-    return mgs
+        return mgs.id
+    else:
+        return None

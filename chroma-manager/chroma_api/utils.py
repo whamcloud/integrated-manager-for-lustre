@@ -144,23 +144,26 @@ class StatefulModelResource(CustomModelResource):
             stateful_object = bundle.obj
 
         dry_run = bundle.data.get('dry_run', False)
-        new_state = bundle.data['state']
+        if 'state' in bundle.data:
+            new_state = bundle.data['state']
 
-        if dry_run:
-            # FIXME: should this be a GET to something like /foo/transitions/from/to/
-            #        to get information about that transition?
-            if stateful_object.state == new_state:
-                report = []
+            if dry_run:
+                # FIXME: should this be a GET to something like /foo/transitions/from/to/
+                #        to get information about that transition?
+                if stateful_object.state == new_state:
+                    report = []
+                else:
+                    report = StateManager().get_transition_consequences(stateful_object, new_state)
+                raise custom_response(self, request, http.HttpResponse, report)
             else:
-                report = StateManager().get_transition_consequences(stateful_object, new_state)
-            raise custom_response(self, request, http.HttpResponse, report)
+                command = Command.set_state([(stateful_object, new_state)])
+                if command:
+                    raise custom_response(self, request, http.HttpAccepted,
+                            {'command': dehydrate_command(command)})
+                else:
+                    raise custom_response(self, request, http.HttpNoContent, None)
         else:
-            command = Command.set_state([(stateful_object, new_state)])
-            if command:
-                raise custom_response(self, request, http.HttpAccepted,
-                        {'command': dehydrate_command(command)})
-            else:
-                raise custom_response(self, request, http.HttpNoContent, None)
+            return bundle
 
     def obj_delete(self, request = None, **kwargs):
         obj = self.obj_get(request, **kwargs)
@@ -186,7 +189,7 @@ class ConfParamResource(StatefulModelResource):
         else:
             obj = bundle.obj
 
-        # FIXME: PUTing modified conf_params and modified state in the same request will
+        # FIXME HYD-1032: PUTing modified conf_params and modified state in the same request will
         # cause one of those two things to be ignored.
 
         if not 'conf_params' in bundle.data or isinstance(obj, ManagedMgs):
@@ -200,10 +203,10 @@ class ConfParamResource(StatefulModelResource):
             pass
         else:
             # TODO: validate all the conf_params before trying to set any of them
-            mgs = chroma_core.lib.conf_param.set_conf_params(obj, conf_params)
-            if mgs.conf_param_version != mgs.conf_param_version_applied:
+            mgs_id = chroma_core.lib.conf_param.set_conf_params(obj, conf_params)
+            if mgs_id:
                 async_result = command_run_jobs.delay([{'class_name': 'ApplyConfParams', 'args': {
-                    'mgs_id': mgs.id
+                    'mgs_id': mgs_id
                 }}], "Updating configuration parameters")
                 command_id = await_async_result(async_result)
 
