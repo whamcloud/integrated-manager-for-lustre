@@ -75,14 +75,19 @@ def main():
         from daemon.pidlockfile import PIDLockFile
 
         if os.path.exists(args.pid_file + ".lock") or os.path.exists(args.pid_file):
-            pid = int(open(args.pid_file).read())
             try:
+                pid = int(open(args.pid_file).read())
                 os.kill(pid, 0)
-            except OSError:
+            except (ValueError, OSError):
                 # Not running, delete stale PID file
-                os.remove(args.pid_file)
-                os.remove(args.pid_file + ".lock")
                 sys.stderr.write("Removing stale PID file\n")
+                try:
+                    os.remove(args.pid_file)
+                    os.remove(args.pid_file + ".lock")
+                except OSError, e:
+                    import errno
+                    if e.errno != errno.ENOENT:
+                        raise e
             else:
                 # Running, we should refuse to run
                 raise RuntimeError("Daemon is already running (PID %s)" % pid)
