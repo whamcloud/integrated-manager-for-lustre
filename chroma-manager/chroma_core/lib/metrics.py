@@ -54,30 +54,26 @@ class R3dMetricStore(MetricStore):
             Configure a default set of RRAs for a new database.  Subclasses
             may (and probably should) override this layout.
             """
-            # This isn't an ideal layout, but it's probably best to default to
-            # collecting too much.  The subclasses should define something which
-            # makes more sense for the metrics being collected.
-
-            # 60 rows of 1 sample = 10 minutes of 10s samples
+            # 8640 rows of 1 sample = 1 day of 10s samples
             db.archives.add(Average.objects.create(xff=0.5,
                 database=db,
                 cdp_per_row=1,
-                rows=60))
-            # 60 rows of 6 consolidated samples = 60 minutes of 1 minute samples
+                rows=8640))
+            # 10080 rows of 6 consolidated samples = 1 week of 1 minute samples
             db.archives.add(Average.objects.create(xff=0.5,
                 database=db,
                 cdp_per_row=6,
-                rows=60))
-            # 168 rows of 360 consolidated samples = 7 days of 1hr samples
+                rows=10080))
+            # 8760 rows of 30 consolidated samples = 1 month of 5 minute samples
             db.archives.add(Average.objects.create(xff=0.5,
                 database=db,
-                cdp_per_row=360,
-                rows=168))
-            # 365 rows of 8640 consolidated samples = 1 year of 1 day samples
+                cdp_per_row=30,
+                rows=8760))
+            # 262800 rows of 60 consolidated samples = 5 years of 10 minute samples
             db.archives.add(Average.objects.create(xff=0.5,
                 database=db,
-                cdp_per_row=8640,
-                rows=365))
+                cdp_per_row=60,
+                rows=262800))
 
         def _minimal_archives(db):
             """
