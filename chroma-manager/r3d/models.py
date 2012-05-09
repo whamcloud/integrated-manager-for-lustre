@@ -151,6 +151,7 @@ class Database(models.Model):
     last_update = models.BigIntegerField(blank=True)
     ds_pickle = PickledObjectField(null=True)
     prep_pickle = PickledObjectField(null=True)
+    rra_pointers = PickledObjectField(null=True)
 
     # Leverage the ContentTypes framework to allow R3D databases to be
     # optionally associated with other apps' models.
@@ -188,6 +189,15 @@ class Database(models.Model):
 
             if self.prep_pickle is None:
                 self.rebuild_prep_pickle()
+
+            if self.rra_pointers is None:
+                self.rebuild_rra_pointers()
+
+    def rebuild_rra_pointers(self, force=False):
+        if force or self.rra_pointers is None:
+            self.rra_pointers = {}
+            for rra in self.rra_list:
+                self.rra_pointers[rra.pk] = 0
 
     def rebuild_ds_pickle(self, force=False):
         if force or self.ds_pickle is None:
@@ -485,38 +495,6 @@ class Datasource(PoorMansStiModel):
     class Meta:
         unique_together = ("database", "name")
 
-    def save(self, *args, **kwargs):
-        new_ds = False
-        if self.id is None:
-            new_ds = True
-
-        super(Datasource, self).save(*args, **kwargs)
-
-        if new_ds:
-            # If this is a new DS, try to precreate the Prep/CDP entities.
-            # If there are no Archives defined yet, this won't do anything,
-            # and the entities will be precreated when the Archives are
-            # defined.  This path should only be taken when a DS is added
-            # after a Database has already been set up.
-            # FIXME: Is this still necessary?
-            for rra in self.database.archives.all():
-                if r3d.DEBUG:
-                    debug_print("  Associating new DS with rra: %s" %
-                                rra.__dict__)
-                rra.create_filler_cdps(self)
-
-    # This seems to be necessary to avoid integrity errors on delete.  Grumble.
-    def delete(self, *args, **kwargs):
-        # Let's not mess around with the ORM -- just delete these quick-like.
-        from django.db import connection, transaction
-        cursor = connection.cursor()
-        for table in "r3d_cdp".split():
-            cursor.execute("DELETE FROM %s WHERE datasource_id = %s" %
-                           (table, self.id))
-        transaction.commit_unless_managed()
-
-        super(Datasource, self).delete(*args, **kwargs)
-
     def transform_reading(self, db, value, update_time, interval):
         return value
 
@@ -676,30 +654,22 @@ class Archive(PoorMansStiModel):
     xff = SciFloatField(default=0.5)
     cdp_per_row = models.BigIntegerField()
     rows = models.BigIntegerField()
-    current_row = models.BigIntegerField(default=0)
 
     # ephemeral attributes
     steps_since_update = 0
     nan_cdps = 0
 
-    def create_filler_cdps(self, ds):
-        # When a DS has been added after the initial inserts, we need to
-        # create "filler" CDPs to make the number of DB rows match the RRA's
-        # current row count. This is ugly, but hopefully shouldn't happen
-        # too often.
-        for i in range(0, self.current_row):
-            CDP.objects.create(archive=self, datasource=ds)
+    def save(self, *args, **kwargs):
+        new_rra = self.pk is None
 
-    def ds_cdps(self, ds):
-        return self.cdps.filter(datasource=ds).order_by('row_id')
+        super(Archive, self).save(*args, **kwargs)
 
-    def store_ds_cdp(self, ds, cdp_prep):
-        # First, create and insert the new CDP for this row.
-        cdp = CDP(archive=self, datasource=ds, value=cdp_prep.primary)
-        cdp.save(force_insert=True)
-        if r3d.DEBUG:
-            debug_print("  saved %.2f -> datapoints[%d]" % (cdp.value,
-                                                            self.current_row))
+        if new_rra:
+            self.database.rra_pointers[self.pk] = 0
+            # NB: This pointer value is only used for the lifetime
+            # of the new .database object in this context -- it's not
+            # persisted to rdbms because we would clobber the "real"
+            # .database object.  Fun times.
 
     def calculate_cdp_value(self, cdp_prep, db, ds, elapsed_steps):
         raise RuntimeError("Method not implemented at this level")
@@ -854,34 +824,16 @@ class Min(Archive):
             cdp_prep.value = db.ds_pickle[ds.name].temp_val
 
 
-class CDP(models.Model):
-    """
-    Stores a Datasource's data points after they've been run through
-    the associated Archive's consolidation function.
-
-    """
-    # We don't want an auto-incrementing id here, because the id
-    # will be incremented per archive/datasource.  To keep Django happy,
-    # we'll let it create an id field but nuke it in the migration.
-    row_id = models.BigIntegerField(default=0)
-    archive = models.ForeignKey(Archive,
-                                db_index=True,
-                                related_name="cdps")
-    datasource = models.ForeignKey(Datasource,
-                                   db_index=True,
-                                   related_name="cdps")
+class ArchiveRow(models.Model):
+    archive_id = models.IntegerField()
     slot = models.BigIntegerField(default=0)
-    value = SciFloatField(null=True)
+    ds_pickle = PickledObjectField(null=True)
 
-    class Meta:
-        # For performance, we need a multi-column primary key spanning
-        # [row_id, archive, datasource], but Django doesn't roll that way
-        # (now?).  We'll need to set that up in the migration.  Just
-        # pretend like this works:
-        # primary_key = ["row_id", "archive", "datasource"]
-        # This index will trigger the ON DUPLICATE KEY ... clause of the
-        # query which we need for the round-robin functionality.
-        unique_together = ["archive", "datasource", "slot"]
+    def __init__(self, *args, **kwargs):
+        super(ArchiveRow, self).__init__(*args, **kwargs)
+
+        if self.ds_pickle is None:
+            self.ds_pickle = {}
 
     def _get_db_prepped_value(self, field_name):
         meta = self.__class__._meta
@@ -890,40 +842,26 @@ class CDP(models.Model):
         except IndexError:
             return RuntimeError("Can't find Field for %s" % field_name)
 
-        # Can NOT for the life of me figure out the "correct" way to do
-        # this, so whatevs.  Rummaged through Django's guts but couldn't
-        # figure out where None -> "NULL".  If we don't catch this here,
-        # it gets through to the DB which barfs on it.
-        pv = field.get_prep_value(field.pre_save(self, True))
-        return (pv is None and "NULL" or pv)
+        return field.get_prep_value(field.pre_save(self, True))
 
-    def save(self, **kwargs):
+    def save(self, *args, **kwargs):
+        self._meta = self.__class__._meta
         # Bit of a hack; have to let the field diddle itself to get a
         # db-safe value.
-        prep_value = self._get_db_prepped_value("value")
+        prepped_pickle = self._get_db_prepped_value("ds_pickle")
 
         from django.db import connection, transaction
         cursor = connection.cursor()
         sql = """
-INSERT INTO %s_cdp (row_id, slot, archive_id, datasource_id, value)
-SELECT
-  (COALESCE(MAX(row_id), -1) + 1),
-  (COALESCE(MAX(row_id), -1) + 1) MOD %s,
-  %s, %s, %s
-FROM %s_cdp
-WHERE archive_id = %s AND datasource_id = %s
+INSERT INTO %s_archiverow (archive_id, slot, ds_pickle)
+VALUES(%%s, %%s, %%s)
 ON DUPLICATE KEY UPDATE
-  row_id=VALUES(row_id),
-  slot=VALUES(slot),
   archive_id=VALUES(archive_id),
-  datasource_id=VALUES(datasource_id),
-  value=VALUES(value)
-        """ % (self._meta.app_label,
-               self.archive.rows,
-               self.archive.pk, self.datasource.pk, prep_value,
-               self._meta.app_label,
-               self.archive.pk, self.datasource.pk)
-        cursor.execute(sql)
+  slot=VALUES(slot),
+  ds_pickle=VALUES(ds_pickle)
+        """ % (self._meta.app_label)
+        params = [self.archive_id, self.slot, prepped_pickle]
+        cursor.execute(sql, params)
         transaction.commit_unless_managed()
 
 

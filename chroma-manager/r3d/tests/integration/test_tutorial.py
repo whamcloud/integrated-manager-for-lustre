@@ -61,16 +61,16 @@ class SingleDsTutorialTest(TestCase):
             (920805300L, {u'speed': 0.02}),
             (920805600L, {u'speed': 0.0}),
             (920805900L, {u'speed': 0.0}),
-            (920806200L, {u'speed': 0.033333333333299998}),
-            (920806500L, {u'speed': 0.033333333333299998}),
-            (920806800L, {u'speed': 0.033333333333299998}),
+            (920806200L, {u'speed': 0.033333333333333333}),
+            (920806500L, {u'speed': 0.033333333333333333}),
+            (920806800L, {u'speed': 0.033333333333333333}),
             (920807100L, {u'speed': 0.02}),
             (920807400L, {u'speed': 0.02}),
             (920807700L, {u'speed': 0.02}),
-            (920808000L, {u'speed': 0.0133333333333}),
-            (920808300L, {u'speed': 0.016666666666700001}),
-            (920808600L, {u'speed': 0.0066666666666700004}),
-            (920808900L, {u'speed': 0.0033333333333299998}),
+            (920808000L, {u'speed': 0.01333333333333333433334}),
+            (920808300L, {u'speed': 0.016666666666666666}),
+            (920808600L, {u'speed': 0.0066666666666666671}),
+            (920808900L, {u'speed': 0.0033333333333333335}),
             (920809200L, {u'speed': None}),
         )
 
@@ -81,8 +81,8 @@ class SingleDsTutorialTest(TestCase):
             (920800800L, {u'speed': None}),
             (920802600L, {u'speed': None}),
             (920804400L, {u'speed': None}),
-            (920806200L, {u'speed': 0.018666666666699999}),
-            (920808000L, {u'speed': 0.0233333333333}),
+            (920806200L, {u'speed': 0.018666666666666665}),
+            (920808000L, {u'speed': 0.023333333333333334}),
         )
 
         actual = self.rrd.fetch("Average", 920799000, 920809200)
@@ -154,16 +154,16 @@ class MultiDsTutorialTest(TestCase):
             (920805300L, {u'speed': 0.02, u'kbytes_free': 1979618.0}),
             (920805600L, {u'speed': 0.0, u'kbytes_free': 1979617.0}),
             (920805900L, {u'speed': 0.0, u'kbytes_free': 1979616.0}),
-            (920806200L, {u'speed': 0.033333333333299998, u'kbytes_free': 1979615.0}),
-            (920806500L, {u'speed': 0.033333333333299998, u'kbytes_free': 1979614.0}),
-            (920806800L, {u'speed': 0.033333333333299998, u'kbytes_free': 1979613.0}),
+            (920806200L, {u'speed': 0.033333333333333333, u'kbytes_free': 1979615.0}),
+            (920806500L, {u'speed': 0.033333333333333333, u'kbytes_free': 1979614.0}),
+            (920806800L, {u'speed': 0.033333333333333333, u'kbytes_free': 1979613.0}),
             (920807100L, {u'speed': 0.02, u'kbytes_free': 1979612.0}),
             (920807400L, {u'speed': 0.02, u'kbytes_free': 1979612.0}),
             (920807700L, {u'speed': 0.02, u'kbytes_free': 1979611.0}),
-            (920808000L, {u'speed': 0.0133333333333, u'kbytes_free': 1979608.0}),
-            (920808300L, {u'speed': 0.016666666666700001, u'kbytes_free': 1979570.0}),
-            (920808600L, {u'speed': 0.0066666666666700004, u'kbytes_free': 1979800.0}),
-            (920808900L, {u'speed': 0.0033333333333299998, u'kbytes_free': 1979940.0}),
+            (920808000L, {u'speed': 0.013333333333333334, u'kbytes_free': 1979608.0}),
+            (920808300L, {u'speed': 0.016666666666666666, u'kbytes_free': 1979570.0}),
+            (920808600L, {u'speed': 0.0066666666666666671, u'kbytes_free': 1979800.0}),
+            (920808900L, {u'speed': 0.0033333333333333335, u'kbytes_free': 1979940.0}),
             (920809200L, {u'speed': None, u'kbytes_free': None}),
         )
 
@@ -174,8 +174,8 @@ class MultiDsTutorialTest(TestCase):
             (920800800L, {u'speed': None, u'kbytes_free': None}),
             (920802600L, {u'speed': None, u'kbytes_free': None}),
             (920804400L, {u'speed': None, u'kbytes_free': None}),
-            (920806200L, {u'speed': 0.018666666666699999, u'kbytes_free': 1979617.5}),
-            (920808000L, {u'speed': 0.0233333333333, u'kbytes_free': 1979611.6666699999}),
+            (920806200L, {u'speed': 0.018666666666666665, u'kbytes_free': 1979617.5}),
+            (920808000L, {u'speed': 0.023333333333333334, u'kbytes_free': 1979611.6666666667}),
         )
 
         actual = self.rrd.fetch("Average", 920799000, 920809200)
@@ -200,7 +200,7 @@ class MultiDsTutorialTest(TestCase):
             (920802600L, {u'kbytes_free': None}),
             (920804400L, {u'kbytes_free': None}),
             (920806200L, {u'kbytes_free': 1979617.5}),
-            (920808000L, {u'kbytes_free': 1979611.6666699999}),
+            (920808000L, {u'kbytes_free': 1979611.6666666667}),
         )
 
         actual = self.rrd.fetch("Average",
@@ -258,11 +258,11 @@ class LongerMultiDSOverlaps(TestCase):
         self.assertEqual(self.rrd.last_update, 920813400)
 
         expected = (
-            (920806200L, {u'speed': 0.018666666666699999, u'kbytes_free': None}),
-            (920808000L, {u'speed': 0.0233333333333, u'kbytes_free': None}),
-            (920809800L, {u'speed': 0.0088888888888900008, u'kbytes_free': 1979619.0}),
+            (920806200L, {u'speed': 0.018666666666666665, u'kbytes_free': None}),
+            (920808000L, {u'speed': 0.023333333333333334, u'kbytes_free': None}),
+            (920809800L, {u'speed': 0.0088888888888888889, u'kbytes_free': 1979619.0}),
             (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
-            (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666699999}),
+            (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666666667}),
         )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)
@@ -323,11 +323,11 @@ class PostCreateNewDs(TestCase):
         self.assertEqual(self.rrd.last_update, 920813400)
 
         expected = (
-            (920806200L, {u'speed': 0.018666666666699999, u'kbytes_free': None}),
-            (920808000L, {u'speed': 0.0233333333333, u'kbytes_free': None}),
-            (920809800L, {u'speed': 0.0088888888888900008, u'kbytes_free': 1979619.0}),
+            (920806200L, {u'speed': 0.018666666666666665, u'kbytes_free': None}),
+            (920808000L, {u'speed': 0.023333333333333334, u'kbytes_free': None}),
+            (920809800L, {u'speed': 0.0088888888888888889, u'kbytes_free': 1979619.0}),
             (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
-            (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666699999}),
+            (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666666667}),
         )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)
@@ -393,16 +393,16 @@ class SingleDsUpdateDictTest(TestCase):
             (920805300L, {u'speed': 0.02}),
             (920805600L, {u'speed': 0.0}),
             (920805900L, {u'speed': 0.0}),
-            (920806200L, {u'speed': 0.033333333333299998}),
-            (920806500L, {u'speed': 0.033333333333299998}),
-            (920806800L, {u'speed': 0.033333333333299998}),
+            (920806200L, {u'speed': 0.033333333333333333}),
+            (920806500L, {u'speed': 0.033333333333333333}),
+            (920806800L, {u'speed': 0.033333333333333333}),
             (920807100L, {u'speed': 0.02}),
             (920807400L, {u'speed': 0.02}),
             (920807700L, {u'speed': 0.02}),
-            (920808000L, {u'speed': 0.0133333333333}),
-            (920808300L, {u'speed': 0.016666666666700001}),
-            (920808600L, {u'speed': 0.0066666666666700004}),
-            (920808900L, {u'speed': 0.0033333333333299998}),
+            (920808000L, {u'speed': 0.013333333333333334}),
+            (920808300L, {u'speed': 0.016666666666666666}),
+            (920808600L, {u'speed': 0.0066666666666666671}),
+            (920808900L, {u'speed': 0.0033333333333333335}),
             (920809200L, {u'speed': None}),
         )
 
@@ -413,8 +413,8 @@ class SingleDsUpdateDictTest(TestCase):
             (920800800L, {u'speed': None}),
             (920802600L, {u'speed': None}),
             (920804400L, {u'speed': None}),
-            (920806200L, {u'speed': 0.018666666666699999}),
-            (920808000L, {u'speed': 0.0233333333333}),
+            (920806200L, {u'speed': 0.018666666666666665}),
+            (920808000L, {u'speed': 0.023333333333333334}),
         )
 
         actual = self.rrd.fetch("Average", 920799000, 920809200)
@@ -497,11 +497,11 @@ class PostCreateNewDsUpdateDict(TestCase):
         self.assertEqual(self.rrd.last_update, 920813400)
 
         expected = (
-            (920806200L, {u'speed': 0.018666666666699999, u'kbytes_free': None}),
-            (920808000L, {u'speed': 0.0233333333333, u'kbytes_free': None}),
-            (920809800L, {u'speed': 0.0088888888888900008, u'kbytes_free': 1979619.0}),
+            (920806200L, {u'speed': 0.018666666666666665, u'kbytes_free': None}),
+            (920808000L, {u'speed': 0.023333333333333334, u'kbytes_free': None}),
+            (920809800L, {u'speed': 0.0088888888888888889, u'kbytes_free': 1979619.0}),
             (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
-            (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666699999}),
+            (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666666667}),
         )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)
@@ -573,11 +573,11 @@ class PostCreateNewDsUpdateDictWithOpts(TestCase):
         self.assertEqual(self.rrd.last_update, 920813400)
 
         expected = (
-            (920806200L, {u'speed': 0.018666666666699999, u'kbytes_free': None}),
-            (920808000L, {u'speed': 0.0233333333333, u'kbytes_free': None}),
-            (920809800L, {u'speed': 0.0088888888888900008, u'kbytes_free': 1979619.0}),
+            (920806200L, {u'speed': 0.018666666666666665, u'kbytes_free': None}),
+            (920808000L, {u'speed': 0.023333333333333334, u'kbytes_free': None}),
+            (920809800L, {u'speed': 0.0088888888888888889, u'kbytes_free': 1979619.0}),
             (920811600L, {u'speed': None, u'kbytes_free': 1979614.5}),
-            (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666699999}),
+            (920813400L, {u'speed': None, u'kbytes_free': 1979614.1666666667}),
         )
 
         actual = self.rrd.fetch("Average", 920804400, 920813400)

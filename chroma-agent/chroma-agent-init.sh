@@ -13,7 +13,7 @@ export DAEMON_BIN=/usr/bin/chroma-agent-daemon
 
 start() {
     echo -n "Starting the Chroma Agent daemon: "
-    $AGENT_BIN --pid-file=$PID_FILE
+    $DAEMON_BIN --pid-file=$PID_FILE
     echo
 }
 

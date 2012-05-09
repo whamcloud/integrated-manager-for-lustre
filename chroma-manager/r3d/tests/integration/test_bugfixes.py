@@ -271,7 +271,7 @@ class BugHyd997(TestCase):
                                           (self.sample_count - 120))
         last_20 = self.rrd.fetch('Average', start_time=about_20_ago)
 
-        empty_rows = last_20[-12:-1]
+        empty_rows = last_20[-11:]
         self.assertSequenceEqual([None for i in range(len(empty_rows))],
                                  [r[1]['ds_counter'] for r in empty_rows])
 
