@@ -273,21 +273,21 @@ class HostContactAlert(AlertState):
 
 class LNetOfflineAlert(AlertState):
     def message(self):
-        return "LNET offline on server %s" % self.alert_item
+        return "LNet offline on server %s" % self.alert_item
 
     class Meta:
         app_label = 'chroma_core'
 
     def begin_event(self):
         return AlertEvent(
-                message_str = "LNET stopped on host '%s'" % self.alert_item,
+                message_str = "LNet stopped on host '%s'" % self.alert_item,
                 host = self.alert_item,
                 alert = self,
                 severity = WARNING)
 
     def end_event(self):
         return AlertEvent(
-                message_str = "LNET started on host '%s'" % self.alert_item,
+                message_str = "LNet started on host '%s'" % self.alert_item,
                 host = self.alert_item,
                 alert = self,
                 severity = INFO)
