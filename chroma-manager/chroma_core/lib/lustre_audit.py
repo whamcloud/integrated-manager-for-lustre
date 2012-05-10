@@ -103,16 +103,7 @@ class UpdateScan(object):
         else:
             contact = True
 
-            # Get state of Client objects
-            #self.learn_clients()
-
-            # Forgotten entities should be ignored so that they're
-            # not "rediscovered" or monitored.
-            self.cull_forgotten_data()
-
-            # Older agents don't send this list
-            if 'capabilities' in self.host_data:
-                self.learn_unmanaged_host()
+            self.learn_capabilities()
 
             self.update_lnet()
             self.update_resource_locations()
@@ -138,67 +129,24 @@ class UpdateScan(object):
 
         return contact
 
-    def cull_forgotten_data(self):
-        mounted_uuids = dict([(m['fs_uuid'], m) for m in self.host_data['mounts']])
-        forgotten_uuids = dict([(mt.uuid, mt) for mt in ManagedTarget._base_manager.filter(state = 'forgotten')])
-
-        for forgotten_uuid in forgotten_uuids:
-            if forgotten_uuid in mounted_uuids:
-                audit_log.debug("Culling forgotten ManagedTarget: %s" % forgotten_uuids[forgotten_uuid].name)
-                self.host_data['mounts'].remove(mounted_uuids[forgotten_uuid])
-
     def _audited_lnet_state(self):
         return {(False, False): 'lnet_unloaded',
                 (True, False): 'lnet_down',
                 (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'],
                                           self.host_data['lnet_up'])]
 
-    def learn_unmanaged_host(self):
+    def learn_capabilities(self):
+        """Update the host record from the capabilities reported by the agent"""
         # FIXME: What to do if we split out rsyslog into an optional
         # package?  Rename it to configure_rsyslog?
-        def _agent_can_manage(cap_list):
-            return len([c for c in cap_list if "manage_" in c]) > 0
 
-        # If the agent is capable of managing things, we don't want to
-        # mess around in here.
-        if _agent_can_manage(self.host_data['capabilities']):
-            return False
-
-        # If a host is monitor-only, then we can't effect any changes
-        # on its state via the agent.  We still want to be aware of state
-        # changes as they happen, though.  There are a few scenarios
-        # to account for:
-        #
-        # 1. If we encounter an unmanaged host which is presenting a
-        #    greater number of mounted targets than what we already
-        #    know about, then it's a good trigger for running a
-        #    DetectTargetsJob.
-        #
-        # TODO: This is a terrible way to do it.  The right way to do
-        # is probably to compare the set of known mount uuids vs. the
-        # audited mounts.  Commenting it out for now, as there are
-        # concerns about automatic initiation of DetectTargetsJobs anyhow.
-        #if len(self.host.managedtargetmount_set.all()) < len(self.host_data['mounts']):
-            # Only try this if LNet is actually up and running. I don't
-            # know why there would be more mounts than we already know about
-            # if this weren't the case, but there's no point in running
-            # useless jobs if there aren't Lustre targets to find.
-            #
-            # NB: This may result in a bit of flailing if not all of
-            # the hosts are in 'lnet_up'.  I'm undecided as to whether
-            # this is a good thing or if the dependency should be relaxed.
-            #from chroma_core.models import DetectTargetsJob
-            #if self.host.state == "lnet_up":
-            #    audit_log.debug("Running DetectTargetsJob")
-            #    job = DetectTargetsJob()
-            #    StateManager().add_job(job)
-
-        # Finally, ensure that the host is flagged as immutable, from
-        # our perspective.
-        if not self.host.immutable_state:
-            audit_log.debug("Setting immutable_state flag on %s" % self.host)
-            self.host.immutable_state = True
-            self.host.save()
+        if len([c for c in self.host_data['capabilities'] if "manage_" in c]) > 0:
+            return
+        else:
+            if not self.host.immutable_state:
+                audit_log.debug("Setting immutable_state flag on %s" % self.host)
+                self.host.immutable_state = True
+                self.host.save()
 
     def update_lnet(self):
         # Update LNet status
