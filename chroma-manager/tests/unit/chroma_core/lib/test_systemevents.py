@@ -43,13 +43,28 @@ class TestHandlers(JobTestCaseWithHost):
             event = ClientConnectEvent.objects.latest('id')
             self.assertEqual(event.lustre_pid, example['lustre_pid'])
 
-    def test_client_eviction_handler(self):
-        from chroma_core.lib.systemevents import client_eviction_handler
+    def test_admin_client_eviction_handler(self):
+        from chroma_core.lib.systemevents import admin_client_eviction_handler
 
         examples = [
             {
                 'message': " Lustre: 2689:0:(genops.c:1379:obd_export_evict_by_uuid()) lustre-OST0001: evicting 26959b68-1208-1fca-1f07-da2dc872c55f at adminstrative request",
                 'lustre_pid': 2689
+            }
+        ]
+
+        for example in examples:
+            admin_client_eviction_handler(Systemevents.objects.create(message=example['message']), self.host)
+            event = ClientConnectEvent.objects.latest('id')
+            self.assertEqual(event.lustre_pid, example['lustre_pid'])
+
+    def test_client_eviction_handler(self):
+        from chroma_core.lib.systemevents import client_eviction_handler
+
+        examples = [
+            {
+                'message': " LustreError: 0:0:(ldlm_lockd.c:356:waiting_locks_callback()) ### lock callback timer expired after 101s: evicting client at 0@lo ns: mdt-ffff8801cd5be000 lock: ffff880126f8f480/0xe99a593b682aed45 lrc: 3/0,0 mode: PR/PR res: 8589935876/10593 bits 0x3 rrc: 2 type: IBT flags: 0x4000020 remote: 0xe99a593b682aecea expref: 14 pid: 3636 timeout: 4389324308'",
+                'lustre_pid': 3636
             }
         ]
 
