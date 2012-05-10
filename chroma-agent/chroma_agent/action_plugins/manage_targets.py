@@ -252,8 +252,13 @@ def register_target(args):
         else:
             raise e
 
-    shell.try_run(["mount", "-t", "lustre", args.device, args.mountpoint])
-    shell.try_run(["umount", args.mountpoint])
+    try:
+        shell.try_run(["mount", "-t", "lustre", args.device, args.mountpoint])
+        shell.try_run(["umount", args.mountpoint])
+    except Exception, e:
+        shell.try_run(["mount", "-t", "lustre", args.device, args.mountpoint])
+        shell.try_run(["umount", args.mountpoint])
+
     blkid_output = shell.try_run(["blkid", "-c/dev/null", "-o", "value", "-s", "LABEL", args.device])
     if blkid_output.find("ffff") != -1:
         # Oh hey, we reproduced HYD-268, see if the tunefs output is any different from the blkid output
