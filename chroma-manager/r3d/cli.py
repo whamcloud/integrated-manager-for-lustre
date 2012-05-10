@@ -196,6 +196,8 @@ def main():
                         help="Beginning of stats request window (default: now - 5min)")
     parser.add_argument("--end", "-e", action=TimeAction,
                         default=now, help="End of stats request window (default: now)")
+    parser.add_argument("--step", "-t", type=int, default=1,
+                    help="Set lower limit of query resolution (default: 1 step)")
 
     parser.add_argument("--interval", "-n", type=int,
                         help="If supplied, refresh every N seconds")
@@ -251,7 +253,8 @@ def main():
             else:
                 flush_transaction()
                 rows = db.fetch(ns.archive, fetch_metrics=ns.datasource,
-                                start_time=ns.begin, end_time=ns.end)
+                                start_time=ns.begin, end_time=ns.end,
+                                step=ns.step)
                 for row in rows:
                     row_time, data = row
                     if ns.separate:

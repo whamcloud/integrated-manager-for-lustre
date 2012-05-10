@@ -179,6 +179,16 @@ class Database(models.Model):
 
         self.cache_lists_and_check_pickles()
 
+    def available_resolutions(self):
+        """
+        Returns a list of resolutions, in seconds, available for query.
+        By default, the highest-resolution archive which best matches the
+        query window is used to provide datapoints, but a lower resolution
+        can be specified if desired.
+        """
+        return [rra.cdp_per_row * self.step
+                for rra in self.archives.order_by('cdp_per_row')]
+
     def cache_lists_and_check_pickles(self):
         self.ds_list = list(self.datasources.all().order_by('id'))
         self.rra_list = list(self.archives.all().order_by('id'))
