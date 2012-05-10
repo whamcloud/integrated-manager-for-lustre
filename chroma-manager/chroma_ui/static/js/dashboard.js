@@ -415,7 +415,7 @@ var Dashboard = (function() {
 
     var filesystem_rows = "";
     _.each(ApiCache.list('filesystem'), function(filesystem) {
-      var t = _.template("<tr><td class='icon_columns'><%= LiveObject.alertIcon(filesystem) %></td><td><%= filesystem.name %></td><td><%= formatBytes(filesystem.bytes_total) %></td><td><%= formatBytes(filesystem.bytes_free) %></td></tr>");
+      var t = _.template("<tr><td class='icon_columns'><%= LiveObject.alertIcon(filesystem) %></td><td><%= filesystem.name %></td><td align='right'><%= formatBytes(filesystem.bytes_total) %></td><td align='right'><%= formatBytes(filesystem.bytes_free) %></td></tr>");
       filesystem_rows += t({filesystem: filesystem});
     });
     $('#global_filesystem_table').find('tbody').html(filesystem_rows);

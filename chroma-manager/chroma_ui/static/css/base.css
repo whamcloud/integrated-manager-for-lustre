@@ -962,6 +962,10 @@ table.properties td {
     white-space: nowrap;
 }
 
+table#global_filesystem_table {
+    width: 100%
+}
+
 .job_row a.navigation {
     text-decoration: none;
 }
