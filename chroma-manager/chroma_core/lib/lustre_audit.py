@@ -30,7 +30,7 @@ def nids_to_mgs(host, nid_strings):
         return ManagedMgs.objects.get(targetmount__host = host)
 
     from django.db.models import Count
-    nids = Nid.objects.values('nid_string').filter(nid_string__in = nid_strings).annotate(Count('id'))
+    nids = Nid.objects.values('nid_string').filter(lnet_configuration__host__not_deleted = True, nid_string__in = nid_strings).annotate(Count('id'))
     unique_nids = [n['nid_string'] for n in nids if n['id__count'] == 1]
 
     if len(unique_nids) == 0:
@@ -442,7 +442,6 @@ class DetectScan(object):
                 volumenode = self.get_volume_node_for_target(None, self.host, mgs_local_info['devices'])
                 primary = self.is_primary(mgs_local_info)
                 tm = ManagedTargetMount.objects.create(
-                        immutable_state = True,
                         target = mgs,
                         host = self.host,
                         primary = primary,
@@ -474,7 +473,7 @@ class DetectScan(object):
             # We didn't find an existing ManagedMgs referring to
             # this LUN, create one
             mgs = ManagedMgs(uuid = mgs_local_info['uuid'],
-                             state = "mounted", lun = volumenode.volume,
+                             state = "mounted", volume = volumenode.volume,
                              name = "MGS", immutable_state = True)
             mgs.save()
             audit_log.info("Learned MGS on %s" % self.host)
@@ -560,6 +559,7 @@ class DetectScan(object):
 
             try:
                 primary = self.is_primary(local_info)
+                audit_log.info("Target %s seen on %s: primary=%s" % (target, self.host, primary))
                 volumenode = self.get_volume_node_for_target(target, self.host, local_info['devices'])
                 (tm, created) = ManagedTargetMount.objects.get_or_create(target = target,
                         host = self.host, primary = primary,
@@ -573,16 +573,16 @@ class DetectScan(object):
                 audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], self.host))
 
     def get_volume_node_for_target(self, target, host, paths):
-        lun_nodes = VolumeNode.objects.filter(path__in = paths, host = host)
-        if lun_nodes.count() == 0:
+        volume_nodes = VolumeNode.objects.filter(path__in = paths, host = host)
+        if volume_nodes.count() == 0:
             raise RuntimeError("No device nodes detected matching paths %s on host %s" % (paths, host))
         else:
-            if lun_nodes.count() > 1:
+            if volume_nodes.count() > 1:
                 # On a sanely configured server you wouldn't have more than one, but if
                 # e.g. you formatted an mpath device and then stopped multipath, you
                 # might end up seeing the two underlying devices.  So we cope, but warn.
-                audit_log.warning("DetectScan: Multiple VolumeNodes found for paths %s on host %s, using %s" % (paths, host, lun_nodes[0].path))
-            return lun_nodes[0]
+                audit_log.warning("DetectScan: Multiple VolumeNodes found for paths %s on host %s, using %s" % (paths, host, volume_nodes[0].path))
+            return volume_nodes[0]
 
     def get_or_create_target(self, mgs, local_info):
         name = local_info['name']
@@ -604,16 +604,14 @@ class DetectScan(object):
 
         try:
             # Is it an already detected or configured target?
-            target_mount = ManagedTargetMount.objects.get(
-                    volume_node = self.get_volume_node_for_target(None, self.host, device_node_paths), host = self.host)
-            target = target_mount.target
-            if target.name == None:
+            target = ManagedTarget.objects.get(managedtargetmount__volume_node = self.get_volume_node_for_target(None, self.host, device_node_paths))
+            if target.name is None:
                 target.name = name
                 target.save()
                 audit_log.info("Learned name for configured target %s" % (target))
 
             return target
-        except ManagedTargetMount.DoesNotExist:
+        except ManagedTarget.DoesNotExist:
             # We are detecting a target anew, or detecting a new mount for an already-named target
             candidates = ManagedTarget.objects.filter(name = name)
             for target in candidates:

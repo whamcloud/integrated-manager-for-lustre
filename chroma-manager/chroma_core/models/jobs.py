@@ -104,6 +104,8 @@ class StatefulObject(models.Model):
 
         if not self.state:
             self.state = self.initial_state
+
+        if not self.state_modified_at:
             self.state_modified_at = datetime.datetime.utcnow()
 
     def set_state(self, state, intentional = False):
