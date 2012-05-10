@@ -117,15 +117,16 @@ def server_security_flavor_handler(entry, h):
 #
 def admin_client_eviction_handler(entry, h):
     uuid = get_word_after(entry.message, "evicting ")
-    msg = "client %s evicted by the administrator" %  uuid
+    msg = "client %s evicted by the administrator" % uuid
     lustre_pid = entry.message[9:9 + entry.message[9:].find(":")]
     ClientConnectEvent(severity = logging.WARNING, host = h, message_str = msg,
                        lustre_pid = lustre_pid).save()
 
+
 #
 # real eviction
 #
-# LustreError: 0:0:(ldlm_lockd.c:356:waiting_locks_callback()) ### lock callback timer expired after 101s: evicting client at 0@lo ns: mdt-ffff8801cd5be000 lock: ffff880126f8f480/0xe99a593b682aed45 lrc: 3/0,0 mode: PR/PR res: 8589935876/10593 bits 0x3 rrc: 2 type: IBT flags: 0x4000020 remote: 0xe99a593b682aecea expref: 14 pid: 3636 timeout: 4389324308' 
+# LustreError: 0:0:(ldlm_lockd.c:356:waiting_locks_callback()) ### lock callback timer expired after 101s: evicting client at 0@lo ns: mdt-ffff8801cd5be000 lock: ffff880126f8f480/0xe99a593b682aed45 lrc: 3/0,0 mode: PR/PR res: 8589935876/10593 bits 0x3 rrc: 2 type: IBT flags: 0x4000020 remote: 0xe99a593b682aecea expref: 14 pid: 3636 timeout: 4389324308'
 def client_eviction_handler(entry, h):
     s = entry.message.find("### ") + 4
     l = entry.message[s:].find(": evicting client at ")
@@ -135,6 +136,7 @@ def client_eviction_handler(entry, h):
     lustre_pid = get_word_after(entry.message, "pid: ")
     ClientConnectEvent(severity = logging.WARNING, host = h, message_str = msg,
                        lustre_pid = lustre_pid).save()
+
 
 class SystemEventsAudit:
     def get_last_id(self):
