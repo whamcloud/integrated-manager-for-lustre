@@ -810,8 +810,8 @@ def _get_host_dependents(host):
         t = t.downcast()
         if hasattr(t, 'filesystem'):
             filesystems.add(t.filesystem)
-        elif hasattr(t, 'filesystems'):
-            for f in t.filesystems:
+        elif hasattr(t, 'managedfilesystem_set'):
+            for f in t.managedfilesystem_set.all():
                 filesystems.add(f)
     for f in filesystems:
         for t in f.get_targets():

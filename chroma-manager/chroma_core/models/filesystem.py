@@ -24,19 +24,18 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         return self.name
 
     def get_available_states(self, begin_state):
-        available_states = super(ManagedFilesystem, self).get_available_states(begin_state)
-
         if self.immutable_state:
-            available_states.append('forgotten')
+            return ['forgotten']
         else:
+            available_states = super(ManagedFilesystem, self).get_available_states(begin_state)
             available_states = list(set(available_states) - set(['forgotten']))
 
-        # Exclude 'stopped' if we are in 'unavailable' and everything is stopped
-        target_states = set([t.state for t in self.get_filesystem_targets()])
-        if begin_state == 'unavailable' and not 'mounted' in target_states:
-            available_states = list(set(available_states) - set(['stopped']))
+            # Exclude 'stopped' if we are in 'unavailable' and everything is stopped
+            target_states = set([t.state for t in self.get_filesystem_targets()])
+            if begin_state == 'unavailable' and not 'mounted' in target_states:
+                available_states = list(set(available_states) - set(['stopped']))
 
-        return available_states
+            return available_states
 
     class Meta:
         unique_together = ('name', 'mgs')

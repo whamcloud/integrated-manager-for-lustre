@@ -235,15 +235,15 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
         return "/mnt/%s/mdt" % self.filesystem.name
 
     def get_available_states(self, begin_state):
-        # Exclude the transition to 'removed' in favour of being removed when our FS is
-        available_states = super(ManagedMdt, self).get_available_states(begin_state)
-        if 'removed' in available_states:
-            available_states.remove('removed')
-
         if self.immutable_state:
-            available_states.append('forgotten')
+            return []
+        else:
+            # Exclude the transition to 'removed' in favour of being removed when our FS is
+            available_states = super(ManagedMdt, self).get_available_states(begin_state)
+            if 'removed' in available_states:
+                available_states.remove('removed')
 
-        return available_states
+            return available_states
 
 
 class ManagedMgs(ManagedTarget, MeasuredEntity):
@@ -254,13 +254,19 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
         return "MGT"
 
     def get_available_states(self, begin_state):
-        # Exclude the transition to 'removed' in favour of being removed when our FS is
-        available_states = super(ManagedMgs, self).get_available_states(begin_state)
-        if self.managedfilesystem_set.count() > 0:
-            if 'removed' in available_states:
-                available_states.remove('removed')
+        if self.immutable_state:
+            if self.managedfilesystem_set.count() == 0:
+                return ['forgotten']
+            else:
+                return []
+        else:
+            # Exclude the transition to 'removed' in favour of being removed when our FS is
+            available_states = super(ManagedMgs, self).get_available_states(begin_state)
+            if self.managedfilesystem_set.count() > 0:
+                if 'removed' in available_states:
+                    available_states.remove('removed')
 
-        return available_states
+            return available_states
 
     @classmethod
     def get_by_host(cls, host):
