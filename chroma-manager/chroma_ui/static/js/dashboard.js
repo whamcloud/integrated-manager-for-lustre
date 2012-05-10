@@ -374,7 +374,7 @@ var Dashboard = (function() {
           "</li>"+
           "</ul>";
         $("#breadcrumbs").html(breadCrumbHtml);
-        populate_breadcrumb_filesystem(ApiCache.list('filesystem'), dashboard_filesystem.id);
+        populate_breadcrumb_filesystem(ApiCache.list('filesystem'));
 
         $("#ostKind").html(ostKindMarkUp);
       });
@@ -547,14 +547,17 @@ var Dashboard = (function() {
           var label;
           if (target) {
             label = target.attributes.label;
+            result[target_id] = {
+              id: target_id,
+              label: label,
+              data: update_data
+            };
           } else {
-            label = target_id;
+            // Exclude the target from the result this time, next time around
+            // the ApiCache will have caught up and we'll give some data
+            // with a proper axis name
           }
-          result[target_id] = {
-            id: target_id,
-            label: label,
-            data: update_data
-          };
+
         });
 
         return result;

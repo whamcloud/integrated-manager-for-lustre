@@ -271,15 +271,19 @@ var ChartManager = function(options) {
               // If data_callback is provided, it will update series_data for us
               var series_updates = chart.data_callback(chart, data);
               _.each(series_updates, function(series_update, series_id) {
+                var series_index;
                 if (chart.series_id_to_index[series_id] == undefined) {
-                  var series_conf = $.extend(true, {}, chart.series_template, {name: series_update.label})
+                  var series_conf = $.extend(true, {}, chart.series_template, {name: series_update.label});
                   var added_series = chart.instance.addSeries(series_conf);
-                  chart.series_id_to_index[series_id] = added_series.index;
+                  series_index = added_series.index;
+
+                  chart.series_id_to_index[series_id] = series_index;
                   chart.series_data[added_series.index] = []
+                } else {
+                  series_index = chart.series_id_to_index[series_id];
                 }
 
-                var i = chart.series_id_to_index[series_id];
-                chart.series_data[i].push.apply(chart.series_data[i], series_update.data);
+                chart.series_data[series_index].push.apply(chart.series_data[series_index], series_update.data);
               });
             } else {
               // Updates series_data from data
@@ -320,7 +324,7 @@ var ChartManager = function(options) {
               log("No data");
             }
 
-            var latest_ts = chart.series_end.getTime()
+            var latest_ts = chart.series_end.getTime();
             _.each(
               chart.series_data,
               function(series_data) {
@@ -338,7 +342,6 @@ var ChartManager = function(options) {
               }
             );
 
-
             // Update highcharts from series_data
             _.each(
               chart.instance.series,
@@ -350,8 +353,8 @@ var ChartManager = function(options) {
 
           chart.instance.redraw();
         },
-        error_callback = null,
-        blocking = false
+        null,
+        false
       );
     }
 

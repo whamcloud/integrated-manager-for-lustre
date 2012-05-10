@@ -66,6 +66,7 @@ var ApiCache = function(){
         });
       }
     }
+
     return object;
   }
 
