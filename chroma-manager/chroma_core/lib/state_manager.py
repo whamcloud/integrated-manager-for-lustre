@@ -470,7 +470,13 @@ class StateManager(object):
                         and not root_transition.new_state in dependency.acceptable_states:
                     assert dependency.fix_state != None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
                     job_log.debug("Reverse dependency: %s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states, root_transition.new_state, dependency.fix_state))
+
+                    if hasattr(dependency.fix_state, '__call__'):
+                        fix_state = dependency.fix_state(root_transition.new_state)
+                    else:
+                        fix_state = dependency.fix_state
+
                     dep_transition = self.emit_transition_deps(Transition(
                             dependent,
-                            dependent_state, dependency.fix_state), transition_stack)
+                            dependent_state, fix_state), transition_stack)
                     self.edges.add((root_transition, dep_transition))

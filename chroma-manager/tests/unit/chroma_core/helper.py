@@ -3,6 +3,7 @@ import logging
 from django.test import TestCase
 import mock
 from chroma_core.models.jobs import Command
+from chroma_core.models import Volume, VolumeNode
 
 
 def freshen(obj):
@@ -61,14 +62,11 @@ class JobTestCase(TestCase):
     mock_servers = None
     hosts = None
 
-    def _test_lun(self, host):
-        from chroma_core.models import Volume, VolumeNode
-
+    def _test_lun(self, primary_host, *args):
         volume = Volume.objects.create()
-        primary = True
-        for host in self.hosts:
-            VolumeNode.objects.create(volume = volume, host = host, path = "/fake/path/%s" % volume.id, primary = primary)
-            primary = False
+        VolumeNode.objects.create(volume = volume, host = primary_host, path = "/fake/path/%s" % volume.id, primary = True)
+        for host in args:
+            VolumeNode.objects.create(volume = volume, host = host, path = "/fake/path/%s" % volume.id, primary = False)
 
         return volume
 
@@ -114,7 +112,16 @@ class JobTestCase(TestCase):
         from chroma_core.models.host import LearnDevicesStep
         LearnDevicesStep.run = mock.Mock()
         from chroma_core.lib.storage_plugin.daemon import AgentDaemonRpc
-        AgentDaemonRpc.remove_host_resources = mock.Mock()
+
+        def fake_remove_host_resources(host_id):
+            from chroma_core.models.host import Volume, VolumeNode
+            for vn in VolumeNode.objects.filter(host__id = host_id):
+                VolumeNode.delete(vn.id)
+            for volume in Volume.objects.all():
+                if volume.volumenode_set.count() == 0:
+                    Volume.delete(volume.id)
+
+        AgentDaemonRpc.remove_host_resources = mock.Mock(side_effect = fake_remove_host_resources)
 
     def tearDown(self):
         import chroma_core.lib.agent

@@ -25,6 +25,12 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
     def get_available_states(self, begin_state):
         available_states = super(ManagedFilesystem, self).get_available_states(begin_state)
+
+        if self.immutable_state:
+            available_states.append('forgotten')
+        else:
+            available_states = list(set(available_states) - set(['forgotten']))
+
         # Exclude 'stopped' if we are in 'unavailable' and everything is stopped
         target_states = set([t.state for t in self.get_filesystem_targets()])
         if begin_state == 'unavailable' and not 'mounted' in target_states:
@@ -93,18 +99,13 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
         mgs = self.mgs.downcast()
 
-        if not self.immutable_state:
-            if state != 'removed':
-                deps.append(DependOn(mgs,
-                        'unmounted',
-                        acceptable_states = mgs.not_state('removed'),
-                        fix_state = 'removed'))
-        else:
-            if state != 'forgotten':
-                deps.append(DependOn(mgs,
-                    'unmounted',
-                    acceptable_states = mgs.not_state('forgotten'),
-                    fix_state = 'forgotten'))
+        remove_state = 'forgotten' if self.immutable_state else 'removed'
+
+        if state not in ['removed', 'forgotten']:
+            deps.append(DependOn(mgs,
+                'unmounted',
+                acceptable_states = mgs.not_states(['removed', 'forgotten']),
+                fix_state = remove_state))
 
         return DependAll(deps)
 

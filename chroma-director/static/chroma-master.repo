@@ -1,6 +1,6 @@
 [chroma-master]
 name=WhamOS-$releasever - Master
-baseurl=https://build.whamcloud.com/0b9505167130/job/chroma/arch=x86_64%2Cdistro=el6/lastSuccessfulBuild/artifact/dist/
+baseurl=https://build.whamcloudlabs.com/eb8a9e6739f7/job/chroma/arch=x86_64%2Cdistro=el6/lastSuccessfulBuild/artifact/dist/
 gpgcheck=0
-enabled=0
+enabled=1
 sslverify=0

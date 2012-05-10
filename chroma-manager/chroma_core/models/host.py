@@ -10,10 +10,11 @@ import dateutil.parser
 from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
+import itertools
 from chroma_core.models import StateChangeJob
 
 from chroma_core.models.utils import WorkaroundDateTimeField
-from chroma_core.models.jobs import StatefulObject, Job
+from chroma_core.models.jobs import StatefulObject, Job, StateWriteLock, AdvertisedJob
 from chroma_core.lib.job import  DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
 
@@ -46,7 +47,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     agent_token = models.CharField(max_length = 64)
 
     # TODO: separate the LNET state [unloaded, down, up] from the host state [created, removed]
-    states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed', 'forgotten']
+    states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
 
     last_contact = WorkaroundDateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
@@ -782,7 +783,7 @@ class DeleteHostStep(Step):
 
 
 class RemoveHostJob(StateChangeJob):
-    state_transition = (ManagedHost, ['lnet_up', 'lnet_down', 'lnet_unloaded'], 'removed')
+    state_transition = (ManagedHost, ['unconfigured', 'lnet_up', 'lnet_down', 'lnet_unloaded'], 'removed')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
@@ -797,7 +798,93 @@ class RemoveHostJob(StateChangeJob):
 
     def get_steps(self):
         return [(RemoveServerConfStep, {'host_id': self.host.id}),
+            (DeleteHostStep, {'host_id': self.host.id})]
+
+
+def _get_host_dependents(host):
+    from chroma_core.models.target import ManagedTarget
+
+    targets = set(list(ManagedTarget.objects.filter(managedtargetmount__host = host).distinct()))
+    filesystems = set()
+    for t in targets:
+        t = t.downcast()
+        if hasattr(t, 'filesystem'):
+            filesystems.add(t.filesystem)
+        elif hasattr(t, 'filesystems'):
+            for f in t.filesystems:
+                filesystems.add(f)
+    for f in filesystems:
+        for t in f.get_targets():
+            targets.add(t)
+
+    return targets, filesystems
+
+
+class DeleteHostDependents(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        host = ManagedHost.objects.get(pk = kwargs['host_id'])
+        targets, filesystems = _get_host_dependents(host)
+
+        from chroma_core.lib.job import job_log
+        job_log.info("DeleteHostDependents(%s): targets: %s, filesystems: %s" % (host, targets, filesystems))
+
+        for object in itertools.chain(targets, filesystems):
+            # We are allowed to modify state directly because
+            object.set_state('removed')
+            object.save()
+            object.__class__.delete(object.id)
+
+
+class ForceRemoveHostJob(AdvertisedJob):
+    host = models.ForeignKey(ManagedHost)
+
+    requires_confirmation = True
+
+    classes = ['ManagedHost']
+
+    verb = "Force Remove"
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def create_locks(self):
+        super(ForceRemoveHostJob, self).create_locks()
+
+        StateWriteLock.objects.create(
+            job = self,
+            locked_item = self.host,
+            begin_state = "",
+            end_state = 'removed'
+        )
+
+        targets, filesystems = _get_host_dependents(self.host)
+        # Take a write lock on get_stateful_object if this is a StateChangeJob
+        for object in itertools.chain(targets, filesystems):
+            StateWriteLock.objects.create(
+                job = self,
+                locked_item = object,
+                begin_state = "",
+                end_state = 'removed')
+
+    @classmethod
+    def get_args(cls, host):
+        return {'host_id': host.id}
+
+    def description(self):
+        return "Force remove host %s from configuration" % self.host
+
+    def get_steps(self):
+        return [(DeleteHostDependents, {'host_id': self.host.id}),
                 (DeleteHostStep, {'host_id': self.host.id})]
+
+    @classmethod
+    def get_confirmation(cls, instance):
+        return """Force-removing a server will cause Chroma to remove records of that server
+without attempting to contact the server.  Any targets which depend on this server will also
+be removed without any attempt to un-configure them.  This action should only be used if
+the server is permanently unavailable."""
 
 
 class RemoveUnconfiguredHostJob(StateChangeJob):
@@ -814,23 +901,3 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
 
     def get_steps(self):
         return [(DeleteHostStep, {'host_id': self.host.id})]
-
-
-class ForgetHostJob(StateChangeJob):
-    class Meta:
-        app_label = 'chroma_core'
-
-    state_transition = (ManagedHost, ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up'], 'forgotten')
-    stateful_object = 'host'
-    state_verb = "Remove"
-    host = models.ForeignKey(ManagedHost)
-
-    def description(self):
-        return "Removing unmanaged host %s" % (self.host.downcast())
-
-    def get_steps(self):
-        return [(RemoveServerConfStep, {'host_id': self.host.id}),
-                (DeleteHostStep, {'host_id': self.host.id})]
-
-    def get_requires_confirmation(self):
-        return True

@@ -70,7 +70,12 @@ class TestSharedTarget(JobTestCaseWithHost):
     def setUp(self):
         super(TestSharedTarget, self).setUp()
 
-        self.target = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        self.target = ManagedMgs.create_for_volume(
+            self._test_lun(
+                ManagedHost.objects.get(address='pair1'),
+                ManagedHost.objects.get(address='pair2')
+            ).id,
+            name = "MGS")
         self.assertEqual(ManagedMgs.objects.get(pk = self.target.pk).state, 'unformatted')
 
     def test_clean_setup(self):

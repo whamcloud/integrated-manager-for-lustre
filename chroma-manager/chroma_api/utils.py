@@ -10,7 +10,7 @@ import bisect
 
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.lib.state_manager import StateManager
-from chroma_core.models.jobs import Command
+from chroma_core.models.jobs import Command, AdvertisedJob
 from chroma_core.models.target import ManagedMgs
 from chroma_core.models.utils import await_async_result
 from chroma_core.tasks import command_run_jobs
@@ -117,13 +117,17 @@ class CustomModelResource(ModelResource):
 class StatefulModelResource(CustomModelResource):
     content_type_id = fields.IntegerField()
     available_transitions = fields.ListField()
+    available_jobs = fields.ListField()
     label = fields.CharField()
 
     class Meta:
-        readonly = ['state', 'content_type_id', 'available_transitions', 'label']
+        readonly = ['state', 'content_type_id', 'available_transitions', 'available_jobs', 'label']
 
     def dehydrate_available_transitions(self, bundle):
         return StateManager.available_transitions(bundle.obj)
+
+    def dehydrate_available_jobs(self, bundle):
+        return AdvertisedJob.get_available_jobs(bundle.obj)
 
     def dehydrate_content_type_id(self, bundle):
         if hasattr(bundle.obj, 'content_type'):

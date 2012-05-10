@@ -8,10 +8,10 @@ import json
 
 from django.db import models, transaction
 from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, NullStep, AnyTargetMountStep, job_log
-from chroma_core.models import DeletableMetaclass, StateChangeJob
+from chroma_core.models.jobs import StateChangeJob
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.jobs import StatefulObject
-from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
 
 
 class FilesystemMember(models.Model):
@@ -92,7 +92,7 @@ class ManagedTarget(StatefulObject):
     # unmounted: I'm set up in HA, ready to mount
     # mounted: Im mounted
     # removed: this target no longer exists in real life
-    # forgotten: Special "just delete it" state which bypasses transitions
+    # forgotten: Equivalent of 'removed' for immutable_state targets
     # Additional states needed for 'deactivated'?
     states = ['unformatted', 'formatted', 'registered', 'unmounted', 'mounted', 'removed', 'forgotten']
     initial_state = 'unformatted'
@@ -141,12 +141,8 @@ class ManagedTarget(StatefulObject):
         if isinstance(self, FilesystemMember) and state not in ['removed', 'forgotten']:
             # Make sure I follow if filesystem goes to 'removed'
             # or 'forgotten'
-            if self.immutable_state:
-                deps.append(DependOn(self.filesystem, 'available',
-                    acceptable_states = self.filesystem.not_state('forgotten'), fix_state='forgotten'))
-            else:
-                deps.append(DependOn(self.filesystem, 'available',
-                    acceptable_states = self.filesystem.not_state('removed'), fix_state='removed'))
+            deps.append(DependOn(self.filesystem, 'available',
+                acceptable_states = self.filesystem.not_states(['forgotten', 'removed']), fix_state=lambda s: s))
 
         if state not in ['removed', 'forgotten']:
             for tm in self.managedtargetmount_set.all():
@@ -243,6 +239,9 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
         available_states = super(ManagedMdt, self).get_available_states(begin_state)
         if 'removed' in available_states:
             available_states.remove('removed')
+
+        if self.immutable_state:
+            available_states.append('forgotten')
 
         return available_states
 
@@ -423,6 +422,25 @@ class RemoveTargetJob(StateChangeJob):
 
     def get_requires_confirmation(self):
         return True
+
+
+class ForgetTargetJob(StateChangeJob):
+    class Meta:
+        app_label = 'chroma_core'
+
+    def description(self):
+        return "Removing unmanaged target %s" % (self.target.downcast())
+
+    def get_steps(self):
+        return [(DeleteTargetStep, {'target_id': self.target.id})]
+
+    def get_requires_confirmation(self):
+        return True
+
+    state_transition = (ManagedTarget, ['unmounted', 'mounted'], 'forgotten')
+    stateful_object = 'target'
+    state_verb = "Remove"
+    target = models.ForeignKey(ManagedTarget)
 
 
 class RegisterTargetStep(Step):
@@ -754,25 +772,6 @@ class FormatTargetJob(StateChangeJob):
 
     def get_steps(self):
         return [(MkfsStep, {'target_id': self.target.id})]
-
-
-class ForgetTargetJob(StateChangeJob):
-    class Meta:
-        app_label = 'chroma_core'
-
-    def description(self):
-        return "Removing unmanaged target %s" % (self.target.downcast())
-
-    def get_steps(self):
-        return [(DeleteTargetStep, {'target_id': self.target.id})]
-
-    def get_requires_confirmation(self):
-        return True
-
-    state_transition = (ManagedTarget, ['unmounted', 'mounted'], 'forgotten')
-    stateful_object = 'target'
-    state_verb = "Remove"
-    target = models.ForeignKey(ManagedTarget)
 
 
 class ManagedTargetMount(models.Model):

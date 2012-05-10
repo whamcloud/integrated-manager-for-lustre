@@ -164,7 +164,7 @@ class SystemEventsAudit:
 
             while True:
                 new_entries = Systemevents.objects.filter(id__gt = \
-                                                      self.get_last_id()).\
+                                                    self.get_last_id()).\
                                                     order_by('id')[:trans_size]
 
                 for entry in new_entries:

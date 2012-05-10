@@ -306,10 +306,7 @@ class UpdateScan(object):
         if isinstance(target, ManagedMdt):
             metrics['client_count'] = metrics['num_exports'] - 1
 
-        if target.state == 'forgotten':
-            return 0
-        else:
-            return target.metrics.update(metrics, self.update_time)
+        return target.metrics.update(metrics, self.update_time)
 
     def store_node_metrics(self, metrics):
         return self.host.downcast().metrics.update(metrics, self.update_time)

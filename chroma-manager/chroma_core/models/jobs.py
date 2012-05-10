@@ -233,24 +233,15 @@ class StatefulObject(models.Model):
         are used internally but don't make sense when requested externally, for example
         the 'removed' state for an MDT (should only be reached by removing the owning filesystem)"""
         if self.immutable_state:
-            # The only available state transition for immutable objects is
-            # to a special "forgotten" state, which is a shortcut state
-            # to allow us to get to what is effectively 'removed' without
-            # passing through all the normal states (which would fail).
-            if self.state != 'forgotten':
-                return ['forgotten']
-            else:
-                return []
+            return []
+        else:
+            if not begin_state in self.states:
+                raise RuntimeError("%s not legal state for %s, legal states are %s" % (begin_state, self.__class__, self.states))
 
-        if not begin_state in self.states:
-            raise RuntimeError("%s not legal state for %s, legal states are %s" % (begin_state, self.__class__, self.states))
+            if not hasattr(self, 'transition_map'):
+                self.__class__._build_maps()
 
-        if not hasattr(self, 'transition_map'):
-            self.__class__._build_maps()
-
-        # Conversely, 'forgotten' is never an available destination state
-        # for manageable objects.  They can be removed, but not forgotten.
-        return list(set(self.transition_map[begin_state]) - set(['forgotten']))
+            return list(set(self.transition_map[begin_state]))
 
     @classmethod
     def get_verb(cls, begin_state, end_state):
@@ -742,3 +733,56 @@ class StateChangeJob(Job):
         # run procedure because steps might be modifying it
         stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
         return stateful_object
+
+
+class AdvertisedJob(Job):
+    """A job which is offered for execution in relation to particular objects"""
+    class Meta:
+        abstract = True
+
+    # list of classes e.g. ['ManagedHost'] of the class
+    # on which this can be run
+    classes = None
+
+    # Terse human readable verb, e.g. "Launch Torpedos"
+    verb = None
+
+    @classmethod
+    def get_available_jobs(cls, instance):
+        # If the object is subject to an incomplete Job
+        # then don't offer any actions
+        from chroma_core.models import StateLock
+        active_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
+        if active_locks > 0:
+            return []
+
+        available_jobs = []
+        for aj in all_subclasses(AdvertisedJob):
+            for class_name in aj.classes:
+                ct = ContentType.objects.get_by_natural_key('chroma_core', class_name)
+                klass = ct.model_class()
+                if isinstance(instance, klass):
+                    if aj.can_run(instance):
+                        available_jobs.append({
+                            'verb': aj.verb,
+                            'confirmation': aj.get_confirmation(instance),
+                            'class_name': aj.__name__,
+                            'args': aj.get_args(instance)})
+
+        return available_jobs
+
+    @classmethod
+    def can_run(cls, instance):
+        """Return True if this Job can be run on the given instance"""
+        return True
+
+    @classmethod
+    def get_args(cls, instance):
+        """Return a dict of args suitable for constructing an instance of this class operating
+        on a particular object instance"""
+        raise NotImplementedError()
+
+    @classmethod
+    def get_confirmation(cls, instance):
+        """Return a string for the confirmation prompt, or None if no confirmation is needed"""
+        return None

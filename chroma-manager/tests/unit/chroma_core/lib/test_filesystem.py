@@ -96,7 +96,7 @@ class TestDetectedFSTransitions(JobTestCaseWithHost):
     def test_remove(self):
         from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedMdt, ManagedOst
 
-        set_state(self.mgt, 'forgotten')
+        set_state(self.mgt, 'removed')
         with self.assertRaises(ManagedMgs.DoesNotExist):
             freshen(self.mgt)
         with self.assertRaises(ManagedFilesystem.DoesNotExist):

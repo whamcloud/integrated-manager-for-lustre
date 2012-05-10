@@ -25,6 +25,96 @@ function loadObjectSelection(kind, select_el)
 
 var LiveObject = function()
 {
+  function jobClicked()
+  {
+    var job_class = $(this).data('job_class');
+    var job_confirmation = JSON.parse($(this).data('job_confirmation'));
+    var job_args = $(this).data('job_args');
+
+    var job = {class_name: job_class, args: job_args};
+    var message = $(this).html();
+
+    if (job_confirmation) {
+      var markup = "<div style='overflow-y: auto; max-height: 700px;'>" + job_confirmation + "</div>";
+      $(markup).dialog({'buttons': {
+        'Cancel': function() {$(this).dialog('close');},
+        'Confirm':
+        {
+          text: "Confirm",
+          class: "confirm_button",
+          click: function(){
+            var dialog = $(this);
+            Api.post('/api/command/', {'jobs': [job], message: message}, function(data) {
+              CommandNotification.begin(data);
+              dialog.dialog('close');
+            });
+          }
+        }
+      }});
+    } else {
+      Api.post('/api/command/', {'jobs': [job], message: message}, function(data) {
+        CommandNotification.begin(data);
+      });
+    }
+  }
+
+
+  function transitionClicked()
+  {
+    var url = $(this).data('resource_uri');
+    var state = $(this).data('state');
+
+    Api.put(url, {dry_run: true, state: state},
+      success_callback = function(data)
+      {
+        var requires_confirmation = false;
+        var confirmation_markup;
+
+        if (data.transition_job == null) {
+          // A no-op
+          return;
+        } else if (data.transition_job.confirmation_prompt) {
+          requires_confirmation = true;
+          confirmation_markup = "<p><strong>" + data.transition_job.confirmation_prompt + "</strong></p><p>Are you sure?</p>";
+        } else if (data.dependency_jobs.length > 0) {
+          confirmation_markup = "<p>This action has the following consequences:</p><ul>";
+          requires_confirmation = data.transition_job.requires_confirmation;
+
+          $.each(data.dependency_jobs, function(i, consequence_info) {
+            confirmation_markup += "<li>" + consequence_info.description + "</li>";
+
+            if (consequence_info.requires_confirmation) {
+              requires_confirmation = true;
+            }
+          });
+          confirmation_markup += "</ul>"
+        } else {
+          requires_confirmation = data.transition_job.requires_confirmation;
+          confirmation_markup = "<p><strong>" + data.transition_job.description + "</strong></p><p>Are you sure?</p>";
+        }
+
+        if (requires_confirmation) {
+          var markup = "<div style='overflow-y: auto; max-height: 700px;' id='transition_confirmation_dialog'>" + confirmation_markup + "</div>";
+          $(markup).dialog({'buttons': {
+            'Cancel': function() {$(this).dialog('close');},
+            'Confirm':
+            {
+              text: "Confirm",
+              id: "transition_confirm_button",
+              click: function(){
+                var dialog = $(this);
+                Api.put(url, {state: state}, success_callback = function() {
+                  dialog.dialog('close');
+                })
+              }
+            }
+          }});
+        } else {
+          Api.put(url, {state: state})
+        }
+      });
+  }
+
   function spanMarkup(obj, classes, content) {
     if (!content) {
       content = "";
@@ -65,17 +155,20 @@ var LiveObject = function()
 
   function actions(stateful_object)
   {
-    var available_transitions = stateful_object.available_transitions;
+    var markup="<span class='transition_buttons' data-resource_uri='" + stateful_object.resource_uri + "'>";
 
-    var ops_action="";
-    var action="<span class='transition_buttons' data-resource_uri='" + stateful_object.resource_uri + "'>";
-    $.each(available_transitions, function(i, transition)
+    _.each(stateful_object.available_transitions, function(transition)
     {
-      ops_action = "<button " + "data-resource_uri='" + stateful_object.resource_uri + "' data-state='" + transition.state + "' onclick='stateTransition.apply(this)'>" + transition.verb + "</button>&nbsp;";
-      action += ops_action;
+      markup += "<button " + "data-resource_uri='" + stateful_object.resource_uri + "' data-state='" + transition.state + "' onclick='LiveObject.transitionClicked.apply(this)'>" + transition.verb + "</button>&nbsp;";
     });
-    action += "</span>";
-    return action;
+
+    _.each(stateful_object.available_jobs, function(job)
+    {
+      markup += "<button data-job_confirmation='" + JSON.stringify(job.confirmation) + "' data-job_class='" + job.class_name + "' data-job_args='" + JSON.stringify(job.args) + "' onclick='LiveObject.jobClicked.apply(this)'>" + job.verb + "</button>&nbsp;";
+    });
+
+    markup += "</span>";
+    return markup;
   }
 
   return {
@@ -86,7 +179,9 @@ var LiveObject = function()
     icons: icons,
     label: label,
     state: state,
-    actions: actions
+    actions: actions,
+    transitionClicked: transitionClicked,
+    jobClicked: jobClicked
   }
 }();
 
