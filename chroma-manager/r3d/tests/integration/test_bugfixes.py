@@ -232,20 +232,24 @@ class BugHyd997(TestCase):
                                                      rows=60,
                                                      database=self.rrd))
 
-    def update_database(self):
+    def test_11_minutes_of_none(self):
+        """
+        fetch() for the past 20 minutes should contain 11 minutes of None
+        """
+        self.maxDiff = None
         # Test plan:
         # 1. Set up a Counter with a 60mins-of-1min-samples RRA
         # 2. Update normally until 12 min ago
         # 3. Skip over 12 min of updates
         # 4. Add a new update
-        # 5. Fetch back 20min, verify that the 12min gap is full of None,
+        # 5. Fetch back 20min, verify that the 11-12min gap is full of None,
         #    not interpolated stats
         updates = {}
         update_value = 0
-        self.until_12_ago = self.start_time + (self.audit_freq * (self.sample_count - 72))
-        self.nowish = self.start_time + (self.audit_freq * self.sample_count)
+        until_12_ago = self.start_time + (self.audit_freq * (self.sample_count - 72))
+        nowish = self.start_time + (self.audit_freq * self.sample_count)
         for i in range(self.start_time,
-                       self.until_12_ago,
+                       until_12_ago,
                        self.audit_freq):
             update_value += i % self.start_time
             updates[i] = {'ds_counter': update_value}
@@ -255,25 +259,67 @@ class BugHyd997(TestCase):
         self.rrd.update(updates)
 
         updates = {}
-        updates[self.nowish] = {'ds_counter': update_value + 3000}
+        updates[nowish] = {'ds_counter': update_value + 3000}
 
         self.rrd.update(updates)
         r3d.EMPTY_GAPS = False
-
-    def test_database_fetch(self):
-        """
-        fetch() for the past 20 minutes should contain 12 minutes of None
-        """
-        self.maxDiff = None
-        self.update_database()
 
         about_20_ago = self.start_time + (self.audit_freq *
                                           (self.sample_count - 120))
         last_20 = self.rrd.fetch('Average', start_time=about_20_ago)
 
-        empty_rows = last_20[-11:]
-        self.assertSequenceEqual([None for i in range(len(empty_rows))],
+        # Depending on where the update/consolidation boundaries fall, it could be 11
+        # or 12 rows of None.  It should never be fewer than 11, though.
+        empty_rows = last_20[-12:-1]
+        self.assertSequenceEqual([None for i in range(11)],
                                  [r[1]['ds_counter'] for r in empty_rows])
+
+    def tearDown(self):
+        self.rrd.delete()
+
+
+class BugUnwrappedRra(TestCase):
+    """RRAs which haven't wrapped around yet return strange results"""
+    def setUp(self):
+        self.audit_freq = 10
+        self.sample_count = 110
+        self.start_time = 1336849200L
+        self.rrd = Database.objects.create(name="unwrapped_rra",
+                                           start=self.start_time - (self.audit_freq),
+                                           step=self.audit_freq)
+        self.rrd.datasources.add(Counter.objects.create(name="ds_counter",
+                                                      heartbeat=self.audit_freq * 2,
+                                                      database=self.rrd))
+        self.rrd.archives.add(Average.objects.create(xff="0.5",
+                                                     cdp_per_row=1,
+                                                     rows=18,
+                                                     database=self.rrd))
+        self.rrd.archives.add(Average.objects.create(xff="0.5",
+                                                     cdp_per_row=10,
+                                                     rows=6,
+                                                     database=self.rrd))
+
+    def test_unwrapped_rras_return_sane_results(self):
+        update_value = 0
+        self.nowish = self.start_time + (self.audit_freq * self.sample_count)
+        for i in range(self.start_time, self.nowish, self.audit_freq):
+            update_value += i % self.start_time
+            self.rrd.update({i: {'ds_counter': update_value}})
+            fetched_rows = self.rrd.fetch('Average',
+                                          start_time=self.start_time,
+                                          end_time=(i + self.audit_freq))
+            step = ((i - self.start_time) / self.audit_freq)
+            # Test that we slide smoothly from the hires to the lower-res rra, and that the
+            # values are sane.
+            if step < 17:
+                if step > 0:
+                    self.assertEqual(round(step), round(fetched_rows[step - 1][1]['ds_counter']))
+            elif step in range(21, 28):
+                self.assertSequenceEqual([5.5, 15.5], [r[1]['ds_counter'] for r in fetched_rows])
+            elif step in range(30, 38):
+                self.assertSequenceEqual([5.5, 15.5, 25.5], [r[1]['ds_counter'] for r in fetched_rows])
+            if step == 109:
+                self.assertSequenceEqual([None, None, None, None, 45.5, 55.5, 65.5, 75.5, 85.5, 95.5, None], [r[1]['ds_counter'] for r in fetched_rows])
 
     def tearDown(self):
         self.rrd.delete()

@@ -197,7 +197,7 @@ class Database(models.Model):
         if force or self.rra_pointers is None:
             self.rra_pointers = {}
             for rra in self.rra_list:
-                self.rra_pointers[rra.pk] = 0
+                self.rra_pointers[rra.pk] = {'wrapped': False, 'slot': 0}
 
     def rebuild_ds_pickle(self, force=False):
         if force or self.ds_pickle is None:
@@ -665,7 +665,7 @@ class Archive(PoorMansStiModel):
         super(Archive, self).save(*args, **kwargs)
 
         if new_rra:
-            self.database.rra_pointers[self.pk] = 0
+            self.database.rra_pointers[self.pk] = {'slot': 0, 'wrapped': False}
             # NB: This pointer value is only used for the lifetime
             # of the new .database object in this context -- it's not
             # persisted to rdbms because we would clobber the "real"
