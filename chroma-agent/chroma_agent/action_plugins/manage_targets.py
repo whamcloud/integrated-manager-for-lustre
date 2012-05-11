@@ -273,45 +273,41 @@ def register_target(args):
 
 
 def unconfigure_ha(args):
-    _unconfigure_ha(args.primary, args.label, args.uuid, args.id)
+    _unconfigure_ha(args.primary, args.ha_label, args.uuid)
 
 
-def _unconfigure_ha(primary, label, uuid, id):
-    unique_label = "%s_%s" % (label, id)
-
-    if get_resource_location(unique_label):
+def _unconfigure_ha(primary, ha_label, uuid):
+    if get_resource_location(ha_label):
         raise RuntimeError("cannot unconfigure-ha: %s is still running " % \
-                           unique_label)
+                           ha_label)
 
     if primary:
-        rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-primary\">'" % unique_label)
-        rc, stdout, stderr = cibadmin("-D -X '<primitive id=\"%s\">'" % unique_label)
+        rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-primary\">'" % ha_label)
+        rc, stdout, stderr = cibadmin("-D -X '<primitive id=\"%s\">'" % ha_label)
         rc, stdout, stderr = shell.run(['crm_resource', '--cleanup', '--resource',
-                       unique_label])
+                       ha_label])
 
         if rc != 0 and rc != 234:
-            raise RuntimeError("Error %s trying to cleanup resource %s" % (rc, unique_label))
+            raise RuntimeError("Error %s trying to cleanup resource %s" % (rc, ha_label))
 
     else:
-        rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" % unique_label)
+        rc, stdout, stderr = cibadmin("-D -X '<rsc_location id=\"%s-secondary\">'" % ha_label)
 
     AgentStore.remove_target_info(uuid)
 
 
 def configure_ha(args):
-    unique_label = "%s_%s" % (args.label, args.id)
-
     if args.primary:
         # now configure pacemaker for this target
         from tempfile import mkstemp
         # but first see if this resource exists and matches what we are adding
-        rc, stdout, stderr = shell.run(shlex.split("crm_resource -r %s -g target" % unique_label))
+        rc, stdout, stderr = shell.run(shlex.split("crm_resource -r %s -g target" % args.ha_label))
         if rc == 0:
             info = AgentStore.get_target_info(stdout.rstrip("\n"))
             if info['bdev'] == args.device and info['mntpt'] == args.mountpoint:
                 return
             else:
-                raise RuntimeError("A resource with the name %s already exists" % unique_label)
+                raise RuntimeError("A resource with the name %s already exists" % args.ha_label)
 
         tmp_f, tmp_name = mkstemp()
         os.write(tmp_f, "<primitive class=\"ocf\" provider=\"chroma\" type=\"Target\" id=\"%s\">\
@@ -326,8 +322,8 @@ def configure_ha(args):
   <instance_attributes id=\"%s-instance_attributes\">\
     <nvpair id=\"%s-instance_attributes-target\" name=\"target\" value=\"%s\"/>\
   </instance_attributes>\
-</primitive>" % (unique_label, unique_label, unique_label, unique_label, unique_label,
-            unique_label, unique_label, unique_label, unique_label, args.uuid))
+</primitive>" % (args.ha_label, args.ha_label, args.ha_label, args.ha_label, args.ha_label,
+            args.ha_label, args.ha_label, args.ha_label, args.ha_label, args.uuid))
         os.close(tmp_f)
 
         rc, stdout, stderr = cibadmin("-o resources -C -x %s" % tmp_name)
@@ -338,24 +334,24 @@ def configure_ha(args):
         preference = "secondary"
 
     rc, stdout, stderr = shell.run(['crm', '-D', 'plain', 'configure', 'show',
-                                    '%s-%s' % (unique_label, preference)])
+                                    '%s-%s' % (args.ha_label, preference)])
     out = stdout.rstrip("\n")
 
     node = os.uname()[1]
 
     if len(out) > 0:
-        compare = "location %s-%s %s %s: %s" % (unique_label, preference,
-                                                unique_label, score,
+        compare = "location %s-%s %s %s: %s" % (args.ha_label, preference,
+                                                args.ha_label, score,
                                                 node)
         if out == compare:
             return
         else:
-            raise RuntimeError("A constraint with the name %s-%s already exists" % (unique_label, preference))
+            raise RuntimeError("A constraint with the name %s-%s already exists" % (args.ha_label, preference))
 
-    rc, stdout, stderr = cibadmin("-o constraints -C -X '<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>'" % (unique_label,
+    rc, stdout, stderr = cibadmin("-o constraints -C -X '<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>'" % (args.ha_label,
                                   preference,
                                   node,
-                                  unique_label, score))
+                                  args.ha_label, score))
 
     try:
         os.makedirs(args.mountpoint)
@@ -375,8 +371,7 @@ def query_ha_targets(args):
         if len(target) < 1:
             continue
 
-        label, id = target.split("_")
-        targets[target] = {'label': label, 'id': id}
+        targets[target] = {'ha_label': target}
 
         raw_xml = "\n".join(shell.try_run(['crm_resource', '-r', target, '-q']).split("\n")[2:])
         try:
@@ -402,8 +397,7 @@ def unmount_target(args):
 
 def start_target(args):
     from time import sleep
-    unique_label = "%s_%s" % (args.label, args.id)
-    shell.try_run(['crm_resource', '-r', unique_label, '-p', 'target-role',
+    shell.try_run(['crm_resource', '-r', args.ha_label, '-p', 'target-role',
                    '-m', '-v', 'Started'])
 
     # now wait for it to start
@@ -411,8 +405,8 @@ def start_target(args):
     timeout = 100
     n = 0
     while n < timeout:
-        stdout = shell.try_run("crm resource status %s 2>&1" % unique_label, shell=True)
-        if stdout.startswith("resource %s is running on:" % unique_label):
+        stdout = shell.try_run("crm resource status %s 2>&1" % args.ha_label, shell=True)
+        if stdout.startswith("resource %s is running on:" % args.ha_label):
             break
         sleep(1)
         n += 1
@@ -422,30 +416,29 @@ def start_target(args):
 
     failed = True
     for line in stdout.split("\n"):
-        if line.startswith(" %s" % unique_label):
+        if line.startswith(" %s" % args.ha_label):
             if line.find("FAILED") < 0:
                 failed = False
 
     if failed:
         # try to leave things in a sane state for a failed mount
-        shell.try_run(['crm_resource', '-r', unique_label, '-p',
+        shell.try_run(['crm_resource', '-r', args.ha_label, '-p',
                        'target-role', '-m', '-v', 'Stopped'])
-        raise RuntimeError("failed to start target %s" % unique_label)
+        raise RuntimeError("failed to start target %s" % args.ha_label)
     else:
-        location = get_resource_location(unique_label)
+        location = get_resource_location(args.ha_label)
         if not location:
-            raise RuntimeError("Started %s but now can't locate it!" % unique_label)
+            raise RuntimeError("Started %s but now can't locate it!" % args.ha_label)
         return {'location': location}
 
 
 def stop_target(args):
-    _stop_target(args.label, args.id)
+    _stop_target(args.ha_label)
 
 
-def _stop_target(label, id):
-    unique_label = "%s_%s" % (label, id)
+def _stop_target(ha_label):
     from time import sleep
-    shell.try_run(['crm_resource', '-r', unique_label, '-p', 'target-role',
+    shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
                   '-m', '-v', 'Stopped'])
 
     # now wait for it
@@ -453,7 +446,7 @@ def _stop_target(label, id):
     timeout = 100
     n = 0
     while n < timeout:
-        stdout = shell.try_run("crm resource status %s 2>&1" % unique_label,
+        stdout = shell.try_run("crm resource status %s 2>&1" % ha_label,
                                shell=True)
         if stdout.find("is NOT running") > -1:
             break
@@ -461,21 +454,20 @@ def _stop_target(label, id):
         n += 1
 
     if n == timeout:
-        raise RuntimeError("failed to stop target %s" % unique_label)
+        raise RuntimeError("failed to stop target %s" % ha_label)
 
 
 # fail a target back to it's primary node
 def failback_target(args):
     from time import sleep
-    unique_label = "%s_%s" % (args.label, args.id)
     stdout = shell.try_run(shlex.split("crm configure show %s-primary" %
-                                       unique_label))
+                                       args.ha_label))
     primary = stdout[stdout.rfind(' ') + 1:-1]
     stdout = shell.try_run("crm_resource --resource %s --move --node %s 2>&1" % \
-                           (unique_label, primary), shell = True)
+                           (args.ha_label, primary), shell = True)
 
     if stdout.find("%s is already active on %s\n" % \
-                   (unique_label, primary)) > -1:
+                   (args.ha_label, primary)) > -1:
         return
 
     # now wait for it to complete its move
@@ -483,7 +475,7 @@ def failback_target(args):
     n = 0
     migrated = False
     while n < timeout:
-        if get_resource_location(unique_label) == primary:
+        if get_resource_location(args.ha_label) == primary:
             migrated = True
             break
         sleep(1)
@@ -491,9 +483,9 @@ def failback_target(args):
 
     # now delete the constraint that crm resource move created
     shell.try_run(shlex.split("crm configure delete cli-prefer-%s" % \
-                              unique_label))
+                              args.ha_label))
     if not migrated:
-        raise RuntimeError("failed to fail back target %s" % unique_label)
+        raise RuntimeError("failed to fail back target %s" % args.ha_label)
 
 
 def migrate_target(args):
@@ -540,9 +532,9 @@ def target_running(args):
 def clear_targets(args):
     for resource, attrs in query_ha_targets(args).items():
         print "Stopping %s" % resource
-        _stop_target(attrs['label'], attrs['id'])
+        _stop_target(attrs['ha_label'])
         print "Unconfiguring %s" % resource
-        _unconfigure_ha(True, attrs['label'], attrs['uuid'], attrs['id'])
+        _unconfigure_ha(True, attrs['ha_label'], attrs['uuid'])
 
 
 class TargetsPlugin(ActionPlugin):
@@ -555,9 +547,8 @@ class TargetsPlugin(ActionPlugin):
         p = parser.add_parser('configure-ha',
                                   help='configure a target\'s HA parameters')
         p.add_argument('--device', required=True, help='device of the target')
-        p.add_argument('--label', required=True, help='label of the target')
+        p.add_argument('--ha_label', required=True)
         p.add_argument('--uuid', required=True, help='uuid of the target')
-        p.add_argument('--id', required=True, help='id of the target')
         p.add_argument('--primary', action='store_true',
                        help='target is primary on this node')
         p.add_argument('--mountpoint', required=True, help='mountpoint for target')
@@ -565,9 +556,8 @@ class TargetsPlugin(ActionPlugin):
 
         p = parser.add_parser('unconfigure-ha',
                                   help='unconfigure a target\'s HA parameters')
-        p.add_argument('--label', required=True, help='label of the target')
+        p.add_argument('--ha_label', required=True)
         p.add_argument('--uuid', required=True, help='uuid of the target')
-        p.add_argument('--id', required=True, help='id of target')
         p.add_argument('--primary', action='store_true',
                        help='target is primary on this node')
         p.set_defaults(func=unconfigure_ha)
@@ -582,17 +572,13 @@ class TargetsPlugin(ActionPlugin):
         p.set_defaults(func=unmount_target)
 
         p = parser.add_parser('start-target', help='start a target')
-        p.add_argument('--label', required=True,
+        p.add_argument('--ha_label', required=True,
                        help='label of target to start')
-        p.add_argument('--id', required=True,
-                       help='id of target to start')
         p.set_defaults(func=start_target)
 
         p = parser.add_parser('stop-target', help='stop a target')
-        p.add_argument('--label', required=True,
+        p.add_argument('--ha_label', required=True,
                        help='label of target to stop')
-        p.add_argument('--id', required=True,
-                       help='id of target to stop')
         p.set_defaults(func=stop_target)
 
         p = parser.add_parser('format-target', help='format a target')
@@ -601,7 +587,7 @@ class TargetsPlugin(ActionPlugin):
 
         p = parser.add_parser('migrate-target',
                               help='migrate a target to a node')
-        p.add_argument('--label', required=True,
+        p.add_argument('--ha_label', required=True,
                        help='label of target to migrate')
         p.add_argument('--node', required=True,
                        help='node to migrate target to')
@@ -609,15 +595,13 @@ class TargetsPlugin(ActionPlugin):
 
         p = parser.add_parser('failback-target',
                               help='fail a target back to it\'s primary node')
-        p.add_argument('--label', required=True,
+        p.add_argument('--ha_label', required=True,
                        help='label of target to migrate')
-        p.add_argument('--id', required=True,
-                       help='id of target to stop')
         p.set_defaults(func=failback_target)
 
         p = parser.add_parser('unmigrate-target',
                               help='cancel prevous target migrate')
-        p.add_argument('--label', required=True,
+        p.add_argument('--ha_label', required=True,
                        help='label of target to cancel migration of')
         p.set_defaults(func=unmigrate_target)
 

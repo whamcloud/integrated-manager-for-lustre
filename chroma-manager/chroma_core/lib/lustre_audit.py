@@ -204,13 +204,7 @@ class UpdateScan(object):
 
         for resource_name, node_name in self.host_data['resource_locations'].items():
             try:
-                try:
-                    # Parse a resource name like "MGS_2"
-                    target_name, target_pk = resource_name.rsplit("_", 1)
-                except ValueError:
-                    audit_log.warning("Malformed resource name '%s'" % resource_name)
-                    continue
-                target = ManagedTarget.objects.get(name = target_name, pk = target_pk).downcast()
+                target = ManagedTarget.objects.get(ha_label = resource_name).downcast()
             except ManagedTarget.DoesNotExist:
                 #audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
                 continue

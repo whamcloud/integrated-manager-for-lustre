@@ -5,9 +5,10 @@
 
 
 import json
+import uuid
 
 from django.db import models, transaction
-from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, NullStep, AnyTargetMountStep, job_log
+from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, AnyTargetMountStep, job_log
 from chroma_core.models.jobs import StateChangeJob
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.jobs import StatefulObject
@@ -29,25 +30,19 @@ class ManagedTarget(StatefulObject):
     name = models.CharField(max_length = 64, null = True, blank = True,
             help_text = "Lustre target name, e.g. 'testfs-OST0001'.  May be null\
             if the target has not yet been registered.")
+
     uuid = models.CharField(max_length = 64, null = True, blank = True,
             help_text = "UUID of the target's internal filesystem.  May be null\
                     if the target has not yet been formatted")
+
+    ha_label = models.CharField(max_length = 64, null = True, blank = True,
+            help_text = "Label used for HA layer: human readable but unique")
 
     volume = models.ForeignKey('Volume')
 
     inode_size = models.IntegerField(null = True, blank = True)
     bytes_per_inode = models.IntegerField(null = True, blank = True)
     inode_count = models.IntegerField(null = True, blank = True)
-
-    def name_no_fs(self):
-        """Something like OST0001 rather than testfs1-OST0001"""
-        if self.name:
-            if self.name.find("-") != -1:
-                return self.name.split("-")[1]
-            else:
-                return self.name
-        else:
-            return self.downcast().role()
 
     def primary_server(self):
         return self.managedtargetmount_set.get(primary = True).host
@@ -235,10 +230,10 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
         return "/mnt/%s/mdt" % self.filesystem.name
 
     def get_available_states(self, begin_state):
+        # Exclude the transition to 'removed' in favour of being removed when our FS is
         if self.immutable_state:
             return []
         else:
-            # Exclude the transition to 'removed' in favour of being removed when our FS is
             available_states = super(ManagedMdt, self).get_available_states(begin_state)
             if 'removed' in available_states:
                 available_states.remove('removed')
@@ -260,9 +255,14 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
             else:
                 return []
         else:
-            # Exclude the transition to 'removed' in favour of being removed when our FS is
             available_states = super(ManagedMgs, self).get_available_states(begin_state)
+
+            # Exclude the transition to 'forgotten' because immutable_state is False
+            available_states = list(set(available_states) ^ set(['forgotten']))
+
+            # Only advertise removal if the FS has already gone away
             if self.managedfilesystem_set.count() > 0:
+                available_states = list(set(available_states) ^ set(['removed']))
                 if 'removed' in available_states:
                     available_states.remove('removed')
 
@@ -460,27 +460,36 @@ class RegisterTargetStep(Step):
         result = self.invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.volume_node.path, target_mount.mount_point))
         label = result['label']
         target = target_mount.target
-        job_log.debug("Registration complete, updating target %d with name=%s" % (target.id, label))
         target.name = label
+        target.ha_label = "%s_%s" % (target.name, uuid.uuid4().__str__()[0:6])
         target.save()
+        job_log.debug("Registration complete, updating target %d with name=%s, ha_label=%s" % (target.id, target.name, target.ha_label))
+
+
+class GenerateHaLabelStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        target = ManagedTarget.objects.get(id = kwargs['target_id'])
+        target.ha_label = "%s_%s" % (target.name, uuid.uuid4().__str__()[0:6])
+        target.save()
+        job_log.debug("Generated ha_label=%s for target %s (%s)" % (target.ha_label, target.id, target.name))
 
 
 class ConfigurePacemakerStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedTargetMount
         target_mount_id = kwargs['target_mount_id']
         target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
 
         # target.name should have been populated by RegisterTarget
         assert(target_mount.volume_node is not None and target_mount.target.name is not None)
 
-        self.invoke_agent(target_mount.host, "configure-ha --device %s --label %s --uuid %s --id %s %s --mountpoint %s" % (
+        self.invoke_agent(target_mount.host, "configure-ha --device %s --ha_label %s --uuid %s %s --mountpoint %s" % (
                                     target_mount.volume_node.path,
-                                    target_mount.target.name,
+                                    target_mount.target.ha_label,
                                     target_mount.target.uuid,
-                                    target_mount.target.pk,
                                     target_mount.primary and "--primary" or "",
                                     target_mount.mount_point))
 
@@ -497,10 +506,9 @@ class UnconfigurePacemakerStep(Step):
         # didn't have its name
         assert(target_mount.target.name != None)
 
-        self.invoke_agent(target_mount.host, "unconfigure-ha --label %s --uuid %s --id %s %s" % (
-                                    target_mount.target.name,
+        self.invoke_agent(target_mount.host, "unconfigure-ha --ha_label %s --uuid %s %s" % (
+                                    target_mount.target.ha_label,
                                     target_mount.target.uuid,
-                                    target_mount.target.pk,
                                     target_mount.primary and "--primary" or ""))
 
 
@@ -556,13 +564,14 @@ class RegisterTargetJob(StateChangeJob):
 
     def get_steps(self):
         steps = []
-        # FIXME: somehow need to avoid advertising this transition for MGS targets
-        # currently as hack this is just a no-op for MGSs which marks them registered
+
         target = self.target.downcast()
         if isinstance(target, ManagedMgs):
-            steps.append((NullStep, {}))
+            steps = []
         if isinstance(target, FilesystemMember):
-            steps.append((RegisterTargetStep, {"target_mount_id": target.managedtargetmount_set.get(primary = True).id}))
+            steps = [(RegisterTargetStep, {"target_mount_id": target.managedtargetmount_set.get(primary = True).id})]
+
+        steps.append((GenerateHaLabelStep, {'target_id': target.id}))
 
         return steps
 
@@ -592,7 +601,7 @@ class MountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id)
 
-        result = self._run_agent_command(target, "start-target --label %s --id %s" % (target.name, target.pk))
+        result = self._run_agent_command(target, "start-target --ha_label %s" % target.ha_label)
         try:
             started_on = ManagedHost.objects.get(nodename = result['location'])
         except ManagedHost.DoesNotExist:
@@ -635,7 +644,7 @@ class UnmountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id)
 
-        self._run_agent_command(target, "stop-target --label %s --id %s" % (target.name, target.pk))
+        self._run_agent_command(target, "stop-target --ha_label %s" % target.ha_label)
         target.set_active_mount(None)
 
 

@@ -42,8 +42,8 @@ class MockAgent(object):
         elif cmdline.startswith('start-target'):
             import re
             from chroma_core.models import ManagedTarget
-            target_id = re.search("--id ([^\s]+)", cmdline).group(1)
-            target = ManagedTarget.objects.get(id = target_id)
+            ha_label = re.search("--ha_label ([^\s]+)", cmdline).group(1)
+            target = ManagedTarget.objects.get(ha_label = ha_label)
             return {'location': target.primary_server().nodename}
         elif cmdline.startswith('register-target'):
             MockAgent.label_counter += 1
