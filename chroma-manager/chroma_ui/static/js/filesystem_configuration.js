@@ -192,7 +192,7 @@ var VolumeChooserStore = function ()
           "    <th></th>" +
           "    <th>Name</th>" +
           "    <th>Capacity</th>" +
-          "    <th>Kind</th>" +
+          "    <th>Type</th>" +
           "    <th>Status</th>" +
           "    <th>Primary server</th>" +
           "    <th>Failover server</th>" +
