@@ -1,4 +1,5 @@
-
+from optparse import make_option
+from provisioning.lib.util import LazyStruct
 from provisioning.models import ChromaManager, ChromaAppliance, Node
 
 import settings
@@ -14,7 +15,19 @@ class Command(BaseCommand):
     args = "list|open <id>|ssh <id>|terminate all"
     help = "Utility command to manage instances"
     can_import_settings = True
+    option_list = BaseCommand.option_list + (
+        make_option("--name", type=str, default="chroma",
+            help="name of the cluster"),
+        make_option("--master", action="store_true",
+            help="Update from master repository"),
+        make_option("--volumes", type=int, default=4,
+            help="number of EBS volumes per OSS"),
+        make_option("--recover", type=int, default=0,
+            help="Attempt to just perform configuration of nodes")
+        )
+
     def handle(self, *args, **options):
+        self.options = LazyStruct(**options)
         if not args or args[0] == 'list':
             for m in ChromaManager.objects.all():
                 i = m.node.get_instance()
@@ -43,14 +56,14 @@ class Command(BaseCommand):
 
         elif args[0] == 'add_node':
             manager_id = int(args[1])
-            name = args[2]
             manager = ChromaManager.objects.get(id = manager_id)
             manager_ops = ChromaManagerOps(manager)
             manager_key = manager_ops.get_key()
 
-            appliance = ChromaAppliance.create(manager, name)
+            appliance = ChromaAppliance.create(manager, self.options.name)
             appliance_ops = ChromaStorageOps(appliance)
-            appliance_ops.configure()
+            appliance_ops.configure(self.options.master)
+            appliance_ops.configure_oss(self.options.volumes)
             appliance_ops.set_key(manager_key)
 
             appliances = ChromaAppliance.objects.filter(chroma_manager = manager)
