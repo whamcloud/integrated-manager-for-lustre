@@ -141,6 +141,7 @@ class ChromaStorageOps(NodeOps):
                 sudo('yum --enablerepo=chroma-master install -y chroma-agent-management')
             else:
                 sudo('yum install -y chroma-agent-management')
+            sudo('service chroma-agent restart')
 
     def mkraid(self):
         with self.open_session():
