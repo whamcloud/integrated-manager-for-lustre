@@ -457,6 +457,11 @@ class RegisterTargetStep(Step):
         target_mount_id = kwargs['target_mount_id']
         target_mount = ManagedTargetMount.objects.get(id = target_mount_id)
 
+        # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
+        mgs = target_mount.target.downcast().filesystem.mgs
+        if not mgs.active_mount == mgs.managedtargetmount_set.get(primary = True):
+            raise RuntimeError("Cannot register target while MGS is not started on its primary server")
+
         result = self.invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.volume_node.path, target_mount.mount_point))
         label = result['label']
         target = target_mount.target
