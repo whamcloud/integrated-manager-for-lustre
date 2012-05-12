@@ -73,6 +73,8 @@ var ChartModel = function(options) {
 
 };
 
+var global_time_boundary;
+
 var ChartManager = function(options) {
   var config = $.extend(true, {
         charts: {},
@@ -121,6 +123,9 @@ var ChartManager = function(options) {
         interval_id: null,
         interval_seconds: 10
     }, options || {});
+
+    /* Use global so the Zoom charts can use the current value */
+    global_time_boundary = config.default_time_boundary;
 
     config.charts[config.chart_group] = {};
 
@@ -181,7 +186,7 @@ var ChartManager = function(options) {
         }
         if ( _.isNull( chart.series_begin) ) {
             chart.series_end          = new Date();
-            chart.series_begin        = new Date( chart.series_end - config.default_time_boundary );
+            chart.series_begin        = new Date( chart.series_end - global_time_boundary );
         } else {
             if (!chart.snapshot) {
               params.update = 'true';
@@ -326,7 +331,7 @@ var ChartManager = function(options) {
               function(series_data) {
                   var newest_trash = null;
                   for (var i = 0; i < series_data.length - 1; i++) {
-                      if (series_data[i][0] < (latest_ts - config.default_time_boundary)) {
+                      if (series_data[i][0] < (latest_ts - global_time_boundary)) {
                           newest_trash = i;
                       } else {
                           break;
