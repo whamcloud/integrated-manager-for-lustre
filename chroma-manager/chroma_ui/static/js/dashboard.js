@@ -81,6 +81,7 @@ var Dashboard = (function() {
       if($(this).is(":checked")) {
         polling_enabled = true;
         chart_manager.set_recurring(10);
+        chart_manager.render_charts()
       } else {
         chart_manager.clear_recurring();
         polling_enabled = false;
