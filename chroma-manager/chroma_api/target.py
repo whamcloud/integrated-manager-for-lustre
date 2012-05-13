@@ -273,6 +273,10 @@ class TargetResource(MetricResource, ConfParamResource):
         # hydration errors through to validation.
         setattr(bundle, 'data_errors', defaultdict(list))
 
+        self.is_valid(bundle, request)
+        if bundle.errors:
+            self.error_response(bundle.errors, request)
+
         # As with the Filesystem resource, full_hydrate() doesn't make sense
         # for our customized Target resource.  As a convention, we'll
         # abstract the logic for mangling the incoming bundle data into

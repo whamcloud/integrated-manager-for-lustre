@@ -28,11 +28,11 @@ var LiveObject = function()
   function jobClicked()
   {
     var job_class = $(this).data('job_class');
+    var job_message = $(this).data('job_message');
     var job_confirmation = JSON.parse($(this).data('job_confirmation'));
     var job_args = $(this).data('job_args');
 
     var job = {class_name: job_class, args: job_args};
-    var message = $(this).html();
 
     if (job_confirmation) {
       var markup = "<div style='overflow-y: auto; max-height: 700px;'>" + job_confirmation + "</div>";
@@ -44,7 +44,7 @@ var LiveObject = function()
           class: "confirm_button",
           click: function(){
             var dialog = $(this);
-            Api.post('/api/command/', {'jobs': [job], message: message}, function(data) {
+            Api.post('/api/command/', {'jobs': [job], message: job_message}, function(data) {
               CommandNotification.begin(data);
               dialog.dialog('close');
             });
@@ -52,7 +52,7 @@ var LiveObject = function()
         }
       }});
     } else {
-      Api.post('/api/command/', {'jobs': [job], message: message}, function(data) {
+      Api.post('/api/command/', {'jobs': [job], message: job_message}, function(data) {
         CommandNotification.begin(data);
       });
     }
@@ -164,7 +164,13 @@ var LiveObject = function()
 
     _.each(stateful_object.available_jobs, function(job)
     {
-      markup += "<button data-job_confirmation='" + JSON.stringify(job.confirmation) + "' data-job_class='" + job.class_name + "' data-job_args='" + JSON.stringify(job.args) + "' onclick='LiveObject.jobClicked.apply(this)'>" + job.verb + "</button>&nbsp;";
+      var message = job.verb + "(" + stateful_object.label + ")";
+      markup += "<button " +
+        "data-job_confirmation='" + JSON.stringify(job.confirmation) + "' " +
+        "data-job_class='" + job.class_name + "' " +
+        "data-job_message='" + message + "' " +
+        "data-job_args='" + JSON.stringify(job.args) + "' " +
+        "onclick='LiveObject.jobClicked.apply(this)'>" + job.verb + "</button>&nbsp;";
     });
 
     markup += "</span>";
@@ -365,18 +371,18 @@ var Tooltip = function()
 var CommandNotification = function() {
   var incomplete_commands = {};
   var incomplete_jobs = {};
-  var read_locks = {}
-  var write_locks = {}
+  var read_locks = {};
+  var write_locks = {};
   var fast_update_interval = 5000;
 
   function updateBusy()
   {
-    var command_ids = []
+    var command_ids = [];
     $.each(incomplete_commands, function(i, command) {
       command_ids.push(command.id);
     });
     if (command_ids.length == 0) {
-      $('#notification_icon_jobs').slideUp()
+      $('#notification_icon_jobs').slideUp();
       return false;
     } else {
       if (command_ids.length == 1) {
@@ -384,7 +390,7 @@ var CommandNotification = function() {
       }
       Tooltip.detailList({element: $('#notification_icon_jobs'),
           title: command_ids.length + " commands running:", objects: incomplete_commands, attr: 'message'});
-      $('#notification_icon_jobs').slideDown()
+      $('#notification_icon_jobs').slideDown();
       return true;
     }
   }

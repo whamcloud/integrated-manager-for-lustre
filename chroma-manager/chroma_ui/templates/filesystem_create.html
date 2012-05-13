@@ -141,7 +141,7 @@
       $('#btnCreateFS').click(function()
       {
         $('#filesystem_create_form').find('span.error').remove();
-        $('#filesystem_create_form').find().removeClass('error');
+        $('#filesystem_create_form').find('.error').removeClass('error');
 
         var fs_name = $('#txtfsnameid').val();
         var mgt_lun_id = $('#mgt_chooser').volumeChooser('val');
@@ -149,7 +149,7 @@
         var mdt_lun_id = $('#mdt_chooser').volumeChooser('val');
         var ost_lun_ids = $('#ost_chooser').volumeChooser('val');
 
-        var errors = []
+        var errors = [];
         if(fs_name=="") {
           errors.push({element: $('#txtfsnameid'), message: "File system name is mandatory"})
         }
@@ -213,7 +213,7 @@
         }
 
         Api.post("filesystem/", filesystem,
-          success_callback = function(data) {
+          function(data) {
             Backbone.history.navigate("configure/filesystem/detail/" + data.filesystem.id + "/", {trigger: true});
           }
         );

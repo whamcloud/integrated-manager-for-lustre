@@ -61,14 +61,17 @@ function add_host_dialog() {
       select_page('add_host_loading');
 
       test_skipped = false;
-      test_xhr = Api.post("test_host/", {address: element.find('.add_host_address').attr('value')},
-      success_callback = function(data)
-      {
-        test_xhr = null;
-        if (!test_skipped) {
-          submit_complete(data);
-        }
-      });
+
+      test_xhr = ValidatedForm.save(element.find('.add_host_prompt'), Api.post, "/api/test_host/", {},
+        function(data) {
+          if (!test_skipped) {
+            submit_complete(data);
+          }
+        },
+        function(){
+          select_page('add_host_prompt');
+        });
+
 
       ev.preventDefault();
   });

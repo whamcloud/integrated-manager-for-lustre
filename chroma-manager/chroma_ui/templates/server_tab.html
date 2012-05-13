@@ -26,14 +26,15 @@
             //console.log(data);
             var processed_data = [];
             $.each(data.aaData, function(i, row) {
-              row['label'] = LiveObject.label(row);
-              row['state'] = LiveObject.state(row);
-              row['actions'] = LiveObject.actions(row);
-              row['icons'] = LiveObject.icons(row);
-              if (!row['fqdn']) {
-                row['fqdn'] = row['address'];
+              var server = $.extend({}, row);
+              row['label'] = LiveObject.label(server);
+              row['state'] = LiveObject.state(server);
+              row['actions'] = LiveObject.actions(server);
+              row['icons'] = LiveObject.icons(server);
+              if (!server['fqdn']) {
+                row['fqdn'] = server['address'];
               }
-              row['fqdn'] = object_properties_link(row, row['fqdn']);
+              row['fqdn'] = object_properties_link(server, row['fqdn']);
             });
             callback(data);
           }, settings);
@@ -80,9 +81,10 @@
 <script type="text/template" id="add_host_dialog_template">
     <div class="add_host_dialog">
         <div class='add_host_wizard'>
-            <div class="add_host_prompt">
+            <div class="add_host_prompt validated_form">
                 <form style="margin-bottom:0px;">
-                    <label style="margin-right: 6px;" for='add_host_address'>Hostname:</label><input style="width:100%;" type='entry'  class='add_host_address'/>
+                    <label style="margin-right: 6px;" for='add_host_address'>Hostname:</label>
+                    <input style="width:100%;" type='entry'  class='add_host_address' name='address'/>
                     <div style="text-align: right;">
                         <a style="margin-top: 6px;" class="add_host_submit_button" type='submit'>Continue</a>
                     </div>

@@ -327,9 +327,9 @@ class FilesystemResource(MetricResource, ConfParamResource):
         # hydration errors through to validation.
         setattr(bundle, 'data_errors', defaultdict(list))
 
-        # NB: this call will be redundant when the data_errors stuff is
-        # removed (tastypie calls is_valid before invoking obj_create)
         self.is_valid(bundle, request)
+        if bundle.errors:
+            self.error_response(bundle.errors, request)
 
         mgt_data = bundle.data['mgt']
         if 'volume_id' in mgt_data:

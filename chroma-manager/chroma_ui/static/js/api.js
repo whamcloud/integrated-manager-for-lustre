@@ -6,7 +6,7 @@
 
 /* So that Backbone.sync will pass GET list parameters
  * in the way that tastypie requires them */
-jQuery.ajaxSetup({traditional: true})
+jQuery.ajaxSetup({traditional: true});
 
 /* Override backbone.sync to deal with {meta:, objects:}
  * output from API calls */
@@ -45,7 +45,7 @@ Backbone.sync = function(method, model, options) {
   }
 
   Api.call(type, url, data, success_callback = options.success);
-}
+};
 
 /* The Api module wraps the global state used for 
  * accessing the /api/ URL space */
@@ -56,6 +56,8 @@ var Api = function() {
   var API_PREFIX = "/api/";
   var UI_ROOT = "/ui/";
   var lost_contact = false;
+  var lost_contact_at;
+  var CONTACT_RETRY_INTERVAL = 5000;
   var calls_waiting = 0;
   var enable_overlay = true;
 
@@ -75,7 +77,7 @@ var Api = function() {
     return "rhubarb"
   }
 
-  var startBlocking = function()
+  function startBlocking()
   {
     if (errored) {
       return;
@@ -89,7 +91,7 @@ var Api = function() {
     }
   }
 
-  var completeBlocking = function()
+  function completeBlocking()
   {
     if (errored) {
       return;
@@ -101,7 +103,7 @@ var Api = function() {
     }
   }
 
-  var enable = function()
+  function enable()
   {
     api_available = true;
     $('body').trigger('api_available');
@@ -113,7 +115,7 @@ var Api = function() {
       // On 'unauthorized' bounce them to the root to 
       // give them a chance to login
       if (jqXHR.status == 401) {
-        window.location.href = UI_ROOT
+        window.location.href = UI_ROOT;
         return
       }
 
@@ -128,22 +130,24 @@ var Api = function() {
           'Response body': jqXHR.responseText
         });
       }
-      if (response_content.error_message && response_content.traceback) {
-        // An API exception
-        blockingError({
-          'Status': jqXHR.status,
-          'Exception': response_content.error_message,
-          'Backtrace': response_content.traceback
-        })
-      } else if (jqXHR.status == 400) {
-        // A validation error
-        validationError(response_content)
-      } else {
-        blockingError({
-          'Status': jqXHR.status + "(" + jqXHR.statusText + ")",
-          'Response headers': jqXHR.getAllResponseHeaders(),
-          'Response body': response_content
-        });
+      if (response_content) {
+        if (response_content.error_message && response_content.traceback) {
+          // An API exception
+          blockingError({
+            'Status': jqXHR.status,
+            'Exception': response_content.error_message,
+            'Backtrace': response_content.traceback
+          })
+        } else if (jqXHR.status == 400) {
+          // A validation error
+          validationError(response_content)
+        } else {
+          blockingError({
+            'Status': jqXHR.status + "(" + jqXHR.statusText + ")",
+            'Response headers': jqXHR.getAllResponseHeaders(),
+            'Response body': response_content
+          });
+        }
       }
   }
 
@@ -178,12 +182,14 @@ var Api = function() {
   /* A rejected request (400) -- assume that this was
    * a recoverable validation error and provide a generic
    * notification which will not block the UI */
-  function validationError(field_errors)
+  function validationError(errors)
   {
     var list_markup = "<dl>";
-    $.each(field_errors, function(field, errors) {
-      $.each(errors, function(i, error) {
-        list_markup += "<dt>" + field + "</dt><dd>" + error + "</dd>";
+    $.each(errors, function(resource, field_errors) {
+      $.each(field_errors, function(field, errors) {
+        $.each(errors, function(i, error) {
+          list_markup += "<dt>" + field + "</dt><dd>" + error + "</dd>";
+        });
       });
     });
     list_markup += "</dl>";
@@ -194,8 +200,6 @@ var Api = function() {
         }
     })
   }
-
-
 
   var get = function() {
     return call.apply(null, ["GET"].concat([].slice.apply(arguments)))
@@ -252,12 +256,9 @@ var Api = function() {
       datatables_data.iTotalRecords = data.meta.total_count
       datatables_data.iTotalDisplayRecords = data.meta.total_count
       callback(datatables_data);
-    }, error_callback = null, blocking = false);
+    }, null, false);
   };
 
-  var lost_contact = false;
-  var lost_contact_at;
-  var CONTACT_RETRY_INTERVAL = 5000;
   function lostContact ()
   {
     if (lost_contact) {
@@ -395,7 +396,7 @@ var Api = function() {
       if (error_callback) {
         if(typeof(error_callback) == "function") {
           /* Caller has provided a generic error handler */
-          rc = error_callback(jqXHR.responseText);
+          var rc = error_callback(jqXHR.responseText);
           if (rc == false) {
             unexpectedError(jqXHR);
           }
@@ -403,7 +404,7 @@ var Api = function() {
           var status_code = jqXHR.status;
           if(error_callback[status_code] != undefined) {
             /* Caller has provided handler for this status */
-            rc = error_callback[status_code](jqXHR);
+            var rc = error_callback[status_code](jqXHR);
             if (rc == false) {
               unexpectedError(jqXHR);
             }

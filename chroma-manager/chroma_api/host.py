@@ -8,18 +8,14 @@ from collections import defaultdict
 from tastypie.validation import Validation
 
 from chroma_core.models import ManagedHost
-from django.db import IntegrityError
 
 import tastypie.http as http
-from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.resources import Resource
 from tastypie import fields
 from chroma_api.utils import custom_response, StatefulModelResource, MetricResource, dehydrate_command
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PermissionAuthorization
-
-from chroma_api import api_log
 
 
 class HostValidation(Validation):
@@ -63,14 +59,14 @@ class HostResource(MetricResource, StatefulModelResource):
                      'fqdn': ['exact']}
 
     def obj_create(self, bundle, request = None, **kwargs):
-        try:
-            host, command = ManagedHost.create_from_string(bundle.data['address'])
-            raise custom_response(self, request, http.HttpAccepted,
-                    {'command': dehydrate_command(command),
-                     'host': self.full_dehydrate(self.build_bundle(obj = host)).data})
-        except IntegrityError, e:
-            api_log.error(e)
-            raise ImmediateHttpResponse(response = http.HttpBadRequest({'address': "%s" % e}))
+        self.is_valid(bundle, request)
+        if bundle.errors:
+            self.error_response(bundle.errors, request)
+
+        host, command = ManagedHost.create_from_string(bundle.data['address'])
+        raise custom_response(self, request, http.HttpAccepted,
+                {'command': dehydrate_command(command),
+                 'host': self.full_dehydrate(self.build_bundle(obj = host)).data})
 
 
 class HostTestResource(Resource):
@@ -87,10 +83,16 @@ class HostTestResource(Resource):
         authentication = AnonymousAuthentication()
         authorization = PermissionAuthorization('add_managedhost')
         object_class = dict
+        validation = HostValidation()
 
     def obj_create(self, bundle, request = None, **kwargs):
         from chroma_core.models.utils import await_async_result
         from chroma_core.tasks import test_host_contact
+
+        self.is_valid(bundle, request)
+        if bundle.errors:
+            self.error_response(bundle.errors, request)
+
         host = ManagedHost(address = bundle.data['address'])
         async_result = test_host_contact.delay(host)
         result = await_async_result(async_result)

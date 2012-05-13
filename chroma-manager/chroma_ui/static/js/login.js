@@ -170,23 +170,30 @@ var UserDialog = function() {
 }();
 
 var ValidatedForm = function() {
-  function save(element, api_fn, url, obj, complete) {
+  function save(element, api_fn, url, obj, success, error) {
     element.find('input').each(function() {
       obj[$(this).attr('name')] = $(this).val()
     });
-    api_fn(url, obj,
+    return api_fn(url, obj,
       success_callback = function(data) {
-        complete();
+        if (success) {
+          success(data);
+        }
       },
-      error_callback = {
+      {
         400: function(jqXHR) {
+          if (error) {
+            error();
+          }
           var errors = JSON.parse(jqXHR.responseText);
           element.find('span.error').remove();
           element.find('input').removeClass('error');
-          $.each(errors, function(attr_name, error_list) {
-            $.each(error_list, function(i, error) {
-              element.find('input[name=' + attr_name + ']').before("<span class='error'>" + error + "</span>")
-              element.find('input[name=' + attr_name + ']').addClass('error');
+          $.each(errors, function(resource_name, resource_errors) {
+            $.each(resource_errors, function(attr_name, error_list) {
+              $.each(error_list, function(i, error) {
+                element.find('input[name=' + attr_name + ']').before("<span class='error'>" + error + "</span>")
+                element.find('input[name=' + attr_name + ']').addClass('error');
+              });
             });
           });
         }
