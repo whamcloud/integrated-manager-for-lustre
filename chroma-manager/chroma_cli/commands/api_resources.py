@@ -5,6 +5,7 @@
 
 
 import tablib
+import json
 
 from chroma_cli.api_client import ApiClient, ApiCommandResource
 
@@ -20,7 +21,9 @@ def register_global_arguments(parser):
 def commands():
     cmd_handlers = {
         'resources': list_resources,
-        'detect_filesystems': detect_filesystems
+        'detect_filesystems': detect_filesystems,
+        'configuration_dump': configuration_dump,
+        'configuration_load': configuration_load
         }
 
     return cmd_handlers
@@ -43,6 +46,18 @@ def detect_filesystems(config, parser, args):
     command = ApiCommandResource(endpoint.name, endpoint.api, **command)
     if not args.async:
         command.get_monitor()()
+
+
+def configuration_dump(config, parser, args):
+    api = ApiClient(config.api_url, config.username, config.password)
+    result = api.get(api.configuration.url)
+    print json.dumps(result, indent = 4)
+
+
+def configuration_load(config, parser, args):
+    api = ApiClient(config.api_url, config.username, config.password)
+    loaded = json.load(open(args.verb, 'r'))
+    api.post(api.configuration.url, **loaded)
 
 
 def add_verb_arguments(parser, verb, endpoint):

@@ -17,9 +17,13 @@ class BadRequest(CliException):
         super(BadRequest, self).__init__()
 
     def __str__(self):
-        errors = ["  %s: %s" % (field, ",".join(errors))
-                  for field, errors in self.error_dict.items()]
-        return "\n".join(errors)
+        lines = []
+        for resource_name, resource_errors in self.error_dict.items():
+            lines.append("  %s:" % resource_name)
+            for field, errors in resource_errors.items():
+                for error in errors:
+                    lines.extend(["    %s: %s" % (field, error)])
+        return "\n".join(lines)
 
 
 class InternalError(CliException):
@@ -32,3 +36,10 @@ class InternalError(CliException):
 
     def __str__(self):
         return self.backtrace
+
+
+class NotFound(CliException):
+    """
+    HTTP 404
+    """
+    pass

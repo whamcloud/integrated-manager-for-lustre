@@ -10,10 +10,6 @@ def freshen(obj):
     return obj.__class__.objects.get(pk=obj.pk)
 
 
-def set_state(obj, state):
-    Command.set_state([(obj, state)], "Unit test transition %s to %s" % (obj, state))
-
-
 class MockAgent(object):
     label_counter = 0
     mock_servers = {}
@@ -69,6 +65,17 @@ class JobTestCase(TestCase):
             VolumeNode.objects.create(volume = volume, host = host, path = "/fake/path/%s" % volume.id, primary = False)
 
         return volume
+
+    def set_state(self, obj, state, check = True):
+        Command.set_state([(obj, state)], "Unit test transition %s to %s" % (obj, state))
+        if check:
+            try:
+                self.assertState(obj, state)
+            except obj.__class__.DoesNotExist:
+                pass
+
+    def assertState(self, obj, state):
+        self.assertEqual(freshen(obj).state, state)
 
     def setUp(self):
         # FIXME: have to do this before every test because otherwise
@@ -158,3 +165,15 @@ class JobTestCaseWithHost(JobTestCase):
         self.host = self.hosts[0]
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).lnetconfiguration.state, 'nids_known')
+
+    def create_simple_filesystem(self):
+        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
+        self.mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
+        self.mdt = ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
+        self.ost = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
+        self.set_state(self.fs, 'available')
+        self.mgt = freshen(self.mgt)
+        self.fs = freshen(self.fs)
+        self.mdt = freshen(self.mdt)
+        self.ost = freshen(self.ost)

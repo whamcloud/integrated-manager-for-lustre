@@ -6,12 +6,12 @@
 
 import sys
 import time
-
-from chroma_cli.exceptions import BadRequest, InternalError
+from urlparse import urljoin
+import json
 
 import requests
-from urlparse import urljoin
-import simplejson as json
+
+from chroma_cli.exceptions import BadRequest, InternalError, NotFound
 
 
 class ApiClient(object):
@@ -43,8 +43,15 @@ class ApiClient(object):
             except (ValueError, KeyError):
                 raise InternalError("Malformed content: %s" % response.text)
         elif response.status_code == 404:
-            raise AttributeError("No resource with that id")
-        else:  # TODO: add more classes of reponse exceptions
+            try:
+                decoded = json.loads(response.text)
+                if 'traceback' in decoded:
+                    raise NotFound(decoded['traceback'])
+                else:
+                    raise NotFound("Not found")
+            except (ValueError, KeyError):
+                raise NotFound("Not found")
+        else:
             raise RuntimeError("status: %s, text: %s" % (response.status_code,
                                                          response.text))
 
@@ -61,7 +68,11 @@ class ApiClient(object):
 
     def post(self, url, **kwargs):
         response = self._session.post(url, json.dumps(kwargs))
-        return json.loads(self.handle_response(response))
+        text = self.handle_response(response)
+        if text:
+            return json.loads(text)
+        else:
+            return None
 
     def delete(self, url, **kwargs):
         response = self._session.delete(url)

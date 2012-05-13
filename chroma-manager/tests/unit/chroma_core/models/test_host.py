@@ -1,5 +1,5 @@
 from django.db.utils import IntegrityError
-from tests.unit.chroma_core.helper import JobTestCase, set_state, MockAgent
+from tests.unit.chroma_core.helper import JobTestCase, MockAgent
 
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode
 
@@ -30,7 +30,7 @@ class TestHostAddRemove(JobTestCase):
         self.assertEqual(Volume.objects.count(), 1)
         self.assertEqual(VolumeNode.objects.count(), 1)
 
-        set_state(host, 'removed')
+        self.set_state(host, 'removed')
         with self.assertRaises(ManagedHost.DoesNotExist):
             ManagedHost.objects.get(address = 'myaddress')
         self.assertEqual(ManagedHost.objects.count(), 0)
@@ -71,7 +71,7 @@ class TestHostAddRemove(JobTestCase):
         self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
         self.mdt = ManagedMdt.create_for_volume(self._test_lun(host).id, filesystem = self.fs)
         self.ost = ManagedOst.create_for_volume(self._test_lun(host).id, filesystem = self.fs)
-        set_state(self.fs, 'available')
+        self.set_state(self.fs, 'available')
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'mounted')
         self.assertEqual(ManagedMdt.objects.get(pk = self.mdt.pk).state, 'mounted')
         self.assertEqual(ManagedOst.objects.get(pk = self.ost.pk).state, 'mounted')

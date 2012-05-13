@@ -8,7 +8,7 @@ from argparse import REMAINDER
 import sys
 import traceback
 
-from chroma_cli.exceptions import BadRequest, InternalError
+from chroma_cli.exceptions import BadRequest, InternalError, NotFound
 from chroma_cli.parser import ResettableArgumentParser
 from chroma_cli.config import Configuration
 
@@ -53,13 +53,17 @@ def main():
     try:
         dispatcher(config, parser, ns)
     except BadRequest, e:
-        print "Failed validation check(s):"
+        print "Validation errors:"
         print e
         sys.exit(1)
     except InternalError, e:
         print "Internal server error:"
         print e
         sys.exit(2)
+    except NotFound, e:
+        print "Not found:"
+        print e
+        sys.exit(4)
     except Exception, e:
         # Handlers are plugin-like so do some unexpected exception handling
         exc_info = sys.exc_info()

@@ -1,5 +1,5 @@
 
-from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen, set_state
+from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen
 import datetime
 from dateutil import tz
 
@@ -44,7 +44,7 @@ class TestStateManager(JobTestCaseWithHost):
         ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = fs)
         ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = fs)
 
-        set_state(ManagedMgs.objects.get(pk = mgt.pk), 'unmounted')
+        self.set_state(ManagedMgs.objects.get(pk = mgt.pk), 'unmounted')
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unmounted')
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 0)
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 0)
@@ -64,7 +64,7 @@ class TestStateManager(JobTestCaseWithHost):
         finally:
             MockAgent.succeed = True
 
-        set_state(fs, 'available')
+        self.set_state(fs, 'available')
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
 
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 1)
@@ -72,7 +72,7 @@ class TestStateManager(JobTestCaseWithHost):
 
     def test_invalid_state(self):
         with self.assertRaisesRegexp(RuntimeError, "is invalid for"):
-            set_state(self.host, 'lnet_rhubarb')
+            self.set_state(self.host, 'lnet_rhubarb')
 
     def test_1step(self):
         # Should be a simple one-step operation
@@ -81,7 +81,7 @@ class TestStateManager(JobTestCaseWithHost):
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
 
         # This tests a state transition which is done by a single job
-        set_state(self.host, 'lnet_down')
+        self.set_state(self.host, 'lnet_down')
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_down')
 
     def test_notification(self):
@@ -108,5 +108,5 @@ class TestStateManager(JobTestCaseWithHost):
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
 
         # This tests a state transition which requires two jobs acting on the same object
-        set_state(self.host, 'lnet_unloaded')
+        self.set_state(self.host, 'lnet_unloaded')
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_unloaded')
