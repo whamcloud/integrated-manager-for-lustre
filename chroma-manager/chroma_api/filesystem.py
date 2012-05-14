@@ -336,11 +336,6 @@ class FilesystemResource(MetricResource, ConfParamResource):
         # Set up an errors dict in the bundle to allow us to carry
         # hydration errors through to validation.
         setattr(bundle, 'data_errors', defaultdict(list))
-
-        self.is_valid(bundle, request)
-        if bundle.errors:
-            self.error_response(bundle.errors, request)
-
         mgt_data = bundle.data['mgt']
         if 'volume_id' in mgt_data:
             mgt = ManagedMgs.create_for_volume(mgt_data['volume_id'], name="MGS", **self._format_attrs(mgt_data))

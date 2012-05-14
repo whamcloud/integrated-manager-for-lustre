@@ -59,10 +59,6 @@ class HostResource(MetricResource, StatefulModelResource):
                      'fqdn': ['exact']}
 
     def obj_create(self, bundle, request = None, **kwargs):
-        self.is_valid(bundle, request)
-        if bundle.errors:
-            self.error_response(bundle.errors, request)
-
         host, command = ManagedHost.create_from_string(bundle.data['address'])
         raise custom_response(self, request, http.HttpAccepted,
                 {'command': dehydrate_command(command),
@@ -88,10 +84,6 @@ class HostTestResource(Resource):
     def obj_create(self, bundle, request = None, **kwargs):
         from chroma_core.models.utils import await_async_result
         from chroma_core.tasks import test_host_contact
-
-        self.is_valid(bundle, request)
-        if bundle.errors:
-            self.error_response(bundle.errors, request)
 
         host = ManagedHost(address = bundle.data['address'])
         async_result = test_host_contact.delay(host)

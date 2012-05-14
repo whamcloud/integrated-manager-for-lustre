@@ -234,11 +234,6 @@ class ConfigurationResource(Resource):
         return target
 
     def obj_create(self, bundle, request = None):
-        self.is_valid(bundle, request)
-        if bundle.errors:
-            api_log.warning("ConfigurationResource.obj_create: %s" % bundle.errors)
-            self.error_response(bundle.errors, request)
-
         for mgt_data in bundle.data['mgts']:
             mgt = self._load_target(mgt_data, ManagedMgs)
             for fs_data in mgt_data['filesystems']:

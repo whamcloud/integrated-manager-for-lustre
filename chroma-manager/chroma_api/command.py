@@ -71,10 +71,6 @@ class CommandResource(ModelResource):
         always_return_data = True
 
     def obj_create(self, bundle, request = None):
-        self.is_valid(bundle, request)
-        if bundle.errors:
-            self.error_response(bundle.errors, request)
-
         async_result = command_run_jobs.delay(bundle.data['jobs'], bundle.data['message'])
         command_id = await_async_result(async_result)
         bundle.obj = Command.objects.get(pk = command_id)
