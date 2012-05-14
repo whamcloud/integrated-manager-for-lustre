@@ -51,9 +51,12 @@ class TargetValidation(Validation):
 
         volume_id = bundle.data['volume_id']
         try:
-            Volume.objects.get(id = volume_id)
+            volume = Volume.objects.get(id = volume_id)
         except Volume.DoesNotExist:
             errors['volume_id'].append("Volume %s not found" % volume_id)
+        else:
+            if ManagedTarget.objects.filter(volume = volume).count():
+                errors['volume_id'].append("Volume %s in use" % volume_id)
 
         kind = bundle.data['kind']
         if not kind in KIND_TO_KLASS:
