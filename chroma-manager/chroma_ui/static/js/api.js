@@ -194,9 +194,15 @@ var Api = function() {
     });
     list_markup += "</dl>";
 
-    $("<div><h2>Validation errors</h2>" + list_markup + "</div>").dialog({
+    $("<div class='error_dialog'><h2>Validation errors</h2>" + list_markup + "</div>").dialog({
         buttons: {
-          "Dismiss": function(){$(this).dialog('close');}
+          "Dismiss": {
+            "text": "Dismiss",
+            "class": "dismiss_button",
+            "click": function() {
+              $(this).dialog('close');
+            }
+          }
         }
     })
   }

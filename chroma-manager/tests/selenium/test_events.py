@@ -1,44 +1,41 @@
-""" Test Events """
-
 from views.events import Events
-from utils.constants import Constants
+from utils.constants import static_text
 from base import SeleniumBaseTestCase
+from base import select_element_option
+from base import get_selected_option_text
+from base import wait_for_datatable
 
 
 class TestEvents(SeleniumBaseTestCase):
+    """Test cases for events page"""
 
     def setUp(self):
         super(TestEvents, self).setUp()
+
         self.navigation.go('Events')
         self.events_page = Events(self.driver)
 
+        wait_for_datatable(self.driver, '#events_table')
+
     def test_events_filter(self):
-        if self.events_page.get_host_list_length() > 1:
-            self.events_page.select_host(1)
-            host_name = self.events_page.get_host_value_from_dropdown()
-            self.events_page.filter_records()
-            filtered_td_data = self.events_page.get_table_data()
-            # Initialise the constants class
-            constants = Constants()
-            self.NO_DATATABLE_DATA = constants.get_static_text('no_data_for_datable')
-            if filtered_td_data == self.NO_DATATABLE_DATA:
-                self.assertEqual(filtered_td_data, self.NO_DATATABLE_DATA)
-            else:
-                self.assertEqual(self.events_page.get_host_value(), host_name)
+        """Test events filter for particular host"""
+
+        self.events_page.check_host_list_length()
+        select_element_option(self.driver, self.events_page.host_list, 1)
+        host_name = get_selected_option_text(self.driver, self.events_page.host_list)
+        self.events_page.filter_btn.click()
+        self.events_page.check_table_data()
+        self.assertEqual(self.events_page.get_host_value(), host_name)
 
     def test_events_data(self):
-        self.events_page.select_severity(2)
-        self.events_page.filter_records()
-        event_created_value = self.events_page.get_table_data()
-        #Initialise the constants class
-        constants = Constants()
-        self.NO_DATATABLE_DATA = constants.get_static_text('no_data_for_datable')
-        if event_created_value == self.NO_DATATABLE_DATA:
-            self.assertEqual(event_created_value, self.NO_DATATABLE_DATA)
-        else:
-            severity_filter_value = self.events_page.get_severity_value()
-            self.assertEqual(severity_filter_value, constants.get_static_text('warning'))
+        """Test events filter for particular severity value"""
 
-import unittest
+        self.events_page.check_host_list_length()
+        select_element_option(self.driver, self.events_page.event_severity, 2)
+        self.events_page.filter_btn.click()
+        self.events_page.check_table_data()
+        self.assertEqual(self.events_page.get_severity_value(), static_text['warning'])
+
+import django.utils.unittest
 if __name__ == '__main__':
-    unittest.main()
+    django.utils.unittest.main()

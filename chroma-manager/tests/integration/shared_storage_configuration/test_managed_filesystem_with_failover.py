@@ -1,5 +1,3 @@
-import re
-import socket
 import time
 
 from testconfig import config
@@ -108,59 +106,13 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             self.unmount_filesystem(client, 'testfs')
 
         if config['failover_is_configured']:
-            for lustre_server in config['lustre_servers']:
-                for host in hosts:
-                    if lustre_server['nodename'] == host['nodename']:
-                        host['config'] = lustre_server
-
-            # Fail hosts[0], which is running the MGT and MDT
-            self.remote_command(
-                hosts[0]['config']['host'],
-                hosts[0]['config']['destroy_command']
+            self.failover(
+                hosts[0],
+                hosts[1],
+                filesystem_id,
+                volumes_expected_hosts_in_normal_state,
+                volumes_expected_hosts_in_failover_state
             )
-
-            # Wait for failover to occur
-            running_time = 0
-            while running_time < TEST_TIMEOUT and not self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state):
-                time.sleep(1)
-                running_time += 1
-
-            self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for failover")
-            self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
-
-            # Wait for the stonithed server to come back online
-            running_time = 0
-            while running_time < TEST_TIMEOUT:
-                try:
-                    # TODO: Better way to check this?
-                    _, stdout, _ = self.remote_command(
-                        hosts[0]['nodename'],
-                        "echo 'Checking if node is ready to receive commands.'"
-                    )
-                except socket.error:
-                    continue
-                finally:
-                    time.sleep(3)
-                    running_time += 3
-
-                # Verify other host knows it is no longer offline
-                _, stdout, _ = self.remote_command(
-                    hosts[1]['nodename'],
-                    "crm node show %s" % hosts[0]['nodename']
-                )
-                node_status = stdout.read()
-                if not re.search("offline", node_status):
-                    break
-
-            self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for stonithed server to come back online.")
-            _, stdout, _ = self.remote_command(
-                hosts[1]['nodename'],
-                "crm node show %s" % hosts[0]['nodename']
-            )
-            self.assertNotRegexpMatches(stdout.read(), "offline")
-
-            # Verify did not auto-failback
-            self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
             # Failback
             response = self.chroma_manager.get(
@@ -201,3 +153,42 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
 
             # TODO: Also add a test for failback on the active/active OSTs.
+
+    def test_lnet_operational_after_failover(self):
+        if config['failover_is_configured']:
+            # "Pull the plug" on host
+            self.remote_command(
+                config['lustre_servers'][0]['host'],
+                config['lustre_servers'][0]['destroy_command']
+            )
+
+            # Wait for host to boot back up
+            self.wait_for_host_to_boot(
+                booting_host = config['lustre_servers'][0],
+                available_host = config['lustre_servers'][2]
+            )
+
+            # Add two hosts
+            host_1 = self.add_hosts([config['lustre_servers'][0]['address']])[0]
+            host_2 = self.add_hosts([config['lustre_servers'][1]['address']])[0]
+
+            # Set volume mounts
+            ha_volumes = self.get_shared_volumes()
+            self.assertGreaterEqual(len(ha_volumes), 4)
+            self.set_volume_mounts(ha_volumes[0], host_1['id'], host_2['id'])
+            self.set_volume_mounts(ha_volumes[1], host_1['id'], host_2['id'])
+            self.set_volume_mounts(ha_volumes[2], host_2['id'], host_1['id'])
+            self.set_volume_mounts(ha_volumes[3], host_2['id'], host_1['id'])
+            self.verify_usable_luns_valid(ha_volumes, 4)
+
+            # Create new filesystem such that the mgs/mdt is on the host we
+            # failed over and the osts are not.
+            self.create_filesystem(
+                {
+                    'name': 'testfs',
+                    'mgt': {'volume_id': ha_volumes[0]['id']},
+                    'mdt': {'volume_id': ha_volumes[1]['id'], 'conf_params': {}},
+                    'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in ha_volumes[2:3]],
+                    'conf_params': {}
+                }
+            )

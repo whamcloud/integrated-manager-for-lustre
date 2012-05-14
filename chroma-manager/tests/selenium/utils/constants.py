@@ -1,30 +1,31 @@
-"""This function will act as settings file
-"""
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
 
+# Static texts used in test conditions
+static_text = {
+        'no_data_for_datable': 'No data available in table',
+        'warning': 'WARNING',
+        'stop_fs': 'Stop',
+        'start_fs': 'Start',
+        'remove_fs': 'Remove',
+        'stop_lnet': 'Stop LNet',
+        'start_lnet': 'Start LNet',
+        'unload_lnet': 'Unload LNet',
+        'load_lnet': 'Load LNet',
+        'remove': 'Remove',
+        'start_mgt': 'Start',
+        'stop_mgt': 'Stop',
+        'remove_mgt': 'Remove',
+        'edit_user': 'Edit',
+        'delete_user': 'Delete'
+}
 
-class Constants:
-    """ An object that will have constants that will be used for the tests
-    """
-    def __init__(self):
-        # Wait times
-        self.static_text = {
-                'no_data_for_datable': 'No data available in table',
-                'warning': 'WARNING'
-        }
-
-        self.wait_time = {
-            'long': 60,
-            'standard': 30,
-            'medium': 15,
-            'short': 5,
-        }
-
-    def get_wait_time(self, duration):
-        """ Returns the wait time
-        """
-        return self.wait_time[duration]
-
-    def get_static_text(self, text):
-        """ Returns the static text
-        """
-        return self.static_text[text]
+# Wait time duration in seconds
+wait_time = {
+    'long': 60,
+    'standard': 30,
+    'medium': 15,
+    'short': 5,
+}

@@ -1,35 +1,32 @@
-""" Test Logs """
-
 from views.logs import Logs
-from utils.constants import Constants
 from base import SeleniumBaseTestCase
-
 from base import wait_for_datatable
+from base import select_element_option
+from base import get_selected_option_text
 
 
 class TestLogs(SeleniumBaseTestCase):
+    """Test cases for logs page"""
+
     def setUp(self):
         super(TestLogs, self).setUp()
+
         self.navigation.go('Logs')
+
         self.logs_page = Logs(self.driver)
         wait_for_datatable(self.driver, '#all_log_content')
-        self.table_data = self.logs_page.get_table_data()
 
     def test_logs_filter(self):
-        if self.logs_page.get_host_list_length() > 1:
-            #selecting first host name from the host list
-            self.logs_page.click_log_host_list(1)
-            self.logs_page.click_filter()
-            host_name_from_dropdown = self.logs_page.get_host_value_from_dropdown()
-            # Initialise the constants class
-            constants = Constants()
-            self.NO_DATATABLE_DATA = constants.get_static_text('no_data_for_datable')
-            if self.table_data == self.NO_DATATABLE_DATA:
-                self.assertEqual(self.table_data, self.NO_DATATABLE_DATA)
-            else:
-                host_name_from_table = self.logs_page.get_host_value_from_table_data()
-                self.assertEqual(host_name_from_dropdown, host_name_from_table)
+        """Test log filter for particular host"""
 
-import unittest
+        self.logs_page.check_host_list_length()
+        select_element_option(self.driver, self.logs_page.log_host_list, 1)
+        self.logs_page.log_filter_btn.click()
+        host_name = get_selected_option_text(self.driver, self.logs_page.log_host_list)
+        self.logs_page.check_table_data()
+        host_name_from_table = self.logs_page.get_host_value_from_table_data()
+        self.assertEqual(host_name, host_name_from_table)
+
+import django.utils.unittest
 if __name__ == '__main__':
-    unittest.main()
+    django.utils.unittest.main()

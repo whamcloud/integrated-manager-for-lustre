@@ -9,45 +9,101 @@
             "headless": false
         },
     "hosts": [
-        {"address": "example01"},
-        {"address": "example02"}
+        {"address": "example01"}
     ],
-    "mgss": [
+    "mgt": [
         {
             "mounts": [
-                {"host": "example01",
-                "device_node": "/dev/disk/by-id/scsi-14f504e46494c4500396949326d482d344464662d6b334f76", "primary": true},
-                {"host": "example02",
-                "device_node": "/dev/disk/by-id/scsi-14f504e46494c4500396949326d482d344464662d6b334f76", "primary": false}
+                {
+                "host": "example01",
+                "device_node": "/dev/sdb"
+                }
             ]
         }
     ],
     "filesystems": [
-        {"name": "egfs",
-         "mgs": "example01",
+        {
+         "name": "testfs",
+         "conf_params": {
+         	"llite.max_cached_mb": "1500",
+         	"llite.max_read_ahead_mb": "1"
+         },
+         "mgt": "example01",
          "mdt": {
              "mounts": [
                     {
                         "host": "example01",
-                        "device_node": "/dev/disk/by-id/scsi-14f504e46494c45004e41396b66472d33355a302d70513033",
+                        "device_node": "/dev/sdc",
                         "primary": true
-                    },
-                    {
-                        "host": "example02",
-                        "device_node": "/dev/disk/by-id/scsi-14f504e46494c45004e41396b66472d33355a302d70513033",
-                        "primary": false
                     }
              ]
         },
         "osts": [
-            {"mounts": [
-                {"host": "example01",
-                 "device_node": "/dev/disk/by-id/scsi-14f504e46494c45005066496a65762d714b4a302d31354457", "primary": true},
-                {"host": "example02",
-                 "device_node": "/dev/disk/by-id/scsi-14f504e46494c45005066496a65762d714b4a302d31354457", "primary": false}
-                ]
+            {
+              "mounts": [
+                {
+                    "host": "example01",
+                    "device_node": "/dev/sdd",
+                    "primary": true
+                }
+              ]
             }
-        ]
+          ]
         }
-    ]
+    ],
+    "edit_filesystem": [
+        {
+          "conf_params": {
+          	"llite.max_read_ahead_whole_mb": "5",
+          	"llite.max_read_ahead_mb": "10"
+          },
+          "mdt": {
+	          "conf_params": {
+                "lov.stripecount": "2"
+              }
+          },
+          "osts": [
+            {
+              "mounts": [
+                {
+                  "host": "example01",
+                  "device_node": "/dev/sde",
+                  "conf_params": {
+                    "osc.max_dirty_mb": "4"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+     ],
+     "user":[
+         {
+         	"user_group": "superusers",
+         	"username": "superuser",
+         	"first_name": "super",
+         	"last_name": "user",
+         	"email": "super@super.com",
+         	"password": "super123",
+         	"confirm_password": "super123",
+         	"new_password": "super321",
+         	"new_confirm_password": "super321"
+         },
+         {
+         	"user_group": "filesystem_users",
+         	"username": "fsuser",
+         	"password": "fsuser123",
+         	"confirm_password": "fsuser123",
+         	"new_password": "fsuser321",
+         	"new_confirm_password": "fsuser321"
+         },
+         {
+         	"user_group": "filesystem_administrators",
+         	"username": "fsadmin",
+         	"password": "fsadmin123",
+         	"confirm_password": "fsadmin123",
+         	"new_password": "fsadmin321",
+         	"new_confirm_password": "fsadmin321"
+         }
+     ]
 }

@@ -81,6 +81,7 @@ var Dashboard = (function() {
       if($(this).is(":checked")) {
         polling_enabled = true;
         chart_manager.set_recurring(10);
+        chart_manager.render_charts()
       } else {
         chart_manager.clear_recurring();
         polling_enabled = false;
@@ -330,12 +331,15 @@ var Dashboard = (function() {
     }
     else if (dashboard_target.kind === 'MDT') {
       //ost_Area_mgtOps_Data($('#ls_ostId').val(), "false");
-      $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div").hide();
-      $("#target_mdt_ops_container_div").show();
+      $("#target_space_usage_container,#target_read_write_container_div").hide();
+      $("td.target_space_usage div.magni").hide();
+      $("#target_mdt_ops_container_div,#target_inodes_container").show();
       init_charts('targets_mdt');
     }
     else {
-      $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div,#target_mgt_ops_container_div").hide();
+      $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div,#target_mdt_ops_container_div").hide();
+      $("td.target_space_usage div.magni").hide();
+      $("td.target_inodes div.magni").hide();
     }
   }
 
@@ -1000,6 +1004,52 @@ var Dashboard = (function() {
           ['close','getattr','getxattr','link','mkdir','mknod','open','rename','rmdir','setattr','statfs','unlink'],
           function(metric, i) { return { name: metric, type: 'area' }; }
         )
+      }
+    });
+
+    chart_manager.add_chart('inode','targets_mdt', {
+      url: function() { return 'target/' + dashboard_target.id + '/metric/'; },
+      api_params: { latest: true},
+      metrics: ["filestotal", "filesfree"],
+      snapshot: true,
+      snapshot_callback: function(chart, data) {
+        var free=0,used=0;
+        var totalFiles=0,totalFreeFiles=0;
+        if ( _.isObject(data[0])) {
+          totalFiles = data[0].data.filesfree;
+          totalFreeFiles = data[0].data.filestotal;
+          free = Math.round(((totalFiles)/(totalFreeFiles))*100);
+          used = Math.round(100 - free);
+        }
+        chart.instance.series[0].setData([ ['Free', free], ['Used', used] ]);
+      },
+      chart_config: {
+        chart: {
+          renderTo: 'target_inodes_container',
+          plotShadow: false
+        },
+        colors: [ '#A6C56D', '#C76560' ],
+        title:{ text: 'File usage'},
+        zoomType: 'xy',
+        tooltip: {
+          formatter: function() { return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %'; }
+        },
+        xAxis:{ categories: [], text: '' },
+        yAxis:{ text: '', plotLines: [ { value: 0, width: 1, color: '#808080' } ] },
+        plotOptions: {
+          pie: {
+            allowPointSelect: true,
+            cursor: 'pointer',
+            showInLegend: true,
+            size: '100%',
+            dataLabels: { enabled: false,color: '#000000',connectorColor: '#000000' }
+          }
+        },
+        series: [{
+          type: 'pie',
+          name: 'Browser share',
+          data: [ ]
+        }]
       }
     });
 

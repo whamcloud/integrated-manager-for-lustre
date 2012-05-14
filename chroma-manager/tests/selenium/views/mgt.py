@@ -1,135 +1,103 @@
-"""Page Object of mgt creation"""
-from utils.constants import Constants
-from time import sleep
-from selenium.common.exceptions import StaleElementReferenceException
-from selenium.common.exceptions import NoSuchElementException
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
+from utils.constants import wait_time
 from base import wait_for_element
+from base import wait_for_transition
+from base import wait_for_datatable
 
 
 class Mgt:
-    """ Page Object for mgt creation
+    """
+    Page Object for MGT operations
     """
     def __init__(self, driver):
         self.driver = driver
-        #Initialise the constants class
-        constants = Constants()
-        self.WAIT_TIME = constants.wait_time
-        self.device_node_coloumn = 2
-        self.host_name_coloumn = 5
-        # Initialise all elements on that view.
-        self.volume_chooser_selected = self.driver.find_elements_by_class_name("volume_chooser_selected")
-        self.create_mgt_button = self.driver.find_element_by_id('btnNewMGT')
-        self.selected_mgt_host = ""
+
+        self.standard_wait = wait_time['standard']
+        self.medium_wait = wait_time['medium']
+        self.long_wait = wait_time['long']
+
+        # Initialise elements on this page
+        self.create_mgt_button = self.driver.find_element_by_css_selector('#btnNewMGT')
+        self.mgt_configuration_list = '#mgt_configuration'
+        self.mgt_list_datatable = 'mgt_configuration_content'
 
     def select_mgt(self, host_name, device_node):
-        """Select an MGT"""
-        mgtchooser = self.volume_chooser_selected.__getitem__(0)
+        """Click storage button and select an MGT from chooser"""
+
+        volume_chooser_selected = self.driver.find_elements_by_class_name("volume_chooser_selected")
+        mgtchooser = volume_chooser_selected.__getitem__(0)
         mgtchooser.click()
-        sleep(2)
         mgt_rows = self.driver.find_elements_by_xpath("id('new_mgt_chooser_table')/tbody/tr")
         for tr in mgt_rows:
             if tr.find_element_by_xpath("td[5]").text == host_name and tr.find_element_by_xpath("td[1]").text == device_node:
                 tr.click()
+                return
 
-    def check_mgt_actions(self, host_name, action_name):
-        """Check whether the given action_name not present in available actions"""
-        # When MGT is stopped no host_name is displayed so search by device_node
-        if action_name == 'Start':
-            mgt_list = self.driver.find_elements_by_xpath("id('mgt_configuration_content')/tr/td[" + str(self.device_node_coloumn) + "]")
-        else:
-            mgt_list = self.driver.find_elements_by_xpath("id('mgt_configuration_content')/tr/td[" + str(self.host_name_coloumn) + "]")
-        is_compared = True
-        for i in range(len(mgt_list)):
-            if mgt_list.__getitem__(i).text == host_name:
-                is_compared = False
-                mgt_buttons = self.driver.find_elements_by_xpath("id('mgt_configuration_content')/tr[" + str(i + 1) + "]/td[6]/span/button")
-                for button_count in range(len(mgt_buttons)):
-                    if mgt_buttons[button_count].text == action_name:
-                        return True
+        raise RuntimeError("Cannot choose MGT with host name: " + host_name + " and device node: " + device_node)
+
+    def check_action_available(self, host_name, device_node, action_name):
+        """Check whether the given transition(action) is present in all possible transitions available for MGT"""
+
+        is_compared = False
+        target_mgt_row = self.locate_mgt(host_name, device_node)
+        buttons = target_mgt_row.find_elements_by_tag_name("button")
+        for button in buttons:
+            if button.text == action_name:
+                is_compared = True
 
         return is_compared
 
-    def create_mgt(self):
-        self.create_mgt_button.click()
-        # FIXME: need to add a generic function to wait for an action
-        sleep(2)
-        self.test_loading_image()
+    def verify_added_mgt(self, host_name, device_node):
+        """Verify whether newly added MGT appears in the displayed MGT list"""
 
-    def create_mgt_button_enabled(self):
-        """Returns whether create MGT button is enabled or not"""
-        return self.create_mgt_button.is_enabled()
+        mgt_rows = self.driver.find_elements_by_xpath("id('" + self.mgt_list_datatable + "')/tr")
+        for tr in mgt_rows:
+            if tr.find_element_by_xpath("td[5]").text == host_name and tr.find_element_by_xpath("td[2]").text == device_node:
+                return True
 
-    def verify_added_mgt(self, host_name):
-        """Stops MGT on the server"""
-        mgt_list = self.driver.find_elements_by_xpath("id('mgt_configuration_content')/tr/td[" + str(self.host_name_coloumn) + "]")
-        if len(mgt_list) > 0:
-            for i in range(len(mgt_list)):
-                if mgt_list.__getitem__(i).text == host_name:
-                    return True
+        raise RuntimeError("Newly added MGT with host name: " + host_name + " and device node: " + device_node + " not found in list")
 
-    def mgt_list_displayed(self):
-        """Returns whether MGT list is displayed or not"""
-        self.mgt_list = self.driver.find_element_by_id('mgt_configuration')
-        return self.mgt_list.is_displayed()
+    def locate_mgt(self, host_name, device_node):
+        """Locate MGT by host_name and device_node"""
 
-    def error_dialog_displayed(self):
-        """Returns whether error dialog is displayed or not"""
-        self.popup_message = self.driver.find_element_by_id('popup_message')
-        return self.popup_message.is_displayed()
+        mgt_list = self.driver.find_elements_by_xpath("id('" + self.mgt_list_datatable + "')/tr")
+        for tr in mgt_list:
+            tds = tr.find_elements_by_tag_name("td")
+            if host_name != '' and device_node != '':
+                if tds[4].text == host_name and tds[1].text == device_node:
+                    return tr
 
-    def stop_mgt(self, host_name):
-        """Stops MGT on the server"""
-        mgt_list = self.driver.find_elements_by_xpath("id('mgt_configuration_content')/tr/td[" + str(self.host_name_coloumn) + "]")
-        if len(mgt_list) > 0:
-            for i in range(len(mgt_list)):
-                if mgt_list.__getitem__(i).text == host_name:
-                    stop_mgt_button = self.driver.find_element_by_xpath("id('mgt_configuration_content')/tr[" + str(i + 1) + "]/td[6]/span/button[2]")
-                    stop_mgt_button.click()
-                    wait_for_element(self.driver, '#transition_confirm_button', 10)
-                    confirm_button = self.driver.find_element_by_id('transition_confirm_button')
-                    confirm_button.click()
-                    sleep(1)
-                    self.test_loading_image()
+        raise RuntimeError("MGT with host name: " + host_name + " and device node:" + device_node + " not found in list")
 
-    def start_mgt(self, device_node):
-        """Starts MGT on the server"""
-        mgt_list = self.driver.find_elements_by_xpath("id('mgt_configuration_content')/tr/td[" + str(self.device_node_coloumn) + "]")
-        if len(mgt_list) > 0:
-            for i in range(len(mgt_list)):
-                if mgt_list.__getitem__(i).text == device_node:
-                    start_mgt_button = self.driver.find_element_by_xpath("id('mgt_configuration_content')/tr[" + str(i + 1) + "]/td[6]/span/button[1]")
-                    start_mgt_button.click()
-                    sleep(2)
-                    self.test_loading_image()
+    def transition(self, host_name, device_node, transition_name, transition_confirm = True):
+        """Perform given transition on target MGT"""
 
-    def remove_mgt(self, host_name):
-        """Removes MGT on the server"""
-        mgt_list = self.driver.find_elements_by_xpath("id('mgt_configuration_content')/tr/td[" + str(self.host_name_coloumn) + "]")
-        if len(mgt_list) > 0:
-            for i in range(len(mgt_list)):
-                if mgt_list.__getitem__(i).text == host_name:
-                    stop_mgt_button = self.driver.find_element_by_xpath("id('mgt_configuration_content')/tr[" + str(i + 1) + "]/td[6]/span/button[1]")
-                    stop_mgt_button.click()
-                    wait_for_element(self.driver, '#transition_confirm_button', 10)
-                    confirm_button = self.driver.find_element_by_id('transition_confirm_button')
-                    confirm_button.click()
-                    sleep(1)
-                    self.test_loading_image()
+        target_mgt_row = self.locate_mgt(host_name, device_node)
+        buttons = target_mgt_row.find_elements_by_tag_name("button")
+        for button in buttons:
+            if button.text == transition_name:
+                button.click()
+                if transition_confirm:
+                    # Confirm decision and wait the transition
+                    wait_for_element(self.driver, '#transition_confirm_button', self.medium_wait)
+                    self.driver.find_element_by_id('transition_confirm_button').click()
 
-    def test_loading_image(self):
-        from time import sleep
-        for i in xrange(10):
-            print "Retrying attempt: " + str(i + 1)
-            try:
-                loading_div = self.driver.find_element_by_css_selector("span.notification_object_icon.busy_icon")
-                try:
-                    if loading_div.is_displayed():
-                        print "Waiting for process to get complete"
-                        sleep(2)
-                        continue
-                except StaleElementReferenceException:
-                    sleep(2)
-                    return
-            except NoSuchElementException:
-                sleep(2)
+                # Wait for the transition to complete
+                wait_for_transition(self.driver, self.standard_wait)
                 return
+
+        raise RuntimeError("Cannot perform transition " + transition_name + " for MGT with host " + host_name + " and device node " + device_node)
+
+    def create_mgt(self, mgt_host_name, mgt_device_node):
+        self.select_mgt(mgt_host_name, mgt_device_node)
+        self.create_mgt_button.click()
+        wait_for_datatable(self.driver, '#mgt_configuration')
+        wait_for_transition(self.driver, self.long_wait)
+
+    def remove_mgt(self, mgt_host_name, mgt_device_node, transition_name):
+        self.transition(self.mgt_host_name, self.mgt_device_node, transition_name)

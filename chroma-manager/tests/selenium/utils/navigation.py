@@ -1,37 +1,40 @@
-""" Code for navigation """
-from utils.constants import Constants
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
+from utils.constants import wait_time
 from time import sleep
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import NoSuchElementException
 
 
 class Navigation:
-    """Class contains all links to navigate in the UI
-    """
     def __init__(self, driver):
-        """ Here we initiate the main header navigation links
-            @param: driver : Instance of the webdriver
+        """
+        List of clickable UI elements in menus/tabs/pages
+        @param: driver - Instance of the webdriver
         """
         self._driver = driver
-        self.WAIT_TIME = Constants().wait_time['standard']
+        self.WAIT_TIME = wait_time['standard']
+
         self.links = {
+            # Elements in Main Menu
             'Dashboard': '#dashboard_menu',
             'Configure': '#configure_menu',
             'Alerts': '#alert_menu',
             'Events': '#event_menu',
             'Logs': '#log_menu',
-            # Links under configuration
+
+            # Elements under configure tab
             'Filesystems': "a[href='#filesystem-tab']",
             'MGTs': "a[href='#mgt-tab']",
             'Volumes': "a[href='#volume-tab']",
             'Servers': "a[href='#server-tab']",
             'Storage': "a[href='#storage-tab']",
-            'Create_new_filesystem': 'create_new_fs',
-            # Links under Notifications
-            'Notifications': 'signbtn',
-            'Notify_alerts': 'alertAnchor',
-            'Notify_events': 'eventsAnchor',
-            'Notify_jobs': 'jobsAnchor',
+            'Users': "a[href='#user-tab']",
+            'Create_new_filesystem': "#create_new_fs",
         }
 
     def go(self, *args):
@@ -39,17 +42,18 @@ class Navigation:
             self.click(self.links[page])
 
     def click(self, selector):
-        """ A generic function to click a link from the main navigation bar
-        @param: element_id : Specify the ID of the element to be clicked as seen on the UI
-        Added wait for blockoverlay and jGrowl notifications pop-ups
         """
+        A generic function to click an element and wait for blockoverlay screen and jGrowl notifications
+        @param: element_id - Specify the ID of the element to be clicked as seen on the UI
+        """
+
         block_overlay_classname = "div.blockUI.blockOverlay"
         jGrowl_notification_classname = "div.jGrowl-notification.highlight.ui-corner-all.default"
+
         for wait_before_count in xrange(self.WAIT_TIME):
             is_overlay = self.wait_for_loading_page(block_overlay_classname)
             is_jGrowl_notification = self.wait_for_loading_page(jGrowl_notification_classname)
             if is_overlay or is_jGrowl_notification:
-                print "Waiting for UI to load BEFORE clicking target element"
                 sleep(2)
             else:
                 link_handle = self._driver.find_element_by_css_selector(selector)
@@ -58,7 +62,6 @@ class Navigation:
                     is_overlay = self.wait_for_loading_page(block_overlay_classname)
                     is_jGrowl_notification = self.wait_for_loading_page(jGrowl_notification_classname)
                     if is_overlay or is_jGrowl_notification:
-                        print "Waiting for UI to load AFTER clicking target element"
                         sleep(2)
                         continue
                     else:

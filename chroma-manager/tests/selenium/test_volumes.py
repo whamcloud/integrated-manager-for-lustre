@@ -1,43 +1,31 @@
-""" Test Volumes """
-
-from utils.navigation import Navigation
 from views.volumes import Volumes
 from base import SeleniumBaseTestCase
-from time import sleep
+from base import wait_for_datatable
 
 
-class Volumesdata(SeleniumBaseTestCase):
+class TestVolumes(SeleniumBaseTestCase):
+    """Test cases for volume configuration"""
+
+    def setUp(self):
+        super(TestVolumes, self).setUp()
+
+        self.navigation.go('Configure', 'Volumes')
+        self.volumes_page = Volumes(self.driver)
+
+        wait_for_datatable(self.driver, '#volume_configuration')
 
     def test_volume_config_error_data(self):
-
-        # Calling navigation
-        page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation.links['Configure'])
-
-        page_navigation.click(page_navigation.links['Volumes'])
-        sleep(2)
-
-        # Calling volumes
-        volumes_page = Volumes(self.driver)
+        """Test case for validating volume configuration"""
 
         # Verifying the volume configuration error dialog being displayed
-        self.assertTrue(volumes_page.get_volume_config_error_message())
+        self.assertTrue(self.volumes_page.check_volume_config_validation())
 
     def test_change_volume_config(self):
-
-        # Calling navigation
-        page_navigation = Navigation(self.driver)
-        page_navigation.click(page_navigation.links['Configure'])
-
-        page_navigation.click(page_navigation.links['Volumes'])
-        sleep(2)
-
-        # Calling volumes
-        volumes_page = Volumes(self.driver)
+        """Test for changing volume configuration"""
 
         # Verifying that volume configuration setting is successful
-        self.assertEqual(volumes_page.get_volume_change_message(), 'Update Successful')
+        self.assertEqual(self.volumes_page.change_volume_config(), 'Update Successful')
 
-import unittest
+import django.utils.unittest
 if __name__ == '__main__':
-    unittest.main()
+    django.utils.unittest.main()

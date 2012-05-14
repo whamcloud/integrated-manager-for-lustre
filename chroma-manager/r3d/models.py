@@ -179,6 +179,16 @@ class Database(models.Model):
 
         self.cache_lists_and_check_pickles()
 
+    def available_resolutions(self):
+        """
+        Returns a list of resolutions, in seconds, available for query.
+        By default, the highest-resolution archive which best matches the
+        query window is used to provide datapoints, but a lower resolution
+        can be specified if desired.
+        """
+        return [rra.cdp_per_row * self.step
+                for rra in self.archives.order_by('cdp_per_row')]
+
     def cache_lists_and_check_pickles(self):
         self.ds_list = list(self.datasources.all().order_by('id'))
         self.rra_list = list(self.archives.all().order_by('id'))
@@ -197,7 +207,7 @@ class Database(models.Model):
         if force or self.rra_pointers is None:
             self.rra_pointers = {}
             for rra in self.rra_list:
-                self.rra_pointers[rra.pk] = 0
+                self.rra_pointers[rra.pk] = {'wrapped': False, 'slot': 0}
 
     def rebuild_ds_pickle(self, force=False):
         if force or self.ds_pickle is None:
@@ -665,7 +675,7 @@ class Archive(PoorMansStiModel):
         super(Archive, self).save(*args, **kwargs)
 
         if new_rra:
-            self.database.rra_pointers[self.pk] = 0
+            self.database.rra_pointers[self.pk] = {'slot': 0, 'wrapped': False}
             # NB: This pointer value is only used for the lifetime
             # of the new .database object in this context -- it's not
             # persisted to rdbms because we would clobber the "real"

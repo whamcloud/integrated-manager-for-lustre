@@ -31,12 +31,16 @@ var ConfParamDialog = function(options) {
       position:"center",
       buttons:
       {
-        "Apply": function() {
-          var datatable = $(this).find('table').dataTable();
-          if (_options.url) {
-            apply_config_params(_options.url, datatable);
+        "Apply": {
+          text: "Apply",
+          class: "conf_param_apply_button",
+          click: function(){
+            var datatable = $(this).find('table').dataTable();
+            if (_options.url) {
+              apply_config_params(_options.url, datatable);
+            }
+            $(this).dialog('close')
           }
-          $(this).dialog('close')
         },
         "Close": function() {
           $(this).dialog("close");

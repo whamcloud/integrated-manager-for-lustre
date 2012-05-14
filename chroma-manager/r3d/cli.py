@@ -160,6 +160,18 @@ def find_local_timezone():
     return _local_tz
 
 
+def pretty_time(in_time):
+    local_tz = find_local_timezone()
+    local_midnight = dt.now(local_tz).replace(hour=0, minute=0,
+                                              second=0, microsecond=0)
+    in_utc = dt.utcfromtimestamp(in_time).replace(tzinfo=tzutc())
+    out_time = in_utc.astimezone(local_tz)
+    if out_time < local_midnight:
+        return out_time.strftime("%Y:%m:%d_%H:%M:%S")
+    else:
+        return out_time.strftime("%H:%M:%S")
+
+
 def main():
     parser = ArgumentParser(description="R3D debug CLI")
 
@@ -184,6 +196,8 @@ def main():
                         help="Beginning of stats request window (default: now - 5min)")
     parser.add_argument("--end", "-e", action=TimeAction,
                         default=now, help="End of stats request window (default: now)")
+    parser.add_argument("--step", "-t", type=int, default=1,
+                    help="Set lower limit of query resolution (default: 1 step)")
 
     parser.add_argument("--interval", "-n", type=int,
                         help="If supplied, refresh every N seconds")
@@ -212,17 +226,6 @@ def main():
         else:
             results[time] = db_data
 
-    def pretty_time(in_time):
-        local_tz = find_local_timezone()
-        local_midnight = dt.now(local_tz).replace(hour=0, minute=0,
-                                                  second=0, microsecond=0)
-        in_utc = dt.utcfromtimestamp(in_time).replace(tzinfo=tzutc())
-        out_time = in_utc.astimezone(local_tz)
-        if out_time < local_midnight:
-            return str(out_time)
-        else:
-            return out_time.strftime("%H:%M:%S")
-
     looped = False
     while True:
         if ns.interval is not None and looped:
@@ -250,7 +253,8 @@ def main():
             else:
                 flush_transaction()
                 rows = db.fetch(ns.archive, fetch_metrics=ns.datasource,
-                                start_time=ns.begin, end_time=ns.end)
+                                start_time=ns.begin, end_time=ns.end,
+                                step=ns.step)
                 for row in rows:
                     row_time, data = row
                     if ns.separate:

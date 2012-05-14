@@ -1,5 +1,6 @@
 import paramiko
 import re
+import socket
 import time
 
 from django.utils.unittest import TestCase
@@ -276,11 +277,16 @@ class ChromaIntegrationTestCase(TestCase):
                 )
 
     def set_volume_mounts(self, volume, primary_host_id, secondary_host_id):
+        primary_volume_node_id = None
+        secondary_volume_node_id = None
         for node in volume['volume_nodes']:
             if node['host_id'] == int(primary_host_id):
                 primary_volume_node_id = node['id']
             elif node['host_id'] == int(secondary_host_id):
                 secondary_volume_node_id = node['id']
+
+        self.assertTrue(primary_volume_node_id, volume)
+        self.assertTrue(secondary_volume_node_id, volume)
 
         response = self.chroma_manager.put(
             "/api/volume/%s/" % volume['id'],
@@ -425,6 +431,12 @@ class ChromaIntegrationTestCase(TestCase):
         return True
 
     def add_hosts(self, addresses):
+        response = self.chroma_manager.get(
+            '/api/host/',
+        )
+        self.assertEqual(response.successful, True, response.text)
+        pre_existing_hosts = response.json['objects']
+
         host_create_command_ids = []
         for host_address in addresses:
             response = self.chroma_manager.post(
@@ -460,10 +472,12 @@ class ChromaIntegrationTestCase(TestCase):
         )
         self.assertEqual(response.successful, True, response.text)
         hosts = response.json['objects']
-        self.assertEqual(len(addresses), len(hosts))
+        self.assertEqual(len(addresses), len(hosts) - len(pre_existing_hosts))
         self.assertListEqual([h['state'] for h in hosts], ['lnet_up'] * len(hosts))
 
-        return hosts
+        new_hosts = [h for h in hosts if h['id'] not in [s['id'] for s in pre_existing_hosts]]
+
+        return new_hosts
 
     def get_usable_volumes(self):
         response = self.chroma_manager.get(
@@ -554,3 +568,65 @@ class ChromaIntegrationTestCase(TestCase):
                 'conf_params': {}
             }
         )
+
+    def failover(self, primary_host, secondary_host, filesystem_id, volumes_expected_hosts_in_normal_state, volumes_expected_hosts_in_failover_state):
+        # Attach configurations to primary host so we can retreive information
+        # about its vmhost and hwo to destroy it.
+        for lustre_server in config['lustre_servers']:
+            if lustre_server['nodename'] == primary_host['nodename']:
+                primary_host['config'] = lustre_server
+
+        # "Pull the plug" on the primary lustre server
+        self.remote_command(
+            primary_host['config']['host'],
+            primary_host['config']['destroy_command']
+        )
+
+        # Wait for failover to occur
+        running_time = 0
+        while running_time < TEST_TIMEOUT and not self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state):
+            time.sleep(1)
+            running_time += 1
+
+        self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for failover")
+        self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
+
+        self.wait_for_host_to_boot(
+            booting_host = primary_host,
+            available_host = secondary_host
+        )
+
+        # Verify did not auto-failback
+        self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
+
+    def wait_for_host_to_boot(self, booting_host, available_host):
+        # Wait for the stonithed server to come back online
+        running_time = 0
+        while running_time < TEST_TIMEOUT:
+            try:
+                #TODO: Better way to check this?
+                _, stdout, _ = self.remote_command(
+                    booting_host['nodename'],
+                    "echo 'Checking if node is ready to receive commands.'"
+                )
+            except socket.error:
+                continue
+            finally:
+                time.sleep(3)
+                running_time += 3
+
+            # Verify other host knows it is no longer offline
+            _, stdout, _ = self.remote_command(
+                available_host['nodename'],
+                "crm node show %s" % booting_host['nodename']
+            )
+            node_status = stdout.read()
+            if not re.search('offline', node_status):
+                break
+
+        self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for host to come back online.")
+        _, stdout, _ = self.remote_command(
+            available_host['nodename'],
+            "crm node show %s" % booting_host['nodename']
+        )
+        self.assertNotRegexpMatches(stdout.read(), 'offline')

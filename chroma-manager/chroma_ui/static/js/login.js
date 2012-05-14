@@ -147,20 +147,23 @@ var UserDialog = function() {
     form_markup += "<tr><th>Username:</th><td><input name='username' type='text' readonly='readonly' value='" + user.username + "'/></td></tr>"
     form_markup += "<tr><th>Password:</th><td><input name='password1' type='password'/></td></tr>"
     form_markup += "<tr><th>Confirm password:</th><td><input name='password2' type='password'/></td></tr>"
-    $("<div>" + form_markup + "</div>").dialog({
+    $("<div class='edit_user_dialog'>" + form_markup + "</div>").dialog({
       resizable: false,
       width: 'auto',
       buttons: {
         "Cancel": function() {$(this).dialog('close')},
-        "Save": function() {
-          var dialog = $(this);
-          ValidatedForm.save($(this), Api.put, "user/" + user.id + "/", user, function() {
-            dialog.dialog('close');
-            if (callback) {
-              callback();
-            }
-          });
-
+        "Save": {
+          "text": "Save",
+          "class": "save_button",
+          "click": function(){
+            var dialog = $(this);
+            ValidatedForm.save($(this), Api.put, "user/" + user.id + "/", user, function() {
+              dialog.dialog('close');
+              if (callback) {
+                callback();
+              }
+            });
+          }
         }
       }
     })

@@ -1,19 +1,23 @@
-# Import system modules
-from django.utils.unittest import TestCase
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
+import logging
+import time
 
 # Import third-party modules
 from selenium import webdriver
 
-from utils.constants import Constants
+from django.utils.unittest import TestCase
+from utils.constants import wait_time
 from testconfig import config
-
-import time
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import Select
-
 from utils.navigation import Navigation
-import logging
+from selenium.webdriver.support.ui import WebDriverWait
 
 
 def element_visible(driver, selector):
@@ -34,7 +38,7 @@ def wait_for_element(driver, selector, timeout):
             return True
 
         time.sleep(1)
-    raise RuntimeError('Timeout')
+    raise RuntimeError('Timeout while waiting for an element to get visible')
 
 
 def wait_for_any_element(driver, selectors, timeout):
@@ -44,30 +48,50 @@ def wait_for_any_element(driver, selectors, timeout):
                 return True
 
         time.sleep(1)
-    raise RuntimeError('Timeout')
+    raise RuntimeError('Timeout while waiting for an array of elements to get visible')
 
 
 def wait_for_transition(driver, timeout):
+    # Wait for transition (i.e busy) icon to get displayed
+    busy_icon_check = False
+
+    WebDriverWait(driver, timeout).until(lambda driver: driver.find_element_by_css_selector("span.notification_object_icon.busy_icon").is_displayed() or driver.find_element_by_css_selector("span.notification_object_icon.locked_icon").is_displayed())
+
+    if driver.find_element_by_css_selector("span.notification_object_icon.busy_icon").is_displayed():
+        busy_icon_check = True
+
     for timer in xrange(timeout):
         # Wait while the transition is in progress
         try:
-            element = driver.find_element_by_css_selector("span.notification_object_icon.busy_icon")
+            # Check for which icon to wait for to get displayed
+            busy_icon = None
+            locked_icon = None
+            if busy_icon_check:
+                busy_icon = driver.find_element_by_css_selector("span.notification_object_icon.busy_icon")
+            else:
+                locked_icon = driver.find_element_by_css_selector("span.notification_object_icon.locked_icon")
             try:
-                if element.is_displayed():
-                    time.sleep(2)
-                    continue
+                if busy_icon_check:
+                    if busy_icon.is_displayed():
+                        time.sleep(2)
+                        continue
+                else:
+                    if locked_icon.is_displayed():
+                        time.sleep(2)
+                        continue
             except StaleElementReferenceException:
                 return
         except NoSuchElementException:
             return
 
-    raise RuntimeError('Timeout while waiting for transition')
+    raise RuntimeError('Timeout while waiting for transition to get complete')
 
 
 def enter_text_for_element(driver, selector, text_value):
     element = driver.find_element_by_css_selector(selector)
     element.clear()
     element.send_keys(text_value)
+    WebDriverWait(driver, 10).until(lambda driver: element.get_attribute('value') == text_value)
 
 
 def click_element_and_wait(driver, xpath_selector, timeout):
@@ -90,6 +114,7 @@ def get_selected_option_text(driver, dropdown_element_selector):
 def wait_for_datatable(driver, selector, timeout = 10):
     # A loaded datatable always has at least one tr, either
     # a real record or a "no data found" row
+    WebDriverWait(driver, 15).until(lambda driver: driver.find_element_by_class_name("dataTables_processing").is_displayed() == False)
     wait_for_element(driver, selector + " tbody tr", timeout)
 
 
@@ -99,6 +124,24 @@ def quiesce_api(driver, timeout):
         if not busy:
             return
     raise RuntimeError('Timeout')
+
+
+def login_superuser(driver):
+    from views.login import Login
+    wait_for_any_element(driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
+    login_view = Login(driver)
+    if not element_visible(driver, '#login_dialog'):
+        login_view.open_login_dialog()
+    login_view.login_superuser()
+
+
+def login_newuser(driver, username, password):
+    from views.login import Login
+    wait_for_any_element(driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
+    login_view = Login(driver)
+    if not element_visible(driver, '#login_dialog'):
+        login_view.open_login_dialog()
+    login_view.login_newuser(username, password)
 
 
 class SeleniumBaseTestCase(TestCase):
@@ -114,7 +157,6 @@ class SeleniumBaseTestCase(TestCase):
     test_logger.setLevel(logging.INFO)
 
     def setUp(self):
-        from views.login import Login
 
         if config['chroma_managers']['headless']:
             from pyvirtualdisplay import Display
@@ -124,18 +166,14 @@ class SeleniumBaseTestCase(TestCase):
         if not self.driver:
             self.driver = getattr(webdriver, config['chroma_managers']['browser'])()
 
-        constants = Constants()
-        self.wait_time = constants.get_wait_time('standard')
-        self.long_wait_time = constants.get_wait_time('long')
+        self.wait_time = wait_time['standard']
+        self.long_wait_time = wait_time['long']
         if not config['chroma_managers']['server_http_url']:
             raise RuntimeError("Please set server_http_url in config file")
         self.driver.get(config['chroma_managers']['server_http_url'])
 
-        wait_for_any_element(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
-        login_view = Login(self.driver)
-        if not element_visible(self.driver, '#login_dialog'):
-            login_view.open_login_dialog()
-        login_view.login_superuser()
+        login_superuser(self.driver)
+
         wait_for_element(self.driver, '#user_info #authenticated', 10)
         wait_for_element(self.driver, '#dashboard_menu', 10)
         self.driver.execute_script('Api.testMode(true);')
