@@ -29,11 +29,15 @@ class HostValidation(Validation):
         except KeyError:
             errors['address'].append("This field is mandatory")
         else:
-            try:
-                ManagedHost.objects.get(address = address)
-                errors['address'].append("This address is already in use")
-            except ManagedHost.DoesNotExist:
-                pass
+            if not len(address.strip()):
+                errors['address'].append("This field is mandatory")
+            else:
+                # TODO: validate URI
+                try:
+                    ManagedHost.objects.get(address = address)
+                    errors['address'].append("This address is already in use")
+                except ManagedHost.DoesNotExist:
+                    pass
 
         return errors
 
