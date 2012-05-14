@@ -182,14 +182,12 @@ var Api = function() {
   /* A rejected request (400) -- assume that this was
    * a recoverable validation error and provide a generic
    * notification which will not block the UI */
-  function validationError(errors)
+  function validationError(field_errors)
   {
     var list_markup = "<dl>";
-    $.each(errors, function(resource, field_errors) {
-      $.each(field_errors, function(field, errors) {
-        $.each(errors, function(i, error) {
-          list_markup += "<dt>" + field + "</dt><dd>" + error + "</dd>";
-        });
+    $.each(field_errors, function(field, errors) {
+      $.each(errors, function(i, error) {
+        list_markup += "<dt>" + field + "</dt><dd>" + error + "</dd>";
       });
     });
     list_markup += "</dl>";

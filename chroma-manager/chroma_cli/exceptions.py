@@ -18,11 +18,9 @@ class BadRequest(CliException):
 
     def __str__(self):
         lines = []
-        for resource_name, resource_errors in self.error_dict.items():
-            lines.append("  %s:" % resource_name)
-            for field, errors in resource_errors.items():
-                for error in errors:
-                    lines.extend(["    %s: %s" % (field, error)])
+        for field, errors in self.error_dict.items():
+            for error in errors:
+                lines.extend(["  %s: %s" % (field, error)])
         return "\n".join(lines)
 
 

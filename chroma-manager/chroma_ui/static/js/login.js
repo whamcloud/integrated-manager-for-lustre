@@ -191,12 +191,10 @@ var ValidatedForm = function() {
           var errors = JSON.parse(jqXHR.responseText);
           element.find('span.error').remove();
           element.find('input').removeClass('error');
-          $.each(errors, function(resource_name, resource_errors) {
-            $.each(resource_errors, function(attr_name, error_list) {
-              $.each(error_list, function(i, error) {
-                element.find('input[name=' + attr_name + ']').before("<span class='error'>" + error + "</span>")
-                element.find('input[name=' + attr_name + ']').addClass('error');
-              });
+          $.each(errors, function(attr_name, error_list) {
+            $.each(error_list, function(i, error) {
+              element.find('input[name=' + attr_name + ']').before("<span class='error'>" + error + "</span>")
+              element.find('input[name=' + attr_name + ']').addClass('error');
             });
           });
         }
