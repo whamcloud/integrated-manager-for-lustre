@@ -484,8 +484,6 @@ function shortLocalTime(str)
     }
   }
 
-  // FIXME: HYD-648: The API gives datetimes without a TZ, we happen to know they are UTC.
-  str = str + "Z";
   var date = new XDate(str);
   var days_elapsed = ((new Date()) - date) / (3600 * 24 * 1000);
   var localTime = pad(date.getHours()) + ":" + pad(date.getMinutes());
