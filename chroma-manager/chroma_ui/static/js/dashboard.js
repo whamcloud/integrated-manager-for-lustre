@@ -1149,7 +1149,8 @@ var Dashboard = (function() {
           title: { text: 'Clients' },
           plotLines: [{ value: 0, width: 1, color: '#808080' }]
         }],
-        tooltip: { formatter: function() { return 'Time: '+this.x +'No. Of Exports: '+ this.y; } },
+        yAxis: [
+          {title: null, labels: {formatter: whole_numbers_only_formatter}}],
         series: [
           { type: 'line', data: [], name: 'Client count' }
         ]
