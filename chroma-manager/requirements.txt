@@ -13,7 +13,6 @@ pyflakes
 south==0.7.3
 sphinx==1.1.3
 werkzeug
-django-piston>=0.2.3
 MySQL-python
 coverage
 python-daemon==1.5.2
