@@ -212,6 +212,15 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
             except ManagedTargetMount.DoesNotExist:
                 return candidate
 
+    def get_available_states(self, begin_state):
+        # Exclude the transition to 'removed' in favour of being removed when our FS is
+        if self.immutable_state:
+            return []
+        else:
+            available_states = super(ManagedOst, self).get_available_states(begin_state)
+            available_states = list(set(available_states) ^ set(['forgotten']))
+            return available_states
+
 
 class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
     class Meta:
@@ -235,8 +244,7 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
             return []
         else:
             available_states = super(ManagedMdt, self).get_available_states(begin_state)
-            if 'removed' in available_states:
-                available_states.remove('removed')
+            available_states = list(set(available_states) ^ set(['removed', 'forgotten']))
 
             return available_states
 
