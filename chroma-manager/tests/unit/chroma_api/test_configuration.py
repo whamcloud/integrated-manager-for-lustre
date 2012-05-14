@@ -4,7 +4,8 @@ from chroma_core.models.host import ManagedHost, VolumeNode, Volume
 from chroma_core.models.target import ManagedMgs, ManagedOst, ManagedMdt
 import chroma_core.lib.conf_param
 from tests.unit.chroma_core.helper import JobTestCaseWithHost
-from tastypie.test import ResourceTestCase
+from tastypie_test import ResourceTestCase
+
 import mock
 
 
