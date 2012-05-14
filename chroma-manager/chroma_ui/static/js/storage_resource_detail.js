@@ -160,7 +160,6 @@ var StorageResourceDetail = Backbone.View.extend({
   render_histogram: function(element_id, chart_info, stat_infos) {
     $('#' + element_id).css("width", "300px");
     $('#' + element_id).css("height", "200px");
-    var opts = null;
 
     var colors = Highcharts.getOptions().colors
 
@@ -182,7 +181,7 @@ var StorageResourceDetail = Backbone.View.extend({
         showInLegend: false
       });
     });
-    opts = {
+    var opts = {
       chart: {
         renderTo:element_id,
         type: 'column'
@@ -215,6 +214,6 @@ var StorageResourceDetail = Backbone.View.extend({
       }
     };
 
-    chart = new Highcharts.Chart(opts);
+    var chart = new Highcharts.Chart(opts);
   }
 });

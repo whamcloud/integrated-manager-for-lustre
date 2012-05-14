@@ -63,6 +63,7 @@ class StorageResourceClassResource(ModelResource):
                 'label': attr.get_label(name),
                 'name': name,
                 'optional': attr.optional,
+                'user_read_only': attr.user_read_only,
                 'class': attr.__class__.__name__})
         return fields
 

@@ -68,6 +68,10 @@
                     $('#storage_resource_create_fields tr.field').remove();
                     var row_markup = "";
                     $.each(resource_class.fields, function (i, field_info) {
+                        if (field_info.user_read_only) {
+                            return;
+                        }
+
                         if (field_info.class == 'Password') {
                             row_markup += "<tr class='field'><th>" + field_info.label + ":</th><td><input type='password' id='storage_resource_create_field_" + field_info.name + "'></input></td>";
                         } else {
