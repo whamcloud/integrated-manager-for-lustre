@@ -126,7 +126,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             mgt = response.json['objects'][0]
             _, stdout, _ = self.remote_command(
                 hosts[0]['nodename'],
-                'chroma-agent failback-target --label %s --id %s' % (mgt['label'], mgt['id'])
+                'chroma-agent failback-target --ha_label %s' % mgt['ha_label']
             )
 
             response = self.chroma_manager.get(
@@ -140,7 +140,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             mdt = response.json['objects'][0]
             _, stdout, _ = self.remote_command(
                 hosts[0]['nodename'],
-                'chroma-agent failback-target --label %s --id %s' % (mdt['label'], mdt['id'])
+                'chroma-agent failback-target --ha_label %s' % mdt['ha_label']
             )
 
             # Wait for the targets to move back to their original server
