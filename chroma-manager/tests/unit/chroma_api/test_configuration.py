@@ -1,6 +1,8 @@
+from copy import deepcopy
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, VolumeNode, Volume
 from chroma_core.models.target import ManagedMgs, ManagedOst, ManagedMdt
+import chroma_core.lib.conf_param
 from tests.unit.chroma_core.helper import JobTestCaseWithHost
 from tastypie.test import ResourceTestCase
 import mock
@@ -47,6 +49,13 @@ class TestConfigurationDumpLoad(JobTestCaseWithHost, ResourceTestCase):
         return data
 
     def test_load(self):
+        """
+
+        """
+        new_conf_params = {'llite.max_cached_mb': '16'}
+        response = self.api_client.put("/api/filesystem/%s/" % self.fs.id, data = {'conf_params': new_conf_params})
+        self.assertHttpAccepted(response)
+
         data = self.test_dump()
 
         # Remember where the volumes were at so we can recreate the same host
@@ -72,4 +81,22 @@ class TestConfigurationDumpLoad(JobTestCaseWithHost, ResourceTestCase):
         self.assertEqual(ManagedOst.objects.count(), 1)
         self.assertEqual(ManagedFilesystem.objects.count(), 1)
 
+        fs_params = chroma_core.lib.conf_param.get_conf_params(ManagedFilesystem.objects.get())
+        self.assertDictContainsSubset({'llite.max_cached_mb': '16'}, fs_params)
+
         self.set_state(ManagedFilesystem.objects.get(), 'available')
+
+        # Add a hypothetical extra OST
+        ost_data = deepcopy(data['mgts'][0]['filesystems'][0]['osts'][0])
+        ost_data['name'] = 'foofs-OST0002'
+        new_volume = self._test_lun(self.host)
+        ost_data['mounts'][0]['path'] = new_volume.volumenode_set.get().path
+        data['mgts'][0]['filesystems'][0]['osts'].append(ost_data)
+
+        response = self.api_client.post("/api/configuration/", data = data)
+        self.assertHttpCreated(response)
+
+        self.assertEqual(ManagedMgs.objects.count(), 1)
+        self.assertEqual(ManagedMdt.objects.count(), 1)
+        self.assertEqual(ManagedOst.objects.count(), 2)
+        self.assertEqual(ManagedFilesystem.objects.count(), 1)

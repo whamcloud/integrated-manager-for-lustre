@@ -303,11 +303,16 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
 
         return result
 
-    def set_conf_params(self, params):
-        """params is a list of unsaved ConfParam objects"""
+    def set_conf_params(self, params, new = True):
+        """
+        :param new: If False, do not increment the conf param version number, resulting in
+                    new conf params not immediately being applied to the MGS (use if importing
+                    records for an already configured filesystem).
+        :param params: is a list of unsaved ConfParam objects"""
         version = None
         from django.db.models import F
-        ManagedMgs.objects.filter(pk = self.id).update(conf_param_version = F('conf_param_version') + 1)
+        if new:
+            ManagedMgs.objects.filter(pk = self.id).update(conf_param_version = F('conf_param_version') + 1)
         version = ManagedMgs.objects.get(pk = self.id).conf_param_version
         for p in params:
             p.version = version

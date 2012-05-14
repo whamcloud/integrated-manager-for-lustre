@@ -9,10 +9,12 @@ from tastypie.authorization import DjangoAuthorization
 from tastypie.resources import Resource
 from tastypie import fields
 from tastypie.validation import Validation
+from chroma_api import api_log
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, VolumeNode
 from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTargetMount
+import chroma_core.lib.conf_param
 
 
 class ConfigurationValidation(Validation):
@@ -140,6 +142,8 @@ class ConfigurationResource(Resource):
             data['inode_count'] = target.inode_count
             data['ha_label'] = target.ha_label
             data['immutable_state'] = target.immutable_state
+            if not isinstance(target, ManagedMgs):
+                data['conf_params'] = chroma_core.lib.conf_param.get_conf_params(target)
 
         return data
 
@@ -152,6 +156,7 @@ class ConfigurationResource(Resource):
                 filesystem = {}
                 filesystem['name'] = fs.name
                 filesystem['state'] = fs.state
+                filesystem['conf_params'] = chroma_core.lib.conf_param.get_conf_params(fs)
                 filesystem['mdts'] = [self._dehydrate_target(mdt) for mdt in ManagedMdt.objects.filter(filesystem = fs)]
                 filesystem['osts'] = [self._dehydrate_target(ost) for ost in ManagedOst.objects.filter(filesystem = fs)]
                 filesystem['immutable_state'] = fs.immutable_state
@@ -173,7 +178,7 @@ class ConfigurationResource(Resource):
 
         return self._build_reverse_url('api_dispatch_list', kwargs = kwargs)
 
-    def load_target(self, target, klass, **kwargs):
+    def _load_target(self, target_data, klass, **kwargs):
         def get_node(mount):
             host_address = mount['host']
             path = mount['path']
@@ -181,45 +186,71 @@ class ConfigurationResource(Resource):
             return VolumeNode.objects.get(host = host, path = path)
 
         volume = None
-        for mount in target['mounts']:
+        for mount in target_data['mounts']:
             volume_node = get_node(mount)
             if not volume:
                 volume = volume_node.volume
             else:
                 if volume != volume_node.volume:
-                    raise RuntimeError("")
+                    raise RuntimeError("Inconsistent volume paths for target %s: %s" %
+                                       (target_data['name'], [m['path'] for m in target_data['mounts']]))
 
-        mounts = target.pop('mounts')
-        for k, v in target.items():
-            if k != 'mounts' and k != 'filesystems':
+        mounts = target_data.pop('mounts')
+        for k, v in target_data.items():
+            if k != 'mounts' and k != 'filesystems' and k != 'conf_params':
                 kwargs[k] = v
         kwargs['volume'] = volume
 
-        target = klass.objects.create(**kwargs)
+        try:
+            target = klass.objects.get(volume = volume)
+            # TODO: in validation stage, check attrs of this target
+            # against attrs in input
+        except klass.DoesNotExist:
+            api_log.info("ConfigurationResource creating target %s" % target_data['name'])
+            target = klass.objects.create(**kwargs)
+
         for mount in mounts:
             volume_node = get_node(mount)
-            ManagedTargetMount.objects.create(
-                target = target,
-                volume_node = volume_node,
-                host = volume_node.host,
-                mount_point = volume_node.path,
-                primary = mount['primary']
-            )
+            try:
+                ManagedTargetMount.objects.get(
+                    target = target,
+                    volume_node = volume_node
+                )
+            except ManagedTargetMount.DoesNotExist:
+                api_log.info("ConfigurationResource creating target mount %s:%s:%s" %
+                             (target.name, volume_node.host, volume_node.path))
+                ManagedTargetMount.objects.create(
+                    target = target,
+                    volume_node = volume_node,
+                    host = volume_node.host,
+                    mount_point = volume_node.path,
+                    primary = mount['primary']
+                )
+
+        if 'conf_params' in target_data:
+            conf_params = dict([(k, v) for k, v in target_data['conf_params'].items() if v is not None])
+            chroma_core.lib.conf_param.set_conf_params(target, conf_params, new = False)
 
         return target
 
     def obj_create(self, bundle, request = None):
         self.is_valid(bundle, request)
         if bundle.errors:
+            api_log.warning("ConfigurationResource.obj_create: %s" % bundle.errors)
             self.error_response(bundle.errors, request)
 
-        for mgt in bundle.data['mgts']:
-            mgs = self.load_target(mgt, ManagedMgs)
-            for fs_data in mgt['filesystems']:
-                filesystem = ManagedFilesystem.objects.create(name = fs_data['name'], mgs = mgs)
+        for mgt_data in bundle.data['mgts']:
+            mgt = self._load_target(mgt_data, ManagedMgs)
+            for fs_data in mgt_data['filesystems']:
+                filesystem, created = ManagedFilesystem.objects.get_or_create(mgs = mgt, name = fs_data['name'])
+                if created:
+                    api_log.info("ConfigurationResource: created filesystem %s" % filesystem)
+                conf_params = dict([(k, v) for k, v in fs_data['conf_params'].items() if v is not None])
+                chroma_core.lib.conf_param.set_conf_params(filesystem, conf_params, new = False)
+
                 for ost_data in fs_data['osts']:
-                    self.load_target(ost_data, ManagedOst, filesystem = filesystem)
+                    self._load_target(ost_data, ManagedOst, filesystem = filesystem)
                 for mdt_data in fs_data['mdts']:
-                    self.load_target(mdt_data, ManagedMdt, filesystem = filesystem)
+                    self._load_target(mdt_data, ManagedMdt, filesystem = filesystem)
 
         return bundle

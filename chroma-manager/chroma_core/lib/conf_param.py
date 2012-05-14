@@ -299,7 +299,7 @@ def get_conf_params(obj):
     return result
 
 
-def set_conf_params(obj, params):
+def set_conf_params(obj, params, new = True):
     from chroma_core.models import ManagedFilesystem, ManagedMdt, ManagedOst, FilesystemMember
 
     if isinstance(obj, ManagedFilesystem):
@@ -338,7 +338,7 @@ def set_conf_params(obj, params):
             api_log.info("Ignoring %s %s=%s, already set" % (obj, key, value))
 
     if param_records:
-        mgs.set_conf_params(param_records)
+        mgs.set_conf_params(param_records, new)
         return mgs.id
     else:
         return None
