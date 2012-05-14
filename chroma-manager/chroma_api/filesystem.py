@@ -218,7 +218,10 @@ class FilesystemResource(MetricResource, ConfParamResource):
     files_total = fields.IntegerField()
 
     mount_command = fields.CharField(null = True, help_text = "Example command for\
-            mounting this filesystem as a Lustre client, e.g. \"mount -t lustre 192.168.0.1:/testfs /mnt/testfs\"")
+            mounting this filesystem on a Lustre client, e.g. \"mount -t lustre 192.168.0.1:/testfs /mnt/testfs\"")
+
+    mount_path = fields.CharField(null = True, help_text = "Path for mounting the filesystem\
+            on a Lustre client, e.g. \"192.168.0.1:/testfs\"")
 
     osts = fields.ToManyField('chroma_api.target.TargetResource', null = True,
             attribute = lambda bundle: ManagedOst.objects.filter(filesystem = bundle.obj),
@@ -238,8 +241,15 @@ class FilesystemResource(MetricResource, ConfParamResource):
         except (KeyError, IndexError):
             return None
 
+    def dehydrate_mount_path(self, bundle):
+        return bundle.obj.mount_path()
+
     def dehydrate_mount_command(self, bundle):
-        return bundle.obj.mount_command()
+        path = self.dehydrate_mount_path(bundle)
+        if path:
+            return "mount -t lustre %s /mnt/%s" % (path, bundle.obj.name)
+        else:
+            return None
 
     def dehydrate_bytes_free(self, bundle):
         return self._get_stat_simple(bundle, ManagedOst, 'kbytesfree', 1024)
