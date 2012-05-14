@@ -22,8 +22,12 @@ class ChromaIntegrationTestCase(TestCase):
             if not user['username'] in configured_usernames:
                 chroma_manager.delete(user['resource_uri'])
 
+    def erase_volumes(self):
+        for server in config['lustre_servers']:
+            for device in server['device_paths']:
+                self.remote_command(server['address'], "dd if=/dev/zero of=%s bs=4M count=1" % device)
+
     def reset_cluster(self, chroma_manager):
-        """Remove all Filesystems, MGTs, and Hosts"""
         response = chroma_manager.get(
             '/api/filesystem/',
             params = {'limit': 0}
@@ -36,6 +40,45 @@ class ChromaIntegrationTestCase(TestCase):
                 for filesystem in filesystems:
                     self.unmount_filesystem(client, filesystem['name'])
 
+        try:
+            self.graceful_teardown(chroma_manager)
+        except Exception:
+            self.force_teardown(chroma_manager)
+
+    def force_teardown(self, chroma_manager):
+        response = chroma_manager.get(
+            '/api/host/',
+            params = {'limit': 0}
+        )
+        self.assertTrue(response.successful, response.text)
+        hosts = response.json['objects']
+
+        if len(hosts) > 0:
+            remove_host_command_ids = []
+            for host in hosts:
+                command = chroma_manager.post("/api/command/", body = {
+                    'jobs': [{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host['id']}}],
+                    'message': "Test force remove hosts"
+                }).json
+                remove_host_command_ids.append(command['id'])
+
+            self.wait_for_commands(chroma_manager, remove_host_command_ids)
+
+        for server in config['lustre_servers']:
+            address = server['address']
+            self.remote_command(address, "chroma-agent clear-targets")
+
+        self.verify_cluster_not_configured(chroma_manager, hosts)
+
+    def graceful_teardown(self, chroma_manager):
+        """Remove all Filesystems, MGTs, and Hosts"""
+        response = chroma_manager.get(
+            '/api/filesystem/',
+            params = {'limit': 0}
+        )
+        filesystems = response.json['objects']
+
+        if len(filesystems) > 0:
             # Remove filesystems
             remove_filesystem_command_ids = []
             for filesystem in filesystems:
