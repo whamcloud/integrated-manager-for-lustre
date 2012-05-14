@@ -8,12 +8,16 @@ class Migration(DataMigration):
 
     def forwards(self, orm):
         for r3d in orm.Database.objects.all():
-            for rra_id, slot in r3d.rra_pointers.items():
-                if isinstance(slot, int):
-                    rra = orm.Archive.objects.get(pk=rra_id)
-                    wrapped = orm.ArchiveRow.objects.filter(archive_id=rra_id).count() >= rra.rows
-                    r3d.rra_pointers[rra_id] = {'slot': slot, 'wrapped': wrapped}
-                    r3d.save()
+            try:
+                for rra_id, slot in r3d.rra_pointers.items():
+                    if isinstance(slot, int):
+                        rra = orm.Archive.objects.get(pk=rra_id)
+                        wrapped = orm.ArchiveRow.objects.filter(archive_id=rra_id).count() >= rra.rows
+                        r3d.rra_pointers[rra_id] = {'slot': slot, 'wrapped': wrapped}
+                        r3d.save()
+            except TypeError:
+                # If it doesn't work, there was nothing to migrate anyhow.
+                pass
 
 
     def backwards(self, orm):
