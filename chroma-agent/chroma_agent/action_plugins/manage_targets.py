@@ -367,21 +367,27 @@ def configure_ha(args):
 def query_ha_targets(args):
     targets = {}
 
-    for target in shell.try_run(['crm_resource', '-l']).split("\n"):
-        if len(target) < 1:
-            continue
+    rc, stdout, stderr = shell.run(['crm_resource', '-l'])
+    if rc == 234:
+        return targets
+    elif rc != 0:
+        raise RuntimeError("Error %s running crm_resource -l: %s %s" % (rc, stdout, stderr))
+    else:
+        for target in stdout.split("\n"):
+            if len(target) < 1:
+                continue
 
-        targets[target] = {'ha_label': target}
+            targets[target] = {'ha_label': target}
 
-        raw_xml = "\n".join(shell.try_run(['crm_resource', '-r', target, '-q']).split("\n")[2:])
-        try:
-            doc = libxml2.parseDoc(raw_xml)
-            node = doc.xpathEval('//instance_attributes/nvpair[@name="target"]')[0]
-            targets[target]['uuid'] = node.prop('value')
-        except (ValueError, libxml2.parserError):
-            continue
+            raw_xml = "\n".join(shell.try_run(['crm_resource', '-r', target, '-q']).split("\n")[2:])
+            try:
+                doc = libxml2.parseDoc(raw_xml)
+                node = doc.xpathEval('//instance_attributes/nvpair[@name="target"]')[0]
+                targets[target]['uuid'] = node.prop('value')
+            except (ValueError, libxml2.parserError):
+                continue
 
-    return targets
+        return targets
 
 
 def mount_target(args):
