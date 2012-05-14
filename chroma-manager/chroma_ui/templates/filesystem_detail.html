@@ -1,9 +1,9 @@
 <script language="javascript">
   var FilesystemDetailView = function() {
     var initialized = false;
-    var fs_id;
     var conf_param_dialog;
     var volume_chooser_store;
+    var filesystem;
 
     function draw(id) {
       if (!initialized) {
@@ -18,15 +18,25 @@
       $('#mdt').dataTable().fnClearTable();
       $('#mgt_configuration_view').dataTable().fnClearTable();
 
-      fs_id = id;
       conf_param_dialog = undefined;
-      loadFilesystem();
+      loadFilesystem(id);
     }
 
     function init()
     {
       $('div#filesystem_detail button.advanced').click(function() {
         conf_param_dialog.open();
+      });
+
+      $('div#filesystem_detail button.mount_info').click(function() {
+          var markup = _.template($('#filesystem_mount_info_template').html())({filesystem: filesystem});
+          $(markup).dialog({
+              width: 800,
+              buttons: {
+                  "Close": {
+                      click: function() {}
+                  }}
+          });
       });
 
       // Create new OST button click handler.
@@ -120,10 +130,11 @@
       });
     }
 
-    function loadFilesystem() {
-      Api.get("filesystem/" + fs_id + "/", {},
-      success_callback = function(filesystem)
+    function loadFilesystem(id) {
+      Api.get("filesystem/" + id + "/", {},
+      success_callback = function(filesystem_data)
       {
+        filesystem = filesystem_data;
         /* FS summary fields */
         $('#bytes_used').html(formatBytes(filesystem.bytes_total - filesystem.bytes_free));
         $('#bytes_total').html(formatBytes(filesystem.bytes_total));
@@ -143,12 +154,12 @@
         LoadFSGraph_EditFS(filesystem);
       });
 
-      loadFilesystemTargets();
+      loadFilesystemTargets(id);
     }
 
-    function loadFilesystemTargets()
+    function loadFilesystemTargets(id)
     {
-      Api.get("target/", {filesystem_id : fs_id, limit: 0},
+      Api.get("target/", {filesystem_id : id, limit: 0},
       success_callback = function(data)
       {
         var targets = data.objects;
@@ -174,16 +185,18 @@
       });
     }
 
-    function getId()
-    {
-      return fs_id;
-    }
-
     return {
-      draw:draw,
-      getId: getId
+      draw:draw
     }
   }();
+</script>
+
+<script language="text/template" id='filesystem_mount_info_template'>
+    <div>
+        <h1><%= filesystem.name %> mount information</h1>
+        <p>To mount this filesystem on a Lustre client, use the following command:</p>
+        <pre><%= filesystem.mount_command %></pre>
+    </div>
 </script>
 
 <div id='filesystem_detail'>
@@ -209,6 +222,7 @@
   </table>
   <p>
     <button class='advanced' type="button">Advanced Settings</button>
+    <button class='mount_info' type="button">Client mount information</button>
   </p>
 </div>
 
