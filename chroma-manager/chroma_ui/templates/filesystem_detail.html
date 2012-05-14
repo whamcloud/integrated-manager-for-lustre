@@ -34,7 +34,9 @@
               width: 800,
               buttons: {
                   "Close": {
-                      click: function() {}
+                      click: function() {$(this).dialog('close')},
+                      text: 'Close',
+                      class: 'close'
                   }}
           });
       });
@@ -192,7 +194,7 @@
 </script>
 
 <script language="text/template" id='filesystem_mount_info_template'>
-    <div>
+    <div class='filesystem_mount_info'>
         <h1><%= filesystem.name %> mount information</h1>
         <p>To mount this filesystem on a Lustre client, use the following command:</p>
         <pre><%= filesystem.mount_command %></pre>
