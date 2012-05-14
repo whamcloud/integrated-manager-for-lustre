@@ -106,6 +106,9 @@ class FilesystemValidation(Validation):
 
             try:
                 mgt = ManagedMgs.objects.get(id = bundle.data['mgt']['id'])
+                if mgt.immutable_state:
+                    errors['mgt'].append("MGT with ID %s is unmanaged" % mgt.id)
+
                 try:
                     ManagedFilesystem.objects.get(name = bundle.data['name'], mgs = mgt)
                     errors['name'].append("A filesystem with name '%s' already exists for this MGT" % bundle.data['name'])

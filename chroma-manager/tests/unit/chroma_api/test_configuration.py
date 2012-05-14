@@ -3,35 +3,13 @@ from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, VolumeNode, Volume
 from chroma_core.models.target import ManagedMgs, ManagedOst, ManagedMdt
 import chroma_core.lib.conf_param
-from tests.unit.chroma_core.helper import JobTestCaseWithHost
-from tastypie_test import ResourceTestCase
-
-import mock
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 
 
-class TestConfigurationDumpLoad(JobTestCaseWithHost, ResourceTestCase):
-    def __init__(self, *args, **kwargs):
-        JobTestCaseWithHost.__init__(self, *args, **kwargs)
-        ResourceTestCase.__init__(self, *args, **kwargs)
-
+class TestConfigurationDumpLoad(ChromaApiTestCase):
     def setUp(self):
-        JobTestCaseWithHost.setUp(self)
-        ResourceTestCase.setUp(self)
-
-        from chroma_api.authentication import CsrfAuthentication
-        self.old_is_authenticated = CsrfAuthentication.is_authenticated
-        CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
-        self.api_client.client.login(username = 'debug', password = 'chr0m4_d3bug')
-        #super(TestConfigurationDumpLoad, self).setUp()
-        #self.api = tastypie_test.TestApiClient()
+        super(TestConfigurationDumpLoad, self).setUp()
         self.create_simple_filesystem()
-
-    def tearDown(self):
-        from chroma_api.authentication import CsrfAuthentication
-        CsrfAuthentication.is_authenticated = self.old_is_authenticated
-
-        ResourceTestCase.tearDown(self)
-        JobTestCaseWithHost.tearDown(self)
 
     def test_dump(self):
         response = self.api_client.get("/api/configuration/")
@@ -50,9 +28,6 @@ class TestConfigurationDumpLoad(JobTestCaseWithHost, ResourceTestCase):
         return data
 
     def test_load(self):
-        """
-
-        """
         new_conf_params = {'llite.max_cached_mb': '16'}
         response = self.api_client.put("/api/filesystem/%s/" % self.fs.id, data = {'conf_params': new_conf_params})
         self.assertHttpAccepted(response)

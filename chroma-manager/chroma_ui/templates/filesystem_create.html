@@ -114,6 +114,7 @@
       /* Populate existing MGT list */
       Api.get("target/", {
           kind: "MGT",
+          immutable_state: false,
           limit: 0
         },
         success_callback = function(data) {
