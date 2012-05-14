@@ -84,7 +84,7 @@
                   i = 0;
                 }
 
-                Api.post("target/", {kind: 'OST', filesystem_id: fs_id, volume_id: ost_lun_ids[i]},
+                Api.post("target/", {kind: 'OST', filesystem_id: filesystem.id, volume_id: ost_lun_ids[i]},
                   success_callback = function(data)
                   {
                     if (i == ost_lun_ids.length - 1) {
@@ -92,7 +92,7 @@
                       $('#ost').dataTable().fnClearTable();
                       $('#mdt').dataTable().fnClearTable();
                       $('#mgt_configuration_view').dataTable().fnClearTable();
-                      loadFilesystemTargets();
+                      loadFilesystemTargets(filesystem.id);
                       dialog.dialog("close");
                     } else {
                       // POST the next OST creation
