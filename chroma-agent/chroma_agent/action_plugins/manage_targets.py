@@ -399,19 +399,20 @@ def query_ha_targets(args):
     elif rc != 0:
         raise RuntimeError("Error %s running crm_resource -l: %s %s" % (rc, stdout, stderr))
     else:
-        for target in stdout.split("\n"):
-            if len(target) < 1:
+        for resource_id in stdout.split("\n"):
+            if len(resource_id) < 1:
                 continue
 
-            targets[target] = {'ha_label': target}
-
-            raw_xml = "\n".join(shell.try_run(['crm_resource', '-r', target, '-q']).split("\n")[2:])
+            target = {'ha_label': resource_id}
+            raw_xml = "\n".join(shell.try_run(['crm_resource', '-r', resource_id, '-q']).split("\n")[2:])
             try:
                 doc = libxml2.parseDoc(raw_xml)
                 node = doc.xpathEval('//instance_attributes/nvpair[@name="target"]')[0]
-                targets[target]['uuid'] = node.prop('value')
+                target['uuid'] = node.prop('value')
             except (ValueError, IndexError, libxml2.parserError):
                 continue
+
+            targets[target] = target
 
         return targets
 
