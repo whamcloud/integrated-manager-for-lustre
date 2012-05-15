@@ -464,7 +464,7 @@ var Dashboard = (function() {
     }
     /*jslint eqeq: false */
 
-    var l = "" + formatBytes(this.value, 0);
+    var l = "" + formatBytes(this.value, 2);
     if (l[0] === '-') {
       return l.substr(1);
     }

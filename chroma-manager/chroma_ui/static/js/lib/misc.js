@@ -19,29 +19,41 @@ function formatNumber(number, decimals, dec_point, thousands_sep) {
     return s + (j ? i.substr(0, j) + t : "") + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) + (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "");
 }
 
-/* http://snipplr.com/view/5949/ */
-function formatBytes(bytes, decimals) {
+/* returns a floating point nubmer with fixed precision */
+function formatNumberPrecision(number, precision) {
+
+    var n = number;
+    var s = n < 0 ? "-" : "";
+    var p = isNaN(precision = Math.abs(precision)) ? 3 : precision;
+    return s +  parseFloat(Math.abs(+n || 0).toPrecision(p));
+}
+
+/* precision is how many significant digits to keep */
+function formatBytes(bytes, precision) {
   if (bytes == null || bytes == undefined) {
     return bytes;
   }
-
-  if (decimals == undefined) {
-    decimals = 2;
+  if (precision == undefined) {
+    precision = 3
   }
 
-	if (bytes >= 1073741824) {
-	     bytes = formatNumber(bytes / 1073741824, decimals, '.', '') + 'GB';
-	} else { 
-		if (bytes >= 1048576) {
-     		bytes = formatNumber(bytes / 1048576, decimals, '.', '') + 'MB';
-   	} else { 
-			if (bytes >= 1024) {
-    		bytes = formatNumber(bytes / 1024, 0) + 'KB';
-  		} else {
-    		bytes = formatNumber(bytes, 0) + 'b';
-			}
- 		}
-	}
+  if (bytes > Math.pow(2, 40)) {
+    bytes = formatNumberPrecision(bytes / Math.pow(2, 40), precision) + 'TB';
+  } else {
+    if (bytes >= 1073741824) {
+      bytes = formatNumberPrecision(bytes / 1073741824, precision) + 'GB';
+    } else {
+      if (bytes >= 1048576) {
+        bytes = formatNumberPrecision(bytes / 1048576, precision) + 'MB';
+      } else {
+        if (bytes >= 1024) {
+          bytes = formatNumberPrecision(bytes / 1024, precision) + 'KB';
+        } else {
+          bytes = formatNumbePrecision(bytes, precision) + 'b';
+        }
+      }
+    }
+  }
   return bytes;
 }
 
