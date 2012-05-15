@@ -485,14 +485,20 @@ function shortLocalTime(str)
   }
 
   var date = new XDate(str);
-  var days_elapsed = ((new Date()) - date) / (3600 * 24 * 1000);
+  var today = new Date();
+  var midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   var localTime = pad(date.getHours()) + ":" + pad(date.getMinutes());
-  var localDate = date.getFullYear() + "/" + pad(date.getMonth()) + "/" + pad(date.getDate());
-  if (days_elapsed < 1.0) {
-    return localTime
+  var localDate = "";
+
+  if (midnight < date) {
+    localDate = "Today";
+  } else if ( midnight.setDate(midnight.getDate() - 1) <  date) {
+    localDate = "Yesterday";
   } else {
-    return  localDate + "&nbsp;" + localTime
+    localDate = date.getFullYear() + "/" + pad(date.getMonth()) + "/" + pad(date.getDate());
   }
+
+  return  localDate + "&nbsp;" + localTime
 }
 
 
