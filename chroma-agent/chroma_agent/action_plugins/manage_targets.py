@@ -410,7 +410,7 @@ def query_ha_targets(args):
                 doc = libxml2.parseDoc(raw_xml)
                 node = doc.xpathEval('//instance_attributes/nvpair[@name="target"]')[0]
                 targets[target]['uuid'] = node.prop('value')
-            except (ValueError, libxml2.parserError):
+            except (ValueError, IndexError, libxml2.parserError):
                 continue
 
         return targets
