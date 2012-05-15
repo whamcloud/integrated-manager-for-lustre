@@ -516,7 +516,7 @@ var Dashboard = (function() {
         chart: {
           renderTo: 'global_cpu_mem'
         },
-        title: { text: 'Server CPU and Memory'},
+        title: { text: 'CPU/RAM Usage'},
         xAxis: { type:'datetime' },
         legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0},
         yAxis: [{
@@ -526,7 +526,7 @@ var Dashboard = (function() {
         }],
         series: [
           { type: 'line', data: [], name: 'cpu' },
-          { type: 'line', data: [], name: 'mem' }
+          { type: 'line', data: [], name: 'ram' }
         ]
       }
     });
@@ -571,7 +571,7 @@ var Dashboard = (function() {
         chart: {
           renderTo: 'global_ost_bandwidth'
         },
-        title: { text: 'OST read/write balance'},
+        title: { text: 'OST Read/Write balance'},
         xAxis: {type:'datetime'},
         yAxis: [{
           title: null,
@@ -596,9 +596,9 @@ var Dashboard = (function() {
         chart: {
           renderTo: 'global_metadata_ops'
         },
-        title: { text: 'Metadata operations'},
+        title: { text: 'Metadata Operations'},
         xAxis: { type:'datetime' },
-        yAxis: [{title: { text: 'MD op/s' }}],
+        yAxis: [{title: { text: 'ops/s' }}],
         colors: [
           '#63B7CF',
           '#9277AF',
@@ -643,7 +643,7 @@ var Dashboard = (function() {
         chart: {
           renderTo: 'global_read_write'
         },
-        title: { text: 'Read/write bandwidth'},
+        title: { text: 'Read/Write bandwidth'},
         xAxis: { type:'datetime' },
         yAxis: [
           {title: null,
@@ -844,7 +844,7 @@ var Dashboard = (function() {
       ],
       chart_config: {
         chart: { renderTo: 'server_read_write'},
-        title: { text: 'Read/write bandwidth'},
+        title: { text: 'Read/Write bandwidth'},
         xAxis: { type:'datetime' },
         yAxis: [{
           title: null,
@@ -996,9 +996,9 @@ var Dashboard = (function() {
         },
         tooltip: { formatter: function() { return ''+ this.x +': '+ Highcharts.numberFormat(this.y, 0, ',') +' '; } },
 
-        title: { text: 'Metadata operations'},
+        title: { text: 'Metadata Operations'},
         xAxis: { type:'datetime' },
-        yAxis: [{title: { text: 'MD op/s' }}],
+        yAxis: [{title: { text: 'ops/s' }}],
         colors: [ '#63B7CF', '#9277AF', '#A6C56D', '#C76560', '#6087B9', '#DB843D', '#92A8CD', '#A47D7C',  '#B5CA92' ],
         series: _.map(
           ['close','getattr','getxattr','link','mkdir','mknod','open','rename','rmdir','setattr','statfs','unlink'],
@@ -1149,7 +1149,8 @@ var Dashboard = (function() {
           title: { text: 'Clients' },
           plotLines: [{ value: 0, width: 1, color: '#808080' }]
         }],
-        tooltip: { formatter: function() { return 'Time: '+this.x +'No. Of Exports: '+ this.y; } },
+        yAxis: [
+          {title: null, labels: {formatter: whole_numbers_only_formatter}}],
         series: [
           { type: 'line', data: [], name: 'Client count' }
         ]
@@ -1176,7 +1177,7 @@ var Dashboard = (function() {
         chart: {
           renderTo: 'filesystem_cpu_mem'
         },
-        title: { text: 'Server CPU and Memory'},
+        title: { text: 'CPU/RAM Usage'},
         xAxis: { type:'datetime' },
         legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0},
         yAxis: [{
@@ -1189,7 +1190,7 @@ var Dashboard = (function() {
         }],
         series: [
           { type: 'line', data: [], name: 'cpu' },
-          { type: 'line', data: [], name: 'mem' }
+          { type: 'line', data: [], name: 'ram' }
         ]
       }
     });
@@ -1294,7 +1295,7 @@ var Dashboard = (function() {
         chart: {
           renderTo: 'filesystem_ost_read_write'
         },
-        title: { text: 'OST read/write balance'},
+        title: { text: 'OST Read/Write balance'},
         xAxis: { type:'datetime' },
         yAxis: [{
           title: null,
