@@ -242,7 +242,7 @@ class ServiceConfig:
         return pass1
 
     def _user_account_prompt(self):
-        log.info("Chroma will now create an initial administrative user using the" +
+        log.info("Chroma will now create an initial administrative user using the " +
                  "credentials which you provide.")
 
         username = self.get_input(msg = "Username:", empty_allowed = False)
