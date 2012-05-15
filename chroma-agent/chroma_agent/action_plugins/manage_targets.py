@@ -412,7 +412,7 @@ def query_ha_targets(args):
             except (ValueError, IndexError, libxml2.parserError):
                 continue
 
-            targets[target] = target
+            targets[resource_id] = target
 
         return targets
 
