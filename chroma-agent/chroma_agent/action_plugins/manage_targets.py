@@ -179,25 +179,46 @@ def get_resource_location(resource_name):
 def get_resource_locations():
     """Parse `crm resource list` to identify where (if anywhere)
        resources (i.e. targets) are running."""
+
     try:
-        rc, stdout, stderr = shell.run(['crm', 'resource', 'list'])
-    except OSError:
-        # Probably we're on a server without corosync
+        from crm.cibstatus import CibStatus
+    except ImportError:
+        # Corosync not installed
         return None
+
+    cs = CibStatus.getInstance()
+    status = cs.get_status()
+    if not status:
+        # Corosync not running
+        return None
+    member_of_cluster = len(status.childNodes) > 0
 
     locations = {}
-
-    if stdout.strip() == "NO resources configured":
-        return {}
-    elif rc != 0:
-        # Probably corosync isn't running?
+    rc, lines_text, stderr = shell.run(["crm_resource", "--list-cts"])
+    if rc != 0:
+        # Corosync not running
         return None
-    else:
-        lines = stdout.strip().split("\n")
-        for line in lines:
-            [resource_name, resource_type] = line.strip().split("\t")
-            if resource_type.startswith("(ocf::chroma:Target)"):
-                locations[resource_name] = get_resource_location(resource_name)
+
+    for line in lines_text.split("\n"):
+        if line.startswith("Resource:"):
+            #    printf("Resource: %s %s %s %s %s %s %s %s %d %lld 0x%.16llx\n",
+            #        crm_element_name(rsc->xml), rsc->id,
+            #        rsc->clone_name?rsc->clone_name:rsc->id, rsc->parent?rsc->parent->id:"NA",
+            #        rprov?rprov:"NA", rclass, rtype, host?host:"NA", needs_quorum, rsc->flags, rsc->flags);
+
+            preamble, el_name, rsc_id, rsc_clone_name, parent, provider, klass, type, host, needs_quorum, flags_dec, flags_hex = line.split()
+            if provider == "chroma" and klass == "ocf" and type == "Target":
+                if host != "NA":
+                    node = host
+                else:
+                    node = None
+            locations[rsc_id] = node
+
+    if not member_of_cluster:
+        # I can only make positive statements
+        # that a resource is running on this node, not negative statements
+        # that it's not running at all
+        locations = dict((k, v) for k, v in locations.items() if v is not None)
 
     return locations
 

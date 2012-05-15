@@ -197,8 +197,7 @@ class UpdateScan(object):
             # we're monitoring a non-chroma-managed monitor-only
             # system.  But if there are managed mounts
             # then this is a problem.
-            from django.db.models import Q
-            if ManagedTargetMount.objects.filter(~Q(target__immutable_state = True), host = self.host).count() > 0:
+            if ManagedTarget.objects.filter(immutable_state = False, managedtargetmount__host = self.host).count():
                 audit_log.error("Got no resource_locations from host %s, but there are chroma-configured mounts on that server!" % self.host)
             return
 
