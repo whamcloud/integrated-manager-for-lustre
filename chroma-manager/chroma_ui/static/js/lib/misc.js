@@ -49,7 +49,7 @@ function formatBytes(bytes, precision) {
         if (bytes >= 1024) {
           bytes = formatNumberPrecision(bytes / 1024, precision) + 'KB';
         } else {
-          bytes = formatNumbePrecision(bytes, precision) + 'b';
+          bytes = formatNumberPrecision(bytes, precision) + 'b';
         }
       }
     }
