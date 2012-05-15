@@ -152,6 +152,10 @@
         // Config param dialog
         conf_param_dialog = ConfParamDialog({url: filesystem.resource_uri, conf_params: filesystem.conf_params});
 
+        // Monitored filesystems can't have new targets
+        $('#btnNewOST').button('option', 'disabled', filesystem.immutable_state);
+
+
         // Free space pie charts
         LoadFSGraph_EditFS(filesystem);
       });

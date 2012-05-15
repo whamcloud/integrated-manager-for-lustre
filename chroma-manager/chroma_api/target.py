@@ -68,9 +68,13 @@ class TargetValidation(Validation):
                 else:
                     filesystem_id = bundle.data['filesystem_id']
                     try:
-                        ManagedFilesystem.objects.get(id = filesystem_id)
+                        filesystem = ManagedFilesystem.objects.get(id = filesystem_id)
                     except ManagedFilesystem.DoesNotExist:
                         errors['filesystem_id'].append("Filesystem %s not found" % filesystem_id)
+                    else:
+                        if filesystem.immutable_state:
+                            errors['filesystem_id'].append("Filesystem %s is unmanaged" % filesystem.name)
+
             if KIND_TO_KLASS[kind] == ManagedMgs:
                 mgt_volume = Volume.objects.get(id = volume_id)
                 hosts = [vn.host for vn in VolumeNode.objects.filter(volume = mgt_volume, use = True)]

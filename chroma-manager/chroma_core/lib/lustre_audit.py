@@ -614,7 +614,7 @@ class DetectScan(object):
     def learn_mgs_info(self):
         found_mgs = False
         for volume in self.host_data['local_targets']:
-            if volume['name'] == "MGS":
+            if volume['name'] == "MGS" and volume['mounted'] == True:
                 found_mgs = True
                 mgs_local_info = volume
         if not found_mgs:
