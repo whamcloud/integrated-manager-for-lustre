@@ -133,7 +133,8 @@ var Login = function() {
 
   return {
     init: init,
-    getUser: getUser
+    getUser: getUser,
+    userHasGroup: userHasGroup
   }
 }();
 
@@ -142,12 +143,8 @@ var UserDialog = function() {
     $.each(user.groups, function(i, group) {
       delete group.resource_uri
     });
-    var form_markup = ""
-    form_markup += "<table class='validated_form'>"
-    form_markup += "<tr><th>Username:</th><td><input name='username' type='text' readonly='readonly' value='" + user.username + "'/></td></tr>"
-    form_markup += "<tr><th>Password:</th><td><input name='password1' type='password'/></td></tr>"
-    form_markup += "<tr><th>Confirm password:</th><td><input name='password2' type='password'/></td></tr>"
-    $("<div class='edit_user_dialog'>" + form_markup + "</div>").dialog({
+
+    $(_.template($('#user_detail_dialog_template').html())({user: user})).dialog({
       resizable: false,
       width: 'auto',
       buttons: {
@@ -166,7 +163,7 @@ var UserDialog = function() {
           }
         }
       }
-    })
+    });
   }
 
   return {edit: edit}

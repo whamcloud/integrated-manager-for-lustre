@@ -44,7 +44,7 @@ def setup_groups(sender, **kwargs):
         print "***\n" * 3
         user = auth.models.User.objects.create_superuser("debug", "debug@debug.co.eh", "chr0m4_d3bug")
         user.groups.add(auth.models.Group.objects.get(name='superusers'))
-        user = auth.models.User.objects.create_superuser("admin", "admin@debug.co.eh", "chr0m4_d3bug")
+        user = auth.models.User.objects.create_user("admin", "admin@debug.co.eh", "chr0m4_d3bug")
         user.groups.add(auth.models.Group.objects.get(name='filesystem_administrators'))
 
 

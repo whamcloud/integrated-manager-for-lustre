@@ -1,4 +1,4 @@
-#
+    #
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
@@ -12,7 +12,7 @@ from tastypie.authorization import DjangoAuthorization
 from tastypie.resources import ModelResource
 from tastypie import fields
 
-from django.contrib.auth.forms import UserCreationForm, SetPasswordForm
+from django.contrib.auth.forms import UserCreationForm
 from tastypie.validation import Validation
 from tastypie.http import HttpBadRequest
 
@@ -33,15 +33,32 @@ class UserValidation(Validation):
     """A custom Validation class, calling into django.contrib.auth's Form
     classes (can't use FormValidation because we have different forms
     for PUT than for POST)"""
-    def __init__(self, **kwargs):
-        self.post_form = UserCreationForm
-        self.put_form = SetPasswordForm
-        super(UserValidation, self).__init__(**kwargs)
-
     def is_valid(self, bundle, request = None):
         data = bundle.data or {}
         if request.method == "PUT":
             errors = {}
+
+            try:
+                user_id = data['id']
+            except KeyError:
+                errors['id'] = ['id attribute is mandatory']
+            else:
+                try:
+                    user = User.objects.get(id = user_id)
+                except User.DoesNotExist:
+                    errors['id'] = ['not found']
+                else:
+                    # Non-superusers always require old_password
+                    # Superusers require old_password when editing themselves
+                    if not request.user.is_superuser or request.user.id == user.id:
+                        try:
+                            old_password = data['old_password']
+                        except KeyError:
+                            errors['old_password'] = ['Old password may not be blank']
+                        else:
+                            if not user.check_password(old_password):
+                                errors['old_password'] = ['Old password incorrect']
+
             if not data['password1']:
                 errors['password1'] = ['Password may not be blank']
             if not data['password2']:
@@ -56,7 +73,7 @@ class UserValidation(Validation):
                         errors['password2'] = err
             return errors
         elif request.method == "POST":
-            form = self.post_form(data)
+            form = UserCreationForm(data)
 
             if form.is_valid():
                 return {}
@@ -133,7 +150,7 @@ class UserResource(ModelResource):
         authorization = UserAuthorization()
         queryset = User.objects.all()
         validation = UserValidation()
-        fields = ['date_joined', 'first_name', 'full_name', 'groups', 'id', 'last_login', 'last_name', 'password1', 'password2', 'resource_uri', 'username', 'email']
+        fields = ['first_name', 'full_name', 'groups', 'id', 'last_name', 'password1', 'password2', 'resource_uri', 'username', 'email']
         ordering = ['username', 'email']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
