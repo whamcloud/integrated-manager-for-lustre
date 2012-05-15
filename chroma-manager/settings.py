@@ -259,7 +259,7 @@ if DEBUG:
 else:
     LOG_PATH = "/var/log/chroma"
 
-PRODUCTION_LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.INFO
 
 
 def setup_log(log_name, filename = None):
@@ -275,7 +275,7 @@ def setup_log(log_name, filename = None):
     if DEBUG:
         logger.setLevel(logging.DEBUG)
     else:
-        logger.setLevel(PRODUCTION_LOG_LEVEL)
+        logger.setLevel(LOG_LEVEL)
     return logger
 
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
