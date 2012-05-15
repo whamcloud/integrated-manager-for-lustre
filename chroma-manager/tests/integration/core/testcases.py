@@ -69,7 +69,7 @@ class ChromaIntegrationTestCase(TestCase):
             address = server['address']
             self.remote_command(address, "chroma-agent clear-targets")
 
-        self.verify_cluster_not_configured(chroma_manager, hosts)
+        self.verify_cluster_not_configured(chroma_manager)
 
     def graceful_teardown(self, chroma_manager):
         """Remove all Filesystems, MGTs, and Hosts"""
@@ -127,9 +127,9 @@ class ChromaIntegrationTestCase(TestCase):
 
             self.wait_for_commands(chroma_manager, remove_host_command_ids)
 
-        self.verify_cluster_not_configured(chroma_manager, hosts)
+        self.verify_cluster_not_configured(chroma_manager)
 
-    def verify_cluster_not_configured(self, chroma_manager, lustre_servers):
+    def verify_cluster_not_configured(self, chroma_manager):
         """
         Checks that the database and the hosts specified in the config
         do not have (unremoved) targets for the filesystems specified.
@@ -160,7 +160,7 @@ class ChromaIntegrationTestCase(TestCase):
         hosts = response.json['objects']
         self.assertEqual(0, len(hosts))
 
-        for host in lustre_servers:
+        for host in config['lustre_servers']:
             # Verify mgs and fs targets not in pacemaker config for hosts
             # TODO: sort out host address and host nodename
             stdin, stdout, stderr = self.remote_command(

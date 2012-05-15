@@ -4,7 +4,6 @@
 # ========================================================
 
 
-import math
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.models.storage_plugin import StorageResourceStatistic
 from r3d.models import Average, Database
@@ -459,7 +458,7 @@ class FilesystemMetricStore(R3dMetricStore):
 
             for metric in tm[1].keys():
                 try:
-                    if math.isnan(tm[1][metric]):
+                    if tm[1][metric] is None:
                         results[1][metric] += 0
                     else:
                         results[1][metric] += tm[1][metric]
