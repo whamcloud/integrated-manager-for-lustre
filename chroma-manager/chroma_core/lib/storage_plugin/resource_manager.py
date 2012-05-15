@@ -371,7 +371,7 @@ class ResourceManager(object):
                 # somewhere.
                 primary_count = 0
                 for vn in VolumeNode.objects.filter(host = h, primary = True):
-                    if vn.volume.volumenode_set.filter(use = True, primary = False).count() > 0:
+                    if vn.volume != volume and vn.volume.volumenode_set.filter(use = True, primary = False).count() > 0:
                         primary_count += 1
 
                 host_to_primary_count[h] = primary_count
@@ -394,7 +394,7 @@ class ResourceManager(object):
                 secondary_lun_node.primary = False
                 secondary_lun_node.use = True
                 secondary_lun_node.save()
-                log.info("affinity_balance: picked %s for %s secondary" % (secondary_lun_node.host, volume))
+                log.info("affinity_balance: picked %s for %s volume secondary" % (secondary_lun_node.host, volume.id))
             else:
                 secondary_lun_node = None
 
@@ -429,6 +429,7 @@ class ResourceManager(object):
                         storage_resource_id = node_record.pk,
                         primary = False,
                         use = False)
+
                     log.info("Created VolumeNode %s for resource %s" % (volume_node.id, node_record.pk))
                     got_weights = affinity_weights(volume_node.volume)
                     if not got_weights:
