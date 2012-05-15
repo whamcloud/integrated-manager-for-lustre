@@ -178,7 +178,7 @@ class ManagedTarget(StatefulObject):
             primary_volume_node = volume.volumenode_set.get(primary = True, host__not_deleted = True)
             create_target_mount(primary_volume_node)
         except VolumeNode.DoesNotExist:
-            raise RuntimeError("No primary lun_node exists for volume %s, cannot created target" % volume.id)
+            raise RuntimeError("No primary lun_node exists for volume %s, cannot create target" % volume.id)
         except VolumeNode.MultipleObjectsReturned:
             raise RuntimeError("Multiple primary lun_nodes exist for volume %s, internal error" % volume.id)
 
