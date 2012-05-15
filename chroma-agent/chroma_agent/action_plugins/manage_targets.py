@@ -212,7 +212,7 @@ def get_resource_locations():
                     node = host
                 else:
                     node = None
-            locations[rsc_id] = node
+                locations[rsc_id] = node
 
     if not member_of_cluster:
         # I can only make positive statements
