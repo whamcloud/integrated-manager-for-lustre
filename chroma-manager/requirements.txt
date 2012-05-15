@@ -22,3 +22,4 @@ tablib
 requests
 nose-testconfig
 fudge
+simplejson

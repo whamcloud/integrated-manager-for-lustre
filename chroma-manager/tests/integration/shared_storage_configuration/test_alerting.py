@@ -25,7 +25,7 @@ class TestAlerting(ChromaIntegrationTestCase):
         mgt = fs['mgt']
 
         # Check the alert is raised when the target unexpectedly stops
-        self.remote_command(host['address'], "chroma-agent stop-target --label %s --id %s" % (mgt['name'], mgt['id']))
+        self.remote_command(host['address'], "chroma-agent stop-target --ha_label %s" % mgt['ha_label'])
         # Updating the status is a (very) asynchronous operation
         # 10 second periodic update from the agent, then the state change goes
         # into a queue serviced at some time by the serialize worker.
@@ -34,7 +34,7 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.assertState(mgt['resource_uri'], 'unmounted')
 
         # Check the alert is cleared when restarting the target
-        self.remote_command(host['address'], "chroma-agent start-target --label %s --id %s" % (mgt['name'], mgt['id']))
+        self.remote_command(host['address'], "chroma-agent start-target --ha_label %s" % mgt['ha_label'])
         time.sleep(20)
         self.assertNoAlerts(mgt['resource_uri'])
 
@@ -64,7 +64,7 @@ class TestAlerting(ChromaIntegrationTestCase):
         # Raise all the alerts we can
         self.set_state("/api/filesystem/%s/" % fs_id, 'available')
         for target in self.get_list("/api/target/"):
-            self.remote_command(host['address'], "chroma-agent stop-target --label %s --id %s" % (target['name'], target['id']))
+            self.remote_command(host['address'], "chroma-agent stop-target --ha_label %s" % target['ha_label'])
         self.remote_command(host['address'], "chroma-agent stop-lnet")
         time.sleep(20)
         self.assertEqual(len(self.get_list('/api/alert', {'active': True})), 4)
