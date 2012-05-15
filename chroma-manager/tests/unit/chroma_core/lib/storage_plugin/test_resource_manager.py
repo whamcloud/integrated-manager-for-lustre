@@ -368,8 +368,9 @@ class TestVolumeBalancing(ResourceManagerTestCase):
                 resource_manager.session_add_resources(host_info['record'].pk, resources)
 
         # Check that for 3 hosts, 3 volumes, they get one primary each
-        for host_info in hosts:
-            self.assertEqual(VolumeNode.objects.filter(host = host_info['host'], primary = True).count(), 1)
+        expected = dict([(host_info['host'].address, 1) for host_info in hosts])
+        actual = dict([(host_info['host'].address, VolumeNode.objects.filter(host = host_info['host'], primary = True).count()) for host_info in hosts])
+        self.assertDictEqual(expected, actual)
 
 
 class TestAlerts(ResourceManagerTestCase):

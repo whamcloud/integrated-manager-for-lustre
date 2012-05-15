@@ -17,10 +17,9 @@ class ChromaApiTestCase(JobTestCaseWithHost, ResourceTestCase):
         CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
         self.api_client.client.login(username = 'debug', password = 'chr0m4_d3bug')
 
+    def tearDown(self):
+            from chroma_api.authentication import CsrfAuthentication
+            CsrfAuthentication.is_authenticated = self.old_is_authenticated
 
-def tearDown(self):
-        from chroma_api.authentication import CsrfAuthentication
-        CsrfAuthentication.is_authenticated = self.old_is_authenticated
-
-        ResourceTestCase.tearDown(self)
-        JobTestCaseWithHost.tearDown(self)
+            ResourceTestCase.tearDown(self)
+            JobTestCaseWithHost.tearDown(self)
