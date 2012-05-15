@@ -773,6 +773,7 @@ class FormatTargetJob(StateChangeJob):
     target = models.ForeignKey(ManagedTarget)
     stateful_object = 'target'
     state_verb = 'Format'
+    cancellable = False
 
     class Meta:
         app_label = 'chroma_core'

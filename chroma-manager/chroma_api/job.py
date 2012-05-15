@@ -7,6 +7,7 @@
 from tastypie.resources import ModelResource
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
+from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 
 from chroma_core.models import Job, StateLock, StateReadLock, StateWriteLock
@@ -40,6 +41,28 @@ class StateLockResource(ModelResource):
         resource_name = 'state_lock'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
+
+
+class JobValidation(Validation):
+    def is_valid(self, bundle, request = None):
+        errors = {}
+        try:
+            job = Job.objects.get(pk = bundle.data['id']).downcast()
+        except KeyError:
+            errors['id'] = "Attribute mandatory"
+        except Job.DoesNotExist:
+            errors['id'] = "Job with id %s not found" % bundle.data['id']
+        else:
+            try:
+                new_state = bundle.data['state']
+            except KeyError:
+                errors['state'] = "Attribute mandatory"
+            else:
+                valid_states = ['pause', 'cancel', 'resume', job.state]
+                if not new_state in valid_states:
+                    errors['state'] = "Must be one of %s" % valid_states
+
+        return errors
 
 
 class JobResource(ModelResource):
@@ -97,19 +120,22 @@ class JobResource(ModelResource):
         return bundle.obj.content_type.model_class().__name__
 
     def dehydrate_available_transitions(self, bundle):
-        job = bundle.obj
+        job = bundle.obj.downcast()
         if job.state in ['complete', 'completing', 'cancelling']:
             return []
         elif job.state == 'paused':
             return [{'state': 'resume', 'label': "Resume"}]
         elif job.state in ['pending', 'tasked', 'tasking']:
-            return [{'state': 'pause', 'label': 'Pause'},
-                    {'state': 'cancel', 'label': 'Cancel'}]
+            if job.cancellable:
+                return [{'state': 'pause', 'label': 'Pause'},
+                        {'state': 'cancel', 'label': 'Cancel'}]
+            else:
+                return []
         else:
             raise NotImplementedError("Unknown job state %s" % job.state)
 
     def dehydrate_description(self, bundle):
-        return bundle.obj.description()
+        return bundle.obj.downcast().description()
 
     class Meta:
         queryset = Job.objects.all()
@@ -122,6 +148,7 @@ class JobResource(ModelResource):
         detail_allowed_methods = ['get', 'put']
         filtering = {'id': ['exact', 'in'], 'state': ['exact']}
         always_return_data = True
+        validation = JobValidation()
 
     def obj_update(self, bundle, request, **kwargs):
         """Modify a Job (setting 'state' field to 'pause', 'cancel', or 'resume' is the
@@ -132,11 +159,12 @@ class JobResource(ModelResource):
         job = Job.objects.get(pk = kwargs['pk'])
         new_state = bundle.data['state']
 
-        assert new_state in ['pause', 'cancel', 'resume']
         if new_state == 'pause':
             job.pause()
         elif new_state == 'cancel':
             job.cancel()
         else:
             job.unpause()
+
+        bundle.obj = job
         return bundle

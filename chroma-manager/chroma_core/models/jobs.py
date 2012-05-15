@@ -380,6 +380,9 @@ class Job(models.Model):
     #  successfully.
     opportunistic_retry = False
 
+    #: Whether the job can be safely cancelled
+    cancellable = True
+
     class Meta:
         app_label = 'chroma_core'
 

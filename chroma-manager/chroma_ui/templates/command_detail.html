@@ -13,7 +13,7 @@
 
 <script type="text/template" id="job_buttons_template">
   <% _.each(job.available_transitions, function(transition) { %>
-    <a class='job_state_transition' data-job_uri='<%=job.resource_uri%>' data-state='<%=transition.state%>'><%=transition.label%></a>
+    <a class='job_state_transition' data-job='<%= JSON.stringify(job) %>' data-state='<%=transition.state%>'><%=transition.label%></a>
   <% }); %>
 </script>
 

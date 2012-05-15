@@ -124,11 +124,11 @@ var Command = Backbone.Model.extend({
     options.success = function(model, response) {
       var job_ids = [];
       $.each(model.attributes.jobs, function(i, job_uri) {
-        var tokens = job_uri.split("/")
-        var job_id = tokens[tokens.length - 2]
+        var tokens = job_uri.split("/");
+        var job_id = tokens[tokens.length - 2];
         job_ids.push(job_id);
       });
-      var collection = new JobCollection()
+      var collection = new JobCollection();
       if (job_ids.length == 0) {
         model.set('jobs_full', []);
         model.set('jobs_tree', []);
@@ -137,7 +137,7 @@ var Command = Backbone.Model.extend({
         }
       } else {
         collection.fetch({data: {id__in: job_ids, limit: 0}, success: function(c, r) {
-          var jobs = c.toJSON()
+          var jobs = c.toJSON();
           model.set('jobs_full', jobs);
           model.set('jobs_tree', model.jobTree(jobs));
           if (outer_success) {
@@ -150,7 +150,7 @@ var Command = Backbone.Model.extend({
     Backbone.Model.prototype.fetch.apply(this, [options])
   },
   urlRoot: "/api/command/"
-})
+});
 
 var CommandDetail = Backbone.View.extend({
   className: 'command_dialog',
@@ -166,9 +166,9 @@ var CommandDetail = Backbone.View.extend({
       var link = $(this);
       link.button();
       link.click(function(ev) {
-        var uri = link.data('job_uri');
-        var state = link.data('state');
-        Api.put(uri, {'state': state},
+        var job = link.data('job');
+        job.state = link.data('state');
+        Api.put(job.resource_uri, job,
           success_callback = function(data) {
             command_detail_view.model.fetch({success:function(){
               command_detail_view.render();
