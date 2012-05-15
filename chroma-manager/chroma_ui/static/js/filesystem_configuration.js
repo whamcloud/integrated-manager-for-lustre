@@ -8,7 +8,7 @@ var VolumeChooserStore = function ()
 {
   var chooserButtons = {};
   var volumes = [];
-  var id_to_volume = {}
+  var id_to_volume = {};
 
   function makeRow(element, volume) {
     var row = $.extend({}, volume);
@@ -21,8 +21,8 @@ var VolumeChooserStore = function ()
       select_widget_fn = function(vol_info){return "<input type='checkbox' name='" + vol_info.id + "'/>";}
     }
 
-    row.primary_host_name = "---"
-    row.secondary_host_name = "---"
+    row.primary_host_name = "---";
+    row.secondary_host_name = "---";
     $.each(row.volume_nodes, function(i, node) {
       if (node.primary) {
         row.primary_host_name = node.host_label
@@ -58,6 +58,17 @@ var VolumeChooserStore = function ()
     });
   }
 
+  function reload() {
+    load(function(){
+      $.each(chooserButtons, function(button_id, other_state) {
+        var button = $('#' + button_id);
+        var dataTable = button.volumeChooser('getDatatable');
+        dataTable.fnClearTable();
+        dataTable.fnAddData(getRows(button));
+      });
+    });
+  }
+
   function select(element, selected) {
     var state = chooserButtons[element.attr('id')];
     if (state == undefined) {
@@ -83,7 +94,7 @@ var VolumeChooserStore = function ()
         return;
       }
 
-      var dataTable = other_element.volumeChooser('getDatatable')
+      var dataTable = other_element.volumeChooser('getDatatable');
 
       _.each(newly_selected, function(remove_id) {
         $.each(dataTable.fnGetData(), function(j, row) {
@@ -108,13 +119,14 @@ var VolumeChooserStore = function ()
     load: load,
     select: select,
     getRows: getRows,
-    getVolume: getVolume
-  }
+    getVolume: getVolume,
+    reload: reload
+  };
 };
 
 (function( $ ) {
-  volumeChooserClear = function(element) {
-    opts = element.data('volumeChooser')
+  var volumeChooserClear = function(element) {
+    var opts = element.data('volumeChooser');
     element = $('#' + element.attr('id'));
 
     var changed;
@@ -122,33 +134,33 @@ var VolumeChooserStore = function ()
       if(opts['selected_lun_ids'] && opts['selected_lun_ids'].length > 0) {
         changed = true;
       }
-      opts['selected_lun_ids'] = []
-      opts.store.select(element, opts.selected_lun_ids)
+      opts['selected_lun_ids'] = [];
+      opts.store.select(element, opts.selected_lun_ids);
       element.parents('.volume_chooser_background').find('input').attr('checked', false);
     } else {
       if(opts['selected_lun_id'] != null) {
         changed = true;
       }
-      opts['selected_lun_id'] = null
-      opts.store.select(element, opts.selected_lun_id)
+      opts['selected_lun_id'] = null;
+      opts.store.select(element, opts.selected_lun_id);
       element.parents('.volume_chooser_background').find('.volume_chooser_selected').html("Select storage...")
     }
     
     if (changed && opts.change) {
       opts.change.apply(element);
     }
-  }
+  };
 
-  volumeChooserGetValue = function(element) {
-    opts = element.data('volumeChooser')
+  var volumeChooserGetValue = function(element) {
+    var opts = element.data('volumeChooser');
     if (opts.multi_select) {
       return opts.selected_lun_ids
     } else {
       return opts.selected_lun_id
     }
-  }
+  };
 
-  volumeChooserButton = function(element, opts) {
+  var volumeChooserButton = function(element, opts) {
     $('#' + element.attr('id')).data('volumeChooser', opts)
       opts.element = $('#' + element.attr('id'));
 
@@ -156,17 +168,17 @@ var VolumeChooserStore = function ()
       throw "'store' attribute required"
     }
 
-    element.wrap("<div class='volume_chooser_background'/>")
-    element.hide()
-    var background_div = element.parent('.volume_chooser_background')
+    element.wrap("<div class='volume_chooser_background'/>");
+    element.hide();
+    var background_div = element.parent('.volume_chooser_background');
 
     element.wrap("<div class='volume_chooser_header'/>");
-    var header_div = element.parent('.volume_chooser_header')
+    var header_div = element.parent('.volume_chooser_header');
 
-    element.after("<span class='volume_chooser_selected'/>")
-    var selected_label = element.next('.volume_chooser_selected')
+    element.after("<span class='volume_chooser_selected'/>");
+    var selected_label = element.next('.volume_chooser_selected');
 
-    header_div.after("<div class='volume_chooser_expander'/>")
+    header_div.after("<div class='volume_chooser_expander'/>");
     var expander_div = header_div.next('.volume_chooser_expander');
 
     if (opts.multi_select) {
@@ -179,7 +191,7 @@ var VolumeChooserStore = function ()
     header_div.button();
     /* Redoing the 'data' on the element as .button() messes with the surrounding DOM */
     element = $('#' + element.attr('id'));
-    $('#' + element.attr('id')).data('volumeChooser', opts)
+    $('#' + element.attr('id')).data('volumeChooser', opts);
 
     // dataTables requires a unique ID
     var table_id = element.attr('id') + "_table";
@@ -204,7 +216,7 @@ var VolumeChooserStore = function ()
         );
 
 
-    var table_element = expander_div.children('table')
+    var table_element = expander_div.children('table');
 
     var volumeTable = table_element.dataTable({
       bJQueryUI: true,
@@ -242,7 +254,7 @@ var VolumeChooserStore = function ()
       });
     });
 
-    var update_multi_select_value = function() {
+    function update_multi_select_value() {
       var selected = [];
       table_element.find('input').each(function() {
         if ($(this).attr('checked')) {
@@ -256,7 +268,7 @@ var VolumeChooserStore = function ()
       if (opts.change) {
         opts.change.apply(element);
       }
-    };
+    }
 
     function row_clicked(tr_element) {
       var aPos = volumeTable.fnGetPosition(tr_element);
@@ -313,7 +325,7 @@ var VolumeChooserStore = function ()
     });
 
     volumeChooserClear($('#' + element.attr('id')));
-  }
+  };
 
 
   var methods = {
@@ -322,7 +334,7 @@ var VolumeChooserStore = function ()
         multi_select: false,
         selected_lun_id: null,
         selected_lun_ids: []
-      }
+      };
 
       var options = $.extend(defaults, options)
 
@@ -344,7 +356,7 @@ var VolumeChooserStore = function ()
     getOpts: function() {
       return $(this).data('volumeChooser');
     }
-  }
+  };
   $.fn.volumeChooser = function(method) {
     if ( methods[method] ) {
       return methods[ method ].apply( this, Array.prototype.slice.call( arguments, 1 ));

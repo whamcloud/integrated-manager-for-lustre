@@ -13,7 +13,8 @@
         init();
         initialized = true;
       } else {
-        // TODO HYD-816: reload lists of volumes, reload list of existing MGSs
+        volume_chooser_store.reload();
+
         $('#mgt_chooser').volumeChooser('clear');
         $('#mdt_chooser').volumeChooser('clear');
         $('#ost_chooser').volumeChooser('clear');

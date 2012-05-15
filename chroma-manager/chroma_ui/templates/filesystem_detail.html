@@ -10,7 +10,7 @@
         init();
         initialized = true;
       } else {
-          /* TODO: HYD-816 reload OST chooser */
+          volume_chooser_store.reload();
           $('#new_ost_chooser').volumeChooser('clear');
       }
 
@@ -92,6 +92,7 @@
                       $('#ost').dataTable().fnClearTable();
                       $('#mdt').dataTable().fnClearTable();
                       $('#mgt_configuration_view').dataTable().fnClearTable();
+                      volume_chooser_store.reload();
                       loadFilesystemTargets(filesystem.id);
                       dialog.dialog("close");
                     } else {
