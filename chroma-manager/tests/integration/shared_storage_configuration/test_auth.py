@@ -103,6 +103,7 @@ class TestAuthentication(ChromaIntegrationTestCase):
         # Change my password
         user['password1'] = 'bar'
         user['password2'] = 'bar'
+        user['old_password'] = 'foo'
         response = basic_user_requests.put(user['resource_uri'], user)
         self.assertEqual(response.status_code, 202, response.content)
 
