@@ -21,7 +21,8 @@
       function sendUpdates(volumes, completion) {
         if (volumes.length == 0) {
           /* Great, I'm through sending */
-          jAlert("Update Successful");
+          // TODO: show a flash message to indicate success
+
           $('#btnApplyConfig').button('disable');
           $('#btnCancelConfig').button('disable');
           /* Strictly speaking, this shouldn't change anything,
