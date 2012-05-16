@@ -50,7 +50,8 @@ var ChromaRouter = Backbone.Router.extend({
     "": "dashboard",
     "alert/": "alert",
     "event/": "event",
-    "log/": "log"
+    "log/": "log",
+    "about/": "about"
   },
   object_detail: function(id, model_class, view_class, title_attr)
   {
@@ -111,6 +112,9 @@ var ChromaRouter = Backbone.Router.extend({
   log: function()
   {
     this.toplevel('log');
+  },
+  about:function () {
+    this.toplevel('about');
   },
   configureIndex: function()
   {

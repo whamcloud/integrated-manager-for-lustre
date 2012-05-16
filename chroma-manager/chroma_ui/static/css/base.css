@@ -986,3 +986,27 @@ table#global_filesystem_table {
 .chart_info_pane table {
     font-size: 9pt;
 }
+
+
+p.footer {
+    font-size: 6.5pt;
+    text-align: center;
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+
+div.about_box {
+    width: 600px;
+    margin: 12px auto 0 auto;
+    background-color: white;
+    border-radius: 6px;
+    padding: 12px;
+    box-shadow: gray 3px 3px 6px;
+}
+
+div.about_box_logo {
+    background-image: url(../images/chroma_logo.png);
+    width: 48px;
+    height: 48px;
+    margin: 12px auto 12px auto;
+}

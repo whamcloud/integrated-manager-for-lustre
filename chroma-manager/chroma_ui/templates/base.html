@@ -148,8 +148,13 @@
         <div class="toplevel" id='toplevel-log' style="display: none;">
           {% include 'logs.html' %}
         </div>
-      {% block include_content %}{% endblock %}
-      {% block content %}{% endblock %}
+          <div class="toplevel" id='toplevel-about' style="display: none;">
+              {% include 'about.html' %}
+          </div>
+          <p class='footer'>
+              Chroma™ (version {{app_version}}) is Copyright © 2012 Whamcloud Inc. All rights reserved.
+              <a href="/ui/about/" class='navigation'>About Chroma.</a>
+          </p>
       </div>
     </div>
   </body>
