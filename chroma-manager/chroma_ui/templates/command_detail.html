@@ -21,17 +21,17 @@
   <% 
     function job_icon(job) {
       if (job.state == 'pending') {
-        return "/static/images/icon_hourglass.png"
+        return "/static/images/fugue/hourglass.png"
       } else if (job.state == 'complete') {
         if (job.cancelled) {
-          return "/static/images/gtk-cancel.png"
+          return "/static/images/fugue/cross-white.png"
         } else if (job.errored) {
-          return "/static/images/dialog-error.png"
+          return "/static/images/fugue/exclamation-red.png"
         } else {
-          return "/static/images/icon_tick.png"
+          return "/static/images/fugue/tick.png"
         }
       } else {
-        return "/static/images/ajax-loader.gif"
+        return "/static/images/loading.gif"
       }
     }
   %>
@@ -115,11 +115,11 @@
       <%
         function step_icon(step) {
           if (step.state == 'success') {
-            return "/static/images/icon_tick.png"
+            return "/static/images/fugue/tick.png"
           } else if (step.state == 'failed') {
-            return "/static/images/dialog-error.png"
+            return "/static/images/fugue/exclamation-red.png"
           } else if (step.state == 'incomplete') {
-            return "/static/images/ajax-loader.gif"
+            return "/static/images/loading.gif"
           }
         }
       %>

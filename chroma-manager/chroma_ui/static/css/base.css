@@ -125,34 +125,6 @@ img{
 /* Page Specific
  ---------------------------------------------------------------------*/
 
-.round-slider
-{
-float:left;
-width:23px;
-height:500px;
-border-right: 1px solid #d6d6d6;
-font-size:10px;
-/*background-color: #e6e6e6;*/
-background-color: black;
-background-image: url(../images/ui-bg_glass_75_e6e6e6_400x1.png);
-background-repeat: no-repeat;
-background-position: 0% 50%;
-border-top-left-radius:2em;
-border-top-right-radius:2em;
-border-bottom-right-radius:2em;
-border-bottom-left-radius:2em;
-border:1px solid #848484;
-margin: 0 auto;
-padding-left:20px;
-padding-right:20px;
-padding-top:1px;
-background-color:#f9f9ff;
-/*background-image:url(../images/loading.gif) center no-repeat;
-background-image:url(../images/wait_progress.gif);
-background-repeat: no-repeat;
-background-position:center 40% ;*/
-}
-
 .breadCrumbHolder
 {
 	/*margin:0 0 20px 0;
@@ -335,11 +307,7 @@ cursor:pointer;
 	height:600px;
     border-right: 1px solid #d6d6d6;
     font-size:10px;
-    /*background-color: #e6e6e6;*/
-    background-color: black;
-    background-image: url(../images/ui-bg_glass_75_e6e6e6_400x1.png);
-    background-repeat: repeat-y;
-    background-position: 0% 50%;
+    background-color: #ededed;
 }
 
 .notification_icon {

@@ -25,47 +25,31 @@ var Sidebar = function(){
   function eventIcon(e)
   {
     return "/static/images/" + {
-      INFO: 'dialog-information.png',
-      ERROR: 'dialog-error.png',
-      WARNING: 'dialog-warning.png',
+      INFO: 'fugue/information.png',
+      ERROR: 'fugue/exclamation-red.png',
+      WARNING: 'fugue/exclamation.png'
     }[e.severity]
   }
 
-  function jobIcon(job)
-  {
-    var prefix = "/static/images/";
-    if(job.state == 'complete') {
-      if (job.errored) {
-        return prefix + "dialog-error.png"
-      } else if (job.cancelled) {
-        return prefix + "gtk-cancel.png"
-      } else {
-        return prefix + "dialog_correct.png"
-      }
-    } else if (job.state == 'paused') {
-      return prefix + "gtk-media-pause.png"
-    } else {
-      return prefix + "ajax-loader.gif"
-    }
-  }
+  var job_icon_template = _.template($('#job_icon_template').html());
 
   function commandIcon(command)
   {
     var prefix = "/static/images/";
     if(!command.complete) {
-      return prefix + "ajax-loader.gif"
+      return prefix + "loading.gif"
     } else if (command.errored) {
-        return prefix + "dialog-error.png"
+        return prefix + "fugue/exclamation-red.png"
     } else if (command.cancelled) {
-        return prefix + "gtk-cancel.png"
+        return prefix + "fugue/cross-white.png"
     } else {
-        return prefix + "dialog_correct.png"
+        return prefix + "fugue/tick.png"
     }
   }
 
   function alertIcon(a)
   {
-    return "/static/images/dialog-warning.png";
+    return "/static/images/fugue/exclamation-red.png";
   }
 
   function dismissIcon(a) {
@@ -73,7 +57,7 @@ var Sidebar = function(){
       return '';
     }
     else {
-      return "<img alt='Dismiss' class='dismiss_button' title='Dismiss' src='/static/images/gtk-cancel.png' />";
+      return "<img alt='Dismiss' class='dismiss_button' title='Dismiss' src='/static/images/fugue/tick.png' />";
     }
   }
 
@@ -140,7 +124,7 @@ var Sidebar = function(){
         { "sClass": 'txtleft', "mDataProp":"text", bSortable: false },
         { "sClass": 'dismiss_column', "mDataProp":"dismiss", bSortable: false }
       ],
-      "<img src='/static/images/dialog_correct.png'/>&nbsp;No alerts active"
+      "<img src='/static/images/fugue/tick.png'/>&nbsp;No alerts active"
     );
     
     // delegated event for dismissing an alert

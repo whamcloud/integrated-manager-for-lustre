@@ -5,14 +5,14 @@ div.add_host_wizard {
 }
 
 td.success {
-    background-image: url('../images/icon_tick.png');
+    background-image: url('../images/fugue/tick.png');
     background-repeat: no-repeat;
     width: 16px;
     height: 16px;
 }
 
 td.failure {
-    background-image: url('../images/dialog-error.png');
+    background-image: url('../images/fugue/exclamation-red.png');
     background-repeat: no-repeat;
     width: 16px;
     height: 16px;

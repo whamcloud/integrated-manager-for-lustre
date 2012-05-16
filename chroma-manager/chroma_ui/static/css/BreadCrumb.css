@@ -1,0 +1,129 @@
+
+
+/* This file has a separate copyright and license from the rest of this package */
+
+/*Copyright (c) 2008 CompareNetworks Inc.*/
+
+/*Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:*/
+
+/*The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.*/
+
+/*THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.*/
+
+
+/* Float Clearing
+ ---------------------------------------------------------------------*/
+
+.module:after
+{
+	clear: both;
+	content: ".";
+	display: block;
+	height: 0;
+	visibility: hidden;
+	
+}
+
+/* float clearing for IE6 */
+* html .module
+{
+	height: 1%;
+	overflow: visible;
+}
+
+/* float clearing for IE7 */
+* + html .module
+{
+	min-height: 1%;
+}
+
+/* Breadcrumb Styles
+ ---------------------------------------------------------------------*/
+
+.breadCrumb
+{
+	margin: 0;
+	padding: 0;
+	float: left;
+	display: block;
+	height: 21px;
+	overflow: hidden;
+	padding:5px;
+	/*border:solid 1px #dedede;*/
+	/*background-image:url(../images/line1.jpg);
+	background-repeat:repeat-x;*/
+	background-color:#ccc;
+	/*background:#fff;*/
+}
+.breadCrumb ul
+{
+	margin: 0;
+	padding: 0;
+	height: 21px;
+	display: block;
+}
+.breadCrumb ul li
+{
+	display: block;
+	float: left;
+	position: relative;
+	height: 25px;
+	overflow: hidden;
+	line-height: 21px;
+	margin: 0px 6px 0px 0;
+	padding: 0px 10px 0px 0;
+	/*font-size: .9167em;*/
+	font-size:12px;
+	background: url(../images/breadcrumb/Chevron.gif) no-repeat 100% 0;
+	font-family:Verdana, Arial, Helvetica, sans-serif;
+	color:#FFFFFF;
+}
+.breadCrumb ul li div.chevronOverlay
+{
+	position: absolute;
+	right: 0;
+	top: 0;
+	z-index: 2;
+}
+.breadCrumb ul li span
+{
+	display: block;
+	overflow: hidden;
+}
+.breadCrumb ul li a
+{
+	display: block;
+	position: relative;
+	height: 21px;
+	line-height: 21px;
+	overflow: hidden;
+	float: left;
+	color: black;
+}
+.home_icon
+{
+	height: 16px !important;
+	text-indent:-1000em;
+	width:16px;
+	padding: 0;
+	margin-top: 2px;
+	overflow: hidden;
+	background:url(../images/breadcrumb/IconHome.gif) no-repeat 0 0;
+}
+.breadCrumb ul li.first a:hover
+{
+	background-position: 0 -16px;
+}
+.breadCrumb ul li.last
+{
+	background: none;
+	margin-right: 0;
+	padding-right: 0;
+}
+.chevronOverlay
+{
+	display: none;
+	background: url(../images/breadcrumb/Chevron.gif) no-repeat 100% 0;
+	width: 13px;
+	height: 20px;
+}
