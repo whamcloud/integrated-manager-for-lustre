@@ -705,7 +705,8 @@ var Dashboard = (function() {
       },
       chart_config: {
         chart: {
-          renderTo: 'global_usage'
+          renderTo: 'global_usage',
+          zoomType: ''
         },
         title: { text: 'Usage'},
         series: [
@@ -1105,7 +1106,8 @@ var Dashboard = (function() {
       },
       chart_config: {
         chart: {
-          renderTo: 'filesystem_usage'
+          renderTo: 'filesystem_usage',
+          zoomType: ''
         },
         title: { text: 'Usage'},
         series: [

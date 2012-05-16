@@ -216,7 +216,6 @@ var ChartManager = function(options) {
             return;
         }
         log("add_chart: " + chart_name)
-        chart_model = ChartModel(options || {});
         config.charts[chart_group][chart_name] = ChartModel(options || {});
     };
 
