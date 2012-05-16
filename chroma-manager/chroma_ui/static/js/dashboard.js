@@ -675,7 +675,7 @@ var Dashboard = (function() {
           } else {
             name = fs_id;
           }
-          categories.push(name);
+          categories.push('Bytes | <em>' + name + '</em> | Files');
 
           if (fs_data.length) {
             var current_data = fs_data[0].data;
@@ -708,7 +708,7 @@ var Dashboard = (function() {
           renderTo: 'global_usage',
           zoomType: ''
         },
-        title: { text: 'Usage'},
+        title: { text: 'Percent Capacity Used'},
         series: [
           { type: 'column', stack: 0, name: 'Free bytes'},
           { type: 'column', stack: 0, name: 'Used bytes'},
@@ -721,7 +721,7 @@ var Dashboard = (function() {
             pointWidth: 30.0
           }
         },
-        xAxis:{ categories: ['Usage'], text: '', labels : {align: 'right', rotation: 310, style:{fontSize:'8px', fontWeight:'regular'} } },
+        xAxis:{categories: [], labels: {align: 'center', style: {fontSize: '8px', fontWeight: 'regular'}}},
         yAxis:{
           max:100, min:0, startOnTick:false,
           title:null,
@@ -746,12 +746,12 @@ var Dashboard = (function() {
         chart: {
           renderTo: 'global_client_count'
         },
-        title: { text: 'Client count'},
+        title: { text: 'Clients Connected'},
         xAxis: { type:'datetime' },
         yAxis: [
           {title: null, labels: {formatter: whole_numbers_only_formatter}}],
         series: [
-          { type: 'line', data: [], name: 'Client count' }
+          { type: 'line', data: [], name: 'Clients Connected' }
         ]
       }
     });
@@ -1062,21 +1062,12 @@ var Dashboard = (function() {
       metrics: ["kbytestotal", "kbytesfree", "filestotal", "filesfree"],
       snapshot: true,
       snapshot_callback: function(chart, data) {
-        var categories = [];
         var freeBytes  = [];
         var usedBytes  = [];
         var freeFiles  = [];
         var usedFiles  = [];
 
         _.each(data, function(fs_data, fs_id) {
-          var name;
-          var filesystem = ApiCache.get('filesystem', fs_id);
-          if (filesystem) {
-            name = filesystem.attributes.name;
-          } else {
-            name = fs_id;
-          }
-          categories.push(name);
 
           if (fs_data.length) {
             var current_data = fs_data[0].data;
@@ -1098,7 +1089,6 @@ var Dashboard = (function() {
           }
         });
 
-        chart.instance.xAxis[0].setCategories(categories);
         chart.instance.series[0].setData(freeBytes, false);
         chart.instance.series[1].setData(usedBytes, false);
         chart.instance.series[2].setData(freeFiles, false);
@@ -1109,7 +1099,7 @@ var Dashboard = (function() {
           renderTo: 'filesystem_usage',
           zoomType: ''
         },
-        title: { text: 'Usage'},
+        title: { text: 'Percent Capacity Used'},
         series: [
           { type: 'column', stack: 0, name: 'Free bytes'},
           { type: 'column', stack: 0, name: 'Used bytes'},
@@ -1122,7 +1112,7 @@ var Dashboard = (function() {
             pointWidth: 30.0
           }
         },
-        xAxis:{ categories: ['Usage'], text: '', labels : {align: 'right', rotation: 310, style:{fontSize:'8px', fontWeight:'regular'} } },
+        xAxis: {categories: ['Bytes | Files'], labels: {align: 'center', style: {fontSize: '8px', fontWeight: 'regular'}}},
         yAxis:{max:100, min:0, startOnTick:false,
           title: null,
           labels: {formatter: percentage_formatter},
@@ -1145,7 +1135,7 @@ var Dashboard = (function() {
         chart: {
           renderTo: 'filesystem_client_count'
         },
-        title: { text: 'Client count'},
+        title: { text: 'Clients Connected'},
         xAxis: { type:'datetime' },
         yAxis: [{
           title: { text: 'Clients' },
@@ -1154,7 +1144,7 @@ var Dashboard = (function() {
         yAxis: [
           {title: null, labels: {formatter: whole_numbers_only_formatter}}],
         series: [
-          { type: 'line', data: [], name: 'Client count' }
+          { type: 'line', data: [], name: 'Clients Connected' }
         ]
       }
     });
