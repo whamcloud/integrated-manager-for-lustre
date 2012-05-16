@@ -96,7 +96,7 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
     types = []
     options = []
 
-    tuple_options = "target_types mgsnode failnode servicenode network".split()
+    tuple_options = ["target_types", "mgsnode", "failnode", "servicenode", "network"]
     for name in tuple_options:
         arg = args[name]
         # ensure that our tuple arguments are always tuples, and not strings
@@ -124,7 +124,7 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
         if args[arg]:
             options.append("%s" % flag_options[arg])
 
-    dict_options = "param".split()
+    dict_options = ["param"]
     for name in dict_options:
         arg = args[name]
         for key in arg:
@@ -140,7 +140,6 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
         if value != '':
             options.append("--%s=%s" % (name, __sanitize_arg(value)))
 
-    # NB: Use $PATH instead of relying on hard-coded paths
     cmd = "mkfs.lustre %s %s %s" % (" ".join(types), " ".join(options), device)
 
     return ' '.join(cmd.split())
