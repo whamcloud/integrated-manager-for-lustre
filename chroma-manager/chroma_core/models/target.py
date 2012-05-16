@@ -13,6 +13,7 @@ from chroma_core.models.jobs import StateChangeJob
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
+import settings
 
 
 class FilesystemMember(models.Model):
@@ -726,6 +727,12 @@ class MkfsStep(Step):
             mkfsoptions.append("-N %s" % (target.inode_count))
         if mkfsoptions:
             kwargs['mkfsoptions'] = " ".join(mkfsoptions)
+
+        # HYD-
+        if isinstance(target, ManagedOst) and settings.LUSTRE_MKFS_OPTIONS_OST:
+            kwargs['mkfsoptions'] = settings.LUSTRE_MKFS_OPTIONS_OST
+        elif isinstance(target, ManagedMdt) and settings.LUSTRE_MKFS_OPTIONS_MDT:
+            kwargs['mkfsoptions'] = settings.LUSTRE_MKFS_OPTIONS_MDT
 
         return kwargs
 

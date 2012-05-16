@@ -4,6 +4,32 @@ from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshe
 from chroma_core.models import ManagedTarget, ManagedMgs, ManagedHost
 
 
+class TestMkfsOverrides(JobTestCaseWithHost):
+    def test_mdt_override(self):
+        import settings
+
+        self.create_simple_filesystem(start = False)
+        self.set_state(self.mgt, "mounted")
+
+        settings.LUSTRE_MKFS_OPTIONS_MDT = "-E block_size=1024"
+        self.set_state(self.mdt, "formatted")
+        cmd, args = MockAgent.last_call()
+        self.assertEqual(cmd, "format-target")
+        self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_MDT}, args)
+
+    def test_ost_override(self):
+        import settings
+
+        self.create_simple_filesystem(start = False)
+        self.set_state(self.mgt, "mounted")
+
+        settings.LUSTRE_MKFS_OPTIONS_OST = "-E block_size=2048"
+        self.set_state(self.ost, "formatted")
+        cmd, args = MockAgent.last_call()
+        self.assertEqual(cmd, "format-target")
+        self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_OST}, args)
+
+
 class TestTargetTransitions(JobTestCaseWithHost):
     def setUp(self):
         super(TestTargetTransitions, self).setUp()

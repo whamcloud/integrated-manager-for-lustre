@@ -228,6 +228,9 @@ AUDIT_MAX_AGE = 3600 * 24
 
 SQL_RETRY_PERIOD = 10
 
+LUSTRE_MKFS_OPTIONS_MDT = None
+LUSTRE_MKFS_OPTIONS_OST = None
+
 CELERY_ROUTES = (
         {"chroma_core.tasks.audit_all": {"queue": "periodic"}},
         {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},

@@ -13,6 +13,15 @@ def freshen(obj):
 class MockAgent(object):
     label_counter = 0
     mock_servers = {}
+    calls = []
+
+    @classmethod
+    def clear_calls(cls):
+        cls.calls = []
+
+    @classmethod
+    def last_call(cls):
+        return cls.calls[-1]
 
     succeed = True
 
@@ -20,6 +29,7 @@ class MockAgent(object):
         self.host = host
 
     def invoke(self, cmdline, args = None):
+        self.calls.append((cmdline, args))
         if not self.succeed:
             raise RuntimeError("Test-generated failure")
 
@@ -166,14 +176,15 @@ class JobTestCaseWithHost(JobTestCase):
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).lnetconfiguration.state, 'nids_known')
 
-    def create_simple_filesystem(self):
+    def create_simple_filesystem(self, start = True):
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
         self.mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
         self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
         self.mdt = ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
         self.ost = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
-        self.set_state(self.fs, 'available')
-        self.mgt = freshen(self.mgt)
-        self.fs = freshen(self.fs)
-        self.mdt = freshen(self.mdt)
-        self.ost = freshen(self.ost)
+        if start:
+            self.set_state(self.fs, 'available')
+            self.mgt = freshen(self.mgt)
+            self.fs = freshen(self.fs)
+            self.mdt = freshen(self.mdt)
+            self.ost = freshen(self.ost)
