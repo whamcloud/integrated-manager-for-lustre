@@ -11,9 +11,9 @@ from datetime import datetime as dt, timedelta as td
 from dateutil.tz import tzlocal, tzutc, tzfile
 import argparse
 from argparse import ArgumentParser, ArgumentError
-from r3d.prettytable import PrettyTable
+from prettytable import PrettyTable
 
-from chroma_core.lib.util import chroma_settings
+from chroma_core.lib.chroma_settings import chroma_settings
 from django.core.management import setup_environ
 setup_environ(chroma_settings())
 

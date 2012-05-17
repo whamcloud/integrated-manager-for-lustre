@@ -22,7 +22,7 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
-Requires: Django >= 1.3 mod_wsgi httpd python-dateutil python-uuid python-multiprocessing python-paramiko python-kombu >= 1.5.1 django-celery rsyslog-mysql mysql-server MySQL-python >= 1.2.1p2 rabbitmq-server django-picklefield python-amqplib avahi-dnsconfd avahi-python python-daemon pygobject2 python-celery >= 2.4.5 django-tastypie Django-south >= 0.7.2 python-setuptools chroma-manager-libs = %{version}
+Requires: Django >= 1.3 mod_wsgi httpd python-dateutil python-uuid python-multiprocessing python-paramiko python-kombu >= 1.5.1 django-celery rsyslog-mysql mysql-server MySQL-python >= 1.2.1p2 rabbitmq-server django-picklefield python-amqplib avahi-dnsconfd avahi-python python-daemon pygobject2 python-celery >= 2.4.5 django-tastypie Django-south >= 0.7.2 python-setuptools chroma-manager-libs = %{version} python-prettytable
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 
@@ -38,7 +38,7 @@ This package contains libraries for Chroma CLI and Chroma Server.
 %package cli
 Summary: Command-Line Interface for Chroma Server
 Group: System/Utility
-Requires: chroma-manager-libs = %{version} python-argparse python-requests python-tablib
+Requires: chroma-manager-libs = %{version} python-argparse python-requests python-tablib python-dateutil python-prettytable
 %description cli
 This package contains the Chroma CLI which can be used on a Chroma server
 or on a separate node.
@@ -95,7 +95,7 @@ install -m 644 %{SOURCE5} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
 
 # This is fugly, but it's cleaner than moving things around to get our
 # modules in the standard path.
-entry_scripts="/usr/bin/chroma /usr/bin/qr3d"
+entry_scripts="/usr/bin/chroma /usr/bin/chroma-api /usr/bin/qr3d"
 for script in $entry_scripts; do
   ed $RPM_BUILD_ROOT$script <<EOF
 /import load_entry_point/ a
@@ -183,6 +183,7 @@ fi
 %files cli
 %defattr(-,root,root)
 %{_bindir}/chroma
+%{_bindir}/chroma-api
 /usr/share/chroma-manager/chroma_cli/*
 
 %files test-libs

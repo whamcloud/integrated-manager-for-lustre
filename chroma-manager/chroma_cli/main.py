@@ -11,15 +11,16 @@ import traceback
 from chroma_cli.exceptions import BadRequest, InternalError, NotFound
 from chroma_cli.parser import ResettableArgumentParser
 from chroma_cli.config import Configuration
+from chroma_cli.api import ApiHandle
 
 # TODO: This kind of thing is probably a good candidate for
 # pluginization, if we wind up with a lot of command modules.
 from chroma_cli.commands import api_resources
 
 
-def main():
+def api_cli():
     config = Configuration()
-    parser = ResettableArgumentParser(description="Chroma CLI")
+    parser = ResettableArgumentParser(description="Chroma API CLI")
 
     # register global arguments for each module
     api_resources.register_global_arguments(parser)
@@ -71,5 +72,131 @@ def main():
         print "Internal client error from handler '%s': %s" % (dispatcher, trace)
         sys.exit(3)
 
+
+def standard_cli(args=None):
+    from itertools import product
+    basic_nouns = ["server", "volume", "filesystem", "ost", "mdt", "mgt", "mgs", "oss", "mds"]
+    basic_verbs = ["list", "show", "add", "remove"]
+    noun_verbs = ["%s-%s" % t for t in product(*[basic_nouns, basic_verbs])]
+    noun_verbs.extend(["target-show", "target-list"])
+
+    config = Configuration()
+    parser = ResettableArgumentParser(description="Chroma API CLI")
+
+    import tablib
+    tablib_formats = [m.title for m in tablib.formats.available]
+    parser.add_argument("--output", "-o", help="Output format",
+                        choices=["human"] + tablib_formats, default="human")
+    parser.clear_resets()
+
+    parser.add_argument("primary_action", choices=basic_nouns + noun_verbs)
+    parser.add_argument("options", nargs=REMAINDER)
+
+    ns = parser.parse_args(args)
+
+    if "-" in ns.primary_action:
+        ns.noun, ns.verb = ns.primary_action.split("-")
+        parser.reset()
+        parser.add_argument("primary_action", choices=noun_verbs)
+        if ns.verb == "show":
+            parser.add_argument("subject")
+        parser.add_argument("options", nargs=REMAINDER)
+        ns = parser.parse_args(args, ns)
+    else:
+        parser.reset()
+        parser.add_argument("noun", choices=basic_nouns)
+        parser.add_argument("subject")
+        parser.add_argument("secondary_action",
+                            choices=[c for c in noun_verbs if '-list' in c])
+        parser.add_argument("options", nargs=REMAINDER)
+        ns = parser.parse_args(args)
+        ns.secondary_noun, ns.verb = ns.secondary_action.split("-")
+
+    def _noun2endpoint(noun):
+        if noun == "server":
+            return "host", {}
+        if noun in ["mgt", "mdt", "ost"]:
+            return "target", {'kind': noun}
+        if noun in ["mgs", "mds", "oss"]:
+            return "host", {'role': noun}
+
+        return noun, {}
+
+    api = ApiHandle()
+    api.base_url = config.api_url
+    api.authentication = {'username': config.username,
+                          'password': config.password}
+
+    if ns.verb in ["list", "show"]:
+        entities = []
+        if 'primary_action' in ns:
+            ep_name, kwargs = _noun2endpoint(ns.noun)
+            if ns.verb == "list":
+                entities = api.endpoints[ep_name].list(**kwargs)
+            elif ns.verb == "show":
+                entities = [api.endpoints[ep_name].show(ns.subject)]
+        else:
+            if ns.noun == "filesystem":
+                fs = api.endpoints['filesystem'].show(ns.subject)
+                kwargs = {'filesystem_id': fs['id']}
+                if '--primary' in ns.options:
+                    kwargs['primary'] = True
+
+                if ns.secondary_noun in ["ost", "mdt", "mgt"]:
+                    kwargs['kind'] = ns.secondary_noun
+                    entities = api.endpoints['target'].list(**kwargs)
+                elif ns.secondary_noun == "target":
+                    entities = api.endpoints['target'].list(**kwargs)
+                elif ns.secondary_noun == "server":
+                    entities = api.endpoints['host'].list(**kwargs)
+                elif ns.secondary_noun in ["oss", "mds", "mgs"]:
+                    kwargs['role'] = ns.secondary_noun
+                    entities = api.endpoints['host'].list(**kwargs)
+                elif ns.secondary_noun == "volume":
+                    entities = api.endpoints['volume'].list(**kwargs)
+            elif ns.noun == "server":
+                host = api.endpoints['host'].show(ns.subject)
+                kwargs = {'host_id': host['id']}
+                if '--primary' in ns.options:
+                    kwargs['primary'] = True
+
+                if ns.secondary_noun in ["ost", "mdt", "mgt"]:
+                    kwargs['kind'] = ns.secondary_noun
+                    entities = api.endpoints['target'].list(**kwargs)
+                elif ns.secondary_noun == "target":
+                    entities = api.endpoints['target'].list(**kwargs)
+                elif ns.secondary_noun == "volume":
+                    entities = api.endpoints['volume'].list(**kwargs)
+
+        if ns.output == "json":
+            from tablib.packages import omnijson as json
+            print json.dumps([e.all_attributes for e in entities])
+        elif ns.output == "yaml":
+            from tablib.packages import yaml
+            print yaml.safe_dump([e.all_attributes for e in entities])
+        else:
+            try:
+                header = entities[0].as_header()
+                rows = []
+                for entity in entities:
+                    rows.append(entity.as_row())
+
+                if ns.output == "human":
+                    from prettytable import PrettyTable, NONE
+                    table = PrettyTable(header, hrules=NONE)
+                    for row in rows:
+                        table.add_row(row)
+                    print table
+                else:
+                    data = tablib.Dataset(*rows, headers=header)
+                    format = getattr(data, ns.output)
+                    print format
+            except IndexError:
+                print "Found 0 results for %s" % ns.verb
+    else:
+        raise RuntimeError("Sorry, '%s' is not implemented yet!" % ns.verb)
+
+    sys.exit(0)
+
 if __name__ == '__main__':
-    main()
+    standard_cli()

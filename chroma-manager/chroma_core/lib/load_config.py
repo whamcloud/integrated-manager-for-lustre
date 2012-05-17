@@ -60,14 +60,15 @@ def _create_mounts(target, mounts):
 
     for m in mounts:
         host = ManagedHost.objects.get(address = m['host'])
-        try:
-            volume_node = VolumeNode.objects.get(host = host, path = m['device_node'])
-        except VolumeNode.DoesNotExist:
-            volume_node = VolumeNode.objects.create(host = host, path = m['device_node'], volume = target.volume)
         if len(mounts) > 1:
             primary = m['primary']
         else:
             primary = True
+
+        try:
+            volume_node = VolumeNode.objects.get(host = host, path = m['device_node'])
+        except VolumeNode.DoesNotExist:
+            volume_node = VolumeNode.objects.create(host = host, path = m['device_node'], volume = target.volume, primary = primary)
 
         try:
             ManagedTargetMount.objects.get(
