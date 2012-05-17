@@ -27,7 +27,7 @@ This is the Whamcloud monitoring and adminstration agent
 Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
-Requires: %{name} = %{version} rsyslog pacemaker libxml2-python
+Requires: %{name} = %{version}-%{release} rsyslog pacemaker libxml2-python
 %if 0%{?rhel} > 5
 Requires: fence-agents
 %endif
@@ -37,7 +37,7 @@ This package layers on management capabilities for Whamcloud Chroma Agent.
 %package unit-tests
 Summary: Chroma Agent Unit Tests
 Group: Development/Tools
-Requires: %{name} = %{version}
+Requires: %{name} = %{version}-%{release}
 %description unit-tests
 This package contains the Chroma Agent unit tests and is intended
 to be used by the Chroma test framework.
