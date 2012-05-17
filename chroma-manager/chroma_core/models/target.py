@@ -728,7 +728,7 @@ class MkfsStep(Step):
         if mkfsoptions:
             kwargs['mkfsoptions'] = " ".join(mkfsoptions)
 
-        # HYD-
+        # HYD-1089 should supercede these settings
         if isinstance(target, ManagedOst) and settings.LUSTRE_MKFS_OPTIONS_OST:
             kwargs['mkfsoptions'] = settings.LUSTRE_MKFS_OPTIONS_OST
         elif isinstance(target, ManagedMdt) and settings.LUSTRE_MKFS_OPTIONS_MDT:
