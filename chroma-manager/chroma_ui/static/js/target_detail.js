@@ -75,11 +75,6 @@ var TargetDetail = Backbone.View.extend({
   },
   events: {
     "click .conf_param_apply": "conf_param_apply",
-    "click .conf_param_reset": "conf_param_reset",
-    "click button.close": "close"
-  },
-  close: function() {
-    this.remove();
-    window.history.back();
+    "click .conf_param_reset": "conf_param_reset"
   }
 });

@@ -57,7 +57,10 @@ var ChromaRouter = Backbone.Router.extend({
   {
     var c = new model_class({id: id});
     c.fetch({success: function(model, response) {
-      var mydiv = $("<div style='overflow-y: scroll;'></div>");
+      // Remove existing dialog if present, create a new one.
+      var dialog_id = view_class.prototype.className + "_" + id;
+      $('#' + dialog_id).remove();
+      var mydiv = $("<div id='" + dialog_id + "' style='overflow-y: scroll;'></div>");
 
       var title;
       if (title_attr){
@@ -66,7 +69,10 @@ var ChromaRouter = Backbone.Router.extend({
         title = undefined;
       }
       mydiv.dialog({
-        buttons: [{text: "Close", 'class': "close", click: function(){}}],
+        buttons: [{text: "Close", 'class': "close", click: function(){
+          $(this).remove();
+          window.history.back();
+        }}],
         width: 600,
         height: 600,
         modal: true,

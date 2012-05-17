@@ -51,7 +51,7 @@ var Command = Backbone.Model.extend({
 
     $.each(jobs, function(i, job) {
       id_to_job[job.resource_uri] = job;
-      id_to_what_waits[job.resource_uri] = []
+      id_to_what_waits[job.resource_uri] = [];
     });
 
     $.each(jobs, function(i, job) {
@@ -74,9 +74,9 @@ var Command = Backbone.Model.extend({
         shallowest_occurrence[root_job.resource_uri] = depth;
       }
 
-      var children = []
+      var children = [];
       $.each(root_job.wait_for, function(i, job_id) {
-        var awaited_job = id_to_job[job_id]
+        var awaited_job = id_to_job[job_id];
         if (awaited_job) {
           children.push(jobChildren(awaited_job, depth));
         }
@@ -84,9 +84,9 @@ var Command = Backbone.Model.extend({
       return $.extend({children: children}, root_job)
     }
 
-    var tree = []
+    var tree = [];
     $.each(jobs, function(i, job) {
-      var what_waits = id_to_what_waits[job.resource_uri]
+      var what_waits = id_to_what_waits[job.resource_uri];
       if (what_waits.length == 0) {
         // Nothing's waiting for me, I'm top level
         tree.push(jobChildren(job))
@@ -154,14 +154,11 @@ var Command = Backbone.Model.extend({
 
 var CommandDetail = Backbone.View.extend({
   className: 'command_dialog',
-  events: {
-    "click button.close": "close"
-  },
   template: _.template($('#command_detail_template').html()),
   render: function() {
     var command_detail_view = this;
     var rendered = this.template(this.model.toJSON());
-    $(this.el).find('.ui-dialog-content').html(rendered)
+    $(this.el).find('.ui-dialog-content').html(rendered);
     $(this.el).find('.job_state_transition').each(function() {
       var link = $(this);
       link.button();
@@ -180,24 +177,17 @@ var CommandDetail = Backbone.View.extend({
       });
     });
     return this;
-  },
-  close: function() {
-    this.remove();
-    window.history.back();
   }
 });
 
 
 var JobDetail = Backbone.View.extend({
   className: 'job_dialog',
-  events: {
-    "click button.close": "close"
-  },
   template: _.template($('#job_detail_template').html()),
   render: function() {
-    var el = $(this.el)
+    var el = $(this.el);
     var model = this.model;
-    var template = this.template
+    var template = this.template;
 
     var steps = new StepCollection();
     steps.fetch_uris(model.attributes.steps, function() {
@@ -209,7 +199,7 @@ var JobDetail = Backbone.View.extend({
         job.wait_for = wait_for.toJSON();
 
         var rendered = template({job: job});
-        el.find('.ui-dialog-content').html(rendered)
+        el.find('.ui-dialog-content').html(rendered);
         el.find('.dialog_tabs').tabs();
         if (job.wait_for.length == 0) {
           el.find('.dialog_tabs').tabs('disable', 'dependencies');
@@ -221,12 +211,5 @@ var JobDetail = Backbone.View.extend({
     });
 
     return this;
-  },
-  close: function() {
-    this.remove();
-    window.history.back();
   }
 });
-
-var JobCache = new JobCollection();
-

@@ -16,12 +16,5 @@ var ServerDetail = Backbone.View.extend({
     $(this.el).find('.ui-dialog-content').html(rendered);
 
     return this;
-  },
-  events: {
-    "click button.close": "close"
-  },
-  close: function() {
-    this.remove();
-    window.history.back();
   }
 });

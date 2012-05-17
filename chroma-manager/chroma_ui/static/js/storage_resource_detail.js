@@ -123,7 +123,6 @@ var StorageResourceDetail = Backbone.View.extend({
     return this;
   },
   events: {
-    "click button.close": "close",
     "click button.del": "del",
     "click button.save_alias": "save_alias",
     "click button.reset_alias": "reset_alias"
@@ -133,10 +132,6 @@ var StorageResourceDetail = Backbone.View.extend({
     this.model.destroy({success: function(){
       view.close();
     }});
-  },
-  close: function() {
-    this.remove();
-    window.history.back();
   },
   reset_alias: function() {
     $(this.el).find(".alias").attr('value', this.model.get('default_alias'));
