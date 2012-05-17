@@ -145,7 +145,7 @@ class RemoveFilesystemJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Removing filesystem %s from configuration" % self.filesystem.name
+        return "File system %s removed" % self.filesystem.name
 
     def get_steps(self):
         return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
@@ -168,7 +168,7 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     def description(self):
-        return "Start filesystem %s" % self.filesystem.name
+        return "File system %s started" % self.filesystem.name
 
     def get_deps(self):
         deps = []
@@ -185,7 +185,7 @@ class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     def description(self):
-        return "Start filesystem %s" % self.filesystem.name
+        return "File system %s started" % self.filesystem.name
 
     def get_deps(self):
         deps = []
@@ -202,7 +202,7 @@ class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     def description(self):
-        return "Stop filesystem %s" % self.filesystem.name
+        return "File system %s stopped" % self.filesystem.name
 
     def get_deps(self):
         deps = []
@@ -220,7 +220,7 @@ class MakeAvailableFilesystemUnavailable(FilesystemJob, StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     def description(self):
-        return "Make filesystem %s unavailable" % self.filesystem.name
+        return "File system %s made unavailable" % self.filesystem.name
 
 
 class ForgetFilesystemJob(StateChangeJob):
@@ -234,7 +234,7 @@ class ForgetFilesystemJob(StateChangeJob):
     requires_confirmation = True
 
     def description(self):
-        return "Removing unmanaged filesystem %s" % (self.filesystem.name)
+        return "File system %s forgotten" % self.filesystem.name
 
     def get_steps(self):
         return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]

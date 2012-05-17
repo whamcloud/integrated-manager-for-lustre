@@ -398,7 +398,7 @@ class RemoveConfiguredTargetJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Removing target %s from configuration" % (self.target.downcast())
+        return "Target %s removed from configuration" % self.target.downcast()
 
     def get_deps(self):
         deps = []
@@ -426,7 +426,7 @@ class RemoveTargetJob(StateChangeJob):
     target = models.ForeignKey(ManagedTarget)
 
     def description(self):
-        return "Removing target %s from configuration" % (self.target.downcast())
+        return "Target %s removed" % self.target.downcast()
 
     def get_steps(self):
         return [(DeleteTargetStep, {'target_id': self.target.id})]
@@ -449,7 +449,7 @@ class ForgetTargetJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Removing unmanaged target %s" % (self.target.downcast())
+        return "Target %s forgotten" % self.target.downcast()
 
     def get_steps(self):
         return [(DeleteTargetStep, {'target_id': self.target.id})]
@@ -541,8 +541,7 @@ class ConfigureTargetJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        target = self.target.downcast()
-        return "Configuring %s mount points" % target
+        return "Target %s configured mount points" % self.target.downcast()
 
     def get_steps(self):
         steps = []
@@ -642,7 +641,7 @@ class StartTargetJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Starting target %s" % self.target.downcast()
+        return "Target %s started" % self.target.downcast()
 
     def get_deps(self):
         lnet_deps = []
@@ -680,7 +679,7 @@ class StopTargetJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Stopping target %s" % self.target.downcast()
+        return "Target %s stopped" % self.target.downcast()
 
     def get_steps(self):
         return [(UnmountStep, {"target_id": self.target.id})]
