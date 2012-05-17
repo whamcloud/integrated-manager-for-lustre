@@ -272,12 +272,15 @@ def register_target(args):
         else:
             raise e
 
-    try:
-        shell.try_run(["mount", "-t", "lustre", args.device, args.mountpoint])
-        shell.try_run(["umount", args.mountpoint])
-    except Exception, e:
-        shell.try_run(["mount", "-t", "lustre", args.device, args.mountpoint])
-        shell.try_run(["umount", args.mountpoint])
+    mount_args = ["mount", "-t", "lustre", args.device, args.mountpoint]
+    rc, stdout, stderr = shell.run(mount_args)
+    if rc == 5:
+        # HYD-1040: Sometimes we should retry on a failed registration
+        shell.try_run(mount_args)
+    elif rc != 0:
+        raise RuntimeError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(mount_args), stdout, stderr))
+
+    shell.try_run(["umount", args.mountpoint])
 
     blkid_output = shell.try_run(["blkid", "-c/dev/null", "-o", "value", "-s", "LABEL", args.device])
     if blkid_output.find("ffff") != -1:
