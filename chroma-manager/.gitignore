@@ -9,7 +9,6 @@ MANIFEST
 celerybeat-schedule
 celerystate.db
 chroma-manager.spec
-setup.py
 *~
 *.pid
 *.log

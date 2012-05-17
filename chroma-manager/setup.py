@@ -6,12 +6,13 @@
 
 
 from setuptools import setup, find_packages
+from production_version import VERSION
 
 excludes = ["*docs*"]
 
 setup(
     name = 'chroma-manager',
-    version = '@VERSION@',
+    version = VERSION,
     author = "Whamcloud, Inc.",
     author_email = "info@whamcloud.com",
     url = 'http://www.whamcloud.com/',
