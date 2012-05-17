@@ -113,6 +113,8 @@ class ChromaManager(models.Model):
     def get_session(self):
         return self.node.get_session()
 
+    def appliances(self):
+        return ChromaAppliance.objects.filter(chroma_manager = self)
 
 class ChromaAppliance(models.Model):
     node = models.ForeignKey(Node, unique = True, null = True)

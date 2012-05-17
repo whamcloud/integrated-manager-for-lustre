@@ -83,16 +83,24 @@ class ChromaManagerOps(NodeOps):
             else:
                 sudo('yum -y update')
 
+    def live_update(self, use_master):
+        with self.open_session():
+            sudo('chroma-config stop')
+        self.update_deps(use_master)
+
     def setup_chroma(self):
         with self.open_session():
             put("%s" % (settings.CHROMA_SETTINGS), "/usr/share/chroma-manager/local_settings.py", use_sudo = True)
             sudo("chroma-config setup %s %s" % (
                 settings.CHROMA_MANAGER_USER,
                 settings.CHROMA_MANAGER_PASSWORD))
+            sudo("echo '[chroma]' > ~/.chroma")
+            sudo("echo username=%s >> ~/.chroma" % settings.CHROMA_MANAGER_USER)
+            sudo("echo password=%s >> ~/.chroma" % settings.CHROMA_MANAGER_PASSWORD)
 
     def reset_chroma(self):
         with self.open_session():
-            sudo("chroma-config start")
+            sudo("chroma-config setup")
             sudo("service httpd restart")
 
     def create_keys(self):
@@ -110,10 +118,7 @@ class ChromaManagerOps(NodeOps):
 
     def add_server(self, appliance_ops):
         with self.open_session():
-            sudo("chroma --username %s --password %s host create --address %s" % (
-                    settings.CHROMA_MANAGER_USER,
-                    settings.CHROMA_MANAGER_PASSWORD,
-                    appliance_ops.appliance.node.name))
+            sudo("chroma host create --address %s" % appliance_ops.appliance.node.name)
 
 #        from provisioning.lib.chroma_manager_client import AuthorizedHttpRequests
 #        manager_url = "http://%s/" % self.session.instance.ip_address
@@ -137,11 +142,15 @@ class ChromaStorageOps(NodeOps):
             self._setup_chroma_repo()
             # ensure latest version of agent is installed
             # don't do yum update because we don't want to update kernel
+            sudo('service chroma-agent stop')
             if use_master:
                 sudo('yum --enablerepo=chroma-master install -y chroma-agent-management')
             else:
                 sudo('yum install -y chroma-agent-management')
-            sudo('service chroma-agent restart')
+            sudo('service chroma-agent start')
+
+    def live_update(self, use_master):
+        self.update_deps(use_master);
 
     def mkraid(self):
         with self.open_session():

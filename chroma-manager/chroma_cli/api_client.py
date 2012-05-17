@@ -23,7 +23,7 @@ class ApiClient(object):
         self._session = requests.session(headers = {'Accept': "application/json", 'Content-Type': "application/json"})
         response = self._session.get(urljoin(self.url, "session/"))
         if not 200 <= response.status_code < 300:
-            raise RuntimeError("Failed to open session")
+            raise RuntimeError("Failed to open session: %d" % response.status_code)
         self._session.headers['X-CSRFToken'] = response.cookies['csrftoken']
         self._session.cookies['csrftoken'] = response.cookies['csrftoken']
         self._session.cookies['sessionid'] = response.cookies['sessionid']
