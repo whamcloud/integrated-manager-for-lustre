@@ -71,6 +71,6 @@ class ManagerImageOps(ImageOps):
         with self.open_session():
             self._setup_chroma_repo()
             self._update_whamos()
-            run('wget http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-5.noarch.rpm')
-            sudo('rpm -i --force epel-release-6-5.noarch.rpm')
+            run('wget http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-6.noarch.rpm')
+            sudo('rpm -i --force epel-release-6-6.noarch.rpm')
             sudo('yum install -y Django-south chroma-manager chroma-manager-cli')
