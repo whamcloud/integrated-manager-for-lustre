@@ -159,16 +159,29 @@ class TestResourceOperations(ResourceManagerTestCase):
         # Session for controller resources
         resource_manager.session_open(controller_record.pk, [controller_resource, lun_resource, presentation_resource], 60)
 
-        # Check relation created between Presentation and DeviceNode
-        #self.assertEquals(True, False)
+        # Check relations created
+        node_klass, node_klass_id = self.manager.get_plugin_resource_class('linux', 'LinuxDeviceNode')
+        presentation_klass, presentation_klass_id = self.manager.get_plugin_resource_class('subscription_plugin', 'Presentation')
+        lun_klass, lun_klass_id = self.manager.get_plugin_resource_class('subscription_plugin', 'Lun')
+        records = StorageResourceRecord.objects.all()
+        for r in records:
+            resource = r.to_resource()
+            parent_resources = [pr.to_resource().__class__ for pr in r.parents.all()]
 
-        # Check relation created between Presentation and Lun
-        #self.assertEquals(True, False)
+            if isinstance(resource, node_klass):
+                self.assertIn(presentation_klass, parent_resources)
 
+            if isinstance(resource, presentation_klass):
+                self.assertIn(lun_klass, parent_resources)
+
+        count_before = StorageResourceRecord.objects.count()
         resource_manager.session_remove_resources(controller_record.pk, [presentation_resource])
+        count_after = StorageResourceRecord.objects.count()
+
+        self.assertEqual(StorageResourceRecord.objects.filter(resource_class = presentation_klass_id).count(), 0)
 
         # Check the Lun and DeviceNode are still there but the Presentation is gone
-        #self.assertEquals(True, False)
+        self.assertEquals(count_after, count_before - 1)
 
     def test_virtual_machine_initial(self):
         """Check that ManagedHosts are created for VirtualMachines when
