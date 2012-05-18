@@ -970,7 +970,6 @@ var Dashboard = (function() {
         },
         legend:{enabled:false, layout: 'vertical', align: 'right', verticalAlign: 'top', x: 0, y: 10, borderWidth: 0},
         title: { text: 'Read vs Writes'},
-        tooltip: { formatter: function()  { return ''+ this.series.name +': '+ this.y +''; } },
 
         xAxis: { type:'datetime' },
         yAxis: [{
@@ -995,7 +994,6 @@ var Dashboard = (function() {
         chart: {
           renderTo: 'target_mdt_ops_container'
         },
-        tooltip: { formatter: function() { return ''+ this.x +': '+ Highcharts.numberFormat(this.y, 0, ',') +' '; } },
 
         title: { text: 'Metadata Operations'},
         xAxis: { type:'datetime' },
@@ -1209,7 +1207,6 @@ var Dashboard = (function() {
           title: null,
           labels: {formatter: bytes_rate_formatter}
         }],
-        tooltip:  { formatter: function()  { return ''+this.series.name +': '+ this.y +''; } },
         series: [
           { type: 'area', name: 'read' },
           { type: 'area', name: 'write' }
