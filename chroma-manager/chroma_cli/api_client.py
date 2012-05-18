@@ -154,6 +154,7 @@ class ApiResourceEndpoint(object):
         # be no limit to the reponse list size. (HYD-725)
         qs_options.extend(["limit=0"])
 
+        # FIXME: HYD-1094: no need to build this by hand
         url = urljoin(self.url, "?%s" % "&".join(qs_options))
         data = self.api.get(url)
         return [ApiResource(self.name, self.api, **json_object)
