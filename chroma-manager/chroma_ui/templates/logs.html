@@ -71,6 +71,8 @@
 
           Api.get_datatables(url, aoData,
             function(data) {
+              var row_decoration_pre = "<div class='log_line'>"
+              var row_decoration_post = "</div>"
               /* Annotate the rows with DT_RowClass */
               _.each(data.aaData, function(row) {
                 if (row.message.search("LustreError") != -1) {
@@ -81,7 +83,7 @@
 
                 row.devicereportedtime = shortLocalTime(row.devicereportedtime);
                 row.syslogtag = row.syslogtag.slice(0, -1);
-                row.message = "<div class='log_line'>" + _.escape(row.message) + "</div>";
+                row.message = row_decoration_pre + _.escape(row.message) + row_decoration_post;
 
                 var substituted = "";
                 var cursor = 0;
@@ -89,6 +91,8 @@
                     var substitution = row.substitutions[i];
                     var len_delta = substitution.label - (substitution.end - substitution.start);
 
+                    substitution.start += row_decoration_pre.length;
+                    substitution.end += row_decoration_pre.length;
                     substituted += row.message.substr(cursor, substitution.start - cursor);
                     cursor = substitution.end;
                     var tooltip = row.message.substr(substitution.start, substitution.end - substitution.start);
