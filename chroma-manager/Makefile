@@ -7,14 +7,17 @@ cleandist:
 	rm -rf  dist
 	mkdir dist
 
-tarball:
-	rm -f MANIFEST
+version:
 	echo 'VERSION = "$(VERSION)"' > production_version.py
-	for file in chroma-manager.spec setup.py; do \
-		sed -e 's/@VERSION@/$(VERSION)/g' \
-		    -e 's/@RELEASE@/$(RELEASE)/g' \
-		< $$file.in > $$file; \
-	done
+
+develop: version
+	python setup.py develop
+
+tarball: version
+	rm -f MANIFEST
+	sed -e 's/@VERSION@/$(VERSION)/g' \
+	    -e 's/@RELEASE@/$(RELEASE)/g' \
+	< chroma-manager.spec.in > chroma-manager.spec
 	# workaround setuptools
 	touch .chroma-manager.wsgi
 	python setup.py sdist
