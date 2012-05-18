@@ -33,6 +33,10 @@ examples = {
             {
             'message': " LustreError: 0:0:(ldlm_lockd.c:356:waiting_locks_callback()) ### lock callback timer expired after 101s: evicting client at 0@lo ns: mdt-ffff8801cd5be000 lock: ffff880126f8f480/0xe99a593b682aed45 lrc: 3/0,0 mode: PR/PR res: 8589935876/10593 bits 0x3 rrc: 2 type: IBT flags: 0x4000020 remote: 0xe99a593b682aecea expref: 14 pid: 3636 timeout: 4389324308'",
             'lustre_pid': 3636
+        },
+            {
+           'message': " LustreError: 0:0:(ldlm_lockd.c:356:waiting_locks_callback()) ### lock callback timer expired after 151s: evicting client at 10.10.6.127@tcp ns: mdt-ffff880027554000 lock: ffff8800345b9480/0x7e9e6dc241f05651 lrc: 3/0,0 mode: PR/PR res: 8589935619/19678 bits 0x3 rrc: 2 type: IBT flags: 0x4000020 remote: 0xebc1380d8b532fd7 expref: 5104 pid: 23056 timeout: 4313115550",
+           'lustre_pid': 23056
         }
     ]
 }
