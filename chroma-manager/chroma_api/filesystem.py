@@ -111,7 +111,7 @@ class FilesystemValidation(Validation):
 
                 try:
                     ManagedFilesystem.objects.get(name = bundle.data['name'], mgs = mgt)
-                    errors['name'].append("A filesystem with name '%s' already exists for this MGT" % bundle.data['name'])
+                    errors['name'].append("A file system with name '%s' already exists for this MGT" % bundle.data['name'])
                 except ManagedFilesystem.DoesNotExist:
                     pass
             except KeyError:
@@ -182,7 +182,7 @@ class FilesystemValidation(Validation):
                 conf_param_class = conf_param_info[0]
                 if not (issubclass(conf_param_class, conf_param.FilesystemGlobalConfParam) or issubclass(conf_param_class, conf_param.FilesystemClientConfParam)):
                     api_log.error("bad conf param %s %s" % (key, conf_param_class))
-                    errors['conf_params'].append("conf_param %s is not settable for filesystems" % key)
+                    errors['conf_params'].append("conf_param %s is not settable for file systems" % key)
                 conf_param_attribute_class = conf_param_info[1]
 
                 try:
@@ -221,22 +221,22 @@ class FilesystemResource(MetricResource, ConfParamResource):
     files_total = fields.IntegerField()
 
     mount_command = fields.CharField(null = True, help_text = "Example command for\
-            mounting this filesystem on a Lustre client, e.g. \"mount -t lustre 192.168.0.1:/testfs /mnt/testfs\"")
+            mounting this file system on a Lustre client, e.g. \"mount -t lustre 192.168.0.1:/testfs /mnt/testfs\"")
 
-    mount_path = fields.CharField(null = True, help_text = "Path for mounting the filesystem\
+    mount_path = fields.CharField(null = True, help_text = "Path for mounting the file system\
             on a Lustre client, e.g. \"192.168.0.1:/testfs\"")
 
     osts = fields.ToManyField('chroma_api.target.TargetResource', null = True,
             attribute = lambda bundle: ManagedOst.objects.filter(filesystem = bundle.obj),
-            help_text = "List of OSTs which belong to this filesystem")
+            help_text = "List of OSTs which belong to this file system")
     # NB a filesystem must always report an MDT, although it may be deleted just before
     # the filesystem is deleted, so use _base_manager
     mdts = fields.ToManyField('chroma_api.target.TargetResource',
             attribute = lambda bundle: ManagedMdt._base_manager.filter(filesystem = bundle.obj), full = True,
-            help_text = "List of MDTs in this filesystem, should be at least 1 unless the filesystem\
+            help_text = "List of MDTs in this file system, should be at least 1 unless the file system\
             is in the process of being deleted")
     mgt = fields.ToOneField('chroma_api.target.TargetResource', attribute = 'mgs', full = True,
-            help_text = "The MGT on which this filesystem is registered")
+            help_text = "The MGT on which this file system is registered")
 
     def _get_stat_simple(self, bundle, klass, stat_name, factor = 1):
         try:
