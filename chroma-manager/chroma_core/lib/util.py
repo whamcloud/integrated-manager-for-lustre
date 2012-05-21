@@ -4,6 +4,11 @@
 # ========================================================
 
 
+import logging
+import time
+from django.db import connection
+
+
 def all_subclasses(obj):
     """Used to introspect all descendents of a class.  Used because metaclasses
        are a PITA when doing multiple inheritance"""
@@ -15,7 +20,6 @@ def all_subclasses(obj):
 
 
 def time_str(dt):
-    import time
     return time.strftime("%Y-%m-%dT%H:%M:%S", dt.timetuple())
 
 
@@ -45,8 +49,6 @@ class timeit(object):
 
         @wraps(method)
         def timed(*args, **kw):
-            import time
-            import logging
             if self.logger.level <= logging.DEBUG:
                 ts = time.time()
                 result = method(*args, **kw)
@@ -68,3 +70,22 @@ class timeit(object):
                 return method(*args, **kw)
 
         return timed
+
+
+class dbperf(object):
+    def __init__(self, label = ""):
+        self.label = label
+
+    def __enter__(self):
+        self.t_initial = time.time()
+        self.q_initial = len(connection.queries)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.t_final = time.time()
+        self.q_final = len(connection.queries)
+
+        t = self.t_final - self.t_initial
+        q = self.q_final - self.q_initial
+        print "%s: %d queries in %.2fs (avg %dms)" % (
+            self.label, q, t,
+            int((t / q) * 1000))

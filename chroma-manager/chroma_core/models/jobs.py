@@ -46,7 +46,7 @@ class Command(models.Model):
     created_at = WorkaroundDateTimeField(auto_now_add = True)
 
     @classmethod
-    def set_state(cls, objects, message = None):
+    def set_state(cls, objects, message = None, **kwargs):
         """The states argument must be a collection of 2-tuples
         of (<StatefulObject instance>, state)"""
         dirty = False
@@ -76,7 +76,7 @@ class Command(models.Model):
         from chroma_core.tasks import command_set_state
         async_result = command_set_state.delay(
                 object_ids,
-                message)
+                message, **kwargs)
 
         command_id = await_async_result(async_result)
 
@@ -441,8 +441,9 @@ class Job(models.Model):
         self.save()
 
     def create_locks(self):
+        from chroma_core.lib.state_manager import get_deps
         # Take read lock on everything from self.get_deps
-        for dependency in self.get_deps().all():
+        for dependency in get_deps(self).all():
             StateReadLock.objects.create(job = self, locked_item = dependency.stateful_object)
 
         if isinstance(self, StateChangeJob):
@@ -457,7 +458,7 @@ class Job(models.Model):
             # requirement of lnet_up (to prevent someone stopping lnet while
             # we're still running)
             from itertools import chain
-            for d in chain(stateful_object.get_deps(self.old_state).all(), stateful_object.get_deps(new_state).all()):
+            for d in chain(get_deps(stateful_object, self.old_state).all(), get_deps(stateful_object, new_state).all()):
                 StateReadLock.objects.create(job = self,
                         locked_item = d.stateful_object)
 
@@ -472,24 +473,42 @@ class Job(models.Model):
     def run_next(cls):
         from chroma_core.lib.job import job_log
         from django.db.models import F
-        runnable_jobs = Job.objects \
-            .filter(wait_for_completions = F('wait_for_count')) \
+        if not settings.UNIT_TEST:
+            runnable_jobs = Job.objects\
+            .filter(wait_for_completions = F('wait_for_count'))\
             .filter(state = 'pending')
 
-        job_log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
-            runnable_jobs.count(),
-            Job.objects.filter(state = 'pending').count(),
-            Job.objects.filter(state = 'tasked').count()))
+            job_log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
+                runnable_jobs.count(),
+                Job.objects.filter(state = 'pending').count(),
+                Job.objects.filter(state = 'tasked').count()))
 
-        for job in runnable_jobs:
-            job = job.downcast()
-            job.run()
-            if not job.task_id and job.state == 'tasking':
-                assert settings.UNIT_TEST
-                # Job was run opportunistically (testing)
-                # therefore will have iteratively called
-                # this function, we can stop here
-                break
+            for job in runnable_jobs:
+                job = job.downcast()
+                job.run()
+        else:
+            while True:
+                runnable_jobs = Job.objects \
+                    .filter(wait_for_completions = F('wait_for_count')) \
+                    .filter(state = 'pending')
+
+                if not runnable_jobs.count():
+                    break
+
+                job_log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
+                    runnable_jobs.count(),
+                    Job.objects.filter(state = 'pending').count(),
+                    Job.objects.filter(state = 'tasked').count()))
+
+                for job in runnable_jobs:
+                    job = job.downcast()
+                    job.run()
+                    #if not job.task_id and job.state == 'tasking':
+                    #    assert settings.UNIT_TEST
+                    #    # Job was run opportunistically (testing)
+                    #    # therefore will have iteratively called
+                    #    # this function, we can stop here
+                    #    break
 
     def get_deps(self):
         return DependAll()
@@ -547,6 +566,8 @@ class Job(models.Model):
             unpaused_job.delay(self.id)
 
     def all_deps(self):
+        from chroma_core.lib.state_manager import get_deps
+
         # This is not necessarily 100% consistent with the dependencies used by StateManager
         # when the job was submitted (e.g. other models which get_deps queries may have
         # changed), but that is a *good thing* -- this is a last check before running
@@ -560,18 +581,18 @@ class Job(models.Model):
             dependent_deps = []
             dependents = stateful_object.get_dependent_objects()
             for dependent in dependents:
-                for dependent_dependency in dependent.get_deps().all():
+                for dependent_dependency in get_deps(dependent).all():
                     if dependent_dependency.stateful_object == stateful_object \
                             and not new_state in dependent_dependency.acceptable_states:
                         dependent_deps.append(DependOn(dependent, dependent_dependency.fix_state))
 
             return DependAll(
                     DependAll(dependent_deps),
-                    self.get_deps(),
-                    stateful_object.get_deps(new_state),
+                    get_deps(self),
+                    get_deps(stateful_object, new_state),
                     DependOn(stateful_object, self.old_state))
         else:
-            return self.get_deps()
+            return get_deps(self)
 
     def _deps_satisfied(self):
         from chroma_core.lib.job import job_log

@@ -12,9 +12,51 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models.query_utils import Q
 from chroma_core.lib.job import job_log
+from chroma_core.lib.util import dbperf
 from chroma_core.models.conf_param import ApplyConfParams
 from chroma_core.models.jobs import StateChangeJob, Command
 from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget
+
+
+class DepCache(object):
+    instance = None
+
+    @classmethod
+    def getInstance(cls):
+        if not cls.instance:
+            cls.instance = DepCache()
+        return cls.instance
+
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        self.hits = 0
+        self.misses = 0
+        self.cache = {}
+
+    def get(self, obj, state = None):
+        if state:
+            key = (obj, state)
+        else:
+            key = obj
+
+        try:
+            v = self.cache[key]
+            self.hits += 1
+            return v
+        except KeyError:
+            if state:
+                self.cache[key] = obj.get_deps(state)
+            else:
+                self.cache[key] = obj.get_deps()
+
+            self.misses += 1
+            return self.cache[key]
+
+
+def get_deps(obj, state = None):
+    return DepCache.getInstance().get(obj, state)
 
 
 class Transition(object):
@@ -152,7 +194,7 @@ class StateManager(object):
             if mgs.conf_param_version != mgs.conf_param_version_applied:
                 if not ApplyConfParams.objects.filter(~Q(state = 'complete')).count():
                     job = ApplyConfParams(mgs = mgs)
-                    if job.get_deps().satisfied():
+                    if get_deps(job).satisfied():
                         command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
                         StateManager().add_jobs([job], command)
 
@@ -209,7 +251,7 @@ class StateManager(object):
         assert transaction.is_managed()
 
         for job in jobs:
-            for dependency in job.get_deps().all():
+            for dependency in get_deps(job).all():
                 if not dependency.satisfied():
                     job_log.info("add_jobs: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
                     self.set_state(dependency.get_stateful_object(), dependency.preferred_state, command.id if command else None)
@@ -346,12 +388,13 @@ class StateManager(object):
             # Pick out whichever job made it so, and attach that to the Command
             return None
 
-        self.deps = set()
-        self.edges = set()
-        self.emit_transition_deps(Transition(
-            instance,
-            self.get_expected_state(instance),
-            new_state))
+        with dbperf('set_state-deps'):
+            self.deps = set()
+            self.edges = set()
+            self.emit_transition_deps(Transition(
+                instance,
+                self.get_expected_state(instance),
+                new_state))
 
         # XXX
         # VERY IMPORTANT: this sort is what gives us the following rule:
@@ -365,26 +408,27 @@ class StateManager(object):
         for e in self.edges:
             job_log.debug("  edge [%s]->[%s]" % (e))
 
-        jobs = {}
-        # Important: the Job must not land in the database until all
-        # its dependencies and locks are in.
-        with transaction.commit_on_success():
-            command = None
-            if command_id:
-                command = Command.objects.get(pk = command_id)
+        with dbperf('set_state-creation'):
+            jobs = {}
+            # Important: the Job must not land in the database until all
+            # its dependencies and locks are in.
+            with transaction.commit_on_success():
+                command = None
+                if command_id:
+                    command = Command.objects.get(pk = command_id)
 
-            for d in self.deps:
-                job = d.to_job()
-                job.save()
-                job.create_locks()
-                job.create_dependencies()
-                jobs[d] = job
-                job_log.debug("  dep %s (Job %s)" % (d, job.pk))
+                for d in self.deps:
+                    job = d.to_job()
+                    job.save()
+                    job.create_locks()
+                    job.create_dependencies()
+                    jobs[d] = job
+                    job_log.debug("  dep %s (Job %s)" % (d, job.pk))
+                    if command:
+                        command.jobs.add(job)
                 if command:
-                    command.jobs.add(job)
-            if command:
-                command.jobs_created = True
-                command.save()
+                    command.jobs_created = True
+                    command.save()
 
     def emit_transition_deps(self, transition, transition_stack = {}):
         if transition in self.deps:
@@ -419,7 +463,7 @@ class StateManager(object):
     def collect_dependencies(self, root_transition, transition_stack):
         job_log.debug("collect_dependencies: %s" % root_transition)
         # What is explicitly required for this state transition?
-        transition_deps = root_transition.to_job().get_deps()
+        transition_deps = get_deps(root_transition.to_job())
         for dependency in transition_deps.all():
             from chroma_core.lib.job import DependOn
             assert(isinstance(dependency, DependOn))
@@ -439,7 +483,7 @@ class StateManager(object):
                 return self.get_expected_state(object)
 
         # What will statically be required in our new state?
-        stateful_deps = root_transition.stateful_object.get_deps(root_transition.new_state)
+        stateful_deps = get_deps(root_transition.stateful_object, root_transition.new_state)
         for dependency in stateful_deps.all():
             if dependency.stateful_object in transition_stack:
                 continue
@@ -467,7 +511,7 @@ class StateManager(object):
                 continue
             # What state do we expect the dependent to be in?
             dependent_state = get_mid_transition_expected_state(dependent)
-            for dependency in dependent.get_deps(dependent_state).all():
+            for dependency in get_deps(dependent, dependent_state).all():
                 if dependency.stateful_object == root_transition.stateful_object \
                         and not root_transition.new_state in dependency.acceptable_states:
                     assert dependency.fix_state != None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)

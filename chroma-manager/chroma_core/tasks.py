@@ -224,7 +224,7 @@ def command_run_jobs(job_dicts, message):
 
 
 @task(base = RetryOnSqlErrorTask)
-def command_set_state(object_ids, message):
+def command_set_state(object_ids, message, run = True):
     """object_ids must be a list of 3-tuples of CT natural key, object PK, state"""
     # StateManager.set_state is invoked in an async task for two reasons:
     #  1. At time of writing, StateManager.set_state's logic is not safe against
@@ -249,8 +249,9 @@ def command_set_state(object_ids, message):
             instance = model_klass.objects.get(pk = o_pk)
             StateManager().set_state(instance, state, command.id)
 
-    from chroma_core.models import Job
-    Job.run_next()
+    if run:
+        from chroma_core.models import Job
+        Job.run_next()
 
     return command.id
 
@@ -262,8 +263,9 @@ def complete_job(job_id):
     from chroma_core.lib.state_manager import StateManager
     StateManager._complete_job(job_id)
 
-    from chroma_core.models import Job
-    Job.run_next()
+    if not settings.UNIT_TEST:
+        from chroma_core.models import Job
+        Job.run_next()
 
 
 @task(base = RetryOnSqlErrorTask)

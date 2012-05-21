@@ -454,7 +454,7 @@ class LearnNidsStep(Step):
                 job_log.debug("LearnNidsStep(%s): learned new nid %s" % (host, nid.nid_string))
             nids.append(nid)
 
-        for old_nid in Nid.objects.filter(~Q(id__in = [n.id for n in nids])):
+        for old_nid in Nid.objects.filter(~Q(id__in = [n.id for n in nids]), lnet_configuration = host.lnetconfiguration):
             job_log.debug("LearnNidsStep(%s): removed old nid %s" % (host, old_nid.nid_string))
             old_nid.delete()
 

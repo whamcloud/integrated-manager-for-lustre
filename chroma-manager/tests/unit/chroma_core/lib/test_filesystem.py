@@ -1,5 +1,74 @@
+from chroma_core.lib.state_manager import DepCache
+from chroma_core.lib.util import dbperf
+from chroma_core.models.filesystem import ManagedFilesystem
+from chroma_core.models.host import ManagedHost
+from chroma_core.models.jobs import Command, Job
+from chroma_core.models.target import ManagedMdt, ManagedMgs, ManagedOst
+import settings
+from tests.unit.chroma_core.helper import JobTestCaseWithHost, freshen, JobTestCase
+from django.db import connection
 
-from tests.unit.chroma_core.helper import JobTestCaseWithHost, freshen
+
+class TestBigFilesystem(JobTestCase):
+    mock_servers = {}
+
+    def setUp(self):
+        super(TestBigFilesystem, self).setUp()
+        connection.use_debug_cursor = True
+
+    def test_big_filesystem(self):
+        OSS_COUNT = 4
+        OST_COUNT = 32
+
+        assert OST_COUNT % OSS_COUNT == 0
+
+        for i, address in enumerate(["oss%d" % i for i in range(0, OSS_COUNT)] + ['mds0', 'mds1', 'mgs0', 'mgs1']):
+            self.mock_servers[address] = {
+                'fqdn': address,
+                'nodename': address,
+                'nids': ["192.168.0.%d@tcp0" % i]
+            }
+
+        settings.DEBUG = True
+        with dbperf("object creation"):
+            self.mgs0, command = ManagedHost.create_from_string('mgs0')
+            self.mgs1, command = ManagedHost.create_from_string('mgs1')
+            self.mds0, command = ManagedHost.create_from_string('mds0')
+            self.mds1, command = ManagedHost.create_from_string('mds1')
+            self.osss = {}
+            for i in range(0, OSS_COUNT):
+                oss, command = ManagedHost.create_from_string('oss%d' % i)
+                self.osss[i] = oss
+
+            self.mgt = ManagedMgs.create_for_volume(self._test_lun(self.mgs0, self.mgs1).id, name = "MGS")
+            self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
+            self.mdt = ManagedMdt.create_for_volume(self._test_lun(self.mds0, self.mds1).id, filesystem = self.fs)
+
+            self.osts = {}
+            for i in range(0, OST_COUNT):
+                primary_oss_i = (i * OSS_COUNT) / OST_COUNT
+                if primary_oss_i % 2 == 1:
+                    secondary_oss_i = primary_oss_i - 1
+                else:
+                    secondary_oss_i = primary_oss_i + 1
+                primary_oss = self.osss[primary_oss_i]
+                secondary_oss = self.osss[secondary_oss_i]
+                self.osts[i] = ManagedOst.create_for_volume(self._test_lun(primary_oss, secondary_oss).id, filesystem = self.fs)
+
+        with dbperf("set_state"):
+            Command.set_state([(self.fs, 'available')], "Unit test transition", run = False)
+
+        # Imagine we're now running in a job worker instead of the serialize
+        # worker, so the cache isn't going to be primed any more
+        dc = DepCache.getInstance()
+        print "DepCache: %d, %d" % (dc.hits, dc.misses)
+        dc.clear()
+
+        with dbperf("job execution"):
+            Job.run_next()
+
+        dc = DepCache.getInstance()
+        print "DepCache: %d, %d" % (dc.hits, dc.misses)
 
 
 class TestFSTransitions(JobTestCaseWithHost):
