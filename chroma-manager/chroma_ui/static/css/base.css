@@ -878,7 +878,7 @@ span.volume_chooser_selected {
 }
 
 .volume_chooser_background table .rowhighlight {
-    background-color: #09f;
+    background-color: #09f !important;
 }
 
 .volume_chooser_expander {
