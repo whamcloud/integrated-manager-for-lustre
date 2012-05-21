@@ -35,7 +35,16 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
     types = []
     options = []
 
-    tuple_options = "target_types mgsnode failnode servicenode network".split()
+    # Workaround for tunefs.lustre being sensitive to argument order:
+    # erase-params has to come first or it overrides preceding options.
+    early_flag_options = {
+        'erase_params': '--erase-params'
+    }
+    for arg, val in early_flag_options.items():
+        if args[arg]:
+            options.append("%s" % val)
+
+    tuple_options = ["target_types", "mgsnode", "failnode", "servicenode", "network"]
     for name in tuple_options:
         arg = args[name]
         # ensure that our tuple arguments are always tuples, and not strings
@@ -49,27 +58,26 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
             if len(arg) > 0:
                 options.append("--%s=%s" % (name, ",".join(arg)))
 
-    flag_options = {
-        'erase_params': '--erase-params',
-        'nomgs': '--nomgs',
-        'writeconf': '--writeconf',
-        'dryrun': '--dryrun',
-        'verbose': '--verbose',
-        'quiet': '--quiet',
-    }
-    for arg in flag_options:
-        if args[arg]:
-            options.append("%s" % flag_options[arg])
-
-    dict_options = "param".split()
+    dict_options = ["param"]
     for name in dict_options:
         arg = args[name]
         for key in arg:
             if arg[key] is not None:
                 options.append("--%s %s=%s" % (name, key, __sanitize_arg(arg[key])))
 
+    flag_options = {
+        'nomgs': '--nomgs',
+        'writeconf': '--writeconf',
+        'dryrun': '--dryrun',
+        'verbose': '--verbose',
+        'quiet': '--quiet',
+        }
+    for arg in flag_options:
+        if args[arg]:
+            options.append("%s" % flag_options[arg])
+
     # everything else
-    handled = set(flag_options.keys() + tuple_options + dict_options)
+    handled = set(flag_options.keys() + early_flag_options.keys() + tuple_options + dict_options)
     for name in set(args.keys()) - handled:
         if name == "device":
             continue
@@ -77,7 +85,6 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
         if value != '':
             options.append("--%s=%s" % (name, __sanitize_arg(value)))
 
-    # NB: Use $PATH instead of relying on hard-coded paths
     cmd = "tunefs.lustre %s %s %s" % (" ".join(types), " ".join(options), device)
 
     return ' '.join(cmd.split())
@@ -241,6 +248,12 @@ def cibadmin(command_args):
                            (rc, command_args, stdout, stderr))
 
     return rc, stdout, stderr
+
+
+def writeconf_target(args):
+    kwargs = json.loads(args.args)
+    cmdline = tunefs(**kwargs)
+    shell.try_run(shlex.split(cmdline))
 
 
 def format_target(args):
@@ -619,6 +632,10 @@ class TargetsPlugin(ActionPlugin):
         p = parser.add_parser('format-target', help='format a target')
         p.add_argument('--args', required=True, help='format arguments')
         p.set_defaults(func=format_target)
+
+        p = parser.add_parser('writeconf-target', help='format a target')
+        p.add_argument('--args', required=True)
+        p.set_defaults(func=writeconf_target)
 
         p = parser.add_parser('migrate-target',
                               help='migrate a target to a node')

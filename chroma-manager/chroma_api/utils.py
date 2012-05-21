@@ -127,7 +127,7 @@ class StatefulModelResource(CustomModelResource):
         return StateManager.available_transitions(bundle.obj)
 
     def dehydrate_available_jobs(self, bundle):
-        return AdvertisedJob.get_available_jobs(bundle.obj)
+        return AdvertisedJob.get_singular_jobs(bundle.obj)
 
     def dehydrate_content_type_id(self, bundle):
         if hasattr(bundle.obj, 'content_type'):

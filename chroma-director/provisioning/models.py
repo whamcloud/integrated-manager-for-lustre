@@ -30,8 +30,10 @@ class Node(models.Model):
     def get_instance(self):
         conn = EC2Connection(settings.AWS_KEY_ID, settings.AWS_SECRET)
         reservations = conn.get_all_instances([self.ec2_id])
-        assert(len(reservations) == 1)
-        return reservations[0].instances[0]
+        if not len(reservations) == 1:
+            return None
+        else:
+            return reservations[0].instances[0]
 
     def get_session(self):
         return NodeSession(self)

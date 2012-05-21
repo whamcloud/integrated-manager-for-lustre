@@ -240,6 +240,9 @@ class ApiResource(object):
         self.resource = resource_name
         self.api = api
 
+    def __getitem__(self, item):
+        return self._data[item]
+
     def __getattr__(self, attr):
         try:
             return self._data[attr]

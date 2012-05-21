@@ -47,7 +47,8 @@ class RetryOnSqlErrorTask(Task):
     def __call__(self, *args, **kwargs):
         from MySQLdb import ProgrammingError, OperationalError
         try:
-            return self.run(*args, **kwargs)
+            with transaction.commit_on_success():
+                return self.run(*args, **kwargs)
         except (ProgrammingError, OperationalError), e:
             import sys
             import traceback
@@ -55,6 +56,13 @@ class RetryOnSqlErrorTask(Task):
             trace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
             job_log.error("Internal error %s" % trace)
             self.retry(args, kwargs, e, countdown=settings.SQL_RETRY_PERIOD)
+        except Exception, e:
+            import sys
+            import traceback
+            exc_info = sys.exc_info()
+            trace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            job_log.error("Internal error %s" % trace)
+            raise
 
 
 def _complete_orphan_jobs():
@@ -173,17 +181,39 @@ def notify_state(content_type, object_id, time, new_state, from_states):
 @task(base = RetryOnSqlErrorTask)
 def command_run_jobs(job_dicts, message):
     assert(len(job_dicts) > 0)
-    jobs = []
-    for job in job_dicts:
-        job_klass = ContentType.objects.get_by_natural_key('chroma_core', job['class_name'].lower()).model_class()
-        jobs.append(job_klass(**job['args']))
-
     with transaction.commit_on_success():
+        jobs = []
+        for job in job_dicts:
+            job_klass = ContentType.objects.get_by_natural_key('chroma_core', job['class_name'].lower()).model_class()
+
+            m2m_attrs = {}
+            for field in job_klass._meta.local_many_to_many:
+                m2m_attrs[field.attname] = field.rel.to
+
+            args = job['args']
+            m2m_values = {}
+            for k, v in args.items():
+                if k in m2m_attrs:
+                    m2m_values[k] = v
+                    del args[k]
+
+            # FIXME: I have to save the job to add its m2m
+            # fields, but I can't save it until after I've created its
+            # precursor jobs (the job ID influences order of run)
+            job_instance = job_klass(**args)
+            #job_instance.save()
+            jobs.append(job_instance)
+            #for attr in m2m_attrs.keys():
+            ##    m2m_attr = getattr(job_instance, attr)
+            #    for id in m2m_values[attr]:
+            #        instance = m2m_attrs[attr].objects.get(pk = id)
+            #        m2m_attr.add(instance)
+
         command = Command.objects.create(message = message)
         job_log.debug("command_run_jobs: command %s" % command.id)
         for job in jobs:
-            StateManager().add_job(job, command)
-            job_log.debug("command_run_jobs: job %s" % job.id)
+            job_log.debug("command_run_jobs:  job %s" % job.id)
+        StateManager().add_jobs(jobs, command)
         command.jobs_created = True
         command.save()
 
@@ -228,6 +258,7 @@ def command_set_state(object_ids, message):
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def complete_job(job_id):
+    job_log.info("Job %d: complete_job" % job_id)
     from chroma_core.lib.state_manager import StateManager
     StateManager._complete_job(job_id)
 
@@ -277,6 +308,7 @@ def run_job(job_id):
             else:
                 job_log.error("Job %d step %d is dirty and cannot be re-run (it is not idempotent, marking job errored." % (job.id, job.started_step))
                 job.complete(errored = True)
+                return None
         else:
             job_log.info("Job %d will re-start from step %d" % (job.id, job.started_step + 1))
 
@@ -364,7 +396,7 @@ def audit_all():
         # If host has ever had contact but is not available now
         if host.last_contact and not host.is_available():
             # Set the HostContactAlert high
-            from chroma_core.models.alert import HostContactAlert
+            from chroma_core.models.host import HostContactAlert
             HostContactAlert.notify(host, True)
 
 

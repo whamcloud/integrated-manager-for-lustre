@@ -14,11 +14,14 @@ class Command(BaseCommand):
         if not args or args[0] == 'list':
             for n in Node.objects.all():
                 i = n.get_instance()
-                print n.id, n.ec2_id, n.name, i.instance_type, i.launch_time, i.state, i.ip_address
+                if i:
+                    print n.id, n.ec2_id, n.name, i.instance_type, i.launch_time, i.state, i.ip_address
+                else:
+                    print n.id, n.ec2_id, n.name, "No EC2 instance found"
 
         elif args[0] == 'terminate' and args[1] == 'all':
             for node in Node.objects.all():
-                node_ops = NodeOps(node);
+                node_ops = NodeOps(node)
                 node_ops.terminate()
 
         elif args[0] == 'terminate' and int(args[1]) > 0:
@@ -41,6 +44,8 @@ class Command(BaseCommand):
             SSH_BIN = "/usr/bin/ssh"
             os.execvp(SSH_BIN, ["ssh", "-i", settings.AWS_SSH_PRIVATE_KEY, 
                                 "%s@%s" % (node.username, session.instance.ip_address)])
+        else:
+            print "unknown command %s" % args[0]
 
             
                 

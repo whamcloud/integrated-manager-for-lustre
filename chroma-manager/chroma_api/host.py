@@ -7,7 +7,7 @@
 from collections import defaultdict
 from tastypie.validation import Validation
 
-from chroma_core.models import ManagedHost
+from chroma_core.models import ManagedHost, Nid
 
 import tastypie.http as http
 from tastypie.resources import Resource
@@ -46,6 +46,11 @@ class HostResource(MetricResource, StatefulModelResource):
     """
     Represents a Lustre server which Chroma server is monitoring or managing.  When PUTing, requires the ``state`` field.  When POSTing, requires the ``address`` field.
     """
+    nids = fields.ListField(null = True)
+
+    def dehydrate_nids(self, bundle):
+        return [n.nid_string for n in Nid.objects.filter(lnet_configuration = bundle.obj.lnetconfiguration)]
+
     class Meta:
         queryset = ManagedHost.objects.all()
         resource_name = 'host'

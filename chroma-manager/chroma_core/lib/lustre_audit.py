@@ -9,10 +9,9 @@ from chroma_core.models import ManagedTargetMount
 
 import settings
 
-from chroma_core.models.alert import TargetRecoveryAlert, HostContactAlert
 from chroma_core.models.event import LearnEvent
-from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, FilesystemMember, TargetRecoveryInfo
-from chroma_core.models.host import ManagedHost, Nid, VolumeNode
+from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, FilesystemMember, TargetRecoveryInfo, TargetRecoveryAlert
+from chroma_core.models.host import ManagedHost, Nid, VolumeNode, HostContactAlert, LNetNidsChangedAlert
 from chroma_core.models.filesystem import ManagedFilesystem
 from django.db import transaction
 import functools
@@ -129,12 +128,6 @@ class UpdateScan(object):
 
         return contact
 
-    def _audited_lnet_state(self):
-        return {(False, False): 'lnet_unloaded',
-                (True, False): 'lnet_down',
-                (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'],
-                                          self.host_data['lnet_up'])]
-
     def learn_capabilities(self):
         """Update the host record from the capabilities reported by the agent"""
         # FIXME: What to do if we split out rsyslog into an optional
@@ -150,11 +143,21 @@ class UpdateScan(object):
 
     def update_lnet(self):
         # Update LNet status
+        lnet_state = {(False, False): 'lnet_unloaded',
+                (True, False): 'lnet_down',
+                (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'],
+                                          self.host_data['lnet_up'])]
+
         from chroma_core.lib.state_manager import StateManager
         StateManager.notify_state(self.host.downcast(),
                                   self.started_at,
-                                  self._audited_lnet_state(),
+                                  lnet_state,
                                   ['lnet_unloaded', 'lnet_down', 'lnet_up'])
+
+        if self.host_data['lnet_nids']:
+            known_nids = self.host.lnetconfiguration.get_nids()
+            current = (set(known_nids) == set([normalize_nid(n) for n in self.host_data['lnet_nids']]))
+            LNetNidsChangedAlert.notify(self.host, not current)
 
     def update_target_mounts(self):
         # Loop over all mountables we expected on this host, whether they

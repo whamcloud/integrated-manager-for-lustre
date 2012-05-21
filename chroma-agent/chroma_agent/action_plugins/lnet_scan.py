@@ -4,6 +4,8 @@
 # ========================================================
 
 
+from chroma_agent.agent_daemon import daemon_log
+
 from chroma_agent.plugins import ActionPlugin
 import os
 
@@ -20,20 +22,14 @@ def lnet_status():
     return lnet_loaded, lnet_up
 
 
-def lnet_scan(args):
-    """Parse /proc for running LNet NIDs, and return a 2-tuple of
-       (whether lnet is up, list of NID strings)"""
-
-    lnet_loaded, lnet_up = lnet_status()
-
-    if not lnet_loaded:
-        raise RuntimeError("Cannot detect LNet NIDs, lnet module is not loaded")
-
-    if not lnet_up:
-        raise RuntimeError("Cannot detect LNet NIDs, lnet is not up")
-
+def get_nids():
     # Read active NIDs from /proc
-    lines = open("/proc/sys/lnet/nis").readlines()
+    try:
+        lines = open("/proc/sys/lnet/nis").readlines()
+    except IOError:
+        daemon_log.warning("get_nids: failed to open")
+        return None
+
     # Skip header line
     lines = lines[1:]
 
@@ -45,6 +41,24 @@ def lnet_scan(args):
             lnet_nids.append(tokens[0])
 
     return lnet_nids
+
+
+def lnet_scan(args):
+    """Parse /proc for running LNet NIDs, and return a 2-tuple of
+       (whether lnet is up, list of NID strings)"""
+    lnet_loaded, lnet_up = lnet_status()
+
+    if not lnet_loaded:
+        raise RuntimeError("Cannot detect LNet NIDs, lnet module is not loaded")
+
+    if not lnet_up:
+        raise RuntimeError("Cannot detect LNet NIDs, lnet is not up")
+
+    nids = get_nids()
+    if nids is None:
+        # Can happen if lnet goes down between lnet_status and here
+        raise RuntimeError("Failed to detect LNet NIDs")
+    return nids
 
 
 class LnetScanPlugin(ActionPlugin):

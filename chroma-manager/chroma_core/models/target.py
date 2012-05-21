@@ -5,10 +5,13 @@
 
 
 import json
+import logging
 import uuid
 
 from django.db import models, transaction
 from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, AnyTargetMountStep, job_log
+from chroma_core.models.alert import AlertState
+from chroma_core.models.event import AlertEvent
 from chroma_core.models.jobs import StateChangeJob
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.jobs import StatefulObject
@@ -109,7 +112,6 @@ class ManagedTarget(StatefulObject):
                 TargetFailoverAlert.notify(tm, active_mount == tm)
 
     def set_state(self, state, intentional = False):
-        from chroma_core.models.alert import TargetOfflineAlert
         job_log.debug("mt.set_state %s %s" % (state, intentional))
         super(ManagedTarget, self).set_state(state, intentional)
         if intentional:
@@ -837,7 +839,6 @@ class ManagedTargetMount(models.Model):
 
         # If this is an MGS, there may not be another MGS on
         # this host
-        from chroma_core.models.target import ManagedMgs
         if isinstance(self.target.downcast(), ManagedMgs):
             from django.db.models import Q
             other_mgs_mountables_local = ManagedTargetMount.objects.filter(~Q(id = self.id), target__in = ManagedMgs.objects.all(), host = self.host).count()
@@ -862,3 +863,72 @@ class ManagedTargetMount(models.Model):
             kind_string = "failover"
 
         return "%s:%s:%s" % (self.host, kind_string, self.target)
+
+
+class TargetOfflineAlert(AlertState):
+    def message(self):
+        return "Target %s offline" % (self.alert_item)
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def begin_event(self):
+        return AlertEvent(
+            message_str = "%s stopped" % self.alert_item,
+            host = self.alert_item.primary_server(),
+            alert = self,
+            severity = logging.WARNING)
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "%s started" % self.alert_item,
+            host = self.alert_item.primary_server(),
+            alert = self,
+            severity = logging.INFO)
+
+
+class TargetFailoverAlert(AlertState):
+    def message(self):
+        return "Target %s failed over to server %s" % (self.alert_item.target, self.alert_item.host)
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def begin_event(self):
+        # FIXME: reporting this event against the primary server
+        # of a target because we don't have enough information
+        # to
+        return AlertEvent(
+            message_str = "%s failover mounted" % self.alert_item.target,
+            host = self.alert_item.host,
+            alert = self,
+            severity = logging.WARNING)
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "%s failover unmounted" % self.alert_item.target,
+            host = self.alert_item.host,
+            alert = self,
+            severity = logging.INFO)
+
+
+class TargetRecoveryAlert(AlertState):
+    def message(self):
+        return "Target %s in recovery" % self.alert_item
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def begin_event(self):
+        return AlertEvent(
+            message_str = "Target '%s' went into recovery" % self.alert_item,
+            host = self.alert_item.primary_server(),
+            alert = self,
+            severity = logging.WARNING)
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "Target '%s' completed recovery" % self.alert_item,
+            host = self.alert_item.primary_server(),
+            alert = self,
+            severity = logging.INFO)

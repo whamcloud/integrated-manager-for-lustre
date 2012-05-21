@@ -17,7 +17,7 @@ class Couplet(resources.ScannableResource):
 
     address = attributes.Hostname()
     password = attributes.Password(crypt)
-    internal_id = attributes.String(user_read_only = True)
+    internal_id = attributes.String(user_read_only = True, optional = True)
 
 
 class Lun(resources.LogicalDrive):

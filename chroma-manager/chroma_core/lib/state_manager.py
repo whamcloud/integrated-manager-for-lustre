@@ -154,7 +154,7 @@ class StateManager(object):
                     job = ApplyConfParams(mgs = mgs)
                     if job.get_deps().satisfied():
                         command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
-                        StateManager().add_job(job, command)
+                        StateManager().add_jobs([job], command)
 
     @classmethod
     def notify_state(cls, instance, time, new_state, from_states):
@@ -202,21 +202,23 @@ class StateManager(object):
                 else:
                     job_log.info("notify_state: Dropping update of %s (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, new_state))
 
-    def add_job(self, job, command = None):
+    def add_jobs(self, jobs, command = None):
         """Add a job, and any others which are required in order to reach its prerequisite state"""
-        for dependency in job.get_deps().all():
-            if not dependency.satisfied():
-                job_log.info("add_job: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
-                self.set_state(dependency.get_stateful_object(), dependency.preferred_state, command.id if command else None)
-
-        job_log.info("add_job: done checking dependencies")
         # Important: the Job must not be committed until all
         # its dependencies and locks are in.
-        with transaction.commit_on_success():
+        assert transaction.is_managed()
+
+        for job in jobs:
+            for dependency in job.get_deps().all():
+                if not dependency.satisfied():
+                    job_log.info("add_jobs: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
+                    self.set_state(dependency.get_stateful_object(), dependency.preferred_state, command.id if command else None)
+            job_log.info("add_jobs: done checking dependencies")
+
             job.save()
             job.create_locks()
             job.create_dependencies()
-            job_log.info("add_job: created %s (%s)" % (job.pk, job.description()))
+            job_log.info("add_jobs: created %s (%s)" % (job.pk, job.description()))
             if command:
                 command.jobs.add(job)
 

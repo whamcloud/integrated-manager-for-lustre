@@ -1,9 +1,11 @@
+from collections import defaultdict
 import datetime
 import logging
 from django.test import TestCase
 import mock
 from chroma_core.models.jobs import Command
 from chroma_core.models import Volume, VolumeNode
+import settings
 
 
 def freshen(obj):
@@ -14,6 +16,7 @@ class MockAgent(object):
     label_counter = 0
     mock_servers = {}
     calls = []
+    host_calls = defaultdict(list)
 
     @classmethod
     def clear_calls(cls):
@@ -30,10 +33,13 @@ class MockAgent(object):
 
     def invoke(self, cmdline, args = None):
         self.calls.append((cmdline, args))
+        self.host_calls[self.host].append((cmdline, args))
+
         if not self.succeed:
             raise RuntimeError("Test-generated failure")
 
         logging.getLogger('mock_agent').info("invoke_agent %s %s %s" % (self.host, cmdline, args))
+        logging.getLogger('job').info("invoke_agent %s %s %s" % (self.host, cmdline, args))
         if cmdline == "get-fqdn":
             return self.mock_servers[self.host.address]['fqdn']
         if cmdline == "get-nodename":
@@ -88,6 +94,11 @@ class JobTestCase(TestCase):
         self.assertEqual(freshen(obj).state, state)
 
     def setUp(self):
+        # There are a couple of hooks in the code that allow for
+        # the inline running of celery tasks, they check this
+        # setting
+        settings.UNIT_TEST = True
+
         # FIXME: have to do this before every test because otherwise
         # one test will get all the setup of StoragePluginClass records,
         # the in-memory instance of storage_plugin_manager will expect

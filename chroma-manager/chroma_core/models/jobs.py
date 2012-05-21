@@ -18,6 +18,7 @@ from collections import defaultdict
 from polymorphic.models import DowncastMetaclass
 from chroma_core.lib.job import DependOn, DependAll
 from chroma_core.lib.util import all_subclasses
+import settings
 
 MAX_STATE_STRING = 32
 
@@ -479,8 +480,16 @@ class Job(models.Model):
             runnable_jobs.count(),
             Job.objects.filter(state = 'pending').count(),
             Job.objects.filter(state = 'tasked').count()))
+
         for job in runnable_jobs:
-            job.downcast().run()
+            job = job.downcast()
+            job.run()
+            if not job.task_id and job.state == 'tasking':
+                assert settings.UNIT_TEST
+                # Job was run opportunistically (testing)
+                # therefore will have iteratively called
+                # this function, we can stop here
+                break
 
     def get_deps(self):
         return DependAll()
@@ -625,6 +634,7 @@ class Job(models.Model):
         from celery.result import EagerResult
         if isinstance(celery_job, EagerResult):
             # Eager execution happens when under test
+            assert settings.UNIT_TEST
             job_log.debug("Job %d ran eagerly" % (self.id))
         else:
             self.task_id = celery_job.task_id
@@ -752,8 +762,12 @@ class AdvertisedJob(Job):
     # Terse human readable verb, e.g. "Launch Torpedos"
     verb = None
 
+    # If False, running this job on N objects is N jobs, if True then running
+    # this job on N objects is one job.
+    plural = False
+
     @classmethod
-    def get_available_jobs(cls, instance):
+    def get_singular_jobs(cls, instance):
         # If the object is subject to an incomplete Job
         # then don't offer any actions
         from chroma_core.models import StateLock
@@ -763,16 +777,17 @@ class AdvertisedJob(Job):
 
         available_jobs = []
         for aj in all_subclasses(AdvertisedJob):
-            for class_name in aj.classes:
-                ct = ContentType.objects.get_by_natural_key('chroma_core', class_name)
-                klass = ct.model_class()
-                if isinstance(instance, klass):
-                    if aj.can_run(instance):
-                        available_jobs.append({
-                            'verb': aj.verb,
-                            'confirmation': aj.get_confirmation(instance),
-                            'class_name': aj.__name__,
-                            'args': aj.get_args(instance)})
+            if not aj.plural:
+                for class_name in aj.classes:
+                    ct = ContentType.objects.get_by_natural_key('chroma_core', class_name)
+                    klass = ct.model_class()
+                    if isinstance(instance, klass):
+                        if aj.can_run(instance):
+                            available_jobs.append({
+                                'verb': aj.verb,
+                                'confirmation': aj.get_confirmation(instance),
+                                'class_name': aj.__name__,
+                                'args': aj.get_args(instance)})
 
         return available_jobs
 
@@ -782,8 +797,11 @@ class AdvertisedJob(Job):
         return True
 
     @classmethod
-    def get_args(cls, instance):
-        """Return a dict of args suitable for constructing an instance of this class operating
+    def get_args(cls, objects):
+        """
+        :param objects: For if cls.plural then an iterable of objects, else a single object
+
+        Return a dict of args suitable for constructing an instance of this class operating
         on a particular object instance"""
         raise NotImplementedError()
 
