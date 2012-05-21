@@ -14,8 +14,45 @@ from django.db.models.query_utils import Q
 from chroma_core.lib.job import job_log
 from chroma_core.lib.util import dbperf
 from chroma_core.models.conf_param import ApplyConfParams
-from chroma_core.models.jobs import StateChangeJob, Command
+from chroma_core.models.jobs import StateChangeJob, Command, StateLock
 from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget
+
+
+class LockCache(object):
+    instance = None
+
+    @classmethod
+    def getInstance(cls):
+        if not cls.instance:
+            cls.instance = DepCache()
+        return cls.instance
+
+    @classmethod
+    def get_all(cls, locked_item):
+        return StateLock.filter_by_locked_item(locked_item)
+
+    @classmethod
+    def get_latest_write(cls, locked_item, before):
+        return StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete'), write = True, job__id__lt = before).latest('id')
+
+    @classmethod
+    def get_read_locks(cls, locked_item, before, after):
+        return StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete')).filter(write = False, job__id__lt = before).filter(job__id__gte = after)
+
+    @classmethod
+    def get_write(cls, locked_item):
+        return StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete'), write = True)
+
+    @classmethod
+    def get_write_by_locked_item(cls):
+        # TODO: do a DB query that just gives us the latest WL for
+        # each locked_item (same result for less iterations of this loop)
+        from django.db.models import Q
+        result = {}
+        for wl in StateLock.objects.filter(write = True).filter(~Q(job__state = 'complete')).order_by('id'):
+            result[wl.locked_item] = wl
+
+        return result
 
 
 class DepCache(object):
@@ -365,14 +402,9 @@ class StateManager(object):
 
         # Work out the eventual states (and which writelock'ing job to depend on to
         # ensure that state) from all non-'complete' jobs in the queue
-        self.expected_states = {}
 
-        # TODO: find out how to do a DB query that just gives us the latest WL for
-        # each locked_item (same result for less iterations of this loop)
-        from chroma_core.models import StateWriteLock
-        from django.db.models import Q
-        for wl in StateWriteLock.objects.filter(~Q(job__state = 'complete')).order_by('id'):
-            self.expected_states[wl.locked_item] = wl.end_state
+        item_to_lock = LockCache.get_write_by_locked_item()
+        self.expected_states = dict([(k, v.end_state) for k, v in item_to_lock.items()])
 
         if new_state == self.get_expected_state(instance):
             if command_id:
@@ -382,7 +414,7 @@ class StateManager(object):
                 command.save()
                 if instance.state != new_state:
                     # This is a no-op because of an in-progress Job:
-                    job = StateWriteLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).latest('id').job
+                    job = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete'), write = True).latest('id').job
                     command.jobs.add(job)
 
             # Pick out whichever job made it so, and attach that to the Command
@@ -408,8 +440,9 @@ class StateManager(object):
         for e in self.edges:
             job_log.debug("  edge [%s]->[%s]" % (e))
 
-        with dbperf('set_state-creation'):
-            jobs = {}
+        jobs = {}
+        jobs_l = []
+        with dbperf('set_state-job_creation'):
             # Important: the Job must not land in the database until all
             # its dependencies and locks are in.
             with transaction.commit_on_success():
@@ -417,18 +450,36 @@ class StateManager(object):
                 if command_id:
                     command = Command.objects.get(pk = command_id)
 
+                locks = []
                 for d in self.deps:
                     job = d.to_job()
                     job.save()
-                    job.create_locks()
-                    job.create_dependencies()
                     jobs[d] = job
+                    jobs_l.append(job)
+                    for l in job.create_locks():
+                        l.save()
+                    job.create_dependencies()
                     job_log.debug("  dep %s (Job %s)" % (d, job.pk))
                     if command:
                         command.jobs.add(job)
-                if command:
-                    command.jobs_created = True
-                    command.save()
+
+        if False:
+            locks = []
+            with dbperf('set_state-lock_calculation'):
+                for job in jobs_l:
+                    locks.extend(job.create_locks())
+
+            with dbperf('set_state-lock_creation'):
+                for lock in locks:
+                    lock.save()
+
+            with dbperf('set_state-dep_creation'):
+                for job in jobs_l:
+                    job.create_dependencies()
+
+        if command:
+            command.jobs_created = True
+            command.save()
 
     def emit_transition_deps(self, transition, transition_stack = {}):
         if transition in self.deps:

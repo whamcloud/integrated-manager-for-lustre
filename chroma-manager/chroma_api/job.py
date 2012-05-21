@@ -10,7 +10,7 @@ from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 
-from chroma_core.models import Job, StateLock, StateReadLock, StateWriteLock
+from chroma_core.models import Job, StateLock
 
 
 class StateLockResource(ModelResource):
@@ -98,11 +98,11 @@ class JobResource(ModelResource):
     wait_for = fields.ToManyField('chroma_api.job.JobResource', 'wait_for', null = True,
             help_text = "List of other jobs which must complete before this job can run")
     read_locks = fields.ToManyField(StateLockResource,
-            lambda bundle: StateReadLock.objects.filter(job = bundle.obj), full = True, null = True,
+            lambda bundle: StateLock.objects.filter(job = bundle.obj, write = False), full = True, null = True,
             help_text = "List of objects which must stay in the required state while\
             this job runs")
     write_locks = fields.ToManyField(StateLockResource,
-            lambda bundle: StateWriteLock.objects.filter(job = bundle.obj), full = True, null = True,
+            lambda bundle: StateLock.objects.filter(job = bundle.obj, write = True), full = True, null = True,
             help_text = "List of objects which must be in a certain state for\
             this job to run, and may be modified by this job while it runs.")
     commands = fields.ToManyField('chroma_api.command.CommandResource',

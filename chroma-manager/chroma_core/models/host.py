@@ -19,7 +19,7 @@ from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 
 from chroma_core.models.utils import WorkaroundDateTimeField
-from chroma_core.models.jobs import StatefulObject, Job, StateWriteLock, AdvertisedJob
+from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLock
 from chroma_core.lib.job import  DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
 
@@ -867,23 +867,27 @@ class ForceRemoveHostJob(AdvertisedJob):
         app_label = 'chroma_core'
 
     def create_locks(self):
-        super(ForceRemoveHostJob, self).create_locks()
+        locks = super(ForceRemoveHostJob, self).create_locks()
 
-        StateWriteLock.objects.create(
+        locks.append(StateLock(
             job = self,
             locked_item = self.host,
             begin_state = "",
-            end_state = 'removed'
-        )
+            end_state = 'removed',
+            write = True
+        ))
 
         targets, filesystems = _get_host_dependents(self.host)
         # Take a write lock on get_stateful_object if this is a StateChangeJob
         for object in itertools.chain(targets, filesystems):
-            StateWriteLock.objects.create(
+            locks.append(StateLock(
                 job = self,
                 locked_item = object,
                 begin_state = "",
-                end_state = 'removed')
+                end_state = 'removed',
+                write = True))
+
+        return locks
 
     @classmethod
     def get_args(cls, host):

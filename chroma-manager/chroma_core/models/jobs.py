@@ -301,6 +301,9 @@ class StateLock(models.Model):
     locked_item_type = models.ForeignKey(ContentType, related_name = 'locked_item')
     locked_item_id = models.PositiveIntegerField()
     locked_item = WorkaroundGenericForeignKey('locked_item_type', 'locked_item_id')
+    write = models.BooleanField()
+    begin_state = models.CharField(max_length = MAX_STATE_STRING, null = True, blank = True)
+    end_state = models.CharField(max_length = MAX_STATE_STRING, null = True, blank = True)
 
     class Meta:
         app_label = 'chroma_core'
@@ -310,29 +313,11 @@ class StateLock(models.Model):
         ctype = ContentType.objects.get_for_model(stateful_object)
         return cls.objects.filter(locked_item_type = ctype, locked_item_id = stateful_object.id)
 
-
-class StateReadLock(StateLock):
-    #locked_state = models.CharField(max_length = MAX_STATE_STRING)
-    # NB we don't actually need to know the readlock state, although
-    # it would be useful to store the acceptable_states of the DependOn
-    # to validate that write locks left it in the right state.
-
-    class Meta:
-        app_label = 'chroma_core'
-
     def __str__(self):
-        return "Job %d readlock on %s" % (self.job.id, self.locked_item)
-
-
-class StateWriteLock(StateLock):
-    begin_state = models.CharField(max_length = MAX_STATE_STRING)
-    end_state = models.CharField(max_length = MAX_STATE_STRING)
-
-    class Meta:
-        app_label = 'chroma_core'
-
-    def __str__(self):
-        return "Job %d writelock on %s %s->%s" % (self.job.id, self.locked_item, self.begin_state, self.end_state)
+        if not self.write:
+            return "Job %d readlock on %s" % (self.job.id, self.locked_item)
+        else:
+            return "Job %d writelock on %s %s->%s" % (self.job.id, self.locked_item, self.begin_state, self.end_state)
 
 
 class Job(models.Model):
@@ -403,36 +388,37 @@ class Job(models.Model):
            dependencies when we have a write lock and they have a read lock
            or generate depend_on dependencies when we have a read or write lock and
            they have a write lock"""
+        from chroma_core.lib.state_manager import LockCache
         wait_fors = set()
-        for lock in self.statelock_set.all():
-            if isinstance(lock, StateWriteLock):
+        for lock in LockCache.get_all(self):
+            if lock.write:
                 wl = lock
                 # Depend on the most recent pending write to this stateful object,
                 # trust that it will have depended on any before that.
                 try:
-                    prior_write_lock = StateWriteLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).latest('id')
+                    prior_write_lock = LockCache.get_latest_write(wl.locked_item, before = self.id)
                     assert (wl.begin_state == prior_write_lock.end_state), ("%s locks %s in state %s but previous %s leaves it in state %s" % (self, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state))
                     wait_fors.add(prior_write_lock.job)
                     # We will only wait_for read locks after this write lock, as it
                     # will have wait_for'd any before it.
                     read_barrier_id = prior_write_lock.job.id
-                except StateWriteLock.DoesNotExist:
+                except StateLock.DoesNotExist:
                     read_barrier_id = 0
                     pass
 
                 # Wait for any reads of the stateful object between the last write and
                 # our position.
-                prior_read_locks = StateReadLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).filter(job__id__gte = read_barrier_id)
+                prior_read_locks = LockCache.get_read_locks(wl.locked_item, before = self.id, after = read_barrier_id)
                 for i in prior_read_locks:
                     wait_fors.add(i.job)
-            elif isinstance(lock, StateReadLock):
+            else:
                 rl = lock
                 try:
-                    prior_write_lock = StateWriteLock.filter_by_locked_item(rl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).latest('id')
+                    prior_write_lock = LockCache.get_latest_write(rl.locked_item, before = self.id)
                     # See comment by locked_state in StateReadLock
                     #assert(prior_write_lock.end_state == rl.locked_state)
                     wait_fors.add(prior_write_lock.job)
-                except StateWriteLock.DoesNotExist:
+                except StateLock.DoesNotExist:
                     pass
 
         for j in wait_fors:
@@ -441,10 +427,11 @@ class Job(models.Model):
         self.save()
 
     def create_locks(self):
+        locks = []
         from chroma_core.lib.state_manager import get_deps
         # Take read lock on everything from self.get_deps
         for dependency in get_deps(self).all():
-            StateReadLock.objects.create(job = self, locked_item = dependency.stateful_object)
+            locks.append(StateLock(job = self, locked_item = dependency.stateful_object, write = False))
 
         if isinstance(self, StateChangeJob):
             stateful_object = self.get_stateful_object()
@@ -459,15 +446,17 @@ class Job(models.Model):
             # we're still running)
             from itertools import chain
             for d in chain(get_deps(stateful_object, self.old_state).all(), get_deps(stateful_object, new_state).all()):
-                StateReadLock.objects.create(job = self,
-                        locked_item = d.stateful_object)
+                locks.append(StateLock(job = self, locked_item = d.stateful_object, write = False))
 
             # Take a write lock on get_stateful_object if this is a StateChangeJob
-            StateWriteLock.objects.create(
+            locks.append(StateLock(
                     job = self,
                     locked_item = stateful_object,
                     begin_state = self.old_state,
-                    end_state = new_state)
+                    end_state = new_state,
+                    write = True))
+
+        return locks
 
     @classmethod
     def run_next(cls):
@@ -792,7 +781,7 @@ class AdvertisedJob(Job):
         # If the object is subject to an incomplete Job
         # then don't offer any actions
         from chroma_core.models import StateLock
-        active_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
+        active_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete'), write = False).count()
         if active_locks > 0:
             return []
 
