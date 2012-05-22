@@ -474,5 +474,6 @@ def send_alerts_email(id):
             if alert.active:
                 message += "  Alert state is currently active"
 
-        send_mail('New Chroma Server alerts', message, settings.EMAIL_SENDER,
-                  [user.email])
+        if settings.EMAIL_HOST:
+            send_mail('New Chroma Server alerts', message, settings.EMAIL_SENDER,
+                      [user.email])

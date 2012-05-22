@@ -281,6 +281,7 @@ def setup_log(log_name, filename = None):
         logger.setLevel(LOG_LEVEL)
     return logger
 
+EMAIL_HOST = None
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
 EMAIL_SENDER = "chroma-manager@whamcloud.com"
 
