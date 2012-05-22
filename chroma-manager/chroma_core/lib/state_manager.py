@@ -14,8 +14,56 @@ from django.db.models.query_utils import Q
 from chroma_core.lib.job import job_log
 from chroma_core.lib.util import dbperf
 from chroma_core.models.conf_param import ApplyConfParams
+from chroma_core.models.filesystem import ManagedFilesystem
+from chroma_core.models.host import ManagedHost, LNetConfiguration
 from chroma_core.models.jobs import StateChangeJob, Command, StateLock
-from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget
+from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget, ManagedTargetMount
+
+class ObjectCache(object):
+    instance = None
+    enable = True
+
+    def __init__(self):
+        objects = defaultdict(list)
+        for klass in [ManagedTarget, ManagedFilesystem, ManagedHost, ManagedTargetMount, LNetConfiguration]:
+            for object in klass.objects.select_related().all():
+                objects[klass].append(object)
+                if hasattr(object, 'content_type'):
+                    object = object.downcast()
+                    if object.__class__ != klass:
+                        objects[object.__class__].append(object)
+
+        self.objects = objects
+
+    @classmethod
+    def get(cls, klass, filter = None):
+        return [o for o in cls.getInstance().objects[klass] if not filter or filter(o)]
+
+    @classmethod
+    def get_one(cls, klass, filter = None):
+        r = [o for o in cls.getInstance().objects[klass] if not filter or filter(o)]
+        if len(r) > 1:
+            raise klass.MultipleObjectsReturned
+        elif not r:
+            raise klass.DoesNotExist
+        else:
+            return r[0]
+
+    @classmethod
+    def target_primary_server(cls, target):
+        primary_mtm = cls.get_one(ManagedTargetMount, lambda mtm: mtm.target.id == target.id and mtm.primary == True)
+        return primary_mtm.host
+
+
+    @classmethod
+    def getInstance(cls):
+        if not cls.instance:
+            cls.instance = ObjectCache()
+        return cls.instance
+
+    @classmethod
+    def clear(cls):
+        cls.instance = None
 
 
 class LockCache(object):
@@ -147,12 +195,18 @@ class DepCache(object):
         cls.instance = None
 
     def _get(self, obj, state):
+        #print "DepCache._get: %s %s" % (obj, state)
+        #with dbperf("depcache_get"):
         if state:
             return obj.get_deps(state)
         else:
             return obj.get_deps()
 
     def get(self, obj, state = None):
+        from chroma_core.models import StatefulObject
+        if state == None and isinstance(obj, StatefulObject):
+            state = obj.state
+
         if not self.enable:
             return self._get(obj, state)
 
@@ -206,6 +260,7 @@ class StateManager(object):
     def __init__(self):
         DepCache.clear()
         LockCache.clear()
+        ObjectCache.clear()
 
     @classmethod
     def available_transitions(cls, stateful_object):
@@ -479,6 +534,13 @@ class StateManager(object):
     def set_state(self, instance, new_state, command_id = None):
         """Return a Job or None if the object is already in new_state.
         command_id should refer to a command instance or be None."""
+
+        DepCache.getInstance()
+        with dbperf('set_state-prime_lock_cache'):
+            LockCache.getInstance()
+        with dbperf('set_state-prime_object_cache'):
+            ObjectCache.getInstance()
+
         with dbperf('set_state-setup'):
             from chroma_core.models import StatefulObject, Command
             assert(isinstance(instance, StatefulObject))
@@ -550,8 +612,15 @@ class StateManager(object):
 
             with dbperf('set_state-lock_creation'):
                 for lock in locks:
+                    lock = StateLock.objects.create(
+                        job = lock.job,
+                        locked_item = lock.locked_item,
+                        begin_state = lock.begin_state,
+                        end_state = lock.end_state,
+                        write = lock.write
+                    )
                     LockCache.add(lock)
-                    lock.save()
+                    #lock.save()
 
             with dbperf('set_state-dep_creation'):
                 for job in jobs_l:

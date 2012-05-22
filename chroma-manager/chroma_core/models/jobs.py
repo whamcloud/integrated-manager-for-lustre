@@ -265,27 +265,28 @@ class StatefulObject(models.Model):
         return cls.job_class_map[(begin_state, end_state)]
 
     def get_dependent_objects(self):
-        """Get all objects which MAY be depending on the state of this object"""
+        #with dbperf('get_dependent_objects'):
+            """Get all objects which MAY be depending on the state of this object"""
 
-        # Cache mapping a class to a list of functions for getting
-        # dependents of an instance of that class.
-        if not hasattr(StatefulObject, 'reverse_deps_map'):
-            reverse_deps_map = defaultdict(list)
-            for klass in all_subclasses(StatefulObject):
-                for class_name, lookup_fn in klass.reverse_deps.items():
-                    import chroma_core.models
-                    #FIXME: looking up class this way eliminates our ability to move
-                    # StatefulObject definitions out into other modules
-                    so_class = getattr(chroma_core.models, class_name)
-                    reverse_deps_map[so_class].append(lookup_fn)
-            StatefulObject.reverse_deps_map = reverse_deps_map
+            # Cache mapping a class to a list of functions for getting
+            # dependents of an instance of that class.
+            if not hasattr(StatefulObject, 'reverse_deps_map'):
+                reverse_deps_map = defaultdict(list)
+                for klass in all_subclasses(StatefulObject):
+                    for class_name, lookup_fn in klass.reverse_deps.items():
+                        import chroma_core.models
+                        #FIXME: looking up class this way eliminates our ability to move
+                        # StatefulObject definitions out into other modules
+                        so_class = getattr(chroma_core.models, class_name)
+                        reverse_deps_map[so_class].append(lookup_fn)
+                StatefulObject.reverse_deps_map = reverse_deps_map
 
-        klass = StatefulObject.so_child(self.__class__)
+            klass = StatefulObject.so_child(self.__class__)
 
-        from itertools import chain
-        lookup_fns = StatefulObject.reverse_deps_map[klass]
-        querysets = [fn(self) for fn in lookup_fns]
-        return chain(*querysets)
+            from itertools import chain
+            lookup_fns = StatefulObject.reverse_deps_map[klass]
+            querysets = [fn(self) for fn in lookup_fns]
+            return chain(*querysets)
 
 
 class StateLock(models.Model):
@@ -300,6 +301,7 @@ class StateLock(models.Model):
     locked_item_type = models.ForeignKey(ContentType, related_name = 'locked_item')
     locked_item_id = models.PositiveIntegerField()
     locked_item = WorkaroundGenericForeignKey('locked_item_type', 'locked_item_id')
+
     write = models.BooleanField()
     begin_state = models.CharField(max_length = MAX_STATE_STRING, null = True, blank = True)
     end_state = models.CharField(max_length = MAX_STATE_STRING, null = True, blank = True)
@@ -445,7 +447,11 @@ class Job(models.Model):
         from chroma_core.lib.state_manager import get_deps
         # Take read lock on everything from self.get_deps
         for dependency in get_deps(self).all():
-            locks.append(StateLock(job = self, locked_item = dependency.stateful_object, write = False))
+            locks.append(StateLock(
+                job = self,
+                locked_item = dependency.stateful_object,
+                write = False
+            ))
 
         if isinstance(self, StateChangeJob):
             #stateful_object = ObjectCache.get()
@@ -461,7 +467,11 @@ class Job(models.Model):
             # we're still running)
             from itertools import chain
             for d in chain(get_deps(stateful_object, self.old_state).all(), get_deps(stateful_object, new_state).all()):
-                locks.append(StateLock(job = self, locked_item = d.stateful_object, write = False))
+                locks.append(StateLock(
+                    job = self,
+                    locked_item = d.stateful_object,
+                    write = False
+                ))
 
             # Take a write lock on get_stateful_object if this is a StateChangeJob
             locks.append(StateLock(

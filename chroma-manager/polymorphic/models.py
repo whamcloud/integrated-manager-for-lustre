@@ -48,6 +48,7 @@ class PolymorphicMetaclass(ModelBase):
             model = ContentType.objects.get_for_id(self.content_type_id).model_class()
             if (model == self.__class__):
                 return self
+            return getattr(self, model.__name__.lower())
             # NB Use _base_manager to get a 'plain' Manager which is guaranteed
             # not to filter any records out
             return model._base_manager.get(id=self.id)

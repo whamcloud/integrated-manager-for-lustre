@@ -18,7 +18,7 @@ class TestBigFilesystem(JobTestCase):
 
     def test_big_filesystem(self):
         OSS_COUNT = 4
-        OST_COUNT = 8
+        OST_COUNT = 32
 
         assert OST_COUNT % OSS_COUNT == 0
 
@@ -71,16 +71,17 @@ class TestBigFilesystem(JobTestCase):
         dc = DepCache.getInstance()
         print "DepCache: %d, %d" % (dc.hits, dc.misses)
 
-        DepCache.clear()
-        LockCache.clear()
+        if False:
+            DepCache.clear()
+            LockCache.clear()
 
-        with dbperf("job execution"):
-            Job.run_next()
+            with dbperf("job execution"):
+                Job.run_next()
 
-        dc = DepCache.getInstance()
-        print "DepCache: %d, %d" % (dc.hits, dc.misses)
+            dc = DepCache.getInstance()
+            print "DepCache: %d, %d" % (dc.hits, dc.misses)
 
-        self.assertEqual(freshen(self.fs).state, 'available')
+            self.assertEqual(freshen(self.fs).state, 'available')
 
 
 class TestFSTransitions(JobTestCaseWithHost):
