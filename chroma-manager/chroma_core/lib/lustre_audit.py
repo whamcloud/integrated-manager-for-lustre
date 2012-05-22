@@ -27,7 +27,7 @@ def nids_to_mgs(host, nid_strings):
     """nid_strings: nids of a target.  host: host on which the target was seen.
     Return a ManagedMgs or raise ManagedMgs.DoesNotExist"""
     if set(nid_strings) == set(["0@lo"]) or len(nid_strings) == 0:
-        return ManagedMgs.objects.get(targetmount__host = host)
+        return ManagedMgs.objects.get(managedtargetmount__host = host)
 
     from django.db.models import Count
     nids = Nid.objects.values('nid_string').filter(lnet_configuration__host__not_deleted = True, nid_string__in = nid_strings).annotate(Count('id'))
