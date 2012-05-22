@@ -8,7 +8,6 @@ import django.utils.unittest
 from views.mgt import Mgt
 from views.servers import Servers
 from views.create_filesystem import CreateFilesystem
-from views.filesystem import Filesystem
 from utils.constants import wait_time
 from utils.constants import static_text
 from base import SeleniumBaseTestCase
@@ -53,40 +52,11 @@ class TestCreateFileSystem(SeleniumBaseTestCase):
     def test_create_filesystem(self):
         """Test case for creating file system"""
 
-        self.navigation.go('Configure', 'Servers')
-        wait_for_datatable(self.driver, '#server_configuration')
-        self.server_page = Servers(self.driver)
-        self.server_page.add_servers(self.host_list)
-
-        self.navigation.go('Configure', 'MGTs')
-        self.driver.refresh()
-        wait_for_datatable(self.driver, '#mgt_configuration')
-        self.mgt_page = Mgt(self.driver)
-        self.mgt_page.create_mgt(self.mgt_host_name, self.mgt_device_node)
-
-        self.navigation.go('Configure', 'Create_new_filesystem')
-        wait_for_element(self.driver, "#btnCreateFS", self.medium_wait)
-        self.driver.refresh()
         create_filesystem_page = CreateFilesystem(self.driver)
-        create_filesystem_page.create(self.filesystem_name, self.mgt_name, self.mdt_host_name, self.mdt_device_node, self.ost_host_name, self.ost_device_node, self.conf_params)
+        create_filesystem_page.create_filesystem_with_server_and_mgt(self.host_list, self.mgt_host_name, self.mgt_device_node, self.filesystem_name, self.mgt_name, self.mdt_host_name, self.mdt_device_node, self.ost_host_name, self.ost_device_node, self.conf_params)
         filesystem_create_message = create_filesystem_page.verify_created_filesystem(self.filesystem_name, self.mgt_name, self.mdt_host_name, self.mdt_device_node, self.ost_host_name, self.ost_device_node)
         self.assertEqual('', filesystem_create_message, filesystem_create_message)
-
-        self.navigation.go('Configure')
-        fs_page = Filesystem(self.driver)
-        wait_for_datatable(self.driver, '#fs_list')
-        fs_page.transition(self.filesystem_name, static_text['remove_fs'])
-
-        self.navigation.go('Configure', 'MGTs')
-        self.driver.refresh()
-        wait_for_datatable(self.driver, '#mgt_configuration')
-        mgt_page = Mgt(self.driver)
-        mgt_page.transition(self.mgt_host_name, self.mgt_device_node, static_text['remove_mgt'])
-
-        self.navigation.go('Configure', 'Servers')
-        server_page = Servers(self.driver)
-        wait_for_datatable(self.driver, '#server_configuration')
-        server_page.remove_servers(self.host_list)
+        create_filesystem_page.remove_filesystem_with_server_and_mgt(self.filesystem_name, self.mgt_host_name, self.mgt_device_node, self.host_list)
 
     def test_blank_filesystem_name(self):
         """Test create file system by giving blank filesystem name"""
@@ -132,6 +102,7 @@ class TestCreateFileSystem(SeleniumBaseTestCase):
 
         # Click advanced button
         create_filesystem_page.advanced_button.click()
+        wait_for_element(self.driver, create_filesystem_page.conf_param_apply_button, self.medium_wait)
 
         # Set values for conf params
         for param in self.conf_params:
@@ -162,13 +133,12 @@ class TestCreateFileSystem(SeleniumBaseTestCase):
 
         self.navigation.go('Configure', 'MGTs')
         self.driver.refresh()
-        wait_for_datatable(self.driver, '#mgt_configuration')
+        wait_for_element(self.driver, 'span.volume_chooser_selected', self.medium_wait)
         self.mgt_page = Mgt(self.driver)
         self.mgt_page.create_mgt(self.mgt_host_name, self.mgt_device_node)
 
         self.navigation.go('Configure', 'Create_new_filesystem')
         wait_for_element(self.driver, "#btnCreateFS", self.medium_wait)
-        self.driver.refresh()
         create_filesystem_page = CreateFilesystem(self.driver)
 
         enter_text_for_element(self.driver, create_filesystem_page.filesystem_text, self.filesystem_name)
@@ -178,6 +148,7 @@ class TestCreateFileSystem(SeleniumBaseTestCase):
 
         # Click advanced button
         create_filesystem_page.advanced_button.click()
+        wait_for_element(self.driver, create_filesystem_page.conf_param_apply_button, self.medium_wait)
 
         # Set values for conf params
         for param in self.conf_params:
@@ -196,7 +167,7 @@ class TestCreateFileSystem(SeleniumBaseTestCase):
 
         self.navigation.go('Configure', 'MGTs')
         self.driver.refresh()
-        wait_for_datatable(self.driver, '#mgt_configuration')
+        wait_for_element(self.driver, 'span.volume_chooser_selected', self.medium_wait)
         mgt_page = Mgt(self.driver)
         mgt_page.transition(self.mgt_host_name, self.mgt_device_node, static_text['remove_mgt'])
 

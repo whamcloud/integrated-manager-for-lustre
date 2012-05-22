@@ -1,8 +1,6 @@
 
 from time import sleep
-from base import wait_for_element
 from testconfig import config
-from base import element_visible
 
 
 class Login:
@@ -14,6 +12,8 @@ class Login:
         self.login_button = self.driver.find_element_by_css_selector("#login_dialog + div #submit")
 
     def open_login_dialog(self):
+        from base import wait_for_element
+        from base import element_visible
         for wait_before_count in xrange(10):
             is_overlay = element_visible(self.driver, "div.blockUI.blockOverlay")
             if is_overlay:

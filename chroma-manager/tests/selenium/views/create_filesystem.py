@@ -10,6 +10,12 @@ from base import enter_text_for_element
 from base import wait_for_element
 from base import wait_for_transition
 from utils.constants import wait_time
+from utils.navigation import Navigation
+from base import wait_for_datatable
+from views.mgt import Mgt
+from views.servers import Servers
+from views.filesystem import Filesystem
+from utils.constants import static_text
 
 
 class CreateFilesystem:
@@ -48,7 +54,7 @@ class CreateFilesystem:
 
     def select_mdt(self, host_name, device_node):
         """Select an MDT from MDT chooser"""
-        mdtchooser = self.volume_chooser_selected.__getitem__(1)
+        mdtchooser = self.driver.find_elements_by_class_name("volume_chooser_selected").__getitem__(1)
         mdtchooser.click()
         mdt_rows = self.driver.find_elements_by_xpath("id('mdt_chooser_table')/tbody/tr")
         for tr in mdt_rows:
@@ -78,7 +84,7 @@ class CreateFilesystem:
         """Checks whether MGT, MDT and OST are associated with file system"""
         create_message = ''
 
-        if self.driver.find_element_by_css_selector(self.edit_fs_title).text != 'Filesystem ' + filesystem_name:
+        if self.driver.find_element_by_css_selector(self.edit_fs_title).text != 'File System ' + filesystem_name:
             create_message = create_message + 'File system not created successfully'
 
         mgt_rows = self.driver.find_elements_by_xpath("id('example_content')/tr[2]")
@@ -121,3 +127,43 @@ class CreateFilesystem:
 
         wait_for_element(self.driver, self.edit_fs_title, self.medium_wait)
         wait_for_transition(self.driver, 300)
+
+    def create_filesystem_with_server_and_mgt(self, host_list, mgt_host_name, mgt_device_node, filesystem_name, mgt_name, mdt_host_name, mdt_device_node, ost_host_name, ost_device_node, conf_params):
+        self.navigation = Navigation(self.driver)
+
+        self.navigation.go('Configure', 'Servers')
+        wait_for_datatable(self.driver, '#server_configuration')
+        self.server_page = Servers(self.driver)
+        self.server_page.add_servers(host_list)
+
+        self.navigation.go('Configure', 'MGTs')
+        self.driver.refresh()
+        wait_for_element(self.driver, 'span.volume_chooser_selected', self.medium_wait)
+        self.mgt_page = Mgt(self.driver)
+        self.mgt_page.create_mgt(mgt_host_name, mgt_device_node)
+
+        self.navigation.go('Configure', 'Create_new_filesystem')
+        self.driver.refresh()
+        wait_for_element(self.driver, "#btnCreateFS", self.medium_wait)
+        create_filesystem_page = CreateFilesystem(self.driver)
+        create_filesystem_page.create(filesystem_name, mgt_name, mdt_host_name, mdt_device_node, ost_host_name, ost_device_node, conf_params)
+
+    def remove_filesystem_with_server_and_mgt(self, filesystem_name, mgt_host_name, mgt_device_node, host_list):
+        self.navigation = Navigation(self.driver)
+
+        self.navigation.go('Configure')
+        fs_page = Filesystem(self.driver)
+        wait_for_datatable(self.driver, '#fs_list')
+        fs_page.transition(filesystem_name, static_text['remove_fs'])
+
+        self.navigation.go('Configure', 'MGTs')
+        self.driver.refresh()
+        wait_for_element(self.driver, 'span.volume_chooser_selected', self.medium_wait)
+        mgt_page = Mgt(self.driver)
+        mgt_page.transition(mgt_host_name, mgt_device_node, static_text['remove_mgt'])
+
+        self.navigation.go('Configure', 'Servers')
+        self.driver.refresh()
+        wait_for_datatable(self.driver, '#server_configuration')
+        server_page = Servers(self.driver)
+        server_page.remove_servers(host_list)

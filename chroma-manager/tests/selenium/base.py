@@ -9,7 +9,7 @@ import time
 
 # Import third-party modules
 from selenium import webdriver
-
+from views.login import Login
 from django.utils.unittest import TestCase
 from utils.constants import wait_time
 from testconfig import config
@@ -52,13 +52,16 @@ def wait_for_any_element(driver, selectors, timeout):
 
 
 def wait_for_transition(driver, timeout):
-    # Wait for transition (i.e busy) icon to get displayed
+    # Wait for transition (i.e busy/locked) icon to get displayed
     busy_icon_check = False
 
     WebDriverWait(driver, timeout).until(lambda driver: driver.find_element_by_css_selector("span.notification_object_icon.busy_icon").is_displayed() or driver.find_element_by_css_selector("span.notification_object_icon.locked_icon").is_displayed())
 
-    if driver.find_element_by_css_selector("span.notification_object_icon.busy_icon").is_displayed():
-        busy_icon_check = True
+    try:
+        if driver.find_element_by_css_selector("span.notification_object_icon.busy_icon").is_displayed():
+            busy_icon_check = True
+    except NoSuchElementException:
+        pass
 
     for timer in xrange(timeout):
         # Wait while the transition is in progress
@@ -127,7 +130,7 @@ def quiesce_api(driver, timeout):
 
 
 def login_superuser(driver):
-    from views.login import Login
+    """Login with the default user"""
     wait_for_any_element(driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
     login_view = Login(driver)
     if not element_visible(driver, '#login_dialog'):
@@ -136,7 +139,7 @@ def login_superuser(driver):
 
 
 def login_newuser(driver, username, password):
-    from views.login import Login
+    """Login with given username and password"""
     wait_for_any_element(driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
     login_view = Login(driver)
     if not element_visible(driver, '#login_dialog'):
