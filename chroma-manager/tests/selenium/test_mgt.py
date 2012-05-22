@@ -97,7 +97,7 @@ class TestMgt(SeleniumBaseTestCase):
         wait_for_datatable(self.driver, '#server_configuration')
         self.server_page.remove_servers(self.host_list)
 
-        self.driver.close()
+        super(TestMgt, self).tearDown()
 
 if __name__ == '__main__':
     django.utils.unittest.main()
