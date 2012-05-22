@@ -20,43 +20,116 @@ from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, 
 
 class LockCache(object):
     instance = None
+    enable = True
+
+    def __init__(self):
+        all_locks = StateLock.objects.select_related('job__id').filter(~Q(job__state = 'complete'))
+        self.write_locks = [l for l in all_locks if l.write]
+        self.read_locks = [l for l in all_locks if not l.write]
+
+        def by_item(f = None):
+            result = defaultdict(list)
+            for l in all_locks:
+                if not f or f(l):
+                    result[l.locked_item].append(l)
+
+            return result
+
+        self.all_by_item = by_item()
+        self.read_by_item = by_item(lambda l: not l.write)
+        self.write_by_item = by_item(lambda l: l.write)
+
+        self.all_by_job = defaultdict(list)
+        for l in all_locks:
+            self.all_by_job[l.job].append(l)
+
+    @classmethod
+    def clear(cls):
+        cls.instance = None
+
+    @classmethod
+    def add(cls, lock):
+        i = cls.getInstance()
+        if lock.write:
+            i.write_locks.append(lock)
+            i.write_by_item[lock.locked_item].append(lock)
+        else:
+            i.read_locks.append(lock)
+            i.read_by_item[lock.locked_item].append(lock)
+
+        i.all_by_job[lock.job].append(lock)
+        i.all_by_item[lock.locked_item].append(lock)
 
     @classmethod
     def getInstance(cls):
         if not cls.instance:
-            cls.instance = DepCache()
+            cls.instance = LockCache()
         return cls.instance
 
     @classmethod
+    def get_by_job(cls, job):
+        if cls.enable:
+            return cls.getInstance().all_by_job[job]
+        else:
+            return StateLock.objects.filter(job = job)
+
+    @classmethod
     def get_all(cls, locked_item):
-        return StateLock.filter_by_locked_item(locked_item)
+        if cls.enable:
+            return cls.getInstance().all_by_item[locked_item]
+        else:
+            return StateLock.filter_by_locked_item(locked_item)
 
     @classmethod
     def get_latest_write(cls, locked_item, before):
-        return StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete'), write = True, job__id__lt = before).latest('id')
+        if cls.enable:
+            try:
+                return sorted([l for l in cls.getInstance().write_by_item[locked_item] if l.job.id < before], lambda a, b: cmp(a.id, b.id))[-1]
+            except IndexError:
+                return None
+        else:
+            try:
+                result = StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete'), write = True, job__id__lt = before).latest('id')
+            except StateLock.DoesNotExist:
+                result = None
+            job_log.info("get_latest_write(%s, %s): %s" % (locked_item, before, result))
+            return result
 
     @classmethod
     def get_read_locks(cls, locked_item, before, after):
-        return StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete')).filter(write = False, job__id__lt = before).filter(job__id__gte = after)
+        if cls.enable:
+            return [x for x in cls.getInstance().read_by_item[locked_item] if after <= x.job.id and x.job.id < before]
+        else:
+            return StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete')).filter(write = False, job__id__lt = before).filter(job__id__gte = after)
 
     @classmethod
     def get_write(cls, locked_item):
-        return StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete'), write = True)
+        if cls.enable:
+            return cls.getInstance().write_by_item[locked_item]
+        else:
+            return StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete'), write = True)
 
     @classmethod
     def get_write_by_locked_item(cls):
-        # TODO: do a DB query that just gives us the latest WL for
-        # each locked_item (same result for less iterations of this loop)
-        from django.db.models import Q
-        result = {}
-        for wl in StateLock.objects.filter(write = True).filter(~Q(job__state = 'complete')).order_by('id'):
-            result[wl.locked_item] = wl
+        if cls.enable:
+            result = {}
+            for locked_item, locks in cls.getInstance().write_by_item.items():
+                result[locked_item] = sorted(locks, lambda a, b: cmp(a.id, b.id))[-1]
+            return result
+        else:
+            # TODO: do a DB query that just gives us the latest WL for
+            # each locked_item (same result for less iterations of this loop)
+            from django.db.models import Q
+            result = {}
+            for wl in StateLock.objects.filter(write = True).filter(~Q(job__state = 'complete')).order_by('id'):
+                result[wl.locked_item] = wl
 
-        return result
+            return result
 
 
 class DepCache(object):
     instance = None
+    enable = True
 
     @classmethod
     def getInstance(cls):
@@ -65,14 +138,24 @@ class DepCache(object):
         return cls.instance
 
     def __init__(self):
-        self.clear()
-
-    def clear(self):
         self.hits = 0
         self.misses = 0
         self.cache = {}
 
+    @classmethod
+    def clear(cls):
+        cls.instance = None
+
+    def _get(self, obj, state):
+        if state:
+            return obj.get_deps(state)
+        else:
+            return obj.get_deps()
+
     def get(self, obj, state = None):
+        if not self.enable:
+            return self._get(obj, state)
+
         if state:
             key = (obj, state)
         else:
@@ -81,13 +164,10 @@ class DepCache(object):
         try:
             v = self.cache[key]
             self.hits += 1
+
             return v
         except KeyError:
-            if state:
-                self.cache[key] = obj.get_deps(state)
-            else:
-                self.cache[key] = obj.get_deps()
-
+            self.cache[key] = self._get(obj, state)
             self.misses += 1
             return self.cache[key]
 
@@ -117,12 +197,16 @@ class Transition(object):
 
     def to_job(self):
         job_klass = self.stateful_object.get_job_class(self.old_state, self.new_state)
-        stateful_object_attr = job_klass.stateful_object
-        kwargs = {stateful_object_attr: self.stateful_object, 'old_state': self.old_state}
+        stateful_object_attr = job_klass.stateful_object + "_id"
+        kwargs = {stateful_object_attr: self.stateful_object.id, 'old_state': self.old_state}
         return job_klass(**kwargs)
 
 
 class StateManager(object):
+    def __init__(self):
+        DepCache.clear()
+        LockCache.clear()
+
     @classmethod
     def available_transitions(cls, stateful_object):
         """Return a list states to which the object can be set from
@@ -280,6 +364,7 @@ class StateManager(object):
                     cls._run_opportunistic_jobs(instance)
                 else:
                     job_log.info("notify_state: Dropping update of %s (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, new_state))
+                    pass
 
     def add_jobs(self, jobs, command = None):
         """Add a job, and any others which are required in order to reach its prerequisite state"""
@@ -394,31 +479,30 @@ class StateManager(object):
     def set_state(self, instance, new_state, command_id = None):
         """Return a Job or None if the object is already in new_state.
         command_id should refer to a command instance or be None."""
-        from chroma_core.models import StatefulObject, Command
-        assert(isinstance(instance, StatefulObject))
-        job_log.debug("set_state %s %s" % (instance, new_state))
-        if new_state not in instance.states:
-            raise RuntimeError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
+        with dbperf('set_state-setup'):
+            from chroma_core.models import StatefulObject, Command
+            assert(isinstance(instance, StatefulObject))
+            if new_state not in instance.states:
+                raise RuntimeError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
 
-        # Work out the eventual states (and which writelock'ing job to depend on to
-        # ensure that state) from all non-'complete' jobs in the queue
+            # Work out the eventual states (and which writelock'ing job to depend on to
+            # ensure that state) from all non-'complete' jobs in the queue
+            item_to_lock = LockCache.get_write_by_locked_item()
+            self.expected_states = dict([(k, v.end_state) for k, v in item_to_lock.items()])
 
-        item_to_lock = LockCache.get_write_by_locked_item()
-        self.expected_states = dict([(k, v.end_state) for k, v in item_to_lock.items()])
+            if new_state == self.get_expected_state(instance):
+                if command_id:
+                    command = Command.objects.get(pk = command_id)
+                    command.jobs_created = True
+                    command.complete = True
+                    command.save()
+                    if instance.state != new_state:
+                        # This is a no-op because of an in-progress Job:
+                        job = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete'), write = True).latest('id').job
+                        command.jobs.add(job)
 
-        if new_state == self.get_expected_state(instance):
-            if command_id:
-                command = Command.objects.get(pk = command_id)
-                command.jobs_created = True
-                command.complete = True
-                command.save()
-                if instance.state != new_state:
-                    # This is a no-op because of an in-progress Job:
-                    job = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete'), write = True).latest('id').job
-                    command.jobs.add(job)
-
-            # Pick out whichever job made it so, and attach that to the Command
-            return None
+                # Pick out whichever job made it so, and attach that to the Command
+                return None
 
         with dbperf('set_state-deps'):
             self.deps = set()
@@ -442,44 +526,40 @@ class StateManager(object):
 
         jobs = {}
         jobs_l = []
-        with dbperf('set_state-job_creation'):
-            # Important: the Job must not land in the database until all
-            # its dependencies and locks are in.
-            with transaction.commit_on_success():
-                command = None
-                if command_id:
-                    command = Command.objects.get(pk = command_id)
+        # Important: the Job must not land in the database until all
+        # its dependencies and locks are in.
+        with transaction.commit_on_success():
+            command = None
+            if command_id:
+                command = Command.objects.get(pk = command_id)
 
-                locks = []
+            locks = []
+            with dbperf('set_state-job_creation'):
                 for d in self.deps:
                     job = d.to_job()
                     job.save()
                     jobs[d] = job
                     jobs_l.append(job)
-                    for l in job.create_locks():
-                        l.save()
-                    job.create_dependencies()
                     job_log.debug("  dep %s (Job %s)" % (d, job.pk))
                     if command:
                         command.jobs.add(job)
 
-        if False:
-            locks = []
             with dbperf('set_state-lock_calculation'):
                 for job in jobs_l:
                     locks.extend(job.create_locks())
 
             with dbperf('set_state-lock_creation'):
                 for lock in locks:
+                    LockCache.add(lock)
                     lock.save()
 
             with dbperf('set_state-dep_creation'):
                 for job in jobs_l:
                     job.create_dependencies()
 
-        if command:
-            command.jobs_created = True
-            command.save()
+            if command:
+                command.jobs_created = True
+                command.save()
 
     def emit_transition_deps(self, transition, transition_stack = {}):
         if transition in self.deps:
@@ -487,6 +567,7 @@ class StateManager(object):
             return transition
         else:
             job_log.debug("emit_transition_deps: %s" % (transition))
+            pass
 
         # Update our worldview to record that any subsequent dependencies may
         # assume that we are in our new state

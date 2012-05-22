@@ -73,6 +73,8 @@ class timeit(object):
 
 
 class dbperf(object):
+    enabled = False
+
     def __init__(self, label = ""):
         self.label = label
 
@@ -81,11 +83,21 @@ class dbperf(object):
         self.q_initial = len(connection.queries)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if not self.enabled:
+            return
+
         self.t_final = time.time()
         self.q_final = len(connection.queries)
 
+        logfile = open("%s.log" % self.label, 'w')
+        for q in connection.queries[self.q_initial:]:
+            logfile.write("(%s) %s\n" % (q['time'], q['sql']))
+        logfile.close()
+
         t = self.t_final - self.t_initial
         q = self.q_final - self.q_initial
-        print "%s: %d queries in %.2fs (avg %dms)" % (
-            self.label, q, t,
-            int((t / q) * 1000))
+        if q:
+            avg_t = int((t / q) * 1000)
+        else:
+            avg_t = 0
+        print "%s: %d queries in %.2fs (avg %dms)" % (self.label, q, t, avg_t)

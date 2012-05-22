@@ -1,4 +1,4 @@
-from chroma_core.lib.state_manager import DepCache
+from chroma_core.lib.state_manager import DepCache, LockCache
 from chroma_core.lib.util import dbperf
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost
@@ -18,7 +18,7 @@ class TestBigFilesystem(JobTestCase):
 
     def test_big_filesystem(self):
         OSS_COUNT = 4
-        OST_COUNT = 32
+        OST_COUNT = 8
 
         assert OST_COUNT % OSS_COUNT == 0
 
@@ -55,6 +55,14 @@ class TestBigFilesystem(JobTestCase):
                 secondary_oss = self.osss[secondary_oss_i]
                 self.osts[i] = ManagedOst.create_for_volume(self._test_lun(primary_oss, secondary_oss).id, filesystem = self.fs)
 
+                #GOOD MORNING, IT DOESN'T WORK WHEN DEPCACHE IS ENABLED, WHY IS THAT?
+                #GET THAT WORKING, THEN MAKE IT FASTER AGAIN:
+                # * WOULD IT HELP IF JOBS WEREN'T USING MTI?
+                # * WOULD IT HELP IF WE DID BULK INSERTS FOR THE LOCKS, DEP LINKS?
+                # * WOULD IT HELP TO PROVIDE GET_DEPS METHODS WITH A CACHE OF STATEFULOBJECTS?
+
+        dbperf.enabled = True
+
         with dbperf("set_state"):
             Command.set_state([(self.fs, 'available')], "Unit test transition", run = False)
 
@@ -62,13 +70,17 @@ class TestBigFilesystem(JobTestCase):
         # worker, so the cache isn't going to be primed any more
         dc = DepCache.getInstance()
         print "DepCache: %d, %d" % (dc.hits, dc.misses)
-        dc.clear()
+
+        DepCache.clear()
+        LockCache.clear()
 
         with dbperf("job execution"):
             Job.run_next()
 
         dc = DepCache.getInstance()
         print "DepCache: %d, %d" % (dc.hits, dc.misses)
+
+        self.assertEqual(freshen(self.fs).state, 'available')
 
 
 class TestFSTransitions(JobTestCaseWithHost):
