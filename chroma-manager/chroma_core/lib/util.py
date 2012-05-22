@@ -7,6 +7,7 @@
 import logging
 import time
 from django.db import connection
+import settings
 
 
 def all_subclasses(obj):
@@ -79,25 +80,27 @@ class dbperf(object):
         self.label = label
 
     def __enter__(self):
-        self.t_initial = time.time()
-        self.q_initial = len(connection.queries)
+        if settings.DEBUG:
+            self.t_initial = time.time()
+            self.q_initial = len(connection.queries)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not self.enabled:
             return
 
-        self.t_final = time.time()
-        self.q_final = len(connection.queries)
+        if settings.DEBUG:
+            self.t_final = time.time()
+            self.q_final = len(connection.queries)
 
-        logfile = open("%s.log" % self.label, 'w')
-        for q in connection.queries[self.q_initial:]:
-            logfile.write("(%s) %s\n" % (q['time'], q['sql']))
-        logfile.close()
+            logfile = open("%s.log" % self.label, 'w')
+            for q in connection.queries[self.q_initial:]:
+                logfile.write("(%s) %s\n" % (q['time'], q['sql']))
+            logfile.close()
 
-        t = self.t_final - self.t_initial
-        q = self.q_final - self.q_initial
-        if q:
-            avg_t = int((t / q) * 1000)
-        else:
-            avg_t = 0
-        print "%s: %d queries in %.2fs (avg %dms)" % (self.label, q, t, avg_t)
+            t = self.t_final - self.t_initial
+            q = self.q_final - self.q_initial
+            if q:
+                avg_t = int((t / q) * 1000)
+            else:
+                avg_t = 0
+            print "%s: %d queries in %.2fs (avg %dms)" % (self.label, q, t, avg_t)

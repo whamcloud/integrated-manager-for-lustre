@@ -7,6 +7,7 @@
 
 from collections import defaultdict
 import datetime
+import json
 from dateutil import tz
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
@@ -16,7 +17,7 @@ from chroma_core.lib.util import dbperf
 from chroma_core.models.conf_param import ApplyConfParams
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, LNetConfiguration
-from chroma_core.models.jobs import StateChangeJob, Command, StateLock
+from chroma_core.models.jobs import StateChangeJob, Command, StateLock, Job
 from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget, ManagedTargetMount
 
 class ObjectCache(object):
@@ -71,25 +72,18 @@ class LockCache(object):
     enable = True
 
     def __init__(self):
-        all_locks = StateLock.objects.select_related('job__id').filter(~Q(job__state = 'complete'))
-        self.write_locks = [l for l in all_locks if l.write]
-        self.read_locks = [l for l in all_locks if not l.write]
+        for job in Job.objects.filter(~Q(state = 'complete')).values('locks_json'):
+            if job['locks_json']:
+                locks = json.loads(job['locks_json'])
+                for lock in locks:
+                    self.add(lock)
 
-        def by_item(f = None):
-            result = defaultdict(list)
-            for l in all_locks:
-                if not f or f(l):
-                    result[l.locked_item].append(l)
-
-            return result
-
-        self.all_by_item = by_item()
-        self.read_by_item = by_item(lambda l: not l.write)
-        self.write_by_item = by_item(lambda l: l.write)
-
+        self.write_locks = []
+        self.write_by_item = defaultdict(list)
+        self.read_locks = []
+        self.read_by_item = defaultdict(list)
         self.all_by_job = defaultdict(list)
-        for l in all_locks:
-            self.all_by_job[l.job].append(l)
+        self.all_by_item = defaultdict(list)
 
     @classmethod
     def clear(cls):
@@ -116,63 +110,38 @@ class LockCache(object):
 
     @classmethod
     def get_by_job(cls, job):
-        if cls.enable:
-            return cls.getInstance().all_by_job[job]
-        else:
-            return StateLock.objects.filter(job = job)
+        return cls.getInstance().all_by_job[job]
 
     @classmethod
     def get_all(cls, locked_item):
-        if cls.enable:
-            return cls.getInstance().all_by_item[locked_item]
-        else:
-            return StateLock.filter_by_locked_item(locked_item)
+        return cls.getInstance().all_by_item[locked_item]
 
     @classmethod
     def get_latest_write(cls, locked_item, before):
-        if cls.enable:
-            try:
-                return sorted([l for l in cls.getInstance().write_by_item[locked_item] if l.job.id < before], lambda a, b: cmp(a.id, b.id))[-1]
-            except IndexError:
-                return None
-        else:
-            try:
-                result = StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete'), write = True, job__id__lt = before).latest('id')
-            except StateLock.DoesNotExist:
-                result = None
-            job_log.info("get_latest_write(%s, %s): %s" % (locked_item, before, result))
-            return result
+        try:
+            return sorted([l for l in cls.getInstance().write_by_item[locked_item] if l.job.id < before], lambda a, b: cmp(a.job.id, b.job.id))[-1]
+        except IndexError:
+            return None
 
     @classmethod
     def get_read_locks(cls, locked_item, before, after):
-        if cls.enable:
-            return [x for x in cls.getInstance().read_by_item[locked_item] if after <= x.job.id and x.job.id < before]
-        else:
-            return StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete')).filter(write = False, job__id__lt = before).filter(job__id__gte = after)
+        return [x for x in cls.getInstance().read_by_item[locked_item] if after <= x.job.id and x.job.id < before]
 
     @classmethod
     def get_write(cls, locked_item):
-        if cls.enable:
-            return cls.getInstance().write_by_item[locked_item]
-        else:
-            return StateLock.filter_by_locked_item(locked_item).filter(~Q(job__state = 'complete'), write = True)
+        return cls.getInstance().write_by_item[locked_item]
+
+    @classmethod
+    def get_by_locked_item(cls, item):
+        return cls.getInstance().all_by_item[item]
 
     @classmethod
     def get_write_by_locked_item(cls):
-        if cls.enable:
-            result = {}
-            for locked_item, locks in cls.getInstance().write_by_item.items():
-                result[locked_item] = sorted(locks, lambda a, b: cmp(a.id, b.id))[-1]
-            return result
-        else:
-            # TODO: do a DB query that just gives us the latest WL for
-            # each locked_item (same result for less iterations of this loop)
-            from django.db.models import Q
-            result = {}
-            for wl in StateLock.objects.filter(write = True).filter(~Q(job__state = 'complete')).order_by('id'):
-                result[wl.locked_item] = wl
-
-            return result
+        result = {}
+        for locked_item, locks in cls.getInstance().write_by_item.items():
+            if locks:
+                result[locked_item] = sorted(locks, lambda a, b: cmp(a.job.id, b.job.id))[-1]
+        return result
 
 
 class DepCache(object):
@@ -251,8 +220,8 @@ class Transition(object):
 
     def to_job(self):
         job_klass = self.stateful_object.get_job_class(self.old_state, self.new_state)
-        stateful_object_attr = job_klass.stateful_object + "_id"
-        kwargs = {stateful_object_attr: self.stateful_object.id, 'old_state': self.old_state}
+        stateful_object_attr = job_klass.stateful_object
+        kwargs = {stateful_object_attr: self.stateful_object, 'old_state': self.old_state}
         return job_klass(**kwargs)
 
 
@@ -405,7 +374,7 @@ class StateManager(object):
             # Check that no incomplete jobs hold a lock on this object
             from django.db.models import Q
             from chroma_core.models import StateLock
-            if not StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count():
+            if not len(LockCache.get_by_locked_item(instance)):
                 modified_at = instance.state_modified_at
                 modified_at = modified_at.replace(tzinfo = tz.tzutc())
 
@@ -464,11 +433,11 @@ class StateManager(object):
             self.get_expected_state(instance),
             new_state))
 
-        job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
-        for d in self.deps:
-            job_log.debug("  dep %s" % (d,))
-        for e in self.edges:
-            job_log.debug("  edge [%s]->[%s]" % (e))
+        #job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
+        #for d in self.deps:
+        #    job_log.debug("  dep %s" % (d,))
+        #for e in self.edges:
+        #    job_log.debug("  edge [%s]->[%s]" % (e))
         self.deps = self._sort_graph(self.deps, self.edges)
 
         depended_jobs = []
@@ -582,9 +551,9 @@ class StateManager(object):
         # XXX
         self.deps = self._sort_graph(self.deps, self.edges)
 
-        job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
-        for e in self.edges:
-            job_log.debug("  edge [%s]->[%s]" % (e))
+        #job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
+        #for e in self.edges:
+        #    job_log.debug("  edge [%s]->[%s]" % (e))
 
         jobs = {}
         jobs_l = []
@@ -611,16 +580,13 @@ class StateManager(object):
                     locks.extend(job.create_locks())
 
             with dbperf('set_state-lock_creation'):
+                job_locks = defaultdict(list)
                 for lock in locks:
-                    lock = StateLock.objects.create(
-                        job = lock.job,
-                        locked_item = lock.locked_item,
-                        begin_state = lock.begin_state,
-                        end_state = lock.end_state,
-                        write = lock.write
-                    )
                     LockCache.add(lock)
-                    #lock.save()
+                    job_locks[lock.job].append(lock)
+
+                for j, ll in job_locks.items():
+                    Job.objects.filter(pk = j.id).update(locks_json = json.dumps([l.to_dict() for l in ll]))
 
             with dbperf('set_state-dep_creation'):
                 for job in jobs_l:
@@ -662,6 +628,13 @@ class StateManager(object):
         return prev
 
     def collect_dependencies(self, root_transition, transition_stack):
+        if not hasattr(self, 'cdc'):
+            self.cdc = defaultdict(list)
+        if len(transition_stack) in self.cdc[root_transition]:
+            return
+        else:
+            self.cdc[root_transition].append(len(transition_stack))
+
         job_log.debug("collect_dependencies: %s" % root_transition)
         # What is explicitly required for this state transition?
         transition_deps = get_deps(root_transition.to_job())

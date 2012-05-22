@@ -97,7 +97,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
     @classmethod
-    def create_from_string(cls, address_string, virtual_machine = None):
+    def create_from_string(cls, address_string, start_lnet = True):
         # Single transaction for creating Host and related database objects
         # * Firstly because we don't want any of these unless they're all setup
         # * Secondly because we want them committed before creating any Jobs which
@@ -117,9 +117,12 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
             lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
 
-        # Attempt some initial setup jobs
-        from chroma_core.models.jobs import Command
-        command = Command.set_state([(host, 'lnet_unloaded'), (lnet_configuration, 'nids_known')], "Setting up host %s" % address_string)
+        if start_lnet:
+            # Attempt some initial setup jobs
+            from chroma_core.models.jobs import Command
+            command = Command.set_state([(host, 'lnet_unloaded'), (lnet_configuration, 'nids_known')], "Setting up host %s" % address_string)
+        else:
+            command = None
 
         return host, command
 

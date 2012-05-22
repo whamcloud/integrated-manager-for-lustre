@@ -20,6 +20,8 @@ from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
 import settings
 
+from chroma_core.lib.util import dbperf
+
 MAX_STATE_STRING = 32
 
 
@@ -289,35 +291,13 @@ class StatefulObject(models.Model):
             return chain(*querysets)
 
 
-class StateLock(models.Model):
-    """Lock is the wrong word really, these objects exist for the lifetime of the Job.
-    All locks depend on the last pending job to write to a stateful object on which
-    they hold claim read or write lock.
-    """
-
-    __metaclass__ = DowncastMetaclass
-    job = models.ForeignKey('Job')
-
-    locked_item_type = models.ForeignKey(ContentType, related_name = 'locked_item')
-    locked_item_id = models.PositiveIntegerField()
-    locked_item = WorkaroundGenericForeignKey('locked_item_type', 'locked_item_id')
-
-    write = models.BooleanField()
-    begin_state = models.CharField(max_length = MAX_STATE_STRING, null = True, blank = True)
-    end_state = models.CharField(max_length = MAX_STATE_STRING, null = True, blank = True)
-
-    class Meta:
-        app_label = 'chroma_core'
-
-    @classmethod
-    def filter_by_locked_item(cls, stateful_object):
-        ctype = ContentType.objects.get_for_model(stateful_object)
-        return cls.objects.filter(locked_item_type = ctype, locked_item_id = stateful_object.id)
-
-    def save(self, *args, **kwargs):
-        if hasattr(self.locked_item, 'content_type'):
-            self.locked_item = self.locked_item.downcast()
-        super(StateLock, self).save(*args, **kwargs)
+class StateLock(object):
+    def __init__(self, job, locked_item, write, begin_state = None, end_state = None):
+        self.job = job
+        self.locked_item = locked_item
+        self.write = write
+        self.begin_state = begin_state
+        self.end_state = end_state
 
     def __str__(self):
         if not self.write:
@@ -325,6 +305,13 @@ class StateLock(models.Model):
         else:
             return "Job %d writelock on %s %s->%s" % (self.job.id, self.locked_item, self.begin_state, self.end_state)
 
+    def to_dict(self):
+        d = dict([(k, getattr(self, k)) for k in ['write', 'begin_state', 'end_state']])
+        d['locked_item_id'] = self.locked_item.id
+        d['locked_item_type_id'] = ContentType.objects.get_for_model(self.locked_item).id
+        d['job_id'] = self.job.id
+        d['job_type_id'] = ContentType.objects.get_for_model(self.job).id
+        return d
 
 class Job(models.Model):
 
@@ -359,6 +346,8 @@ class Job(models.Model):
     wait_for = models.ManyToManyField('Job', symmetrical = False, related_name = 'wait_for_job')
 
     task_id = models.CharField(max_length=36, blank = True, null = True)
+
+    locks_json = models.TextField()
 
     # Set to a step index before that step starts running
     started_step = models.PositiveIntegerField(default = None, blank = True, null = True,
@@ -407,7 +396,7 @@ class Job(models.Model):
         from chroma_core.lib.state_manager import LockCache
         wait_fors = set()
         for lock in LockCache.get_by_job(self):
-            job_log.info("Job %s: %s" % (self.id, lock))
+            #job_log.info("Job %s: %s" % (self.id, lock))
             if lock.write:
                 wl = lock
                 # Depend on the most recent pending write to this stateful object,
@@ -415,7 +404,7 @@ class Job(models.Model):
                 prior_write_lock = LockCache.get_latest_write(wl.locked_item, before = self.id)
                 if prior_write_lock:
                     assert (wl.begin_state == prior_write_lock.end_state), ("%s locks %s in state %s but previous %s leaves it in state %s" % (self, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state))
-                    job_log.info("Job %s:   pwl %s" % (self.id, prior_write_lock))
+                    #job_log.info("Job %s:   pwl %s" % (self.id, prior_write_lock))
                     wait_fors.add(prior_write_lock.job)
                     # We will only wait_for read locks after this write lock, as it
                     # will have wait_for'd any before it.
@@ -427,7 +416,7 @@ class Job(models.Model):
                 # our position.
                 prior_read_locks = LockCache.get_read_locks(wl.locked_item, before = self.id, after = read_barrier_id)
                 for i in prior_read_locks:
-                    job_log.info("Job %s:   prl %s" % (self.id, i))
+                    #job_log.info("Job %s:   prl %s" % (self.id, i))
                     wait_fors.add(i.job)
             else:
                 rl = lock
@@ -435,7 +424,7 @@ class Job(models.Model):
                 if prior_write_lock:
                     # See comment by locked_state in StateReadLock
                     wait_fors.add(prior_write_lock.job)
-                job_log.info("Job %s:   pwl2 %s" % (self.id, prior_write_lock))
+                #job_log.info("Job %s:   pwl2 %s" % (self.id, prior_write_lock))
 
         for j in wait_fors:
             self.wait_for.add(j)
@@ -774,6 +763,13 @@ class StateChangeJob(Job):
     # Terse human readable verb, e.g. "Change this" (for buttons)
     state_verb = None
 
+    def __init__(self, *args, **kwargs):
+        super(StateChangeJob, self).__init__(*args, **kwargs)
+        if self.stateful_object in kwargs:
+            self._so_cache = kwargs[self.stateful_object]
+        else:
+            self._so_cache = None
+
     class Meta:
         abstract = True
 
@@ -785,13 +781,15 @@ class StateChangeJob(Job):
         return self._meta._fields[self.stateful_object].rel.to
 
     def get_stateful_object(self):
-        stateful_object = getattr(self, self.stateful_object)
-        # Get a fresh instance every time, we don't want one hanging around in the job
-        # run procedure because steps might be modifying it
-        stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
-        if hasattr(stateful_object, 'content_type'):
-            stateful_object = stateful_object.downcast()
-        return stateful_object
+        if not self._so_cache:
+            stateful_object = getattr(self, self.stateful_object)
+            # Get a fresh instance every time, we don't want one hanging around in the job
+            # run procedure because steps might be modifying it
+            stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
+            if hasattr(stateful_object, 'content_type'):
+                stateful_object = stateful_object.downcast()
+            self._so_cache = stateful_object
+        return self._so_cache
 
 
 class AdvertisedJob(Job):

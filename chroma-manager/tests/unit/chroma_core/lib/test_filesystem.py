@@ -9,6 +9,29 @@ from tests.unit.chroma_core.helper import JobTestCaseWithHost, freshen, JobTestC
 from django.db import connection
 
 
+class TestOneHost(JobTestCase):
+    mock_servers = {
+        'myaddress': {
+            'fqdn': 'myaddress.mycompany.com',
+            'nodename': 'test01.myaddress.mycompany.com',
+            'nids': ["192.168.0.1@tcp"]
+        }
+    }
+
+    def setUp(self):
+        super(TestOneHost, self).setUp()
+        connection.use_debug_cursor = True
+
+    def test_one_host(self):
+        host, command = ManagedHost.create_from_string('myaddress')
+        dbperf.enabled = True
+        with dbperf("set_state"):
+            Command.set_state([(host, 'lnet_unloaded'), (host.lnetconfiguration, 'nids_known')], "Setting up host", run = False)
+
+        Job.run_next()
+        self.assertEqual(ManagedHost.objects.get(id = host.id).state, 'lnet_up')
+        #self.assertState(host, 'lnet_up')
+
 class TestBigFilesystem(JobTestCase):
     mock_servers = {}
 
