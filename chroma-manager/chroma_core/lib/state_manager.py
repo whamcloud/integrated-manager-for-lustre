@@ -72,12 +72,6 @@ class LockCache(object):
     enable = True
 
     def __init__(self):
-        for job in Job.objects.filter(~Q(state = 'complete')).values('locks_json'):
-            if job['locks_json']:
-                locks = json.loads(job['locks_json'])
-                for lock in locks:
-                    self.add(lock)
-
         self.write_locks = []
         self.write_by_item = defaultdict(list)
         self.read_locks = []
@@ -85,22 +79,31 @@ class LockCache(object):
         self.all_by_job = defaultdict(list)
         self.all_by_item = defaultdict(list)
 
+        for job in Job.objects.filter(~Q(state = 'complete')).values('locks_json'):
+            if job['locks_json']:
+                locks = json.loads(job['locks_json'])
+                for lock in locks:
+                    self._add(StateLock.from_dict(lock))
+
+
     @classmethod
     def clear(cls):
         cls.instance = None
 
     @classmethod
     def add(cls, lock):
-        i = cls.getInstance()
-        if lock.write:
-            i.write_locks.append(lock)
-            i.write_by_item[lock.locked_item].append(lock)
-        else:
-            i.read_locks.append(lock)
-            i.read_by_item[lock.locked_item].append(lock)
+        cls.getInstance()._add(lock)
 
-        i.all_by_job[lock.job].append(lock)
-        i.all_by_item[lock.locked_item].append(lock)
+    def _add(self, lock):
+        if lock.write:
+            self.write_locks.append(lock)
+            self.write_by_item[lock.locked_item].append(lock)
+        else:
+            self.read_locks.append(lock)
+            self.read_by_item[lock.locked_item].append(lock)
+
+        self.all_by_job[lock.job].append(lock)
+        self.all_by_item[lock.locked_item].append(lock)
 
     @classmethod
     def getInstance(cls):
@@ -284,8 +287,6 @@ class StateManager(object):
         job = Job.objects.get(pk = job_id)
         if job.state == 'completing':
             with transaction.commit_on_success():
-                for dependent in job.wait_for_job.all():
-                    dependent.notify_wait_for_complete()
                 job.state = 'complete'
                 job.save()
         else:

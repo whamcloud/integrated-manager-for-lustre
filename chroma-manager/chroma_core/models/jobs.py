@@ -19,6 +19,7 @@ from polymorphic.models import DowncastMetaclass
 from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
 import settings
+import json
 
 from chroma_core.lib.util import dbperf
 
@@ -313,6 +314,18 @@ class StateLock(object):
         d['job_type_id'] = ContentType.objects.get_for_model(self.job).id
         return d
 
+    @classmethod
+    def from_dict(cls, d):
+        return StateLock(
+            locked_item = ContentType.objects.get_for_id(d['locked_item_type_id']).model_class().objects.get(pk = d['locked_item_id']),
+            job = ContentType.objects.get_for_id(d['job_type_id']).model_class().objects.get(pk = d['job_id']),
+            write = d['write'],
+            begin_state = d['begin_state'],
+            end_state = d['end_state']
+        )
+
+
+
 class Job(models.Model):
 
     # https://code.djangoproject.com/ticket/18250
@@ -341,9 +354,7 @@ class Job(models.Model):
     modified_at = WorkaroundDateTimeField(auto_now = True)
     created_at = WorkaroundDateTimeField(auto_now_add = True)
 
-    wait_for_count = models.PositiveIntegerField(default = 0)
-    wait_for_completions = models.PositiveIntegerField(default = 0)
-    wait_for = models.ManyToManyField('Job', symmetrical = False, related_name = 'wait_for_job')
+    wait_for_json = models.TextField()
 
     task_id = models.CharField(max_length=36, blank = True, null = True)
 
@@ -381,12 +392,6 @@ class Job(models.Model):
         from celery.result import AsyncResult
         return AsyncResult(self.task_id).state
 
-    def notify_wait_for_complete(self):
-        """Called by a wait_for job to notify that it is complete"""
-        from django.db.models import F
-        Job.objects.get_or_create(pk = self.id)
-        Job.objects.filter(pk = self.id).update(wait_for_completions = F('wait_for_completions') + 1)
-
     def create_dependencies(self):
         """Examine overlaps between self's statelocks and those of
            earlier jobs which are still pending, and generate wait_for
@@ -405,7 +410,7 @@ class Job(models.Model):
                 if prior_write_lock:
                     assert (wl.begin_state == prior_write_lock.end_state), ("%s locks %s in state %s but previous %s leaves it in state %s" % (self, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state))
                     #job_log.info("Job %s:   pwl %s" % (self.id, prior_write_lock))
-                    wait_fors.add(prior_write_lock.job)
+                    wait_fors.add(prior_write_lock.job.id)
                     # We will only wait_for read locks after this write lock, as it
                     # will have wait_for'd any before it.
                     read_barrier_id = prior_write_lock.job.id
@@ -417,19 +422,19 @@ class Job(models.Model):
                 prior_read_locks = LockCache.get_read_locks(wl.locked_item, before = self.id, after = read_barrier_id)
                 for i in prior_read_locks:
                     #job_log.info("Job %s:   prl %s" % (self.id, i))
-                    wait_fors.add(i.job)
+                    wait_fors.add(i.job.id)
             else:
                 rl = lock
                 prior_write_lock = LockCache.get_latest_write(rl.locked_item, before = self.id)
                 if prior_write_lock:
                     # See comment by locked_state in StateReadLock
-                    wait_fors.add(prior_write_lock.job)
+                    wait_fors.add(prior_write_lock.job.id)
                 #job_log.info("Job %s:   pwl2 %s" % (self.id, prior_write_lock))
 
-        for j in wait_fors:
-            self.wait_for.add(j)
-        self.wait_for_count = self.wait_for.count()
-        self.save()
+        wait_fors = list(wait_fors)
+        if wait_fors:
+            self.wait_for_json = json.dumps(wait_fors)
+            Job.objects.filter(pk = self.id).update(wait_for_json = self.wait_for_json)
 
     def create_locks(self):
         locks = []
@@ -473,38 +478,60 @@ class Job(models.Model):
         return locks
 
     @classmethod
+    def get_ready_jobs(cls):
+        wait_fors = {}
+        all_wait_fors = []
+        for job in Job.objects.filter(state = 'pending'):
+            if job.wait_for_json:
+                job_wait_fors = json.loads(job.wait_for_json)
+            else:
+                job_wait_fors = []
+            wait_fors[job.id] = job_wait_fors
+            all_wait_fors.extend(job_wait_fors)
+
+        wait_for_states = {}
+        for job in Job.objects.filter(id__in = all_wait_fors).values('state', 'id'):
+            wait_for_states[job['id']] = job['state']
+
+        result = []
+        for job_id, wait_for_ids in wait_fors.items():
+            ready = True
+            for wfi in wait_for_ids:
+                if wait_for_states[wfi] != 'complete':
+                    ready = False
+
+            if ready:
+                result.append(Job.objects.get(pk = job_id).downcast())
+
+        return result
+
+    @classmethod
     def run_next(cls):
         from chroma_core.lib.job import job_log
         from django.db.models import F
         if not settings.UNIT_TEST:
-            runnable_jobs = Job.objects\
-            .filter(wait_for_completions = F('wait_for_count'))\
-            .filter(state = 'pending')
+            runnable_jobs = cls.get_ready_jobs()
 
             job_log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
-                runnable_jobs.count(),
+                len(runnable_jobs),
                 Job.objects.filter(state = 'pending').count(),
                 Job.objects.filter(state = 'tasked').count()))
 
             for job in runnable_jobs:
-                job = job.downcast()
                 job.run()
         else:
             while True:
-                runnable_jobs = Job.objects \
-                    .filter(wait_for_completions = F('wait_for_count')) \
-                    .filter(state = 'pending')
+                runnable_jobs = cls.get_ready_jobs()
 
                 job_log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
-                    runnable_jobs.count(),
+                    len(runnable_jobs),
                     Job.objects.filter(state = 'pending').count(),
                     Job.objects.filter(state = 'tasked').count()))
 
-                if not runnable_jobs.count():
+                if not len(runnable_jobs):
                     break
 
                 for job in runnable_jobs:
-                    job = job.downcast()
                     job.run()
                     from chroma_core.lib.state_manager import LockCache, DepCache
 
