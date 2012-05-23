@@ -34,7 +34,8 @@ def configure_rsyslog(args):
             os.write(tmp_f, line)
     f.close()
     if args.node != "":
-        os.write(tmp_f, "# added by chroma-agent\n*.* @@%s\n" \
+        os.write(tmp_f, "# added by chroma-agent\n" \
+                        "*.* @@%s;RSYSLOG_ForwardFormat\n" \
                         "# added by chroma-agent\n" % args.node)
     os.close(tmp_f)
     os.chmod(tmp_name, 0644)
