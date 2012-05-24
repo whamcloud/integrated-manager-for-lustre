@@ -17,6 +17,8 @@ class Command(BaseCommand):
             help="name of the new image"),
         make_option("--type", choices = ["manager", "storage"],
             help = "manager or storage instance"),
+        make_option("--plain", action="store_true",
+            help = "just boot image"),
         make_option("--recover", action="store_true",
             help = "attempt to resume image preparation")
     )
@@ -76,6 +78,9 @@ class Command(BaseCommand):
             image = self._create_instances()
         else:
             image = Node.objects.get(id = int(args[1]))
+
+        if self.options.plain:
+            return
 
         if self.options.type == "manager":
             self.prepare_manager_image(image)
