@@ -885,6 +885,7 @@ var Dashboard = (function() {
         title:{ text: 'Space Usage' },
         zoomType: 'xy',
         tooltip: {
+          shared: false,
           formatter: function() { return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %'; }
         },
         xAxis:{ categories: [], text: '' },
@@ -930,6 +931,7 @@ var Dashboard = (function() {
         title:{ text: 'File usage'},
         zoomType: 'xy',
         tooltip: {
+          shared: false,
           formatter: function() { return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %'; }
         },
         xAxis:{ categories: [], text: '' },
@@ -1031,6 +1033,7 @@ var Dashboard = (function() {
         title:{ text: 'File usage'},
         zoomType: 'xy',
         tooltip: {
+          shared: false,
           formatter: function() { return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %'; }
         },
         xAxis:{ categories: [], text: '' },

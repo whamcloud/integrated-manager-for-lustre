@@ -141,6 +141,15 @@ var ChartManager = function(options) {
           },
           title: {style: { fontSize: '12px' } },
           legend: { enabled: false},
+          tooltip: {
+            shared: true,
+            valueDecimals:0,
+            useHTML: true,
+            headerFormat: '<small>{point.key}</small><table width="100%">',
+            pointFormat: '<tr><td style="color: {series.color}">{series.name}: </td>' +
+              '<td style="text-align: right"><b>{point.y}</b></td></tr>',
+            footerFormat: '</table>'
+          },
           plotOptions: {
             line: {
                     lineWidth: 2,
