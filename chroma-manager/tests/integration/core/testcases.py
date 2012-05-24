@@ -49,6 +49,20 @@ class ChromaIntegrationTestCase(TestCase):
         try:
             self.graceful_teardown(chroma_manager)
         except Exception:
+            # Attempt to wait for existing running commands to finish executing to avoid
+            # a race between an already running command and a force remove command.
+            unfinished_commands = []
+            running_time = 0
+            while (unfinished_commands or running_time == 0) and running_time < TEST_TIMEOUT:
+                response = chroma_manager.get(
+                    '/api/command/',
+                    params = {'complete': False}
+                )
+                self.assertEqual(response.successful, True, response.text)
+                unfinished_commands = response.json['objects']
+                running_time += 1
+                time.sleep(1)
+
             self.force_teardown(chroma_manager)
 
     def reset_chroma_manager_db(self, user):
@@ -93,19 +107,24 @@ EOF
         if len(hosts) > 0:
             remove_host_command_ids = []
             for host in hosts:
-                command = chroma_manager.post("/api/command/", body = {
+                response = chroma_manager.post("/api/command/", body = {
                     'jobs': [{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host['id']}}],
                     'message': "Test force remove hosts"
-                }).json
+                })
+                self.assertEqual(response.successful, True, response.text)
+                command = response.json
                 remove_host_command_ids.append(command['id'])
 
             self.wait_for_commands(chroma_manager, remove_host_command_ids)
 
         for server in config['lustre_servers']:
             address = server['address']
-            self.remote_command(address, "chroma-agent clear-targets")
+            _, stdout, _ = self.remote_command(address, "chroma-agent -h")
+            available_commands = stdout.read()
+            if re.search('clear-targets', available_commands):
+                self.remote_command(address, "chroma-agent clear-targets")
 
-        self.verify_cluster_not_configured(chroma_manager)
+        self.verify_cluster_has_no_managed_targets(chroma_manager)
 
     def graceful_teardown(self, chroma_manager):
         """Remove all Filesystems, MGTs, and Hosts"""
@@ -119,7 +138,13 @@ EOF
             # Remove filesystems
             remove_filesystem_command_ids = []
             for filesystem in filesystems:
-                response = chroma_manager.delete(filesystem['resource_uri'])
+                if filesystem['immutable_state']:
+                    response = self.set_state(
+                        filesystem['resource_uri'],
+                        'forgotten'
+                    )
+                else:
+                    response = chroma_manager.delete(filesystem['resource_uri'])
                 self.assertTrue(response.successful, response.text)
                 command_id = response.json['command']['id']
                 self.assertTrue(command_id)
@@ -163,9 +188,9 @@ EOF
 
             self.wait_for_commands(chroma_manager, remove_host_command_ids)
 
-        self.verify_cluster_not_configured(chroma_manager)
+        self.verify_cluster_has_no_managed_targets(chroma_manager)
 
-    def verify_cluster_not_configured(self, chroma_manager):
+    def verify_cluster_has_no_managed_targets(self, chroma_manager):
         """
         Checks that the database and the hosts specified in the config
         do not have (unremoved) targets for the filesystems specified.
@@ -211,13 +236,19 @@ EOF
             # TODO: sort out host address and host nodename
             stdin, stdout, stderr = self.remote_command(
                 host['address'],
-                'crm configure show'
+                'which crm',
+                expected_return_code = None
             )
-            configuration = stdout.read()
-            self.assertNotRegexpMatches(
-                configuration,
-                "location [^\n]* %s\n" % host['nodename']
-            )
+            if not stderr:
+                stdin, stdout, stderr = self.remote_command(
+                    host['address'],
+                    'crm configure show'
+                )
+                configuration = stdout.read()
+                self.assertNotRegexpMatches(
+                    configuration,
+                    "location [^\n]* %s\n" % host['nodename']
+                )
 
     def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
         logger.debug("wait_for_command %s" % command_id)
@@ -263,9 +294,9 @@ EOF
 
             self.assertFalse(command['errored'] or command['cancelled'], command)
 
-    def wait_for_commands(self, chroma_manager, command_ids, timeout=TEST_TIMEOUT):
+    def wait_for_commands(self, chroma_manager, command_ids, timeout=TEST_TIMEOUT, verify_successful = True):
         for command_id in command_ids:
-            self.wait_for_command(chroma_manager, command_id, timeout)
+            self.wait_for_command(chroma_manager, command_id, timeout, verify_successful)
 
     def remote_command(self, server, command, expected_return_code=0):
         logger.debug("remote_command[%s]: %s" % (server, command))
@@ -511,7 +542,7 @@ EOF
         # Wait for the host setup and device discovery to complete
         self.wait_for_commands(self.chroma_manager, host_create_command_ids)
 
-        # Verify there are now two hosts in the database.
+        # Verify there are now n hosts in the database.
         response = self.chroma_manager.get(
             '/api/host/',
         )

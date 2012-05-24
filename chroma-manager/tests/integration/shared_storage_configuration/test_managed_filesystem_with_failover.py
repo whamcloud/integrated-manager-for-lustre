@@ -105,6 +105,8 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         finally:
             self.unmount_filesystem(client, 'testfs')
 
+        # Test failover if the cluster config indicates that failover has
+        # been properly configured with stonith, etc.
         if config['failover_is_configured']:
             self.failover(
                 hosts[0],
