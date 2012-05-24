@@ -41,7 +41,6 @@ class TestFilesystem(SeleniumBaseTestCase):
         self.ost_device_node = self.fs_test_data[0]['osts'][0]['mounts'][0]['device_node']
         self.conf_params = self.fs_test_data[0]['conf_params']
 
-        self.driver.refresh()
         create_filesystem_page = CreateFilesystem(self.driver)
         create_filesystem_page.create_filesystem_with_server_and_mgt(self.host_list, self.mgt_host_name, self.mgt_device_node, self.filesystem_name, self.mgt_name, self.mdt_host_name, self.mdt_device_node, self.ost_host_name, self.ost_device_node, self.conf_params)
 
@@ -69,7 +68,6 @@ class TestFilesystem(SeleniumBaseTestCase):
             fs_page.check_action_available(fs['name'], static_text['start_fs'])
 
     def tearDown(self):
-        self.driver.refresh()
 
         create_filesystem_page = CreateFilesystem(self.driver)
         create_filesystem_page.remove_filesystem_with_server_and_mgt(self.filesystem_name, self.mgt_host_name, self.mgt_device_node, self.host_list)
