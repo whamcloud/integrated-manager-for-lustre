@@ -12,59 +12,56 @@ from dateutil import tz
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models.query_utils import Q
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import job_log
-from chroma_core.lib.util import dbperf
+from chroma_core.lib.util import dbperf, all_subclasses
 from chroma_core.models.conf_param import ApplyConfParams
-from chroma_core.models.filesystem import ManagedFilesystem
-from chroma_core.models.host import ManagedHost, LNetConfiguration
 from chroma_core.models.jobs import StateChangeJob, Command, StateLock, Job
-from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget, ManagedTargetMount
+from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget
 
-class ObjectCache(object):
-    instance = None
-    enable = True
 
-    def __init__(self):
-        objects = defaultdict(list)
-        for klass in [ManagedTarget, ManagedFilesystem, ManagedHost, ManagedTargetMount, LNetConfiguration]:
-            for object in klass.objects.select_related().all():
-                objects[klass].append(object)
-                if hasattr(object, 'content_type'):
-                    object = object.downcast()
-                    if object.__class__ != klass:
-                        objects[object.__class__].append(object)
-
-        self.objects = objects
+class StateManagerClient(object):
+    @classmethod
+    def command_run_jobs(cls, job_dicts, message):
+        from chroma_core.tasks import command_run_jobs
+        return command_run_jobs.delay(job_dicts, message)
 
     @classmethod
-    def get(cls, klass, filter = None):
-        return [o for o in cls.getInstance().objects[klass] if not filter or filter(o)]
+    def command_set_state(cls, object_ids, message, run = True):
+        from chroma_core.tasks import command_set_state
+        return command_set_state.delay(object_ids, message, run)
 
     @classmethod
-    def get_one(cls, klass, filter = None):
-        r = [o for o in cls.getInstance().objects[klass] if not filter or filter(o)]
-        if len(r) > 1:
-            raise klass.MultipleObjectsReturned
-        elif not r:
-            raise klass.DoesNotExist
-        else:
-            return r[0]
+    def notify_state(cls, instance, time, new_state, from_states):
+        """from_states: list of states it's valid to transition from.  This lets
+           the audit code safely update the state of e.g. a mount it doesn't find
+           to 'unmounted' without risking incorrectly transitioning from 'unconfigured'"""
+        if instance.state in from_states and instance.state != new_state:
+            job_log.info("Enqueuing notify_state %s %s->%s at %s" % (instance, instance.state, new_state, time))
+            from chroma_core.tasks import notify_state
+            return notify_state.delay(
+                instance.content_type.natural_key(),
+                instance.id,
+                time,
+                new_state,
+                from_states)
 
     @classmethod
-    def target_primary_server(cls, target):
-        primary_mtm = cls.get_one(ManagedTargetMount, lambda mtm: mtm.target.id == target.id and mtm.primary == True)
-        return primary_mtm.host
-
-
-    @classmethod
-    def getInstance(cls):
-        if not cls.instance:
-            cls.instance = ObjectCache()
-        return cls.instance
+    def complete_job(cls, job_id):
+        from chroma_core.tasks import complete_job
+        return complete_job.delay(job_id)
 
     @classmethod
-    def clear(cls):
-        cls.instance = None
+    def available_transitions(cls, stateful_object):
+        return StateManager().available_transitions(stateful_object)
+
+    @classmethod
+    def available_jobs(cls, stateful_object):
+        return StateManager().available_jobs(stateful_object)
+
+    @classmethod
+    def get_transition_consequences(cls, stateful_object, new_state):
+        return StateManager().get_transition_consequences(stateful_object, new_state)
 
 
 class LockCache(object):
@@ -79,12 +76,11 @@ class LockCache(object):
         self.all_by_job = defaultdict(list)
         self.all_by_item = defaultdict(list)
 
-        for job in Job.objects.filter(~Q(state = 'complete')).values('locks_json'):
-            if job['locks_json']:
-                locks = json.loads(job['locks_json'])
+        for job in Job.objects.filter(~Q(state = 'complete')):
+            if job.locks_json:
+                locks = json.loads(job.locks_json)
                 for lock in locks:
-                    self._add(StateLock.from_dict(lock))
-
+                    self._add(StateLock.from_dict(job, lock))
 
     @classmethod
     def clear(cls):
@@ -120,15 +116,18 @@ class LockCache(object):
         return cls.getInstance().all_by_item[locked_item]
 
     @classmethod
-    def get_latest_write(cls, locked_item, before):
+    def get_latest_write(cls, locked_item, not_job = None):
         try:
-            return sorted([l for l in cls.getInstance().write_by_item[locked_item] if l.job.id < before], lambda a, b: cmp(a.job.id, b.job.id))[-1]
+            if not_job != None:
+                return sorted([l for l in cls.getInstance().write_by_item[locked_item] if l.job != not_job], lambda a, b: cmp(a.job.id, b.job.id))[-1]
+            else:
+                return sorted(cls.getInstance().write_by_item[locked_item], lambda a, b: cmp(a.job.id, b.job.id))[-1]
         except IndexError:
             return None
 
     @classmethod
-    def get_read_locks(cls, locked_item, before, after):
-        return [x for x in cls.getInstance().read_by_item[locked_item] if after <= x.job.id and x.job.id < before]
+    def get_read_locks(cls, locked_item, after, not_job):
+        return [x for x in cls.getInstance().read_by_item[locked_item] if after <= x.job.id and x.job != not_job]
 
     @classmethod
     def get_write(cls, locked_item):
@@ -199,6 +198,7 @@ class DepCache(object):
 
 
 def get_deps(obj, state = None):
+    #with dbperf("get_deps_%s_%s" % (obj.__class__, state)):
     return DepCache.getInstance().get(obj, state)
 
 
@@ -209,7 +209,7 @@ class Transition(object):
         self.new_state = new_state
 
     def __str__(self):
-        return "%s %s->%s" % (self.stateful_object, self.old_state, self.new_state)
+        return "%s/%s %s->%s" % (self.stateful_object.__class__, self.stateful_object.id, self.old_state, self.new_state)
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__)
@@ -219,7 +219,7 @@ class Transition(object):
         return not self.__eq__(other)
 
     def __hash__(self):
-        return ("%s %s %s %s" % (self.stateful_object.__class__, self.stateful_object.id, self.old_state, self.new_state)).__hash__()
+        return hash((self.stateful_object.__hash__(), self.old_state, self.new_state))
 
     def to_job(self):
         job_klass = self.stateful_object.get_job_class(self.old_state, self.new_state)
@@ -234,24 +234,42 @@ class StateManager(object):
         LockCache.clear()
         ObjectCache.clear()
 
-    @classmethod
-    def available_transitions(cls, stateful_object):
+    def available_jobs(self, instance):
+        # If the object is subject to an incomplete Job
+        # then don't offer any actions
+        if LockCache.get_latest_write(instance) > 0:
+            return []
+
+        from chroma_core.models import AdvertisedJob
+
+        available_jobs = []
+        for aj in all_subclasses(AdvertisedJob):
+            if not aj.plural:
+                for class_name in aj.classes:
+                    ct = ContentType.objects.get_by_natural_key('chroma_core', class_name)
+                    klass = ct.model_class()
+                    if isinstance(instance, klass):
+                        if aj.can_run(instance):
+                            available_jobs.append({
+                                'verb': aj.verb,
+                                'confirmation': aj.get_confirmation(instance),
+                                'class_name': aj.__name__,
+                                'args': aj.get_args(instance)})
+
+        return available_jobs
+
+    def available_transitions(self, stateful_object):
         """Return a list states to which the object can be set from
            its current state, or None if the object is currently
            locked by a Job"""
         if hasattr(stateful_object, 'content_type'):
             stateful_object = stateful_object.downcast()
 
-        # If the object is subject to an incomplete StateChangeJob
-        # then don't offer any other transitions.
-        from chroma_core.models import StateLock
-
         # We don't advertise transitions for anything which is currently
         # locked by an incomplete job.  We could alternatively advertise
         # which jobs would actually be legal to add by skipping this check and
         # using get_expected_state in place of .state below.
-        active_locks = StateLock.filter_by_locked_item(stateful_object).filter(~Q(job__state = 'complete')).count()
-        if active_locks > 0:
+        if LockCache.get_latest_write(stateful_object):
             return []
 
         # XXX: could alternatively use expected_state here if you want to advertise
@@ -269,19 +287,71 @@ class StateManager(object):
 
         return transitions
 
+    def _run_opportunistic_jobs(self, changed_item):
+        if hasattr(changed_item, 'content_type'):
+            changed_item = changed_item.downcast()
+
+        if isinstance(changed_item, FilesystemMember):
+            fs = changed_item.filesystem
+            members = list(ManagedMdt._base_manager.filter(filesystem = fs)) + list(ManagedOst._base_manager.filter(filesystem = fs))
+            states = set([t.state for t in members])
+            now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
+            if not fs.state == 'available' and changed_item.state == 'mounted' and states == set(['mounted']):
+                self.notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'available', ['stopped', 'unavailable'])
+            if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
+                self.notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'stopped', ['stopped', 'unavailable'])
+            if changed_item.state == 'unmounted' and fs.state == 'available' and states != set(['mounted']):
+                self.notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'unavailable', ['available'])
+
+        if isinstance(changed_item, ManagedTarget):
+            if isinstance(changed_item, FilesystemMember):
+                mgs = changed_item.filesystem.mgs
+            else:
+                mgs = changed_item
+
+            if mgs.conf_param_version != mgs.conf_param_version_applied:
+                if not ApplyConfParams.objects.filter(~Q(state = 'complete')).count():
+                    job = ApplyConfParams(mgs = mgs)
+                    if get_deps(job).satisfied():
+                        command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
+                        self.add_jobs([job], command)
+
+    def notify_state(self, content_type, object_id, notification_time, new_state, from_states):
+        # Get the StatefulObject
+        from django.contrib.contenttypes.models import ContentType
+        model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
+        instance = model_klass.objects.get(pk = object_id).downcast()
+
+        # Assert its class
+        from chroma_core.models import StatefulObject
+        assert(isinstance(instance, StatefulObject))
+
+        # If a state update is needed/possible
+        if instance.state in from_states and instance.state != new_state:
+            # Check that no incomplete jobs hold a lock on this object
+            if not len(LockCache.get_by_locked_item(instance)):
+                modified_at = instance.state_modified_at
+                modified_at = modified_at.replace(tzinfo = tz.tzutc())
+
+                if notification_time > modified_at:
+                    # No jobs lock this object, go ahead and update its state
+                    job_log.info("notify_state: Updating state of item %s (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
+                    instance.set_state(new_state)
+
+                    # FIXME: should check the new state against reverse dependencies
+                    # and apply any fix_states
+                    self._run_opportunistic_jobs(instance)
+                else:
+                    job_log.info("notify_state: Dropping update of %s (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, new_state))
+                    pass
+
     def get_expected_state(self, stateful_object_instance):
         try:
             return self.expected_states[stateful_object_instance]
         except KeyError:
             return stateful_object_instance.state
 
-    @classmethod
-    def complete_job(cls, job_id):
-        from chroma_core.tasks import complete_job
-        complete_job.delay(job_id)
-
-    @classmethod
-    def _complete_job(cls, job_id):
+    def complete_job(self, job_id):
         from chroma_core.models import Job
 
         job = Job.objects.get(pk = job_id)
@@ -312,86 +382,9 @@ class StateManager(object):
         job = job.downcast()
 
         if isinstance(job, StateChangeJob):
-            cls._run_opportunistic_jobs(job.get_stateful_object())
+            self._run_opportunistic_jobs(job.get_stateful_object())
 
-    @classmethod
-    def _run_opportunistic_jobs(cls, changed_item):
-        if hasattr(changed_item, 'content_type'):
-            changed_item = changed_item.downcast()
-
-        if isinstance(changed_item, FilesystemMember):
-            fs = changed_item.filesystem
-            members = list(ManagedMdt._base_manager.filter(filesystem = fs)) + list(ManagedOst._base_manager.filter(filesystem = fs))
-            states = set([t.state for t in members])
-            now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
-            if not fs.state == 'available' and changed_item.state == 'mounted' and states == set(['mounted']):
-                cls._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'available', ['stopped', 'unavailable'])
-            if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
-                cls._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'stopped', ['stopped', 'unavailable'])
-            if changed_item.state == 'unmounted' and fs.state == 'available' and states != set(['mounted']):
-                cls._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'unavailable', ['available'])
-
-        if isinstance(changed_item, ManagedTarget):
-            if isinstance(changed_item, FilesystemMember):
-                mgs = changed_item.filesystem.mgs
-            else:
-                mgs = changed_item
-
-            if mgs.conf_param_version != mgs.conf_param_version_applied:
-                if not ApplyConfParams.objects.filter(~Q(state = 'complete')).count():
-                    job = ApplyConfParams(mgs = mgs)
-                    if get_deps(job).satisfied():
-                        command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
-                        StateManager().add_jobs([job], command)
-
-    @classmethod
-    def notify_state(cls, instance, time, new_state, from_states):
-        """from_states: list of states it's valid to transition from.  This lets
-           the audit code safely update the state of e.g. a mount it doesn't find
-           to 'unmounted' without risking incorrectly transitioning from 'unconfigured'"""
-        if instance.state in from_states and instance.state != new_state:
-            job_log.info("Enqueuing notify_state %s %s->%s at %s" % (instance, instance.state, new_state, time))
-            from chroma_core.tasks import notify_state
-            notify_state.delay(
-                instance.content_type.natural_key(),
-                instance.id,
-                time,
-                new_state,
-                from_states)
-
-    @classmethod
-    def _notify_state(cls, content_type, object_id, notification_time, new_state, from_states):
-        # Get the StatefulObject
-        from django.contrib.contenttypes.models import ContentType
-        model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
-        instance = model_klass.objects.get(pk = object_id).downcast()
-
-        # Assert its class
-        from chroma_core.models import StatefulObject
-        assert(isinstance(instance, StatefulObject))
-
-        # If a state update is needed/possible
-        if instance.state in from_states and instance.state != new_state:
-            # Check that no incomplete jobs hold a lock on this object
-            from django.db.models import Q
-            from chroma_core.models import StateLock
-            if not len(LockCache.get_by_locked_item(instance)):
-                modified_at = instance.state_modified_at
-                modified_at = modified_at.replace(tzinfo = tz.tzutc())
-
-                if notification_time > modified_at:
-                    # No jobs lock this object, go ahead and update its state
-                    job_log.info("notify_state: Updating state of item %s (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
-                    instance.set_state(new_state)
-
-                    # FIXME: should check the new state against reverse dependencies
-                    # and apply any fix_states
-                    cls._run_opportunistic_jobs(instance)
-                else:
-                    job_log.info("notify_state: Dropping update of %s (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, new_state))
-                    pass
-
-    def add_jobs(self, jobs, command = None):
+    def add_jobs(self, jobs, command):
         """Add a job, and any others which are required in order to reach its prerequisite state"""
         # Important: the Job must not be committed until all
         # its dependencies and locks are in.
@@ -401,15 +394,15 @@ class StateManager(object):
             for dependency in get_deps(job).all():
                 if not dependency.satisfied():
                     job_log.info("add_jobs: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
-                    self.set_state(dependency.get_stateful_object(), dependency.preferred_state, command.id if command else None)
+                    self.set_state(dependency.get_stateful_object(), dependency.preferred_state, command)
             job_log.info("add_jobs: done checking dependencies")
-
-            job.save()
-            job.create_locks()
+            locks = job.create_locks()
+            for l in locks:
+                LockCache.add(l)
             job.create_dependencies()
-            job_log.info("add_jobs: created %s (%s)" % (job.pk, job.description()))
-            if command:
-                command.jobs.add(job)
+            job.save()
+            job_log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))
+            command.jobs.add(job)
 
     def get_transition_consequences(self, instance, new_state):
         """For use in the UI, for warning the user when an
@@ -501,9 +494,11 @@ class StateManager(object):
         object_leaf_distances.sort(lambda x, y: cmp(x[1], y[1]))
         return [obj for obj, ld in object_leaf_distances]
 
-    def set_state(self, instance, new_state, command_id = None):
+    def set_state(self, instance, new_state, command):
         """Return a Job or None if the object is already in new_state.
         command_id should refer to a command instance or be None."""
+
+        job_log.info("set_state: %s-%s to state %s" % (instance.__class__, instance.id, new_state))
 
         DepCache.getInstance()
         with dbperf('set_state-prime_lock_cache'):
@@ -512,7 +507,7 @@ class StateManager(object):
             ObjectCache.getInstance()
 
         with dbperf('set_state-setup'):
-            from chroma_core.models import StatefulObject, Command
+            from chroma_core.models import StatefulObject
             assert(isinstance(instance, StatefulObject))
             if new_state not in instance.states:
                 raise RuntimeError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
@@ -523,15 +518,12 @@ class StateManager(object):
             self.expected_states = dict([(k, v.end_state) for k, v in item_to_lock.items()])
 
             if new_state == self.get_expected_state(instance):
-                if command_id:
-                    command = Command.objects.get(pk = command_id)
-                    command.jobs_created = True
-                    command.complete = True
-                    command.save()
-                    if instance.state != new_state:
-                        # This is a no-op because of an in-progress Job:
-                        job = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete'), write = True).latest('id').job
-                        command.jobs.add(job)
+                command.complete = True
+                command.save()
+                if instance.state != new_state:
+                    # This is a no-op because of an in-progress Job:
+                    job = LockCache.get_latest_write(instance).job
+                    command.jobs.add(job)
 
                 # Pick out whichever job made it so, and attach that to the Command
                 return None
@@ -550,51 +542,29 @@ class StateManager(object):
         #  the jobs would run (including accounting for dependencies) in the absence
         #  of parallelism.
         # XXX
-        self.deps = self._sort_graph(self.deps, self.edges)
+        with dbperf('set_state-sort_graph'):
+            self.deps = self._sort_graph(self.deps, self.edges)
 
         #job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
         #for e in self.edges:
         #    job_log.debug("  edge [%s]->[%s]" % (e))
 
-        jobs = {}
-        jobs_l = []
         # Important: the Job must not land in the database until all
         # its dependencies and locks are in.
-        with transaction.commit_on_success():
-            command = None
-            if command_id:
-                command = Command.objects.get(pk = command_id)
-
-            locks = []
-            with dbperf('set_state-job_creation'):
+        with dbperf('set_state-job_creation'):
+            with transaction.commit_on_success():
                 for d in self.deps:
+                    job_log.debug("  dep %s" % d)
                     job = d.to_job()
-                    job.save()
-                    jobs[d] = job
-                    jobs_l.append(job)
-                    job_log.debug("  dep %s (Job %s)" % (d, job.pk))
-                    if command:
-                        command.jobs.add(job)
-
-            with dbperf('set_state-lock_calculation'):
-                for job in jobs_l:
-                    locks.extend(job.create_locks())
-
-            with dbperf('set_state-lock_creation'):
-                job_locks = defaultdict(list)
-                for lock in locks:
-                    LockCache.add(lock)
-                    job_locks[lock.job].append(lock)
-
-                for j, ll in job_locks.items():
-                    Job.objects.filter(pk = j.id).update(locks_json = json.dumps([l.to_dict() for l in ll]))
-
-            with dbperf('set_state-dep_creation'):
-                for job in jobs_l:
+                    locks = job.create_locks()
+                    job.locks_json = json.dumps([l.to_dict() for l in locks])
+                    for l in locks:
+                        LockCache.add(l)
                     job.create_dependencies()
+                    job.save()
+                    job_log.debug("  dep %s -> Job %s" % (d, job.pk))
+                    command.jobs.add(job)
 
-            if command:
-                command.jobs_created = True
                 command.save()
 
     def emit_transition_deps(self, transition, transition_stack = {}):
@@ -609,7 +579,7 @@ class StateManager(object):
         # assume that we are in our new state
         transition_stack = dict(transition_stack.items())
         transition_stack[transition.stateful_object] = transition.new_state
-        job_log.debug("Updating transition_stack[%s] = %s" % (transition.stateful_object, transition.new_state))
+        job_log.debug("Updating transition_stack[%s/%s] = %s" % (transition.stateful_object.__class__, transition.stateful_object.id, transition.new_state))
 
         # E.g. for 'unformatted'->'registered' for a ManagedTarget we
         # would get ['unformatted', 'formatted', 'registered']
@@ -631,10 +601,8 @@ class StateManager(object):
     def collect_dependencies(self, root_transition, transition_stack):
         if not hasattr(self, 'cdc'):
             self.cdc = defaultdict(list)
-        if len(transition_stack) in self.cdc[root_transition]:
+        if root_transition in self.cdc:
             return
-        else:
-            self.cdc[root_transition].append(len(transition_stack))
 
         job_log.debug("collect_dependencies: %s" % root_transition)
         # What is explicitly required for this state transition?
@@ -643,7 +611,8 @@ class StateManager(object):
             from chroma_core.lib.job import DependOn
             assert(isinstance(dependency, DependOn))
             old_state = self.get_expected_state(dependency.stateful_object)
-            job_log.debug("cd %s %s %s" % (dependency.stateful_object, old_state, dependency.acceptable_states))
+            job_log.debug("cd %s/%s %s %s" % (dependency.stateful_object.__class__, dependency.stateful_object.id, old_state, dependency.acceptable_states))
+
             if not old_state in dependency.acceptable_states:
                 dep_transition = self.emit_transition_deps(Transition(
                         dependency.stateful_object,
@@ -679,9 +648,6 @@ class StateManager(object):
         # What was depending on our old state?
         # Iterate over all objects which *might* depend on this one
         for dependent in root_transition.stateful_object.get_dependent_objects():
-            if hasattr(dependent, 'content_type'):
-                dependent = dependent.downcast()
-
             if dependent in transition_stack:
                 continue
             # What state do we expect the dependent to be in?
@@ -690,7 +656,10 @@ class StateManager(object):
                 if dependency.stateful_object == root_transition.stateful_object \
                         and not root_transition.new_state in dependency.acceptable_states:
                     assert dependency.fix_state != None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
-                    job_log.debug("Reverse dependency: %s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states, root_transition.new_state, dependency.fix_state))
+                    job_log.debug("Reverse dependency: %s-%s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s" % (
+                        dependent, dependent_state, root_transition.stateful_object.__class__,
+                        root_transition.stateful_object.id, dependency.acceptable_states, root_transition.new_state,
+                        dependency.fix_state))
 
                     if hasattr(dependency.fix_state, '__call__'):
                         fix_state = dependency.fix_state(root_transition.new_state)
@@ -701,3 +670,69 @@ class StateManager(object):
                             dependent,
                             dependent_state, fix_state), transition_stack)
                     self.edges.add((root_transition, dep_transition))
+
+    def command_run_jobs(self, job_dicts, message):
+        assert(len(job_dicts) > 0)
+        with transaction.commit_on_success():
+            jobs = []
+            for job in job_dicts:
+                job_klass = ContentType.objects.get_by_natural_key('chroma_core', job['class_name'].lower()).model_class()
+
+                m2m_attrs = {}
+                for field in job_klass._meta.local_many_to_many:
+                    m2m_attrs[field.attname] = field.rel.to
+
+                args = job['args']
+                m2m_values = {}
+                for k, v in args.items():
+                    if k in m2m_attrs:
+                        m2m_values[k] = v
+                        del args[k]
+
+                # FIXME: I have to save the job to add its m2m
+                # fields, but I can't save it until after I've created its
+                # precursor jobs (the job ID influences order of run)
+                job_instance = job_klass(**args)
+                #job_instance.save()
+                jobs.append(job_instance)
+                #for attr in m2m_attrs.keys():
+                ##    m2m_attr = getattr(job_instance, attr)
+                #    for id in m2m_values[attr]:
+                #        instance = m2m_attrs[attr].objects.get(pk = id)
+                #        m2m_attr.add(instance)
+
+            command = Command.objects.create(message = message)
+            job_log.debug("command_run_jobs: command %s" % command.id)
+            for job in jobs:
+                job_log.debug("command_run_jobs:  job %s" % job.id)
+            self.add_jobs(jobs, command)
+            command.save()
+
+        return command.id
+
+    def command_set_state(self, object_ids, message):
+        """object_ids must be a list of 3-tuples of CT natural key, object PK, state"""
+        # StateManager.set_state is invoked in an async task for two reasons:
+        #  1. At time of writing, StateManager.set_state's logic is not safe against
+        #     concurrent runs that might schedule multiple jobs for the same objects.
+        #     Submitting to a single-worker queue is a simpler and more efficient
+        #     way of serializing than locking the table in the database, as we don't
+        #     exclude workers from setting there completion and advancing the queue
+        #     while we're scheduling new jobs.
+        #  2. Calculating the dependencies of a new state is not trivial, because operation
+        #     may have thousands of dependencies (think stopping a filesystem with thousands
+        #     of OSTs).  We want views like those that create+format a target to return
+        #     snappily.
+        #
+        #  nb. there is an added bonus that StateManager uses some cached tables
+        #      built from introspecting StatefulObject and StateChangeJob classes,
+        #      and a long-lived worker process keeps those in memory for you.
+
+        with transaction.commit_on_success():
+            command = Command.objects.create(message = message)
+            for ct_nk, o_pk, state in object_ids:
+                model_klass = ContentType.objects.get_by_natural_key(*ct_nk).model_class()
+                instance = model_klass.objects.get(pk = o_pk)
+                self.set_state(instance, state, command)
+
+        return command.id

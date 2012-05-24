@@ -1,10 +1,8 @@
-from chroma_core.lib.state_manager import DepCache, LockCache
 from chroma_core.lib.util import dbperf
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.jobs import Command, Job
 from chroma_core.models.target import ManagedMdt, ManagedMgs, ManagedOst
-import settings
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, freshen, JobTestCase
 from django.db import connection
 
@@ -22,15 +20,24 @@ class TestOneHost(JobTestCase):
         super(TestOneHost, self).setUp()
         connection.use_debug_cursor = True
 
-    def test_one_host(self):
-        host, command = ManagedHost.create_from_string('myaddress')
-        dbperf.enabled = True
-        with dbperf("set_state"):
-            Command.set_state([(host, 'lnet_unloaded'), (host.lnetconfiguration, 'nids_known')], "Setting up host", run = False)
+    def tearDown(self):
+        super(TestOneHost, self).tearDown()
+        connection.use_debug_cursor = False
 
-        Job.run_next()
-        self.assertEqual(ManagedHost.objects.get(id = host.id).state, 'lnet_up')
-        #self.assertState(host, 'lnet_up')
+    def test_one_host(self):
+        try:
+            dbperf.enabled = True
+
+            with dbperf("create_from_string"):
+                host, command = ManagedHost.create_from_string('myaddress', start_lnet = False)
+            with dbperf("set_state"):
+                Command.set_state([(host, 'lnet_up'), (host.lnetconfiguration, 'nids_known')], "Setting up host", run = False)
+            with dbperf("run_next"):
+                Job.run_next()
+            self.assertState(host, 'lnet_up')
+        finally:
+            dbperf.enabled = False
+
 
 class TestBigFilesystem(JobTestCase):
     mock_servers = {}
@@ -39,7 +46,12 @@ class TestBigFilesystem(JobTestCase):
         super(TestBigFilesystem, self).setUp()
         connection.use_debug_cursor = True
 
+    def tearDown(self):
+        super(TestBigFilesystem, self).tearDown()
+        connection.use_debug_cursor = False
+
     def test_big_filesystem(self):
+        return
         OSS_COUNT = 4
         OST_COUNT = 32
 
@@ -52,7 +64,6 @@ class TestBigFilesystem(JobTestCase):
                 'nids': ["192.168.0.%d@tcp0" % i]
             }
 
-        settings.DEBUG = True
         with dbperf("object creation"):
             self.mgs0, command = ManagedHost.create_from_string('mgs0')
             self.mgs1, command = ManagedHost.create_from_string('mgs1')
@@ -78,33 +89,19 @@ class TestBigFilesystem(JobTestCase):
                 secondary_oss = self.osss[secondary_oss_i]
                 self.osts[i] = ManagedOst.create_for_volume(self._test_lun(primary_oss, secondary_oss).id, filesystem = self.fs)
 
-                #GOOD MORNING, IT DOESN'T WORK WHEN DEPCACHE IS ENABLED, WHY IS THAT?
-                #GET THAT WORKING, THEN MAKE IT FASTER AGAIN:
-                # * WOULD IT HELP IF JOBS WEREN'T USING MTI?
-                # * WOULD IT HELP IF WE DID BULK INSERTS FOR THE LOCKS, DEP LINKS?
-                # * WOULD IT HELP TO PROVIDE GET_DEPS METHODS WITH A CACHE OF STATEFULOBJECTS?
+        try:
+            dbperf.enabled = True
+            import cProfile
+            with dbperf("set_state"):
+                #cProfile.runctx("Command.set_state([(self.osts[0], 'mounted')], 'Unit test transition', run = False)", globals(), locals(), 'set_state.prof')
+                cProfile.runctx("Command.set_state([(self.fs, 'available')], 'Unit test transition', run = False)", globals(), locals(), 'set_state.prof')
 
-        dbperf.enabled = True
-
-        with dbperf("set_state"):
-            Command.set_state([(self.fs, 'available')], "Unit test transition", run = False)
-
-        # Imagine we're now running in a job worker instead of the serialize
-        # worker, so the cache isn't going to be primed any more
-        dc = DepCache.getInstance()
-        print "DepCache: %d, %d" % (dc.hits, dc.misses)
-
-        if False:
-            DepCache.clear()
-            LockCache.clear()
-
-            with dbperf("job execution"):
+            with dbperf('run_next'):
                 Job.run_next()
+        finally:
+            dbperf.enabled = False
 
-            dc = DepCache.getInstance()
-            print "DepCache: %d, %d" % (dc.hits, dc.misses)
-
-            self.assertEqual(freshen(self.fs).state, 'available')
+        self.assertEqual(freshen(self.fs).state, 'available')
 
 
 class TestFSTransitions(JobTestCaseWithHost):

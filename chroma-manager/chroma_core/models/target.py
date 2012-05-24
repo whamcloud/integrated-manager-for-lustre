@@ -10,6 +10,7 @@ import uuid
 from django.contrib.contenttypes.models import ContentType
 
 from django.db import models, transaction
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, AnyTargetMountStep, job_log
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
@@ -124,6 +125,7 @@ class ManagedTarget(StatefulObject):
         app_label = 'chroma_core'
 
     def get_deps(self, state = None):
+        from chroma_core.models import ManagedFilesystem
         if not state:
             state = self.state
 
@@ -132,7 +134,11 @@ class ManagedTarget(StatefulObject):
             # Depend on the active mount's host having LNet up, so that if
             # LNet is stopped on that host this target will be stopped first.
             target_mount = self.active_mount
-            deps.append(DependOn(target_mount.host.downcast(), 'lnet_up', fix_state='unmounted'))
+            if ObjectCache.enable:
+                host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == target_mount.host_id)
+            else:
+                host = target_mount.host.downcast()
+            deps.append(DependOn(host, 'lnet_up', fix_state='unmounted'))
 
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
@@ -140,22 +146,31 @@ class ManagedTarget(StatefulObject):
         if isinstance(self, FilesystemMember) and state not in ['removed', 'forgotten']:
             # Make sure I follow if filesystem goes to 'removed'
             # or 'forgotten'
-            deps.append(DependOn(self.filesystem, 'available',
-                acceptable_states = self.filesystem.not_states(['forgotten', 'removed']), fix_state=lambda s: s))
+            filesystem = ObjectCache.get_one(ManagedFilesystem, lambda fs: fs.id == self.filesystem_id)
+            deps.append(DependOn(filesystem, 'available',
+                acceptable_states = filesystem.not_states(['forgotten', 'removed']), fix_state=lambda s: s))
 
         if state not in ['removed', 'forgotten']:
-            for tm in self.managedtargetmount_set.all():
-                if self.immutable_state:
-                    deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
-                else:
-                    deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
+            if ObjectCache.enable:
+                target_mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.id)
+                for tm in target_mounts:
+                    if self.immutable_state:
+                        deps.append(DependOn(tm.host, 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
+                    else:
+                        deps.append(DependOn(tm.host, 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
+            else:
+                for tm in self.managedtargetmount_set.all():
+                    if self.immutable_state:
+                        deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
+                    else:
+                        deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
 
         return DependAll(deps)
 
     reverse_deps = {
-            'ManagedTargetMount': (lambda mtm: ManagedTarget.objects.filter(pk = mtm.target_id)),
-            'ManagedHost': lambda mh: set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)]),
-            'ManagedFilesystem': lambda mfs: [t.downcast() for t in mfs.get_filesystem_targets()]
+            'ManagedTargetMount': lambda mtm: ObjectCache.mtm_targets(mtm.id),
+            'ManagedHost': lambda mh: ObjectCache.host_targets(mh.id),
+            'ManagedFilesystem': lambda mfs: ObjectCache.fs_targets(mfs.id)
             }
 
     @classmethod
@@ -558,7 +573,12 @@ class ConfigureTargetJob(StateChangeJob):
     def get_deps(self):
         deps = []
 
-        deps.append(DependOn(self.target.downcast().managedtargetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
+        from chroma_core.lib.state_manager import ObjectCache
+        if ObjectCache.enable:
+            prim_mtm = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.primary == True and mtm.target_id == self.target.id)
+            deps.append(DependOn(prim_mtm.host, 'lnet_up'))
+        else:
+            deps.append(DependOn(self.target.downcast().managedtargetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
 
         return DependAll(deps)
 
@@ -601,24 +621,18 @@ class RegisterTargetJob(StateChangeJob):
         from chroma_core.lib.state_manager import ObjectCache
         deps = []
 
-        if ObjectCache.enable:
-            ct = ContentType.objects.get_for_id(self.target.content_type_id)
-            target = ObjectCache.get_one(ct.model_class(), lambda t: t.id == self.target.id)
-        else:
-            target = self.target.downcast()
-
-        if ObjectCache.enable:
-            deps.append(DependOn(ObjectCache.target_primary_server(target), 'lnet_up'))
-        else:
-            deps.append(DependOn(self.target.downcast().managedtargetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
-
+        ct = ContentType.objects.get_for_id(self.target.content_type_id)
+        target = ObjectCache.get_one(ct.model_class(), lambda t: t.id == self.target.id)
+        deps.append(DependOn(ObjectCache.target_primary_server(target), 'lnet_up'))
 
         if isinstance(target, FilesystemMember):
-            mgs = target.filesystem.mgs.downcast()
+            mgs = ObjectCache.get_one(ManagedMgs, lambda t: t.id == target.filesystem.mgs_id)
+
             deps.append(DependOn(mgs, "mounted"))
 
         if isinstance(target, ManagedOst):
-            mdts = ManagedMdt.objects.filter(filesystem = target.filesystem)
+            mdts = ObjectCache.get(ManagedMdt, lambda mdt: mdt.filesystem_id == target.filesystem_id)
+
             for mdt in mdts:
                 deps.append(DependOn(mdt, "mounted"))
 
@@ -660,8 +674,10 @@ class StartTargetJob(StateChangeJob):
     def get_deps(self):
         lnet_deps = []
         # Depend on at least one targetmount having lnet up
-        for tm in self.target.downcast().managedtargetmount_set.all():
-            lnet_deps.append(DependOn(tm.host.downcast(), 'lnet_up', fix_state = 'unmounted'))
+
+        mtms = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.target_id)
+        for tm in mtms:
+            lnet_deps.append(DependOn(tm.host, 'lnet_up', fix_state = 'unmounted'))
         return DependAny(lnet_deps)
 
     def get_steps(self):
@@ -810,49 +826,34 @@ class FormatTargetJob(StateChangeJob):
             raise NotImplementedError()
 
     def get_deps(self):
-        #with dbperf('target_get_deps'):
-            from chroma_core.lib.state_manager import ObjectCache
-            from chroma_core.models import ManagedFilesystem
+        from chroma_core.lib.state_manager import ObjectCache
+        from chroma_core.models import ManagedFilesystem
 
-            if ObjectCache.enable:
-                ct = ContentType.objects.get_for_id(self.target.content_type_id)
-                target = ObjectCache.get_one(ct.model_class(), lambda t: t.id == self.target.id)
-            else:
-                target = self.target.downcast()
-            deps = []
+        if ObjectCache.enable:
+            ct = ContentType.objects.get_for_id(self.target.content_type_id)
+            target = ObjectCache.get_one(ct.model_class(), lambda t: t.id == self.target.id)
+        else:
+            target = self.target.downcast()
+        deps = []
 
-            if ObjectCache.enable:
-                hosts = set()
-                for tm in ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == target.id):
-                    hosts.add(tm.host_id)
-                for lnc in ObjectCache.get(LNetConfiguration, lambda lnc: lnc.host_id in hosts):
-                    deps.append(DependOn(lnc, 'nids_known'))
-            else:
-                for tm in target.managedtargetmount_set.all():
-                    host = tm.host.downcast()
-                    deps.append(DependOn(host.lnetconfiguration, 'nids_known'))
+        hosts = set()
+        for tm in ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == target.id):
+            hosts.add(tm.host_id)
+        for lnc in ObjectCache.get(LNetConfiguration, lambda lnc: lnc.host_id in hosts):
+            deps.append(DependOn(lnc, 'nids_known'))
 
-            if isinstance(target, FilesystemMember):
-                if ObjectCache.enable:
-                    filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.id == target.filesystem.id)
-                    mgt_id = filesystem.mgs.id
+        if isinstance(target, FilesystemMember):
+            filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.id == target.filesystem_id)
+            mgt_id = filesystem.mgs_id
 
-                    mgs_hosts = set()
-                    for tm in ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == mgt_id):
-                        mgs_hosts.add(tm.host_id)
+            mgs_hosts = set()
+            for tm in ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == mgt_id):
+                mgs_hosts.add(tm.host_id)
 
-                    for lnc in ObjectCache.get(LNetConfiguration, lambda lnc: lnc.host_id in mgs_hosts):
-                        deps.append(DependOn(lnc, 'nids_known'))
+            for lnc in ObjectCache.get(LNetConfiguration, lambda lnc: lnc.host_id in mgs_hosts):
+                deps.append(DependOn(lnc, 'nids_known'))
 
-                else:
-
-                    for tm in target.filesystem.mgs.managedtargetmount_set.all():
-                        host = tm.host.downcast()
-                        lnet_configuration = host.lnetconfiguration
-                        deps.append(DependOn(lnet_configuration, 'nids_known'))
-
-
-            return DependAll(deps)
+        return DependAll(deps)
 
     def get_steps(self):
         return [(MkfsStep, {'target_id': self.target.id})]

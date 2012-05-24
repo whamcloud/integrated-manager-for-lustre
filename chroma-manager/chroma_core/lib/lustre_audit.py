@@ -148,8 +148,8 @@ class UpdateScan(object):
                 (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'],
                                           self.host_data['lnet_up'])]
 
-        from chroma_core.lib.state_manager import StateManager
-        StateManager.notify_state(self.host.downcast(),
+        from chroma_core.lib.state_manager import StateManagerClient
+        StateManagerClient.notify_state(self.host.downcast(),
                                   self.started_at,
                                   lnet_state,
                                   ['lnet_unloaded', 'lnet_down', 'lnet_up'])
@@ -230,8 +230,8 @@ class UpdateScan(object):
                 target.set_active_mount(active_mount)
 
                 state = ['unmounted', 'mounted'][active_mount != None]
-                from chroma_core.lib.state_manager import StateManager
-                StateManager.notify_state(target, self.started_at, state, ['mounted', 'unmounted'])
+                from chroma_core.lib.state_manager import StateManagerClient
+                StateManagerClient.notify_state(target, self.started_at, state, ['mounted', 'unmounted'])
 
     def store_lustre_target_metrics(self, target_name, metrics):
         # TODO: Re-enable MGS metrics storage if it turns out it's useful.

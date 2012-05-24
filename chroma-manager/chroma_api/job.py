@@ -4,7 +4,9 @@
 # ========================================================
 
 
-from tastypie.resources import ModelResource
+from django.contrib.contenttypes.models import ContentType
+
+from tastypie.resources import ModelResource, Resource
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
@@ -13,20 +15,20 @@ from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import Job, StateLock
 
 
-class StateLockResource(ModelResource):
+class StateLockResource(Resource):
     locked_item_id = fields.IntegerField()
     locked_item_content_type_id = fields.IntegerField()
     locked_item_uri = fields.CharField()
 
     def dehydrate_locked_item_id(self, bundle):
-        return bundle.obj.locked_item_id
+        return bundle.obj.locked_item.id
 
     def dehydrate_locked_item_content_type_id(self, bundle):
         locked_item = bundle.obj.locked_item
         if hasattr(locked_item, 'content_type'):
             return locked_item.content_type.id
         else:
-            return bundle.obj.locked_item_type.id
+            return ContentType.objects.get_for_model(locked_item)
 
     def dehydrate_locked_item_uri(self, bundle):
         from chroma_api.urls import api
@@ -37,7 +39,7 @@ class StateLockResource(ModelResource):
         return api.get_resource_uri(locked_item)
 
     class Meta:
-        queryset = StateLock.objects.all()
+        object_class = StateLock
         resource_name = 'state_lock'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
@@ -97,12 +99,10 @@ class JobResource(ModelResource):
             one sentence long describing what the job is doing")
     wait_for = fields.ToManyField('chroma_api.job.JobResource', 'wait_for', null = True,
             help_text = "List of other jobs which must complete before this job can run")
-    read_locks = fields.ToManyField(StateLockResource,
-            lambda bundle: StateLock.objects.filter(job = bundle.obj, write = False), full = True, null = True,
+    read_locks = fields.ListField(null = True,
             help_text = "List of objects which must stay in the required state while\
             this job runs")
-    write_locks = fields.ToManyField(StateLockResource,
-            lambda bundle: StateLock.objects.filter(job = bundle.obj, write = True), full = True, null = True,
+    write_locks = fields.ListField(null = True,
             help_text = "List of objects which must be in a certain state for\
             this job to run, and may be modified by this job while it runs.")
     commands = fields.ToManyField('chroma_api.command.CommandResource',
@@ -115,6 +115,21 @@ class JobResource(ModelResource):
     class_name = fields.CharField(help_text = "Internal class name of job")
 
     available_transitions = fields.DictField()
+
+    def _dehydrate_locks(self, bundle, write):
+        import json
+        if bundle.locks_json:
+            locks = json.loads(bundle.locks_json)
+        else:
+            locks = []
+        locks = [StateLock.from_dict(lock) for lock in locks if lock.write == write]
+        return [StateLockResource().build_bundle(l) for l in locks]
+
+    def dehydrate_read_locks(self, bundle):
+        return self._dehydrate_locks(bundle, write = False)
+
+    def dehydrate_write_locks(self, bundle):
+        return self._dehydrate_locks(bundle, write = True)
 
     def dehydrate_class_name(self, bundle):
         return bundle.obj.content_type.model_class().__name__

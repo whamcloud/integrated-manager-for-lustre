@@ -14,6 +14,7 @@ from django.db import IntegrityError
 import itertools
 from django.db.models.aggregates import Max, Count
 from django.db.models.query_utils import Q
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import StateChangeJob
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
@@ -235,7 +236,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         """
         from chroma_core.models import LNetOfflineAlert
 
-        super(ManagedHost, self).set_state(state)
+        super(ManagedHost, self).set_state(state, intentional)
         if intentional:
             LNetOfflineAlert.notify_quiet(self, self.state != 'lnet_up')
         else:
@@ -472,10 +473,10 @@ class ConfigureLNetJob(StateChangeJob):
         return "Configuring LNet on %s" % self.lnet_configuration.host
 
     def get_steps(self):
-        return [(LearnNidsStep, {'host_id': self.lnet_configuration.host.id})]
+        return [(LearnNidsStep, {'host_id': self.lnet_configuration.host_id})]
 
     def get_deps(self):
-        return DependOn(self.lnet_configuration.host, "lnet_up")
+        return DependOn(ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lnet_configuration.host_id), "lnet_up")
 
     class Meta:
         app_label = 'chroma_core'

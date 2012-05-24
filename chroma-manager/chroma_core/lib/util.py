@@ -75,9 +75,14 @@ class timeit(object):
 
 class dbperf(object):
     enabled = False
+    logger = logging.getLogger('dbperf')
 
     def __init__(self, label = ""):
         self.label = label
+        self.logger.disabled = not self.enabled
+        if self.enabled and not len(self.logger.handlers):
+            self.logger.setLevel(logging.DEBUG)
+            self.logger.addHandler(logging.FileHandler('dbperf.log'))
 
     def __enter__(self):
         if settings.DEBUG:
@@ -88,19 +93,20 @@ class dbperf(object):
         if not self.enabled:
             return
 
-        if settings.DEBUG:
-            self.t_final = time.time()
-            self.q_final = len(connection.queries)
+        self.t_final = time.time()
+        self.q_final = len(connection.queries)
 
+        t = self.t_final - self.t_initial
+        q = self.q_final - self.q_initial
+
+        if q:
             logfile = open("%s.log" % self.label, 'w')
-            for q in connection.queries[self.q_initial:]:
-                logfile.write("(%s) %s\n" % (q['time'], q['sql']))
+            for query in connection.queries[self.q_initial:]:
+                logfile.write("(%s) %s\n" % (query['time'], query['sql']))
             logfile.close()
 
-            t = self.t_final - self.t_initial
-            q = self.q_final - self.q_initial
-            if q:
-                avg_t = int((t / q) * 1000)
-            else:
-                avg_t = 0
-            print "%s: %d queries in %.2fs (avg %dms)" % (self.label, q, t, avg_t)
+        if q:
+            avg_t = int((t / q) * 1000)
+        else:
+            avg_t = 0
+        self.logger.debug("%s: %d queries in %.2fs (avg %dms)" % (self.label, q, t, avg_t))

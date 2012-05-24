@@ -5,22 +5,19 @@
 
 
 import subprocess
-from celery.beat import Scheduler
-from django.contrib.contenttypes.models import ContentType
-from chroma_core.lib.state_manager import StateManager
-from chroma_core.models.jobs import Command
-
-import settings
 from datetime import datetime, timedelta
 
+from celery.beat import Scheduler
 from celery.task import task, periodic_task, Task
 from django.db import transaction
 
+from chroma_core.lib.state_manager import StateManager
 from chroma_core.lib.agent import AgentException
 from chroma_core.lib.util import timeit
-
 from chroma_core.lib.job import job_log
 from chroma_core.lib.lustre_audit import audit_log
+
+import settings
 
 
 class EphemeralScheduler(Scheduler):
@@ -175,97 +172,41 @@ def janitor():
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def notify_state(content_type, object_id, time, new_state, from_states):
-    StateManager._notify_state(content_type, object_id, time, new_state, from_states)
-
-
-@task(base = RetryOnSqlErrorTask)
-def command_run_jobs(job_dicts, message):
-    assert(len(job_dicts) > 0)
-    with transaction.commit_on_success():
-        jobs = []
-        for job in job_dicts:
-            job_klass = ContentType.objects.get_by_natural_key('chroma_core', job['class_name'].lower()).model_class()
-
-            m2m_attrs = {}
-            for field in job_klass._meta.local_many_to_many:
-                m2m_attrs[field.attname] = field.rel.to
-
-            args = job['args']
-            m2m_values = {}
-            for k, v in args.items():
-                if k in m2m_attrs:
-                    m2m_values[k] = v
-                    del args[k]
-
-            # FIXME: I have to save the job to add its m2m
-            # fields, but I can't save it until after I've created its
-            # precursor jobs (the job ID influences order of run)
-            job_instance = job_klass(**args)
-            #job_instance.save()
-            jobs.append(job_instance)
-            #for attr in m2m_attrs.keys():
-            ##    m2m_attr = getattr(job_instance, attr)
-            #    for id in m2m_values[attr]:
-            #        instance = m2m_attrs[attr].objects.get(pk = id)
-            #        m2m_attr.add(instance)
-
-        command = Command.objects.create(message = message)
-        job_log.debug("command_run_jobs: command %s" % command.id)
-        for job in jobs:
-            job_log.debug("command_run_jobs:  job %s" % job.id)
-        StateManager().add_jobs(jobs, command)
-        command.jobs_created = True
-        command.save()
-
+    result = StateManager().notify_state(content_type, object_id, time, new_state, from_states)
     from chroma_core.models import Job
     Job.run_next()
-
-    return command.id
+    return result
 
 
 @task(base = RetryOnSqlErrorTask)
-def command_set_state(object_ids, message, run = True):
-    """object_ids must be a list of 3-tuples of CT natural key, object PK, state"""
-    # StateManager.set_state is invoked in an async task for two reasons:
-    #  1. At time of writing, StateManager.set_state's logic is not safe against
-    #     concurrent runs that might schedule multiple jobs for the same objects.
-    #     Submitting to a single-worker queue is a simpler and more efficient
-    #     way of serializing than locking the table in the database, as we don't
-    #     exclude workers from setting there completion and advancing the queue
-    #     while we're scheduling new jobs.
-    #  2. Calculating the dependencies of a new state is not trivial, because operation
-    #     may have thousands of dependencies (think stopping a filesystem with thousands
-    #     of OSTs).  We want views like those that create+format a target to return
-    #     snappily.
-    #
-    #  nb. there is an added bonus that StateManager uses some cached tables
-    #      built from introspecting StatefulObject and StateChangeJob classes,
-    #      and a long-lived worker process keeps those in memory for you.
+@timeit(logger=job_log)
+def command_run_jobs(job_dicts, message):
+    result = StateManager().command_run_jobs(job_dicts, message)
+    from chroma_core.models import Job
+    Job.run_next()
+    return result
 
-    with transaction.commit_on_success():
-        command = Command.objects.create(message = message)
-        for ct_nk, o_pk, state in object_ids:
-            model_klass = ContentType.objects.get_by_natural_key(*ct_nk).model_class()
-            instance = model_klass.objects.get(pk = o_pk)
-            StateManager().set_state(instance, state, command.id)
+
+@task(base = RetryOnSqlErrorTask)
+@timeit(logger=job_log)
+def command_set_state(object_ids, message, run):
+    result = StateManager().command_set_state(object_ids, message)
 
     if run:
         from chroma_core.models import Job
         Job.run_next()
 
-    return command.id
+    return result
 
 
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def complete_job(job_id):
     job_log.info("Job %d: complete_job" % job_id)
-    from chroma_core.lib.state_manager import StateManager
-    StateManager._complete_job(job_id)
+    StateManager().complete_job(job_id)
 
-    if not settings.UNIT_TEST:
-        from chroma_core.models import Job
-        Job.run_next()
+    from chroma_core.models import Job
+    Job.run_next()
 
 
 @task(base = RetryOnSqlErrorTask)

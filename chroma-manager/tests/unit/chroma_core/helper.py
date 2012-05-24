@@ -5,7 +5,6 @@ from django.test import TestCase
 import mock
 from chroma_core.models.jobs import Command
 from chroma_core.models import Volume, VolumeNode
-import settings
 
 
 def freshen(obj):
@@ -70,6 +69,33 @@ class MockDaemonRpc():
         return
 
 
+def run_next():
+    from chroma_core.lib.util import dbperf
+    from chroma_core.models.jobs import Job
+    from chroma_core.lib.state_manager import LockCache, DepCache
+    from chroma_core.lib.cache import ObjectCache
+
+    # Detect recursion
+    import inspect
+    count = 0
+    for frame in inspect.stack():
+        if frame[0].f_code.co_name == 'run_next':
+            count += 1
+    if count > 1:
+        return
+
+    ran = -1
+    while ran:
+        ran = 0
+        for job in Job.objects.filter(state = 'pending'):
+            ran += 1
+            with dbperf('job.run'):
+                job.run()
+            DepCache.clear()
+            LockCache.clear()
+            ObjectCache.clear()
+
+
 class JobTestCase(TestCase):
     mock_servers = None
     hosts = None
@@ -94,11 +120,6 @@ class JobTestCase(TestCase):
         self.assertEqual(freshen(obj).state, state)
 
     def setUp(self):
-        # There are a couple of hooks in the code that allow for
-        # the inline running of celery tasks, they check this
-        # setting
-        settings.UNIT_TEST = True
-
         # FIXME: have to do this before every test because otherwise
         # one test will get all the setup of StoragePluginClass records,
         # the in-memory instance of storage_plugin_manager will expect
@@ -123,6 +144,11 @@ class JobTestCase(TestCase):
         self.old_agent = chroma_core.lib.agent.Agent
         MockAgent.mock_servers = self.mock_servers
         chroma_core.lib.agent.Agent = MockAgent
+
+        # A custom version of run_next to avoid overflowing the stack
+        # when recursing
+        import chroma_core.models.jobs
+        chroma_core.models.jobs.Job.run_next = mock.Mock(side_effect = run_next)
 
         # Override DaemonRPC
         import chroma_core.lib.storage_plugin.daemon

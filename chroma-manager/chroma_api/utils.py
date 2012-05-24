@@ -9,8 +9,8 @@ import dateutil.parser
 import bisect
 
 from django.contrib.contenttypes.models import ContentType
-from chroma_core.lib.state_manager import StateManager
-from chroma_core.models.jobs import Command, AdvertisedJob
+from chroma_core.lib.state_manager import StateManagerClient
+from chroma_core.models.jobs import Command
 from chroma_core.models.target import ManagedMgs
 from chroma_core.models.utils import await_async_result
 from chroma_core.tasks import command_run_jobs
@@ -124,10 +124,10 @@ class StatefulModelResource(CustomModelResource):
         readonly = ['state', 'content_type_id', 'available_transitions', 'available_jobs', 'label']
 
     def dehydrate_available_transitions(self, bundle):
-        return StateManager.available_transitions(bundle.obj)
+        return StateManagerClient.available_transitions(bundle.obj)
 
     def dehydrate_available_jobs(self, bundle):
-        return AdvertisedJob.get_singular_jobs(bundle.obj)
+        return StateManagerClient.available_jobs(bundle.obj)
 
     def dehydrate_content_type_id(self, bundle):
         if hasattr(bundle.obj, 'content_type'):
@@ -157,7 +157,7 @@ class StatefulModelResource(CustomModelResource):
                 if stateful_object.state == new_state:
                     report = []
                 else:
-                    report = StateManager().get_transition_consequences(stateful_object, new_state)
+                    report = StateManagerClient.get_transition_consequences(stateful_object, new_state)
                 raise custom_response(self, request, http.HttpResponse, report)
             else:
                 command = Command.set_state([(stateful_object, new_state)])
