@@ -63,6 +63,15 @@ class ManagedTarget(StatefulObject):
     def get_params(self):
         return [(p.key, p.value) for p in self.targetparam_set.all()]
 
+    def get_failover_nids(self):
+        fail_nids = []
+        for secondary_mount in self.managedtargetmount_set.filter(primary = False):
+            host = secondary_mount.host
+            failhost_nids = host.lnetconfiguration.get_nids()
+            assert(len(failhost_nids) != 0)
+            fail_nids.extend(failhost_nids)
+        return fail_nids
+
     @property
     def primary_host(self):
         return ManagedTargetMount.objects.get(target = self, primary = True).host
@@ -736,13 +745,8 @@ class MkfsStep(Step):
         # FIXME: HYD-266
         kwargs['reformat'] = True
 
-        fail_nids = []
-        for secondary_mount in target.managedtargetmount_set.filter(primary = False):
-            host = secondary_mount.host
-            failhost_nids = host.lnetconfiguration.get_nids()
-            assert(len(failhost_nids) != 0)
-            fail_nids.extend(failhost_nids)
-        if len(fail_nids) > 0:
+        fail_nids = target.get_failover_nids()
+        if fail_nids:
             kwargs['failnode'] = fail_nids
 
         kwargs['device'] = primary_mount.volume_node.path

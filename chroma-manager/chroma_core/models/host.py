@@ -954,15 +954,16 @@ class WriteConfStep(Step):
         target = ManagedTarget.objects.get(pk = args['target_id']).downcast()
         primary_tm = target.managedtargetmount_set.get(primary = True)
         # tunefs.lustre --erase-param --mgsnode=<new_nid(s)> --writeconf /dev/..
-        self.invoke_agent(primary_tm.host, "writeconf-target", {
+
+        agent_args = {
             'writeconf': True,
             'erase_params': True,
             'mgsnode': tuple(primary_tm.host.lnetconfiguration.get_nids()),
-            'device': primary_tm.volume_node.path})
-        # FIXME: should there be a failnode argument here?
-        # FIXME: if the MGS NIDs haven't changed, we could do the less severe version:
-        #        (but what's the point?)
-        #    # tunefs.lustre --writeconf <device>
+            'device': primary_tm.volume_node.path}
+        fail_nids = target.get_failover_nids()
+        if fail_nids:
+            agent_args['failnode'] = fail_nids
+        self.invoke_agent(primary_tm.host, "writeconf-target", agent_args)
 
 
 class ResetConfParamsStep(Step):
