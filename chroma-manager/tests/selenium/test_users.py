@@ -101,10 +101,10 @@ class TestUsers(SeleniumBaseTestCase):
 
     def test_entering_different_confirm_password(self):
         self.user_page.create_new_user_button.click()
-        select_element_option(self.driver, self.user_page.user_group, 0)
-        enter_text_for_element(self.driver, self.user_page.username, self.username)
-        enter_text_for_element(self.driver, self.user_page.password1, self.password)
         import random
+        select_element_option(self.driver, self.user_page.user_group, 0)
+        enter_text_for_element(self.driver, self.user_page.username, 'user' + str(random.random()))
+        enter_text_for_element(self.driver, self.user_page.password1, self.password)
         enter_text_for_element(self.driver, self.user_page.password2, str(random.random()))
         self.driver.find_element_by_css_selector(self.user_page.create_user_button).click()
         wait_for_element(self.driver, self.user_page.error_span, self.medium_wait)

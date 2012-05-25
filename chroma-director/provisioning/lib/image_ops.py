@@ -53,7 +53,6 @@ class StorageImageOps(ImageOps):
         with self.open_session():
             self._setup_chroma_repo()
             self._update_whamos()
-            sudo('yum install -y kernel')
             sudo('yum install -y lustre')
             sudo('grubby --set-default "/boot/vmlinuz-2.6.32-*lustre*"')
             sudo('yum install -y chroma-agent-management')

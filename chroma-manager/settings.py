@@ -6,6 +6,7 @@
 
 import sys
 import os
+import socket
 import logging
 import logging.handlers
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
@@ -281,8 +282,9 @@ def setup_log(log_name, filename = None):
         logger.setLevel(LOG_LEVEL)
     return logger
 
+EMAIL_HOST = None
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
-EMAIL_SENDER = "chroma-manager@whamcloud.com"
+EMAIL_SENDER = "noreply@%s" % socket.getfqdn()
 
 _plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'chroma_core', 'plugins')
 sys.path.append(_plugins_path)

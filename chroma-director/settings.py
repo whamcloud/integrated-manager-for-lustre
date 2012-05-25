@@ -149,10 +149,12 @@ CHROMA_APPLIANCE_SECURITY_GROUP = 'chroma-appliance'
 
 
 BASE_IMAGE = {
-        'username': 'root',
-        'ami': 'ami-d91dcbb0', # A CentOS 6.x AMI of unknown heritage,
-        'instance_type': 'm1.small',
-        'security_group': 'chroma-manager'}
+    'username': 'root',
+    'ami': 'ami-d91dcbb0', # A CentOS 6.x AMI of unknown heritage,
+    #    'username': 'ec2-user',
+    #    'ami': 'ami-eece1d87', # A CentOS 6.x AMI of unknown heritage,
+    'instance_type': 'm1.small',
+    'security_group': 'chroma-manager'}
 
 # Create your images and put these in your local-settings.py
 #

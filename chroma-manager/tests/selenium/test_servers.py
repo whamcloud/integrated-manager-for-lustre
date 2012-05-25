@@ -106,7 +106,7 @@ class TestServer(SeleniumBaseTestCase):
 
     def tearDown(self):
         self.server_page.remove_servers(self.host_list)
-        self.driver.close()
+        super(TestServer, self).tearDown()
 
 if __name__ == '__main__':
     django.utils.unittest.main()

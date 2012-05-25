@@ -8,14 +8,14 @@ class Migration(SchemaMigration):
 
     def forwards(self, orm):
         
-        # Deleting model 'StateLock'
-        db.delete_table('chroma_core_statelock')
-
         # Deleting model 'StateReadLock'
         db.delete_table('chroma_core_statereadlock')
 
         # Deleting model 'StateWriteLock'
         db.delete_table('chroma_core_statewritelock')
+
+        # Deleting model 'StateLock'
+        db.delete_table('chroma_core_statelock')
 
         # Deleting field 'Command.jobs_created'
         db.delete_column('chroma_core_command', 'jobs_created')

@@ -11,6 +11,7 @@ import sys
 import traceback
 import datetime
 import argparse
+import signal
 
 daemon_log = logging.getLogger('daemon')
 daemon_log.setLevel(logging.INFO)
@@ -91,7 +92,7 @@ def main():
             else:
                 # Running, we should refuse to run
                 raise RuntimeError("Daemon is already running (PID %s)" % pid)
-
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
         context = DaemonContext(pidfile = PIDLockFile(args.pid_file))
         context.open()
         # NB Have to set up logger after entering DaemonContext because it closes all files when
