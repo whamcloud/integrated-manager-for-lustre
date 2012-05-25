@@ -5,18 +5,19 @@
 # ========================================================
 
 
-from chroma_core.models import ManagedTargetMount
-
-import settings
-
-from chroma_core.models.alert import TargetRecoveryAlert, HostContactAlert
-from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo
-from chroma_core.models.host import ManagedHost
-from django.db import transaction
 import functools
 
 # HYD-646: Use django 1.4 db exceptions
 import MySQLdb as Database
+from django.db import transaction
+
+from chroma_core.models.alert import TargetRecoveryAlert, HostContactAlert
+from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo
+from chroma_core.models.host import ManagedHost
+from chroma_core.lib.state_manager import StateManager
+from chroma_core.models import ManagedTargetMount
+
+import settings
 
 audit_log = settings.setup_log('audit')
 
@@ -117,8 +118,6 @@ class UpdateScan(object):
                 self.host.save()
 
     def update_lnet(self):
-        # Update LNet status
-        from chroma_core.lib.state_manager import StateManager
         StateManager.notify_state(self.host.downcast(),
                                   self.started_at,
                                   self._audited_lnet_state(),
@@ -148,8 +147,10 @@ class UpdateScan(object):
                 target = target_mount.target
                 if mounted_locally:
                     target.set_active_mount(target_mount)
+                    StateManager.notify_state(target, self.started_at, 'mounted', ['mounted', 'unmounted'])
                 elif not mounted_locally and target.active_mount == target_mount:
                     target.set_active_mount(None)
+                    StateManager.notify_state(target, self.started_at, 'unmounted', ['mounted', 'unmounted'])
 
             if target_mount.target.active_mount == None:
                 TargetRecoveryInfo.update(target_mount.target, {})

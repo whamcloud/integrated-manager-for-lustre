@@ -53,6 +53,9 @@ class TestFSTransitions(JobTestCase):
 
         self.assertEqual(ManagedOst.objects.count(), 8)
 
+        for t in ManagedTarget.objects.all():
+            self.assertEqual(t.immutable_state, True)
+
         def assertMount(target_name, primary_host, failover_hosts = list()):
             target = ManagedTarget.objects.get(name = target_name)
             self.assertEquals(ManagedTargetMount.objects.filter(target = target).count(), 1 + len(failover_hosts))
