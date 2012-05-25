@@ -97,7 +97,7 @@ class JobResource(ModelResource):
 
     description = fields.CharField(help_text = "Human readable string around\
             one sentence long describing what the job is doing")
-    wait_for = fields.ToManyField('chroma_api.job.JobResource', 'wait_for', null = True,
+    wait_for = fields.ListField('wait_for', null = True,
             help_text = "List of other jobs which must complete before this job can run")
     read_locks = fields.ListField(null = True,
             help_text = "List of objects which must stay in the required state while\
@@ -118,12 +118,22 @@ class JobResource(ModelResource):
 
     def _dehydrate_locks(self, bundle, write):
         import json
-        if bundle.locks_json:
-            locks = json.loads(bundle.locks_json)
+
+        if bundle.obj.locks_json:
+            locks = json.loads(bundle.obj.locks_json)
+            locks = [StateLock.from_dict(bundle.obj, lock) for lock in locks if lock['write'] == write]
+            slr = StateLockResource()
+            return [slr.full_dehydrate(slr.build_bundle(obj = l)).data for l in locks]
         else:
-            locks = []
-        locks = [StateLock.from_dict(lock) for lock in locks if lock.write == write]
-        return [StateLockResource().build_bundle(l) for l in locks]
+            return []
+
+    def dehydrate_wait_for(self, bundle):
+        import json
+        if not bundle.obj.wait_for_json:
+            return []
+        else:
+            wait_fors = json.loads(bundle.obj.wait_for_json)
+            return [JobResource().get_resource_uri(Job.objects.get(pk=i)) for i in wait_fors]
 
     def dehydrate_read_locks(self, bundle):
         return self._dehydrate_locks(bundle, write = False)
@@ -157,7 +167,8 @@ class JobResource(ModelResource):
         resource_name = 'job'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ['wait_for_completions', 'wait_for_count', 'finished_step', 'started_step', 'task_id']
+        excludes = ['wait_for_completions', 'wait_for_count', 'finished_step',
+                    'started_step', 'task_id', 'locks_json', 'wait_for_json']
         ordering = ['created_at']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'put']
