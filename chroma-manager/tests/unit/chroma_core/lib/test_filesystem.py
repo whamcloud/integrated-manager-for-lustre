@@ -51,7 +51,6 @@ class TestBigFilesystem(JobTestCase):
         connection.use_debug_cursor = False
 
     def test_big_filesystem(self):
-        return
         OSS_COUNT = 4
         OST_COUNT = 32
 
