@@ -129,22 +129,13 @@ def quiesce_api(driver, timeout):
     raise RuntimeError('Timeout')
 
 
-def login_superuser(driver):
-    """Login with the default user"""
-    wait_for_any_element(driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
-    login_view = Login(driver)
-    if not element_visible(driver, '#login_dialog'):
-        login_view.open_login_dialog()
-    login_view.login_superuser()
-
-
-def login_newuser(driver, username, password):
+def login(driver, username, password):
     """Login with given username and password"""
     wait_for_any_element(driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
     login_view = Login(driver)
     if not element_visible(driver, '#login_dialog'):
         login_view.open_login_dialog()
-    login_view.login_newuser(username, password)
+    login_view.login_user(username, password)
 
 
 class SeleniumBaseTestCase(TestCase):
@@ -175,7 +166,14 @@ class SeleniumBaseTestCase(TestCase):
             raise RuntimeError("Please set server_http_url in config file")
         self.driver.get(config['chroma_managers']['server_http_url'])
 
-        login_superuser(self.driver)
+        superuser_present = False
+        for user in config['chroma_managers']['users']:
+            if user['is_superuser']:
+                login(self.driver, user['username'], user['password'])
+                superuser_present = True
+
+        if not superuser_present:
+            raise RuntimeError("No superuser in config file")
 
         wait_for_element(self.driver, '#user_info #authenticated', 10)
         wait_for_element(self.driver, '#dashboard_menu', 10)

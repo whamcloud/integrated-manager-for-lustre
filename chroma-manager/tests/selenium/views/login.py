@@ -1,6 +1,5 @@
 
 from time import sleep
-from testconfig import config
 
 
 class Login:
@@ -23,16 +22,7 @@ class Login:
                 wait_for_element(self.driver, '#login_dialog input[name=username]', 1000)
                 break
 
-    def login_superuser(self):
-        for user in config['chroma_managers']['users']:
-            if user['is_superuser']:
-                self.username.send_keys(user['username'])
-                self.password.send_keys(user['password'])
-                self.login_button.click()
-                return
-        raise RuntimeError("No superuser in config file")
-
-    def login_newuser(self, username, password):
+    def login_user(self, username, password):
         self.username.send_keys(username)
         self.password.send_keys(password)
         self.login_button.click()

@@ -9,8 +9,8 @@ from base import select_element_option
 from base import wait_for_element
 from utils.constants import wait_time
 from utils.constants import static_text
-from base import login_newuser
-from base import login_superuser
+from base import login
+from testconfig import config
 
 
 class Users:
@@ -36,6 +36,7 @@ class Users:
         self.password1 = "div.create_user_dialog input[name=password1]"
         self.password2 = "div.create_user_dialog input[name=password2]"
 
+        self.old_password = "div.edit_user_dialog input[name=old_password]"
         self.edit_password1 = "div.edit_user_dialog input[name=password1]"
         self.edit_password2 = "div.edit_user_dialog input[name=password2]"
         self.create_user_button = "button.create_button"
@@ -46,6 +47,11 @@ class Users:
         self.user_list_datatable = 'user_list'
         self.username_td = 0
         self.user_group_td = 3
+
+        for user in config['chroma_managers']['users']:
+            if user['is_superuser']:
+                self.superuser_username = user['username']
+                self.superuser_password = user['password']
 
     def add(self, user_group, username, first_name, last_name, email, password, confirm_password):
         # Enter data for adding new user
@@ -103,25 +109,26 @@ class Users:
 
     def verify_user(self, username, password):
         self.driver.find_element_by_css_selector("#logout").click()
-        login_newuser(self.driver, username, password)
+        login(self.driver, username, password)
         wait_for_element(self.driver, '#configure_menu', 10)
         self.driver.find_element_by_css_selector("#logout").click()
-        login_superuser(self.driver)
+        login(self.driver, self.superuser_username, self.superuser_password)
 
     def edit_user_password(self, username, password, new_password):
         self.driver.find_element_by_css_selector("#logout").click()
-        login_newuser(self.driver, username, password)
+        login(self.driver, username, password)
         wait_for_element(self.driver, '#username', 10)
         self.driver.find_element_by_css_selector("#username").click()
         wait_for_element(self.driver, self.edit_user_dialog, 10)
+        enter_text_for_element(self.driver, self.old_password, password)
         enter_text_for_element(self.driver, self.edit_password1, new_password)
         enter_text_for_element(self.driver, self.edit_password2, new_password)
         # Click save button
         self.driver.find_element_by_css_selector(self.edit_save_button).click()
         wait_for_element(self.driver, '#username', 10)
         self.driver.find_element_by_css_selector("#logout").click()
-        login_newuser(self.driver, username, new_password)
+        login(self.driver, username, new_password)
         wait_for_element(self.driver, '#username', 10)
         self.driver.refresh()
         self.driver.find_element_by_css_selector("#logout").click()
-        login_superuser(self.driver)
+        login(self.driver, self.superuser_username, self.superuser_password)
