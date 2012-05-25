@@ -17,13 +17,23 @@ var Dashboard = (function() {
   var dashboard_target;
   var dashboard_filesystem;
 
-  var polling_enabled = true;
+  var polling_enabled;
   var time_period;
 
   function stopCharts() {
     // FIXME: revise when there is a global chart_manager
     if (chart_manager) {
       chart_manager.destroy();
+    }
+  }
+
+  function pollingInterval() {
+    if (polling_enabled) {
+      // scale the polling interval with time_period
+      var interval = time_period/60;
+      return (interval < 10)? 10 : interval;
+    } else {
+      return 0;
     }
   }
 
@@ -70,8 +80,8 @@ var Dashboard = (function() {
     });
 
     // Set defaults
-    polling_enabled = true;
     time_period = 5 * 60;
+    polling_enabled = true;
     $('#intervalSelect').val('minutes');
     updateUnits('minutes',5);
     $('input#polling').attr('checked', 'checked');
@@ -80,11 +90,11 @@ var Dashboard = (function() {
     {
       if($(this).is(":checked")) {
         polling_enabled = true;
-        chart_manager.set_recurring(10);
+        chart_manager.set_recurring(pollingInterval());
         chart_manager.render_charts()
       } else {
-        chart_manager.clear_recurring();
         polling_enabled = false;
+        chart_manager.clear_recurring();
       }
     });
 
@@ -528,7 +538,8 @@ var Dashboard = (function() {
       chart_manager.destroy();
     }
 
-    chart_manager = ChartManager({chart_group: 'dashboard', default_time_boundary: time_period * 1000});
+    chart_manager = ChartManager({chart_group: 'dashboard', default_time_boundary: time_period * 1000,
+                                  interval_seconds: pollingInterval()});
     chart_manager.add_chart('db_line_cpu_mem', 'dashboard', {
       url: 'host/metric/',
       api_params: { reduce_fn: 'average' },
