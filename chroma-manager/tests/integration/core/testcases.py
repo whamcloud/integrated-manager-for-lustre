@@ -435,6 +435,7 @@ EOF
             self.remote_command(
                 client,
                 "umount /mnt/%s" % filesystem_name,
+                expected_return_code = None
             )
             stdin, stdout, stderr = self.remote_command(
                 client,
