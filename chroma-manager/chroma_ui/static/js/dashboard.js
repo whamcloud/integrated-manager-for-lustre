@@ -282,7 +282,6 @@ var Dashboard = (function() {
         var count = 0;
         $.each(targets, function(i, target_info)
         {
-          console.log(target_info.label);
           if (target_info.label == "MGS") { return; }
           breadCrumbHtml += "<option value='" + target_info.id + "'"
           if (target_info.id == dashboard_target.id) {
@@ -296,7 +295,6 @@ var Dashboard = (function() {
           "</select>"+
           "</li>"+
           "</ul>";
-        console.log(breadCrumbHtml)
         $("#breadcrumbs").html(breadCrumbHtml);
       });
 
