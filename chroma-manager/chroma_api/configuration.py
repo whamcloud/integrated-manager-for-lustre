@@ -118,7 +118,7 @@ class ConfigurationResource(Resource):
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ['get', 'post']
-        get_allowed_methods = []
+        detail_allowed_methods = []
         validation = ConfigurationValidation()
 
     def dehydrate_hosts(self, bundle):
