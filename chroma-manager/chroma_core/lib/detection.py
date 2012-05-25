@@ -279,7 +279,7 @@ class DetectScan(object):
                     mgs_local_info = volume
             if not mgs_local_info:
                 audit_log.debug("No MGS found on host %s" % host)
-                return
+                continue
 
             try:
                 mgs = ManagedMgs.objects.get(uuid = mgs_local_info['uuid'])
