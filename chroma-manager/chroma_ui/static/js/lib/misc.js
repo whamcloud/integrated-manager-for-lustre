@@ -14,7 +14,7 @@ function formatBytes(bytes, precision) {
     return bytes;
   }
   if (precision == undefined) {
-    precision = 3
+    precision = 3;
   }
 
   if (bytes > Math.pow(2, 40)) {
@@ -37,19 +37,26 @@ function formatBytes(bytes, precision) {
   return bytes;
 }
 
-function formatBigNumber(number) {
+function formatKBytes(kbytes, precision) {
+  return formatBytes(kbytes * 1024, precision);
+}
+
+function formatBigNumber(number, precision) {
   if (number == null || number == undefined) {
     return number;
   }
+  if (precision == undefined) {
+    precision = 3;
+  }
 
 	if (number >= 1000000000) {
-	     number = Math.floor(number / 1000000000) + 'B';
+	     number = formatNumberPrecision(number / 1000000000, precision) + 'B';
 	} else { 
 		if (number >= 1000000) {
-     		number = Math.floor(number / 1000000) + 'M';
+     		number = formatNumberPrecision(number / 1000000, precision) + 'M';
    	} else { 
 			if (number >= 1000) {
-    		number = Math.floor(number / 1000) + 'k';
+    		number = formatNumberPrecision(number / 1000, precision) + 'k';
   		}
  		}
 	}

@@ -234,6 +234,7 @@ var Dashboard = (function() {
         var count = 0;
         $.each(targets, function(i, target_info)
         {
+          if (target_info.label == "MGS") { return; }
           breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>";
           ostKindMarkUp = ostKindMarkUp + "<option value="+target_info.id+">"+target_info.kind+"</option>";
           ost_file_system_MarkUp = ost_file_system_MarkUp + "<option value="+target_info.id+">"+target_info.filesystem_id+"</option>";
@@ -258,62 +259,96 @@ var Dashboard = (function() {
   {
     dashboard_page('target');
 
+    var target_params = "";
     var breadCrumbHtml = "<ul>"+
       "<li><a href='dashboard/' class='home_icon navigation'>Home</a></li>"+
       "<li>"+get_view_selection_markup()+"</li>";
     if (dashboard_filesystem){
       breadCrumbHtml += "<li><a class='navigation' href='dashboard/filesystem/" + dashboard_filesystem.id + "/''>"+dashboard_filesystem.label+"</a></li>";
+      target_params = {"filesystem_id": dashboard_filesystem.id, limit:0};
     } else {
       breadCrumbHtml += "<li><a class='navigation' href='dashboard/server/" + dashboard_server.id + "/'>"+dashboard_server.label+"</a></li>";
+      target_params = {"host_id": dashboard_server.id, limit:0};
     }
+    breadCrumbHtml += "<li>"+
+      "<select id='breadcrumb_target'>"
+
+    Api.get("target/", target_params,
+      success_callback = function(data)
+      {
+        var targets = data.objects;
+        targets = targets.sort(function(a,b) {return a.label > b.label;});
+
+        var count = 0;
+        $.each(targets, function(i, target_info)
+        {
+          console.log(target_info.label);
+          if (target_info.label == "MGS") { return; }
+          breadCrumbHtml += "<option value='" + target_info.id + "'"
+          if (target_info.id == dashboard_target.id) {
+            breadCrumbHtml += ' selected="selected"'
+          }
+          breadCrumbHtml +=">" + target_info.label + "</option>";
+          count += 1;
+        });
+
+        breadCrumbHtml = breadCrumbHtml +
+          "</select>"+
+          "</li>"+
+          "</ul>";
+        console.log(breadCrumbHtml)
+        $("#breadcrumbs").html(breadCrumbHtml);
+      });
+
 
     $('#target_name').html(dashboard_target.label);
-
-    breadCrumbHtml += "<li>"+dashboard_target.label+"</li>"+
-      "</ul>";
-
-    $("#breadcrumbs").html(breadCrumbHtml);
 
     if (dashboard_target.filesystem) {
       var innerContent = "";
       $('#ostSummaryTbl').html("<tr><td width='100%' align='center' height='180px'>" +
         "<img src='/static/images/loading.gif' style='margin-top:10px;margin-bottom:10px' width='16' height='16' /></td></tr>");
 
-      var filesystem = ApiCache.get('filesystem', dashboard_target.filesystem_id).toJSON();
-      innerContent = innerContent +
-        "<tr>" +
-        "<td class='greybgcol'>MGS :</td><td class='tblContent greybgcol'>"+filesystem.mgt.primary_server_name+"</td><td>&nbsp;</td><td>&nbsp;</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>MDS :</td>" +
-        "<td class='tblContent greybgcol'>"+filesystem.mdts[0].primary_server_name+"</td>" +
-        "<td></td><td></td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>File System :</td>" +
-        "<td class='tblContent greybgcol'>"+filesystem.name+"</td>" +
-        "<td>&nbsp;</td>" +
-        "<td>&nbsp;</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Size: </td>" +
-        "<td class='tblContent greybgcol'>"+formatBytes(filesystem.bytes_total)+" </td>" +
-        "<td class='greybgcol'>Free space:</td>" +
-        "<td class='tblContent greybgcol'>"+formatBytes(filesystem.bytes_free)+"</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Max. files: </td>" +
-        "<td class='tblContent greybgcol'>"+formatBigNumber(filesystem.files_total)+" </td>" +
-        "<td class='greybgcol'>Files:</td>" +
-        "<td class='tblContent greybgcol'>"+formatBigNumber(filesystem.files_total - filesystem.files_free)+"</td>" +
-        "</tr>"+
-        "<tr>" +
-        "<td class='greybgcol'>Total OSTs:</td>" +
-        "<td class='tblContent greybgcol'>"+filesystem.osts.length+" </td>" +
-        "<td>&nbsp;</td><td>&nbsp;</td>" +
-        "</tr>";
+      var filesystem = ApiCache.get('filesystem', dashboard_target.filesystem_id).toJSON()
 
-      $('#ostSummaryTbl').html(innerContent);
+      Api.get('target/' + dashboard_target.id + '/metric/',
+        {metrics: "filestotal,filesfree,kbytestotal,kbytesfree", latest:true},
+        success_callback = function(data) {
+          var inode_label = (dashboard_target.kind == 'OST')? "Objects" : "Files";
+          var filestotal= 0,filesfree= 0,kbytestotal=0,kbytesfree=0;
+
+          if (_.isObject(data[0])) {
+            filestotal = data[0].data.filestotal;
+            filesfree = data[0].data.filesfree;
+            kbytestotal = data[0].data.kbytestotal;
+            kbytesfree = data[0].data.kbytesfree;
+          }
+
+          innerContent = innerContent +
+            "<tr>" +
+            "<td class='greybgcol'>Active Host</td><td class='tblContent greybgcol'>"+dashboard_target.active_host_name+"</td><td>&nbsp;</td><td>&nbsp;</td>" +
+            "</tr>"+
+            "<tr>" +
+            "<td class='greybgcol'>File System :</td>" +
+            "<td class='tblContent greybgcol'>"+filesystem.name+"</td>" +
+            "<td>&nbsp;</td>" +
+            "<td>&nbsp;</td>" +
+            "</tr>"+
+            "<tr>" +
+            "<td class='greybgcol'>Max Space: </td>" +
+            "<td class='tblContent greybgcol'>"+formatKBytes(kbytestotal, 4)+" </td>" +
+            "<td class='greybgcol'>Free space:</td>" +
+            "<td class='tblContent greybgcol'>"+formatKBytes(kbytesfree, 4)+"</td>" +
+            "</tr>"+
+            "<tr>" +
+            "<td class='greybgcol'>Max. "+ inode_label + ": </td>" +
+            "<td class='tblContent greybgcol'>"+formatBigNumber(filestotal)+" </td>" +
+            "<td class='greybgcol'>Used "+ inode_label + ":</td>" +
+            "<td class='tblContent greybgcol'>"+formatBigNumber(filestotal - filesfree)+"</td>" +
+            "</tr>";
+
+          $('#ostSummaryTbl').html(innerContent);
+        });
+
     }
     else
     {
@@ -327,7 +362,6 @@ var Dashboard = (function() {
       $("#target_space_usage_container,#target_inodes_container,#target_read_write_container_div").show();
       $("#target_mdt_ops_container_div").hide();
       init_charts('targets_ost');
-
     }
     else if (dashboard_target.kind === 'MDT') {
       //ost_Area_mgtOps_Data($('#ls_ostId').val(), "false");
@@ -366,6 +400,7 @@ var Dashboard = (function() {
         var count = 0;
         $.each(targets, function(i, target_info)
         {
+          if (target_info.label == "MGS") { return; }
           breadCrumbHtml += "<option value='" + target_info.id + "'>" + target_info.label + "</option>";
 
           ostKindMarkUp = ostKindMarkUp + "<option value="+target_info.id+">"+target_info.kind+"</option>";
@@ -389,15 +424,15 @@ var Dashboard = (function() {
     var innerContent = "";
     innerContent = innerContent +
       "<tr>" +
-      "<td>MGS :</td>" +
+      "<td>Management Server (MGS) :</td>" +
       "<td>"+dashboard_filesystem.mgt.primary_server_name+"</td>" +
       "</tr>"+
       "<tr>" +
-      "<td>MDS:</td>" +
+      "<td>Metadata Server (MDS):</td>" +
       "<td>"+dashboard_filesystem.mdts[0].primary_server_name+"</td>" +
       "</tr>"+
       "<tr>" +
-      "<td>Total OSTs:</td>" +
+      "<td>Total Object Storage Targets (OST):</td>" +
       "<td>"+dashboard_filesystem.osts.length+"</td>" +
       "</tr>"+
       "<tr>" +
@@ -862,94 +897,87 @@ var Dashboard = (function() {
     chart_manager.chart_group('targets_ost');
     chart_manager.add_chart('freespace','targets_ost', {
       url: function() { return 'target/' + dashboard_target.id + '/metric/'; },
-      api_params: {reduce_fn: 'sum', kind: 'OST', group_by: 'filesystem', latest: true},
+      api_params: {},
       metrics: ["kbytestotal", "kbytesfree"],
-      snapshot: true,
-      snapshot_callback: function(chart, data) {
-        var free=0,used=0;
-        var totalDiskSpace=0,totalFreeSpace=0;
-        if ( _.isObject(data[0])) {
-          totalFreeSpace = data[0].data.kbytesfree;
-          totalDiskSpace = data[0].data.kbytestotal;
-          free = Math.round(((totalFreeSpace)/(totalDiskSpace))*100);
-          used = Math.round(100 - free);
+      data_callback: function(chart, data) {
+        // Generate a number of series objects and return them
+        var result = {};
+        var update_data = [];
+        _.each(data, function(point, target_id) {
+          usedPercent = (point.data.kbytestotal - point.data.kbytesfree)/point.data.kbytestotal * 100;
+          update_data.push([new Date(point.ts).getTime(), usedPercent])
+        });
+        result[0] = {
+          id: 0,
+          label: "Space Used",
+          data: update_data
         }
-        chart.instance.series[0].setData([ ['Free', free], ['Used', used] ]);
+        return result;
       },
+      series_template: {type: 'area'},
       chart_config: {
         chart: {
           renderTo: 'target_space_usage_container',
           plotShadow: false
         },
-        colors: [ '#A6C56D', '#C76560' ],
-        title:{ text: 'Space Usage' },
+        colors: [ '#C76560' ],
+        title:{ text: 'Space Usage'},
+        tooltip: {valueSuffix: '%'},
         zoomType: 'xy',
-        tooltip: {
-          shared: false,
-          formatter: function() { return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %'; }
-        },
-        xAxis:{ categories: [], text: '' },
-        yAxis:{ text: '', plotLines: [ { value: 0, width: 1, color: '#808080' } ] },
+        xAxis: { type:'datetime' },
+        yAxis: [{
+          max:100, min:0, startOnTick:false,  tickInterval: 20,
+          title: null,
+          labels: {formatter: percentage_formatter}
+        }],
         plotOptions: {
-          pie: {
-            allowPointSelect: true,
-            cursor: 'pointer',
-            showInLegend: true,
-            size: '100%',
-            dataLabels: { enabled: false,color: '#000000',connectorColor: '#000000' }
+          area: {
+            stacking: null
           }
-        },
-        series: [{
-          type: 'pie',
-          name: 'Browser share',
-          data: [ ]
-        }]
+        }
       }
     });
+
     chart_manager.add_chart('inode','targets_ost', {
       url: function() { return 'target/' + dashboard_target.id + '/metric/'; },
-      api_params: {reduce_fn: 'sum', kind: 'OST', group_by: 'filesystem', latest: true},
+      api_params: {},
       metrics: ["filestotal", "filesfree"],
-      snapshot: true,
-      snapshot_callback: function(chart, data) {
-        var free=0,used=0;
-        var totalFiles=0,totalFreeFiles=0;
-        if ( _.isObject(data[0])) {
-          totalFiles = data[0].data.filesfree;
-          totalFreeFiles = data[0].data.filestotal;
-          free = Math.round(((totalFiles)/(totalFreeFiles))*100);
-          used = Math.round(100 - free);
+      data_callback: function(chart, data) {
+        // Generate a number of series objects and return them
+        var result = {};
+        var update_data = [];
+        _.each(data, function(point, target_id) {
+          usedPercent = (point.data.filestotal - point.data.filesfree)/point.data.filestotal * 100;
+          update_data.push([new Date(point.ts).getTime(), usedPercent])
+        });
+        result[0] = {
+          id: 0,
+          label: "Objects Used",
+          data: update_data
         }
-        chart.instance.series[0].setData([ ['Free', free], ['Used', used] ]);
+        return result;
       },
+      series_template: {type: 'area'},
       chart_config: {
         chart: {
           renderTo: 'target_inodes_container',
           plotShadow: false
         },
-        colors: [ '#A6C56D', '#C76560' ],
-        title:{ text: 'File usage'},
+        colors: [ '#C76560' ],
+        title:{ text: 'Object Usage'},
+        tooltip: {valueSuffix: '%'},
         zoomType: 'xy',
-        tooltip: {
-          shared: false,
-          formatter: function() { return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %'; }
-        },
-        xAxis:{ categories: [], text: '' },
-        yAxis:{ text: '', plotLines: [ { value: 0, width: 1, color: '#808080' } ] },
+        xAxis: { type:'datetime' },
+        yAxis: [{
+          max:100, min:0, startOnTick:false,  tickInterval: 20,
+          title: null,
+          labels: {formatter: percentage_formatter}
+        }],
         plotOptions: {
-          pie: {
-            allowPointSelect: true,
-            cursor: 'pointer',
-            showInLegend: true,
-            size: '100%',
-            dataLabels: { enabled: false,color: '#000000',connectorColor: '#000000' }
+          area: {
+            stacking: null
           }
-        },
-        series: [{
-          type: 'pie',
-          name: 'Browser share',
-          data: [ ]
-        }]
+        }
       }
     });
 
@@ -1010,48 +1038,44 @@ var Dashboard = (function() {
 
     chart_manager.add_chart('inode','targets_mdt', {
       url: function() { return 'target/' + dashboard_target.id + '/metric/'; },
-      api_params: { latest: true},
+      api_params: {},
       metrics: ["filestotal", "filesfree"],
-      snapshot: true,
-      snapshot_callback: function(chart, data) {
-        var free=0,used=0;
-        var totalFiles=0,totalFreeFiles=0;
-        if ( _.isObject(data[0])) {
-          totalFiles = data[0].data.filesfree;
-          totalFreeFiles = data[0].data.filestotal;
-          free = Math.round(((totalFiles)/(totalFreeFiles))*100);
-          used = Math.round(100 - free);
+      data_callback: function(chart, data) {
+        // Generate a number of series objects and return them
+        var result = {};
+        var update_data = [];
+        _.each(data, function(point, target_id) {
+          usedPercent = (point.data.filestotal - point.data.filesfree)/point.data.filestotal * 100;
+          update_data.push([new Date(point.ts).getTime(), usedPercent])
+        });
+        result[0] = {
+          id: 0,
+          label: "Files Used",
+          data: update_data
         }
-        chart.instance.series[0].setData([ ['Free', free], ['Used', used] ]);
+        return result;
       },
+      series_template: {type: 'area'},
       chart_config: {
         chart: {
           renderTo: 'target_inodes_container',
           plotShadow: false
         },
-        colors: [ '#A6C56D', '#C76560' ],
-        title:{ text: 'File usage'},
+        colors: [ '#C76560' ],
+        title:{ text: 'Object Usage'},
+        tooltip: {valueSuffix: '%'},
         zoomType: 'xy',
-        tooltip: {
-          shared: false,
-          formatter: function() { return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %'; }
-        },
-        xAxis:{ categories: [], text: '' },
-        yAxis:{ text: '', plotLines: [ { value: 0, width: 1, color: '#808080' } ] },
+        xAxis: { type:'datetime' },
+        yAxis: [{
+          max:100, min:0, startOnTick:false,  tickInterval: 20,
+          title: null,
+          labels: {formatter: percentage_formatter}
+        }],
         plotOptions: {
-          pie: {
-            allowPointSelect: true,
-            cursor: 'pointer',
-            showInLegend: true,
-            size: '100%',
-            dataLabels: { enabled: false,color: '#000000',connectorColor: '#000000' }
+          area: {
+            stacking: null
           }
-        },
-        series: [{
-          type: 'pie',
-          name: 'Browser share',
-          data: [ ]
-        }]
+        }
       }
     });
 
