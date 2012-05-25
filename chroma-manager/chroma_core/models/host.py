@@ -626,24 +626,17 @@ class DetectTargetsStep(Step):
 
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
-        from chroma_core.lib.lustre_audit import DetectScan
+        from chroma_core.lib.detection import DetectScan
 
+        # Get all the host data
+        # FIXME: HYD-1120: should do this part in parallel
         host_data = {}
         for host in ManagedHost.objects.all():
             data = self.invoke_agent(host, 'detect-scan')
             host_data[host] = data
 
-        # Stage one: detect MGSs
-        for host in ManagedHost.objects.all():
-            success = DetectScan().run(host.pk, host_data[host], host_data)
-            if not success:
-                raise RuntimeError("Audit host %s failed during MGS detection, aborting" % host)
-
-        # Stage two: detect filesystem targets
-        for host in ManagedHost.objects.all():
-            success = DetectScan().run(host.pk, host_data[host], host_data)
-            if not success:
-                raise RuntimeError("Audit host %s failed during FS target detection, aborting" % host)
+        with transaction.commit_on_success():
+            DetectScan().run(host_data)
 
 
 class DetectTargetsJob(Job):

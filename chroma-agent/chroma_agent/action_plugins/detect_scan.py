@@ -81,7 +81,7 @@ def get_mgs_targets(local_targets):
     TARGET_NAME_REGEX = "([\w-]+)-(MDT|OST)\w+"
     mgs_target = None
     for t in local_targets:
-        if t["name"] == "MGS":
+        if t["name"] == "MGS" and t['mounted']:
             mgs_target = t
     if not mgs_target:
         return ({}, {})
