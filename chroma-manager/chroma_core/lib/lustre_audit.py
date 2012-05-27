@@ -12,7 +12,7 @@ import MySQLdb as Database
 from django.db import transaction
 
 from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
-from chroma_core.models.host import ManagedHost, HostContactAlert, LNetNidsChangedAlert
+from chroma_core.models.host import ManagedHost, HostContactAlert, LNetNidsChangedAlert, NoLNetInfo
 from chroma_core.lib.state_manager import StateManagerClient
 from chroma_core.models import ManagedTargetMount
 
@@ -122,10 +122,14 @@ class UpdateScan(object):
                                   lnet_state,
                                   ['lnet_unloaded', 'lnet_down', 'lnet_up'])
 
-        if self.host_data['lnet_nids']:
+        try:
             known_nids = self.host.lnetconfiguration.get_nids()
-            current = (set(known_nids) == set([normalize_nid(n) for n in self.host_data['lnet_nids']]))
-            LNetNidsChangedAlert.notify(self.host, not current)
+        except NoLNetInfo:
+            pass
+        else:
+            if self.host_data['lnet_nids']:
+                current = (set(known_nids) == set([normalize_nid(n) for n in self.host_data['lnet_nids']]))
+                LNetNidsChangedAlert.notify(self.host, not current)
 
     def update_target_mounts(self):
         # Loop over all mountables we expected on this host, whether they

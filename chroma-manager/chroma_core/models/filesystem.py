@@ -6,6 +6,7 @@
 
 from django.db import models
 from chroma_core.lib.job import  DependOn, DependAll, Step
+from chroma_core.models.host import NoLNetInfo
 from chroma_core.models.jobs import StatefulObject, StateChangeJob
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_core.lib.cache import ObjectCache
@@ -69,7 +70,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
             host = target_mount.host
             nids = ",".join(host.lnetconfiguration.get_nids())
             if nids == "":
-                raise ValueError("NIDs for MGS host %s not known" % host)
+                raise NoLNetInfo("NIDs for MGS host %s not known" % host)
 
             nid_specs.append(nids)
 
@@ -78,7 +79,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
     def mount_path(self):
         try:
             return "%s:/%s" % (self.mgs_spec(), self.name)
-        except ValueError:
+        except NoLNetInfo:
             return None
 
     def __str__(self):

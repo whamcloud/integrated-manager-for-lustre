@@ -5,6 +5,7 @@
 
 
 import datetime
+from exceptions import Exception
 import logging
 import dateutil.parser
 
@@ -419,7 +420,7 @@ class LNetConfiguration(StatefulObject):
 
     def get_nids(self):
         if self.state != 'nids_known':
-            raise ValueError("Nids not known yet for host %s" % self.host)
+            raise NoLNetInfo("Nids not known yet for host %s" % self.host)
         return [n.nid_string for n in self.nid_set.all()]
 
     def __str__(self):
@@ -1097,3 +1098,7 @@ class LNetNidsChangedAlert(AlertState):
             host = self.alert_item,
             alert = self,
             severity = logging.INFO)
+
+
+class NoLNetInfo(Exception):
+    pass
