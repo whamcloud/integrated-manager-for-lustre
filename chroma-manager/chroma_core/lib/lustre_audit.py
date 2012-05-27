@@ -11,10 +11,9 @@ import functools
 import MySQLdb as Database
 from django.db import transaction
 
-from chroma_core.models.alert import TargetRecoveryAlert, HostContactAlert
-from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo
-from chroma_core.models.host import ManagedHost
-from chroma_core.lib.state_manager import StateManager
+from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
+from chroma_core.models.host import ManagedHost, HostContactAlert, LNetNidsChangedAlert, NoLNetInfo
+from chroma_core.lib.state_manager import StateManagerClient
 from chroma_core.models import ManagedTargetMount
 
 import settings
@@ -98,12 +97,6 @@ class UpdateScan(object):
 
         return contact
 
-    def _audited_lnet_state(self):
-        return {(False, False): 'lnet_unloaded',
-                (True, False): 'lnet_down',
-                (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'],
-                                          self.host_data['lnet_up'])]
-
     def learn_capabilities(self):
         """Update the host record from the capabilities reported by the agent"""
         # FIXME: What to do if we split out rsyslog into an optional
@@ -118,10 +111,25 @@ class UpdateScan(object):
                 self.host.save()
 
     def update_lnet(self):
-        StateManager.notify_state(self.host.downcast(),
+        # Update LNet status
+        lnet_state = {(False, False): 'lnet_unloaded',
+                (True, False): 'lnet_down',
+                (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'],
+                                          self.host_data['lnet_up'])]
+
+        StateManagerClient.notify_state(self.host.downcast(),
                                   self.started_at,
-                                  self._audited_lnet_state(),
+                                  lnet_state,
                                   ['lnet_unloaded', 'lnet_down', 'lnet_up'])
+
+        try:
+            known_nids = self.host.lnetconfiguration.get_nids()
+        except NoLNetInfo:
+            pass
+        else:
+            if self.host_data['lnet_nids']:
+                current = (set(known_nids) == set([normalize_nid(n) for n in self.host_data['lnet_nids']]))
+                LNetNidsChangedAlert.notify(self.host, not current)
 
     def update_target_mounts(self):
         # Loop over all mountables we expected on this host, whether they
@@ -147,10 +155,10 @@ class UpdateScan(object):
                 target = target_mount.target
                 if mounted_locally:
                     target.set_active_mount(target_mount)
-                    StateManager.notify_state(target, self.started_at, 'mounted', ['mounted', 'unmounted'])
+                    StateManagerClient.notify_state(target, self.started_at, 'mounted', ['mounted', 'unmounted'])
                 elif not mounted_locally and target.active_mount == target_mount:
                     target.set_active_mount(None)
-                    StateManager.notify_state(target, self.started_at, 'unmounted', ['mounted', 'unmounted'])
+                    StateManagerClient.notify_state(target, self.started_at, 'unmounted', ['mounted', 'unmounted'])
 
             if target_mount.target.active_mount == None:
                 TargetRecoveryInfo.update(target_mount.target, {})
@@ -196,8 +204,8 @@ class UpdateScan(object):
                 target.set_active_mount(active_mount)
 
                 state = ['unmounted', 'mounted'][active_mount != None]
-                from chroma_core.lib.state_manager import StateManager
-                StateManager.notify_state(target, self.started_at, state, ['mounted', 'unmounted'])
+                from chroma_core.lib.state_manager import StateManagerClient
+                StateManagerClient.notify_state(target, self.started_at, state, ['mounted', 'unmounted'])
 
     def store_lustre_target_metrics(self, target_name, metrics):
         # TODO: Re-enable MGS metrics storage if it turns out it's useful.

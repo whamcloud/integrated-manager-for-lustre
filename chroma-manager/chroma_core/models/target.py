@@ -5,12 +5,17 @@
 
 
 import json
+import logging
 import uuid
+from django.contrib.contenttypes.models import ContentType
 
 from django.db import models, transaction
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, AnyTargetMountStep, job_log
+from chroma_core.models.alert import AlertState
+from chroma_core.models.event import AlertEvent
 from chroma_core.models.jobs import StateChangeJob
-from chroma_core.models.host import ManagedHost
+from chroma_core.models.host import ManagedHost, LNetConfiguration
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
 import settings
@@ -57,6 +62,15 @@ class ManagedTarget(StatefulObject):
 
     def get_params(self):
         return [(p.key, p.value) for p in self.targetparam_set.all()]
+
+    def get_failover_nids(self):
+        fail_nids = []
+        for secondary_mount in self.managedtargetmount_set.filter(primary = False):
+            host = secondary_mount.host
+            failhost_nids = host.lnetconfiguration.get_nids()
+            assert(len(failhost_nids) != 0)
+            fail_nids.extend(failhost_nids)
+        return fail_nids
 
     @property
     def primary_host(self):
@@ -109,7 +123,6 @@ class ManagedTarget(StatefulObject):
                 TargetFailoverAlert.notify(tm, active_mount == tm)
 
     def set_state(self, state, intentional = False):
-        from chroma_core.models.alert import TargetOfflineAlert
         job_log.debug("mt.set_state %s %s" % (state, intentional))
         super(ManagedTarget, self).set_state(state, intentional)
         if intentional:
@@ -121,6 +134,7 @@ class ManagedTarget(StatefulObject):
         app_label = 'chroma_core'
 
     def get_deps(self, state = None):
+        from chroma_core.models import ManagedFilesystem
         if not state:
             state = self.state
 
@@ -129,7 +143,11 @@ class ManagedTarget(StatefulObject):
             # Depend on the active mount's host having LNet up, so that if
             # LNet is stopped on that host this target will be stopped first.
             target_mount = self.active_mount
-            deps.append(DependOn(target_mount.host.downcast(), 'lnet_up', fix_state='unmounted'))
+            if ObjectCache.enable:
+                host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == target_mount.host_id)
+            else:
+                host = target_mount.host.downcast()
+            deps.append(DependOn(host, 'lnet_up', fix_state='unmounted'))
 
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
@@ -137,22 +155,31 @@ class ManagedTarget(StatefulObject):
         if isinstance(self, FilesystemMember) and state not in ['removed', 'forgotten']:
             # Make sure I follow if filesystem goes to 'removed'
             # or 'forgotten'
-            deps.append(DependOn(self.filesystem, 'available',
-                acceptable_states = self.filesystem.not_states(['forgotten', 'removed']), fix_state=lambda s: s))
+            filesystem = ObjectCache.get_one(ManagedFilesystem, lambda fs: fs.id == self.filesystem_id)
+            deps.append(DependOn(filesystem, 'available',
+                acceptable_states = filesystem.not_states(['forgotten', 'removed']), fix_state=lambda s: s))
 
         if state not in ['removed', 'forgotten']:
-            for tm in self.managedtargetmount_set.all():
-                if self.immutable_state:
-                    deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
-                else:
-                    deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
+            if ObjectCache.enable:
+                target_mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.id)
+                for tm in target_mounts:
+                    if self.immutable_state:
+                        deps.append(DependOn(tm.host, 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
+                    else:
+                        deps.append(DependOn(tm.host, 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
+            else:
+                for tm in self.managedtargetmount_set.all():
+                    if self.immutable_state:
+                        deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
+                    else:
+                        deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
 
         return DependAll(deps)
 
     reverse_deps = {
-            'ManagedTargetMount': (lambda mtm: ManagedTarget.objects.filter(pk = mtm.target_id)),
-            'ManagedHost': lambda mh: set([tm.target.downcast() for tm in ManagedTargetMount.objects.filter(host = mh)]),
-            'ManagedFilesystem': lambda mfs: [t.downcast() for t in mfs.get_filesystem_targets()]
+            'ManagedTargetMount': lambda mtm: ObjectCache.mtm_targets(mtm.id),
+            'ManagedHost': lambda mh: ObjectCache.host_targets(mh.id),
+            'ManagedFilesystem': lambda mfs: ObjectCache.fs_targets(mfs.id)
             }
 
     @classmethod
@@ -555,7 +582,12 @@ class ConfigureTargetJob(StateChangeJob):
     def get_deps(self):
         deps = []
 
-        deps.append(DependOn(self.target.downcast().managedtargetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
+        from chroma_core.lib.state_manager import ObjectCache
+        if ObjectCache.enable:
+            prim_mtm = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.primary == True and mtm.target_id == self.target.id)
+            deps.append(DependOn(prim_mtm.host, 'lnet_up'))
+        else:
+            deps.append(DependOn(self.target.downcast().managedtargetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
 
         return DependAll(deps)
 
@@ -595,17 +627,21 @@ class RegisterTargetJob(StateChangeJob):
         return steps
 
     def get_deps(self):
+        from chroma_core.lib.state_manager import ObjectCache
         deps = []
 
-        deps.append(DependOn(self.target.downcast().managedtargetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
+        ct = ContentType.objects.get_for_id(self.target.content_type_id)
+        target = ObjectCache.get_one(ct.model_class(), lambda t: t.id == self.target.id)
+        deps.append(DependOn(ObjectCache.target_primary_server(target), 'lnet_up'))
 
-        target = self.target.downcast()
         if isinstance(target, FilesystemMember):
-            mgs = target.filesystem.mgs.downcast()
+            mgs = ObjectCache.get_one(ManagedMgs, lambda t: t.id == target.filesystem.mgs_id)
+
             deps.append(DependOn(mgs, "mounted"))
 
         if isinstance(target, ManagedOst):
-            mdts = ManagedMdt.objects.filter(filesystem = target.filesystem)
+            mdts = ObjectCache.get(ManagedMdt, lambda mdt: mdt.filesystem_id == target.filesystem_id)
+
             for mdt in mdts:
                 deps.append(DependOn(mdt, "mounted"))
 
@@ -647,8 +683,10 @@ class StartTargetJob(StateChangeJob):
     def get_deps(self):
         lnet_deps = []
         # Depend on at least one targetmount having lnet up
-        for tm in self.target.downcast().managedtargetmount_set.all():
-            lnet_deps.append(DependOn(tm.host.downcast(), 'lnet_up', fix_state = 'unmounted'))
+
+        mtms = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.target_id)
+        for tm in mtms:
+            lnet_deps.append(DependOn(tm.host, 'lnet_up', fix_state = 'unmounted'))
         return DependAny(lnet_deps)
 
     def get_steps(self):
@@ -707,13 +745,8 @@ class MkfsStep(Step):
         # FIXME: HYD-266
         kwargs['reformat'] = True
 
-        fail_nids = []
-        for secondary_mount in target.managedtargetmount_set.filter(primary = False):
-            host = secondary_mount.host
-            failhost_nids = host.lnetconfiguration.get_nids()
-            assert(len(failhost_nids) != 0)
-            fail_nids.extend(failhost_nids)
-        if len(fail_nids) > 0:
+        fail_nids = target.get_failover_nids()
+        if fail_nids:
             kwargs['failnode'] = fail_nids
 
         kwargs['device'] = primary_mount.volume_node.path
@@ -797,18 +830,33 @@ class FormatTargetJob(StateChangeJob):
             raise NotImplementedError()
 
     def get_deps(self):
-        target = self.target.downcast()
+        from chroma_core.lib.state_manager import ObjectCache
+        from chroma_core.models import ManagedFilesystem
+
+        if ObjectCache.enable:
+            ct = ContentType.objects.get_for_id(self.target.content_type_id)
+            target = ObjectCache.get_one(ct.model_class(), lambda t: t.id == self.target.id)
+        else:
+            target = self.target.downcast()
         deps = []
 
-        for tm in target.managedtargetmount_set.all():
-            host = tm.host.downcast()
-            deps.append(DependOn(host.lnetconfiguration, 'nids_known'))
+        hosts = set()
+        for tm in ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == target.id):
+            hosts.add(tm.host_id)
+        for lnc in ObjectCache.get(LNetConfiguration, lambda lnc: lnc.host_id in hosts):
+            deps.append(DependOn(lnc, 'nids_known'))
 
         if isinstance(target, FilesystemMember):
-            for tm in target.filesystem.mgs.managedtargetmount_set.all():
-                host = tm.host.downcast()
-                lnet_configuration = host.lnetconfiguration
-                deps.append(DependOn(lnet_configuration, 'nids_known'))
+            filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.id == target.filesystem_id)
+            mgt_id = filesystem.mgs_id
+
+            mgs_hosts = set()
+            for tm in ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == mgt_id):
+                mgs_hosts.add(tm.host_id)
+
+            for lnc in ObjectCache.get(LNetConfiguration, lambda lnc: lnc.host_id in mgs_hosts):
+                deps.append(DependOn(lnc, 'nids_known'))
+
         return DependAll(deps)
 
     def get_steps(self):
@@ -837,7 +885,6 @@ class ManagedTargetMount(models.Model):
 
         # If this is an MGS, there may not be another MGS on
         # this host
-        from chroma_core.models.target import ManagedMgs
         if isinstance(self.target.downcast(), ManagedMgs):
             from django.db.models import Q
             other_mgs_mountables_local = ManagedTargetMount.objects.filter(~Q(id = self.id), target__in = ManagedMgs.objects.all(), host = self.host).count()
@@ -862,3 +909,72 @@ class ManagedTargetMount(models.Model):
             kind_string = "failover"
 
         return "%s:%s:%s" % (self.host, kind_string, self.target)
+
+
+class TargetOfflineAlert(AlertState):
+    def message(self):
+        return "Target %s offline" % (self.alert_item)
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def begin_event(self):
+        return AlertEvent(
+            message_str = "%s stopped" % self.alert_item,
+            host = self.alert_item.primary_server(),
+            alert = self,
+            severity = logging.WARNING)
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "%s started" % self.alert_item,
+            host = self.alert_item.primary_server(),
+            alert = self,
+            severity = logging.INFO)
+
+
+class TargetFailoverAlert(AlertState):
+    def message(self):
+        return "Target %s failed over to server %s" % (self.alert_item.target, self.alert_item.host)
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def begin_event(self):
+        # FIXME: reporting this event against the primary server
+        # of a target because we don't have enough information
+        # to
+        return AlertEvent(
+            message_str = "%s failover mounted" % self.alert_item.target,
+            host = self.alert_item.host,
+            alert = self,
+            severity = logging.WARNING)
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "%s failover unmounted" % self.alert_item.target,
+            host = self.alert_item.host,
+            alert = self,
+            severity = logging.INFO)
+
+
+class TargetRecoveryAlert(AlertState):
+    def message(self):
+        return "Target %s in recovery" % self.alert_item
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def begin_event(self):
+        return AlertEvent(
+            message_str = "Target '%s' went into recovery" % self.alert_item,
+            host = self.alert_item.primary_server(),
+            alert = self,
+            severity = logging.WARNING)
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "Target '%s' completed recovery" % self.alert_item,
+            host = self.alert_item.primary_server(),
+            alert = self,
+            severity = logging.INFO)

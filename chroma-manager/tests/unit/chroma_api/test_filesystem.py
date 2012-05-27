@@ -4,6 +4,11 @@ from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 
 
 class TestFilesystemResource(ChromaApiTestCase):
+    def test_spider(self):
+        self.spider_api()
+        self.create_simple_filesystem()
+        self.spider_api()
+
     def test_HYD424(self):
         """Test that filesystems can't be created using unmanaged MGSs"""
         mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")

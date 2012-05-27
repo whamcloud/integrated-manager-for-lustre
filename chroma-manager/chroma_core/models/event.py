@@ -5,7 +5,6 @@
 
 
 from django.db import models
-from chroma_core.models.target import ManagedTargetMount
 from polymorphic.models import DowncastMetaclass
 from django.contrib.contenttypes.models import ContentType
 
@@ -52,11 +51,11 @@ class LearnEvent(Event):
         return "Autodetection"
 
     def message(self):
-        from chroma_core.models import  ManagedTarget, ManagedFilesystem
+        from chroma_core.models import ManagedTarget, ManagedFilesystem, ManagedTargetMount
         if isinstance(self.learned_item, ManagedTargetMount):
             return "Discovered mount point of %s on %s" % (self.learned_item, self.learned_item.host)
         elif isinstance(self.learned_item, ManagedTarget):
-            return "Discovered formatted target %s" % (self.learned_item)
+            return "Discovered formatted target %s" % self.learned_item
         elif isinstance(self.learned_item, ManagedFilesystem):
             return "Discovered filesystem %s on MGS %s" % (self.learned_item, self.learned_item.mgs.primary_server())
         else:

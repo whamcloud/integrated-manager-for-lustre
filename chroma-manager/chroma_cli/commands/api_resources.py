@@ -23,8 +23,10 @@ def commands():
         'resources': list_resources,
         'detect_filesystems': detect_filesystems,
         'configuration_dump': configuration_dump,
-        'configuration_load': configuration_load
-        }
+        'configuration_load': configuration_load,
+        'relearn_nids': relearn_nids,
+        'update_nids': update_nids
+    }
 
     return cmd_handlers
 
@@ -34,16 +36,50 @@ def list_resources(config, parser, namespace):
     print " ".join(sorted(api.resource_names))
 
 
-def detect_filesystems(config, parser, args):
-    api = ApiClient(config.api_url, config.username, config.password)
+def _run_command(api, message, jobs):
     endpoint = api.command
-    resources = endpoint.create(message = "Detecting filesystems", jobs = [{'class_name': 'DetectTargetsJob', 'args': {}}])
+    resources = endpoint.create(message = message, jobs = jobs)
 
     # FIXME: blob2objects turns the returned dict into a list of one ApiResource containing the dict, which
     # is not what is wanted in this case.
     command = resources[0]._data
 
-    command = ApiCommandResource(endpoint.name, endpoint.api, **command)
+    return ApiCommandResource(endpoint.name, endpoint.api, **command)
+
+
+def detect_filesystems(config, parser, args):
+    api = ApiClient(config.api_url, config.username, config.password)
+    command = _run_command(api, message = "Detecting filesystems", jobs = [{'class_name': 'DetectTargetsJob', 'args': {
+        #'hosts': [h['id'] for h in api.host.list()]
+    }}])
+    if not args.async:
+        command.get_monitor()()
+
+
+def relearn_nids(config, parser, args):
+    api = ApiClient(config.api_url, config.username, config.password)
+
+    command = _run_command(api, message = "Relearning host NIDs", jobs = [{
+        'class_name': 'RelearnNidsJob',
+        'args': {
+            # FIXME: take an arg
+            'host_id': api.host.list()[0]['id']
+            #'hosts': [h['id'] for h in api.host.list()]
+        }
+    }])
+    if not args.async:
+        command.get_monitor()()
+
+
+def update_nids(config, parser, args):
+    api = ApiClient(config.api_url, config.username, config.password)
+
+    command = _run_command(api, message = "Updating filesystem NID configuration", jobs = [{
+        'class_name': 'UpdateNidsJob',
+        'args': {
+            #'hosts': [h['id'] for h in api.host.list()]
+        }
+    }])
     if not args.async:
         command.get_monitor()()
 

@@ -1,5 +1,6 @@
 
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen
+from chroma_core.lib.state_manager import StateManagerClient
 import datetime
 from dateutil import tz
 
@@ -14,7 +15,6 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
 
         # This tests a state transition which is done by a single job
         command_id = Command.set_state([(freshen(self.host), 'lnet_down')]).id
-        self.assertEqual(Command.objects.get(pk = command_id).jobs_created, True)
         self.assertEqual(Command.objects.get(pk = command_id).complete, True)
         self.assertEqual(Command.objects.get(pk = command_id).jobs.count(), 1)
 
@@ -30,7 +30,6 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
         from chroma_core.models import Command
         command_id = Command.set_state([(freshen(self.host), 'lnet_unloaded')]).id
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_unloaded')
-        self.assertEqual(Command.objects.get(pk = command_id).jobs_created, True)
         self.assertEqual(Command.objects.get(pk = command_id).complete, True)
         self.assertEqual(Command.objects.get(pk = command_id).jobs.count(), 2)
 
@@ -54,10 +53,7 @@ class TestStateManager(JobTestCaseWithHost):
             MockAgent.succeed = False
 
             import chroma_core.lib.conf_param
-            mgs_id = chroma_core.lib.conf_param.set_conf_params(fs, {"llite.max_cached_mb": "32"})
-            from chroma_core.models import ApplyConfParams
-            from chroma_core.lib.state_manager import StateManager
-            StateManager().add_job(ApplyConfParams(mgs = ManagedMgs.objects.get(pk = mgs_id)))
+            chroma_core.lib.conf_param.set_conf_params(fs, {"llite.max_cached_mb": "32"})
 
             self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 1)
             self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 0)
@@ -86,21 +82,17 @@ class TestStateManager(JobTestCaseWithHost):
 
     def test_notification(self):
         """Test that state notifications cause the state of an object to change"""
-        from chroma_core.lib.state_manager import StateManager
-
         self.assertEqual(freshen(self.host).state, 'lnet_up')
         now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
-        StateManager.notify_state(freshen(self.host), now, 'lnet_down', ['lnet_up'])
+        StateManagerClient.notify_state(freshen(self.host), now, 'lnet_down', ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_down')
 
     def test_late_notification(self):
         """Test that notifications are droppped when they are older than
         the last change to an objects state"""
-        from chroma_core.lib.state_manager import StateManager
-
         self.assertEqual(freshen(self.host).state, 'lnet_up')
         awhile_ago = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc()) - datetime.timedelta(seconds = 120)
-        StateManager.notify_state(freshen(self.host), awhile_ago, 'lnet_down', ['lnet_up'])
+        StateManagerClient.notify_state(freshen(self.host), awhile_ago, 'lnet_down', ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_up')
 
     def test_2steps(self):

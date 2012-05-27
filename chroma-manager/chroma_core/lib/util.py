@@ -4,6 +4,12 @@
 # ========================================================
 
 
+import logging
+import time
+from django.db import connection
+import settings
+
+
 def all_subclasses(obj):
     """Used to introspect all descendents of a class.  Used because metaclasses
        are a PITA when doing multiple inheritance"""
@@ -15,7 +21,6 @@ def all_subclasses(obj):
 
 
 def time_str(dt):
-    import time
     return time.strftime("%Y-%m-%dT%H:%M:%S", dt.timetuple())
 
 
@@ -45,8 +50,6 @@ class timeit(object):
 
         @wraps(method)
         def timed(*args, **kw):
-            import time
-            import logging
             if self.logger.level <= logging.DEBUG:
                 ts = time.time()
                 result = method(*args, **kw)
@@ -68,3 +71,42 @@ class timeit(object):
                 return method(*args, **kw)
 
         return timed
+
+
+class dbperf(object):
+    enabled = False
+    logger = logging.getLogger('dbperf')
+
+    def __init__(self, label = ""):
+        self.label = label
+        self.logger.disabled = not self.enabled
+        if self.enabled and not len(self.logger.handlers):
+            self.logger.setLevel(logging.DEBUG)
+            self.logger.addHandler(logging.FileHandler('dbperf.log'))
+
+    def __enter__(self):
+        if settings.DEBUG:
+            self.t_initial = time.time()
+            self.q_initial = len(connection.queries)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if not self.enabled:
+            return
+
+        self.t_final = time.time()
+        self.q_final = len(connection.queries)
+
+        t = self.t_final - self.t_initial
+        q = self.q_final - self.q_initial
+
+        if q:
+            logfile = open("%s.log" % self.label, 'w')
+            for query in connection.queries[self.q_initial:]:
+                logfile.write("(%s) %s\n" % (query['time'], query['sql']))
+            logfile.close()
+
+        if q:
+            avg_t = int((t / q) * 1000)
+        else:
+            avg_t = 0
+        self.logger.debug("%s: %d queries in %.2fs (avg %dms)" % (self.label, q, t, avg_t))

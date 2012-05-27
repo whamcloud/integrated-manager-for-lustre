@@ -116,7 +116,6 @@ class Agent(object):
         code, out, err = self.ssh(cmdline)
 
         if code == 0:
-            # May raise a ValueError
             try:
                 data = json.loads(out)
             except ValueError:

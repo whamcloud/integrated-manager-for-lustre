@@ -5,28 +5,26 @@
 
 
 import datetime
+from collections import defaultdict
+import json
 
 from django.db import models
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
-from picklefield.fields import PickledObjectField
-
-from chroma_core.models.utils import WorkaroundGenericForeignKey, WorkaroundDateTimeField, await_async_result
-
 from django.db.models import Q
-from collections import defaultdict
+
+from picklefield.fields import PickledObjectField
 from polymorphic.models import DowncastMetaclass
-from chroma_core.lib.job import DependOn, DependAll
+
+from chroma_core.models.utils import WorkaroundDateTimeField, await_async_result
+from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
+from chroma_core.lib.util import dbperf
 
 MAX_STATE_STRING = 32
 
 
 class Command(models.Model):
-    jobs_created = models.BooleanField(default = False,
-        help_text = "True if the jobs for this command have been scheduled.\
-                Commands start with this False, as scheduling the jobs for a\
-                command is an asynchronous process.")
     jobs = models.ManyToManyField('Job')
 
     complete = models.BooleanField(default = False,
@@ -45,7 +43,7 @@ class Command(models.Model):
     created_at = WorkaroundDateTimeField(auto_now_add = True)
 
     @classmethod
-    def set_state(cls, objects, message = None):
+    def set_state(cls, objects, message = None, **kwargs):
         """The states argument must be a collection of 2-tuples
         of (<StatefulObject instance>, state)"""
         dirty = False
@@ -72,10 +70,10 @@ class Command(models.Model):
 
         object_ids = [(ContentType.objects.get_for_model(object).natural_key(), object.id, state) for object, state in objects]
 
-        from chroma_core.tasks import command_set_state
-        async_result = command_set_state.delay(
+        from chroma_core.lib.state_manager import StateManagerClient
+        async_result = StateManagerClient.command_set_state(
                 object_ids,
-                message)
+                message, **kwargs)
 
         command_id = await_async_result(async_result)
 
@@ -109,7 +107,6 @@ class StatefulObject(models.Model):
             self.state_modified_at = datetime.datetime.utcnow()
 
     def set_state(self, state, intentional = False):
-        from chroma_core.lib.job import job_log
         job_log.info("StatefulObject.set_state %s %s->%s (intentional=%s)" % (self, self.state, state, intentional))
         self.state = state
         self.state_modified_at = datetime.datetime.utcnow()
@@ -265,76 +262,73 @@ class StatefulObject(models.Model):
         return cls.job_class_map[(begin_state, end_state)]
 
     def get_dependent_objects(self):
-        """Get all objects which MAY be depending on the state of this object"""
+        #with dbperf('get_dependent_objects'):
+            """Get all objects which MAY be depending on the state of this object"""
 
-        # Cache mapping a class to a list of functions for getting
-        # dependents of an instance of that class.
-        if not hasattr(StatefulObject, 'reverse_deps_map'):
-            reverse_deps_map = defaultdict(list)
-            for klass in all_subclasses(StatefulObject):
-                for class_name, lookup_fn in klass.reverse_deps.items():
-                    import chroma_core.models
-                    #FIXME: looking up class this way eliminates our ability to move
-                    # StatefulObject definitions out into other modules
-                    so_class = getattr(chroma_core.models, class_name)
-                    reverse_deps_map[so_class].append(lookup_fn)
-            StatefulObject.reverse_deps_map = reverse_deps_map
+            # Cache mapping a class to a list of functions for getting
+            # dependents of an instance of that class.
+            if not hasattr(StatefulObject, 'reverse_deps_map'):
+                reverse_deps_map = defaultdict(list)
+                for klass in all_subclasses(StatefulObject):
+                    for class_name, lookup_fn in klass.reverse_deps.items():
+                        import chroma_core.models
+                        #FIXME: looking up class this way eliminates our ability to move
+                        # StatefulObject definitions out into other modules
+                        so_class = getattr(chroma_core.models, class_name)
+                        reverse_deps_map[so_class].append(lookup_fn)
+                StatefulObject.reverse_deps_map = reverse_deps_map
 
-        klass = StatefulObject.so_child(self.__class__)
+            klass = StatefulObject.so_child(self.__class__)
 
-        from itertools import chain
-        lookup_fns = StatefulObject.reverse_deps_map[klass]
-        querysets = [fn(self) for fn in lookup_fns]
-        return chain(*querysets)
+            from itertools import chain
+            lookup_fns = StatefulObject.reverse_deps_map[klass]
+            querysets = [fn(self) for fn in lookup_fns]
+            return chain(*querysets)
 
 
-class StateLock(models.Model):
-    """Lock is the wrong word really, these objects exist for the lifetime of the Job.
-    All locks depend on the last pending job to write to a stateful object on which
-    they hold claim read or write lock.
-    """
+class StateLock(object):
+    def __init__(self, job, locked_item, write, begin_state = None, end_state = None):
+        self.job = job
+        self.locked_item = locked_item
+        self.write = write
+        self.begin_state = begin_state
+        self.end_state = end_state
 
-    __metaclass__ = DowncastMetaclass
-    job = models.ForeignKey('Job')
+    def __str__(self):
+        if not self.write:
+            return "readlock on %s" % (self.locked_item)
+        else:
+            return "writelock on %s %s->%s" % (self.locked_item, self.begin_state, self.end_state)
 
-    locked_item_type = models.ForeignKey(ContentType, related_name = 'locked_item')
-    locked_item_id = models.PositiveIntegerField()
-    locked_item = WorkaroundGenericForeignKey('locked_item_type', 'locked_item_id')
-
-    class Meta:
-        app_label = 'chroma_core'
+    def to_dict(self):
+        d = dict([(k, getattr(self, k)) for k in ['write', 'begin_state', 'end_state']])
+        d['locked_item_id'] = self.locked_item.id
+        d['locked_item_type_id'] = ContentType.objects.get_for_model(self.locked_item).id
+        return d
 
     @classmethod
-    def filter_by_locked_item(cls, stateful_object):
-        ctype = ContentType.objects.get_for_model(stateful_object)
-        return cls.objects.filter(locked_item_type = ctype, locked_item_id = stateful_object.id)
-
-
-class StateReadLock(StateLock):
-    #locked_state = models.CharField(max_length = MAX_STATE_STRING)
-    # NB we don't actually need to know the readlock state, although
-    # it would be useful to store the acceptable_states of the DependOn
-    # to validate that write locks left it in the right state.
-
-    class Meta:
-        app_label = 'chroma_core'
-
-    def __str__(self):
-        return "Job %d readlock on %s" % (self.job.id, self.locked_item)
-
-
-class StateWriteLock(StateLock):
-    begin_state = models.CharField(max_length = MAX_STATE_STRING)
-    end_state = models.CharField(max_length = MAX_STATE_STRING)
-
-    class Meta:
-        app_label = 'chroma_core'
-
-    def __str__(self):
-        return "Job %d writelock on %s %s->%s" % (self.job.id, self.locked_item, self.begin_state, self.end_state)
+    def from_dict(cls, job, d):
+        return StateLock(
+            locked_item = ContentType.objects.get_for_id(d['locked_item_type_id']).model_class().objects.get(pk = d['locked_item_id']),
+            job = job,
+            write = d['write'],
+            begin_state = d['begin_state'],
+            end_state = d['end_state'])
 
 
 class Job(models.Model):
+
+    # Hashing functions are specialized to how jobs are used/indexed
+    # inside StateManager
+    # - eq+hash operations are for operating on unsaved jobs
+    # - which doesn't work properly by default (https://code.djangoproject.com/ticket/18250)
+    # - and we also want the saved version of a job to compare equal to its unsaved version
+    def __eq__(self, other):
+        return id(self) == id(other)
+
+    def __hash__(self):
+        return hash(id(self))
+
     __metaclass__ = DowncastMetaclass
 
     states = ('pending', 'tasked', 'complete', 'completing', 'cancelling', 'paused')
@@ -352,11 +346,11 @@ class Job(models.Model):
     modified_at = WorkaroundDateTimeField(auto_now = True)
     created_at = WorkaroundDateTimeField(auto_now_add = True)
 
-    wait_for_count = models.PositiveIntegerField(default = 0)
-    wait_for_completions = models.PositiveIntegerField(default = 0)
-    wait_for = models.ManyToManyField('Job', symmetrical = False, related_name = 'wait_for_job')
+    wait_for_json = models.TextField()
 
     task_id = models.CharField(max_length=36, blank = True, null = True)
+
+    locks_json = models.TextField()
 
     # Set to a step index before that step starts running
     started_step = models.PositiveIntegerField(default = None, blank = True, null = True,
@@ -390,61 +384,62 @@ class Job(models.Model):
         from celery.result import AsyncResult
         return AsyncResult(self.task_id).state
 
-    def notify_wait_for_complete(self):
-        """Called by a wait_for job to notify that it is complete"""
-        from django.db.models import F
-        Job.objects.get_or_create(pk = self.id)
-        Job.objects.filter(pk = self.id).update(wait_for_completions = F('wait_for_completions') + 1)
-
     def create_dependencies(self):
         """Examine overlaps between self's statelocks and those of
            earlier jobs which are still pending, and generate wait_for
            dependencies when we have a write lock and they have a read lock
            or generate depend_on dependencies when we have a read or write lock and
            they have a write lock"""
+        from chroma_core.lib.state_manager import LockCache
         wait_fors = set()
-        for lock in self.statelock_set.all():
-            if isinstance(lock, StateWriteLock):
+        for lock in LockCache.get_by_job(self):
+            job_log.info("Job %s: %s" % (self.id, lock))
+            if lock.write:
                 wl = lock
                 # Depend on the most recent pending write to this stateful object,
                 # trust that it will have depended on any before that.
-                try:
-                    prior_write_lock = StateWriteLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).latest('id')
+                prior_write_lock = LockCache.get_latest_write(wl.locked_item, not_job = self)
+                if prior_write_lock:
                     assert (wl.begin_state == prior_write_lock.end_state), ("%s locks %s in state %s but previous %s leaves it in state %s" % (self, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state))
-                    wait_fors.add(prior_write_lock.job)
+                    job_log.info("Job %s:   pwl %s" % (self.id, prior_write_lock))
+                    wait_fors.add(prior_write_lock.job.id)
                     # We will only wait_for read locks after this write lock, as it
                     # will have wait_for'd any before it.
                     read_barrier_id = prior_write_lock.job.id
-                except StateWriteLock.DoesNotExist:
+                else:
                     read_barrier_id = 0
-                    pass
 
                 # Wait for any reads of the stateful object between the last write and
                 # our position.
-                prior_read_locks = StateReadLock.filter_by_locked_item(wl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).filter(job__id__gte = read_barrier_id)
+                prior_read_locks = LockCache.get_read_locks(wl.locked_item, after = read_barrier_id, not_job = self)
                 for i in prior_read_locks:
-                    wait_fors.add(i.job)
-            elif isinstance(lock, StateReadLock):
+                    job_log.info("Job %s:   prl %s" % (self.id, i))
+                    wait_fors.add(i.job.id)
+            else:
                 rl = lock
-                try:
-                    prior_write_lock = StateWriteLock.filter_by_locked_item(rl.locked_item).filter(~Q(job__state = 'complete')).filter(job__id__lt = self.id).latest('id')
+                prior_write_lock = LockCache.get_latest_write(rl.locked_item, not_job = self)
+                if prior_write_lock:
                     # See comment by locked_state in StateReadLock
-                    #assert(prior_write_lock.end_state == rl.locked_state)
-                    wait_fors.add(prior_write_lock.job)
-                except StateWriteLock.DoesNotExist:
-                    pass
+                    wait_fors.add(prior_write_lock.job.id)
+                job_log.info("Job %s:   pwl2 %s" % (self.id, prior_write_lock))
 
-        for j in wait_fors:
-            self.wait_for.add(j)
-        self.wait_for_count = self.wait_for.count()
-        self.save()
+        wait_fors = list(wait_fors)
+        if wait_fors:
+            self.wait_for_json = json.dumps(wait_fors)
 
     def create_locks(self):
+        locks = []
+        from chroma_core.lib.state_manager import get_deps
         # Take read lock on everything from self.get_deps
-        for dependency in self.get_deps().all():
-            StateReadLock.objects.create(job = self, locked_item = dependency.stateful_object)
+        for dependency in get_deps(self).all():
+            locks.append(StateLock(
+                job = self,
+                locked_item = dependency.stateful_object,
+                write = False
+            ))
 
         if isinstance(self, StateChangeJob):
+            #stateful_object = ObjectCache.get()
             stateful_object = self.get_stateful_object()
             target_klass, origins, new_state = self.state_transition
 
@@ -456,31 +451,63 @@ class Job(models.Model):
             # requirement of lnet_up (to prevent someone stopping lnet while
             # we're still running)
             from itertools import chain
-            for d in chain(stateful_object.get_deps(self.old_state).all(), stateful_object.get_deps(new_state).all()):
-                StateReadLock.objects.create(job = self,
-                        locked_item = d.stateful_object)
+            for d in chain(get_deps(stateful_object, self.old_state).all(), get_deps(stateful_object, new_state).all()):
+                locks.append(StateLock(
+                    job = self,
+                    locked_item = d.stateful_object,
+                    write = False
+                ))
 
             # Take a write lock on get_stateful_object if this is a StateChangeJob
-            StateWriteLock.objects.create(
+            locks.append(StateLock(
                     job = self,
                     locked_item = stateful_object,
                     begin_state = self.old_state,
-                    end_state = new_state)
+                    end_state = new_state,
+                    write = True))
+
+        return locks
+
+    @classmethod
+    def get_ready_jobs(cls):
+        wait_fors = {}
+        all_wait_fors = []
+        for job in Job.objects.filter(state = 'pending'):
+            if job.wait_for_json:
+                job_wait_fors = json.loads(job.wait_for_json)
+            else:
+                job_wait_fors = []
+            wait_fors[job.id] = job_wait_fors
+            all_wait_fors.extend(job_wait_fors)
+
+        wait_for_states = {}
+        for job in Job.objects.filter(id__in = all_wait_fors).values('state', 'id'):
+            wait_for_states[job['id']] = job['state']
+
+        result = []
+        for job_id, wait_for_ids in wait_fors.items():
+            ready = True
+            for wfi in wait_for_ids:
+                if wait_for_states[wfi] != 'complete':
+                    ready = False
+
+            if ready:
+                result.append(Job.objects.get(pk = job_id).downcast())
+
+        return result
 
     @classmethod
     def run_next(cls):
         from chroma_core.lib.job import job_log
-        from django.db.models import F
-        runnable_jobs = Job.objects \
-            .filter(wait_for_completions = F('wait_for_count')) \
-            .filter(state = 'pending')
+        runnable_jobs = cls.get_ready_jobs()
 
         job_log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
-            runnable_jobs.count(),
+            len(runnable_jobs),
             Job.objects.filter(state = 'pending').count(),
             Job.objects.filter(state = 'tasked').count()))
+
         for job in runnable_jobs:
-            job.downcast().run()
+            job.run()
 
     def get_deps(self):
         return DependAll()
@@ -538,6 +565,8 @@ class Job(models.Model):
             unpaused_job.delay(self.id)
 
     def all_deps(self):
+        from chroma_core.lib.state_manager import get_deps
+
         # This is not necessarily 100% consistent with the dependencies used by StateManager
         # when the job was submitted (e.g. other models which get_deps queries may have
         # changed), but that is a *good thing* -- this is a last check before running
@@ -551,18 +580,18 @@ class Job(models.Model):
             dependent_deps = []
             dependents = stateful_object.get_dependent_objects()
             for dependent in dependents:
-                for dependent_dependency in dependent.get_deps().all():
+                for dependent_dependency in get_deps(dependent).all():
                     if dependent_dependency.stateful_object == stateful_object \
                             and not new_state in dependent_dependency.acceptable_states:
                         dependent_deps.append(DependOn(dependent, dependent_dependency.fix_state))
 
             return DependAll(
                     DependAll(dependent_deps),
-                    self.get_deps(),
-                    stateful_object.get_deps(new_state),
+                    get_deps(self),
+                    get_deps(stateful_object, new_state),
                     DependOn(stateful_object, self.old_state))
         else:
-            return self.get_deps()
+            return get_deps(self)
 
     def _deps_satisfied(self):
         from chroma_core.lib.job import job_log
@@ -593,7 +622,8 @@ class Job(models.Model):
         # is - are this Job's immediate dependencies satisfied?  And are any deps
         # for a statefulobject's new state satisfied?  If so, continue.  If not, cancel.
 
-        deps_satisfied = self._deps_satisfied()
+        with dbperf('deps_satisfied'):
+            deps_satisfied = self._deps_satisfied()
 
         if not deps_satisfied:
             job_log.warning("Job %d: cancelling because of failed dependency" % (self.id))
@@ -656,8 +686,8 @@ class Job(models.Model):
             self.cancelled = cancelled
             self.save()
 
-        from chroma_core.lib.state_manager import StateManager
-        StateManager.complete_job(self.pk)
+        from chroma_core.lib.state_manager import StateManagerClient
+        StateManagerClient.complete_job(self.pk)
 
     def description(self):
         raise NotImplementedError
@@ -725,6 +755,13 @@ class StateChangeJob(Job):
     # Terse human readable verb, e.g. "Change this" (for buttons)
     state_verb = None
 
+    def __init__(self, *args, **kwargs):
+        super(StateChangeJob, self).__init__(*args, **kwargs)
+        if self.stateful_object in kwargs:
+            self._so_cache = kwargs[self.stateful_object]
+        else:
+            self._so_cache = None
+
     class Meta:
         abstract = True
 
@@ -732,12 +769,19 @@ class StateChangeJob(Job):
         stateful_object = getattr(self, self.stateful_object)
         return stateful_object.pk
 
+    def get_stateful_object_class(self):
+        return self._meta._fields[self.stateful_object].rel.to
+
     def get_stateful_object(self):
-        stateful_object = getattr(self, self.stateful_object)
-        # Get a fresh instance every time, we don't want one hanging around in the job
-        # run procedure because steps might be modifying it
-        stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
-        return stateful_object
+        if not self._so_cache:
+            stateful_object = getattr(self, self.stateful_object)
+            # Get a fresh instance every time, we don't want one hanging around in the job
+            # run procedure because steps might be modifying it
+            stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
+            if hasattr(stateful_object, 'content_type'):
+                stateful_object = stateful_object.downcast()
+            self._so_cache = stateful_object
+        return self._so_cache
 
 
 class AdvertisedJob(Job):
@@ -752,29 +796,9 @@ class AdvertisedJob(Job):
     # Terse human readable verb, e.g. "Launch Torpedos"
     verb = None
 
-    @classmethod
-    def get_available_jobs(cls, instance):
-        # If the object is subject to an incomplete Job
-        # then don't offer any actions
-        from chroma_core.models import StateLock
-        active_locks = StateLock.filter_by_locked_item(instance).filter(~Q(job__state = 'complete')).count()
-        if active_locks > 0:
-            return []
-
-        available_jobs = []
-        for aj in all_subclasses(AdvertisedJob):
-            for class_name in aj.classes:
-                ct = ContentType.objects.get_by_natural_key('chroma_core', class_name)
-                klass = ct.model_class()
-                if isinstance(instance, klass):
-                    if aj.can_run(instance):
-                        available_jobs.append({
-                            'verb': aj.verb,
-                            'confirmation': aj.get_confirmation(instance),
-                            'class_name': aj.__name__,
-                            'args': aj.get_args(instance)})
-
-        return available_jobs
+    # If False, running this job on N objects is N jobs, if True then running
+    # this job on N objects is one job.
+    plural = False
 
     @classmethod
     def can_run(cls, instance):
@@ -782,8 +806,11 @@ class AdvertisedJob(Job):
         return True
 
     @classmethod
-    def get_args(cls, instance):
-        """Return a dict of args suitable for constructing an instance of this class operating
+    def get_args(cls, objects):
+        """
+        :param objects: For if cls.plural then an iterable of objects, else a single object
+
+        Return a dict of args suitable for constructing an instance of this class operating
         on a particular object instance"""
         raise NotImplementedError()
 

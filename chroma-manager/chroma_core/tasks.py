@@ -5,22 +5,19 @@
 
 
 import subprocess
-from celery.beat import Scheduler
-from django.contrib.contenttypes.models import ContentType
-from chroma_core.lib.state_manager import StateManager
-from chroma_core.models.jobs import Command
-
-import settings
 from datetime import datetime, timedelta
 
+from celery.beat import Scheduler
 from celery.task import task, periodic_task, Task
 from django.db import transaction
 
+from chroma_core.lib.state_manager import StateManager
 from chroma_core.lib.agent import AgentException
 from chroma_core.lib.util import timeit
-
 from chroma_core.lib.job import job_log
 from chroma_core.lib.lustre_audit import audit_log
+
+import settings
 
 
 class EphemeralScheduler(Scheduler):
@@ -47,7 +44,8 @@ class RetryOnSqlErrorTask(Task):
     def __call__(self, *args, **kwargs):
         from MySQLdb import ProgrammingError, OperationalError
         try:
-            return self.run(*args, **kwargs)
+            with transaction.commit_on_success():
+                return self.run(*args, **kwargs)
         except (ProgrammingError, OperationalError), e:
             import sys
             import traceback
@@ -55,6 +53,13 @@ class RetryOnSqlErrorTask(Task):
             trace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
             job_log.error("Internal error %s" % trace)
             self.retry(args, kwargs, e, countdown=settings.SQL_RETRY_PERIOD)
+        except Exception, e:
+            import sys
+            import traceback
+            exc_info = sys.exc_info()
+            trace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            job_log.error("Internal error %s" % trace)
+            raise
 
 
 def _complete_orphan_jobs():
@@ -167,69 +172,38 @@ def janitor():
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def notify_state(content_type, object_id, time, new_state, from_states):
-    StateManager._notify_state(content_type, object_id, time, new_state, from_states)
+    result = StateManager().notify_state(content_type, object_id, time, new_state, from_states)
+    from chroma_core.models import Job
+    Job.run_next()
+    return result
 
 
 @task(base = RetryOnSqlErrorTask)
+@timeit(logger=job_log)
 def command_run_jobs(job_dicts, message):
-    assert(len(job_dicts) > 0)
-    jobs = []
-    for job in job_dicts:
-        job_klass = ContentType.objects.get_by_natural_key('chroma_core', job['class_name'].lower()).model_class()
-        jobs.append(job_klass(**job['args']))
-
-    with transaction.commit_on_success():
-        command = Command.objects.create(message = message)
-        job_log.debug("command_run_jobs: command %s" % command.id)
-        for job in jobs:
-            StateManager().add_job(job, command)
-            job_log.debug("command_run_jobs: job %s" % job.id)
-        command.jobs_created = True
-        command.save()
-
+    result = StateManager().command_run_jobs(job_dicts, message)
     from chroma_core.models import Job
     Job.run_next()
-
-    return command.id
+    return result
 
 
 @task(base = RetryOnSqlErrorTask)
-def command_set_state(object_ids, message):
-    """object_ids must be a list of 3-tuples of CT natural key, object PK, state"""
-    # StateManager.set_state is invoked in an async task for two reasons:
-    #  1. At time of writing, StateManager.set_state's logic is not safe against
-    #     concurrent runs that might schedule multiple jobs for the same objects.
-    #     Submitting to a single-worker queue is a simpler and more efficient
-    #     way of serializing than locking the table in the database, as we don't
-    #     exclude workers from setting there completion and advancing the queue
-    #     while we're scheduling new jobs.
-    #  2. Calculating the dependencies of a new state is not trivial, because operation
-    #     may have thousands of dependencies (think stopping a filesystem with thousands
-    #     of OSTs).  We want views like those that create+format a target to return
-    #     snappily.
-    #
-    #  nb. there is an added bonus that StateManager uses some cached tables
-    #      built from introspecting StatefulObject and StateChangeJob classes,
-    #      and a long-lived worker process keeps those in memory for you.
+@timeit(logger=job_log)
+def command_set_state(object_ids, message, run):
+    result = StateManager().command_set_state(object_ids, message)
 
-    with transaction.commit_on_success():
-        command = Command.objects.create(message = message)
-        for ct_nk, o_pk, state in object_ids:
-            model_klass = ContentType.objects.get_by_natural_key(*ct_nk).model_class()
-            instance = model_klass.objects.get(pk = o_pk)
-            StateManager().set_state(instance, state, command.id)
+    if run:
+        from chroma_core.models import Job
+        Job.run_next()
 
-    from chroma_core.models import Job
-    Job.run_next()
-
-    return command.id
+    return result
 
 
 @task(base = RetryOnSqlErrorTask)
 @timeit(logger=job_log)
 def complete_job(job_id):
-    from chroma_core.lib.state_manager import StateManager
-    StateManager._complete_job(job_id)
+    job_log.info("Job %d: complete_job" % job_id)
+    StateManager().complete_job(job_id)
 
     from chroma_core.models import Job
     Job.run_next()
@@ -277,6 +251,7 @@ def run_job(job_id):
             else:
                 job_log.error("Job %d step %d is dirty and cannot be re-run (it is not idempotent, marking job errored." % (job.id, job.started_step))
                 job.complete(errored = True)
+                return None
         else:
             job_log.info("Job %d will re-start from step %d" % (job.id, job.started_step + 1))
 
@@ -364,7 +339,7 @@ def audit_all():
         # If host has ever had contact but is not available now
         if host.last_contact and not host.is_available():
             # Set the HostContactAlert high
-            from chroma_core.models.alert import HostContactAlert
+            from chroma_core.models.host import HostContactAlert
             HostContactAlert.notify(host, True)
 
 

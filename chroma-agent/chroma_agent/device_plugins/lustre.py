@@ -9,7 +9,7 @@ import glob
 import datetime
 
 from chroma_agent.utils import Mounts, normalize_device, list_capabilities
-from chroma_agent.action_plugins.lnet_scan import lnet_status
+from chroma_agent.action_plugins.lnet_scan import lnet_status, get_nids
 from chroma_agent import shell, version
 from chroma_agent.plugins import DevicePlugin
 
@@ -56,6 +56,7 @@ def update_scan(args = None):
 
     metrics = LocalAudit().metrics()
     lnet_loaded, lnet_up = lnet_status()
+    lnet_nids = get_nids()
 
     # Only set resource_locations if we have the management package
     try:
@@ -64,12 +65,14 @@ def update_scan(args = None):
     except ImportError:
         resource_locations = None
 
+    # FIXME: HYD-1095 we should be sending a delta instead of a full dump every time
     return {
             "started_at": started_at,
             "agent_version": version(),
             "capabilities": list_capabilities(),
             "metrics": metrics,
             "lnet_loaded": lnet_loaded,
+            "lnet_nids": lnet_nids,
             "lnet_up": lnet_up,
             "mounts": mounts,
             "resource_locations": resource_locations

@@ -930,6 +930,12 @@ table.properties td {
     white-space: nowrap;
 }
 
+table.properties td ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
 table#global_filesystem_table {
     width: 100%
 }

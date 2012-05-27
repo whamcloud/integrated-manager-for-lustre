@@ -6,8 +6,10 @@
 
 from django.db import models
 from chroma_core.lib.job import  DependOn, DependAll, Step
+from chroma_core.models.host import NoLNetInfo
 from chroma_core.models.jobs import StatefulObject, StateChangeJob
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_core.lib.cache import ObjectCache
 
 
 class ManagedFilesystem(StatefulObject, MeasuredEntity):
@@ -46,10 +48,6 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
     def get_filesystem_targets(self):
         from chroma_core.models import ManagedOst, ManagedMdt
         osts = list(ManagedOst.objects.filter(filesystem = self).all())
-        # NB using __str__ instead of name because name may not
-        # be set in all cases
-        osts.sort(lambda i, j: cmp(i.__str__()[-4:], j.__str__()[-4:]))
-
         return list(ManagedMdt.objects.filter(filesystem = self).all()) + osts
 
     def get_servers(self):
@@ -72,7 +70,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
             host = target_mount.host
             nids = ",".join(host.lnetconfiguration.get_nids())
             if nids == "":
-                raise ValueError("NIDs for MGS host %s not known" % host)
+                raise NoLNetInfo("NIDs for MGS host %s not known" % host)
 
             nid_specs.append(nids)
 
@@ -81,7 +79,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
     def mount_path(self):
         try:
             return "%s:/%s" % (self.mgs_spec(), self.name)
-        except ValueError:
+        except NoLNetInfo:
             return None
 
     def __str__(self):
@@ -96,7 +94,8 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
         deps = []
 
-        mgs = self.mgs.downcast()
+        from chroma_core.models import ManagedMgs
+        mgs = ObjectCache.get_one(ManagedMgs, lambda t: t.id == self.mgs_id)
 
         remove_state = 'forgotten' if self.immutable_state else 'removed'
 
@@ -111,11 +110,10 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
     @classmethod
     def filter_by_target(cls, target):
         from chroma_core.models import ManagedMgs
-        target = target.downcast()
         if isinstance(target, ManagedMgs):
-            return ManagedFilesystem.objects.filter(mgs = target)
+            return ObjectCache.get(ManagedFilesystem, lambda mfs: mfs.mgs_id == target.id)
         else:
-            return [target.filesystem]
+            return ObjectCache.get(ManagedFilesystem, lambda mfs: mfs.id == target.filesystem_id)
 
     reverse_deps = {
                 'ManagedTarget': lambda mt: ManagedFilesystem.filter_by_target(mt)
@@ -172,10 +170,15 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
 
     def get_deps(self):
         deps = []
-        for t in self.filesystem.get_targets():
+
+        from chroma_core.models import ManagedMgs, ManagedOst, ManagedMdt
+        targets = (ObjectCache.get(ManagedMgs, lambda t: t.id == self.filesystem.mgs_id) +
+            ObjectCache.get(ManagedMdt, lambda t: t.filesystem_id == self.filesystem_id) +
+            ObjectCache.get(ManagedOst, lambda o: o.filesystem_id == self.filesystem_id))
+        for t in targets:
             deps.append(DependOn(t,
                 'mounted',
-                    fix_state = 'unavailable'))
+                fix_state = 'unavailable'))
         return DependAll(deps)
 
 
@@ -189,7 +192,12 @@ class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
 
     def get_deps(self):
         deps = []
-        for t in self.filesystem.get_targets():
+        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst
+        targets = (ObjectCache.get(ManagedMgs, lambda t: t.id == self.filesystem.mgs_id) +
+                   ObjectCache.get(ManagedMdt, lambda t: t.filesystem_id == self.filesystem_id) +
+                   ObjectCache.get(ManagedOst, lambda o: o.filesystem_id == self.filesystem_id))
+
+        for t in targets:
             deps.append(DependOn(t,
                 'mounted',
                 fix_state = 'unavailable'))

@@ -240,6 +240,9 @@ class ApiResource(object):
         self.resource = resource_name
         self.api = api
 
+    def __getitem__(self, item):
+        return self._data[item]
+
     def __getattr__(self, attr):
         try:
             return self._data[attr]
@@ -268,13 +271,12 @@ class ApiCommandResource(ApiResource):
     def get_status(self):
         # This should be the subset of sane combinations...
         return {
-                (True, True, False, False): "Finished",
-                (True, True, True, False): "Canceled",
-                (True, True, False, True): "Failed",
-                (False, True, False, False): "Tasked",
-                (False, True, True, False): "Canceling",
-                }[(self.complete, self.jobs_created,
-                   self.cancelled, self.errored)]
+                (True, False, False): "Finished",
+                (True, True, False): "Canceled",
+                (True, False, True): "Failed",
+                (False, False, False): "Tasked",
+                (False, True, False): "Canceling",
+                }[(self.complete, self.cancelled, self.errored)]
 
     def _simple_monitor(self, output=sys.stderr):
         # FIXME: HYD-731

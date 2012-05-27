@@ -1,5 +1,106 @@
+from chroma_core.lib.util import dbperf
+from chroma_core.models.filesystem import ManagedFilesystem
+from chroma_core.models.host import ManagedHost
+from chroma_core.models.jobs import Command, Job
+from chroma_core.models.target import ManagedMdt, ManagedMgs, ManagedOst
+from tests.unit.chroma_core.helper import JobTestCaseWithHost, freshen, JobTestCase
+from django.db import connection
 
-from tests.unit.chroma_core.helper import JobTestCaseWithHost, freshen
+
+class TestOneHost(JobTestCase):
+    mock_servers = {
+        'myaddress': {
+            'fqdn': 'myaddress.mycompany.com',
+            'nodename': 'test01.myaddress.mycompany.com',
+            'nids': ["192.168.0.1@tcp"]
+        }
+    }
+
+    def setUp(self):
+        super(TestOneHost, self).setUp()
+        connection.use_debug_cursor = True
+
+    def tearDown(self):
+        super(TestOneHost, self).tearDown()
+        connection.use_debug_cursor = False
+
+    def test_one_host(self):
+        try:
+            dbperf.enabled = True
+
+            with dbperf("create_from_string"):
+                host, command = ManagedHost.create_from_string('myaddress', start_lnet = False)
+            with dbperf("set_state"):
+                Command.set_state([(host, 'lnet_up'), (host.lnetconfiguration, 'nids_known')], "Setting up host", run = False)
+            with dbperf("run_next"):
+                Job.run_next()
+            self.assertState(host, 'lnet_up')
+        finally:
+            dbperf.enabled = False
+
+
+class TestBigFilesystem(JobTestCase):
+    mock_servers = {}
+
+    def setUp(self):
+        super(TestBigFilesystem, self).setUp()
+        connection.use_debug_cursor = True
+
+    def tearDown(self):
+        super(TestBigFilesystem, self).tearDown()
+        connection.use_debug_cursor = False
+
+    def test_big_filesystem(self):
+        OSS_COUNT = 4
+        OST_COUNT = 32
+
+        assert OST_COUNT % OSS_COUNT == 0
+
+        for i, address in enumerate(["oss%d" % i for i in range(0, OSS_COUNT)] + ['mds0', 'mds1', 'mgs0', 'mgs1']):
+            self.mock_servers[address] = {
+                'fqdn': address,
+                'nodename': address,
+                'nids': ["192.168.0.%d@tcp0" % i]
+            }
+
+        with dbperf("object creation"):
+            self.mgs0, command = ManagedHost.create_from_string('mgs0')
+            self.mgs1, command = ManagedHost.create_from_string('mgs1')
+            self.mds0, command = ManagedHost.create_from_string('mds0')
+            self.mds1, command = ManagedHost.create_from_string('mds1')
+            self.osss = {}
+            for i in range(0, OSS_COUNT):
+                oss, command = ManagedHost.create_from_string('oss%d' % i)
+                self.osss[i] = oss
+
+            self.mgt = ManagedMgs.create_for_volume(self._test_lun(self.mgs0, self.mgs1).id, name = "MGS")
+            self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
+            self.mdt = ManagedMdt.create_for_volume(self._test_lun(self.mds0, self.mds1).id, filesystem = self.fs)
+
+            self.osts = {}
+            for i in range(0, OST_COUNT):
+                primary_oss_i = (i * OSS_COUNT) / OST_COUNT
+                if primary_oss_i % 2 == 1:
+                    secondary_oss_i = primary_oss_i - 1
+                else:
+                    secondary_oss_i = primary_oss_i + 1
+                primary_oss = self.osss[primary_oss_i]
+                secondary_oss = self.osss[secondary_oss_i]
+                self.osts[i] = ManagedOst.create_for_volume(self._test_lun(primary_oss, secondary_oss).id, filesystem = self.fs)
+
+        try:
+            dbperf.enabled = True
+            import cProfile
+            with dbperf("set_state"):
+                #cProfile.runctx("Command.set_state([(self.osts[0], 'mounted')], 'Unit test transition', run = False)", globals(), locals(), 'set_state.prof')
+                cProfile.runctx("Command.set_state([(self.fs, 'available')], 'Unit test transition', run = False)", globals(), locals(), 'set_state.prof')
+
+            with dbperf('run_next'):
+                Job.run_next()
+        finally:
+            dbperf.enabled = False
+
+        self.assertEqual(freshen(self.fs).state, 'available')
 
 
 class TestFSTransitions(JobTestCaseWithHost):

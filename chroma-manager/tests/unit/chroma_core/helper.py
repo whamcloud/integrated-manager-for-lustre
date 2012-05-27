@@ -1,3 +1,4 @@
+from collections import defaultdict
 import datetime
 import logging
 from django.test import TestCase
@@ -14,6 +15,7 @@ class MockAgent(object):
     label_counter = 0
     mock_servers = {}
     calls = []
+    host_calls = defaultdict(list)
 
     @classmethod
     def clear_calls(cls):
@@ -30,10 +32,13 @@ class MockAgent(object):
 
     def invoke(self, cmdline, args = None):
         self.calls.append((cmdline, args))
+        self.host_calls[self.host].append((cmdline, args))
+
         if not self.succeed:
             raise RuntimeError("Test-generated failure")
 
         logging.getLogger('mock_agent').info("invoke_agent %s %s %s" % (self.host, cmdline, args))
+        logging.getLogger('job').info("invoke_agent %s %s %s" % (self.host, cmdline, args))
         if cmdline == "get-fqdn":
             return self.mock_servers[self.host.address]['fqdn']
         if cmdline == "get-nodename":
@@ -62,6 +67,33 @@ class MockDaemonRpc():
 
     def remove_resource(self, resource_id):
         return
+
+
+def run_next():
+    from chroma_core.lib.util import dbperf
+    from chroma_core.models.jobs import Job
+    from chroma_core.lib.state_manager import LockCache, DepCache
+    from chroma_core.lib.cache import ObjectCache
+
+    # Detect recursion
+    import inspect
+    count = 0
+    for frame in inspect.stack():
+        if frame[0].f_code.co_name == 'run_next':
+            count += 1
+    if count > 1:
+        return
+
+    ran = -1
+    while ran:
+        ran = 0
+        for job in Job.objects.filter(state = 'pending'):
+            ran += 1
+            with dbperf('job.run'):
+                job.run()
+            DepCache.clear()
+            LockCache.clear()
+            ObjectCache.clear()
 
 
 class JobTestCase(TestCase):
@@ -112,6 +144,11 @@ class JobTestCase(TestCase):
         self.old_agent = chroma_core.lib.agent.Agent
         MockAgent.mock_servers = self.mock_servers
         chroma_core.lib.agent.Agent = MockAgent
+
+        # A custom version of run_next to avoid overflowing the stack
+        # when recursing
+        import chroma_core.models.jobs
+        chroma_core.models.jobs.Job.run_next = mock.Mock(side_effect = run_next)
 
         # Override DaemonRPC
         import chroma_core.lib.storage_plugin.daemon

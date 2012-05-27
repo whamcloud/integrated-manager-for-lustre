@@ -5,18 +5,27 @@
 
 
 import datetime
+from exceptions import Exception
+import logging
 import dateutil.parser
 
 from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
 import itertools
+from django.db.models.aggregates import Max, Count
+from django.db.models.query_utils import Q
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import StateChangeJob
+from chroma_core.models.alert import AlertState
+from chroma_core.models.event import AlertEvent
 
 from chroma_core.models.utils import WorkaroundDateTimeField
-from chroma_core.models.jobs import StatefulObject, Job, StateWriteLock, AdvertisedJob
+from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLock
 from chroma_core.lib.job import  DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
+
+from chroma_core.lib.job import job_log
 
 import settings
 
@@ -72,7 +81,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
         if self.fqdn:
             try:
-                from django.db.models import Q
                 ManagedHost.objects.get(~Q(pk = self.pk), fqdn = self.fqdn)
                 raise IntegrityError("FQDN %s in use" % self.fqdn)
             except ManagedHost.DoesNotExist:
@@ -91,7 +99,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
     @classmethod
-    def create_from_string(cls, address_string, virtual_machine = None):
+    def create_from_string(cls, address_string, start_lnet = True):
         # Single transaction for creating Host and related database objects
         # * Firstly because we don't want any of these unless they're all setup
         # * Secondly because we want them committed before creating any Jobs which
@@ -111,9 +119,12 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
             lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
 
-        # Attempt some initial setup jobs
-        from chroma_core.models.jobs import Command
-        command = Command.set_state([(host, 'lnet_unloaded'), (lnet_configuration, 'nids_known')], "Setting up host %s" % address_string)
+        if start_lnet:
+            # Attempt some initial setup jobs
+            from chroma_core.models.jobs import Command
+            command = Command.set_state([(host, 'lnet_unloaded'), (lnet_configuration, 'nids_known')], "Setting up host %s" % address_string)
+        else:
+            command = None
 
         return host, command
 
@@ -156,8 +167,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return False
 
     def available_lun_nodes(self):
-        from django.db.models import Q
-
         from chroma_core.models import ManagedTargetMount
         used_luns = [i['block_device__lun'] for i in ManagedTargetMount.objects.all().values('volume_node__volume')]
         return VolumeNode.objects.filter(
@@ -228,7 +237,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         """
         from chroma_core.models import LNetOfflineAlert
 
-        super(ManagedHost, self).set_state(state)
+        super(ManagedHost, self).set_state(state, intentional)
         if intentional:
             LNetOfflineAlert.notify_quiet(self, self.state != 'lnet_up')
         else:
@@ -258,7 +267,6 @@ class Volume(models.Model):
         if not queryset:
             queryset = cls.objects.all()
 
-        from django.db.models import Max
         queryset = queryset.annotate(any_targets = Max('volumenode__managedtargetmount__target__not_deleted'))
         return queryset.filter(any_targets = None)
 
@@ -269,7 +277,6 @@ class Volume(models.Model):
         if not queryset:
             queryset = cls.objects.all()
 
-        from django.db.models import Count, Max, Q
         # Luns are usable if they have only one VolumeNode (i.e. no HA available but
         # we can definitively say where it should be mounted) or if they have
         # a primary VolumeNode (i.e. one or more VolumeNodes is available and we
@@ -413,7 +420,7 @@ class LNetConfiguration(StatefulObject):
 
     def get_nids(self):
         if self.state != 'nids_known':
-            raise ValueError("Nids not known yet for host %s" % self.host)
+            raise NoLNetInfo("Nids not known yet for host %s" % self.host)
         return [n.nid_string for n in self.nid_set.all()]
 
     def __str__(self):
@@ -440,10 +447,21 @@ class LearnNidsStep(Step):
         from chroma_core.lib.lustre_audit import normalize_nid
         host = ManagedHost.objects.get(pk = kwargs['host_id'])
         result = self.invoke_agent(host, "lnet-scan")
+
+        job_log.debug("LearnNidsStep(%s): %s" % (host, result))
+
+        nids = []
         for nid_string in result:
-            Nid.objects.get_or_create(
+            nid, created = Nid.objects.get_or_create(
                     lnet_configuration = host.lnetconfiguration,
                     nid_string = normalize_nid(nid_string))
+            if created:
+                job_log.debug("LearnNidsStep(%s): learned new nid %s" % (host, nid.nid_string))
+            nids.append(nid)
+
+        for old_nid in Nid.objects.filter(~Q(id__in = [n.id for n in nids]), lnet_configuration = host.lnetconfiguration):
+            job_log.debug("LearnNidsStep(%s): removed old nid %s" % (host, old_nid.nid_string))
+            old_nid.delete()
 
 
 class ConfigureLNetJob(StateChangeJob):
@@ -456,10 +474,10 @@ class ConfigureLNetJob(StateChangeJob):
         return "Configuring LNet on %s" % self.lnet_configuration.host
 
     def get_steps(self):
-        return [(LearnNidsStep, {'host_id': self.lnet_configuration.host.id})]
+        return [(LearnNidsStep, {'host_id': self.lnet_configuration.host_id})]
 
     def get_deps(self):
-        return DependOn(self.lnet_configuration.host, "lnet_up")
+        return DependOn(ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lnet_configuration.host_id), "lnet_up")
 
     class Meta:
         app_label = 'chroma_core'
@@ -640,6 +658,11 @@ class DetectTargetsStep(Step):
 
 
 class DetectTargetsJob(Job):
+    # FIXME: HYD-XYZ this should take a list of hosts
+    @property
+    def hosts(self):
+        return ManagedHost.objects
+
     class Meta:
         app_label = 'chroma_core'
 
@@ -650,9 +673,8 @@ class DetectTargetsJob(Job):
         return [(DetectTargetsStep, {})]
 
     def get_deps(self):
-        from chroma_core.models import ManagedHost
         deps = []
-        for host in ManagedHost.objects.all():
+        for host in self.hosts.all():
             deps.append(DependOn(host.lnetconfiguration, 'nids_known'))
 
         return DependAll(deps)
@@ -843,23 +865,27 @@ class ForceRemoveHostJob(AdvertisedJob):
         app_label = 'chroma_core'
 
     def create_locks(self):
-        super(ForceRemoveHostJob, self).create_locks()
+        locks = super(ForceRemoveHostJob, self).create_locks()
 
-        StateWriteLock.objects.create(
+        locks.append(StateLock(
             job = self,
             locked_item = self.host,
             begin_state = "",
-            end_state = 'removed'
-        )
+            end_state = 'removed',
+            write = True
+        ))
 
         targets, filesystems = _get_host_dependents(self.host)
         # Take a write lock on get_stateful_object if this is a StateChangeJob
         for object in itertools.chain(targets, filesystems):
-            StateWriteLock.objects.create(
+            locks.append(StateLock(
                 job = self,
                 locked_item = object,
                 begin_state = "",
-                end_state = 'removed')
+                end_state = 'removed',
+                write = True))
+
+        return locks
 
     @classmethod
     def get_args(cls, host):
@@ -894,3 +920,185 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
 
     def get_steps(self):
         return [(DeleteHostStep, {'host_id': self.host.id})]
+
+
+class RelearnNidsJob(Job):
+    host = models.ForeignKey('ManagedHost')
+
+    def description(self):
+        return "Relearning NIDS on host %s" % self.host
+
+    def get_deps(self):
+        return DependAll([
+            DependOn(self.host, "lnet_up"),
+            DependOn(self.host.lnetconfiguration, 'nids_known')
+            ])
+
+    def get_steps(self):
+        return [(LearnNidsStep, {'host_id': self.host.id})]
+
+    class Meta:
+        app_label = 'chroma_core'
+
+
+class WriteConfStep(Step):
+    def run(self, args):
+        from chroma_core.models.target import ManagedTarget
+
+        target = ManagedTarget.objects.get(pk = args['target_id']).downcast()
+        primary_tm = target.managedtargetmount_set.get(primary = True)
+        # tunefs.lustre --erase-param --mgsnode=<new_nid(s)> --writeconf /dev/..
+
+        agent_args = {
+            'writeconf': True,
+            'erase_params': True,
+            'mgsnode': tuple(primary_tm.host.lnetconfiguration.get_nids()),
+            'device': primary_tm.volume_node.path}
+        fail_nids = target.get_failover_nids()
+        if fail_nids:
+            agent_args['failnode'] = fail_nids
+        self.invoke_agent(primary_tm.host, "writeconf-target", agent_args)
+
+
+class ResetConfParamsStep(Step):
+    def run(self, args):
+        from chroma_core.models.target import ManagedMgs
+
+        # Reset version to zero so that next time the target is started
+        # it will write all its parameters from chroma to lustre.
+        ManagedMgs.objects.filter(pk = args['mgt_id']).update(conf_param_version_applied = 0)
+
+
+class UpdateNidsJob(Job):
+    # FIXME: HYD-XYZ this should take a list of hosts
+    # as an argument: doing m2m attributes of Jobs
+    # is painful atm because:
+    # * constructor in command_run_jobs doesn't know how to deal with them
+    # * assigning them requires model to be saved first, which means
+    #   we can't e.g. check deps before saving job
+    @property
+    def hosts(self):
+        return ManagedHost.objects
+
+    def description(self):
+        if self.hosts.count() > 1:
+            return "Updating NIDs on %d hosts" % self.hosts.count()
+        else:
+            return "Updating NIDS on host %s" % self.hosts.all()[0]
+
+    def _targets_on_hosts(self):
+        from chroma_core.models.target import ManagedMgs, ManagedTarget, FilesystemMember
+        targets = ManagedTarget.objects.filter(managedtargetmount__host__in = self.hosts.all())
+        targets = [t.downcast() for t in targets]
+
+        filesystems = set()
+        for target in targets:
+            if isinstance(target, FilesystemMember):
+                filesystems.add(target.filesystem)
+
+            if isinstance(target, ManagedMgs):
+                for fs in target.managedfilesystem_set.all():
+                    filesystems.add(fs)
+
+        return filesystems, targets
+
+    def get_deps(self):
+        filesystems, targets = self._targets_on_hosts()
+
+        return DependAll(
+            [DependOn(fs, 'stopped') for fs in filesystems]
+            + [DependOn(t, 'unmounted') for t in targets]
+        )
+
+    def get_steps(self):
+        from chroma_core.models.target import ManagedMgs
+        filesystems, targets = self._targets_on_hosts()
+        all_targets = set()
+        for fs in filesystems:
+            all_targets |= set(fs.get_targets())
+        all_targets |= set(targets)
+
+        steps = []
+        for target in all_targets:
+            target = target.downcast()
+            steps.append((WriteConfStep, {'target_id': target.id}))
+
+        for target in all_targets:
+            target = target.downcast()
+            if isinstance(target, ManagedMgs):
+                steps.append((ResetConfParamsStep, {'mgt_id': target.id}))
+
+        return steps
+
+    class Meta:
+        app_label = 'chroma_core'
+
+
+class HostContactAlert(AlertState):
+    def message(self):
+        return "Lost contact with host %s" % self.alert_item
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def begin_event(self):
+        return AlertEvent(
+            message_str = "Lost contact with host %s" % self.alert_item,
+            host = self.alert_item,
+            alert = self,
+            severity = logging.WARNING)
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "Re-established contact with host %s" % self.alert_item,
+            host = self.alert_item,
+            alert = self,
+            severity = logging.INFO)
+
+
+class LNetOfflineAlert(AlertState):
+    def message(self):
+        return "LNet offline on server %s" % self.alert_item
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def begin_event(self):
+        return AlertEvent(
+            message_str = "LNet stopped on server '%s'" % self.alert_item,
+            host = self.alert_item,
+            alert = self,
+            severity = logging.WARNING)
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "LNet started on server '%s'" % self.alert_item,
+            host = self.alert_item,
+            alert = self,
+            severity = logging.INFO)
+
+
+class LNetNidsChangedAlert(AlertState):
+    def message(self):
+        return "NIDs changed on server %s" % self.alert_item
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def begin_event(self):
+        return AlertEvent(
+            message_str = "LNet NIDs changed on server %s" % self.alert_item,
+            host = self.alert_item,
+            alert = self,
+            severity = logging.WARNING)
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "LNet NIDs updated for server %s" % self.alert_item,
+            host = self.alert_item,
+            alert = self,
+            severity = logging.INFO)
+
+
+class NoLNetInfo(Exception):
+    pass

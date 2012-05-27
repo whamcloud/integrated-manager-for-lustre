@@ -1,7 +1,92 @@
+from copy import deepcopy
 from django.db.utils import IntegrityError
 from tests.unit.chroma_core.helper import JobTestCase, MockAgent
 
-from chroma_core.models.host import ManagedHost, Volume, VolumeNode
+from chroma_core.models.host import ManagedHost, Volume, VolumeNode, Nid
+
+
+class NidTestCase(JobTestCase):
+    def setUp(self):
+        super(NidTestCase, self).setUp()
+        self.default_mock_servers = deepcopy(self.mock_servers)
+
+    def tearDown(self):
+        self.mock_servers = self.default_mock_servers
+        super(NidTestCase, self).tearDown()
+
+    def assertNidsCorrect(self, host):
+        self.assertSetEqual(
+            set([n.nid_string for n in Nid.objects.filter(lnet_configuration__host = host)]),
+            set(self.mock_servers[host.address]['nids']))
+
+
+class TestNidChange(NidTestCase):
+    mock_servers = {
+        'myaddress': {
+            'fqdn': 'myaddress.mycompany.com',
+            'nodename': 'test01.myaddress.mycompany.com',
+            'nids': ["192.168.0.1@tcp0"]
+        }
+    }
+
+    def attempt_nid_change(self, new_nids):
+        host, command = ManagedHost.create_from_string('myaddress')
+        self.assertNidsCorrect(host)
+        self.mock_servers['myaddress']['nids'] = new_nids
+        from chroma_core.tasks import command_run_jobs
+        command_run_jobs.delay([{'class_name': 'RelearnNidsJob', 'args': {'host_id': host.id}}], "Test relearn nids")
+        self.assertNidsCorrect(host)
+
+    def test_relearn_change(self):
+        self.attempt_nid_change(["192.168.0.2@tcp0"])
+
+    def test_relearn_add(self):
+        self.attempt_nid_change(["192.168.0.1@tcp0", "192.168.0.2@tcp0"])
+
+    def test_relearn_remove(self):
+        self.attempt_nid_change([])
+
+
+class TestUpdateNids(NidTestCase):
+    mock_servers = {
+        'mgs': {
+            'fqdn': 'mgs.mycompany.com',
+            'nodename': 'mgs.mycompany.com',
+            'nids': ["192.168.0.1@tcp0"]
+        },
+        'mds': {
+            'fqdn': 'mds.mycompany.com',
+            'nodename': 'mds.mycompany.com',
+            'nids': ["192.168.0.2@tcp0"]
+        },
+        'oss': {
+            'fqdn': 'oss.mycompany.com',
+            'nodename': 'oss.mycompany.com',
+            'nids': ["192.168.0.3@tcp0"]
+        },
+    }
+
+    def test_mgs_nid_change(self):
+        mgs, command = ManagedHost.create_from_string('mgs')
+        mds, command = ManagedHost.create_from_string('mds')
+        oss, command = ManagedHost.create_from_string('oss')
+
+        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
+        self.mgt = ManagedMgs.create_for_volume(self._test_lun(mgs).id, name = "MGS")
+        self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
+        self.mdt = ManagedMdt.create_for_volume(self._test_lun(mds).id, filesystem = self.fs)
+        self.ost = ManagedOst.create_for_volume(self._test_lun(oss).id, filesystem = self.fs)
+        self.set_state(self.fs, 'available')
+
+        self.mock_servers['mgs']['nids'] = ['192.168.0.99@tcp0']
+        from chroma_core.tasks import command_run_jobs
+        command_run_jobs.delay([{'class_name': 'RelearnNidsJob', 'args': {'host_id': mgs.id}}], "Test relearn nids")
+        self.assertNidsCorrect(mgs)
+
+        command_run_jobs.delay([{'class_name': 'UpdateNidsJob', 'args': {'hosts': [mgs.id]}}], "Test update nids")
+        self.assertEqual(MockAgent.host_calls[mgs][-1][0], "writeconf-target")
+        self.assertEqual(MockAgent.host_calls[mds][-1][0], "writeconf-target")
+        self.assertEqual(MockAgent.host_calls[oss][-1][0], "writeconf-target")
 
 
 class TestHostAddRemove(JobTestCase):

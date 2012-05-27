@@ -7,8 +7,8 @@
 from django.db import models
 from django.db.models import Q
 
-from chroma_core.models.event import Event
-from chroma_core.models.alert import AlertState, AlertEvent
+from chroma_core.models.event import Event, AlertEvent
+from chroma_core.models.alert import AlertState
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 
 from collections import defaultdict

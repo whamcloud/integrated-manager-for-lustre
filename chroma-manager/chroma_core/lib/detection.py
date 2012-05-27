@@ -7,14 +7,11 @@
 from django.db import transaction
 
 from chroma_core.lib.lustre_audit import audit_log, normalize_nids
+from chroma_core.models import NoLNetInfo
 from chroma_core.models.event import LearnEvent
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, VolumeNode, Nid
 from chroma_core.models.target import ManagedMgs, ManagedTargetMount, ManagedTarget, FilesystemMember, ManagedMdt, ManagedOst
-
-
-class NoLNetInfo(Exception):
-    pass
 
 
 class DetectScan(object):

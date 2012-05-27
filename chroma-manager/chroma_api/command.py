@@ -56,8 +56,7 @@ class CommandResource(ModelResource):
     succeeded.
     """
     jobs = fields.ToManyField("chroma_api.job.JobResource", 'jobs',
-            help_text = "Jobs belonging to this command (not populated until \
-                    ``jobs_created`` is true")
+            help_text = "Jobs belonging to this command")
 
     class Meta:
         queryset = Command.objects.all()

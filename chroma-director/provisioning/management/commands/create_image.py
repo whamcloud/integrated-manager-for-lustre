@@ -77,7 +77,7 @@ class Command(BaseCommand):
         if not self.options.recover:
             image = self._create_instances()
         else:
-            image = Node.objects.get(id = int(args[1]))
+            image = Node.objects.get(id = int(args[0]))
 
         if self.options.plain:
             return

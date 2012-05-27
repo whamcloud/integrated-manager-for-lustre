@@ -5,6 +5,13 @@
           <tr><th>Address:</th><td><%= server.address %></td></tr>
           <tr><th>FQDN:</th><td><%= server.fqdn %></td></tr>
           <tr><th>Nodename:</th><td><%= server.nodename %></td></tr>
+          <tr><th>NIDs:</th><td>
+              <ul>
+                  <% _.each(server.nids, function(nid) { %>
+                    <li><%= nid %></li>
+                  <% }); %>
+              </ul>
+          </td></tr>
           <tr><th>State:</th><td><%= LiveObject.state(server) %></td></tr>
           <tr><th>State changed:</th><td><%= shortLocalTime(server.state_modified_at) %></td></tr>
           <tr><th>Last contact:</th><td><%= shortLocalTime(server.last_contact) %></td></tr>
