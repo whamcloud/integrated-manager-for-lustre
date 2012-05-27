@@ -97,7 +97,7 @@ class TestConfParams(ChromaIntegrationTestCase):
 
         self._test_params()
 
-        #self.reset_cluster(self.chroma_manager)
+        self.reset_cluster(self.chroma_manager)
 
     def test_writeconf_conf_params(self):
         self._create_with_params()
@@ -107,7 +107,7 @@ class TestConfParams(ChromaIntegrationTestCase):
             'jobs': [{'class_name': 'UpdateNidsJob', 'args': {}}],
             'message': "Test writeconf"
         }).json
-        self.wait_for_command(self.chroma_manager, command.id)
+        self.wait_for_command(self.chroma_manager, command['id'])
 
         self.set_state("/api/filesystem/%s/" % self.filesystem_id, 'available')
 
