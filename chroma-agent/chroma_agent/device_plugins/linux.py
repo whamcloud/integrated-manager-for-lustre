@@ -7,6 +7,7 @@
 from chroma_agent.plugins import DevicePlugin
 from chroma_agent.log import agent_log
 from chroma_agent import shell
+from chroma_agent.utils import normalize_device
 
 import os
 import glob
@@ -177,7 +178,7 @@ def _parse_sys_block():
                 return
 
         # Resolve a major:minor to a /dev/foo
-        path = get_path(major_minor, device_name)
+        path = normalize_device(get_path(major_minor, device_name))
         if path:
             block_device_nodes[major_minor] = _device_node(device_name, major_minor, path, size, parent)
             node_block_devices[path] = major_minor
