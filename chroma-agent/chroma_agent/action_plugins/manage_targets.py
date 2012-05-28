@@ -4,15 +4,17 @@
 # ========================================================
 
 
-from chroma_agent.plugins import ActionPlugin
-from chroma_agent.store import AgentStore
-from chroma_agent import shell
 import simplejson as json
 import errno
 import os
 import shlex
 import re
 import libxml2
+
+from chroma_agent.agent_daemon import daemon_log
+from chroma_agent.plugins import ActionPlugin
+from chroma_agent.store import AgentStore
+from chroma_agent import shell
 
 
 def __sanitize_arg(arg):
@@ -147,9 +149,9 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
         if value != '':
             options.append("--%s=%s" % (name, __sanitize_arg(value)))
 
-    if target_types == 'mdt':
-        options.append("--writeconf")
-        options.append("--index=0")
+    #if target_types == 'mdt':
+    #    options.append("--writeconf")
+    #    options.append("--index=0")
 
     cmd = "mkfs.lustre %s %s %s" % (" ".join(types), " ".join(options), device)
 
@@ -589,8 +591,35 @@ def clear_targets(args):
         _unconfigure_ha(True, attrs['ha_label'], attrs['uuid'])
 
 
+def purge_configuration(args):
+    path = args.device
+    fsname = args.fsname
+
+    ls = shell.try_run(["debugfs", "-w", "-R", "ls -l CONFIGS/", path])
+
+    victims = []
+    for line in ls.split("\n"):
+        try:
+            name = line.split()[8]
+        except IndexError:
+            continue
+
+        if name.startswith("%s-" % fsname):
+            victims.append(name)
+
+    daemon_log.info("Purging config files: %s" % victims)
+
+    for victim in victims:
+        shell.try_run(["debugfs", "-w", "-R", "rm CONFIGS/%s" % victim, path])
+
+
 class TargetsPlugin(ActionPlugin):
     def register_commands(self, parser):
+        p = parser.add_parser('purge-configuration')
+        p.add_argument('--device', required=True)
+        p.add_argument('--fsname', required=True)
+        p.set_defaults(func=purge_configuration)
+
         p = parser.add_parser('register-target', help='register a target')
         p.add_argument('--device', required=True, help='device for target')
         p.add_argument('--mountpoint', required=True, help='mountpoint for target')
