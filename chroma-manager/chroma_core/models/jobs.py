@@ -321,7 +321,7 @@ class StateLock(object):
     @classmethod
     def from_dict(cls, job, d):
         return StateLock(
-            locked_item = ContentType.objects.get_for_id(d['locked_item_type_id']).model_class().objects.get(pk = d['locked_item_id']),
+            locked_item = ContentType.objects.get_for_id(d['locked_item_type_id']).model_class()._base_manager.get(pk = d['locked_item_id']),
             job = job,
             write = d['write'],
             begin_state = d['begin_state'],
