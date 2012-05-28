@@ -93,6 +93,11 @@ if __name__ == '__main__':
     except IndexError:
         foreground = False
 
+    from chroma_core.lib.service_config import ServiceConfig
+    if not ServiceConfig().configured():
+        sys.stderr.write("Chroma is not configured, please run chroma-config setup first\n")
+        sys.exit(-1)
+
     if not foreground:
         PID_FILE = "/var/run/chroma-storage.pid"
         from daemon import DaemonContext

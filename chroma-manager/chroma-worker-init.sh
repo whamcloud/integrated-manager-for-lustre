@@ -26,7 +26,7 @@ export WORKER_NAMES="serial jobs parselog"
 run_celeryd() {
     local op=$1
 
-    python ${MANAGE_PY} celeryd_multi $op ${WORKER_NAMES} -Q:serial periodic,serialize -Q:jobs jobs -Q:parselog parselog -B:serial -c:serial 1 --autoscale:jobs=64,1 --pidfile=$PIDFILE --logfile=$LOGFILE --scheduler=chroma_core.tasks.EphemeralScheduler
+    python ${MANAGE_PY} worker_multi $op ${WORKER_NAMES} -Q:serial periodic,serialize -Q:jobs jobs -Q:parselog parselog -B:serial -c:serial 1 --autoscale:jobs=64,1 --pidfile=$PIDFILE --logfile=$LOGFILE --scheduler=chroma_core.tasks.EphemeralScheduler
 
 }
 
@@ -43,7 +43,7 @@ restart() {
 }
 
 stop() {
-    action "Stopping ${SERVICE_NAME}: "python /usr/share/chroma-manager/manage.py celeryd_multi stop ${WORKER_NAMES} --pidfile=$PIDFILE --logfile=$LOGFILE
+    action "Stopping ${SERVICE_NAME}: "python /usr/share/chroma-manager/manage.py worker_multi stop ${WORKER_NAMES} --pidfile=$PIDFILE --logfile=$LOGFILE
     echo
 }
 
