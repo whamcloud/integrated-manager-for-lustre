@@ -84,9 +84,11 @@ class TestUpdateNids(NidTestCase):
         self.assertNidsCorrect(mgs)
 
         command_run_jobs.delay([{'class_name': 'UpdateNidsJob', 'args': {'hosts': [mgs.id]}}], "Test update nids")
-        self.assertEqual(MockAgent.host_calls[mgs][-1][0], "writeconf-target")
-        self.assertEqual(MockAgent.host_calls[mds][-1][0], "writeconf-target")
-        self.assertEqual(MockAgent.host_calls[oss][-1][0], "writeconf-target")
+        # The -3 looks past the start/stop that happens after writeconf
+        self.assertEqual(MockAgent.host_calls[mgs][-3][0], "writeconf-target")
+        self.assertEqual(MockAgent.host_calls[mds][-3][0], "writeconf-target")
+        self.assertEqual(MockAgent.host_calls[oss][-3][0], "writeconf-target")
+        self.assertState(self.fs, 'stopped')
 
 
 class TestHostAddRemove(JobTestCase):

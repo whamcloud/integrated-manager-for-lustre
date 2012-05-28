@@ -12,14 +12,21 @@ class TestConfParams(ChromaIntegrationTestCase):
         self.reset_cluster(self.chroma_manager)
 
     def _create_with_params(self):
-        self.hosts = self.add_hosts([config['lustre_servers'][0]['address']])
+        self.hosts = self.add_hosts([
+            config['lustre_servers'][0]['address'],
+            config['lustre_servers'][1]['address'],
+        ])
 
         volumes = self.get_usable_volumes()
         self.assertGreaterEqual(len(volumes), 4)
 
         mgt_volume = volumes[0]
         mdt_volume = volumes[1]
-        ost_volumes = [volumes[2]]
+        ost_volume = volumes[2]
+        self.set_volume_mounts(mgt_volume, self.hosts[0]['id'], self.hosts[1]['id'])
+        self.set_volume_mounts(mdt_volume, self.hosts[0]['id'], self.hosts[1]['id'])
+        self.set_volume_mounts(ost_volume, self.hosts[0]['id'], self.hosts[1]['id'])
+
         self.filesystem_id = self.create_filesystem(
                 {
                 'name': 'testfs',
@@ -30,9 +37,9 @@ class TestConfParams(ChromaIntegrationTestCase):
 
                 },
                 'osts': [{
-                    'volume_id': v['id'],
+                    'volume_id': ost_volume['id'],
                     'conf_params': {'ost.writethrough_cache_enable': '0'}
-                } for v in ost_volumes],
+                }],
                 'conf_params': {'llite.max_cached_mb': '16'}
             }
         )
@@ -103,13 +110,23 @@ class TestConfParams(ChromaIntegrationTestCase):
         self._create_with_params()
         self._test_params()
 
+        # Check that conf params are preserved across a writeconf
         command = self.chroma_manager.post("/api/command/", body = {
             'jobs': [{'class_name': 'UpdateNidsJob', 'args': {}}],
             'message': "Test writeconf"
         }).json
         self.wait_for_command(self.chroma_manager, command['id'])
 
-        self.set_state("/api/filesystem/%s/" % self.filesystem_id, 'available')
+        fs_uri = "/api/filesystem/%s/" % self.filesystem_id
+        response = self.chroma_manager.get(fs_uri)
+        self.assertEqual(response.status_code, 200)
+        fs = response.json
+
+        # FIXME: HYD-1133: have to manually ensure the MGT comes up first
+        # after a writeconf
+        self.set_state(fs['mgt']['resource_uri'], 'mounted')
+        self.set_state(fs['mdts'][0]['resource_uri'], 'mounted')
+        self.set_state(fs['resource_uri'], 'available')
 
         self._test_params()
 

@@ -1028,6 +1028,35 @@ class UpdateNidsJob(Job):
             if isinstance(target, ManagedMgs):
                 steps.append((ResetConfParamsStep, {'mgt_id': target.id}))
 
+        for target in all_targets:
+            if isinstance(target, ManagedMgs):
+                from chroma_core.models.target import MountStep
+                steps.append((MountStep, {'target_id': target.id}))
+
+        # FIXME: HYD-1133: when doing this properly these should
+        # be run as parallel jobs
+        for target in all_targets:
+            if not isinstance(target, ManagedMgs):
+                from chroma_core.models.target import MountStep
+                steps.append((MountStep, {'target_id': target.id}))
+
+        for target in all_targets:
+            if not isinstance(target, ManagedMgs):
+                from chroma_core.models.target import UnmountStep
+                steps.append((UnmountStep, {'target_id': target.id}))
+
+        for target in all_targets:
+            if isinstance(target, ManagedMgs):
+                from chroma_core.models.target import UnmountStep
+                steps.append((UnmountStep, {'target_id': target.id}))
+
+        # FIXME: HYD-1133: should be marking targets as unregistered
+        # so that they get started in the correct order next time
+        # NB in that case also need to ensure that the start
+        # of all the targets happens before StateManager calls
+        # the completion hook that tries to apply configuration params
+        # for targets that haven't been set up yet.
+
         return steps
 
     class Meta:

@@ -1,3 +1,4 @@
+import logging
 import paramiko
 import re
 import socket
@@ -8,6 +9,11 @@ from django.utils.unittest import TestCase
 from testconfig import config
 
 from tests.integration.core.constants import TEST_TIMEOUT
+
+
+logger = logging.getLogger('test')
+logger.setLevel(logging.DEBUG)
+logger.addHandler(logging.FileHandler('test.log'))
 
 
 class ChromaIntegrationTestCase(TestCase):
@@ -174,6 +180,7 @@ class ChromaIntegrationTestCase(TestCase):
             )
 
     def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
+        logger.debug("wait_for_command %s" % command_id)
         # TODO: More elegant timeout?
         running_time = 0
         command_complete = False
@@ -221,6 +228,7 @@ class ChromaIntegrationTestCase(TestCase):
             self.wait_for_command(chroma_manager, command_id, timeout)
 
     def remote_command(self, server, command, expected_return_code=0):
+        logger.debug("remote_command[%s]: %s" % (server, command))
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(server, **{'username': 'root'})
@@ -513,16 +521,16 @@ class ChromaIntegrationTestCase(TestCase):
         return response.json['objects']
 
     def set_state(self, uri, state):
+        logger.debug("set_state %s %s" % (uri, state))
         object = self.get_by_uri(uri)
         object['state'] = state
 
         response = self.chroma_manager.put(uri, body = object)
         if response.status_code == 204:
-            return
-        elif response.status_code == 202:
-            self.wait_for_command(self.chroma_manager, response.json['command']['id'])
+            logger.warning("set_state %s %s - no-op" % (uri, state))
         else:
             self.assertEquals(response.status_code, 202, response.content)
+            self.wait_for_command(self.chroma_manager, response.json['command']['id'])
 
         self.assertState(uri, state)
 
@@ -540,6 +548,7 @@ class ChromaIntegrationTestCase(TestCase):
         self.assertIn(uri, [a['alert_item'] for a in alerts])
 
     def assertState(self, uri, state):
+        logger.debug("assertState %s %s" % (uri, state))
         obj = self.get_by_uri(uri)
         self.assertEqual(obj['state'], state)
 

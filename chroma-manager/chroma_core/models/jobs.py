@@ -42,6 +42,18 @@ class Command(models.Model):
             the action being done by the command")
     created_at = WorkaroundDateTimeField(auto_now_add = True)
 
+    def check_completion(self):
+        jobs = self.jobs.all().values('state', 'errored', 'cancelled')
+        if set([j['state'] for j in jobs]) == set(['complete']) or len(jobs) == 0:
+            if True in [j['errored'] for j in jobs]:
+                self.errored = True
+            elif True in [j['cancelled'] for j in jobs]:
+                self.cancelled = True
+
+            job_log.info("Command %s (%s) completed in %s" % (self.id, self.message, datetime.datetime.utcnow() - self.created_at))
+            self.complete = True
+            self.save()
+
     @classmethod
     def set_state(cls, objects, message = None, **kwargs):
         """The states argument must be a collection of 2-tuples
@@ -678,7 +690,7 @@ class Job(models.Model):
                 obj.set_state(new_state, intentional = True)
                 job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.pk, new_state, obj))
 
-        job_log.info("Job %d completing (errored=%s, cancelled=%s)" %
+        job_log.info("Job %s completing (errored=%s, cancelled=%s)" %
                 (self.id, errored, cancelled))
         with transaction.commit_on_success():
             self.state = 'completing'

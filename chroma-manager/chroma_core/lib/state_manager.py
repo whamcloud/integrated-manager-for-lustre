@@ -287,7 +287,11 @@ class StateManager(object):
 
         return transitions
 
-    def _run_opportunistic_jobs(self, changed_item):
+    def _completion_hooks(self, changed_item, command = None):
+        """
+        :param command: If set, any created jobs are added
+        to this command object.
+        """
         if hasattr(changed_item, 'content_type'):
             changed_item = changed_item.downcast()
 
@@ -313,7 +317,8 @@ class StateManager(object):
                 if not ApplyConfParams.objects.filter(~Q(state = 'complete')).count():
                     job = ApplyConfParams(mgs = mgs)
                     if get_deps(job).satisfied():
-                        command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
+                        if not command:
+                            command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
                         self.add_jobs([job], command)
 
     def notify_state(self, content_type, object_id, notification_time, new_state, from_states):
@@ -340,7 +345,7 @@ class StateManager(object):
 
                     # FIXME: should check the new state against reverse dependencies
                     # and apply any fix_states
-                    self._run_opportunistic_jobs(instance)
+                    self._completion_hooks(instance)
                 else:
                     job_log.info("notify_state: Dropping update of %s (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, new_state))
                     pass
@@ -362,18 +367,6 @@ class StateManager(object):
         else:
             assert job.state == 'complete'
 
-        for command in Command.objects.filter(jobs = job):
-            jobs = command.jobs.all().values('state', 'errored', 'cancelled')
-            if set([j['state'] for j in jobs]) == set(['complete']):
-                if True in [j['errored'] for j in jobs]:
-                    command.errored = True
-                elif True in [j['cancelled'] for j in jobs]:
-                    command.cancelled = True
-
-                job_log.info("Command %s (%s) completed in %s" % (command.id, command.message, datetime.datetime.utcnow() - command.created_at))
-                command.complete = True
-                command.save()
-
         # FIXME: we use cancelled to indicate a job which didn't run
         # because its dependencies failed, and also to indicate a job
         # that was deliberately cancelled by the user.  We should
@@ -382,7 +375,15 @@ class StateManager(object):
         job = job.downcast()
 
         if isinstance(job, StateChangeJob):
-            self._run_opportunistic_jobs(job.get_stateful_object())
+            try:
+                command = Command.objects.filter(complete = False)[0]
+            except IndexError:
+                job_log.warning("Job %s: No incomplete command while completing" % job_id)
+                command = None
+            self._completion_hooks(job.get_stateful_object(), command)
+
+        for command in Command.objects.filter(jobs = job):
+            command.check_completion()
 
     def add_jobs(self, jobs, command):
         """Add a job, and any others which are required in order to reach its prerequisite state"""
@@ -518,12 +519,12 @@ class StateManager(object):
             self.expected_states = dict([(k, v.end_state) for k, v in item_to_lock.items()])
 
             if new_state == self.get_expected_state(instance):
-                command.complete = True
-                command.save()
                 if instance.state != new_state:
                     # This is a no-op because of an in-progress Job:
                     job = LockCache.get_latest_write(instance).job
                     command.jobs.add(job)
+
+                command.check_completion()
 
                 # Pick out whichever job made it so, and attach that to the Command
                 return None
