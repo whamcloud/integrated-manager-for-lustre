@@ -552,7 +552,7 @@ class ChromaIntegrationTestCase(TestCase):
         obj = self.get_by_uri(uri)
         self.assertEqual(obj['state'], state)
 
-    def create_filesystem_simple(self):
+    def create_filesystem_simple(self, name = 'testfs'):
         """The simplest possible filesystem on a single server"""
         self.add_hosts([config['lustre_servers'][0]['address']])
 
@@ -564,7 +564,7 @@ class ChromaIntegrationTestCase(TestCase):
         ost_volumes = [ha_volumes[2]]
         return self.create_filesystem(
                 {
-                'name': 'testfs',
+                'name': name,
                 'mgt': {'volume_id': mgt_volume['id']},
                 'mdt': {
                     'volume_id': mdt_volume['id'],
