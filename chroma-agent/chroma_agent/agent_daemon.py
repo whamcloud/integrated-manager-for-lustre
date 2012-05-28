@@ -17,6 +17,12 @@ daemon_log = logging.getLogger('daemon')
 daemon_log.setLevel(logging.INFO)
 
 
+def daemon_log_setup():
+    handler = logging.FileHandler("/var/log/chroma-agent.log")
+    handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+    daemon_log.addHandler(handler)
+
+
 def retry_main_loop():
     DEFAULT_BACKOFF = 10
     MAX_BACKOFF = 120
@@ -103,8 +109,7 @@ def main():
         daemon_log.info("Starting in the background")
     else:
         context = None
-        daemon_log.setLevel(logging.DEBUG)
-        daemon_log.addHandler(logging.StreamHandler())
+        daemon_log.setup()
         daemon_log.info("Starting in the foreground")
 
     if args.publish_zconf:
