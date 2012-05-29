@@ -301,10 +301,13 @@ class ResourceManager(object):
             # Get all DeviceNodes within this scope
             node_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
                     for klass in all_subclasses(DeviceNode)]
-            node_resources = ResourceQuery().get_class_resources(node_klass_ids, storage_id_scope = scannable_id)
+
+            node_resources = StorageResourceRecord.objects.filter(
+                resource_class__in = node_klass_ids, storage_id_scope = scannable_id).annotate(
+                child_count = Count('resource_parent'))
 
             # DeviceNodes elegible for use as a VolumeNode (leaves)
-            usable_node_resources = [nr for nr in node_resources if not ResourceQuery().record_has_children(nr.id)]
+            usable_node_resources = [nr for nr in node_resources if nr.child_count == 0]
 
             # DeviceNodes which are usable but don't have VolumeNode
             assigned_resource_ids = [ln['storage_resource_id'] for ln in VolumeNode.objects.filter(storage_resource__in = [n.id for n in node_resources]).values("id", "storage_resource_id")]

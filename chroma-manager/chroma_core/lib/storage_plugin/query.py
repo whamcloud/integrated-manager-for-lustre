@@ -18,10 +18,6 @@ class ResourceQuery(object):
         # Record plugins which fail to load
         self._errored_plugins = set()
 
-    def record_has_children(self, record_id):
-        n = StorageResourceRecord.objects.filter(parents = record_id).count()
-        return (n > 0)
-
     def record_all_ancestors(self, record):
         """Find an ancestor of type parent_klass, search depth first"""
         if not isinstance(record, StorageResourceRecord):

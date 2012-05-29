@@ -286,16 +286,18 @@ class TestResourceOperations(ResourceManagerTestCase):
 
     def test_initial_host_lun(self):
         from chroma_core.lib.storage_plugin.resource_manager import resource_manager
-        resource_manager.session_open(self.scannable_resource_pk, [self.scannable_resource, self.dev_resource, self.node_resource], 60)
+        child_node_resource = self._make_local_resource('linux', 'LinuxDeviceNode',
+            path = "/dev/foobar", parents = [self.node_resource], host_id = self.host.id)
 
-        # TODO: check that in a hierarchy Volume/VolumeNodes are only created for the leaves
+        resource_manager.session_open(
+            self.scannable_resource_pk, [self.scannable_resource, self.dev_resource, self.node_resource, child_node_resource], 60)
 
         # Check we got a Volume and a VolumeNode
         self.assertEqual(Volume.objects.count(), 1)
         self.assertEqual(VolumeNode.objects.count(), 1)
 
         # Check the VolumeNode got the correct path
-        self.assertEqual(VolumeNode.objects.get().path, "/dev/foo")
+        self.assertEqual(VolumeNode.objects.get().path, "/dev/foobar")
         self.assertEqual(VolumeNode.objects.get().host, self.host)
 
         # Check the created Volume has a link back to the UnsharedDevice
