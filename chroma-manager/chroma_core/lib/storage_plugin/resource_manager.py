@@ -40,6 +40,7 @@ from django.db import transaction
 
 from collections import defaultdict
 import threading
+from chroma_core.models.storage_plugin import StorageResourceAttributeSerialized
 
 
 class PluginSession(object):
@@ -286,17 +287,6 @@ class ResourceManager(object):
             log.debug("_persist_lun_updates for scope record %s" % scannable_id)
             host = ManagedHost.objects.get(pk = scannable_resource.host_id)
 
-        def volume_get_or_create(resource_id):
-            try:
-                return Volume.objects.get(storage_resource = resource_id)
-            except Volume.DoesNotExist:
-                r = ResourceQuery().get_resource(resource_id)
-                lun = Volume.objects.create(
-                        size = r.size,
-                        storage_resource_id = r._handle)
-                log.info("Created Volume %s for LogicalDrive %s" % (lun.pk, resource_id))
-                return lun
-
         with dbperf('getthem'):
             # Get all DeviceNodes within this scope
             node_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
@@ -412,35 +402,70 @@ class ResourceManager(object):
                     lun_node.save()
 
         # For all unattached DeviceNode resources, find or create VolumeNodes
-        for node_record in unassigned_node_resources:
-            logicaldrive_id = ResourceQuery().record_find_ancestor(node_record.pk, LogicalDrive)
-            if logicaldrive_id == None:
-                # This is not an error: a plugin may report a device node from
-                # an agent plugin before reporting the LogicalDrive from the controller.
-                log.info("DeviceNode %s has no LogicalDrive ancestor" % node_record.pk)
-                continue
-            else:
-                log.info("Setting up DeviceNode %s" % node_record.pk)
-                node_resource = node_record.to_resource()
+        with dbperf('create_vols'):
+            volumes_for_affinity_checks = set()
+            node_to_logicaldrive_id = {}
+            with dbperf('x1'):
+                for node_record in unassigned_node_resources:
+                    logicaldrive_id = ResourceQuery().record_find_ancestor(node_record, LogicalDrive, self._edges)
+                    if logicaldrive_id == None:
+                        # This is not an error: a plugin may report a device node from
+                        # an agent plugin before reporting the LogicalDrive from the controller.
+                        log.info("DeviceNode %s has no LogicalDrive ancestor" % node_record.pk)
+                        continue
+                    else:
+                        node_to_logicaldrive_id[node_record] = logicaldrive_id
 
-                volume = volume_get_or_create(logicaldrive_id)
-                try:
-                    volume_node = VolumeNode.objects.get(
+            # Get the sizes for all of the logicaldrive resources
+            with dbperf('x2'):
+                sizes = StorageResourceAttributeSerialized.objects.filter(
+                    resource__id__in = node_to_logicaldrive_id.values(), key = 'size').values('resource_id', 'value')
+                logicaldrive_id_to_size = dict([(s['resource_id'],
+                                            StorageResourceAttributeSerialized.decode(s['value'])) for s in sizes])
+
+                existing_volumes = Volume.objects.filter(storage_resource__in = node_to_logicaldrive_id.values())
+                logicaldrive_id_to_volume = dict([(v.storage_resource_id, v) for v in existing_volumes])
+                for node_resource, logicaldrive_id in node_to_logicaldrive_id.items():
+                    if not logicaldrive_id in logicaldrive_id_to_volume:
+                        size = logicaldrive_id_to_size[logicaldrive_id]
+                        volume = Volume.objects.create(size = size, storage_resource_id = logicaldrive_id)
+                        logicaldrive_id_to_volume[logicaldrive_id] = volume
+
+            with dbperf('x3'):
+                path_attrs = StorageResourceAttributeSerialized.objects.filter(key = 'path', resource__in = unassigned_node_resources).values('resource_id', 'value')
+                node_record_id_to_path = dict([(
+                    p['resource_id'], StorageResourceAttributeSerialized.decode(p['value'])
+                ) for p in path_attrs])
+
+                existing_volume_nodes = VolumeNode.objects.filter(host = host, path__in = node_record_id_to_path.values())
+                path_to_volumenode = dict([(
+                    vn.path, vn
+                ) for vn in existing_volume_nodes])
+
+            with dbperf('x4'):
+                for node_record in unassigned_node_resources:
+                    volume = logicaldrive_id_to_volume[node_to_logicaldrive_id[node_record]]
+                    log.info("Setting up DeviceNode %s" % node_record.pk)
+                    path = node_record_id_to_path[node_record.id]
+                    if path in path_to_volumenode:
+                        volume_node = path_to_volumenode[path]
+                    else:
+                        volume_node = VolumeNode.objects.create(
+                            volume = volume,
                             host = host,
-                            path = node_resource.path)
-                except VolumeNode.DoesNotExist:
-                    volume_node = VolumeNode.objects.create(
-                        volume = volume,
-                        host = host,
-                        path = node_resource.path,
-                        storage_resource_id = node_record.pk,
-                        primary = False,
-                        use = False)
+                            path = path,
+                            storage_resource_id = node_record.pk,
+                            primary = False,
+                            use = False)
 
-                    log.info("Created VolumeNode %s for resource %s" % (volume_node.id, node_record.pk))
-                    got_weights = affinity_weights(volume_node.volume)
-                    if not got_weights:
-                        affinity_balance(volume_node.volume)
+                        log.info("Created VolumeNode %s for resource %s" % (volume_node.id, node_record.pk))
+                        volumes_for_affinity_checks.add(volume_node.volume)
+
+        with dbperf('affinities'):
+            for volume in volumes_for_affinity_checks:
+                got_weights = affinity_weights(volume)
+                if not got_weights:
+                    affinity_balance(volume)
 
         # For all VolumeNodes, if its storage resource was in this scope, and it
         # was not included in the set of usable DeviceNode resources, remove

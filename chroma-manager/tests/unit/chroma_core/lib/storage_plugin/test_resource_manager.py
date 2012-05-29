@@ -133,6 +133,8 @@ class TestManyObjects(ResourceManagerTestCase):
             with dbperf('session_open'):
                 resource_manager.session_open(self.scannable_resource_pk, self.resources, 60)
             self.assertEqual(StorageResourceRecord.objects.count(), self.N * 2 + 1)
+            self.assertEqual(Volume.objects.count(), self.N)
+            self.assertEqual(VolumeNode.objects.count(), self.N)
 
             with dbperf('global_remove_resource'):
                 resource_manager.global_remove_resource(self.scannable_resource_pk)
