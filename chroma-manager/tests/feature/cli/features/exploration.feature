@@ -189,3 +189,7 @@ Scenario: List all MDSes for a given filesystem
   When I run chroma filesystem secondfs mds-list
   Then I should see output containing "secondfs-mds"
   But I should not see output containing "firstfs-mds"
+
+Scenario: View client mount information for a given filesystem
+  When I run chroma filesystem firstfs mountspec
+  Then I should see output containing "192.168.0.1@tcp:/firstfs"
