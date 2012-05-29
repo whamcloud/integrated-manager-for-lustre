@@ -97,6 +97,11 @@ if __name__ == '__main__':
     if not ServiceConfig().configured():
         sys.stderr.write("Chroma is not configured, please run chroma-config setup first\n")
         sys.exit(-1)
+    else:
+        # Close the DB connection so that we get a fresh one
+        # for our daemonized process
+        from django.db import connection
+        connection.close()
 
     if not foreground:
         PID_FILE = "/var/run/chroma-storage.pid"
