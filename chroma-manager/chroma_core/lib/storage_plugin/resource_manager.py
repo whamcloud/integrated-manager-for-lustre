@@ -21,12 +21,14 @@ WARNING:
     its initialization does a significant amount of DB activity.  Don't import
     this module unless you're really going to use it.
 """
+from django.db.models.aggregates import Count
+from django.db.models.query_utils import Q
 from chroma_core.lib.storage_plugin.api import attributes, relations
 from chroma_core.lib.storage_plugin.base_resource import BaseGlobalId, BaseScopedId
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
-from chroma_core.lib.util import all_subclasses
+from chroma_core.lib.util import all_subclasses, dbperf
 
 from chroma_core.models import ManagedHost, ManagedTarget
 from chroma_core.models import Volume, VolumeNode
@@ -82,7 +84,6 @@ class EdgeIndex(object):
         del self._parent_from_edge[node]
 
     def populate(self):
-        from django.db.models import Q
         for srr in StorageResourceRecord.objects.filter(~Q(parents = None)).values('id', 'parents'):
             child = srr['id']
             parent = srr['parents']
@@ -222,15 +223,19 @@ class ResourceManager(object):
 
             session = PluginSession(scannable_id, update_period)
             self._sessions[scannable_id] = session
-            self._persist_new_resources(session, initial_resources)
-            self._cull_lost_resources(session, initial_resources)
+            with dbperf('persist_new_resources'):
+                self._persist_new_resources(session, initial_resources)
+            with dbperf('cull_lost_resources'):
+                self._cull_lost_resources(session, initial_resources)
 
-            # Update Volume and VolumeNode objects
-            self._persist_lun_updates(scannable_id)
+            with dbperf('persist_lun_updates'):
+                # Update Volume and VolumeNode objects
+                self._persist_lun_updates(scannable_id)
 
-            # Plugins are allowed to create VirtualMachine objects, indicating that
-            # we should created a ManagedHost to go with it (e.g. discovering VMs)
-            self._persist_created_hosts(session, scannable_id, initial_resources)
+            with dbperf('persist_created_hosts'):
+                # Plugins are allowed to create VirtualMachine objects, indicating that
+                # we should created a ManagedHost to go with it (e.g. discovering VMs)
+                self._persist_created_hosts(session, scannable_id, initial_resources)
 
         log.debug("<< session_open %s" % scannable_id)
 
@@ -292,22 +297,23 @@ class ResourceManager(object):
                 log.info("Created Volume %s for LogicalDrive %s" % (lun.pk, resource_id))
                 return lun
 
-        # Get all DeviceNodes within this scope
-        node_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
-                for klass in all_subclasses(DeviceNode)]
-        node_resources = ResourceQuery().get_class_resources(node_klass_ids, storage_id_scope = scannable_id)
+        with dbperf('getthem'):
+            # Get all DeviceNodes within this scope
+            node_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
+                    for klass in all_subclasses(DeviceNode)]
+            node_resources = ResourceQuery().get_class_resources(node_klass_ids, storage_id_scope = scannable_id)
 
-        # DeviceNodes elegible for use as a VolumeNode (leaves)
-        usable_node_resources = [nr for nr in node_resources if not ResourceQuery().record_has_children(nr.id)]
+            # DeviceNodes elegible for use as a VolumeNode (leaves)
+            usable_node_resources = [nr for nr in node_resources if not ResourceQuery().record_has_children(nr.id)]
 
-        # DeviceNodes which are usable but don't have VolumeNode
-        assigned_resource_ids = [ln['storage_resource_id'] for ln in VolumeNode.objects.filter(storage_resource__in = [n.id for n in node_resources]).values("id", "storage_resource_id")]
-        unassigned_node_resources = [nr for nr in usable_node_resources if nr.id not in assigned_resource_ids]
+            # DeviceNodes which are usable but don't have VolumeNode
+            assigned_resource_ids = [ln['storage_resource_id'] for ln in VolumeNode.objects.filter(storage_resource__in = [n.id for n in node_resources]).values("id", "storage_resource_id")]
+            unassigned_node_resources = [nr for nr in usable_node_resources if nr.id not in assigned_resource_ids]
 
-        # VolumeNodes whose storage resource is within this scope
-        scope_volume_nodes = VolumeNode.objects.filter(storage_resource__storage_id_scope = scannable_id)
+            # VolumeNodes whose storage resource is within this scope
+            scope_volume_nodes = VolumeNode.objects.filter(storage_resource__storage_id_scope = scannable_id)
 
-        log.debug("%s %s %s %s" % (tuple([len(l) for l in [node_resources, usable_node_resources, unassigned_node_resources, scope_volume_nodes]])))
+            log.debug("%s %s %s %s" % (tuple([len(l) for l in [node_resources, usable_node_resources, unassigned_node_resources, scope_volume_nodes]])))
 
         def affinity_weights(volume):
             volume_nodes = VolumeNode.objects.filter(volume = volume)
@@ -369,10 +375,8 @@ class ResourceManager(object):
                 # Instead of just counting primary nodes (that would include local volumes), only
                 # give a host credit for a primary node if the node's volume also has a secondary
                 # somewhere.
-                primary_count = 0
-                for vn in VolumeNode.objects.filter(host = h, primary = True):
-                    if vn.volume != volume and vn.volume.volumenode_set.filter(use = True, primary = False).count() > 0:
-                        primary_count += 1
+                primary_count = Volume.objects.filter(~Q(id = volume.id)).annotate(vn_count = Count('volumenode')).filter(
+                    volumenode__host = h, volumenode__primary = True, vn_count__gt = 1).count()
 
                 host_to_primary_count[h] = primary_count
                 log.info("primary_count %s = %s" % (h, primary_count))
@@ -441,7 +445,10 @@ class ResourceManager(object):
         for volume_node in scope_volume_nodes:
             log.debug("volume node %s (%s) usable %s" % (volume_node.id, volume_node.storage_resource_id, volume_node.storage_resource_id in [nr.id for nr in usable_node_resources]))
             if not volume_node.storage_resource_id in [nr.id for nr in usable_node_resources]:
-                self._try_removing_volume_node(volume_node)
+                removed = self._try_removing_volume_node(volume_node)
+                if not removed:
+                    volume_node.storage_resource = None
+                    volume_node.save()
 
         # TODO: Volume Stealing: there may be an existing Volume/VolumeNode setup for some ScsiDeviceNodes and ScsiVolumes
         # detected by Chroma, and a storage plugin adds in extra links to the device nodes that follow back
@@ -473,8 +480,6 @@ class ResourceManager(object):
         targets = ManagedTarget.objects.filter(managedtargetmount__volume_node = volume_node)
         if targets.count() == 0:
             log.warn("Removing VolumeNode %s" % volume_node.id)
-            volume_node.storage_resource = None
-            volume_node.save()
             VolumeNode.delete(volume_node.id)
             self._try_removing_volume(volume_node.volume)
             return True
@@ -573,15 +578,16 @@ class ResourceManager(object):
             self._persist_created_hosts(session, scannable_id, resources)
 
     def session_remove_resources(self, scannable_id, resources):
-        with self._instance_lock:
-            session = self._sessions[scannable_id]
-            for local_resource in resources:
-                try:
-                    resource_global_id = session.local_id_to_global_id[local_resource._handle]
-                    self._cull_resource(StorageResourceRecord.objects.get(pk = resource_global_id))
-                except KeyError:
-                    pass
-            self._persist_lun_updates(scannable_id)
+        with dbperf('session_remove_resources'):
+            with self._instance_lock:
+                session = self._sessions[scannable_id]
+                for local_resource in resources:
+                    try:
+                        resource_global_id = session.local_id_to_global_id[local_resource._handle]
+                        self._cull_resource(StorageResourceRecord.objects.get(pk = resource_global_id))
+                    except KeyError:
+                        pass
+                self._persist_lun_updates(scannable_id)
 
     def session_notify_alert(self, scannable_id, resource_local_id, active, alert_class, attribute):
         with self._instance_lock:
@@ -648,7 +654,6 @@ class ResourceManager(object):
             else:
                 reported_global_resources.append(session.local_id_to_global_id[r._handle])
 
-        from django.db.models import Q
         lost_resources = StorageResourceRecord.objects.filter(
                 ~Q(pk__in = reported_scoped_resources),
                 storage_id_scope = session.scannable_id)
@@ -666,77 +671,88 @@ class ResourceManager(object):
                 self._cull_resource(reportee)
 
     def _cull_resource(self, resource_record):
-        from chroma_core.models import StorageResourceAttributeReference
+        with dbperf('cull_resource'):
+            from chroma_core.models import StorageResourceAttributeReference
 
-        log.info("ResourceManager._cull_resource '%s'" % resource_record.pk)
-        try:
-            resource_record = StorageResourceRecord.objects.get(pk = resource_record.pk)
-        except StorageResourceRecord.DoesNotExist:
-            return
+            with dbperf('one'):
+                log.info("ResourceManager._cull_resource '%s'" % resource_record.pk)
+                try:
+                    resource_record = StorageResourceRecord.objects.get(pk = resource_record.pk)
+                except StorageResourceRecord.DoesNotExist:
+                    return
 
-        # Find resources which have a parent link to this resource
-        for dependent in StorageResourceRecord.objects.filter(
-                parents = resource_record):
-            dependent.parents.remove(resource_record)
+                # Find resources which have a parent link to this resource
+                for dependent in StorageResourceRecord.objects.filter(
+                        parents = resource_record):
+                    dependent.parents.remove(resource_record)
 
-        # Find resources scoped to this resource
-        for dependent in StorageResourceRecord.objects.filter(storage_id_scope = resource_record):
-            self._cull_resource(dependent)
+                # Find resources scoped to this resource
+                for dependent in StorageResourceRecord.objects.filter(storage_id_scope = resource_record):
+                    self._cull_resource(dependent)
 
-        # Find ResourceReference attributes on other objects
-        # that refer to this one
-        for attr in StorageResourceAttributeReference.objects.filter(value = resource_record):
-            self._cull_resource(attr.resource)
+                # Find ResourceReference attributes on other objects
+                # that refer to this one
+                for attr in StorageResourceAttributeReference.objects.filter(value = resource_record):
+                    self._cull_resource(attr.resource)
 
-        # Find GlobalId resources which were reported by this resource
-        # XXX efficieny: could only do this for ScannableResources and AgentPluginResources
-        for reportee in StorageResourceRecord.objects.filter(reported_by = resource_record):
-            reportee.reported_by.remove(resource_record)
-            if reportee.reported_by.count() == 0:
-                self._cull_resource(reportee)
+            with dbperf('two'):
+                # Find GlobalId resources which were reported by this resource
+                # XXX efficieny: could only do this for ScannableResources and AgentPluginResources
+                for reportee in StorageResourceRecord.objects.filter(reported_by = resource_record):
+                    reportee.reported_by.remove(resource_record)
+                    if reportee.reported_by.count() == 0:
+                        self._cull_resource(reportee)
 
-        lun_nodes = VolumeNode.objects.filter(storage_resource = resource_record.pk)
-        log.debug("%s lun_nodes depend on %s" % (lun_nodes.count(), resource_record.pk))
-        for lun_node in lun_nodes:
-            removed = self._try_removing_volume_node(lun_node)
-            if not removed:
-                log.warning("Could not remove VolumeNode %s, disconnecting from resource %s" % (lun_node.id, resource_record.id))
-                lun_node.storage_resource = None
-                lun_node.save()
+                volume_nodes = list(VolumeNode.objects.filter(storage_resource = resource_record.pk))
+                log.debug("%s lun_nodes depend on %s" % (len(volume_nodes), resource_record.pk))
+                kept_volume_nodes = False
+                for volume_node in volume_nodes:
+                    removed = self._try_removing_volume_node(volume_node)
+                    if not removed:
+                        kept_volume_nodes = True
+                        log.warning("Could not remove VolumeNode %s, disconnecting from resource %s" % (volume_node.id, resource_record.id))
+                if kept_volume_nodes:
+                    # Ensure any remaining VolumeNodes (in use by target) are disconnected from storage resource
+                    VolumeNode.objects.filter(storage_resource = resource_record.pk).update(storage_resource = None)
 
-        luns = Volume.objects.filter(storage_resource = resource_record.pk)
-        log.debug("%s luns depend on %s" % (luns.count(), resource_record.pk))
-        for lun in luns:
-            removed = self._try_removing_volume(lun)
-            if not removed:
-                log.warning("Could not remove Volume %s, disconnecting from resource %s" % (lun.id, resource_record.id))
-                lun.storage_resource = None
-                lun.save()
+                volumes = list(Volume.objects.filter(storage_resource = resource_record.pk))
+                log.debug("%s luns depend on %s" % (len(volumes), resource_record.pk))
+                kept_volumes = False
+                for lun in volumes:
+                    removed = self._try_removing_volume(lun)
+                    if not removed:
+                        kept_volumes = True
+                        log.warning("Could not remove Volume %s, disconnecting from resource %s" % (lun.id, resource_record.id))
 
-        self._subscriber_index.remove_resource(resource_record.pk)
+                if kept_volumes:
+                    # Ensure any remaining Volumes (in use by target) are disconnected from storage resource
+                    Volume.objects.filter(storage_resource = resource_record.pk).update(storage_resource = None)
 
-        for alert_state in AlertState.filter_by_item(resource_record):
-            self._persist_alert_unpropagate(alert_state)
-            alert_state.delete()
+                self._subscriber_index.remove_resource(resource_record.pk)
 
-        for alert_state in StorageResourceOffline.filter_by_item(resource_record):
-            alert_state.delete()
+            with dbperf('three'):
+                for alert_state in AlertState.filter_by_item(resource_record):
+                    self._persist_alert_unpropagate(alert_state)
+                    alert_state.delete()
 
-        # Explicitly remove each StorageResourceRecord to remove underlying stats data
-        for statistic in StorageResourceStatistic.objects.filter(storage_resource = resource_record):
-            statistic.delete()
+                for alert_state in StorageResourceOffline.filter_by_item(resource_record):
+                    alert_state.delete()
 
-        for session in self._sessions.values():
-            try:
-                local_id = session.global_id_to_local_id[resource_record.pk]
-                del session.local_id_to_global_id[local_id]
-                del session.global_id_to_local_id[local_id]
-            except KeyError:
-                pass
+                # Explicitly remove each StorageResourceRecord to remove underlying stats data
+                #for statistic in StorageResourceStatistic.objects.filter(storage_resource = resource_record):
+                #    statistic.delete()
 
-        self._edges.remove_node(resource_record.pk)
+                for session in self._sessions.values():
+                    try:
+                        local_id = session.global_id_to_local_id[resource_record.pk]
+                        del session.local_id_to_global_id[local_id]
+                        del session.global_id_to_local_id[local_id]
+                    except KeyError:
+                        pass
 
-        resource_record.delete()
+                self._edges.remove_node(resource_record.pk)
+
+                resource_record.delete()
 
     def global_remove_resource(self, resource_id):
         with self._instance_lock:

@@ -1,4 +1,6 @@
+from django.db import connection
 from django.db.models.query_utils import Q
+from chroma_core.lib.util import dbperf
 from chroma_core.models.host import Volume, VolumeNode, ManagedHost
 from chroma_core.models.storage_plugin import StorageResourceRecord
 from helper import load_plugins
@@ -93,6 +95,53 @@ class TestSessions(ResourceManagerTestCase):
         # closing in a finally block)
         resource_manager.session_close(self.scannable_resource_id)
         self.assertEqual(len(resource_manager._sessions), 0)
+
+
+class TestManyObjects(ResourceManagerTestCase):
+    mock_servers = {
+        'myaddress': {
+            'fqdn': 'myaddress.mycompany.com',
+            'nodename': 'test01.myaddress.mycompany.com',
+            'nids': ["192.168.0.1@tcp"]
+        }
+    }
+
+    def setUp(self):
+        super(TestManyObjects, self).setUp()
+
+        self.host, command = ManagedHost.create_from_string('myaddress')
+
+        resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources',
+                {'plugin_name': 'linux', 'host_id': self.host.id})
+
+        self.scannable_resource_pk = resource_record.pk
+
+        self.N = 100
+        self.resources = [scannable_resource]
+        for n in range(0, self.N):
+            dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial_80 = "foobar%d" % n, serial_83 = None, size = 4096)
+            node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/foo%s" % n, parents = [dev_resource], host_id = self.host.id)
+            self.resources.extend([dev_resource, node_resource])
+
+    def test_global_remove(self):
+        try:
+            dbperf.enabled = True
+            connection.use_debug_cursor = True
+
+            from chroma_core.lib.storage_plugin.resource_manager import resource_manager
+
+            with dbperf('session_open'):
+                resource_manager.session_open(self.scannable_resource_pk, self.resources, 60)
+            self.assertEqual(StorageResourceRecord.objects.count(), self.N * 2 + 1)
+
+            with dbperf('global_remove_resource'):
+                resource_manager.global_remove_resource(self.scannable_resource_pk)
+
+            self.assertEqual(StorageResourceRecord.objects.count(), 0)
+
+        finally:
+            dbperf.enabled = False
+            connection.use_debug_cursor = False
 
 
 class TestResourceOperations(ResourceManagerTestCase):
@@ -261,7 +310,9 @@ class TestResourceOperations(ResourceManagerTestCase):
         # Try closing and re-opening the session, this time without the resources, the Volume/VolumeNode objects
         # should be removed
         resource_manager.session_close(resource_record.pk)
+
         resource_manager.session_open(resource_record.pk, [self.scannable_resource], 60)
+
         self.assertEqual(VolumeNode.objects.count(), 0)
         self.assertEqual(Volume.objects.count(), 0)
 
