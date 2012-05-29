@@ -42,7 +42,8 @@ setup(
     scripts = ["chroma_core/bin/storage_daemon", "chroma_core/bin/chroma-config", "chroma-host-discover"],
     entry_points = {
         'console_scripts': [
-            'chroma = chroma_cli.main:main',
+            'chroma = chroma_cli.main:standard_cli',
+            'chroma-api = chroma_cli.main:api_cli',
             'qr3d = r3d.cli:main'
         ]
     }

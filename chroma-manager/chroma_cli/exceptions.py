@@ -4,6 +4,29 @@
 # ========================================================
 
 
+class ApiException(Exception):
+    pass
+
+
+class InvalidApiResource(ApiException):
+    def __init__(self, name):
+        self.error_str = "Invalid API Resource: %s" % name
+
+    def __str__(self):
+        return self.error_str
+
+
+class UnsupportedFormat(ApiException):
+    pass
+
+
+class TooManyMatches(ApiException):
+    """
+    Too many matches returned during a fuzzy-id lookup.
+    """
+    pass
+
+
 class CliException(Exception):
     pass
 

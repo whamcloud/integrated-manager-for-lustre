@@ -57,6 +57,20 @@ class MockAgent(object):
             target = ManagedTarget.objects.get(ha_label = ha_label)
             return {'location': target.primary_server().nodename}
         elif cmdline.startswith('register-target'):
+            import re
+
+            # generic target (should be future-proof for multiple MDTs)
+            tgt_match = re.search("--mountpoint /mnt/(\w+)/(.{3})(\d+)", cmdline)
+            if tgt_match:
+                fsname, kind, idx = tgt_match.groups()
+                return {'label': "%s-%s%04d" % (fsname, kind.upper(), int(idx))}
+
+            # special-case match for non-CMD MDTs
+            mdt_match = re.search("--mountpoint /mnt/(\w+)/mdt", cmdline)
+            if mdt_match:
+                return {'label': "%s-MDT0000" % mdt_match.group(1)}
+
+            # fallback, gin up a label
             MockAgent.label_counter += 1
             return {'label': "foofs-TTT%04d" % self.label_counter}
 

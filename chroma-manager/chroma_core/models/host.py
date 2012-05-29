@@ -145,7 +145,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         roles = set()
         for mountable in self.managedtargetmount_set.all():
             target = mountable.target.downcast()
-            roles.add(target.role())
+            roles.add("%sS" % target.role()[:-1])
 
             #if isinstance(mountable, Client):
             #    roles.add("Client")

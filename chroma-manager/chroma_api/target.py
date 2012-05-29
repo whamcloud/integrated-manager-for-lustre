@@ -129,7 +129,7 @@ class TargetResource(MetricResource, ConfParamResource):
         null = True, help_text = "The server on which this target is currently started, or null if" \
                                  "the target is not currently started")
 
-    volume = fields.ToOneField('chroma_api.volume.VolumeResource', 'volume', full = False, help_text = "\
+    volume = fields.ToOneField('chroma_api.volume.VolumeResource', 'volume', full = True, help_text = "\
                              The Volume on which this target is stored.")
 
     def content_type_id_to_kind(self, id):
@@ -142,7 +142,7 @@ class TargetResource(MetricResource, ConfParamResource):
         queryset = ManagedTarget.objects.all()
         resource_name = 'target'
         excludes = ['not_deleted', 'bytes_per_inode']
-        filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'id': ['exact', 'in'], 'immutable_state': ['exact']}
+        filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'id': ['exact', 'in'], 'immutable_state': ['exact'], 'name': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         ordering = ['volume_name', 'name']
@@ -249,10 +249,15 @@ class TargetResource(MetricResource, ConfParamResource):
         for key, val in filters.items():
             if key == 'kind':
                 del filters[key]
-                custom_filters['content_type__model'] = KIND_TO_MODEL_NAME[val]
+                try:
+                    custom_filters['content_type__model'] = KIND_TO_MODEL_NAME[val.upper()]
+                except KeyError:
+                    # Don't want to just pass this because it will
+                    # potentially remove all filters and make this a list
+                    # operation.
+                    custom_filters['content_type__model'] = None
             elif key == 'host_id':
                 del filters[key]
-                custom_filters['managedtargetmount__host__id'] = val
             elif key == 'filesystem_id':
                 # Remove filesystem_id as we
                 # do a custom query generation for it in apply_filters
@@ -271,6 +276,16 @@ class TargetResource(MetricResource, ConfParamResource):
             objects = objects.filter((Q(managedmdt__filesystem = fs) | Q(managedost__filesystem = fs)) | Q(id = fs.mgs.id))
         except KeyError:
             # Not filtering on filesystem_id
+            pass
+
+        try:
+            try:
+                objects = objects.filter(Q(managedtargetmount__primary = request.GET['primary']) & Q(managedtargetmount__host__id = request.GET['host_id']))
+            except KeyError:
+                # Not filtering on primary, try just host_id
+                objects = objects.filter(Q(managedtargetmount__host__id = request.GET['host_id']))
+        except KeyError:
+            # Not filtering on host_id
             pass
 
         return objects
