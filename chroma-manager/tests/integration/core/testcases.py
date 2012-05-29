@@ -166,6 +166,15 @@ class ChromaIntegrationTestCase(TestCase):
         hosts = response.json['objects']
         self.assertEqual(0, len(hosts))
 
+        # Verify there are now zero volumes in the database.
+        response = self.chroma_manager.get(
+            '/api/volume/',
+            params = {'limit': 0}
+        )
+        self.assertTrue(response.successful, response.text)
+        volumes = response.json['objects']
+        self.assertEqual(0, len(volumes))
+
         for host in config['lustre_servers']:
             # Verify mgs and fs targets not in pacemaker config for hosts
             # TODO: sort out host address and host nodename
