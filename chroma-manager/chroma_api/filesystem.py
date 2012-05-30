@@ -219,6 +219,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
     bytes_total = fields.IntegerField()
     files_free = fields.IntegerField()
     files_total = fields.IntegerField()
+    client_count = fields.IntegerField()
 
     mount_command = fields.CharField(null = True, help_text = "Example command for\
             mounting this file system on a Lustre client, e.g. \"mount -t lustre 192.168.0.1:/testfs /mnt/testfs\"")
@@ -265,6 +266,9 @@ class FilesystemResource(MetricResource, ConfParamResource):
 
     def dehydrate_files_total(self, bundle):
         return self._get_stat_simple(bundle, ManagedMdt, 'filestotal')
+
+    def dehydrate_client_count(self, bundle):
+        return self._get_stat_simple(bundle, ManagedMdt, 'client_count')
 
     def hydrate_mgt_lun_id(self, bundle):
         if 'mgt_lun_id' in bundle.data:
