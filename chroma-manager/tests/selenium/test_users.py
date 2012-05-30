@@ -38,7 +38,7 @@ class TestUsers(SeleniumBaseTestCase):
         self.new_password = self.user_data[0]['new_password']
         self.new_confirm_password = self.user_data[0]['new_confirm_password']
 
-        # Test data for file system user
+        # Test data for filesystem user
         self.fs_user_group = self.user_data[1]['user_group']
         self.fs_username = self.user_data[1]['username']
         self.fs_password = self.user_data[1]['password']
@@ -46,7 +46,7 @@ class TestUsers(SeleniumBaseTestCase):
         self.fs_new_password = self.user_data[1]['new_password']
         self.fs_new_confirm_password = self.user_data[1]['new_confirm_password']
 
-        # Test data for file system user
+        # Test data for filesystem administrator
         self.admin_user_group = self.user_data[2]['user_group']
         self.admin_username = self.user_data[2]['username']
         self.admin_password = self.user_data[2]['password']
@@ -79,6 +79,7 @@ class TestUsers(SeleniumBaseTestCase):
         self.delete_user(self.username)
 
     def test_mandatory_fields(self):
+        # Test validation for all mandatory fields
         self.user_page.create_new_user_button.click()
         self.driver.find_element_by_css_selector(self.user_page.create_user_button).click()
         wait_for_element(self.driver, self.user_page.error_span, self.medium_wait)
@@ -88,6 +89,7 @@ class TestUsers(SeleniumBaseTestCase):
         self.assertEqual(validation_messages['field_required'], error_message[2].text, 'Error message for blank confirm password not displayed')
 
     def test_adding_user_with_existing_username(self):
+        # Test validation for duplicate username
         self.add_user(0, self.username, self.first_name, self.last_name, self.email, self.password, self.confirm_password)
         self.user_page.create_new_user_button.click()
         select_element_option(self.driver, self.user_page.user_group, 0)
@@ -100,6 +102,7 @@ class TestUsers(SeleniumBaseTestCase):
         self.delete_user(self.username)
 
     def test_entering_different_confirm_password(self):
+        # Test validation for entering different confirm passwords
         self.user_page.create_new_user_button.click()
         import random
         select_element_option(self.driver, self.user_page.user_group, 0)
@@ -112,7 +115,7 @@ class TestUsers(SeleniumBaseTestCase):
         self.assertEqual(validation_messages['different_password_values'], error_message[0].text, 'No error message displayed when different values are entered for password and confirm password fields')
 
     def test_adding_filesystem_user(self):
-        # Test to add new user
+        # Test to add new filesystem user
         self.add_user(1, self.fs_username, '', '', '', self.fs_password, self.fs_confirm_password)
         self.user_page.edit_user_password(self.fs_username, self.fs_password, self.fs_new_password)
         navigation = Navigation(self.driver)
@@ -120,7 +123,7 @@ class TestUsers(SeleniumBaseTestCase):
         self.delete_user(self.fs_username)
 
     def test_adding_filesystem_administrator_user(self):
-        # Test to add new user
+        # Test to add new filesystem administrator user
         self.add_user(2, self.admin_username, '', '', '', self.admin_password, self.admin_confirm_password)
         self.user_page.edit_user_password(self.admin_username, self.admin_password, self.admin_new_password)
         navigation = Navigation(self.driver)
