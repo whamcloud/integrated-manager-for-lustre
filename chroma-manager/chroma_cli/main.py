@@ -79,6 +79,7 @@ def standard_cli(args=None):
     basic_verbs = ["list", "show", "add", "remove"]
     noun_verbs = ["%s-%s" % t for t in product(*[basic_nouns, basic_verbs])]
     noun_verbs.extend(["target-show", "target-list"])
+    irregular_verbs = ["mountspec"]
 
     config = Configuration()
     parser = ResettableArgumentParser(description="Chroma API CLI")
@@ -107,10 +108,13 @@ def standard_cli(args=None):
         parser.add_argument("noun", choices=basic_nouns)
         parser.add_argument("subject")
         parser.add_argument("secondary_action",
-                            choices=[c for c in noun_verbs if '-list' in c])
+                            choices=[c for c in noun_verbs if '-list' in c] + irregular_verbs)
         parser.add_argument("options", nargs=REMAINDER)
         ns = parser.parse_args(args)
-        ns.secondary_noun, ns.verb = ns.secondary_action.split("-")
+        if ns.secondary_action in irregular_verbs:
+            ns.verb = ns.secondary_action
+        else:
+            ns.secondary_noun, ns.verb = ns.secondary_action.split("-")
 
     def _noun2endpoint(noun):
         if noun == "server":
@@ -127,7 +131,12 @@ def standard_cli(args=None):
     api.authentication = {'username': config.username,
                           'password': config.password}
 
-    if ns.verb in ["list", "show"]:
+    if ns.verb in irregular_verbs:
+        if ns.verb == "mountspec":
+            fs = api.endpoints['filesystem'].show(ns.subject)
+            print fs['mount_path']
+
+    elif ns.verb in ["list", "show"]:
         entities = []
         if 'primary_action' in ns:
             ep_name, kwargs = _noun2endpoint(ns.noun)

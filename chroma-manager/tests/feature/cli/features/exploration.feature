@@ -192,4 +192,4 @@ Scenario: List all MDSes for a given filesystem
 
 Scenario: View client mount information for a given filesystem
   When I run chroma filesystem firstfs mountspec
-  Then I should see output containing "192.168.0.1@tcp:/firstfs"
+  Then I should see output containing "192.168.0.1@tcp0:192.168.0.2@tcp0:/firstfs"
