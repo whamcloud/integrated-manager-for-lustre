@@ -77,6 +77,12 @@ def simple_receive(name):
             return None
 
 
+def simple_purge(name):
+    with _amqp_connection() as conn:
+        purged = conn.SimpleQueue(name).consumer.purge()
+        log.info("Purged %s messages from '%s' queue" % (purged, name))
+
+
 def _wait_for_host(host, timeout):
     #: How often to check the host to see if it has become available
     UNAVAILABLE_POLL_INTERVAL = 10

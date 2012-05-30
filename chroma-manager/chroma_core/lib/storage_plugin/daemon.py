@@ -227,6 +227,7 @@ class AgentDaemon(object):
 
     def main_loop(self):
         # Evict any existing sessions
+        messaging.simple_purge('agent')
         AgentSession.objects.all().delete()
         storage_plugin_log.info("AgentDaemon listening")
         while(not self._stopping):
