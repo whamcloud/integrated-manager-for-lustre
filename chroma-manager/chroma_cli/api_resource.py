@@ -128,7 +128,10 @@ class Filesystem(ApiResource):
         return "%s/%s" % (self.fmt_bytes(bytes_free), self.fmt_bytes(bytes_total))
 
     def clients(self):
-        return "%d" % self.client_count
+        try:
+            return "%d" % self.client_count
+        except TypeError:
+            return "0"
 
 
 class Volume(ApiResource):
