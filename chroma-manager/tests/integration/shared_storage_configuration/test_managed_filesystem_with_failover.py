@@ -12,7 +12,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         user = config['chroma_managers'][0]['users'][0]
         self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
                 server_http_url = config['chroma_managers'][0]['server_http_url'])
-        self.reset_cluster(self.chroma_manager)
+        self.reset_cluster(self.chroma_manager, self.user)
 
     def test_create_filesystem_with_failover(self):
         # Add hosts as managed hosts

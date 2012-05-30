@@ -10,7 +10,6 @@ from testconfig import config
 
 from tests.integration.core.constants import TEST_TIMEOUT
 
-
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.FileHandler('test.log'))
@@ -51,6 +50,37 @@ class ChromaIntegrationTestCase(TestCase):
             self.graceful_teardown(chroma_manager)
         except Exception:
             self.force_teardown(chroma_manager)
+
+    def reset_chroma_manager_db(self, user):
+        for chroma_manager in config['chroma_managers']:
+            self.remote_command(
+                chroma_manager['address'],
+                'chroma-config stop'
+            )
+            self.remote_command(
+                chroma_manager['address'],
+                'echo "drop database chroma; create database chroma;" | mysql -u root'
+            )
+
+            self.remote_command(
+                chroma_manager['address'],
+                """
+chroma-config setup >config_setup.log <<EOF
+%s
+nobody@whamcloud.com
+%s
+%s
+EOF
+                """ % (user['username'], user['password'], user['password'])
+            )
+            self.remote_command(
+                chroma_manager['address'],
+                "chroma-config start"
+            )
+            self.remote_command(
+                chroma_manager['address'],
+                "chroma-config validate"
+            )
 
     def force_teardown(self, chroma_manager):
         response = chroma_manager.get(
