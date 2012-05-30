@@ -305,6 +305,87 @@ class ResourceManager(object):
                     host, command = ManagedHost.create_from_string(resource.address)
                     record.update_attribute('host_id', host.pk)
 
+    def _balance_volume_nodes(self, volumes_to_balance, volume_id_to_nodes):
+        volume_ids_to_balance = [v.id for v in volumes_to_balance]
+        hosts = set()
+        for vn_list in volume_id_to_nodes.values():
+            for vn in vn_list:
+                hosts.add(vn.host_id)
+
+        outer_host_to_primary_count = dict([(host_id, 0) for host_id in hosts])
+        outer_host_to_used_count = dict([(host_id, 0) for host_id in hosts])
+
+        host_volumes = Volume.objects.filter(volumenode__host__in = hosts).distinct()
+        volume_to_volume_nodes = defaultdict(list)
+        all_vns = []
+        for vn in VolumeNode.objects.filter(volume__in = host_volumes):
+            volume_to_volume_nodes[vn.volume_id].append(vn)
+            all_vns.append(vn)
+
+        for vn in all_vns:
+            if vn.host_id in hosts:
+                if vn.primary:
+                    if len(volume_to_volume_nodes[vn.volume_id]) > 1:
+                        if not vn.volume_id in volume_ids_to_balance:
+                            outer_host_to_primary_count[vn.host_id] += 1
+                if vn.use:
+                    if not vn.volume_id in volume_ids_to_balance:
+                        outer_host_to_used_count[vn.host_id] += 1
+
+        with VolumeNode.delayed as vn_writer:
+            for volume_id in volume_ids_to_balance:
+                volume_nodes = volume_to_volume_nodes[volume_id]
+                host_to_lun_nodes = defaultdict(list)
+                for vn in volume_nodes:
+                    host_to_lun_nodes[vn.host_id].append(vn)
+
+                host_to_primary_count = {}
+                for host_id in host_to_lun_nodes.keys():
+                    # Instead of just counting primary nodes (that would include local volumes), only
+                    # give a host credit for a primary node if the node's volume also has a secondary
+                    # somewhere.
+                    primary_count = outer_host_to_primary_count[host_id]
+                    host_to_primary_count[host_id] = primary_count
+                    log.info("primary_count %s = %s" % (host_id, primary_count))
+
+                fewest_primaries = [host_id for host_id, count in sorted(host_to_primary_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
+                primary_lun_node = host_to_lun_nodes[fewest_primaries][0]
+                outer_host_to_primary_count[fewest_primaries] += 1
+                outer_host_to_used_count[fewest_primaries] += 1
+                vn_writer.update(
+                    {'id': primary_lun_node.id,
+                     'use': True,
+                     'primary': True
+                    })
+                log.info("affinity_balance: picked %s for %s primary" % (primary_lun_node.host_id, volume_id))
+
+                # Remove the primary host from consideration for the secondary mount
+                del host_to_lun_nodes[primary_lun_node.host_id]
+
+                if len(host_to_lun_nodes) > 0:
+                    host_to_used_node_count = dict([(h, outer_host_to_used_count[h]) for h in host_to_lun_nodes.keys()])
+                    fewest_used_nodes = [host for host, count in sorted(host_to_used_node_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
+                    outer_host_to_used_count[fewest_used_nodes] += 1
+                    secondary_lun_node = host_to_lun_nodes[fewest_used_nodes][0]
+
+                    vn_writer.update({
+                        'id': secondary_lun_node.id,
+                        'use': True,
+                        'primary': False
+                    })
+
+                    log.info("affinity_balance: picked %s for %s volume secondary" % (secondary_lun_node.host_id, volume_id))
+                else:
+                    secondary_lun_node = None
+
+                for volume_node in volume_nodes:
+                    if not volume_node in (primary_lun_node, secondary_lun_node):
+                        vn_writer.update({
+                            'id': volume_node.id,
+                            'use': False,
+                            'primary': False
+                        })
+
     @transaction.commit_on_success
     def _persist_lun_updates(self, scannable_id):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
@@ -380,49 +461,6 @@ class ResourceManager(object):
                 volume_node.save()
 
             return True
-
-        def affinity_balance(volume, volume_nodes):
-            host_to_lun_nodes = defaultdict(list)
-            for vn in volume_nodes:
-                host_to_lun_nodes[vn.host].append(vn)
-
-            host_to_primary_count = {}
-            for h in host_to_lun_nodes.keys():
-                # Instead of just counting primary nodes (that would include local volumes), only
-                # give a host credit for a primary node if the node's volume also has a secondary
-                # somewhere.
-                primary_count = Volume.objects.filter(~Q(id = volume.id)).annotate(vn_count = Count('volumenode')).filter(
-                    volumenode__host = h, volumenode__primary = True, vn_count__gt = 1).count()
-
-                host_to_primary_count[h] = primary_count
-                log.info("primary_count %s = %s" % (h, primary_count))
-
-            fewest_primaries = [host for host, count in sorted(host_to_primary_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
-            primary_lun_node = host_to_lun_nodes[fewest_primaries][0]
-            primary_lun_node.primary = True
-            primary_lun_node.use = True
-            primary_lun_node.save()
-            log.info("affinity_balance: picked %s for %s primary" % (primary_lun_node.host, volume))
-
-            # Remove the primary host from consideration for the secondary mount
-            del host_to_lun_nodes[primary_lun_node.host]
-
-            if len(host_to_lun_nodes) > 0:
-                host_to_lun_node_count = dict([(h, VolumeNode.objects.filter(host = h, use = True).count()) for h in host_to_lun_nodes.keys()])
-                fewest_lun_nodes = [host for host, count in sorted(host_to_lun_node_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
-                secondary_lun_node = host_to_lun_nodes[fewest_lun_nodes][0]
-                secondary_lun_node.primary = False
-                secondary_lun_node.use = True
-                secondary_lun_node.save()
-                log.info("affinity_balance: picked %s for %s volume secondary" % (secondary_lun_node.host, volume.id))
-            else:
-                secondary_lun_node = None
-
-            for lun_node in volume_nodes:
-                if not lun_node in (primary_lun_node, secondary_lun_node):
-                    lun_node.use = False
-                    lun_node.primary = False
-                    lun_node.save()
 
         import dse
         dse.patch_models(specific_models=[Volume, VolumeNode])
@@ -513,8 +551,7 @@ class ResourceManager(object):
                     volumes_for_balancing.append(volume)
 
         with dbperf('balance'):
-            for volume in volumes_for_balancing:
-                affinity_balance(volume, volume_to_volume_nodes[volume.id])
+            self._balance_volume_nodes(volumes_for_balancing, volume_to_volume_nodes)
 
         # For all VolumeNodes, if its storage resource was in this scope, and it
         # was not included in the set of usable DeviceNode resources, remove
