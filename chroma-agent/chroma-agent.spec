@@ -34,14 +34,6 @@ Requires: fence-agents
 %description management
 This package layers on management capabilities for Whamcloud Chroma Agent.
 
-%package unit-tests
-Summary: Chroma Agent Unit Tests
-Group: Development/Tools
-Requires: %{name} = %{version}-%{release}
-%description unit-tests
-This package contains the Chroma Agent unit tests and is intended
-to be used by the Chroma test framework.
-
 %prep
 %setup -n %{name}-%{version}
 
@@ -73,11 +65,6 @@ for base_file in $(find $RPM_BUILD_ROOT -type f -name '*.py'); do
   echo "${install_file%.py*}.py*" >> base.files
 done
 
-touch unit_tests.files
-cat <<EndOfList>>unit_tests.files
-%{python_sitelib}/tests/*
-EndOfList
-
 %clean
 rm -rf %{buildroot}
 
@@ -97,10 +84,6 @@ chkconfig corosync on
 %attr(0755,root,root)/etc/init.d/chroma-agent
 %{_bindir}/chroma-agent*
 %{python_sitelib}/chroma_agent-*.egg-info/*
-%exclude %{python_sitelib}/tests
 
 %files -f management.files management
-%defattr(-,root,root)
-
-%files -f unit_tests.files unit-tests
 %defattr(-,root,root)

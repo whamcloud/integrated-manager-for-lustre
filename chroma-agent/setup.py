@@ -8,7 +8,7 @@
 from setuptools import setup, find_packages
 from chroma_agent import __version__
 
-excludes = []
+excludes = ["*tests*"]
 
 setup(
     name = 'chroma-agent',

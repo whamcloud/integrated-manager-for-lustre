@@ -43,21 +43,6 @@ Requires: chroma-manager-libs = %{version} python-argparse python-requests pytho
 This package contains the Chroma CLI which can be used on a Chroma server
 or on a separate node.
 
-%package test-libs
-Summary: Chroma Manager Test Libraries
-Group: Development/Tools
-%description test-libs
-Libraries, tools, and data files that support the various types of 
-Chroma Manager tests.
-
-%package unit-tests
-Summary: Chroma Manager Unit Tests
-Group: Development/Tools
-Requires: chroma-manager = %{version} chroma-manager-test-libs = %{version}
-%description unit-tests
-This package contains the Chroma Manager unit tests and is intended
-to be used by the Chroma test framework.
-
 %package integration-tests
 Summary: Chroma Manager Integration Tests
 Group: Development/Tools
@@ -186,19 +171,11 @@ fi
 %{_bindir}/chroma-api
 /usr/share/chroma-manager/chroma_cli/*
 
-%files test-libs
+%files integration-tests
 %defattr(-,root,root)
 /usr/share/chroma-manager/tests/__init__.py
 /usr/share/chroma-manager/tests/utils/*
 /usr/share/chroma-manager/tests/sample_data/*
 /usr/share/chroma-manager/tests/plugins/*
-
-%files unit-tests
-%defattr(-,root,root)
-/usr/share/chroma-manager/tests/unit/*
-/usr/share/chroma-manager/example_storage_plugin_package/*
-
-%files integration-tests
-%defattr(-,root,root)
 /usr/share/chroma-manager/tests/integration/*
 %attr(0755,root,root)/usr/share/chroma-manager/tests/integration/run_tests
