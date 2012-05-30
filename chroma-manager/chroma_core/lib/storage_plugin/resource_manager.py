@@ -91,6 +91,36 @@ class EdgeIndex(object):
             self.add_parent(child, parent)
 
 
+class ClassIndex(object):
+    def __init__(self):
+        self._record_id_to_class = {}
+
+    def get(self, record_id):
+        # For normal resources the value will always have been set during creation or in populate(),
+        # but for root resources it may have been created in another process.
+        try:
+            result = self._record_id_to_class[record_id]
+        except KeyError:
+            result = StorageResourceRecord.objects.get(pk = record_id).resource_class.get_class()
+            self._record_id_to_class[record_id] = result
+
+        return result
+
+    def add_record(self, record_id, record_class):
+        self._record_id_to_class[record_id] = record_class
+
+    def remove_record(self, record_id):
+        try:
+            del self._record_id_to_class[record_id]
+        except KeyError:
+            pass
+
+    def populate(self):
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        for srr in StorageResourceRecord.objects.all().values('id', 'resource_class_id'):
+            self.add_record(srr['id'], storage_plugin_manager.get_resource_class_by_id(srr['resource_class_id']))
+
+
 class SubscriberIndex(object):
     def __init__(self):
         log.debug("SubscriberIndex.__init__")
@@ -207,6 +237,9 @@ class ResourceManager(object):
         # In-memory bidirectional lookup table of resource parent-child relationships
         self._edges = EdgeIndex()
         self._edges.populate()
+
+        self._class_index = ClassIndex()
+        self._class_index.populate()
 
         # In-memory lookup table of 'provide' and 'subscribe' resource attributes
         self._subscriber_index = SubscriberIndex()
@@ -401,13 +434,16 @@ class ResourceManager(object):
                     lun_node.primary = False
                     lun_node.save()
 
+        import dse
+        dse.patch_models(specific_models=[Volume, VolumeNode])
+
         # For all unattached DeviceNode resources, find or create VolumeNodes
         with dbperf('create_vols'):
             volumes_for_affinity_checks = set()
             node_to_logicaldrive_id = {}
             with dbperf('x1'):
                 for node_record in unassigned_node_resources:
-                    logicaldrive_id = ResourceQuery().record_find_ancestor(node_record, LogicalDrive, self._edges)
+                    logicaldrive_id = self._record_find_ancestor(node_record.id, LogicalDrive)
                     if logicaldrive_id == None:
                         # This is not an error: a plugin may report a device node from
                         # an agent plugin before reporting the LogicalDrive from the controller.
@@ -425,11 +461,19 @@ class ResourceManager(object):
 
                 existing_volumes = Volume.objects.filter(storage_resource__in = node_to_logicaldrive_id.values())
                 logicaldrive_id_to_volume = dict([(v.storage_resource_id, v) for v in existing_volumes])
-                for node_resource, logicaldrive_id in node_to_logicaldrive_id.items():
-                    if not logicaldrive_id in logicaldrive_id_to_volume:
-                        size = logicaldrive_id_to_size[logicaldrive_id]
-                        volume = Volume.objects.create(size = size, storage_resource_id = logicaldrive_id)
-                        logicaldrive_id_to_volume[logicaldrive_id] = volume
+                with Volume.delayed as volumes:
+                    for node_resource, logicaldrive_id in node_to_logicaldrive_id.items():
+                        if not logicaldrive_id in logicaldrive_id_to_volume:
+                            size = logicaldrive_id_to_size[logicaldrive_id]
+                            volumes.insert(dict(
+                                size = size,
+                                storage_resource_id = logicaldrive_id,
+                                not_deleted = True,
+                                label = ""
+                            ))
+
+            existing_volumes = Volume.objects.filter(storage_resource__in = node_to_logicaldrive_id.values())
+            logicaldrive_id_to_volume = dict([(v.storage_resource_id, v) for v in existing_volumes])
 
             with dbperf('x3'):
                 path_attrs = StorageResourceAttributeSerialized.objects.filter(key = 'path', resource__in = unassigned_node_resources).values('resource_id', 'value')
@@ -443,23 +487,26 @@ class ResourceManager(object):
                 ) for vn in existing_volume_nodes])
 
             with dbperf('x4'):
-                for node_record in unassigned_node_resources:
-                    volume = logicaldrive_id_to_volume[node_to_logicaldrive_id[node_record]]
-                    log.info("Setting up DeviceNode %s" % node_record.pk)
-                    path = node_record_id_to_path[node_record.id]
-                    if path in path_to_volumenode:
-                        volume_node = path_to_volumenode[path]
-                    else:
-                        volume_node = VolumeNode.objects.create(
-                            volume = volume,
-                            host = host,
-                            path = path,
-                            storage_resource_id = node_record.pk,
-                            primary = False,
-                            use = False)
+                with VolumeNode.delayed as volume_nodes:
+                    for node_record in unassigned_node_resources:
+                        volume = logicaldrive_id_to_volume[node_to_logicaldrive_id[node_record]]
+                        log.info("Setting up DeviceNode %s" % node_record.pk)
+                        path = node_record_id_to_path[node_record.id]
+                        if path in path_to_volumenode:
+                            volume_node = path_to_volumenode[path]
+                        else:
+                            volume_nodes.insert(dict(
+                                volume_id = volume.id,
+                                host_id = host.id,
+                                path = path,
+                                storage_resource_id = node_record.pk,
+                                primary = False,
+                                use = False,
+                                not_deleted = True
+                            ))
 
-                        log.info("Created VolumeNode %s for resource %s" % (volume_node.id, node_record.pk))
-                        volumes_for_affinity_checks.add(volume_node.volume)
+                            log.info("Created VolumeNode for resource %s" % node_record.pk)
+                            volumes_for_affinity_checks.add(volume)
 
         with dbperf('affinities'):
             for volume in volumes_for_affinity_checks:
@@ -757,6 +804,8 @@ class ResourceManager(object):
                     Volume.objects.filter(storage_resource = resource_record.pk).update(storage_resource = None)
 
                 self._subscriber_index.remove_resource(resource_record.pk)
+                self._class_index.remove_record(resource_record.pk)
+                self._edges.remove_node(resource_record.pk)
 
             with dbperf('three'):
                 for alert_state in AlertState.filter_by_item(resource_record):
@@ -778,8 +827,6 @@ class ResourceManager(object):
                     except KeyError:
                         pass
 
-                self._edges.remove_node(resource_record.pk)
-
                 resource_record.delete()
 
     def global_remove_resource(self, resource_id):
@@ -793,6 +840,19 @@ class ResourceManager(object):
                 return
 
             self._cull_resource(record)
+
+    def _record_find_ancestor(self, record_id, parent_klass):
+        """Find an ancestor of type parent_klass, search depth first"""
+        record_class = self._class_index.get(record_id)
+        if issubclass(record_class, parent_klass):
+            return record_id
+
+        for p in self._edges.get_parents(record_id):
+            found = self._record_find_ancestor(p, parent_klass)
+            if found:
+                return found
+
+        return None
 
     def _persist_new_resource(self, session, resource):
         if resource._handle_global:
@@ -876,6 +936,8 @@ class ResourceManager(object):
             # Add the new record to the index so that future records and resolve their
             # provide/subscribe relationships with respect to it
             self._subscriber_index.add_resource(record.pk, resource)
+
+            self._class_index.add_record(record.pk, resource_class)
 
         if isinstance(resource._meta.identifier, BaseGlobalId) and session.scannable_id != record.id:
             try:

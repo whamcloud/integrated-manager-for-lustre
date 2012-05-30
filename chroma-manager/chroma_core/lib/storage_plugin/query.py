@@ -28,21 +28,6 @@ class ResourceQuery(object):
             result.extend(self.record_all_ancestors(p))
         return result
 
-    def record_find_ancestor(self, record, parent_klass, edge_index):
-        """Find an ancestor of type parent_klass, search depth first"""
-        if not isinstance(record, StorageResourceRecord):
-            record = StorageResourceRecord.objects.get(pk=record)
-
-        if issubclass(record.to_resource_class(), parent_klass):
-            return record.pk
-
-        for p in edge_index.get_parents(record.id):
-            found = self.record_find_ancestor(p, parent_klass, edge_index)
-            if found:
-                return found
-
-        return None
-
     def record_find_ancestors(self, record, parent_klass):
         """Find all ancestors of type parent_klass"""
         if not isinstance(record, StorageResourceRecord):
