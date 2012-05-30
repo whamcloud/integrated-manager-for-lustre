@@ -21,6 +21,7 @@ WARNING:
     its initialization does a significant amount of DB activity.  Don't import
     this module unless you're really going to use it.
 """
+import logging
 from django.db.models.aggregates import Count
 from django.db.models.query_utils import Q
 from chroma_core.lib.storage_plugin.api import attributes, relations
@@ -40,7 +41,7 @@ from django.db import transaction
 
 from collections import defaultdict
 import threading
-from chroma_core.models.storage_plugin import StorageResourceAttributeSerialized
+from chroma_core.models.storage_plugin import StorageResourceAttributeSerialized, StorageResourceLearnEvent
 
 
 class PluginSession(object):
@@ -244,6 +245,9 @@ class ResourceManager(object):
         # In-memory lookup table of 'provide' and 'subscribe' resource attributes
         self._subscriber_index = SubscriberIndex()
         self._subscriber_index.populate()
+
+        import dse
+        dse.patch_models()
 
     def session_open(self,
             scannable_id,
@@ -461,9 +465,6 @@ class ResourceManager(object):
                 volume_node.save()
 
             return True
-
-        import dse
-        dse.patch_models(specific_models=[Volume, VolumeNode])
 
         # For all unattached DeviceNode resources, find or create VolumeNodes
         with dbperf('create_vols'):
@@ -905,169 +906,187 @@ class ResourceManager(object):
 
         return result
 
-    def _persist_new_resource(self, session, resource):
-        if resource._handle_global:
-            # Bit of a weird one: this covers the case where a plugin sessoin
-            # was given a root resource that had some ResourceReference attributes
-            # that pointed to resources from a different plugin
-            return
-
-        if resource._handle in session.local_id_to_global_id:
-            return
-
-        if isinstance(resource._meta.identifier, BaseScopedId):
-            scope_id = session.scannable_id
-        elif isinstance(resource._meta.identifier, BaseGlobalId):
-            scope_id = None
-        else:
-            raise NotImplementedError
-
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(
-                resource.__class__.__module__,
-                resource.__class__.__name__)
-
-        # Find any ResourceReference attributes and persist them first so that
-        # we know their global IDs for serializing this one
-        for key, value in resource._storage_dict.items():
-            # Special case for ResourceReference attributes, because the resource
-            # object passed from the plugin won't have a global ID for the referenced
-            # resource -- we have to do the lookup inside ResourceManager
-            attribute_obj = resource_class.get_attribute_properties(key)
-            if isinstance(attribute_obj, attributes.ResourceReference):
-                if value:
-                    referenced_resource = value
-                    if not referenced_resource._handle_global:
-                        if not referenced_resource._handle in session.local_id_to_global_id:
-                            self._persist_new_resource(session, referenced_resource)
-                            assert referenced_resource._handle in session.local_id_to_global_id
-
-        id_tuple = resource.id_tuple()
-        cleaned_id_items = []
-        for t in id_tuple:
-            if isinstance(t, BaseStorageResource):
-                cleaned_id_items.append(session.local_id_to_global_id[t._handle])
-            else:
-                cleaned_id_items.append(t)
-        import json
-        id_str = json.dumps(tuple(cleaned_id_items))
-
-        record, created = StorageResourceRecord.objects.get_or_create(
-                resource_class_id = resource_class_id,
-                storage_id_str = id_str,
-                storage_id_scope_id = scope_id)
-        if created:
-            from chroma_core.models import StorageResourceLearnEvent
-            import logging
-            # Record a user-visible event
-            StorageResourceLearnEvent(severity = logging.INFO, storage_resource = record).save()
-
-            # IMPORTANT: THIS TOTALLY RELIES ON SERIALIZATION OF ALL CREATION OPERATIONS
-            # IN A SINGLE PROCESS INSTANCE OF THIS CLASS
-
-            # This is a new resource which provides a field, see if any existing
-            # resources would like to subscribe to it
-            subscribers = self._subscriber_index.what_subscribes(resource)
-            # Make myself a parent of anything that subscribes to me
-            for s in subscribers:
-                log.info("Linked up me %s as parent of %s" % (record.pk, s))
-                self._edges.add_parent(s, record.pk)
-                s_record = StorageResourceRecord.objects.get(pk = s)
-                s_record.parents.add(record.pk)
-
-            # This is a new resource which subscribes to a field, see if any existing
-            # resource can provide it
-            providers = self._subscriber_index.what_provides(resource)
-            # Make my providers my parents
-            for p in providers:
-                log.info("Linked up %s as parent of me, %s" % (p, record.pk))
-                self._edges.add_parent(record.pk, p)
-                record.parents.add(p)
-
-            # Add the new record to the index so that future records and resolve their
-            # provide/subscribe relationships with respect to it
-            self._subscriber_index.add_resource(record.pk, resource)
-
-            self._class_index.add_record(record.pk, resource_class)
-
-        if isinstance(resource._meta.identifier, BaseGlobalId) and session.scannable_id != record.id:
-            try:
-                record.reported_by.get(pk = session.scannable_id)
-            except StorageResourceRecord.DoesNotExist:
-                log.debug("saw GlobalId resource %s from scope %s for the first time" % (record.id, session.scannable_id))
-                record.reported_by.add(session.scannable_id)
-
-        session.local_id_to_global_id[resource._handle] = record.pk
-        session.global_id_to_local_id[record.pk] = resource._handle
-        self._resource_persist_attributes(session, resource, record)
-
-        if created:
-            log.debug("ResourceManager._persist_new_resource[%s] %s %s %s" % (session.scannable_id, created, record.pk, resource._handle))
-        return record
-
     # Use commit on success to avoid situations where a resource record
     # lands in the DB without its attribute records.
     # FIXME: there are cases where _persist_new_resource gets called outside
     # of _persist_new_resources, make sure it's wrapped in a transaction too
     @transaction.commit_on_success
     def _persist_new_resources(self, session, resources):
-        for r in resources:
-            self._persist_new_resource(session, r)
-
-        # Do a separate pass for parents so that we will have already
-        # built the full local-to-global map
-        for r in resources:
-            resource_global_id = session.local_id_to_global_id[r._handle]
-
-            # Update self._edges
-            for p in r._parents:
-                parent_global_id = session.local_id_to_global_id[p._handle]
-                self._edges.add_parent(resource_global_id, parent_global_id)
-
-            # Update the database
-            # FIXME: shouldn't need to SELECT the record to set up its relationships
-            record = StorageResourceRecord.objects.get(pk = resource_global_id)
-            self._resource_persist_parents(r, session, record)
-
-    @transaction.autocommit
-    def _resource_persist_attributes(self, session, resource, record):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        resource_class = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
 
-        attrs = {}
-        # Special case for ResourceReference attributes, because the resource
-        # object passed from the plugin won't have a global ID for the referenced
-        # resource -- we have to do the lookup inside ResourceManager
-        for key, value in resource._storage_dict.items():
-            attribute_obj = resource_class.get_attribute_properties(key)
-            from chroma_core.lib.storage_plugin.api import attributes
-            if isinstance(attribute_obj, attributes.ResourceReference):
-                if value and not value._handle_global:
-                    attrs[key] = session.local_id_to_global_id[value._handle]
-                elif value and value._handle_global:
-                    attrs[key] = value._handle
+        with dbperf('ordering'):
+            ordered_for_creation = []
+
+            def order_by_references(resource):
+                if resource._handle_global:
+                    # Bit of _a weird one: this covers the case where a plugin sessoin
+                    # was given a root resource that had some ResourceReference attributes
+                    # that pointed to resources from a different plugin
+                    return False
+
+                if resource._handle in session.local_id_to_global_id:
+                    return False
+
+                resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(
+                    resource.__class__.__module__,
+                    resource.__class__.__name__)
+
+                # Find any ResourceReference attributes and persist them first so that
+                # we know their global IDs for serializing this one
+                for key, value in resource._storage_dict.items():
+                    # Special case for ResourceReference attributes, because the resource
+                    # object passed from the plugin won't have a global ID for the referenced
+                    # resource -- we have to do the lookup inside ResourceManager
+                    attribute_obj = resource_class.get_attribute_properties(key)
+                    if isinstance(attribute_obj, attributes.ResourceReference):
+                        if value:
+                            referenced_resource = value
+                            if not referenced_resource._handle_global:
+                                if not referenced_resource._handle in session.local_id_to_global_id:
+                                    ordered_for_creation.append(referenced_resource)
+
+                return True
+
+            for resource in resources:
+                if not resource in ordered_for_creation:
+                    if order_by_references(resource):
+                        ordered_for_creation.append(resource)
+
+        creations = {}
+        with dbperf('record_creation'):
+            for resource in ordered_for_creation:
+                if isinstance(resource._meta.identifier, BaseScopedId):
+                    scope_id = session.scannable_id
+                elif isinstance(resource._meta.identifier, BaseGlobalId):
+                    scope_id = None
                 else:
-                    attrs[key] = value
-            else:
-                attrs[key] = value
+                    raise NotImplementedError
 
-        record.update_attributes(attrs)
+                resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(
+                    resource.__class__.__module__,
+                    resource.__class__.__name__)
 
-    @transaction.autocommit
-    def _resource_persist_parents(self, resource, session, record):
-        new_parent_pks = [session.local_id_to_global_id[p._handle] for p in resource._parents]
-        existing_parents = record.parents.all()
+                id_tuple = resource.id_tuple()
+                cleaned_id_items = []
+                for t in id_tuple:
+                    if isinstance(t, BaseStorageResource):
+                        cleaned_id_items.append(session.local_id_to_global_id[t._handle])
+                    else:
+                        cleaned_id_items.append(t)
+                import json
+                id_str = json.dumps(tuple(cleaned_id_items))
 
-        # TODO: work out how to cull relationships
-        # (can't just do it here because persist_parents is called with a LOCAL resource
-        # which may not have all the parents)
-        #for ep in existing_parents:
-        #    if not ep.pk in new_parent_pks:
-        #        record.parents.remove(ep)
+                record, created = StorageResourceRecord.objects.get_or_create(
+                    resource_class_id = resource_class_id,
+                    storage_id_str = id_str,
+                    storage_id_scope_id = scope_id)
 
-        existing_parent_handles = [ep.pk for ep in existing_parents]
-        for pk in new_parent_pks:
-            if not pk in existing_parent_handles:
-                record.parents.add(pk)
+                if created:
+                    # Record a user-visible event
+                    log.debug("ResourceManager._persist_new_resource[%s] %s %s %s" % (session.scannable_id, created, record.pk, resource._handle))
+                    StorageResourceLearnEvent(severity = logging.INFO, storage_resource = record).save()
+
+                creations[resource] = (record, created)
+
+                # Add the new record to the index so that future records and resolve their
+                # provide/subscribe relationships with respect to it
+                self._subscriber_index.add_resource(record.pk, resource)
+
+                self._class_index.add_record(record.pk, resource_class)
+
+        with dbperf('attributes'):
+            attr_classes = set()
+            for resource in ordered_for_creation:
+                record, created = creations[resource]
+
+                if isinstance(resource._meta.identifier, BaseGlobalId) and session.scannable_id != record.id:
+                    try:
+                        record.reported_by.get(pk = session.scannable_id)
+                    except StorageResourceRecord.DoesNotExist:
+                        log.debug("saw GlobalId resource %s from scope %s for the first time" % (record.id, session.scannable_id))
+                        record.reported_by.add(session.scannable_id)
+
+                session.local_id_to_global_id[resource._handle] = record.pk
+                session.global_id_to_local_id[record.pk] = resource._handle
+
+                resource_class = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
+
+                attrs = {}
+                # Special case for ResourceReference attributes, because the resource
+                # object passed from the plugin won't have a global ID for the referenced
+                # resource -- we have to do the lookup inside ResourceManager
+                for key, value in resource._storage_dict.items():
+                    attribute_obj = resource_class.get_attribute_properties(key)
+                    if isinstance(attribute_obj, attributes.ResourceReference):
+                        if value and not value._handle_global:
+                            attrs[key] = session.local_id_to_global_id[value._handle]
+                        elif value and value._handle_global:
+                            attrs[key] = value._handle
+                        else:
+                            attrs[key] = value
+                    else:
+                        attrs[key] = value
+
+                for key, val in attrs.items():
+                    resource_class = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
+
+                    # Try to update an existing record
+                    attr_model_class = resource_class.attr_model_class(key)
+
+                    updated = attr_model_class.objects.filter(
+                        resource = record,
+                        key = key).update(value = attr_model_class.encode(val))
+
+                    # If there was no existing record, create one
+                    if not updated:
+                        attr_classes.add(attr_model_class)
+                        attr_model_class.delayed.insert(dict(
+                            resource_id = record.id,
+                            key = key,
+                            value = attr_model_class.encode(val)))
+
+            for attr_model_class in attr_classes:
+                attr_model_class.delayed.flush()
+
+        with dbperf('subscribers'):
+            for resource in ordered_for_creation:
+                record, created = creations[resource]
+                if created:
+                    # IMPORTANT: THIS TOTALLY RELIES ON SERIALIZATION OF ALL CREATION OPERATIONS
+                    # IN A SINGLE PROCESS INSTANCE OF THIS CLASS
+
+                    # This is a new resource which provides a field, see if any existing
+                    # resources would like to subscribe to it
+                    subscribers = self._subscriber_index.what_subscribes(resource)
+                    # Make myself a parent of anything that subscribes to me
+                    for s in subscribers:
+                        log.info("Linked up me %s as parent of %s" % (record.pk, s))
+                        self._edges.add_parent(s, record.pk)
+                        s_record = StorageResourceRecord.objects.get(pk = s)
+                        s_record.parents.add(record.pk)
+
+                    # This is a new resource which subscribes to a field, see if any existing
+                    # resource can provide it
+                    providers = self._subscriber_index.what_provides(resource)
+                    # Make my providers my parents
+                    for p in providers:
+                        log.info("Linked up %s as parent of me, %s" % (p, record.pk))
+                        self._edges.add_parent(record.pk, p)
+                        record.parents.add(p)
+
+        with dbperf('parents'):
+            # Do a separate pass for parents so that we will have already
+            # built the full local-to-global map
+            for resource in resources:
+                record, created = creations[resource]
+
+                # Update self._edges
+                for p in resource._parents:
+                    parent_global_id = session.local_id_to_global_id[p._handle]
+                    self._edges.add_parent(record.id, parent_global_id)
+
+                new_parent_pks = [session.local_id_to_global_id[p._handle] for p in resource._parents]
+                record.parents.add(*new_parent_pks)
+
 
 resource_manager = ResourceManager()
