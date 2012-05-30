@@ -114,7 +114,7 @@ class Target(ApiResource):
 class Filesystem(ApiResource):
     def __init__(self, *args, **kwargs):
         super(Filesystem, self).__init__(*args, **kwargs)
-        self.list_columns.extend(["name", "state", "files", "space"])
+        self.list_columns.extend(["name", "state", "clients", "files", "space"])
 
     def files(self):
         # Freaking Nones
@@ -126,6 +126,9 @@ class Filesystem(ApiResource):
         bytes_total = float("nan") if self.bytes_total is None else self.bytes_total
         bytes_free = float("nan") if self.bytes_free is None else self.bytes_free
         return "%s/%s" % (self.fmt_bytes(bytes_free), self.fmt_bytes(bytes_total))
+
+    def clients(self):
+        return "%d" % self.client_count
 
 
 class Volume(ApiResource):

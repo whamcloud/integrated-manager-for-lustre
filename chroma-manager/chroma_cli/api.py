@@ -4,13 +4,7 @@
 # ========================================================
 
 
-import simplejson
-try:
-    from simplejson.decoder import JSONDecodeError
-    JSONDecodeError  # https://github.com/kevinw/pyflakes/issues/13
-except ImportError:
-    # Handle simplejson < 2.3
-    JSONDecodeError = ValueError
+import json
 
 from chroma_cli.exceptions import InvalidApiResource, UnsupportedFormat, NotFound, TooManyMatches
 
@@ -35,13 +29,13 @@ class JsonSerializer(object):
         if format != "application/json":
             raise UnsupportedFormat("Can't serialize '%s', sorry." % format)
 
-        return simplejson.dumps(bundle, sort_keys=True)
+        return json.dumps(bundle, sort_keys=True)
 
     def deserialize(self, content, format='application/json'):
         if format != "application/json":
             raise UnsupportedFormat("Can't deserialize '%s', sorry." % format)
 
-        return simplejson.loads(content)
+        return json.loads(content)
 
 
 class ApiClient(object):
@@ -212,7 +206,7 @@ class ApiEndpoint(object):
         try:
             for object in self.get_decoded(**data)['objects']:
                 resources.append(self.resource_klass(**object))
-        except JSONDecodeError:
+        except ValueError:
             pass
         return resources
 
