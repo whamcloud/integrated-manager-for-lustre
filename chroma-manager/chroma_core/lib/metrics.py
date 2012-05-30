@@ -48,51 +48,20 @@ class R3dMetricStore(MetricStore):
         Creates a new R3D Database and associates it with the given
         measured object via ContentType.
         """
-        def _default_rra_fn(db):
-            """
-            Configure a default set of RRAs for a new database.  Subclasses
-            may (and probably should) override this layout.
-            """
-            # 8640 rows of 1 sample = 1 day of 10s samples
-            db.archives.add(Average.objects.create(xff=0.5,
-                database=db,
-                cdp_per_row=1,
-                rows=8640))
-            # 10080 rows of 6 consolidated samples = 1 week of 1 minute samples
-            db.archives.add(Average.objects.create(xff=0.5,
-                database=db,
-                cdp_per_row=6,
-                rows=10080))
-            # 8760 rows of 30 consolidated samples = 1 month of 5 minute samples
-            db.archives.add(Average.objects.create(xff=0.5,
-                database=db,
-                cdp_per_row=30,
-                rows=8760))
-            # 262800 rows of 60 consolidated samples = 5 years of 10 minute samples
-            db.archives.add(Average.objects.create(xff=0.5,
-                database=db,
-                cdp_per_row=60,
-                rows=262800))
-
-        def _minimal_archives(db):
-            """
-            Workaround performance issues, create the least possible archives
-            """
-            # 60 rows of 1 sample = 10 minutes of 10s samples
-            db.archives.add(Average.objects.create(xff=0.5,
-                database=db,
-                cdp_per_row=1,
-                rows=60))
-
         # FIXME: because of stats storage performance issues,
         # only store very short period of data for (numerous)
         # storage resource statistics.
         if isinstance(measured_object, StorageResourceStatistic):
             metrics_log.debug('minimal archive for %s' % measured_object)
-            rra_create_fn = _minimal_archives
+            # 60 rows of 1 sample = 10 minutes of 10s samples
+            samples = (1, 60),
         else:
             metrics_log.debug('full archive for %s' % measured_object)
-            rra_create_fn = _default_rra_fn
+            # 8640 rows of 1 sample = 1 day of 10s samples
+            # 10080 rows of 6 consolidated samples = 1 week of 1 minute samples
+            # 8760 rows of 30 consolidated samples = 1 month of 5 minute samples
+            # 262800 rows of 60 consolidated samples = 5 years of 10 minute samples
+            samples = (1, 8640), (6, 10080), (30, 8760), (60, 262800)
 
         # We want our start time to be prior to the first insert, but
         # not so far back that we waste lots of time with filling in
@@ -110,7 +79,8 @@ class R3dMetricStore(MetricStore):
                                                 content_type=ct,
                                                 step=sample_period,
                                                 **kwargs)
-        rra_create_fn(r3d)
+        for cdp_per_row, rows in samples:
+            r3d.archives.add(Average.objects.create(xff=0.5, database=r3d, cdp_per_row=cdp_per_row, rows=rows))
 
         if created:
             metrics_log.info("Created R3D: %s (%s)" % (ct, measured_object))
