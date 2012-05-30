@@ -27,11 +27,7 @@ class TooManyMatches(ApiException):
     pass
 
 
-class CliException(Exception):
-    pass
-
-
-class BadRequest(CliException):
+class BadRequest(ApiException):
     """
     Represents a failed TastyPie validation.
     """
@@ -47,7 +43,7 @@ class BadRequest(CliException):
         return "\n".join(lines)
 
 
-class InternalError(CliException):
+class InternalError(ApiException):
     """
     HTTP 500
     """
@@ -59,8 +55,19 @@ class InternalError(CliException):
         return self.backtrace
 
 
-class NotFound(CliException):
+class NotFound(ApiException):
     """
     HTTP 404
     """
+    pass
+
+
+class UnauthorizedRequest(ApiException):
+    """
+    HTTP 401
+    """
+    pass
+
+
+class AuthenticationFailure(ApiException):
     pass

@@ -26,8 +26,16 @@ def step(context, args):
         if e.code != 0:
             context.stdout.seek(0)
             context.stderr.seek(0)
-            fail("code: %d stdout: %s stderr:%s" %
+            fail("code: %d stdout: %s stderr: %s" %
                  (e.code, context.stdout.readlines(), context.stderr.readlines()))
+    except Exception, e:
+        context.stdout.seek(0)
+        context.stderr.seek(0)
+        from traceback import format_exc
+        fail("%s\nstdout:\n%s\nstderr:\n%s" %
+             (format_exc(),
+              "".join(context.stdout.readlines()),
+              "".join(context.stderr.readlines())))
 
 
 @then('I should see output containing "{message}"')

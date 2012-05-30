@@ -88,6 +88,9 @@ def standard_cli(args=None):
     tablib_formats = [m.title for m in tablib.formats.available]
     parser.add_argument("--output", "-o", help="Output format",
                         choices=["human"] + tablib_formats, default="human")
+    parser.add_argument("--api-url", help="Entry URL for Chroma API")
+    parser.add_argument("--username", help="Chroma username")
+    parser.add_argument("--password", help="Chroma password")
     parser.clear_resets()
 
     parser.add_argument("primary_action", choices=basic_nouns + noun_verbs)
@@ -95,11 +98,16 @@ def standard_cli(args=None):
 
     ns = parser.parse_args(args)
 
+    # Allow CLI options to override defaults/.chroma config values
+    config.update(dict([[key, val] for key, val in ns.__dict__.items()
+                                if val != None
+                                and key not in ["primary_action", "options"]]))
+
     if "-" in ns.primary_action:
         ns.noun, ns.verb = ns.primary_action.split("-")
         parser.reset()
         parser.add_argument("primary_action", choices=noun_verbs)
-        if ns.verb == "show":
+        if ns.verb in ["add", "show"]:
             parser.add_argument("subject")
         parser.add_argument("options", nargs=REMAINDER)
         ns = parser.parse_args(args, ns)
@@ -116,9 +124,12 @@ def standard_cli(args=None):
         else:
             ns.secondary_noun, ns.verb = ns.secondary_action.split("-")
 
-    def _noun2endpoint(noun):
+    def _noun2endpoint(noun, subject=None):
         if noun == "server":
-            return "host", {}
+            if subject:
+                return "host", {'address': subject}
+            else:
+                return "host", {}
         if noun in ["mgt", "mdt", "ost"]:
             return "target", {'kind': noun}
         if noun in ["mgs", "mds", "oss"]:
@@ -126,10 +137,10 @@ def standard_cli(args=None):
 
         return noun, {}
 
-    api = ApiHandle()
-    api.base_url = config.api_url
-    api.authentication = {'username': config.username,
-                          'password': config.password}
+    authentication = {'username': config.username,
+                      'password': config.password}
+    api = ApiHandle(api_uri=config.api_url,
+                    authentication=authentication)
 
     if ns.verb in irregular_verbs:
         if ns.verb == "mountspec":
@@ -202,6 +213,10 @@ def standard_cli(args=None):
                     print format
             except IndexError:
                 print "Found 0 results for %s" % ns.verb
+    elif ns.verb == "add":
+        ep_name, kwargs = _noun2endpoint(ns.noun, ns.subject)
+        cmd = api.endpoints[ep_name].create(**kwargs)
+        print cmd
     else:
         raise RuntimeError("Sorry, '%s' is not implemented yet!" % ns.verb)
 

@@ -11,7 +11,7 @@ from behave import *
 @given('the "{sample_name}" data is loaded')
 def step(context, sample_name):
     import os
-    import simplejson as json
+    import json
     import chroma_core.lib.agent
 
     from chroma_core.models.filesystem import ManagedFilesystem
@@ -41,3 +41,16 @@ def step(context, sample_name):
 
     from chroma_core.models.host import ManagedHost
     ok_(ManagedHost.objects.count() == len(chroma_core.lib.agent.Agent.mock_servers.keys()))
+
+
+@given('the "{name}" mocks are loaded')
+def step(context, name):
+    import os
+    import json
+    import chroma_core.lib.agent
+
+    path = os.path.join(os.path.dirname(__file__), "../../../../sample_data/%s.json" % name)
+    with open(path) as fh:
+        data = json.load(fh)
+
+    chroma_core.lib.agent.Agent.mock_servers = dict([[h['address'], h] for h in data['hosts']])

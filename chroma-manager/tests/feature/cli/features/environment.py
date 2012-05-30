@@ -45,6 +45,11 @@ def before_feature(context, feature):
     from tests.unit.chroma_api.tastypie_test import TestApiClient
     ApiHandle.ApiClient = TestApiClient
 
+    from chroma_api.authentication import CsrfAuthentication
+    context.old_is_authenticated = CsrfAuthentication.is_authenticated
+    import mock
+    CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
+
 
 def after_feature(context, feature):
     context.test_case.tearDown()
@@ -63,6 +68,9 @@ def after_feature(context, feature):
 
     from chroma_cli.api import ApiHandle
     ApiHandle.ApiClient = context.old_api_client
+
+    from chroma_api.authentication import CsrfAuthentication
+    CsrfAuthentication.is_authenticated = context.old_is_authenticated
 
 #--def before_scenario(context, scenario):
 #--    # Set up the scenario test environment
