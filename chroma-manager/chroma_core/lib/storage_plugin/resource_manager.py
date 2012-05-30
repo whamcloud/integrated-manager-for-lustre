@@ -341,23 +341,14 @@ class ResourceManager(object):
 
             log.debug("%s %s %s %s" % (tuple([len(l) for l in [node_resources, usable_node_resources, unassigned_node_resources, scope_volume_nodes]])))
 
-        def affinity_weights(volume):
-            volume_nodes = VolumeNode.objects.filter(volume = volume)
-            if volume_nodes.count() == 0:
-                log.info("affinity_weights: Volume %d has no VolumeNodes" % volume.id)
-                return False
-
-            if ManagedTarget.objects.filter(volume = volume).count() > 0:
-                log.info("affinity_weights: Volume %d in use" % volume.id)
-                return False
-
+        def affinity_weights(volume, volume_nodes):
             weights = {}
             for volume_node in volume_nodes:
-                if not volume_node.storage_resource:
+                if not volume_node.storage_resource_id:
                     log.info("affinity_weights: no storage_resource for VolumeNode %s" % volume_node.id)
                     return False
 
-                weight_resource_ids = ResourceQuery().record_find_ancestors(volume_node.storage_resource, PathWeight)
+                weight_resource_ids = self._record_find_ancestors(volume_node.storage_resource_id, PathWeight)
                 if len(weight_resource_ids) == 0:
                     log.info("affinity_weights: no PathWeights for VolumeNode %s" % volume_node.id)
                     return False
@@ -390,11 +381,10 @@ class ResourceManager(object):
 
             return True
 
-        def affinity_balance(volume):
-            volume_nodes = VolumeNode.objects.filter(volume = volume)
+        def affinity_balance(volume, volume_nodes):
             host_to_lun_nodes = defaultdict(list)
-            for ln in volume_nodes:
-                host_to_lun_nodes[ln.host].append(ln)
+            for vn in volume_nodes:
+                host_to_lun_nodes[vn.host].append(vn)
 
             host_to_primary_count = {}
             for h in host_to_lun_nodes.keys():
@@ -508,11 +498,23 @@ class ResourceManager(object):
                             log.info("Created VolumeNode for resource %s" % node_record.pk)
                             volumes_for_affinity_checks.add(volume)
 
-        with dbperf('affinities'):
+        volume_to_volume_nodes = defaultdict(list)
+        for vn in VolumeNode.objects.filter(volume__in = volumes_for_affinity_checks):
+            volume_to_volume_nodes[vn.volume_id].append(vn)
+
+        occupied_volumes = set([t['volume_id'] for t in ManagedTarget.objects.filter(volume__in = volumes_for_affinity_checks).values('volume_id')])
+        volumes_for_affinity_checks = [v for v in volumes_for_affinity_checks if v.id not in occupied_volumes and volume_to_volume_nodes[v.id]]
+
+        with dbperf('weights'):
+            volumes_for_balancing = []
             for volume in volumes_for_affinity_checks:
-                got_weights = affinity_weights(volume)
+                got_weights = affinity_weights(volume, volume_to_volume_nodes[volume.id])
                 if not got_weights:
-                    affinity_balance(volume)
+                    volumes_for_balancing.append(volume)
+
+        with dbperf('balance'):
+            for volume in volumes_for_balancing:
+                affinity_balance(volume, volume_to_volume_nodes[volume.id])
 
         # For all VolumeNodes, if its storage resource was in this scope, and it
         # was not included in the set of usable DeviceNode resources, remove
@@ -853,6 +855,18 @@ class ResourceManager(object):
                 return found
 
         return None
+
+    def _record_find_ancestors(self, record_id, parent_klass):
+        """Find all ancestors of type parent_klass"""
+        result = []
+        record_class = self._class_index.get(record_id)
+        if issubclass(record_class, parent_klass):
+            result.append(record_id)
+
+        for p in self._edges.get_parents(record_id):
+            result.extend(self._record_find_ancestors(p, parent_klass))
+
+        return result
 
     def _persist_new_resource(self, session, resource):
         if resource._handle_global:
