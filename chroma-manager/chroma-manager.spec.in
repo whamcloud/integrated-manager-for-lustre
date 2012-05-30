@@ -46,7 +46,6 @@ or on a separate node.
 %package integration-tests
 Summary: Chroma Manager Integration Tests
 Group: Development/Tools
-Requires: chroma-manager-test-libs = %{version}
 %description integration-tests
 This package contains the Chroma Manager integration tests and scripts and is intended
 to be used by the Chroma test framework.
