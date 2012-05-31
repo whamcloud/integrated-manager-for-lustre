@@ -464,12 +464,8 @@ EOF
         targets = response.json['objects']
 
         for target in targets:
-            target_volume_url = target['volume']
-            response = self.chroma_manager.get(target_volume_url)
-            self.assertTrue(response.successful, response.text)
-            target_volume_id = response.json['id']
-            if target_volume_id in volumes_to_expected_hosts:
-                expected_host = volumes_to_expected_hosts[target_volume_id]
+            if target['volume']['id'] in volumes_to_expected_hosts:
+                expected_host = volumes_to_expected_hosts[target['volume']['id']]
                 if assert_true:
                     self.assertEqual(expected_host, target['active_host_name'])
                 else:
