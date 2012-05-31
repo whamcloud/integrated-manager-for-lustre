@@ -96,6 +96,9 @@ class Host(ApiResource):
         else:
             return "Never"
 
+    def nids(self):
+        return ",".join(self.all_attributes['nids'])
+
 
 class Target(ApiResource):
     def __init__(self, *args, **kwargs):
