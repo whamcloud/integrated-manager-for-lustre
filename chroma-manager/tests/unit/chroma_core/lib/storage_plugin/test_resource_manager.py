@@ -114,14 +114,39 @@ class TestManyObjects(ResourceManagerTestCase):
         resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources',
                 {'plugin_name': 'linux', 'host_id': self.host.id})
 
-        self.scannable_resource_pk = resource_record.pk
+        couplet_record, couplet_resource = self._make_global_resource('example_plugin', 'Couplet',
+                {'address_1': 'foo', 'address_2': 'bar'})
 
-        self.N = 100
-        self.resources = [scannable_resource]
+        self.host_resource_pk = resource_record.pk
+        self.couplet_resource_pk = couplet_record.pk
+
+        # luns
+        self.N = 32
+        # drives per lun
+        self.M = 10
+        self.host_resources = [scannable_resource]
+        self.controller_resources = [couplet_resource]
+        lun_size = 1024 * 1024 * 1024 * 73
         for n in range(0, self.N):
-            dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial_80 = "foobar%d" % n, serial_83 = None, size = 4096)
+            drives = []
+            for m in range(0, self.M):
+                drive_resource = self._make_local_resource('example_plugin', 'HardDrive', serial_number = "foobarbaz%s_%s" % (n, m), capacity = lun_size / self.M)
+                drives.append(drive_resource)
+            lun_resource = self._make_local_resource(
+                'example_plugin', 'Lun',
+                parents = drives,
+                serial_83 = "foobar%d" % n,
+                local_id = n,
+                size = lun_size,
+                name = "LUN_%d" % n)
+            self.controller_resources.extend(drives + [lun_resource])
+
+            dev_resource = self._make_local_resource('linux', 'ScsiDevice',
+                serial_80 = None,
+                serial_83 = "foobar%d" % n,
+                size = lun_size)
             node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/foo%s" % n, parents = [dev_resource], host_id = self.host.id)
-            self.resources.extend([dev_resource, node_resource])
+            self.host_resources.extend([dev_resource, node_resource])
 
     def test_global_remove(self):
         try:
@@ -130,14 +155,24 @@ class TestManyObjects(ResourceManagerTestCase):
 
             from chroma_core.lib.storage_plugin.resource_manager import resource_manager
 
-            with dbperf('session_open'):
-                resource_manager.session_open(self.scannable_resource_pk, self.resources, 60)
-            self.assertEqual(StorageResourceRecord.objects.count(), self.N * 2 + 1)
+            with dbperf('session_open_host'):
+                resource_manager.session_open(self.host_resource_pk, self.host_resources, 60)
+            with dbperf('session_open_controller'):
+                resource_manager.session_open(self.couplet_resource_pk, self.controller_resources, 60)
+
+            host_res_count = self.N * 2 + 1
+            cont_res_count = self.N + self.N * self.M + 1
+            self.assertEqual(StorageResourceRecord.objects.count(), host_res_count + cont_res_count)
             self.assertEqual(Volume.objects.count(), self.N)
             self.assertEqual(VolumeNode.objects.count(), self.N)
 
-            with dbperf('global_remove_resource'):
-                resource_manager.global_remove_resource(self.scannable_resource_pk)
+            with dbperf('global_remove_resource_host'):
+                resource_manager.global_remove_resource(self.host_resource_pk)
+
+            self.assertEqual(StorageResourceRecord.objects.count(), cont_res_count)
+
+            with dbperf('global_remove_resource_controller'):
+                resource_manager.global_remove_resource(self.couplet_resource_pk)
 
             self.assertEqual(StorageResourceRecord.objects.count(), 0)
 
@@ -476,6 +511,34 @@ class TestAlerts(ResourceManagerTestCase):
         # Leave failed state and send notification
         controller_resource.status = 'OK'
         self.assertEqual(False, self._update_alerts(resource_record.pk, controller_resource, ValueCondition))
+
+        # Check that the alert is now unset on couplet
+        self.assertEqual(AlertState.objects.filter(active = True).count(), 0)
+        # Check that the alert is now unset on controller (propagation)
+        self.assertEqual(StorageAlertPropagated.objects.filter().count(), 0)
+
+    def test_alert_deletion(self):
+        resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK'})
+        lun_resource = self._make_local_resource('alert_plugin', 'Lun', lun_id="foo", size = 1024 * 1024 * 650, parents = [controller_resource])
+
+        # Open session
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
+        resource_manager.session_open(resource_record.pk, [controller_resource, lun_resource], 60)
+
+        from chroma_core.lib.storage_plugin.api.alert_conditions import ValueCondition
+
+        # Go into failed state and send notification
+        controller_resource.status = 'FAILED'
+        self.assertEqual(True, self._update_alerts(resource_record.pk, controller_resource, ValueCondition))
+
+        from chroma_core.models import AlertState, StorageAlertPropagated
+
+        # Check that the alert is now set on couplet
+        self.assertEqual(AlertState.objects.filter(active = True).count(), 1)
+        # Check that the alert is now set on controller (propagation)
+        self.assertEqual(StorageAlertPropagated.objects.filter().count(), 1)
+
+        resource_manager.global_remove_resource(resource_record.pk)
 
         # Check that the alert is now unset on couplet
         self.assertEqual(AlertState.objects.filter(active = True).count(), 0)
