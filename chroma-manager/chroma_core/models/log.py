@@ -68,6 +68,9 @@ class Systemevents(models.Model):
         else:
             return "normal"
 
+    def __str__(self):
+        return "%s %s %s %s" % (self.devicereportedtime, self.fromhost, self.syslogtag, self.message)
+
 
 class LastSystemeventsProcessed(models.Model):
     """Record the ID of the latest log line that was

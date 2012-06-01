@@ -368,6 +368,13 @@ def parse_log_entries():
         audit_log.debug("parse_log_entries: parsed %d lines" % parsed_count)
 
 
+@periodic_task(run_every=timedelta(seconds=settings.AUDIT_PERIOD))
+def prune_database():
+    from chroma_core.lib.systemevents import SystemEventsAudit
+    pruned_count = SystemEventsAudit().prune_log_entries()
+    audit_log.debug("prune_database: pruned %d entries" % pruned_count)
+
+
 @task()
 def test_host_contact(host):
     import socket
