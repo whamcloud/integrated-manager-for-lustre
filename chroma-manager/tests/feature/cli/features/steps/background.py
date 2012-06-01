@@ -40,7 +40,7 @@ def step(context, sample_name):
         volume.save()
 
     from chroma_core.models.host import ManagedHost
-    ok_(ManagedHost.objects.count() == len(chroma_core.lib.agent.Agent.mock_servers.keys()))
+    eq_(ManagedHost.objects.count(), len(chroma_core.lib.agent.Agent.mock_servers.keys()))
 
 
 @given('the "{name}" mocks are loaded')
@@ -48,6 +48,10 @@ def step(context, name):
     import os
     import json
     import chroma_core.lib.agent
+
+    # Skip setup if it was already done in a previous scenario.
+    if len(chroma_core.lib.agent.Agent.mock_servers) > 0:
+        return
 
     path = os.path.join(os.path.dirname(__file__), "../../../../sample_data/%s.json" % name)
     with open(path) as fh:

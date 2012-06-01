@@ -41,7 +41,7 @@ class JsonSerializer(object):
 class ChromaSessionClient(object):
     def __init__(self):
         self.is_authenticated = False
-        self.api_uri = "http://localhost/api"
+        self.api_uri = "http://localhost/api/"
 
         session_headers = {'Accept': "application/json",
                            'Content-Type': "application/json"}
@@ -150,7 +150,7 @@ class ApiHandle(object):
         self.__schema = None
         self.base_url = api_uri
         if not self.base_url:
-            self.base_url = "http://localhost/api"
+            self.base_url = "http://localhost/api/"
         self.authentication = authentication
         self.endpoints = ApiEndpointGenerator(self)
         self.serializer = JsonSerializer()
@@ -266,7 +266,7 @@ class ApiEndpoint(object):
         return self.__schema
 
     @property
-    def url(self):
+    def uri(self):
         return self.api_handle.schema[self.name]['list_endpoint']
 
     def resolve_id(self, query):
@@ -299,10 +299,15 @@ class ApiEndpoint(object):
 
         raise NotFound("Unable to resolve id for %s/%s" % (self.name, query))
 
-    def get_decoded(self, url=None, **data):
-        if not url:
-            url = self.url
-        return self.api_handle.send_and_decode("get", url, data=data)
+    def resource_uri(self, subject):
+        id = self.resolve_id(subject)
+        from urlparse import urljoin
+        return urljoin(self.uri, "%s/" % id)
+
+    def get_decoded(self, uri=None, **data):
+        if not uri:
+            uri = self.uri
+        return self.api_handle.send_and_decode("get", uri, data=data)
 
     def list(self, **data):
         resources = []
@@ -314,10 +319,17 @@ class ApiEndpoint(object):
         return resources
 
     def show(self, subject):
-        id = self.resolve_id(subject)
-        from urlparse import urljoin
-        object = self.get_decoded(url=urljoin(self.url, "%s/" % id))
+        object = self.get_decoded(self.resource_uri(subject))
         return self.resource_klass(**object)
 
     def create(self, **data):
-        return self.api_handle.send_and_decode("post", self.url, data=data)
+        return self.api_handle.send_and_decode("post", self.uri, data=data)
+
+    def delete(self, subject):
+        return self.api_handle.send_and_decode("delete",
+                                               self.resource_uri(subject))
+
+    def update(self, subject, **data):
+        return self.api_handle.send_and_decode("put",
+                                               self.resource_uri(subject),
+                                               data=data)
