@@ -23,6 +23,9 @@ class NodeOps(object):
             put("%s/%s" % (settings.YUM_KEYS, key), "/root/keys/%s" % key, use_sudo = True)
         put(settings.YUM_REPO, "/etc/yum.repos.d", use_sudo = True)
         put(settings.MASTER_REPO, "/etc/yum.repos.d", use_sudo = True)
+        from os.path import basename
+        sudo('sed -i.orig s/MAGICKEY/%s/g /etc/yum.repos.d/%s' % (settings.MAGIC_KEY, basename(settings.MASTER_REPO)))
+
 
 
     def reboot(self):
