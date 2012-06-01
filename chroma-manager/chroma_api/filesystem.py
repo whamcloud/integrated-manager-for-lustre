@@ -242,7 +242,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
     def _get_stat_simple(self, bundle, klass, stat_name, factor = 1):
         try:
             return bundle.obj.metrics.fetch_last(klass, fetch_metrics=[stat_name])[1][stat_name] * factor
-        except (KeyError, IndexError):
+        except (KeyError, IndexError, TypeError):
             return None
 
     def dehydrate_mount_path(self, bundle):
