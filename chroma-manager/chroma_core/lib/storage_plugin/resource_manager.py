@@ -25,7 +25,7 @@ import logging
 from django.db.models.aggregates import Count
 from django.db.models.query_utils import Q
 from chroma_core.lib.storage_plugin.api import attributes, relations
-from chroma_core.lib.storage_plugin.base_resource import BaseGlobalId, BaseScopedId
+from chroma_core.lib.storage_plugin.base_resource import BaseGlobalId, BaseScopedId, HostsideResource, BaseScannableResource
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
@@ -257,6 +257,8 @@ class ResourceManager(object):
             scannable_id,
             initial_resources,
             update_period):
+        scannable_class = self._class_index.get(scannable_id)
+        assert issubclass(scannable_class, BaseScannableResource) or issubclass(scannable_class, HostsideResource)
         log.debug(">> session_open %s (%s resources)" % (scannable_id, len(initial_resources)))
         with self._instance_lock:
             if scannable_id in self._sessions:
@@ -797,9 +799,9 @@ class ResourceManager(object):
             # If we are deleting one of the special top level resource classes, handle
             # its dependents
             record_id = resource_record.id
-            from chroma_core.lib.storage_plugin.base_resource import ScannableResource, HostsideResource
+            from chroma_core.lib.storage_plugin.base_resource import BaseScannableResource, HostsideResource
             resource_class = self._class_index.get(record_id)
-            if issubclass(resource_class, ScannableResource) or issubclass(resource_class, HostsideResource):
+            if issubclass(resource_class, BaseScannableResource) or issubclass(resource_class, HostsideResource):
                 # Find resources scoped to this resource
                 for dependent in StorageResourceRecord.objects.filter(storage_id_scope = record_id):
                     collect_phase1(dependent.id)
@@ -812,10 +814,10 @@ class ResourceManager(object):
                 # Delete any resources whose reported_by are now zero
                 for srr in StorageResourceRecord.objects.filter(storage_id_scope = None, reported_by = None).values('id'):
                     srr_class = self._class_index.get(srr['id'])
-                    if (not issubclass(srr_class, HostsideResource)) and (not issubclass(srr_class, ScannableResource)):
+                    if (not issubclass(srr_class, HostsideResource)) and (not issubclass(srr_class, BaseScannableResource)):
                         collect_phase1(srr['id'])
 
-            if issubclass(resource_class, ScannableResource):
+            if issubclass(resource_class, BaseScannableResource):
                 # Delete any StorageResourceOffline alerts
                 for alert_state in StorageResourceOffline.objects.filter(alert_item_id = record_id):
                     alert_state.delete()
@@ -892,7 +894,7 @@ class ResourceManager(object):
 
             volume_to_volume_nodes = defaultdict(list)
             for vn in VolumeNode.objects.filter(volume__in = volumes_need_attention):
-                volume_to_volume_nodes.append(vn)
+                volume_to_volume_nodes[vn.volume_id].append(vn)
 
             for volume_id in volumes_need_attention:
                 targets = volume_to_targets[volume_id]
@@ -1070,6 +1072,8 @@ class ResourceManager(object):
                     resource_class_id = resource_class_id,
                     storage_id_str = id_str,
                     storage_id_scope_id = scope_id)
+                session.local_id_to_global_id[resource._handle] = record.pk
+                session.global_id_to_local_id[record.pk] = resource._handle
 
                 if created:
                     # Record a user-visible event
@@ -1095,9 +1099,6 @@ class ResourceManager(object):
                     except StorageResourceRecord.DoesNotExist:
                         log.debug("saw GlobalId resource %s from scope %s for the first time" % (record.id, session.scannable_id))
                         record.reported_by.add(session.scannable_id)
-
-                session.local_id_to_global_id[resource._handle] = record.pk
-                session.global_id_to_local_id[record.pk] = resource._handle
 
                 resource_class = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
 
@@ -1167,8 +1168,12 @@ class ResourceManager(object):
         with dbperf('parents'):
             # Do a separate pass for parents so that we will have already
             # built the full local-to-global map
+
             for resource in resources:
-                record, created = creations[resource]
+                try:
+                    record, created = creations[resource]
+                except KeyError:
+                    record = StorageResourceRecord.objects.get(pk = session.local_id_to_global_id[resource._handle])
 
                 # Update self._edges
                 for p in resource._parents:

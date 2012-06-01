@@ -4,7 +4,7 @@ from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api import attributes
 
 
-class Controller(resources.Controller):
+class Controller(resources.ScannableResource):
     class Meta:
         identifier = GlobalId('address')
 

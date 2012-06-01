@@ -285,8 +285,10 @@ class TestResourceOperations(ResourceManagerTestCase):
     def test_virtual_machine_update(self):
         """Check that ManagedHosts are created for VirtualMachines when
         added in an update"""
-        controller_record, controller_resource = self._make_global_resource('virtual_machine_plugin', 'Controller', {'address': '192.168.0.1'})
-        vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine', address = 'myvm')
+        controller_record, controller_resource = self._make_global_resource('virtual_machine_plugin', 'Controller',
+                {'address': '192.168.0.1'})
+        vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine',
+            address = 'myvm')
 
         from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         # Session for host resources
