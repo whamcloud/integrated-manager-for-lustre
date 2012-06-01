@@ -80,6 +80,8 @@ def standard_cli(args=None):
     noun_verbs = ["%s-%s" % t for t in product(*[basic_nouns, basic_verbs])]
     noun_verbs.extend(["target-show", "target-list"])
     irregular_verbs = ["mountspec"]
+    lnet_verbs = ["start", "stop", "load", "unload"]
+    lnet_actions = ["%s-%s" % t for t in product(*[["lnet"], lnet_verbs])]
 
     config = Configuration()
     parser = ResettableArgumentParser(description="Chroma API CLI")
@@ -107,7 +109,7 @@ def standard_cli(args=None):
         ns.noun, ns.verb = ns.primary_action.split("-")
         parser.reset()
         parser.add_argument("primary_action", choices=noun_verbs)
-        if ns.verb in ["add", "show"]:
+        if ns.verb in ["add", "show", "remove"]:
             parser.add_argument("subject")
         parser.add_argument("options", nargs=REMAINDER)
         ns = parser.parse_args(args, ns)
@@ -116,7 +118,7 @@ def standard_cli(args=None):
         parser.add_argument("noun", choices=basic_nouns)
         parser.add_argument("subject")
         parser.add_argument("secondary_action",
-                            choices=[c for c in noun_verbs if '-list' in c] + irregular_verbs)
+                            choices=[c for c in noun_verbs if '-list' in c] + irregular_verbs + lnet_actions)
         parser.add_argument("options", nargs=REMAINDER)
         ns = parser.parse_args(args)
         if ns.secondary_action in irregular_verbs:
@@ -142,12 +144,15 @@ def standard_cli(args=None):
     api = ApiHandle(api_uri=config.api_url,
                     authentication=authentication)
 
+    # FIXME: Turn this pile of spaghetti into something modular.
+    # I just want to get all of the functionality driven out and
+    # then refactor once the tests are passing.
     if ns.verb in irregular_verbs:
         if ns.verb == "mountspec":
             fs = api.endpoints['filesystem'].show(ns.subject)
             print fs['mount_path']
 
-    elif ns.verb in ["list", "show"]:
+    elif ns.verb in ["list", "show"] + lnet_verbs:
         entities = []
         if 'primary_action' in ns:
             ep_name, kwargs = _noun2endpoint(ns.noun)
@@ -187,7 +192,13 @@ def standard_cli(args=None):
                     entities = api.endpoints['target'].list(**kwargs)
                 elif ns.secondary_noun == "volume":
                     entities = api.endpoints['volume'].list(**kwargs)
-
+                elif ns.secondary_noun == "lnet":
+                    state_verbs = {'stop': "lnet_down",
+                                   'start': "lnet_up",
+                                   'unload': "lnet_unloaded",
+                                   'load': "lnet_down"}
+                    kwargs['state'] = state_verbs[ns.verb]
+                    return api.endpoints['host'].update(ns.subject, **kwargs)
         if ns.output == "json":
             from tablib.packages import omnijson as json
             print json.dumps([e.all_attributes for e in entities])
@@ -216,6 +227,10 @@ def standard_cli(args=None):
     elif ns.verb == "add":
         ep_name, kwargs = _noun2endpoint(ns.noun, ns.subject)
         cmd = api.endpoints[ep_name].create(**kwargs)
+        print cmd
+    elif ns.verb == "remove":
+        ep_name, kwargs = _noun2endpoint(ns.noun, ns.subject)
+        cmd = api.endpoints[ep_name].delete(ns.subject)
         print cmd
     else:
         raise RuntimeError("Sorry, '%s' is not implemented yet!" % ns.verb)
