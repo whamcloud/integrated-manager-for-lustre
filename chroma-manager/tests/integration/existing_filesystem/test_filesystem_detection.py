@@ -159,11 +159,11 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         # Verify a client can use the filesystem using the mount command provided
         mount_command = filesystem['mount_command']
         client = config['lustre_clients'].keys()[0]
-        self.mount_filesystem(client, "test18fs", mount_command)
+        self.mount_filesystem(client, config['filesystem']['name'], mount_command)
         try:
-            self.exercise_filesystem(client, "test18fs")
+            self.exercise_filesystem(client, config['filesystem']['name'])
         finally:
-            self.unmount_filesystem(client, "test18fs")
+            self.unmount_filesystem(client, config['filesystem']['name'])
 
         # Verify detects target unmount.
         for target in targets:
