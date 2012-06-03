@@ -46,3 +46,4 @@ class VolumeNodeResource(ModelResource):
         excludes = ['not_deleted']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get']
+        filtering = {'host': ['exact'], 'path': ['exact']}

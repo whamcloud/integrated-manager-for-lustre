@@ -269,6 +269,10 @@ class ApiEndpoint(object):
     def uri(self):
         return self.api_handle.schema[self.name]['list_endpoint']
 
+    @property
+    def fields(self):
+        return self.schema['fields']
+
     def resolve_id(self, query):
         try:
             # Slight hack here -- relies on the "name" field usually being

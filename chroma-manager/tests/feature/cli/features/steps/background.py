@@ -58,3 +58,15 @@ def step(context, name):
         data = json.load(fh)
 
     chroma_core.lib.agent.Agent.mock_servers = dict([[h['address'], h] for h in data['hosts']])
+
+
+@given('the mock servers are set up')
+def step(context):
+    import chroma_core.lib.agent
+    from chroma_core.models.host import ManagedHost
+
+    for address in chroma_core.lib.agent.Agent.mock_servers.keys():
+        host = ManagedHost.create_from_string(address)[0]
+        context.test_case._test_lun(host)
+
+    eq_(ManagedHost.objects.count(), len(chroma_core.lib.agent.Agent.mock_servers))

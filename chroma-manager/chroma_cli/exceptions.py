@@ -24,22 +24,42 @@ class TooManyMatches(ApiException):
     """
     Too many matches returned during a fuzzy-id lookup.
     """
+    def __str__(self):
+        return "The query matched more than one record."
+
+
+class InvalidVolumeNode(ApiException):
+    def __init__(self, input):
+        self.input = input
+
+    def __str__(self):
+        return "Invalid VolumeNode spec: %s (malformed or bad path?)" % self.input
+
+
+class BadUserInput(ApiException):
+    """
+    Generic exception for bad user input detected post-argparse.
+    """
     pass
 
 
 class BadRequest(ApiException):
     """
-    Represents a failed TastyPie validation.
+    Represents a failed TastyPie validation or other 400-level error.
     """
     def __init__(self, value):
         self.error_dict = value
         super(BadRequest, self).__init__()
 
     def __str__(self):
-        lines = []
-        for field, errors in self.error_dict.items():
-            for error in errors:
-                lines.extend(["  %s: %s" % (field, error)])
+        lines = ["The server rejected the request with the following error(s):"]
+        try:
+            for field, errors in self.error_dict.items():
+                for error in errors:
+                    lines.extend(["  %s: %s" % (field, error)])
+        except AttributeError:
+            # Sometimes what comes back is just a string.
+            lines.append(self.error_dict)
         return "\n".join(lines)
 
 
@@ -70,4 +90,6 @@ class UnauthorizedRequest(ApiException):
 
 
 class AuthenticationFailure(ApiException):
-    pass
+    """
+    HTTP 401 after trying to authenticate.
+    """

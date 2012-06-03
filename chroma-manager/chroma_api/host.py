@@ -64,7 +64,7 @@ class HostResource(MetricResource, StatefulModelResource):
         ordering = ['fqdn']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
-        readonly = ['nodename', 'fqdn']
+        readonly = ['nodename', 'fqdn', 'nids', 'last_contact']
         validation = HostValidation()
         always_return_data = True
 

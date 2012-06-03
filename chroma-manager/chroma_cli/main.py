@@ -12,6 +12,8 @@ from chroma_cli.exceptions import BadRequest, InternalError, NotFound
 from chroma_cli.parser import ResettableArgumentParser
 from chroma_cli.config import Configuration
 from chroma_cli.api import ApiHandle
+from chroma_cli.output import StandardFormatter, FollowFormatter
+from chroma_cli.handlers import Dispatcher
 
 # TODO: This kind of thing is probably a good candidate for
 # pluginization, if we wind up with a lot of command modules.
@@ -74,28 +76,19 @@ def api_cli():
 
 
 def standard_cli(args=None):
-    from itertools import product
-    basic_nouns = ["server", "volume", "filesystem", "ost", "mdt", "mgt", "mgs", "oss", "mds"]
-    basic_verbs = ["list", "show", "add", "remove"]
-    noun_verbs = ["%s-%s" % t for t in product(*[basic_nouns, basic_verbs])]
-    noun_verbs.extend(["target-show", "target-list"])
-    irregular_verbs = ["mountspec"]
-    lnet_verbs = ["start", "stop", "load", "unload"]
-    lnet_actions = ["%s-%s" % t for t in product(*[["lnet"], lnet_verbs])]
-
     config = Configuration()
     parser = ResettableArgumentParser(description="Chroma API CLI")
+    dispatcher = Dispatcher()
 
-    import tablib
-    tablib_formats = [m.title for m in tablib.formats.available]
-    parser.add_argument("--output", "-o", help="Output format",
-                        choices=["human"] + tablib_formats, default="human")
     parser.add_argument("--api-url", help="Entry URL for Chroma API")
     parser.add_argument("--username", help="Chroma username")
     parser.add_argument("--password", help="Chroma password")
+    parser.add_argument("--output", "-o", help="Output format",
+                        choices=StandardFormatter.formats())
+    parser.add_argument("--follow", help="Follow jobs to completion")
     parser.clear_resets()
 
-    parser.add_argument("primary_action", choices=basic_nouns + noun_verbs)
+    parser.add_argument("primary_action", choices=dispatcher.handled_actions)
     parser.add_argument("options", nargs=REMAINDER)
 
     ns = parser.parse_args(args)
@@ -105,135 +98,16 @@ def standard_cli(args=None):
                                 if val != None
                                 and key not in ["primary_action", "options"]]))
 
-    if "-" in ns.primary_action:
-        ns.noun, ns.verb = ns.primary_action.split("-")
-        parser.reset()
-        parser.add_argument("primary_action", choices=noun_verbs)
-        if ns.verb in ["add", "show", "remove"]:
-            parser.add_argument("subject")
-        parser.add_argument("options", nargs=REMAINDER)
-        ns = parser.parse_args(args, ns)
-    else:
-        parser.reset()
-        parser.add_argument("noun", choices=basic_nouns)
-        parser.add_argument("subject")
-        parser.add_argument("secondary_action",
-                            choices=[c for c in noun_verbs if '-list' in c] + irregular_verbs + lnet_actions)
-        parser.add_argument("options", nargs=REMAINDER)
-        ns = parser.parse_args(args)
-        if ns.secondary_action in irregular_verbs:
-            ns.verb = ns.secondary_action
-        else:
-            ns.secondary_noun, ns.verb = ns.secondary_action.split("-")
-
-    def _noun2endpoint(noun, subject=None):
-        if noun == "server":
-            if subject:
-                return "host", {'address': subject}
-            else:
-                return "host", {}
-        if noun in ["mgt", "mdt", "ost"]:
-            return "target", {'kind': noun}
-        if noun in ["mgs", "mds", "oss"]:
-            return "host", {'role': noun}
-
-        return noun, {}
-
     authentication = {'username': config.username,
                       'password': config.password}
     api = ApiHandle(api_uri=config.api_url,
                     authentication=authentication)
 
-    # FIXME: Turn this pile of spaghetti into something modular.
-    # I just want to get all of the functionality driven out and
-    # then refactor once the tests are passing.
-    if ns.verb in irregular_verbs:
-        if ns.verb == "mountspec":
-            fs = api.endpoints['filesystem'].show(ns.subject)
-            print fs['mount_path']
-
-    elif ns.verb in ["list", "show"] + lnet_verbs:
-        entities = []
-        if 'primary_action' in ns:
-            ep_name, kwargs = _noun2endpoint(ns.noun)
-            if ns.verb == "list":
-                entities = api.endpoints[ep_name].list(**kwargs)
-            elif ns.verb == "show":
-                entities = [api.endpoints[ep_name].show(ns.subject)]
-        else:
-            if ns.noun == "filesystem":
-                fs = api.endpoints['filesystem'].show(ns.subject)
-                kwargs = {'filesystem_id': fs['id']}
-                if '--primary' in ns.options:
-                    kwargs['primary'] = True
-
-                if ns.secondary_noun in ["ost", "mdt", "mgt"]:
-                    kwargs['kind'] = ns.secondary_noun
-                    entities = api.endpoints['target'].list(**kwargs)
-                elif ns.secondary_noun == "target":
-                    entities = api.endpoints['target'].list(**kwargs)
-                elif ns.secondary_noun == "server":
-                    entities = api.endpoints['host'].list(**kwargs)
-                elif ns.secondary_noun in ["oss", "mds", "mgs"]:
-                    kwargs['role'] = ns.secondary_noun
-                    entities = api.endpoints['host'].list(**kwargs)
-                elif ns.secondary_noun == "volume":
-                    entities = api.endpoints['volume'].list(**kwargs)
-            elif ns.noun == "server":
-                host = api.endpoints['host'].show(ns.subject)
-                kwargs = {'host_id': host['id']}
-                if '--primary' in ns.options:
-                    kwargs['primary'] = True
-
-                if ns.secondary_noun in ["ost", "mdt", "mgt"]:
-                    kwargs['kind'] = ns.secondary_noun
-                    entities = api.endpoints['target'].list(**kwargs)
-                elif ns.secondary_noun == "target":
-                    entities = api.endpoints['target'].list(**kwargs)
-                elif ns.secondary_noun == "volume":
-                    entities = api.endpoints['volume'].list(**kwargs)
-                elif ns.secondary_noun == "lnet":
-                    state_verbs = {'stop': "lnet_down",
-                                   'start': "lnet_up",
-                                   'unload': "lnet_unloaded",
-                                   'load': "lnet_down"}
-                    kwargs['state'] = state_verbs[ns.verb]
-                    return api.endpoints['host'].update(ns.subject, **kwargs)
-        if ns.output == "json":
-            from tablib.packages import omnijson as json
-            print json.dumps([e.all_attributes for e in entities])
-        elif ns.output == "yaml":
-            from tablib.packages import yaml
-            print yaml.safe_dump([e.all_attributes for e in entities])
-        else:
-            try:
-                header = entities[0].as_header()
-                rows = []
-                for entity in entities:
-                    rows.append(entity.as_row())
-
-                if ns.output == "human":
-                    from prettytable import PrettyTable, NONE
-                    table = PrettyTable(header, hrules=NONE)
-                    for row in rows:
-                        table.add_row(row)
-                    print table
-                else:
-                    data = tablib.Dataset(*rows, headers=header)
-                    format = getattr(data, ns.output)
-                    print format
-            except IndexError:
-                print "Found 0 results for %s" % ns.verb
-    elif ns.verb == "add":
-        ep_name, kwargs = _noun2endpoint(ns.noun, ns.subject)
-        cmd = api.endpoints[ep_name].create(**kwargs)
-        print cmd
-    elif ns.verb == "remove":
-        ep_name, kwargs = _noun2endpoint(ns.noun, ns.subject)
-        cmd = api.endpoints[ep_name].delete(ns.subject)
-        print cmd
+    if config.follow:
+        formatter = FollowFormatter(format=config.output)
     else:
-        raise RuntimeError("Sorry, '%s' is not implemented yet!" % ns.verb)
+        formatter = StandardFormatter(format=config.output)
+    dispatcher(ns.primary_action)(api=api, formatter=formatter)(parser=parser, args=args, namespace=ns)
 
     sys.exit(0)
 
