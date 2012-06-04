@@ -57,11 +57,8 @@ class R3dMetricStore(MetricStore):
             samples = (1, 60),
         else:
             metrics_log.debug('full archive for %s' % measured_object)
-            # 8640 rows of 1 sample = 1 day of 10s samples
-            # 10080 rows of 6 consolidated samples = 1 week of 1 minute samples
-            # 8760 rows of 30 consolidated samples = 1 month of 5 minute samples
-            # 262800 rows of 60 consolidated samples = 5 years of 10 minute samples
-            samples = (1, 8640), (6, 10080), (30, 8760), (60, 262800)
+            # 10s, 1m, 5m, 1h, 1d
+            samples = [(points, points * 10**4) for points in (1, 6, 30, 360, 360*24)]
 
         # We want our start time to be prior to the first insert, but
         # not so far back that we waste lots of time with filling in
