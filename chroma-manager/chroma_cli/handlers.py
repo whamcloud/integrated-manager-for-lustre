@@ -203,11 +203,7 @@ class ServerHandler(Handler):
 class FilesystemHandler(Handler):
     nouns = ["filesystem", "fs"]
     secondary_nouns = ["target", "tgt", "mgt", "mdt", "ost", "volume", "vol", "server", "mgs", "mds", "oss"]
-    verbs = ["list", "show", "add", "remove", "start", "stop", "detect"]
-
-    @property
-    def secondary_actions(self):
-        return ["mountspec"] + super(FilesystemHandler, self).secondary_actions
+    verbs = ["list", "show", "add", "remove", "start", "stop", "detect", "mountspec"]
 
     @property
     def intransitive_verbs(self):
