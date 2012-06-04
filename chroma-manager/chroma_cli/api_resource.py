@@ -153,3 +153,9 @@ class Volume(ApiResource):
             else:
                 nodes.append(node['host_label'])
         return ",".join(nodes)
+
+
+class VolumeNode(ApiResource):
+    def __init__(self, *args, **kwargs):
+        super(VolumeNode, self).__init__(*args, **kwargs)
+        self.list_columns.extend(["host_id", "volume_id", "host_label", "path"])

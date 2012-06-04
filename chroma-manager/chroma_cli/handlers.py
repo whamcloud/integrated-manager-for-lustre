@@ -8,7 +8,7 @@ from itertools import product
 from argparse import REMAINDER
 
 from chroma_cli.output import StandardFormatter
-from chroma_cli.exceptions import BadRequest, InvalidVolumeNode, TooManyMatches, BadUserInput
+from chroma_cli.exceptions import InvalidVolumeNode, TooManyMatches, BadUserInput, NotFound
 
 
 class Dispatcher(object):
@@ -100,10 +100,7 @@ class Handler(object):
             ns = parser.parse_args(args, ns)
 
         verb_method = getattr(self, ns.verb)
-        try:
-            verb_method(ns)
-        except BadRequest, e:
-            self.output(e)
+        verb_method(ns)
 
     def _api_fields_to_parser_args(self, parser):
         for name, attrs in self.api_endpoint.fields.items():
@@ -121,6 +118,25 @@ class Handler(object):
                 kwargs['type'] = int
 
             parser.add_argument("--%s" % name, **kwargs)
+
+    def _resolve_volume_node(self, spec):
+        try:
+            hostname, path = spec.split(":")
+            host = self.api.endpoints['host'].show(hostname)
+            kwargs = {'host': host['id'], 'path': path}
+            vn_set = self.api.endpoints['volume_node'].list(**kwargs)
+            if len(vn_set) > 1:
+                raise TooManyMatches()
+            else:
+                return vn_set[0]
+        except (ValueError, IndexError):
+            raise InvalidVolumeNode(spec)
+
+    def _resolve_volume_nodes(self, specs):
+        vn_list = []
+        for spec in specs.split(","):
+            vn_list.append(self._resolve_volume_node(spec))
+        return vn_list
 
     def list(self, ns):
         self.output(self.api_endpoint.list())
@@ -236,26 +252,10 @@ class FilesystemHandler(Handler):
         except AttributeError:
             self.output(self.api_endpoint.list())
 
-    def _resolve_volume_node(self, spec):
-        try:
-            hostname, path = spec.split(":")
-            host = self.api.endpoints['host'].show(hostname)
-            kwargs = {'host': host['id'], 'path': path}
-            vn_set = self.api.endpoints['volume_node'].list(**kwargs)
-            if len(vn_set) > 1:
-                raise TooManyMatches()
-            else:
-                return vn_set[0]
-        except (ValueError, IndexError):
-            raise InvalidVolumeNode(spec)
-
-    def _resolve_volume_nodes(self, specs):
-        vn_list = []
-        for spec in specs.split(","):
-            vn_list.append(self._resolve_volume_node(spec))
-        return vn_list
-
     def _resolve_mgt(self, ns):
+        if ns.mgt is None:
+            raise BadUserInput("No MGT supplied.")
+
         if len(ns.mgt) > 1:
             raise BadUserInput("Only 1 MGT per filesystem is allowed.")
 
@@ -263,12 +263,19 @@ class FilesystemHandler(Handler):
         try:
             mgt_vn = self._resolve_volume_node(ns.mgt[0])
             mgt['volume_id'] = mgt_vn.volume_id
-        except InvalidVolumeNode:
+        except (InvalidVolumeNode, NotFound):
             mgs = self.api.endpoints['host'].show(ns.mgt[0])
-            mgt['id'] = mgs['id']
+            kwargs = {'host_id': mgs['id'], 'kind': 'mgt'}
+            try:
+                mgt['id'] = self.api.endpoints['target'].list(**kwargs)[0]['id']
+            except IndexError:
+                raise BadUserInput("Invalid mgt spec: %s" % ns.mgt[0])
         return mgt
 
     def _resolve_mdt(self, ns):
+        if ns.mdts is None:
+            raise BadUserInput("No MDT supplied.")
+
         if len(ns.mdts) > 1:
             # NB: Following the API -- only 1 MDT supported for now.
             raise BadUserInput("Only 1 MDT per filesystem is supported.")
@@ -277,6 +284,9 @@ class FilesystemHandler(Handler):
         return {'conf_params': {}, 'volume_id': mdt_vn.volume_id}
 
     def _resolve_osts(self, ns):
+        if ns.osts is None:
+            raise BadUserInput("At least one OST must be supplied.")
+
         osts = []
         for ost_spec in ns.osts:
             ost_vn = self._resolve_volume_node(ost_spec)
@@ -312,6 +322,20 @@ class TargetHandler(Handler):
     def start(self, ns):
         kwargs = {'state': "mounted"}
         self.output(self.api_endpoint.update(ns.subject, **kwargs))
+
+    def remove(self, ns):
+        # HTTP DELETE doesn't seem to work -- some downcasting problem?
+        kwargs = {'state': "removed"}
+        self.output(self.api_endpoint.update(ns.subject, **kwargs))
+
+    def add(self, ns):
+        vn = self._resolve_volume_node(ns.subject)
+        kwargs = {'kind': ns.noun.upper(), 'volume_id': vn.volume_id}
+        if ns.noun != 'mgt':
+            fs = self.api.endpoints['filesystem'].show(ns.filesystem)
+            kwargs['filesystem_id'] = fs.id
+
+        self.output(self.api_endpoint.create(**kwargs))
 
     def list(self, ns):
         kwargs = {}

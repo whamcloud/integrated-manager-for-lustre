@@ -65,7 +65,11 @@ def step(context):
     import chroma_core.lib.agent
     from chroma_core.models.host import ManagedHost
 
-    for address in chroma_core.lib.agent.Agent.mock_servers.keys():
+    # Skip setup if it was already done in a previous scenario.
+    if ManagedHost.objects.count() > 0:
+        return
+
+    for address in sorted(chroma_core.lib.agent.Agent.mock_servers.keys()):
         host = ManagedHost.create_from_string(address)[0]
         context.test_case._test_lun(host)
 

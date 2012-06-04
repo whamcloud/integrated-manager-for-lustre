@@ -20,8 +20,6 @@ def step(context, args):
         sys.stdout = context.stdout
         sys.stderr = context.stderr
         standard_cli(args.split())
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
     except SystemExit, e:
         if e.code != 0:
             context.stdout.seek(0)
@@ -36,6 +34,9 @@ def step(context, args):
              (format_exc(),
               "".join(context.stdout.readlines()),
               "".join(context.stderr.readlines())))
+
+    sys.stdout = sys.__stdout__
+    sys.stderr = sys.__stderr__
 
 
 @then('I should see output containing "{message}"')

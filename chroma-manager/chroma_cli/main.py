@@ -107,7 +107,17 @@ def standard_cli(args=None):
         formatter = FollowFormatter(format=config.output)
     else:
         formatter = StandardFormatter(format=config.output)
-    dispatcher(ns.primary_action)(api=api, formatter=formatter)(parser=parser, args=args, namespace=ns)
+
+    from chroma_cli.exceptions import ApiException
+    try:
+        dispatcher(ns.primary_action)(api=api, formatter=formatter)(parser=parser, args=args, namespace=ns)
+    except ApiException, e:
+        print e
+        sys.exit(1)
+    except Exception, e:
+        exc_info = sys.exc_info()
+        trace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+        print "Internal client error from handler '%s': %s" % (ns.primary_action, trace)
 
     sys.exit(0)
 

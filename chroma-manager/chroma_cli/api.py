@@ -252,10 +252,14 @@ class ApiEndpoint(object):
         import chroma_cli.api_resource
         try:
             self.resource_klass = getattr(chroma_cli.api_resource,
-                                          self.name.capitalize())
+                                          self.resource_klass_name)
         except AttributeError:
             # generic fallback
             self.resource_klass = chroma_cli.api_resource.ApiResource
+
+    @property
+    def resource_klass_name(self):
+        return "".join([part.capitalize() for part in self.name.split("_")])
 
     @property
     def schema(self):
