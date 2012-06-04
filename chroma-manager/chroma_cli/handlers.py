@@ -41,6 +41,7 @@ class Handler(object):
     nouns = []
     secondary_nouns = []
     verbs = ["show", "list", "add", "remove"]
+    intransitive_verbs = ["list"]
 
     @classmethod
     def noun_verbs(cls):
@@ -75,7 +76,7 @@ class Handler(object):
             ns.noun, ns.verb = ns.primary_action.split("-")
             parser.add_argument("primary_action",
                                 choices=self.noun_verbs())
-            if ns.verb != "list":
+            if ns.verb not in self.intransitive_verbs:
                 parser.add_argument("subject", help=self.subject_name)
             parser.clear_resets()
             parser.add_argument("options", nargs=REMAINDER)
@@ -186,11 +187,15 @@ class ServerHandler(Handler):
 class FilesystemHandler(Handler):
     nouns = ["filesystem", "fs"]
     secondary_nouns = ["target", "tgt", "mgt", "mdt", "ost", "volume", "vol", "server", "mgs", "mds", "oss"]
-    verbs = ["list", "show", "add", "remove", "start", "stop"]
+    verbs = ["list", "show", "add", "remove", "start", "stop", "detect"]
 
     @property
     def secondary_actions(self):
         return ["mountspec"] + super(FilesystemHandler, self).secondary_actions
+
+    @property
+    def intransitive_verbs(self):
+        return ["detect"] + super(FilesystemHandler, self).intransitive_verbs
 
     def __init__(self, *args, **kwargs):
         super(FilesystemHandler, self).__init__(*args, **kwargs)
@@ -203,6 +208,11 @@ class FilesystemHandler(Handler):
     def start(self, ns):
         kwargs = {'state': "available"}
         self.output(self.api_endpoint.update(ns.subject, **kwargs))
+
+    def detect(self, ns):
+        kwargs = {'message': "Detecting filesystems",
+                  'jobs': [{'class_name': 'DetectTargetsJob', 'args': {}}]}
+        self.output(self.api.endpoints['command'].create(**kwargs))
 
     def list(self, ns):
         try:

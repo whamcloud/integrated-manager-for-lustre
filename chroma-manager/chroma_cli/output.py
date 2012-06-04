@@ -60,7 +60,10 @@ class StandardFormatter(object):
                 print "Found 0 results"
 
     def command(self, command):
-        print command['command']['message']
+        try:
+            print command['command']['message']
+        except KeyError:
+            print command['message']
 
 
 class FollowFormatter(StandardFormatter):
