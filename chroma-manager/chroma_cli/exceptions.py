@@ -93,3 +93,11 @@ class AuthenticationFailure(ApiException):
     """
     HTTP 401 after trying to authenticate.
     """
+
+
+class ApiConnectionError(ApiException):
+    def __init__(self, api_url):
+        self.api_url = api_url
+
+    def __str__(self):
+        return "Failed to connect to %s (is --api_url correct?)" % self.api_url

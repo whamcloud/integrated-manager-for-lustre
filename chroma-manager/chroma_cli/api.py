@@ -6,7 +6,7 @@
 
 import json
 
-from chroma_cli.exceptions import InvalidApiResource, UnsupportedFormat, NotFound, TooManyMatches, BadRequest, InternalError, UnauthorizedRequest, AuthenticationFailure
+from chroma_cli.exceptions import InvalidApiResource, UnsupportedFormat, NotFound, TooManyMatches, BadRequest, InternalError, UnauthorizedRequest, AuthenticationFailure, ApiConnectionError
 
 
 class JsonSerializer(object):
@@ -148,7 +148,7 @@ class ApiHandle(object):
 
     def __init__(self, api_uri=None, authentication=None):
         self.__schema = None
-        self.base_url = api_uri
+        self.base_url = self._fix_base_uri(api_uri)
         if not self.base_url:
             self.base_url = "http://localhost/api/"
         self.authentication = authentication
@@ -157,6 +157,30 @@ class ApiHandle(object):
         self.api_client = self.ApiClient()
         # Ugh. Least-worst option, I think.
         self.api_client.client.api_uri = self.base_url
+
+    def _fix_base_uri(self, base_uri):
+        """
+        Clean up supplied API URI.
+
+        >>> ah = ApiHandle()
+        >>> ah.base_url
+        'http://localhost/api/'
+        >>> ah = ApiHandle(api_uri="http://some.server")
+        >>> ah.base_url
+        'http://some.server/api/'
+        >>> ah = ApiHandle(api_uri="some.server")
+        >>> ah.base_url
+        'http://some.server/api/'
+        """
+        if not base_uri:
+            return None
+
+        import re
+        if not re.search(r"^http(s)?://", base_uri):
+            base_uri = "http://" + base_uri
+        if not re.search(r"/api(/?)$", base_uri):
+            from urlparse import urljoin
+            return urljoin(base_uri, "/api/")
 
     @property
     def schema(self):
@@ -175,8 +199,13 @@ class ApiHandle(object):
         from urlparse import urljoin
         full_url = urljoin(self.base_url, relative_url)
 
+        from requests import ConnectionError
         method = getattr(self.api_client, method_name)
-        r = method(full_url, data=data)
+        try:
+            r = method(full_url, data=data)
+        except ConnectionError:
+            raise ApiConnectionError(self.base_url)
+
         if r.status_code == 401:
             # Try logging in and retry the request
             self.api_client.client.login(**self.authentication)
