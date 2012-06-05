@@ -933,7 +933,7 @@ class ResourceManager(object):
             with StorageResourceStatistic.delayed as srs_delayed:
                 for srs in StorageResourceStatistic.objects.filter(storage_resource__in = ordered_for_deletion):
                     srs.metrics.clear()
-                    srs_delayed.delete(srs.id)
+                    srs_delayed.delete(int(srs.id))
 
         with dbperf('deletion_indices'):
             for record_id in ordered_for_deletion:
@@ -970,8 +970,7 @@ class ResourceManager(object):
                 log.error("ResourceManager received invalid request to remove non-existent resource %s" % resource_id)
                 return
 
-            with dbperf('cull_resource'):
-                self._delete_resource(record)
+            self._delete_resource(record)
 
     def _record_find_ancestor(self, record_id, parent_klass):
         """Find an ancestor of type parent_klass, search depth first"""
