@@ -676,6 +676,29 @@ EOF
         # Verify did not auto-failback
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
+    def failback(self, primary_host, filesystem_id, volumes_expected_hosts_in_normal_state):
+        response = self.chroma_manager.get(
+            '/api/target/',
+            params = {'filesystem_id': filesystem_id}
+        )
+        self.assertTrue(response.successful, response.text)
+        targets_with_matching_primary_host = [t for t in response.json['objects'] if t['primary_server_name'] == primary_host['nodename']]
+
+        for target in targets_with_matching_primary_host:
+                _, stdout, _ = self.remote_command(
+                primary_host['nodename'],
+                'chroma-agent failback-target --ha_label %s' % target['ha_label']
+            )
+
+        # Wait for the targets to move back to their original server.
+        running_time = 0
+        while running_time < TEST_TIMEOUT and not self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state):
+            time.sleep(1)
+            running_time += 1
+        self.assertLess(running_time, TEST_TIMEOUT, 'Timed out waiting for failback.')
+
+        self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
+
     def wait_for_host_to_boot(self, booting_host, available_host):
         # Wait for the stonithed server to come back online
         running_time = 0

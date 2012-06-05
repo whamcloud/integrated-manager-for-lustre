@@ -1,9 +1,6 @@
-import time
-
 from testconfig import config
 
 from tests.utils.http_requests import AuthorizedHttpRequests
-from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.testcases import ChromaIntegrationTestCase
 
 
@@ -20,7 +17,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         hosts = self.add_hosts([h['address'] for h in config['lustre_servers'][:4]])
 
         # Count how many of the reported Luns are ready for our test
-        # (i.e. they have both a primary and a secondary node)
+        # (i.e. they have both a primary and a failover node)
         ha_volumes = self.get_shared_volumes()
         self.assertGreaterEqual(len(ha_volumes), 4)
 
@@ -29,12 +26,35 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         ost_volume_1 = ha_volumes[2]
         ost_volume_2 = ha_volumes[3]
 
-        # Set primary and secondary mounts explicitly and check they
+        target_hosts = {
+            'mgt': {'primary': hosts[0], 'failover': hosts[1]},
+            'mdt': {'primary': hosts[1], 'failover': hosts[0]},
+            'ost1': {'primary': hosts[2], 'failover': hosts[3]},
+            'ost2': {'primary': hosts[3], 'failover': hosts[2]},
+        }
+
+        # Set primary and failover mounts explicitly and check they
         # are respected
-        self.set_volume_mounts(mgt_volume, hosts[0]['id'], hosts[1]['id'])
-        self.set_volume_mounts(mdt_volume, hosts[0]['id'], hosts[1]['id'])
-        self.set_volume_mounts(ost_volume_1, hosts[2]['id'], hosts[3]['id'])
-        self.set_volume_mounts(ost_volume_2, hosts[3]['id'], hosts[2]['id'])
+        self.set_volume_mounts(
+            mgt_volume,
+            target_hosts['mgt']['primary']['id'],
+            target_hosts['mgt']['failover']['id']
+        )
+        self.set_volume_mounts(
+            mdt_volume,
+            target_hosts['mdt']['primary']['id'],
+            target_hosts['mdt']['failover']['id']
+        )
+        self.set_volume_mounts(
+            ost_volume_1,
+            target_hosts['ost1']['primary']['id'],
+            target_hosts['ost1']['failover']['id']
+        )
+        self.set_volume_mounts(
+            ost_volume_2,
+            target_hosts['ost2']['primary']['id'],
+            target_hosts['ost2']['failover']['id']
+        )
 
         response = self.chroma_manager.get(
             '/api/volume/',
@@ -56,10 +76,26 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
             elif volume['id'] == ost_volume_2['id']:
                 refreshed_ost_volume_2 = volume
         self.assertTrue(refreshed_mgt_volume and refreshed_mdt_volume and refreshed_ost_volume_1 and refreshed_ost_volume_2)
-        self.verify_volume_mounts(refreshed_mgt_volume, hosts[0]['id'], hosts[1]['id'])
-        self.verify_volume_mounts(refreshed_mdt_volume, hosts[0]['id'], hosts[1]['id'])
-        self.verify_volume_mounts(refreshed_ost_volume_1, hosts[2]['id'], hosts[3]['id'])
-        self.verify_volume_mounts(refreshed_ost_volume_2, hosts[3]['id'], hosts[2]['id'])
+        self.verify_volume_mounts(
+            refreshed_mgt_volume,
+            target_hosts['mgt']['primary'],
+            target_hosts['mgt']['failover']
+        )
+        self.verify_volume_mounts(
+            refreshed_mdt_volume,
+            target_hosts['mdt']['primary'],
+            target_hosts['mdt']['failover']
+        )
+        self.verify_volume_mounts(
+            refreshed_ost_volume_1,
+            target_hosts['ost1']['primary'],
+            target_hosts['ost1']['failover']
+        )
+        self.verify_volume_mounts(
+            refreshed_ost_volume_2,
+            target_hosts['ost1']['primary'],
+            target_hosts['ost2']['failover']
+        )
 
         # Create new filesystem
         self.verify_usable_luns_valid(ha_volumes, 4)
@@ -76,16 +112,10 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
         # Define where we expect targets for volumes to be started on depending on our failover state.
         volumes_expected_hosts_in_normal_state = {
-            mgt_volume['id']: hosts[0]['nodename'],
-            mdt_volume['id']: hosts[0]['nodename'],
-            ost_volume_1['id']: hosts[2]['nodename'],
-            ost_volume_2['id']: hosts[3]['nodename'],
-        }
-        volumes_expected_hosts_in_failover_state = {
-            mgt_volume['id']: hosts[1]['nodename'],
-            mdt_volume['id']: hosts[1]['nodename'],
-            ost_volume_1['id']: hosts[2]['nodename'],
-            ost_volume_2['id']: hosts[3]['nodename'],
+            mgt_volume['id']: target_hosts['mgt']['primary']['nodename'],
+            mdt_volume['id']: target_hosts['mdt']['primary']['nodename'],
+            ost_volume_1['id']: target_hosts['ost1']['primary']['nodename'],
+            ost_volume_2['id']: target_hosts['ost2']['primary']['nodename'],
         }
 
         # Verify targets are started on the correct hosts
@@ -108,53 +138,71 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         # Test failover if the cluster config indicates that failover has
         # been properly configured with stonith, etc.
         if config['failover_is_configured']:
+            # Test MGS failover
+            volumes_expected_hosts_in_failover_state = {
+                mgt_volume['id']: target_hosts['mgt']['failover']['nodename'],
+                mdt_volume['id']: target_hosts['mdt']['primary']['nodename'],
+                ost_volume_1['id']: target_hosts['ost1']['primary']['nodename'],
+                ost_volume_2['id']: target_hosts['ost2']['primary']['nodename'],
+            }
+
             self.failover(
-                hosts[0],
-                hosts[1],
+                target_hosts['mgt']['primary'],
+                target_hosts['mgt']['failover'],
                 filesystem_id,
                 volumes_expected_hosts_in_normal_state,
                 volumes_expected_hosts_in_failover_state
             )
 
-            # Failback
-            response = self.chroma_manager.get(
-                '/api/target/',
-                params = {
-                    'filesystem_id': filesystem_id,
-                    'kind': 'MGT',
-                }
-            )
-            self.assertTrue(response.successful, response.text)
-            mgt = response.json['objects'][0]
-            _, stdout, _ = self.remote_command(
-                hosts[0]['nodename'],
-                'chroma-agent failback-target --ha_label %s' % mgt['ha_label']
+            self.failback(
+                target_hosts['mgt']['primary'],
+                filesystem_id,
+                volumes_expected_hosts_in_normal_state
             )
 
-            response = self.chroma_manager.get(
-                '/api/target/',
-                params = {
-                    'filesystem_id': filesystem_id,
-                    'kind': 'MDT',
-                }
+            # Test MDS failover
+            volumes_expected_hosts_in_failover_state = {
+                mgt_volume['id']: target_hosts['mgt']['primary']['nodename'],
+                mdt_volume['id']: target_hosts['mdt']['failover']['nodename'],
+                ost_volume_1['id']: target_hosts['ost1']['primary']['nodename'],
+                ost_volume_2['id']: target_hosts['ost2']['primary']['nodename'],
+            }
+
+            self.failover(
+                target_hosts['mdt']['primary'],
+                target_hosts['mdt']['failover'],
+                filesystem_id,
+                volumes_expected_hosts_in_normal_state,
+                volumes_expected_hosts_in_failover_state
             )
-            self.assertTrue(response.successful, response.text)
-            mdt = response.json['objects'][0]
-            _, stdout, _ = self.remote_command(
-                hosts[0]['nodename'],
-                'chroma-agent failback-target --ha_label %s' % mdt['ha_label']
+
+            self.failback(
+                target_hosts['mdt']['primary'],
+                filesystem_id,
+                volumes_expected_hosts_in_normal_state
             )
 
-            # Wait for the targets to move back to their original server
-            running_time = 0
-            while running_time < TEST_TIMEOUT and not self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state):
-                time.sleep(1)
-                running_time += 1
+            # Test failing over an OSS
+            volumes_expected_hosts_in_failover_state = {
+                mgt_volume['id']: target_hosts['mgt']['primary']['nodename'],
+                mdt_volume['id']: target_hosts['mdt']['primary']['nodename'],
+                ost_volume_1['id']: target_hosts['ost1']['failover']['nodename'],
+                ost_volume_2['id']: target_hosts['ost2']['primary']['nodename'],
+            }
 
-            self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for failback")
-            self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
+            self.failover(
+                target_hosts['ost1']['primary'],
+                target_hosts['ost1']['failover'],
+                filesystem_id,
+                volumes_expected_hosts_in_normal_state,
+                volumes_expected_hosts_in_failover_state
+            )
 
-            # TODO: Also add a test for failback on the active/active OSTs.
+            self.failback(
+                target_hosts['ost1']['primary'],
+                filesystem_id,
+                volumes_expected_hosts_in_normal_state
+            )
 
     def test_lnet_operational_after_failover(self):
         if config['failover_is_configured']:
