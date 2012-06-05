@@ -12,7 +12,7 @@ from chroma_cli.exceptions import BadRequest, InternalError, NotFound
 from chroma_cli.parser import ResettableArgumentParser
 from chroma_cli.config import Configuration
 from chroma_cli.api import ApiHandle
-from chroma_cli.output import StandardFormatter, FollowFormatter
+from chroma_cli.output import StandardFormatter
 from chroma_cli.handlers import Dispatcher
 
 # TODO: This kind of thing is probably a good candidate for
@@ -85,7 +85,8 @@ def standard_cli(args=None):
     parser.add_argument("--password", help="Chroma password")
     parser.add_argument("--output", "-o", help="Output format",
                         choices=StandardFormatter.formats())
-    parser.add_argument("--follow", help="Follow jobs to completion")
+    parser.add_argument("--nowait", help="Don't wait for jobs to complete",
+                        action="store_true")
     parser.clear_resets()
 
     parser.add_argument("primary_action", choices=dispatcher.handled_actions)
@@ -103,10 +104,7 @@ def standard_cli(args=None):
     api = ApiHandle(api_uri=config.api_url,
                     authentication=authentication)
 
-    if config.follow:
-        formatter = FollowFormatter(format=config.output)
-    else:
-        formatter = StandardFormatter(format=config.output)
+    formatter = StandardFormatter(format=config.output, nowait=config.nowait, command_monitor=api.command_monitor)
 
     from chroma_cli.exceptions import ApiException
     try:
