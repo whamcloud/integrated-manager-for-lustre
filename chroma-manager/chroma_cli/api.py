@@ -417,3 +417,12 @@ class ApiEndpoint(object):
         return self.api_handle.send_and_decode("put",
                                                self.resource_uri(subject),
                                                data=data)
+
+    def get(self, uri=None, **kwargs):
+        """
+        Expose a "raw" get() with no error handling or decoding.
+        """
+        if not uri:
+            from urlparse import urljoin
+            uri = urljoin(self.api_handle.base_url, self.uri)
+        return self.api_handle.api_client.get(uri, **kwargs)

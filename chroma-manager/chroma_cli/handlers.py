@@ -347,3 +347,46 @@ class VolumeHandler(Handler):
     def __init__(self, *args, **kwargs):
         super(VolumeHandler, self).__init__(*args, **kwargs)
         self.api_endpoint = self.api.endpoints['volume']
+
+
+class NidsHandler(Handler):
+    nouns = ["nids"]
+    verbs = ["update", "relearn"]
+    intransitive_verbs = ["update"]
+
+    @classmethod
+    def primary_actions(cls):
+        return cls.noun_verbs()
+
+    def update(self, ns):
+        kwargs = {'message': "Updating filesystem NID configuration",
+                  'jobs': [{'class_name': 'UpdateNidsJob', 'args': {}}]}
+        self.output(self.api.endpoints['command'].create(**kwargs))
+
+    def relearn(self, ns):
+        host = self.api.endpoints['host'].show(ns.subject)
+        kwargs = {'message': "Relearning NIDs on %s" % host.label,
+                  'jobs': [{'class_name': 'RelearnNidsJob', 'args': {
+                      'host_id': host['id']
+        }}]}
+        self.output(self.api.endpoints['command'].create(**kwargs))
+
+
+class ConfigHandler(Handler):
+    nouns = ["configuration", "cfg"]
+    verbs = ["dump", "load"]
+    intransitive_verbs = ["dump"]
+
+    @classmethod
+    def primary_actions(cls):
+        return cls.noun_verbs()
+
+    def dump(self, ns):
+        import json
+        response = self.api.endpoints['configuration'].get()
+        print json.dumps(json.loads(response.content), indent=4)
+
+    def load(self, ns):
+        import json
+        config = json.load(open(ns.subject, "r"))
+        self.api.endpoints['configuration'].create(**config)
