@@ -274,7 +274,8 @@ class BaseStoragePlugin(object):
             r_stats = resource.flush_stats()
             if len(r_stats) > 0:
                 from chroma_core.lib.storage_plugin.resource_manager import resource_manager
-                resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
+                if settings.STORAGE_PLUGIN_ENABLE_STATS:
+                    resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
                 sent_stats += len(r_stats)
         if sent_stats > 0:
             storage_plugin_log.debug("commit_resource_statistics %s (%s sent)", self._scannable_id, sent_stats)
