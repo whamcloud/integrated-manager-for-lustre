@@ -12,4 +12,4 @@ defaults['api_url'] = "http://localhost/api/"
 defaults['username'] = ""
 defaults['password'] = ""
 defaults['output'] = "human"
-defaults['follow'] = False
+defaults['nowait'] = False

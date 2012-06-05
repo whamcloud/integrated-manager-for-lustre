@@ -140,6 +140,49 @@ class ApiClient(object):
         return self.client.delete(uri, headers=headers, params=data)
 
 
+class CommandMonitor(object):
+    def __init__(self, api, cmd):
+        self.api = api
+        self.cmd = cmd
+
+    def update(self, pause=1):
+        import time
+        time.sleep(pause)
+        self.cmd = self.api.endpoints['command'].show(self.cmd['id'])
+
+    @property
+    def status(self):
+        return {
+            (True, False, False): "Finished",
+            (True, True, False): "Canceled",
+            (True, False, True): "Failed",
+            (False, False, False): "Tasked",
+            (False, True, False): "Canceling",
+        }[(self.cmd['complete'], self.cmd['cancelled'], self.cmd['errored'])]
+
+    @property
+    def completed(self):
+        return self.status in ["Finished", "Canceled", "Failed"]
+
+    @property
+    def incomplete_jobs(self):
+        def _job_id(j_uri):
+            import re
+            m = re.search(r"(\d+)/?$", j_uri)
+            if m:
+                return m.group(1)
+            else:
+                return None
+
+        incomplete = []
+        for job_id in [_job_id(j_uri) for j_uri in self.cmd['jobs']]:
+            job = self.api.endpoints['job'].show(job_id)
+            if job['state'] != "complete":
+                incomplete.append(int(job_id))
+
+        return incomplete
+
+
 class ApiHandle(object):
     # By default, we want to use our own ApiClient class.  This
     # provides a handle for the test framework to inject its own
@@ -157,6 +200,7 @@ class ApiHandle(object):
         self.api_client = self.ApiClient()
         # Ugh. Least-worst option, I think.
         self.api_client.client.api_uri = self.base_url
+        self.command_monitor = lambda cmd: CommandMonitor(self, cmd)
 
     def _fix_base_uri(self, base_uri):
         """
@@ -337,7 +381,10 @@ class ApiEndpoint(object):
         raise NotFound("Unable to resolve id for %s/%s" % (self.name, query))
 
     def resource_uri(self, subject):
-        id = self.resolve_id(subject)
+        try:
+            id = int(subject)
+        except (ValueError, TypeError):
+            id = self.resolve_id(subject)
         from urlparse import urljoin
         return urljoin(self.uri, "%s/" % id)
 
