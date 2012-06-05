@@ -1071,7 +1071,7 @@ var Dashboard = (function() {
           plotShadow: false
         },
         colors: [ '#C76560' ],
-        title:{ text: 'Object Usage'},
+        title:{ text: 'File Usage'},
         tooltip: {valueSuffix: '%'},
         zoomType: 'xy',
         xAxis: { type:'datetime' },
