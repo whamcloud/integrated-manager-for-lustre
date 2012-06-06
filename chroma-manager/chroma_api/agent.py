@@ -5,8 +5,11 @@
 
 
 import datetime
+import traceback
 import dateutil.parser
 from dateutil import tz
+import sys
+from django.db import transaction
 
 from tastypie import fields
 from tastypie.authorization import Authorization
@@ -99,9 +102,23 @@ class AgentResource(Resource):
                 # pass it along to the storage plugin framework
                 try:
                     lustre_data = updates.pop('lustre')
-                    UpdateScan().run(host.id, started_at, lustre_data)
                 except KeyError:
                     pass
+                else:
+                    try:
+                        UpdateScan().run(host.id, started_at, lustre_data)
+                    except Exception:
+                        api_log.error("Error processing POST from %s: %s" % (
+                            bundle.data['fqdn'],
+                            '\n'.join(traceback.format_exception(*(sys.exc_info())))
+                        ))
+
+                        # If the client sends something which causes an exception,
+                        # evict its session to prevent re-sending.
+                        with transaction.commit_on_success():
+                            session.delete()
+
+                        raise
 
                 messaging.simple_send("agent", {
                     "session_id": session.session_id,
