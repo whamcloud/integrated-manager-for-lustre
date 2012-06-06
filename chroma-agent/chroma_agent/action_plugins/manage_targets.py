@@ -4,15 +4,17 @@
 # ========================================================
 
 
-from chroma_agent.plugins import ActionPlugin
-from chroma_agent.store import AgentStore
-from chroma_agent import shell
 import simplejson as json
 import errno
 import os
 import shlex
 import re
 import libxml2
+
+from chroma_agent.agent_daemon import daemon_log
+from chroma_agent.plugins import ActionPlugin
+from chroma_agent.store import AgentStore
+from chroma_agent import shell
 
 
 def __sanitize_arg(arg):
@@ -37,6 +39,7 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
 
     # Workaround for tunefs.lustre being sensitive to argument order:
     # erase-params has to come first or it overrides preceding options.
+    # (LU-1462)
     early_flag_options = {
         'erase_params': '--erase-params'
     }
@@ -276,14 +279,33 @@ def format_target(args):
             }
 
 
+def _mkdir_p_concurrent(path):
+    # To cope with concurrent calls with a common sub-path, we have to do
+    # this in two steps:
+    #  1. Create the common portion (e.g. /mnt/whamfs/)
+    #  2. Create the unique portion (e.g. /mnt/whamfs/ost0/)
+    # If we tried to do a single os.makedirs, we could get an EEXIST when
+    # colliding on the creation of the common portion and therefore miss
+    # creating the unique portion.
+
+    path = path.rstrip("/")
+
+    def mkdir_silent(path):
+        try:
+            os.makedirs(path)
+        except OSError, e:
+            if e.errno == errno.EEXIST:
+                pass
+            else:
+                raise e
+
+    parent = os.path.split(path)[0]
+    mkdir_silent(parent)
+    mkdir_silent(path)
+
+
 def register_target(args):
-    try:
-        os.makedirs(args.mountpoint)
-    except OSError, e:
-        if e.errno == errno.EEXIST:
-            pass
-        else:
-            raise e
+    _mkdir_p_concurrent(args.mountpoint)
 
     mount_args = ["mount", "-t", "lustre", args.device, args.mountpoint]
     rc, stdout, stderr = shell.run(mount_args)
@@ -394,13 +416,7 @@ def configure_ha(args):
                                   node,
                                   args.ha_label, score))
 
-    try:
-        os.makedirs(args.mountpoint)
-    except OSError, e:
-        if e.errno == errno.EEXIST:
-            pass
-        else:
-            raise e
+    _mkdir_p_concurrent(args.mountpoint)
 
     AgentStore.set_target_info(args.uuid, {"bdev": args.device, "mntpt": args.mountpoint})
 
@@ -585,8 +601,35 @@ def clear_targets(args):
         _unconfigure_ha(True, attrs['ha_label'], attrs['uuid'])
 
 
+def purge_configuration(args):
+    path = args.device
+    fsname = args.fsname
+
+    ls = shell.try_run(["debugfs", "-w", "-R", "ls -l CONFIGS/", path])
+
+    victims = []
+    for line in ls.split("\n"):
+        try:
+            name = line.split()[8]
+        except IndexError:
+            continue
+
+        if name.startswith("%s-" % fsname):
+            victims.append(name)
+
+    daemon_log.info("Purging config files: %s" % victims)
+
+    for victim in victims:
+        shell.try_run(["debugfs", "-w", "-R", "rm CONFIGS/%s" % victim, path])
+
+
 class TargetsPlugin(ActionPlugin):
     def register_commands(self, parser):
+        p = parser.add_parser('purge-configuration')
+        p.add_argument('--device', required=True)
+        p.add_argument('--fsname', required=True)
+        p.set_defaults(func=purge_configuration)
+
         p = parser.add_parser('register-target', help='register a target')
         p.add_argument('--device', required=True, help='device for target')
         p.add_argument('--mountpoint', required=True, help='mountpoint for target')

@@ -130,6 +130,18 @@ class DeleteFilesystemStep(Step):
         ManagedFilesystem.delete(kwargs['filesystem_id'])
 
 
+class PurgeFilesystemStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        fs = ManagedFilesystem.objects.get(pk = kwargs['filesystem_id'])
+        mgs = fs.mgs
+        mgs_primary_mount = mgs.managedtargetmount_set.get(primary = True)
+        self.invoke_agent(mgs_primary_mount.host, "purge-configuration --device=%s --fsname=%s" % (
+          mgs_primary_mount.volume_node.path, fs.name
+        ))
+
+
 class RemoveFilesystemJob(StateChangeJob):
     state_transition = (ManagedFilesystem, 'stopped', 'removed')
     stateful_object = 'filesystem'
@@ -145,8 +157,15 @@ class RemoveFilesystemJob(StateChangeJob):
     def description(self):
         return "Removing file system %s from configuration" % self.filesystem.name
 
+    def get_deps(self):
+        return DependOn(self.filesystem.mgs, "unmounted")
+
     def get_steps(self):
-        return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
+        steps = []
+        if not self.filesystem.immutable_state:
+            steps.append((PurgeFilesystemStep, {'filesystem_id': self.filesystem.id}))
+        steps.append((DeleteFilesystemStep, {'filesystem_id': self.filesystem.id}))
+        return steps
 
 
 class FilesystemJob():

@@ -8,7 +8,7 @@
 from setuptools import setup, find_packages
 from production_version import VERSION
 
-excludes = ["*docs*"]
+excludes = ["*docs*", "*r3d*tests*"]
 
 setup(
     name = 'chroma-manager',
@@ -37,12 +37,12 @@ setup(
         'chroma_help': ["static/contextual/*.html", "static/webhelp/*.html"],
         'polymorphic': ["COPYING"],
         'tests': ["integration/run_tests", "integration/*/*.json", "sample_data/*"],
-        'r3d': ["tests/sample_data/*"],
     },
     scripts = ["chroma_core/bin/storage_daemon", "chroma_core/bin/chroma-config", "chroma-host-discover"],
     entry_points = {
         'console_scripts': [
-            'chroma = chroma_cli.main:main',
+            'chroma = chroma_cli.main:standard_cli',
+            'chroma-api = chroma_cli.main:api_cli',
             'qr3d = r3d.cli:main'
         ]
     }

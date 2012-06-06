@@ -4,7 +4,7 @@
 # ========================================================
 
 
-from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, ScannableResource
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, BaseScannableResource
 from chroma_core.lib.storage_plugin.api import attributes
 
 
@@ -12,7 +12,7 @@ class Resource(BaseStorageResource):
     pass
 
 
-class ScannableResource(BaseStorageResource, ScannableResource):
+class ScannableResource(BaseStorageResource, BaseScannableResource):
     pass
 
 

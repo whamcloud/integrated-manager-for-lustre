@@ -227,13 +227,18 @@ class AgentDaemon(object):
 
     def main_loop(self):
         # Evict any existing sessions
+        messaging.simple_purge('agent')
         AgentSession.objects.all().delete()
         storage_plugin_log.info("AgentDaemon listening")
         while(not self._stopping):
+            storage_plugin_log.debug(">>simple_receive")
             message = messaging.simple_receive('agent')
+            storage_plugin_log.debug("<<simple_receive")
             if message:
                 with self._processing_lock:
+                    storage_plugin_log.debug(">>handle_incoming")
                     self.handle_incoming(message)
+                    storage_plugin_log.debug("<<handle_incoming")
             else:
                 time.sleep(1)
 
@@ -268,8 +273,9 @@ class AgentDaemon(object):
         start_time = datetime.datetime.now()
         storage_plugin_log.debug("AgentDaemon: starting await_session")
         while not started:
-            with self._processing_lock:
-                started = host_id in self._session_state
+            started = host_id in self._session_state
+            if not started:
+                time.sleep(1)
 
             if datetime.datetime.now() - start_time > datetime.timedelta(seconds = timeout):
                 raise Timeout("Timed out after %s seconds waiting for session to start")
@@ -382,7 +388,7 @@ class ScanDaemon(object):
         storage_plugin_log.info("ScanDaemon: Loaded %s plugins, %s sessions" % (len(self.plugins), session_count))
 
     def modify_resource(self, resource_id, attrs):
-        storage_plugin_log.info("ScanDaemon: removing %s" % resource_id)
+        storage_plugin_log.info("ScanDaemon: modifying %s" % resource_id)
         with self._session_lock:
             try:
                 kill_session = self._all_sessions[resource_id]

@@ -7,7 +7,10 @@
 from collections import defaultdict
 from tastypie.validation import Validation
 
-from chroma_core.models import ManagedHost, Nid
+from chroma_core.models import ManagedHost, Nid, ManagedFilesystem
+
+from django.shortcuts import get_object_or_404
+from django.db.models import Q
 
 import tastypie.http as http
 from tastypie.resources import Resource
@@ -60,18 +63,48 @@ class HostResource(MetricResource, StatefulModelResource):
         ordering = ['fqdn']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
-        readonly = ['nodename', 'fqdn']
+        readonly = ['nodename', 'fqdn', 'nids', 'last_contact']
         validation = HostValidation()
         always_return_data = True
 
         filtering = {'id': ['exact'],
-                     'fqdn': ['exact']}
+                     'fqdn': ['exact', 'startswith'],
+                    'role': ['exact']}
+
+    #role = fields.CharField()
+    #def dehydrate_role(self, bundle):
+    #    return bundle.obj.role()
 
     def obj_create(self, bundle, request = None, **kwargs):
         host, command = ManagedHost.create_from_string(bundle.data['address'])
         raise custom_response(self, request, http.HttpAccepted,
                 {'command': dehydrate_command(command),
                  'host': self.full_dehydrate(self.build_bundle(obj = host)).data})
+
+    def apply_filters(self, request, filters = None):
+        objects = super(HostResource, self).apply_filters(request, filters)
+        try:
+            fs = get_object_or_404(ManagedFilesystem, pk = request.GET['filesystem_id'])
+            objects = objects.filter((Q(managedtargetmount__target__managedmdt__filesystem = fs) | Q(managedtargetmount__target__managedost__filesystem = fs)) | Q(managedtargetmount__target__id = fs.mgs.id))
+        except KeyError:
+            # Not filtering on filesystem_id
+            pass
+
+        try:
+            from chroma_api.target import KIND_TO_MODEL_NAME
+            server_role = request.GET['role'].upper()
+        except KeyError:
+            # No 'role' argument
+            pass
+        else:
+            target_model = KIND_TO_MODEL_NAME["%sT" % server_role[:-1]]
+            objects = objects.filter(
+                Q(managedtargetmount__target__content_type__model = target_model)
+                &
+                Q(managedtargetmount__target__not_deleted = True)
+            )
+
+        return objects.distinct()
 
 
 class HostTestResource(Resource):

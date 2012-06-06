@@ -10,6 +10,7 @@ from base import wait_for_datatable
 from base import wait_for_transition
 from utils.constants import wait_time
 from selenium.webdriver.support.ui import WebDriverWait
+from base import wait_for_screen_unblock
 
 
 class EditFilesystem:
@@ -26,7 +27,7 @@ class EditFilesystem:
         self.advanced_button = "div#filesystem_detail button.advanced"
         self.conf_param_apply_button = "button.conf_param_apply_button"
         # Conf param apply button on pop-up dialog for MDT and OST
-        self.target_conf_param_apply_button = "#ConfigParam_Apply"
+        self.target_conf_param_apply_button = "button.conf_param_apply"
         self.popup_container = "#popup_container"
         self.popup_message = "#popup_message"
         self.popup_ok = "#popup_ok"
@@ -35,6 +36,7 @@ class EditFilesystem:
         self.ost_data_table = "ost_content"
         self.mdt_data_table = "mdt_content"
         self.mgt_data_table = "example_content"
+        self.popup_dialog_close_button = "button.close"
 
         self.config_param_tab = ""
 
@@ -49,7 +51,7 @@ class EditFilesystem:
         for tr in datatable_rows_list:
             if tr.find_element_by_xpath("td[2]").text == device_node and tr.find_element_by_xpath("td[3]").text == host_name:
                 tr.find_element_by_xpath("td[1]/a").click()
-                self.config_param_tab = self.driver.find_element_by_xpath("id('target_dialog_tabs')/ul/li[3]/a")
+                self.config_param_tab = self.driver.find_element_by_css_selector('div.target_detail a[href="#target_dialog_config_param_tab"]')
                 self.config_param_tab.click()
 
     def set_conf_params(self, target_conf_params):
@@ -67,7 +69,7 @@ class EditFilesystem:
 
     def select_ost(self, host_name, device_node):
         """Click button to add new OST and select an OST/s from ost chooser"""
-        WebDriverWait(self.driver, self.medium_wait).until(lambda driver: self.driver.find_element_by_css_selector("#btnNewOST").is_displayed())
+        wait_for_screen_unblock(self.driver, wait_time['medium'])
         self.driver.find_element_by_css_selector('#btnNewOST').click()
 
         ost_rows = self.driver.find_elements_by_xpath("id('new_ost_chooser_table')/tbody/tr")

@@ -6,11 +6,14 @@
 
 import argparse
 import simplejson as json
+from chroma_agent.agent_daemon import daemon_log_setup
 
 from chroma_agent.plugins import ActionPluginManager
 
 
 def main():
+    daemon_log_setup()
+
     parser = argparse.ArgumentParser(description="Whamcloud Chroma Agent")
     subparsers = parser.add_subparsers()
 

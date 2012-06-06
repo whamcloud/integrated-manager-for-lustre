@@ -19,6 +19,7 @@ import signal
 import threading
 import time
 
+from chroma_core.tasks import close_logs
 import logging
 daemon_log = logging.getLogger('daemon')
 daemon_log.setLevel(logging.INFO)
@@ -122,6 +123,7 @@ if __name__ == '__main__':
                 raise RuntimeError("Daemon is already running (PID %s)" % pid)
 
         context = DaemonContext(pidfile = PIDLockFile(PID_FILE))
+        close_logs(None)
         context.open()
         handler = logging.FileHandler("/var/log/chroma/chroma-storage.log")
         handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))

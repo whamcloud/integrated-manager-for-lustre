@@ -19,7 +19,7 @@ class LinuxDevicePlugin(DevicePlugin):
         return device_scan()
 
     def update_session(self):
-        pass
+        raise NotImplementedError()
 
 
 def _dev_major_minor(path):

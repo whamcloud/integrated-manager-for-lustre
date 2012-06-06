@@ -51,7 +51,7 @@ var TargetDetail = Backbone.View.extend({
     var view = this;
     var tab = ui.panel.id;
     if (tab == 'devices_tab') {
-      Api.get(this.model.get('volume'), {}, function(data) {
+      Api.get(this.model.get('volume').resource_uri, {}, function(data) {
         var storage_resource_uri = data.storage_resource;
         var storage_resource_id = storage_resource_uri.split("/")[3];
         Api.get('/api/storage_resource/', {ancestor_of: storage_resource_id}, function(data) {

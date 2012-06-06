@@ -23,6 +23,9 @@ class NodeOps(object):
             put("%s/%s" % (settings.YUM_KEYS, key), "/root/keys/%s" % key, use_sudo = True)
         put(settings.YUM_REPO, "/etc/yum.repos.d", use_sudo = True)
         put(settings.MASTER_REPO, "/etc/yum.repos.d", use_sudo = True)
+        from os.path import basename
+        sudo('sed -i.orig s/MAGICKEY/%s/g /etc/yum.repos.d/%s' % (settings.MAGIC_KEY, basename(settings.MASTER_REPO)))
+
 
 
     def reboot(self):
@@ -77,6 +80,7 @@ class ChromaManagerOps(NodeOps):
 
     def update_deps(self, use_master):
         with self.open_session():
+            sudo('chroma-config stop')
             self._setup_chroma_repo()
             if use_master:
                 sudo('yum --enablerepo=chroma-master -y update')
@@ -101,7 +105,6 @@ class ChromaManagerOps(NodeOps):
     def reset_chroma(self):
         with self.open_session():
             sudo("chroma-config setup")
-            sudo("service httpd restart")
 
     def create_keys(self):
         with self.open_session():
@@ -118,7 +121,7 @@ class ChromaManagerOps(NodeOps):
 
     def add_server(self, appliance_ops):
         with self.open_session():
-            sudo("chroma host create --address %s" % appliance_ops.appliance.node.name)
+            sudo("chroma-api host create --address %s" % appliance_ops.appliance.node.name)
 
 #        from provisioning.lib.chroma_manager_client import AuthorizedHttpRequests
 #        manager_url = "http://%s/" % self.session.instance.ip_address

@@ -1,0 +1,91 @@
+{
+    "filesystem": {
+        "name": "test18fs",
+        "targets": {
+            "MGS": {
+                "kind": "MGT",
+                "primary_server_name": "kp-lustre-1-8-mgs-1",
+                "mount_path": "/mnt/mgs"
+            },
+            "test18fs-MDT0000": {
+                "kind": "MDT",
+                "primary_server_name": "kp-lustre-1-8-mgs-1",
+                "mount_path": "/mnt/mdt"
+            },
+            "test18fs-OST0000": {
+                "kind": "OST",
+                "primary_server_name": "kp-lustre-1-8-oss-1",
+                "mount_path": "/mnt/ost1"
+            },
+            "test18fs-OST0001": {
+                "kind": "OST",
+                "primary_server_name": "kp-lustre-1-8-oss-1",
+                "mount_path": "/mnt/ost2"
+            },
+            "test18fs-OST0002": {
+                "kind": "OST",
+                "primary_server_name": "kp-lustre-1-8-oss-2",
+                "mount_path": "/mnt/ost3"
+            },
+            "test18fs-OST0003": {
+                "kind": "OST",
+                "primary_server_name": "kp-lustre-1-8-oss-2",
+                "mount_path": "/mnt/ost4"
+            },
+            "test18fs-OST0004": {
+                "kind": "OST",
+                "primary_server_name": "kp-lustre-1-8-oss-3",
+                "mount_path": "/mnt/ost5"
+            },
+            "test18fs-OST0005": {
+                "kind": "OST",
+                "primary_server_name": "kp-lustre-1-8-oss-3",
+                "mount_path": "/mnt/ost6"
+            },
+            "test18fs-OST0006": {
+                "kind": "OST",
+                "primary_server_name": "kp-lustre-1-8-oss-4",
+                "mount_path": "/mnt/ost7"
+            },
+            "test18fs-OST0007": {
+                "kind": "OST",
+                "primary_server_name": "kp-lustre-1-8-oss-4",
+                "mount_path": "/mnt/ost8"
+            }
+        }
+    },
+    "chroma_managers": [
+        {
+            "address": "kp-lustre-1-8-chroma-manager",
+            "server_http_url": "http://kp-lustre-1-8-chroma-manager/",
+            "users": [
+                {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
+            ]
+        }
+    ],
+    "lustre_servers": [
+        {
+            "address": "kp-lustre-1-8-mgs-1",
+            "nodename": "kp-lustre-1-8-mgs-1"
+        },
+        {
+            "address": "kp-lustre-1-8-oss-1",
+            "nodename": "kp-lustre-1-8-oss-1"
+        },
+        {
+            "address": "kp-lustre-1-8-oss-2",
+            "nodename": "kp-lustre-1-8-oss-2"
+        },
+        {
+            "address": "kp-lustre-1-8-oss-3",
+            "nodename": "kp-lustre-1-8-oss-3"
+        },
+        {
+            "address": "kp-lustre-1-8-oss-4",
+            "nodename": "kp-lustre-1-8-oss-4"
+        }
+    ],
+    "lustre_clients": {
+        "kp-lustre-1-8-client-1": {}
+    }
+}

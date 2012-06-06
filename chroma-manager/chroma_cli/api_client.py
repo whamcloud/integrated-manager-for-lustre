@@ -36,12 +36,8 @@ class ApiClient(object):
         elif response.status_code == 400:
             # A bad request -- deserialize the errors
             raise BadRequest(json.loads(response.text))
-        elif response.status_code == 500:
-            try:
-                decoded = json.loads(response.text)
-                raise InternalError(decoded['traceback'])
-            except (ValueError, KeyError):
-                raise InternalError("Malformed content: %s" % response.text)
+        elif response.status_code == 401:
+            raise RuntimeError("Server returned 401 UNAUTHORIZED")
         elif response.status_code == 404:
             try:
                 decoded = json.loads(response.text)
@@ -51,6 +47,12 @@ class ApiClient(object):
                     raise NotFound("Not found")
             except (ValueError, KeyError):
                 raise NotFound("Not found")
+        elif response.status_code == 500:
+            try:
+                decoded = json.loads(response.text)
+                raise InternalError(decoded['traceback'])
+            except (ValueError, KeyError):
+                raise InternalError("Malformed content: %s" % response.text)
         else:
             raise RuntimeError("status: %s, text: %s" % (response.status_code,
                                                          response.text))

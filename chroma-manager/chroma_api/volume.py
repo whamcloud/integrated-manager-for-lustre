@@ -4,7 +4,7 @@
 # ========================================================
 
 
-from chroma_core.models import Volume, VolumeNode
+from chroma_core.models import Volume, VolumeNode, ManagedFilesystem
 
 from tastypie.resources import ModelResource
 from tastypie.exceptions import ImmediateHttpResponse
@@ -15,6 +15,7 @@ from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 
 
 class VolumeResource(ModelResource):
@@ -69,9 +70,10 @@ class VolumeResource(ModelResource):
         detail_allowed_methods = ['get', 'put']
         always_return_data = True
 
+        filtering = {'id': ['exact'],
+                     'label': ['exact', 'endswith']}
+
     def apply_filters(self, request, filters = None):
-        """Override this to build a filesystem filter using Q expressions (not
-           possible from build_filters because it only deals with kwargs to filter())"""
         objects = super(VolumeResource, self).apply_filters(request, filters)
 
         try:
@@ -82,6 +84,24 @@ class VolumeResource(ModelResource):
                 objects = Volume.get_unused_luns(objects)
             elif category == 'usable':
                 objects = Volume.get_usable_luns(objects)
+        except KeyError:
+            # Not filtering on category
+            pass
+
+        try:
+            try:
+                objects = objects.filter(Q(volumenode__primary = request.GET['primary']) & Q(volumenode__host__id = request.GET['host_id']))
+            except KeyError:
+                # Not filtering on primary, try just host_id
+                objects = objects.filter(Q(volumenode__host__id = request.GET['host_id']))
+        except KeyError:
+            # Not filtering on host_id
+            pass
+
+        try:
+            fs = get_object_or_404(ManagedFilesystem,
+                                   pk = request.GET['filesystem_id'])
+            objects = objects.filter((Q(managedtarget__managedmdt__filesystem = fs) | Q(managedtarget__managedost__filesystem = fs)) | Q(managedtarget__id = fs.mgs.id))
         except KeyError:
             # Not filtering on filesystem_id
             pass

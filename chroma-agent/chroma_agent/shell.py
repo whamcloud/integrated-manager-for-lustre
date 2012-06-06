@@ -5,6 +5,7 @@
 
 
 import subprocess
+from chroma_agent.agent_daemon import daemon_log
 
 
 def run(arg_list, shell = False):
@@ -14,6 +15,7 @@ def run(arg_list, shell = False):
     using this function.
     """
 
+    daemon_log.info("shell.run: %s" % arg_list)
     import sys
     import pty
     import fcntl

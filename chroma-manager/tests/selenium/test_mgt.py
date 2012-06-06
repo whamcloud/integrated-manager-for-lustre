@@ -35,9 +35,8 @@ class TestMgt(SeleniumBaseTestCase):
         self.server_page.add_servers(self.host_list)
 
         # Test data for MGT
-        self.mgt_test_data = self.test_data.get_test_data_for_mgt_configuration()
-        self.mgt_host_name = self.mgt_test_data[0]['mounts'][0]['host']
-        self.mgt_device_node = self.mgt_test_data[0]['mounts'][0]['device_node']
+        self.mgt_host_name = self.host_list[0]['address']
+        self.mgt_device_node = self.host_list[0]['device_node'][0]
 
         self.navigation.go('Configure', 'MGTs')
         wait_for_element(self.driver, 'span.volume_chooser_selected', self.medium_wait)

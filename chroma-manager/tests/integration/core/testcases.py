@@ -10,7 +10,6 @@ from testconfig import config
 
 from tests.integration.core.constants import TEST_TIMEOUT
 
-
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.FileHandler('test.log'))
@@ -50,7 +49,52 @@ class ChromaIntegrationTestCase(TestCase):
         try:
             self.graceful_teardown(chroma_manager)
         except Exception:
+            # Attempt to wait for existing running commands to finish executing to avoid
+            # a race between an already running command and a force remove command.
+            unfinished_commands = []
+            running_time = 0
+            while (unfinished_commands or running_time == 0) and running_time < TEST_TIMEOUT:
+                response = chroma_manager.get(
+                    '/api/command/',
+                    params = {'complete': False}
+                )
+                self.assertEqual(response.successful, True, response.text)
+                unfinished_commands = response.json['objects']
+                running_time += 1
+                time.sleep(1)
+
             self.force_teardown(chroma_manager)
+
+    def reset_chroma_manager_db(self, user):
+        for chroma_manager in config['chroma_managers']:
+            self.remote_command(
+                chroma_manager['address'],
+                'chroma-config stop'
+            )
+            self.remote_command(
+                chroma_manager['address'],
+                'echo "drop database chroma; create database chroma;" | mysql -u root'
+            )
+
+            self.remote_command(
+                chroma_manager['address'],
+                """
+chroma-config setup >config_setup.log <<EOF
+%s
+nobody@whamcloud.com
+%s
+%s
+EOF
+                """ % (user['username'], user['password'], user['password'])
+            )
+            self.remote_command(
+                chroma_manager['address'],
+                "chroma-config start"
+            )
+            self.remote_command(
+                chroma_manager['address'],
+                "chroma-config validate"
+            )
 
     def force_teardown(self, chroma_manager):
         response = chroma_manager.get(
@@ -63,19 +107,24 @@ class ChromaIntegrationTestCase(TestCase):
         if len(hosts) > 0:
             remove_host_command_ids = []
             for host in hosts:
-                command = chroma_manager.post("/api/command/", body = {
+                response = chroma_manager.post("/api/command/", body = {
                     'jobs': [{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host['id']}}],
                     'message': "Test force remove hosts"
-                }).json
+                })
+                self.assertEqual(response.successful, True, response.text)
+                command = response.json
                 remove_host_command_ids.append(command['id'])
 
             self.wait_for_commands(chroma_manager, remove_host_command_ids)
 
         for server in config['lustre_servers']:
             address = server['address']
-            self.remote_command(address, "chroma-agent clear-targets")
+            _, stdout, _ = self.remote_command(address, "chroma-agent -h")
+            available_commands = stdout.read()
+            if re.search('clear-targets', available_commands):
+                self.remote_command(address, "chroma-agent clear-targets")
 
-        self.verify_cluster_not_configured(chroma_manager)
+        self.verify_cluster_has_no_managed_targets(chroma_manager)
 
     def graceful_teardown(self, chroma_manager):
         """Remove all Filesystems, MGTs, and Hosts"""
@@ -89,7 +138,13 @@ class ChromaIntegrationTestCase(TestCase):
             # Remove filesystems
             remove_filesystem_command_ids = []
             for filesystem in filesystems:
-                response = chroma_manager.delete(filesystem['resource_uri'])
+                if filesystem['immutable_state']:
+                    response = self.set_state(
+                        filesystem['resource_uri'],
+                        'forgotten'
+                    )
+                else:
+                    response = chroma_manager.delete(filesystem['resource_uri'])
                 self.assertTrue(response.successful, response.text)
                 command_id = response.json['command']['id']
                 self.assertTrue(command_id)
@@ -133,9 +188,9 @@ class ChromaIntegrationTestCase(TestCase):
 
             self.wait_for_commands(chroma_manager, remove_host_command_ids)
 
-        self.verify_cluster_not_configured(chroma_manager)
+        self.verify_cluster_has_no_managed_targets(chroma_manager)
 
-    def verify_cluster_not_configured(self, chroma_manager):
+    def verify_cluster_has_no_managed_targets(self, chroma_manager):
         """
         Checks that the database and the hosts specified in the config
         do not have (unremoved) targets for the filesystems specified.
@@ -166,18 +221,34 @@ class ChromaIntegrationTestCase(TestCase):
         hosts = response.json['objects']
         self.assertEqual(0, len(hosts))
 
+        # Verify there are now zero volumes in the database.
+        # TEMPORARILY COMMENTED OUT DUE TO HYD-1143.
+        #response = self.chroma_manager.get(
+        #    '/api/volume/',
+        #    params = {'limit': 0}
+        #)
+        #self.assertTrue(response.successful, response.text)
+        #volumes = response.json['objects']
+        #self.assertEqual(0, len(volumes))
+
         for host in config['lustre_servers']:
             # Verify mgs and fs targets not in pacemaker config for hosts
             # TODO: sort out host address and host nodename
             stdin, stdout, stderr = self.remote_command(
                 host['address'],
-                'crm configure show'
+                'which crm',
+                expected_return_code = None
             )
-            configuration = stdout.read()
-            self.assertNotRegexpMatches(
-                configuration,
-                "location [^\n]* %s\n" % host['nodename']
-            )
+            if not stderr:
+                stdin, stdout, stderr = self.remote_command(
+                    host['address'],
+                    'crm configure show'
+                )
+                configuration = stdout.read()
+                self.assertNotRegexpMatches(
+                    configuration,
+                    "location [^\n]* %s\n" % host['nodename']
+                )
 
     def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
         logger.debug("wait_for_command %s" % command_id)
@@ -223,9 +294,9 @@ class ChromaIntegrationTestCase(TestCase):
 
             self.assertFalse(command['errored'] or command['cancelled'], command)
 
-    def wait_for_commands(self, chroma_manager, command_ids, timeout=TEST_TIMEOUT):
+    def wait_for_commands(self, chroma_manager, command_ids, timeout=TEST_TIMEOUT, verify_successful = True):
         for command_id in command_ids:
-            self.wait_for_command(chroma_manager, command_id, timeout)
+            self.wait_for_command(chroma_manager, command_id, timeout, verify_successful)
 
     def remote_command(self, server, command, expected_return_code=0):
         logger.debug("remote_command[%s]: %s" % (server, command))
@@ -395,6 +466,7 @@ class ChromaIntegrationTestCase(TestCase):
             self.remote_command(
                 client,
                 "umount /mnt/%s" % filesystem_name,
+                expected_return_code = None
             )
             stdin, stdout, stderr = self.remote_command(
                 client,
@@ -424,12 +496,8 @@ class ChromaIntegrationTestCase(TestCase):
         targets = response.json['objects']
 
         for target in targets:
-            target_volume_url = target['volume']
-            response = self.chroma_manager.get(target_volume_url)
-            self.assertTrue(response.successful, response.text)
-            target_volume_id = response.json['id']
-            if target_volume_id in volumes_to_expected_hosts:
-                expected_host = volumes_to_expected_hosts[target_volume_id]
+            if target['volume']['id'] in volumes_to_expected_hosts:
+                expected_host = volumes_to_expected_hosts[target['volume']['id']]
                 if assert_true:
                     self.assertEqual(expected_host, target['active_host_name'])
                 else:
@@ -474,7 +542,7 @@ class ChromaIntegrationTestCase(TestCase):
         # Wait for the host setup and device discovery to complete
         self.wait_for_commands(self.chroma_manager, host_create_command_ids)
 
-        # Verify there are now two hosts in the database.
+        # Verify there are now n hosts in the database.
         response = self.chroma_manager.get(
             '/api/host/',
         )
@@ -552,7 +620,7 @@ class ChromaIntegrationTestCase(TestCase):
         obj = self.get_by_uri(uri)
         self.assertEqual(obj['state'], state)
 
-    def create_filesystem_simple(self):
+    def create_filesystem_simple(self, name = 'testfs'):
         """The simplest possible filesystem on a single server"""
         self.add_hosts([config['lustre_servers'][0]['address']])
 
@@ -564,7 +632,7 @@ class ChromaIntegrationTestCase(TestCase):
         ost_volumes = [ha_volumes[2]]
         return self.create_filesystem(
                 {
-                'name': 'testfs',
+                'name': name,
                 'mgt': {'volume_id': mgt_volume['id']},
                 'mdt': {
                     'volume_id': mdt_volume['id'],
@@ -607,6 +675,29 @@ class ChromaIntegrationTestCase(TestCase):
 
         # Verify did not auto-failback
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
+
+    def failback(self, primary_host, filesystem_id, volumes_expected_hosts_in_normal_state):
+        response = self.chroma_manager.get(
+            '/api/target/',
+            params = {'filesystem_id': filesystem_id}
+        )
+        self.assertTrue(response.successful, response.text)
+        targets_with_matching_primary_host = [t for t in response.json['objects'] if t['primary_server_name'] == primary_host['nodename']]
+
+        for target in targets_with_matching_primary_host:
+                _, stdout, _ = self.remote_command(
+                primary_host['nodename'],
+                'chroma-agent failback-target --ha_label %s' % target['ha_label']
+            )
+
+        # Wait for the targets to move back to their original server.
+        running_time = 0
+        while running_time < TEST_TIMEOUT and not self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state):
+            time.sleep(1)
+            running_time += 1
+        self.assertLess(running_time, TEST_TIMEOUT, 'Timed out waiting for failback.')
+
+        self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
 
     def wait_for_host_to_boot(self, booting_host, available_host):
         # Wait for the stonithed server to come back online

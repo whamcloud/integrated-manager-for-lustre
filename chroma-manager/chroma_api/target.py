@@ -23,7 +23,6 @@ from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
-from chroma_api.fuzzy_lookups import FuzzyLookupFailed, FuzzyLookupException, target_vol_data
 
 # Some lookups for the three 'kind' letter strings used
 # by API consumers to refer to our target types
@@ -129,7 +128,7 @@ class TargetResource(MetricResource, ConfParamResource):
         null = True, help_text = "The server on which this target is currently started, or null if" \
                                  "the target is not currently started")
 
-    volume = fields.ToOneField('chroma_api.volume.VolumeResource', 'volume', full = False, help_text = "\
+    volume = fields.ToOneField('chroma_api.volume.VolumeResource', 'volume', full = True, help_text = "\
                              The Volume on which this target is stored.")
 
     def content_type_id_to_kind(self, id):
@@ -142,7 +141,7 @@ class TargetResource(MetricResource, ConfParamResource):
         queryset = ManagedTarget.objects.all()
         resource_name = 'target'
         excludes = ['not_deleted', 'bytes_per_inode']
-        filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'id': ['exact', 'in'], 'immutable_state': ['exact']}
+        filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'id': ['exact', 'in'], 'immutable_state': ['exact'], 'name': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         ordering = ['volume_name', 'name']
@@ -212,47 +211,21 @@ class TargetResource(MetricResource, ConfParamResource):
         else:
             return None
 
-    def hydrate_lun_ids(self, bundle):
-        if 'lun_ids' in bundle.data:
-            return bundle
-
-        try:
-            bundle.data['lun_ids'] = []
-            for volume_str in bundle.data['volumes']:
-                # TODO: Actually use the supplied primary/failover information
-                (primary, failover_list, lun_id) = target_vol_data(volume_str)
-                bundle.data['lun_ids'].append(lun_id)
-        except KeyError:
-            bundle.data_errors['volumes'].append("volumes is required if lun_ids is not present")
-        except (FuzzyLookupFailed, FuzzyLookupException), e:
-            bundle.data_errors['volumes'].append(str(e))
-
-        return bundle
-
-    def hydrate_filesystem_id(self, bundle):
-        if 'filesystem_id' in bundle.data:
-            return bundle
-
-        try:
-            bundle.data['filesystem_id'] = ManagedFilesystem.objects.get(name=bundle.data['filesystem_name']).pk
-        except KeyError:
-            # Filesystem isn't always required -- could be a MGT
-            pass
-        except ManagedFilesystem.DoesNotExist:
-            bundle.data_errors['filesystem_name'].append("Unknown filesystem: %s" % bundle.data['filesystem_name'])
-
-        return bundle
-
     def build_filters(self, filters = None):
         """Override this to convert a 'kind' argument into a DB field which exists"""
         custom_filters = {}
         for key, val in filters.items():
             if key == 'kind':
                 del filters[key]
-                custom_filters['content_type__model'] = KIND_TO_MODEL_NAME[val]
+                try:
+                    custom_filters['content_type__model'] = KIND_TO_MODEL_NAME[val.upper()]
+                except KeyError:
+                    # Don't want to just pass this because it will
+                    # potentially remove all filters and make this a list
+                    # operation.
+                    custom_filters['content_type__model'] = None
             elif key == 'host_id':
                 del filters[key]
-                custom_filters['managedtargetmount__host__id'] = val
             elif key == 'filesystem_id':
                 # Remove filesystem_id as we
                 # do a custom query generation for it in apply_filters
@@ -271,6 +244,16 @@ class TargetResource(MetricResource, ConfParamResource):
             objects = objects.filter((Q(managedmdt__filesystem = fs) | Q(managedost__filesystem = fs)) | Q(id = fs.mgs.id))
         except KeyError:
             # Not filtering on filesystem_id
+            pass
+
+        try:
+            try:
+                objects = objects.filter(Q(managedtargetmount__primary = request.GET['primary']) & Q(managedtargetmount__host__id = request.GET['host_id']))
+            except KeyError:
+                # Not filtering on primary, try just host_id
+                objects = objects.filter(Q(managedtargetmount__host__id = request.GET['host_id']))
+        except KeyError:
+            # Not filtering on host_id
             pass
 
         return objects

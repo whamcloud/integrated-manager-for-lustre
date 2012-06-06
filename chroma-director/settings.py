@@ -188,4 +188,7 @@ AWS_SECRET=None  # String
 AWS_SSH_KEY = None  # Name of keypair
 AWS_SSH_PRIVATE_KEY = None  # Path to private key file
 
+# Get a repo key and put this in local_settngs.py
+MAGIC_KEY = None
+
 from local_settings import *

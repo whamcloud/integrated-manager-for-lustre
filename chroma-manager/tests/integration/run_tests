@@ -58,6 +58,8 @@ if ! $FORCED
         fi
 fi
 
+nosetests --verbosity=2 tests/integration/utils/full_cluster_reset.py --tc-format=json --tc-file=$CONFIG_FILE
+
 echo "----------------------------------------------------------------------"
 echo "Running tests in $TEST_DIR"
 echo "----------------------------------------------------------------------"

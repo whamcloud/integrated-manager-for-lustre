@@ -16,6 +16,7 @@ from views.mgt import Mgt
 from views.servers import Servers
 from views.filesystem import Filesystem
 from utils.constants import static_text
+from base import wait_for_screen_unblock
 
 
 class CreateFilesystem:
@@ -144,6 +145,7 @@ class CreateFilesystem:
 
         self.navigation.go('Configure', 'Create_new_filesystem')
         self.driver.refresh()
+        wait_for_screen_unblock(self.driver, wait_time['medium'])
         wait_for_element(self.driver, "#btnCreateFS", self.medium_wait)
         create_filesystem_page = CreateFilesystem(self.driver)
         create_filesystem_page.create(filesystem_name, mgt_name, mdt_host_name, mdt_device_node, ost_host_name, ost_device_node, conf_params)

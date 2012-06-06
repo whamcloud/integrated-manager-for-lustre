@@ -21,7 +21,6 @@ from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
 from chroma_api import api_log
-from chroma_api.fuzzy_lookups import FuzzyLookupFailed, FuzzyLookupException, mgt_vol_id, mdt_vol_id, ost_vol_id
 
 
 class FilesystemValidation(Validation):
@@ -38,14 +37,15 @@ class FilesystemValidation(Validation):
         except AttributeError:
             pass
 
-        # Check that client hasn't specified and existing MGT *and* a volume to format
-        if 'id' in bundle.data['mgt'] and 'volume_id' in bundle.data['mgt']:
-            errors['mgt'].append("id and volume_id are mutually exclusive")
-
         targets = defaultdict(list)
         # Check 'mgt', 'mdt', 'osts' are present and compose
         # a record of targets which will be formatted
         try:
+            # Check that client hasn't specified an existing MGT
+            # *and* a volume to format.
+            if 'id' in bundle.data['mgt'] and 'volume_id' in bundle.data['mgt']:
+                errors['mgt'].append("id and volume_id are mutually exclusive")
+
             mgt = bundle.data['mgt']
             if 'volume_id' in mgt:
                 targets['mgt'].append(mgt)
@@ -219,6 +219,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
     bytes_total = fields.IntegerField()
     files_free = fields.IntegerField()
     files_total = fields.IntegerField()
+    client_count = fields.IntegerField()
 
     mount_command = fields.CharField(null = True, help_text = "Example command for\
             mounting this file system on a Lustre client, e.g. \"mount -t lustre 192.168.0.1:/testfs /mnt/testfs\"")
@@ -241,7 +242,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
     def _get_stat_simple(self, bundle, klass, stat_name, factor = 1):
         try:
             return bundle.obj.metrics.fetch_last(klass, fetch_metrics=[stat_name])[1][stat_name] * factor
-        except (KeyError, IndexError):
+        except (KeyError, IndexError, TypeError):
             return None
 
     def dehydrate_mount_path(self, bundle):
@@ -266,48 +267,8 @@ class FilesystemResource(MetricResource, ConfParamResource):
     def dehydrate_files_total(self, bundle):
         return self._get_stat_simple(bundle, ManagedMdt, 'filestotal')
 
-    def hydrate_mgt_lun_id(self, bundle):
-        if 'mgt_lun_id' in bundle.data:
-            return bundle
-
-        if 'mgt' in bundle.data:
-            fuzzy_id = bundle.data['mgt'][0]
-            try:
-                bundle.data['mgt_lun_id'] = mgt_vol_id(fuzzy_id)
-                bundle.data['mgt_id'] = None
-            except (FuzzyLookupFailed, FuzzyLookupException), e:
-                bundle.data_errors['mgt'].append(str(e))
-
-        return bundle
-
-    def hydrate_mdt_lun_id(self, bundle):
-        if 'mdt_lun_id' in bundle.data:
-            return bundle
-
-        if 'mdts' in bundle.data:
-            # This will need to be updated if/when we support > 1 MDT.
-            fuzzy_id = bundle.data['mdts'][0]
-            try:
-                bundle.data['mdt_lun_id'] = mdt_vol_id(fuzzy_id)
-            except (FuzzyLookupFailed, FuzzyLookupException), e:
-                bundle.data_errors['mdts'].append(str(e))
-
-        return bundle
-
-    def hydrate_ost_lun_ids(self, bundle):
-        if 'ost_lun_ids' in bundle.data:
-            return bundle
-
-        if 'osts' in bundle.data:
-            ost_lun_ids = []
-            for fuzzy_id in bundle.data['osts']:
-                try:
-                    ost_lun_ids.append(ost_vol_id(fuzzy_id))
-                except (FuzzyLookupFailed, FuzzyLookupException), e:
-                    bundle.data_errors['osts'].append(str(e))
-            bundle.data['ost_lun_ids'] = ost_lun_ids
-
-        return bundle
+    def dehydrate_client_count(self, bundle):
+        return self._get_stat_simple(bundle, ManagedMdt, 'client_count')
 
     class Meta:
         queryset = ManagedFilesystem.objects.all()
@@ -316,10 +277,10 @@ class FilesystemResource(MetricResource, ConfParamResource):
         authentication = AnonymousAuthentication()
         excludes = ['not_deleted']
         ordering = ['name']
-        filtering = {'id': ['exact', 'in']}
+        filtering = {'id': ['exact', 'in'], 'name': ['exact']}
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'delete', 'put']
-        readonly = ['bytes_free', 'bytes_total', 'files_free', 'files_total', 'mount_command']
+        readonly = ['bytes_free', 'bytes_total', 'files_free', 'files_total', 'client_count', 'mount_command', 'mount_path']
         validation = FilesystemValidation()
         always_return_data = True
 

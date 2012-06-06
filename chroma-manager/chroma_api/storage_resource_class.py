@@ -23,10 +23,13 @@ def filter_class_ids():
     those for which we have a plugin available in this process)
     """
     from MySQLdb import OperationalError
+    from django.db.utils import DatabaseError
     try:
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         return storage_plugin_manager.resource_class_id_to_class.keys()
-    except OperationalError:
+    except (OperationalError, DatabaseError):
+        # OperationalError if the DB server can't be contacted
+        # DatabaseError if the DB exists but isn't populated
         return []
 
 

@@ -225,10 +225,6 @@ class StorageResourceStatistic(models.Model):
     sample_period = models.IntegerField()
     name = models.CharField(max_length = 64)
 
-    def delete(self, *args, **kwargs):
-        self.metrics.clear()
-        super(StorageResourceStatistic, self).delete(*args, **kwargs)
-
     def __get_metrics(self):
         from chroma_core.lib.metrics import VendorMetricStore
         if not hasattr(self, '_metrics'):
@@ -406,7 +402,7 @@ class StorageAlertPropagated(models.Model):
 
 
 class StorageResourceLearnEvent(Event):
-    storage_resource = models.ForeignKey(StorageResourceRecord)
+    storage_resource = models.ForeignKey(StorageResourceRecord, on_delete = models.PROTECT)
 
     @staticmethod
     def type_name():

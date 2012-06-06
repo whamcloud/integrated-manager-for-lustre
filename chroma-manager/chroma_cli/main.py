@@ -11,15 +11,18 @@ import traceback
 from chroma_cli.exceptions import BadRequest, InternalError, NotFound
 from chroma_cli.parser import ResettableArgumentParser
 from chroma_cli.config import Configuration
+from chroma_cli.api import ApiHandle
+from chroma_cli.output import StandardFormatter
+from chroma_cli.handlers import Dispatcher
 
 # TODO: This kind of thing is probably a good candidate for
 # pluginization, if we wind up with a lot of command modules.
 from chroma_cli.commands import api_resources
 
 
-def main():
+def api_cli():
     config = Configuration()
-    parser = ResettableArgumentParser(description="Chroma CLI")
+    parser = ResettableArgumentParser(description="Chroma API CLI")
 
     # register global arguments for each module
     api_resources.register_global_arguments(parser)
@@ -71,5 +74,50 @@ def main():
         print "Internal client error from handler '%s': %s" % (dispatcher, trace)
         sys.exit(3)
 
+
+def standard_cli(args=None):
+    config = Configuration()
+    parser = ResettableArgumentParser(description="Chroma API CLI")
+    dispatcher = Dispatcher()
+
+    parser.add_argument("--api-url", help="Entry URL for Chroma API")
+    parser.add_argument("--username", help="Chroma username")
+    parser.add_argument("--password", help="Chroma password")
+    parser.add_argument("--output", "-o", help="Output format",
+                        choices=StandardFormatter.formats())
+    parser.add_argument("--nowait", help="Don't wait for jobs to complete",
+                        action="store_true")
+    parser.clear_resets()
+
+    parser.add_argument("primary_action", choices=dispatcher.handled_actions)
+    parser.add_argument("options", nargs=REMAINDER)
+
+    ns = parser.parse_args(args)
+
+    # Allow CLI options to override defaults/.chroma config values
+    config.update(dict([[key, val] for key, val in ns.__dict__.items()
+                                if val != None
+                                and key not in ["primary_action", "options"]]))
+
+    authentication = {'username': config.username,
+                      'password': config.password}
+    api = ApiHandle(api_uri=config.api_url,
+                    authentication=authentication)
+
+    formatter = StandardFormatter(format=config.output, nowait=config.nowait, command_monitor=api.command_monitor)
+
+    from chroma_cli.exceptions import ApiException
+    try:
+        dispatcher(ns.primary_action)(api=api, formatter=formatter)(parser=parser, args=args, namespace=ns)
+    except ApiException, e:
+        print e
+        sys.exit(1)
+    except Exception, e:
+        exc_info = sys.exc_info()
+        trace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+        print "Internal client error from handler '%s': %s" % (ns.primary_action, trace)
+
+    sys.exit(0)
+
 if __name__ == '__main__':
-    main()
+    standard_cli()
