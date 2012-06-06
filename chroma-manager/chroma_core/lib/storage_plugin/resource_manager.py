@@ -1008,8 +1008,8 @@ class ResourceManager(object):
                 resource.__class__.__module__,
                 resource.__class__.__name__)
 
-            # Find any ResourceReference attributes and persist them first so that
-            # we know their global IDs for serializing this one
+            # Find any ResourceReference attributes ensure that the target
+            # resource gets constructed before this one
             for key, value in resource._storage_dict.items():
                 # Special case for ResourceReference attributes, because the resource
                 # object passed from the plugin won't have a global ID for the referenced
@@ -1114,10 +1114,18 @@ class ResourceManager(object):
                 # If there was no existing record, create one
                 if not updated:
                     attr_classes.add(attr_model_class)
-                    attr_model_class.delayed.insert(dict(
-                        resource_id = record.id,
-                        key = key,
-                        value = attr_model_class.encode(val)))
+                    if issubclass(attr_model_class, StorageResourceAttributeSerialized):
+                        data = dict(
+                            resource_id = record.id,
+                            key = key,
+                            value = attr_model_class.encode(val))
+
+                    else:
+                        data = dict(
+                            resource_id = record.id,
+                            key = key,
+                            value_id = attr_model_class.encode(val))
+                    attr_model_class.delayed.insert(data)
 
         for attr_model_class in attr_classes:
             attr_model_class.delayed.flush()

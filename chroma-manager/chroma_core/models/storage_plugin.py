@@ -316,10 +316,6 @@ class StorageResourceAttributeReference(StorageResourceAttribute):
             return super(StorageResourceAttributeReference, self).__setattr__(k, v)
 
     @classmethod
-    def encode(cls, value):
-        return StorageResourceRecord.objects.get(pk = value)
-
-    @classmethod
     def decode(cls, value):
         if value:
             return value.to_resource()

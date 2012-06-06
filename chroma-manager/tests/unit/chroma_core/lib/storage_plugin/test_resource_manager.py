@@ -223,7 +223,7 @@ class TestResourceOperations(ResourceManagerTestCase):
     def test_reference(self):
         """Create and save a resource which uses attributes.ResourceReference"""
         partition = self._make_local_resource('linux', 'Partition',
-            container = self.dev_resource, number = 0, size = 1024 * 1024 * 500)
+                                              container = self.dev_resource, number = 0, size = 1024 * 1024 * 500)
 
         from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         resource_manager.session_open(self.scannable_resource_pk, [
@@ -231,6 +231,7 @@ class TestResourceOperations(ResourceManagerTestCase):
 
         from chroma_core.models import StorageResourceAttributeReference
         self.assertEqual(StorageResourceAttributeReference.objects.count(), 1)
+        self.assertNotEqual(StorageResourceAttributeReference.objects.get().value, None)
 
     def test_subscriber(self):
         """Create a pair of resources where one subscribes to the other"""
