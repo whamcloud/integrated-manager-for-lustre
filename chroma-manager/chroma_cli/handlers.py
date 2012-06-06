@@ -13,51 +13,112 @@ from chroma_cli.exceptions import InvalidVolumeNode, TooManyMatches, BadUserInpu
 
 class Dispatcher(object):
     def __init__(self):
-        self.build_handler_map()
+        self._build_handler_map()
 
-    def __call__(self, key):
-        try:
-            return self.handlers[key]
-        except KeyError:
-            raise RuntimeError("Unhandled action: %s" % key)
-
-    def build_handler_map(self):
+    def _build_handler_map(self):
         self.handlers = {}
         # NB: This only handles a single level of subclasses.
         for cls in Handler.__subclasses__():
-            for key in cls.primary_actions():
-                if key in self.handlers:
-                    raise RuntimeError("Handler collision: %s:%s -> %s:%s" %
-                                       (cls, key, self.handlers[key], key))
-                else:
-                    self.handlers[key] = cls
+            name = cls.nouns[0]
+            if name in self.handlers:
+                raise RuntimeError("Handler collision: %s:%s -> %s:%s" %
+                                   (cls, name, self.handlers[name], name))
+            else:
+                self.handlers[name] = {}
+                self.handlers[name]['klass'] = cls
+                self.handlers[name]['aliases'] = cls.nouns[1:]
+                self.handlers[name]['verbs'] = cls.verbs
 
-    @property
-    def handled_actions(self):
-        return sorted(self.handlers.keys())
+    def _parse_noun_verb(self, ns):
+        try:
+            # Handle "noun-verb" format
+            noun, verb = ns.args[0].split("-")
+            del ns.args[0]
+            return noun, verb
+        except ValueError:
+            pass
+        except IndexError:
+            return None, None
+
+        noun = ns.args.pop(0)
+        handler_name = noun
+        if noun not in self.handlers:
+            for name, handler in self.handlers.items():
+                if noun in handler['aliases']:
+                    handler_name = name
+                    break
+            if handler_name == noun:
+                return noun, None
+
+        try:
+            if ns.args[0] in self.handlers[handler_name]['verbs']:
+                # Handle "noun verb" format
+                return noun, ns.args.pop(0)
+            elif ns.args[0] in ["-h", "--help"]:
+                # Don't mistake help for a verb
+                return noun, None
+        except IndexError:
+            return noun, None
+
+        # Handle "noun subject foo" format
+        return noun, "context"
+
+    def add_subparsers(self, subparsers, ns):
+        # Do a bit of fiddling with the namespace created in the
+        # first pass of arg parsing.
+        noun, verb = self._parse_noun_verb(ns)
+        if noun:
+            ns.noun = noun
+        if verb:
+            ns.verb = verb
+
+        # The nesting in here...  Wugh.
+        for key in sorted(self.handlers.keys()):
+            handler = self.handlers[key]
+            noun_parser = subparsers.add_parser(key, aliases=handler['aliases'], help=", ".join(handler['verbs']))
+            noun_parser.set_defaults(handler=handler['klass'])
+
+            verb_subparsers = noun_parser.add_subparsers()
+            intransitive = handler['klass'].intransitive_verbs
+            irregular = handler['klass'].irregular_verbs
+
+            for verb in handler['verbs']:
+                if verb not in intransitive + irregular:
+                    verb_parser = verb_subparsers.add_parser(verb, help="%s a %s" % (verb, key))
+                    verb_parser.add_argument("subject", metavar=key)
+                    if 'verb' in ns and ns.verb == "add":
+                        # Special-case for "add"... It wants to do its
+                        # own parsing in the handler.
+                        verb_parser.add_argument("args", nargs=REMAINDER)
+                elif verb in intransitive:
+                    verb_parser = verb_subparsers.add_parser(verb, help="%s all %ss" % (verb, key))
+                else:
+                    # This should be fine until it's not.
+                    verb_parser = verb_subparsers.add_parser(verb, help="%s for %s" % (verb, key))
+
+                verb_parser.set_defaults(handler=handler['klass'])
+
+            if len(handler['klass'].contextual_actions()) > 0:
+                ctx_parser = verb_subparsers.add_parser("context", help="%s_name action (e.g. ost-list, vol-list, etc.)" % key)
+                ctx_parser.add_argument("subject", metavar=key)
+                ctx_subparsers = ctx_parser.add_subparsers()
+                for action in handler['klass'].contextual_actions():
+                    ctx_act_parser = ctx_subparsers.add_parser(action, help="run %s in the %s context" % (action, key))
+                    ctx_act_parser.add_argument("--primary", action="store_true", help="Restrict list to primaries only")
+                    ctx_act_parser.set_defaults(handler=handler['klass'], contextual_action=action)
 
 
 class Handler(object):
     nouns = []
-    secondary_nouns = []
+    contextual_nouns = []
     verbs = ["show", "list", "add", "remove"]
     intransitive_verbs = ["list"]
+    irregular_verbs = []
 
     @classmethod
-    def noun_verbs(cls):
-        return ["%s-%s" % t for t in product(*[cls.nouns, cls.verbs])]
-
-    @classmethod
-    def primary_actions(cls):
-        return cls.nouns + cls.noun_verbs()
-
-    @property
-    def secondary_actions(self):
-        return ["%s-%s" % t for t in product(*[self.secondary_nouns, self.verbs])]
-
-    @property
-    def subject_name(self):
-        return self.nouns[0]
+    def contextual_actions(cls):
+        # Really, the only verb that makes sense in general context is list
+        return ["%s-%s" % t for t in product(*[cls.contextual_nouns, ["list"]])]
 
     def __init__(self, api, formatter=None):
         self.api = api
@@ -68,36 +129,16 @@ class Handler(object):
 
         self.errors = []
 
-    def __call__(self, parser, namespace, args=None):
-        ns = namespace
-        parser.reset()
-
+    def __call__(self, parser, ns, args=None):
         try:
-            ns.noun, ns.verb = ns.primary_action.split("-")
-            parser.add_argument("primary_action",
-                                choices=self.noun_verbs())
-            if ns.verb not in self.intransitive_verbs:
-                parser.add_argument("subject", help=self.subject_name)
-            parser.clear_resets()
-            parser.add_argument("options", nargs=REMAINDER)
-            ns = parser.parse_args(args, ns)
-        except ValueError:
-            parser.add_argument("noun", choices=self.nouns)
-            parser.add_argument("subject", help=self.subject_name)
-            parser.add_argument("secondary_action",
-                                choices=self.secondary_actions)
-            parser.add_argument("options", nargs=REMAINDER)
-            ns = parser.parse_args(args)
-            try:
-                ns.secondary_noun, ns.verb = ns.secondary_action.split("-")
-            except ValueError:
-                # Irregular verb?
-                ns.verb = ns.secondary_action
+            ns.contextual_noun, ns.verb = ns.contextual_action.split("-")
+        except AttributeError:
+            pass
 
-        if ns.verb == "add":
+        if 'verb' in ns and ns.verb == "add":
             parser.reset()
             self._api_fields_to_parser_args(parser)
-            ns = parser.parse_args(args, ns)
+            ns = parser.parse_args(ns.args, ns)
 
         verb_method = getattr(self, ns.verb)
         verb_method(ns)
@@ -150,9 +191,12 @@ class Handler(object):
 
 class ServerHandler(Handler):
     nouns = ["server", "srv", "mgs", "mds", "oss"]
-    secondary_nouns = ["target", "tgt", "mgt", "mdt", "ost", "volume", "vol"]
+    contextual_nouns = ["target", "tgt", "mgt", "mdt", "ost", "volume", "vol"]
     lnet_actions = ["lnet-stop", "lnet-start", "lnet-load", "lnet-unload"]
-    subject_name = "hostname"
+
+    @classmethod
+    def contextual_actions(cls):
+        return cls.lnet_actions + super(ServerHandler, cls).contextual_actions()
 
     def __init__(self, *args, **kwargs):
         super(ServerHandler, self).__init__(*args, **kwargs)
@@ -162,10 +206,6 @@ class ServerHandler(Handler):
             # actions with the same verbs to this handler.
             verb = action.split("-")[1]
             self.__dict__[verb] = self.set_lnet_state
-
-    @property
-    def secondary_actions(self):
-        return self.lnet_actions + super(ServerHandler, self).secondary_actions
 
     def set_lnet_state(self, ns):
         lnet_state = {'stop': "lnet_down",
@@ -179,15 +219,15 @@ class ServerHandler(Handler):
         try:
             host = self.api_endpoint.show(ns.subject)
             kwargs = {'host_id': host['id']}
-            if '--primary' in ns.options:
+            if 'primary' in ns and ns.primary:
                 kwargs['primary'] = True
 
-            if ns.secondary_noun in ["ost", "mdt", "mgt"]:
-                kwargs['kind'] = ns.secondary_noun
+            if ns.contextual_noun in ["ost", "mdt", "mgt"]:
+                kwargs['kind'] = ns.contextual_noun
                 self.output(self.api.endpoints['target'].list(**kwargs))
-            elif ns.secondary_noun in ["target", "tgt"]:
+            elif ns.contextual_noun in ["target", "tgt"]:
                 self.output(self.api.endpoints['target'].list(**kwargs))
-            elif ns.secondary_noun in ["volume", "vol"]:
+            elif ns.contextual_noun in ["volume", "vol"]:
                 self.output(self.api.endpoints['volume'].list(**kwargs))
         except AttributeError:
             kwargs = {}
@@ -202,12 +242,10 @@ class ServerHandler(Handler):
 
 class FilesystemHandler(Handler):
     nouns = ["filesystem", "fs"]
-    secondary_nouns = ["target", "tgt", "mgt", "mdt", "ost", "volume", "vol", "server", "mgs", "mds", "oss"]
+    contextual_nouns = ["target", "tgt", "mgt", "mdt", "ost", "volume", "vol", "server", "mgs", "mds", "oss"]
     verbs = ["list", "show", "add", "remove", "start", "stop", "detect", "mountspec"]
-
-    @property
-    def intransitive_verbs(self):
-        return ["detect"] + super(FilesystemHandler, self).intransitive_verbs
+    intransitive_verbs = ["list", "detect"]
+    irregular_verbs = ["mountspec"]
 
     def __init__(self, *args, **kwargs):
         super(FilesystemHandler, self).__init__(*args, **kwargs)
@@ -230,20 +268,18 @@ class FilesystemHandler(Handler):
         try:
             fs = self.api_endpoint.show(ns.subject)
             kwargs = {'filesystem_id': fs['id']}
-            if '--primary' in ns.options:
-                kwargs['primary'] = True
 
-            if ns.secondary_noun in ["ost", "mdt", "mgt"]:
-                kwargs['kind'] = ns.secondary_noun
+            if ns.contextual_noun in ["ost", "mdt", "mgt"]:
+                kwargs['kind'] = ns.contextual_noun
                 self.output(self.api.endpoints['target'].list(**kwargs))
-            elif ns.secondary_noun == "target":
+            elif ns.contextual_noun == "target":
                 self.output(self.api.endpoints['target'].list(**kwargs))
-            elif ns.secondary_noun == "server":
+            elif ns.contextual_noun == "server":
                 self.output(self.api.endpoints['host'].list(**kwargs))
-            elif ns.secondary_noun in ["oss", "mds", "mgs"]:
-                kwargs['role'] = ns.secondary_noun
+            elif ns.contextual_noun in ["oss", "mds", "mgs"]:
+                kwargs['role'] = ns.contextual_noun
                 self.output(self.api.endpoints['host'].list(**kwargs))
-            elif ns.secondary_noun == "volume":
+            elif ns.contextual_noun == "volume":
                 self.output(self.api.endpoints['volume'].list(**kwargs))
         except AttributeError:
             self.output(self.api_endpoint.list())
@@ -350,13 +386,9 @@ class VolumeHandler(Handler):
 
 
 class NidsHandler(Handler):
-    nouns = ["nids"]
+    nouns = ["nid"]
     verbs = ["update", "relearn"]
     intransitive_verbs = ["update"]
-
-    @classmethod
-    def primary_actions(cls):
-        return cls.noun_verbs()
 
     def update(self, ns):
         kwargs = {'message': "Updating filesystem NID configuration",
@@ -376,10 +408,6 @@ class ConfigHandler(Handler):
     nouns = ["configuration", "cfg"]
     verbs = ["dump", "load"]
     intransitive_verbs = ["dump"]
-
-    @classmethod
-    def primary_actions(cls):
-        return cls.noun_verbs()
 
     def dump(self, ns):
         import json
