@@ -28,18 +28,29 @@
     </tr>
 </table>
 
+<script type="text/template" id="global_filesystem_table_row_template">
+<tr>
+    <td class='icon_columns'><%= LiveObject.alertIcon(filesystem) %></td>"
+    <td><%= filesystem.name %></td>"
+    <td align='right'><%= formatBytes(filesystem.bytes_total) %></td>"
+    <td align='right'><%= formatBytes(filesystem.bytes_free) %></td>
+    <td align='right'><%= filesystem.client_count %></td>
+</tr>
+</script>
+
 <div id="dashboard_page_global" class='dashboard_page'>
     <table class='chart_grid'>
         <tr>
-            <td valign="top" align="left">
+            <td>
                 <div id="container_fs_list" class="chart_info_pane">
                     <table id="global_filesystem_table">
                         <thead>
                         <tr>
                             <th class='icon_column'></th>
-                            <th>File System</th>
+                            <th></th>
                             <th>Total</th>
                             <th>Free</th>
+                            <th>Clients</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -50,24 +61,21 @@
             <td valign="top" align="center">
                 <div class='chart' id="global_usage"></div>
             </td>
-            <td valign="top" align="center">
-                <div class='chart' id="global_client_count"></div>
-            </td>
         </tr>
         <tr>
             <td valign="top" align="center">
-                <div class='chart' id="global_cpu_mem"></div>
+                <div class='chart' id="global_metadata_ops"></div>
             </td>
             <td valign="top" align="center">
                 <div class='chart' id="global_read_write"></div>
             </td>
-            <td valign="top" align="center">
-                <div class='chart' id="global_metadata_ops"></div>
-            </td>
         </tr>
         <tr>
-            <td colspan="3">
-                <div class='chart' id="global_ost_bandwidth"></div>
+            <td>
+                <div class='chart' id="global_mds_cpu_mem"></div>
+            </td>
+            <td>
+                <div class='chart' id="global_oss_cpu_mem"></div>
             </td>
         </tr>
     </table>

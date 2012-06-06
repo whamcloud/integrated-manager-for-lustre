@@ -53,7 +53,6 @@ class HostResource(MetricResource, StatefulModelResource):
 
     def dehydrate_nids(self, bundle):
         return [n.nid_string for n in Nid.objects.filter(lnet_configuration = bundle.obj.lnetconfiguration)]
-    #role = fields.CharField()
 
     class Meta:
         queryset = ManagedHost.objects.all()
@@ -69,8 +68,10 @@ class HostResource(MetricResource, StatefulModelResource):
         always_return_data = True
 
         filtering = {'id': ['exact'],
-                     'fqdn': ['exact', 'startswith']}
+                     'fqdn': ['exact', 'startswith'],
+                    'role': ['exact']}
 
+    #role = fields.CharField()
     #def dehydrate_role(self, bundle):
     #    return bundle.obj.role()
 
@@ -92,12 +93,16 @@ class HostResource(MetricResource, StatefulModelResource):
         try:
             from chroma_api.target import KIND_TO_MODEL_NAME
             server_role = request.GET['role'].upper()
-            target_model = KIND_TO_MODEL_NAME["%sT" % server_role[:-1]]
-            objects = objects.filter(Q(managedtargetmount__target__content_type__model = target_model))
         except KeyError:
-            # Either we're not filtering on role or the supplied role
-            # didn't resolve properly to a target model.
+            # No 'role' argument
             pass
+        else:
+            target_model = KIND_TO_MODEL_NAME["%sT" % server_role[:-1]]
+            objects = objects.filter(
+                Q(managedtargetmount__target__content_type__model = target_model)
+                &
+                Q(managedtargetmount__target__not_deleted = True)
+            )
 
         return objects.distinct()
 
