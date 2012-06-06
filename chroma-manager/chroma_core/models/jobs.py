@@ -19,7 +19,6 @@ from polymorphic.models import DowncastMetaclass
 from chroma_core.models.utils import WorkaroundDateTimeField, await_async_result
 from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
-from chroma_core.lib.util import dbperf
 
 MAX_STATE_STRING = 32
 
@@ -274,28 +273,27 @@ class StatefulObject(models.Model):
         return cls.job_class_map[(begin_state, end_state)]
 
     def get_dependent_objects(self):
-        #with dbperf('get_dependent_objects'):
-            """Get all objects which MAY be depending on the state of this object"""
+        """Get all objects which MAY be depending on the state of this object"""
 
-            # Cache mapping a class to a list of functions for getting
-            # dependents of an instance of that class.
-            if not hasattr(StatefulObject, 'reverse_deps_map'):
-                reverse_deps_map = defaultdict(list)
-                for klass in all_subclasses(StatefulObject):
-                    for class_name, lookup_fn in klass.reverse_deps.items():
-                        import chroma_core.models
-                        #FIXME: looking up class this way eliminates our ability to move
-                        # StatefulObject definitions out into other modules
-                        so_class = getattr(chroma_core.models, class_name)
-                        reverse_deps_map[so_class].append(lookup_fn)
-                StatefulObject.reverse_deps_map = reverse_deps_map
+        # Cache mapping a class to a list of functions for getting
+        # dependents of an instance of that class.
+        if not hasattr(StatefulObject, 'reverse_deps_map'):
+            reverse_deps_map = defaultdict(list)
+            for klass in all_subclasses(StatefulObject):
+                for class_name, lookup_fn in klass.reverse_deps.items():
+                    import chroma_core.models
+                    #FIXME: looking up class this way eliminates our ability to move
+                    # StatefulObject definitions out into other modules
+                    so_class = getattr(chroma_core.models, class_name)
+                    reverse_deps_map[so_class].append(lookup_fn)
+            StatefulObject.reverse_deps_map = reverse_deps_map
 
-            klass = StatefulObject.so_child(self.__class__)
+        klass = StatefulObject.so_child(self.__class__)
 
-            from itertools import chain
-            lookup_fns = StatefulObject.reverse_deps_map[klass]
-            querysets = [fn(self) for fn in lookup_fns]
-            return chain(*querysets)
+        from itertools import chain
+        lookup_fns = StatefulObject.reverse_deps_map[klass]
+        querysets = [fn(self) for fn in lookup_fns]
+        return chain(*querysets)
 
 
 class StateLock(object):
@@ -634,8 +632,7 @@ class Job(models.Model):
         # is - are this Job's immediate dependencies satisfied?  And are any deps
         # for a statefulobject's new state satisfied?  If so, continue.  If not, cancel.
 
-        with dbperf('deps_satisfied'):
-            deps_satisfied = self._deps_satisfied()
+        deps_satisfied = self._deps_satisfied()
 
         if not deps_satisfied:
             job_log.warning("Job %d: cancelling because of failed dependency" % (self.id))
