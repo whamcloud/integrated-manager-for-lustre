@@ -18,7 +18,7 @@
       //validation for start an end time
       $('#datetime_from').datetimepicker(
       {
-        maxDate: new Date(),
+        maxDate: XDate().addSeconds(TIME_OFFSET),
         onSelect: function (selectedDateTime)
         {
           var start = $(this).datetimepicker('getDate');
@@ -27,7 +27,7 @@
       });
       $('#datetime_to').datetimepicker(
       {
-        maxDate: new Date()
+        maxDate: XDate().addSeconds(TIME_OFFSET)
       });
 
       $.datepicker.setDefaults({dateFormat: 'yy-mm-dd'});

@@ -47,7 +47,7 @@ Backbone.sync = function(method, model, options) {
   Api.call(type, url, data, success_callback = options.success);
 };
 
-/* The Api module wraps the global state used for 
+/* The Api module wraps the global state used for
  * accessing the /api/ URL space */
 var Api = function() {
   var errored = false;
@@ -112,7 +112,7 @@ var Api = function() {
 
   function unexpectedError (jqXHR)
   {
-      // On 'unauthorized' bounce them to the root to 
+      // On 'unauthorized' bounce them to the root to
       // give them a chance to login
       if (jqXHR.status == 401) {
         window.location.href = UI_ROOT;
@@ -224,7 +224,7 @@ var Api = function() {
     if (kwargs == undefined) {
       kwargs = {}
     }
-      
+
     /* Copy datatables args into our dict */
     if (data) {
       $.each(data, function(i, param) {
@@ -370,7 +370,7 @@ var Api = function() {
           } else {
             /* Caller gave us a lookup table of success callbacks
                but we got a response code that was successful but
-               unhandled -- consider this a bug or error */ 
+               unhandled -- consider this a bug or error */
             unexpectedError(jqXHR);
           }
         }
@@ -452,7 +452,7 @@ var Api = function() {
     get: get,
     post: post,
     put: put,
-    busy: busy, 
+    busy: busy,
     testMode: testMode,
     'delete': del,
     get_datatables: get_datatables,
@@ -470,35 +470,34 @@ function removeBlankAttributes(obj) {
   return obj;
 }
 
+/* Convert date string into a "short local time" with today/yesterday subbed
+ * in as necessary
+ * args:
+ *  (str) date as a string
+ * output:
+ *  (str) shortLocalTime string
+ */
 function shortLocalTime(str)
 {
-  if (!str) {
-    return "";
-  }
+  if (!str) return "";
 
-  function pad(n) {
-    if (n < 10) {
-      return "0" + n
-    } else {
-      return n
-    }
-  }
-
-  var date = new XDate(str);
-  var today = new Date();
-  var midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  var localTime = pad(date.getHours()) + ":" + pad(date.getMinutes());
+  var date = XDate(str);
+  var midnight = XDate().addSeconds(TIME_OFFSET)
+                        .setHours(0)
+                        .setMinutes(0)
+                        .setSeconds(0)
+                        .setMilliseconds(0);
   var localDate = "";
 
-  if (midnight < date) {
+  if ( midnight < date ) {
     localDate = "Today";
-  } else if ( midnight.setDate(midnight.getDate() - 1) <  date) {
+  }
+  else if ( midnight.clone().addDays(-1) < date ) {
     localDate = "Yesterday";
-  } else {
-    localDate = date.getFullYear() + "/" + pad(date.getMonth()) + "/" + pad(date.getDate());
+  }
+  else {
+    localDate = date.toString("yyyy/MM/dd");
   }
 
-  return  localDate + "&nbsp;" + localTime
+  return  localDate + "&nbsp;" + date.toString("HH:mm");
 }
-
-
