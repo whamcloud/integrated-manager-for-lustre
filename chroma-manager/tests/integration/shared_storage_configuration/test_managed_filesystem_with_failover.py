@@ -78,23 +78,23 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         self.assertTrue(refreshed_mgt_volume and refreshed_mdt_volume and refreshed_ost_volume_1 and refreshed_ost_volume_2)
         self.verify_volume_mounts(
             refreshed_mgt_volume,
-            target_hosts['mgt']['primary'],
-            target_hosts['mgt']['failover']
+            target_hosts['mgt']['primary']['id'],
+            target_hosts['mgt']['failover']['id']
         )
         self.verify_volume_mounts(
             refreshed_mdt_volume,
-            target_hosts['mdt']['primary'],
-            target_hosts['mdt']['failover']
+            target_hosts['mdt']['primary']['id'],
+            target_hosts['mdt']['failover']['id']
         )
         self.verify_volume_mounts(
             refreshed_ost_volume_1,
-            target_hosts['ost1']['primary'],
-            target_hosts['ost1']['failover']
+            target_hosts['ost1']['primary']['id'],
+            target_hosts['ost1']['failover']['id']
         )
         self.verify_volume_mounts(
             refreshed_ost_volume_2,
-            target_hosts['ost1']['primary'],
-            target_hosts['ost2']['failover']
+            target_hosts['ost2']['primary']['id'],
+            target_hosts['ost2']['failover']['id']
         )
 
         # Create new filesystem
