@@ -56,7 +56,10 @@ def update_scan(args = None):
 
     metrics = LocalAudit().metrics()
     lnet_loaded, lnet_up = lnet_status()
-    lnet_nids = get_nids()
+    if lnet_up:
+        lnet_nids = get_nids()
+    else:
+        lnet_nids = None
 
     # Only set resource_locations if we have the management package
     try:

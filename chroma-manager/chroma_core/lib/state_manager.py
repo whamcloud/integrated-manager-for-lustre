@@ -14,7 +14,7 @@ from django.db import transaction
 from django.db.models.query_utils import Q
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import job_log
-from chroma_core.lib.util import dbperf, all_subclasses
+from chroma_core.lib.util import all_subclasses
 from chroma_core.models.conf_param import ApplyConfParams
 from chroma_core.models.jobs import StateChangeJob, Command, StateLock, Job
 from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget
@@ -166,8 +166,6 @@ class DepCache(object):
         cls.instance = None
 
     def _get(self, obj, state):
-        #print "DepCache._get: %s %s" % (obj, state)
-        #with dbperf("depcache_get"):
         if state:
             return obj.get_deps(state)
         else:
@@ -198,7 +196,6 @@ class DepCache(object):
 
 
 def get_deps(obj, state = None):
-    #with dbperf("get_deps_%s_%s" % (obj.__class__, state)):
     return DepCache.getInstance().get(obj, state)
 
 
@@ -502,40 +499,36 @@ class StateManager(object):
         job_log.info("set_state: %s-%s to state %s" % (instance.__class__, instance.id, new_state))
 
         DepCache.getInstance()
-        with dbperf('set_state-prime_lock_cache'):
-            LockCache.getInstance()
-        with dbperf('set_state-prime_object_cache'):
-            ObjectCache.getInstance()
+        LockCache.getInstance()
+        ObjectCache.getInstance()
 
-        with dbperf('set_state-setup'):
-            from chroma_core.models import StatefulObject
-            assert(isinstance(instance, StatefulObject))
-            if new_state not in instance.states:
-                raise RuntimeError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
+        from chroma_core.models import StatefulObject
+        assert(isinstance(instance, StatefulObject))
+        if new_state not in instance.states:
+            raise RuntimeError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
 
-            # Work out the eventual states (and which writelock'ing job to depend on to
-            # ensure that state) from all non-'complete' jobs in the queue
-            item_to_lock = LockCache.get_write_by_locked_item()
-            self.expected_states = dict([(k, v.end_state) for k, v in item_to_lock.items()])
+        # Work out the eventual states (and which writelock'ing job to depend on to
+        # ensure that state) from all non-'complete' jobs in the queue
+        item_to_lock = LockCache.get_write_by_locked_item()
+        self.expected_states = dict([(k, v.end_state) for k, v in item_to_lock.items()])
 
-            if new_state == self.get_expected_state(instance):
-                if instance.state != new_state:
-                    # This is a no-op because of an in-progress Job:
-                    job = LockCache.get_latest_write(instance).job
-                    command.jobs.add(job)
+        if new_state == self.get_expected_state(instance):
+            if instance.state != new_state:
+                # This is a no-op because of an in-progress Job:
+                job = LockCache.get_latest_write(instance).job
+                command.jobs.add(job)
 
-                command.check_completion()
+            command.check_completion()
 
-                # Pick out whichever job made it so, and attach that to the Command
-                return None
+            # Pick out whichever job made it so, and attach that to the Command
+            return None
 
-        with dbperf('set_state-deps'):
-            self.deps = set()
-            self.edges = set()
-            self.emit_transition_deps(Transition(
-                instance,
-                self.get_expected_state(instance),
-                new_state))
+        self.deps = set()
+        self.edges = set()
+        self.emit_transition_deps(Transition(
+            instance,
+            self.get_expected_state(instance),
+            new_state))
 
         # XXX
         # VERY IMPORTANT: this sort is what gives us the following rule:
@@ -543,8 +536,7 @@ class StateManager(object):
         #  the jobs would run (including accounting for dependencies) in the absence
         #  of parallelism.
         # XXX
-        with dbperf('set_state-sort_graph'):
-            self.deps = self._sort_graph(self.deps, self.edges)
+        self.deps = self._sort_graph(self.deps, self.edges)
 
         #job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
         #for e in self.edges:
@@ -552,21 +544,20 @@ class StateManager(object):
 
         # Important: the Job must not land in the database until all
         # its dependencies and locks are in.
-        with dbperf('set_state-job_creation'):
-            with transaction.commit_on_success():
-                for d in self.deps:
-                    job_log.debug("  dep %s" % d)
-                    job = d.to_job()
-                    locks = job.create_locks()
-                    job.locks_json = json.dumps([l.to_dict() for l in locks])
-                    for l in locks:
-                        LockCache.add(l)
-                    job.create_dependencies()
-                    job.save()
-                    job_log.debug("  dep %s -> Job %s" % (d, job.pk))
-                    command.jobs.add(job)
+        with transaction.commit_on_success():
+            for d in self.deps:
+                job_log.debug("  dep %s" % d)
+                job = d.to_job()
+                locks = job.create_locks()
+                job.locks_json = json.dumps([l.to_dict() for l in locks])
+                for l in locks:
+                    LockCache.add(l)
+                job.create_dependencies()
+                job.save()
+                job_log.debug("  dep %s -> Job %s" % (d, job.pk))
+                command.jobs.add(job)
 
-                command.save()
+            command.save()
 
     def emit_transition_deps(self, transition, transition_stack = {}):
         if transition in self.deps:

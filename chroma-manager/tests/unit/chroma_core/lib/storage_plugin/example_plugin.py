@@ -1,6 +1,7 @@
 from chroma_core.lib.storage_plugin.api import attributes, statistics
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
 from chroma_core.lib.storage_plugin.api import resources
+from chroma_core.lib.storage_plugin.api import relations
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
 
 
@@ -43,12 +44,17 @@ class RaidPool(resources.StoragePool):
 class Lun(resources.LogicalDrive):
     class Meta:
         identifier = ScopedId('local_id')
+        relations = [
+                relations.Provide(
+                        provide_to = resources.DeviceNode,
+                        attributes = ['serial_83']
+                    )
+                ]
 
     local_id = attributes.Integer()
-    capacity = attributes.Bytes()
     name = attributes.String()
 
-    scsi_id = attributes.String(provide = 'scsi_serial')
+    serial_83 = attributes.String()
 
     def get_label(self):
         return self.name

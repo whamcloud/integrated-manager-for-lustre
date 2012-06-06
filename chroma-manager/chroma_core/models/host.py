@@ -145,7 +145,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         roles = set()
         for mountable in self.managedtargetmount_set.all():
             target = mountable.target.downcast()
-            roles.add(target.role())
+            roles.add("%sS" % target.role()[:-1])
 
             #if isinstance(mountable, Client):
             #    roles.add("Client")
@@ -245,7 +245,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
 
 class Volume(models.Model):
-    storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
+    storage_resource = models.ForeignKey(
+        'StorageResourceRecord', blank = True, null = True, on_delete = models.PROTECT)
 
     # Size may be null for VolumeNodes created when setting up
     # from a JSON file which just tells us a path.

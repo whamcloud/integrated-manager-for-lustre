@@ -181,23 +181,22 @@ class ServiceConfig:
 
         self.try_shell(["rabbitmqctl", "set_permissions", "-p", RABBITMQ_VHOST, RABBITMQ_USER, ".*", ".*", ".*"])
 
+    CONTROLLED_SERVICES = ['chroma-worker', 'chroma-storage', 'httpd']
+
     def _enable_services(self):
         log.info("Enabling Chroma daemons")
-        self.try_shell(['chkconfig', '--add', 'chroma-worker'])
-        self.try_shell(['chkconfig', '--add', 'chroma-storage'])
-        self.try_shell(['chkconfig', '--add', 'chroma-host-discover'])
+        for service in self.CONTROLLED_SERVICES:
+            self.try_shell(['chkconfig', '--add', service])
 
     def _start_services(self):
         log.info("Starting Chroma daemons")
-        self.try_shell(['service', 'chroma-worker', 'start'])
-        self.try_shell(['service', 'chroma-storage', 'start'])
-        self.try_shell(['service', 'chroma-host-discover', 'start'])
+        for service in self.CONTROLLED_SERVICES:
+            self.try_shell(['service', service, 'start'])
 
     def _stop_services(self):
         log.info("Stopping Chroma daemons")
-        self.try_shell(['service', 'chroma-worker', 'stop'])
-        self.try_shell(['service', 'chroma-storage', 'stop'])
-        self.try_shell(['service', 'chroma-host-discover', 'stop'])
+        for service in self.CONTROLLED_SERVICES:
+            self.try_shell(['service', service, 'stop'])
 
     def _setup_mysql(self, database):
         log.info("Setting up MySQL daemon...")
@@ -224,9 +223,7 @@ class ServiceConfig:
         return answer
 
     def get_pass(self, msg = "", empty_allowed = True, confirm_msg = ""):
-        match = False
-
-        while not match:
+        while True:
             pass1 = self.get_input(msg = msg, empty_allowed = empty_allowed,
                                    password = True)
 
@@ -237,9 +234,7 @@ class ServiceConfig:
             if pass1 != pass2:
                 print "Passwords do not match!"
             else:
-                match = True
-
-        return pass1
+                return pass1
 
     def _user_account_prompt(self):
         log.info("Chroma will now create an initial administrative user using the " +
@@ -340,7 +335,7 @@ class ServiceConfig:
         elif not self._users_exist():
             errors.append("No user accounts exist")
 
-        interesting_services = ['chroma-worker', 'chroma-storage', 'chroma-host-discover', 'mysqld', 'rsyslog', 'rabbitmq-server']
+        interesting_services = self.CONTROLLED_SERVICES + ['mysqld', 'rsyslog', 'rabbitmq-server']
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
             try:

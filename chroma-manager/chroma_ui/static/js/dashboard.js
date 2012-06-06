@@ -153,10 +153,10 @@ var Dashboard = (function() {
   {
     var view_selection_markup = "<select id='breadcrumb_type'>";
     if(dashboard_type === "filesystem") {
-      view_selection_markup += "<option value='filesystem' selected>File systems</option>";
+      view_selection_markup += "<option value='filesystem' selected>File Systems</option>";
     }
     else {
-      view_selection_markup += "<option value='filesystem'>File systems</option>";
+      view_selection_markup += "<option value='filesystem'>File Systems</option>";
     }
 
     if(dashboard_type === "server") {
@@ -462,7 +462,7 @@ var Dashboard = (function() {
 
     var filesystem_rows = "";
     _.each(ApiCache.list('filesystem'), function(filesystem) {
-      var t = _.template("<tr><td class='icon_columns'><%= LiveObject.alertIcon(filesystem) %></td><td><%= filesystem.name %></td><td align='right'><%= formatBytes(filesystem.bytes_total) %></td><td align='right'><%= formatBytes(filesystem.bytes_free) %></td></tr>");
+      var t = _.template($('#global_filesystem_table_row_template').html());
       filesystem_rows += t({filesystem: filesystem});
     });
     $('#global_filesystem_table').find('tbody').html(filesystem_rows);
@@ -529,7 +529,7 @@ var Dashboard = (function() {
 
   function init_charts(chart_group) {
     /* helper callbacks */
-    var api_params_add_filessytem = function(api_params,chart) {
+    var api_params_add_filesystem = function(api_params,chart) {
       api_params.filesystem_id = dashboard_filesystem.id;
       return api_params;
     };
@@ -538,11 +538,9 @@ var Dashboard = (function() {
       chart_manager.destroy();
     }
 
-    chart_manager = ChartManager({chart_group: 'dashboard', default_time_boundary: time_period * 1000,
-                                  interval_seconds: pollingInterval()});
-    chart_manager.add_chart('db_line_cpu_mem', 'dashboard', {
+    var cpu_chart_template = {
       url: 'host/metric/',
-      api_params: { reduce_fn: 'average' },
+      api_params: { reduce_fn: 'average', role: 'OSS'},
       metrics: ["cpu_total", "cpu_user", "cpu_system", "cpu_iowait", "mem_MemFree", "mem_MemTotal"],
       series_callbacks: [
         function(timestamp, data, index, chart) {
@@ -558,77 +556,79 @@ var Dashboard = (function() {
       ],
       chart_config: {
         chart: {
-          renderTo: 'global_cpu_mem'
+          renderTo: 'filesystem_oss_cpu_mem'
         },
-        title: { text: 'CPU/RAM Usage'},
+        title: { text: 'Object store servers'},
         xAxis: { type:'datetime' },
-        legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0},
+        legend: {
+          enabled: true,
+          layout: 'horizontal',
+          align: 'center',
+          verticalAlign: 'bottom', borderWidth: 0
+        },
         yAxis: [{
-          max:100, min:0, startOnTick:false,  tickInterval: 20,
           title: null,
-          labels: {formatter: percentage_formatter}
+          labels: {formatter: percentage_formatter},
+          max:100,
+          min:0,
+          startOnTick:false,
+          tickInterval: 20
         }],
         series: [
           { type: 'line', data: [], name: 'cpu' },
           { type: 'line', data: [], name: 'ram' }
         ]
       }
-    });
+    };
 
-    chart_manager.add_chart('iops', 'dashboard', {
-      url: 'target/metric/',
-      api_params: {kind: 'OST'},
-      metrics: ["stats_write_bytes", "stats_read_bytes"],
-      data_callback: function(chart, data) {
-        // Generate a number of series objects and return them
-        var result = {};
-        _.each(data, function(series_data, target_id) {
-          var update_data = [];
-          _.each(series_data, function(datapoint) {
-              var timestamp = new Date(datapoint.ts).getTime();
-              var read_bytes = _.isUndefined(datapoint.data.stats_read_bytes)? 0 : datapoint.data.stats_read_bytes;
-              var write_bytes =  _.isUndefined(datapoint.data.stats_write_bytes)? 0 : datapoint.data.stats_write_bytes;
-              update_data.push([timestamp, read_bytes - write_bytes]);
-            });
+    chart_manager = ChartManager({chart_group: 'dashboard', default_time_boundary: time_period * 1000,
+                                  interval_seconds: pollingInterval()});
 
-          var target = ApiCache.get('target', target_id);
-          var label;
-          if (target) {
-            label = target.attributes.label;
-            result[target_id] = {
-              id: target_id,
-              label: label,
-              data: update_data
-            };
-          } else {
-            // Exclude the target from the result this time, next time around
-            // the ApiCache will have caught up and we'll give some data
-            // with a proper axis name
+    chart_manager.add_chart('global_mds_cpu_mem', 'dashboard',
+      $.extend(true, {}, cpu_chart_template, {
+        api_params: {role: "MDS"},
+        chart_config: {
+          chart: {
+            renderTo: 'global_mds_cpu_mem'
+          },
+          title: {
+            text: "Metadata servers"
           }
+        }
+      }));
 
-        });
-
-        return result;
-      },
-      series_template: {type: 'areaspline'},
-      chart_config: {
-        chart: {
-          renderTo: 'global_ost_bandwidth'
-        },
-        title: { text: 'OST Read/Write balance'},
-        xAxis: {type:'datetime'},
-        yAxis: [{
-          title: null,
-          labels: {formatter: bytes_rate_formatter}
-        }],
-        plotOptions: {
-          areaspline: {
-            stacking: 'normal'
+    chart_manager.add_chart('global_oss_cpu_mem', 'dashboard',
+      $.extend(true, {}, cpu_chart_template, {
+        api_params: {role: "OSS"},
+        chart_config: {
+          chart: {
+            renderTo: 'global_oss_cpu_mem'
+          },
+          title: {
+            text: "Object storage servers"
           }
+        }
+      }));
+
+    chart_manager.add_chart('client_count', 'dashboard', {
+      url:'target/metric/',
+      api_params:{ reduce_fn:'sum', kind:'MDT'},
+      metrics:["client_count"],
+      chart_config:{
+        chart:{
+          renderTo:'global_client_count'
         },
-        legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0}
+        title:{ text:'Clients Connected'},
+        xAxis:{ type:'datetime' },
+        yAxis:[
+          {title:null, labels:{formatter:whole_numbers_only_formatter}}
+        ],
+        series:[
+          { type:'line', data:[], name:'Clients Connected' }
+        ]
       }
     });
+
 
     chart_manager.add_chart('mdops', 'dashboard', {
       url: 'target/metric/',
@@ -652,8 +652,16 @@ var Dashboard = (function() {
           '#DB843D',
           '#92A8CD',
           '#A47D7C',
-          '#B5CA92'
+          '#B5CA92',
+          '#f87d45',
+          '#f8457d',
+          '#7d45f8'
         ],
+        plotOptions: {
+          area: {
+            lineWidth: 0.0
+          }
+        },
         series: [
           {name: 'close', type: 'area'},
           {name: 'getattr', type: 'area'},
@@ -778,24 +786,6 @@ var Dashboard = (function() {
           '#C76560',
           '#A6C56D',
           '#C76560'
-        ]
-      }
-    });
-
-    chart_manager.add_chart('client_count', 'dashboard', {
-      url: 'target/metric/',
-      api_params: { reduce_fn: 'sum', kind: 'MDT'},
-      metrics: ["client_count"],
-      chart_config: {
-        chart: {
-          renderTo: 'global_client_count'
-        },
-        title: { text: 'Clients Connected'},
-        xAxis: { type:'datetime' },
-        yAxis: [
-          {title: null, labels: {formatter: whole_numbers_only_formatter}}],
-        series: [
-          { type: 'line', data: [], name: 'Clients Connected' }
         ]
       }
     });
@@ -1037,7 +1027,25 @@ var Dashboard = (function() {
         title: { text: 'Metadata Operations'},
         xAxis: { type:'datetime' },
         yAxis: [{title: { text: 'ops/s' }}],
-        colors: [ '#63B7CF', '#9277AF', '#A6C56D', '#C76560', '#6087B9', '#DB843D', '#92A8CD', '#A47D7C',  '#B5CA92' ],
+        colors: [
+          '#63B7CF',
+          '#9277AF',
+          '#A6C56D',
+          '#C76560',
+          '#6087B9',
+          '#DB843D',
+          '#92A8CD',
+          '#A47D7C',
+          '#B5CA92',
+          '#f87d45',
+          '#f8457d',
+          '#7d45f8'
+        ],
+        plotOptions: {
+          area: {
+            lineWidth: 0.0
+          }
+        },
         series: _.map(
           ['close','getattr','getxattr','link','mkdir','mknod','open','rename','rmdir','setattr','statfs','unlink'],
           function(metric, i) { return { name: metric, type: 'area' }; }
@@ -1071,7 +1079,7 @@ var Dashboard = (function() {
           plotShadow: false
         },
         colors: [ '#C76560' ],
-        title:{ text: 'Object Usage'},
+        title:{ text: 'File Usage'},
         tooltip: {valueSuffix: '%'},
         zoomType: 'xy',
         xAxis: { type:'datetime' },
@@ -1092,7 +1100,7 @@ var Dashboard = (function() {
     chart_manager.add_chart('freespace','filesystem', {
       url: 'target/metric/',
       api_params: {reduce_fn: 'sum', kind: 'OST', group_by: 'filesystem', latest: true },
-      api_params_callback: api_params_add_filessytem,
+      api_params_callback: api_params_add_filesystem,
       metrics: ["kbytestotal", "kbytesfree", "filestotal", "filesfree"],
       snapshot: true,
       snapshot_callback: function(chart, data) {
@@ -1163,7 +1171,7 @@ var Dashboard = (function() {
     chart_manager.add_chart('client_count','filesystem', {
       url: 'target/metric/',
       api_params: { reduce_fn: 'sum', kind: 'MDT'},
-      api_params_callback: api_params_add_filessytem,
+      api_params_callback: api_params_add_filesystem,
       metrics: ["client_count"],
       chart_config: {
         chart: {
@@ -1182,48 +1190,39 @@ var Dashboard = (function() {
         ]
       }
     });
-    chart_manager.add_chart('cpumem','filesystem', {
-      url: 'host/metric/',
-      api_params: { reduce_fn: 'average' },
-      api_params_callback: api_params_add_filessytem,
-      metrics: ["cpu_total", "cpu_user", "cpu_system", "cpu_iowait", "mem_MemFree", "mem_MemTotal"],
-      series_callbacks: [
-        function(timestamp, data, index, chart) {
-          var sum_cpu = data.cpu_user + data.cpu_system + data.cpu_iowait;
-          var pct_cpu = (100 * sum_cpu) / data.cpu_total;
-          chart.series_data[index].push( [ timestamp, pct_cpu] );
-        },
-        function( timestamp, data, index, chart ) {
-          var used_mem = data.mem_MemTotal - data.mem_MemFree;
-          var pct_mem  = 100 * ( used_mem / data.mem_MemTotal );
-          chart.series_data[index].push( [ timestamp, pct_mem ]);
+
+    chart_manager.add_chart('filesystem_oss_cpu_mem','filesystem',
+      $.extend(true, {}, cpu_chart_template, {
+        api_params: {role: "OSS"},
+        api_params_callback: api_params_add_filesystem,
+        chart_config: {
+          chart: {
+            renderTo: 'filesystem_oss_cpu_mem'
+          },
+          title: {
+            text: "Object storage servers"
+          }
         }
-      ],
-      chart_config: {
-        chart: {
-          renderTo: 'filesystem_cpu_mem'
-        },
-        title: { text: 'CPU/RAM Usage'},
-        xAxis: { type:'datetime' },
-        legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0},
-        yAxis: [{
-          title: null,
-          labels: {formatter: percentage_formatter},
-          max:100,
-          min:0,
-          startOnTick:false,
-          tickInterval: 20
-        }],
-        series: [
-          { type: 'line', data: [], name: 'cpu' },
-          { type: 'line', data: [], name: 'ram' }
-        ]
-      }
-    });
+      }));
+
+    chart_manager.add_chart('filesystem_mds_cpu_mem','filesystem',
+      $.extend(true, {}, cpu_chart_template, {
+        api_params: {role: "MDS"},
+        api_params_callback: api_params_add_filesystem,
+        chart_config: {
+          chart: {
+            renderTo: 'filesystem_mds_cpu_mem'
+          },
+          title: {
+            text: "Metadata server"
+          }
+        }
+      }));
+
     chart_manager.add_chart('readwrite','filesystem', {
       url: 'target/metric/',
       api_params: { reduce_fn: 'sum', kind: 'OST'},
-      api_params_callback: api_params_add_filessytem,
+      api_params_callback: api_params_add_filesystem,
       metrics: ["stats_read_bytes", "stats_write_bytes"],
       series_callbacks: [
         function(timestamp, data, index, chart) {
@@ -1252,7 +1251,7 @@ var Dashboard = (function() {
     chart_manager.add_chart('mdops','filesystem', {
       url: 'target/metric/',
       api_params: { reduce_fn: 'sum', kind: 'MDT'},
-      api_params_callback: api_params_add_filessytem,
+      api_params_callback: api_params_add_filesystem,
       metrics: ["stats_close", "stats_getattr", "stats_getxattr", "stats_link",
         "stats_mkdir", "stats_mknod", "stats_open", "stats_rename",
         "stats_rmdir", "stats_setattr", "stats_statfs", "stats_unlink"],
@@ -1263,7 +1262,25 @@ var Dashboard = (function() {
         title: { text: 'Metadata op/s'},
         xAxis: { type:'datetime' },
         yAxis: [{title: { text: 'MD op/s' }}],
-        colors: [ '#63B7CF', '#9277AF', '#A6C56D', '#C76560', '#6087B9', '#DB843D', '#92A8CD', '#A47D7C', '#B5CA92' ],
+        colors: [
+          '#63B7CF',
+          '#9277AF',
+          '#A6C56D',
+          '#C76560',
+          '#6087B9',
+          '#DB843D',
+          '#92A8CD',
+          '#A47D7C',
+          '#B5CA92',
+          '#f87d45',
+          '#f8457d',
+          '#7d45f8'
+        ],
+        plotOptions: {
+          area: {
+            lineWidth: 0.0
+          }
+        },
         series: [
           {name: 'close', type: 'area'},
           {name: 'getattr', type: 'area'},
@@ -1278,60 +1295,6 @@ var Dashboard = (function() {
           {name: 'statfs', type: 'area'},
           {name: 'unlink', type: 'area'}
         ]
-      }
-    });
-
-    chart_manager.add_chart('iops', 'filesystem', {
-      url: 'target/metric/',
-      api_params: {kind: 'OST'},
-      api_params_callback: api_params_add_filessytem,
-      metrics: ["stats_write_bytes","stats_read_bytes"],
-      data_callback: function(chart, data) {
-        // Generate a number of series objects and return them
-        var result = {};
-        _.each(data, function(series_data, target_id) {
-
-          var update_data = [];
-          _.each(series_data, function(datapoint) {
-              var timestamp = new Date(datapoint.ts).getTime();
-              var read_bytes = _.isUndefined(datapoint.data.stats_read_bytes)? 0 : datapoint.data.stats_read_bytes;
-              var write_bytes =  _.isUndefined(datapoint.data.stats_write_bytes)? 0 : datapoint.data.stats_write_bytes;
-              update_data.push([timestamp, read_bytes - write_bytes]);
-            });
-
-          var target = ApiCache.get('target', target_id);
-          var label;
-          if (target) {
-            label = target.attributes.label;
-          } else {
-            label = target_id;
-          }
-          result[target_id] = {
-            id: target_id,
-            label: label,
-            data: update_data
-          };
-        });
-
-        return result;
-      },
-      series_template: {type: 'areaspline'},
-      chart_config: {
-        chart: {
-          renderTo: 'filesystem_ost_read_write'
-        },
-        title: { text: 'OST Read/Write balance'},
-        xAxis: { type:'datetime' },
-        yAxis: [{
-          title: null,
-          labels: {formatter: bytes_rate_formatter}
-        }],
-        plotOptions: {
-          areaspline: {
-            stacking: 'normal'
-          }
-        },
-        legend: { enabled: true, layout: 'vertical', align: 'right', verticalAlign: 'middle', x: 0, y: 10, borderWidth: 0}
       }
     });
 

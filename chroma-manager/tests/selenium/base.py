@@ -51,6 +51,19 @@ def wait_for_any_element(driver, selectors, timeout):
     raise RuntimeError('Timeout while waiting for an array of elements to get visible')
 
 
+def wait_for_screen_unblock(driver, timeout):
+    WebDriverWait(driver, timeout).until(lambda driver: driver.find_element_by_css_selector("div.blockUI.blockOverlay").is_displayed())
+
+    try:
+        block_element = driver.find_element_by_css_selector("div.blockUI.blockOverlay")
+        try:
+            WebDriverWait(driver, timeout).until(lambda driver: not block_element.is_displayed())
+        except StaleElementReferenceException:
+            return
+    except NoSuchElementException:
+        return
+
+
 def wait_for_transition(driver, timeout):
     # Wait for transition (i.e busy/locked) icon to get displayed
     busy_icon_check = False

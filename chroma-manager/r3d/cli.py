@@ -11,17 +11,11 @@ from datetime import datetime as dt, timedelta as td
 from dateutil.tz import tzlocal, tzutc, tzfile
 import argparse
 from argparse import ArgumentParser, ArgumentError
-from r3d.prettytable import PrettyTable
+from prettytable import PrettyTable
 
-import os
-import sys
-# NB: This assumes that the r3d/ app is in a subdir of the site, which
-# is usually a reasonable assumption.
-site_dir = os.path.dirname(os.path.dirname(__file__))
-sys.path.insert(0, site_dir)
+from chroma_core.lib.chroma_settings import chroma_settings
 from django.core.management import setup_environ
-import settings
-setup_environ(settings)
+setup_environ(chroma_settings())
 
 from django.db import transaction
 from django.core.exceptions import FieldError, ObjectDoesNotExist
@@ -138,6 +132,7 @@ def find_local_timezone():
     if all else fails, though.
     """
     def _tz_file(path):
+        import os
         if os.path.exists(path):
             try:
                 return tzfile(path)

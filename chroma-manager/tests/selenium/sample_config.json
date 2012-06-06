@@ -9,101 +9,19 @@
             "headless": false
         },
     "hosts": [
-        {"address": "example01"}
-    ],
-    "mgt": [
         {
-            "mounts": [
-                {
-                "host": "example01",
-                "device_node": "/dev/sdb"
-                }
-            ]
-        }
-    ],
-    "filesystems": [
-        {
-         "name": "testfs",
-         "conf_params": {
-         	"llite.max_cached_mb": "1500",
-         	"llite.max_read_ahead_mb": "1"
-         },
-         "mgt": "example01",
-         "mdt": {
-             "mounts": [
-                    {
-                        "host": "example01",
-                        "device_node": "/dev/sdc",
-                        "primary": true
-                    }
-             ]
+        	"address": "example01",
+        	"device_node" : [
+        		"/dev/sda",
+        		"/dev/sdb"
+        	]
         },
-        "osts": [
-            {
-              "mounts": [
-                {
-                    "host": "example01",
-                    "device_node": "/dev/sdd",
-                    "primary": true
-                }
-              ]
-            }
-          ]
-        }
-    ],
-    "edit_filesystem": [
         {
-          "conf_params": {
-          	"llite.max_read_ahead_whole_mb": "5",
-          	"llite.max_read_ahead_mb": "10"
-          },
-          "mdt": {
-	          "conf_params": {
-                "lov.stripecount": "2"
-              }
-          },
-          "osts": [
-            {
-              "mounts": [
-                {
-                  "host": "example01",
-                  "device_node": "/dev/sde",
-                  "conf_params": {
-                    "osc.max_dirty_mb": "4"
-                  }
-                }
-              ]
-            }
-          ]
+        	"address": "example02",
+        	"device_node" : [
+        		"/dev/sda",
+        		"/dev/sdb"
+        	]
         }
-     ],
-     "user":[
-         {
-         	"user_group": "superusers",
-         	"username": "superuser",
-         	"first_name": "super",
-         	"last_name": "user",
-         	"email": "super@super.com",
-         	"password": "super123",
-         	"confirm_password": "super123",
-         	"new_password": "super321",
-         	"new_confirm_password": "super321"
-         },
-         {
-         	"user_group": "filesystem_users",
-         	"username": "fsuser",
-         	"password": "fsuser123",
-         	"confirm_password": "fsuser123",
-         	"new_password": "fsuser321",
-         	"new_confirm_password": "fsuser321"
-         },
-         {
-         	"user_group": "filesystem_administrators",
-         	"username": "fsadmin",
-         	"password": "fsadmin123",
-         	"confirm_password": "fsadmin123",
-         	"new_password": "fsadmin321",
-         	"new_confirm_password": "fsadmin321"
-         }
-     ]
+    ]
 }

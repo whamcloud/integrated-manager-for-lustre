@@ -6,9 +6,9 @@ dist:
 
 .PHONY: api
 api: dist/
-	pushd rest-api ;\
-	rm -rf _build ;\
-	make html ;\
+	pushd rest-api &&\
+	rm -rf _build &&\
+	make html &&\
 	popd
 	rm -rf dist/chroma-doc-rest-api
 	cp -r rest-api/_build/html dist/chroma-doc-rest-api
@@ -17,9 +17,9 @@ api: dist/
 
 .PHONY: storage_plugin
 storage_plugin: dist/
-	pushd storage-plugin-api ;\
-	rm -rf _build ;\
-	make html ;\
+	pushd storage-plugin-api &&\
+	rm -rf _build &&\
+	make html &&\
 	popd
 	rm -rf dist/storage-plugin-api
 	cp -r storage-plugin-api/_build/html dist/chroma-doc-storage-plugin-api

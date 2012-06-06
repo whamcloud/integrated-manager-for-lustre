@@ -19,6 +19,7 @@ import signal
 import threading
 import time
 
+from chroma_core.tasks import close_logs
 import logging
 daemon_log = logging.getLogger('daemon')
 daemon_log.setLevel(logging.INFO)
@@ -93,6 +94,16 @@ if __name__ == '__main__':
     except IndexError:
         foreground = False
 
+    from chroma_core.lib.service_config import ServiceConfig
+    if not ServiceConfig().configured():
+        sys.stderr.write("Chroma is not configured, please run chroma-config setup first\n")
+        sys.exit(-1)
+    else:
+        # Close the DB connection so that we get a fresh one
+        # for our daemonized process
+        from django.db import connection
+        connection.close()
+
     if not foreground:
         PID_FILE = "/var/run/chroma-storage.pid"
         from daemon import DaemonContext
@@ -112,6 +123,7 @@ if __name__ == '__main__':
                 raise RuntimeError("Daemon is already running (PID %s)" % pid)
 
         context = DaemonContext(pidfile = PIDLockFile(PID_FILE))
+        close_logs(None)
         context.open()
         handler = logging.FileHandler("/var/log/chroma/chroma-storage.log")
         handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))

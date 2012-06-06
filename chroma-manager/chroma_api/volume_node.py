@@ -31,6 +31,7 @@ class VolumeNodeResource(ModelResource):
     host_label = fields.CharField(help_text = "label attribute of the \
             host that this device node is on, as a convenience \
             for presentation")
+    host = fields.ToOneField('chroma_api.host.HostResource', 'host')
 
     def dehydrate_host_id(self, bundle):
         return bundle.obj.host.id
@@ -46,3 +47,4 @@ class VolumeNodeResource(ModelResource):
         excludes = ['not_deleted']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get']
+        filtering = {'host': ['exact'], 'path': ['exact']}

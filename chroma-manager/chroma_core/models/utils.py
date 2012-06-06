@@ -14,6 +14,7 @@ from polymorphic.models import DowncastManager
 from polymorphic.models import PolymorphicMetaclass
 
 from south.modelsinspector import add_introspection_rules
+
 add_introspection_rules([], ["^chroma_core\.models\.utils\.WorkaroundDateTimeField"])
 
 

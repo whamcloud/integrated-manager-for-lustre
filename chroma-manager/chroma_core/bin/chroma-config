@@ -29,30 +29,45 @@ if __name__ == '__main__':
     try:
         command = sys.argv[1]
     except IndexError:
-        log.error("Usage: %s <setup|validate|start|stop>" % sys.argv[0])
+        log.error("Usage: %s <setup|validate|start|restart|stop>" % sys.argv[0])
         sys.exit(-1)
 
     def print_errors(errors):
-        if len(errors) == 0:
-            log.info("OK.")
-        else:
+        if errors:
             log.error("Errors found:")
             for error in errors:
                 log.error("  * %s" % error)
+        else:
+            log.info("OK.")
 
     if command == 'setup':
         if len(sys.argv) == 2:
-            print_errors(cc.setup())
+            args = []
         elif len(sys.argv) == 4:
-            print_errors(cc.setup(sys.argv[2], sys.argv[3]))
+            args = [sys.argv[2], sys.argv[3]]
         else:
             log.error("Usage: setup [username] [password]")
             sys.exit(-1)
+
+        errors = cc.setup(*args)
+        print_errors(errors)
+        if errors:
+            sys.exit(-1)
+        else:
+            sys.exit(0)
     elif command == 'validate':
-        print_errors(cc.validate())
+        errors = cc.validate()
+        print_errors(errors)
+        if errors:
+            sys.exit(1)
+        else:
+            sys.exit(0)
     elif command == 'stop':
         cc.stop()
     elif command == 'start':
+        cc.start()
+    elif command == 'restart':
+        cc.stop()
         cc.start()
     else:
         log.error("Invalid command '%s'" % command)

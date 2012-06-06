@@ -4,11 +4,13 @@
 # ========================================================
 
 
+import logging
 import subprocess
 from datetime import datetime, timedelta
 
 from celery.beat import Scheduler
 from celery.task import task, periodic_task, Task
+from celery.worker.control import Panel
 from django.db import transaction
 
 from chroma_core.lib.state_manager import StateManager
@@ -18,6 +20,22 @@ from chroma_core.lib.job import job_log
 from chroma_core.lib.lustre_audit import audit_log
 
 import settings
+
+
+@Panel.register
+def close_logs(panel):
+    """Celery remote control command to close log files to avoid
+    keeping stale handles after rotation.
+
+    This is used in addition to the behaviour of WatchedFileHandler, to ensure files
+    are closed even by processes that never write to them (and therefore would
+    otherwise never close them)  See HYD-960.
+    """
+    for logger_name, logger in logging.root.manager.loggerDict.items():
+        if isinstance(logger, logging.Logger):
+            for handler in logger.handlers:
+                if isinstance(handler, logging.handlers.WatchedFileHandler):
+                    handler.close()
 
 
 class EphemeralScheduler(Scheduler):

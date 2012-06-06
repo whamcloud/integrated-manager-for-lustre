@@ -273,8 +273,9 @@ var ChartManager = function(options) {
           }
           var container = $('#' + chart_config.chart.renderTo);
           if (container.prev('div.magni').length == 0) {
-            container.before("<div class='magni'><button class='magbutton'></button></div>");
-            container.prev('div.magni').find('button.magbutton').button({icons: {primary: 'ui-icon-zoomin'}});
+            container.before("<div class='magni'><button class='magbutton'><img src='" + STATIC_URL + "/images/fugue/magnifier-zoom-in.png'/></button></div>");
+            container.prev('div.magni').find('button.magbutton').button();
+
             container.prev('div.magni').find('button.magbutton').click(function(ev) {
               var dialog = $("<div><div class='zoomed_chart'></div></div>");
               dialog.dialog({width: window.innerWidth - 200, height: 450, modal: true});

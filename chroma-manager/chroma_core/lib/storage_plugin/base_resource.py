@@ -325,11 +325,11 @@ class BaseStorageResource(object):
         return self._parents
 
 
-class ScannableResource(object):
+class BaseScannableResource(object):
     """Used for marking which BaseStorageResource subclasses are for scanning (like couplets, hosts)"""
     pass
 
 
 class HostsideResource(object):
-    """Resources which are the agent-side equivalent of a ScannableResource"""
+    """Resources which are the agent-side equivalent of a BaseScannableResource"""
     pass

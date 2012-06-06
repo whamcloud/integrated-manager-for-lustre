@@ -121,7 +121,7 @@ class StatefulModelResource(CustomModelResource):
     label = fields.CharField()
 
     class Meta:
-        readonly = ['state', 'content_type_id', 'available_transitions', 'available_jobs', 'label']
+        readonly = ['id', 'immutable_state', 'state', 'content_type_id', 'available_transitions', 'available_jobs', 'label', 'state_modified_at']
 
     def dehydrate_available_transitions(self, bundle):
         return StateManagerClient.available_transitions(bundle.obj)

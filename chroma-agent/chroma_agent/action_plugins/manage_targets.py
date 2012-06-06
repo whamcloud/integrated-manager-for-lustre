@@ -278,14 +278,33 @@ def format_target(args):
             }
 
 
+def _mkdir_p_concurrent(path):
+    # To cope with concurrent calls with a common sub-path, we have to do
+    # this in two steps:
+    #  1. Create the common portion (e.g. /mnt/whamfs/)
+    #  2. Create the unique portion (e.g. /mnt/whamfs/ost0/)
+    # If we tried to do a single os.makedirs, we could get an EEXIST when
+    # colliding on the creation of the common portion and therefore miss
+    # creating the unique portion.
+
+    path = path.rstrip("/")
+
+    def mkdir_silent(path):
+        try:
+            os.makedirs(path)
+        except OSError, e:
+            if e.errno == errno.EEXIST:
+                pass
+            else:
+                raise e
+
+    parent = os.path.split(path)[0]
+    mkdir_silent(parent)
+    mkdir_silent(path)
+
+
 def register_target(args):
-    try:
-        os.makedirs(args.mountpoint)
-    except OSError, e:
-        if e.errno == errno.EEXIST:
-            pass
-        else:
-            raise e
+    _mkdir_p_concurrent(args.mountpoint)
 
     mount_args = ["mount", "-t", "lustre", args.device, args.mountpoint]
     rc, stdout, stderr = shell.run(mount_args)
@@ -396,13 +415,7 @@ def configure_ha(args):
                                   node,
                                   args.ha_label, score))
 
-    try:
-        os.makedirs(args.mountpoint)
-    except OSError, e:
-        if e.errno == errno.EEXIST:
-            pass
-        else:
-            raise e
+    _mkdir_p_concurrent(args.mountpoint)
 
     AgentStore.set_target_info(args.uuid, {"bdev": args.device, "mntpt": args.mountpoint})
 

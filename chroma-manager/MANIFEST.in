@@ -11,6 +11,5 @@ include tests/integration/run_tests
 include tests/integration/*/*.json
 graft polymorphic
 graft chroma_ui/static
-graft r3d/tests/sample_data
 global-exclude .*.swp
 global-exclude local_settings.py*

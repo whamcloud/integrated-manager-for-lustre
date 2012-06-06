@@ -8,7 +8,7 @@
 access to StoragePlugins and their StorageResources"""
 import sys
 from chroma_core.lib.storage_plugin.api import relations
-from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, ScannableResource, ResourceProgrammingError
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, BaseScannableResource, ResourceProgrammingError
 
 from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
@@ -66,7 +66,7 @@ class LoadedPlugin(object):
                     storage_plugin = self.plugin_record,
                     class_name = cls.__name__)
             if created:
-                vrc.user_creatable = issubclass(cls, ScannableResource)
+                vrc.user_creatable = issubclass(cls, BaseScannableResource)
                 vrc.save()
             for name, stat_obj in cls._meta.storage_statistics.items():
                 class_stat, created = StorageResourceClassStatistic.objects.get_or_create(
@@ -76,7 +76,7 @@ class LoadedPlugin(object):
             plugin_manager.resource_class_id_to_class[vrc.id] = cls
             plugin_manager.resource_class_class_to_id[cls] = vrc.id
             self.resource_classes[cls.__name__] = LoadedResourceClass(cls, vrc.id)
-            if issubclass(cls, ScannableResource):
+            if issubclass(cls, BaseScannableResource):
                 self.scannable_resource_classes.append(cls.__name__)
 
 
@@ -156,7 +156,7 @@ class StoragePluginManager(object):
     def get_resource_classes(self, scannable_only = False, show_internal = False):
         """Return a list of StorageResourceClass records
 
-           :param scannable_only: Only report ScannableResource subclasses
+           :param scannable_only: Only report BaseScannableResource subclasses
            :param show_internal: Include plugins with the internal=True attribute (excluded by default)
         """
         class_records = []

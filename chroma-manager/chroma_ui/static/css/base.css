@@ -159,14 +159,6 @@ pre
 	color:#888;
 }
 
-.leftPanelTD{
-border-top-left-radius:2em;
-border-top-right-radius:2em;
-border-bottom-right-radius:2em;
-border-bottom-left-radius:2em;
-border:1px solid #333333;
-}
-
 .fontStyle {font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 11px; /*font-weight: bold;*/ }
 .open-close {
 cursor:pointer;
@@ -188,9 +180,7 @@ cursor:pointer;
   position: absolute;
   z-index: 10;
   }
-/*.maincontainer{
-	min-width:1270px;
-}*/
+
 .closebutton{
 
 	vertical-align:middle;
@@ -275,11 +265,10 @@ cursor:pointer;
     height: 24px;
 }
 
-.magbutton.ui-button .ui-icon{
-    margin-left: -3px;
+.magbutton img {
+    margin-left: -11px;
+    margin-top: -1px;
 }
-
-
 
 .timeint{
 	float:right;
@@ -392,16 +381,7 @@ button#sidebar_close .ui-icon{
     background-color: #bbb;
 
 }
-#sidebar input[type=text], #sidebar input[type=password] {
-	display:block;
-	-moz-border-radius:4px;
-	-webkit-border-radius:4px;
-	border-radius:4px;
-	border:1px solid #666;
-	margin:0 0 5px;
-	padding:5px;
-	width:203px;
-}
+
 #sidebar p {
 	margin:0;
 }
@@ -413,21 +393,6 @@ button#sidebar_close .ui-icon{
     padding: 6px;
 }
 
-#submitbtn {
-	-moz-border-radius:4px;
-	-webkit-border-radius:4px;
-	border-radius:4px;
-
-	border:1px solid #fff;
-	color:#fff;
-	padding:5px 8px;
-	margin:0 5px 0 0;
-	font-weight:bold;
-}
-#submitbtn:hover, #submitbtn:focus {
-	border:1px solid #000;
-	cursor:pointer;
-}
 .submit {
 	padding-top:5px;
 }
@@ -983,4 +948,18 @@ div.about_box_logo {
     width: 48px;
     height: 48px;
     margin: 12px auto 12px auto;
+}
+
+table#global_filesystem_table {
+    background-color: rgb(240, 240, 255);
+    border: 1px solid #4572a7;
+    border-radius: 5px;
+    padding: 2px;
+}
+
+table#global_filesystem_table th {
+    font-weight: normal;
+    text-align: right;
+    font-style: italic;
+
 }
