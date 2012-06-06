@@ -940,6 +940,9 @@ class ResourceManager(object):
             for record_id in ordered_for_deletion:
                 resources.update({'id': int(record_id), 'storage_id_scope_id': None})
 
+        for klass in [StorageResourceAttributeReference, StorageResourceAttributeSerialized]:
+            klass.objects.filter(resource__in = ordered_for_deletion).delete()
+
         with StorageResourceRecord.delayed as deleter:
             for record_id in ordered_for_deletion:
                 deleter.delete(int(record_id))
