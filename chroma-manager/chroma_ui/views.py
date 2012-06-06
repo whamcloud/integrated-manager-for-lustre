@@ -5,6 +5,7 @@
 
 
 import json
+import datetime
 
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -43,4 +44,4 @@ def index(request):
 
         from django.core.serializers import json as django_json
         return render_to_response("base.html",
-                RequestContext(request, {'cache': json.dumps(_build_cache(), cls = django_json.DjangoJSONEncoder)}))
+                RequestContext(request, {'cache': json.dumps(_build_cache(), cls = django_json.DjangoJSONEncoder), 'server_time': datetime.datetime.utcnow()}))

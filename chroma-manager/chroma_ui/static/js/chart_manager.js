@@ -3,6 +3,7 @@
 // Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 // ========================================================
 
+/* global TIME_OFFSET defined in base.html */
 
 /*
   HYD-410: Workaround for highcharts issue 568, highcharts support case 64
@@ -70,15 +71,15 @@ Highcharts.Series.prototype.tooltipHeaderFormatter = function (key) {
 function dump(arr,level) {
   var dumped_text = "";
   if(!level) level = 0;
-  
+
   //The padding given at the beginning of the line.
   var level_padding = "";
   for(var j=0;j<level+1;j++) level_padding += "    ";
-  
-  if(typeof(arr) == 'object') { //Array/Hashes/Objects 
+
+  if(typeof(arr) == 'object') { //Array/Hashes/Objects
     for(var item in arr) {
       var value = arr[item];
-      
+
       if(typeof(value) == 'object') { //If it is an array,
         dumped_text += level_padding + "'" + item + "' ...\n";
         dumped_text += dump(value,level+1);
@@ -119,7 +120,7 @@ var ChartModel = function(options) {
         _.each(config.chart_config.series, function() { config.series_data.push([]); } );
     };
 
-    config.reset_series();        
+    config.reset_series();
     return config;
 
 };
@@ -159,8 +160,8 @@ var ChartManager = function(options) {
             series:{marker: {enabled: false}},
             column:{ pointPadding: 0.0, shadow: false, groupPadding: 0.0, borderWidth: 0.0 },
             areaspline: {fillOpacity: 0.5},
-            pie: { 
-              allowPointSelect: true, cursor: 'pointer', showInLegend: true, size: '100%', 
+            pie: {
+              allowPointSelect: true, cursor: 'pointer', showInLegend: true, size: '100%',
               dataLabels: {
                 enabled: false,
                 color: '#000000',
@@ -244,8 +245,8 @@ var ChartManager = function(options) {
           params.latest = true;
         }
         if ( _.isNull( chart.series_begin) ) {
-            chart.series_end          = new Date();
-            chart.series_begin        = new Date( chart.series_end - global_time_boundary );
+            chart.series_end    = XDate(utc = true).addSeconds(TIME_OFFSET);
+            chart.series_begin  = chart.series_end.clone().addMilliseconds( -1 * global_time_boundary);
         } else {
             if (!chart.snapshot) {
               params.update = 'true';
@@ -259,7 +260,7 @@ var ChartManager = function(options) {
 
     var update_chart = function(chart) {
         if (_.isNull(chart.instance)) {
-          var chart_config = 
+          var chart_config =
               $.extend(true, {}, config.chart_config_defaults, chart.chart_config, {
                   // maps all the series data into single object literals with "data" as it's key
                   // this is to allow us to merge it into the config seamlessly
@@ -432,7 +433,7 @@ var ChartManager = function(options) {
     // Interval based refreshing
     var clear_recurring = function() {
         if( _.isNumber(config.interval_id) ) {
-            clearInterval(config.interval_id);    
+            clearInterval(config.interval_id);
         }
         config.interval_id = null;
         config.interval_seconds = 0;

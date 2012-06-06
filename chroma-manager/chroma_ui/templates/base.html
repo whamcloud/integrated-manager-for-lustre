@@ -40,6 +40,9 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/json2.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/xdate.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/misc.js"></script>
+    <script type='text/javascript'>
+      var TIME_OFFSET = Math.round(XDate(utc = true).diffSeconds(XDate('{{server_time|safe}}', utc = true)));
+    </script>
 
     <!-- Plugins -->
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery.blockUI.js"></script>
@@ -51,7 +54,7 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/api_cache.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/router.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/login.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/sidebar.js"></script>  
+    <script type="text/javascript" src="{{STATIC_URL}}js/sidebar.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/notifications.js" ></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/highcharts_theme.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/help.js"></script>
@@ -107,6 +110,7 @@
         }
 
     $(document).ready(function() {
+
         $('div.rightpanel').css('visibility', 'hidden');
         Login.init();
         HelpLinks.init();
@@ -128,7 +132,7 @@
     {% include 'header.html'%}
     <div class='columns read_enabled_only'>
       <div style="clear:both"></div>
-      {% include 'notification_slider.html' %} 
+      {% include 'notification_slider.html' %}
       <div class='rightpanel'>
         <div class="toplevel" id='toplevel-configure' style="display: none;">
           {% include 'configuration.html' %}
