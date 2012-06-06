@@ -92,9 +92,15 @@ class SyslogEvent(Event):
         return self.message_str
 
 
-class ClientConnectEvent(SyslogEvent):
+class ClientConnectEvent(Event):
+    message_str = models.CharField(max_length = 512)
+    lustre_pid = models.IntegerField(null = True)
+
     class Meta:
         app_label = 'chroma_core'
+
+    def message(self):
+        return self.message_str
 
     @staticmethod
     def type_name():
