@@ -294,6 +294,8 @@ STORAGE_PLUGIN_DEBUG = DEBUG
 #: List of plugins to enable debug-level logging for
 STORAGE_PLUGIN_DEBUG_PLUGINS = []
 
+STORAGE_PLUGIN_ENABLE_STATS = True
+
 # For django_coverage
 COVERAGE_REPORT_HTML_OUTPUT_DIR = '/tmp/test_html'
 

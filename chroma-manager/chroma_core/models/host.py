@@ -245,7 +245,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
 
 class Volume(models.Model):
-    storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
+    storage_resource = models.ForeignKey(
+        'StorageResourceRecord', blank = True, null = True, on_delete = models.PROTECT)
 
     # Size may be null for VolumeNodes created when setting up
     # from a JSON file which just tells us a path.

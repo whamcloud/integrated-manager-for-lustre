@@ -130,12 +130,12 @@ var StorageResourceDetail = Backbone.View.extend({
   del: function() {
     var view = this;
     this.model.destroy({success: function(){
-      view.close();
+      $(view.el).remove();
+      window.history.back();
     }});
   },
   reset_alias: function() {
     $(this.el).find(".alias").attr('value', this.model.get('default_alias'));
-
   },
   save_alias: function() {
     var save_button = $(this.el).find('a.save_alias');
@@ -156,7 +156,7 @@ var StorageResourceDetail = Backbone.View.extend({
     $('#' + element_id).css("width", "300px");
     $('#' + element_id).css("height", "200px");
 
-    var colors = Highcharts.getOptions().colors
+    var colors = Highcharts.getOptions().colors;
 
     var bin_labels = stat_infos[0].data.bin_labels;
     var enable_legend = stat_infos.length > 1;
@@ -209,6 +209,6 @@ var StorageResourceDetail = Backbone.View.extend({
       }
     };
 
-    var chart = new Highcharts.Chart(opts);
+    new Highcharts.Chart(opts);
   }
 });

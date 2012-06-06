@@ -388,7 +388,7 @@ class ScanDaemon(object):
         storage_plugin_log.info("ScanDaemon: Loaded %s plugins, %s sessions" % (len(self.plugins), session_count))
 
     def modify_resource(self, resource_id, attrs):
-        storage_plugin_log.info("ScanDaemon: removing %s" % resource_id)
+        storage_plugin_log.info("ScanDaemon: modifying %s" % resource_id)
         with self._session_lock:
             try:
                 kill_session = self._all_sessions[resource_id]
