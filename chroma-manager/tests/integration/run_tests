@@ -1,15 +1,23 @@
 #!/bin/bash
 
-export FORCED=false
-export CONFIG_FILE=tests/integration/shared_storage_configuration/sample_cluster_cfg.json
-while getopts "tc:f" opt
+FORCED=false
+CONFIG_FILE=tests/integration/shared_storage_configuration/sample_cluster_cfg.json
+XML_REPORT=''
+num_opts=0
+while getopts "c:x:f" opt
 do
     case $opt in
         f)
             export FORCED=true
+            num_opts=`expr $num_opts + 1`
             ;;
         c)
             export CONFIG_FILE="$OPTARG"
+            num_opts=`expr $num_opts + 2`
+            ;;
+        x) 
+            export XML_REPORT="$OPTARG"
+            num_opts=`expr $num_opts + 2`
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
@@ -17,7 +25,7 @@ do
             ;;
     esac
 done
-shift $(( OPTIND -1 ))
+shift $num_opts;
 
 if [ $# -eq 1 ];
     then
@@ -64,4 +72,8 @@ echo "----------------------------------------------------------------------"
 echo "Running tests in $TEST_DIR"
 echo "----------------------------------------------------------------------"
 
-nosetests --verbosity=2 $TEST_DIR --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE"
+if [ ! -n "$XML_REPORT" ]; then
+    nosetests --verbosity=2 $TEST_DIR --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE" --with-xunit --xunit-file=$XML_REPORT
+else
+    nosetests --verbosity=2 $TEST_DIR --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE"
+fi
