@@ -149,10 +149,6 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
         if value != '':
             options.append("--%s=%s" % (name, __sanitize_arg(value)))
 
-    #if target_types == 'mdt':
-    #    options.append("--writeconf")
-    #    options.append("--index=0")
-
     cmd = "mkfs.lustre %s %s %s" % (" ".join(types), " ".join(options), device)
 
     return ' '.join(cmd.split())
