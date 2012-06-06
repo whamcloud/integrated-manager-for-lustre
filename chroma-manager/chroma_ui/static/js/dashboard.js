@@ -642,8 +642,16 @@ var Dashboard = (function() {
           '#DB843D',
           '#92A8CD',
           '#A47D7C',
-          '#B5CA92'
+          '#B5CA92',
+          '#f87d45',
+          '#f8457d',
+          '#7d45f8',
         ],
+        plotOptions: {
+          area: {
+            lineWidth: 0.0
+          }
+        },
         series: [
           {name: 'close', type: 'area'},
           {name: 'getattr', type: 'area'},
@@ -1009,7 +1017,25 @@ var Dashboard = (function() {
         title: { text: 'Metadata Operations'},
         xAxis: { type:'datetime' },
         yAxis: [{title: { text: 'ops/s' }}],
-        colors: [ '#63B7CF', '#9277AF', '#A6C56D', '#C76560', '#6087B9', '#DB843D', '#92A8CD', '#A47D7C',  '#B5CA92' ],
+        colors: [
+          '#63B7CF',
+          '#9277AF',
+          '#A6C56D',
+          '#C76560',
+          '#6087B9',
+          '#DB843D',
+          '#92A8CD',
+          '#A47D7C',
+          '#B5CA92',
+          '#f87d45',
+          '#f8457d',
+          '#7d45f8',
+        ],
+        plotOptions: {
+          area: {
+            lineWidth: 0.0
+          }
+        },
         series: _.map(
           ['close','getattr','getxattr','link','mkdir','mknod','open','rename','rmdir','setattr','statfs','unlink'],
           function(metric, i) { return { name: metric, type: 'area' }; }
@@ -1235,7 +1261,25 @@ var Dashboard = (function() {
         title: { text: 'Metadata op/s'},
         xAxis: { type:'datetime' },
         yAxis: [{title: { text: 'MD op/s' }}],
-        colors: [ '#63B7CF', '#9277AF', '#A6C56D', '#C76560', '#6087B9', '#DB843D', '#92A8CD', '#A47D7C', '#B5CA92' ],
+        colors: [
+          '#63B7CF',
+          '#9277AF',
+          '#A6C56D',
+          '#C76560',
+          '#6087B9',
+          '#DB843D',
+          '#92A8CD',
+          '#A47D7C',
+          '#B5CA92',
+          '#f87d45',
+          '#f8457d',
+          '#7d45f8',
+        ],
+        plotOptions: {
+          area: {
+            lineWidth: 0.0
+          }
+        },
         series: [
           {name: 'close', type: 'area'},
           {name: 'getattr', type: 'area'},
