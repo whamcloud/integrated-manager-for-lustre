@@ -93,7 +93,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         )
         self.verify_volume_mounts(
             refreshed_ost_volume_2,
-            target_hosts['ost1']['primary']['id'],
+            target_hosts['ost2']['primary']['id'],
             target_hosts['ost2']['failover']['id']
         )
 
