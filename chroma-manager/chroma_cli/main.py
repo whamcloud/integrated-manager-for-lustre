@@ -116,6 +116,7 @@ def standard_cli(args=None):
         exc_info = sys.exc_info()
         trace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
         print "Internal client error from handler '%s': %s" % (ns.primary_action, trace)
+        sys.exit(1)
 
     sys.exit(0)
 
