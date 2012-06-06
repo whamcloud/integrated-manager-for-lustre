@@ -19,7 +19,7 @@ function loadObjectSelection(kind, select_el)
   select_el.html('');
   select_el.append($("<option value=''>All</option>"));
   _.each(objects, function(obj) {
-    select_el.append($("<option value=''" + obj.id + "'>" + obj.label+ "</option>"))
+    select_el.append($("<option value='" + obj.id + "'>" + obj.label+ "</option>"))
   });
 }
 
