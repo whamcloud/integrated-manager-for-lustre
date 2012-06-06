@@ -39,6 +39,7 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
 
     # Workaround for tunefs.lustre being sensitive to argument order:
     # erase-params has to come first or it overrides preceding options.
+    # (LU-1462)
     early_flag_options = {
         'erase_params': '--erase-params'
     }
