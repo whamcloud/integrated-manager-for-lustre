@@ -40,9 +40,19 @@
 
 <div id="dashboard_page_global" class='dashboard_page'>
     <table class='chart_grid'>
+        <thead>
+            <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+        </thead>
         <tr>
-            <td>
-                <div id="container_fs_list" class="chart_info_pane">
+            <td colspan=2>
+                <div class="chart_info_pane">
                     <table id="global_filesystem_table">
                         <thead>
                         <tr>
@@ -58,23 +68,26 @@
                     </table>
                 </div>
             </td>
-            <td valign="top" align="center">
+            <td width="30%" colspan=2>
                 <div class='chart' id="global_usage"></div>
+            </td>
+            <td width="30%" colspan=2>
+                <div class='chart' id="global_client_count"></div>
             </td>
         </tr>
         <tr>
-            <td valign="top" align="center">
+            <td colspan=3>
                 <div class='chart' id="global_metadata_ops"></div>
             </td>
-            <td valign="top" align="center">
+            <td colspan=3>
                 <div class='chart' id="global_read_write"></div>
             </td>
         </tr>
         <tr>
-            <td>
+            <td colspan=3>
                 <div class='chart' id="global_mds_cpu_mem"></div>
             </td>
-            <td>
+            <td colspan=3>
                 <div class='chart' id="global_oss_cpu_mem"></div>
             </td>
         </tr>
@@ -83,35 +96,45 @@
 
 <div id="dashboard_page_filesystem" class='dashboard_page' style="display: none">
     <table class='chart_grid'>
+        <thead>
         <tr>
-            <td valign="top">
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        </thead>
+        <tr>
+            <td colspan=2>
                 <div class='chart_info_pane'>
                     <h2 id="filesystem_name"></h2>
                     <table id="fileSystemSummaryTbl" width="100%">
                     </table>
                 </div>
             </td>
-            <td width="30%" valign="top" align="center">
+            <td width="30%" valign="top" align="center" colspan=2>
                 <div id="filesystem_usage" class="chart"></div>
             </td>
-            <td width="30%" valign="top" align="center">
+            <td width="30%" valign="top" align="center" colspan=2>
                 <div id="filesystem_client_count" class="chart"></div>
             </td>
         </tr>
         <tr>
-            <td valign="top" width="30%" align="center">
-                <div id="filesystem_cpu_mem" class="chart"></div>
-            </td>
-            <td valign="top" align="center">
-                <div id="filesystem_read_write" class="chart"></div>
-            </td>
-            <td valign="top" width="30%" align="center">
+            <td valign="top" width="30%" align="center" colspan=3>
                 <div id="filesystem_md_ops" class="chart"></div>
+            </td>
+            <td valign="top" align="center" colspan=3>
+                <div id="filesystem_read_write" class="chart"></div>
             </td>
         </tr>
         <tr>
             <td colspan="3">
-                <div id="filesystem_ost_read_write" class="chart"></div>
+                <div id="filesystem_mds_cpu_mem" class="chart"></div>
+            </td>
+            <td colspan="3">
+                <div id="filesystem_oss_cpu_mem" class="chart"></div>
             </td>
         </tr>
     </table>
