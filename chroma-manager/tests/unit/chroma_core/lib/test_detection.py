@@ -8,7 +8,7 @@ from chroma_core.models.target import ManagedOst, ManagedTargetMount, ManagedTar
 from tests.unit.chroma_core.helper import JobTestCase
 
 
-class TestFSTransitions(JobTestCase):
+class TestDetection(JobTestCase):
     mock_servers = {}
 
     def test_combined_mgs_mdt(self):
@@ -73,3 +73,5 @@ class TestFSTransitions(JobTestCase):
         assertMount('test18fs-OST0005', 'kp-lustre-1-8-oss-3')
         assertMount('test18fs-OST0006', 'kp-lustre-1-8-oss-4')
         assertMount('test18fs-OST0007', 'kp-lustre-1-8-oss-4')
+
+        self.assertState(ManagedFilesystem.objects.get(), 'available')

@@ -15,6 +15,9 @@ from chroma_core.models.target import ManagedMgs, ManagedTargetMount, ManagedTar
 
 
 class DetectScan(object):
+    def __init__(self):
+        self.created_filesystems = []
+
     def run(self, all_hosts_data):
         """:param all_hosts_data: Dict of ManagedHost to detect-scan output"""
 
@@ -56,6 +59,11 @@ class DetectScan(object):
             elif not ManagedOst.objects.filter(filesystem = fs).count():
                 audit_log.warning("Found no OSTs for filesystem %s" % fs.name)
                 ManagedFilesystem.delete(fs.id)
+
+        for fs in self.created_filesystems:
+            if set([t.state for t in fs.get_targets()]) == set(['mounted']):
+                fs.state = 'available'
+                fs.save()
 
     def _nids_to_mgs(self, host, nid_strings):
         """nid_strings: nids of a target.  host: host on which the target was seen.
@@ -201,6 +209,12 @@ class DetectScan(object):
                             tm.save()
                             audit_log.info("Learned association %d between %s and host %s" % (tm.id, local_info['name'], host))
                             self._learn_event(host, tm)
+
+                        if local_info['mounted']:
+                            target.state = 'mounted'
+                            target.active_mount = tm
+                            target.save()
+
                     except NoLNetInfo:
                         audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], host))
 
@@ -298,6 +312,7 @@ class DetectScan(object):
             for fs_name, targets in host_data['mgs_targets'].items():
                 (fs, created) = ManagedFilesystem.objects.get_or_create(name = fs_name, mgs = mgs)
                 if created:
+                    self.created_filesystems.append(fs)
                     fs.immutable_state = True
                     fs.save()
                     audit_log.info("Learned filesystem '%s'" % fs_name)
