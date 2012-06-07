@@ -294,10 +294,10 @@ class StateManager(object):
 
         if isinstance(changed_item, FilesystemMember):
             fs = changed_item.filesystem
-            members = list(ManagedMdt._base_manager.filter(filesystem = fs)) + list(ManagedOst._base_manager.filter(filesystem = fs))
+            members = list(ManagedMdt.objects.filter(filesystem = fs)) + list(ManagedOst.objects.filter(filesystem = fs))
             states = set([t.state for t in members])
             now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
-            if not fs.state == 'available' and changed_item.state == 'mounted' and states == set(['mounted']):
+            if not fs.state == 'available' and changed_item.state in ['mounted', 'removed'] and states == set(['mounted']):
                 self.notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'available', ['stopped', 'unavailable'])
             if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
                 self.notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'stopped', ['stopped', 'unavailable'])

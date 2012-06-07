@@ -127,6 +127,7 @@ class TestFSTransitions(JobTestCaseWithHost):
     def test_mgs_removal(self):
         """Test that removing an MGS takes the filesystems with it"""
         self.set_state(self.mgt, 'removed')
+        self.assertEqual(ManagedFilesystem.objects.count(), 0)
 
     def test_fs_removal(self):
         """Test that removing a filesystem takes its targets with it"""
@@ -158,6 +159,9 @@ class TestFSTransitions(JobTestCaseWithHost):
         self.assertEqual(ManagedOst.objects.get(pk = self.ost.pk).state, 'unmounted')
         self.assertEqual(ManagedFilesystem.objects.get(pk = self.fs.pk).state, 'stopped')
 
+        self.set_state(self.ost, 'mounted')
+        self.assertState(self.fs, 'available')
+
     def test_stop_start(self):
         from chroma_core.models import ManagedMdt, ManagedOst, ManagedFilesystem
         self.set_state(self.fs, 'stopped')
@@ -171,6 +175,20 @@ class TestFSTransitions(JobTestCaseWithHost):
         self.assertEqual(ManagedMdt.objects.get(pk = self.mdt.pk).state, 'mounted')
         self.assertEqual(ManagedOst.objects.get(pk = self.ost.pk).state, 'mounted')
         self.assertEqual(ManagedFilesystem.objects.get(pk = self.fs.pk).state, 'available')
+
+    def test_ost_changes(self):
+        self.set_state(self.fs, 'stopped')
+        ost_new = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
+        self.set_state(self.mgt, 'mounted')
+        self.set_state(self.mdt, 'mounted')
+        self.set_state(self.ost, 'mounted')
+        self.set_state(ost_new, 'mounted')
+        self.assertState(self.fs, 'available')
+
+        self.set_state(ost_new, 'unmounted')
+        self.assertState(self.fs, 'unavailable')
+        self.set_state(ost_new, 'removed')
+        self.assertState(self.fs, 'available')
 
 
 class TestDetectedFSTransitions(JobTestCaseWithHost):
