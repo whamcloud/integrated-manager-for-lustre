@@ -403,7 +403,7 @@ class Job(models.Model):
         from chroma_core.lib.state_manager import LockCache
         wait_fors = set()
         for lock in LockCache.get_by_job(self):
-            job_log.info("Job %s: %s" % (self.id, lock))
+            job_log.debug("Job %s: %s" % (self, lock))
             if lock.write:
                 wl = lock
                 # Depend on the most recent pending write to this stateful object,
@@ -411,7 +411,7 @@ class Job(models.Model):
                 prior_write_lock = LockCache.get_latest_write(wl.locked_item, not_job = self)
                 if prior_write_lock:
                     assert (wl.begin_state == prior_write_lock.end_state), ("%s locks %s in state %s but previous %s leaves it in state %s" % (self, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state))
-                    job_log.info("Job %s:   pwl %s" % (self.id, prior_write_lock))
+                    job_log.debug("Job %s:   pwl %s" % (self, prior_write_lock))
                     wait_fors.add(prior_write_lock.job.id)
                     # We will only wait_for read locks after this write lock, as it
                     # will have wait_for'd any before it.
@@ -423,7 +423,7 @@ class Job(models.Model):
                 # our position.
                 prior_read_locks = LockCache.get_read_locks(wl.locked_item, after = read_barrier_id, not_job = self)
                 for i in prior_read_locks:
-                    job_log.info("Job %s:   prl %s" % (self.id, i))
+                    job_log.debug("Job %s:   prl %s" % (self, i))
                     wait_fors.add(i.job.id)
             else:
                 rl = lock
@@ -431,7 +431,7 @@ class Job(models.Model):
                 if prior_write_lock:
                     # See comment by locked_state in StateReadLock
                     wait_fors.add(prior_write_lock.job.id)
-                job_log.info("Job %s:   pwl2 %s" % (self.id, prior_write_lock))
+                job_log.debug("Job %s:   pwl2 %s" % (self, prior_write_lock))
 
         wait_fors = list(wait_fors)
         if wait_fors:
