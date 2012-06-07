@@ -335,6 +335,7 @@ class TestResourceOperations(ResourceManagerTestCase):
         # Check we got a Volume and a VolumeNode
         self.assertEqual(Volume.objects.count(), 1)
         self.assertEqual(VolumeNode.objects.count(), 1)
+        self.assertEqual(Volume.objects.get().label, self.dev_resource.get_label())
 
         # Check the VolumeNode got the correct path
         self.assertEqual(VolumeNode.objects.get().path, "/dev/foobar")

@@ -250,6 +250,8 @@ class ResourceManager(object):
         self._subscriber_index = SubscriberIndex()
         self._subscriber_index.populate()
 
+        self._label_cache = {}
+
         import dse
         dse.patch_models()
 
@@ -270,7 +272,6 @@ class ResourceManager(object):
             self._persist_new_resources(session, initial_resources)
             self._cull_lost_resources(session, initial_resources)
 
-            # Update Volume and VolumeNode objects
             self._persist_lun_updates(scannable_id)
 
             # Plugins are allowed to create VirtualMachine objects, indicating that
@@ -492,11 +493,15 @@ class ResourceManager(object):
             for node_resource, logicaldrive_id in node_to_logicaldrive_id.items():
                 if not logicaldrive_id in logicaldrive_id_to_volume:
                     size = logicaldrive_id_to_size[logicaldrive_id]
+                    try:
+                        label = self._label_cache[logicaldrive_id]
+                    except KeyError:
+                        label = StorageResourceRecord.objects.get(pk = logicaldrive_id).to_resource().get_label()
                     volumes.insert(dict(
                         size = size,
                         storage_resource_id = logicaldrive_id,
                         not_deleted = True,
-                        label = ""
+                        label = label
                     ))
 
         existing_volumes = Volume.objects.filter(storage_resource__in = node_to_logicaldrive_id.values())
@@ -931,6 +936,7 @@ class ResourceManager(object):
                     local_id = session.global_id_to_local_id[record_id]
                     del session.local_id_to_global_id[local_id]
                     del session.global_id_to_local_id[local_id]
+                    del self._label_cache[record_id]
                 except KeyError:
                     pass
 
@@ -1058,6 +1064,7 @@ class ResourceManager(object):
                 storage_id_scope_id = scope_id)
             session.local_id_to_global_id[resource._handle] = record.pk
             session.global_id_to_local_id[record.pk] = resource._handle
+            self._label_cache[record.id] = resource.get_label()
 
             if created:
                 # Record a user-visible event
