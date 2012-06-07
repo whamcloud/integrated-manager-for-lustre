@@ -8,7 +8,7 @@ kombu==1.5.1
 celery==2.4.5
 mock
 paramiko
-pep8
+pep8==1.0.1
 pyflakes
 south==0.7.3
 sphinx==1.1.3
