@@ -24,8 +24,14 @@ class TooManyMatches(ApiException):
     """
     Too many matches returned during a fuzzy-id lookup.
     """
+    def __init__(self, msg=None):
+        self.msg = msg
+
     def __str__(self):
-        return "The query matched more than one record."
+        if not self.msg:
+            return "The query matched more than one record."
+        else:
+            return self.msg
 
 
 class InvalidVolumeNode(ApiException):
