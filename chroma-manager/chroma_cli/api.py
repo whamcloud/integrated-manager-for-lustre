@@ -367,12 +367,15 @@ class ApiEndpoint(object):
                         continue
 
                     if len(candidates) > 1:
-                        raise TooManyMatches("The query %s/%s matches more than one resource: %s" % (self.name, query, candidates))
+                        if expression in ["startswith", "endswith"]:
+                            raise TooManyMatches("The query %s/%s matches more than one resource: %s" % (self.name, query, candidates))
+                        else:
+                            continue
 
                     try:
                         if query in candidates[0][field]:
                             return candidates[0]['id']
-                    except IndexError:
+                    except (IndexError, KeyError):
                         continue
         except KeyError:
             # No filtering possible?
