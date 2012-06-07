@@ -233,7 +233,6 @@ EOF
 
         for host in config['lustre_servers']:
             # Verify mgs and fs targets not in pacemaker config for hosts
-            # TODO: sort out host address and host nodename
             stdin, stdout, stderr = self.remote_command(
                 host['address'],
                 'which crm',
@@ -334,7 +333,7 @@ EOF
         self.assertTrue(response.successful, response.text)
         hosts = response.json['objects']
 
-        host_id_to_address = dict((h['id'], h['address']) for h in hosts)
+        host_id_to_nodename = dict((h['id'], h['nodename']) for h in hosts)
         usable_luns_ids = [l['id'] for l in usable_luns]
 
         for lun_node in lun_nodes:
@@ -343,10 +342,8 @@ EOF
                 # Create a list of usable device paths for the host of the
                 # current lun node as listed in the config.
                 host_id = lun_node['host_id']
-                host_address = host_id_to_address[host_id]
-                host_config = [l for l in config['lustre_servers'] if l['address'] == host_address]
-                self.assertEqual(1, len(host_config))
-                host_config = host_config[0]
+                host_nodename = host_id_to_nodename[host_id]
+                host_config = self.get_host_config(host_nodename)
                 config_device_paths = host_config['device_paths']
                 config_paths = [str(p) for p in config_device_paths]
 
@@ -649,9 +646,7 @@ EOF
     def failover(self, primary_host, secondary_host, filesystem_id, volumes_expected_hosts_in_normal_state, volumes_expected_hosts_in_failover_state):
         # Attach configurations to primary host so we can retreive information
         # about its vmhost and hwo to destroy it.
-        for lustre_server in config['lustre_servers']:
-            if lustre_server['nodename'] == primary_host['nodename']:
-                primary_host['config'] = lustre_server
+        primary_host['config'] = self.get_host_config(primary_host['nodename'])
 
         # "Pull the plug" on the primary lustre server
         self.remote_command(
@@ -677,16 +672,19 @@ EOF
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
     def failback(self, primary_host, filesystem_id, volumes_expected_hosts_in_normal_state):
+        primary_host['config'] = self.get_host_config(primary_host['nodename'])
+
         response = self.chroma_manager.get(
             '/api/target/',
             params = {'filesystem_id': filesystem_id}
         )
         self.assertTrue(response.successful, response.text)
-        targets_with_matching_primary_host = [t for t in response.json['objects'] if t['primary_server_name'] == primary_host['nodename']]
+        targets_with_matching_primary_host = [t for t in response.json['objects']
+            if t['primary_server_name'] == primary_host['config']['fqdn']]
 
         for target in targets_with_matching_primary_host:
                 _, stdout, _ = self.remote_command(
-                primary_host['nodename'],
+                primary_host['address'],
                 'chroma-agent failback-target --ha_label %s' % target['ha_label']
             )
 
@@ -706,7 +704,7 @@ EOF
             try:
                 #TODO: Better way to check this?
                 _, stdout, _ = self.remote_command(
-                    booting_host['nodename'],
+                    booting_host['address'],
                     "echo 'Checking if node is ready to receive commands.'"
                 )
             except socket.error:
@@ -717,7 +715,7 @@ EOF
 
             # Verify other host knows it is no longer offline
             _, stdout, _ = self.remote_command(
-                available_host['nodename'],
+                available_host['address'],
                 "crm node show %s" % booting_host['nodename']
             )
             node_status = stdout.read()
@@ -726,7 +724,12 @@ EOF
 
         self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for host to come back online.")
         _, stdout, _ = self.remote_command(
-            available_host['nodename'],
+            available_host['address'],
             "crm node show %s" % booting_host['nodename']
         )
         self.assertNotRegexpMatches(stdout.read(), 'offline')
+
+    def get_host_config(self, nodename):
+        for host in config['lustre_servers']:
+            if host['nodename'] == nodename:
+                return host

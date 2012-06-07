@@ -1,63 +1,63 @@
 {
     "filesystem": {
-        "name": "test18fs",
+        "name": "lustrefs",
         "targets": {
             "MGS": {
                 "kind": "MGT",
-                "primary_server_name": "kp-lustre-1-8-mgs-1",
-                "mount_path": "/mnt/mgs"
+                "primary_server": "hydra-2-lustre-1-8-mgs-mds",
+                "mount_path": "/lustre/mdt"
             },
-            "test18fs-MDT0000": {
+            "lustrefs-MDT0000": {
                 "kind": "MDT",
-                "primary_server_name": "kp-lustre-1-8-mgs-1",
-                "mount_path": "/mnt/mdt"
+                "primary_server": "hydra-2-lustre-1-8-mgs-mds",
+                "mount_path": "/lustre/mdt"
             },
-            "test18fs-OST0000": {
+            "lustrefs-OST0008": {
                 "kind": "OST",
-                "primary_server_name": "kp-lustre-1-8-oss-1",
-                "mount_path": "/mnt/ost1"
+                "primary_server": "hydra-2-lustre-1-8-oss1",
+                "mount_path": "/lustre/oss1-ost1"
             },
-            "test18fs-OST0001": {
+            "lustrefs-OST0009": {
                 "kind": "OST",
-                "primary_server_name": "kp-lustre-1-8-oss-1",
-                "mount_path": "/mnt/ost2"
+                "primary_server": "hydra-2-lustre-1-8-oss1",
+                "mount_path": "/lustre/oss1-ost2"
             },
-            "test18fs-OST0002": {
+            "lustrefs-OST000a": {
                 "kind": "OST",
-                "primary_server_name": "kp-lustre-1-8-oss-2",
-                "mount_path": "/mnt/ost3"
+                "primary_server": "hydra-2-lustre-1-8-oss2",
+                "mount_path": "/lustre/oss2-ost1"
             },
-            "test18fs-OST0003": {
+            "lustrefs-OST000b": {
                 "kind": "OST",
-                "primary_server_name": "kp-lustre-1-8-oss-2",
-                "mount_path": "/mnt/ost4"
+                "primary_server": "hydra-2-lustre-1-8-oss2",
+                "mount_path": "/lustre/oss2-ost2"
             },
-            "test18fs-OST0004": {
+            "lustrefs-OST000c": {
                 "kind": "OST",
-                "primary_server_name": "kp-lustre-1-8-oss-3",
-                "mount_path": "/mnt/ost5"
+                "primary_server": "hydra-2-lustre-1-8-oss3",
+                "mount_path": "/lustre/oss3-ost1"
             },
-            "test18fs-OST0005": {
+            "lustrefs-OST000d": {
                 "kind": "OST",
-                "primary_server_name": "kp-lustre-1-8-oss-3",
-                "mount_path": "/mnt/ost6"
+                "primary_server": "hydra-2-lustre-1-8-oss3",
+                "mount_path": "/lustre/oss3-ost2"
             },
-            "test18fs-OST0006": {
+            "lustrefs-OST000e": {
                 "kind": "OST",
-                "primary_server_name": "kp-lustre-1-8-oss-4",
-                "mount_path": "/mnt/ost7"
+                "primary_server": "hydra-2-lustre-1-8-oss4",
+                "mount_path": "/lustre/oss4-ost1"
             },
-            "test18fs-OST0007": {
+            "lustrefs-OST000f": {
                 "kind": "OST",
-                "primary_server_name": "kp-lustre-1-8-oss-4",
-                "mount_path": "/mnt/ost8"
+                "primary_server": "hydra-2-lustre-1-8-oss4",
+                "mount_path": "/lustre/ost4-ost2"
             }
         }
     },
     "chroma_managers": [
         {
-            "address": "kp-lustre-1-8-chroma-manager",
-            "server_http_url": "http://kp-lustre-1-8-chroma-manager/",
+            "address": "hydra-2-lustre-1-8-chroma-manager-1",
+            "server_http_url": "http://hydra-2-lustre-1-8-chroma-manager-1/",
             "users": [
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
             ]
@@ -65,27 +65,31 @@
     ],
     "lustre_servers": [
         {
-            "address": "kp-lustre-1-8-mgs-1",
-            "nodename": "kp-lustre-1-8-mgs-1"
+            "address": "hydra-2-lustre-1-8-mgs-mds",
+            "nodename": "hydra-2-lustre-1-8-mgs-mds",
+            "fqdn": "hydra-2-lustre-1-8-mgs-mds.lab.whamcloud.com
         },
         {
-            "address": "kp-lustre-1-8-oss-1",
-            "nodename": "kp-lustre-1-8-oss-1"
+            "address": "hydra-2-lustre-1-8-oss1",
+            "nodename": "hydra-2-lustre-1-8-oss1",
+            "fqdn": "hydra-2-lustre-1-8-oss1.lab.whamcloud.com
         },
         {
-            "address": "kp-lustre-1-8-oss-2",
-            "nodename": "kp-lustre-1-8-oss-2"
+            "address": "hydra-2-lustre-1-8-oss2",
+            "nodename": "hydra-2-lustre-1-8-oss2",
+            "fqdn": "hydra-2-lustre-1-8-oss2.lab.whamcloud.com
         },
         {
-            "address": "kp-lustre-1-8-oss-3",
-            "nodename": "kp-lustre-1-8-oss-3"
+            "address": "hydra-2-lustre-1-8-oss3",
+            "nodename": "hydra-2-lustre-1-8-oss3",
+            "fqdn": "hydra-2-lustre-1-8-oss3.lab.whamcloud.com
         },
         {
-            "address": "kp-lustre-1-8-oss-4",
-            "nodename": "kp-lustre-1-8-oss-4"
+            "address": "hydra-2-lustre-1-8-oss4",
+            "fqdn": "hydra-2-lustre-1-8-oss4.lab.whamcloud.com
         }
     ],
     "lustre_clients": {
-        "kp-lustre-1-8-client-1": {}
+        "hydra-2-lustre-1-8-client": {}
     }
 }

@@ -1,8 +1,9 @@
 {
-    "failover_is_configured": false,
+    "failover_is_configured": true,
     "chroma_managers": [
         {
-            "server_http_url": "http://chroma:8000/",
+            "address": "hydra-2-ss-chroma-manager-1",
+            "server_http_url": "http://hydra-2-ss-chroma-manager-1/",
             "users": [
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
             ]
@@ -10,54 +11,66 @@
     ],
     "lustre_servers": [
         {
-            "address": "storage_appliance_1",
-            "nodename": "storage_appliance_1",
+            "address": "hydra-2-ss-storage-appliance-1",
+            "nodename": "hydra-2-ss-storage-appliance-1",
+            "fqdn": "hydra-2-ss-storage-appliance-1",
             "device_paths": [
-                "/dev/sdb",
-                "/dev/sdc"
+                "/dev/disk/by-id/scsi-1IET_00010001",
+                "/dev/disk/by-id/scsi-1IET_00020001",
+                "/dev/disk/by-id/scsi-1IET_00030001",
+                "/dev/disk/by-id/scsi-1IET_00040001"
             ],
 
-            "host": "vmhost",
-            "destroy_command": "virsh destroy storage_appliance_1"
+            "host": "hydra-2",
+            "destroy_command": "virsh destroy hydra-2-ss-storage-appliance-1"
         },
         {
-            "address": "storage_appliance_2",
-            "nodename": "storage_appliance_2",
+            "address": "hydra-2-ss-storage-appliance-2",
+            "nodename": "hydra-2-ss-storage-appliance-2",
+            "fqdn": "hydra-2-ss-storage-appliance-2",
             "device_paths": [
-                "/dev/sdb",
-                "/dev/sdc"
+                "/dev/disk/by-id/scsi-1IET_00010001",
+                "/dev/disk/by-id/scsi-1IET_00020001",
+                "/dev/disk/by-id/scsi-1IET_00030001",
+                "/dev/disk/by-id/scsi-1IET_00040001"
             ],
 
-            "host": "vmhost",
-            "destroy_command": "virsh destroy storage_appliance_2"
+            "host": "hydra-2",
+            "destroy_command": "virsh destroy hydra-2-ss-storage-appliance-2"
         },
         {
-            "address": "storage_appliance_3",
-            "nodename": "storage_appliance_3",
+            "address": "hydra-2-ss-storage-appliance-3",
+            "nodename": "hydra-2-ss-storage-appliance-3",
+            "fqdn": "hydra-2-ss-storage-appliance-3",
             "device_paths": [
-                "/dev/sdb",
-                "/dev/sdc"
+                "/dev/disk/by-id/scsi-1IET_00010001",
+                "/dev/disk/by-id/scsi-1IET_00020001",
+                "/dev/disk/by-id/scsi-1IET_00030001",
+                "/dev/disk/by-id/scsi-1IET_00040001"
             ],
 
-            "host": "vmhost",
-            "destroy_command": "virsh destroy storage_appliance_3"
+            "host": "hydra-2",
+            "destroy_command": "virsh destroy hydra-2-ss-storage-appliance-3"
         },
         {
-            "address": "storage_appliance_4",
-            "nodename": "storage_appliance_4",
+            "address": "hydra-2-ss-storage-appliance-4",
+            "nodename": "hydra-2-ss-storage-appliance-4",
+            "fqdn": "hydra-2-ss-storage-appliance-4",
             "device_paths": [
-                "/dev/sdb",
-                "/dev/sdc"
+                "/dev/disk/by-id/scsi-1IET_00010001",
+                "/dev/disk/by-id/scsi-1IET_00020001",
+                "/dev/disk/by-id/scsi-1IET_00030001",
+                "/dev/disk/by-id/scsi-1IET_00040001"
             ],
 
-            "host": "vmhost",
-            "destroy_command": "virsh destroy storage_appliance_4"
+            "host": "hydra-2",
+            "destroy_command": "virsh destroy hydra-2-ss-storage-appliance-4"
         }
     ],
     "lustre_clients": {
-        "client1": {}
+        "hydra-2-ss-client-1": {}
     },
     "hosts": {
-        "vmhost": {}
+        "hydra-2": {}
     }
 }
