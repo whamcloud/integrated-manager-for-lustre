@@ -16,6 +16,7 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import job_log
 from chroma_core.lib.util import all_subclasses
 from chroma_core.models.conf_param import ApplyConfParams
+from chroma_core.models.host import ConfigureLNetJob, ManagedHost, GetLNetStateJob
 from chroma_core.models.jobs import StateChangeJob, Command, StateLock, Job
 from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget
 
@@ -304,6 +305,21 @@ class StateManager(object):
             if changed_item.state == 'unmounted' and fs.state == 'available' and states != set(['mounted']):
                 self.notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'unavailable', ['available'])
 
+        if isinstance(changed_item, ManagedHost):
+            if changed_item.state == 'lnet_up' and changed_item.lnetconfiguration.state != 'nids_known':
+                if not ConfigureLNetJob.objects.filter(~Q(state = 'complete'), lnet_configuration = changed_item.lnetconfiguration).count():
+                    job = ConfigureLNetJob(lnet_configuration = changed_item.lnetconfiguration, old_state = 'nids_unknown')
+                    if not command:
+                        command = Command.objects.create(message = "Configuring LNet on %s" % changed_item)
+                    self.add_jobs([job], command)
+
+            if changed_item.state == 'configured':
+                if not GetLNetStateJob.objects.filter(~Q(state = 'complete'), host = changed_item).count():
+                    job = GetLNetStateJob(host = changed_item)
+                    if not command:
+                        command = Command.objects.create(message = "Getting LNet state for %s" % changed_item)
+                    self.add_jobs([job], command)
+
         if isinstance(changed_item, ManagedTarget):
             if isinstance(changed_item, FilesystemMember):
                 mgs = changed_item.filesystem.mgs
@@ -311,7 +327,7 @@ class StateManager(object):
                 mgs = changed_item
 
             if mgs.conf_param_version != mgs.conf_param_version_applied:
-                if not ApplyConfParams.objects.filter(~Q(state = 'complete')).count():
+                if not ApplyConfParams.objects.filter(~Q(state = 'complete'), mgs = mgs).count():
                     job = ApplyConfParams(mgs = mgs)
                     if get_deps(job).satisfied():
                         if not command:
@@ -371,13 +387,16 @@ class StateManager(object):
         # the user has explicitly cancelled something.
         job = job.downcast()
 
-        if isinstance(job, StateChangeJob):
+        if job.locks_json:
             try:
-                command = Command.objects.filter(complete = False)[0]
+                command = Command.objects.filter(jobs = job, complete = False)[0]
             except IndexError:
                 job_log.warning("Job %s: No incomplete command while completing" % job_id)
                 command = None
-            self._completion_hooks(job.get_stateful_object(), command)
+            for lock in json.loads(job.locks_json):
+                if lock['write']:
+                    lock = StateLock.from_dict(job, lock)
+                    self._completion_hooks(lock.locked_item, command)
 
         for command in Command.objects.filter(jobs = job):
             command.check_completion()

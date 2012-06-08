@@ -76,13 +76,17 @@ class TestStateManager(JobTestCaseWithHost):
         # Our self.host is initially lnet_up
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
 
-        # This tests a state transition which is done by a single job
+        # One job
         self.set_state(self.host, 'lnet_down')
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_down')
+        self.assertState(self.host, 'lnet_down')
+
+        # One more job
+        self.set_state(self.host, 'lnet_unloaded')
+        self.assertState(self.host, 'lnet_unloaded')
 
     def test_notification(self):
         """Test that state notifications cause the state of an object to change"""
-        self.assertEqual(freshen(self.host).state, 'lnet_up')
+        self.assertState(self.host, 'lnet_up')
         now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
         StateManagerClient.notify_state(freshen(self.host), now, 'lnet_down', ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_down')
@@ -90,7 +94,7 @@ class TestStateManager(JobTestCaseWithHost):
     def test_late_notification(self):
         """Test that notifications are droppped when they are older than
         the last change to an objects state"""
-        self.assertEqual(freshen(self.host).state, 'lnet_up')
+        self.assertState(self.host, 'lnet_up')
         awhile_ago = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc()) - datetime.timedelta(seconds = 120)
         StateManagerClient.notify_state(freshen(self.host), awhile_ago, 'lnet_down', ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_up')

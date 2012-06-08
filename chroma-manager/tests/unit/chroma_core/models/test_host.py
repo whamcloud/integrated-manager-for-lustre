@@ -1,8 +1,40 @@
 from copy import deepcopy
-from django.db.utils import IntegrityError
-from tests.unit.chroma_core.helper import JobTestCase, MockAgent
+import datetime
+from dateutil import tz
 
+from tests.unit.chroma_core.helper import JobTestCase, MockAgent
+from chroma_core.lib.state_manager import StateManagerClient
+from chroma_core.models.host import NoLNetInfo
+from tests.unit.chroma_core.helper import freshen
+from django.db.utils import IntegrityError
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode, Nid
+
+
+class TestSetup(JobTestCase):
+    mock_servers = {
+        'myaddress': {
+            'fqdn': 'myaddress.mycompany.com',
+            'nodename': 'test01.myaddress.mycompany.com',
+            'nids': ["192.168.0.1@tcp"]
+        }
+    }
+
+    def test_nid_learning(self):
+        """Test that if a host is added and then acquired lnet_up state passively,
+        we will go and get the NIDs"""
+        try:
+            MockAgent.fail_globs = ['device-plugin --plugin=lustre']
+            host, command = ManagedHost.create_from_string('myaddress')
+        finally:
+            MockAgent.fail_globs = []
+        self.assertState(host, 'configured')
+        self.assertState(host.lnetconfiguration, 'nids_unknown')
+        now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
+        with self.assertRaises(NoLNetInfo):
+            freshen(host).lnetconfiguration.get_nids()
+        StateManagerClient.notify_state(freshen(host), now, 'lnet_up', ['configured'])
+        self.assertState(host.lnetconfiguration, 'nids_known')
+        freshen(host).lnetconfiguration.get_nids()
 
 
 class NidTestCase(JobTestCase):
@@ -31,6 +63,7 @@ class TestNidChange(NidTestCase):
 
     def attempt_nid_change(self, new_nids):
         host, command = ManagedHost.create_from_string('myaddress')
+        self.set_state(host.lnetconfiguration, 'nids_known')
         self.assertNidsCorrect(host)
         self.mock_servers['myaddress']['nids'] = new_nids
         from chroma_core.tasks import command_run_jobs

@@ -20,6 +20,7 @@ from chroma_core.models import StateChangeJob
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 
+from chroma_core.lib.storage_plugin import messaging
 from chroma_core.models.utils import WorkaroundDateTimeField
 from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLock
 from chroma_core.lib.job import  DependOn, DependAll, Step
@@ -55,8 +56,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # A basic authentication mechanism
     agent_token = models.CharField(max_length = 64)
 
-    # TODO: separate the LNET state [unloaded, down, up] from the host state [created, removed]
-    states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
+    # FIXME: HYD-1215: separate the LNET state [unloaded, down, up] from the host state [created, removed]
+    states = ['unconfigured', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
 
     last_contact = WorkaroundDateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
@@ -98,8 +99,17 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             time_since = datetime.datetime.utcnow() - self.last_contact
             return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
+    def get_available_states(self, begin_state):
+        if self.immutable_state:
+            if begin_state == 'unconfigured':
+                return ['removed', 'configured']
+            else:
+                return ['removed']
+        else:
+            return super(ManagedHost, self).get_available_states(begin_state)
+
     @classmethod
-    def create_from_string(cls, address_string, start_lnet = True):
+    def create_from_string(cls, address_string):
         # Single transaction for creating Host and related database objects
         # * Firstly because we don't want any of these unless they're all setup
         # * Secondly because we want them committed before creating any Jobs which
@@ -119,12 +129,9 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
             lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
 
-        if start_lnet:
-            # Attempt some initial setup jobs
-            from chroma_core.models.jobs import Command
-            command = Command.set_state([(host, 'lnet_unloaded'), (lnet_configuration, 'nids_known')], "Setting up host %s" % address_string)
-        else:
-            command = None
+        # Attempt some initial setup jobs
+        from chroma_core.models.jobs import Command
+        command = Command.set_state([(host, 'configured')], "Setting up host %s" % address_string)
 
         return host, command
 
@@ -496,16 +503,8 @@ class ConfigureRsyslogStep(Step):
 
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        try:
+        if not host.immutable_state:
             self.invoke_agent(host, "configure-rsyslog --node %s" % fqdn)
-        except RuntimeError, e:
-            # FIXME: Would be smarter to detect capabilities before
-            # trying to run things which may break.  Don't want to do it
-            # every time, though, because it adds an extra round trip for
-            # every step.  Maybe we should serialize the audited
-            # capabilities in a new ManagedHost field? (HYD-638)
-            from chroma_core.lib.job import job_log
-            job_log.error("Failed to configure rsyslog on %s: %s" % (host, e))
 
 
 class UnconfigureRsyslogStep(Step):
@@ -517,7 +516,55 @@ class UnconfigureRsyslogStep(Step):
         self.invoke_agent(host, "unconfigure-rsyslog")
 
 
-class LearnHostnameStep(Step):
+class GetLNetStateStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+
+        lustre_data = self.invoke_agent(host, "device-plugin --plugin=lustre")['lustre']
+
+        if lustre_data['lnet_up']:
+            state = 'lnet_up'
+        elif lustre_data['lnet_loaded']:
+            state = 'lnet_down'
+        else:
+            state = 'lnet_unloaded'
+
+        host.set_state(state)
+        host.save()
+
+
+class GetLNetStateJob(Job):
+    host = models.ForeignKey(ManagedHost)
+    requires_confirmation = False
+    verb = "Get LNet state"
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def create_locks(self):
+        return [StateLock(
+            job = self,
+            locked_item = self.host,
+            begin_state = "configured",
+            end_state = '',
+            write = True
+        )]
+
+    @classmethod
+    def get_args(cls, host):
+        return {'host_id': host.id}
+
+    def description(self):
+        return "Get LNet state for %s" % self.host
+
+    def get_steps(self):
+        return [(GetLNetStateStep, {'host_id': self.host.id})]
+
+
+class GetHostProperties(Step):
     idempotent = True
 
     def run(self, kwargs):
@@ -525,8 +572,34 @@ class LearnHostnameStep(Step):
 
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        fqdn = self.invoke_agent(host, "get-fqdn")
-        nodename = self.invoke_agent(host, "get-nodename")
+        host_properties = self.invoke_agent(host, "host-properties")
+
+        # Get agent capabilities
+        capabilities = host_properties['capabilities']
+        immutable_state = len([c for c in capabilities if "manage_" in c]) == 0
+        if host.immutable_state != immutable_state:
+            host.immutable_state = immutable_state
+            host.save()
+
+        # Get FQDN and nodename
+        fqdn = host_properties['fqdn']
+        nodename = host_properties['nodename']
+
+        # Get agent time and check it against server time
+        agent_time_str = host_properties['time']
+        agent_time = dateutil.parser.parse(agent_time_str)
+        server_time = datetime.datetime.utcnow()
+        from dateutil import tz
+        server_time = server_time.replace(tzinfo=tz.tzutc())
+
+        if agent_time > server_time:
+            if (agent_time - server_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
+                raise RuntimeError("Host %s clock is fast.  agent time %s, server time %s" % (host, agent_time, server_time))
+
+        if server_time > agent_time:
+            if (server_time - agent_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
+                raise RuntimeError("Host %s clock is slow.  agent time %s, server time %s" % (host, agent_time, server_time))
+
         assert fqdn != None
         assert nodename != None
 
@@ -583,8 +656,9 @@ class LearnDevicesStep(Step):
             pass
 
         # Fake a session as if the agent had reported in
-        from chroma_core.lib.storage_plugin import messaging
-        session, created = AgentSession.objects.get_or_create(host = host)
+        with transaction.commit_on_success():
+            session, created = AgentSession.objects.get_or_create(host = host)
+
         messaging.simple_send('agent', {
                     "session_id": session.session_id,
                     "host_id": host.id,
@@ -595,32 +669,8 @@ class LearnDevicesStep(Step):
         AgentDaemonRpc().await_session(kwargs['host_id'])
 
 
-class CheckClockStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        # Get the device-scan output
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
-        agent_time_str = self.invoke_agent(host, "get-time")
-        agent_time = dateutil.parser.parse(agent_time_str)
-
-        # Get a tz-aware datetime object
-        server_time = datetime.datetime.utcnow()
-        from dateutil import tz
-        server_time = server_time.replace(tzinfo=tz.tzutc())
-
-        if agent_time > server_time:
-            if (agent_time - server_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
-                raise RuntimeError("Host %s clock is fast.  agent time %s, server time %s" % (host, agent_time, server_time))
-
-        if server_time > agent_time:
-            if (server_time - agent_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
-                raise RuntimeError("Host %s clock is slow.  agent time %s, server time %s" % (host, agent_time, server_time))
-
-
 class SetupHostJob(StateChangeJob):
-    state_transition = (ManagedHost, 'unconfigured', 'lnet_unloaded')
+    state_transition = (ManagedHost, 'unconfigured', 'configured')
     stateful_object = 'managed_host'
     managed_host = models.ForeignKey(ManagedHost)
     state_verb = 'Set up server'
@@ -629,11 +679,26 @@ class SetupHostJob(StateChangeJob):
         return "Setting up server %s" % self.managed_host
 
     def get_steps(self):
-        return [(LearnHostnameStep, {'host_id': self.managed_host.pk}),
+        return [(GetHostProperties, {'host_id': self.managed_host.pk}),
                 (ConfigureRsyslogStep, {'host_id': self.managed_host.pk}),
-                (SetServerConfStep, {'host_id': self.managed_host.pk}),
-                (CheckClockStep, {'host_id': self.managed_host.pk}),
-                (LearnDevicesStep, {'host_id': self.managed_host.pk})]
+                (LearnDevicesStep, {'host_id': self.managed_host.pk}),
+                (SetServerConfStep, {'host_id': self.managed_host.pk})]
+
+    class Meta:
+        app_label = 'chroma_core'
+
+
+class EnableLNetJob(StateChangeJob):
+    state_transition = (ManagedHost, 'configured', 'lnet_unloaded')
+    stateful_object = 'managed_host'
+    managed_host = models.ForeignKey(ManagedHost)
+    state_verb = 'Enable LNet'
+
+    def description(self):
+        return "Enabling LNet on %s" % self.managed_host
+
+    def get_steps(self):
+        return []
 
     class Meta:
         app_label = 'chroma_core'
@@ -796,10 +861,12 @@ class DeleteHostStep(Step):
 
         from chroma_core.models import ManagedHost
         ManagedHost.delete(kwargs['host_id'])
+        if kwargs['force']:
+            ManagedHost._base_manager.filter(id = kwargs['host_id']).update(state = 'removed')
 
 
 class RemoveHostJob(StateChangeJob):
-    state_transition = (ManagedHost, ['unconfigured', 'lnet_up', 'lnet_down', 'lnet_unloaded'], 'removed')
+    state_transition = (ManagedHost, ['unconfigured', 'configured', 'lnet_up', 'lnet_down', 'lnet_unloaded'], 'removed')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
@@ -814,7 +881,7 @@ class RemoveHostJob(StateChangeJob):
 
     def get_steps(self):
         return [(RemoveServerConfStep, {'host_id': self.host.id}),
-            (DeleteHostStep, {'host_id': self.host.id})]
+            (DeleteHostStep, {'host_id': self.host.id, 'force': False})]
 
 
 def _get_host_dependents(host):
@@ -847,7 +914,7 @@ class DeleteHostDependents(Step):
         job_log.info("DeleteHostDependents(%s): targets: %s, filesystems: %s" % (host, targets, filesystems))
 
         for object in itertools.chain(targets, filesystems):
-            # We are allowed to modify state directly because
+            # We are allowed to modify state directly because we have locked these objects
             object.set_state('removed')
             object.save()
             object.__class__.delete(object.id)
@@ -897,7 +964,7 @@ class ForceRemoveHostJob(AdvertisedJob):
 
     def get_steps(self):
         return [(DeleteHostDependents, {'host_id': self.host.id}),
-                (DeleteHostStep, {'host_id': self.host.id})]
+                (DeleteHostStep, {'host_id': self.host.id, 'force': True})]
 
     @classmethod
     def get_confirmation(cls, instance):
@@ -920,7 +987,7 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
         return "Remove host %s from configuration" % self.host
 
     def get_steps(self):
-        return [(DeleteHostStep, {'host_id': self.host.id})]
+        return [(DeleteHostStep, {'host_id': self.host.id, 'force': False})]
 
 
 class RelearnNidsJob(Job):

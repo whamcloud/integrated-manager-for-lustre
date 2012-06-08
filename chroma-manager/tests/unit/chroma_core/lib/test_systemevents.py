@@ -5,9 +5,6 @@ from tests.unit.chroma_core.helper import JobTestCaseWithHost
 
 
 examples = {
-    server_security_flavor_handler: [
-        {'message': " Lustre: 5629:0:(sec.c:1474:sptlrpc_import_sec_adapt()) import lustre-MDT0000->NET_0x20000c0a87ada_UUID netid 20000: select flavor null"},
-        {'message': "Lustre: 20380:0:(sec.c:1474:sptlrpc_import_sec_adapt()) import MGC192.168.122.105@tcp->MGC192.168.122.105@tcp_0 netid 20000: select flavor null"}],
     client_connection_handler: [
             {
             "lustre_pid": 5629,
@@ -43,8 +40,11 @@ examples = {
 
 class TestHandlers(JobTestCaseWithHost):
     def test_server_security_flavor_handler(self):
+        ssfh_examples = [
+            {'message': " Lustre: 5629:0:(sec.c:1474:sptlrpc_import_sec_adapt()) import lustre-MDT0000->NET_0x20000c0a87ada_UUID netid 20000: select flavor null"},
+            {'message': "Lustre: 20380:0:(sec.c:1474:sptlrpc_import_sec_adapt()) import MGC192.168.122.105@tcp->MGC192.168.122.105@tcp_0 netid 20000: select flavor null"}]
         # These will not create events, but should also not raise exceptions
-        for example in examples[server_security_flavor_handler]:
+        for example in ssfh_examples:
             server_security_flavor_handler(Systemevents.objects.create(message=example['message']), None)
 
         # TODO: test doing a client connection and then one of these, to see it get correlated

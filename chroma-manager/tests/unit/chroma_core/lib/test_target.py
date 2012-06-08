@@ -144,12 +144,6 @@ class TestSharedTarget(JobTestCaseWithHost):
         # Friendly user stops the target
         self.set_state(self.target, 'unmounted')
 
-        # NB not supporting removing individual target mounts
-        # Friendly user removes secondary targetmount first
-        #self.set_state(self.target.managedtargetmount_set.get(primary = False), 'removed')
-        #self.assertEqual(ManagedTargetMount._base_manager.get(target = self.target, primary = False).state, 'removed')
-        #self.assertEqual(ManagedTargetMount._base_manager.get(target = self.target, primary = True).state, 'configured')
-
         # Friendly user removes the target
         self.set_state(self.target, 'removed')
         with self.assertRaises(ManagedTarget.DoesNotExist):

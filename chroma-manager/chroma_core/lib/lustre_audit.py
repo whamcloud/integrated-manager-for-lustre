@@ -71,7 +71,7 @@ class UpdateScan(object):
         else:
             contact = True
 
-            self.learn_capabilities()
+            self.update_capabilities()
 
             self.update_lnet()
             self.update_resource_locations()
@@ -97,18 +97,13 @@ class UpdateScan(object):
 
         return contact
 
-    def learn_capabilities(self):
+    def update_capabilities(self):
         """Update the host record from the capabilities reported by the agent"""
-        # FIXME: What to do if we split out rsyslog into an optional
-        # package?  Rename it to configure_rsyslog?
-
-        if len([c for c in self.host_data['capabilities'] if "manage_" in c]) > 0:
-            return
-        else:
-            if not self.host.immutable_state:
-                audit_log.debug("Setting immutable_state flag on %s" % self.host)
-                self.host.immutable_state = True
-                self.host.save()
+        immutable_state = len([c for c in self.host_data['capabilities'] if "manage_" in c]) == 0
+        if self.host.immutable_state != immutable_state:
+            audit_log.debug("Setting immutable_state=%s on %s" % (immutable_state, self.host))
+            self.host.immutable_state = True
+            self.host.save()
 
     def update_lnet(self):
         # Update LNet status
@@ -120,7 +115,7 @@ class UpdateScan(object):
         StateManagerClient.notify_state(self.host.downcast(),
                                   self.started_at,
                                   lnet_state,
-                                  ['lnet_unloaded', 'lnet_down', 'lnet_up'])
+                                  ['lnet_unloaded', 'lnet_down', 'lnet_up', 'configured'])
 
         try:
             known_nids = self.host.lnetconfiguration.get_nids()

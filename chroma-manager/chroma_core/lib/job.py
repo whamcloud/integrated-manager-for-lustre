@@ -71,10 +71,8 @@ class DependOn(Dependable):
         depended_object = self.get_stateful_object()
         satisfied = depended_object.state in self.acceptable_states
         if not satisfied:
-            job_log.warning("DependOn not satisfied: %s in state %s, not one of %s" %
-                    (depended_object,
-                     depended_object.state,
-                     self.acceptable_states))
+            job_log.warning("DependOn not satisfied: %s in state %s, not one of %s (preferred %s)" %
+                    (depended_object, depended_object.state, self.acceptable_states, self.preferred_state))
         return satisfied
 
 

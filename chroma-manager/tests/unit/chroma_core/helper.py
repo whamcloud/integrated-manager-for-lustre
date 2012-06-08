@@ -26,6 +26,7 @@ class MockAgent(object):
         return cls.calls[-1]
 
     succeed = True
+    fail_globs = []
 
     def __init__(self, host, log = None, console_callback = None, timeout = None):
         self.host = host
@@ -37,16 +38,20 @@ class MockAgent(object):
         if not self.succeed:
             raise RuntimeError("Test-generated failure")
 
+        if cmdline in self.fail_globs:
+            raise RuntimeError("Test-generated failure")
+
         logging.getLogger('mock_agent').info("invoke_agent %s %s %s" % (self.host, cmdline, args))
         logging.getLogger('job').info("invoke_agent %s %s %s" % (self.host, cmdline, args))
-        if cmdline == "get-fqdn":
-            return self.mock_servers[self.host.address]['fqdn']
-        if cmdline == "get-nodename":
-            return self.mock_servers[self.host.address]['nodename']
-        elif cmdline == "lnet-scan":
+        if cmdline == "lnet-scan":
             return self.mock_servers[self.host.address]['nids']
-        elif cmdline == 'get-time':
-            return datetime.datetime.utcnow().isoformat() + "Z"
+        elif cmdline == 'host-properties':
+            return {
+                'time': datetime.datetime.utcnow().isoformat() + "Z",
+                'fqdn': self.mock_servers[self.host.address]['fqdn'],
+                'nodename': self.mock_servers[self.host.address]['nodename'],
+                'capabilities': ['manage_targets']
+            }
         elif cmdline.startswith("format-target"):
             import uuid
             return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': 777}
@@ -73,6 +78,13 @@ class MockAgent(object):
             # fallback, gin up a label
             MockAgent.label_counter += 1
             return {'label': "foofs-TTT%04d" % self.label_counter}
+        elif cmdline.startswith('detect-scan'):
+            return self.mock_servers[self.host.address]['detect-scan']
+        elif cmdline == "device-plugin --plugin=lustre":
+            return {'lustre': {
+                'lnet_up': True,
+                'lnet_loaded': True
+            }}
 
 
 class MockDaemonRpc():
@@ -225,7 +237,6 @@ class JobTestCaseWithHost(JobTestCase):
         # Handy if you're only using one
         self.host = self.hosts[0]
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).lnetconfiguration.state, 'nids_known')
 
     def create_simple_filesystem(self, start = True):
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem

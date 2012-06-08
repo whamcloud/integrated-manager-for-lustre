@@ -1,7 +1,6 @@
 import glob
 import json
 import os
-from chroma_core.lib.detection import DetectScan
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode
 from chroma_core.models.target import ManagedOst, ManagedTargetMount, ManagedTarget
@@ -31,7 +30,9 @@ class TestDetection(JobTestCase):
         host_data = {}
         for path in fixture_glob("*detect_scan_output.txt"):
             address = os.path.basename(path).split("_")[0]
-            host_data[ManagedHost.objects.get(address = address)] = json.load(open(path))['result']
+            data = json.load(open(path))['result']
+            host_data[ManagedHost.objects.get(address = address)] = data
+            self.mock_servers[address]['detect-scan'] = data
 
         # Simplified volume construction:
         #  * Assume all device paths referenced in detection exist
@@ -47,7 +48,9 @@ class TestDetection(JobTestCase):
                         for host in host_data.keys():
                             VolumeNode.objects.create(volume = volume, path = d, host = host)
 
-        DetectScan().run(host_data)
+        from chroma_core.tasks import command_run_jobs
+        command_run_jobs.delay([{'class_name': 'DetectTargetsJob', 'args': {}}], "Test detect targets")
+
         self.assertEqual(ManagedFilesystem.objects.count(), 1)
         self.assertEqual(ManagedFilesystem.objects.get().name, "test18fs")
 

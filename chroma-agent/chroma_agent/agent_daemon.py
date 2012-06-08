@@ -12,6 +12,7 @@ import traceback
 import datetime
 import argparse
 import signal
+import socket
 
 daemon_log = logging.getLogger('daemon')
 daemon_log.setLevel(logging.INFO)
@@ -50,7 +51,6 @@ def retry_main_loop():
 
             # We now check for some cases on which we should terminate instead
             # of retrying.
-            import socket
             if isinstance(e, socket.error):
                 # This is a 'system call interrupted' exception which
                 # can result from a signal received during a system call --
@@ -157,8 +157,6 @@ def main():
 def send_update(server_url, server_token, session, started_at, updates):
     """POST to the UpdateScan API method.
        Returns None on errors"""
-    from chroma_agent.action_plugins.host_scan import get_fqdn
-
     from httplib import BadStatusLine
     import simplejson as json
     import urllib2
@@ -167,7 +165,7 @@ def send_update(server_url, server_token, session, started_at, updates):
                           headers = {"Content-Type": "application/json"},
                           data = json.dumps({
                                   'session': session,
-                                  'fqdn': get_fqdn(),
+                                  'fqdn': socket.getfqdn(),
                                   'token': server_token,
                                   'started_at': started_at.isoformat() + "Z",
                                   'sent_at': datetime.datetime.utcnow().isoformat() + "Z",

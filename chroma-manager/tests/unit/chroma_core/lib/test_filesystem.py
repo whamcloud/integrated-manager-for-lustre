@@ -29,7 +29,7 @@ class TestOneHost(JobTestCase):
             dbperf.enabled = True
 
             with dbperf("create_from_string"):
-                host, command = ManagedHost.create_from_string('myaddress', start_lnet = False)
+                host, command = ManagedHost.create_from_string('myaddress')
             with dbperf("set_state"):
                 Command.set_state([(host, 'lnet_up'), (host.lnetconfiguration, 'nids_known')], "Setting up host", run = False)
             with dbperf("run_next"):

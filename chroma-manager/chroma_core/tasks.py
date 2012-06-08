@@ -278,6 +278,7 @@ def run_job(job_id):
         job.stepresult_set.filter(state = 'incomplete').update(state = 'crashed')
 
     step_index = 0
+    finish_step = -1
     while step_index < len(steps):
         with transaction.commit_on_success():
             job.started_step = step_index
@@ -339,12 +340,10 @@ def run_job(job_id):
         finally:
             result.save()
 
-        with transaction.commit_on_success():
-            job.finish_step = step_index
-            job.save()
+        finish_step = step_index
         step_index += 1
 
-    job_log.info("Job %d finished %d steps successfully" % (job.id, job.finish_step + 1))
+    job_log.info("Job %d finished %d steps successfully" % (job.id, finish_step + 1))
     job.complete(errored = False)
 
     return None
@@ -418,7 +417,7 @@ def test_host_contact(host):
     agent = False
     if resolve:
         try:
-            Agent(host).invoke('get-fqdn')
+            Agent(host).invoke('host-properties')
             agent = True
         except Exception, e:
             audit_log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
