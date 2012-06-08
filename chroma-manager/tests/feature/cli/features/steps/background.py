@@ -74,3 +74,11 @@ def step(context):
         context.test_case._test_lun(host)
 
     eq_(ManagedHost.objects.count(), len(chroma_core.lib.agent.Agent.mock_servers))
+
+
+@given('the config has been reset to defaults')
+def step(context):
+    from chroma_cli.config import Configuration
+    from chroma_cli.defaults import defaults
+    context.cli_config = Configuration()
+    context.cli_config.update(defaults)

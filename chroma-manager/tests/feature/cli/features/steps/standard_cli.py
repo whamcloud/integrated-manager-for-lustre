@@ -19,7 +19,10 @@ def step(context, args):
     try:
         sys.stdout = context.stdout
         sys.stderr = context.stderr
-        standard_cli(args.split())
+        if context.cli_config:
+            standard_cli(args=args.split(), config=context.cli_config)
+        else:
+            standard_cli(args.split())
     except SystemExit, e:
         if e.code != 0:
             context.stdout.seek(0)

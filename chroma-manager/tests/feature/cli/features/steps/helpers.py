@@ -37,3 +37,15 @@ def step(context, entity, field, subject, value):
         resource = ah.endpoints[entity].show(subject)
 
     eq_(resource.all_attributes[field], value)
+
+
+@given('the config parameter {key} should be set to {value}')
+@then('the config parameter {key} should be set to {value}')
+def step(context, key, value):
+    from chroma_cli.defaults import defaults
+    if value == "the default":
+        eq_(getattr(context.cli_config, key), defaults[key])
+    elif value == "True":
+        eq_(getattr(context.cli_config, key), True)
+    else:
+        eq_(getattr(context.cli_config, key), value)

@@ -75,17 +75,19 @@ def api_cli():
         sys.exit(3)
 
 
-def standard_cli(args=None):
-    config = Configuration()
+def standard_cli(args=None, config=None):
+    config = config
+    if not config:
+        config = Configuration()
     parser = ResettableArgumentParser(description="Chroma CLI", add_help=False)
     dispatcher = Dispatcher()
 
-    parser.add_argument("--api-url", help="Entry URL for Chroma API")
+    parser.add_argument("--api_url", help="Entry URL for Chroma API")
     parser.add_argument("--username", help="Chroma username")
     parser.add_argument("--password", help="Chroma password")
     parser.add_argument("--output", "-o", help="Output format",
                         choices=StandardFormatter.formats())
-    parser.add_argument("--nowait", help="Don't wait for jobs to complete",
+    parser.add_argument("--nowait", "-n", help="Don't wait for jobs to complete",
                         action="store_true")
     parser.clear_resets()
 
