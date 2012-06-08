@@ -1,3 +1,4 @@
+import re
 import time
 
 from testconfig import config
@@ -170,11 +171,23 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         for target in targets:
             target_config = config['filesystem']['targets'][target['name']]
             target_host_config = self.get_host_config(target_config['primary_server'])
-            self.remote_command(
+            stdin, stdout, stderr = self.remote_command(
                 target_host_config['address'],
-                "umount %s" % target_config['mount_path'],
-                expected_return_code = None  # May already be mounted if combined mgt/mdt
+                'mount'
             )
+            if re.search("on %s" % target_config['mount_path'], stdout.read()):
+                self.remote_command(
+                    target_host_config['address'],
+                    "umount %s" % target_config['mount_path'],
+                )
+                stdin, stdout, stderr = self.remote_command(
+                    target_host_config['address'],
+                    'mount'
+                )
+                self.assertNotRegexpMatches(
+                    stdout.read(),
+                    "on %s" % target_config['mount_path']
+                )
 
         # Wait for audit
         time.sleep(30)
@@ -184,7 +197,7 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         self.assertEqual(response.successful, True, response.text)
         targets = response.json['objects']
         for target in targets:
-            self.assertEqual('unmounted', target['state'])
+            self.assertEqual('unmounted', target['state'], target)
 
         # Verify filesystem is unavailable
         response = self.chroma_manager.get(
