@@ -172,7 +172,8 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
             target_host_config = self.get_host_config(target_config['primary_server'])
             self.remote_command(
                 target_host_config['address'],
-                "umount %s" % target_config['mount_path']
+                "umount %s" % target_config['mount_path'],
+                expected_return_node = None  # May already be mounted if combined mgt/mdt
             )
 
         # Wait for audit
